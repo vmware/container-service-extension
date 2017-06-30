@@ -24,7 +24,13 @@ cse init
 ```
 Edit file `config.yml` and provide the values for your vCloud Director installation.
 
-Start the service with:
+Validate configuration:
+
+``` shell
+cse check config.yml
+```
+
+Start the service:
 
 ``` shell
 cse run config.yml
@@ -38,6 +44,7 @@ cd container-service-extension
 python setup.py develop
 cse init
 #edit config.yml
+cse check config.yml
 cse run config.yml
 ```
 

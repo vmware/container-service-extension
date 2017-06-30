@@ -21,13 +21,13 @@ Usage: cse COMMAND [ARGS]
 Commands:
   help                  Prints this messages
   version               Shows version
-  init                  Creates config.yml file with default values
+  init [config.yml]     Creates config.yml file with default values
   check <config.yml>    Checks configuration in config.yml (RabbitMQ and vCD)
   run <config.yml>      Run cse with options from config.yml
 """)
     sys.exit(0)
 
-def init():
+def init(file_name='config.yml'):
     default_config = """
 rabbitmq:
     host: vcd.cpsbu.eng.vmware.com
@@ -56,7 +56,12 @@ vcd:
     verify: False
     log: True
     """
-    print(default_config)
+    if os.path.isfile(file_name):
+        print('file %s already exist, aborting' % file_name)
+        sys.exit(1)
+    with open(file_name, 'w') as f:
+        f.write(default_config)
+    print('default config saved to file \'%s\'' % file_name)
 
 def check_config(file_name):
     config = {}
@@ -92,7 +97,10 @@ def main():
                 print_help()
                 sys.exit(0)
             elif sys.argv[1] == 'init':
-                init()
+                if len(sys.argv) > 2:
+                    init(sys.argv[2])
+                else:
+                    init()
                 sys.exit(0)
             elif sys.argv[1] == 'check':
                 check_config(sys.argv[2])
