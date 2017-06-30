@@ -20,8 +20,8 @@
 
 ### Development
 
-  python setup.py develop
-  cse config.yml
+    python setup.py develop
+    cse config.yml
 
 ## Documentation
 
