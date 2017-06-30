@@ -18,6 +18,11 @@
 2. Step 2
 3. Step 3
 
+### Development
+
+  python setup.py develop
+  cse config.yml
+
 ## Documentation
 
 ## Releases & Major Branches
