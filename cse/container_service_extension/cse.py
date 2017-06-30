@@ -7,8 +7,10 @@
 import base64, json, sys, logging, thread, time, os, traceback, signal
 import pkg_resources
 import yaml
+import pika
 
 LOGGER = logging.getLogger(__name__)
+config = {}
 
 def print_help():
     print('Container Service Extension for vCloud Director, version %s'
@@ -20,6 +22,7 @@ Commands:
   help                  Prints this messages
   version               Shows version
   init                  Creates config.yml file with default values
+  check <config.yml>    Checks configuration in config.yml (RabbitMQ and vCD)
   run <config.yml>      Run cse with options from config.yml
 """)
     sys.exit(0)
@@ -55,6 +58,23 @@ vcd:
     """
     print(default_config)
 
+def check_config(file_name):
+    config = {}
+    try:
+        with open(file_name, 'r') as f:
+            config = yaml.load(f)
+    except:
+        print('config file \'%s\' not found or invalid' % file_name)
+        sys.exit(1)
+    rmq = config['rabbitmq']
+    credentials = pika.PlainCredentials(rmq['user'], rmq['password'])
+    parameters = pika.ConnectionParameters(rmq['host'], rmq['port'],
+                                           '/',
+                                           credentials)
+    connection = pika.BlockingConnection(parameters)
+    print('Connection to RabbitMQ (%s:%s): %s' % (rmq['host'], rmq['port'], connection.is_open))
+    connection.close()
+
 def signal_handler(signal, frame):
     print('\nCrtl+C detected, exiting')
     sys.exit(0)
@@ -73,6 +93,9 @@ def main():
                 sys.exit(0)
             elif sys.argv[1] == 'init':
                 init()
+                sys.exit(0)
+            elif sys.argv[1] == 'check':
+                check_config(sys.argv[2])
                 sys.exit(0)
             elif sys.argv[1] == 'run':
                 pass
