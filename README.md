@@ -12,24 +12,38 @@ The *container-service-extension* is a vCloud Director extension that manages th
 
 This extension should be installed on a vCloud Director instance by a system administrator.
 
-* Prereq 1
-* Prereq 2
-* Prereq 3
+The *container-service-extension* is a Python package and requires Python 2.7.
 
-### Build & Run
+### Install & Run
 
-1. Step 1
-2. Step 2
-3. Step 3
+Installation:
+
+``` shell
+pip install --user container-service-extension
+cse init
+```
+Edit file `config.yml` and provide the values for your vCloud Director installation.
+
+Start the service with:
+
+``` shell
+cse run config.yml
+```
 
 ### Development
 
-    python setup.py develop
-    cse config.yml
+``` shell
+git clone https://github.com/vmware/container-service-extension.git
+cd container-service-extension
+python setup.py develop
+cse init
+#edit config.yml
+cse run config.yml
+```
 
 ## Documentation
 
-## Releases & Major Branches
+[wiki](https://github.com/vmware/container-service-extension/wiki).
 
 ## Contributing
 

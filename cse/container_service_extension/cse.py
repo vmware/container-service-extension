@@ -13,10 +13,47 @@ LOGGER = logging.getLogger(__name__)
 def print_help():
     print('Container Service Extension for vCloud Director, version %s'
         % pkg_resources.require("container-service-extension")[0].version)
-    print('Usage:')
-    print('  cse version')
-    print('  cse <config.yml>')
+    print("""
+Usage: cse COMMAND [ARGS]
+
+Commands:
+  help                  Prints this messages
+  version               Shows version
+  init                  Creates config.yml file with default values
+  run <config.yml>      Run cse with options from config.yml
+""")
     sys.exit(0)
+
+def init():
+    default_config = """
+rabbitmq:
+    host: vcd.cpsbu.eng.vmware.com
+    port: 5672
+    user: 'guest'
+    password: 'guest'
+    exchange: vcdext
+    routing_key: cse
+
+service:
+    listeners: 2
+    logging_level: 20
+    logging_format: '%(levelname) -8s %(asctime)s %(name) -8s %(funcName) -8s %(lineno) -5d: %(message)s'
+    key_filename: 'id_rsa_cse'
+    key_filename_pub: 'id_rsa_cse.pub'
+    catalog: 'cse-catalog'
+    template_master: 'kube-m.ova'
+    template_node: 'kube-n.ova'
+
+vcd:
+    host: vcd.cpsbu.eng.vmware.com
+    port: 443
+    username: 'administrator'
+    password: 'enter_your_password'
+    api_version: '5.6'
+    verify: False
+    log: True
+    """
+    print(default_config)
 
 def signal_handler(signal, frame):
     print('\nCrtl+C detected, exiting')
@@ -31,10 +68,18 @@ def main():
                           [0].version
                 print(version)
                 sys.exit(0)
+            elif sys.argv[1] == 'help':
+                print_help()
+                sys.exit(0)
+            elif sys.argv[1] == 'init':
+                init()
+                sys.exit(0)
+            elif sys.argv[1] == 'run':
+                pass
         else:
             print_help()
     try:
-        with open(sys.argv[1], 'r') as f:
+        with open(sys.argv[2], 'r') as f:
             config = yaml.load(f)
     except:
         tb = traceback.format_exc()

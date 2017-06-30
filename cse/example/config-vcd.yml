@@ -1,8 +1,8 @@
 rabbitmq:
     host: vcd.cpsbu.eng.vmware.com
     port: 5672
-    user: '****'
-    password: '*****'
+    user: 'guest'
+    password: 'guest'
     exchange: vcdext
     routing_key: cse
 
@@ -10,17 +10,17 @@ service:
     listeners: 2
     logging_level: 20
     logging_format: '%(levelname) -8s %(asctime)s %(name) -8s %(funcName) -8s %(lineno) -5d: %(message)s'
-    key_filename: '~/.ssh/id_rsa_vmw'
-    key_filename_pub: '~/.ssh/id_rsa_vmw.pub'
-    catalog: mycatalog
-    template_master: kube.ova
-    template_worker: kube.ova
+    key_filename: 'id_rsa_cse'
+    key_filename_pub: 'id_rsa_cse.pub'
+    catalog: 'cse-catalog'
+    template_master: 'kube-m.ova'
+    template_node: 'kube-n.ova'
 
 vcd:
     host: vcd.cpsbu.eng.vmware.com
     port: 443
-    username: administrator
-    password: '*************'
+    username: 'administrator'
+    password: 'enter_your_password'
     api_version: '5.6'
     verify: False
     log: True
