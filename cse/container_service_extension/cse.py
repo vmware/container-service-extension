@@ -6,10 +6,11 @@
 
 import base64, json, sys, logging, thread, time, os, traceback
 import pkg_resources
+import yaml
 
 def print_help():
     print('Container Service Extension for vCloud Director, version %s'
-        % pkg_resources.require("cse-vcd")[0].version)
+        % pkg_resources.require("container-service-extension")[0].version)
     print('Usage:')
     print('  cse version')
     print('  cse config.yml')
@@ -24,7 +25,7 @@ def main():
     if len(sys.argv)>0:
         if len(sys.argv)>1:
             if sys.argv[1] == 'version':
-                version = pkg_resources.require("cse-vcd")[0].version
+                version = pkg_resources.require("container-service-extension")[0].version
                 print(version)
                 sys.exit(0)
         else:
