@@ -1,5 +1,5 @@
 rabbitmq:
-    host: vcd.cpsbu.eng.vmware.com
+    host: vcd.eng.vmware.com
     port: 5672
     user: 'guest'
     password: 'guest'
@@ -7,7 +7,7 @@ rabbitmq:
     routing_key: cse
 
 vcd:
-    host: vcd.cpsbu.eng.vmware.com
+    host: vcd.eng.vmware.com
     port: 443
     username: 'administrator'
     password: 'enter_your_password'

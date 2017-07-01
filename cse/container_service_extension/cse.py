@@ -33,7 +33,7 @@ Commands:
 def init(file_name='config.yml'):
     default_config = \
 """rabbitmq:
-    host: vcd.cpsbu.eng.vmware.com
+    host: vcd.eng.vmware.com
     port: 5672
     user: 'guest'
     password: 'guest'
@@ -41,7 +41,7 @@ def init(file_name='config.yml'):
     routing_key: cse
 
 vcd:
-    host: vcd.cpsbu.eng.vmware.com
+    host: vcd.eng.vmware.com
     port: 443
     username: 'administrator'
     password: 'enter_your_password'

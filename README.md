@@ -31,7 +31,7 @@ Validate the configuration:
 $ cse check config.yml
 
 Connection to RabbitMQ (rbmq.cpsbu.eng.vmware.com:5672): True
-Connection to vCloud Director (https://vcd.cpsbu.eng.vmware.com:443): True
+Connection to vCloud Director (https://vcd.eng.vmware.com:443): True
   login to 'System' org: True
 ```
 
