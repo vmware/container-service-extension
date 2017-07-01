@@ -6,6 +6,15 @@ rabbitmq:
     exchange: vcdext
     routing_key: cse
 
+vcd:
+    host: vcd.cpsbu.eng.vmware.com
+    port: 443
+    username: 'administrator'
+    password: 'enter_your_password'
+    api_version: '5.7'
+    verify: False
+    log: True
+
 service:
     listeners: 2
     logging_level: 20
@@ -15,12 +24,3 @@ service:
     catalog: 'cse-catalog'
     template_master: 'kube-m.ova'
     template_node: 'kube-n.ova'
-
-vcd:
-    host: vcd.cpsbu.eng.vmware.com
-    port: 443
-    username: 'administrator'
-    password: 'enter_your_password'
-    api_version: '5.6'
-    verify: False
-    log: True

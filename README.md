@@ -4,7 +4,7 @@
 
 ## Overview
 
-The *container-service-extension* is a vCloud Director extension that manages the life cycle of Kubernetes clusters on behalf of tenants.
+The **container-service-extension** for vCloud Director manages the life cycle of Kubernetes clusters for tenants.
 
 ## Try it out
 
@@ -12,40 +12,48 @@ The *container-service-extension* is a vCloud Director extension that manages th
 
 This extension should be installed on a vCloud Director instance by a system administrator.
 
-The *container-service-extension* is a Python package and requires Python 2.7.
+The **container-service-extension** is a Python package and requires Python 2.7.
 
 ### Install & Run
 
 Installation:
 
 ``` shell
-pip install --user container-service-extension
-cse init
+$ pip install --user container-service-extension
+
+$ cse init
 ```
 Edit file `config.yml` and provide the values for your vCloud Director installation.
 
-Validate configuration:
+Validate the configuration:
 
 ``` shell
-cse check config.yml
+$ cse check config.yml
+
+Connection to RabbitMQ (rbmq.cpsbu.eng.vmware.com:5672): True
+Connection to vCloud Director (https://vcd.cpsbu.eng.vmware.com:443): True
+  login to 'System' org: True
 ```
 
 Start the service:
 
 ``` shell
-cse run config.yml
+$ cse run config.yml
 ```
 
 ### Development
 
 ``` shell
-git clone https://github.com/vmware/container-service-extension.git
-cd container-service-extension
-python setup.py develop
-cse init
-#edit config.yml
-cse check config.yml
-cse run config.yml
+$ git clone https://github.com/vmware/container-service-extension.git
+$ cd container-service-extension
+$ python setup.py develop
+$ cse init
+```
+edit config.yml
+
+``` shell
+$ cse check config.yml
+$ cse run config.yml
 ```
 
 ## Documentation

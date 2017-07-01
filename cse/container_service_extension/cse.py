@@ -8,6 +8,9 @@ import base64, json, sys, logging, thread, time, os, traceback, signal
 import pkg_resources
 import yaml
 import pika
+from pyvcloud.vcloudair import VCA
+from pyvcloud.task import Task
+from pyvcloud.system import System
 
 LOGGER = logging.getLogger(__name__)
 config = {}
@@ -28,14 +31,23 @@ Commands:
     sys.exit(0)
 
 def init(file_name='config.yml'):
-    default_config = """
-rabbitmq:
+    default_config = \
+"""rabbitmq:
     host: vcd.cpsbu.eng.vmware.com
     port: 5672
     user: 'guest'
     password: 'guest'
     exchange: vcdext
     routing_key: cse
+
+vcd:
+    host: vcd.cpsbu.eng.vmware.com
+    port: 443
+    username: 'administrator'
+    password: 'enter_your_password'
+    api_version: '5.7'
+    verify: False
+    log: True
 
 service:
     listeners: 2
@@ -46,16 +58,7 @@ service:
     catalog: 'cse-catalog'
     template_master: 'kube-m.ova'
     template_node: 'kube-n.ova'
-
-vcd:
-    host: vcd.cpsbu.eng.vmware.com
-    port: 443
-    username: 'administrator'
-    password: 'enter_your_password'
-    api_version: '5.6'
-    verify: False
-    log: True
-    """
+"""
     if os.path.isfile(file_name):
         print('file %s already exist, aborting' % file_name)
         sys.exit(1)
@@ -71,14 +74,30 @@ def check_config(file_name):
     except:
         print('config file \'%s\' not found or invalid' % file_name)
         sys.exit(1)
-    rmq = config['rabbitmq']
-    credentials = pika.PlainCredentials(rmq['user'], rmq['password'])
-    parameters = pika.ConnectionParameters(rmq['host'], rmq['port'],
-                                           '/',
-                                           credentials)
-    connection = pika.BlockingConnection(parameters)
-    print('Connection to RabbitMQ (%s:%s): %s' % (rmq['host'], rmq['port'], connection.is_open))
-    connection.close()
+    try:
+        rmq = config['rabbitmq']
+        credentials = pika.PlainCredentials(rmq['user'], rmq['password'])
+        parameters = pika.ConnectionParameters(rmq['host'], rmq['port'],
+                                               '/',
+                                               credentials)
+        connection = pika.BlockingConnection(parameters)
+        print('Connection to RabbitMQ (%s:%s): %s' % (rmq['host'], rmq['port'], connection.is_open))
+        connection.close()
+        vca_system = VCA(host=config['vcd']['host'], username=config['vcd']['username'],
+                        service_type='standalone', version=config['vcd']['api_version'],
+                        verify=config['vcd']['verify'], log=config['vcd']['log'])
+
+        org_url = 'https://%s/cloud' % config['vcd']['host']
+        r = vca_system.login(password=config['vcd']['password'], org='System', org_url=org_url)
+        print('Connection to vCloud Director (%s:%s): %s' % (config['vcd']['host'], config['vcd']['port'], r))
+        if r:
+            r = vca_system.login(token=vca_system.token, org='System', org_url=vca_system.vcloud_session.org_url)
+            print('  login to \'System\' org: %s' % (r))
+    except:
+        tb = traceback.format_exc()
+        print('failed to validate configuration from file %s' % file_name)
+        print(tb)
+        sys.exit(1)
 
 def signal_handler(signal, frame):
     print('\nCrtl+C detected, exiting')
