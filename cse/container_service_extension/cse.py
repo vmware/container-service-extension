@@ -4,20 +4,27 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import base64, json, sys, logging, thread, time, os, traceback, signal
+from consumer import MessageConsumer
+import logging
+import os
 import pkg_resources
+import signal
+import sys
+from threading import Thread
+import time
+import traceback
 import yaml
 import pika
 from pyvcloud.vcloudair import VCA
-from pyvcloud.task import Task
-from pyvcloud.system import System
+
 
 LOGGER = logging.getLogger(__name__)
 config = {}
 
+
 def print_help():
     print('Container Service Extension for vCloud Director, version %s'
-        % pkg_resources.require("container-service-extension")[0].version)
+          % pkg_resources.require("container-service-extension")[0].version)
     print("""
 Usage: cse COMMAND [ARGS]
 
@@ -30,9 +37,10 @@ Commands:
 """)
     sys.exit(0)
 
+
 def init(file_name='config.yml'):
-    default_config = \
-"""rabbitmq:
+    default_config = """
+    rabbitmq:
     host: vcd.eng.vmware.com
     port: 5672
     user: 'guest'
@@ -52,19 +60,21 @@ vcd:
 service:
     listeners: 2
     logging_level: 20
-    logging_format: '%(levelname) -8s %(asctime)s %(name) -8s %(funcName) -8s %(lineno) -5d: %(message)s'
+    logging_format: '%(levelname) -8s %(asctime)s %(name) -8s %(funcName)\
+-8s %(lineno) -5d: %(message)s'
     key_filename: 'id_rsa_cse'
     key_filename_pub: 'id_rsa_cse.pub'
     catalog: 'cse-catalog'
     template_master: 'kube-m.ova'
     template_node: 'kube-n.ova'
-"""
+    """
     if os.path.isfile(file_name):
         print('file %s already exist, aborting' % file_name)
         sys.exit(1)
     with open(file_name, 'w') as f:
         f.write(default_config)
     print('default config saved to file \'%s\'' % file_name)
+
 
 def check_config(file_name):
     config = {}
@@ -81,17 +91,26 @@ def check_config(file_name):
                                                '/',
                                                credentials)
         connection = pika.BlockingConnection(parameters)
-        print('Connection to RabbitMQ (%s:%s): %s' % (rmq['host'], rmq['port'], connection.is_open))
+        print('Connection to RabbitMQ (%s:%s): %s' % (rmq['host'], rmq['port'],
+              connection.is_open))
         connection.close()
-        vca_system = VCA(host=config['vcd']['host'], username=config['vcd']['username'],
-                        service_type='standalone', version=config['vcd']['api_version'],
-                        verify=config['vcd']['verify'], log=config['vcd']['log'])
+        vca_system = VCA(host=config['vcd']['host'],
+                         username=config['vcd']['username'],
+                         service_type='standalone',
+                         version=config['vcd']['api_version'],
+                         verify=config['vcd']['verify'],
+                         log=config['vcd']['log'])
 
         org_url = 'https://%s/cloud' % config['vcd']['host']
-        r = vca_system.login(password=config['vcd']['password'], org='System', org_url=org_url)
-        print('Connection to vCloud Director (%s:%s): %s' % (config['vcd']['host'], config['vcd']['port'], r))
+        r = vca_system.login(password=config['vcd']['password'],
+                             org='System',
+                             org_url=org_url)
+        print('Connection to vCloud Director (%s:%s): %s' %
+              (config['vcd']['host'], config['vcd']['port'], r))
         if r:
-            r = vca_system.login(token=vca_system.token, org='System', org_url=vca_system.vcloud_session.org_url)
+            r = vca_system.login(token=vca_system.token,
+                                 org='System',
+                                 org_url=vca_system.vcloud_session.org_url)
             print('  login to \'System\' org: %s' % (r))
     except:
         tb = traceback.format_exc()
@@ -99,17 +118,29 @@ def check_config(file_name):
         print(tb)
         sys.exit(1)
 
+
 def signal_handler(signal, frame):
     print('\nCrtl+C detected, exiting')
     sys.exit(0)
 
+
+def consumer_thread(c):
+    try:
+        LOGGER.info('about to start consumer_thread %s', c)
+        c.run()
+    except:
+        print('about to stop consumer_thread')
+        print(traceback.format_exc())
+        c.stop()
+
+
 def main():
     global config
-    if len(sys.argv)>0:
-        if len(sys.argv)>1:
+    if len(sys.argv) > 0:
+        if len(sys.argv) > 1:
             if sys.argv[1] == 'version':
-                version = pkg_resources.require("container-service-extension")\
-                          [0].version
+                version = pkg_resources.\
+                          require("container-service-extension")[0].version
                 print(version)
                 sys.exit(0)
             elif sys.argv[1] == 'help':
@@ -149,9 +180,33 @@ def main():
     LOGGER.info('Container Service Extension for vCloud Director')
     LOGGER.info('waiting for requests...')
 
+    rmq = config['rabbitmq']
     num_consumers = config['service']['listeners']
     consumers = []
     threads = []
+
+    for n in range(num_consumers):
+        try:
+            c = MessageConsumer('amqp://%s:%s@%s:%s/' %
+                                (rmq['user'],
+                                 rmq['password'],
+                                 rmq['host'],
+                                 rmq['port']),
+                                rmq['exchange'],
+                                rmq['routing_key'])
+            t = Thread(target=consumer_thread, args=(c,))
+            t.daemon = True
+            t.start()
+            LOGGER.info('started thread %s', t.ident)
+            threads.append(t)
+            consumers.append(c)
+            time.sleep(0.25)
+        except KeyboardInterrupt:
+            break
+        except:
+            print(traceback.format_exc())
+
+    LOGGER.info('num of threads started: %s', len(threads))
 
     while True:
         try:
@@ -163,9 +218,14 @@ def main():
                 try:
                     c.stop()
                 except:
-                    pass
+                    print(traceback.format_exc())
+                    break
             LOGGER.info('done')
-            break
+            sys.exit(1)
+        except:
+            print(traceback.format_exc())
+            sys.exit(1)
+
 
 if __name__ == '__main__':
     main()
