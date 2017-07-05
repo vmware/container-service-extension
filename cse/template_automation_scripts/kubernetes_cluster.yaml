@@ -1,0 +1,74 @@
+# Tasks for Master node only
+- hosts: masters
+  tasks:
+    - name: Adding Master hostname to /etc/hosts
+      shell: |
+        /usr/bin/echo "{{master_ip}} {{master_hostname}}" >> /etc/hosts
+
+    - name: Adding Minions hostname to /etc/hosts
+      shell: |
+        /usr/bin/echo "{{hostvars[item]['ansible_host']}} {{ hostvars[item]['name'] }}" >> /etc/hosts
+      with_items: "{{ groups['nodes'] }}"
+
+
+    - name: Configuring /etc/kubernetes/apiserver
+      lineinfile: |
+        dest=/etc/kubernetes/apiserver backup=yes
+        regexp='^KUBE_API_ADDRESS' line=KUBE_API_ADDRESS=\""--address=0.0.0.0"\"
+
+    - name: Enabling Services (etcd,kube-apiserver,kube-controller-manager,kube-scheduler)
+      shell: |
+        /usr/bin/systemctl enable etcd
+        /usr/bin/systemctl restart etcd
+        /usr/bin/systemctl enable kube-apiserver
+        /usr/bin/systemctl restart kube-apiserver
+        /usr/bin/systemctl enable kube-controller-manager
+        /usr/bin/systemctl restart kube-controller-manager
+        /usr/bin/systemctl enable kube-scheduler
+        /usr/bin/systemctl restart kube-scheduler
+
+    - name: Creating /tmp/nodes.json file
+      shell: |
+        cat >> /tmp/nodes.json << EOF
+          {
+            "apiVersion": "v1",
+            "kind": "Node",
+            "metadata": {
+              "name": "{{hostvars[item]['name']}}",
+              "labels":{ "name": "{{hostvars[item]['name']}}-label"}
+            },
+            "spec": {
+              "externalID": "{{hostvars[item]['name']}}"
+            }
+          }
+      with_items: "{{ groups['nodes'] }}"
+
+    - name: Creating Node Object using /tmp/nodes.json
+      shell: /usr/bin/kubectl create -f /tmp/nodes.json
+
+# Tasks for Minon node/s only
+- hosts: nodes
+  tasks:
+    - name: Adding Master hostname to /etc/hosts
+      shell: |
+        /usr/bin/echo "{{master_ip}} {{master_hostname}}" >> /etc/hosts
+        /usr/bin/echo "{{ ansible_host }} {{ name }}" >> /etc/hosts
+
+    - name: Configuring /etc/kubernetes/kubelet
+      lineinfile:
+        dest=/etc/kubernetes/kubelet backup=yes
+        regexp="{{ item.key }}"
+        line="{{ item.value }}"
+      with_items:
+        - { key: "KUBELET_API_SERVER", value: "KUBELET_API_SERVER=\\\"--api_servers=http://{{master_hostname}}:8080\\\"" }
+        - { key: "KUBELET_ADDRESS", value: "KUBELET_ADDRESS=\\\"--address=0.0.0.0\\\"" }
+        - { key: "KUBELET_HOSTNAME", value: "KUBELET_HOSTNAME=\\\"--hostname_override={{name}}\\\"" }
+
+    - name: Enabling Services (kube-proxy,kublet,docker)
+      shell: |
+        /usr/bin/systemctl enable kube-proxy
+        /usr/bin/systemctl restart kube-proxy
+        /usr/bin/systemctl enable kubelet
+        /usr/bin/systemctl restart kubelet
+        /usr/bin/systemctl enable docker
+        /usr/bin/systemctl restart docker
