@@ -5,7 +5,7 @@
     "product_version": "1.0",
     "headless": "true",
     "disk_size": "4080",
-    "ssh_password": "ca$hc0w",
+    "ssh_password": "",
     "ssh_wait_timeout": "5m",
     "shutdown_command": "shutdown -h now"
   },
@@ -20,7 +20,7 @@
       "iso_checksum_type": "sha1",
       "guest_os_type": "other3xlinux-64",
       "ssh_username": "root",
-      "ssh_password": "ca$hc0w",
+      "ssh_password": "",
       "disk_size": "{{user `disk_size`}}",
       "boot_wait": "5s",
       "ssh_wait_timeout": "{{user `ssh_wait_timeout`}}",
