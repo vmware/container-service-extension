@@ -1,0 +1,22 @@
+---
+- hosts: localhost
+  connection: local
+  tasks:
+    - name: Create vCD vapp/vapps
+      vca_vapp:
+        org: 'vcav_org2'
+        username: ''
+        password: ''
+        host: '10.158.14.6'
+        service_type: vcd
+        vdc_name: vcav2_org2_vdc
+        vapp_name: "{{ item.name }}"
+        vm_name: "{{ item.name }}"
+        vm_cpus: "{{ item.cpus }}"
+        catalog_name: "cse"
+        template_name: "Photon-12"
+        operation: noop
+        verify_certs: False       
+      with_items:
+        - {name: photon1, cpus: 0, memory: 2048}
+        - {name: photon2, cpus: 2, memory: 1024}
