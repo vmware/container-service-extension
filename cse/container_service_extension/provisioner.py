@@ -65,8 +65,9 @@ class Provisioner(object):
         return(task_id, href)
 
     def delete_vm(self, vdc_name, vapp_name):
-        task = self.vca_tenant.delete_vapp(vdc_name, vapp_name)
-        return task
+        t = self.vca_tenant.delete_vapp(vdc_name, vapp_name)
+        task_id = t.get_id().split(':')[-1]
+        return task_id
 
     def run_guest_command(self):
         pass

@@ -18,7 +18,6 @@ class Node(object):
         self.node_type = node_type
         self.node_id = node_id
         self.href = href
-        self.status = ''
         self.ip = ''
         self.cluster_id = ''
         self.cluster_name = ''
@@ -40,7 +39,7 @@ class Cluster(object):
         self.cluster_id = cluster_id
         self.master_nodes = []
         self.nodes = []
-        self.status = ''
+        self.vdc = None
 
     def update_vm_tags(self, vca):
         for node in self.master_nodes+self.nodes:
@@ -59,7 +58,6 @@ class Cluster(object):
                                      'name=%s, href=%s, '
                                      'key=%s, value=%s',
                                      result, node.name, node.href, k, v)
-                        return False
                     else:
                         LOGGER.info('add metadata, result=%s, '
                                     'name=%s, href=%s, '
@@ -68,21 +66,12 @@ class Cluster(object):
         return True
 
     @staticmethod
-    def load_from_metadata(vca, cluster_name=None):
-        if cluster_name is None:
-            query = 'fields=metadata:cse.cluster.id,' + \
-                    'metadata:cse.cluster.name,' + \
-                    'metadata:cse.node.type,' + \
-                    'metadata:cse.node.name&pageSize=%d' \
-                    % MAX_VMS
-        else:
-            query = 'fields=metadata:cse.cluster.id,' + \
-                    'metadata:cse.cluster.name,' + \
-                    'metadata:cse.node.type,' + \
-                    'metadata:cse.node.name&pageSize=%d' + \
-                    'filter=metadata:cse.cluster.id==STRING:%s' \
-                    % (MAX_VMS, cluster_name)
-        print(query)
+    def load_from_metadata(vca):
+        query = 'fields=metadata:cse.cluster.id,' + \
+                'metadata:cse.cluster.name,' + \
+                'metadata:cse.node.type,' + \
+                'metadata:cse.node.name&pageSize=%d' \
+                % MAX_VMS
         result = vca.query_by_metadata(query)
         nodes = dict()
         clusters = dict()
@@ -99,30 +88,40 @@ class Cluster(object):
                         if entry.get_TypedValue().get_Value() not in nodes:
                             cluster = Cluster(entry.get_TypedValue().
                                               get_Value())
+                            cluster.vdc = r.vdcName
                             clusters[cluster.name] = cluster
             for r in result.Record:
                 if r.get_Metadata() is None:
                     continue
                 for entry in r.get_Metadata().get_MetadataEntry():
                     if entry.get_Key() == 'cse.node.type':
-                        nodes[r.name].node_type = \
-                            entry.get_TypedValue().get_Value()
-                        nodes[r.name].href = r.href
+                        if r.name in nodes.keys():
+                            nodes[r.name].node_type = \
+                                entry.get_TypedValue().get_Value()
+                            nodes[r.name].href = r.href
                     elif entry.get_Key() == 'cse.cluster.id':
-                        nodes[r.name].cluster_id = \
-                            entry.get_TypedValue().get_Value()
+                        if r.name in nodes.keys():
+                            nodes[r.name].cluster_id = \
+                                entry.get_TypedValue().get_Value()
                     elif entry.get_Key() == 'cse.cluster.name':
-                        nodes[r.name].cluster_name = \
-                            entry.get_TypedValue().get_Value()
+                        if r.name in nodes.keys():
+                            nodes[r.name].cluster_name = \
+                                entry.get_TypedValue().get_Value()
 
         for key, value in nodes.items():
             if value.node_type == TYPE_MASTER:
-                clusters[value.cluster_name].cluster_id = node.cluster_id
+                clusters[value.cluster_name].cluster_id = value.cluster_id
                 clusters[value.cluster_name].master_nodes.append(value)
             elif value.node_type == TYPE_NODE:
-                clusters[value.cluster_name].nodes.append(value)
+                if value.cluster_name in clusters.keys():
+                    clusters[value.cluster_name].nodes.append(value)
 
-        return clusters.values()
+        cluster_list = []
+        for cluster in clusters.values():
+            if len(cluster.nodes) > 0 or len(cluster.master_nodes) > 0:
+                cluster_list.append(cluster)
+
+        return cluster_list
 
     def __repr__(self):
         return self.toJSON()
