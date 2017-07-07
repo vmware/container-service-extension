@@ -60,8 +60,8 @@ vcd:
 service:
     listeners: 2
     logging_level: 20
-    logging_format: '%(levelname) -8s %(asctime)s %(name) -8s %(funcName)\
--8s %(lineno) -5d: %(message)s'
+    logging_format: '%(levelname) -8s %(asctime)s %(name) -40s %(funcName)\
+-35s %(lineno) -5d: %(message)s'
     key_filename: 'id_rsa_cse'
     key_filename_pub: 'id_rsa_cse.pub'
     catalog: 'cse-catalog'
@@ -74,6 +74,13 @@ service:
     with open(file_name, 'w') as f:
         f.write(default_config)
     print('default config saved to file \'%s\'' % file_name)
+
+
+def bool_to_unicode(value):
+    if value:
+        return u'\u2714'
+    else:
+        return u'\u2718'
 
 
 def check_config(file_name):
@@ -92,7 +99,7 @@ def check_config(file_name):
                                                credentials)
         connection = pika.BlockingConnection(parameters)
         print('Connection to RabbitMQ (%s:%s): %s' % (rmq['host'], rmq['port'],
-              connection.is_open))
+              bool_to_unicode(connection.is_open)))
         connection.close()
         vca_system = VCA(host=config['vcd']['host'],
                          username=config['vcd']['username'],
@@ -106,12 +113,35 @@ def check_config(file_name):
                              org='System',
                              org_url=org_url)
         print('Connection to vCloud Director (%s:%s): %s' %
-              (config['vcd']['host'], config['vcd']['port'], r))
+              (config['vcd']['host'], config['vcd']['port'],
+               bool_to_unicode(r)))
         if r:
             r = vca_system.login(token=vca_system.token,
                                  org='System',
                                  org_url=vca_system.vcloud_session.org_url)
-            print('  login to \'System\' org: %s' % (r))
+            print('  login to \'System\' org: %s' % (bool_to_unicode(r)))
+            found_master = False
+            found_node = False
+            catalogs = vca_system.get_catalogs()
+            for catalog in catalogs:
+                if catalog.name == config['service']['catalog']:
+                    if catalog.CatalogItems and \
+                       catalog.CatalogItems.CatalogItem:
+                        for item in catalog.CatalogItems.CatalogItem:
+                            if item.name == \
+                               config['service']['template_master']:
+                                found_master = True
+                            if item.name == \
+                               config['service']['template_node']:
+                                found_node = True
+            print('  found master template (%s, %s): %s' %
+                  (config['service']['catalog'],
+                   config['service']['template_master'],
+                   bool_to_unicode(found_master)))
+            print('  found node template (%s, %s): %s' %
+                  (config['service']['catalog'],
+                   config['service']['template_node'],
+                   bool_to_unicode(found_node)))
     except:
         tb = traceback.format_exc()
         print('failed to validate configuration from file %s' % file_name)
@@ -121,7 +151,7 @@ def check_config(file_name):
 
 def signal_handler(signal, frame):
     print('\nCrtl+C detected, exiting')
-    sys.exit(0)
+    raise KeyboardInterrupt()
 
 
 def consumer_thread(c):
@@ -193,7 +223,10 @@ def main():
                                  rmq['host'],
                                  rmq['port']),
                                 rmq['exchange'],
-                                rmq['routing_key'])
+                                rmq['routing_key'],
+                                config,
+                                config['vcd']['verify'],
+                                config['vcd']['log'])
             t = Thread(target=consumer_thread, args=(c,))
             t.daemon = True
             t.start()
@@ -218,10 +251,9 @@ def main():
                 try:
                     c.stop()
                 except:
-                    print(traceback.format_exc())
-                    break
+                    pass
             LOGGER.info('done')
-            sys.exit(1)
+            break
         except:
             print(traceback.format_exc())
             sys.exit(1)

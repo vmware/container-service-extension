@@ -4,12 +4,12 @@
 
 import base64
 import json
+import jsonpickle
 import logging
 import pika
 from processor import ServiceProcessor
 import thread
 import traceback
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -17,7 +17,8 @@ LOGGER = logging.getLogger(__name__)
 class MessageConsumer(object):
     EXCHANGE_TYPE = 'direct'
 
-    def __init__(self, amqp_url, exchange, routing_key):
+    def __init__(self, amqp_url, exchange, routing_key,
+                 config, verify, log=False):
         self._connection = None
         self._channel = None
         self._closing = False
@@ -26,6 +27,9 @@ class MessageConsumer(object):
         self.exchange = exchange
         self.routing_key = routing_key
         self.queue = routing_key
+        self.config = config
+        self.verify = verify
+        self.log = log
 
     def connect(self):
         LOGGER.info('Connecting to %s', self._url)
@@ -34,12 +38,12 @@ class MessageConsumer(object):
                                      stop_ioloop_on_close=False)
 
     def on_connection_open(self, unused_connection):
-        LOGGER.info('Connection opened')
+        LOGGER.debug('Connection opened')
         self.add_on_connection_close_callback()
         self.open_channel()
 
     def add_on_connection_close_callback(self):
-        LOGGER.info('Adding connection close callback')
+        LOGGER.debug('Adding connection close callback')
         self._connection.add_on_close_callback(self.on_connection_closed)
 
     def on_connection_closed(self, connection, reply_code, reply_text):
@@ -48,7 +52,7 @@ class MessageConsumer(object):
             self._connection.ioloop.stop()
         else:
             LOGGER.warning('Connection closed, reopening in 5 seconds: '
-                                '(%s) %s', reply_code, reply_text)
+                           '(%s) %s', reply_code, reply_text)
             self._connection.add_timeout(5, self.reconnect)
 
     def reconnect(self):
@@ -59,77 +63,77 @@ class MessageConsumer(object):
             self._connection.ioloop.start()
 
     def open_channel(self):
-        LOGGER.info('Creating a new channel')
+        LOGGER.debug('Creating a new channel')
         self._connection.channel(on_open_callback=self.on_channel_open)
 
     def on_channel_open(self, channel):
-        LOGGER.info('Channel opened')
+        LOGGER.debug('Channel opened')
         self._channel = channel
         self.add_on_channel_close_callback()
         self.setup_exchange(self.exchange)
 
     def add_on_channel_close_callback(self):
-        LOGGER.info('Adding channel close callback')
+        LOGGER.debug('Adding channel close callback')
         self._channel.add_on_close_callback(self.on_channel_closed)
 
     def on_channel_closed(self, channel, reply_code, reply_text):
         LOGGER.warning('Channel %i was closed: (%s) %s',
-                            channel, reply_code, reply_text)
+                       channel, reply_code, reply_text)
         self._connection.close()
 
     def setup_exchange(self, exchange_name):
-        LOGGER.info('Declaring exchange %s', exchange_name)
+        LOGGER.debug('Declaring exchange %s', exchange_name)
         self._channel.exchange_declare(self.on_exchange_declareok,
                                        exchange=exchange_name,
                                        type=self.EXCHANGE_TYPE,
                                        durable=True)
 
     def on_exchange_declareok(self, unused_frame):
-        LOGGER.info('Exchange declared')
+        LOGGER.debug('Exchange declared')
         self.setup_queue(self.queue)
 
     def setup_queue(self, queue_name):
-        LOGGER.info('Declaring queue %s', queue_name)
+        LOGGER.debug('Declaring queue %s', queue_name)
         self._channel.queue_declare(self.on_queue_declareok, queue_name)
 
     def on_queue_declareok(self, method_frame):
-        LOGGER.info('Binding %s to %s with %s',
-                         self.exchange, self.queue, self.routing_key)
+        LOGGER.debug('Binding %s to %s with %s',
+                     self.exchange, self.queue, self.routing_key)
         self._channel.queue_bind(self.on_bindok, self.queue,
                                  self.exchange, self.routing_key)
 
     def on_bindok(self, unused_frame):
-        LOGGER.info('Queue bound')
+        LOGGER.debug('Queue bound')
         self.start_consuming()
 
     def start_consuming(self):
-        LOGGER.info('Issuing consumer related RPC commands')
+        LOGGER.debug('Issuing consumer related RPC commands')
         self.add_on_cancel_callback()
         self._consumer_tag = self._channel.basic_consume(self.on_message,
                                                          self.queue)
 
     def add_on_cancel_callback(self):
-        LOGGER.info('Adding consumer cancellation callback')
+        LOGGER.debug('Adding consumer cancellation callback')
         self._channel.add_on_cancel_callback(self.on_consumer_cancelled)
 
     def on_consumer_cancelled(self, method_frame):
-        LOGGER.info('Consumer was cancelled remotely, shutting down: %r',
-                         method_frame)
+        LOGGER.debug('Consumer was cancelled remotely, shutting down: %r',
+                     method_frame)
         if self._channel:
             self._channel.close()
 
     def on_message(self, unused_channel, basic_deliver, properties, body):
-        LOGGER.info('Received message # %s from %s (%s): %s',
-                         basic_deliver.delivery_tag,
-                         properties.app_id,
-                         thread.get_ident(),
-                         json.dumps(json.loads(body)[0]))
+        LOGGER.debug('Received message # %s from %s (%s): %s',
+                     basic_deliver.delivery_tag,
+                     properties.app_id,
+                     thread.get_ident(),
+                     json.dumps(json.loads(body)[0]))
         self.acknowledge_message(basic_deliver.delivery_tag)
         try:
-            sp = ServiceProcessor()
+            sp = ServiceProcessor(self.config, self.verify, self.log)
             body = json.loads(body)[0]
             result = sp.process_request(body)
-            reply_body = json.dumps(result['body'])
+            reply_body = jsonpickle.encode(result['body'])
             status_code = result['status_code']
         except:
             reply_body = '{}'
@@ -144,7 +148,7 @@ class MessageConsumer(object):
             'body': base64.b64encode(reply_body),
             'request': False
         }
-        LOGGER.info('reply: %s', json.dumps(reply_body))
+        LOGGER.debug('reply: %s', json.dumps(reply_body))
 
         reply_properties = pika.BasicProperties(
                                correlation_id=properties.correlation_id)
@@ -155,7 +159,7 @@ class MessageConsumer(object):
             properties=reply_properties)
 
     def acknowledge_message(self, delivery_tag):
-        LOGGER.info('Acknowledging message %s', delivery_tag)
+        LOGGER.debug('Acknowledging message %s', delivery_tag)
         self._channel.basic_ack(delivery_tag)
 
     def stop_consuming(self):
@@ -164,12 +168,12 @@ class MessageConsumer(object):
             self._channel.basic_cancel(self.on_cancelok, self._consumer_tag)
 
     def on_cancelok(self, unused_frame):
-        LOGGER.info('RabbitMQ acknowledged the cancellation'
-                         'of the consumer')
+        LOGGER.debug('RabbitMQ acknowledged the cancellation'
+                     'of the consumer')
         self.close_channel()
 
     def close_channel(self):
-        LOGGER.info('Closing the channel')
+        LOGGER.debug('Closing the channel')
         self._channel.close()
 
     def run(self):
