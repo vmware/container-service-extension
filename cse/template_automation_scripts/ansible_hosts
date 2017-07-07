@@ -1,0 +1,19 @@
+[kubernetes_cluster]
+master master_hostname=photon-master ansible_host=10.33.116.248
+node01 name=photon-node01 ansible_host=10.33.119.147
+node02 name=photon-node02 ansible_host=10.33.119.128
+node03 name=photon-node03 ansible_host=10.33.119.81
+node04 name=photon-node04 ansible_host=10.33.119.143
+
+[masters]
+master
+
+[nodes]
+node01
+node02
+node03
+node04
+
+[kubernetes_cluster:vars]
+master_hostname=photon-master
+master_ip=10.33.116.248
