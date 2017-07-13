@@ -1,0 +1,53 @@
+{
+  "variables": {
+    "product_name": "Photon",
+    "product_version": "1.0",
+    "disk_size": "4096",
+    "ssh_password": "{{env `PACKER_PASSWORD`}}",
+    "ssh_wait_timeout": "5m",
+    "shutdown_command": "shutdown -h now"
+  },
+  "builders": [
+    {
+      "type": "vmware-iso",
+      "name": "kubernetes",
+      "vm_name": "kubernetes",
+      "vmdk_name": "kubernetes",
+      "iso_url": "https://bintray.com/vmware/photon/download_file?file_path=photon-1.0-62c543d.iso",
+      "iso_checksum": "c4c6cb94c261b162e7dac60fdffa96ddb5836d66",
+      "iso_checksum_type": "sha1",
+      "guest_os_type": "other3xlinux-64",
+      "ssh_username": "root",
+      "ssh_password": "{{user `ssh_password`}}",
+      "disk_size": "{{user `disk_size`}}",
+      "headless": true,
+      "boot_wait": "5s",
+      "ssh_wait_timeout": "{{user `ssh_wait_timeout`}}",
+      "shutdown_command": "{{user `shutdown_command`}}",
+      "http_directory": ".",
+      "boot_command": [
+        "<enter><wait5>",
+        "<wait5><enter><enter><enter><wait5>",
+        "<enter><wait5>",
+        "<enter><wait5>",
+        "{{user `ssh_password`}}<enter><wait5>",
+        "{{user `ssh_password`}}<enter><wait5>",
+        "<wait10><wait10><wait10>",
+        "<enter>",
+        "<wait10><wait5>",
+        "root<enter><wait5>{{user `ssh_password`}}<enter><wait5>",
+        "sed -i -e 's/PermitRootLogin no/PermitRootLogin yes/g' /etc/ssh/sshd_config<enter>",
+        "<wait>",
+        "systemctl restart sshd.service<enter>",
+        "<wait5>"
+      ]
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "script": "provision.sh",
+       "only": ["kubernetes"]
+    }
+  ]
+}

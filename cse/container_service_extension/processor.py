@@ -82,7 +82,7 @@ def process_create_cluster_thread(cluster_id,
             for node in all_nodes:
                 status = prov.get_task_status(node.task_id)
                 success = success and status == 'success'
-                error = error and status != 'success' and status != 'running'
+                error = error or (status != 'success' and status != 'running')
                 LOGGER.debug('node: %s, task: %s' % (node.name, status))
                 time.sleep(1)
 
@@ -137,7 +137,7 @@ def process_delete_cluster_thread(cluster_id,
             for node in all_nodes:
                 status = prov.get_task_status(node.task_id)
                 success = success and status == 'success'
-                error = error and status != 'success' and status != 'running'
+                error = error or (status != 'success' and status != 'running')
                 LOGGER.debug('node: %s, task: %s' % (node.name, status))
                 time.sleep(1)
 

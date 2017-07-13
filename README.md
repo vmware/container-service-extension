@@ -30,9 +30,9 @@ Validate the configuration:
 ``` shell
 $ cse check config.yml
 
-Connection to RabbitMQ (rbmq.eng.vmware.com:5672): True
-Connection to vCloud Director (https://vcd.eng.vmware.com:443): True
-  login to 'System' org: True
+Connection to RabbitMQ (rmq.vmware.com:5672): ✔
+Connection to vCloud Director (vcd.vmware.com:443): ✔
+  login to 'System' org: ✔
 ```
 
 Start the service:

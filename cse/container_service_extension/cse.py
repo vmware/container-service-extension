@@ -41,7 +41,7 @@ Commands:
 def init(file_name='config.yml'):
     default_config = """
     rabbitmq:
-    host: vcd.eng.vmware.com
+    host: rmq.vmware.com
     port: 5672
     user: 'guest'
     password: 'guest'
@@ -49,11 +49,11 @@ def init(file_name='config.yml'):
     routing_key: cse
 
 vcd:
-    host: vcd.eng.vmware.com
+    host: vcd.vmware.com
     port: 443
     username: 'administrator'
     password: 'enter_your_password'
-    api_version: '5.7'
+    api_version: '5.6'
     verify: False
     log: True
 
@@ -65,8 +65,8 @@ service:
     key_filename: 'id_rsa_cse'
     key_filename_pub: 'id_rsa_cse.pub'
     catalog: 'cse-catalog'
-    template_master: 'kube-m.ova'
-    template_node: 'kube-n.ova'
+    template_master: 'kubernetes.ova'
+    template_node: 'kubernetes.ova'
     """
     if os.path.isfile(file_name):
         print('file %s already exist, aborting' % file_name)
