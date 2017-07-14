@@ -1,5 +1,5 @@
-rabbitmq:
-    host: rmq.vmware.com
+amqp:
+    host: amqp.vmware.com
     port: 5672
     user: 'guest'
     password: 'guest'

@@ -24,6 +24,12 @@ $ pip install --user container-service-extension
 $ cse init
 ```
 
+To install the development version, use:
+
+``` shell
+$ pip install --user git+https://github.com/vmware/container-service-extension.git#subdirectory=cse
+```
+
 Edit file `config.yml` and provide the values for your vCloud Director installation.
 
 Validate the configuration:
@@ -31,7 +37,7 @@ Validate the configuration:
 ``` shell
 $ cse check config.yml
 
-Connection to RabbitMQ (rmq.vmware.com:5672): ✔
+Connection to AMQP server (amqp.vmware.com:5672): ✔
 Connection to vCloud Director (vcd.vmware.com:443): ✔
   login to 'System' org: ✔
 ```

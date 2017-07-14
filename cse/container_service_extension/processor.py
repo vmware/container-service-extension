@@ -38,7 +38,8 @@ def process_create_cluster_thread(cluster_id,
     network_name = body['network']
 
     success = False
-    operation_description = 'creating cluster %s' % cluster_name
+    operation_description = 'creating cluster %s (%s)' % \
+        (cluster_name, cluster_id)
     LOGGER.debug(operation_description)
     try:
         adapter = VC_Adapter(vca_system, prov)
@@ -62,7 +63,7 @@ def process_create_cluster_thread(cluster_id,
                           task_id=task_id)
 
 
-def process_delete_cluster_thread(cluster_id,
+def process_delete_cluster_thread(details,
                                   body,
                                   prov,
                                   task,
@@ -70,8 +71,10 @@ def process_delete_cluster_thread(cluster_id,
                                   vca_system,
                                   config):
     success = False
-    cluster_name = cluster_id
-    operation_description = 'deleting cluster %s' % cluster_name
+    cluster_name = details['name']
+    cluster_id = details['cluster_id']
+    operation_description = 'deleting cluster %s (%s)' % \
+        (cluster_name, cluster_id)
     LOGGER.debug(operation_description)
     try:
         adapter = VC_Adapter(vca_system, prov)
@@ -81,8 +84,8 @@ def process_delete_cluster_thread(cluster_id,
         raise Exception('not implemented')
     except Exception as e:
         success = False
-        operation_description = 'failed to delete cluster %s: %s' % \
-            (cluster_id, str(e).replace('"', ''))
+        operation_description = 'failed to delete cluster %s (%s): %s' % \
+            (cluster_name, cluster_id, str(e).replace('"', ''))
         LOGGER.error(traceback.format_exc())
 
     status = 'success' if success else 'error'
@@ -111,8 +114,8 @@ class ServiceProcessor(object):
         requestUri = body['requestUri']
         request_version = request_headers['Accept'].split('version=')[-1]
         tokens = requestUri.split('/')
-        cluster_id = None
         cluster_op = None
+        cluster_id = None
         if len(tokens) > 3:
             cluster_id = tokens[3]
             if cluster_id == '':
@@ -169,8 +172,15 @@ class ServiceProcessor(object):
         cluster_name = body['name']
         node_count = body['node_count']
         LOGGER.debug('about to create cluster with %s nodes', node_count)
+        result['body'] = 'can''t create cluster'
         result['status_code'] = INTERNAL_SERVER_ERROR
         if prov.connect():
+            if not prov.validate_name(cluster_name):
+                result['body'] = {'message': 'name is not valid'}
+                return result
+            if prov.search_by_name(cluster_name)['cluster_id'] is not None:
+                result['body'] = {'message': 'cluster already exists'}
+                return result
             vca_system = VCA(host=self.config['vcd']['host'],
                              username=self.config['vcd']['username'],
                              service_type='standalone',
@@ -193,7 +203,8 @@ class ServiceProcessor(object):
                         verify=self.config['vcd']['verify'],
                         log=self.config['vcd']['log'])
             cluster_id = str(uuid.uuid4())
-            operation_description = 'creating cluster %s' % cluster_name
+            operation_description = 'creating cluster %s (%s)' % \
+                (cluster_name, cluster_id)
             LOGGER.info(operation_description)
             status = 'running'
             t = create_or_update_task(task,
@@ -205,8 +216,8 @@ class ServiceProcessor(object):
             if t is None:
                 return result
             response_body = {}
-            response_body['id'] = cluster_id
             response_body['name'] = cluster_name
+            response_body['cluster_id'] = cluster_id
             response_body['task_id'] = t.get_id().split(':')[-1]
             response_body['status'] = status
             response_body['progress'] = None
@@ -225,9 +236,14 @@ class ServiceProcessor(object):
     def delete_cluster(self, body, prov, cluster_id):
         result = {}
         result['body'] = {}
-        LOGGER.debug('about to delete cluster with id=%s', cluster_id)
+        LOGGER.debug('about to delete cluster with id: %s', cluster_id)
         result['status_code'] = INTERNAL_SERVER_ERROR
         if prov.connect():
+            details = prov.search_by_id(cluster_id)
+            if details['name'] is None:
+                result['body'] = {'message': 'cluster not found'}
+                return result
+            cluster_name = details['cluster']
             vca_system = VCA(host=self.config['vcd']['host'],
                              username=self.config['vcd']['username'],
                              service_type='standalone',
@@ -249,8 +265,8 @@ class ServiceProcessor(object):
             task = Task(session=vca_system.vcloud_session,
                         verify=self.config['vcd']['verify'],
                         log=self.config['vcd']['log'])
-            cluster_name = cluster_id
-            operation_description = 'deleting cluster %s' % cluster_id
+            operation_description = 'deleting cluster %s (%s)' % \
+                (cluster_name, cluster_id)
             LOGGER.info(operation_description)
             status = 'running'
             t = create_or_update_task(task,
@@ -262,7 +278,8 @@ class ServiceProcessor(object):
             if t is None:
                 return result
             response_body = {}
-            response_body['id'] = cluster_id
+            response_body['name'] = cluster_name
+            response_body['cluster_id'] = cluster_id
             response_body['task_id'] = t.get_id().split(':')[-1]
             response_body['status'] = status
             response_body['progress'] = None
@@ -270,7 +287,7 @@ class ServiceProcessor(object):
             result['status_code'] = ACCEPTED
 
             t = Thread(target=process_delete_cluster_thread,
-                       args=(cluster_id, body, prov, task,
+                       args=(details, body, prov, task,
                              response_body['task_id'], vca_system,
                              self.config, ))
             t.daemon = True

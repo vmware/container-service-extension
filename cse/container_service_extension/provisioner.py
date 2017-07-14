@@ -64,3 +64,30 @@ class Provisioner(object):
             return t.get_status()
         except:
             return 'unknown'
+
+    def validate_name(self, name):
+        """
+        Validates that the cluster name against the pattern.
+        """
+
+        pattern = '^[a-zA-Z](([-0-9a-zA-Z]+)?[0-9a-zA-Z])?(\.[a-zA-Z](([-0-9a-zA-Z]+)?[0-9a-zA-Z])?)*$'
+
+        return True
+
+    def search_by_name(self, name):
+        """
+        check that the cluster name exists in the current VDC.
+        It exists, it returns the cluster id
+        """
+        result = {'name': name, 'cluster_id': None}
+
+        return result
+
+    def search_by_id(self, cluster_id):
+        """
+        check that the cluster with cluster_id exists in the current VDC.
+        It exists, it returns the cluster name and details.
+        """
+        result = {'name': None, 'cluster_id': cluster_id}
+
+        return result

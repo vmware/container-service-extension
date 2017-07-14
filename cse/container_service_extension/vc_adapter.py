@@ -12,7 +12,7 @@ class VC_Adapter(object):
     def get_list_params(self):
         """
         Translates the input parameters identifying a list cluster operation in
-        vCD/CSE to the input parameters required by KoV to list a cluster.
+        vCD/CSE to the input parameters required by KoV to list clusters.
         It uses self.vca_system and self.prov to introspect vCD.
 
         :return: (result)
@@ -27,6 +27,7 @@ class VC_Adapter(object):
         Translates the input parameters identifying a cluster in vCD to
         the input parameters required by KoV to create a cluster.
         It uses self.vca_system and self.prov to introspect vCD.
+        The result should also include the vCenter information.
 
         :return: (result)
         """
@@ -48,6 +49,7 @@ class VC_Adapter(object):
         Translates the input parameters identifying a cluster in vCD to
         the input parameters required by KoV to delete a cluster.
         It uses self.vca_system and self.prov to introspect vCD.
+        The result should also include the vCenter information.
 
         :return: (result)
         """

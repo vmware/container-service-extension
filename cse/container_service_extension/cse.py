@@ -32,7 +32,7 @@ Commands:
   help                  Prints this messages
   version               Shows version
   init [config.yml]     Creates config.yml file with default values
-  check <config.yml>    Checks configuration in config.yml (RabbitMQ and vCD)
+  check <config.yml>    Checks configuration in config.yml (AMQP and vCD)
   run <config.yml>      Run cse with options from config.yml
 """)
     sys.exit(0)
@@ -40,8 +40,8 @@ Commands:
 
 def init(file_name='config.yml'):
     default_config = """
-    rabbitmq:
-    host: rmq.vmware.com
+amqp:
+    host: amqp.vmware.com
     port: 5672
     user: 'guest'
     password: 'guest'
@@ -89,13 +89,13 @@ def check_config(file_name):
         print('config file \'%s\' not found or invalid' % file_name)
         sys.exit(1)
     try:
-        rmq = config['rabbitmq']
-        credentials = pika.PlainCredentials(rmq['user'], rmq['password'])
-        parameters = pika.ConnectionParameters(rmq['host'], rmq['port'],
+        amqp = config['amqp']
+        credentials = pika.PlainCredentials(amqp['user'], amqp['password'])
+        parameters = pika.ConnectionParameters(amqp['host'], amqp['port'],
                                                '/',
                                                credentials)
         connection = pika.BlockingConnection(parameters)
-        print('Connection to RabbitMQ (%s:%s): %s' % (rmq['host'], rmq['port'],
+        print('Connection to AMQP server (%s:%s): %s' % (amqp['host'], amqp['port'],
               bool_to_unicode(connection.is_open)))
         connection.close()
         vca_system = VCA(host=config['vcd']['host'],
@@ -185,7 +185,7 @@ def main():
     LOGGER.info('Container Service Extension for vCloud Director')
     LOGGER.info('waiting for requests...')
 
-    rmq = config['rabbitmq']
+    amqp = config['amqp']
     num_consumers = config['service']['listeners']
     consumers = []
     threads = []
@@ -193,12 +193,12 @@ def main():
     for n in range(num_consumers):
         try:
             c = MessageConsumer('amqp://%s:%s@%s:%s/' %
-                                (rmq['user'],
-                                 rmq['password'],
-                                 rmq['host'],
-                                 rmq['port']),
-                                rmq['exchange'],
-                                rmq['routing_key'],
+                                (amqp['user'],
+                                 amqp['password'],
+                                 amqp['host'],
+                                 amqp['port']),
+                                amqp['exchange'],
+                                amqp['routing_key'],
                                 config,
                                 config['vcd']['verify'],
                                 config['vcd']['log'])
