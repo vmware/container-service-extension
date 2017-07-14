@@ -24,10 +24,18 @@ $ pip install --user container-service-extension
 $ cse init
 ```
 
-To install the development version, use:
+To install the development version, use the following commands:
 
 ``` shell
+$ pip install --user git+https://github.com/vmware/pyvcloud.git@cse
 $ pip install --user git+https://github.com/vmware/container-service-extension.git#subdirectory=cse
+```
+
+To use the **container-service-extension** as a vCD user, install `vca-cli`:
+
+``` shell
+$ pip install --user git+https://github.com/vmware/pyvcloud.git@cse
+$ pip install --user git+https://github.com/vmware/vca-cli.git@cse
 ```
 
 Edit file `config.yml` and provide the values for your vCloud Director installation.
