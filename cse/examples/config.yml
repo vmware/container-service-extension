@@ -21,6 +21,3 @@ service:
     logging_format: '%(levelname) -8s %(asctime)s %(name) -8s %(funcName) -8s %(lineno) -5d: %(message)s'
     key_filename: 'id_rsa_cse'
     key_filename_pub: 'id_rsa_cse.pub'
-    catalog: 'cse-catalog'
-    template_master: 'kubernetes.ova'
-    template_node: 'kubernetes.ova'

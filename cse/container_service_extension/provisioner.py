@@ -56,25 +56,6 @@ class Provisioner(object):
                      self.vcloud_token))
         return True
 
-    def create_vm(self, catalog, template, vdc, vm_name,
-                  network, public_key, node_type):
-        t = self.vca_tenant.create_vapp(vdc, vm_name,
-                                        template, catalog, vm_name=vm_name)
-        href = t.get_Owner().get_href()
-        task_id = t.get_id().split(':')[-1]
-        return(task_id, href)
-
-    def delete_vm(self, vdc_name, vapp_name):
-        t = self.vca_tenant.delete_vapp(vdc_name, vapp_name)
-        task_id = t.get_id().split(':')[-1]
-        return task_id
-
-    def run_guest_command(self):
-        pass
-
-    def reboot_guest(self, wait_for_prompt=True):
-        pass
-
     def get_task_status(self, task_id):
         try:
             task = Task(session=self.vca_tenant.vcloud_session,

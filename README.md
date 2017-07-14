@@ -23,6 +23,7 @@ $ pip install --user container-service-extension
 
 $ cse init
 ```
+
 Edit file `config.yml` and provide the values for your vCloud Director installation.
 
 Validate the configuration:
@@ -49,6 +50,7 @@ $ cd container-service-extension
 $ python setup.py develop
 $ cse init
 ```
+
 edit config.yml
 
 ``` shell

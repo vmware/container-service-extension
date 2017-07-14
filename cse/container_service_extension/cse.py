@@ -64,9 +64,6 @@ service:
 -35s %(lineno) -5d: %(message)s'
     key_filename: 'id_rsa_cse'
     key_filename_pub: 'id_rsa_cse.pub'
-    catalog: 'cse-catalog'
-    template_master: 'kubernetes.ova'
-    template_node: 'kubernetes.ova'
     """
     if os.path.isfile(file_name):
         print('file %s already exist, aborting' % file_name)
@@ -120,28 +117,6 @@ def check_config(file_name):
                                  org='System',
                                  org_url=vca_system.vcloud_session.org_url)
             print('  login to \'System\' org: %s' % (bool_to_unicode(r)))
-            found_master = False
-            found_node = False
-            catalogs = vca_system.get_catalogs()
-            for catalog in catalogs:
-                if catalog.name == config['service']['catalog']:
-                    if catalog.CatalogItems and \
-                       catalog.CatalogItems.CatalogItem:
-                        for item in catalog.CatalogItems.CatalogItem:
-                            if item.name == \
-                               config['service']['template_master']:
-                                found_master = True
-                            if item.name == \
-                               config['service']['template_node']:
-                                found_node = True
-            print('  found master template (%s, %s): %s' %
-                  (config['service']['catalog'],
-                   config['service']['template_master'],
-                   bool_to_unicode(found_master)))
-            print('  found node template (%s, %s): %s' %
-                  (config['service']['catalog'],
-                   config['service']['template_node'],
-                   bool_to_unicode(found_node)))
     except:
         tb = traceback.format_exc()
         print('failed to validate configuration from file %s' % file_name)

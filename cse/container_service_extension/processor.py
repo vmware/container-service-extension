@@ -15,6 +15,7 @@ from threading import Thread
 import time
 import traceback
 import uuid
+from vc_adapter import VC_Adapter
 
 LOGGER = logging.getLogger(__name__)
 
@@ -36,64 +37,20 @@ def process_create_cluster_thread(cluster_id,
     vdc_name = body['vdc']
     network_name = body['network']
 
-    cluster = Cluster(cluster_name, cluster_id)
-    master = Node('%s-m-%02d' % (cluster_name, 1), node_type='master')
-    cluster.master_nodes = [master]
-    cluster.nodes = []
-
-    for n in range(node_count):
-        node = Node('%s-%02d' % (cluster_name, n+1))
-        cluster.nodes.append(node)
-
     success = False
+    operation_description = 'creating cluster %s' % cluster_name
+    LOGGER.debug(operation_description)
     try:
-        all_nodes = cluster.master_nodes + cluster.nodes
-        for node in all_nodes:
-            status = 'running'
-            operation_description = 'creating cluster %s' % \
-                                    (cluster_name)
-            create_or_update_task(task,
-                                  operation_description,
-                                  cluster_name,
-                                  cluster_id,
-                                  status,
-                                  prov,
-                                  task_id=task_id)
-            vm = node.name
-            if node.node_type == 'master':
-                template = 'template_master'
-            else:
-                template = 'template_node'
-            node.task_id, node.href = prov.create_vm(
-                    config['service']['catalog'],
-                    config['service'][template],
-                    vdc_name,
-                    vm,
-                    network_name,
-                    None,
-                    node.node_type)
-        success = False
-        error = False
-        while not success and not error:
-            if len(all_nodes) == 0:
-                raise Exception('no nodes were created')
-            success = True
-            error = False
-            for node in all_nodes:
-                status = prov.get_task_status(node.task_id)
-                success = success and status == 'success'
-                error = error or (status != 'success' and status != 'running')
-                LOGGER.debug('node: %s, task: %s' % (node.name, status))
-                time.sleep(1)
+        adapter = VC_Adapter(vca_system, prov)
+        kov_input = adapter.get_create_params(body)
 
-        operation_description = 'created cluster %s' % cluster_name
+        time.sleep(5)
+        raise Exception('not implemented')
     except Exception as e:
         success = False
         operation_description = 'failed to create cluster %s: %s' % \
             (cluster_name, str(e).replace('"', ''))
         LOGGER.error(traceback.format_exc())
-
-    cluster.update_vm_tags(vca_system)
 
     status = 'success' if success else 'error'
     create_or_update_task(task,
@@ -112,36 +69,16 @@ def process_delete_cluster_thread(cluster_id,
                                   task_id,
                                   vca_system,
                                   config):
-    clusters = Cluster.load_from_metadata(prov.vca_tenant)
     success = False
-    operation_description = 'deleting cluster %s' % cluster_id
     cluster_name = cluster_id
+    operation_description = 'deleting cluster %s' % cluster_name
     LOGGER.debug(operation_description)
     try:
-        all_nodes = []
-        for cluster in clusters:
-            if cluster.cluster_id == cluster_id:
-                all_nodes = cluster.master_nodes + cluster.nodes
-                for node in all_nodes:
-                    LOGGER.debug('deleting vm %s %s (%s)',
-                                 node.name, node.node_type, cluster.vdc)
-                    node.task_id = prov.delete_vm(cluster.vdc, node.name)
-        success = False
-        error = False
-        while not success and not error:
-            if len(all_nodes) == 0:
-                raise Exception(
-                    'cluster does not exist or does not have any nodes')
-            success = True
-            error = False
-            for node in all_nodes:
-                status = prov.get_task_status(node.task_id)
-                success = success and status == 'success'
-                error = error or (status != 'success' and status != 'running')
-                LOGGER.debug('node: %s, task: %s' % (node.name, status))
-                time.sleep(1)
+        adapter = VC_Adapter(vca_system, prov)
+        kov_input = adapter.get_delete_params(body)
 
-        operation_description = 'deleted cluster %s' % cluster_name
+        time.sleep(5)
+        raise Exception('not implemented')
     except Exception as e:
         success = False
         operation_description = 'failed to delete cluster %s: %s' % \
@@ -222,7 +159,7 @@ class ServiceProcessor(object):
 
     def list_clusters(self, prov):
         result = {}
-        result['body'] = Cluster.load_from_metadata(prov.vca_tenant)
+        result['body'] = []
         result['status_code'] = OK
         return result
 
