@@ -1,4 +1,7 @@
 jsonpickle
 pika >= 0.10.0
-pyvcloud >= 18.0.2
 pyyaml
+bravado
+requests
+git+https://github.com/vmware/pyvcloud.git#egg=pyvcloud
+git+https://github.com/vmware/vca-cli.git#egg=vca_cli

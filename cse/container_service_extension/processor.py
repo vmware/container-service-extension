@@ -5,12 +5,16 @@
 import base64
 from cluster import Cluster
 from cluster import Node
+from cluster import TYPE_MASTER
+from cluster import TYPE_NODE
+from cove_client import CoveClient
 import json
 import logging
 from provisioner import Provisioner
 from pyvcloud.vcloudair import VCA
 from pyvcloud.task import Task
 from task import create_or_update_task
+from task import update_task_thread
 from threading import Thread
 import time
 import traceback
@@ -25,83 +29,11 @@ ACCEPTED = 202
 INTERNAL_SERVER_ERROR = 500
 
 
-def process_create_cluster_thread(cluster_id,
-                                  body,
-                                  prov,
-                                  task,
-                                  task_id,
-                                  vca_system,
-                                  config):
-    cluster_name = body['name']
-    node_count = body['node_count']
-    vdc_name = body['vdc']
-    network_name = body['network']
-
-    success = False
-    operation_description = 'creating cluster %s (%s)' % \
-        (cluster_name, cluster_id)
-    LOGGER.debug(operation_description)
-    try:
-        adapter = VC_Adapter(vca_system, prov)
-        kov_input = adapter.get_create_params(body)
-
-        time.sleep(5)
-        raise Exception('not implemented')
-    except Exception as e:
-        success = False
-        operation_description = 'failed to create cluster %s: %s' % \
-            (cluster_name, str(e).replace('"', ''))
-        LOGGER.error(traceback.format_exc())
-
-    status = 'success' if success else 'error'
-    create_or_update_task(task,
-                          operation_description,
-                          cluster_name,
-                          cluster_id,
-                          status,
-                          prov,
-                          task_id=task_id)
-
-
-def process_delete_cluster_thread(details,
-                                  body,
-                                  prov,
-                                  task,
-                                  task_id,
-                                  vca_system,
-                                  config):
-    success = False
-    cluster_name = details['name']
-    cluster_id = details['cluster_id']
-    operation_description = 'deleting cluster %s (%s)' % \
-        (cluster_name, cluster_id)
-    LOGGER.debug(operation_description)
-    try:
-        adapter = VC_Adapter(vca_system, prov)
-        kov_input = adapter.get_delete_params(body)
-
-        time.sleep(5)
-        raise Exception('not implemented')
-    except Exception as e:
-        success = False
-        operation_description = 'failed to delete cluster %s (%s): %s' % \
-            (cluster_name, cluster_id, str(e).replace('"', ''))
-        LOGGER.error(traceback.format_exc())
-
-    status = 'success' if success else 'error'
-    create_or_update_task(task,
-                          operation_description,
-                          cluster_name,
-                          cluster_id,
-                          status,
-                          prov,
-                          task_id=task_id)
-
-
 class ServiceProcessor(object):
 
-    def __init__(self, config, verify, log):
+    def __init__(self, config, cove, verify, log):
         self.config = config
+        self.cove = cove
         self.verify = verify
         self.log = log
 
@@ -138,20 +70,25 @@ class ServiceProcessor(object):
             assert(r)
             request_username = prov.vca_tenant.vcloud_session.username
             request_org_id = prov.vca_tenant.vcloud_session.org_id
+            vca_system = Provisioner.get_system_session(self.config)
+            vc_adapter = VC_Adapter(self.config, vca_system, prov)
         except:
             prov = None
             request_username = None
             request_org_id = None
-            tb = traceback.format_exc()
-            LOGGER.error(tb)
+            vca_system = None
+            vc_adapter = None
+            LOGGER.error(traceback.format_exc())
         if body['method'] == 'GET':
             if cluster_id is None:
-                reply = self.list_clusters(prov)
+                reply = self.list_clusters(prov, vca_system, vc_adapter)
         elif body['method'] == 'POST':
             if cluster_id is None:
-                reply = self.create_cluster(request_body, prov)
+                reply = self.create_cluster(request_body, prov,
+                                            vca_system, vc_adapter)
         elif body['method'] == 'DELETE':
-            reply = self.delete_cluster(request_body, prov, cluster_id)
+            reply = self.delete_cluster(request_body, prov,
+                                        vca_system, vc_adapter, cluster_id)
         LOGGER.debug('---\nid=%s\nmethod=%s\nuser=%s\norg_id=%s\n'
                      'vcloud_token=%s\ncluster_id=%s\ncluster_op=%s' %
                      (body['id'], body['method'], request_username,
@@ -160,13 +97,35 @@ class ServiceProcessor(object):
         LOGGER.debug('request:\n%s' % json.dumps(request_body))
         return reply
 
-    def list_clusters(self, prov):
+    def list_clusters(self, prov, vca_system, vc_adapter):
         result = {}
-        result['body'] = []
-        result['status_code'] = OK
+        clusters = []
+        try:
+            cluster_list = self.cove.get_clusters(vc_adapter.get_list_params())
+            for cluster in cluster_list:
+                c = Cluster('')
+                c.cluster_id = cluster.name
+                if cluster.numMasters:
+                    for n in range(cluster.numMasters):
+                        node = Node('', TYPE_MASTER)
+                        c.master_nodes.append(node)
+                if cluster.numWorkers:
+                    for n in range(cluster.numWorkers):
+                        node = Node('')
+                        c.nodes.append(node)
+                c.status = cluster.status
+                c.leader_endpoint = cluster.leaderEndpoint
+                clusters.append(c)
+            result['body'] = clusters
+            result['status_code'] = OK
+        except Exception as e:
+            LOGGER.error(traceback.format_exc())
+            result['body'] = []
+            result['status_code'] = INTERNAL_SERVER_ERROR
+            result['message'] = traceback.format_exc()
         return result
 
-    def create_cluster(self, body, prov):
+    def create_cluster(self, body, prov, vca_system, vc_adapter):
         result = {}
         result['body'] = {}
         cluster_name = body['name']
@@ -174,123 +133,122 @@ class ServiceProcessor(object):
         LOGGER.debug('about to create cluster with %s nodes', node_count)
         result['body'] = 'can''t create cluster'
         result['status_code'] = INTERNAL_SERVER_ERROR
-        if prov.connect():
-            if not prov.validate_name(cluster_name):
-                result['body'] = {'message': 'name is not valid'}
-                return result
-            if prov.search_by_name(cluster_name)['cluster_id'] is not None:
-                result['body'] = {'message': 'cluster already exists'}
-                return result
-            vca_system = VCA(host=self.config['vcd']['host'],
-                             username=self.config['vcd']['username'],
-                             service_type='standalone',
-                             version=self.config['vcd']['api_version'],
-                             verify=self.config['vcd']['verify'],
-                             log=self.config['vcd']['log'])
-
-            org_url = 'https://%s/cloud' % self.config['vcd']['host']
-            r = vca_system.login(password=self.config['vcd']['password'],
-                                 org='System',
-                                 org_url=org_url)
-            if not r:
-                return result
-            r = vca_system.login(token=vca_system.token,
-                                 org='System',
-                                 org_url=vca_system.vcloud_session.org_url)
-            if not r:
-                return result
-            task = Task(session=vca_system.vcloud_session,
-                        verify=self.config['vcd']['verify'],
-                        log=self.config['vcd']['log'])
-            cluster_id = str(uuid.uuid4())
-            operation_description = 'creating cluster %s (%s)' % \
-                (cluster_name, cluster_id)
-            LOGGER.info(operation_description)
-            status = 'running'
-            t = create_or_update_task(task,
-                                      operation_description,
-                                      cluster_name,
-                                      cluster_id,
-                                      status,
-                                      prov)
-            if t is None:
-                return result
-            response_body = {}
-            response_body['name'] = cluster_name
-            response_body['cluster_id'] = cluster_id
-            response_body['task_id'] = t.get_id().split(':')[-1]
-            response_body['status'] = status
-            response_body['progress'] = None
-            result['body'] = response_body
-            result['status_code'] = ACCEPTED
-
-            t = Thread(target=process_create_cluster_thread,
-                       args=(cluster_id, body, prov, task,
-                             response_body['task_id'], vca_system,
-                             self.config, ))
-            t.daemon = True
-            t.start()
-
+        if not prov.validate_name(cluster_name):
+            result['body'] = {'message': 'name is not valid'}
+            return result
+        if prov.search_by_name(cluster_name)['cluster_id'] is not None:
+            result['body'] = {'message': 'cluster already exists'}
+            return result
+        cluster_id = str(uuid.uuid4())
+        create_params = vc_adapter.get_create_params(body, cluster_id)
+        try:
+            cove_task_id = self.cove.create_cluster(create_params[0],
+                                                    create_params[1])
+        except Exception as e:
+            result['body'] = 'can''t create cluster on Cove'
+            LOGGER.error(traceback.format_exc())
+            return result
+        #TODO: update VDC metadata with cluster_id/name
+        task = Task(session=vca_system.vcloud_session,
+                    verify=self.config['vcd']['verify'],
+                    log=self.config['vcd']['log'])
+        operation_description = 'creating cluster %s (%s)' % \
+            (cluster_name, cluster_id)
+        LOGGER.info(operation_description)
+        status = 'running'
+        details = '{"name": "%s", "cove_task_id": "%s"}' % \
+                  (cluster_name, cove_task_id)
+        t = create_or_update_task(task,
+                                  operation_description,
+                                  cluster_name,
+                                  cluster_id,
+                                  status,
+                                  details,
+                                  prov)
+        if t is None:
+            return result
+        response_body = {}
+        response_body['name'] = cluster_name
+        response_body['cluster_id'] = cluster_id
+        response_body['task_id'] = t.get_id().split(':')[-1]
+        response_body['status'] = status
+        response_body['progress'] = None
+        result['body'] = response_body
+        result['status_code'] = ACCEPTED
+        t = Thread(target=update_task_thread,
+                   args=(task,
+                         operation_description,
+                         cluster_name,
+                         cluster_id,
+                         status,
+                         details,
+                         prov,
+                         self.cove,
+                         response_body['task_id'],
+                        )
+                  )
+        t.daemon = True
+        t.start()
         return result
 
-    def delete_cluster(self, body, prov, cluster_id):
+    def delete_cluster(self, body, prov, vca_system, vc_adapter, cluster_id):
         result = {}
         result['body'] = {}
         LOGGER.debug('about to delete cluster with id: %s', cluster_id)
         result['status_code'] = INTERNAL_SERVER_ERROR
-        if prov.connect():
-            details = prov.search_by_id(cluster_id)
-            if details['name'] is None:
-                result['body'] = {'message': 'cluster not found'}
-                return result
-            cluster_name = details['cluster']
-            vca_system = VCA(host=self.config['vcd']['host'],
-                             username=self.config['vcd']['username'],
-                             service_type='standalone',
-                             version=self.config['vcd']['api_version'],
-                             verify=self.config['vcd']['verify'],
-                             log=self.config['vcd']['log'])
+        details = prov.search_by_id(cluster_id)
+        if details['name'] is None:
+            result['body'] = {'message': 'cluster not found'}
+            return result
+        cluster_name = details['name']
+        delete_params = vc_adapter.get_delete_params(body, cluster_id)
+        try:
+            cove_task_id = self.cove.delete_cluster(delete_params[0],
+                                                    delete_params[1])
+        except Exception as e:
+            result['body'] = 'can''t delete cluster on Cove'
+            LOGGER.error(traceback.format_exc())
+            return result
+        #TODO: delete VDC metadata related to the cluster_id/name
+        task = Task(session=vca_system.vcloud_session,
+                    verify=self.config['vcd']['verify'],
+                    log=self.config['vcd']['log'])
+        operation_description = 'deleting cluster %s (%s)' % \
+            (cluster_name, cluster_id)
+        LOGGER.info(operation_description)
+        status = 'running'
+        details = '{"name": "%s", "cove_task_id": "%s"}' % \
+                  (cluster_name, cove_task_id)
+        t = create_or_update_task(task,
+                                  operation_description,
+                                  cluster_name,
+                                  cluster_id,
+                                  status,
+                                  details,
+                                  prov)
+        if t is None:
+            return result
+        response_body = {}
+        response_body['name'] = cluster_name
+        response_body['cluster_id'] = cluster_id
+        response_body['task_id'] = t.get_id().split(':')[-1]
+        response_body['status'] = status
+        response_body['progress'] = None
+        result['body'] = response_body
+        result['status_code'] = ACCEPTED
 
-            org_url = 'https://%s/cloud' % self.config['vcd']['host']
-            r = vca_system.login(password=self.config['vcd']['password'],
-                                 org='System',
-                                 org_url=org_url)
-            if not r:
-                return result
-            r = vca_system.login(token=vca_system.token,
-                                 org='System',
-                                 org_url=vca_system.vcloud_session.org_url)
-            if not r:
-                return result
-            task = Task(session=vca_system.vcloud_session,
-                        verify=self.config['vcd']['verify'],
-                        log=self.config['vcd']['log'])
-            operation_description = 'deleting cluster %s (%s)' % \
-                (cluster_name, cluster_id)
-            LOGGER.info(operation_description)
-            status = 'running'
-            t = create_or_update_task(task,
-                                      operation_description,
-                                      cluster_name,
-                                      cluster_id,
-                                      status,
-                                      prov)
-            if t is None:
-                return result
-            response_body = {}
-            response_body['name'] = cluster_name
-            response_body['cluster_id'] = cluster_id
-            response_body['task_id'] = t.get_id().split(':')[-1]
-            response_body['status'] = status
-            response_body['progress'] = None
-            result['body'] = response_body
-            result['status_code'] = ACCEPTED
-
-            t = Thread(target=process_delete_cluster_thread,
-                       args=(details, body, prov, task,
-                             response_body['task_id'], vca_system,
-                             self.config, ))
-            t.daemon = True
-            t.start()
-
+        t = Thread(target=update_task_thread,
+                   args=(task,
+                         operation_description,
+                         cluster_name,
+                         cluster_id,
+                         status,
+                         details,
+                         prov,
+                         self.cove,
+                         response_body['task_id'],
+                        )
+                  )
+        t.daemon = True
+        t.start()
         return result

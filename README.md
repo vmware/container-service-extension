@@ -16,7 +16,7 @@ The **container-service-extension** is a Python package and requires Python 2.7.
 
 ### Install & Run
 
-Installation:
+#### Installation:
 
 ``` shell
 $ pip install --user container-service-extension
@@ -24,19 +24,23 @@ $ pip install --user container-service-extension
 $ cse init
 ```
 
-To install the development version, use the following commands:
+To install the development version:
 
 ``` shell
 $ pip install --user git+https://github.com/vmware/pyvcloud.git@cse
 $ pip install --user git+https://github.com/vmware/container-service-extension.git#subdirectory=cse
 ```
 
-To use the **container-service-extension** as a vCD user, install `vca-cli`:
+To use the **container-service-extension** as a vCloud Director user, install `vca-cli`:
 
 ``` shell
 $ pip install --user git+https://github.com/vmware/pyvcloud.git@cse
 $ pip install --user git+https://github.com/vmware/vca-cli.git@cse
 ```
+
+More information about `vca-cli` commands can be found in the [wiki](https://github.com/vmware/vca-cli/wiki/CSE).
+
+#### Configuration
 
 Edit file `config.yml` and provide the values for your vCloud Director installation.
 
@@ -45,9 +49,9 @@ Validate the configuration:
 ``` shell
 $ cse check config.yml
 
-Connection to AMQP server (amqp.vmware.com:5672): ✔
-Connection to vCloud Director (vcd.vmware.com:443): ✔
-  login to 'System' org: ✔
+Connection to AMQP server (amqp.vmware.com:5672): success
+Connection to vCloud Director (vcd.vmware.com:443): success
+  login to 'System' org: success
 ```
 
 Start the service:

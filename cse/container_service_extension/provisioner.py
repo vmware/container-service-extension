@@ -88,6 +88,29 @@ class Provisioner(object):
         check that the cluster with cluster_id exists in the current VDC.
         It exists, it returns the cluster name and details.
         """
-        result = {'name': None, 'cluster_id': cluster_id}
+        # result = {'name': None, 'cluster_id': cluster_id}
+        result = {'name': cluster_id.split('-')[0], 'cluster_id': cluster_id}
 
         return result
+
+    @staticmethod
+    def get_system_session(config):
+        vca_system = VCA(host=config['vcd']['host'],
+                         username=config['vcd']['username'],
+                         service_type='vcd',
+                         version=config['vcd']['api_version'],
+                         verify=config['vcd']['verify'],
+                         log=config['vcd']['log'])
+
+        org_url = 'https://%s/cloud' % config['vcd']['host']
+        r = vca_system.login(password=config['vcd']['password'],
+                             org='System',
+                             org_url=org_url)
+        if not r:
+            raise Exception(result)
+        r = vca_system.login(token=vca_system.token,
+                             org='System',
+                             org_url=vca_system.vcloud_session.org_url)
+        if not r:
+            raise Exception(result)
+        return vca_system

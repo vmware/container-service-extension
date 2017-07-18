@@ -5,17 +5,21 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from consumer import MessageConsumer
+from cove_client import CoveClient
 import logging
 import os
 import pkg_resources
 import signal
 import sys
+from task import TaskThread
 from threading import Thread
 import time
 import traceback
 import yaml
 import pika
 from pyvcloud.vcloudair import VCA
+from utils import get_thumbprint
+from vcenter import VCenter
 
 
 LOGGER = logging.getLogger(__name__)
@@ -73,11 +77,15 @@ service:
     print('default config saved to file \'%s\'' % file_name)
 
 
-def bool_to_unicode(value):
+def bool_to_msg(value):
+    # if value:
+    #     return u'\u2714'
+    # else:
+    #     return u'\u2718'
     if value:
-        return u'\u2714'
+        return 'success'
     else:
-        return u'\u2718'
+        return 'fail'
 
 
 def check_config(file_name):
@@ -96,7 +104,7 @@ def check_config(file_name):
                                                credentials)
         connection = pika.BlockingConnection(parameters)
         print('Connection to AMQP server (%s:%s): %s' % (amqp['host'], amqp['port'],
-              bool_to_unicode(connection.is_open)))
+              bool_to_msg(connection.is_open)))
         connection.close()
         vca_system = VCA(host=config['vcd']['host'],
                          username=config['vcd']['username'],
@@ -111,12 +119,25 @@ def check_config(file_name):
                              org_url=org_url)
         print('Connection to vCloud Director (%s:%s): %s' %
               (config['vcd']['host'], config['vcd']['port'],
-               bool_to_unicode(r)))
+               bool_to_msg(r)))
         if r:
             r = vca_system.login(token=vca_system.token,
                                  org='System',
                                  org_url=vca_system.vcloud_session.org_url)
-            print('  login to \'System\' org: %s' % (bool_to_unicode(r)))
+            print('  login to \'System\' org: %s' % (bool_to_msg(r)))
+
+        cove = CoveClient(config['cove']['host'],
+                          config['cove']['port'],
+                          config['cove']['verify'])
+        cove.connect()
+        print('Connection to Cove server (%s:%s): %s' %
+              (config['cove']['host'], config['cove']['port'],
+               bool_to_msg(True)))
+        for vc in config['vcs']:
+            r = get_thumbprint(vc['host'], vc['port'])
+            print('Connection to vCenter Server (%s:%s): %s' %
+                  (vc['host'], vc['port'],
+                   bool_to_msg(len(r)>0)))
     except:
         tb = traceback.format_exc()
         print('failed to validate configuration from file %s' % file_name)
@@ -137,7 +158,6 @@ def consumer_thread(c):
         print('about to stop consumer_thread')
         print(traceback.format_exc())
         c.stop()
-
 
 def main():
     global config
@@ -190,6 +210,17 @@ def main():
     consumers = []
     threads = []
 
+    for vc in config['vcs']:
+        vc['thumbprint'] = get_thumbprint(vc['host'], vc['port'])
+
+    cove = CoveClient(config['cove']['host'],
+                      config['cove']['port'],
+                      config['cove']['verify'])
+    cove.connect()
+
+    task_thread = TaskThread('cse-1', config)
+    task_thread.start()
+
     for n in range(num_consumers):
         try:
             c = MessageConsumer('amqp://%s:%s@%s:%s/' %
@@ -200,6 +231,7 @@ def main():
                                 amqp['exchange'],
                                 amqp['routing_key'],
                                 config,
+                                cove,
                                 config['vcd']['verify'],
                                 config['vcd']['log'])
             t = Thread(target=consumer_thread, args=(c,))
@@ -227,6 +259,7 @@ def main():
                     c.stop()
                 except:
                     pass
+            task_thread.stop()
             LOGGER.info('done')
             break
         except:

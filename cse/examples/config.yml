@@ -15,9 +15,27 @@ vcd:
     verify: False
     log: True
 
+cove:
+    host: cove.vmware.com
+    port: 5683
+    username: 'admin'
+    password: 'enter_your_password'
+    verify: False
+    log: True
+
+vcs:
+  - host: vc1.vmware.com
+    port: 443
+    username: 'administrator@vsphere.local'
+    password: 'enter_your_password'
+    verify: False
+  - host: vc2.vmware.com
+    port: 443
+    username: 'administrator@vsphere.local'
+    password: 'enter_your_password'
+    verify: False
+
 service:
     listeners: 2
     logging_level: 20
     logging_format: '%(levelname) -8s %(asctime)s %(name) -8s %(funcName) -8s %(lineno) -5d: %(message)s'
-    key_filename: 'id_rsa_cse'
-    key_filename_pub: 'id_rsa_cse.pub'

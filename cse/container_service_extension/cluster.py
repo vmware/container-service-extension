@@ -39,6 +39,8 @@ class Cluster(object):
         self.master_nodes = []
         self.nodes = []
         self.vdc = None
+        self.status = None
+        self.leader_endpoint = None
 
     def __repr__(self):
         return self.toJSON()
