@@ -31,11 +31,11 @@ $ pip install --user git+https://github.com/vmware/pyvcloud.git
 $ pip install --user git+https://github.com/vmware/container-service-extension.git#subdirectory=cse
 ```
 
-To use the **container-service-extension** as a vCloud Director user, install `vca-cli`:
+To use the **container-service-extension** as a vCloud Director user, install `vcd-cli`:
 
 ``` shell
 $ pip install --user git+https://github.com/vmware/pyvcloud.git
-$ pip install --user git+https://github.com/vmware/vca-cli.git
+$ pip install --user git+https://github.com/vmware/vcd-cli.git
 ```
 
 More information about `vca-cli` commands can be found in the [wiki](https://github.com/vmware/vca-cli/wiki/container-service-extension).

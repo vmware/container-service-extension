@@ -56,18 +56,40 @@ vcd:
     host: vcd.vmware.com
     port: 443
     username: 'administrator'
-    password: 'enter_your_password'
-    api_version: '5.6'
+    password: 'my_secret_password'
+    api_version: '6.0'
     verify: False
     log: True
 
+cove:
+    host: cove.vmware.com
+    port: 5683
+    username: 'admin'
+    password: 'my_secret_password'
+    ca_cert: certs/ca.crt
+    client_cert: certs/admin.crt
+    client_key: certs/admin.key
+    verify: False
+    log: True
+
+vcs:
+  - host: vcs.vmware.com
+    port: 443
+    username: 'administrator@vsphere.local'
+    password: 'my_secret_password'
+    verify: False
+    datacenter: 'my_datacenter'
+    cluster: 'my_cluster'
+    datastore: 'my_datastore'
+    network: 'my_network'
+
 service:
     listeners: 2
-    logging_level: 20
-    logging_format: '%(levelname) -8s %(asctime)s %(name) -40s %(funcName)\
--35s %(lineno) -5d: %(message)s'
+    logging_level: 5
+    logging_format: '%(levelname) -8s %(asctime)s %(name) -40s %(funcName) -35s %(lineno) -5d: %(message)s'
     key_filename: 'id_rsa_cse'
     key_filename_pub: 'id_rsa_cse.pub'
+
     """
     if os.path.isfile(file_name):
         print('file %s already exist, aborting' % file_name)
