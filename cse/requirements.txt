@@ -4,4 +4,3 @@ pyyaml
 bravado
 requests
 pyvcloud >= 18.0.3
-vca-cli >= 18.0.1
