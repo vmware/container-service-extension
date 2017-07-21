@@ -1,4 +1,4 @@
-jsonpickle
+click
 pika >= 0.10.0
 pyyaml
 bravado

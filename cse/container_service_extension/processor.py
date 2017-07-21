@@ -28,6 +28,9 @@ CREATED = 201
 ACCEPTED = 202
 INTERNAL_SERVER_ERROR = 500
 
+OP_CREATE_CLUSTER = 'CLUSTER_CREATE'
+OP_DELETE_CLUSTER = 'CLUSTER_DELETE'
+
 
 class ServiceProcessor(object):
 
@@ -159,6 +162,7 @@ class ServiceProcessor(object):
         details = '{"name": "%s", "cove_task_id": "%s"}' % \
                   (cluster_name, cove_task_id)
         t = create_or_update_task(task,
+                                  OP_CREATE_CLUSTER,
                                   operation_description,
                                   cluster_name,
                                   cluster_id,
@@ -177,6 +181,7 @@ class ServiceProcessor(object):
         result['status_code'] = ACCEPTED
         t = Thread(target=update_task_thread,
                    args=(task,
+                         OP_CREATE_CLUSTER,
                          operation_description,
                          cluster_name,
                          cluster_id,
@@ -220,6 +225,7 @@ class ServiceProcessor(object):
         details = '{"name": "%s", "cove_task_id": "%s"}' % \
                   (cluster_name, cove_task_id)
         t = create_or_update_task(task,
+                                  OP_DELETE_CLUSTER,
                                   operation_description,
                                   cluster_name,
                                   cluster_id,
@@ -239,6 +245,7 @@ class ServiceProcessor(object):
 
         t = Thread(target=update_task_thread,
                    args=(task,
+                         OP_DELETE_CLUSTER,
                          operation_description,
                          cluster_name,
                          cluster_id,

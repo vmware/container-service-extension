@@ -4,6 +4,7 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import click
 from consumer import MessageConsumer
 from cove_client import CoveClient
 import logging
@@ -19,7 +20,6 @@ import yaml
 import pika
 from pyvcloud.vcloudair import VCA
 from utils import get_thumbprint
-from vcenter import VCenter
 
 
 LOGGER = logging.getLogger(__name__)

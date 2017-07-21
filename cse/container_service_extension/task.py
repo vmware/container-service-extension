@@ -13,7 +13,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 def create_or_update_task(task,
-                          description,
+                          operation_name,
+                          operation_description,
                           cluster_name,
                           cluster_id,
                           status,
@@ -21,8 +22,6 @@ def create_or_update_task(task,
                           provisioner,
                           task_id=None):
     namespace = 'cpsbu.cse'
-    operation_name = 'cluster operations'
-    operation_description = description
     org_id = provisioner.vca_tenant.vcloud_session.org_id
     owner_href = 'urn:cse:cluster:%s' % cluster_id
     owner_name = cluster_name
@@ -67,7 +66,8 @@ class TaskThread(threading.Thread):
 
 
 def update_task_thread(task,
-                       description,
+                       operation_name,
+                       operation_description,
                        cluster_name,
                        cluster_id,
                        status,
@@ -92,7 +92,8 @@ def update_task_thread(task,
                 status = 'success' if cove_task_state == 'completed' \
                     else 'error'
             create_or_update_task(task,
-                                  description,
+                                  operation_name,
+                                  operation_description,
                                   cluster_name,
                                   cluster_id,
                                   status,
