@@ -1,6 +1,18 @@
 CHANGES
 =======
 
+* deps
+* wip
+* new-impl
+* fixed import error
+* deps
+* req
+* readme
+* kov-int
+* doc
+* adapter
+* vc-adapter
+* ci
 * wip
 * delete
 * Packer scripts for kub master and worker template creation
