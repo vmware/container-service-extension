@@ -57,9 +57,9 @@ class Configuration(object):
         # dict to store API prefix (e.g. Bearer)
         self.api_key_prefix = {}
         # Username for HTTP basic authentication
-        self.username = ""
+        self.username = "administrator@vsphere.local"
         # Password for HTTP basic authentication
-        self.password = ""
+        self.password = "Welcome@123"
 
         # Logging Settings
         self.logger = {}
@@ -78,13 +78,13 @@ class Configuration(object):
 
         # SSL/TLS verification
         # Set this to false to skip verifying SSL certificate when calling API from https server.
-        self.verify_ssl = True
+        self.verify_ssl = False
         # Set this to customize the certificate file to verify the peer.
-        self.ssl_ca_cert = None
+        self.ssl_ca_cert = "certs/ca.crt"
         # client certificate file
-        self.cert_file = None
+        self.cert_file = "certs/admin.crt"
         # client key file
-        self.key_file = None
+        self.key_file = "certs/admin.key"
 
     @property
     def logger_file(self):

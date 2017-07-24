@@ -37,7 +37,7 @@ class DefaultApi(object):
             self.api_client = api_client
         else:
             if not config.api_client:
-                config.api_client = ApiClient()
+                config.api_client = ApiClient(host="https://10.150.221.187:443")
             self.api_client = config.api_client
 
     def add_user(self, x_vc_username, x_vc_password, x_vc_endpoint, clustername, user, **kwargs):
@@ -817,6 +817,7 @@ class DefaultApi(object):
         collection_formats = {}
 
         resource_path = '/clusters'.replace('{format}', 'json')
+        print(resource_path)
         path_params = {}
 
         query_params = {}

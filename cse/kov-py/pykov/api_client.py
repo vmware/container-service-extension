@@ -140,6 +140,7 @@ class ApiClient(object):
 
         # request url
         url = self.host + resource_path
+        #print(url)
 
         # perform request and return response
         response_data = self.request(method, url,
@@ -339,6 +340,7 @@ class ApiClient(object):
         Makes the HTTP request using RESTClient.
         """
         if method == "GET":
+            #print(url)
             return self.rest_client.GET(url,
                                         query_params=query_params,
                                         _preload_content=_preload_content,

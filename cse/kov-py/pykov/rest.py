@@ -12,14 +12,15 @@
 
 
 from __future__ import absolute_import
-
+import time
 import io
 import json
 import ssl
 import certifi
 import logging
 import re
-
+import requests
+from requests.packages.urllib3.exceptions import NewConnectionError
 # python 2 and python 3 compatibility library
 from six import PY3
 from six.moves.urllib.parse import urlencode
@@ -84,7 +85,7 @@ class RESTClientObject(object):
 
         # key file
         key_file = Configuration().key_file
-
+        
         # https pool manager
         self.pool_manager = urllib3.PoolManager(
             num_pools=pools_size,
@@ -180,15 +181,20 @@ class RESTClientObject(object):
                     raise ApiException(status=0, reason=msg)
             # For `GET`, `HEAD`
             else:
-                r = self.pool_manager.request(method, url,
+                requests.packages.urllib3.disable_warnings()
+                #requests.packages.urllib3.disable_warnings(NewConnectionError)
+                try:
+                        r = self.pool_manager.request(method, url,
                                               fields=query_params,
                                               preload_content=_preload_content,
                                               timeout=timeout,
                                               headers=headers)
+                except NewConnectionError as e:
+                    print("G")
+
         except urllib3.exceptions.SSLError as e:
             msg = "{0}\n{1}".format(type(e).__name__, str(e))
             raise ApiException(status=0, reason=msg)
-
         if _preload_content:
             r = RESTResponse(r)
 
