@@ -136,7 +136,7 @@ paths:
           $ref: '#/responses/errorDefault'
   /cluster/swagger.json:
     get:
-      operationId: getSwagger
+      operationId: getSwaggerJSON
       summary: get swagger file in json format from api
       description: gets swagger file in json format to make api calls
       parameters:
@@ -147,7 +147,23 @@ paths:
           description: swagger file call succeeded 
           schema:
             type: file
-
+        default:
+          $ref: '#/responses/errorDefault'
+  /cluster/swagger.yaml:
+    get:
+      operationId: getSwaggerYAML
+      summary: get swagger file in yaml format from api url
+      description: gets swagger file in yaml format from api
+      parameters:
+        - $ref: '#/parameters/authorization'
+        - $ref: '#/parameters/accept' 
+      responses:
+        202:
+          description: swagger file call succeeded 
+          schema:
+            type: file
+        default:
+          $ref: '#/responses/errorDefault'
   /tasks:
     get:
       operationId: listTaskIDs
