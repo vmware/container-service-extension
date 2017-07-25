@@ -9,7 +9,6 @@ unit_test:
   script:
     # - pip install tox
     # - tox -e flake8
-    - cd cse
     - pip install .
     - cse version
 
@@ -17,7 +16,6 @@ deploy:
   stage: deploy
   script:
     - pip install twine
-    - cd cse
     - rm -rf build dist
     - python setup.py sdist bdist_wheel
     - twine upload dist/*
