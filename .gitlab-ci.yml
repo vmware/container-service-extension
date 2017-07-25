@@ -10,6 +10,7 @@ unit_test:
     # - pip install tox
     # - tox -e flake8
     - pip install .
+    - pip list --format=columns
     - cse version
 
 deploy:

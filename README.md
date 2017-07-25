@@ -12,33 +12,33 @@ The **container-service-extension** for vCloud Director manages the life cycle o
 
 This extension should be installed on a vCloud Director instance by a system administrator.
 
-The **container-service-extension** is a Python package and requires Python 2.7.
+The **container-service-extension** is distributed as a Python package.
 
 ### Install & Run
 
 #### Installation:
 
+Install and validate:
+
 ``` shell
 $ pip install --user container-service-extension
 
-$ cse init
+$ cse version
 ```
 
-To install the development version:
+Update an existing installation:
 
 ``` shell
-$ pip install --user git+https://github.com/vmware/pyvcloud.git
-$ pip install --user git+https://github.com/vmware/container-service-extension.git#subdirectory=cse
+$ pip install --user container-service-extension --upgrade
 ```
 
-To use the **container-service-extension** as a vCloud Director user, install `vcd-cli`:
+To install the latest development version:
 
 ``` shell
-$ pip install --user git+https://github.com/vmware/pyvcloud.git
-$ pip install --user git+https://github.com/vmware/vcd-cli.git
+$ pip install --user container-service-extension --upgrade --pre
 ```
 
-More information about `vca-cli` commands can be found in the [wiki](https://github.com/vmware/vca-cli/wiki/container-service-extension).
+More information about `vcd-cli` commands to use the service can be found in the [wiki](https://github.com/vmware/vcd-cli/wiki/container-service-extension).
 
 #### Configuration
 
@@ -52,6 +52,8 @@ $ cse check config.yml
 Connection to AMQP server (amqp.vmware.com:5672): success
 Connection to vCloud Director (vcd.vmware.com:443): success
   login to 'System' org: success
+Connection to Cove server (kov.vmware.com:5683): success
+Connection to vCenter Server (vcs.vmware.com:443): success
 ```
 
 Start the service:
@@ -64,7 +66,6 @@ $ cse run config.yml
 
 ``` shell
 $ git clone https://github.com/vmware/container-service-extension.git
-$ cd container-service-extension
 $ python setup.py develop
 $ cse init
 ```
