@@ -1,0 +1,375 @@
+swagger: "2.0"
+info:
+  title: API Specfication For Container Service Extension on VCD(CSE)
+
+  description: |
+    #API for CSE
+  version: 0.0.1
+
+consumes:
+  - application/json
+
+produces:
+  - application/json
+
+schemes:
+  - https
+
+parameters:
+  authorization:
+    name: x-vcloud-authorization
+    description: vcloud authorization
+    type: string
+    in: header
+    required: true
+    minLength: 1
+  accept:
+    name: Accept
+    description: version in this 'application/*+xml;version=' way
+    type: string
+    in: header
+    required: true
+    minLength: 1
+
+responses:
+  errorClusterNameConflict:
+    description: The provided cluster name already exists
+    schema:
+      $ref: '#/definitions/error'
+
+  errorTaskNotFound:
+    description: The task was not found
+    schema:
+      $ref: '#/definitions/error'
+
+  errorClusterNotFound:
+    description: The cluster was not found
+    schema:
+      $ref: '#/definitions/error'
+
+  errorUserExists:
+    description: The user with that username already exists
+    schema:
+      $ref: '#/definitions/error'
+
+  errorClusterOrUserNotFound:
+    description: The cluster or user was not found
+    schema:
+      $ref: '#/definitions/error'
+
+  errorMultipleClustersFound:
+    description: Multiple clusters found with same name
+    schema:
+      $ref: '#/definitions/error'
+
+  errorInvalidRequest:
+    description: The request is not valid
+    schema:
+      $ref: '#/definitions/error'
+
+  errorDefault:
+    description: Error
+    schema:
+      $ref: '#/definitions/error'
+
+paths: 
+  /cluster:
+    get:
+      operationId: listClusters
+      summary: get a list of all clusters
+      description: get a list of all clusters
+      parameters:
+        - $ref: '#/parameters/authorization'
+        - $ref: '#/parameters/accept'
+      responses:
+        200:
+          description: 200 response with the list of clusters
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Cluster'
+        default:
+          $ref: '#/responses/errorDefault'
+    post:
+      operationId: createCluster
+      summary: creates a cluster
+      description: creates a cluster
+      parameters:
+        - $ref: '#/parameters/authorization'
+        - $ref: '#/parameters/accept'
+        - name: clusterConfig
+          description: the config of the cluster to be created
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/clusterConfig'
+      responses:
+        202:
+          description: create cluster task has been accepted
+          schema:
+            $ref: '#/definitions/clusterReturn'
+        409:
+          $ref: '#/responses/errorClusterNameConflict'
+        default:
+          $ref: '#/responses/errorDefault'
+  /cluster/{clusterid}:
+    delete:
+      operationId: deleteCluster
+      summary: deletes a cluster
+      description: deletes a cluster with a given Id 
+      parameters:
+        - $ref: '#/parameters/authorization'
+        - $ref: '#/parameters/accept'
+        - name: clusterid
+          description: cluster's Id
+          in: path
+          type: string
+          required: true
+      responses: 
+        202: 
+          description: delete cluster task has been accepted
+          schema:
+            $ref: '#/definitions/deleteReturn'
+        404:
+          $ref: '#/responses/errorClusterNotFound'
+        default:
+          $ref: '#/responses/errorDefault'
+  /cluster/swagger.json:
+    get:
+      operationId: getSwaggerJSON
+      summary: get swagger file in json format from api
+      description: gets swagger file in json format to make api calls
+      parameters:
+        - $ref: '#/parameters/authorization'
+        - $ref: '#/parameters/accept'
+      responses:
+        202:
+          description: swagger file call succeeded 
+          schema:
+            type: file
+        default:
+          $ref: '#/responses/errorDefault'
+  /cluster/swagger.yaml:
+    get:
+      operationId: getSwaggerYAML
+      summary: get swagger file in yaml format from api url
+      description: gets swagger file in yaml format from api
+      parameters:
+        - $ref: '#/parameters/authorization'
+        - $ref: '#/parameters/accept' 
+      responses:
+        202:
+          description: swagger file call succeeded 
+          schema:
+            type: file
+        default:
+          $ref: '#/responses/errorDefault'
+  /tasks:
+    get:
+      operationId: listTaskIDs
+      summary: get a list of task IDs
+      description: get a list of task IDs from KOV
+      responses:
+        200:
+          description: 200 response with the list of taskIDs
+          schema:
+           type: array
+           items:
+             type: string
+        default:
+          $ref: "#/responses/errorDefault"
+
+definitions:
+  error:
+    description: |
+      the default error model for all the error responses coming from the VCD
+    type: object
+    required:
+      - message
+      - code
+    properties:
+      code:
+        type: integer
+        format: int64
+        description: The error code
+      message:
+        description: The error message
+        type: string
+      helpUrl:
+        description: link to help page explaining the error in more detail
+        type: string
+        format: uri
+      cause:
+        $ref: '#/definitions/error'
+
+  node:
+    type: object
+    required:
+      - name
+      - node_type
+      - node_id
+      - href
+      - ip
+      - cluster_id
+      - cluster_name
+    properties:
+      name: 
+        type: string
+        #pattern: '^[a-zA-Z](([-0-9a-zA-Z]+)?[0-9a-zA-Z])?(\.[a-zA-Z](([-0-9a-zA-Z]+)?[0-9a-zA-Z])?)*$'
+        description: the node name, should be valid for use in dns names
+        #minLength: 3
+        #maxLength: 63
+      node_type:
+        type: string
+        description: the type of node ie. master or minion
+        minLength: 1
+      node_id:
+        type: string
+        description: node Id
+      href:
+        type: string
+        description: href
+      ip: 
+        type: string
+        description: ip address of node 
+      cluster_id:
+        type: string
+        description: id of the cluster its associated to
+        #minLength: 1
+      cluster_name:
+        type: string
+        #pattern: '^[a-zA-Z](([-0-9a-zA-Z]+)?[0-9a-zA-Z])?(\.[a-zA-Z](([-0-9a-zA-Z]+)?[0-9a-zA-Z])?)*$'
+        description: name of cluster it is associated to
+        #minLength: 3
+        #maxLength: 63
+
+  Cluster:
+    type: object
+    required:
+      - name
+      - cluster_id
+      - master_nodes
+      - nodes
+      - status
+      - leader_endpoint
+      #- vdc
+    properties:
+      name: 
+        type: string
+        #pattern: '^[a-zA-Z](([-0-9a-zA-Z]+)?[0-9a-zA-Z])?(\.[a-zA-Z](([-0-9a-zA-Z]+)?[0-9a-zA-Z])?)*$'
+        description: the cluster name, should be valid for use in dns names
+        #minLength: 3
+        #maxLength: 63
+      cluster_id:
+        type: string
+        description: id of the cluster
+      master_nodes:
+        type: array
+        description: array of master nodes
+        items:
+          $ref: '#/definitions/node'
+      nodes:
+        type: array
+        description: array of normal nodes
+        items:
+          $ref: '#/definitions/node'
+      status:
+        $ref: '#/definitions/clusterStatus'
+      leader_endpoint:
+        type: string
+      #vdc:
+        #type: string
+        #description: Virtual Data Center
+
+  clusterStatus:
+    type: string 
+    description: the status of the cluster
+    enum:
+    - active
+    - inactive
+    - error
+
+  clusterConfig:
+    type: object
+    description: data needed to make cluster 
+    required:
+      - name
+      - node_count
+      - vdc 
+      - network
+    properties:
+      name:
+        type: string
+        pattern: '^[a-zA-Z](([-0-9a-zA-Z]+)?[0-9a-zA-Z])?(\.[a-zA-Z](([-0-9a-zA-Z]+)?[0-9a-zA-Z])?)*$'
+        description: the cluster name, should be valid for use in dns names
+        minLength: 3
+        maxLength: 63
+      node_count:
+        type: integer
+        format: int32
+        minimum: 1
+        description: the amount of nodes will be created
+      cluster_id:
+        type: string
+        description: id of the cluster
+      vdc: 
+        type: string
+        description: Virtual Data Center
+        minLength: 1
+      network:
+        type: string
+        description: Name of network
+        minimum: 1
+
+  clusterReturn:
+    type: object
+    description: return for creating a cluster 
+    required: 
+      - cluster_id
+      - name
+      - status
+      - task_id 
+    properties:
+      cluster_id:
+        type: string
+        description: id of the cluster
+      name:
+        type: string
+        pattern: '^[a-zA-Z](([-0-9a-zA-Z]+)?[0-9a-zA-Z])?(\.[a-zA-Z](([-0-9a-zA-Z]+)?[0-9a-zA-Z])?)*$'
+        description: the cluster name, should be valid for use in dns names
+        minLength: 3
+        maxLength: 63
+      #progress:
+        #type: string
+        #description: progress of the creation
+      status:
+        type: string
+        description: status of cluster
+      task_id:
+        type: string
+
+  deleteReturn:
+    type: object
+    description: result returned when deleting cluster 
+    required:
+      - name
+      - cluster_id
+      - task_id
+      - status
+    properties:
+      name:
+        type: string
+        description: clustername
+      cluster_id:
+        type: string
+        description: cluster id 
+      task_id:
+        type: string
+        description: the task id of the destroy cluster call
+      status:
+        type: string
+        description: status of the call
+
+  taskId:
+    type: string
+    minLength: 1
