@@ -26,18 +26,6 @@ $ pip install --user container-service-extension
 $ cse version
 ```
 
-Update an existing installation:
-
-``` shell
-$ pip install --user container-service-extension --upgrade
-```
-
-To install the latest development version:
-
-``` shell
-$ pip install --user container-service-extension --upgrade --pre
-```
-
 More information about `vcd-cli` commands to use the service can be found in the [wiki](https://github.com/vmware/vcd-cli/wiki/container-service-extension).
 
 #### Configuration
