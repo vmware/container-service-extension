@@ -42,6 +42,8 @@ More information about `vcd-cli` commands to use the service can be found in the
 
 #### Configuration
 
+Follow the vCloud Director configuration steps in the [wiki](https://github.com/vmware/container-service-extension/wiki).
+
 Edit file `config.yml` and provide the values for your vCloud Director installation.
 
 Validate the configuration:
