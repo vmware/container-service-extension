@@ -17,6 +17,7 @@ deploy:
   stage: deploy
   script:
     - pip install twine
+    - cd cse
     - rm -rf build dist
     - python setup.py sdist bdist_wheel
     - twine upload dist/*
