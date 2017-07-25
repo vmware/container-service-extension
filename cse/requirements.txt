@@ -4,4 +4,4 @@ pika >= 0.10.0
 pyyaml
 bravado
 requests
-pyvcloud >= 18.0.3
+vca-cli >= 18.0.2.dev30

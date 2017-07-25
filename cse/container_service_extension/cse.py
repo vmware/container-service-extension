@@ -183,6 +183,8 @@ def consumer_thread(c):
 
 def main():
     global config
+    import requests
+    requests.packages.urllib3.disable_warnings()
     if len(sys.argv) > 0:
         if len(sys.argv) > 1:
             if sys.argv[1] == 'version':
