@@ -9,7 +9,7 @@ unit_test:
   script:
     # - pip install tox
     # - tox -e flake8
-    - pip install cse
+    - pip install ./cse
     - cse version
 
 deploy:
