@@ -59,6 +59,9 @@ class ServiceProcessor(object):
             if cluster_id == 'swagger.json':
                 get_swagger_json = True
                 cluster_id = None
+            if cluster_id == 'swagger.yaml':
+                get_swagger_yaml ==True
+                cluster_id = None
         if len(tokens) > 4:
             cluster_op = tokens[4]
             if cluster_op == '':
@@ -87,8 +90,10 @@ class ServiceProcessor(object):
             vc_adapter = None
             LOGGER.error(traceback.format_exc())
         if body['method'] == 'GET':
-            if get_swagger==True:
+            if get_swagger_json==True:
                 reply = self.get_swagger_json_file()
+            elif get_swagger_yaml ==True:
+                reply = self.get_swagger_yaml_file()
             elif cluster_id is None:
                 reply = self.list_clusters(prov, vca_system, vc_adapter)
         elif body['method'] == 'POST':
@@ -117,6 +122,16 @@ class ServiceProcessor(object):
         realResponse['status_code'] = OK
         return realResponse
 
+    def get_swagger_yaml_file(self):
+        url = "https://raw.githubusercontent.com/vmware/container-service-extension/master/swagger/swagger.yaml"
+        sock = urllib.urlopen(url)
+        response=sock.read()
+        sock.close()
+        jsonresponse=json.load(response)
+        realResponse={}
+        realResponse['body']=yamlresponse
+        realResponse['status_code'] = OK
+        return realResponse
 
     def list_clusters(self, prov, vca_system, vc_adapter):
         result = {}
