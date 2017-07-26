@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import base64
+import pkg_resources, os
 from cluster import Cluster
 from cluster import Node
 from cluster import TYPE_MASTER
@@ -112,22 +113,33 @@ class ServiceProcessor(object):
         return reply
 
      def get_swagger_json_file(self):
-        url = "https://raw.githubusercontent.com/vmware/container-service-extension/master/swagger/swagger.json"
-        sock = urllib.urlopen(url)
-        response=sock.read()
-        sock.close()
-        jsonresponse=json.loads(response)
+        file_path='/usr/local/swagger/swagger.yaml'
+        yamlresponse=None
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as fi:
+                yamlresponse=yaml.load(fi)
+        elif os.path.exists('usr/swagger/swagger.yaml'):
+            with open('usr/swagger/swagger.yaml', 'r') as fi:
+                yamlresponse=yaml.load(fi)
+        else:
+            raise Exception("Swagger file not found")
+        jsonresponse=yaml.dump(yamlresponse)
         realResponse={}
         realResponse['body']=jsonresponse
         realResponse['status_code'] = OK
         return realResponse
 
     def get_swagger_yaml_file(self):
-        url = "https://raw.githubusercontent.com/vmware/container-service-extension/master/swagger/swagger.yaml"
-        sock = urllib.urlopen(url)
-        response=sock.read()
-        sock.close()
-        jsonresponse=json.load(response)
+        file_path='/usr/local/swagger/swagger.yaml'
+        yamlresponse=None
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as fi:
+                yamlresponse=yaml.load(fi)
+        elif os.path.exists('usr/swagger/swagger.yaml'):
+            with open('usr/swagger/swagger.yaml', 'r') as fi:
+                yamlresponse=yaml.load(fi)
+        else:
+            raise Exception("Swagger file not found")
         realResponse={}
         realResponse['body']=yamlresponse
         realResponse['status_code'] = OK
