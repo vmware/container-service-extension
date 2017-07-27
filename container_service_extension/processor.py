@@ -6,17 +6,13 @@ import base64
 from cluster import Cluster
 from cluster import Node
 from cluster import TYPE_MASTER
-from cluster import TYPE_NODE
-from cove_client import CoveClient
 import json
 import logging
 from provisioner import Provisioner
-from pyvcloud.vcloudair import VCA
 from pyvcloud.task import Task
 from task import create_or_update_task
 from task import update_task_thread
 from threading import Thread
-import time
 import traceback
 import uuid
 from vc_adapter import VC_Adapter
@@ -121,7 +117,7 @@ class ServiceProcessor(object):
                 clusters.append(c)
             result['body'] = clusters
             result['status_code'] = OK
-        except Exception as e:
+        except Exception:
             LOGGER.error(traceback.format_exc())
             result['body'] = []
             result['status_code'] = INTERNAL_SERVER_ERROR
@@ -147,11 +143,11 @@ class ServiceProcessor(object):
         try:
             cove_task_id = self.cove.create_cluster(create_params[0],
                                                     create_params[1])
-        except Exception as e:
+        except Exception:
             result['body'] = 'can''t create cluster on Cove'
             LOGGER.error(traceback.format_exc())
             return result
-        #TODO: update VDC metadata with cluster_id/name
+        # TODO (update VDC metadata with cluster_id/name)
         task = Task(session=vca_system.vcloud_session,
                     verify=self.config['vcd']['verify'],
                     log=self.config['vcd']['log'])
@@ -190,8 +186,8 @@ class ServiceProcessor(object):
                          prov,
                          self.cove,
                          response_body['task_id'],
-                        )
-                  )
+                         )
+                   )
         t.daemon = True
         t.start()
         return result
@@ -210,11 +206,11 @@ class ServiceProcessor(object):
         try:
             cove_task_id = self.cove.delete_cluster(delete_params[0],
                                                     delete_params[1])
-        except Exception as e:
+        except Exception:
             result['body'] = 'can''t delete cluster on Cove'
             LOGGER.error(traceback.format_exc())
             return result
-        #TODO: delete VDC metadata related to the cluster_id/name
+        # TODO (delete VDC metadata related to the cluster_id/name)
         task = Task(session=vca_system.vcloud_session,
                     verify=self.config['vcd']['verify'],
                     log=self.config['vcd']['log'])
@@ -254,8 +250,8 @@ class ServiceProcessor(object):
                          prov,
                          self.cove,
                          response_body['task_id'],
-                        )
-                  )
+                         )
+                   )
         t.daemon = True
         t.start()
         return result

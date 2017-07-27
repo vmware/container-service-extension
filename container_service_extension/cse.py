@@ -4,7 +4,6 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import click
 from consumer import MessageConsumer
 from cove_client import CoveClient
 import logging
@@ -86,11 +85,12 @@ vcs:
 service:
     listeners: 2
     logging_level: 5
-    logging_format: '%(levelname) -8s %(asctime)s %(name) -40s %(funcName) -35s %(lineno) -5d: %(message)s'
+    logging_format: %s
     key_filename: 'id_rsa_cse'
     key_filename_pub: 'id_rsa_cse.pub'
 
-    """
+    """ % '%(levelname) -8s %(asctime)s %(name) -40s %(funcName) ' \
+          '-35s %(lineno) -5d: %(message)s'
     if os.path.isfile(file_name):
         print('file %s already exist, aborting' % file_name)
         sys.exit(1)
@@ -125,7 +125,8 @@ def check_config(file_name):
                                                '/',
                                                credentials)
         connection = pika.BlockingConnection(parameters)
-        print('Connection to AMQP server (%s:%s): %s' % (amqp['host'], amqp['port'],
+        print('Connection to AMQP server (%s:%s): %s' % (amqp['host'],
+              amqp['port'],
               bool_to_msg(connection.is_open)))
         connection.close()
         vca_system = VCA(host=config['vcd']['host'],
@@ -159,7 +160,7 @@ def check_config(file_name):
             r = get_thumbprint(vc['host'], vc['port'])
             print('Connection to vCenter Server (%s:%s): %s' %
                   (vc['host'], vc['port'],
-                   bool_to_msg(len(r)>0)))
+                   bool_to_msg(len(r) > 0)))
     except:
         tb = traceback.format_exc()
         print('failed to validate configuration from file %s' % file_name)
@@ -180,6 +181,7 @@ def consumer_thread(c):
         print('about to stop consumer_thread')
         print(traceback.format_exc())
         c.stop()
+
 
 def main():
     global config

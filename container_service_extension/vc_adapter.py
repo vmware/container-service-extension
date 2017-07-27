@@ -24,7 +24,6 @@ class VC_Adapter(object):
 
         return vcs
 
-
     def get_create_params(self, body, cluster_id):
         """
         Translates the input parameters identifying a cluster in vCD to
@@ -35,12 +34,9 @@ class VC_Adapter(object):
         :return: (result)
         """
 
-        node_count = body['node_count']
-        vdc_name = body['vdc']
-        network_name = body['network']
-
-        request_username = self.prov.vca_tenant.vcloud_session.username
-        request_org_id = self.prov.vca_tenant.vcloud_session.org_id
+        # vdc_name = body['vdc']
+        # request_username = self.prov.vca_tenant.vcloud_session.username
+        # request_org_id = self.prov.vca_tenant.vcloud_session.org_id
 
         vcs = self.config['vcs'][0]
 

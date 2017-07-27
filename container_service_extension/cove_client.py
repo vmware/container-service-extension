@@ -4,10 +4,10 @@
 
 from bravado.client import SwaggerClient
 from bravado.requests_client import RequestsClient
-from bravado.swagger_model import load_file
 import requests
 
 TIMEOUT_SECONDS = 20
+
 
 class CoveClient(object):
 
@@ -18,8 +18,9 @@ class CoveClient(object):
         self.client = None
 
     def connect(self):
-        response = requests.get('https://%s:%s/swagger.json' % \
-            (self.host, self.port), verify=self.verify)
+        response = requests.get(
+            'https://%s:%s/swagger.json' % (self.host, self.port),
+            verify=self.verify)
         if response.status_code == requests.status_codes.codes.OK:
             spec = response.json()
             spec['host'] = '%s:%s' % (self.host, self.port)
@@ -40,8 +41,8 @@ class CoveClient(object):
         if vc_info is not None:
             opt['headers'] = {'X-VC-Username': vc_info['username'],
                               'X-VC-Password': vc_info['password'],
-                              'X-VC-Endpoint': '%s:%s' % \
-                                  (vc_info['host'], vc_info['port']),
+                              'X-VC-Endpoint': '%s:%s' % (vc_info['host'],
+                                                          vc_info['port']),
                               'X-VC-Thumbprint': vc_info['thumbprint']}
         return opt
 
@@ -65,11 +66,12 @@ class CoveClient(object):
             name=cluster_id).result(timeout=TIMEOUT_SECONDS)
 
     def get_task(self, task_id):
-        return self.client.tasks.getTask(taskid=task_id,
+        return self.client.tasks.getTask(
+            taskid=task_id,
             _request_options=self._request_options()).result(
                 timeout=TIMEOUT_SECONDS)
 
     def get_tasks(self):
         return self.client.tasks.listTaskIDs(
-                _request_options=_request_options).result(
+                _request_options=self._request_options).result(
                     timeout=TIMEOUT_SECONDS)
