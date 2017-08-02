@@ -131,15 +131,6 @@ class MessageConsumer(object):
                          thread.get_ident(),
                          json.dumps(json.loads(body)[0]),
                          properties)
-            # else:
-            #     my_properties = pika.BasicProperties()
-            #     result = self._channel.basic_publish(
-            #         exchange=self.exchange,
-            #         routing_key=self.routing_key,
-            #         body=json.dumps([{'test': 'this is a test'}]),
-            #         properties=my_properties)
-            #     print('sent my-message')
-
             sp = ServiceProcessor(self.config,
                                   self.verify,
                                   self.log)

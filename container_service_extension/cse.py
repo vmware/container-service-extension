@@ -188,6 +188,9 @@ def main():
                 sys.exit(0)
             elif sys.argv[1] == 'run':
                 pass
+            elif sys.argv[1] == 'cancel-running-tasks':
+                # use vcd-cli
+                pass
         else:
             print_help()
     try:

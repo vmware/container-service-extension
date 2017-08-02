@@ -10,7 +10,11 @@ from cluster import TYPE_MASTER
 import json
 import logging
 from provisioner import Provisioner
+from pyvcloud.task import Task
+from task import create_or_update_task
+import time
 import traceback
+from threading import Thread
 import uuid
 from vc_adapter import VC_Adapter
 
@@ -154,6 +158,7 @@ class ServiceProcessor(object):
         result = {}
         result['body'] = {}
         cluster_name = body['name']
+        cluster_vdc = body['vdc']
         node_count = body['node_count']
         LOGGER.debug('about to create cluster with %s nodes', node_count)
         result['body'] = 'can''t create cluster'
@@ -166,11 +171,41 @@ class ServiceProcessor(object):
             return result
         cluster_id = str(uuid.uuid4())
         try:
-            raise Exception('not implemented')
+            task = Task(session=vca_system.vcloud_session,
+                        verify=self.config['vcd']['verify'],
+                        log=self.config['vcd']['log'])
+            operation_description = 'creating cluster %s (%s)' % \
+                (cluster_name, cluster_id)
+            LOGGER.info(operation_description)
+            status = 'running'
+            details = '{"name": "%s", "id": "%s", "vdc": "%s"}' % \
+                      (cluster_name, cluster_id, cluster_vdc)
+            create_task = create_or_update_task(task,
+                                                OP_CREATE_CLUSTER,
+                                                operation_description,
+                                                cluster_name,
+                                                cluster_id,
+                                                status,
+                                                details,
+                                                prov)
+            if create_task is None:
+                return result
+            response_body = {}
+            response_body['name'] = cluster_name
+            response_body['cluster_id'] = cluster_id
+            response_body['task_id'] = create_task.get_id().split(':')[-1]
+            response_body['status'] = status
+            response_body['progress'] = None
+            result['body'] = response_body
+            result['status_code'] = ACCEPTED
+            thread = Thread(target=self.create_cluster_thread,
+                            args=(cluster_id,))
+            thread.daemon = True
+            thread.start()
         except Exception as e:
             result['body'] = e.message
             LOGGER.error(traceback.format_exc())
-            return result
+        return result
 
     def delete_cluster(self, body, prov, vca_system, vc_adapter, cluster_id):
         result = {}
@@ -188,3 +223,9 @@ class ServiceProcessor(object):
             result['body'] = e.message
             LOGGER.error(traceback.format_exc())
             return result
+
+    def create_cluster_thread(self, cluster_id):
+        pass
+
+    def delete_cluster_thread(self, cluster_id):
+        pass
