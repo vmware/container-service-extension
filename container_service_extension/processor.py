@@ -4,6 +4,7 @@
 
 import base64
 import os
+import sys
 from cluster import Cluster
 from cluster import Node
 from cluster import TYPE_MASTER
@@ -111,13 +112,10 @@ class ServiceProcessor(object):
         return reply
 
     def get_swagger_json_file(self):
-        file_path = '/usr/local/swagger/swagger.yaml'
+        file_path = sys.prefix + '/swagger/swagger.yaml'
         yamlresponse = None
         if os.path.exists(file_path):
             with open(file_path, 'r') as fi:
-                yamlresponse = yaml.load(fi)
-        elif os.path.exists('usr/swagger/swagger.yaml'):
-            with open('usr/swagger/swagger.yaml', 'r') as fi:
                 yamlresponse = yaml.load(fi)
         else:
             raise Exception("Swagger file not found")
@@ -128,13 +126,10 @@ class ServiceProcessor(object):
         return realResponse
 
     def get_swagger_yaml_file(self):
-        file_path = '/usr/local/swagger/swagger.yaml'
+        file_path = sys.prefix +' swagger/swagger.yaml'
         yamlresponse = None
         if os.path.exists(file_path):
             with open(file_path, 'r') as fi:
-                yamlresponse = yaml.load(fi)
-        elif os.path.exists('usr/swagger/swagger.yaml'):
-            with open('usr/swagger/swagger.yaml', 'r') as fi:
                 yamlresponse = yaml.load(fi)
         else:
             raise Exception("Swagger file not found")
