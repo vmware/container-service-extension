@@ -1,8 +1,7 @@
 {
+  "_comment": "if necessary, escape $ in PACKER_PASSWORD with a backslash",
   "variables": {
-    "product_name": "Photon",
-    "product_version": "1.0",
-    "disk_size": "4096",
+    "disk_size": "2048",
     "ssh_password": "{{env `PACKER_PASSWORD`}}",
     "ssh_wait_timeout": "5m",
     "shutdown_command": "shutdown -h now"

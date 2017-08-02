@@ -123,13 +123,23 @@ class MessageConsumer(object):
             self._channel.close()
 
     def on_message(self, unused_channel, basic_deliver, properties, body):
-        LOGGER.debug('Received message # %s from %s (%s): %s',
-                     basic_deliver.delivery_tag,
-                     properties.app_id,
-                     thread.get_ident(),
-                     json.dumps(json.loads(body)[0]))
         self.acknowledge_message(basic_deliver.delivery_tag)
         try:
+            LOGGER.debug('Received message # %s from %s (%s): %s, props: %s',
+                         basic_deliver.delivery_tag,
+                         properties.app_id,
+                         thread.get_ident(),
+                         json.dumps(json.loads(body)[0]),
+                         properties)
+            # else:
+            #     my_properties = pika.BasicProperties()
+            #     result = self._channel.basic_publish(
+            #         exchange=self.exchange,
+            #         routing_key=self.routing_key,
+            #         body=json.dumps([{'test': 'this is a test'}]),
+            #         properties=my_properties)
+            #     print('sent my-message')
+
             sp = ServiceProcessor(self.config,
                                   self.verify,
                                   self.log)
@@ -142,23 +152,25 @@ class MessageConsumer(object):
             status_code = 500
             tb = traceback.format_exc()
             LOGGER.error(tb)
-        reply_msg = {
-            'id': body['id'],
-            'headers': {'Content-Type': body['headers']['Accept'],
-                        'Content-Length': len(reply_body)},
-            'statusCode': status_code,
-            'body': base64.b64encode(reply_body),
-            'request': False
-        }
-        LOGGER.debug('reply: %s', json.dumps(reply_body))
 
-        reply_properties = pika.BasicProperties(
-                               correlation_id=properties.correlation_id)
-        result = self._channel.basic_publish(
-            exchange=properties.headers['replyToExchange'],
-            routing_key=properties.reply_to,
-            body=json.dumps(reply_msg),
-            properties=reply_properties)
+        if properties.reply_to is not None:
+            reply_msg = {
+                'id': body['id'],
+                'headers': {'Content-Type': body['headers']['Accept'],
+                            'Content-Length': len(reply_body)},
+                'statusCode': status_code,
+                'body': base64.b64encode(reply_body),
+                'request': False
+            }
+            LOGGER.debug('reply: %s', json.dumps(reply_body))
+
+            reply_properties = pika.BasicProperties(
+                                   correlation_id=properties.correlation_id)
+            result = self._channel.basic_publish(
+                exchange=properties.headers['replyToExchange'],
+                routing_key=properties.reply_to,
+                body=json.dumps(reply_msg),
+                properties=reply_properties)
 
     def acknowledge_message(self, delivery_tag):
         LOGGER.debug('Acknowledging message %s', delivery_tag)

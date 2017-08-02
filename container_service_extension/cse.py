@@ -218,7 +218,7 @@ def main():
 
     for n in range(num_consumers):
         try:
-            c = MessageConsumer('amqp://%s:%s@%s:%s/' %
+            c = MessageConsumer('amqp://%s:%s@%s:%s/?socket_timeout=5' %
                                 (amqp['user'],
                                  amqp['password'],
                                  amqp['host'],

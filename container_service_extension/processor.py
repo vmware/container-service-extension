@@ -33,7 +33,7 @@ class ServiceProcessor(object):
         self.log = log
 
     def process_request(self, body):
-        LOGGER.debug(json.dumps(body))
+        LOGGER.debug('request body: %s' % json.dumps(body))
         reply = {}
         request_headers = body['headers']
         request_host = request_headers['Host']
@@ -165,7 +165,6 @@ class ServiceProcessor(object):
             result['body'] = {'message': 'cluster already exists'}
             return result
         cluster_id = str(uuid.uuid4())
-        create_params = vc_adapter.get_create_params(body, cluster_id)
         try:
             raise Exception('not implemented')
         except Exception as e:
@@ -183,7 +182,6 @@ class ServiceProcessor(object):
             result['body'] = {'message': 'cluster not found'}
             return result
         cluster_name = details['name']
-        delete_params = vc_adapter.get_delete_params(body, cluster_id)
         try:
             raise Exception('not implemented')
         except Exception as e:
