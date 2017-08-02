@@ -8,6 +8,7 @@ from cluster import Cluster
 from cluster import Node
 from cluster import TYPE_MASTER
 import json
+import yaml 
 import logging
 from provisioner import Provisioner
 from pyvcloud.task import Task
@@ -49,6 +50,7 @@ class ServiceProcessor(object):
         cluster_op = None
         cluster_id = None
         get_swagger_json=False
+        get_swagger_yaml=False
         if len(tokens) > 3:
             cluster_id = tokens[3]
             if cluster_id == '':
