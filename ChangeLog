@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* moved up swagger for packaging
 * follows flake8 tests
 * fixed issues with datafiles
 * fixes swagger json method

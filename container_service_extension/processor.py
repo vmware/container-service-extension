@@ -2,6 +2,7 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from pkg_resources import resource_string
 import base64
 import os
 import sys
@@ -112,13 +113,12 @@ class ServiceProcessor(object):
         return reply
 
     def get_swagger_json_file(self):
-        file_path = 'swagger/swagger.yaml'
         yamlresponse = None
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as fi:
-                yamlresponse = yaml.load(fi)
-        else:
-            raise Exception("Swagger file not found")
+        try: 
+            file = resource_string('container_service_extension', 'swagger/swagger.yaml')
+            yamlresponse = yaml.load(file)
+        except:
+            raise Exception("Swagger file not found: check installation")
         jsonresponse = json.loads(json.dumps(yamlresponse))
         realResponse = {}
         realResponse['body'] = jsonresponse
@@ -126,13 +126,12 @@ class ServiceProcessor(object):
         return realResponse
 
     def get_swagger_yaml_file(self):
-        file_path = 'swagger/swagger.yaml'
         yamlresponse = None
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as fi:
-                yamlresponse = yaml.load(fi)
-        else:
-            raise Exception("Swagger file not found")
+        try: 
+            file = resource_string('container_service_extension', 'swagger/swagger.yaml')
+            yamlresponse = yaml.load(file)
+        except:
+            raise Exception("Swagger file not found: check installation")
         realResponse = {}
         realResponse['body'] = yamlresponse
         realResponse['status_code'] = OK
