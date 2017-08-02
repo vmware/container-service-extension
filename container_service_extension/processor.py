@@ -49,6 +49,7 @@ class ServiceProcessor(object):
         cluster_op = None
         cluster_id = None
         get_swagger_json=False
+        get_swagger_yaml = False
         if len(tokens) > 3:
             cluster_id = tokens[3]
             if cluster_id == '':
@@ -57,7 +58,7 @@ class ServiceProcessor(object):
                 get_swagger_json = True
                 cluster_id = None
             if cluster_id == 'swagger.yaml':
-                get_swagger_yaml ==True
+                get_swagger_yaml = True
                 cluster_id = None
         if len(tokens) > 4:
             cluster_op = tokens[4]
@@ -108,7 +109,7 @@ class ServiceProcessor(object):
         LOGGER.debug('request:\n%s' % json.dumps(request_body))
         return reply
 
-     def get_swagger_json_file(self):
+    def get_swagger_json_file(self):
         file_path='/usr/local/swagger/swagger.yaml'
         yamlresponse=None
         if os.path.exists(file_path):
