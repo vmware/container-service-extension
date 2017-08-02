@@ -18,7 +18,7 @@ class MessageConsumer(object):
     EXCHANGE_TYPE = 'direct'
 
     def __init__(self, amqp_url, exchange, routing_key,
-                 config, cove, verify, log=False):
+                 config, verify, log=False):
         self._connection = None
         self._channel = None
         self._closing = False
@@ -28,7 +28,6 @@ class MessageConsumer(object):
         self.routing_key = routing_key
         self.queue = routing_key
         self.config = config
-        self.cove = cove
         self.verify = verify
         self.log = log
 
@@ -131,8 +130,9 @@ class MessageConsumer(object):
                      json.dumps(json.loads(body)[0]))
         self.acknowledge_message(basic_deliver.delivery_tag)
         try:
-            sp = ServiceProcessor(self.config, self.cove,
-                                  self.verify, self.log)
+            sp = ServiceProcessor(self.config,
+                                  self.verify,
+                                  self.log)
             body = json.loads(body)[0]
             result = sp.process_request(body)
             reply_body = jsonpickle.encode(result['body'])

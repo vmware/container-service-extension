@@ -5,13 +5,11 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from consumer import MessageConsumer
-from cove_client import CoveClient
 import logging
 import os
 import pkg_resources
 import signal
 import sys
-from task import TaskThread
 from threading import Thread
 import time
 import traceback
@@ -57,17 +55,6 @@ vcd:
     username: 'administrator'
     password: 'my_secret_password'
     api_version: '6.0'
-    verify: False
-    log: True
-
-cove:
-    host: cove.vmware.com
-    port: 5683
-    username: 'admin'
-    password: 'my_secret_password'
-    ca_cert: certs/ca.crt
-    client_cert: certs/admin.crt
-    client_key: certs/admin.key
     verify: False
     log: True
 
@@ -149,13 +136,6 @@ def check_config(file_name):
                                  org_url=vca_system.vcloud_session.org_url)
             print('  login to \'System\' org: %s' % (bool_to_msg(r)))
 
-        cove = CoveClient(config['cove']['host'],
-                          config['cove']['port'],
-                          config['cove']['verify'])
-        cove.connect()
-        print('Connection to Cove server (%s:%s): %s' %
-              (config['cove']['host'], config['cove']['port'],
-               bool_to_msg(True)))
         for vc in config['vcs']:
             r = get_thumbprint(vc['host'], vc['port'])
             print('Connection to vCenter Server (%s:%s): %s' %
@@ -236,17 +216,6 @@ def main():
     consumers = []
     threads = []
 
-    for vc in config['vcs']:
-        vc['thumbprint'] = get_thumbprint(vc['host'], vc['port'])
-
-    cove = CoveClient(config['cove']['host'],
-                      config['cove']['port'],
-                      config['cove']['verify'])
-    cove.connect()
-
-    task_thread = TaskThread('cse-1', config)
-    task_thread.start()
-
     for n in range(num_consumers):
         try:
             c = MessageConsumer('amqp://%s:%s@%s:%s/' %
@@ -257,7 +226,6 @@ def main():
                                 amqp['exchange'],
                                 amqp['routing_key'],
                                 config,
-                                cove,
                                 config['vcd']['verify'],
                                 config['vcd']['log'])
             t = Thread(target=consumer_thread, args=(c,))
@@ -285,7 +253,6 @@ def main():
                     c.stop()
                 except:
                     pass
-            task_thread.stop()
             LOGGER.info('done')
             break
         except:

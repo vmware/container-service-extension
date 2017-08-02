@@ -15,14 +15,6 @@ vcd:
     verify: False
     log: True
 
-cove:
-    host: cove.vmware.com
-    port: 5683
-    username: 'admin'
-    password: 'enter_your_password'
-    verify: False
-    log: True
-
 vcs:
   - host: vc1.vmware.com
     port: 443
