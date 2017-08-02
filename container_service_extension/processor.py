@@ -7,7 +7,9 @@ import pkg_resources, os
 from cluster import Cluster
 from cluster import Node
 from cluster import TYPE_MASTER
-import json
+from cluster import TYPE_NODE
+from cove_client import CoveClient
+import json, yaml
 import logging
 from provisioner import Provisioner
 from pyvcloud.task import Task
@@ -49,6 +51,7 @@ class ServiceProcessor(object):
         cluster_op = None
         cluster_id = None
         get_swagger_json=False
+        get_swagger_yaml=False
         if len(tokens) > 3:
             cluster_id = tokens[3]
             if cluster_id == '':
@@ -119,7 +122,7 @@ class ServiceProcessor(object):
                 yamlresponse=yaml.load(fi)
         else:
             raise Exception("Swagger file not found")
-        jsonresponse=yaml.dump(yamlresponse)
+        jsonresponse=json.loads(json.dumps(yamlresponse))
         realResponse={}
         realResponse['body']=jsonresponse
         realResponse['status_code'] = OK
