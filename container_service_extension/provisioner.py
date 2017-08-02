@@ -70,7 +70,8 @@ class Provisioner(object):
         Validates that the cluster name against the pattern.
         """
 
-        pattern = '^[a-zA-Z](([-0-9a-zA-Z]+)?[0-9a-zA-Z])?(\.[a-zA-Z](([-0-9a-zA-Z]+)?[0-9a-zA-Z])?)*$'
+        # TODO (validate against pattern)
+        # pattern = '^[a-zA-Z](([-0-9a-zA-Z]+)?[0-9a-zA-Z])?(\.[a-zA-Z](([-0-9a-zA-Z]+)?[0-9a-zA-Z])?)*$'  # NOQA
 
         return True
 
@@ -107,10 +108,10 @@ class Provisioner(object):
                              org='System',
                              org_url=org_url)
         if not r:
-            raise Exception(result)
+            raise Exception('failed to login as system')
         r = vca_system.login(token=vca_system.token,
                              org='System',
                              org_url=vca_system.vcloud_session.org_url)
         if not r:
-            raise Exception(result)
+            raise Exception('failed to login as system')
         return vca_system
