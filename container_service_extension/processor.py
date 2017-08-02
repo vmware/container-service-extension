@@ -3,12 +3,12 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import base64
-import pkg_resources, os
+import os
 from cluster import Cluster
 from cluster import Node
 from cluster import TYPE_MASTER
 import json
-import yaml 
+import yaml
 import logging
 from provisioner import Provisioner
 from pyvcloud.task import Task
@@ -49,8 +49,8 @@ class ServiceProcessor(object):
         tokens = requestUri.split('/')
         cluster_op = None
         cluster_id = None
-        get_swagger_json=False
-        get_swagger_yaml=False
+        get_swagger_json = False
+        get_swagger_yaml = False
         if len(tokens) > 3:
             cluster_id = tokens[3]
             if cluster_id == '':
@@ -59,7 +59,7 @@ class ServiceProcessor(object):
                 get_swagger_json = True
                 cluster_id = None
             if cluster_id == 'swagger.yaml':
-                get_swagger_yaml ==True
+                get_swagger_yaml = True
                 cluster_id = None
         if len(tokens) > 4:
             cluster_op = tokens[4]
@@ -89,9 +89,9 @@ class ServiceProcessor(object):
             vc_adapter = None
             LOGGER.error(traceback.format_exc())
         if body['method'] == 'GET':
-            if get_swagger_json==True:
+            if get_swagger_json is True:
                 reply = self.get_swagger_json_file()
-            elif get_swagger_yaml ==True:
+            elif get_swagger_yaml is True:
                 reply = self.get_swagger_yaml_file()
             elif cluster_id is None:
                 reply = self.list_clusters(prov, vca_system, vc_adapter)
@@ -110,36 +110,36 @@ class ServiceProcessor(object):
         LOGGER.debug('request:\n%s' % json.dumps(request_body))
         return reply
 
-     def get_swagger_json_file(self):
-        file_path='/usr/local/swagger/swagger.yaml'
-        yamlresponse=None
+    def get_swagger_json_file(self):
+        file_path = '/usr/local/swagger/swagger.yaml'
+        yamlresponse = None
         if os.path.exists(file_path):
             with open(file_path, 'r') as fi:
-                yamlresponse=yaml.load(fi)
+                yamlresponse = yaml.load(fi)
         elif os.path.exists('usr/swagger/swagger.yaml'):
             with open('usr/swagger/swagger.yaml', 'r') as fi:
-                yamlresponse=yaml.load(fi)
+                yamlresponse = yaml.load(fi)
         else:
             raise Exception("Swagger file not found")
-        jsonresponse=yaml.dump(yamlresponse)
-        realResponse={}
-        realResponse['body']=jsonresponse
+        jsonresponse = yaml.dump(yamlresponse)
+        realResponse = {}
+        realResponse['body'] = jsonresponse
         realResponse['status_code'] = OK
         return realResponse
 
     def get_swagger_yaml_file(self):
-        file_path='/usr/local/swagger/swagger.yaml'
-        yamlresponse=None
+        file_path = '/usr/local/swagger/swagger.yaml'
+        yamlresponse = None
         if os.path.exists(file_path):
             with open(file_path, 'r') as fi:
-                yamlresponse=yaml.load(fi)
+                yamlresponse = yaml.load(fi)
         elif os.path.exists('usr/swagger/swagger.yaml'):
             with open('usr/swagger/swagger.yaml', 'r') as fi:
-                yamlresponse=yaml.load(fi)
+                yamlresponse = yaml.load(fi)
         else:
             raise Exception("Swagger file not found")
-        realResponse={}
-        realResponse['body']=yamlresponse
+        realResponse = {}
+        realResponse['body'] = yamlresponse
         realResponse['status_code'] = OK
         return realResponse
 
