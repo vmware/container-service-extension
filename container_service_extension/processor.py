@@ -9,7 +9,7 @@ from cluster import Node
 from cluster import TYPE_MASTER
 from cluster import TYPE_NODE
 from cove_client import CoveClient
-import json
+import json, yaml
 import logging
 from provisioner import Provisioner
 from pyvcloud.vcloudair import VCA
