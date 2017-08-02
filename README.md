@@ -42,7 +42,6 @@ $ cse check config.yml
 Connection to AMQP server (amqp.vmware.com:5672): success
 Connection to vCloud Director (vcd.vmware.com:443): success
   login to 'System' org: success
-Connection to Cove server (kov.vmware.com:5683): success
 Connection to vCenter Server (vcs.vmware.com:443): success
 ```
 
