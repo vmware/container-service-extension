@@ -112,7 +112,7 @@ class ServiceProcessor(object):
         return reply
 
     def get_swagger_json_file(self):
-        file_path = sys.prefix + '/swagger/swagger.yaml'
+        file_path = 'swagger/swagger.yaml'
         yamlresponse = None
         if os.path.exists(file_path):
             with open(file_path, 'r') as fi:
@@ -126,7 +126,7 @@ class ServiceProcessor(object):
         return realResponse
 
     def get_swagger_yaml_file(self):
-        file_path = sys.prefix + '/swagger/swagger.yaml'
+        file_path = 'swagger/swagger.yaml'
         yamlresponse = None
         if os.path.exists(file_path):
             with open(file_path, 'r') as fi:
