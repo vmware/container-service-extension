@@ -4,8 +4,6 @@
 
 from pkg_resources import resource_string
 import base64
-import os
-import sys
 from cluster import Cluster
 from cluster import Node
 from cluster import TYPE_MASTER
@@ -114,8 +112,9 @@ class ServiceProcessor(object):
 
     def get_swagger_json_file(self):
         yamlresponse = None
-        try: 
-            file = resource_string('container_service_extension', 'swagger/swagger.yaml')
+        try:
+            file = resource_string('container_service_extension',
+                                   'swagger/swagger.yaml')
             yamlresponse = yaml.load(file)
         except:
             raise Exception("Swagger file not found: check installation")
@@ -127,8 +126,9 @@ class ServiceProcessor(object):
 
     def get_swagger_yaml_file(self):
         yamlresponse = None
-        try: 
-            file = resource_string('container_service_extension', 'swagger/swagger.yaml')
+        try:
+            file = resource_string('container_service_extension',
+                                   'swagger/swagger.yaml')
             yamlresponse = yaml.load(file)
         except:
             raise Exception("Swagger file not found: check installation")
