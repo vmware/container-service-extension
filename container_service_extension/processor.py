@@ -121,7 +121,7 @@ class ServiceProcessor(object):
                 yamlresponse = yaml.load(fi)
         else:
             raise Exception("Swagger file not found")
-        jsonresponse = yaml.dump(yamlresponse)
+        jsonresponse = json.loads(json.dumps(yamlresponse))
         realResponse = {}
         realResponse['body'] = jsonresponse
         realResponse['status_code'] = OK
