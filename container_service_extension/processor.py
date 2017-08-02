@@ -53,6 +53,7 @@ class ServiceProcessor(object):
         cluster_op = None
         cluster_id = None
         get_swagger_json=False
+        get_swagger_yaml=False
         if len(tokens) > 3:
             cluster_id = tokens[3]
             if cluster_id == '':
@@ -123,7 +124,7 @@ class ServiceProcessor(object):
                 yamlresponse=yaml.load(fi)
         else:
             raise Exception("Swagger file not found")
-        jsonresponse=yaml.dump(yamlresponse)
+        jsonresponse=json.loads(json.dumps(yamlresponse))
         realResponse={}
         realResponse['body']=jsonresponse
         realResponse['status_code'] = OK
