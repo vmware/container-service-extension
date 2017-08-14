@@ -178,8 +178,8 @@ class ServiceProcessor(object):
                 (cluster_name, cluster_id)
             LOGGER.info(operation_description)
             status = 'running'
-            details = '{"name": "%s", "id": "%s", "vdc": "%s"}' % \
-                      (cluster_name, cluster_id, cluster_vdc)
+            details = '{"vdc": "%s"}' % \
+                      (cluster_vdc)
             create_task = create_or_update_task(task,
                                                 OP_CREATE_CLUSTER,
                                                 operation_description,
