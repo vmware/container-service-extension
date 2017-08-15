@@ -171,6 +171,7 @@ class ServiceProcessor(object):
             return result
         cluster_id = str(uuid.uuid4())
         try:
+            raise Exception('not implemented')
             task = Task(session=vca_system.vcloud_session,
                         verify=self.config['vcd']['verify'],
                         log=self.config['vcd']['log'])
@@ -179,7 +180,7 @@ class ServiceProcessor(object):
             LOGGER.info(operation_description)
             status = 'running'
             details = '{"vdc": "%s"}' % \
-                      (cluster_vdc)
+                     (cluster_vdc)
             create_task = create_or_update_task(task,
                                                 OP_CREATE_CLUSTER,
                                                 operation_description,

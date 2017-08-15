@@ -56,21 +56,6 @@ class VC_Adapter(object):
                     "authorizedKeys": []
                  }
 
-        # params = {
-        #             "name": 'c-' + cluster_id,
-        #             "minNodes": body['node_count'],
-        #             "maxNodes": body['node_count'],
-        #             "authorizedKeys": [],
-        #             "vsphere": {
-        #                 "datacenter": vcs['datacenter'],
-        #                 "computeResource": vcs['cluster'],
-        #                 "datastore": vcs['datastore'],
-        #                 "publicNetwork": vcs['network'],
-        #                 "opsUsername": vcs['username'],
-        #                 "opsPassword": vcs['password'],
-        #             }
-        #          }
-
         return (vcs, params)
 
     def get_delete_params(self, body, cluster_id):

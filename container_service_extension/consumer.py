@@ -85,7 +85,7 @@ class MessageConsumer(object):
         LOGGER.debug('Declaring exchange %s', exchange_name)
         self._channel.exchange_declare(self.on_exchange_declareok,
                                        exchange=exchange_name,
-                                       type=self.EXCHANGE_TYPE,
+                                       exchange_type=self.EXCHANGE_TYPE,
                                        durable=True)
 
     def on_exchange_declareok(self, unused_frame):
