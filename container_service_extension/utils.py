@@ -19,5 +19,4 @@ def get_thumbprint(host, port):
     der_cert_bin = wrappedSocket.getpeercert(True)
     thumb_sha1 = hashlib.sha1(der_cert_bin).hexdigest()
     wrappedSocket.close()
-
     return ':'.join(map(str, hex_chunks(thumb_sha1))).upper()
