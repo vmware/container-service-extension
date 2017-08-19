@@ -3,67 +3,62 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import logging
+from lxml import objectify
+from pyvcloud.vcd.client import _WellKnownEndpoint
+from pyvcloud.vcd.client import BasicLoginCredentials
+from pyvcloud.vcd.client import Client
+import requests
 import time
-from pyvcloud.task import Task
-from pyvcloud.vcloudair import VCA
-from pyvcloud.vcloudsession import VCS
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-def wait_for_task(task, task_id):
-    t = task.get_task(task_id)
-    while t.get_status() != 'success':
-        time.sleep(3)
-        t = task.get_task(task_id)
-        LOGGER.debug('%s, %s, %s, %s, %s, %s->%s' %
-                     (t.get_id().split(':')[-1],
-                      t.get_operation(),
-                      t.get_Owner().get_name(),
-                      t.get_status(),
-                      t.get_Progress(),
-                      str(t.get_startTime()).split('.')[0],
-                      str(t.get_endTime()).split('.')[0]))
-
-
 class Provisioner(object):
 
-    def __init__(self, host, vcloud_token, version, verify, log=False):
+    def __init__(self, host, username, password, version, verify, log):
         self.host = host
-        self.vcloud_token = vcloud_token
+        self.username = username
+        self.password = password
         self.version = version
         self.verify = verify
         self.log = log
-        self.vca_tenant = VCA(host=host, username='', service_type='vcd',
-                              version=version, verify=verify, log=log)
+        self.client_sysadmin = None
+        self.client_tenant = None
 
-    def connect(self):
-        link = 'https://%s/api/session' % (self.host)
-        vcloud_session = VCS(link, '', '', None, '', '',
-                             version=self.version,
-                             verify=self.verify,
-                             log=self.log)
-        result = vcloud_session.update_session_data(self.vcloud_token)
-        if not result:
-            LOGGER.error('unable to connect provisioner for token: %s' %
-                         (self.vcloud_token))
-            return False
-        self.vca_tenant.vcloud_session = vcloud_session
-        LOGGER.info('connected provisioner for: %s@%s (%s)' %
-                    (self.vca_tenant.vcloud_session.username,
-                     self.vca_tenant.vcloud_session.org,
-                     self.vcloud_token))
-        return True
+    def connect_sysadmin(self):
+        if not self.verify:
+            LOGGER.warning('InsecureRequestWarning: '
+                           'Unverified HTTPS request is being made. '
+                           'Adding certificate verification is strongly '
+                           'advised.')
+            requests.packages.urllib3.disable_warnings()
+        self.client_sysadmin = Client(uri=self.host,
+                                      api_version=self.version,
+                                      verify_ssl_certs=self.verify,
+                                      log_file='sysadmin.log',
+                                      log_headers=True,
+                                      log_bodies=True
+                                      )
+        self.client_sysadmin.set_credentials(
+            BasicLoginCredentials(self.username,
+                                  'System',
+                                  self.password))
 
-    def get_task_status(self, task_id):
-        try:
-            task = Task(session=self.vca_tenant.vcloud_session,
-                        verify=self.verify, log=self.log)
-            t = task.get_task(task_id)
-            return t.get_status()
-        except:
-            return 'unknown'
+    def connect_tenant(self, body):
+        token = body.get('headers').get('x-vcloud-authorization')
+        accept_header = body.get('headers').get('Accept')
+        version = accept_header.split('version=')[1]
+        self.client_tenant = Client(uri=self.host,
+                                    api_version=version,
+                                    verify_ssl_certs=self.verify,
+                                    log_file='tenant.log',
+                                    log_headers=True,
+                                    log_bodies=True
+                                    )
+        session = self.client_tenant.rehydrate_from_token(token)
+        # print(client._get_wk_endpoint(_WellKnownEndpoint.LOGGED_IN_ORG))
+        return {'user_name': session.get('user'), 'org_name': session.get('org')}
 
     def validate_name(self, name):
         """
@@ -80,38 +75,17 @@ class Provisioner(object):
         check that the cluster name exists in the current VDC.
         It exists, it returns the cluster id
         """
-        result = {'name': name, 'cluster_id': None}
-
-        return result
+        return None
 
     def search_by_id(self, cluster_id):
         """
         check that the cluster with cluster_id exists in the current VDC.
         It exists, it returns the cluster name and details.
         """
-        # result = {'name': None, 'cluster_id': cluster_id}
-        result = {'name': cluster_id.split('-')[0], 'cluster_id': cluster_id}
+        return None
 
-        return result
+    def create_cluster_thread(self, cluster_id):
+        pass
 
-    @staticmethod
-    def get_system_session(config):
-        vca_system = VCA(host=config['vcd']['host'],
-                         username=config['vcd']['username'],
-                         service_type='vcd',
-                         version=config['vcd']['api_version'],
-                         verify=config['vcd']['verify'],
-                         log=config['vcd']['log'])
-
-        org_url = 'https://%s/cloud' % config['vcd']['host']
-        r = vca_system.login(password=config['vcd']['password'],
-                             org='System',
-                             org_url=org_url)
-        if not r:
-            raise Exception('failed to login as system')
-        r = vca_system.login(token=vca_system.token,
-                             org='System',
-                             org_url=vca_system.vcloud_session.org_url)
-        if not r:
-            raise Exception('failed to login as system')
-        return vca_system
+    def delete_cluster_thread(self, cluster_id):
+        pass

@@ -7,17 +7,14 @@ import base64
 from cluster import Cluster
 from cluster import Node
 from cluster import TYPE_MASTER
+from container_service_extension.provisioner import Provisioner
 import json
 import yaml
 import logging
-from provisioner import Provisioner
-from pyvcloud.task import Task
-from task import create_or_update_task
 import time
 import traceback
 from threading import Thread
 import uuid
-from vc_adapter import VC_Adapter
 
 LOGGER = logging.getLogger(__name__)
 
@@ -36,6 +33,13 @@ class ServiceProcessor(object):
         self.config = config
         self.verify = verify
         self.log = log
+        self.provisioner = Provisioner(host=config['vcd']['host'],
+                                       username=config['vcd']['username'],
+                                       password=config['vcd']['password'],
+                                       version=config['vcd']['api_version'],
+                                       verify=config['vcd']['verify'],
+                                       log=config['vcd']['log'])
+        self.provisioner.connect_sysadmin()
 
     def process_request(self, body):
         LOGGER.debug('request body: %s' % json.dumps(body))
@@ -71,72 +75,59 @@ class ServiceProcessor(object):
                 request_body = None
         else:
             request_body = None
-        try:
-            prov = Provisioner(request_host, request_vcloud_token,
-                               request_version, self.verify, self.log)
-            r = prov.connect()
-            assert(r)
-            request_username = prov.vca_tenant.vcloud_session.username
-            request_org_id = prov.vca_tenant.vcloud_session.org_id
-            vca_system = Provisioner.get_system_session(self.config)
-            vc_adapter = VC_Adapter(self.config, vca_system, prov)
-        except:
-            prov = None
-            request_username = None
-            request_org_id = None
-            vca_system = None
-            vc_adapter = None
-            LOGGER.error(traceback.format_exc())
+
+        tenant_info = self.provisioner.connect_tenant(body)
+
+        request_user_name = tenant_info.get('user_name')
+        request_org_name = tenant_info.get('org_name')
         if body['method'] == 'GET':
             if get_swagger_json is True:
                 reply = self.get_swagger_json_file()
             elif get_swagger_yaml is True:
                 reply = self.get_swagger_yaml_file()
             elif cluster_id is None:
-                reply = self.list_clusters(prov, vca_system, vc_adapter)
+                reply = self.list_clusters()
         elif body['method'] == 'POST':
             if cluster_id is None:
-                reply = self.create_cluster(request_body, prov,
-                                            vca_system, vc_adapter)
+                reply = self.create_cluster(request_body)
         elif body['method'] == 'DELETE':
-            reply = self.delete_cluster(request_body, prov,
-                                        vca_system, vc_adapter, cluster_id)
-        LOGGER.debug('---\nid=%s\nmethod=%s\nuser=%s\norg_id=%s\n'
+            reply = self.delete_cluster(request_body, cluster_id)
+        LOGGER.debug('---\nid=%s\nmethod=%s\nuser=%s\norg_name=%s\n'
                      'vcloud_token=%s\ncluster_id=%s\ncluster_op=%s' %
-                     (body['id'], body['method'], request_username,
-                      request_org_id, request_vcloud_token, cluster_id,
+                     (body['id'], body['method'], request_user_name,
+                      request_org_name, request_vcloud_token, cluster_id,
                       cluster_op))
         LOGGER.debug('request:\n%s' % json.dumps(request_body))
         return reply
 
     def get_swagger_json_file(self):
-        yamlresponse = None
+        yaml_response = None
         try:
-            file = resource_string('container_service_extension',
-                                   'swagger/swagger.yaml')
-            yamlresponse = yaml.load(file)
+            file_name = resource_string('container_service_extension',
+                                        'swagger/swagger.yaml')
+            yaml_response = yaml.load(file_name)
         except:
-            raise Exception("Swagger file not found: check installation")
-        jsonresponse = json.loads(json.dumps(yamlresponse))
-        realResponse = {}
-        realResponse['body'] = jsonresponse
-        realResponse['status_code'] = OK
-        return realResponse
+            raise Exception("Swagger file not found: check installation.")
+        json_response = json.loads(json.dumps(yaml_response))
+        real_response = {}
+        real_response['body'] = json_response
+        real_response['status_code'] = OK
+        return real_response
 
     def get_swagger_yaml_file(self):
-        yamlresponse = None
+        yaml_response = None
         try:
-            file = resource_string('container_service_extension',
-                                   'swagger/swagger.yaml')
-            yamlresponse = yaml.load(file)
+            file_name = resource_string('container_service_extension',
+                                        'swagger/swagger.yaml')
+            yaml_response = yaml.load(file_name)
         except:
-            raise Exception("Swagger file not found: check installation")
-        realResponse = {}
-        realResponse['body'] = yamlresponse
-        realResponse['status_code'] = OK
-        return realResponse
+            raise Exception("Swagger file not found: check installation.")
+        real_response = {}
+        real_response['body'] = yaml_response
+        real_response['status_code'] = OK
+        return real_response
 
-    def list_clusters(self, prov, vca_system, vc_adapter):
+    def list_clusters(self):
         result = {}
         clusters = []
         try:
@@ -149,7 +140,7 @@ class ServiceProcessor(object):
             result['message'] = traceback.format_exc()
         return result
 
-    def create_cluster(self, body, prov, vca_system, vc_adapter):
+    def create_cluster(self, body):
         result = {}
         result['body'] = {}
         cluster_name = body['name']
@@ -158,58 +149,58 @@ class ServiceProcessor(object):
         LOGGER.debug('about to create cluster with %s nodes', node_count)
         result['body'] = 'can''t create cluster'
         result['status_code'] = INTERNAL_SERVER_ERROR
-        if not prov.validate_name(cluster_name):
+        if not self.provisioner.validate_name(cluster_name):
             result['body'] = {'message': 'name is not valid'}
             return result
-        if prov.search_by_name(cluster_name)['cluster_id'] is not None:
+        if self.provisioner.search_by_name(cluster_name) is not None:
             result['body'] = {'message': 'cluster already exists'}
             return result
         cluster_id = str(uuid.uuid4())
         try:
-            raise Exception('not implemented')
-            task = Task(session=vca_system.vcloud_session,
-                        verify=self.config['vcd']['verify'],
-                        log=self.config['vcd']['log'])
-            operation_description = 'creating cluster %s (%s)' % \
-                (cluster_name, cluster_id)
-            LOGGER.info(operation_description)
-            status = 'running'
-            details = '{"vdc": "%s"}' % \
-                     (cluster_vdc)
-            create_task = create_or_update_task(task,
-                                                OP_CREATE_CLUSTER,
-                                                operation_description,
-                                                cluster_name,
-                                                cluster_id,
-                                                status,
-                                                details,
-                                                prov)
-            if create_task is None:
-                return result
-            response_body = {}
-            response_body['name'] = cluster_name
-            response_body['cluster_id'] = cluster_id
-            response_body['task_id'] = create_task.get_id().split(':')[-1]
-            response_body['status'] = status
-            response_body['progress'] = None
-            result['body'] = response_body
-            result['status_code'] = ACCEPTED
-            thread = Thread(target=self.create_cluster_thread,
-                            args=(cluster_id,))
-            thread.daemon = True
-            thread.start()
+            raise Exception({'message': 'not implemented'})
+            # task = Task(session=vca_system.vcloud_session,
+            #             verify=self.config['vcd']['verify'],
+            #             log=self.config['vcd']['log'])
+            # operation_description = 'creating cluster %s (%s)' % \
+            #     (cluster_name, cluster_id)
+            # LOGGER.info(operation_description)
+            # status = 'running'
+            # details = '{"vdc": "%s"}' % \
+            #          (cluster_vdc)
+            # create_task = create_or_update_task(task,
+            #                                     OP_CREATE_CLUSTER,
+            #                                     operation_description,
+            #                                     cluster_name,
+            #                                     cluster_id,
+            #                                     status,
+            #                                     details,
+            #                                     prov)
+            # if create_task is None:
+            #     return result
+            # response_body = {}
+            # response_body['name'] = cluster_name
+            # response_body['cluster_id'] = cluster_id
+            # response_body['task_id'] = create_task.get_id().split(':')[-1]
+            # response_body['status'] = status
+            # response_body['progress'] = None
+            # result['body'] = response_body
+            # result['status_code'] = ACCEPTED
+            # thread = Thread(target=self.create_cluster_thread,
+            #                 args=(cluster_id,))
+            # thread.daemon = True
+            # thread.start()
         except Exception as e:
             result['body'] = e.message
             LOGGER.error(traceback.format_exc())
         return result
 
-    def delete_cluster(self, body, prov, vca_system, vc_adapter, cluster_id):
+    def delete_cluster(self, body, cluster_id):
         result = {}
         result['body'] = {}
         LOGGER.debug('about to delete cluster with id: %s', cluster_id)
         result['status_code'] = INTERNAL_SERVER_ERROR
-        details = prov.search_by_id(cluster_id)
-        if details['name'] is None:
+        details = self.provisioner.search_by_id(cluster_id)
+        if details is None or details['name'] is None:
             result['body'] = {'message': 'cluster not found'}
             return result
         cluster_name = details['name']

@@ -30,6 +30,9 @@ class MessageConsumer(object):
         self.config = config
         self.verify = verify
         self.log = log
+        self.service_processor = ServiceProcessor(self.config,
+                                                  self.verify,
+                                                  self.log)
 
     def connect(self):
         LOGGER.info('Connecting to %s', self._url)
@@ -131,11 +134,8 @@ class MessageConsumer(object):
                          thread.get_ident(),
                          json.dumps(json.loads(body)[0]),
                          properties)
-            sp = ServiceProcessor(self.config,
-                                  self.verify,
-                                  self.log)
             body = json.loads(body)[0]
-            result = sp.process_request(body)
+            result = self.service_processor.process_request(body)
             reply_body = jsonpickle.encode(result['body'])
             status_code = result['status_code']
         except:
