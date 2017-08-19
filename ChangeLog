@@ -1,7 +1,35 @@
 CHANGES
 =======
 
+* moved-to-click
+* pks
+* removed templates
+* wip
+* templates
+* removed scripts
+* removed deps
+* removed deps
+* removed deps
+* temp fix
+* fixed utils
+* removed pyc files
+* gitignore
+* allow client to fetch swagger files, packaged swagger with cse
+* flake8
+* doc
+* doc
+* gitignore
+* doc
+* moved-dir-up
+* new-sdk-client
+* new-sdk-client
+* new-sdk-client
+* new-sdk-client
+* new-sdk-client
+* deleted DS Stores
 * update
+* delete all kov-py files
+* created swagger file and deleted all kov-py stuff (swagger code-gen)
 * deps
 * wip
 * new-impl
@@ -13,6 +41,9 @@ CHANGES
 * doc
 * adapter
 * vc-adapter
+* renamed the folder to pykov and added setup.cfg to get it to work with naming the package pykov
+* created the swagger-codgen generated python-sdk's
+* created the swagger-codgen generated python-sdk's
 * ci
 * wip
 * delete
