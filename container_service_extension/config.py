@@ -62,8 +62,8 @@ def check_config(file_name):
                                            credentials)
     connection = pika.BlockingConnection(parameters)
     click.echo('Connection to AMQP server (%s:%s): %s' % (amqp['host'],
-          amqp['port'],
-          bool_to_msg(connection.is_open)))
+               amqp['port'],
+               bool_to_msg(connection.is_open)))
     connection.close()
     if not config['vcd']['verify']:
         click.secho('InsecureRequestWarning: '
@@ -72,15 +72,15 @@ def check_config(file_name):
                     'advised.', fg='yellow', err=True)
         requests.packages.urllib3.disable_warnings()
     client = Client(config['vcd']['host'],
-            api_version=config['vcd']['api_version'],
-            verify_ssl_certs=config['vcd']['verify'],
-            log_file='cse.log',
-            log_headers=True,
-            log_bodies=True
-            )
+                    api_version=config['vcd']['api_version'],
+                    verify_ssl_certs=config['vcd']['verify'],
+                    log_file='cse.log',
+                    log_headers=True,
+                    log_bodies=True
+                    )
     client.set_credentials(BasicLoginCredentials(config['vcd']['username'],
-                                                'System',
-                                                config['vcd']['password']))
+                                                 'System',
+                                                 config['vcd']['password']))
     click.echo('Connection to vCloud Director as system '
                'administrator (%s:%s): %s' %
                (config['vcd']['host'], config['vcd']['port'],

@@ -6,22 +6,11 @@ import click
 from consumer import MessageConsumer
 from container_service_extension.config import check_config
 import logging
-from pyvcloud.vcd.client import BasicLoginCredentials
-from pyvcloud.vcd.client import Client
-import pika
-import requests
-import yaml
-import os
-import pkg_resources
 import signal
 import sys
 from threading import Thread
 import time
 import traceback
-import yaml
-import pika
-from pyvcloud.vcloudair import VCA
-from utils import get_thumbprint
 
 
 LOGGER = logging.getLogger(__name__)
@@ -47,7 +36,6 @@ class Service(object):
     def __init__(self, config_file):
         self.config_file = config_file
         self.config = None
-
 
     def run(self):
         self.config = check_config(self.config_file)

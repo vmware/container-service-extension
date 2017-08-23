@@ -5,22 +5,11 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import click
-from consumer import MessageConsumer
 from container_service_extension.config import check_config
 from container_service_extension.config import generate_sample_config
 from container_service_extension.service import Service
 import logging
-import os
 import pkg_resources
-import signal
-import sys
-from threading import Thread
-import time
-import traceback
-import yaml
-import pika
-from pyvcloud.vcloudair import VCA
-from utils import get_thumbprint
 
 
 LOGGER = logging.getLogger(__name__)
