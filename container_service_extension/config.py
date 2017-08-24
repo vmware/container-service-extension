@@ -8,6 +8,7 @@ import pika
 import requests
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
+from pyvcloud.vcd.vsphere import VSphere
 import yaml
 
 
@@ -32,12 +33,26 @@ vcd:
     verify: False
     log: True
 
+vcs:
+    host: vcenter.vmware.com
+    port: 443
+    username: 'administrator@vsphere.local'
+    password: 'my_secret_password'
+    verify: False
+
 service:
     listeners: 2
     logging_level: 5
     logging_format: %s
     key_filename: 'id_rsa_cse'
     key_filename_pub: 'id_rsa_cse.pub'
+
+broker:
+    type: default
+    catalog: cse-catalog
+    master_template: k8s-template.ova
+    node_template: k8s-template.ova
+    password: 'template-root-user-password'
 
     """ % '%(levelname) -8s %(asctime)s %(name) -40s %(funcName) ' \
           '-35s %(lineno) -5d: %(message)s'
@@ -84,5 +99,17 @@ def check_config(file_name):
     click.echo('Connection to vCloud Director as system '
                'administrator (%s:%s): %s' %
                (config['vcd']['host'], config['vcd']['port'],
+                bool_to_msg(True)))
+
+    v = VSphere(config['vcs']['host'],
+                config['vcs']['username'],
+                config['vcs']['password'],
+                port=int(config['vcs']['port']))
+    v.connect()
+    click.echo('Connection to vCenter Server as %s '
+               '(%s:%s): %s' %
+               (config['vcs']['username'],
+                config['vcs']['host'],
+                config['vcs']['port'],
                 bool_to_msg(True)))
     return config

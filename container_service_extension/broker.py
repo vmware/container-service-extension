@@ -7,6 +7,7 @@ from container_service_extension.cluster import load_from_metadata
 from container_service_extension.cluster import load_from_metadata_by_id
 from container_service_extension.cluster import TYPE_NODE
 from container_service_extension.cluster import TYPE_MASTER
+from container_service_extension.guest import execute_program_in_guest
 import logging
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
@@ -246,9 +247,19 @@ class DefaultBroker(threading.Thread):
                     tags['cse.cluster.id'] = self.cluster_id
                     tags['cse.node.type'] = node_type
                     tags['cse.cluster.name'] = cluster_name
+                    vapp = VApp(self.client_tenant,
+                                vapp_href=node.get('href'))
+                    execute_program_in_guest(self.client_tenant,
+                                             node.get('href'),
+                                             node.get('name'),
+                                             None,
+                                             None,
+                                             None,
+                                             None,
+                                             None,
+                                             None,
+                                             None)
                     for k, v in tags.items():
-                        vapp = VApp(self.client_tenant,
-                                    vapp_href=node.get('href'))
                         task = vapp.set_metadata('GENERAL', 'READWRITE', k, v)
                         self.client_tenant.get_task_monitor().\
                             wait_for_status(
