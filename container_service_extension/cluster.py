@@ -5,7 +5,6 @@
 import json
 import logging
 from pyvcloud.vcd.client import QueryResultFormat
-from pyvcloud.vcd.client import RESOURCE_TYPES
 
 
 TYPE_MASTER = 'master'
@@ -57,7 +56,6 @@ class Cluster(object):
 
 #  TODO(optimize after fix for bug #1945003)
 def load_from_metadata(client, name=None):
-    clusters = []
     q = client.get_typed_query(
             'vApp',
             query_result_format=QueryResultFormat.
@@ -81,7 +79,9 @@ def load_from_metadata(client, name=None):
                 query_result_format=QueryResultFormat.
                 ID_RECORDS,
                 qfilter='id==%s' % node['vapp_id'],
-                fields='metadata:cse.cluster.name,metadata:cse.cluster.id,metadata:cse.node.type')
+                fields='metadata:cse.cluster.name' +
+                       ',metadata:cse.cluster.id' +
+                       ',metadata:cse.node.type')
         records = list(q.execute())
         for record in records:
             for md in record.Metadata.MetadataEntry:

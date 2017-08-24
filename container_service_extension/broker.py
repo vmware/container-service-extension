@@ -10,8 +10,6 @@ from container_service_extension.cluster import TYPE_MASTER
 import logging
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
-from pyvcloud.vcd.client import QueryResultFormat
-from pyvcloud.vcd.client import RESOURCE_TYPES
 from pyvcloud.vcd.client import TaskStatus
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vapp import VApp
@@ -202,7 +200,6 @@ class DefaultBroker(threading.Thread):
         vdc_resource = org.get_vdc(self.body['vdc'])
 
         cluster_name = self.body['name']
-        vdc_name = self.body['vdc']
         master_count = 1
         node_count = int(self.body['node_count'])
         catalog = self.config['broker']['catalog']
@@ -215,7 +212,9 @@ class DefaultBroker(threading.Thread):
         for n in range(master_count):
             time.sleep(1)
             name = cluster_name + '-m%s' % str(n+1)
-            masters.append(vdc.instantiate_vapp(name, catalog, master_template))
+            masters.append(vdc.instantiate_vapp(name,
+                                                catalog,
+                                                master_template))
         nodes = []
         for n in range(node_count):
             time.sleep(1)
@@ -239,7 +238,9 @@ class DefaultBroker(threading.Thread):
                         break
             time.sleep(15)
             if node is not None:
-                print('about to tag %s, href=%s' % (node.get('name'), node.get('href')))
+                LOGGER.debug('about to tag %s, href=%s',
+                             node.get('name'),
+                             node.get('href'))
                 try:
                     tags = {}
                     tags['cse.cluster.id'] = self.cluster_id
@@ -249,7 +250,7 @@ class DefaultBroker(threading.Thread):
                         vapp = VApp(self.client_tenant,
                                     vapp_href=node.get('href'))
                         task = vapp.set_metadata('GENERAL', 'READWRITE', k, v)
-                        result = self.client_tenant.get_task_monitor().\
+                        self.client_tenant.get_task_monitor().\
                             wait_for_status(
                                 task=task,
                                 timeout=600,
@@ -258,34 +259,13 @@ class DefaultBroker(threading.Thread):
                                 expected_target_statuses=[TaskStatus.SUCCESS],
                                 callback=None)
                     tagged.update([node.get('name')])
-                    print('tagged %s' % node.get('name'))
+                    LOGGER.debug('tagged %s', node.get('name'))
                 except:
-                    LOGGER.error('can''t tag %s at this moment, will retry later', node.get('name'))
+                    LOGGER.error(
+                        'can''t tag %s at this moment, will retry later',
+                        node.get('name'))
                     LOGGER.error(traceback.format_exc())
                     time.sleep(1)
-
-            # task = self.client_tenant.get_task_monitor().wait_for_status(
-            #                     task=node.Tasks.Task[0],
-            #                     timeout=600,
-            #                     poll_frequency=5,
-            #                     fail_on_status=None,
-            #                     expected_target_statuses=[
-            #                         TaskStatus.SUCCESS,
-            #                         TaskStatus.ABORTED,
-            #                         TaskStatus.ERROR,
-            #                         TaskStatus.CANCELED],
-            #                     callback=task_callback)
-            # if task.get('status').lower() == TaskStatus.SUCCESS.value:
-            #     va = VApp(self.client_tenant, vapp_href=node.get('href'))
-            #     tags = {}
-            #     tags['cse.cluster.id'] = self.cluster_id
-            #     tags['cse.node.type'] = TYPE_NODE
-            #     tags['cse.cluster.name'] = cluster_name
-            #     for k, v in tags.items():
-            #         #  TODO(wait until success)
-            #         time.sleep(1)
-            #         va.set_metadata('GENERAL', 'READWRITE', k, v)
-            #     node_ip = va.get_primary_ip()
 
     def delete_cluster(self, cluster_id, headers, body):
         result = {}
@@ -323,6 +303,6 @@ class DefaultBroker(threading.Thread):
         for node in nodes:
             if vdc is None:
                 vdc = VDC(self.client_tenant, vdc_href=node['vdc_href'])
-            print('about to delete vapp %s' % node['vapp_name'])
-            task = vdc.delete_vapp(node['vapp_name'], force=True)
+            LOGGER.debug('about to delete vapp %s', node['vapp_name'])
+            vdc.delete_vapp(node['vapp_name'], force=True)
             time.sleep(1)
