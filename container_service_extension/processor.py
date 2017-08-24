@@ -72,8 +72,11 @@ class ServiceProcessor(object):
         try:
             file_name = resource_string('container_service_extension',
                                         'swagger/swagger.yaml')
-            spec = yaml.load(file_name)
-            result['body'] = json.loads(json.dumps(spec))
+            if format == 'swagger.yaml':
+                result['body'] = file_name
+            else:
+                spec = yaml.load(file_name)
+                result['body'] = json.loads(json.dumps(spec))
             result['status_code'] = OK
         except:
             LOGGER.error(traceback.format_exc())
