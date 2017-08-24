@@ -128,7 +128,7 @@ class ServiceProcessor(object):
         try:
             file = resource_string('container_service_extension',
                                    'swagger/swagger.yaml')
-            yamlresponse = yaml.load(file)
+            yamlresponse = file
         except:
             raise Exception("Swagger file not found: check installation")
         realResponse = {}
