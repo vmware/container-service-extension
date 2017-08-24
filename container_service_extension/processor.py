@@ -70,14 +70,13 @@ class ServiceProcessor(object):
     def get_spec(self, format):
         result = {}
         try:
-	  
             file_name = resource_string('container_service_extension',
                                         'swagger/swagger.yaml')
-	    if format == 'swagger.yaml':
-		result['body'] = file_name
-	    else:
-	    	spec = yaml.load(file_name)
-            	result['body'] = json.loads(json.dumps(spec))
+            if format == 'swagger.yaml':
+                result['body'] = file_name
+            else:
+                spec = yaml.load(file_name)
+                result['body'] = json.loads(json.dumps(spec))
             result['status_code'] = OK
         except:
             LOGGER.error(traceback.format_exc())
