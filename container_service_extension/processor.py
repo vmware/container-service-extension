@@ -50,8 +50,9 @@ class ServiceProcessor(object):
             if spec_request:
                 reply = self.get_spec(tokens[3])
             elif cluster_id is None:
-                reply = self.broker.list_clusters(body['headers'],
-                                                  request_body)
+                broker = get_new_broker(self.config)
+                reply = broker.list_clusters(body['headers'],
+                                             request_body)
         elif body['method'] == 'POST':
             if cluster_id is None:
                 broker = get_new_broker(self.config)
