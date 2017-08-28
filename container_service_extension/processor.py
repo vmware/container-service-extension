@@ -30,13 +30,17 @@ class ServiceProcessor(object):
         LOGGER.debug('body: %s' % json.dumps(body))
         reply = {}
         tokens = body['requestUri'].split('/')
-        cluster_id = None
+        cluster_name = None
         spec_request = False
+        config_request = False
         if len(tokens) > 3:
             if tokens[3] in ['swagger', 'swagger.json', 'swagger.yaml']:
                 spec_request = True
             elif tokens[3] != '':
-                cluster_id = tokens[3]
+                cluster_name = tokens[3]
+        if len(tokens) > 4:
+            if tokens[4] == 'config':
+                config_request = True
         if len(body['body']) > 0:
             try:
                 request_body = json.loads(base64.b64decode(body['body']))
@@ -49,18 +53,23 @@ class ServiceProcessor(object):
         if body['method'] == 'GET':
             if spec_request:
                 reply = self.get_spec(tokens[3])
-            elif cluster_id is None:
+            elif config_request:
+                broker = get_new_broker(self.config)
+                reply = broker.get_cluster_config(cluster_name,
+                                                  body['headers'],
+                                                  None)
+            elif cluster_name is None:
                 broker = get_new_broker(self.config)
                 reply = broker.list_clusters(body['headers'],
                                              request_body)
         elif body['method'] == 'POST':
-            if cluster_id is None:
+            if cluster_name is None:
                 broker = get_new_broker(self.config)
                 reply = broker.create_cluster(body['headers'],
                                               request_body)
         elif body['method'] == 'DELETE':
             broker = get_new_broker(self.config)
-            reply = broker.delete_cluster(cluster_id,
+            reply = broker.delete_cluster(cluster_name,
                                           body['headers'],
                                           request_body)
         LOGGER.debug('reply: %s' % json.dumps(reply))

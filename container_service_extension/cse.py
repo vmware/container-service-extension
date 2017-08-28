@@ -65,9 +65,15 @@ def check(ctx, file_name):
                 metavar='<config-file>',
                 required=True,
                 default='config.yml')
-def run(ctx, file_name):
+@click.option('-s',
+              '--skip-check',
+              is_flag=True,
+              default=False,
+              required=False,
+              help='Skip check')
+def run(ctx, file_name, skip_check):
     """Run CSE service"""
-    service = Service(file_name)
+    service = Service(file_name, check_config=not skip_check)
     service.run()
 
 

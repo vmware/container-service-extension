@@ -97,3 +97,6 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+templates/packer_cache
+templates/private-variables.json

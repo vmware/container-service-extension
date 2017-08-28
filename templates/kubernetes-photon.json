@@ -1,0 +1,53 @@
+{
+  "builders": [
+    {
+      "name": "k8s-template",
+      "vm_name": "k8s-template",
+      "type": "vmware-iso",
+      "guest_os_type": "other3xlinux-64",
+      "tools_upload_flavor": "linux",
+      "headless": false,
+
+      "iso_url": "https://bintray.com/vmware/photon/download_file?file_path=photon-1.0-62c543d.iso",
+      "iso_checksum": "026b9d05b5414dbf4d439dd945e1d78917354d755128c1a8f36cecdd036ce775",
+      "iso_checksum_type": "sha256",
+
+      "ssh_username": "root",
+      "ssh_password": "2RQrZ83i7tTgszpvZNX6",
+      "ssh_timeout": "60m",
+      "boot_wait": "5s",
+
+      "disk_type_id": "thin",
+
+      "shutdown_command": "shutdown -P now",
+
+      "http_directory": "scripts",
+      "version": 11,
+      "vmx_data": {
+        "scsi0.virtualDev": "pvscsi",
+        "ethernet0.networkName": "VM Network",
+        "ethernet0.virtualDev": "vmxnet3"
+        },
+
+      "boot_command": [
+        "<esc><wait>",
+        "vmlinuz initrd=initrd.img root=/dev/ram0 loglevel=3 ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/photon-kickstart.json",
+        "<enter>"
+      ],
+
+      "remote_type": "esx5",
+      "remote_host": "{{user `esxi_host`}}",
+      "remote_datastore": "{{user `esxi_datastore`}}",
+      "remote_username": "{{user `esxi_username`}}",
+      "remote_password": "{{user `esxi_password`}}",
+      "keep_registered": true
+
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "script": "scripts/photon-package_provisioning.sh"
+    }
+  ]
+}

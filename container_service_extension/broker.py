@@ -5,9 +5,9 @@
 import click
 from container_service_extension.cluster import load_from_metadata
 from container_service_extension.cluster import load_from_metadata_by_id
+from container_service_extension.cluster import load_from_metadata_by_name
 from container_service_extension.cluster import TYPE_NODE
 from container_service_extension.cluster import TYPE_MASTER
-from container_service_extension.guest import execute_program_in_guest
 import logging
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
@@ -15,6 +15,7 @@ from pyvcloud.vcd.client import TaskStatus
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
+from pyvcloud.vcd.vsphere import VSphere
 import requests
 import threading
 import time
@@ -167,14 +168,7 @@ class DefaultBroker(threading.Thread):
                      node_count)
         result['body'] = 'can''t create cluster'
         result['status_code'] = INTERNAL_SERVER_ERROR
-        # if not self.provisioner.validate_name(cluster_name):
-        #     result['body'] = {'message': 'name is not valid'}
-        #     return result
-        # if self.provisioner.search_by_name(cluster_name) is not None:
-        #     result['body'] = {'message': 'cluster already exists'}
-        #     return result
         try:
-            # self._connect_sysadmin()
             self._connect_tenant(headers)
             self.headers = headers
             self.body = body
@@ -185,9 +179,6 @@ class DefaultBroker(threading.Thread):
             response_body = {}
             response_body['name'] = cluster_name
             response_body['cluster_id'] = self.cluster_id
-            # response_body['task_id'] = create_task.get_id().split(':')[-1]
-            # response_body['status'] = status
-            # response_body['progress'] = None
             result['body'] = response_body
             result['status_code'] = ACCEPTED
         except Exception as e:
@@ -249,16 +240,6 @@ class DefaultBroker(threading.Thread):
                     tags['cse.cluster.name'] = cluster_name
                     vapp = VApp(self.client_tenant,
                                 vapp_href=node.get('href'))
-                    execute_program_in_guest(self.client_tenant,
-                                             node.get('href'),
-                                             node.get('name'),
-                                             None,
-                                             None,
-                                             None,
-                                             None,
-                                             None,
-                                             None,
-                                             None)
                     for k, v in tags.items():
                         task = vapp.set_metadata('GENERAL', 'READWRITE', k, v)
                         self.client_tenant.get_task_monitor().\
@@ -277,29 +258,24 @@ class DefaultBroker(threading.Thread):
                         node.get('name'))
                     LOGGER.error(traceback.format_exc())
                     time.sleep(1)
+        time.sleep(4)
+        self.customize_nodes()
 
-    def delete_cluster(self, cluster_id, headers, body):
+    def delete_cluster(self, cluster_name, headers, body):
         result = {}
         result['body'] = {}
-        LOGGER.debug('about to delete cluster with id: %s', cluster_id)
+        LOGGER.debug('about to delete cluster with name: %s', cluster_name)
         result['status_code'] = INTERNAL_SERVER_ERROR
-        # details = self.provisioner.search_by_id(cluster_id)
-        # if details is None or details['name'] is None:
-        #     result['body'] = {'message': 'cluster not found'}
-        #     return result
-        # cluster_name = details['name']
         try:
-            # self._connect_sysadmin()
             self._connect_tenant(headers)
             self.headers = headers
             self.body = body
-            self.cluster_id = cluster_id
+            self.cluster_name = cluster_name
             self.op = OP_DELETE_CLUSTER
             self.daemon = True
             self.start()
             response_body = {}
-            response_body['cluster_id'] = self.cluster_id
-            # response_body['task_id'] = create_task.get_id().split(':')[-1]
+            response_body['cluster_name'] = self.cluster_name
             result['body'] = response_body
             result['status_code'] = ACCEPTED
         except Exception as e:
@@ -308,8 +284,8 @@ class DefaultBroker(threading.Thread):
         return result
 
     def delete_cluster_thread(self):
-        print('about to delete cluster %s' % self.cluster_id)
-        nodes = load_from_metadata_by_id(self.client_tenant, self.cluster_id)
+        LOGGER.debug('about to delete cluster with name: %s', self.cluster_name)
+        nodes = load_from_metadata_by_name(self.client_tenant, self.cluster_name)
         vdc = None
         for node in nodes:
             if vdc is None:
@@ -317,3 +293,150 @@ class DefaultBroker(threading.Thread):
             LOGGER.debug('about to delete vapp %s', node['vapp_name'])
             vdc.delete_vapp(node['vapp_name'], force=True)
             time.sleep(1)
+
+    def customize_nodes(self, max_retries=60):
+        nodes = []
+        n = 0
+        all_nodes_configured = False
+        while n < max_retries:
+            try:
+                nodes = load_from_metadata_by_id(self.client_tenant,
+                                                 self.cluster_id)
+                LOGGER.debug(nodes)
+                for node in nodes:
+                    if 'ip' in node.keys() and len(node['ip']) > 0:
+                        pass
+                    else:
+                        n += 1
+                        raise Exception('missing ip, retry %s', n)
+                all_nodes_configured = True
+                break
+            except Exception as e:
+                LOGGER.error(e.message)
+                time.sleep(5)
+        if not all_nodes_configured:
+            LOGGER.error('ip not configured in at least one node')
+            return
+        LOGGER.debug('ip configured in all nodes')
+        vs = VSphere(self.config['vcs']['host'],
+                     self.config['vcs']['username'],
+                     self.config['vcs']['password'],
+                     port=int(self.config['vcs']['port']))
+        vs.connect()
+        master_node = None
+        for node in nodes:
+            vm = vs.get_vm_by_moid(node['moid'])
+            commands = [
+                ['/bin/echo', '\'127.0.0.1    localhost\' | sudo tee /etc/hosts'],
+                ['/bin/echo', '\'127.0.1.1    %s\' | sudo tee -a /etc/hosts' % node['vapp_name']],
+                ['/bin/echo', '\'::1          localhost ip6-localhost ip6-loopback\' | sudo tee -a /etc/hosts'],
+                ['/bin/echo', '\'ff02::1      ip6-allnodes\' | sudo tee -a /etc/hosts'],
+                ['/bin/echo', '\'ff02::2      ip6-allrouters\' | sudo tee -a /etc/hosts'],
+                ['/usr/bin/sudo', 'hostnamectl set-hostname %s' % node['vapp_name']],
+                ['/bin/mkdir', '$HOME/.ssh'],
+                ['/bin/chmod', 'go-rwx $HOME/.ssh'],
+                ['/bin/echo', '\'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0bRDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== contact@pacogomez.com\' > $HOME/.ssh/authorized_keys'],
+                ['/bin/chmod', 'go-rwx $HOME/.ssh/authorized_keys']
+            ]
+            if node['node_type'] == TYPE_MASTER:
+                master_node = node
+                commands.append(['/bin/rm', '-f /tmp/kubeadm-init.out'])
+                commands.append(['/usr/bin/sudo', '/usr/bin/kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address={ip} > /tmp/kubeadm-init.out'.format(ip=node['ip'])])
+            for command in commands:
+                LOGGER.debug('executing %s %s on %s', command[0], command[1], vm)
+                result = vs.execute_program_in_guest(
+                            vm,
+                            self.config['broker']['username'],
+                            self.config['broker']['password'],
+                            command[0],
+                            command[1],
+                            wait_for_completion=True)
+                LOGGER.debug('executed %s %s on %s: %s', command[0], command[1], vm, result)
+        if master_node is not None:
+            vm = vs.get_vm_by_moid(master_node['moid'])
+            response = vs.download_file_from_guest(
+                        vm,
+                        self.config['broker']['username'],
+                        self.config['broker']['password'],
+                        '/tmp/kubeadm-init.out'
+                        )
+            token = [x for x in response.content.splitlines() if x.strip().startswith('[token] Using token: ')][0].split()[-1]
+            cmd = '/usr/bin/sudo'
+            args = '/usr/bin/kubeadm join --token %s %s:6443' % (token, master_node['ip'])
+            for node in nodes:
+                vm = vs.get_vm_by_moid(node['moid'])
+                if node['node_type'] == TYPE_NODE:
+                    LOGGER.debug('executing %s %s on %s', cmd, args, vm)
+                    cmd = '/usr/bin/sudo'
+                    result = vs.execute_program_in_guest(
+                                vm,
+                                self.config['broker']['username'],
+                                self.config['broker']['password'],
+                                cmd,
+                                args,
+                                wait_for_completion=True
+                            )
+                    LOGGER.debug('executed %s %s on %s: %s', cmd, args, vm, result)
+                elif node['node_type'] == TYPE_MASTER:
+                    commands = [
+                            # ['/usr/bin/sudo', 'kubectl --kubeconfig=/etc/kubernetes/admin.conf taint nodes --all node-role.kubernetes.io/master-'],
+                            ['/usr/bin/sudo', 'kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel-rbac.yml'],
+                            ['/usr/bin/sudo', 'kubectl --kubeconfig=/etc/kubernetes/admin.conf create -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml']
+                        ]
+                    for command in commands:
+                        LOGGER.debug('executing %s %s on %s', command[0], command[1], vm)
+                        result = vs.execute_program_in_guest(
+                                    vm,
+                                    self.config['broker']['username'],
+                                    self.config['broker']['password'],
+                                    command[0],
+                                    command[1],
+                                    wait_for_completion=True)
+                        LOGGER.debug('executed %s %s on %s: %s', command[0], command[1], vm, result)
+
+    def get_cluster_config(self, cluster_name, headers, body):
+        result = {}
+        result['body'] = {}
+        result['status_code'] = INTERNAL_SERVER_ERROR
+        try:
+            self._connect_tenant(headers)
+            self.headers = headers
+            self.cluster_name = cluster_name
+            nodes = load_from_metadata_by_name(self.client_tenant,
+                                               self.cluster_name)
+            LOGGER.debug(nodes)
+            result['body'] = {'cluster_config': '\'%s\'' % cluster_name}
+            for node in nodes:
+                if node['node_type'] == TYPE_MASTER:
+                    vs = VSphere(self.config['vcs']['host'],
+                                 self.config['vcs']['username'],
+                                 self.config['vcs']['password'],
+                                 port=int(self.config['vcs']['port']))
+                    vs.connect()
+                    vm = vs.get_vm_by_moid(node['moid'])
+                    commands = [
+                        ['/usr/bin/sudo', 'chmod a+r /etc/kubernetes/admin.conf']
+                    ]
+                    for command in commands:
+                        LOGGER.debug('executing %s on %s', command[0], vm)
+                        r = vs.execute_program_in_guest(
+                                    vm,
+                                    self.config['broker']['username'],
+                                    self.config['broker']['password'],
+                                    command[0],
+                                    command[1]
+                                )
+                        time.sleep(1)
+                        LOGGER.debug('executed %s on %s: %s', command[0], vm, r)
+                    response = vs.download_file_from_guest(
+                                            vm,
+                                            self.config['broker']['username'],
+                                            self.config['broker']['password'],
+                                            '/etc/kubernetes/admin.conf')
+                    result['body'] = response.content
+                    result['status_code'] = response.status_code
+                    break
+        except Exception as e:
+            LOGGER.error(traceback.format_exc())
+            result['body'] = e.message
+        return result

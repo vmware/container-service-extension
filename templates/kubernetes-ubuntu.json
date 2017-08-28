@@ -1,0 +1,81 @@
+{
+  "variables": {
+    "compression_level": "6",
+    "cpus": "1",
+    "disk_size": "40000",
+    "headless": "true",
+    "iso_checksum": "a06cd926f5855d4f21fb4bc9978a35312f815fbda0d0ef7fdc846861f4fc4600",
+    "iso_checksum_type": "sha256",
+    "memory": "1024",
+    "mirror": "http://releases.ubuntu.com",
+    "ssh_timeout": "60m"
+  },
+  "builders": [
+    {
+      "name": "k8s-u",
+      "vm_name": "k8s-u",
+      "type": "vmware-iso",
+      "guest_os_type": "ubuntu-64",
+      "tools_upload_flavor": "linux",
+      "headless": "{{user `headless`}}",
+
+      "iso_url": "{{user `mirror`}}/16.04/ubuntu-16.04.3-server-amd64.iso",
+      "iso_checksum": "{{user `iso_checksum`}}",
+      "iso_checksum_type": "{{user `iso_checksum_type`}}",
+      "output_directory": "output-ubuntu-16.04-amd64-{{build_type}}",
+
+      "ssh_username": "cse",
+      "ssh_password": "2RQrZ83i7tTgszpvZNX6",
+      "ssh_timeout": "60m",
+      "shutdown_command": "sudo systemctl poweroff",
+      "boot_wait": "30s",
+
+      "http_directory": "scripts",
+      "version": 11,
+      "vmx_data": {
+          "ethernet0.networkName": "VM Network",
+          "ethernet0.virtualDev": "vmxnet3",
+          "memsize": "{{user `memory`}}",
+          "numvcpus": "{{user `cpus`}}"
+      },
+      "disk_type_id": "thin",
+      "disk_size": "{{user `disk_size`}}",
+
+
+      "boot_command": [
+        "<enter><wait>",
+        "<f6><esc>",
+        "<bs><bs><bs><bs><bs><bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs><bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs><bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs><bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs><bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs><bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs><bs><bs><bs><bs><bs>",
+        "<bs><bs><bs><bs><bs><bs><bs><bs><bs><bs>",
+        "<bs><bs><bs>",
+        "/install/vmlinuz ",
+        "initrd=/install/initrd.gz ",
+        "net.ifnames=0 ",
+        "auto-install/enable=true ",
+        "debconf/priority=critical ",
+        "preseed/url=http://{{.HTTPIP}}:{{.HTTPPort}}/ubuntu-16.04-preseed.cfg ",
+        "<enter>"
+      ],
+
+      "remote_type": "esx5",
+      "remote_host": "{{user `esxi_host`}}",
+      "remote_datastore": "{{user `esxi_datastore`}}",
+      "remote_username": "{{user `esxi_username`}}",
+      "remote_password": "{{user `esxi_password`}}",
+      "keep_registered": true
+
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "script": "scripts/ubuntu-16.04.sh"
+    }
+  ]
+}

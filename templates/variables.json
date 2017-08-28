@@ -1,0 +1,6 @@
+{
+  "esxi_host": "esx.vmware.com",
+  "esxi_datastore": "datastore 1",
+  "esxi_username": "root",
+  "esxi_password": "pa$$w0rd"
+}

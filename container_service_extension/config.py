@@ -8,6 +8,7 @@ import pika
 import requests
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
+from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vsphere import VSphere
 import yaml
 
@@ -44,8 +45,6 @@ service:
     listeners: 2
     logging_level: 5
     logging_format: %s
-    key_filename: 'id_rsa_cse'
-    key_filename_pub: 'id_rsa_cse.pub'
 
 broker:
     type: default
@@ -66,10 +65,21 @@ def bool_to_msg(value):
         return 'fail'
 
 
-def check_config(file_name):
+def get_config(file_name):
     config = {}
     with open(file_name, 'r') as f:
         config = yaml.load(f)
+    if not config['vcd']['verify']:
+        click.secho('InsecureRequestWarning: '
+                    'Unverified HTTPS request is being made. '
+                    'Adding certificate verification is strongly '
+                    'advised.', fg='yellow', err=True)
+        requests.packages.urllib3.disable_warnings()
+    return config
+
+
+def check_config(file_name):
+    config = get_config(file_name)
     amqp = config['amqp']
     credentials = pika.PlainCredentials(amqp['user'], amqp['password'])
     parameters = pika.ConnectionParameters(amqp['host'], amqp['port'],
@@ -100,6 +110,21 @@ def check_config(file_name):
                'administrator (%s:%s): %s' %
                (config['vcd']['host'], config['vcd']['port'],
                 bool_to_msg(True)))
+
+    if config['broker']['type'] == 'default':
+        logged_in_org = client.get_org()
+        org = Org(client, org_resource=logged_in_org)
+        c = org.get_catalog(config['broker']['catalog'])
+        click.echo('Find catalog \'%s\': %s' %
+                   (config['broker']['catalog'], bool_to_msg(True)))
+        c = org.get_catalog_item(config['broker']['catalog'],
+                                 config['broker']['master_template'])
+        click.echo('Find master template \'%s\': %s' %
+                   (config['broker']['master_template'], bool_to_msg(True)))
+        c = org.get_catalog_item(config['broker']['catalog'],
+                                 config['broker']['node_template'])
+        click.echo('Find node template \'%s\': %s' %
+                   (config['broker']['node_template'], bool_to_msg(True)))
 
     v = VSphere(config['vcs']['host'],
                 config['vcs']['username'],

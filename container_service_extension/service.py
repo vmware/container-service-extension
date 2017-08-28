@@ -3,8 +3,9 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import click
-from consumer import MessageConsumer
+from container_service_extension.consumer import MessageConsumer
 from container_service_extension.config import check_config
+from container_service_extension.config import get_config
 import logging
 import signal
 import sys
@@ -33,12 +34,16 @@ def consumer_thread(c):
 
 class Service(object):
 
-    def __init__(self, config_file):
+    def __init__(self, config_file, check_config=True):
         self.config_file = config_file
         self.config = None
+        self.check_config = check_config
 
     def run(self):
-        self.config = check_config(self.config_file)
+        if self.check_config:
+            self.config = check_config(self.config_file)
+        else:
+            self.config = get_config(self.config_file)
         logging.basicConfig(filename='cse.log',
                             level=self.config['service']['logging_level'],
                             format=self.config['service']['logging_format'])

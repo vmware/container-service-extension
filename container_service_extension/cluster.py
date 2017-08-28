@@ -5,6 +5,7 @@
 import json
 import logging
 from pyvcloud.vcd.client import QueryResultFormat
+from pyvcloud.vcd.vapp import VApp
 
 
 TYPE_MASTER = 'master'
@@ -12,46 +13,46 @@ TYPE_NODE = 'node'
 LOGGER = logging.getLogger(__name__)
 
 
-class Node(object):
-
-    def __init__(self, name, node_type=TYPE_NODE, node_id='', href=''):
-        self.name = name
-        self.node_type = node_type
-        self.node_id = node_id
-        self.href = href
-        self.ip = ''
-        self.cluster_id = ''
-        self.cluster_name = ''
-
-    def __repr__(self):
-        return self.toJSON()
-
-    def toJSON(self):
-        return json.dumps(self,
-                          default=lambda o: o.__dict__,
-                          sort_keys=True,
-                          indent=4)
-
-
-class Cluster(object):
-
-    def __init__(self, name=None, cluster_id=''):
-        self.name = name
-        self.cluster_id = cluster_id
-        self.master_nodes = []
-        self.nodes = []
-        self.vdc = None
-        self.status = None
-        self.leader_endpoint = None
-
-    def __repr__(self):
-        return self.toJSON()
-
-    def toJSON(self):
-        return json.dumps(self,
-                          default=lambda o: o.__dict__,
-                          sort_keys=True,
-                          indent=4)
+# class Node(object):
+#
+#     def __init__(self, name, node_type=TYPE_NODE, node_id='', href=''):
+#         self.name = name
+#         self.node_type = node_type
+#         self.node_id = node_id
+#         self.href = href
+#         self.ip = ''
+#         self.cluster_id = ''
+#         self.cluster_name = ''
+#
+#     def __repr__(self):
+#         return self.toJSON()
+#
+#     def toJSON(self):
+#         return json.dumps(self,
+#                           default=lambda o: o.__dict__,
+#                           sort_keys=True,
+#                           indent=4)
+#
+#
+# class Cluster(object):
+#
+#     def __init__(self, name=None, cluster_id=''):
+#         self.name = name
+#         self.cluster_id = cluster_id
+#         self.master_nodes = []
+#         self.nodes = []
+#         self.vdc = None
+#         self.status = None
+#         self.leader_endpoint = None
+#
+#     def __repr__(self):
+#         return self.toJSON()
+#
+#     def toJSON(self):
+#         return json.dumps(self,
+#                           default=lambda o: o.__dict__,
+#                           sort_keys=True,
+#                           indent=4)
 
 
 #  TODO(optimize after fix for bug #1945003)
@@ -67,8 +68,11 @@ def load_from_metadata(client, name=None):
     for record in records:
         for md in record.Metadata.MetadataEntry:
             if md.Key == 'cse.node.type':
+                vapp_id = record.get('id').split(':')[-1]
                 nodes.append({'vapp_name': record.get('name'),
-                              'vapp_id': record.get('id'),
+                              'vapp_id': vapp_id,
+                              'vapp_href': '%s/vApp/vapp-%s' %
+                                            (client._uri, vapp_id),
                               'vdc_name': record.get('vdcName'),
                               'node_type': md.TypedValue.Value})
                 break
@@ -92,7 +96,6 @@ def load_from_metadata(client, name=None):
 
     clusters_dict = {}
     for node in nodes:
-        print(node)
         if node['cluster_name'] in clusters_dict.keys():
             cluster = clusters_dict[node['cluster_name']]
         else:
@@ -102,13 +105,20 @@ def load_from_metadata(client, name=None):
             else:
                 cluster['cluster_id'] = ''
             cluster['status'] = ''
-            cluster['leader_endpoint'] = ''
+            cluster['leader_endpoint'] = None
             cluster['vdc_name'] = '%s' % node['vdc_name']
             cluster['master_nodes'] = []
             cluster['nodes'] = []
         if node['node_type'] == TYPE_MASTER:
             cluster['master_nodes'].append(node['vapp_name'])
-            cluster['leader_endpoint'] = '%s' % node['vapp_name']
+            cluster['leader_endpoint'] = None
+            if node['vapp_name'].endswith('-m1'):
+                try:
+                    vapp = VApp(client, vapp_href=node['vapp_href'])
+                    cluster['leader_endpoint'] = '%s' % vapp.get_primary_ip(node['vapp_name'])
+                except:
+                    import traceback
+                    LOGGER.debug(traceback.format_exc())
         elif node['node_type'] == TYPE_NODE:
             cluster['nodes'].append(node['vapp_name'])
         clusters_dict[node['cluster_name']] = cluster
@@ -126,9 +136,44 @@ def load_from_metadata_by_id(client, cluster_id):
     records = list(q.execute())
     nodes = []
     for record in records:
-        nodes.append({'vapp_name': record.get('name'),
-                      'vapp_id': record.get('id'),
-                      'vapp_href': record.get('href'),
-                      'vdc_name': record.get('vdcName'),
-                      'vdc_href': record.get('vdc')})
+        node = {'vapp_name': record.get('name'),
+                'vapp_id': record.get('id'),
+                'vapp_href': record.get('href'),
+                'vdc_name': record.get('vdcName'),
+                'vdc_href': record.get('vdc')}
+        if node['vapp_name'].endswith('-m1'):
+            node['node_type'] = TYPE_MASTER
+        else:
+            node['node_type'] = TYPE_NODE
+        vapp = VApp(client, vapp_href=record.get('href'))
+        node['ip'] = vapp.get_primary_ip(record.get('name'))
+        node['moid'] = vapp.get_vm_moid(record.get('name'))
+        nodes.append(node)
+    return nodes
+
+
+#  TODO(optimize after fix for bug #1945003)
+def load_from_metadata_by_name(client, cluster_name):
+    q = client.get_typed_query(
+            'vApp',
+            query_result_format=QueryResultFormat.
+            RECORDS,
+            qfilter='metadata:cse.cluster.name==STRING:%s' % cluster_name,
+            fields='metadata:cse.cluster.name,metadata:cse.node.type')
+    records = list(q.execute())
+    nodes = []
+    for record in records:
+        node = {'vapp_name': record.get('name'),
+                'vapp_id': record.get('id'),
+                'vapp_href': record.get('href'),
+                'vdc_name': record.get('vdcName'),
+                'vdc_href': record.get('vdc')}
+        if node['vapp_name'].endswith('-m1'):
+            node['node_type'] = TYPE_MASTER
+        else:
+            node['node_type'] = TYPE_NODE
+        vapp = VApp(client, vapp_href=record.get('href'))
+        node['ip'] = vapp.get_primary_ip(record.get('name'))
+        node['moid'] = vapp.get_vm_moid(record.get('name'))
+        nodes.append(node)
     return nodes

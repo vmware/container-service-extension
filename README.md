@@ -26,49 +26,28 @@ $ pip install --user container-service-extension
 $ cse version
 ```
 
-More information about `vcd-cli` commands to use the service can be found in the [wiki](https://github.com/vmware/vcd-cli/wiki/container-service-extension).
-
-#### Configuration
+#### Running the Service
 
 Follow the vCloud Director configuration steps in the [wiki](https://github.com/vmware/container-service-extension/wiki).
 
-Edit file `config.yml` and provide the values for your vCloud Director installation.
-
-Validate the configuration:
-
-``` shell
-$ cse check config.yml
-
-Connection to AMQP server (amqp.vmware.com:5672): success
-Connection to vCloud Director (vcd.vmware.com:443): success
-  login to 'System' org: success
-Connection to vCenter Server (vcs.vmware.com:443): success
-```
-
-Start the service:
+Start the service with:
 
 ``` shell
 $ cse run config.yml
 ```
+
+More information about `vcd-cli` commands to use the service can be found in the [wiki](https://github.com/vmware/vcd-cli/wiki/container-service-extension).
 
 ### Development
 
 ``` shell
 $ git clone https://github.com/vmware/container-service-extension.git
 $ python setup.py develop
-$ cse init
-```
-
-edit config.yml
-
-``` shell
-$ cse check config.yml
-$ cse run config.yml
 ```
 
 ## Documentation
 
-[wiki](https://github.com/vmware/container-service-extension/wiki).
+See our [wiki](https://github.com/vmware/container-service-extension/wiki).
 
 ## Contributing
 
