@@ -35,19 +35,15 @@ Catalog shared.
 Upload the template to the catalog with `ovftool`:
 
 ```shell
-ovftool \
-  --diskMode=thin \
-  --allowExtraConfig \
-  --acceptAllEulas \
+$ ovftool --diskMode=thin --allowExtraConfig --acceptAllEulas \
   k8s-u.ova  \
   'vcloud://usr1:pa$$w0rd@vcd.vmware.com?org=org1&catalog=cse&vappTemplate=k8s-u.ova'
 ```
 
-
 ESXi Host Configuration
 ---
 
-In order to create the template with `packer`, ssh to the ESXi host configure the following settings:
+In order to create the template with `packer`, ssh to the ESXi host and configure the following settings:
 
 1. GuestIPHack:
 
