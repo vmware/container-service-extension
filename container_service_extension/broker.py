@@ -284,8 +284,10 @@ class DefaultBroker(threading.Thread):
         return result
 
     def delete_cluster_thread(self):
-        LOGGER.debug('about to delete cluster with name: %s', self.cluster_name)
-        nodes = load_from_metadata_by_name(self.client_tenant, self.cluster_name)
+        LOGGER.debug('about to delete cluster with name: %s',
+                     self.cluster_name)
+        nodes = load_from_metadata_by_name(self.client_tenant,
+                                           self.cluster_name)
         vdc = None
         for node in nodes:
             if vdc is None:
@@ -327,23 +329,26 @@ class DefaultBroker(threading.Thread):
         for node in nodes:
             vm = vs.get_vm_by_moid(node['moid'])
             commands = [
-                ['/bin/echo', '\'127.0.0.1    localhost\' | sudo tee /etc/hosts'],
-                ['/bin/echo', '\'127.0.1.1    %s\' | sudo tee -a /etc/hosts' % node['vapp_name']],
-                ['/bin/echo', '\'::1          localhost ip6-localhost ip6-loopback\' | sudo tee -a /etc/hosts'],
-                ['/bin/echo', '\'ff02::1      ip6-allnodes\' | sudo tee -a /etc/hosts'],
-                ['/bin/echo', '\'ff02::2      ip6-allrouters\' | sudo tee -a /etc/hosts'],
-                ['/usr/bin/sudo', 'hostnamectl set-hostname %s' % node['vapp_name']],
+                ['/bin/echo', '\'127.0.0.1    localhost\' | sudo tee /etc/hosts'],  # NOQA
+                ['/bin/echo', '\'127.0.1.1    %s\' | sudo tee -a /etc/hosts' % node['vapp_name']],  # NOQA
+                ['/bin/echo', '\'::1          localhost ip6-localhost ip6-loopback\' | sudo tee -a /etc/hosts'],  # NOQA
+                ['/bin/echo', '\'ff02::1      ip6-allnodes\' | sudo tee -a /etc/hosts'],  # NOQA
+                ['/bin/echo', '\'ff02::2      ip6-allrouters\' | sudo tee -a /etc/hosts'],  # NOQA
+                ['/usr/bin/sudo', 'hostnamectl set-hostname %s' % node['vapp_name']],  # NOQA
                 ['/bin/mkdir', '$HOME/.ssh'],
                 ['/bin/chmod', 'go-rwx $HOME/.ssh'],
-                ['/bin/echo', '\'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0bRDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== contact@pacogomez.com\' > $HOME/.ssh/authorized_keys'],
+                ['/bin/echo', '\'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0bRDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== contact@pacogomez.com\' > $HOME/.ssh/authorized_keys'],   # NOQA
                 ['/bin/chmod', 'go-rwx $HOME/.ssh/authorized_keys']
             ]
             if node['node_type'] == TYPE_MASTER:
                 master_node = node
                 commands.append(['/bin/rm', '-f /tmp/kubeadm-init.out'])
-                commands.append(['/usr/bin/sudo', '/usr/bin/kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address={ip} > /tmp/kubeadm-init.out'.format(ip=node['ip'])])
+                commands.append(['/usr/bin/sudo', '/usr/bin/kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address={ip} > /tmp/kubeadm-init.out'.format(ip=node['ip'])])  # NOQA
             for command in commands:
-                LOGGER.debug('executing %s %s on %s', command[0], command[1], vm)
+                LOGGER.debug('executing %s %s on %s',
+                             command[0],
+                             command[1],
+                             vm)
                 result = vs.execute_program_in_guest(
                             vm,
                             self.config['broker']['username'],
@@ -351,7 +356,11 @@ class DefaultBroker(threading.Thread):
                             command[0],
                             command[1],
                             wait_for_completion=True)
-                LOGGER.debug('executed %s %s on %s: %s', command[0], command[1], vm, result)
+                LOGGER.debug('executed %s %s on %s: %s',
+                             command[0],
+                             command[1],
+                             vm,
+                             result)
         if master_node is not None:
             vm = vs.get_vm_by_moid(master_node['moid'])
             response = vs.download_file_from_guest(
@@ -360,9 +369,9 @@ class DefaultBroker(threading.Thread):
                         self.config['broker']['password'],
                         '/tmp/kubeadm-init.out'
                         )
-            token = [x for x in response.content.splitlines() if x.strip().startswith('[token] Using token: ')][0].split()[-1]
+            token = [x for x in response.content.splitlines() if x.strip().startswith('[token] Using token: ')][0].split()[-1]  # NOQA
             cmd = '/usr/bin/sudo'
-            args = '/usr/bin/kubeadm join --token %s %s:6443' % (token, master_node['ip'])
+            args = '/usr/bin/kubeadm join --token %s %s:6443' % (token, master_node['ip'])  # NOQA
             for node in nodes:
                 vm = vs.get_vm_by_moid(node['moid'])
                 if node['node_type'] == TYPE_NODE:
@@ -376,15 +385,22 @@ class DefaultBroker(threading.Thread):
                                 args,
                                 wait_for_completion=True
                             )
-                    LOGGER.debug('executed %s %s on %s: %s', cmd, args, vm, result)
+                    LOGGER.debug('executed %s %s on %s: %s',
+                                 cmd,
+                                 args,
+                                 vm,
+                                 result)
                 elif node['node_type'] == TYPE_MASTER:
                     commands = [
-                            # ['/usr/bin/sudo', 'kubectl --kubeconfig=/etc/kubernetes/admin.conf taint nodes --all node-role.kubernetes.io/master-'],
-                            ['/usr/bin/sudo', 'kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel-rbac.yml'],
-                            ['/usr/bin/sudo', 'kubectl --kubeconfig=/etc/kubernetes/admin.conf create -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml']
+                            # ['/usr/bin/sudo', 'kubectl --kubeconfig=/etc/kubernetes/admin.conf taint nodes --all node-role.kubernetes.io/master-'],  # NOQA
+                            ['/usr/bin/sudo', 'kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel-rbac.yml'],  # NOQA
+                            ['/usr/bin/sudo', 'kubectl --kubeconfig=/etc/kubernetes/admin.conf create -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml']  # NOQA
                         ]
                     for command in commands:
-                        LOGGER.debug('executing %s %s on %s', command[0], command[1], vm)
+                        LOGGER.debug('executing %s %s on %s',
+                                     command[0],
+                                     command[1],
+                                     vm)
                         result = vs.execute_program_in_guest(
                                     vm,
                                     self.config['broker']['username'],
@@ -392,7 +408,11 @@ class DefaultBroker(threading.Thread):
                                     command[0],
                                     command[1],
                                     wait_for_completion=True)
-                        LOGGER.debug('executed %s %s on %s: %s', command[0], command[1], vm, result)
+                        LOGGER.debug('executed %s %s on %s: %s',
+                                     command[0],
+                                     command[1],
+                                     vm,
+                                     result)
 
     def get_cluster_config(self, cluster_name, headers, body):
         result = {}
@@ -415,7 +435,7 @@ class DefaultBroker(threading.Thread):
                     vs.connect()
                     vm = vs.get_vm_by_moid(node['moid'])
                     commands = [
-                        ['/usr/bin/sudo', 'chmod a+r /etc/kubernetes/admin.conf']
+                        ['/usr/bin/sudo', 'chmod a+r /etc/kubernetes/admin.conf']  # NOQA
                     ]
                     for command in commands:
                         LOGGER.debug('executing %s on %s', command[0], vm)
@@ -427,7 +447,10 @@ class DefaultBroker(threading.Thread):
                                     command[1]
                                 )
                         time.sleep(1)
-                        LOGGER.debug('executed %s on %s: %s', command[0], vm, r)
+                        LOGGER.debug('executed %s on %s: %s',
+                                     command[0],
+                                     vm,
+                                     r)
                     response = vs.download_file_from_guest(
                                             vm,
                                             self.config['broker']['username'],

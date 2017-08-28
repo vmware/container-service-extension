@@ -114,15 +114,15 @@ def check_config(file_name):
     if config['broker']['type'] == 'default':
         logged_in_org = client.get_org()
         org = Org(client, org_resource=logged_in_org)
-        c = org.get_catalog(config['broker']['catalog'])
+        org.get_catalog(config['broker']['catalog'])
         click.echo('Find catalog \'%s\': %s' %
                    (config['broker']['catalog'], bool_to_msg(True)))
-        c = org.get_catalog_item(config['broker']['catalog'],
-                                 config['broker']['master_template'])
+        org.get_catalog_item(config['broker']['catalog'],
+                             config['broker']['master_template'])
         click.echo('Find master template \'%s\': %s' %
                    (config['broker']['master_template'], bool_to_msg(True)))
-        c = org.get_catalog_item(config['broker']['catalog'],
-                                 config['broker']['node_template'])
+        org.get_catalog_item(config['broker']['catalog'],
+                             config['broker']['node_template'])
         click.echo('Find node template \'%s\': %s' %
                    (config['broker']['node_template'], bool_to_msg(True)))
 

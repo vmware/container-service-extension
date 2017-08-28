@@ -2,7 +2,6 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import json
 import logging
 from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.vapp import VApp
@@ -72,7 +71,7 @@ def load_from_metadata(client, name=None):
                 nodes.append({'vapp_name': record.get('name'),
                               'vapp_id': vapp_id,
                               'vapp_href': '%s/vApp/vapp-%s' %
-                                            (client._uri, vapp_id),
+                              (client._uri, vapp_id),
                               'vdc_name': record.get('vdcName'),
                               'node_type': md.TypedValue.Value})
                 break
@@ -115,7 +114,8 @@ def load_from_metadata(client, name=None):
             if node['vapp_name'].endswith('-m1'):
                 try:
                     vapp = VApp(client, vapp_href=node['vapp_href'])
-                    cluster['leader_endpoint'] = '%s' % vapp.get_primary_ip(node['vapp_name'])
+                    cluster['leader_endpoint'] = '%s' % \
+                        vapp.get_primary_ip(node['vapp_name'])
                 except:
                     import traceback
                     LOGGER.debug(traceback.format_exc())
