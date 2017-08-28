@@ -48,10 +48,11 @@ service:
 
 broker:
     type: default
-    catalog: cse-catalog
-    master_template: k8s-template.ova
-    node_template: k8s-template.ova
-    password: 'template-root-user-password'
+    catalog: cse
+    master_template: k8s-u.ova
+    node_template: k8s-u.ova
+    username: cse
+    password: 'cse_user_template_password'
 
     """ % '%(levelname) -8s %(asctime)s %(name) -40s %(funcName) ' \
           '-35s %(lineno) -5d: %(message)s'
