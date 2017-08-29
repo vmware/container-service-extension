@@ -1,6 +1,31 @@
 CHANGES
 =======
 
+0.0.5
+-----
+
+* deps
+* flake8
+* readme
+
+0.0.4
+-----
+
+* dependencies
+
+0.0.2
+-----
+
+* 0.0.2
+* template ports; cluster name validation
+* conf
+* doc
+* provisioning
+* templates
+* .ds
+* vsphere
+* flake8
+* added ability to fetch yaml swagger file
 * flake8
 * cluster-crud
 * default-broker
