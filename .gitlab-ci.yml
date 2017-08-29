@@ -7,11 +7,13 @@ stages:
 unit_test:
   stage: test
   script:
-    # - pip install tox
-    # - tox -e flake8
+    - pip install -r test-requirements.txt
+    - tox -e flake8
     - pip install .
     - pip list --format=columns
     - cse version
+  except:
+    - tags
 
 deploy:
   stage: deploy
@@ -20,5 +22,7 @@ deploy:
     - rm -rf build dist
     - python setup.py sdist bdist_wheel
     - twine upload dist/*
+  except:
+    - tags
   dependencies:
     - unit_test
