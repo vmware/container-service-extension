@@ -1,6 +1,6 @@
-
-
 # container-service-extension
+
+[![asciicast](https://asciinema.org/a/135505.png)](https://asciinema.org/a/135505)
 
 ## Overview
 
