@@ -37,6 +37,7 @@ OP_DELETE_CLUSTER = 'CLUSTER_DELETE'
 
 MAX_HOST_NAME_LENGTH = 25 - 4
 
+
 def get_new_broker(config):
     if config['broker']['type'] == 'default':
         return DefaultBroker(config)
@@ -121,7 +122,7 @@ class DefaultBroker(threading.Thread):
         if len(name) > MAX_HOST_NAME_LENGTH:
             return False
         if name[-1] == ".":
-            name = name[:-1] # strip exactly one dot from the right, if present
+            name = name[:-1]
         allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
         return all(allowed.match(x) for x in name.split("."))
 
