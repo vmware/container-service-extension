@@ -19,6 +19,11 @@
       "tools_upload_flavor": "linux",
       "headless": "{{user `headless`}}",
 
+      "vnc_port_min": "5900",
+      "vnc_port_max": "6000",
+      "vnc_bind_address": "0.0.0.0",
+      "vnc_disable_password": "true",
+
       "iso_url": "{{user `mirror`}}/16.04/ubuntu-16.04.3-server-amd64.iso",
       "iso_checksum": "{{user `iso_checksum`}}",
       "iso_checksum_type": "{{user `iso_checksum_type`}}",

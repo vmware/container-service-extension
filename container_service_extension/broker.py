@@ -16,6 +16,7 @@ from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vsphere import VSphere
+import re
 import requests
 import threading
 import time
@@ -34,6 +35,7 @@ INTERNAL_SERVER_ERROR = 500
 OP_CREATE_CLUSTER = 'CLUSTER_CREATE'
 OP_DELETE_CLUSTER = 'CLUSTER_DELETE'
 
+MAX_HOST_NAME_LENGTH = 25 - 4
 
 def get_new_broker(config):
     if config['broker']['type'] == 'default':
@@ -112,13 +114,16 @@ class DefaultBroker(threading.Thread):
         return {'user_name': session.get('user'),
                 'org_name': session.get('org')}
 
-    def _validate_name(self, name):
+    def is_valid_name(self, name):
         """
         Validates that the cluster name against the pattern.
         """
-        # TODO (validate against pattern)
-        # pattern = '^[a-zA-Z](([-0-9a-zA-Z]+)?[0-9a-zA-Z])?(\.[a-zA-Z](([-0-9a-zA-Z]+)?[0-9a-zA-Z])?)*$'  # NOQA
-        return True
+        if len(name) > MAX_HOST_NAME_LENGTH:
+            return False
+        if name[-1] == ".":
+            name = name[:-1] # strip exactly one dot from the right, if present
+        allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
+        return all(allowed.match(x) for x in name.split("."))
 
     def _search_by_name(self, name):
         """
@@ -166,9 +171,11 @@ class DefaultBroker(threading.Thread):
                      cluster_name,
                      vdc_name,
                      node_count)
-        result['body'] = 'can''t create cluster'
+        result['body'] = {'message': 'can\'t create cluster'}
         result['status_code'] = INTERNAL_SERVER_ERROR
         try:
+            if not self.is_valid_name(cluster_name):
+                raise Exception('Invalid cluster name')
             self._connect_tenant(headers)
             self.headers = headers
             self.body = body
@@ -182,7 +189,7 @@ class DefaultBroker(threading.Thread):
             result['body'] = response_body
             result['status_code'] = ACCEPTED
         except Exception as e:
-            result['body'] = e.message
+            result['body'] = {'message': e.message}
             LOGGER.error(traceback.format_exc())
         return result
 
@@ -279,7 +286,7 @@ class DefaultBroker(threading.Thread):
             result['body'] = response_body
             result['status_code'] = ACCEPTED
         except Exception as e:
-            result['body'] = e.message
+            result['body'] = {'message': e.message}
             LOGGER.error(traceback.format_exc())
         return result
 
@@ -461,5 +468,5 @@ class DefaultBroker(threading.Thread):
                     break
         except Exception as e:
             LOGGER.error(traceback.format_exc())
-            result['body'] = e.message
+            result['body'] = {'message': e.message}
         return result
