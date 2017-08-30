@@ -2,13 +2,13 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from pkg_resources import resource_string
 import base64
 from container_service_extension.broker import get_new_broker
 import json
-import yaml
 import logging
+from pkg_resources import resource_string
 import traceback
+import yaml
 
 LOGGER = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ class ServiceProcessor(object):
         if len(body['body']) > 0:
             try:
                 request_body = json.loads(base64.b64decode(body['body']))
-            except:
+            except Exception:
                 request_body = None
         else:
             request_body = None
@@ -87,7 +87,7 @@ class ServiceProcessor(object):
                 spec = yaml.load(file_name)
                 result['body'] = json.loads(json.dumps(spec))
             result['status_code'] = OK
-        except:
+        except Exception:
             LOGGER.error(traceback.format_exc())
             result['body'] = []
             result['status_code'] = INTERNAL_SERVER_ERROR

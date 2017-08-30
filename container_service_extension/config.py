@@ -5,11 +5,11 @@
 import click
 import logging
 import pika
-import requests
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vsphere import VSphere
+import requests
 import yaml
 
 
@@ -17,7 +17,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 def generate_sample_config():
-    sample_config = """amqp:
+    sample_config = """
+amqp:
     host: amqp.vmware.com
     port: 5672
     user: 'guest'
@@ -56,7 +57,7 @@ broker:
 
     """ % '%(levelname) -8s %(asctime)s %(name) -40s %(funcName) ' \
           '-35s %(lineno) -5d: %(message)s'
-    return sample_config
+    return sample_config.strip() + '\n'
 
 
 def bool_to_msg(value):

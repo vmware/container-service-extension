@@ -8,7 +8,7 @@ import jsonpickle
 import logging
 import pika
 from processor import ServiceProcessor
-import thread
+import threading
 import traceback
 
 LOGGER = logging.getLogger(__name__)
@@ -131,14 +131,14 @@ class MessageConsumer(object):
             LOGGER.debug('Received message # %s from %s (%s): %s, props: %s',
                          basic_deliver.delivery_tag,
                          properties.app_id,
-                         thread.get_ident(),
+                         threading.currentThread().ident,
                          json.dumps(json.loads(body)[0]),
                          properties)
             body = json.loads(body)[0]
             result = self.service_processor.process_request(body)
             reply_body = jsonpickle.encode(result['body'])
             status_code = result['status_code']
-        except:
+        except Exception:
             reply_body = '{}'
             status_code = 500
             tb = traceback.format_exc()

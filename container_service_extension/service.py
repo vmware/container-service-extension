@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import click
-from container_service_extension.consumer import MessageConsumer
 from container_service_extension.config import check_config
 from container_service_extension.config import get_config
+from container_service_extension.consumer import MessageConsumer
 import logging
 import signal
 import sys
@@ -26,7 +26,7 @@ def consumer_thread(c):
     try:
         LOGGER.info('about to start consumer_thread %s', c)
         c.run()
-    except:
+    except Exception:
         click.echo('about to stop consumer_thread')
         print(traceback.format_exc())
         c.stop()
@@ -83,7 +83,7 @@ class Service(object):
                 time.sleep(0.25)
             except KeyboardInterrupt:
                 break
-            except:
+            except Exception:
                 print(traceback.format_exc())
 
         LOGGER.info('num of threads started: %s', len(threads))
@@ -97,10 +97,10 @@ class Service(object):
                 for c in consumers:
                     try:
                         c.stop()
-                    except:
+                    except Exception:
                         pass
                 LOGGER.info('done')
                 break
-            except:
+            except Exception:
                 click.secho(traceback.format_exc())
                 sys.exit(1)

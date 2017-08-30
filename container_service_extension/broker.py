@@ -6,8 +6,8 @@ import click
 from container_service_extension.cluster import load_from_metadata
 from container_service_extension.cluster import load_from_metadata_by_id
 from container_service_extension.cluster import load_from_metadata_by_name
-from container_service_extension.cluster import TYPE_NODE
 from container_service_extension.cluster import TYPE_MASTER
+from container_service_extension.cluster import TYPE_NODE
 import logging
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
@@ -116,8 +116,8 @@ class DefaultBroker(threading.Thread):
                 'org_name': session.get('org')}
 
     def is_valid_name(self, name):
-        """
-        Validates that the cluster name against the pattern.
+        """Validates that the cluster name against the pattern.
+
         """
         if len(name) > MAX_HOST_NAME_LENGTH:
             return False
@@ -127,16 +127,18 @@ class DefaultBroker(threading.Thread):
         return all(allowed.match(x) for x in name.split("."))
 
     def _search_by_name(self, name):
-        """
-        check that the cluster name exists in the current VDC.
-        It exists, it returns the cluster id
+        """check that the cluster name exists in the current VDC.
+
+        If exists, it returns the cluster id.
+
         """
         return None
 
     def _search_by_id(self, cluster_id):
-        """
-        check that the cluster with cluster_id exists in the current VDC.
-        It exists, it returns the cluster name and details.
+        """check that the cluster with cluster_id exists in the current VDC.
+
+        If exists, it returns the cluster name and details.
+
         """
         return None
 
@@ -260,7 +262,7 @@ class DefaultBroker(threading.Thread):
                                 callback=None)
                     tagged.update([node.get('name')])
                     LOGGER.debug('tagged %s', node.get('name'))
-                except:
+                except Exception:
                     LOGGER.error(
                         'can''t tag %s at this moment, will retry later',
                         node.get('name'))
