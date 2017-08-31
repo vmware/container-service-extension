@@ -32,12 +32,15 @@ $ vcd catalog share cse
 Catalog shared.
 ```
 
-Upload the template to the catalog with `ovftool`:
+Upload the template to the catalog with `vcd-cli`:
 
 ```shell
-$ ovftool --diskMode=thin --allowExtraConfig --acceptAllEulas \
-  k8s-u.ova  \
-  'vcloud://usr1:pa$$w0rd@vcd.vmware.com?org=org1&catalog=cse&vappTemplate=k8s-u.ova'
+$ vcd catalog upload cse k8s-u.ova
+upload 1,128,098,816 of 1,128,098,816 bytes, 100%
+property    value
+----------  ----------
+file        k8s-u.ova
+size        1128106989
 ```
 
 ESXi Host Configuration
