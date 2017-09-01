@@ -7,7 +7,7 @@
 
 i=$1
 
-if [ $i == '-i' ]
+if [ "$i" == '-i' ]
 then
 	cd $(mktemp -d)
 
