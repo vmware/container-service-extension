@@ -33,9 +33,12 @@ class ServiceProcessor(object):
         cluster_name = None
         spec_request = False
         config_request = False
+        helm_request = False
         if len(tokens) > 3:
             if tokens[3] in ['swagger', 'swagger.json', 'swagger.yaml']:
                 spec_request = True
+            elif tokens[3] in ['helm', 'helm.sh']:
+                helm_request = True
             elif tokens[3] != '':
                 cluster_name = tokens[3]
         if len(tokens) > 4:
@@ -58,6 +61,8 @@ class ServiceProcessor(object):
                 reply = broker.get_cluster_config(cluster_name,
                                                   body['headers'],
                                                   None)
+            elif helm_request:
+                reply = self.helm_init()
             elif cluster_name is None:
                 broker = get_new_broker(self.config)
                 reply = broker.list_clusters(body['headers'],
@@ -92,4 +97,18 @@ class ServiceProcessor(object):
             result['body'] = []
             result['status_code'] = INTERNAL_SERVER_ERROR
             result['message'] = 'spec file not found: check installation.'
+        return result
+
+    def helm_init(self):
+        result = {}
+        try:
+            file = resource_string('container_service_extension',
+                                   'helm/helm.sh')
+            result['body'] = file
+            result['status_code'] = OK
+        except Exception:
+            LOGGER.error(traceback.format_exc())
+            result['body'] = []
+            result['status_code'] = INTERNAL_SERVER_ERROR
+            result['message'] = 'helm script not found: check installation.'
         return result
