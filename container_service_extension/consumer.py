@@ -3,11 +3,11 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import base64
-from container_service_extension.processor import ServiceProcessor
 import json
 import jsonpickle
 import logging
 import pika
+from processor import ServiceProcessor
 import threading
 import traceback
 
