@@ -1,5 +1,3 @@
-#!/bin/bash
-
 ###### This script setups helm and the example chart repository for usage, after this you don't really 
 ## need the vcd cli helm stuff, but if you want to use it its works the same
 ### only run this if you want to add tiller to a cluster that doesn't have it
@@ -7,7 +5,7 @@
 ## for mac os and linux right now
 ## easier if you install helm yourself
 
-i = $1
+i=$1
 
 if [ $i == '-i' ]
 then
@@ -25,14 +23,6 @@ fi
 # for helm to use to find your cluster
 
 export KUBECONFIG=~/kubeconfig.yml
-
-if [ ! -e ~/kubeconfig.yaml ]
-then
-	echo "check cluster installation"
-	echo "use vcd cluster config <name> >> ~/kubeconfig.yaml"
-	exit 1
-fi
-
 
 ## creates tiller server on kubernetes cluster
 
