@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* fixed a bug on script
 * removed temp directory
 * bug free
 * helm.sh works

@@ -4,7 +4,7 @@
 
 i=$1
 
-if [ "$i" == '-i' ]
+if [ $i == '-i' ]
 then
 
 	curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get > get_helm
