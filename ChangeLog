@@ -1,6 +1,10 @@
 CHANGES
 =======
 
+* removed temp directory
+* bug free
+* helm.sh works
+* removed unneccesary file
 * helm support for cse
 
 0.0.8

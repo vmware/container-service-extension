@@ -2,21 +2,18 @@
 ## need the vcd cli helm stuff, but if you want to use it its works the same
 ### only run this if you want to add tiller to a cluster that doesn't have it
 
-## for mac os and linux right now
-## easier if you install helm yourself
-
 i=$1
 
 if [ "$i" == '-i' ]
 then
 
-	curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get > "get_helm.sh"
+	curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get > get_helm
 
-	chmod 700 "get_helm.sh"
+	chmod 700 get_helm
 
-	./"get_helm.sh"
+	./get_helm
 	# clean up unneccesary files
-	rm "get_helm.sh"
+	rm get_helm
 
 fi
 
