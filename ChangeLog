@@ -1,6 +1,32 @@
 CHANGES
 =======
 
+* fixed a bug on script
+* removed temp directory
+* bug free
+* helm.sh works
+* removed unneccesary file
+* helm support for cse
+
+0.0.8
+-----
+
+* deps
+
+0.0.7
+-----
+
+* wip
+* python3 support
+* Closes #29
+* removed sample config file
+* misc
+
+0.0.6
+-----
+
+* test
+
 0.0.5
 -----
 
