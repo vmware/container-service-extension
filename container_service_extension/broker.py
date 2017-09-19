@@ -9,10 +9,12 @@ from container_service_extension.cluster import load_from_metadata_by_name
 from container_service_extension.cluster import TYPE_MASTER
 from container_service_extension.cluster import TYPE_NODE
 import logging
+from pyvcloud.vcd.client import _WellKnownEndpoint
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import TaskStatus
 from pyvcloud.vcd.org import Org
+from pyvcloud.vcd.task import Task
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vsphere import VSphere
@@ -32,8 +34,8 @@ CREATED = 201
 ACCEPTED = 202
 INTERNAL_SERVER_ERROR = 500
 
-OP_CREATE_CLUSTER = 'CLUSTER_CREATE'
-OP_DELETE_CLUSTER = 'CLUSTER_DELETE'
+OP_CREATE_CLUSTER = 'create_cluster'
+OP_DELETE_CLUSTER = 'delete_cluster'
 
 MAX_HOST_NAME_LENGTH = 25 - 4
 
@@ -111,9 +113,12 @@ class DefaultBroker(threading.Thread):
                                     log_bodies=True
                                     )
         session = self.client_tenant.rehydrate_from_token(token)
-        # print(client._get_wk_endpoint(_WellKnownEndpoint.LOGGED_IN_ORG))
         return {'user_name': session.get('user'),
-                'org_name': session.get('org')}
+                'user_id': session.get('userId'),
+                'org_name': session.get('org'),
+                'org_href': self.client_tenant._get_wk_endpoint(
+                    _WellKnownEndpoint.LOGGED_IN_ORG)
+                }
 
     def is_valid_name(self, name):
         """Validates that the cluster name against the pattern.
@@ -179,16 +184,33 @@ class DefaultBroker(threading.Thread):
         try:
             if not self.is_valid_name(cluster_name):
                 raise Exception('Invalid cluster name')
-            self._connect_tenant(headers)
+            self.tenant_info = self._connect_tenant(headers)
             self.headers = headers
             self.body = body
             self.cluster_id = str(uuid.uuid4())
             self.op = OP_CREATE_CLUSTER
+            self._connect_sysadmin()
+            task = Task(self.client_sysadmin)
+            self.t = task.update(
+                TaskStatus.RUNNING.value,
+                'vcloud.cse',
+                'Creating cluster %s(%s)' % (cluster_name, self.cluster_id),
+                OP_CREATE_CLUSTER,
+                '',
+                None,
+                'urn:cse:cluster:%s' % self.cluster_id,
+                cluster_name,
+                'application/vcloud.cse.cluster+xml',
+                self.tenant_info['user_id'],
+                self.tenant_info['user_name'],
+                org_href=self.tenant_info['org_href']
+            )
             self.daemon = True
             self.start()
             response_body = {}
             response_body['name'] = cluster_name
             response_body['cluster_id'] = self.cluster_id
+            response_body['task_href'] = self.t.get('href')
             result['body'] = response_body
             result['status_code'] = ACCEPTED
         except Exception as e:
@@ -197,11 +219,27 @@ class DefaultBroker(threading.Thread):
         return result
 
     def create_cluster_thread(self):
+        cluster_name = self.body['name']
+
+        task = Task(self.client_sysadmin)
+        self.t = task.update(
+            TaskStatus.RUNNING.value,
+            'vcloud.cse',
+            'Creating nodes %s(%s)' % (cluster_name, self.cluster_id),
+            OP_CREATE_CLUSTER,
+            '',
+            None,
+            'urn:cse:cluster:%s' % self.cluster_id,
+            cluster_name,
+            'application/vcloud.cse.cluster+xml',
+            self.tenant_info['user_id'],
+            self.tenant_info['user_name'],
+            org_href=self.tenant_info['org_href'],
+            task_href=self.t.get('href'))
         org_resource = self.client_tenant.get_org()
         org = Org(self.client_tenant, org_resource=org_resource)
         vdc_resource = org.get_vdc(self.body['vdc'])
 
-        cluster_name = self.body['name']
         master_count = 1
         node_count = int(self.body['node_count'])
         catalog = self.config['broker']['catalog']
@@ -307,6 +345,22 @@ class DefaultBroker(threading.Thread):
             time.sleep(1)
 
     def customize_nodes(self, max_retries=60):
+        cluster_name = self.body['name']
+        task = Task(self.client_sysadmin)
+        self.t = task.update(
+            TaskStatus.RUNNING.value,
+            'vcloud.cse',
+            'Customizing nodes %s(%s)' % (cluster_name, self.cluster_id),
+            OP_CREATE_CLUSTER,
+            '',
+            None,
+            'urn:cse:cluster:%s' % self.cluster_id,
+            cluster_name,
+            'application/vcloud.cse.cluster+xml',
+            self.tenant_info['user_id'],
+            self.tenant_info['user_name'],
+            org_href=self.tenant_info['org_href'],
+            task_href=self.t.get('href'))
         nodes = []
         n = 0
         all_nodes_configured = False
@@ -423,6 +477,21 @@ class DefaultBroker(threading.Thread):
                                      command[1],
                                      vm,
                                      result)
+            task = Task(self.client_sysadmin)
+            self.t = task.update(
+                TaskStatus.SUCCESS.value,
+                'vcloud.cse',
+                OP_CREATE_CLUSTER,
+                'create cluster',
+                '',
+                None,
+                'urn:cse:cluster:%s' % self.cluster_id,
+                cluster_name,
+                'application/vcloud.cse.cluster+xml',
+                self.tenant_info['user_id'],
+                self.tenant_info['user_name'],
+                org_href=self.tenant_info['org_href'],
+                task_href=self.t.get('href'))
 
     def get_cluster_config(self, cluster_name, headers, body):
         result = {}
