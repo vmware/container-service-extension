@@ -54,6 +54,10 @@ broker:
     node_template: k8s-u.ova
     username: cse
     password: 'cse_user_template_password'
+    master_cpu: 4
+    master_mem: 4096
+    node_cpu: 4
+    node_mem: 4096
 
     """ % '%(levelname) -8s %(asctime)s %(name) -40s %(funcName) ' \
           '-35s %(lineno) -5d: %(message)s'

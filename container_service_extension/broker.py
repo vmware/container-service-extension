@@ -195,7 +195,7 @@ class DefaultBroker(threading.Thread):
                 TaskStatus.RUNNING.value,
                 'vcloud.cse',
                 'Creating cluster %s(%s)' % (cluster_name, self.cluster_id),
-                OP_CREATE_CLUSTER,
+                self.op,
                 '',
                 None,
                 'urn:cse:cluster:%s' % self.cluster_id,
@@ -226,7 +226,7 @@ class DefaultBroker(threading.Thread):
             TaskStatus.RUNNING.value,
             'vcloud.cse',
             'Creating nodes %s(%s)' % (cluster_name, self.cluster_id),
-            OP_CREATE_CLUSTER,
+            self.op,
             '',
             None,
             'urn:cse:cluster:%s' % self.cluster_id,
@@ -245,6 +245,10 @@ class DefaultBroker(threading.Thread):
         catalog = self.config['broker']['catalog']
         master_template = self.config['broker']['master_template']
         node_template = self.config['broker']['node_template']
+        master_cpu = self.config['broker']['master_cpu']
+        master_mem = self.config['broker']['master_mem']
+        node_cpu = self.config['broker']['node_cpu']
+        node_mem = self.config['broker']['node_mem']
 
         vdc = VDC(self.client_tenant, vdc_resource=vdc_resource)
 
@@ -254,12 +258,18 @@ class DefaultBroker(threading.Thread):
             name = cluster_name + '-m%s' % str(n+1)
             masters.append(vdc.instantiate_vapp(name,
                                                 catalog,
-                                                master_template))
+                                                master_template,
+                                                memory=master_mem,
+                                                cpu=master_cpu))
         nodes = []
         for n in range(node_count):
             time.sleep(1)
             name = cluster_name + '-n%s' % str(n+1)
-            nodes.append(vdc.instantiate_vapp(name, catalog, node_template))
+            nodes.append(vdc.instantiate_vapp(name,
+                                              catalog,
+                                              node_template,
+                                              memory=node_mem,
+                                              cpu=node_cpu))
 
         tagged = set([])
         while len(tagged) < (master_count + node_count):
@@ -315,15 +325,34 @@ class DefaultBroker(threading.Thread):
         LOGGER.debug('about to delete cluster with name: %s', cluster_name)
         result['status_code'] = INTERNAL_SERVER_ERROR
         try:
-            self._connect_tenant(headers)
+            self.cluster_name = cluster_name
+            self.tenant_info = self._connect_tenant(headers)
             self.headers = headers
             self.body = body
-            self.cluster_name = cluster_name
             self.op = OP_DELETE_CLUSTER
+            self.cluster_id = '?'
+            self._connect_sysadmin()
+            task = Task(self.client_sysadmin)
+            self.t = task.update(
+                TaskStatus.RUNNING.value,
+                'vcloud.cse',
+                'Deleting cluster %s(%s)' % (self.cluster_name,
+                                             self.cluster_id),
+                self.op,
+                '',
+                None,
+                'urn:cse:cluster:%s' % self.cluster_id,
+                self.cluster_name,
+                'application/vcloud.cse.cluster+xml',
+                self.tenant_info['user_id'],
+                self.tenant_info['user_name'],
+                org_href=self.tenant_info['org_href']
+            )
             self.daemon = True
             self.start()
             response_body = {}
             response_body['cluster_name'] = self.cluster_name
+            response_body['task_href'] = self.t.get('href')
             result['body'] = response_body
             result['status_code'] = ACCEPTED
         except Exception as e:
@@ -337,21 +366,42 @@ class DefaultBroker(threading.Thread):
         nodes = load_from_metadata_by_name(self.client_tenant,
                                            self.cluster_name)
         vdc = None
+        tasks = []
         for node in nodes:
             if vdc is None:
                 vdc = VDC(self.client_tenant, vdc_href=node['vdc_href'])
             LOGGER.debug('about to delete vapp %s', node['vapp_name'])
-            vdc.delete_vapp(node['vapp_name'], force=True)
+            try:
+                tasks.append(vdc.delete_vapp(node['vapp_name'], force=True))
+            except:
+                pass
             time.sleep(1)
+        task = Task(self.client_sysadmin)
+        # TODO(wait until all nodes are deleted)
+        self.t = task.update(
+            TaskStatus.SUCCESS.value,
+            'vcloud.cse',
+            self.op,
+            'delete cluster',
+            '',
+            None,
+            'urn:cse:cluster:%s' % self.cluster_id,
+            self.cluster_name,
+            'application/vcloud.cse.cluster+xml',
+            self.tenant_info['user_id'],
+            self.tenant_info['user_name'],
+            org_href=self.tenant_info['org_href'],
+            task_href=self.t.get('href'))
 
     def customize_nodes(self, max_retries=60):
         cluster_name = self.body['name']
+        node_count = int(self.body['node_count'])
         task = Task(self.client_sysadmin)
         self.t = task.update(
             TaskStatus.RUNNING.value,
             'vcloud.cse',
             'Customizing nodes %s(%s)' % (cluster_name, self.cluster_id),
-            OP_CREATE_CLUSTER,
+            self.op,
             '',
             None,
             'urn:cse:cluster:%s' % self.cluster_id,
@@ -460,6 +510,8 @@ class DefaultBroker(threading.Thread):
                             ['/usr/bin/sudo', 'kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel-rbac.yml'],  # NOQA
                             ['/usr/bin/sudo', 'kubectl --kubeconfig=/etc/kubernetes/admin.conf create -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml']  # NOQA
                         ]
+                    if node_count == 0:
+                        commands.append(['/usr/bin/sudo', 'kubectl --kubeconfig=/etc/kubernetes/admin.conf taint nodes --all node-role.kubernetes.io/master-'])  # NOQA
                     for command in commands:
                         LOGGER.debug('executing %s %s on %s',
                                      command[0],
@@ -481,7 +533,7 @@ class DefaultBroker(threading.Thread):
             self.t = task.update(
                 TaskStatus.SUCCESS.value,
                 'vcloud.cse',
-                OP_CREATE_CLUSTER,
+                self.op,
                 'create cluster',
                 '',
                 None,
