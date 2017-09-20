@@ -373,7 +373,7 @@ class DefaultBroker(threading.Thread):
             LOGGER.debug('about to delete vapp %s', node['vapp_name'])
             try:
                 tasks.append(vdc.delete_vapp(node['vapp_name'], force=True))
-            except:
+            except Exception:
                 pass
             time.sleep(1)
         task = Task(self.client_sysadmin)
