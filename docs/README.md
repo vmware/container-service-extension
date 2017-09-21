@@ -1,5 +1,3 @@
-# Overview
-
 The **container-service-extension** is a vCloud Director add-on that manages the life cycle of Kubernetes clusters for tenants.
 
 ## Service Provider Installation
