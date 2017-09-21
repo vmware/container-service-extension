@@ -255,6 +255,8 @@ $ cse run config.yml
 
 Once installed, the container service extension can be used by tenants to create kubernetes clusters on demand.
 
+See [vcd-cli](https://vmware.github.io/vcd-cli/vcd_cluster) for more information about the available commands.
+
 ```shell
 # create cluster c1 with one master and two nodes
 $ vcd cluster create c1
