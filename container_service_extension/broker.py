@@ -4,8 +4,6 @@
 
 import click
 from container_service_extension.cluster import load_from_metadata
-from container_service_extension.cluster import load_from_metadata_by_id
-from container_service_extension.cluster import load_from_metadata_by_name
 from container_service_extension.cluster import TYPE_MASTER
 from container_service_extension.cluster import TYPE_NODE
 import logging
@@ -161,6 +159,15 @@ class DefaultBroker(threading.Thread):
             result['status_code'] = OK
             self._connect_tenant(headers)
             clusters = load_from_metadata(self.client_tenant)
+            for cluster in clusters:
+                names = []
+                for node in cluster['master_nodes']:
+                    names.append(node['name'])
+                cluster['master_nodes'] = names
+                names = []
+                for node in cluster['nodes']:
+                    names.append(node['name'])
+                cluster['nodes'] = names
             result['body'] = clusters
         except Exception:
             LOGGER.error(traceback.format_exc())
@@ -363,16 +370,19 @@ class DefaultBroker(threading.Thread):
     def delete_cluster_thread(self):
         LOGGER.debug('about to delete cluster with name: %s',
                      self.cluster_name)
-        nodes = load_from_metadata_by_name(self.client_tenant,
-                                           self.cluster_name)
+        clusters = load_from_metadata(self.client_tenant,
+                                      name=self.cluster_name)
+        LOGGER.debug(clusters)
+        assert len(clusters) == 1
+        cluster = clusters[0]
         vdc = None
         tasks = []
-        for node in nodes:
+        for node in cluster['master_nodes']+cluster['nodes']:
             if vdc is None:
-                vdc = VDC(self.client_tenant, vdc_href=node['vdc_href'])
-            LOGGER.debug('about to delete vapp %s', node['vapp_name'])
+                vdc = VDC(self.client_tenant, vdc_href=cluster['vdc_href'])
+            LOGGER.debug('about to delete vapp %s', node['name'])
             try:
-                tasks.append(vdc.delete_vapp(node['vapp_name'], force=True))
+                tasks.append(vdc.delete_vapp(node['name'], force=True))
             except Exception:
                 pass
             time.sleep(1)
@@ -416,9 +426,23 @@ class DefaultBroker(threading.Thread):
         all_nodes_configured = False
         while n < max_retries:
             try:
-                nodes = load_from_metadata_by_id(self.client_tenant,
-                                                 self.cluster_id)
-                LOGGER.debug(nodes)
+                nodes = []
+                clusters = load_from_metadata(self.client_tenant,
+                                              cluster_id=self.cluster_id)
+                LOGGER.debug(clusters)
+                assert len(clusters) == 1
+                cluster = clusters[0]
+                for n in cluster['master_nodes'] + cluster['nodes']:
+                    node = {'name': n['name']}
+                    vapp = VApp(self.client_tenant,
+                                vapp_href=n['href'])
+                    node['ip'] = vapp.get_primary_ip(n['name'])
+                    node['moid'] = vapp.get_vm_moid(n['name'])
+                    if n['name'].endswith('-m1'):
+                        node['node_type'] = TYPE_MASTER
+                    else:
+                        node['node_type'] = TYPE_NODE
+                    nodes.append(node)
                 for node in nodes:
                     if 'ip' in node.keys() and len(node['ip']) > 0:
                         pass
@@ -444,11 +468,11 @@ class DefaultBroker(threading.Thread):
             vm = vs.get_vm_by_moid(node['moid'])
             commands = [
                 ['/bin/echo', '\'127.0.0.1    localhost\' | sudo tee /etc/hosts'],  # NOQA
-                ['/bin/echo', '\'127.0.1.1    %s\' | sudo tee -a /etc/hosts' % node['vapp_name']],  # NOQA
+                ['/bin/echo', '\'127.0.1.1    %s\' | sudo tee -a /etc/hosts' % node['name']],  # NOQA
                 ['/bin/echo', '\'::1          localhost ip6-localhost ip6-loopback\' | sudo tee -a /etc/hosts'],  # NOQA
                 ['/bin/echo', '\'ff02::1      ip6-allnodes\' | sudo tee -a /etc/hosts'],  # NOQA
                 ['/bin/echo', '\'ff02::2      ip6-allrouters\' | sudo tee -a /etc/hosts'],  # NOQA
-                ['/usr/bin/sudo', 'hostnamectl set-hostname %s' % node['vapp_name']],  # NOQA
+                ['/usr/bin/sudo', 'hostnamectl set-hostname %s' % node['name']],  # NOQA
                 ['/bin/mkdir', '$HOME/.ssh'],
                 ['/bin/chmod', 'go-rwx $HOME/.ssh'],
                 ['/bin/echo', '\'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0bRDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== contact@pacogomez.com\' > $HOME/.ssh/authorized_keys'],   # NOQA
@@ -553,43 +577,43 @@ class DefaultBroker(threading.Thread):
             self._connect_tenant(headers)
             self.headers = headers
             self.cluster_name = cluster_name
-            nodes = load_from_metadata_by_name(self.client_tenant,
-                                               self.cluster_name)
-            LOGGER.debug(nodes)
+            clusters = load_from_metadata(self.client_tenant,
+                                          name=self.cluster_name)
+            LOGGER.debug(clusters)
+            assert len(clusters) == 1
+            cluster = clusters[0]
+            assert len(cluster['master_nodes']) == 1
             result['body'] = {'cluster_config': '\'%s\'' % cluster_name}
-            for node in nodes:
-                if node['node_type'] == TYPE_MASTER:
-                    vs = VSphere(self.config['vcs']['host'],
-                                 self.config['vcs']['username'],
-                                 self.config['vcs']['password'],
-                                 port=int(self.config['vcs']['port']))
-                    vs.connect()
-                    vm = vs.get_vm_by_moid(node['moid'])
-                    commands = [
-                        ['/usr/bin/sudo', 'chmod a+r /etc/kubernetes/admin.conf']  # NOQA
-                    ]
-                    for command in commands:
-                        LOGGER.debug('executing %s on %s', command[0], vm)
-                        r = vs.execute_program_in_guest(
+            vs = VSphere(self.config['vcs']['host'],
+                         self.config['vcs']['username'],
+                         self.config['vcs']['password'],
+                         port=int(self.config['vcs']['port']))
+            vs.connect()
+            vm = vs.get_vm_by_moid(cluster['leader_moid'])
+            commands = [
+                ['/usr/bin/sudo', 'chmod a+r /etc/kubernetes/admin.conf']  # NOQA
+            ]
+            for command in commands:
+                LOGGER.debug('executing %s on %s', command[0], vm)
+                r = vs.execute_program_in_guest(
+                            vm,
+                            self.config['broker']['username'],
+                            self.config['broker']['password'],
+                            command[0],
+                            command[1]
+                        )
+                time.sleep(1)
+                LOGGER.debug('executed %s on %s: %s',
+                             command[0],
+                             vm,
+                             r)
+            response = vs.download_file_from_guest(
                                     vm,
                                     self.config['broker']['username'],
                                     self.config['broker']['password'],
-                                    command[0],
-                                    command[1]
-                                )
-                        time.sleep(1)
-                        LOGGER.debug('executed %s on %s: %s',
-                                     command[0],
-                                     vm,
-                                     r)
-                    response = vs.download_file_from_guest(
-                                            vm,
-                                            self.config['broker']['username'],
-                                            self.config['broker']['password'],
-                                            '/etc/kubernetes/admin.conf')
-                    result['body'] = response.content
-                    result['status_code'] = response.status_code
-                    break
+                                    '/etc/kubernetes/admin.conf')
+            result['body'] = response.content
+            result['status_code'] = response.status_code
         except Exception as e:
             LOGGER.error(traceback.format_exc())
             result['body'] = {'message': e.message}
