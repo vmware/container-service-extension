@@ -4,31 +4,29 @@
 
 ## Overview
 
-The **container-service-extension** for vCloud Director manages the life cycle of Kubernetes clusters for tenants.
+The **container-service-extension** is a vCloud Director add-on that manages the life cycle of Kubernetes clusters for tenants.
 
 ## Try it out
 
-### Prerequisites
+#### Prerequisites
 
-This extension should be installed on a vCloud Director instance by a system administrator.
+This extension is designed to be installed on a vCloud Director instance by the service provider (system administrator).
 
 The **container-service-extension** is distributed as a Python package.
-
-### Install & Run
 
 #### Installation:
 
 Install and validate:
 
 ``` shell
-$ pip install --user container-service-extension
+$ pip install container-service-extension
 
 $ cse version
 ```
 
 #### Running the Service
 
-Follow the vCloud Director configuration steps in the [wiki](https://github.com/vmware/container-service-extension/wiki).
+Follow the [configuration steps](https://vmware.github.io/container-service-extension/).
 
 Start the service with:
 
@@ -36,9 +34,9 @@ Start the service with:
 $ cse run config.yml
 ```
 
-More information about `vcd-cli` commands to use the service can be found in the [wiki](https://github.com/vmware/vcd-cli/wiki/container-service-extension).
+More information about `vcd-cli` commands to use the service can be found in the [vcd-cli](https://vmware.github.io/vcd-cli/vcd_cluster) site.
 
-### Development
+## Development
 
 ``` shell
 $ git clone https://github.com/vmware/container-service-extension.git
@@ -47,7 +45,7 @@ $ python setup.py develop
 
 ## Documentation
 
-See our [wiki](https://github.com/vmware/container-service-extension/wiki).
+See our [site](https://vmware.github.io/container-service-extension/).
 
 ## Contributing
 

@@ -7,8 +7,7 @@ The **container-service-extension** is a vCloud Director add-on that manages the
 The installation process includes the following steps to be completed as the vCloud Director system administrator:
 
 1. download and install the `CSE` software package
-2. create vApp templates from provided scripts
-3. upload templates to vCloud Director
+2. create vApp templates from provided scripts and upload to vCloud Director
 4. register the `CSE` service extension with vCloud Director
 5. edit and validate `CSE` configuration settings
 6. start `CSE`
@@ -84,7 +83,7 @@ file        k8s-u.ova
 size        1128106989
 ```
 
-### 2.1 ESXi Host Configuration
+#### 2.1 ESXi Host Configuration
 
 In order to create the template with `packer`, ssh to the ESXi host and configure the following settings:
 
@@ -125,7 +124,11 @@ $ chmod 444 /etc/vmware/firewall/service.xml
 $ esxcli network firewall refresh
 ```
 
-Make sure the `port group` defined in the template, is defined in the ESXi host, is accessible by the machine running the `packer` script and it has a DHCP service running. The default `port group` in the provided template is `VM Network`, but can be changed based on the ESXi configuration. Extract of the `kubernetes-ubuntu.json` template:
+Make sure that the `port group` defined in the template:
+- is defined in the ESXi host accessible by the machine running the `packer` script,
+- it has a DHCP service running.
+
+The default `port group` in the provided template is `VM Network`, but it should be changed based on the ESXi configuration. This is a fragment of the `kubernetes-ubuntu.json` template:
 
 ```
 "vmx_data": {
@@ -133,7 +136,8 @@ Make sure the `port group` defined in the template, is defined in the ESXi host,
 ```
 
 
-### Configure vCloud Director AMQP Settings
+### 3. Register `CSE` with vCloud Director
+#### 3.1 Configure vCloud Director AMQP Settings
 
 Using `vcd-cli`, configure AMQP. Log in as the system administrator:
 
@@ -180,31 +184,7 @@ $ vcd system amqp set amqp-config.json --password guest
 Updated AMQP configuration.
 ```
 
-### Define the CSE Configuration
-
-Create sample configuration:
-
-```shell
-$ cse sample-config > config.yml
-```
-
-Edit file `config.yml` and provide the values for your vCloud Director installation.
-
-Validate the configuration:
-
-```shell
-$ cse check config.yml
-
-Connection to AMQP server (amqp.vmware.com:5672): success
-Connection to vCloud Director as system administrator (vcd.vmware.com:443): success
-Find catalog 'cse': success
-Find master template 'k8s-u.ova': success
-Find node template 'k8s-u.ova': success
-Connection to vCenter Server as administrator@vsphere.local (vcenter.vmware.com:443): success
-The configuration is valid.
-```
-
-### Complete vCloud Director Configuration
+#### 3.2 Complete vCloud Director Configuration
 
 Using `vcd-cli`, register the extension in vCloud Director.
 
@@ -239,7 +219,31 @@ priority                0
 routingKey              cse
 ```
 
-## Running the Extension
+### 4. Define the `CSE` Configuration
+
+Create sample configuration:
+
+```shell
+$ cse sample-config > config.yml
+```
+
+Edit file `config.yml` and provide the values for your vCloud Director installation.
+
+Validate the configuration:
+
+```shell
+$ cse check config.yml
+
+Connection to AMQP server (amqp.vmware.com:5672): success
+Connection to vCloud Director as system administrator (vcd.vmware.com:443): success
+Find catalog 'cse': success
+Find master template 'k8s-u.ova': success
+Find node template 'k8s-u.ova': success
+Connection to vCenter Server as administrator@vsphere.local (vcenter.vmware.com:443): success
+The configuration is valid.
+```
+
+### 5. Start `CSE`
 
 Start the service with the command below. Output log is appended to file `cse.log`
 
