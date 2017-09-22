@@ -1,6 +1,40 @@
 CHANGES
 =======
 
+0.0.9
+-----
+
+* tasks
+* docs
+* docs
+* docs
+* docs
+* mem/cpu
+* flake8
+* node customization
+* create task
+* Set theme jekyll-theme-minimal
+* docs
+
+0.0.8
+-----
+
+* deps
+
+0.0.7
+-----
+
+* wip
+* python3 support
+* Closes #29
+* removed sample config file
+* misc
+
+0.0.6
+-----
+
+* test
+
 0.0.5
 -----
 
