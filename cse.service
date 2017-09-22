@@ -1,0 +1,10 @@
+[Unit]
+Description=Container Service Extension for VMware vCloud Director
+After=network.target
+
+[Service]
+ExecStart=/opt/cse/cse.py
+Type=simple
+
+[Install]
+WantedBy=default.target

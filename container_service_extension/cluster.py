@@ -12,7 +12,10 @@ TYPE_NODE = 'node'
 LOGGER = logging.getLogger(__name__)
 
 
-def load_from_metadata(client, name=None, cluster_id=None):
+def load_from_metadata(client,
+                       name=None,
+                       cluster_id=None,
+                       get_leader_ip=False):
     clusters_dict = {}
     if name is not None:
         query_filter = 'metadata:cse.cluster.name==STRING:%s' % name
@@ -70,7 +73,7 @@ def load_from_metadata(client, name=None, cluster_id=None):
         if node['node_type'] == TYPE_MASTER:
             cluster['master_nodes'].append(n)
             cluster['leader_endpoint'] = None
-            if node['vapp_name'].endswith('-m1'):
+            if get_leader_ip and node['vapp_name'].endswith('-m1'):
                 try:
                     vapp = VApp(client, vapp_href=node['vapp_href'])
                     cluster['leader_endpoint'] = '%s' % \
