@@ -100,3 +100,4 @@ ENV/
 
 templates/packer_cache
 templates/private-variables.json
+cse_cache

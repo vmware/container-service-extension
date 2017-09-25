@@ -498,6 +498,7 @@ class DefaultBroker(threading.Thread):
         master_node = None
         for node in nodes:
             vm = vs.get_vm_by_moid(node['moid'])
+            # TODO(run customization as a single file...)
             commands = [
                 ['/bin/echo', '\'127.0.0.1    localhost\' | sudo tee /etc/hosts'],  # NOQA
                 ['/bin/echo', '\'127.0.1.1    %s\' | sudo tee -a /etc/hosts' % node['name']],  # NOQA
@@ -507,12 +508,11 @@ class DefaultBroker(threading.Thread):
                 ['/usr/bin/sudo', 'hostnamectl set-hostname %s' % node['name']],  # NOQA
                 ['/bin/mkdir', '$HOME/.ssh'],
                 ['/bin/chmod', 'go-rwx $HOME/.ssh'],
-                ['/bin/echo', '\'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0bRDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== contact@pacogomez.com\' > $HOME/.ssh/authorized_keys'],   # NOQA
+                ['/bin/echo', '\'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0bRDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse\' > $HOME/.ssh/authorized_keys'],   # NOQA
                 ['/bin/chmod', 'go-rwx $HOME/.ssh/authorized_keys']
             ]
             if node['node_type'] == TYPE_MASTER:
                 master_node = node
-                commands.append(['/bin/rm', '-f /tmp/kubeadm-init.out'])
                 commands.append(['/usr/bin/sudo', '/usr/bin/kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address={ip} > /tmp/kubeadm-init.out'.format(ip=node['ip'])])  # NOQA
             for command in commands:
                 LOGGER.debug('executing %s %s on %s',

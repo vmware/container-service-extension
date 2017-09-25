@@ -6,6 +6,7 @@
 
 import click
 from container_service_extension.config import check_config
+from container_service_extension.config import configure_vcd
 from container_service_extension.config import generate_sample_config
 from container_service_extension.service import Service
 import logging
@@ -56,6 +57,18 @@ def check(ctx, file_name):
     """Validate CSE configuration"""
     check_config(file_name)
     click.secho('The configuration is valid.')
+
+
+@cli.command(short_help='configure vCD')
+@click.pass_context
+@click.argument('file_name',
+                type=click.Path(exists=True),
+                metavar='<config-file>',
+                required=True,
+                default='config.yml')
+def configure(ctx, file_name):
+    """Configure vCloud Director for CSE"""
+    configure_vcd(file_name)
 
 
 @cli.command(short_help='run service')
