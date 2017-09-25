@@ -227,7 +227,7 @@ def upload_source_ova(config, client, org, catalog):
                     fg='green')
         r = requests.get(config['broker']['source_ova'], stream=True)
         with open(cse_ova_file, 'wb') as fd:
-            for chunk in r.iter_content():
+            for chunk in r.iter_content(chunk_size=1024):
                 fd.write(chunk)
     if os.path.exists(cse_ova_file):
         sha1 = get_sha1(cse_ova_file)
@@ -239,7 +239,8 @@ def upload_source_ova(config, client, org, catalog):
                                        config['broker']['source_ova_name'],
                                        callback=None)
 
-        return True
+        return org.get_catalog_item(config['broker']['catalog'],
+                                    config['broker']['source_ova_name'])
     else:
         return None
 
@@ -252,3 +253,7 @@ def create_master_template(config, client, org, vdc, catalog):
     click.secho('Find source ova \'%s\': %s' %
                 (config['broker']['source_ova_name'],
                  bool_to_msg(source_ova_item is not None)))
+    if source_ova_item is not None:
+        print(source_ova_item.get('name'))
+    else:
+        print('not found')
