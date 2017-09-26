@@ -7,7 +7,7 @@ import json
 import jsonpickle
 import logging
 import pika
-from processor import ServiceProcessor
+from container_service_extension.processor import ServiceProcessor
 import threading
 import traceback
 

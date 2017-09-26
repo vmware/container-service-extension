@@ -8,6 +8,8 @@ password        include         system-password
 session         include         system-session
 EOF
 
+#cp /etc/pam.d/sshd /etc/pam.d/vmtoolsd
+
 # Install sudo.
 /usr/bin/tdnf --assumeyes install sudo
 

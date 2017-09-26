@@ -68,7 +68,7 @@ def check(ctx, file_name):
                 default='config.yml')
 def configure(ctx, file_name):
     """Configure vCloud Director for CSE"""
-    configure_vcd(file_name)
+    configure_vcd(ctx, file_name)
 
 
 @cli.command(short_help='run service')

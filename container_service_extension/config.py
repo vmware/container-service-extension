@@ -11,9 +11,13 @@ import pika
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.org import Org
+from pyvcloud.vcd.vapp import VApp
+from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vsphere import VSphere
+from vcd_cli.utils import stdout
 import requests
 import sys
+import time
 import yaml
 
 
@@ -155,7 +159,7 @@ def check_config(file_name):
                 bool_to_msg(True)))
     return config
 
-def configure_vcd(file_name):
+def configure_vcd(ctx, file_name):
     click.secho('Configuring vCD from file: %s' % file_name)
     config = get_config(file_name)
     client = Client(config['vcd']['host'],
@@ -181,15 +185,16 @@ def configure_vcd(file_name):
         org = Org(client, org_href=org_href)
         click.echo('Find org \'%s\': %s' %
                    (org.get_name(), bool_to_msg(True)))
-        vdc = org.get_vdc(config['broker']['vdc'])
+        vdc_resource = org.get_vdc(config['broker']['vdc'])
         click.echo('Find vdc \'%s\': %s' %
-                   (vdc.get('name'), bool_to_msg(True)))
+                   (vdc_resource.get('name'), bool_to_msg(True)))
         try:
             catalog = org.get_catalog(config['broker']['catalog'])
         except:
             catalog = org.create_catalog(config['broker']['catalog'],
                                          'CSE catalog')
             org.share_catalog(config['broker']['catalog'])
+            catalog = org.get_catalog(config['broker']['catalog'])
         click.echo('Find catalog \'%s\': %s' %
                    (config['broker']['catalog'],
                     bool_to_msg(catalog is not None)))
@@ -197,10 +202,11 @@ def configure_vcd(file_name):
             master_template = org.get_catalog_item(config['broker']['catalog'],
                 config['broker']['master_template'])
         except:
-            master_template = create_master_template(config,
+            master_template = create_master_template(ctx,
+                                                     config,
                                                      client,
                                                      org,
-                                                     vdc,
+                                                     vdc_resource,
                                                      catalog)
         click.echo('Find master template \'%s\': %s' %
                    (config['broker']['master_template'],
@@ -244,7 +250,10 @@ def upload_source_ova(config, client, org, catalog):
     else:
         return None
 
-def create_master_template(config, client, org, vdc, catalog):
+def create_master_template(ctx, config, client, org, vdc_resource, catalog):
+    vapp_name = config['broker']['temp_vapp']
+    ctx.obj = {}
+    ctx.obj['client'] = client
     try:
         source_ova_item = org.get_catalog_item(config['broker']['catalog'],
             config['broker']['source_ova_name'])
@@ -253,7 +262,186 @@ def create_master_template(config, client, org, vdc, catalog):
     click.secho('Find source ova \'%s\': %s' %
                 (config['broker']['source_ova_name'],
                  bool_to_msg(source_ova_item is not None)))
-    if source_ova_item is not None:
-        print(source_ova_item.get('name'))
-    else:
-        print('not found')
+    if source_ova_item is None:
+        return None
+    vdc = VDC(client, vdc_resource=vdc_resource)
+    try:
+        vapp_resource = vdc.get_vapp(vapp_name)
+    except:
+        vapp_resource = None
+    if vapp_resource is not None:
+        click.secho('Found vApp %s, capture as template' % vapp_name)
+        return capture_as_template(ctx, vapp_resource, org)
+    connection_mode='dhcp'
+    vm_name = vapp_name
+    cust_script = """
+#!/bin/bash
+/usr/bin/cp /etc/pam.d/sshd /etc/pam.d/vmtoolsd
+temp="autogenerate"
+echo -e "$temp\n$temp" | passwd root
+chage -I -1 -m 0 -M -1 -E -1 root
+        """
+    vapp_resource = vdc.instantiate_vapp(
+        vm_name,
+        catalog.get('name'),
+        config['broker']['source_ova_name'],
+        network=config['broker']['network'],
+        deploy=False,
+        power_on=False,
+        password=None,
+        cust_script=cust_script)
+    stdout(vapp_resource.Tasks.Task[0], ctx)
+    vapp = VApp(client, vapp_href=vapp_resource.get('href'))
+    t = vapp.connect_vm(mode=connection_mode)
+    stdout(t, ctx)
+    t = vapp.power_on()
+    stdout(t, ctx)
+    ip = None
+    password_auto = None
+    vm_moid = None
+    click.secho('Waiting for IP address... ', nl=False, fg='green')
+    while True:
+        time.sleep(5)
+        vapp = VApp(client, vapp_href=vapp_resource.get('href'))
+        try:
+            ip = vapp.get_primary_ip(vm_name)
+            password_auto = vapp.get_admin_password(vm_name)
+            vm_moid = vapp.get_vm_moid(vm_name)
+            if ip is not None and \
+               password_auto is not None and \
+               vm_moid is not None:
+                break
+        except:
+            pass
+    click.secho(ip, fg='blue')
+    click.secho('Customizing template... ', nl=False, fg='green')
+    cust_script = """
+#!/bin/bash
+/usr/bin/echo -e "{password}\n{password}" | /usr/bin/passwd root
+/bin/echo '127.0.0.1    localhost' > /etc/hosts
+/bin/echo '127.0.1.1    {hostname}' >> /etc/hosts
+/bin/echo '::1          localhost ip6-localhost ip6-loopback' >> /etc/hosts
+/bin/echo 'ff02::1      ip6-allnodes' >> /etc/hosts
+/bin/echo 'ff02::2      ip6-allrouters' >> /etc/hosts
+/bin/echo '{ssh_public_key}' >> $HOME/.ssh/authorized_keys
+/bin/chmod go-rwx $HOME/.ssh/authorized_keys
+""".format(password=config['broker']['password'],
+           hostname=vm_name,
+           ssh_public_key=config['broker']['ssh_public_key'])
+    vs = VSphere(config['vcs']['host'],
+                 config['vcs']['username'],
+                 config['vcs']['password'],
+                 port=int(config['vcs']['port']))
+    vs.connect()
+    vm = vs.get_vm_by_moid(vm_moid)
+    result = vs.upload_file_to_guest(
+                             vm,
+                             'root',
+                             password_auto,
+                             cust_script,
+                             '/tmp/customize.sh')
+    result = vs.execute_program_in_guest(
+                vm,
+                config['broker']['username'],
+                password_auto,
+                '/usr/bin/chmod',
+                'u+rx /tmp/customize.sh',
+                wait_for_completion=True)
+    result = vs.execute_program_in_guest(
+                vm,
+                config['broker']['username'],
+                password_auto,
+                '/tmp/customize.sh',
+                '',
+                wait_for_completion=False)
+    time.sleep(5)
+    result = vs.execute_program_in_guest(
+                vm,
+                config['broker']['username'],
+                config['broker']['password'],
+                '/usr/bin/rm',
+                '-f /tmp/customize.sh',
+                wait_for_completion=True)
+    cust_script = """
+#!/bin/bash
+/usr/bin/cat << EOF > /etc/systemd/system/iptables-ports.service
+[Unit]
+After=iptables.service
+Requires=iptables.service
+[Service]
+Type=oneshot
+ExecStartPre=/usr/sbin/iptables -P INPUT ACCEPT
+ExecStartPre=/usr/sbin/iptables -P OUTPUT ACCEPT
+ExecStart=/usr/sbin/iptables -P FORWARD ACCEPT
+TimeoutSec=0
+RemainAfterExit=yes
+[Install]
+WantedBy=iptables.service
+EOF
+
+/usr/bin/chmod 766 /etc/systemd/system/iptables-ports.service
+/usr/bin/systemctl enable iptables-ports.service
+/usr/bin/systemctl start iptables-ports.service
+
+/usr/bin/systemctl enable docker.service
+/usr/bin/systemctl start docker.service
+/usr/bin/tdnf install -y kubernetes-1.7.5-1.ph1 kubernetes-kubeadm-1.7.5-1.ph1
+/usr/bin/tdnf install -y wget
+
+/usr/bin/docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.7.6
+/usr/bin/docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.7.6
+/usr/bin/docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.7.6
+/usr/bin/docker pull gcr.io/google_containers/kube-proxy-amd64:v1.7.6
+/usr/bin/docker pull gcr.io/google_containers/etcd-amd64:3.0.17
+/usr/bin/docker pull gcr.io/google_containers/pause-amd64:3.0
+/usr/bin/docker pull quay.io/coreos/flannel:v0.9.0-amd64
+/usr/bin/docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.4
+/usr/bin/docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.4
+/usr/bin/docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.4
+
+/usr/bin/wget https://raw.githubusercontent.com/coreos/flannel/v0.9.0/Documentation/kube-flannel.yml
+
+/bin/echo -n > /etc/machine-id
+
+"""
+    result = vs.upload_file_to_guest(
+        vm,
+        config['broker']['username'],
+        config['broker']['password'],
+        cust_script,
+        '/tmp/customize.sh')
+    result = vs.execute_program_in_guest(
+        vm,
+        config['broker']['username'],
+        config['broker']['password'],
+        '/usr/bin/chmod',
+        'u+rx /tmp/customize.sh',
+        wait_for_completion=True)
+    result = vs.execute_program_in_guest(
+        vm,
+        config['broker']['username'],
+        config['broker']['password'],
+        '/tmp/customize.sh',
+        '',
+        wait_for_completion=True)
+    result = vs.execute_program_in_guest(
+        vm,
+        config['broker']['username'],
+        config['broker']['password'],
+        '/usr/bin/rm',
+        '-f /tmp/customize.sh',
+        wait_for_completion=True)
+    click.secho('done', fg='blue')
+    return capture_as_template(vapp_resource, org)
+
+
+def capture_as_template(ctx, vapp_resource, org):
+    client = ctx.obj['client']
+    vapp = VApp(client, vapp_href=vapp_resource.get('href'))
+    vapp.reload()
+    if vapp.vapp_resource.get('status') == '4':
+        task = vapp.shutdown()
+        stdout(task, ctx)
+    time.sleep(4)
+
+    return None
