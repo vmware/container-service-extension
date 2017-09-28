@@ -277,6 +277,13 @@ def create_master_template(ctx, config, client, org, vdc_resource, catalog):
                  bool_to_msg(source_ova_item is not None)))
     if source_ova_item is None:
         return None
+
+    while source_ova_item['status'] != 'RESOLVED':
+        time.sleep(5)
+        source_ova_item = org.get_catalog_item(
+            config['broker']['catalog'],
+            config['broker']['source_ova_name'])
+
     vdc = VDC(client, resource=vdc_resource)
     try:
         vapp_resource = vdc.get_vapp(vapp_name)
