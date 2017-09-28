@@ -229,7 +229,7 @@ class DefaultBroker(threading.Thread):
                 org_href=self.tenant_info['org_href'],
                 task_href=self.t.get('href'))
             org_resource = self.client_tenant.get_org()
-            org = Org(self.client_tenant, org_resource=org_resource)
+            org = Org(self.client_tenant, resource=org_resource)
             vdc_resource = org.get_vdc(self.body['vdc'])
 
             master_count = 1
@@ -242,7 +242,7 @@ class DefaultBroker(threading.Thread):
             node_cpu = self.config['broker']['node_cpu']
             node_mem = self.config['broker']['node_mem']
 
-            vdc = VDC(self.client_tenant, vdc_resource=vdc_resource)
+            vdc = VDC(self.client_tenant, resource=vdc_resource)
 
             cust_script = """
 /usr/bin/echo -e "Created by CSE on {date}\n" > /root/cse.txt
@@ -300,7 +300,7 @@ class DefaultBroker(threading.Thread):
                         tags['cse.node.type'] = node_type
                         tags['cse.cluster.name'] = cluster_name
                         vapp = VApp(self.client_tenant,
-                                    vapp_href=node.get('href'))
+                                    href=node.get('href'))
                         for k, v in tags.items():
                             t = vapp.set_metadata('GENERAL',
                                                   'READWRITE',
@@ -399,7 +399,7 @@ class DefaultBroker(threading.Thread):
             tasks = []
             for node in cluster['master_nodes']+cluster['nodes']:
                 if vdc is None:
-                    vdc = VDC(self.client_tenant, vdc_href=cluster['vdc_href'])
+                    vdc = VDC(self.client_tenant, href=cluster['vdc_href'])
                 LOGGER.debug('about to delete vapp %s', node['name'])
                 try:
                     tasks.append(vdc.delete_vapp(node['name'], force=True))
@@ -473,9 +473,9 @@ class DefaultBroker(threading.Thread):
                     node = {'name': cluster_node['name'],
                             'href': cluster_node['href']}
                     vapp = VApp(self.client_tenant,
-                                vapp_href=cluster_node['href'])
+                                href=cluster_node['href'])
                     vapp.reload()
-                    if vapp.vapp_resource.get('status') != '4':
+                    if vapp.resource.get('status') != '4':
                         connection_mode = 'dhcp'
                         t = vapp.connect_vm(mode=connection_mode)
                         self.client_tenant.get_task_monitor().\
@@ -516,7 +516,7 @@ class DefaultBroker(threading.Thread):
                 all_nodes_configured = True
                 break
             except Exception as e:
-                LOGGER.error(e)
+                LOGGER.error(traceback.format_exc())
                 time.sleep(5)
         if not all_nodes_configured:
             message = 'ip not configured in at least one node'
@@ -548,7 +548,7 @@ class DefaultBroker(threading.Thread):
 /bin/mkdir -p $HOME/.kube
 /bin/cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
 /bin/chown $(id -u):$(id -g) $HOME/.kube/config
-/usr/bin/kubectl create -f $HOME/kube-flannel.yml
+/usr/bin/kubectl apply -f $HOME/kube-flannel.yml
                 """.format(ip=node['ip'])  # NOQA
                 vs.upload_file_to_guest(
                     vm,
@@ -588,7 +588,7 @@ class DefaultBroker(threading.Thread):
                     raise Exception('Failed executing "kubeadm init"')
                 token = [x for x in response.content.decode('utf-8').splitlines() if x.strip().startswith('[token] Using token: ')][0].split()[-1]  # NOQA
                 vapp = VApp(self.client_tenant,
-                            vapp_href=node['href'])
+                            href=node['href'])
                 vapp.reload()
                 t = vapp.set_metadata('GENERAL',
                                       'READWRITE',

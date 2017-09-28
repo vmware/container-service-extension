@@ -76,7 +76,7 @@ def load_from_metadata(client,
                 cluster['leader_endpoint'] = None
                 if get_leader_ip and node['vapp_name'].endswith('-m1'):
                     try:
-                        vapp = VApp(client, vapp_href=node['vapp_href'])
+                        vapp = VApp(client, href=node['vapp_href'])
                         cluster['leader_endpoint'] = '%s' % \
                             vapp.get_primary_ip(node['vapp_name'])
                         cluster['leader_moid'] = vapp.get_vm_moid(

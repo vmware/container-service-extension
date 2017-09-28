@@ -10,6 +10,7 @@ import os
 import pika
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
+from pyvcloud.vcd.client import SIZE_1MB
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
@@ -130,7 +131,7 @@ def check_config(file_name):
 
     if config['broker']['type'] == 'default':
         logged_in_org = client.get_org()
-        org = Org(client, org_resource=logged_in_org)
+        org = Org(client, resource=logged_in_org)
         org.get_catalog(config['broker']['catalog'])
         click.echo('Find catalog \'%s\': %s' %
                    (config['broker']['catalog'], bool_to_msg(True)))
@@ -179,7 +180,7 @@ def configure_vcd(ctx, file_name):
         for org in [o for o in orgs.Org if hasattr(orgs, 'Org')]:
             if org.get('name') == config['broker']['org']:
                 org_href = org.get('href')
-        org = Org(client, org_href=org_href)
+        org = Org(client, href=org_href)
         click.echo('Find org \'%s\': %s' %
                    (org.get_name(), bool_to_msg(True)))
         vdc_resource = org.get_vdc(config['broker']['vdc'])
@@ -243,7 +244,7 @@ def upload_source_ova(config, client, org, catalog):
                     fg='green')
         r = requests.get(config['broker']['source_ova'], stream=True)
         with open(cse_ova_file, 'wb') as fd:
-            for chunk in r.iter_content(chunk_size=1024):
+            for chunk in r.iter_content(chunk_size=SIZE_1MB):
                 fd.write(chunk)
     if os.path.exists(cse_ova_file):
         sha1 = get_sha1(cse_ova_file)
@@ -276,7 +277,7 @@ def create_master_template(ctx, config, client, org, vdc_resource, catalog):
                  bool_to_msg(source_ova_item is not None)))
     if source_ova_item is None:
         return None
-    vdc = VDC(client, vdc_resource=vdc_resource)
+    vdc = VDC(client, resource=vdc_resource)
     try:
         vapp_resource = vdc.get_vapp(vapp_name)
     except Exception:
@@ -303,7 +304,7 @@ chage -I -1 -m 0 -M -1 -E -1 root
         password=None,
         cust_script=cust_script)
     stdout(vapp_resource.Tasks.Task[0], ctx)
-    vapp = VApp(client, vapp_href=vapp_resource.get('href'))
+    vapp = VApp(client, href=vapp_resource.get('href'))
     task = vapp.connect_vm(mode=connection_mode)
     stdout(task, ctx)
     task = vapp.power_on()
@@ -314,7 +315,7 @@ chage -I -1 -m 0 -M -1 -E -1 root
     click.secho('Waiting for IP address... ', nl=False, fg='green')
     while True:
         time.sleep(5)
-        vapp = VApp(client, vapp_href=vapp_resource.get('href'))
+        vapp = VApp(client, href=vapp_resource.get('href'))
         try:
             ip = vapp.get_primary_ip(vm_name)
             password_auto = vapp.get_admin_password(vm_name)
@@ -360,12 +361,12 @@ EOF
 /usr/bin/docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.7.6
 /usr/bin/docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.7.6
 /usr/bin/docker pull gcr.io/google_containers/kube-proxy-amd64:v1.7.6
-/usr/bin/docker pull gcr.io/google_containers/etcd-amd64:3.0.17
-/usr/bin/docker pull gcr.io/google_containers/pause-amd64:3.0
-/usr/bin/docker pull quay.io/coreos/flannel:v0.9.0-amd64
 /usr/bin/docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.4
 /usr/bin/docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.4
 /usr/bin/docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.4
+/usr/bin/docker pull gcr.io/google_containers/etcd-amd64:3.0.17
+/usr/bin/docker pull gcr.io/google_containers/pause-amd64:3.0
+/usr/bin/docker pull quay.io/coreos/flannel:v0.9.0-amd64
 
 /usr/bin/wget https://raw.githubusercontent.com/coreos/flannel/v0.9.0/Documentation/kube-flannel.yml
 
@@ -416,7 +417,7 @@ EOF
 
 def capture_as_template(ctx, config, vapp_resource, org, catalog):
     client = ctx.obj['client']
-    vapp = VApp(client, vapp_href=vapp_resource.get('href'))
+    vapp = VApp(client, href=vapp_resource.get('href'))
     vapp.reload()
     if vapp.vapp_resource.get('status') == '4':
         task = vapp.shutdown()

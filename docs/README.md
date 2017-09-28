@@ -88,6 +88,14 @@ $ vcd system amqp set amqp-config.json --password guest
 Updated AMQP configuration.
 ```
 
+API extension timeout:
+
+```shell
+cd /opt/vmware/vcloud-director/bin
+./cell-management-tool manage-config -n extensibility.timeout -l
+./cell-management-tool manage-config -n extensibility.timeout -v 20
+```
+
 #### 3.2 Complete vCloud Director Configuration
 
 Using `vcd-cli`, register the extension in vCloud Director.

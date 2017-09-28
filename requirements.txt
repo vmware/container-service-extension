@@ -3,4 +3,4 @@ jsonpickle
 pika >= 0.10.0
 pyyaml
 requests
-vcd-cli >= 19.0.7
+vcd-cli >= 19.0.8.dev1
