@@ -1,5 +1,7 @@
 # container-service-extension
 
+[![Join the chat at https://gitter.im/container-service-extension/Lobby](https://badges.gitter.im/container-service-extension/Lobby.svg)](https://gitter.im/container-service-extension/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 [![asciicast](https://asciinema.org/a/135505.png)](https://asciinema.org/a/135505)
 
 ## Overview
