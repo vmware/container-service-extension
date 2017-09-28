@@ -3,11 +3,10 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import base64
+from container_service_extension.processor import ServiceProcessor
 import json
-import jsonpickle
 import logging
 import pika
-from container_service_extension.processor import ServiceProcessor
 import threading
 import traceback
 
@@ -136,7 +135,7 @@ class MessageConsumer(object):
                          properties)
             body = json.loads(body)[0]
             result = self.service_processor.process_request(body)
-            reply_body = jsonpickle.encode(result['body'])
+            reply_body = json.dumps(result['body'])
             status_code = result['status_code']
         except Exception:
             reply_body = '{}'
@@ -150,11 +149,10 @@ class MessageConsumer(object):
                 'headers': {'Content-Type': body['headers']['Accept'],
                             'Content-Length': len(reply_body)},
                 'statusCode': status_code,
-                'body': base64.b64encode(reply_body),
+                'body': base64.b64encode(reply_body.encode()).decode("utf-8"),
                 'request': False
             }
             LOGGER.debug('reply: %s', json.dumps(reply_body))
-
             reply_properties = pika.BasicProperties(
                                    correlation_id=properties.correlation_id)
             result = self._channel.basic_publish(

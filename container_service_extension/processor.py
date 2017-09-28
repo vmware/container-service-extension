@@ -72,8 +72,7 @@ class ServiceProcessor(object):
             reply = broker.delete_cluster(cluster_name,
                                           body['headers'],
                                           request_body)
-        LOGGER.debug('reply: %s' % json.dumps(reply))
-
+        LOGGER.debug('reply: %s', str(reply))
         return reply
 
     def get_spec(self, format):

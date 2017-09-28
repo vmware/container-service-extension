@@ -14,10 +14,9 @@ from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vsphere import VSphere
-from vcd_cli.utils import stdout
 import requests
-import sys
 import time
+from vcd_cli.utils import stdout
 import yaml
 
 
@@ -54,7 +53,7 @@ vcs:
 service:
     listeners: 2
     logging_level: 5
-    logging_format: %s
+    logging_format: {logging_format}
 
 broker:
     type: default
@@ -65,16 +64,14 @@ broker:
     sha1_ova: 18c1a6d31545b757d897c61a0c3cc0e54d8aeeba
     master_template: k8s-u.ova
     node_template: k8s-u.ova
-    username: cse
-    password: 'template-password'
+    password: 'my_secret_password'
     ssh_public_key: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0brDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse'
     master_cpu: 2
     master_mem: 2048
     node_cpu: 2
     node_mem: 2048
 
-    """ % '%(levelname) -8s %(asctime)s %(name) -40s %(funcName) ' \
-          '-35s %(lineno) -5d: %(message)s'
+    """.format(logging_format='%(levelname) -8s %(asctime)s %(name) -40s %(funcName) -35s %(lineno) -5d: %(message)s')  # NOQA
     return sample_config.strip() + '\n'
 
 
@@ -106,7 +103,7 @@ def check_config(file_name):
                                            '/',
                                            credentials)
     connection = pika.BlockingConnection(parameters)
-    click.echo('Connection to AMQP server (%s:%s): %s' % (amqp['host'],
+    click.echo('Connected to AMQP server (%s:%s): %s' % (amqp['host'],
                amqp['port'],
                bool_to_msg(connection.is_open)))
     connection.close()
@@ -126,7 +123,7 @@ def check_config(file_name):
     client.set_credentials(BasicLoginCredentials(config['vcd']['username'],
                                                  'System',
                                                  config['vcd']['password']))
-    click.echo('Connection to vCloud Director as system '
+    click.echo('Connected to vCloud Director as system '
                'administrator (%s:%s): %s' %
                (config['vcd']['host'], config['vcd']['port'],
                 bool_to_msg(True)))
@@ -151,13 +148,14 @@ def check_config(file_name):
                 config['vcs']['password'],
                 port=int(config['vcs']['port']))
     v.connect()
-    click.echo('Connection to vCenter Server as %s '
+    click.echo('Connected to vCenter Server as %s '
                '(%s:%s): %s' %
                (config['vcs']['username'],
                 config['vcs']['host'],
                 config['vcs']['port'],
                 bool_to_msg(True)))
     return config
+
 
 def configure_vcd(ctx, file_name):
     click.secho('Configuring vCD from file: %s' % file_name)
@@ -172,13 +170,12 @@ def configure_vcd(ctx, file_name):
     client.set_credentials(BasicLoginCredentials(config['vcd']['username'],
                                                  'System',
                                                  config['vcd']['password']))
-    click.echo('Connection to vCloud Director as system '
+    click.echo('Connected to vCloud Director as system '
                'administrator (%s:%s): %s' %
                (config['vcd']['host'], config['vcd']['port'],
                 bool_to_msg(True)))
     if config['broker']['type'] == 'default':
         orgs = client.get_org_list()
-        result = []
         for org in [o for o in orgs.Org if hasattr(orgs, 'Org')]:
             if org.get('name') == config['broker']['org']:
                 org_href = org.get('href')
@@ -190,7 +187,7 @@ def configure_vcd(ctx, file_name):
                    (vdc_resource.get('name'), bool_to_msg(True)))
         try:
             catalog = org.get_catalog(config['broker']['catalog'])
-        except:
+        except Exception:
             catalog = org.create_catalog(config['broker']['catalog'],
                                          'CSE catalog')
             org.share_catalog(config['broker']['catalog'])
@@ -198,19 +195,31 @@ def configure_vcd(ctx, file_name):
         click.echo('Find catalog \'%s\': %s' %
                    (config['broker']['catalog'],
                     bool_to_msg(catalog is not None)))
+        master_template = None
         try:
-            master_template = org.get_catalog_item(config['broker']['catalog'],
+            master_template = org.get_catalog_item(
+                config['broker']['catalog'],
                 config['broker']['master_template'])
-        except:
-            master_template = create_master_template(ctx,
-                                                     config,
-                                                     client,
-                                                     org,
-                                                     vdc_resource,
-                                                     catalog)
+        except Exception:
+            create_master_template(
+                ctx,
+                config,
+                client,
+                org,
+                vdc_resource,
+                catalog)
+        try:
+            master_template = org.get_catalog_item(
+                config['broker']['catalog'],
+                config['broker']['master_template'])
+        except Exception:
+            pass
         click.echo('Find master template \'%s\': %s' %
                    (config['broker']['master_template'],
                     bool_to_msg(master_template is not None)))
+        configure_amqp_settings(client, config)
+        register_extension(client, config)
+
 
 def get_sha1(file):
     sha1 = hashlib.sha1()
@@ -221,6 +230,7 @@ def get_sha1(file):
                 break
             sha1.update(data)
     return sha1.hexdigest()
+
 
 def upload_source_ova(config, client, org, catalog):
     cse_cache_dir = os.path.join(os.getcwd(), 'cse_cache')
@@ -240,24 +250,26 @@ def upload_source_ova(config, client, org, catalog):
         assert sha1 == config['broker']['sha1_ova']
         click.secho('Uploading %s' % config['broker']['source_ova_name'],
                     fg='green')
-        bytes_written = org.upload_ovf(config['broker']['catalog'],
-                                       cse_ova_file,
-                                       config['broker']['source_ova_name'],
-                                       callback=None)
-
+        org.upload_ovf(
+            config['broker']['catalog'],
+            cse_ova_file,
+            config['broker']['source_ova_name'],
+            callback=None)
         return org.get_catalog_item(config['broker']['catalog'],
                                     config['broker']['source_ova_name'])
     else:
         return None
+
 
 def create_master_template(ctx, config, client, org, vdc_resource, catalog):
     vapp_name = config['broker']['temp_vapp']
     ctx.obj = {}
     ctx.obj['client'] = client
     try:
-        source_ova_item = org.get_catalog_item(config['broker']['catalog'],
+        source_ova_item = org.get_catalog_item(
+            config['broker']['catalog'],
             config['broker']['source_ova_name'])
-    except:
+    except Exception:
         source_ova_item = upload_source_ova(config, client, org, catalog)
     click.secho('Find source ova \'%s\': %s' %
                 (config['broker']['source_ova_name'],
@@ -267,17 +279,17 @@ def create_master_template(ctx, config, client, org, vdc_resource, catalog):
     vdc = VDC(client, vdc_resource=vdc_resource)
     try:
         vapp_resource = vdc.get_vapp(vapp_name)
-    except:
+    except Exception:
         vapp_resource = None
     if vapp_resource is not None:
         click.secho('Found vApp %s, capture as template' % vapp_name)
-        return capture_as_template(ctx, vapp_resource, org)
-    connection_mode='dhcp'
+        return capture_as_template(ctx, config, vapp_resource, org, catalog)
+    connection_mode = 'dhcp'
     vm_name = vapp_name
     cust_script = """
 #!/bin/bash
 /usr/bin/cp /etc/pam.d/sshd /etc/pam.d/vmtoolsd
-temp="autogenerate"
+temp="use-autogenerated"
 echo -e "$temp\n$temp" | passwd root
 chage -I -1 -m 0 -M -1 -E -1 root
         """
@@ -292,10 +304,10 @@ chage -I -1 -m 0 -M -1 -E -1 root
         cust_script=cust_script)
     stdout(vapp_resource.Tasks.Task[0], ctx)
     vapp = VApp(client, vapp_href=vapp_resource.get('href'))
-    t = vapp.connect_vm(mode=connection_mode)
-    stdout(t, ctx)
-    t = vapp.power_on()
-    stdout(t, ctx)
+    task = vapp.connect_vm(mode=connection_mode)
+    stdout(task, ctx)
+    task = vapp.power_on()
+    stdout(task, ctx)
     ip = None
     password_auto = None
     vm_moid = None
@@ -311,59 +323,15 @@ chage -I -1 -m 0 -M -1 -E -1 root
                password_auto is not None and \
                vm_moid is not None:
                 break
-        except:
+        except Exception:
             pass
     click.secho(ip, fg='blue')
-    click.secho('Customizing template... ', nl=False, fg='green')
+    click.secho('Customizing template, please wait...', nl=False, fg='green')
     cust_script = """
 #!/bin/bash
-/usr/bin/echo -e "{password}\n{password}" | /usr/bin/passwd root
-/bin/echo '127.0.0.1    localhost' > /etc/hosts
-/bin/echo '127.0.1.1    {hostname}' >> /etc/hosts
-/bin/echo '::1          localhost ip6-localhost ip6-loopback' >> /etc/hosts
-/bin/echo 'ff02::1      ip6-allnodes' >> /etc/hosts
-/bin/echo 'ff02::2      ip6-allrouters' >> /etc/hosts
 /bin/echo '{ssh_public_key}' >> $HOME/.ssh/authorized_keys
 /bin/chmod go-rwx $HOME/.ssh/authorized_keys
-""".format(password=config['broker']['password'],
-           hostname=vm_name,
-           ssh_public_key=config['broker']['ssh_public_key'])
-    vs = VSphere(config['vcs']['host'],
-                 config['vcs']['username'],
-                 config['vcs']['password'],
-                 port=int(config['vcs']['port']))
-    vs.connect()
-    vm = vs.get_vm_by_moid(vm_moid)
-    result = vs.upload_file_to_guest(
-                             vm,
-                             'root',
-                             password_auto,
-                             cust_script,
-                             '/tmp/customize.sh')
-    result = vs.execute_program_in_guest(
-                vm,
-                config['broker']['username'],
-                password_auto,
-                '/usr/bin/chmod',
-                'u+rx /tmp/customize.sh',
-                wait_for_completion=True)
-    result = vs.execute_program_in_guest(
-                vm,
-                config['broker']['username'],
-                password_auto,
-                '/tmp/customize.sh',
-                '',
-                wait_for_completion=False)
-    time.sleep(5)
-    result = vs.execute_program_in_guest(
-                vm,
-                config['broker']['username'],
-                config['broker']['password'],
-                '/usr/bin/rm',
-                '-f /tmp/customize.sh',
-                wait_for_completion=True)
-    cust_script = """
-#!/bin/bash
+
 /usr/bin/cat << EOF > /etc/systemd/system/iptables-ports.service
 [Unit]
 After=iptables.service
@@ -402,40 +370,51 @@ EOF
 /usr/bin/wget https://raw.githubusercontent.com/coreos/flannel/v0.9.0/Documentation/kube-flannel.yml
 
 /bin/echo -n > /etc/machine-id
-
-"""
-    result = vs.upload_file_to_guest(
+/bin/sync
+/bin/sync
+""".format(ssh_public_key=config['broker']['ssh_public_key'])  # NOQA
+    vs = VSphere(config['vcs']['host'],
+                 config['vcs']['username'],
+                 config['vcs']['password'],
+                 port=int(config['vcs']['port']))
+    vs.connect()
+    vm = vs.get_vm_by_moid(vm_moid)
+    vs.upload_file_to_guest(
         vm,
-        config['broker']['username'],
-        config['broker']['password'],
+        'root',
+        password_auto,
         cust_script,
         '/tmp/customize.sh')
-    result = vs.execute_program_in_guest(
+    click.secho('.', nl=False, fg='green')
+    vs.execute_program_in_guest(
         vm,
-        config['broker']['username'],
-        config['broker']['password'],
+        'root',
+        password_auto,
         '/usr/bin/chmod',
         'u+rx /tmp/customize.sh',
         wait_for_completion=True)
-    result = vs.execute_program_in_guest(
+    click.secho('.', nl=False, fg='green')
+    vs.execute_program_in_guest(
         vm,
-        config['broker']['username'],
-        config['broker']['password'],
+        'root',
+        password_auto,
         '/tmp/customize.sh',
-        '',
+        '> /tmp/customize.out 2>&1',
         wait_for_completion=True)
-    result = vs.execute_program_in_guest(
+    click.secho('.', nl=False, fg='green')
+    vs.execute_program_in_guest(
         vm,
-        config['broker']['username'],
-        config['broker']['password'],
+        'root',
+        password_auto,
         '/usr/bin/rm',
         '-f /tmp/customize.sh',
         wait_for_completion=True)
+    click.secho('.', nl=False, fg='green')
     click.secho('done', fg='blue')
-    return capture_as_template(vapp_resource, org)
+    return capture_as_template(ctx, config, vapp_resource, org, catalog)
 
 
-def capture_as_template(ctx, vapp_resource, org):
+def capture_as_template(ctx, config, vapp_resource, org, catalog):
     client = ctx.obj['client']
     vapp = VApp(client, vapp_href=vapp_resource.get('href'))
     vapp.reload()
@@ -443,5 +422,19 @@ def capture_as_template(ctx, vapp_resource, org):
         task = vapp.shutdown()
         stdout(task, ctx)
     time.sleep(4)
+    task = org.capture_vapp(
+        catalog,
+        vapp_resource.get('href'),
+        config['broker']['master_template'],
+        'CSE master template',
+        customize_on_instantiate=True)
+    stdout(task, ctx)
+    return True
 
-    return None
+
+def configure_amqp_settings(client, config):
+    click.secho('See https://vmware.github.io/container-service-extension to configure AMQP settings.')  # NOQA
+
+
+def register_extension(client, config):
+    click.secho('See https://vmware.github.io/container-service-extension to register API extension.')  # NOQA

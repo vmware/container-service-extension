@@ -36,14 +36,14 @@ def version(ctx):
     ver = 'Container Service Extension for %s' % \
           'VMware vCloud Director, version %s' % \
           pkg_resources.require("container-service-extension")[0].version
-    print(ver)
+    click.secho(ver)
 
 
 @cli.command('sample-config', short_help='generate sample configuration')
 @click.pass_context
 def sample_config(ctx):
     """Generate sample CSE configuration"""
-    print(generate_sample_config())
+    click.secho(generate_sample_config())
 
 
 @cli.command(short_help='check configuration')

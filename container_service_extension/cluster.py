@@ -54,36 +54,37 @@ def load_from_metadata(client,
                     node['node_type'] = me.TypedValue.Value
             nodes.append(node)
     for node in nodes:
-        if node['cluster_name'] in clusters_dict.keys():
-            cluster = clusters_dict[node['cluster_name']]
-        else:
-            cluster = {'name': '%s' % node['cluster_name']}
-            if 'cluster_id' in node.keys():
-                cluster['cluster_id'] = '%s' % node['cluster_id']
+        if 'cluster_name' in node:
+            if node['cluster_name'] in clusters_dict.keys():
+                cluster = clusters_dict[node['cluster_name']]
             else:
-                cluster['cluster_id'] = ''
-            cluster['status'] = ''
-            cluster['leader_endpoint'] = None
-            cluster['vdc_name'] = '%s' % node['vdc_name']
-            cluster['vdc_href'] = node['vdc_href']
-            cluster['master_nodes'] = []
-            cluster['nodes'] = []
-        n = {'name': node['vapp_name'],
-             'href': node['vapp_href']}
-        if node['node_type'] == TYPE_MASTER:
-            cluster['master_nodes'].append(n)
-            cluster['leader_endpoint'] = None
-            if get_leader_ip and node['vapp_name'].endswith('-m1'):
-                try:
-                    vapp = VApp(client, vapp_href=node['vapp_href'])
-                    cluster['leader_endpoint'] = '%s' % \
-                        vapp.get_primary_ip(node['vapp_name'])
-                    cluster['leader_moid'] = vapp.get_vm_moid(
-                        node['vapp_name'])
-                except Exception:
-                    import traceback
-                    LOGGER.debug(traceback.format_exc())
-        elif node['node_type'] == TYPE_NODE:
-            cluster['nodes'].append(n)
-        clusters_dict[node['cluster_name']] = cluster
-    return clusters_dict.values()
+                cluster = {'name': '%s' % node['cluster_name']}
+                if 'cluster_id' in node.keys():
+                    cluster['cluster_id'] = '%s' % node['cluster_id']
+                else:
+                    cluster['cluster_id'] = ''
+                cluster['status'] = ''
+                cluster['leader_endpoint'] = None
+                cluster['vdc_name'] = '%s' % node['vdc_name']
+                cluster['vdc_href'] = node['vdc_href']
+                cluster['master_nodes'] = []
+                cluster['nodes'] = []
+            n = {'name': node['vapp_name'],
+                 'href': node['vapp_href']}
+            if node['node_type'] == TYPE_MASTER:
+                cluster['master_nodes'].append(n)
+                cluster['leader_endpoint'] = None
+                if get_leader_ip and node['vapp_name'].endswith('-m1'):
+                    try:
+                        vapp = VApp(client, vapp_href=node['vapp_href'])
+                        cluster['leader_endpoint'] = '%s' % \
+                            vapp.get_primary_ip(node['vapp_name'])
+                        cluster['leader_moid'] = vapp.get_vm_moid(
+                            node['vapp_name'])
+                    except Exception:
+                        import traceback
+                        LOGGER.debug(traceback.format_exc())
+            elif node['node_type'] == TYPE_NODE:
+                cluster['nodes'].append(n)
+            clusters_dict[node['cluster_name']] = cluster
+    return list(clusters_dict.values())

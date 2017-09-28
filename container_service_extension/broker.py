@@ -6,6 +6,7 @@ import click
 from container_service_extension.cluster import load_from_metadata
 from container_service_extension.cluster import TYPE_MASTER
 from container_service_extension.cluster import TYPE_NODE
+import datetime
 import logging
 from pyvcloud.vcd.client import _WellKnownEndpoint
 from pyvcloud.vcd.client import BasicLoginCredentials
@@ -144,15 +145,6 @@ class DefaultBroker(threading.Thread):
             self._connect_tenant(headers)
             clusters = load_from_metadata(self.client_tenant,
                                           get_leader_ip=True)
-            for cluster in clusters:
-                names = []
-                for node in cluster['master_nodes']:
-                    names.append(node['name'])
-                cluster['master_nodes'] = names
-                names = []
-                for node in cluster['nodes']:
-                    names.append(node['name'])
-                cluster['nodes'] = names
             result['body'] = clusters
         except Exception:
             LOGGER.error(traceback.format_exc())
@@ -212,6 +204,7 @@ class DefaultBroker(threading.Thread):
 
     def create_cluster_thread(self):
         cluster_name = self.body['name']
+        network_name = None
 
         task = Task(self.client_sysadmin)
         try:
@@ -251,6 +244,10 @@ class DefaultBroker(threading.Thread):
 
             vdc = VDC(self.client_tenant, vdc_resource=vdc_resource)
 
+            cust_script = """
+/usr/bin/echo -e "Created by CSE on {date}\n" > /root/cse.txt
+            """.format(date=str(datetime.datetime.now()))
+
             masters = []
             for n in range(master_count):
                 time.sleep(1)
@@ -259,7 +256,11 @@ class DefaultBroker(threading.Thread):
                                                     catalog,
                                                     master_template,
                                                     memory=master_mem,
-                                                    cpu=master_cpu))
+                                                    cpu=master_cpu,
+                                                    network=network_name,
+                                                    deploy=False,
+                                                    power_on=False,
+                                                    cust_script=cust_script))
             nodes = []
             for n in range(node_count):
                 time.sleep(1)
@@ -268,8 +269,11 @@ class DefaultBroker(threading.Thread):
                                                   catalog,
                                                   node_template,
                                                   memory=node_mem,
-                                                  cpu=node_cpu))
-
+                                                  cpu=node_cpu,
+                                                  network=network_name,
+                                                  deploy=False,
+                                                  power_on=False,
+                                                  cust_script=cust_script))
             tagged = set([])
             while len(tagged) < (master_count + node_count):
                 node = None
@@ -298,13 +302,13 @@ class DefaultBroker(threading.Thread):
                         vapp = VApp(self.client_tenant,
                                     vapp_href=node.get('href'))
                         for k, v in tags.items():
-                            task = vapp.set_metadata('GENERAL',
-                                                     'READWRITE',
-                                                     k,
-                                                     v)
+                            t = vapp.set_metadata('GENERAL',
+                                                  'READWRITE',
+                                                  k,
+                                                  v)
                             self.client_tenant.get_task_monitor().\
                                 wait_for_status(
-                                    task=task,
+                                    task=t,
                                     timeout=600,
                                     poll_frequency=5,
                                     fail_on_status=None,
@@ -318,7 +322,7 @@ class DefaultBroker(threading.Thread):
                             node.get('name'))
                         LOGGER.error(traceback.format_exc())
                         time.sleep(1)
-            time.sleep(4)
+            time.sleep(5)
             self.customize_nodes()
         except Exception as e:
             LOGGER.error(traceback.format_exc())
@@ -443,6 +447,7 @@ class DefaultBroker(threading.Thread):
             TaskStatus.RUNNING.value,
             'vcloud.cse',
             'Customizing nodes %s(%s)' % (cluster_name, self.cluster_id),
+
             self.op,
             '',
             None,
@@ -465,9 +470,33 @@ class DefaultBroker(threading.Thread):
                 assert len(clusters) == 1
                 cluster = clusters[0]
                 for cluster_node in cluster['master_nodes'] + cluster['nodes']:
-                    node = {'name': cluster_node['name']}
+                    node = {'name': cluster_node['name'],
+                            'href': cluster_node['href']}
                     vapp = VApp(self.client_tenant,
                                 vapp_href=cluster_node['href'])
+                    vapp.reload()
+                    if vapp.vapp_resource.get('status') != '4':
+                        connection_mode = 'dhcp'
+                        t = vapp.connect_vm(mode=connection_mode)
+                        self.client_tenant.get_task_monitor().\
+                            wait_for_status(
+                                task=t,
+                                timeout=600,
+                                poll_frequency=5,
+                                fail_on_status=None,
+                                expected_target_statuses=[TaskStatus.SUCCESS], # NOQA
+                                callback=None)
+                        t = vapp.power_on()
+                        self.client_tenant.get_task_monitor().\
+                            wait_for_status(
+                                task=t,
+                                timeout=600,
+                                poll_frequency=5,
+                                fail_on_status=None,
+                                expected_target_statuses=[TaskStatus.SUCCESS], # NOQA
+                                callback=None)
+                    node['password'] = vapp.get_admin_password(
+                                        cluster_node['name'])
                     node['ip'] = vapp.get_primary_ip(cluster_node['name'])
                     node['moid'] = vapp.get_vm_moid(cluster_node['name'])
                     if cluster_node['name'].endswith('-m1'):
@@ -476,19 +505,23 @@ class DefaultBroker(threading.Thread):
                         node['node_type'] = TYPE_NODE
                     nodes.append(node)
                 for node in nodes:
-                    if 'ip' in node.keys() and len(node['ip']) > 0:
+                    if 'ip' in node.keys() and \
+                       node['ip'] is not None and \
+                       len(node['ip']) > 0 and \
+                       not node['ip'].startswith('172.17.'):
                         pass
                     else:
                         n += 1
-                        raise Exception('missing ip, retry %s', n)
+                        raise Exception('missing ip, retry %s' % n)
                 all_nodes_configured = True
                 break
             except Exception as e:
-                LOGGER.error(e.message)
+                LOGGER.error(e)
                 time.sleep(5)
         if not all_nodes_configured:
-            LOGGER.error('ip not configured in at least one node')
-            return
+            message = 'ip not configured in at least one node'
+            LOGGER.error(message)
+            raise Exception(message)
         LOGGER.debug('ip configured in all nodes')
         vs = VSphere(self.config['vcs']['host'],
                      self.config['vcs']['username'],
@@ -496,96 +529,128 @@ class DefaultBroker(threading.Thread):
                      port=int(self.config['vcs']['port']))
         vs.connect()
         master_node = None
+        password = self.config['broker']['password']
         for node in nodes:
             vm = vs.get_vm_by_moid(node['moid'])
-            # TODO(run customization as a single file...)
-            commands = [
-                ['/bin/echo', '\'127.0.0.1    localhost\' | sudo tee /etc/hosts'],  # NOQA
-                ['/bin/echo', '\'127.0.1.1    %s\' | sudo tee -a /etc/hosts' % node['name']],  # NOQA
-                ['/bin/echo', '\'::1          localhost ip6-localhost ip6-loopback\' | sudo tee -a /etc/hosts'],  # NOQA
-                ['/bin/echo', '\'ff02::1      ip6-allnodes\' | sudo tee -a /etc/hosts'],  # NOQA
-                ['/bin/echo', '\'ff02::2      ip6-allrouters\' | sudo tee -a /etc/hosts'],  # NOQA
-                ['/usr/bin/sudo', 'hostnamectl set-hostname %s' % node['name']],  # NOQA
-                ['/bin/mkdir', '$HOME/.ssh'],
-                ['/bin/chmod', 'go-rwx $HOME/.ssh'],
-                ['/bin/echo', '\'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0bRDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse\' > $HOME/.ssh/authorized_keys'],   # NOQA
-                ['/bin/chmod', 'go-rwx $HOME/.ssh/authorized_keys']
-            ]
+            vs.execute_program_in_guest(
+                vm,
+                'root',
+                node['password'],
+                '/usr/bin/echo',
+                '-e "{password}\n{password}" | /usr/bin/passwd root'.
+                format(password=password),
+                wait_for_completion=False)
             if node['node_type'] == TYPE_MASTER:
-                master_node = node
-                commands.append(['/usr/bin/sudo', '/usr/bin/kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address={ip} > /tmp/kubeadm-init.out'.format(ip=node['ip'])])  # NOQA
-            for command in commands:
-                LOGGER.debug('executing %s %s on %s',
-                             command[0],
-                             command[1],
-                             vm)
-                result = vs.execute_program_in_guest(
+                time.sleep(5)
+                cust_script = """
+#!/bin/bash
+/usr/bin/kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address={ip} > /tmp/kubeadm-init.out
+/bin/mkdir -p $HOME/.kube
+/bin/cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
+/bin/chown $(id -u):$(id -g) $HOME/.kube/config
+/usr/bin/kubectl create -f $HOME/kube-flannel.yml
+                """.format(ip=node['ip'])  # NOQA
+                vs.upload_file_to_guest(
+                    vm,
+                    'root',
+                    password,
+                    cust_script,
+                    '/tmp/customize.sh')
+                vs.execute_program_in_guest(
+                    vm,
+                    'root',
+                    password,
+                    '/usr/bin/chmod',
+                    'u+rx /tmp/customize.sh',
+                    wait_for_completion=True)
+                vs.execute_program_in_guest(
+                    vm,
+                    'root',
+                    password,
+                    '/tmp/customize.sh',
+                    '',
+                    wait_for_completion=True)
+                vs.execute_program_in_guest(
+                    vm,
+                    'root',
+                    password,
+                    '/usr/bin/rm',
+                    '-f /tmp/customize.sh',
+                    wait_for_completion=True)
+                response = vs.download_file_from_guest(
                             vm,
-                            self.config['broker']['username'],
-                            self.config['broker']['password'],
-                            command[0],
-                            command[1],
-                            wait_for_completion=True)
-                LOGGER.debug('executed %s %s on %s: %s',
-                             command[0],
-                             command[1],
-                             vm,
-                             result)
-        if master_node is not None:
-            vm = vs.get_vm_by_moid(master_node['moid'])
-            response = vs.download_file_from_guest(
-                        vm,
-                        self.config['broker']['username'],
-                        self.config['broker']['password'],
-                        '/tmp/kubeadm-init.out'
-                        )
-            token = [x for x in response.content.splitlines() if x.strip().startswith('[token] Using token: ')][0].split()[-1]  # NOQA
-            cmd = '/usr/bin/sudo'
-            args = '/usr/bin/kubeadm join --token %s %s:6443' % (token, master_node['ip'])  # NOQA
+                            'root',
+                            password,
+                            '/tmp/kubeadm-init.out'
+                            )
+                content = response.content.decode('utf-8')
+                if len(content) == 0:
+                    raise Exception('Failed executing "kubeadm init"')
+                token = [x for x in response.content.decode('utf-8').splitlines() if x.strip().startswith('[token] Using token: ')][0].split()[-1]  # NOQA
+                vapp = VApp(self.client_tenant,
+                            vapp_href=node['href'])
+                vapp.reload()
+                t = vapp.set_metadata('GENERAL',
+                                      'READWRITE',
+                                      'cse.cluster.token',
+                                      token)
+                self.client_tenant.get_task_monitor().\
+                    wait_for_status(
+                        task=t,
+                        timeout=600,
+                        poll_frequency=5,
+                        fail_on_status=None,
+                        expected_target_statuses=[TaskStatus.SUCCESS],
+                        callback=None)
+                node['token'] = token
+                master_node = node
+            LOGGER.debug('executed customization script on %s' % node['name'])
+
+        if master_node is None:
+            raise Exception('No master node is configured.')
+        else:
             for node in nodes:
                 vm = vs.get_vm_by_moid(node['moid'])
-                if node['node_type'] == TYPE_NODE:
-                    LOGGER.debug('executing %s %s on %s', cmd, args, vm)
-                    cmd = '/usr/bin/sudo'
-                    result = vs.execute_program_in_guest(
-                                vm,
-                                self.config['broker']['username'],
-                                self.config['broker']['password'],
-                                cmd,
-                                args,
-                                wait_for_completion=True
-                            )
-                    LOGGER.debug('executed %s %s on %s: %s',
-                                 cmd,
-                                 args,
-                                 vm,
-                                 result)
-                elif node['node_type'] == TYPE_MASTER:
-                    commands = [
-                            # ['/usr/bin/sudo', 'kubectl --kubeconfig=/etc/kubernetes/admin.conf taint nodes --all node-role.kubernetes.io/master-'],  # NOQA
-                            ['/usr/bin/sudo', 'kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel-rbac.yml'],  # NOQA
-                            ['/usr/bin/sudo', 'kubectl --kubeconfig=/etc/kubernetes/admin.conf create -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml']  # NOQA
-                        ]
-                    if node_count == 0:
-                        commands.append(['/usr/bin/sudo', 'kubectl --kubeconfig=/etc/kubernetes/admin.conf taint nodes --all node-role.kubernetes.io/master-'])  # NOQA
-                    for command in commands:
-                        LOGGER.debug('executing %s %s on %s',
-                                     command[0],
-                                     command[1],
-                                     vm)
-                        result = vs.execute_program_in_guest(
-                                    vm,
-                                    self.config['broker']['username'],
-                                    self.config['broker']['password'],
-                                    command[0],
-                                    command[1],
-                                    wait_for_completion=True)
-                        LOGGER.debug('executed %s %s on %s: %s',
-                                     command[0],
-                                     command[1],
-                                     vm,
-                                     result)
-            task = Task(self.client_sysadmin)
+                if node_count == 0 and node['node_type'] == TYPE_MASTER:
+                    cust_script = """
+#!/bin/bash
+/usr/bin/kubectl --kubeconfig=/etc/kubernetes/admin.conf taint nodes --all node-role.kubernetes.io/master-
+                    """  # NOQA
+                else:
+                    cust_script = """
+#!/bin/bash
+/usr/bin/kubeadm join --token {token} {ip}:6443
+                    """.format(token=master_node['token'],
+                               ip=master_node['ip'])
+                vs.upload_file_to_guest(
+                    vm,
+                    'root',
+                    password,
+                    cust_script,
+                    '/tmp/customize.sh')
+                vs.execute_program_in_guest(
+                    vm,
+                    'root',
+                    password,
+                    '/usr/bin/chmod',
+                    'u+rx /tmp/customize.sh',
+                    wait_for_completion=True)
+                vs.execute_program_in_guest(
+                    vm,
+                    'root',
+                    password,
+                    '/tmp/customize.sh',
+                    '',
+                    wait_for_completion=True)
+                vs.execute_program_in_guest(
+                    vm,
+                    'root',
+                    password,
+                    '/usr/bin/rm',
+                    '-f /tmp/customize.sh',
+                    wait_for_completion=True)
+                LOGGER.debug('executed %s on %s' % (cust_script, vm))
+
             self.t = task.update(
                 TaskStatus.SUCCESS.value,
                 'vcloud.cse',
@@ -623,29 +688,12 @@ class DefaultBroker(threading.Thread):
                          port=int(self.config['vcs']['port']))
             vs.connect()
             vm = vs.get_vm_by_moid(cluster['leader_moid'])
-            commands = [
-                ['/usr/bin/sudo', 'chmod a+r /etc/kubernetes/admin.conf']  # NOQA
-            ]
-            for command in commands:
-                LOGGER.debug('executing %s on %s', command[0], vm)
-                r = vs.execute_program_in_guest(
-                            vm,
-                            self.config['broker']['username'],
-                            self.config['broker']['password'],
-                            command[0],
-                            command[1]
-                        )
-                time.sleep(1)
-                LOGGER.debug('executed %s on %s: %s',
-                             command[0],
-                             vm,
-                             r)
             response = vs.download_file_from_guest(
                                     vm,
                                     self.config['broker']['username'],
                                     self.config['broker']['password'],
-                                    '/etc/kubernetes/admin.conf')
-            result['body'] = response.content
+                                    '/root/.kube/config')
+            result['body'] = response.content.decode('utf-8')
             result['status_code'] = response.status_code
         except Exception as e:
             LOGGER.error(traceback.format_exc())
