@@ -221,6 +221,7 @@ def configure_vcd(ctx, file_name):
                     bool_to_msg(master_template is not None)))
         configure_amqp_settings(client, config)
         register_extension(client, config)
+        click.secho('Start CSE with: \'cse run %s\'' % file_name)
 
 
 def get_sha1(file):
