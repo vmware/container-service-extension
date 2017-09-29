@@ -10,6 +10,7 @@ import os
 import pika
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
+from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.client import SIZE_1MB
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vapp import VApp
@@ -277,13 +278,20 @@ def create_master_template(ctx, config, client, org, vdc_resource, catalog):
                  bool_to_msg(source_ova_item is not None)))
     if source_ova_item is None:
         return None
-
-    while source_ova_item['status'] != 'RESOLVED':
+    click.secho('Waiting for template...', nl=False, fg='green')
+    item_id = source_ova_item.get('id')
+    while True:
         time.sleep(5)
-        source_ova_item = org.get_catalog_item(
-            config['broker']['catalog'],
-            config['broker']['source_ova_name'])
-
+        q = client.get_typed_query(
+                'adminCatalogItem',
+                query_result_format=QueryResultFormat.ID_RECORDS,
+                qfilter='id==%s' % item_id)
+        records = list(q.execute())
+        if records[0].get('status') == 'RESOLVED':
+            click.secho('ready', fg='blue')
+            break
+        else:
+            click.secho('.', nl=False, fg='green')
     vdc = VDC(client, resource=vdc_resource)
     try:
         vapp_resource = vdc.get_vapp(vapp_name)
