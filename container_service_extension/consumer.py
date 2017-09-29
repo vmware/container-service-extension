@@ -7,6 +7,7 @@ from container_service_extension.processor import ServiceProcessor
 import json
 import logging
 import pika
+import sys
 import threading
 import traceback
 
@@ -32,6 +33,7 @@ class MessageConsumer(object):
         self.service_processor = ServiceProcessor(self.config,
                                                   self.verify,
                                                   self.log)
+        self.fsencoding = sys.getfilesystemencoding()
 
     def connect(self):
         LOGGER.info('Connecting to %s', self._url)
@@ -131,9 +133,10 @@ class MessageConsumer(object):
                          basic_deliver.delivery_tag,
                          properties.app_id,
                          threading.currentThread().ident,
-                         json.dumps(json.loads(body)[0]),
+                         json.dumps(json.loads(
+                            body.decode(self.fsencoding))[0]),
                          properties)
-            body = json.loads(body)[0]
+            body = json.loads(body.decode(self.fsencoding))[0]
             result = self.service_processor.process_request(body)
             reply_body = json.dumps(result['body'])
             status_code = result['status_code']
