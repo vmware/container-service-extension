@@ -129,15 +129,14 @@ class MessageConsumer(object):
     def on_message(self, unused_channel, basic_deliver, properties, body):
         self.acknowledge_message(basic_deliver.delivery_tag)
         try:
+            body_json = json.loads(body)[0]
             LOGGER.debug('Received message # %s from %s (%s): %s, props: %s',
                          basic_deliver.delivery_tag,
                          properties.app_id,
                          threading.currentThread().ident,
-                         json.dumps(json.loads(
-                            body.decode(self.fsencoding))[0]),
+                         json.dumps(body_json),
                          properties)
-            body = json.loads(body.decode(self.fsencoding))[0]
-            result = self.service_processor.process_request(body)
+            result = self.service_processor.process_request(body_json)
             reply_body = json.dumps(result['body'])
             status_code = result['status_code']
         except Exception:
@@ -148,11 +147,11 @@ class MessageConsumer(object):
 
         if properties.reply_to is not None:
             reply_msg = {
-                'id': body['id'],
-                'headers': {'Content-Type': body['headers']['Accept'],
+                'id': body_json['id'],
+                'headers': {'Content-Type': body_json['headers']['Accept'],
                             'Content-Length': len(reply_body)},
                 'statusCode': status_code,
-                'body': base64.b64encode(reply_body.encode()).decode("utf-8"),
+                'body': base64.b64encode(reply_body.encode()).decode(self.fsencoding),
                 'request': False
             }
             LOGGER.debug('reply: %s', json.dumps(reply_body))
