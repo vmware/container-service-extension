@@ -129,7 +129,7 @@ class MessageConsumer(object):
     def on_message(self, unused_channel, basic_deliver, properties, body):
         self.acknowledge_message(basic_deliver.delivery_tag)
         try:
-            body_json = json.loads(body)[0]
+            body_json = json.loads(body.decode(self.fsencoding))[0]
             LOGGER.debug('Received message # %s from %s (%s): %s, props: %s',
                          basic_deliver.delivery_tag,
                          properties.app_id,
@@ -151,7 +151,8 @@ class MessageConsumer(object):
                 'headers': {'Content-Type': body_json['headers']['Accept'],
                             'Content-Length': len(reply_body)},
                 'statusCode': status_code,
-                'body': base64.b64encode(reply_body.encode()).decode(self.fsencoding),
+                'body': base64.b64encode(
+                    reply_body.encode()).decode(self.fsencoding),
                 'request': False
             }
             LOGGER.debug('reply: %s', json.dumps(reply_body))

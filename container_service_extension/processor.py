@@ -7,6 +7,7 @@ from container_service_extension.broker import get_new_broker
 import json
 import logging
 from pkg_resources import resource_string
+import sys
 import traceback
 import yaml
 
@@ -25,6 +26,7 @@ class ServiceProcessor(object):
         self.verify = verify
         self.log = log
         self.broker = get_new_broker(config)
+        self.fsencoding = sys.getfilesystemencoding()
 
     def process_request(self, body):
         LOGGER.debug('body: %s' % json.dumps(body))
@@ -43,8 +45,10 @@ class ServiceProcessor(object):
                 config_request = True
         if len(body['body']) > 0:
             try:
-                request_body = json.loads(base64.b64decode(body['body']))
+                request_body = json.loads(
+                    base64.b64decode(body['body']).decode(self.fsencoding))
             except Exception:
+                LOGGER.error(traceback.format_exc())
                 request_body = None
         else:
             request_body = None
@@ -72,7 +76,7 @@ class ServiceProcessor(object):
             reply = broker.delete_cluster(cluster_name,
                                           body['headers'],
                                           request_body)
-        LOGGER.debug('reply: %s', str(reply))
+        LOGGER.debug('reply: %s' % str(reply))
         return reply
 
     def get_spec(self, format):
