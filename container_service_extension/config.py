@@ -278,20 +278,27 @@ def create_master_template(ctx, config, client, org, vdc_resource, catalog):
                  bool_to_msg(source_ova_item is not None)))
     if source_ova_item is None:
         return None
-    click.secho('Waiting for template...', nl=False, fg='green')
     item_id = source_ova_item.get('id')
+    flag = False
     while True:
-        time.sleep(5)
         q = client.get_typed_query(
                 'adminCatalogItem',
                 query_result_format=QueryResultFormat.ID_RECORDS,
                 qfilter='id==%s' % item_id)
         records = list(q.execute())
         if records[0].get('status') == 'RESOLVED':
-            click.secho('ready', fg='blue')
+            if flag:
+                click.secho('done', fg='blue')
             break
         else:
-            click.secho('.', nl=False, fg='green')
+            if flag:
+                click.secho('.', nl=False, fg='green')
+            else:
+                click.secho('Waiting for upload to complete...',
+                            nl=False,
+                            fg='green')
+                flag = True
+            time.sleep(5)
     vdc = VDC(client, resource=vdc_resource)
     try:
         vapp_resource = vdc.get_vapp(vapp_name)
@@ -434,7 +441,7 @@ def capture_as_template(ctx, config, vapp_resource, org, catalog):
     client = ctx.obj['client']
     vapp = VApp(client, href=vapp_resource.get('href'))
     vapp.reload()
-    if vapp.vapp_resource.get('status') == '4':
+    if vapp.resource.get('status') == '4':
         task = vapp.shutdown()
         stdout(task, ctx)
     time.sleep(4)
