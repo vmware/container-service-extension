@@ -258,8 +258,8 @@ class DefaultBroker(threading.Thread):
                                                     memory=master_mem,
                                                     cpu=master_cpu,
                                                     network=network_name,
-                                                    deploy=False,
-                                                    power_on=False,
+                                                    deploy=True,
+                                                    power_on=True,
                                                     cust_script=cust_script))
             nodes = []
             for n in range(node_count):

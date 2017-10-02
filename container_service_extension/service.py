@@ -64,8 +64,13 @@ class Service(object):
 
         for n in range(num_consumers):
             try:
-                c = MessageConsumer('amqp://%s:%s@%s:%s/?socket_timeout=5' %
-                                    (amqp['user'],
+                if amqp['ssl']:
+                    scheme = 'amqps'
+                else:
+                    scheme = 'amqp'
+                c = MessageConsumer('%s://%s:%s@%s:%s/?socket_timeout=5' %
+                                    (scheme,
+                                     amqp['user'],
                                      amqp['password'],
                                      amqp['host'],
                                      amqp['port']),

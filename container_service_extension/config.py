@@ -35,13 +35,14 @@ amqp:
     password: 'guest'
     exchange: vcdext
     routing_key: cse
+    ssl: True
 
 vcd:
     host: vcd.vmware.com
     port: 443
     username: 'administrator'
     password: 'my_secret_password'
-    api_version: '6.0'
+    api_version: '29.0'
     verify: False
     log: True
 
@@ -55,14 +56,14 @@ vcs:
 service:
     listeners: 2
     logging_level: 5
-    logging_format: {logging_format}
+    logging_format: '{logging_format}'
 
 broker:
     type: default
-    org: org1
-    vdc: vdc1
+    org: Admin
+    vdc: Catalog
     catalog: cse
-    source_ova: https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova
+    source_ova: 'https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova'
     sha1_ova: 18c1a6d31545b757d897c61a0c3cc0e54d8aeeba
     master_template: k8s-u.ova
     node_template: k8s-u.ova
@@ -103,7 +104,8 @@ def check_config(file_name):
     credentials = pika.PlainCredentials(amqp['user'], amqp['password'])
     parameters = pika.ConnectionParameters(amqp['host'], amqp['port'],
                                            '/',
-                                           credentials)
+                                           credentials,
+                                           ssl=amqp['ssl'])
     connection = pika.BlockingConnection(parameters)
     click.echo('Connected to AMQP server (%s:%s): %s' % (amqp['host'],
                amqp['port'],
@@ -190,9 +192,12 @@ def configure_vcd(ctx, file_name):
         try:
             catalog = org.get_catalog(config['broker']['catalog'])
         except Exception:
+            click.secho('Creating catalog %s' % config['broker']['catalog'],
+                        fg='green')
             catalog = org.create_catalog(config['broker']['catalog'],
                                          'CSE catalog')
             org.share_catalog(config['broker']['catalog'])
+            click.secho('done', fg='blue')
             catalog = org.get_catalog(config['broker']['catalog'])
         click.echo('Find catalog \'%s\': %s' %
                    (config['broker']['catalog'],
@@ -306,10 +311,9 @@ def create_master_template(ctx, config, client, org, vdc_resource, catalog):
     except Exception:
         vapp_resource = None
     if vapp_resource is not None:
-        click.secho('Found vApp %s, capture as template' % vapp_name)
         return capture_as_template(ctx, config, vapp_resource, org, catalog)
-    connection_mode = 'dhcp'
-    vm_name = vapp_name
+    click.secho('Creating vApp template \'%s\'' % vapp_name, fg='green')
+    vapp_name
     cust_script = """
 #!/bin/bash
 /usr/bin/cp /etc/pam.d/sshd /etc/pam.d/vmtoolsd
@@ -318,20 +322,20 @@ echo -e "$temp\n$temp" | passwd root
 chage -I -1 -m 0 -M -1 -E -1 root
         """
     vapp_resource = vdc.instantiate_vapp(
-        vm_name,
+        vapp_name,
         catalog.get('name'),
         config['broker']['source_ova_name'],
         network=config['broker']['network'],
-        deploy=False,
-        power_on=False,
+        fence_mode='bridged',
+        ip_allocation_mode='dhcp',
+        deploy=True,
+        power_on=True,
+        memory=config['broker']['master_mem'],
+        cpu=config['broker']['master_cpu'],
         password=None,
-        cust_script=cust_script)
+        cust_script=cust_script,
+        )
     stdout(vapp_resource.Tasks.Task[0], ctx)
-    vapp = VApp(client, href=vapp_resource.get('href'))
-    task = vapp.connect_vm(mode=connection_mode)
-    stdout(task, ctx)
-    task = vapp.power_on()
-    stdout(task, ctx)
     ip = None
     password_auto = None
     vm_moid = None
@@ -340,9 +344,9 @@ chage -I -1 -m 0 -M -1 -E -1 root
         time.sleep(5)
         vapp = VApp(client, href=vapp_resource.get('href'))
         try:
-            ip = vapp.get_primary_ip(vm_name)
-            password_auto = vapp.get_admin_password(vm_name)
-            vm_moid = vapp.get_vm_moid(vm_name)
+            ip = vapp.get_primary_ip(vapp_name)
+            password_auto = vapp.get_admin_password(vapp_name)
+            vm_moid = vapp.get_vm_moid(vapp_name)
             if ip is not None and \
                password_auto is not None and \
                vm_moid is not None:
@@ -439,6 +443,10 @@ EOF
 
 
 def capture_as_template(ctx, config, vapp_resource, org, catalog):
+    vapp_name = vapp_resource.get('name')
+    click.secho('Found vApp \'%s\', capturing as template on catalog \'%s\'' %
+                (vapp_name, catalog.get('name')),
+                fg='green')
     client = ctx.obj['client']
     vapp = VApp(client, href=vapp_resource.get('href'))
     vapp.reload()
