@@ -72,6 +72,18 @@ def install(ctx, file_name):
     install_cse(ctx, file_name)
 
 
+@cli.command(short_help='uninstall CSE from vCD')
+@click.pass_context
+@click.argument('file_name',
+                type=click.Path(exists=True),
+                metavar='<config-file>',
+                required=True,
+                default='config.yml')
+def uninstall(ctx, file_name):
+    """Uninstall CSE from vCloud Director"""
+    uninstall_cse(ctx, file_name)
+
+
 @cli.command(short_help='run service')
 @click.pass_context
 @click.argument('file_name',

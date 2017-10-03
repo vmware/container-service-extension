@@ -613,11 +613,10 @@ class DefaultBroker(threading.Thread):
             for node in nodes:
                 vm = vs.get_vm_by_moid(node['moid'])
                 if node['node_type'] == TYPE_MASTER:
-                    cust_script = """
-#!/bin/bash
-                        """
+                    cust_script = None
                     if node_count == 0:
-                        cust_script += """
+                        cust_script = """
+#!/bin/bash
 /usr/bin/kubectl --kubeconfig=/etc/kubernetes/admin.conf taint nodes --all node-role.kubernetes.io/master-
                         """  # NOQA
                 else:
@@ -626,34 +625,35 @@ class DefaultBroker(threading.Thread):
 /usr/bin/kubeadm join --token {token} {ip}:6443
                     """.format(token=master_node['token'],
                                ip=master_node['ip'])
-                vs.upload_file_to_guest(
-                    vm,
-                    'root',
-                    password,
-                    cust_script,
-                    '/tmp/customize.sh')
-                vs.execute_program_in_guest(
-                    vm,
-                    'root',
-                    password,
-                    '/usr/bin/chmod',
-                    'u+rx /tmp/customize.sh',
-                    wait_for_completion=True)
-                vs.execute_program_in_guest(
-                    vm,
-                    'root',
-                    password,
-                    '/tmp/customize.sh',
-                    '',
-                    wait_for_completion=True)
-                vs.execute_program_in_guest(
-                    vm,
-                    'root',
-                    password,
-                    '/usr/bin/rm',
-                    '-f /tmp/customize.sh',
-                    wait_for_completion=True)
-                LOGGER.debug('executed %s on %s' % (cust_script, vm))
+                if cust_script is not None:
+                    vs.upload_file_to_guest(
+                        vm,
+                        'root',
+                        password,
+                        cust_script,
+                        '/tmp/customize.sh')
+                    vs.execute_program_in_guest(
+                        vm,
+                        'root',
+                        password,
+                        '/usr/bin/chmod',
+                        'u+rx /tmp/customize.sh',
+                        wait_for_completion=True)
+                    vs.execute_program_in_guest(
+                        vm,
+                        'root',
+                        password,
+                        '/tmp/customize.sh',
+                        '',
+                        wait_for_completion=True)
+                    vs.execute_program_in_guest(
+                        vm,
+                        'root',
+                        password,
+                        '/usr/bin/rm',
+                        '-f /tmp/customize.sh',
+                        wait_for_completion=True)
+                    LOGGER.debug('executed %s on %s' % (cust_script, vm))
 
             self.t = task.update(
                 TaskStatus.SUCCESS.value,
