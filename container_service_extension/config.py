@@ -63,11 +63,14 @@ broker:
     org: Admin
     vdc: Catalog
     catalog: cse
+    network: admin_network
+    source_ova_name: photon-custom-hw11-1.0-62c543d.ova
     source_ova: 'https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova'
     sha1_ova: 18c1a6d31545b757d897c61a0c3cc0e54d8aeeba
-    master_template: k8s-u.ova
-    node_template: k8s-u.ova
-    password: 'my_secret_password'
+    temp_vapp: csetmp
+    master_template: k8s-p.ova
+    node_template: k8s-p.ova
+    password: 'root_secret_password'
     ssh_public_key: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0brDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse'
     master_cpu: 2
     master_mem: 2048
@@ -193,6 +196,7 @@ def configure_vcd(ctx, file_name):
             catalog = org.get_catalog(config['broker']['catalog'])
         except Exception:
             click.secho('Creating catalog %s' % config['broker']['catalog'],
+                        nl=False,
                         fg='green')
             catalog = org.create_catalog(config['broker']['catalog'],
                                          'CSE catalog')

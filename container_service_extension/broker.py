@@ -690,7 +690,7 @@ class DefaultBroker(threading.Thread):
             vm = vs.get_vm_by_moid(cluster['leader_moid'])
             response = vs.download_file_from_guest(
                                     vm,
-                                    self.config['broker']['username'],
+                                    'root',
                                     self.config['broker']['password'],
                                     '/root/.kube/config')
             result['body'] = response.content.decode('utf-8')
