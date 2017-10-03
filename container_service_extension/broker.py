@@ -626,6 +626,8 @@ class DefaultBroker(threading.Thread):
                     """.format(token=master_node['token'],
                                ip=master_node['ip'])
                 if cust_script is not None:
+                    LOGGER.debug('about to execute %s on %s [%s]' %
+                                 (cust_script, vm, password))
                     vs.upload_file_to_guest(
                         vm,
                         'root',
