@@ -7,8 +7,8 @@
 import click
 from container_service_extension.config import check_config
 from container_service_extension.config import generate_sample_config
-from container_service_extension.config import install
-from container_service_extension.config import uninstall
+from container_service_extension.config import install_cse
+from container_service_extension.config import uninstall_cse
 from container_service_extension.service import Service
 import logging
 import pkg_resources
@@ -69,7 +69,7 @@ def check(ctx, file_name):
                 default='config.yml')
 def install(ctx, file_name):
     """Install CSE on vCloud Director"""
-    install(ctx, file_name)
+    install_cse(ctx, file_name)
 
 
 @cli.command(short_help='run service')

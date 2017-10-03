@@ -163,11 +163,11 @@ def check_config(file_name):
                 bool_to_msg(True)))
     return config
 
-def uninstall(ctx, file_name):
+def uninstall_cse(ctx, file_name):
     click.secho('Uninstalling CSE from vCD from file: %s' % file_name)
 
 
-def install(ctx, file_name):
+def install_cse(ctx, file_name):
     click.secho('Installing CSE on vCD from file: %s' % file_name)
     config = get_config(file_name)
     client = Client(config['vcd']['host'],
