@@ -549,7 +549,6 @@ class DefaultBroker(threading.Thread):
 /bin/cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
 /bin/chown $(id -u):$(id -g) $HOME/.kube/config
 /usr/bin/kubectl apply -f $HOME/kube-flannel.yml
-/usr/bin/kubectl apply -f $HOME/kube-flannel-rbac.yml
                 """
                 vs.upload_file_to_guest(
                     vm,

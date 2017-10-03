@@ -163,9 +163,12 @@ def check_config(file_name):
                 bool_to_msg(True)))
     return config
 
+def uninstall(ctx, file_name):
+    click.secho('Uninstalling CSE from vCD from file: %s' % file_name)
 
-def configure_vcd(ctx, file_name):
-    click.secho('Configuring vCD from file: %s' % file_name)
+
+def install(ctx, file_name):
+    click.secho('Installing CSE on vCD from file: %s' % file_name)
     config = get_config(file_name)
     client = Client(config['vcd']['host'],
                     api_version=config['vcd']['api_version'],
@@ -388,19 +391,18 @@ EOF
 /usr/bin/tdnf install -y kubernetes-1.7.5-1.ph1 kubernetes-kubeadm-1.7.5-1.ph1
 /usr/bin/tdnf install -y wget
 
-/usr/bin/docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.7.6
-/usr/bin/docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.7.6
-/usr/bin/docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.7.6
-/usr/bin/docker pull gcr.io/google_containers/kube-proxy-amd64:v1.7.6
+/usr/bin/docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.7.7
+/usr/bin/docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.7.7
+/usr/bin/docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.7.7
+/usr/bin/docker pull gcr.io/google_containers/kube-proxy-amd64:v1.7.7
 /usr/bin/docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.4
 /usr/bin/docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.4
 /usr/bin/docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.4
 /usr/bin/docker pull gcr.io/google_containers/etcd-amd64:3.0.17
 /usr/bin/docker pull gcr.io/google_containers/pause-amd64:3.0
-/usr/bin/docker pull quay.io/coreos/flannel:v0.8.0-amd64
+/usr/bin/docker pull quay.io/coreos/flannel:v0.9.0-amd64
 
-/usr/bin/wget https://raw.githubusercontent.com/coreos/flannel/v0.8.0/Documentation/kube-flannel.yml
-/usr/bin/wget https://raw.githubusercontent.com/coreos/flannel/v0.8.0/Documentation/kube-flannel-rbac.yml
+/usr/bin/wget https://raw.githubusercontent.com/coreos/flannel/v0.9.0/Documentation/kube-flannel.yml
 
 /bin/echo -n > /etc/machine-id
 /bin/sync
