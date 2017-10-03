@@ -523,14 +523,14 @@ class DefaultBroker(threading.Thread):
             LOGGER.error(message)
             raise Exception(message)
         LOGGER.debug('ip configured in all nodes')
-        vs = VSphere(self.config['vcs']['host'],
-                     self.config['vcs']['username'],
-                     self.config['vcs']['password'],
-                     port=int(self.config['vcs']['port']))
-        vs.connect()
         master_node = None
         password = self.config['broker']['password']
         for node in nodes:
+            vs = VSphere(self.config['vcs']['host'],
+                         self.config['vcs']['username'],
+                         self.config['vcs']['password'],
+                         port=int(self.config['vcs']['port']))
+            vs.connect()
             vm = vs.get_vm_by_moid(node['moid'])
             vs.execute_program_in_guest(
                 vm,
@@ -611,6 +611,11 @@ class DefaultBroker(threading.Thread):
             raise Exception('No master node is configured.')
         else:
             for node in nodes:
+                vs = VSphere(self.config['vcs']['host'],
+                             self.config['vcs']['username'],
+                             self.config['vcs']['password'],
+                             port=int(self.config['vcs']['port']))
+                vs.connect()
                 vm = vs.get_vm_by_moid(node['moid'])
                 if node['node_type'] == TYPE_MASTER:
                     cust_script = None
@@ -626,8 +631,8 @@ class DefaultBroker(threading.Thread):
                     """.format(token=master_node['token'],
                                ip=master_node['ip'])
                 if cust_script is not None:
-                    LOGGER.debug('about to execute %s on %s [%s]' %
-                                 (cust_script, vm, password))
+                    LOGGER.debug('about to execute on %s:\n%s' %
+                                 (vm, cust_script))
                     vs.upload_file_to_guest(
                         vm,
                         'root',
@@ -655,8 +660,7 @@ class DefaultBroker(threading.Thread):
                         '/usr/bin/rm',
                         '-f /tmp/customize.sh',
                         wait_for_completion=True)
-                    LOGGER.debug('executed %s on %s' % (cust_script, vm))
-
+                    LOGGER.debug('executed on %s:\n%s' % (vm, cust_script))
             self.t = task.update(
                 TaskStatus.SUCCESS.value,
                 'vcloud.cse',
