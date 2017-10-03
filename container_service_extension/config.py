@@ -400,9 +400,15 @@ EOF
 /usr/bin/docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.4
 /usr/bin/docker pull gcr.io/google_containers/etcd-amd64:3.0.17
 /usr/bin/docker pull gcr.io/google_containers/pause-amd64:3.0
-/usr/bin/docker pull quay.io/coreos/flannel:v0.9.0-amd64
+# /usr/bin/docker pull quay.io/coreos/flannel:v0.9.0-amd64
 
-/usr/bin/wget https://raw.githubusercontent.com/coreos/flannel/v0.9.0/Documentation/kube-flannel.yml
+/usr/bin/docker pull weaveworks/weave-npc:2.0.4
+/usr/bin/docker pull weaveworks/weave-kube:2.0.4
+
+export kubever=$(/usr/bin/kubectl version | /usr/bin/base64 | /usr/bin/tr -d '\n')
+/usr/bin/wget -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever"
+
+# /usr/bin/wget https://raw.githubusercontent.com/coreos/flannel/v0.9.0/Documentation/kube-flannel.yml
 
 /bin/echo -n > /etc/machine-id
 /bin/sync
