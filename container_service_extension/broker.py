@@ -544,12 +544,13 @@ class DefaultBroker(threading.Thread):
                 time.sleep(5)
                 cust_script = """
 #!/bin/bash
-/usr/bin/kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address={ip} > /tmp/kubeadm-init.out
+/usr/bin/kubeadm init --pod-network-cidr=10.244.0.0/16 > /tmp/kubeadm-init.out
 /bin/mkdir -p $HOME/.kube
 /bin/cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
 /bin/chown $(id -u):$(id -g) $HOME/.kube/config
 /usr/bin/kubectl apply -f $HOME/kube-flannel.yml
-                """.format(ip=node['ip'])  # NOQA
+/usr/bin/kubectl apply -f $HOME/kube-flannel-rbac.yml
+                """
                 vs.upload_file_to_guest(
                     vm,
                     'root',
@@ -611,11 +612,14 @@ class DefaultBroker(threading.Thread):
         else:
             for node in nodes:
                 vm = vs.get_vm_by_moid(node['moid'])
-                if node_count == 0 and node['node_type'] == TYPE_MASTER:
+                if node['node_type'] == TYPE_MASTER:
                     cust_script = """
 #!/bin/bash
+                        """
+                    if node_count == 0:
+                        cust_script += """
 /usr/bin/kubectl --kubeconfig=/etc/kubernetes/admin.conf taint nodes --all node-role.kubernetes.io/master-
-                    """  # NOQA
+                        """  # NOQA
                 else:
                     cust_script = """
 #!/bin/bash

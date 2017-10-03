@@ -397,9 +397,10 @@ EOF
 /usr/bin/docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.4
 /usr/bin/docker pull gcr.io/google_containers/etcd-amd64:3.0.17
 /usr/bin/docker pull gcr.io/google_containers/pause-amd64:3.0
-/usr/bin/docker pull quay.io/coreos/flannel:v0.9.0-amd64
+/usr/bin/docker pull quay.io/coreos/flannel:v0.8.0-amd64
 
-/usr/bin/wget https://raw.githubusercontent.com/coreos/flannel/v0.9.0/Documentation/kube-flannel.yml
+/usr/bin/wget https://raw.githubusercontent.com/coreos/flannel/v0.8.0/Documentation/kube-flannel.yml
+/usr/bin/wget https://raw.githubusercontent.com/coreos/flannel/v0.8.0/Documentation/kube-flannel-rbac.yml
 
 /bin/echo -n > /etc/machine-id
 /bin/sync
