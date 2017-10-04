@@ -3,54 +3,51 @@ The **container-service-extension** (`CSE`) is a vCloud Director add-on that man
 
 ## Installation
 
-The `CSE` service should be installed by the vCloud Director System Administrator on a virtual machine with access to vCD cell, AMQP server and vCenter server. It requires Python version 3.
+The `CSE` service is designed to be installed by the vCloud Director System Administrator on a virtual machine with access to vCD cell, AMQP server and vCenter server.
 
-vCD tenants can use `CSE` through [vcd-cli](https://vmware.github.io/vcd-cli/vcd_cluster). `vcd-cli` also requires Python version 3.
+vCD tenants can use `CSE` through [vcd-cli](https://vmware.github.io/vcd-cli).
 
-## Service Provider Installation
+### System Administrator Installation
 
-The installation process includes the following steps to be completed as the vCloud Director system administrator:
+Allocate a new virtual machine to run `CSE` or use one of the existing servers in the vCloud Director installation. `CSE` requires Python 3.
 
-1. download and install the `CSE` software package
-2. create vApp templates and upload to vCloud Director
-4. register the `CSE` service extension with vCloud Director
-5. edit and validate `CSE` configuration settings
-6. start `CSE`
-
-vCloud Director tenants just need to:
-
-- install `vcd-cli` and `kubectl` on their client computer
-- start using `CSE` and `kubernetes`
-
-### 1. Package Installation
-
-Allocate a new virtual machine to run `CSE` or use one of the existing servers in the vCloud Director installation. Install the `CSE` package:
+#### 1. Install `CSE` package.
 
 ```shell
-$ pip install --user container-service-extension
+$ pip3 install container-service-extension
 
 $ cse version
+Container Service Extension for VMware vCloud Director, version 0.1.1
 ```
 
-Update an existing installation:
+`pip3 install` can be used with additional parameters:
 
-``` shell
-$ pip install --user container-service-extension --upgrade --no-cache
+| parameter | meaning |
+|-----------|---------|
+|`--user`   | install to the Python user install directory |
+| `--upgrade` | upgrade an existing installation |
+| `--pre`   | install a pre-release and development version |
+| `--no-cache-dir` | disable the cache and download the package |
+
+#### 2. Generate a skeleton configuration and provide site specific settings.
+
+```shell
+$ cse sample-config > config.yaml
 ```
 
-To install the latest development version:
+Edit file `config.yaml` with the values for your vCloud Director installation. See table below for a description of the configuration values.
 
-``` shell
-$ pip install --user container-service-extension --upgrade --pre --no-cache
+#### 3. Install the extension.
+
+The installation will take a few minutes. Use the command below:
+
+```shell
+$ cse install config.yaml
 ```
 
-### 2. Create and Upload Templates to vCloud Director
+#### 4. Configure vCloud Director.
 
-
-### 3. Register `CSE` with vCloud Director
-#### 3.1 Configure vCloud Director AMQP Settings
-
-Using `vcd-cli`, configure AMQP. Log in as the system administrator:
+Using `vcd-cli` included with `CSE`, configure AMQP. Log in as the system administrator:
 
 ```shell
 $ vcd login vcd.vmware.com System administrator --password 'p@$$w0rd'
@@ -83,7 +80,6 @@ Test the new AMQP configuration:
 
 ```shell
 $ vcd system amqp test amqp-config.json --password guest
-
 The configuration is valid.
 ```
 
@@ -91,19 +87,8 @@ Set the new AMQP configuration:
 
 ```shell
 $ vcd system amqp set amqp-config.json --password guest
-
 Updated AMQP configuration.
 ```
-
-API extension timeout:
-
-```shell
-cd /opt/vmware/vcloud-director/bin
-./cell-management-tool manage-config -n extensibility.timeout -l
-./cell-management-tool manage-config -n extensibility.timeout -v 20
-```
-
-#### 3.2 Complete vCloud Director Configuration
 
 Using `vcd-cli`, register the extension in vCloud Director.
 
@@ -138,36 +123,31 @@ priority                0
 routingKey              cse
 ```
 
-### 4. Define the `CSE` Configuration
-
-Create sample configuration:
+Optionally, configure the API extension timeout (seconds) on the vCloud Director cell:
 
 ```shell
-$ cse sample-config > config.yml
+cd /opt/vmware/vcloud-director/bin
+./cell-management-tool manage-config -n extensibility.timeout -l
+./cell-management-tool manage-config -n extensibility.timeout -v 20
 ```
 
-Edit file `config.yml` and provide the values for your vCloud Director installation.
-
-Validate the configuration:
-
-```shell
-$ cse check config.yml
-
-Connection to AMQP server (amqp.vmware.com:5672): success
-Connection to vCloud Director as system administrator (vcd.vmware.com:443): success
-Find catalog 'cse': success
-Find master template 'k8s-u.ova': success
-Find node template 'k8s-u.ova': success
-Connection to vCenter Server as administrator@vsphere.local (vcenter.vmware.com:443): success
-The configuration is valid.
-```
-
-### 5. Start `CSE`
+#### 5. Start `CSE`
 
 Start the service with the command below. Output log is appended to file `cse.log`
 
 ```shell
-$ cse run config.yml
+$ cse run config.yaml
+```
+
+### Tenant Installation
+
+vCloud Director tenants just need to install the [vcd-cli](https://vmware.github.io/vcd-cli) package:
+
+```shell
+$ pip3 install vcd-cli
+
+$ vcd version
+vcd-cli, VMware vCloud Director Command Line Interface, 19.2.0
 ```
 
 ## Using the Container Service
@@ -176,9 +156,16 @@ Once installed, the container service extension can be used by tenants to create
 
 See [vcd-cli](https://vmware.github.io/vcd-cli/vcd_cluster) for more information about the available commands.
 
+The virtual machines (master and nodes) will be provisioned on the tenant virtual datacenter. The VMs will be connected to the first available network or to the network specified with the `--network` optional parameter. The network should have a `DHCP` service enabled and it doesn't require access to the Internet. Static IP pool allocation mode will be also supported in the future.
+
+The `CSE` service doesn't need a network connection to the tenant virtual datacenters.
+
 ```shell
 # create cluster c1 with one master and two nodes
 $ vcd cluster create c1
+
+# create cluster c3 with one master, three nodes and connected to provided network
+$ vcd cluster create c3 --nodes 3 --network intranet
 
 # list available clusters
 $ vcd cluster list
@@ -191,6 +178,8 @@ $ export KUBECONFIG=~/kubeconfig.yml
 
 $ kubectl get nodes
 
+$ kubectl get pods --all-namespaces
+
 # deploy kubernetes dashboard
 $ kubectl create -f https://git.io/kube-dashboard
 
@@ -201,3 +190,26 @@ $ open http://127.0.0.1:8001/ui
 # delete cluster when no longer needed
 $ vcd cluster delete c1
 ```
+
+### CSE Configuration Settings
+
+|Group|Property|Value|
+|-----|--------|-----|
+|`broker`|||
+||`org`|vCD organization where the master templates will be stored|
+||`vdc`|Virtual datacenter within `org` that will be used during the install process to build the template|
+||`network`|Org Network within `vdc` that will be used during the install process to build the template. It should have a `DHCP` service and should have outbound access to the public Internet|
+||`catalog`|Catalog within `org` where the template will be published|
+||`temp_vapp`|Name of the temporary vApp used to build the template. Once the template is created, this vApp can be deleted|
+||`password`|`root` password for the template and instantiated VMs. This password should not be shared with tenants|
+||`master_cpu`|Number of virtual CPUs to be allocated for each Kubernetes master VM|
+||`master_mem`|Memory in MB to be allocated for each Kubernetes master VM|
+||`node_cpu`|Number of virtual CPUs to be allocated for each Kubernetes master VM|
+||`node_mem`|Memory in MB to be allocated for each Kubernetes node VM|
+
+
+### Versions
+
+|Release Date|vCD|CSE|OS|Kubernetes|Pod Network|
+|----------|---|---|--|----------|-----------|
+|2017-10-03|9.0|0.1.1|Photon OS 1.0, Rev 2|1.7.5|Weave 2.0.4|
