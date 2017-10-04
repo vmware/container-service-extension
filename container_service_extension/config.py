@@ -163,6 +163,7 @@ def check_config(file_name):
                 bool_to_msg(True)))
     return config
 
+
 def uninstall_cse(ctx, file_name):
     # click.secho('Uninstalling CSE from vCD from file: %s' % file_name)
     raise Exception('not implemented')
