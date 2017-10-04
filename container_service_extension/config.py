@@ -64,6 +64,7 @@ broker:
     vdc: Catalog
     catalog: cse
     network: admin_network
+    ip_allocation_mode: pool
     source_ova_name: photon-custom-hw11-1.0-62c543d.ova
     source_ova: 'https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova'
     sha1_ova: 18c1a6d31545b757d897c61a0c3cc0e54d8aeeba
@@ -200,7 +201,7 @@ def install_cse(ctx, file_name):
         try:
             catalog = org.get_catalog(config['broker']['catalog'])
         except Exception:
-            click.secho('Creating catalog %s' % config['broker']['catalog'],
+            click.secho('Creating catalog %s ' % config['broker']['catalog'],
                         nl=False,
                         fg='green')
             catalog = org.create_catalog(config['broker']['catalog'],
@@ -336,13 +337,13 @@ chage -I -1 -m 0 -M -1 -E -1 root
         config['broker']['source_ova_name'],
         network=config['broker']['network'],
         fence_mode='bridged',
-        ip_allocation_mode='dhcp',
+        ip_allocation_mode=config['broker']['ip_allocation_mode'],
         deploy=True,
         power_on=True,
         memory=config['broker']['master_mem'],
         cpu=config['broker']['master_cpu'],
         password=None,
-        cust_script=cust_script,
+        cust_script=cust_script
         )
     stdout(vapp_resource.Tasks.Task[0], ctx)
     ip = None

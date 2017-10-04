@@ -156,22 +156,25 @@ Once installed, the container service extension can be used by tenants to create
 
 See [vcd-cli](https://vmware.github.io/vcd-cli/vcd_cluster) for more information about the available commands.
 
-The virtual machines (master and nodes) will be provisioned on the tenant virtual datacenter. The VMs will be connected to the first available network or to the network specified with the `--network` optional parameter. The network should have a `DHCP` service enabled and it doesn't require access to the Internet. Static IP pool allocation mode will be also supported in the future.
+The virtual machines (master and nodes) will be provisioned on the tenant virtual datacenter. The VMs will be connected to the first available network or to the network specified with the `--network` optional parameter. The network should be configured with a static IP pool and it doesn't require access to the Internet.
 
 The `CSE` service doesn't need a network connection to the tenant virtual datacenters.
 
 ```shell
 # create cluster c1 with one master and two nodes
-$ vcd cluster create c1
+$ vcd cluster create c2
 
 # create cluster c3 with one master, three nodes and connected to provided network
 $ vcd cluster create c3 --nodes 3 --network intranet
+
+# create a single node cluster
+$ vcd cluster create c0 --nodes 0
 
 # list available clusters
 $ vcd cluster list
 
 # retrieve cluster config
-$ vcd cluster config c1 > ~/kubeconfig.yml
+$ vcd cluster config c2 > ~/kubeconfig.yml
 
 # check cluster configuration
 $ export KUBECONFIG=~/kubeconfig.yml
@@ -180,15 +183,8 @@ $ kubectl get nodes
 
 $ kubectl get pods --all-namespaces
 
-# deploy kubernetes dashboard
-$ kubectl create -f https://git.io/kube-dashboard
-
-$ kubectl proxy &
-
-$ open http://127.0.0.1:8001/ui
-
 # delete cluster when no longer needed
-$ vcd cluster delete c1
+$ vcd cluster delete c2
 ```
 
 ### CSE Configuration Settings
@@ -198,7 +194,8 @@ $ vcd cluster delete c1
 |`broker`|||
 ||`org`|vCD organization where the master templates will be stored|
 ||`vdc`|Virtual datacenter within `org` that will be used during the install process to build the template|
-||`network`|Org Network within `vdc` that will be used during the install process to build the template. It should have a `DHCP` service and should have outbound access to the public Internet|
+||`network`|Org Network within `vdc` that will be used during the install process to build the template. It should have outbound access to the public Internet|
+||`ip_allocation_mode`|IP allocation mode to be used during the install process to build the template. Possible values are `dhcp` or `pool`. During creation of clusters for tenants, `pool` IP allocation mode is always used|
 ||`catalog`|Catalog within `org` where the template will be published|
 ||`temp_vapp`|Name of the temporary vApp used to build the template. Once the template is created, this vApp can be deleted|
 ||`password`|`root` password for the template and instantiated VMs. This password should not be shared with tenants|
@@ -210,6 +207,6 @@ $ vcd cluster delete c1
 
 ### Versions
 
-|Release Date|vCD|CSE|OS|Kubernetes|Pod Network|
+|Release Date|CSE|vCD|OS|Kubernetes|Pod Network|
 |----------|---|---|--|----------|-----------|
-|2017-10-03|9.0|0.1.1|Photon OS 1.0, Rev 2|1.7.5|Weave 2.0.4|
+|2017-10-03|0.1.1|9.0|Photon OS 1.0, Rev 2|1.7.5|Weave 2.0.4|
