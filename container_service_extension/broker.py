@@ -27,7 +27,6 @@ import uuid
 
 LOGGER = logging.getLogger(__name__)
 
-
 OK = 200
 CREATED = 201
 ACCEPTED = 202
@@ -37,6 +36,48 @@ OP_CREATE_CLUSTER = 'create_cluster'
 OP_DELETE_CLUSTER = 'delete_cluster'
 
 MAX_HOST_NAME_LENGTH = 25 - 4
+
+SAMPLE_CONFIG = {
+    'type': 'default',
+    'org': 'Admin',
+    'vdc': 'Catalog',
+    'catalog': 'cse',
+    'network': 'admin_network',
+    'ip_allocation_mode': 'pool',
+    'source_ova_name': 'photon-custom-hw11-1.0-62c543d.ova',
+    'source_ova': 'https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova',
+    'sha1_ova': '18c1a6d31545b757d897c61a0c3cc0e54d8aeeba',
+    'temp_vapp': 'csetmp',
+    'cleanup': True,
+    'master_template': 'k8s-p.ova',
+    'node_template': 'k8s-p.ova',
+    'password': 'root_secret_password',
+    'ssh_public_key': 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0brDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse',
+    'master_cpu': 2,
+    'master_mem': 2048,
+    'node_cpu': 2,
+    'node_mem': 2048
+}  # NOQA
+
+
+def get_sample_broker_config():
+    cfg = ''
+    for k, v in SAMPLE_CONFIG.items():
+        cfg += '    %s: ' % k
+        if type(v) in [int, bool]:
+            cfg +='%s\n' % v
+        else:
+            cfg +='\'%s\'\n' % v
+    return cfg
+
+
+def validate_broker_config(config):
+    for k, v in SAMPLE_CONFIG.items():
+        if k not in config.keys():
+            raise Exception('missing key: %s' % k)
+    for k, v in config.items():
+        if k not in SAMPLE_CONFIG.keys():
+            raise Exception('invalid key: %s' % k)
 
 
 def get_new_broker(config):
@@ -50,6 +91,23 @@ def spinning_cursor():
     while True:
         for cursor in '|/-\\':
             yield cursor
+
+
+def wait_until_ready(vs, vm, password):
+    while True:
+        try:
+            vs.execute_program_in_guest(
+                vm,
+                'root',
+                password,
+                '/usr/bin/uname',
+                '',
+                wait_for_completion=True)
+            LOGGER.debug('vm %s is ready' % vm)
+            return
+        except:
+            LOGGER.debug('waiting for vm %s to be ready' % vm)
+            time.sleep(1)
 
 
 spinner = spinning_cursor()
@@ -260,7 +318,8 @@ class DefaultBroker(threading.Thread):
                                                     network=network_name,
                                                     deploy=True,
                                                     power_on=True,
-                                                    cust_script=cust_script))
+                                                    cust_script=None,
+                                                    ip_allocation_mode='pool'))
             nodes = []
             for n in range(node_count):
                 time.sleep(1)
@@ -271,9 +330,10 @@ class DefaultBroker(threading.Thread):
                                                   memory=node_mem,
                                                   cpu=node_cpu,
                                                   network=network_name,
-                                                  deploy=False,
-                                                  power_on=False,
-                                                  cust_script=cust_script))
+                                                  deploy=True,
+                                                  power_on=True,
+                                                  cust_script=None,
+                                                  ip_allocation_mode='pool'))
             tagged = set([])
             while len(tagged) < (master_count + node_count):
                 node = None
@@ -289,7 +349,7 @@ class DefaultBroker(threading.Thread):
                             node = n
                             node_type = TYPE_NODE
                             break
-                time.sleep(15)
+                time.sleep(5)
                 if node is not None:
                     LOGGER.debug('about to tag %s, href=%s',
                                  node.get('name'),
@@ -475,28 +535,8 @@ class DefaultBroker(threading.Thread):
                     vapp = VApp(self.client_tenant,
                                 href=cluster_node['href'])
                     vapp.reload()
-                    if vapp.resource.get('status') != '4':
-                        connection_mode = 'dhcp'
-                        t = vapp.connect_vm(mode=connection_mode)
-                        self.client_tenant.get_task_monitor().\
-                            wait_for_status(
-                                task=t,
-                                timeout=600,
-                                poll_frequency=5,
-                                fail_on_status=None,
-                                expected_target_statuses=[TaskStatus.SUCCESS], # NOQA
-                                callback=None)
-                        t = vapp.power_on()
-                        self.client_tenant.get_task_monitor().\
-                            wait_for_status(
-                                task=t,
-                                timeout=600,
-                                poll_frequency=5,
-                                fail_on_status=None,
-                                expected_target_statuses=[TaskStatus.SUCCESS], # NOQA
-                                callback=None)
                     node['password'] = vapp.get_admin_password(
-                                        cluster_node['name'])
+                                       cluster_node['name'])
                     node['ip'] = vapp.get_primary_ip(cluster_node['name'])
                     node['moid'] = vapp.get_vm_moid(cluster_node['name'])
                     if cluster_node['name'].endswith('-m1'):
@@ -532,6 +572,7 @@ class DefaultBroker(threading.Thread):
                          port=int(self.config['vcs']['port']))
             vs.connect()
             vm = vs.get_vm_by_moid(node['moid'])
+            wait_until_ready(vs, vm, node['password'])
             vs.execute_program_in_guest(
                 vm,
                 'root',
@@ -544,7 +585,7 @@ class DefaultBroker(threading.Thread):
                 time.sleep(5)
                 cust_script = """
 #!/bin/bash
-/usr/bin/kubeadm init --pod-network-cidr=10.244.0.0/16 > /tmp/kubeadm-init.out
+/usr/bin/kubeadm init --pod-network-cidr=10.244.0.0/16 --skip-preflight-checks --kubernetes-version=v1.7.7 > /tmp/kubeadm-init.out
 /bin/mkdir -p $HOME/.kube
 /bin/cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
 /bin/chown $(id -u):$(id -g) $HOME/.kube/config
@@ -587,7 +628,11 @@ class DefaultBroker(threading.Thread):
                 content = response.content.decode('utf-8')
                 if len(content) == 0:
                     raise Exception('Failed executing "kubeadm init"')
-                token = [x for x in response.content.decode('utf-8').splitlines() if x.strip().startswith('[token] Using token: ')][0].split()[-1]  # NOQA
+                try:
+                    token = [x for x in response.content.decode('utf-8').splitlines() if x.strip().startswith('[token] Using token: ')][0].split()[-1]  # NOQA
+                except:
+                    raise Exception('Failed executing "kubeadm init", cannot find token:\%s' %
+                                    response.content.decode('utf-8'))
                 vapp = VApp(self.client_tenant,
                             href=node['href'])
                 vapp.reload()
@@ -617,16 +662,17 @@ class DefaultBroker(threading.Thread):
                              port=int(self.config['vcs']['port']))
                 vs.connect()
                 vm = vs.get_vm_by_moid(node['moid'])
-                if node['node_type'] == TYPE_MASTER:
-                    cust_script = None
-                    if node_count == 0:
-                        cust_script = """
+                cust_script = """
 #!/bin/bash
+/usr/bin/sed -ri 's/preserve_hostname: false/preserve_hostname: true/' /etc/cloud/cloud.cfg
+                """
+                if node['node_type'] == TYPE_MASTER:
+                    if node_count == 0:
+                        cust_script += """
 /usr/bin/kubectl --kubeconfig=/etc/kubernetes/admin.conf taint nodes --all node-role.kubernetes.io/master-
                         """  # NOQA
                 else:
-                    cust_script = """
-#!/bin/bash
+                    cust_script += """
 /usr/bin/kubeadm join --token {token} {ip}:6443
                     """.format(token=master_node['token'],
                                ip=master_node['ip'])

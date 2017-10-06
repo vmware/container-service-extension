@@ -209,4 +209,4 @@ $ vcd cluster delete c2
 
 |Release Date|CSE|vCD|OS|Kubernetes|Pod Network|
 |----------|---|---|--|----------|-----------|
-|2017-10-03|0.1.1|9.0|Photon OS 1.0, Rev 2|1.7.5|Weave 2.0.4|
+|2017-10-03|0.1.1|9.0|Photon OS 1.0, Rev 2|1.7.7|Weave 2.0.4|

@@ -4,6 +4,8 @@
 
 from __future__ import print_function
 import click
+from container_service_extension.broker import get_sample_broker_config
+from container_service_extension.broker import validate_broker_config
 import hashlib
 import logging
 import os
@@ -59,26 +61,10 @@ service:
     logging_format: '{logging_format}'
 
 broker:
-    type: default
-    org: Admin
-    vdc: Catalog
-    catalog: cse
-    network: admin_network
-    ip_allocation_mode: pool
-    source_ova_name: photon-custom-hw11-1.0-62c543d.ova
-    source_ova: 'https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova'
-    sha1_ova: 18c1a6d31545b757d897c61a0c3cc0e54d8aeeba
-    temp_vapp: csetmp
-    master_template: k8s-p.ova
-    node_template: k8s-p.ova
-    password: 'root_secret_password'
-    ssh_public_key: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0brDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse'
-    master_cpu: 2
-    master_mem: 2048
-    node_cpu: 2
-    node_mem: 2048
+{broker_config}
 
-    """.format(logging_format='%(levelname) -8s %(asctime)s %(name) -40s %(funcName) -35s %(lineno) -5d: %(message)s')  # NOQA
+    """.format(logging_format='%(levelname) -8s %(asctime)s %(name) -40s %(funcName) -35s %(lineno) -5d: %(message)s',
+               broker_config=get_sample_broker_config())  # NOQA
     return sample_config.strip() + '\n'
 
 
@@ -104,6 +90,7 @@ def get_config(file_name):
 
 def check_config(file_name):
     config = get_config(file_name)
+    validate_broker_config(config['broker'])
     amqp = config['amqp']
     credentials = pika.PlainCredentials(amqp['user'], amqp['password'])
     parameters = pika.ConnectionParameters(amqp['host'], amqp['port'],
@@ -166,8 +153,59 @@ def check_config(file_name):
 
 
 def uninstall_cse(ctx, file_name):
-    # click.secho('Uninstalling CSE from vCD from file: %s' % file_name)
-    raise Exception('not implemented')
+    click.secho('Uninstalling CSE from vCD from file: %s' % file_name)
+    config = get_config(file_name)
+    client = Client(config['vcd']['host'],
+                    api_version=config['vcd']['api_version'],
+                    verify_ssl_certs=config['vcd']['verify'],
+                    log_file='cse.log',
+                    log_headers=True,
+                    log_bodies=True
+                    )
+    client.set_credentials(BasicLoginCredentials(config['vcd']['username'],
+                                                 'System',
+                                                 config['vcd']['password']))
+    click.echo('Connected to vCloud Director as system '
+               'administrator (%s:%s): %s' %
+               (config['vcd']['host'], config['vcd']['port'],
+                bool_to_msg(True)))
+    ctx.obj = {}
+    ctx.obj['client'] = client
+    if config['broker']['type'] == 'default':
+        vapp_name = config['broker']['temp_vapp']
+        ctx.obj = {}
+        ctx.obj['client'] = client
+        orgs = client.get_org_list()
+        for org in [o for o in orgs.Org if hasattr(orgs, 'Org')]:
+            if org.get('name') == config['broker']['org']:
+                org_href = org.get('href')
+        org = Org(client, href=org_href)
+        click.echo('Find org \'%s\': %s' %
+                   (org.get_name(), bool_to_msg(True)))
+        vdc_resource = org.get_vdc(config['broker']['vdc'])
+        click.echo('Find vdc \'%s\': %s' %
+                   (vdc_resource.get('name'), bool_to_msg(True)))
+        try:
+            vdc = VDC(client, resource=vdc_resource)
+            vapp_resource = vdc.get_vapp(vapp_name)
+            click.secho('Deleting vApp template \'%s\' ' % vapp_name,
+                        fg='green')
+            task = vdc.delete_vapp(vapp_name, force=True)
+            stdout(task, ctx)
+        except Exception:
+            click.secho('vApp template \'%s\' not found' % vapp_name)
+        try:
+            master_template = org.get_catalog_item(
+                config['broker']['catalog'],
+                config['broker']['master_template'])
+            click.secho('Deleting master template \'%s\'' %
+                        config['broker']['master_template'],
+                        fg='green')
+            # click.secho('done', fg='blue')
+        except Exception:
+            click.secho('Master template \'%s\' not found' %
+                        config['broker']['master_template'])
+
 
 
 def install_cse(ctx, file_name):
@@ -349,7 +387,7 @@ chage -I -1 -m 0 -M -1 -E -1 root
     ip = None
     password_auto = None
     vm_moid = None
-    click.secho('Waiting for IP address... ', nl=False, fg='green')
+    click.secho('Waiting for IP address...', nl=False, fg='green')
     while True:
         time.sleep(5)
         vapp = VApp(client, href=vapp_resource.get('href'))
@@ -423,6 +461,19 @@ export kubever=$(/usr/bin/kubectl version | /usr/bin/base64 | /usr/bin/tr -d '\n
                  port=int(config['vcs']['port']))
     vs.connect()
     vm = vs.get_vm_by_moid(vm_moid)
+    while True:
+        try:
+            vs.execute_program_in_guest(
+                vm,
+                'root',
+                password_auto,
+                '/usr/bin/uname',
+                '',
+                wait_for_completion=True)
+            break
+        except:
+            click.secho('.', nl=False, fg='yellow')
+    click.secho('.', nl=False, fg='green')
     vs.upload_file_to_guest(
         vm,
         'root',
