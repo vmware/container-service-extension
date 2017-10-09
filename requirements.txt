@@ -1,6 +1,2 @@
-click
-jsonpickle
 pika >= 0.10.0
-pyyaml
-requests
-vcd-cli >= 19.2.1.dev1
+vcd-cli >= 19.2.1.dev3
