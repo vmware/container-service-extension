@@ -1,6 +1,10 @@
 CHANGES
 =======
 
+* docs
+* ip allocation mode pool; validate broker config
+* allocation\_mode
+
 0.1.1
 -----
 

@@ -250,6 +250,14 @@ $ pip3 install --user --pre --upgrade --no-cache container-service-extension
 $ export LANG=en_US.UTF-8
 $ cse version
 ```
+Photon OS 1.0, Revision 2:
+
+```shell
+$ sudo tdnf install -y gcc glibc-devel glibc-lang binutils python3-devel linux-api-headers gawk
+$ sudo locale-gen.sh
+$ pip3 install --user --pre --upgrade --no-cache container-service-extension
+$ cse version
+```
 
 #### Installing Python 3 on macOS
 
