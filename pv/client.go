@@ -27,6 +27,7 @@ type Client struct {
   Token         string
   Insecure      bool
   Http          *http.Client
+  Wkep          map[string]string
 }
 
 type SupportedVersions struct {
@@ -69,10 +70,14 @@ func SetVersion(client *Client, version string){
   client.VersionInfo.LoginUrl = fmt.Sprintf("%s%s", client.HRef.String(), "/api/sessions")
 }
 
-func setSessionEndpoints(){
-  // for _, link := range s.Link {
-  //   fmt.Println(link.Type, link.ID, link.Name)
-  // }
+func setSessionEndpoints(client *Client, session *Session){
+  client.Wkep = make(map[string]string)
+  for _, link := range session.Link {
+    client.Wkep[link.Type] = link.HREF
+  }
+  for k, v := range client.Wkep {
+    log.Output(2, fmt.Sprintf("(%s, %s)", k, v))
+  }
 }
 
 func SetCredentials(client *Client, credentials Credentials) error {
@@ -80,18 +85,19 @@ func SetCredentials(client *Client, credentials Credentials) error {
     SetHighestVersion(client)
   }
   u, _ := url.Parse(client.VersionInfo.LoginUrl)
-  s := new(Session)
-  resp, err := doRequest(client, "POST", u.Path, &credentials, s)
+  session := new(Session)
+  resp, err := doRequest(client, "POST", u.Path, &credentials, session)
   if err != nil {
     return err
   }
   client.Token = resp.Header.Get("x-vcloud-authorization")
   log.Output(2, fmt.Sprintf("token=%s", client.Token))
+  setSessionEndpoints(client, session)
   return nil
 }
 
 func RehydrateFromToken(client *Client, token string){
-  
+
 }
 
 // TODO(parse error responses)
