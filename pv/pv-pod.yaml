@@ -1,0 +1,24 @@
+# container-service-extension
+# Copyright (c) 2017 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
+kind: Pod
+apiVersion: v1
+metadata:
+  name: pv-pod-1
+spec:
+  volumes:
+    - name: pv-storage
+      persistentVolumeClaim:
+       claimName: pvc01
+  containers:
+    - name: pv-container
+      image: nginx
+      ports:
+        - containerPort: 80
+          name: "http-server"
+      volumeMounts:
+        - mountPath: "/usr/share/nginx/html"
+          name: pv-storage
+  nodeSelector:
+    kubernetes.io/hostname: c2-n2

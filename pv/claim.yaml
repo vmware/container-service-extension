@@ -1,0 +1,18 @@
+# container-service-extension
+# Copyright (c) 2017 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc01
+  annotations:
+    volume.beta.kubernetes.io/storage-class: "vcloud-director"
+  labels:
+    kubernetes.io/hostname: c2-n2
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Mi
