@@ -1,0 +1,9 @@
+# container-service-extension
+# Copyright (c) 2017 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
+kind: StorageClass
+apiVersion: storage.k8s.io/v1beta1
+metadata:
+  name: vcloud-director
+provisioner: vmware.com/vcloud-director
