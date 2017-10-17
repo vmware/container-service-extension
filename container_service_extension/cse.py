@@ -43,10 +43,7 @@ def cli(ctx, json_output):
 @click.pass_context
 def version(ctx):
     """Show CSE version"""
-    # ver = 'Container Service Extension for %s' % \
-    #       'VMware vCloud Director, version %s' % \
-    #       pkg_resources.require("container-service-extension")[0].version
-    ver = pkg_resources.require("vcd-cli")[0].version
+    ver = pkg_resources.require('container-service-extension')[0].version
     ver_obj = {'product': 'cse',
                'description': 'Container Service Extension for VMware vCloud Director',
                'version': ver,
