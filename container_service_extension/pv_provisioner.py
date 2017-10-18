@@ -23,6 +23,12 @@ class PVProvisioner(threading.Thread):
         print('PV provisioner thread started, cse_msg_dir: %s' % self.config['broker']['cse_msg_dir'])
         request_directory = os.path.join(self.config['broker']['cse_msg_dir'], 'req')
         response_directory = os.path.join(self.config['broker']['cse_msg_dir'], 'res')
+        if not os.path.isdir(request_directory):
+            print('directory \'%s\' not found, PV provisioner stopped' % request_directory)
+            return
+        if not os.path.isdir(response_directory):
+            print('directory \'%s\' not found, PV provisioner stopped' % response_directory)
+            return
         while True:
             time.sleep(1)
             files = os.scandir(request_directory)
