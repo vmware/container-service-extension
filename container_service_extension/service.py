@@ -6,6 +6,7 @@ import click
 from container_service_extension.config import check_config
 from container_service_extension.config import get_config
 from container_service_extension.consumer import MessageConsumer
+from container_service_extension.pv_provisioner import PVProvisioner
 import logging
 import signal
 import sys
@@ -92,6 +93,9 @@ class Service(object):
                 print(traceback.format_exc())
 
         LOGGER.info('num of threads started: %s', len(threads))
+
+        pv_provisioner = PVProvisioner(self.config)
+        pv_provisioner.start()
 
         while True:
             try:

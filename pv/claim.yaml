@@ -8,8 +8,6 @@ metadata:
   name: pvc01
   annotations:
     volume.beta.kubernetes.io/storage-class: "vcloud-director"
-  labels:
-    kubernetes.io/hostname: c2-n2
 spec:
   accessModes:
     - ReadWriteMany

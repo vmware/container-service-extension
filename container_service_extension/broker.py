@@ -56,7 +56,8 @@ SAMPLE_CONFIG = {
     'master_cpu': 2,
     'master_mem': 2048,
     'node_cpu': 2,
-    'node_mem': 2048
+    'node_mem': 2048,
+    'cse_msg_dir': '/tmp/cse'
 }  # NOQA
 
 
