@@ -1,0 +1,29 @@
+# container-service-extension
+# Copyright (c) 2017 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: dep-1
+  labels:
+    app: dep1
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: dep-1
+    spec:
+      containers:
+      - name: pv-container
+        image: nginx
+        volumeMounts:
+          - mountPath: "/usr/share/nginx/html"
+            name: pv-storage
+      volumes:
+        - name: pv-storage
+          persistentVolumeClaim:
+           claimName: pvc01
+      nodeSelector:
+        pvc.pvc01: ""
