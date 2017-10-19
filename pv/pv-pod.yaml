@@ -20,5 +20,5 @@ spec:
       volumeMounts:
         - mountPath: "/usr/share/nginx/html"
           name: pv-storage
-    # nodeSelector:
-    #   kubernetes.io/hostname: c2-n2
+  nodeSelector:
+    pvc.pvc01: ""

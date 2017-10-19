@@ -8,7 +8,6 @@ import (
   "flag"
   "fmt"
   "os"
-  // "path"
   "path/filepath"
   "time"
   "io/ioutil"
@@ -73,9 +72,8 @@ func check(e error) {
 
 func (p *vcdProvisioner) Provision(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
   var target_node string
-  // var pvname string
   marshalled, _ := json.MarshalIndent(options, "", "    ")
-  fmt.Printf("provisioner->provision called with options:\n%s\n", marshalled)
+  fmt.Printf("vcdProvisioner->Provision called with options:\n%s\n", marshalled)
   request_file_name := fmt.Sprintf("%s/req/%s.json", p.msgDir, options.PVName)
   response_file_name := fmt.Sprintf("%s/res/%s.json", p.msgDir, options.PVName)
   f, err := os.Create(request_file_name)
@@ -116,21 +114,13 @@ func (p *vcdProvisioner) Provision(options controller.VolumeOptions) (*v1.Persis
     }
   }
 
-
-  // path := path.Join(p.pvDir, options.PVName)
   host_path := "/tmp"
-
-	// if err := os.MkdirAll(path, 0777); err != nil {
-	// 	return nil, err
-	// }
 
 	pv := &v1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: options.PVName,
 			Annotations: map[string]string{
 				"vcdProvisionerIdentity": p.identity,
-        // TODO(add a metadata field to the node where this ID is attached to, so the pod nodeSelector can be deployed in the right node)
-        "Node": target_node,
 			},
       Labels: map[string]string{
         "Node": target_node,
@@ -153,8 +143,36 @@ func (p *vcdProvisioner) Provision(options controller.VolumeOptions) (*v1.Persis
 }
 
 func (p *vcdProvisioner) Delete(volume *v1.PersistentVolume) error {
-  fmt.Printf("delete called\n")
-  // TODO(remove the metadata field in the node)
+  target_node := volume.ObjectMeta.Labels["Node"]
+  pvc_name := volume.Spec.ClaimRef.Name
+
+  marshalled, _ := json.MarshalIndent(volume, "", "    ")
+  fmt.Printf("vcdProvisioner->Delete called with volume:\n%s\n", marshalled)
+  fmt.Printf("pv: %s\npvc: %s\nnode: %s\n",
+             volume.ObjectMeta.Name,
+             pvc_name,
+             target_node)
+  label := fmt.Sprintf("pvc.%s", pvc_name)
+  n := clientset.CoreV1().Nodes()
+  nodes, _ := n.List(metav1.ListOptions{})
+  for _, node := range nodes.Items {
+    if node.Name == target_node {
+      fmt.Printf("assigned to node: %s\n", node.ObjectMeta.Name)
+      new_labels := map[string]string{}
+      for k, v := range node.Labels {
+        if k != label {
+          new_labels[k] = v
+        }
+      }
+      node.Labels = new_labels
+      marshalled, _ = json.MarshalIndent(new_labels, "", "    ")
+      fmt.Printf("new labels:\n%s\n", marshalled)
+      marshalled, _ = json.MarshalIndent(node, "", "    ")
+      fmt.Printf("modified node:\n%s\n", marshalled)
+      n.Update(&node)
+    }
+  }
+
   return nil
 }
 
