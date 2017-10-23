@@ -23,6 +23,7 @@ import threading
 import time
 import traceback
 import uuid
+import yaml
 
 
 LOGGER = logging.getLogger(__name__)
@@ -37,13 +38,14 @@ OP_DELETE_CLUSTER = 'delete_cluster'
 
 MAX_HOST_NAME_LENGTH = 25 - 4
 
-SAMPLE_CONFIG = {
+SAMPLE_CONFIG = {'broker': {
     'type': 'default',
     'org': 'Admin',
     'vdc': 'Catalog',
     'catalog': 'cse',
     'network': 'admin_network',
     'ip_allocation_mode': 'pool',
+    'labels': ['photon', '1.0'],
     'source_ova_name': 'photon-custom-hw11-1.0-62c543d.ova',
     'source_ova': 'https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova',
     'sha1_ova': '18c1a6d31545b757d897c61a0c3cc0e54d8aeeba',
@@ -58,10 +60,14 @@ SAMPLE_CONFIG = {
     'node_cpu': 2,
     'node_mem': 2048,
     'cse_msg_dir': '/tmp/cse'
-}  # NOQA
+}}  # NOQA
 
 
 def get_sample_broker_config():
+    return yaml.safe_dump(SAMPLE_CONFIG, default_flow_style=False)
+
+
+def get_sample_broker_config_old():
     cfg = ''
     for k, v in SAMPLE_CONFIG.items():
         cfg += '    %s: ' % k
@@ -73,11 +79,11 @@ def get_sample_broker_config():
 
 
 def validate_broker_config(config):
-    for k, v in SAMPLE_CONFIG.items():
+    for k, v in SAMPLE_CONFIG['broker'].items():
         if k not in config.keys():
             raise Exception('missing key: %s' % k)
     for k, v in config.items():
-        if k not in SAMPLE_CONFIG.keys():
+        if k not in SAMPLE_CONFIG['broker'].keys():
             raise Exception('invalid key: %s' % k)
 
 

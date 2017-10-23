@@ -27,44 +27,55 @@ import yaml
 LOGGER = logging.getLogger(__name__)
 BUF_SIZE = 65536
 
+SAMPLE_AMQP_CONFIG = {'amqp': {
+    'host': 'amqp.vmware.com',
+    'port': 5672,
+    'username': 'guest',
+    'password': 'guest',
+    'exchange': 'vcdext',
+    'routing_key': 'cse',
+    'ssl': True
+    }}
+
+
+SAMPLE_VCD_CONFIG = {'vcd': {
+    'host': 'vcd.vmware.com',
+    'port': 443,
+    'username': 'administrator',
+    'password': 'my_secret_password',
+    'api_version': '29.0',
+    'verify': False,
+    'log': True
+    }}
+
+
+SAMPLE_VCS_CONFIG = {'vcs': {
+    'host': 'vcs.vmware.com',
+    'port': 443,
+    'username': 'administrator@vsphere.local',
+    'password': 'my_secret_password',
+    'verify': False
+    }}
+
+
+SAMPLE_SERVICE_CONFIG = {'service': {
+    'listeners': 2,
+    'logging_level': 5,
+    'logging_format': '%(levelname) -8s %(asctime)s %(name) -40s %(funcName) -35s %(lineno) -5d: %(message)s',
+    }}
+
 
 def generate_sample_config():
-    sample_config = """
-amqp:
-    host: amqp.vmware.com
-    port: 5672
-    user: 'guest'
-    password: 'guest'
-    exchange: vcdext
-    routing_key: cse
-    ssl: True
+    sample_config = yaml.safe_dump(SAMPLE_AMQP_CONFIG,
+                                   default_flow_style=False) + '\n'
+    sample_config += yaml.safe_dump(SAMPLE_VCD_CONFIG,
+                                   default_flow_style=False) + '\n'
+    sample_config += yaml.safe_dump(SAMPLE_VCS_CONFIG,
+                                   default_flow_style=False) + '\n'
+    sample_config += yaml.safe_dump(SAMPLE_SERVICE_CONFIG,
+                                   default_flow_style=False) + '\n'
+    sample_config += get_sample_broker_config()
 
-vcd:
-    host: vcd.vmware.com
-    port: 443
-    username: 'administrator'
-    password: 'my_secret_password'
-    api_version: '29.0'
-    verify: False
-    log: True
-
-vcs:
-    host: vcenter.vmware.com
-    port: 443
-    username: 'administrator@vsphere.local'
-    password: 'my_secret_password'
-    verify: False
-
-service:
-    listeners: 2
-    logging_level: 5
-    logging_format: '{logging_format}'
-
-broker:
-{broker_config}
-
-    """.format(logging_format='%(levelname) -8s %(asctime)s %(name) -40s %(funcName) -35s %(lineno) -5d: %(message)s',
-               broker_config=get_sample_broker_config())  # NOQA
     return sample_config.strip() + '\n'
 
 
@@ -92,7 +103,7 @@ def check_config(file_name):
     config = get_config(file_name)
     validate_broker_config(config['broker'])
     amqp = config['amqp']
-    credentials = pika.PlainCredentials(amqp['user'], amqp['password'])
+    credentials = pika.PlainCredentials(amqp['username'], amqp['password'])
     parameters = pika.ConnectionParameters(amqp['host'], amqp['port'],
                                            '/',
                                            credentials,

@@ -71,7 +71,7 @@ class Service(object):
                     scheme = 'amqp'
                 c = MessageConsumer('%s://%s:%s@%s:%s/?socket_timeout=5' %
                                     (scheme,
-                                     amqp['user'],
+                                     amqp['username'],
                                      amqp['password'],
                                      amqp['host'],
                                      amqp['port']),

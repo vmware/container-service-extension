@@ -115,7 +115,7 @@ Updated AMQP configuration.
 Using `vcd-cli`, register the extension in vCloud Director.
 
 ```shell
-$ vcd system extension register cse cse cse vcdext '/api/cluster, /api/cluster/.*, /api/cluster/.*/.*'
+$ vcd system extension create cse cse cse vcdext '/api/cluster, /api/cluster/.*, /api/cluster/.*/.*'
 
 Extension registered.
 ```
