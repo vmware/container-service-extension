@@ -225,7 +225,7 @@ $ kubectl apply -n sock-shop -f "https://github.com/microservices-demo/microserv
 $ kubectl get pods --namespace sock-shop
 
 # access the application
-$ IP=`vcd cluster list|grep c2|cut -f 1 -d ' '`
+$ IP=`vcd cluster list|grep '\ c2'|cut -f 1 -d ' '`
 $ open "http://${IP}:30001"
 
 # delete cluster when no longer needed
@@ -234,9 +234,10 @@ $ vcd cluster delete c2
 
 ### Versions
 
-|Release Date|CSE|vCD|OS|Kubernetes|Pod Network|
-|----------|---|---|--|----------|-----------|
-|2017-10-03|0.1.1|9.0|Photon OS 1.0, Rev 2|1.7.7|Weave 2.0.4|
+|Release Date|CSE  |vCD|OS                  |Kubernetes|Pod Network|
+|------------|-----|---|--------------------|----------|-----------|
+|2017-10-03  |0.1.1|9.0|Photon OS 1.0, Rev 2|1.7.7     |Weave 2.0.4|
+|2017-11-10  |0.1.2|9.0|Ubuntu 16.04.3 LTS  |1.8.2     |Weave 2.0.5|
 
 ### Appendix
 
