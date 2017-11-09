@@ -250,14 +250,18 @@ $ vcd cluster delete c2
 ### Versions
 
 #### CSE 0.1.2
+
 Release date: 2017-11-10
+
 |vCD|OS                  |Kubernetes|Pod Network|
 |---|--------------------|----------|-----------|
 |9.0|Photon OS 1.0, Rev 2|1.7.7     |Weave 2.0.5|
 |9.0|Ubuntu 16.04.3 LTS  |1.8.2     |Weave 2.0.5|
 
 #### CSE 0.1.1
+
 Release date: 2017-10-03
+
 |vCD|OS                  |Kubernetes|Pod Network|
 |---|--------------------|----------|-----------|
 |9.0|Photon OS 1.0, Rev 2|1.7.7     |Weave 2.0.4|
