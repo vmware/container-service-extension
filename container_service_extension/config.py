@@ -398,6 +398,10 @@ chage -I -1 -m 0 -M -1 -E -1 root
 """
     else:
         cust_script = None
+    if config['broker']['master_template_disk'] == 0:
+        disk_size = None
+    else:
+        disk_size = config['broker']['master_template_disk']
     vapp_resource = vdc.instantiate_vapp(
         vapp_name,
         catalog.get('name'),
@@ -409,7 +413,7 @@ chage -I -1 -m 0 -M -1 -E -1 root
         power_on=True,
         memory=config['broker']['master_mem'],
         cpu=config['broker']['master_cpu'],
-        disk_size=config['broker']['master_template_disk'],
+        disk_size=disk_size,
         password=None,
         cust_script=cust_script
         )
@@ -474,11 +478,11 @@ EOF
 /usr/bin/docker pull gcr.io/google_containers/pause-amd64:3.0
 # /usr/bin/docker pull quay.io/coreos/flannel:v0.9.0-amd64
 
-/usr/bin/docker pull weaveworks/weave-npc:2.0.4
-/usr/bin/docker pull weaveworks/weave-kube:2.0.4
+/usr/bin/docker pull weaveworks/weave-npc:2.0.5
+/usr/bin/docker pull weaveworks/weave-kube:2.0.5
 
 export kubever=$(/usr/bin/kubectl version | /usr/bin/base64 | /usr/bin/tr -d '\n')
-/usr/bin/wget -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever"
+/usr/bin/wget -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&version=2.0.5"
 
 # /usr/bin/wget https://raw.githubusercontent.com/coreos/flannel/v0.9.0/Documentation/kube-flannel.yml
 
@@ -534,7 +538,7 @@ EOF
 /usr/bin/docker pull weaveworks/weaveexec:2.0.5
 
 export kubever=$(/usr/bin/kubectl version --client | /usr/bin/base64 | /usr/bin/tr -d '\n')
-/usr/bin/wget -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever"
+/usr/bin/wget -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&version=2.0.5"
 
 /usr/bin/curl -L git.io/weave -o /usr/local/bin/weave
 /bin/chmod a+x /usr/local/bin/weave

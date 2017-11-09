@@ -38,7 +38,7 @@ OP_DELETE_CLUSTER = 'delete_cluster'
 
 MAX_HOST_NAME_LENGTH = 25 - 4
 
-SAMPLE_CONFIG = {'broker': {
+SAMPLE_CONFIG_PHOTON = {'broker': {
     'type': 'default',
     'org': 'Admin',
     'vdc': 'Catalog',
@@ -49,10 +49,10 @@ SAMPLE_CONFIG = {'broker': {
     'source_ova_name': 'photon-custom-hw11-1.0-62c543d.ova',
     'source_ova': 'https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova',
     'sha1_ova': '18c1a6d31545b757d897c61a0c3cc0e54d8aeeba',
-    'temp_vapp': 'csetmp',
+    'temp_vapp': 'csetmp-p',
     'cleanup': True,
     'master_template': 'k8s-p.ova',
-    'master_template_disk': 20000,
+    'master_template_disk': 0,
     'node_template': 'k8s-p.ova',
     'password': 'root_secret_password',
     'ssh_public_key': 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0brDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse',
@@ -63,20 +63,35 @@ SAMPLE_CONFIG = {'broker': {
     'cse_msg_dir': '/tmp/cse'
 }}  # NOQA
 
+SAMPLE_CONFIG_UBUNTU = {'broker': {
+    'type': 'default',
+    'org': 'Admin',
+    'vdc': 'Catalog',
+    'catalog': 'cse',
+    'network': 'admin_network',
+    'ip_allocation_mode': 'pool',
+    'labels': ['ubuntu', '16.04'],
+    'source_ova_name': 'xenial-server-cloudimg-amd64.ova',
+    'source_ova': 'https://cloud-images.ubuntu.com/xenial/20171025/xenial-server-cloudimg-amd64.ova',
+    'sha1_ova': 'ffbc85309a9dc12376449e1f9359538a3edae196',
+    'temp_vapp': 'csetmp-u',
+    'cleanup': True,
+    'master_template': 'k8s-u.ova',
+    'master_template_disk': 20000,
+    'node_template': 'k8s-u.ova',
+    'password': 'root_secret_password',
+    'ssh_public_key': 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0brDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse',
+    'master_cpu': 2,
+    'master_mem': 2048,
+    'node_cpu': 2,
+    'node_mem': 2048,
+    'cse_msg_dir': '/tmp/cse'
+}}  # NOQA
+
+SAMPLE_CONFIG = SAMPLE_CONFIG_UBUNTU
 
 def get_sample_broker_config():
     return yaml.safe_dump(SAMPLE_CONFIG, default_flow_style=False)
-
-
-def get_sample_broker_config_old():
-    cfg = ''
-    for k, v in SAMPLE_CONFIG.items():
-        cfg += '    %s: ' % k
-        if type(v) in [int, bool]:
-            cfg +='%s\n' % v
-        else:
-            cfg +='\'%s\'\n' % v
-    return cfg
 
 
 def validate_broker_config(config):
@@ -95,12 +110,6 @@ def get_new_broker(config):
         return None
 
 
-def spinning_cursor():
-    while True:
-        for cursor in '|/-\\':
-            yield cursor
-
-
 def wait_until_ready(vs, vm, password, file='/proc/version'):
     while True:
         try:
@@ -109,27 +118,6 @@ def wait_until_ready(vs, vm, password, file='/proc/version'):
                 'root',
                 password,
                 file)
-            LOGGER.debug('vm %s is ready' % vm)
-            return
-        except:
-            LOGGER.error(traceback.format_exc())
-            LOGGER.debug('waiting for vm %s to be ready' % vm)
-            time.sleep(1)
-
-
-def wait_until_ready_2(vs, vm, password, command='/usr/bin/uname'):
-    while True:
-        try:
-            print(vs)
-            print(vm)
-            print(password)
-            # print(command)
-            f = vs.download_file_from_guest(
-                vm,
-                'root',
-                password,
-                '/var/run/vm-is-ready')
-            print(f)
             LOGGER.debug('vm %s is ready' % vm)
             return
         except:
@@ -148,29 +136,15 @@ def wait_until_tools_ready(vm):
             LOGGER.debug('waiting for vm tools %s to be ready (%s)' % (vm, status))
             time.sleep(1)
         except:
-            LOGGER.debug('waiting for vm tools %s to be ready (%s)' % (vm, status))
+            LOGGER.debug('waiting for vm tools %s to be ready (%s)* ' % (vm, status))
             time.sleep(1)
 
-def wait_until_ready_old(vs, vm, password, command='/usr/bin/uname'):
+
+def spinning_cursor():
     while True:
-        try:
-            print(vs)
-            print(vm)
-            print(password)
-            print(command)
-            vs.execute_program_in_guest(
-                vm,
-                'root',
-                password,
-                command,
-                '',
-                wait_for_completion=True)
-            LOGGER.debug('vm %s is ready' % vm)
-            return
-        except:
-            LOGGER.error(traceback.format_exc())
-            LOGGER.debug('waiting for vm %s to be ready' % vm)
-            time.sleep(1)
+        for cursor in '|/-\\':
+            yield cursor
+
 
 spinner = spinning_cursor()
 
@@ -370,17 +344,6 @@ class DefaultBroker(threading.Thread):
                 cmd_prefix = '/bin/'
             else:
                 cmd_prefix = '/bin/'
-
-
-#             cust_script = """
-# #!/bin/bash
-# if [ x$1=x"postcustomization" ];
-# then
-# {cmd_prefix}echo -e "Created by CSE on {date}\n" > /var/run/vm-is-ready
-# fi
-#             """.format(cmd_prefix=cmd_prefix,
-#                        date=str(datetime.datetime.now()))
-
             masters = []
             for n in range(master_count):
                 time.sleep(1)
@@ -731,25 +694,6 @@ class DefaultBroker(threading.Thread):
             LOGGER.error(message)
             raise Exception(message)
         LOGGER.debug('ip configured in all nodes')
-        if 'photon' in self.config['broker']['labels']:
-            pass
-        elif 'ubuntu' in self.config['broker']['labels']:
-            pass
-            # self.t = task.update(
-            #     TaskStatus.SUCCESS.value,
-            #     'vcloud.cse',
-            #     self.op,
-            #     'create cluster',
-            #     '',
-            #     None,
-            #     'urn:cse:cluster:%s' % self.cluster_id,
-            #     cluster_name,
-            #     'application/vcloud.cse.cluster+xml',
-            #     self.tenant_info['user_id'],
-            #     self.tenant_info['user_name'],
-            #     org_href=self.tenant_info['org_href'],
-            #     task_href=self.t.get('href'))
-            # return
         master_node = None
         password = self.config['broker']['password']
         for node in nodes:
@@ -779,15 +723,9 @@ class DefaultBroker(threading.Thread):
                 cmd_prefix = '/bin/'
             else:
                 cmd_prefix = '/bin/'
-            # print('******** 1')
-            # wait_until_ready(vs, vm, node['password'], command=cmd_prefix+'uname')
-            # print('******** 2')
-            # print(vm.guest.toolsRunningStatus)
             wait_until_tools_ready(vm)
-            # print(vm.guest.toolsRunningStatus)
             while True:
                 try:
-                    # print('******** 2.5')
                     vs.execute_program_in_guest(
                         vm,
                         'root',
@@ -799,12 +737,9 @@ class DefaultBroker(threading.Thread):
                     time.sleep(2)
                     break
                 except:
-                    # print('******** 2.6')
                     LOGGER.error(traceback.format_exc())
                     time.sleep(1)
-            # print('******** 3')
             wait_until_ready(vs, vm, password)
-            # print('******** 4')
             if node['node_type'] == TYPE_MASTER:
                 if 'photon' in self.config['broker']['labels']:
                     cust_script = """
@@ -858,8 +793,6 @@ class DefaultBroker(threading.Thread):
                             '/tmp/kubeadm-init.out'
                             )
                 content = response.content.decode('utf-8')
-                # print('******** 5')
-                # print(content)
                 if len(content) == 0:
                     raise Exception('Failed executing "kubeadm init"')
                 try:
