@@ -80,4 +80,4 @@ When opening a new issue, try to roughly follow the commit message format conven
 
 ## Repository Structure
 
-The *container-service-extension* Python module is located under `cse`.
+The *container-service-extension* Python module is located under the repository's root directory.

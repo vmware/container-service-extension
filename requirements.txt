@@ -1,2 +1,4 @@
 pika >= 0.10.0
-vcd-cli >= 19.2.1.dev3
+vsphere-guest-run
+pyvcloud >= 18.2.1.dev16
+vcd-cli >= 19.2.2.dev22

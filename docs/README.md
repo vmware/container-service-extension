@@ -44,19 +44,28 @@ Edit file `config.yaml` with the values for your vCloud Director installation. T
 |Group|Property|Value|
 |-----|--------|-----|
 |`broker`|||
+||`type`|Broker type, set to `default`|
 ||`org`|vCD organization that contains the shared catalog where the master templates will be stored|
 ||`vdc`|Virtual datacenter within `org` that will be used during the install process to build the template|
 ||`network`|Org Network within `vdc` that will be used during the install process to build the template. It should have outbound access to the public Internet. The `CSE` appliance doesn't need to be connected to this network|
 ||`ip_allocation_mode`|IP allocation mode to be used during the install process to build the template. Possible values are `dhcp` or `pool`. During creation of clusters for tenants, `pool` IP allocation mode is always used|
 ||`catalog`|Catalog within `org` where the template will be published|
+||`labels`|Identifies the type of image. It can have multiple values like: `photon`, `1.0`, `ubuntu`, `16.04`|
+||`source_ova`|URL of the source OVA to download|
+||`sha1_ova`|sha1 of the source OVA|
+||`source_ova_name`|Name of the source OVA in the catalog|
 ||`temp_vapp`|Name of the temporary vApp used to build the template. Once the template is created, this vApp can be deleted|
 ||`cleanup`|If `True`, `temp_vapp` will be deleted by the install process after the master template is created|
+||`master_template`|Name of the template for master nodes|
+||`master_template_disk`|Size in MB of the primary disk of the master. Set to `0` to use the default in the source OVA|
+||`node_template`|It should be the same as `master_template`|
 ||`password`|`root` password for the template and instantiated VMs. This password should not be shared with tenants|
+||`ssh_public_key`|A SSH public key that can be used by the administrator to SSH into the nodes as `root`|
 ||`master_cpu`|Number of virtual CPUs to be allocated for each Kubernetes master VM|
 ||`master_mem`|Memory in MB to be allocated for each Kubernetes master VM|
 ||`node_cpu`|Number of virtual CPUs to be allocated for each Kubernetes master VM|
 ||`node_mem`|Memory in MB to be allocated for each Kubernetes node VM|
-
+||`cse_msg_dir`|A working directory for communication with master VMs, it should contain two subdirectories: `req` and `res`|
 
 
 #### 3. Install the extension.
@@ -65,6 +74,12 @@ The installation will take a few minutes. Use the command below:
 
 ```shell
 $ cse install config.yaml
+```
+
+The `install` command will generate the template required to run the service. If you need to delete the template to generate a new one, or to uninstall the extension, run the `uninstall` command:
+
+```shell
+$ cse uninstall config.yaml
 ```
 
 #### 4. Configure vCloud Director.
@@ -225,7 +240,7 @@ $ kubectl apply -n sock-shop -f "https://github.com/microservices-demo/microserv
 $ kubectl get pods --namespace sock-shop
 
 # access the application
-$ IP=`vcd cluster list|grep c2|cut -f 1 -d ' '`
+$ IP=`vcd cluster list|grep '\ c2'|cut -f 1 -d ' '`
 $ open "http://${IP}:30001"
 
 # delete cluster when no longer needed
@@ -234,9 +249,19 @@ $ vcd cluster delete c2
 
 ### Versions
 
-|Release Date|CSE|vCD|OS|Kubernetes|Pod Network|
-|----------|---|---|--|----------|-----------|
-|2017-10-03|0.1.1|9.0|Photon OS 1.0, Rev 2|1.7.7|Weave 2.0.4|
+#### CSE 0.1.2
+Release date: 2017-11-10
+|vCD|OS                  |Kubernetes|Pod Network|
+|---|--------------------|----------|-----------|
+|9.0|Photon OS 1.0, Rev 2|1.7.7     |Weave 2.0.5|
+|9.0|Ubuntu 16.04.3 LTS  |1.8.2     |Weave 2.0.5|
+
+#### CSE 0.1.1
+Release date: 2017-10-03
+|vCD|OS                  |Kubernetes|Pod Network|
+|---|--------------------|----------|-----------|
+|9.0|Photon OS 1.0, Rev 2|1.7.7     |Weave 2.0.4|
+
 
 ### Appendix
 
