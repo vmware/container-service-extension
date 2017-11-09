@@ -1,10 +1,12 @@
 CHANGES
 =======
 
-* ubuntu-template
-* develop
-* delete
-* serial
+0.1.2
+-----
+
+* docs
+* ubuntu template
+* ubuntu
 * config
 * pv
 * optional-pv
