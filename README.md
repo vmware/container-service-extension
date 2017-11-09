@@ -1,6 +1,6 @@
 # container-service-extension
 
-[![License](https://img.shields.io/pypi/l/container-service-extension.svg)]() [![Stable Version](https://img.shields.io/pypi/v/container-service-extension.svg)](https://pypi.python.org/pypi/container-service-extension) [![Join the chat at https://gitter.im/container-service-extension/Lobby](https://badges.gitter.im/container-service-extension/Lobby.svg)](https://gitter.im/container-service-extension/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![License](https://img.shields.io/pypi/l/container-service-extension.svg)](https://pypi.python.org/pypi/container-service-extension) [![Stable Version](https://img.shields.io/pypi/v/container-service-extension.svg)](https://pypi.python.org/pypi/container-service-extension) [![Join the chat at https://gitter.im/container-service-extension/Lobby](https://badges.gitter.im/container-service-extension/Lobby.svg)](https://gitter.im/container-service-extension/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 [![asciicast](https://asciinema.org/a/135505.png)](https://asciinema.org/a/135505)
 
