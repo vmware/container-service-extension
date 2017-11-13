@@ -211,14 +211,14 @@ The virtual machines (master and nodes) will be provisioned on the tenant virtua
 The `CSE` service doesn't need a network connection to the tenant virtual datacenters.
 
 ```shell
-# create cluster c1 with one master and two nodes
-$ vcd cluster create c2
+# create cluster c1 with one master and two nodes, connected to provided network
+$ vcd cluster create c2 --network intranet
 
 # create cluster c3 with one master, three nodes and connected to provided network
-$ vcd cluster create c3 --nodes 3 --network intranet
+$ vcd cluster create c3 --network intranet --nodes 3
 
-# create a single node cluster
-$ vcd cluster create c0 --nodes 0
+# create a single node cluster, connected to provided network
+$ vcd cluster create c0 --network intranet --nodes 0
 
 # list available clusters
 $ vcd cluster list

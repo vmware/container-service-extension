@@ -415,7 +415,10 @@ chage -I -1 -m 0 -M -1 -E -1 root
         cpu=config['broker']['master_cpu'],
         disk_size=disk_size,
         password=None,
-        cust_script=cust_script
+        cust_script=cust_script,
+        accept_all_eulas=True,
+        vm_name=vapp_name,
+        hostname=vapp_name
         )
     stdout(vapp_resource.Tasks.Task[0], ctx)
     ip = None

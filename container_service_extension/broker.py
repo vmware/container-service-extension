@@ -71,9 +71,9 @@ SAMPLE_CONFIG_UBUNTU = {'broker': {
     'network': 'admin_network',
     'ip_allocation_mode': 'pool',
     'labels': ['ubuntu', '16.04'],
-    'source_ova_name': 'xenial-server-cloudimg-amd64.ova',
-    'source_ova': 'https://cloud-images.ubuntu.com/xenial/20171025/xenial-server-cloudimg-amd64.ova',
-    'sha1_ova': 'ffbc85309a9dc12376449e1f9359538a3edae196',
+    'source_ova_name': 'ubuntu-16.04-server-cloudimg-amd64.ova',
+    'source_ova': 'https://cloud-images.ubuntu.com/releases/xenial/release-20171011/ubuntu-16.04-server-cloudimg-amd64.ova',
+    'sha1_ova': '1bddf68820c717e13c6d1acd800fb7b4d197b411',
     'temp_vapp': 'csetmp-u',
     'cleanup': True,
     'master_template': 'k8s-u.ova',
@@ -298,7 +298,7 @@ class DefaultBroker(threading.Thread):
 
     def create_cluster_thread(self):
         cluster_name = self.body['name']
-        network_name = None
+        network_name = self.body['network']
 
         task = Task(self.client_sysadmin)
         try:
@@ -362,16 +362,20 @@ class DefaultBroker(threading.Thread):
                     self.tenant_info['user_name'],
                     org_href=self.tenant_info['org_href'],
                     task_href=self.t.get('href'))
-                vapp_resource = vdc.instantiate_vapp(name,
-                                                    catalog,
-                                                    master_template,
-                                                    memory=master_mem,
-                                                    cpu=master_cpu,
-                                                    network=network_name,
-                                                    deploy=True,
-                                                    power_on=True,
-                                                    cust_script=None,
-                                                    ip_allocation_mode='pool')
+                vapp_resource = vdc.instantiate_vapp(
+                    name,
+                    catalog,
+                    master_template,
+                    memory=master_mem,
+                    cpu=master_cpu,
+                    network=network_name,
+                    deploy=True,
+                    power_on=True,
+                    cust_script=None,
+                    ip_allocation_mode='pool',
+                    accept_all_eulas=True,
+                    vm_name=name,
+                    hostname=name)
                 t = self.client_tenant.get_task_monitor().wait_for_status(
                                     task=vapp_resource.Tasks.Task[0],
                                     timeout=60,
@@ -402,16 +406,20 @@ class DefaultBroker(threading.Thread):
                     self.tenant_info['user_name'],
                     org_href=self.tenant_info['org_href'],
                     task_href=self.t.get('href'))
-                vapp_resource = vdc.instantiate_vapp(name,
-                                                  catalog,
-                                                  node_template,
-                                                  memory=node_mem,
-                                                  cpu=node_cpu,
-                                                  network=network_name,
-                                                  deploy=True,
-                                                  power_on=True,
-                                                  cust_script=None,
-                                                  ip_allocation_mode='pool')
+                vapp_resource = vdc.instantiate_vapp(
+                    name,
+                    catalog,
+                    node_template,
+                    memory=node_mem,
+                    cpu=node_cpu,
+                    network=network_name,
+                    deploy=True,
+                    power_on=True,
+                    cust_script=None,
+                    ip_allocation_mode='pool',
+                    accept_all_eulas=True,
+                    vm_name=name,
+                    hostname=name)
                 t = self.client_tenant.get_task_monitor().wait_for_status(
                                     task=vapp_resource.Tasks.Task[0],
                                     timeout=60,
@@ -439,7 +447,6 @@ class DefaultBroker(threading.Thread):
                             node = n
                             node_type = TYPE_NODE
                             break
-                # time.sleep(5)
                 if node is not None:
                     LOGGER.debug('about to tag %s, href=%s',
                                  node.get('name'),
@@ -485,8 +492,7 @@ class DefaultBroker(threading.Thread):
                             'can''t tag %s at this moment, will retry later',
                             node.get('name'))
                         LOGGER.error(traceback.format_exc())
-                        time.sleep(1)
-            # time.sleep(5)
+                        time.sleep(5)
             self.customize_nodes()
         except Exception as e:
             LOGGER.error(traceback.format_exc())

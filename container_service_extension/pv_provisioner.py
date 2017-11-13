@@ -49,4 +49,5 @@ class PVProvisioner(threading.Thread):
             'PVName': request_msg['PVName'],
             'Node': self.nodes[next_node]
         }
+        print(json.dumps(response_msg))
         return response_msg
