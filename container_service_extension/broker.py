@@ -45,6 +45,7 @@ SAMPLE_CONFIG_PHOTON = {'broker': {
     'catalog': 'cse',
     'network': 'admin_network',
     'ip_allocation_mode': 'pool',
+    'storage_profile': '*',
     'labels': ['photon', '1.0'],
     'source_ova_name': 'photon-custom-hw11-1.0-62c543d.ova',
     'source_ova': 'https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova',
@@ -70,6 +71,7 @@ SAMPLE_CONFIG_UBUNTU = {'broker': {
     'catalog': 'cse',
     'network': 'admin_network',
     'ip_allocation_mode': 'pool',
+    'storage_profile': '*',
     'labels': ['ubuntu', '16.04'],
     'source_ova_name': 'ubuntu-16.04-server-cloudimg-amd64.ova',
     'source_ova': 'https://cloud-images.ubuntu.com/releases/xenial/release-20171011/ubuntu-16.04-server-cloudimg-amd64.ova',
@@ -253,10 +255,11 @@ class DefaultBroker(threading.Thread):
         cluster_name = body['name']
         vdc_name = body['vdc']
         node_count = body['node_count']
-        LOGGER.debug('about to create cluster %s on %s with %s nodes',
+        LOGGER.debug('about to create cluster %s on %s with %s nodes, sp=%s',
                      cluster_name,
                      vdc_name,
-                     node_count)
+                     node_count,
+                     body['storage_profile'])
         result['body'] = {'message': 'can\'t create cluster'}
         result['status_code'] = INTERNAL_SERVER_ERROR
         try:
@@ -335,6 +338,7 @@ class DefaultBroker(threading.Thread):
             master_mem = self.config['broker']['master_mem']
             node_cpu = self.config['broker']['node_cpu']
             node_mem = self.config['broker']['node_mem']
+            storage_profile = self.body['storage_profile']
 
             vdc = VDC(self.client_tenant, resource=vdc_resource)
 
@@ -375,7 +379,8 @@ class DefaultBroker(threading.Thread):
                     ip_allocation_mode='pool',
                     accept_all_eulas=True,
                     vm_name=name,
-                    hostname=name)
+                    hostname=name,
+                    storage_profile=storage_profile)
                 t = self.client_tenant.get_task_monitor().wait_for_status(
                                     task=vapp_resource.Tasks.Task[0],
                                     timeout=60,
@@ -419,7 +424,8 @@ class DefaultBroker(threading.Thread):
                     ip_allocation_mode='pool',
                     accept_all_eulas=True,
                     vm_name=name,
-                    hostname=name)
+                    hostname=name,
+                    storage_profile=storage_profile)
                 t = self.client_tenant.get_task_monitor().wait_for_status(
                                     task=vapp_resource.Tasks.Task[0],
                                     timeout=60,

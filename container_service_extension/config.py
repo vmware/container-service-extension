@@ -418,8 +418,8 @@ chage -I -1 -m 0 -M -1 -E -1 root
         cust_script=cust_script,
         accept_all_eulas=True,
         vm_name=vapp_name,
-        hostname=vapp_name
-        )
+        hostname=vapp_name,
+        storage_profile=config['broker']['storage_profile'])
     stdout(vapp_resource.Tasks.Task[0], ctx)
     ip = None
     password_auto = None
