@@ -513,7 +513,7 @@ EOF
 /usr/bin/apt-get install -y docker.io=1.12.6-0ubuntu1~16.04.1
 /usr/bin/apt-get install -y kubelet=1.8.2-00 kubeadm=1.8.2-00 kubectl=1.8.2-00 kubernetes-cni=0.5.1-00 --allow-unauthenticated
 /usr/bin/apt-get autoremove -y
-/bin/echo -e "n\n\n\n\n\nw" | /sbin/fdisk /dev/sda
+/bin/echo -e 'n\n\n\n\n\nw' | /sbin/fdisk /dev/sda
 /sbin/partprobe /dev/sda
 /sbin/mkfs -t ext4 /dev/sda2
 mkdir /mnt/docker-data
