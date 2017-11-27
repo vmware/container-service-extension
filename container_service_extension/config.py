@@ -20,6 +20,7 @@ from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vsphere import VSphere
 import requests
 import time
+import traceback
 from vcd_cli.utils import stdout
 import yaml
 
@@ -437,6 +438,8 @@ chage -I -1 -m 0 -M -1 -E -1 root
                vm_moid is not None:
                 break
         except Exception:
+            LOGGER.debug('waiting for template vm to be ready')
+            LOGGER.debug(traceback.format_exc())
             pass
     click.secho(ip, fg='blue')
     click.secho('Customizing template, please wait...', nl=False, fg='green')
