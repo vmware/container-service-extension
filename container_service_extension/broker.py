@@ -390,12 +390,6 @@ class DefaultBroker(threading.Thread):
 
             vdc = VDC(self.client_tenant, resource=vdc_resource)
 
-            # if 'photon' in self.config['broker']['labels']:
-            #     cmd_prefix = '/usr/bin/'
-            # elif 'ubuntu' in self.config['broker']['labels']:
-            #     cmd_prefix = '/bin/'
-            # else:
-            #     cmd_prefix = '/bin/'
             masters = []
             for n in range(master_count):
                 time.sleep(1)
