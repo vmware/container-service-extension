@@ -24,57 +24,64 @@ import traceback
 from vcd_cli.utils import stdout
 import yaml
 
-
 LOGGER = logging.getLogger(__name__)
 BUF_SIZE = 65536
 
-SAMPLE_AMQP_CONFIG = {'amqp': {
-    'host': 'amqp.vmware.com',
-    'port': 5672,
-    'username': 'guest',
-    'password': 'guest',
-    'exchange': 'vcdext',
-    'routing_key': 'cse',
-    'ssl': False
-    }}
+SAMPLE_AMQP_CONFIG = {
+    'amqp': {
+        'host': 'amqp.vmware.com',
+        'port': 5672,
+        'username': 'guest',
+        'password': 'guest',
+        'exchange': 'vcdext',
+        'routing_key': 'cse',
+        'ssl': False
+    }
+}
 
+SAMPLE_VCD_CONFIG = {
+    'vcd': {
+        'host': 'vcd.vmware.com',
+        'port': 443,
+        'username': 'administrator',
+        'password': 'my_secret_password',
+        'api_version': '29.0',
+        'verify': False,
+        'log': True
+    }
+}
 
-SAMPLE_VCD_CONFIG = {'vcd': {
-    'host': 'vcd.vmware.com',
-    'port': 443,
-    'username': 'administrator',
-    'password': 'my_secret_password',
-    'api_version': '29.0',
-    'verify': False,
-    'log': True
-    }}
+SAMPLE_VCS_CONFIG = {
+    'vcs': {
+        'host': 'vcs.vmware.com',
+        'port': 443,
+        'username': 'administrator@vsphere.local',
+        'password': 'my_secret_password',
+        'verify': False
+    }
+}
 
-
-SAMPLE_VCS_CONFIG = {'vcs': {
-    'host': 'vcs.vmware.com',
-    'port': 443,
-    'username': 'administrator@vsphere.local',
-    'password': 'my_secret_password',
-    'verify': False
-    }}
-
-
-SAMPLE_SERVICE_CONFIG = {'service': {
-    'listeners': 2,
-    'logging_level': 5,
-    'logging_format': '%(levelname) -8s %(asctime)s %(name) -40s %(funcName) -35s %(lineno) -5d: %(message)s',
-    }}
+SAMPLE_SERVICE_CONFIG = {
+    'service': {
+        'listeners':
+        2,
+        'logging_level':
+        5,
+        'logging_format':
+        '%(levelname) -8s %(asctime)s %(name) -40s %(funcName) -35s %(lineno) -5d: %(message)s',  # NOQA
+    }
+}
 
 
 def generate_sample_config(labels=[]):
-    sample_config = yaml.safe_dump(SAMPLE_AMQP_CONFIG,
-                                   default_flow_style=False) + '\n'
-    sample_config += yaml.safe_dump(SAMPLE_VCD_CONFIG,
-                                   default_flow_style=False) + '\n'
-    sample_config += yaml.safe_dump(SAMPLE_VCS_CONFIG,
-                                   default_flow_style=False) + '\n'
-    sample_config += yaml.safe_dump(SAMPLE_SERVICE_CONFIG,
-                                   default_flow_style=False) + '\n'
+    sample_config = yaml.safe_dump(
+        SAMPLE_AMQP_CONFIG, default_flow_style=False) + '\n'
+    sample_config += yaml.safe_dump(
+        SAMPLE_VCD_CONFIG, default_flow_style=False) + '\n'
+    sample_config += yaml.safe_dump(
+        SAMPLE_VCS_CONFIG, default_flow_style=False) + '\n'
+    sample_config += yaml.safe_dump(
+        SAMPLE_SERVICE_CONFIG, default_flow_style=False) + '\n'
     sample_config += get_sample_broker_config(labels)
 
     return sample_config.strip() + '\n'
@@ -92,10 +99,13 @@ def get_config(file_name):
     with open(file_name, 'r') as f:
         config = yaml.load(f)
     if not config['vcd']['verify']:
-        click.secho('InsecureRequestWarning: '
-                    'Unverified HTTPS request is being made. '
-                    'Adding certificate verification is strongly '
-                    'advised.', fg='yellow', err=True)
+        click.secho(
+            'InsecureRequestWarning: '
+            'Unverified HTTPS request is being made. '
+            'Adding certificate verification is strongly '
+            'advised.',
+            fg='yellow',
+            err=True)
         requests.packages.urllib3.disable_warnings()
     return config
 
@@ -105,42 +115,42 @@ def check_config(file_name):
     validate_broker_config(config['broker'])
     amqp = config['amqp']
     credentials = pika.PlainCredentials(amqp['username'], amqp['password'])
-    parameters = pika.ConnectionParameters(amqp['host'], amqp['port'],
-                                           '/',
-                                           credentials,
-                                           ssl=amqp['ssl'])
+    parameters = pika.ConnectionParameters(
+        amqp['host'], amqp['port'], '/', credentials, ssl=amqp['ssl'])
     connection = pika.BlockingConnection(parameters)
-    click.echo('Connected to AMQP server (%s:%s): %s' % (amqp['host'],
-               amqp['port'],
-               bool_to_msg(connection.is_open)))
+    click.echo('Connected to AMQP server (%s:%s): %s' %
+               (amqp['host'], amqp['port'], bool_to_msg(connection.is_open)))
     connection.close()
     if not config['vcd']['verify']:
-        click.secho('InsecureRequestWarning: '
-                    'Unverified HTTPS request is being made. '
-                    'Adding certificate verification is strongly '
-                    'advised.', fg='yellow', err=True)
+        click.secho(
+            'InsecureRequestWarning: '
+            'Unverified HTTPS request is being made. '
+            'Adding certificate verification is strongly '
+            'advised.',
+            fg='yellow',
+            err=True)
         requests.packages.urllib3.disable_warnings()
-    client = Client(config['vcd']['host'],
-                    api_version=config['vcd']['api_version'],
-                    verify_ssl_certs=config['vcd']['verify'],
-                    log_file='cse.log',
-                    log_headers=True,
-                    log_bodies=True
-                    )
-    client.set_credentials(BasicLoginCredentials(config['vcd']['username'],
-                                                 'System',
-                                                 config['vcd']['password']))
+    client = Client(
+        config['vcd']['host'],
+        api_version=config['vcd']['api_version'],
+        verify_ssl_certs=config['vcd']['verify'],
+        log_file='cse.log',
+        log_headers=True,
+        log_bodies=True)
+    client.set_credentials(
+        BasicLoginCredentials(config['vcd']['username'], 'System',
+                              config['vcd']['password']))
     click.echo('Connected to vCloud Director as system '
-               'administrator (%s:%s): %s' %
-               (config['vcd']['host'], config['vcd']['port'],
-                bool_to_msg(True)))
+               'administrator (%s:%s): %s' % (config['vcd']['host'],
+                                              config['vcd']['port'],
+                                              bool_to_msg(True)))
 
     if config['broker']['type'] == 'default':
         logged_in_org = client.get_org()
         org = Org(client, resource=logged_in_org)
         org.get_catalog(config['broker']['catalog'])
-        click.echo('Find catalog \'%s\': %s' %
-                   (config['broker']['catalog'], bool_to_msg(True)))
+        click.echo('Find catalog \'%s\': %s' % (config['broker']['catalog'],
+                                                bool_to_msg(True)))
         org.get_catalog_item(config['broker']['catalog'],
                              config['broker']['master_template'])
         click.echo('Find master template \'%s\': %s' %
@@ -150,37 +160,36 @@ def check_config(file_name):
         click.echo('Find node template \'%s\': %s' %
                    (config['broker']['node_template'], bool_to_msg(True)))
 
-    v = VSphere(config['vcs']['host'],
-                config['vcs']['username'],
-                config['vcs']['password'],
-                port=int(config['vcs']['port']))
+    v = VSphere(
+        config['vcs']['host'],
+        config['vcs']['username'],
+        config['vcs']['password'],
+        port=int(config['vcs']['port']))
     v.connect()
     click.echo('Connected to vCenter Server as %s '
-               '(%s:%s): %s' %
-               (config['vcs']['username'],
-                config['vcs']['host'],
-                config['vcs']['port'],
-                bool_to_msg(True)))
+               '(%s:%s): %s' % (config['vcs']['username'],
+                                config['vcs']['host'], config['vcs']['port'],
+                                bool_to_msg(True)))
     return config
 
 
 def uninstall_cse(ctx, file_name):
     click.secho('Uninstalling CSE from vCD from file: %s' % file_name)
     config = get_config(file_name)
-    client = Client(config['vcd']['host'],
-                    api_version=config['vcd']['api_version'],
-                    verify_ssl_certs=config['vcd']['verify'],
-                    log_file='cse.log',
-                    log_headers=True,
-                    log_bodies=True
-                    )
-    client.set_credentials(BasicLoginCredentials(config['vcd']['username'],
-                                                 'System',
-                                                 config['vcd']['password']))
+    client = Client(
+        config['vcd']['host'],
+        api_version=config['vcd']['api_version'],
+        verify_ssl_certs=config['vcd']['verify'],
+        log_file='cse.log',
+        log_headers=True,
+        log_bodies=True)
+    client.set_credentials(
+        BasicLoginCredentials(config['vcd']['username'], 'System',
+                              config['vcd']['password']))
     click.echo('Connected to vCloud Director as system '
-               'administrator (%s:%s): %s' %
-               (config['vcd']['host'], config['vcd']['port'],
-                bool_to_msg(True)))
+               'administrator (%s:%s): %s' % (config['vcd']['host'],
+                                              config['vcd']['port'],
+                                              bool_to_msg(True)))
     ctx.obj = {}
     ctx.obj['client'] = client
     if config['broker']['type'] == 'default':
@@ -192,16 +201,16 @@ def uninstall_cse(ctx, file_name):
             if org.get('name') == config['broker']['org']:
                 org_href = org.get('href')
         org = Org(client, href=org_href)
-        click.echo('Find org \'%s\': %s' %
-                   (org.get_name(), bool_to_msg(True)))
+        click.echo('Find org \'%s\': %s' % (org.get_name(), bool_to_msg(True)))
         vdc_resource = org.get_vdc(config['broker']['vdc'])
-        click.echo('Find vdc \'%s\': %s' %
-                   (vdc_resource.get('name'), bool_to_msg(True)))
+        click.echo('Find vdc \'%s\': %s' % (vdc_resource.get('name'),
+                                            bool_to_msg(True)))
         try:
             vdc = VDC(client, resource=vdc_resource)
             vapp_resource = vdc.get_vapp(vapp_name)
-            click.secho('Deleting vApp template \'%s\' ' % vapp_name,
-                        fg='green')
+            assert vapp_resource is not None
+            click.secho(
+                'Deleting vApp template \'%s\' ' % vapp_name, fg='green')
             task = vdc.delete_vapp(vapp_name, force=True)
             stdout(task, ctx)
         except Exception:
@@ -210,9 +219,12 @@ def uninstall_cse(ctx, file_name):
             master_template = org.get_catalog_item(
                 config['broker']['catalog'],
                 config['broker']['master_template'])
-            click.secho('Deleting master template \'%s\'' %
-                        config['broker']['master_template'],
-                        nl=False, fg='green')
+            assert master_template is not None
+            click.secho(
+                'Deleting master template \'%s\'' %
+                config['broker']['master_template'],
+                nl=False,
+                fg='green')
             org.delete_catalog_item(config['broker']['catalog'],
                                     config['broker']['master_template'])
             click.secho('done', fg='blue')
@@ -224,37 +236,37 @@ def uninstall_cse(ctx, file_name):
 def install_cse(ctx, file_name):
     click.secho('Installing CSE on vCD from file: %s' % file_name)
     config = get_config(file_name)
-    client = Client(config['vcd']['host'],
-                    api_version=config['vcd']['api_version'],
-                    verify_ssl_certs=config['vcd']['verify'],
-                    log_file='cse.log',
-                    log_headers=True,
-                    log_bodies=True
-                    )
-    client.set_credentials(BasicLoginCredentials(config['vcd']['username'],
-                                                 'System',
-                                                 config['vcd']['password']))
+    client = Client(
+        config['vcd']['host'],
+        api_version=config['vcd']['api_version'],
+        verify_ssl_certs=config['vcd']['verify'],
+        log_file='cse.log',
+        log_headers=True,
+        log_bodies=True)
+    client.set_credentials(
+        BasicLoginCredentials(config['vcd']['username'], 'System',
+                              config['vcd']['password']))
     click.echo('Connected to vCloud Director as system '
-               'administrator (%s:%s): %s' %
-               (config['vcd']['host'], config['vcd']['port'],
-                bool_to_msg(True)))
+               'administrator (%s:%s): %s' % (config['vcd']['host'],
+                                              config['vcd']['port'],
+                                              bool_to_msg(True)))
     if config['broker']['type'] == 'default':
         orgs = client.get_org_list()
         for org in [o for o in orgs.Org if hasattr(orgs, 'Org')]:
             if org.get('name') == config['broker']['org']:
                 org_href = org.get('href')
         org = Org(client, href=org_href)
-        click.echo('Find org \'%s\': %s' %
-                   (org.get_name(), bool_to_msg(True)))
+        click.echo('Find org \'%s\': %s' % (org.get_name(), bool_to_msg(True)))
         vdc_resource = org.get_vdc(config['broker']['vdc'])
-        click.echo('Find vdc \'%s\': %s' %
-                   (vdc_resource.get('name'), bool_to_msg(True)))
+        click.echo('Find vdc \'%s\': %s' % (vdc_resource.get('name'),
+                                            bool_to_msg(True)))
         try:
             catalog = org.get_catalog(config['broker']['catalog'])
         except Exception:
-            click.secho('Creating catalog %s ' % config['broker']['catalog'],
-                        nl=False,
-                        fg='green')
+            click.secho(
+                'Creating catalog %s ' % config['broker']['catalog'],
+                nl=False,
+                fg='green')
             catalog = org.create_catalog(config['broker']['catalog'],
                                          'CSE catalog')
             org.share_catalog(config['broker']['catalog'])
@@ -269,13 +281,8 @@ def install_cse(ctx, file_name):
                 config['broker']['catalog'],
                 config['broker']['master_template'])
         except Exception:
-            create_master_template(
-                ctx,
-                config,
-                client,
-                org,
-                vdc_resource,
-                catalog)
+            create_master_template(ctx, config, client, org, vdc_resource,
+                                   catalog)
         try:
             master_template = org.get_catalog_item(
                 config['broker']['catalog'],
@@ -308,8 +315,8 @@ def upload_source_ova(config, client, org, catalog):
     if not os.path.exists(cse_ova_file):
         if not os.path.isdir(cse_cache_dir):
             os.makedirs(cse_cache_dir)
-        click.secho('Downloading %s' % config['broker']['source_ova'],
-                    fg='green')
+        click.secho(
+            'Downloading %s' % config['broker']['source_ova'], fg='green')
         r = requests.get(config['broker']['source_ova'], stream=True)
         with open(cse_ova_file, 'wb') as fd:
             for chunk in r.iter_content(chunk_size=SIZE_1MB):
@@ -317,8 +324,8 @@ def upload_source_ova(config, client, org, catalog):
     if os.path.exists(cse_ova_file):
         sha1 = get_sha1(cse_ova_file)
         assert sha1 == config['broker']['sha1_ova']
-        click.secho('Uploading %s' % config['broker']['source_ova_name'],
-                    fg='green')
+        click.secho(
+            'Uploading %s' % config['broker']['source_ova_name'], fg='green')
         org.upload_ovf(
             config['broker']['catalog'],
             cse_ova_file,
@@ -342,8 +349,7 @@ def create_master_template(ctx, config, client, org, vdc_resource, catalog):
     ctx.obj['client'] = client
     try:
         source_ova_item = org.get_catalog_item(
-            config['broker']['catalog'],
-            config['broker']['source_ova_name'])
+            config['broker']['catalog'], config['broker']['source_ova_name'])
     except Exception:
         source_ova_item = upload_source_ova(config, client, org, catalog)
     click.secho('Find source ova \'%s\': %s' %
@@ -355,9 +361,9 @@ def create_master_template(ctx, config, client, org, vdc_resource, catalog):
     flag = False
     while True:
         q = client.get_typed_query(
-                'adminCatalogItem',
-                query_result_format=QueryResultFormat.ID_RECORDS,
-                qfilter='id==%s' % item_id)
+            'adminCatalogItem',
+            query_result_format=QueryResultFormat.ID_RECORDS,
+            qfilter='id==%s' % item_id)
         records = list(q.execute())
         if records[0].get('status') == 'RESOLVED':
             if flag:
@@ -367,9 +373,8 @@ def create_master_template(ctx, config, client, org, vdc_resource, catalog):
             if flag:
                 click.secho('.', nl=False, fg='green')
             else:
-                click.secho('Waiting for upload to complete...',
-                            nl=False,
-                            fg='green')
+                click.secho(
+                    'Waiting for upload to complete...', nl=False, fg='green')
                 flag = True
             time.sleep(5)
     vdc = VDC(client, resource=vdc_resource)
@@ -396,7 +401,7 @@ chage -I -1 -m 0 -M -1 -E -1 root
 /bin/sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
 /usr/bin/apt-get remove -y cloud-init
 /usr/sbin/dpkg-reconfigure openssh-server
-"""
+"""  # NOQA
     else:
         cust_script = None
     if config['broker']['master_template_disk'] == 0:
@@ -581,18 +586,20 @@ export kubever=$(/usr/bin/kubectl version --client | /usr/bin/base64 | /usr/bin/
     else:
         cust_script = None
     if cust_script is not None:
-        vs = VSphere(config['vcs']['host'],
-                     config['vcs']['username'],
-                     config['vcs']['password'],
-                     port=int(config['vcs']['port']))
+        vs = VSphere(
+            config['vcs']['host'],
+            config['vcs']['username'],
+            config['vcs']['password'],
+            port=int(config['vcs']['port']))
         vs.connect()
         vm = vs.get_vm_by_moid(vm_moid)
         while True:
             try:
-                vs = VSphere(config['vcs']['host'],
-                             config['vcs']['username'],
-                             config['vcs']['password'],
-                             port=int(config['vcs']['port']))
+                vs = VSphere(
+                    config['vcs']['host'],
+                    config['vcs']['username'],
+                    config['vcs']['password'],
+                    port=int(config['vcs']['port']))
                 vs.connect()
                 vm = vs.get_vm_by_moid(vm_moid)
                 vs.execute_program_in_guest(
@@ -603,15 +610,11 @@ export kubever=$(/usr/bin/kubectl version --client | /usr/bin/base64 | /usr/bin/
                     '',
                     wait_for_completion=True)
                 break
-            except:
+            except Exception:
                 click.secho('.', nl=False, fg='yellow')
         click.secho('.', nl=False, fg='green')
-        vs.upload_file_to_guest(
-            vm,
-            'root',
-            password_auto,
-            cust_script,
-            '/tmp/customize.sh')
+        vs.upload_file_to_guest(vm, 'root', password_auto, cust_script,
+                                '/tmp/customize.sh')
         click.secho('.', nl=False, fg='green')
         vs.execute_program_in_guest(
             vm,
@@ -643,9 +646,10 @@ export kubever=$(/usr/bin/kubectl version --client | /usr/bin/base64 | /usr/bin/
 
 def capture_as_template(ctx, config, vapp_resource, org, catalog):
     vapp_name = vapp_resource.get('name')
-    click.secho('Found vApp \'%s\', capturing as template on catalog \'%s\'' %
-                (vapp_name, catalog.get('name')),
-                fg='green')
+    click.secho(
+        'Found vApp \'%s\', capturing as template on catalog \'%s\'' %
+        (vapp_name, catalog.get('name')),
+        fg='green')
     client = ctx.obj['client']
     vapp = VApp(client, href=vapp_resource.get('href'))
     vapp.reload()
@@ -664,8 +668,12 @@ def capture_as_template(ctx, config, vapp_resource, org, catalog):
 
 
 def configure_amqp_settings(client, config):
-    click.secho('See https://vmware.github.io/container-service-extension to configure AMQP settings.')  # NOQA
+    click.secho(
+        'See https://vmware.github.io/container-service-extension to configure AMQP settings.'  # NOQA
+    )
 
 
 def register_extension(client, config):
-    click.secho('See https://vmware.github.io/container-service-extension to register API extension.')  # NOQA
+    click.secho(
+        'See https://vmware.github.io/container-service-extension to register API extension.'  # NOQA
+    )

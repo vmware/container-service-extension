@@ -6,7 +6,6 @@ import click
 from container_service_extension.cluster import load_from_metadata
 from container_service_extension.cluster import TYPE_MASTER
 from container_service_extension.cluster import TYPE_NODE
-import datetime
 import logging
 from pyvcloud.vcd.client import _WellKnownEndpoint
 from pyvcloud.vcd.client import BasicLoginCredentials
@@ -25,7 +24,6 @@ import traceback
 import uuid
 import yaml
 
-
 LOGGER = logging.getLogger(__name__)
 
 OK = 200
@@ -38,59 +36,108 @@ OP_DELETE_CLUSTER = 'delete_cluster'
 
 MAX_HOST_NAME_LENGTH = 25 - 4
 
-SAMPLE_CONFIG_PHOTON = {'broker': {
-    'type': 'default',
-    'org': 'Admin',
-    'vdc': 'Catalog',
-    'catalog': 'cse',
-    'network': 'admin_network',
-    'ip_allocation_mode': 'pool',
-    'storage_profile': '*',
-    'labels': ['photon', '1.0'],
-    'source_ova_name': 'photon-custom-hw11-1.0-62c543d.ova',
-    'source_ova': 'https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova',
-    'sha1_ova': '18c1a6d31545b757d897c61a0c3cc0e54d8aeeba',
-    'temp_vapp': 'csetmp-p',
-    'cleanup': True,
-    'master_template': 'k8s-p.ova',
-    'master_template_disk': 20000,
-    'node_template': 'k8s-p.ova',
-    'password': 'root_secret_password',
-    'ssh_public_key': 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0brDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse',
-    'master_cpu': 2,
-    'master_mem': 2048,
-    'node_cpu': 2,
-    'node_mem': 2048,
-    'cse_msg_dir': '/tmp/cse'
-}}  # NOQA
+SAMPLE_CONFIG_PHOTON = {
+    'broker': {
+        'type':
+        'default',
+        'org':
+        'Admin',
+        'vdc':
+        'Catalog',
+        'catalog':
+        'cse',
+        'network':
+        'admin_network',
+        'ip_allocation_mode':
+        'pool',
+        'storage_profile':
+        '*',
+        'labels': ['photon', '1.0'],
+        'source_ova_name':
+        'photon-custom-hw11-1.0-62c543d.ova',
+        'source_ova':
+        'https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova',  # NOQA
+        'sha1_ova':
+        '18c1a6d31545b757d897c61a0c3cc0e54d8aeeba',
+        'temp_vapp':
+        'csetmp-p',
+        'cleanup':
+        True,
+        'master_template':
+        'k8s-p.ova',
+        'master_template_disk':
+        20000,
+        'node_template':
+        'k8s-p.ova',
+        'password':
+        'root_secret_password',
+        'ssh_public_key':
+        'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0brDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse',  # NOQA
+        'master_cpu':
+        2,
+        'master_mem':
+        2048,
+        'node_cpu':
+        2,
+        'node_mem':
+        2048,
+        'cse_msg_dir':
+        '/tmp/cse'
+    }
+}
 
-SAMPLE_CONFIG_UBUNTU = {'broker': {
-    'type': 'default',
-    'org': 'Admin',
-    'vdc': 'Catalog',
-    'catalog': 'cse',
-    'network': 'admin_network',
-    'ip_allocation_mode': 'pool',
-    'storage_profile': '*',
-    'labels': ['ubuntu', '16.04'],
-    'source_ova_name': 'ubuntu-16.04-server-cloudimg-amd64.ova',
-    'source_ova': 'https://cloud-images.ubuntu.com/releases/xenial/release-20171011/ubuntu-16.04-server-cloudimg-amd64.ova',
-    'sha1_ova': '1bddf68820c717e13c6d1acd800fb7b4d197b411',
-    'temp_vapp': 'csetmp-u',
-    'cleanup': True,
-    'master_template': 'k8s-u.ova',
-    'master_template_disk': 20000,
-    'node_template': 'k8s-u.ova',
-    'password': 'root_secret_password',
-    'ssh_public_key': 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0brDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse',
-    'master_cpu': 2,
-    'master_mem': 2048,
-    'node_cpu': 2,
-    'node_mem': 2048,
-    'cse_msg_dir': '/tmp/cse'
-}}  # NOQA
+SAMPLE_CONFIG_UBUNTU = {
+    'broker': {
+        'type':
+        'default',
+        'org':
+        'Admin',
+        'vdc':
+        'Catalog',
+        'catalog':
+        'cse',
+        'network':
+        'admin_network',
+        'ip_allocation_mode':
+        'pool',
+        'storage_profile':
+        '*',
+        'labels': ['ubuntu', '16.04'],
+        'source_ova_name':
+        'ubuntu-16.04-server-cloudimg-amd64.ova',
+        'source_ova':
+        'https://cloud-images.ubuntu.com/releases/xenial/release-20171011/ubuntu-16.04-server-cloudimg-amd64.ova',  # NOQA
+        'sha1_ova':
+        '1bddf68820c717e13c6d1acd800fb7b4d197b411',
+        'temp_vapp':
+        'csetmp-u',
+        'cleanup':
+        True,
+        'master_template':
+        'k8s-u.ova',
+        'master_template_disk':
+        20000,
+        'node_template':
+        'k8s-u.ova',
+        'password':
+        'root_secret_password',
+        'ssh_public_key':
+        'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0brDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse',  # NOQA
+        'master_cpu':
+        2,
+        'master_mem':
+        2048,
+        'node_cpu':
+        2,
+        'node_mem':
+        2048,
+        'cse_msg_dir':
+        '/tmp/cse'
+    }
+}
 
 SAMPLE_CONFIG = SAMPLE_CONFIG_UBUNTU
+
 
 def get_sample_broker_config(labels):
     if 'photon' in labels:
@@ -120,14 +167,10 @@ def get_new_broker(config):
 def wait_until_ready(vs, vm, password, file='/proc/version'):
     while True:
         try:
-            f = vs.download_file_from_guest(
-                vm,
-                'root',
-                password,
-                file)
+            vs.download_file_from_guest(vm, 'root', password, file)
             LOGGER.debug('vm %s is ready' % vm)
             return
-        except:
+        except Exception:
             LOGGER.error(traceback.format_exc())
             LOGGER.debug('waiting for vm %s to be ready' % vm)
             time.sleep(1)
@@ -140,10 +183,12 @@ def wait_until_tools_ready(vm):
             if 'guestToolsRunning' == status:
                 LOGGER.debug('vm tools %s are ready' % vm)
                 return
-            LOGGER.debug('waiting for vm tools %s to be ready (%s)' % (vm, status))
+            LOGGER.debug('waiting for vm tools %s to be ready (%s)' % (vm,
+                                                                       status))
             time.sleep(1)
-        except:
-            LOGGER.debug('waiting for vm tools %s to be ready (%s)* ' % (vm, status))
+        except Exception:
+            LOGGER.debug('waiting for vm tools %s to be ready (%s)* ' %
+                         (vm, status))
             time.sleep(1)
 
 
@@ -158,20 +203,18 @@ spinner = spinning_cursor()
 
 def task_callback(task):
     message = '\x1b[2K\r{}: {}, status: {}'.format(
-        task.get('operationName'), task.get('operation'), task.get('status')
-    )
+        task.get('operationName'), task.get('operation'), task.get('status'))
     if hasattr(task, 'Progress'):
         message += ', progress: %s%%' % task.Progress
-    if task.get('status').lower() in [TaskStatus.QUEUED.value,
-                                      TaskStatus.PENDING.value,
-                                      TaskStatus.PRE_RUNNING.value,
-                                      TaskStatus.RUNNING.value]:
+    if task.get('status').lower() in [
+            TaskStatus.QUEUED.value, TaskStatus.PENDING.value,
+            TaskStatus.PRE_RUNNING.value, TaskStatus.RUNNING.value
+    ]:
         message += ' %s ' % spinner.next()
     click.secho(message)
 
 
 class DefaultBroker(threading.Thread):
-
     def __init__(self, config):
         threading.Thread.__init__(self)
         self.config = config
@@ -189,36 +232,39 @@ class DefaultBroker(threading.Thread):
                            'Adding certificate verification is strongly '
                            'advised.')
             requests.packages.urllib3.disable_warnings()
-        self.client_sysadmin = Client(uri=self.host,
-                                      api_version=self.version,
-                                      verify_ssl_certs=self.verify,
-                                      log_file='sysadmin.log',
-                                      log_headers=True,
-                                      log_bodies=True
-                                      )
+        self.client_sysadmin = Client(
+            uri=self.host,
+            api_version=self.version,
+            verify_ssl_certs=self.verify,
+            log_file='sysadmin.log',
+            log_headers=True,
+            log_bodies=True)
         self.client_sysadmin.set_credentials(
-            BasicLoginCredentials(self.username,
-                                  'System',
-                                  self.password))
+            BasicLoginCredentials(self.username, 'System', self.password))
 
     def _connect_tenant(self, headers):
         token = headers.get('x-vcloud-authorization')
         accept_header = headers.get('Accept')
         version = accept_header.split('version=')[1]
-        self.client_tenant = Client(uri=self.host,
-                                    api_version=version,
-                                    verify_ssl_certs=self.verify,
-                                    log_file='tenant.log',
-                                    log_headers=True,
-                                    log_bodies=True
-                                    )
+        self.client_tenant = Client(
+            uri=self.host,
+            api_version=version,
+            verify_ssl_certs=self.verify,
+            log_file='tenant.log',
+            log_headers=True,
+            log_bodies=True)
         session = self.client_tenant.rehydrate_from_token(token)
-        return {'user_name': session.get('user'),
-                'user_id': session.get('userId'),
-                'org_name': session.get('org'),
-                'org_href': self.client_tenant._get_wk_endpoint(
-                    _WellKnownEndpoint.LOGGED_IN_ORG)
-                }
+        return {
+            'user_name':
+            session.get('user'),
+            'user_id':
+            session.get('userId'),
+            'org_name':
+            session.get('org'),
+            'org_href':
+            self.client_tenant._get_wk_endpoint(
+                _WellKnownEndpoint.LOGGED_IN_ORG)
+        }
 
     def is_valid_name(self, name):
         """Validates that the cluster name against the pattern.
@@ -244,8 +290,8 @@ class DefaultBroker(threading.Thread):
             result['body'] = []
             result['status_code'] = OK
             self._connect_tenant(headers)
-            clusters = load_from_metadata(self.client_tenant,
-                                          get_leader_ip=True)
+            clusters = load_from_metadata(
+                self.client_tenant, get_leader_ip=True)
             result['body'] = clusters
         except Exception:
             LOGGER.error(traceback.format_exc())
@@ -261,9 +307,7 @@ class DefaultBroker(threading.Thread):
         vdc_name = body['vdc']
         node_count = body['node_count']
         LOGGER.debug('about to create cluster %s on %s with %s nodes, sp=%s',
-                     cluster_name,
-                     vdc_name,
-                     node_count,
+                     cluster_name, vdc_name, node_count,
                      body['storage_profile'])
         result['body'] = {'message': 'can\'t create cluster'}
         result['status_code'] = INTERNAL_SERVER_ERROR
@@ -289,8 +333,7 @@ class DefaultBroker(threading.Thread):
                 'application/vcloud.cse.cluster+xml',
                 self.tenant_info['user_id'],
                 self.tenant_info['user_name'],
-                org_href=self.tenant_info['org_href']
-            )
+                org_href=self.tenant_info['org_href'])
             self.daemon = True
             self.start()
             response_body = {}
@@ -310,8 +353,8 @@ class DefaultBroker(threading.Thread):
 
         task = Task(self.client_sysadmin)
         try:
-            clusters = load_from_metadata(self.client_tenant,
-                                          name=cluster_name)
+            clusters = load_from_metadata(
+                self.client_tenant, name=cluster_name)
             LOGGER.debug(clusters)
             if len(clusters) != 0:
                 raise Exception('Cluster already exists.')
@@ -347,16 +390,16 @@ class DefaultBroker(threading.Thread):
 
             vdc = VDC(self.client_tenant, resource=vdc_resource)
 
-            if 'photon' in self.config['broker']['labels']:
-                cmd_prefix = '/usr/bin/'
-            elif 'ubuntu' in self.config['broker']['labels']:
-                cmd_prefix = '/bin/'
-            else:
-                cmd_prefix = '/bin/'
+            # if 'photon' in self.config['broker']['labels']:
+            #     cmd_prefix = '/usr/bin/'
+            # elif 'ubuntu' in self.config['broker']['labels']:
+            #     cmd_prefix = '/bin/'
+            # else:
+            #     cmd_prefix = '/bin/'
             masters = []
             for n in range(master_count):
                 time.sleep(1)
-                name = cluster_name + '-m%s' % str(n+1)
+                name = cluster_name + '-m%s' % str(n + 1)
                 self.t = task.update(
                     TaskStatus.RUNNING.value,
                     'vcloud.cse',
@@ -387,21 +430,20 @@ class DefaultBroker(threading.Thread):
                     hostname=name,
                     storage_profile=storage_profile)
                 t = self.client_tenant.get_task_monitor().wait_for_status(
-                                    task=vapp_resource.Tasks.Task[0],
-                                    timeout=60,
-                                    poll_frequency=2,
-                                    fail_on_status=None,
-                                    expected_target_statuses=[
-                                        TaskStatus.SUCCESS,
-                                        TaskStatus.ABORTED,
-                                        TaskStatus.ERROR,
-                                        TaskStatus.CANCELED],
-                                    callback=None)
+                    task=vapp_resource.Tasks.Task[0],
+                    timeout=60,
+                    poll_frequency=2,
+                    fail_on_status=None,
+                    expected_target_statuses=[
+                        TaskStatus.SUCCESS, TaskStatus.ABORTED,
+                        TaskStatus.ERROR, TaskStatus.CANCELED
+                    ],
+                    callback=None)
                 masters.append(vapp_resource)
             nodes = []
             for n in range(node_count):
                 time.sleep(1)
-                name = cluster_name + '-n%s' % str(n+1)
+                name = cluster_name + '-n%s' % str(n + 1)
                 self.t = task.update(
                     TaskStatus.RUNNING.value,
                     'vcloud.cse',
@@ -432,16 +474,15 @@ class DefaultBroker(threading.Thread):
                     hostname=name,
                     storage_profile=storage_profile)
                 t = self.client_tenant.get_task_monitor().wait_for_status(
-                                    task=vapp_resource.Tasks.Task[0],
-                                    timeout=60,
-                                    poll_frequency=2,
-                                    fail_on_status=None,
-                                    expected_target_statuses=[
-                                        TaskStatus.SUCCESS,
-                                        TaskStatus.ABORTED,
-                                        TaskStatus.ERROR,
-                                        TaskStatus.CANCELED],
-                                    callback=None)
+                    task=vapp_resource.Tasks.Task[0],
+                    timeout=60,
+                    poll_frequency=2,
+                    fail_on_status=None,
+                    expected_target_statuses=[
+                        TaskStatus.SUCCESS, TaskStatus.ABORTED,
+                        TaskStatus.ERROR, TaskStatus.CANCELED
+                    ],
+                    callback=None)
                 nodes.append(vapp_resource)
             tagged = set([])
             while len(tagged) < (master_count + node_count):
@@ -459,14 +500,14 @@ class DefaultBroker(threading.Thread):
                             node_type = TYPE_NODE
                             break
                 if node is not None:
-                    LOGGER.debug('about to tag %s, href=%s',
-                                 node.get('name'),
+                    LOGGER.debug('about to tag %s, href=%s', node.get('name'),
                                  node.get('href'))
                     try:
                         self.t = task.update(
                             TaskStatus.RUNNING.value,
                             'vcloud.cse',
-                            'Tagging node %s(%s)' % (node.get('name'), self.cluster_id),
+                            'Tagging node %s(%s)' % (node.get('name'),
+                                                     self.cluster_id),
                             self.op,
                             '',
                             None,
@@ -481,13 +522,9 @@ class DefaultBroker(threading.Thread):
                         tags['cse.cluster.id'] = self.cluster_id
                         tags['cse.node.type'] = node_type
                         tags['cse.cluster.name'] = cluster_name
-                        vapp = VApp(self.client_tenant,
-                                    href=node.get('href'))
+                        vapp = VApp(self.client_tenant, href=node.get('href'))
                         for k, v in tags.items():
-                            t = vapp.set_metadata('GENERAL',
-                                                  'READWRITE',
-                                                  k,
-                                                  v)
+                            t = vapp.set_metadata('GENERAL', 'READWRITE', k, v)
                             self.client_tenant.get_task_monitor().\
                                 wait_for_status(
                                     task=t,
@@ -500,7 +537,8 @@ class DefaultBroker(threading.Thread):
                         LOGGER.debug('tagged %s', node.get('name'))
                     except Exception:
                         LOGGER.error(
-                            'can''t tag %s at this moment, will retry later',
+                            'can'
+                            't tag %s at this moment, will retry later',
                             node.get('name'))
                         LOGGER.error(traceback.format_exc())
                         time.sleep(5)
@@ -550,8 +588,7 @@ class DefaultBroker(threading.Thread):
                 'application/vcloud.cse.cluster+xml',
                 self.tenant_info['user_id'],
                 self.tenant_info['user_name'],
-                org_href=self.tenant_info['org_href']
-            )
+                org_href=self.tenant_info['org_href'])
             self.daemon = True
             self.start()
             response_body = {}
@@ -569,8 +606,8 @@ class DefaultBroker(threading.Thread):
                      self.cluster_name)
         task = Task(self.client_sysadmin)
         try:
-            clusters = load_from_metadata(self.client_tenant,
-                                          name=self.cluster_name)
+            clusters = load_from_metadata(
+                self.client_tenant, name=self.cluster_name)
             LOGGER.debug(clusters)
             if len(clusters) != 1:
                 raise Exception('Cluster not found.')
@@ -578,7 +615,7 @@ class DefaultBroker(threading.Thread):
             # self.cluster_id = cluster['cluster_id']
             vdc = None
             # tasks = []
-            for node in cluster['master_nodes']+cluster['nodes']:
+            for node in cluster['master_nodes'] + cluster['nodes']:
                 if vdc is None:
                     vdc = VDC(self.client_tenant, href=cluster['vdc_href'])
                 LOGGER.debug('about to delete vapp %s', node['name'])
@@ -587,7 +624,7 @@ class DefaultBroker(threading.Thread):
                         TaskStatus.RUNNING.value,
                         'vcloud.cse',
                         'Deleting node %s(%s)' % (node['name'],
-                                                     self.cluster_id),
+                                                  self.cluster_id),
                         self.op,
                         '',
                         None,
@@ -597,8 +634,7 @@ class DefaultBroker(threading.Thread):
                         self.tenant_info['user_id'],
                         self.tenant_info['user_name'],
                         org_href=self.tenant_info['org_href'],
-                        task_href=self.t.get('href')
-                    )
+                        task_href=self.t.get('href'))
                     delete_task = vdc.delete_vapp(node['name'], force=True)
                     self.client_tenant.get_task_monitor().\
                         wait_for_status(
@@ -672,19 +708,20 @@ class DefaultBroker(threading.Thread):
         while n < max_retries:
             try:
                 nodes = []
-                clusters = load_from_metadata(self.client_tenant,
-                                              cluster_id=self.cluster_id)
+                clusters = load_from_metadata(
+                    self.client_tenant, cluster_id=self.cluster_id)
                 LOGGER.debug(clusters)
                 assert len(clusters) == 1
                 cluster = clusters[0]
                 for cluster_node in cluster['master_nodes'] + cluster['nodes']:
-                    node = {'name': cluster_node['name'],
-                            'href': cluster_node['href']}
-                    vapp = VApp(self.client_tenant,
-                                href=cluster_node['href'])
+                    node = {
+                        'name': cluster_node['name'],
+                        'href': cluster_node['href']
+                    }
+                    vapp = VApp(self.client_tenant, href=cluster_node['href'])
                     vapp.reload()
                     node['password'] = vapp.get_admin_password(
-                                       cluster_node['name'])
+                        cluster_node['name'])
                     node['ip'] = vapp.get_primary_ip(cluster_node['name'])
                     node['moid'] = vapp.get_vm_moid(cluster_node['name'])
                     if cluster_node['name'].endswith('-m1'):
@@ -728,10 +765,11 @@ class DefaultBroker(threading.Thread):
                 self.tenant_info['user_name'],
                 org_href=self.tenant_info['org_href'],
                 task_href=self.t.get('href'))
-            vs = VSphere(self.config['vcs']['host'],
-                         self.config['vcs']['username'],
-                         self.config['vcs']['password'],
-                         port=int(self.config['vcs']['port']))
+            vs = VSphere(
+                self.config['vcs']['host'],
+                self.config['vcs']['username'],
+                self.config['vcs']['password'],
+                port=int(self.config['vcs']['port']))
             vs.connect()
             vm = vs.get_vm_by_moid(node['moid'])
             if 'photon' in self.config['broker']['labels']:
@@ -747,13 +785,13 @@ class DefaultBroker(threading.Thread):
                         vm,
                         'root',
                         node['password'],
-                        cmd_prefix+'echo',
+                        cmd_prefix + 'echo',
                         '-e "{password}\n{password}" | /usr/bin/passwd root'.
                         format(password=password),
                         wait_for_completion=False)
                     time.sleep(2)
                     break
-                except:
+                except Exception:
                     LOGGER.error(traceback.format_exc())
                     time.sleep(1)
             wait_until_ready(vs, vm, password)
@@ -776,17 +814,13 @@ class DefaultBroker(threading.Thread):
 {cmd_prefix}chown $(id -u):$(id -g) /root/.kube/config
 /usr/bin/kubectl apply -f /root/weave.yml
                     """.format(cmd_prefix=cmd_prefix)
-                vs.upload_file_to_guest(
-                    vm,
-                    'root',
-                    password,
-                    cust_script,
-                    '/tmp/customize.sh')
+                vs.upload_file_to_guest(vm, 'root', password, cust_script,
+                                        '/tmp/customize.sh')
                 vs.execute_program_in_guest(
                     vm,
                     'root',
                     password,
-                    cmd_prefix+'chmod',
+                    cmd_prefix + 'chmod',
                     'u+rx /tmp/customize.sh',
                     wait_for_completion=True)
                 vs.execute_program_in_guest(
@@ -800,15 +834,11 @@ class DefaultBroker(threading.Thread):
                     vm,
                     'root',
                     password,
-                    cmd_prefix+'rm',
+                    cmd_prefix + 'rm',
                     '-f /tmp/customize.sh',
                     wait_for_completion=True)
-                response = vs.download_file_from_guest(
-                            vm,
-                            'root',
-                            password,
-                            '/tmp/kubeadm-init.out'
-                            )
+                response = vs.download_file_from_guest(vm, 'root', password,
+                                                       '/tmp/kubeadm-init.out')
                 content = response.content.decode('utf-8')
                 if len(content) == 0:
                     raise Exception('Failed executing "kubeadm init"')
@@ -818,22 +848,27 @@ class DefaultBroker(threading.Thread):
                     #     token_hash = None
                     # elif 'ubuntu' in self.config['broker']['labels']:
                     if True:
-                        token = [x for x in content.splitlines() if x.strip().startswith('[bootstraptoken] Using token: ')][0].split()[-1]  # NOQA
-                        token_hash = [x for x in content.splitlines() if '--discovery-token-ca-cert-hash' in x.strip()][0].split()[-1]  # NOQA
+                        token = [
+                            x for x in content.splitlines()
+                            if x.strip().startswith(
+                                '[bootstraptoken] Using token: ')
+                        ][0].split()[-1]  # NOQA
+                        token_hash = [
+                            x for x in content.splitlines()
+                            if '--discovery-token-ca-cert-hash' in x.strip()
+                        ][0].split()[-1]  # NOQA
                         token_hash = None
                     else:
                         raise Exception('not supported config broker label')
-                except:
+                except Exception:
                     LOGGER.error(traceback.format_exc())
-                    raise Exception('Failed executing "kubeadm init", cannot find token:\%s' %
-                                    content)
-                vapp = VApp(self.client_tenant,
-                            href=node['href'])
+                    raise Exception(
+                        'Failed executing "kubeadm init", cannot find token:\%s'  # NOQA
+                        % content)
+                vapp = VApp(self.client_tenant, href=node['href'])
                 vapp.reload()
-                t = vapp.set_metadata('GENERAL',
-                                      'READWRITE',
-                                      'cse.cluster.token',
-                                      token)
+                t = vapp.set_metadata('GENERAL', 'READWRITE',
+                                      'cse.cluster.token', token)
                 self.client_tenant.get_task_monitor().\
                     wait_for_status(
                         task=t,
@@ -844,22 +879,23 @@ class DefaultBroker(threading.Thread):
                         callback=None)
                 node['token'] = token
                 master_node = node
-            LOGGER.debug('executed customization script on %s (%s)' % (node['name'], node['moid']))
+            LOGGER.debug('executed customization script on %s (%s)' %
+                         (node['name'], node['moid']))
 
         if master_node is None:
             raise Exception('No master node is configured.')
         else:
             for node in nodes:
-                vs = VSphere(self.config['vcs']['host'],
-                             self.config['vcs']['username'],
-                             self.config['vcs']['password'],
-                             port=int(self.config['vcs']['port']))
+                vs = VSphere(
+                    self.config['vcs']['host'],
+                    self.config['vcs']['username'],
+                    self.config['vcs']['password'],
+                    port=int(self.config['vcs']['port']))
                 vs.connect()
                 vm = vs.get_vm_by_moid(node['moid'])
-                cust_script = """
-#!/bin/bash
+                cust_script = """#!/bin/bash
 {cmd_prefix}sed -ri 's/preserve_hostname: false/preserve_hostname: true/' /etc/cloud/cloud.cfg
-""".format(cmd_prefix=cmd_prefix)
+""".format(cmd_prefix=cmd_prefix)  # NOQA
                 if node['node_type'] == TYPE_MASTER:
                     if node_count == 0:
                         cust_script += """
@@ -868,24 +904,19 @@ class DefaultBroker(threading.Thread):
                 else:
                     cust_script += """
 /usr/bin/kubeadm join --token {token} {ip}:6443
-""".format(token=master_node['token'],
-                               ip=master_node['ip'])
+""".format(token=master_node['token'], ip=master_node['ip'])
                 if token_hash is not None:
-                    cust_script += ' --discovery-token-ca-cert-hash ' + token_hash
+                    cust_script += ' --discovery-token-ca-cert-hash ' + token_hash  # NOQA
                 if cust_script is not None:
-                    LOGGER.debug('about to execute on %s:\n%s' %
-                                 (vm, cust_script))
-                    vs.upload_file_to_guest(
-                        vm,
-                        'root',
-                        password,
-                        cust_script,
-                        '/tmp/customize.sh')
+                    LOGGER.debug('about to execute on %s:\n%s' % (vm,
+                                                                  cust_script))
+                    vs.upload_file_to_guest(vm, 'root', password, cust_script,
+                                            '/tmp/customize.sh')
                     vs.execute_program_in_guest(
                         vm,
                         'root',
                         password,
-                         cmd_prefix+'chmod',
+                        cmd_prefix + 'chmod',
                         'u+rx /tmp/customize.sh',
                         wait_for_completion=True)
                     vs.execute_program_in_guest(
@@ -899,7 +930,7 @@ class DefaultBroker(threading.Thread):
                         vm,
                         'root',
                         password,
-                        cmd_prefix+'rm',
+                        cmd_prefix + 'rm',
                         '-f /tmp/customize.sh',
                         wait_for_completion=True)
                     LOGGER.debug('executed on %s:\n%s' % (vm, cust_script))
@@ -926,25 +957,23 @@ class DefaultBroker(threading.Thread):
             self._connect_tenant(headers)
             self.headers = headers
             self.cluster_name = cluster_name
-            clusters = load_from_metadata(self.client_tenant,
-                                          name=self.cluster_name,
-                                          get_leader_ip=True)
+            clusters = load_from_metadata(
+                self.client_tenant, name=self.cluster_name, get_leader_ip=True)
             LOGGER.debug(clusters)
             assert len(clusters) == 1
             cluster = clusters[0]
             assert len(cluster['master_nodes']) == 1
             result['body'] = {'cluster_config': '\'%s\'' % cluster_name}
-            vs = VSphere(self.config['vcs']['host'],
-                         self.config['vcs']['username'],
-                         self.config['vcs']['password'],
-                         port=int(self.config['vcs']['port']))
+            vs = VSphere(
+                self.config['vcs']['host'],
+                self.config['vcs']['username'],
+                self.config['vcs']['password'],
+                port=int(self.config['vcs']['port']))
             vs.connect()
             vm = vs.get_vm_by_moid(cluster['leader_moid'])
             response = vs.download_file_from_guest(
-                                    vm,
-                                    'root',
-                                    self.config['broker']['password'],
-                                    '/root/.kube/config')
+                vm, 'root', self.config['broker']['password'],
+                '/root/.kube/config')
             result['body'] = response.content.decode('utf-8')
             result['status_code'] = response.status_code
         except Exception as e:
