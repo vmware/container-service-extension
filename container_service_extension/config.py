@@ -66,7 +66,7 @@ SAMPLE_SERVICE_CONFIG = {'service': {
     }}
 
 
-def generate_sample_config():
+def generate_sample_config(labels=[]):
     sample_config = yaml.safe_dump(SAMPLE_AMQP_CONFIG,
                                    default_flow_style=False) + '\n'
     sample_config += yaml.safe_dump(SAMPLE_VCD_CONFIG,
@@ -75,7 +75,7 @@ def generate_sample_config():
                                    default_flow_style=False) + '\n'
     sample_config += yaml.safe_dump(SAMPLE_SERVICE_CONFIG,
                                    default_flow_style=False) + '\n'
-    sample_config += get_sample_broker_config()
+    sample_config += get_sample_broker_config(labels)
 
     return sample_config.strip() + '\n'
 
@@ -414,7 +414,7 @@ chage -I -1 -m 0 -M -1 -E -1 root
         power_on=True,
         memory=config['broker']['master_mem'],
         cpu=config['broker']['master_cpu'],
-        disk_size=disk_size,
+        disk_size=None,
         password=None,
         cust_script=cust_script,
         accept_all_eulas=True,
@@ -422,6 +422,11 @@ chage -I -1 -m 0 -M -1 -E -1 root
         hostname=vapp_name,
         storage_profile=config['broker']['storage_profile'])
     stdout(vapp_resource.Tasks.Task[0], ctx)
+    if disk_size is not None:
+        vapp = VApp(client, resource=vapp_resource)
+        vm_name = vapp_resource.Children.Vm[0].get('name')
+        task = vapp.add_disk_to_vm(vm_name, disk_size)
+        stdout(task, ctx)
     ip = None
     password_auto = None
     vm_moid = None
@@ -444,8 +449,7 @@ chage -I -1 -m 0 -M -1 -E -1 root
     click.secho(ip, fg='blue')
     click.secho('Customizing template, please wait...', nl=False, fg='green')
     if 'photon' in config['broker']['labels']:
-        cust_script = """
-#!/bin/bash
+        cust_script = """#!/bin/bash
 /bin/echo '{ssh_public_key}' >> $HOME/.ssh/authorized_keys
 /bin/chmod go-rwx $HOME/.ssh/authorized_keys
 
@@ -468,21 +472,39 @@ EOF
 /usr/bin/systemctl enable iptables-ports.service
 /usr/bin/systemctl start iptables-ports.service
 
+/usr/bin/tdnf install -y docker-17.06.0-1.ph1
 /usr/bin/systemctl enable docker.service
 /usr/bin/systemctl start docker.service
-/usr/bin/tdnf install -y kubernetes-1.7.5-1.ph1 kubernetes-kubeadm-1.7.5-1.ph1
-/usr/bin/tdnf install -y wget
 
-/usr/bin/docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.7.7
-/usr/bin/docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.7.7
-/usr/bin/docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.7.7
-/usr/bin/docker pull gcr.io/google_containers/kube-proxy-amd64:v1.7.7
+if [ -b /dev/sdb ]
+then
+    /usr/bin/echo -e 'n\n\n\n\n\nw' | /usr/sbin/fdisk /dev/sdb
+    /usr/sbin/mkfs -t ext4 /dev/sdb1
+    /usr/bin/mkdir /mnt/docker-data
+    /usr/bin/cat <<EOF >> /etc/fstab
+/dev/sdb1\t/mnt/docker-data\text4\tdefaults\t0\t0
+EOF
+    /usr/bin/mount /mnt/docker-data
+    /usr/bin/cat <<EOF > /etc/docker/daemon.json
+{{
+  "graph": "/mnt/docker-data"
+}}
+EOF
+    /usr/bin/systemctl restart docker.service
+fi
+
+
+/usr/bin/tdnf install -y wget kubernetes-1.8.1-3.ph1 kubernetes-kubeadm-1.8.1-3.ph1
+
+/usr/bin/docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.8.1
+/usr/bin/docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.8.1
+/usr/bin/docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.8.1
+/usr/bin/docker pull gcr.io/google_containers/kube-proxy-amd64:v1.8.1
 /usr/bin/docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.4
 /usr/bin/docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.4
 /usr/bin/docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.4
 /usr/bin/docker pull gcr.io/google_containers/etcd-amd64:3.0.17
 /usr/bin/docker pull gcr.io/google_containers/pause-amd64:3.0
-# /usr/bin/docker pull quay.io/coreos/flannel:v0.9.0-amd64
 
 /usr/bin/docker pull weaveworks/weave-npc:2.0.5
 /usr/bin/docker pull weaveworks/weave-kube:2.0.5
@@ -490,15 +512,12 @@ EOF
 export kubever=$(/usr/bin/kubectl version | /usr/bin/base64 | /usr/bin/tr -d '\n')
 /usr/bin/wget -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&version=2.0.5"
 
-# /usr/bin/wget https://raw.githubusercontent.com/coreos/flannel/v0.9.0/Documentation/kube-flannel.yml
-
 /bin/echo -n > /etc/machine-id
 /bin/sync
 /bin/sync
 """.format(ssh_public_key=config['broker']['ssh_public_key'])  # NOQA
     elif 'ubuntu' in config['broker']['labels']:
-        cust_script = """
-#!/bin/bash
+        cust_script = """#!/bin/bash
 /bin/mkdir /root/.ssh
 /bin/chmod go-rwx /root/.ssh
 /bin/echo '{ssh_public_key}' >> /root/.ssh/authorized_keys
@@ -507,29 +526,35 @@ export kubever=$(/usr/bin/kubectl version | /usr/bin/base64 | /usr/bin/tr -d '\n
 /sbin/resolvconf -u
 /bin/systemctl restart networking.service
 /usr/bin/apt-get update
-/usr/bin/apt-get install -y apt-transport-https
+/usr/bin/apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+/usr/bin/curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 /usr/bin/curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 /bin/cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
 deb http://apt.kubernetes.io/ kubernetes-xenial main
 EOF
+/usr/bin/add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 /usr/bin/apt-get update
-/usr/bin/apt-get install -y docker.io=1.12.6-0ubuntu1~16.04.1
+/usr/bin/apt-get install -y docker-ce=17.09.0~ce-0~ubuntu
 /usr/bin/apt-get install -y kubelet=1.8.2-00 kubeadm=1.8.2-00 kubectl=1.8.2-00 kubernetes-cni=0.5.1-00 --allow-unauthenticated
 /usr/bin/apt-get autoremove -y
-# /bin/echo -e 'n\n\n\n\n\nw' | /sbin/fdisk /dev/sda
-# /sbin/partprobe /dev/sda
-# /sbin/mkfs -t ext4 /dev/sda2
-mkdir /mnt/docker-data
-# /bin/cat <<EOF >> /etc/fstab
-# /dev/sda2\t/mnt/docker-data\text4\tdefaults\t0\t0
-# EOF
-# /bin/mount /mnt/docker-data
-/bin/cat <<EOF > /etc/docker/daemon.json
+echo "- - -" > /sys/class/scsi_host/host2/scan
+if [ -b /dev/sdb ]
+then
+    /bin/echo -e 'n\n\n\n\n\nw' | /sbin/fdisk /dev/sdb
+    /sbin/partprobe /dev/sdb
+    /sbin/mkfs -t ext4 /dev/sdb1
+    mkdir /mnt/docker-data
+    /bin/cat <<EOF >> /etc/fstab
+/dev/sdb1\t/mnt/docker-data\text4\tdefaults\t0\t0
+EOF
+    /bin/mount /mnt/docker-data
+    /bin/cat <<EOF > /etc/docker/daemon.json
 {{
   "graph": "/mnt/docker-data"
 }}
 EOF
-/bin/systemctl restart docker
+    /bin/systemctl restart docker
+fi
 /usr/bin/docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.8.2
 /usr/bin/docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.8.2
 /usr/bin/docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.8.2

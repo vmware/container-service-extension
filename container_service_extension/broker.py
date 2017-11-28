@@ -53,7 +53,7 @@ SAMPLE_CONFIG_PHOTON = {'broker': {
     'temp_vapp': 'csetmp-p',
     'cleanup': True,
     'master_template': 'k8s-p.ova',
-    'master_template_disk': 0,
+    'master_template_disk': 20000,
     'node_template': 'k8s-p.ova',
     'password': 'root_secret_password',
     'ssh_public_key': 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0brDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse',
@@ -92,8 +92,13 @@ SAMPLE_CONFIG_UBUNTU = {'broker': {
 
 SAMPLE_CONFIG = SAMPLE_CONFIG_UBUNTU
 
-def get_sample_broker_config():
-    return yaml.safe_dump(SAMPLE_CONFIG, default_flow_style=False)
+def get_sample_broker_config(labels):
+    if 'photon' in labels:
+        return yaml.safe_dump(SAMPLE_CONFIG_PHOTON, default_flow_style=False)
+    elif 'ubuntu' in labels:
+        return yaml.safe_dump(SAMPLE_CONFIG_UBUNTU, default_flow_style=False)
+    else:
+        return yaml.safe_dump(SAMPLE_CONFIG_PHOTON, default_flow_style=False)
 
 
 def validate_broker_config(config):
@@ -756,7 +761,7 @@ class DefaultBroker(threading.Thread):
                 if 'photon' in self.config['broker']['labels']:
                     cust_script = """
 #!/bin/bash
-/usr/bin/kubeadm init --pod-network-cidr=10.244.0.0/16 --skip-preflight-checks --kubernetes-version=v1.7.7 > /tmp/kubeadm-init.out
+/usr/bin/kubeadm init --kubernetes-version=v1.8.1 > /tmp/kubeadm-init.out
 {cmd_prefix}mkdir -p /root/.kube
 {cmd_prefix}cp -f /etc/kubernetes/admin.conf /root/.kube/config
 {cmd_prefix}chown $(id -u):$(id -g) /root/.kube/config
@@ -808,10 +813,11 @@ class DefaultBroker(threading.Thread):
                 if len(content) == 0:
                     raise Exception('Failed executing "kubeadm init"')
                 try:
-                    if 'photon' in self.config['broker']['labels']:
-                        token = [x for x in content.splitlines() if x.strip().startswith('[token] Using token: ')][0].split()[-1]  # NOQA
-                        token_hash = None
-                    elif 'ubuntu' in self.config['broker']['labels']:
+                    # if 'photon' in self.config['broker']['labels']:
+                    #     token = [x for x in content.splitlines() if x.strip().startswith('[token] Using token: ')][0].split()[-1]  # NOQA
+                    #     token_hash = None
+                    # elif 'ubuntu' in self.config['broker']['labels']:
+                    if True:
                         token = [x for x in content.splitlines() if x.strip().startswith('[bootstraptoken] Using token: ')][0].split()[-1]  # NOQA
                         token_hash = [x for x in content.splitlines() if '--discovery-token-ca-cert-hash' in x.strip()][0].split()[-1]  # NOQA
                         token_hash = None

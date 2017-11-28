@@ -52,14 +52,21 @@ def version(ctx):
                               ver_obj['description'],
                               ver_obj['version'])
     stdout(ver_obj, ctx, ver_str)
-    # click.secho(ver)
 
 
 @cli.command('sample-config', short_help='generate sample configuration')
 @click.pass_context
-def sample_config(ctx):
+@click.option('-l',
+              '--labels',
+              'labels',
+              required=False,
+              default='photon,1.0',
+              metavar='<labels>',
+              help='labels')
+def sample_config(ctx, labels):
     """Generate sample CSE configuration"""
-    click.secho(generate_sample_config())
+    labels_array = labels.split(',')
+    click.secho(generate_sample_config(labels_array))
 
 
 @cli.command(short_help='check configuration')

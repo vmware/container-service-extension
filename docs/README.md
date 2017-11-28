@@ -197,7 +197,7 @@ vCloud Director tenants just need to install the [vcd-cli](https://vmware.github
 $ pip3 install vcd-cli
 
 $ vcd version
-vcd-cli, VMware vCloud Director Command Line Interface, 19.2.0
+vcd-cli, VMware vCloud Director Command Line Interface, 19.2.1
 ```
 
 ## Using the Container Service
@@ -248,6 +248,15 @@ $ vcd cluster delete c2
 ```
 
 ### Versions
+
+#### CSE 0.1.3
+
+Release date: 2017-12-TBD
+
+|vCD|OS                  |Docker    |Kubernetes|Pod Network|
+|---|--------------------|----------|----------|-----------|
+|9.0|Photon OS 1.0, Rev 2|17.06.0-ce|1.8.1     |Weave 2.0.5|
+|9.0|Ubuntu 16.04.3 LTS  |17.09.0-ce|1.8.2     |Weave 2.0.5|
 
 #### CSE 0.1.2
 
