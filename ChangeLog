@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* removed comments
 * pep8
 * using additional disk
 * debug
