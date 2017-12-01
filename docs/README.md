@@ -37,6 +37,16 @@ Container Service Extension for VMware vCloud Director, version 0.1.1
 $ cse sample-config > config.yaml
 ```
 
+The `--labels` option can be used to specify the type of template to generate:
+
+```shell
+# template based on PhotonOS
+$ cse sample-config --labels photon > config-photon.yaml
+
+# template based on Ubuntu
+$ cse sample-config --labels ubuntu > config-ubuntu.yaml
+```
+
 Edit file `config.yaml` with the values for your vCloud Director installation. The following table describes the setting values.
 
 ##### `CSE` Configuration Settings
@@ -81,6 +91,33 @@ The `install` command will generate the template required to run the service. If
 ```shell
 $ cse uninstall config.yaml
 ```
+
+To inspect the `temp_vapp` vApp, it is possible to pass the `--no-capture` option:
+
+```shell
+$ cse install config.yaml --no-capture
+```
+
+With `--no-capture`, the install process will create the `temp_vapp` vApp, will keep it running and not capture it as a template. This allows to `ssh` into the vApp and inspect it. Inside the `temp_vapp`, the file `/tmp/customize.out` contains the output of the customization process.
+
+If the install process fails to connect `temp_vapp` to the network, the `/tmp/customize.out` file can still be retrieved with `vcd-cli` with the following command (requires access to vCenter):
+
+```shell
+$ vcd vm download csetmp-u csetmp-u vcenter.vmware.com 'administrator@vsphere.local' 'Welcome@123' root 'wF$4g!4#' /tmp/customize.out customize.out
+```
+
+The generated password of `temp_vapp` guest OS can be retrieved with:
+
+```shell
+$ vcd vapp info csetmp-u | grep password
+```
+
+The `uninstall` command will delete `temp_vapp` and `master_template` if present:
+
+```shell
+$ cse uninstall config.yaml
+```
+
 
 #### 4. Configure vCloud Director.
 
@@ -246,6 +283,7 @@ $ open "http://${IP}:30001"
 # delete cluster when no longer needed
 $ vcd cluster delete c2
 ```
+## Reference
 
 ### Versions
 
@@ -275,8 +313,14 @@ Release date: 2017-10-03
 |---|--------------------|----------|-----------|
 |9.0|Photon OS 1.0, Rev 2|1.7.7     |Weave 2.0.4|
 
+### Source OVA Files
 
-### Appendix
+|OS                  |OVA Name| URL    |SHA1      |
+|--------------------|--------|--------|----------|
+|Photon OS 1.0, Rev 2|photon-custom-hw11-1.0-62c543d.ova |`https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova`|18c1a6d31545b757d897c61a0c3cc0e54d8aeeba|
+|Ubuntu 16.04.3 LTS|ubuntu-16.04-server-cloudimg-amd64.ova|`https://cloud-images.ubuntu.com/releases/xenial/release-20171011/ubuntu-16.04-server-cloudimg-amd64.ova`|1bddf68820c717e13c6d1acd800fb7b4d197b411|
+
+### Installation Details
 
 #### Installing Python 3 and CSE on Photon OS
 
