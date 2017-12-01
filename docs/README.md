@@ -348,3 +348,13 @@ Install using [Homebrew](https://brew.sh):
 ```shell
 $ brew install python3
 ```
+
+#### Installing Python 3 on Centos 7
+
+```shell
+$ sudo yum update
+$ sudo yum install -y yum-utils
+$ sudo yum groupinstall -y development
+$ sudo yum -y install https://centos7.iuscommunity.org/ius-release.rpm
+$ sudo yum -y install python36u python36u-pip python36u-devel
+```
