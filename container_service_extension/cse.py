@@ -93,18 +93,16 @@ def check(ctx, file_name):
               help='no capture')
 def install(ctx, file_name, no_capture):
     """Install CSE on vCloud Director"""
-    content = ''
-    try:
-        f = open('pv/vcd-provider.go', 'r')
-        content = f.read()
-        f.close
-    except:
-        try:
-            from distutils.sysconfig import get_python_lib
-            f = open(get_python_lib()+'/cse/vcd-provider.go')
-        except:
-            pass
-    print(len(content))
+    import os
+    import site
+    path = None
+    if os.path.isfile('pv/vcd-provider.go'):
+        path = 'pv/vcd-provider.go'
+    elif os.path.isfile(site.getusersitepackages()+'/cse/vcd-provider.go'):
+        path = site.getusersitepackages()+'/cse/vcd-provider.go'
+    elif os.path.isfile(site.getusersitepackages()+'/cse/vcd-provider.go'):
+        path = site.getsitepackages()+'/cse/vcd-provider.go'
+    print(path)
     # install_cse(ctx, file_name, no_capture)
 
 
