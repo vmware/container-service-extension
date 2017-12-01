@@ -22,14 +22,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 @click.group(context_settings=CONTEXT_SETTINGS, invoke_without_command=True)
 @click.pass_context
-@click.option(
-    '-j',
-    '--json',
-    'json_output',
-    is_flag=True,
-    default=False,
-    help='Results as JSON object')
-def cli(ctx, json_output):
+def cli(ctx):
     """Container Service Extension for VMware vCloud Director."""
     if ctx.invoked_subcommand is None:
         click.secho(ctx.get_help())
@@ -92,9 +85,27 @@ def check(ctx, file_name):
     metavar='<config-file>',
     required=True,
     default='config.yml')
-def install(ctx, file_name):
+@click.option('-n',
+              '--no-capture',
+              is_flag=True,
+              required=False,
+              default=False,
+              help='no capture')
+def install(ctx, file_name, no_capture):
     """Install CSE on vCloud Director"""
-    install_cse(ctx, file_name)
+    content = ''
+    try:
+        f = open('pv/vcd-provider.go', 'r')
+        content = f.read()
+        f.close
+    except:
+        try:
+            from distutils.sysconfig import get_python_lib
+            f = open(get_python_lib()+'/cse/vcd-provider.go')
+        except:
+            pass
+    print(len(content))
+    # install_cse(ctx, file_name, no_capture)
 
 
 @cli.command(short_help='uninstall CSE from vCD')

@@ -1,5 +1,5 @@
-hash: 37bca6eb89ff1d0440e2109a29bdca28d2671b9c748299c406eb02aea9a7cceb
-updated: 2017-10-16T18:19:51.8738602-05:00
+hash: 0e22b39c7332f7b5a490c732b9a7a4d9d90370263430bede9aac12496c016b53
+updated: 2017-11-30T20:12:13.681014914-06:00
 imports:
 - name: github.com/davecgh/go-spew
   version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
@@ -46,6 +46,7 @@ imports:
   version: 77ed1c8a01217656d2080ad51981f6e99adaa177
 - name: github.com/kubernetes-incubator/external-storage
   version: c5e69a02cc1f9db5171efbac7284ee6f3cc0c49f
+  vcs: git
   subpackages:
   - lib/controller
   - lib/leaderelection

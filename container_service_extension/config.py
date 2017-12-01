@@ -233,7 +233,7 @@ def uninstall_cse(ctx, file_name):
                         config['broker']['master_template'])
 
 
-def install_cse(ctx, file_name):
+def install_cse(ctx, file_name, no_capture):
     click.secho('Installing CSE on vCD from file: %s' % file_name)
     config = get_config(file_name)
     client = Client(
@@ -282,7 +282,7 @@ def install_cse(ctx, file_name):
                 config['broker']['master_template'])
         except Exception:
             create_master_template(ctx, config, client, org, vdc_resource,
-                                   catalog)
+                                   catalog, no_capture)
         try:
             master_template = org.get_catalog_item(
                 config['broker']['catalog'],
@@ -337,7 +337,8 @@ def upload_source_ova(config, client, org, catalog):
         return None
 
 
-def create_master_template(ctx, config, client, org, vdc_resource, catalog):
+def create_master_template(ctx, config, client, org, vdc_resource, catalog,
+                           no_capture):
     if 'photon' in config['broker']['labels']:
         cmd_prefix = '/usr/bin/'
     elif 'ubuntu' in config['broker']['labels']:
@@ -530,6 +531,10 @@ export kubever=$(/usr/bin/kubectl version | /usr/bin/base64 | /usr/bin/tr -d '\n
 /bin/echo 'nameserver 8.8.8.8' >> /etc/resolvconf/resolv.conf.d/tail
 /sbin/resolvconf -u
 /bin/systemctl restart networking.service
+
+/usr/bin/growpart /dev/sda 1
+/sbin/resize2fs /dev/sda1
+
 /usr/bin/apt-get update
 /usr/bin/apt-get install -y apt-transport-https ca-certificates curl software-properties-common
 /usr/bin/curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
@@ -578,6 +583,20 @@ export kubever=$(/usr/bin/kubectl version --client | /usr/bin/base64 | /usr/bin/
 
 /usr/bin/curl -L git.io/weave -o /usr/local/bin/weave
 /bin/chmod a+x /usr/local/bin/weave
+
+mkdir -p /root/go/bin
+mkdir -p /root/go/src/github.com/vmware/container-service-extension/pv
+
+/usr/bin/wget https://storage.googleapis.com/golang/go1.9.2.linux-amd64.tar.gz
+/bin/tar -xvf go1.9.2.linux-amd64.tar.gz
+export GOPATH=/root/go
+export PATH=$GOPATH/bin:$PATH
+
+echo 'export GOPATH=/root/go' >> /root/.bashrc
+echo 'PATH=$GOPATH/bin:$PATH' >> /root/.bashrc
+
+go version
+curl https://glide.sh/get | sh
 
 /bin/echo -n > /etc/machine-id
 /bin/sync
@@ -641,7 +660,8 @@ export kubever=$(/usr/bin/kubectl version --client | /usr/bin/base64 | /usr/bin/
             wait_for_completion=True)
         click.secho('.', nl=False, fg='green')
         click.secho('done', fg='blue')
-    return capture_as_template(ctx, config, vapp_resource, org, catalog)
+    if not no_capture:
+        capture_as_template(ctx, config, vapp_resource, org, catalog)
 
 
 def capture_as_template(ctx, config, vapp_resource, org, catalog):

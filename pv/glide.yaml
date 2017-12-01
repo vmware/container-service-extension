@@ -7,6 +7,7 @@ import:
 - package: github.com/golang/glog
 - package: github.com/kubernetes-incubator/external-storage
   version: v2.0.0
+  vcs: git
   subpackages:
   - lib/controller
 - package: k8s.io/apimachinery
