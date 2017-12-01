@@ -19,6 +19,7 @@ from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vsphere import VSphere
 import requests
+import site
 import time
 import traceback
 from vcd_cli.utils import stdout
@@ -308,6 +309,20 @@ def get_sha1(file):
     return sha1.hexdigest()
 
 
+def get_data_file(file_name):
+    path = None
+    if os.path.isfile('pv/%s' % file_name):
+        path = 'pv/%s' % file_name
+    elif os.path.isfile(site.getusersitepackages()+'/cse/'+file_name):
+        path = site.getusersitepackages()+'/cse/'+file_name
+    elif os.path.isfile(site.getusersitepackages()+'/cse/'+file_name):
+        path = site.getsitepackages()+'/cse/'+file_name
+    content = ''
+    with open(path) as f:
+        content = f.read()
+    return content
+
+
 def upload_source_ova(config, client, org, catalog):
     cse_cache_dir = os.path.join(os.getcwd(), 'cse_cache')
     cse_ova_file = os.path.join(cse_cache_dir,
@@ -589,6 +604,7 @@ mkdir -p /root/go/src/github.com/vmware/container-service-extension/pv
 
 /usr/bin/wget https://storage.googleapis.com/golang/go1.9.2.linux-amd64.tar.gz
 /bin/tar -xvf go1.9.2.linux-amd64.tar.gz
+
 export GOPATH=/root/go
 export PATH=$GOPATH/bin:$PATH
 
@@ -597,6 +613,13 @@ echo 'PATH=$GOPATH/bin:$PATH' >> /root/.bashrc
 
 go version
 curl https://glide.sh/get | sh
+
+cp /root/glide.* /root/vcd-provider.go /root/go/src/github.com/vmware/container-service-extension/pv
+cd /root/go/src/github.com/vmware/container-service-extension/pv
+glide install --strip-vendor
+echo 'about to build pv'
+go build
+echo 'pv built'
 
 /bin/echo -n > /etc/machine-id
 /bin/sync
@@ -632,6 +655,11 @@ curl https://glide.sh/get | sh
             except Exception:
                 click.secho('.', nl=False, fg='yellow')
         click.secho('.', nl=False, fg='green')
+        for f in ['vcd-provider.go', 'glide.yaml', 'glide.lock', 'class.yaml']:
+            content = get_data_file(f)
+            vs.upload_file_to_guest(vm, 'root', password_auto, content,
+                                    '/root/'+f)
+            click.secho('.', nl=False, fg='green')
         vs.upload_file_to_guest(vm, 'root', password_auto, cust_script,
                                 '/tmp/customize.sh')
         click.secho('.', nl=False, fg='green')

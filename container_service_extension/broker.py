@@ -7,6 +7,7 @@ from container_service_extension.cluster import load_from_metadata
 from container_service_extension.cluster import TYPE_MASTER
 from container_service_extension.cluster import TYPE_NODE
 import logging
+import pkg_resources
 from pyvcloud.vcd.client import _WellKnownEndpoint
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
@@ -516,6 +517,8 @@ class DefaultBroker(threading.Thread):
                         tags['cse.cluster.id'] = self.cluster_id
                         tags['cse.node.type'] = node_type
                         tags['cse.cluster.name'] = cluster_name
+                        tags['cse.version'] = pkg_resources.require('container-service-extension')[0].version
+                        tags['cse.labels'] = ','.join(self.config['broker']['labels'])
                         vapp = VApp(self.client_tenant, href=node.get('href'))
                         for k, v in tags.items():
                             t = vapp.set_metadata('GENERAL', 'READWRITE', k, v)
@@ -791,22 +794,23 @@ class DefaultBroker(threading.Thread):
             wait_until_ready(vs, vm, password)
             if node['node_type'] == TYPE_MASTER:
                 if 'photon' in self.config['broker']['labels']:
-                    cust_script = """
-#!/bin/bash
+                    cust_script = """#!/bin/bash
 /usr/bin/kubeadm init --kubernetes-version=v1.8.1 > /tmp/kubeadm-init.out
 {cmd_prefix}mkdir -p /root/.kube
 {cmd_prefix}cp -f /etc/kubernetes/admin.conf /root/.kube/config
 {cmd_prefix}chown $(id -u):$(id -g) /root/.kube/config
 /usr/bin/kubectl apply -f /root/weave.yml
+mkdir -p /root/cse/{{req,res}}
                     """.format(cmd_prefix=cmd_prefix)
                 elif 'ubuntu' in self.config['broker']['labels']:
-                    cust_script = """
-#!/bin/bash
+                    cust_script = """#!/bin/bash
 /usr/bin/kubeadm init --kubernetes-version=v1.8.2 > /tmp/kubeadm-init.out
 {cmd_prefix}mkdir -p /root/.kube
 {cmd_prefix}cp -f /etc/kubernetes/admin.conf /root/.kube/config
 {cmd_prefix}chown $(id -u):$(id -g) /root/.kube/config
 /usr/bin/kubectl apply -f /root/weave.yml
+mkdir -p /root/cse/{{req,res}}
+HOST=`hostname` CSE_MSG_DIR=/root/cse nohup go/src/github.com/vmware/container-service-extension/pv/pv > /root/pv.out 2>&1 &
                     """.format(cmd_prefix=cmd_prefix)
                 vs.upload_file_to_guest(vm, 'root', password, cust_script,
                                         '/tmp/customize.sh')

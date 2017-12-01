@@ -93,17 +93,7 @@ def check(ctx, file_name):
               help='no capture')
 def install(ctx, file_name, no_capture):
     """Install CSE on vCloud Director"""
-    import os
-    import site
-    path = None
-    if os.path.isfile('pv/vcd-provider.go'):
-        path = 'pv/vcd-provider.go'
-    elif os.path.isfile(site.getusersitepackages()+'/cse/vcd-provider.go'):
-        path = site.getusersitepackages()+'/cse/vcd-provider.go'
-    elif os.path.isfile(site.getusersitepackages()+'/cse/vcd-provider.go'):
-        path = site.getsitepackages()+'/cse/vcd-provider.go'
-    print(path)
-    # install_cse(ctx, file_name, no_capture)
+    install_cse(ctx, file_name, no_capture)
 
 
 @cli.command(short_help='uninstall CSE from vCD')

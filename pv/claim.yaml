@@ -5,7 +5,7 @@
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: pvc03
+  name: pvc01
   annotations:
     volume.beta.kubernetes.io/storage-class: "vcloud-director"
 spec:
