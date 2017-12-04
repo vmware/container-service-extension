@@ -517,8 +517,10 @@ class DefaultBroker(threading.Thread):
                         tags['cse.cluster.id'] = self.cluster_id
                         tags['cse.node.type'] = node_type
                         tags['cse.cluster.name'] = cluster_name
-                        tags['cse.version'] = pkg_resources.require('container-service-extension')[0].version
-                        tags['cse.labels'] = ','.join(self.config['broker']['labels'])
+                        tags['cse.version'] = pkg_resources.require(
+                            'container-service-extension')[0].version
+                        tags['cse.labels'] = ','.join(
+                            self.config['broker']['labels'])
                         vapp = VApp(self.client_tenant, href=node.get('href'))
                         for k, v in tags.items():
                             t = vapp.set_metadata('GENERAL', 'READWRITE', k, v)
@@ -811,7 +813,7 @@ mkdir -p /root/cse/{{req,res}}
 /usr/bin/kubectl apply -f /root/weave.yml
 mkdir -p /root/cse/{{req,res}}
 HOST=`hostname` CSE_MSG_DIR=/root/cse nohup go/src/github.com/vmware/container-service-extension/pv/pv > /root/pv.out 2>&1 &
-                    """.format(cmd_prefix=cmd_prefix)
+                    """.format(cmd_prefix=cmd_prefix)  # NOQA
                 vs.upload_file_to_guest(vm, 'root', password, cust_script,
                                         '/tmp/customize.sh')
                 vs.execute_program_in_guest(

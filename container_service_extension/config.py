@@ -316,11 +316,19 @@ def get_data_file(file_name):
         path = 'pv/%s' % file_name
     elif os.path.isfile(site.getusersitepackages()+'/cse/'+file_name):
         path = site.getusersitepackages()+'/cse/'+file_name
-    elif os.path.isfile(site.getusersitepackages()+'/cse/'+file_name):
-        path = site.getsitepackages()+'/cse/'+file_name
+    else:
+        sp = site.getsitepackages()
+        if isinstance(sp, list):
+            for item in sp:
+                if os.path.isfile(item+'/cse/'+file_name):
+                    path = item+'/cse/'+file_name
+                    break
+        elif os.path.isfile(sp+'/cse/'+file_name):
+            path = sp+'/cse/'+file_name
     content = ''
-    with open(path) as f:
-        content = f.read()
+    if path is not None:
+        with open(path) as f:
+            content = f.read()
     return content
 
 
