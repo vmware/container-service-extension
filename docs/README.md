@@ -98,12 +98,12 @@ To inspect the `temp_vapp` vApp, it is possible to pass the `--no-capture` optio
 $ cse install config.yaml --no-capture
 ```
 
-With `--no-capture`, the install process will create the `temp_vapp` vApp, will keep it running and not capture it as a template. This allows to `ssh` into the vApp and inspect it. Inside the `temp_vapp`, the file `/tmp/customize.out` contains the output of the customization process.
+With `--no-capture`, the install process will create the `temp_vapp` vApp, will keep it running and not capture it as a template. This allows to `ssh` into the vApp and inspect it. Inside the `temp_vapp`, the file `/root/customize.out` contains the output of the customization process.
 
-If the install process fails to connect `temp_vapp` to the network, the `/tmp/customize.out` file can still be retrieved with `vcd-cli` with the following command (requires access to vCenter):
+If the install process fails to connect `temp_vapp` to the network, the `/root/customize.out` file can still be retrieved with `vcd-cli` with the following command (requires access to vCenter):
 
 ```shell
-$ vcd vm download csetmp-u csetmp-u vcenter.vmware.com 'administrator@vsphere.local' 'Welcome@123' root 'wF$4g!4#' /tmp/customize.out customize.out
+$ vcd vm download csetmp-u csetmp-u vcenter.vmware.com 'administrator@vsphere.local' 'Welcome@123' root 'wF$4g!4#' /root/customize.out customize.out
 ```
 
 The generated password of `temp_vapp` guest OS can be retrieved with:
@@ -357,4 +357,10 @@ $ sudo yum install -y yum-utils
 $ sudo yum groupinstall -y development
 $ sudo yum -y install https://centos7.iuscommunity.org/ius-release.rpm
 $ sudo yum -y install python36u python36u-pip python36u-devel
+```
+
+#### Installing Python 3 on Ubuntu 16.04
+
+```shell
+$ sudo apt install python3-pip
 ```

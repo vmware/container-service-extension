@@ -253,6 +253,7 @@ def install_cse(ctx, file_name, no_capture):
                                               bool_to_msg(True)))
     if config['broker']['type'] == 'default':
         orgs = client.get_org_list()
+        org_href = None
         for org in [o for o in orgs.Org if hasattr(orgs, 'Org')]:
             if org.get('name') == config['broker']['org']:
                 org_href = org.get('href')
@@ -534,6 +535,8 @@ export kubever=$(/usr/bin/kubectl version | /usr/bin/base64 | /usr/bin/tr -d '\n
 /usr/bin/wget -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&version=2.0.5"
 
 /bin/echo -n > /etc/machine-id
+
+echo 'customization completed'
 /bin/sync
 /bin/sync
 """.format(ssh_public_key=config['broker']['ssh_public_key'])  # NOQA
@@ -622,6 +625,8 @@ go build
 echo 'pv built'
 
 /bin/echo -n > /etc/machine-id
+
+echo 'customization completed'
 /bin/sync
 /bin/sync
 """.format(ssh_public_key=config['broker']['ssh_public_key'])  # NOQA
@@ -661,32 +666,32 @@ echo 'pv built'
                                     '/root/'+f)
             click.secho('.', nl=False, fg='green')
         vs.upload_file_to_guest(vm, 'root', password_auto, cust_script,
-                                '/tmp/customize.sh')
+                                '/root/customize.sh')
         click.secho('.', nl=False, fg='green')
         vs.execute_program_in_guest(
             vm,
             'root',
             password_auto,
             cmd_prefix + 'chmod',
-            'u+rx /tmp/customize.sh',
+            'u+rx /root/customize.sh',
             wait_for_completion=True)
         click.secho('.', nl=False, fg='green')
         vs.execute_program_in_guest(
             vm,
             'root',
             password_auto,
-            '/tmp/customize.sh',
-            '> /tmp/customize.out 2>&1',
+            '/root/customize.sh',
+            '> /root/customize.out 2>&1',
             wait_for_completion=True)
         click.secho('.', nl=False, fg='green')
-        vs.execute_program_in_guest(
-            vm,
-            'root',
-            password_auto,
-            cmd_prefix + 'rm',
-            '-f /tmp/customize.sh',
-            wait_for_completion=True)
-        click.secho('.', nl=False, fg='green')
+        # vs.execute_program_in_guest(
+        #     vm,
+        #     'root',
+        #     password_auto,
+        #     cmd_prefix + 'rm',
+        #     '-f /tmp/customize.sh',
+        #     wait_for_completion=True)
+        # click.secho('.', nl=False, fg='green')
         click.secho('done', fg='blue')
     if not no_capture:
         capture_as_template(ctx, config, vapp_resource, org, catalog)
