@@ -50,17 +50,17 @@ def version(ctx):
 @cli.command('sample-config', short_help='generate sample configuration')
 @click.pass_context
 @click.option(
-    '-l',
-    '--labels',
-    'labels',
+    '-t',
+    '--template',
+    'template',
     required=False,
-    default='photon,1.0',
-    metavar='<labels>',
-    help='labels')
-def sample_config(ctx, labels):
+    default='photon-custom-hw11-2.0-304b817.ova',
+    metavar='<template>',
+    help='template')
+def sample_config(ctx, template):
     """Generate sample CSE configuration"""
     labels_array = labels.split(',')
-    click.secho(generate_sample_config(labels_array))
+    click.secho(generate_sample_config(template))
 
 
 @cli.command(short_help='check configuration')
@@ -85,6 +85,14 @@ def check(ctx, file_name):
     metavar='<config-file>',
     required=True,
     default='config.yml')
+@click.option(
+    '-t',
+    '--template',
+    'template',
+    required=False,
+    default='photon-custom-hw11-2.0-304b817.ova',
+    metavar='<template>',
+    help='template')
 @click.option('-n',
               '--no-capture',
               is_flag=True,
@@ -93,7 +101,7 @@ def check(ctx, file_name):
               help='no capture')
 def install(ctx, file_name, no_capture):
     """Install CSE on vCloud Director"""
-    install_cse(ctx, file_name, no_capture)
+    install_cse(ctx, file_name, template, no_capture)
 
 
 @cli.command(short_help='uninstall CSE from vCD')

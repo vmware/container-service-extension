@@ -23,8 +23,11 @@ def load_from_metadata(client,
         query_filter = 'metadata:cse.cluster.id==STRING:%s' % cluster_id
     else:
         query_filter = 'metadata:cse.cluster.id==STRING:*'
+    resource_type = 'vApp'
+    if client.is_sysadmin():
+        resource_type = 'adminVApp'
     q = client.get_typed_query(
-            'vApp',
+            resource_type,
             query_result_format=QueryResultFormat.
             ID_RECORDS,
             qfilter=query_filter,

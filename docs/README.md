@@ -226,6 +226,20 @@ On Photon OS, check file `/etc/systemd/logind.conf` and make sure `KillUserProce
 KillUserProcesses=no
 ```
 
+A sample `systemd` unit is provided. Customize and copy file `cse.service` in the repository to `/etc/systemd/system/cse.service`. A sample `cse.sh` is also provided.
+
+Install with:
+
+```
+systemctl enable cse
+```
+
+Start with:
+
+```
+systemctl start cse
+```
+
 ### Tenant Installation
 
 vCloud Director tenants just need to install the [vcd-cli](https://vmware.github.io/vcd-cli) package:

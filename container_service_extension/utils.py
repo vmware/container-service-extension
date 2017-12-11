@@ -3,8 +3,10 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import hashlib
+import random
 import socket
 import ssl
+import string
 
 
 def hex_chunks(s):
@@ -20,3 +22,8 @@ def get_thumbprint(host, port):
     thumb_sha1 = hashlib.sha1(der_cert_bin).hexdigest()
     wrappedSocket.close()
     return ':'.join(map(str, hex_chunks(thumb_sha1))).upper()
+
+
+def random_word(length):
+   letters = string.ascii_lowercase
+   return ''.join(random.choice(letters) for i in range(length))

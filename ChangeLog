@@ -1,6 +1,9 @@
 CHANGES
 =======
 
+* fixed PV provider files location
+* customization directory
+* docs
 * docs
 * ubuntu template
 * path

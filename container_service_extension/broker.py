@@ -877,6 +877,16 @@ HOST=`hostname` CSE_MSG_DIR=/root/cse nohup go/src/github.com/vmware/container-s
                         fail_on_status=None,
                         expected_target_statuses=[TaskStatus.SUCCESS],
                         callback=None)
+                t = vapp.set_metadata('GENERAL', 'READWRITE',
+                                      'cse.cluster.status', 'ready')
+                self.client_tenant.get_task_monitor().\
+                    wait_for_status(
+                        task=t,
+                        timeout=600,
+                        poll_frequency=5,
+                        fail_on_status=None,
+                        expected_target_statuses=[TaskStatus.SUCCESS],
+                        callback=None)
                 node['token'] = token
                 master_node = node
             LOGGER.debug('executed customization script on %s (%s)' %
