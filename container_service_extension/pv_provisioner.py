@@ -135,33 +135,47 @@ class PVProvisioner(threading.Thread):
                         else:
                             response = vs.download_file_from_guest(vm, 'root', self.config['broker']['password'], f)
                             json_request = json.loads(response.content.decode('utf-8'))
-                        LOGGER.debug('PVName: %s' % json_request['PVName'])
-                        json_response = copy.deepcopy(json_request)
+                        json_response = None
                         try:
-                            self.process_request(cluster_name, cluster_id, vapp, moid, json_request)
+                            if 'spec' in json_request:
+                                if 'claimRef' in json_request['spec']:
+                                    if 'kind' in json_request['spec']['claimRef']:
+                                        if json_request['spec']['claimRef']['kind'] == 'PersistentVolumeClaim':
+                                            if json_request['status']['phase'] == 'Released':
+                                                json_response = {'status':{'phase':''}}
+                                                self.process_request_delete_pv(cluster_name, cluster_id, vapp, moid, json_request)
+                            elif 'PVC' in json_request:
+                                json_response = copy.deepcopy(json_request)
+                                self.process_request_provision_pv(cluster_name, cluster_id, vapp, moid, json_request)
+                            else:
+                                pass
                         except Exception as e:
                             LOGGER.error(e, exc_info=True)
-                            json_response['PVC']['status']['phase'] = 'failed'
-                            json_response['PVC']['status']['reason'] = str(e)
-                            json_response['PVC']['status']['message'] = str(e)
+                            if 'PVC' in json_request:
+                                json_response['PVC']['status']['phase'] = 'failed'
+                                json_response['PVC']['status']['reason'] = str(e)
+                                json_response['PVC']['status']['message'] = str(e)
+                            else:
+                                json_response['status']['phase'] = 'failed'
+                                json_response['status']['reason'] = str(e)
+                                json_response['status']['message'] = str(e)
                         if 'CSE_LOCAL' in os.environ:
                             os.remove(f)
                         else:
                             vs.delete_file_in_guest(vm, 'root', self.config['broker']['password'], f)
-                        f = f.replace('/req/', '/res/')
-                        if 'CSE_LOCAL' in os.environ:
-                            with open(f, 'w') as outfile:
-                                json.dump(json_response, outfile)
-                        else:
-                            vs.upload_file_to_guest(vm, 'root', self.config['broker']['password'], json.dumps(json_response), f)
+                        if json_response is not None:
+                            f = f.replace('/req/', '/res/')
+                            if 'CSE_LOCAL' in os.environ:
+                                with open(f, 'w') as outfile:
+                                    json.dump(json_response, outfile)
+                            else:
+                                vs.upload_file_to_guest(vm, 'root', self.config['broker']['password'], json.dumps(json_response), f)
                 except Exception as e:
                     LOGGER.error(e, exc_info=True)
 
             time.sleep(SLEEP_TIME)
 
-    # sed -i '/\/mnt\/pvc1/d' /etc/fstab
-
-    def process_request(self, cluster_name, cluster_id, vapp, moid, json_request):
+    def process_request_provision_pv(self, cluster_name, cluster_id, vapp, moid, json_request):
         vdc_resource = self.client_sysadmin.get_linked_resource(vapp.resource, RelationType.UP, EntityType.VDC.value)
         vdc = VDC(self.client_sysadmin, resource=vdc_resource)
         disk_name_orig = json_request['PVC']['metadata']['name']
@@ -224,7 +238,7 @@ class PVProvisioner(threading.Thread):
         nodes = cluster['nodes']
         if len(nodes) == 0:
             nodes = cluster['master_nodes']
-        for n in range(random.randrange(10)):
+        for n in range(random.randrange(25)):
             target_node = random.choice(nodes)
         target_vapp = VApp(self.client_sysadmin, href=target_node['href'])
         target_moid = target_vapp.get_vm_moid(target_node['name'])
@@ -315,3 +329,71 @@ fi
         else:
             LOGGER.info('PV %s(%s), bound, VM: %s, moid: %s, device: %s, path: %s' % (disk_name, disk_id, target_node['name'], target_moid, device, path))
         assert result[0] == 0
+
+
+    def process_request_delete_pv(self, cluster_name, cluster_id, vapp, moid, json_request):
+        vdc_resource = self.client_sysadmin.get_linked_resource(vapp.resource, RelationType.UP, EntityType.VDC.value)
+        vdc = VDC(self.client_sysadmin, resource=vdc_resource)
+        disk_name_orig = json_request['spec']['claimRef']['name']
+        disk_uid = json_request['spec']['claimRef']['uid']
+        disk_name = '%s-%s' % (cluster_name, disk_name_orig)
+
+        disk_resource = vdc.get_disk(disk_name)
+
+        vm_name = disk_resource.attached_vms.VmReference.get('name')
+        vm_href = disk_resource.attached_vms.VmReference.get('href')
+        vm_resource = self.client_sysadmin.get_resource(vm_href)
+        vapp_resource = self.client_sysadmin.get_linked_resource(vm_resource, RelationType.UP, EntityType.VAPP.value)
+        vapp_name = vapp_resource.get('name')
+
+        LOGGER.info('PV %s, deleting ind. disk: %s, vapp: %s, vm: %s, pvc-uid: %s' % (disk_name_orig, disk_name, vapp_name, vm_name, disk_uid))
+
+        disk_id = disk_resource.get('id')
+        disk_href = disk_resource.get('href')
+
+        target_vapp = VApp(self.client_sysadmin, resource=vapp_resource)
+        target_moid = target_vapp.get_vm_moid(vm_name)
+        LOGGER.debug('%s, %s, %s' % (cluster_name, vapp_name, target_moid))
+
+        vs = VSphere(
+            self.config['vcs']['host'],
+            self.config['vcs']['username'],
+            self.config['vcs']['password'],
+            port=int(self.config['vcs']['port']))
+        vs.connect()
+        vm = vs.get_vm_by_moid(target_moid)
+        script = """
+umount -f /mnt/{dir}
+sed -i '/\/mnt\/{dir}/d' /etc/fstab
+""".format(dir=disk_name_orig)
+        result = vs.execute_script_in_guest(vm, 'root',
+                                            self.config['broker']['password'],
+                                            script, wait_for_completion=True,
+                                            wait_time=1, get_output=True)
+        LOGGER.info('PV %s(%s), umount script status: %s, vm: %s' % (disk_name, disk_id, result[0], vm_name))
+        if result[0] != 0:
+            LOGGER.error('PV %s(%s), umount script stdout: %s' % (disk_name, disk_id, result[1].content.decode()))
+            LOGGER.error('PV %s(%s), umount script stderr: %s' % (disk_name, disk_id, result[2].content.decode()))
+        else:
+            LOGGER.info('PV %s(%s), umount, VM: %s, moid: %s' % (disk_name, disk_id, vm_name, target_moid))
+        assert result[0] == 0
+
+        LOGGER.info('PV %s(%s), detaching from: %s, moid: %s' % (disk_name, disk_id, vm_name, target_moid))
+        task = target_vapp.detach_disk_from_vm(
+            disk_href=disk_resource.get('href'),
+            disk_type=disk_resource.get('type'),
+            disk_name=disk_resource.get('name'),
+            vm_name=vm_name)
+        task_resource = self.client_sysadmin.get_task_monitor().wait_for_status(
+            task=task,
+            timeout=60,
+            poll_frequency=2,
+            fail_on_status=None,
+            expected_target_statuses=[
+                TaskStatus.SUCCESS,
+                TaskStatus.ABORTED,
+                TaskStatus.ERROR,
+                TaskStatus.CANCELED])
+        task_status = task_resource.get('status').lower()
+        LOGGER.info('PV %s(%s), detach disk status: %s' % (disk_name, disk_id, task_status))
+        assert task_status == TaskStatus.SUCCESS.value

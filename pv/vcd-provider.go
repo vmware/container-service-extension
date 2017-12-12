@@ -22,6 +22,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/tools/clientcmd"
+  "github.com/satori/go.uuid"
 )
 
 const (
@@ -86,8 +87,9 @@ func (p *vcdProvisioner) Provision(options controller.VolumeOptions) (*v1.Persis
 	var target_node string
 	marshalled, _ := json.MarshalIndent(options, "", "    ")
 	fmt.Printf("vcdProvisioner->Provision called with options:\n%s\n", marshalled)
-	request_file_name := fmt.Sprintf("%s/req/%s.json", p.msgDir, options.PVName)
-	response_file_name := fmt.Sprintf("%s/res/%s.json", p.msgDir, options.PVName)
+  u1 := uuid.NewV4()
+	request_file_name := fmt.Sprintf("%s/req/%s.json", p.msgDir, u1)
+	response_file_name := fmt.Sprintf("%s/res/%s.json", p.msgDir, u1)
 	f, err := os.Create(request_file_name)
 	check(err)
 	defer f.Close()
@@ -169,6 +171,39 @@ func (p *vcdProvisioner) Delete(volume *v1.PersistentVolume) error {
 		volume.ObjectMeta.Name,
 		pvc_name,
 		target_node)
+  u1 := uuid.NewV4()
+  request_file_name := fmt.Sprintf("%s/req/%s.json", p.msgDir, u1)
+  response_file_name := fmt.Sprintf("%s/res/%s.json", p.msgDir, u1)
+
+  f, err := os.Create(request_file_name)
+	check(err)
+	defer f.Close()
+	_, err = f.Write(marshalled)
+	check(err)
+	fmt.Printf("request sent: %s\n", request_file_name)
+
+  fmt.Printf("respnse wait: %s\n", response_file_name)
+
+  // var r vcdProvisionerResponse
+
+	for {
+		time.Sleep(5 * time.Second)
+		response, err := ioutil.ReadFile(response_file_name)
+		if err != nil {
+			fmt.Printf("respnse wait: %s\n", response_file_name)
+		} else {
+			fmt.Printf("respnse read: %s\n", response_file_name)
+      fmt.Printf("response got:\n%s\n", response)
+			// json.Unmarshal(response, &r)
+			// marshalled, _ = json.MarshalIndent(r, "", "    ")
+			// fmt.Printf("response got: %s\n%s\n", r, marshalled)
+			// target_node = r.Node
+			// pvname = r.PVName
+			os.Remove(response_file_name)
+			break
+		}
+	}
+
 	label := fmt.Sprintf("pvc.%s", pvc_name)
 	n := clientset.CoreV1().Nodes()
 	nodes, _ := n.List(metav1.ListOptions{})

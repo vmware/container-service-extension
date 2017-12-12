@@ -1,5 +1,5 @@
-hash: 0e22b39c7332f7b5a490c732b9a7a4d9d90370263430bede9aac12496c016b53
-updated: 2017-11-30T20:12:13.681014914-06:00
+hash: 4331e526faced884e869294218d42e1c4730c7237af215d959cc3ffe568d470b
+updated: 2017-12-11T13:08:09.032272949-06:00
 imports:
 - name: github.com/davecgh/go-spew
   version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
@@ -63,6 +63,8 @@ imports:
   version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
 - name: github.com/PuerkitoBio/urlesc
   version: 5bd2802263f21d8788851d5305584c82a5c75d7e
+- name: github.com/satori/go.uuid
+  version: 5bf94b69c6b68ee1b541973bb8e1144db23a194b
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/ugorji/go

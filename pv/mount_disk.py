@@ -131,7 +131,7 @@ fi
                                         config['broker']['password'],
                                         script, wait_for_completion=True,
                                         wait_time=1, get_output=True,
-                                        target_file='/root/floppylion.sh',
+                                        target_file='/root/script.sh',
                                         delete_script=True)
     print(result[0])
     print(result[1].content.decode())

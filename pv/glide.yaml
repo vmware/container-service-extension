@@ -21,3 +21,4 @@ import:
   - kubernetes
   - pkg/api/v1
   - rest
+- package: github.com/satori/go.uuid
