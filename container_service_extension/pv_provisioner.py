@@ -312,9 +312,9 @@ then
     sync
     mkfs -t ext4 {device}1
     mkdir -p {path}
-    cat <<EOF >> /etc/fstab
-{device}1\t{path}\text4\tdefaults\t0\t0
-EOF
+#    cat <<EOF >> /etc/fstab
+#{device}1\t{path}\text4\tdefaults\t0\t0
+#EOF
     mount {device}1
 fi
 """.format(device=device, device_name=device_name, path=path)
