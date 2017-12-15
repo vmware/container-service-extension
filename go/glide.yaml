@@ -1,0 +1,18 @@
+package: github.com/vmware/container-service-extension/go
+import:
+- package: github.com/golang/glog
+- package: github.com/kubernetes-incubator/external-storage
+  version: ~3.0.0-beta.2
+  subpackages:
+  - lib/controller
+- package: k8s.io/api
+  subpackages:
+  - core/v1
+- package: k8s.io/apimachinery
+  subpackages:
+  - pkg/apis/meta/v1
+  - pkg/util/wait
+- package: k8s.io/client-go
+  subpackages:
+  - kubernetes
+  - rest

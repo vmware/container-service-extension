@@ -1,0 +1,21 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: vcd-provisioner
+spec:
+  containers:
+    - name: vcd-provisioner
+      image: pacogomez/vcd-provisioner:latest
+      imagePullPolicy: Always
+      env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+      volumeMounts:
+        - name: pv-volume
+          mountPath: /tmp/vcd-provisioner
+  volumes:
+    - name: pv-volume
+      hostPath:
+        path: /tmp/vcd-provisioner
