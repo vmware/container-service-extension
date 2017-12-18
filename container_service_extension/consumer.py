@@ -17,8 +17,13 @@ LOGGER = logging.getLogger(__name__)
 class MessageConsumer(object):
     EXCHANGE_TYPE = 'direct'
 
-    def __init__(self, amqp_url, exchange, routing_key,
-                 config, verify, log=False):
+    def __init__(self,
+                 amqp_url,
+                 exchange,
+                 routing_key,
+                 config,
+                 verify,
+                 log=False):
         self._connection = None
         self._channel = None
         self._closing = False
@@ -30,16 +35,16 @@ class MessageConsumer(object):
         self.config = config
         self.verify = verify
         self.log = log
-        self.service_processor = ServiceProcessor(self.config,
-                                                  self.verify,
+        self.service_processor = ServiceProcessor(self.config, self.verify,
                                                   self.log)
         self.fsencoding = sys.getfilesystemencoding()
 
     def connect(self):
         LOGGER.info('Connecting to %s', self._url)
-        return pika.SelectConnection(pika.URLParameters(self._url),
-                                     self.on_connection_open,
-                                     stop_ioloop_on_close=False)
+        return pika.SelectConnection(
+            pika.URLParameters(self._url),
+            self.on_connection_open,
+            stop_ioloop_on_close=False)
 
     def on_connection_open(self, unused_connection):
         LOGGER.debug('Connection opened')
@@ -81,16 +86,17 @@ class MessageConsumer(object):
         self._channel.add_on_close_callback(self.on_channel_closed)
 
     def on_channel_closed(self, channel, reply_code, reply_text):
-        LOGGER.warning('Channel %i was closed: (%s) %s',
-                       channel, reply_code, reply_text)
+        LOGGER.warning('Channel %i was closed: (%s) %s', channel, reply_code,
+                       reply_text)
         self._connection.close()
 
     def setup_exchange(self, exchange_name):
         LOGGER.debug('Declaring exchange %s', exchange_name)
-        self._channel.exchange_declare(self.on_exchange_declareok,
-                                       exchange=exchange_name,
-                                       exchange_type=self.EXCHANGE_TYPE,
-                                       durable=True)
+        self._channel.exchange_declare(
+            self.on_exchange_declareok,
+            exchange=exchange_name,
+            exchange_type=self.EXCHANGE_TYPE,
+            durable=True)
 
     def on_exchange_declareok(self, unused_frame):
         LOGGER.debug('Exchange declared')
@@ -101,10 +107,10 @@ class MessageConsumer(object):
         self._channel.queue_declare(self.on_queue_declareok, queue_name)
 
     def on_queue_declareok(self, method_frame):
-        LOGGER.debug('Binding %s to %s with %s',
-                     self.exchange, self.queue, self.routing_key)
-        self._channel.queue_bind(self.on_bindok, self.queue,
-                                 self.exchange, self.routing_key)
+        LOGGER.debug('Binding %s to %s with %s', self.exchange, self.queue,
+                     self.routing_key)
+        self._channel.queue_bind(self.on_bindok, self.queue, self.exchange,
+                                 self.routing_key)
 
     def on_bindok(self, unused_frame):
         LOGGER.debug('Queue bound')
@@ -113,8 +119,8 @@ class MessageConsumer(object):
     def start_consuming(self):
         LOGGER.debug('Issuing consumer related RPC commands')
         self.add_on_cancel_callback()
-        self._consumer_tag = self._channel.basic_consume(self.on_message,
-                                                         self.queue)
+        self._consumer_tag = self._channel.basic_consume(
+            self.on_message, self.queue)
 
     def add_on_cancel_callback(self):
         LOGGER.debug('Adding consumer cancellation callback')
@@ -131,11 +137,9 @@ class MessageConsumer(object):
         try:
             body_json = json.loads(body.decode(self.fsencoding))[0]
             LOGGER.debug('Received message # %s from %s (%s): %s, props: %s',
-                         basic_deliver.delivery_tag,
-                         properties.app_id,
+                         basic_deliver.delivery_tag, properties.app_id,
                          threading.currentThread().ident,
-                         json.dumps(body_json),
-                         properties)
+                         json.dumps(body_json), properties)
             result = self.service_processor.process_request(body_json)
             reply_body = json.dumps(result['body'])
             status_code = result['status_code']
@@ -147,17 +151,22 @@ class MessageConsumer(object):
 
         if properties.reply_to is not None:
             reply_msg = {
-                'id': body_json['id'],
-                'headers': {'Content-Type': body_json['headers']['Accept'],
-                            'Content-Length': len(reply_body)},
-                'statusCode': status_code,
-                'body': base64.b64encode(
-                    reply_body.encode()).decode(self.fsencoding),
-                'request': False
+                'id':
+                body_json['id'],
+                'headers': {
+                    'Content-Type': body_json['headers']['Accept'],
+                    'Content-Length': len(reply_body)
+                },
+                'statusCode':
+                status_code,
+                'body':
+                base64.b64encode(reply_body.encode()).decode(self.fsencoding),
+                'request':
+                False
             }
             LOGGER.debug('reply: %s', json.dumps(reply_body))
             reply_properties = pika.BasicProperties(
-                                   correlation_id=properties.correlation_id)
+                correlation_id=properties.correlation_id)
             result = self._channel.basic_publish(
                 exchange=properties.headers['replyToExchange'],
                 routing_key=properties.reply_to,

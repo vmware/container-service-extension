@@ -37,125 +37,95 @@ OP_DELETE_CLUSTER = 'delete_cluster'
 
 MAX_HOST_NAME_LENGTH = 25 - 4
 
-SAMPLE_CONFIG_PHOTON = {
-    'broker': {
-        'type':
-        'default',
-        'org':
-        'Admin',
-        'vdc':
-        'Catalog',
-        'catalog':
-        'cse',
-        'network':
-        'admin_network',
-        'ip_allocation_mode':
-        'pool',
-        'storage_profile':
-        '*',
-        'labels': ['photon', '1.0'],
-        'source_ova_name':
-        'photon-custom-hw11-1.0-62c543d.ova',
-        'source_ova':
-        'https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova',  # NOQA
-        'sha1_ova':
-        '18c1a6d31545b757d897c61a0c3cc0e54d8aeeba',
-        'temp_vapp':
-        'csetmp-p',
-        'cleanup':
-        True,
-        'master_template':
-        'k8s-p.ova',
-        'master_template_disk':
-        20000,
-        'node_template':
-        'k8s-p.ova',
-        'password':
-        'root_secret_password',
-        'ssh_public_key':
-        'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0brDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse',  # NOQA
-        'master_cpu':
-        2,
-        'master_mem':
-        2048,
-        'node_cpu':
-        2,
-        'node_mem':
-        2048,
-        'cse_msg_dir':
-        '/tmp/cse'
-    }
+SAMPLE_TEMPLATE_PHOTON_V1 = {
+    'name':
+    'photon-custom-hw11-1.0-62c543d.ova',
+    'source_ova_name':
+    'photon-custom-hw11-1.0-62c543d.ova',
+    'source_ova':
+    'https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova',  # NOQA
+    'sha1_ova':
+    '18c1a6d31545b757d897c61a0c3cc0e54d8aeeba',
+    'temp_vapp':
+    'photon1-temp',
+    'cleanup':
+    True,
+    'template':
+    'photon-custom-hw11-1.0-62c543d-k8s',
+    'password':
+    'root_secret_password',
+    'ssh_public_key':
+    'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0brDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse',  # NOQA
+    'cpu':
+    2,
+    'mem':
+    2048
 }
 
-SAMPLE_CONFIG_UBUNTU = {
-    'broker': {
-        'type':
-        'default',
-        'org':
-        'Admin',
-        'vdc':
-        'Catalog',
-        'catalog':
-        'cse',
-        'network':
-        'admin_network',
-        'ip_allocation_mode':
-        'pool',
-        'storage_profile':
-        '*',
-        'labels': ['ubuntu', '16.04'],
-        'source_ova_name':
-        'ubuntu-16.04-server-cloudimg-amd64.ova',
-        'source_ova':
-        'https://cloud-images.ubuntu.com/releases/xenial/release-20171011/ubuntu-16.04-server-cloudimg-amd64.ova',  # NOQA
-        'sha1_ova':
-        '1bddf68820c717e13c6d1acd800fb7b4d197b411',
-        'temp_vapp':
-        'csetmp-u',
-        'cleanup':
-        True,
-        'master_template':
-        'k8s-u.ova',
-        'master_template_disk':
-        20000,
-        'node_template':
-        'k8s-u.ova',
-        'password':
-        'root_secret_password',
-        'ssh_public_key':
-        'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0brDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse',  # NOQA
-        'master_cpu':
-        2,
-        'master_mem':
-        2048,
-        'node_cpu':
-        2,
-        'node_mem':
-        2048,
-        'cse_msg_dir':
-        '/tmp/cse'
-    }
+SAMPLE_TEMPLATE_UBUNTU_16_04 = {
+    'name':
+    'ubuntu-16.04-server-cloudimg-amd64.ova',
+    'source_ova_name':
+    'ubuntu-16.04-server-cloudimg-amd64.ova',
+    'source_ova':
+    'https://cloud-images.ubuntu.com/releases/xenial/release-20171011/ubuntu-16.04-server-cloudimg-amd64.ova',  # NOQA
+    'sha1_ova':
+    '1bddf68820c717e13c6d1acd800fb7b4d197b411',
+    'temp_vapp':
+    'ubuntu-temp',
+    'cleanup':
+    True,
+    'template':
+    'ubuntu-16.04-server-cloudimg-amd64-k8s',
+    'password':
+    'root_secret_password',
+    'ssh_public_key':
+    'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0brDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse',  # NOQA
+    'cpu':
+    2,
+    'mem':
+    2048
 }
 
-SAMPLE_CONFIG = SAMPLE_CONFIG_UBUNTU
+SAMPLE_CONFIG = {
+    'broker': {
+        'type': 'default',
+        'org': 'Admin',
+        'vdc': 'Catalog',
+        'catalog': 'cse',
+        'network': 'admin_network',
+        'ip_allocation_mode': 'pool',
+        'storage_profile': '*',
+        'default_template': SAMPLE_TEMPLATE_PHOTON_V1['name'],
+        'templates': [SAMPLE_TEMPLATE_PHOTON_V1, SAMPLE_TEMPLATE_UBUNTU_16_04],
+        'cse_msg_dir': '/tmp/cse'
+    }
+}
 
 
 def get_sample_broker_config(labels):
-    if 'photon' in labels:
-        return yaml.safe_dump(SAMPLE_CONFIG_PHOTON, default_flow_style=False)
-    elif 'ubuntu' in labels:
-        return yaml.safe_dump(SAMPLE_CONFIG_UBUNTU, default_flow_style=False)
-    else:
-        return yaml.safe_dump(SAMPLE_CONFIG_PHOTON, default_flow_style=False)
+    return yaml.safe_dump(SAMPLE_CONFIG, default_flow_style=False)
 
 
-def validate_broker_config(config):
+def validate_broker_config_elements(config):
     for k, v in SAMPLE_CONFIG['broker'].items():
         if k not in config.keys():
             raise Exception('missing key: %s' % k)
     for k, v in config.items():
         if k not in SAMPLE_CONFIG['broker'].keys():
             raise Exception('invalid key: %s' % k)
+    for template in config['templates']:
+        for k, v in SAMPLE_TEMPLATE_PHOTON_V1.items():
+            if k not in template.keys():
+                raise Exception('missing key: %s' % k)
+        for k, v in template.items():
+            if k not in SAMPLE_TEMPLATE_PHOTON_V1.keys():
+                raise Exception('invalid key: %s' % k)
+
+
+def validate_broker_config_content(config):
+    for template in config['broker']['templates']:
+        click.secho('template: %s' % template['name'])
 
 
 def get_new_broker(config):

@@ -6,15 +6,12 @@ import logging
 from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.vapp import VApp
 
-
 TYPE_MASTER = 'master'
 TYPE_NODE = 'node'
 LOGGER = logging.getLogger(__name__)
 
 
-def load_from_metadata(client,
-                       name=None,
-                       cluster_id=None,
+def load_from_metadata(client, name=None, cluster_id=None,
                        get_leader_ip=False):
     clusters_dict = {}
     if name is not None:
@@ -27,26 +24,23 @@ def load_from_metadata(client,
     if client.is_sysadmin():
         resource_type = 'adminVApp'
     q = client.get_typed_query(
-            resource_type,
-            query_result_format=QueryResultFormat.
-            ID_RECORDS,
-            qfilter=query_filter,
-            fields='metadata:cse.cluster.name' +
-                   ',metadata:cse.cluster.id' +
-                   ',metadata:cse.node.type')
+        resource_type,
+        query_result_format=QueryResultFormat.ID_RECORDS,
+        qfilter=query_filter,
+        fields='metadata:cse.cluster.name' + ',metadata:cse.cluster.id' +
+        ',metadata:cse.node.type')
     records = list(q.execute())
     nodes = []
     for record in records:
         vapp_id = record.get('id').split(':')[-1]
         vdc_id = record.get('vdc').split(':')[-1]
-        node = {'vapp_name': record.get('name'),
-                'vdc_name': record.get('vdcName'),
-                'vapp_id': vapp_id,
-                'vapp_href': '%s/vApp/vapp-%s' %
-                (client._uri, vapp_id),
-                'vdc_href': '%s/vdc/%s' %
-                (client._uri, vdc_id)
-                }
+        node = {
+            'vapp_name': record.get('name'),
+            'vdc_name': record.get('vdcName'),
+            'vapp_id': vapp_id,
+            'vapp_href': '%s/vApp/vapp-%s' % (client._uri, vapp_id),
+            'vdc_href': '%s/vdc/%s' % (client._uri, vdc_id)
+        }
         if hasattr(record, 'Metadata'):
             for me in record.Metadata.MetadataEntry:
                 if me.Key == 'cse.cluster.name':
@@ -72,8 +66,7 @@ def load_from_metadata(client,
                 cluster['vdc_href'] = node['vdc_href']
                 cluster['master_nodes'] = []
                 cluster['nodes'] = []
-            n = {'name': node['vapp_name'],
-                 'href': node['vapp_href']}
+            n = {'name': node['vapp_name'], 'href': node['vapp_href']}
             if node['node_type'] == TYPE_MASTER:
                 cluster['master_nodes'].append(n)
                 cluster['leader_endpoint'] = None

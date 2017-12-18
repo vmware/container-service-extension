@@ -5,7 +5,8 @@
 from __future__ import print_function
 import click
 from container_service_extension.broker import get_sample_broker_config
-from container_service_extension.broker import validate_broker_config
+from container_service_extension.broker import validate_broker_config_content
+from container_service_extension.broker import validate_broker_config_elements
 import hashlib
 import logging
 import os
@@ -17,12 +18,12 @@ from pyvcloud.vcd.client import SIZE_1MB
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
-from pyvcloud.vcd.vsphere import VSphere
 import requests
 import site
 import time
 import traceback
 from vcd_cli.utils import stdout
+from vsphere_guest_run.vsphere import VSphere
 import yaml
 
 LOGGER = logging.getLogger(__name__)
@@ -95,9 +96,9 @@ def bool_to_msg(value):
         return 'fail'
 
 
-def get_config(file_name):
+def get_config(config_file_name):
     config = {}
-    with open(file_name, 'r') as f:
+    with open(config_file_name, 'r') as f:
         config = yaml.load(f)
     if not config['vcd']['verify']:
         click.secho(
@@ -111,9 +112,10 @@ def get_config(file_name):
     return config
 
 
-def check_config(file_name):
-    config = get_config(file_name)
-    validate_broker_config(config['broker'])
+def check_config(config_file_name):
+    click.secho('Validating CSE on vCD from file: %s' % config_file_name)
+    config = get_config(config_file_name)
+    validate_broker_config_elements(config['broker'])
     amqp = config['amqp']
     credentials = pika.PlainCredentials(amqp['username'], amqp['password'])
     parameters = pika.ConnectionParameters(
@@ -145,21 +147,24 @@ def check_config(file_name):
                'administrator (%s:%s): %s' % (config['vcd']['host'],
                                               config['vcd']['port'],
                                               bool_to_msg(True)))
-
+    click.secho('Validating  \'%s\' service broker' % config['broker']['type'])
     if config['broker']['type'] == 'default':
-        logged_in_org = client.get_org()
-        org = Org(client, resource=logged_in_org)
-        org.get_catalog(config['broker']['catalog'])
-        click.echo('Find catalog \'%s\': %s' % (config['broker']['catalog'],
-                                                bool_to_msg(True)))
-        org.get_catalog_item(config['broker']['catalog'],
-                             config['broker']['master_template'])
-        click.echo('Find master template \'%s\': %s' %
-                   (config['broker']['master_template'], bool_to_msg(True)))
-        org.get_catalog_item(config['broker']['catalog'],
-                             config['broker']['node_template'])
-        click.echo('Find node template \'%s\': %s' %
-                   (config['broker']['node_template'], bool_to_msg(True)))
+        validate_broker_config_content(config)
+        # logged_in_org = client.get_org()
+        # org = Org(client, resource=logged_in_org)
+        # org.get_catalog(config['broker']['catalog'])
+        # click.echo('Find catalog \'%s\': %s' % (config['broker']['catalog'],
+        #                                         bool_to_msg(True)))
+        # for template in config['broker']['templates']:
+        #     click.secho('template: %s' % template['name'])
+        # org.get_catalog_item(config['broker']['catalog'],
+        #                      config['broker']['master_template'])
+        # click.echo('Find master template \'%s\': %s' %
+        #            (config['broker']['master_template'], bool_to_msg(True)))
+        # org.get_catalog_item(config['broker']['catalog'],
+        #                      config['broker']['node_template'])
+        # click.echo('Find node template \'%s\': %s' %
+        #            (config['broker']['node_template'], bool_to_msg(True)))
 
     v = VSphere(
         config['vcs']['host'],
@@ -174,9 +179,10 @@ def check_config(file_name):
     return config
 
 
-def uninstall_cse(ctx, file_name):
-    click.secho('Uninstalling CSE from vCD from file: %s' % file_name)
-    config = get_config(file_name)
+def uninstall_cse(ctx, config_file_name, template):
+    click.secho('Uninstalling CSE from vCD from file: %s, template: %s' %
+                (config_file_name, template))
+    config = get_config(config_file_name)
     client = Client(
         config['vcd']['host'],
         api_version=config['vcd']['api_version'],
@@ -194,7 +200,6 @@ def uninstall_cse(ctx, file_name):
     ctx.obj = {}
     ctx.obj['client'] = client
     if config['broker']['type'] == 'default':
-        vapp_name = config['broker']['temp_vapp']
         ctx.obj = {}
         ctx.obj['client'] = client
         orgs = client.get_org_list()
@@ -206,6 +211,8 @@ def uninstall_cse(ctx, file_name):
         vdc_resource = org.get_vdc(config['broker']['vdc'])
         click.echo('Find vdc \'%s\': %s' % (vdc_resource.get('name'),
                                             bool_to_msg(True)))
+        return
+        vapp_name = config['broker']['temp_vapp']
         try:
             vdc = VDC(client, resource=vdc_resource)
             vapp_resource = vdc.get_vapp(vapp_name)
@@ -234,9 +241,10 @@ def uninstall_cse(ctx, file_name):
                         config['broker']['master_template'])
 
 
-def install_cse(ctx, file_name, no_capture):
-    click.secho('Installing CSE on vCD from file: %s' % file_name)
-    config = get_config(file_name)
+def install_cse(ctx, config_file_name, template, no_capture):
+    click.secho('Installing CSE on vCD from file: %s, template: %s' %
+                (config_file_name, template))
+    config = get_config(config_file_name)
     client = Client(
         config['vcd']['host'],
         api_version=config['vcd']['api_version'],
@@ -251,6 +259,7 @@ def install_cse(ctx, file_name, no_capture):
                'administrator (%s:%s): %s' % (config['vcd']['host'],
                                               config['vcd']['port'],
                                               bool_to_msg(True)))
+    click.secho('Installing  \'%s\' service broker' % config['broker']['type'])
     if config['broker']['type'] == 'default':
         orgs = client.get_org_list()
         org_href = None
@@ -262,6 +271,7 @@ def install_cse(ctx, file_name, no_capture):
         vdc_resource = org.get_vdc(config['broker']['vdc'])
         click.echo('Find vdc \'%s\': %s' % (vdc_resource.get('name'),
                                             bool_to_msg(True)))
+        return
         try:
             catalog = org.get_catalog(config['broker']['catalog'])
         except Exception:
@@ -296,7 +306,7 @@ def install_cse(ctx, file_name, no_capture):
                     bool_to_msg(master_template is not None)))
         configure_amqp_settings(client, config)
         register_extension(client, config)
-        click.secho('Start CSE with: \'cse run %s\'' % file_name)
+        click.secho('Start CSE with: \'cse run %s\'' % config_file_name)
 
 
 def get_sha1(file):
@@ -314,17 +324,17 @@ def get_data_file(file_name):
     path = None
     if os.path.isfile('pv/%s' % file_name):
         path = 'pv/%s' % file_name
-    elif os.path.isfile(site.getusersitepackages()+'/cse/'+file_name):
-        path = site.getusersitepackages()+'/cse/'+file_name
+    elif os.path.isfile(site.getusersitepackages() + '/cse/' + file_name):
+        path = site.getusersitepackages() + '/cse/' + file_name
     else:
         sp = site.getsitepackages()
         if isinstance(sp, list):
             for item in sp:
-                if os.path.isfile(item+'/cse/'+file_name):
-                    path = item+'/cse/'+file_name
+                if os.path.isfile(item + '/cse/' + file_name):
+                    path = item + '/cse/' + file_name
                     break
-        elif os.path.isfile(sp+'/cse/'+file_name):
-            path = sp+'/cse/'+file_name
+        elif os.path.isfile(sp + '/cse/' + file_name):
+            path = sp + '/cse/' + file_name
     content = ''
     if path is not None:
         with open(path) as f:
@@ -671,7 +681,7 @@ echo 'customization completed'
         for f in ['vcd-provider.go', 'glide.yaml', 'glide.lock', 'class.yaml']:
             content = get_data_file(f)
             vs.upload_file_to_guest(vm, 'root', password_auto, content,
-                                    '/root/'+f)
+                                    '/root/' + f)
             click.secho('.', nl=False, fg='green')
         vs.upload_file_to_guest(vm, 'root', password_auto, cust_script,
                                 '/root/customize.sh')

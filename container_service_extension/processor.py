@@ -20,7 +20,6 @@ INTERNAL_SERVER_ERROR = 500
 
 
 class ServiceProcessor(object):
-
     def __init__(self, config, verify, log):
         self.config = config
         self.verify = verify
@@ -60,21 +59,17 @@ class ServiceProcessor(object):
             elif config_request:
                 broker = get_new_broker(self.config)
                 reply = broker.get_cluster_config(cluster_name,
-                                                  body['headers'],
-                                                  None)
+                                                  body['headers'], None)
             elif cluster_name is None:
                 broker = get_new_broker(self.config)
-                reply = broker.list_clusters(body['headers'],
-                                             request_body)
+                reply = broker.list_clusters(body['headers'], request_body)
         elif body['method'] == 'POST':
             if cluster_name is None:
                 broker = get_new_broker(self.config)
-                reply = broker.create_cluster(body['headers'],
-                                              request_body)
+                reply = broker.create_cluster(body['headers'], request_body)
         elif body['method'] == 'DELETE':
             broker = get_new_broker(self.config)
-            reply = broker.delete_cluster(cluster_name,
-                                          body['headers'],
+            reply = broker.delete_cluster(cluster_name, body['headers'],
                                           request_body)
         LOGGER.debug('reply: %s' % str(reply))
         return reply
