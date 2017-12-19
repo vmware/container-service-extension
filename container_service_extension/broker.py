@@ -39,7 +39,7 @@ MAX_HOST_NAME_LENGTH = 25 - 4
 
 SAMPLE_TEMPLATE_PHOTON_V1 = {
     'name':
-    'photon-custom-hw11-1.0-62c543d.ova',
+    'photon-custom-hw11-1.0-62c543d-k8s',
     'source_ova_name':
     'photon-custom-hw11-1.0-62c543d.ova',
     'source_ova':
@@ -50,21 +50,17 @@ SAMPLE_TEMPLATE_PHOTON_V1 = {
     'photon1-temp',
     'cleanup':
     True,
-    'template':
-    'photon-custom-hw11-1.0-62c543d-k8s',
-    'password':
-    'root_secret_password',
-    'ssh_public_key':
-    'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0brDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse',  # NOQA
     'cpu':
     2,
     'mem':
-    2048
+    2048,
+    'admin_password':
+    'guest_os_admin_password'
 }
 
 SAMPLE_TEMPLATE_UBUNTU_16_04 = {
     'name':
-    'ubuntu-16.04-server-cloudimg-amd64.ova',
+    'ubuntu-16.04-server-cloudimg-amd64-k8s',
     'source_ova_name':
     'ubuntu-16.04-server-cloudimg-amd64.ova',
     'source_ova':
@@ -72,19 +68,15 @@ SAMPLE_TEMPLATE_UBUNTU_16_04 = {
     'sha1_ova':
     '1bddf68820c717e13c6d1acd800fb7b4d197b411',
     'temp_vapp':
-    'ubuntu-temp',
+    'ubuntu1604-temp',
     'cleanup':
     True,
-    'template':
-    'ubuntu-16.04-server-cloudimg-amd64-k8s',
-    'password':
-    'root_secret_password',
-    'ssh_public_key':
-    'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFS5HL4CBlWrZscohhqdVwUa815Pi3NaCijfdvs0xCNF2oP458Xb3qYdEmuFWgtl3kEM4hR60/Tzk7qr3dmAfY7GPqdGhQsZEnvUJq0bfDAh0KqhdrqiIqx9zlKWnR65gl/u7Qkck2jiKkqjfxZwmJcuVCu+zQZCRC80XKwpyOudLKd/zJz9tzJxJ7+yltu9rNdshCEfP+OR1QoY2hFRH1qaDHTIbDdlF/m0FavapH7+ScufOY/HNSSYH7/SchsxK3zywOwGV1e1z//HHYaj19A3UiNdOqLkitKxFQrtSyDfClZ/0SwaVxh4jqrKuJ5NT1fbN2bpDWMgffzD9WWWZbDvtYQnl+dBjDnzBZGo8miJ87lYiYH9N9kQfxXkkyPziAjWj8KZ8bYQWJrEQennFzsbbreE8NtjsM059RXz0kRGeKs82rHf0mTZltokAHjoO5GmBZb8sZTdZyjfo0PTgaNCENe0brDTrAomM99LhW2sJ5ZjK7SIqpWFaU+P+qgj4s88btCPGSqnh0Fea1foSo5G57l5YvfYpJalW0IeiynrO7TRuxEVV58DJNbYyMCvcZutuyvNq0OpEQYXRM2vMLQX3ZX3YhHMTlSXXcriqvhOJ7aoNae5aiPSlXvgFi/wP1x1aGYMEsiqrjNnrflGk9pIqniXsJ/9TFwRh9m4GktQ== cse',  # NOQA
     'cpu':
     2,
     'mem':
-    2048
+    2048,
+    'admin_password':
+    'guest_os_admin_password'
 }
 
 SAMPLE_CONFIG = {
@@ -123,9 +115,27 @@ def validate_broker_config_elements(config):
                 raise Exception('invalid key: %s' % k)
 
 
-def validate_broker_config_content(config):
+def validate_broker_config_content(config, client):
+    from container_service_extension.config import bool_to_msg
+    logged_in_org = client.get_org()
+    org = Org(client, resource=logged_in_org)
+    org.get_catalog(config['broker']['catalog'])
+    click.echo('Find catalog \'%s\': %s' % (config['broker']['catalog'],
+                                            bool_to_msg(True)))
+    default_template_found = False
     for template in config['broker']['templates']:
-        click.secho('template: %s' % template['name'])
+        click.secho('Validating template: %s' % template['name'])
+        if config['broker']['default_template'] == template['name']:
+            default_template_found = True
+            click.secho('  Is default template: %s' % True)
+        else:
+            click.secho('  Is default template: %s' % False)
+        org.get_catalog_item(config['broker']['catalog'], template['name'])
+        click.echo('Find template \'%s\', \'%s\': %s' %
+                   (config['broker']['catalog'], template['name'],
+                    bool_to_msg(True)))
+
+    assert default_template_found
 
 
 def get_new_broker(config):
@@ -145,6 +155,10 @@ def wait_until_ready(vs, vm, password, file='/proc/version'):
             LOGGER.error(traceback.format_exc())
             LOGGER.debug('waiting for vm %s to be ready' % vm)
             time.sleep(1)
+
+
+def wait_for_tools_ready_callback():
+    pass
 
 
 def wait_until_tools_ready(vm):
@@ -611,7 +625,7 @@ class DefaultBroker(threading.Thread):
                             timeout=600,
                             poll_frequency=5,
                             fail_on_status=None,
-                            expected_target_statuses=[TaskStatus.SUCCESS], # NOQA
+                            expected_target_statuses=[TaskStatus.SUCCESS],
                             callback=None)
                     # tasks.append(delete_task)
 

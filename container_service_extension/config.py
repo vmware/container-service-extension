@@ -21,7 +21,6 @@ from pyvcloud.vcd.vdc import VDC
 import requests
 import site
 import time
-import traceback
 from vcd_cli.utils import stdout
 from vsphere_guest_run.vsphere import VSphere
 import yaml
@@ -147,24 +146,9 @@ def check_config(config_file_name):
                'administrator (%s:%s): %s' % (config['vcd']['host'],
                                               config['vcd']['port'],
                                               bool_to_msg(True)))
-    click.secho('Validating  \'%s\' service broker' % config['broker']['type'])
+    click.secho('Validating \'%s\' service broker' % config['broker']['type'])
     if config['broker']['type'] == 'default':
-        validate_broker_config_content(config)
-        # logged_in_org = client.get_org()
-        # org = Org(client, resource=logged_in_org)
-        # org.get_catalog(config['broker']['catalog'])
-        # click.echo('Find catalog \'%s\': %s' % (config['broker']['catalog'],
-        #                                         bool_to_msg(True)))
-        # for template in config['broker']['templates']:
-        #     click.secho('template: %s' % template['name'])
-        # org.get_catalog_item(config['broker']['catalog'],
-        #                      config['broker']['master_template'])
-        # click.echo('Find master template \'%s\': %s' %
-        #            (config['broker']['master_template'], bool_to_msg(True)))
-        # org.get_catalog_item(config['broker']['catalog'],
-        #                      config['broker']['node_template'])
-        # click.echo('Find node template \'%s\': %s' %
-        #            (config['broker']['node_template'], bool_to_msg(True)))
+        validate_broker_config_content(config, client)
 
     v = VSphere(
         config['vcs']['host'],
@@ -179,9 +163,9 @@ def check_config(config_file_name):
     return config
 
 
-def uninstall_cse(ctx, config_file_name, template):
+def uninstall_cse(ctx, config_file_name, template_name):
     click.secho('Uninstalling CSE from vCD from file: %s, template: %s' %
-                (config_file_name, template))
+                (config_file_name, template_name))
     config = get_config(config_file_name)
     client = Client(
         config['vcd']['host'],
@@ -211,39 +195,17 @@ def uninstall_cse(ctx, config_file_name, template):
         vdc_resource = org.get_vdc(config['broker']['vdc'])
         click.echo('Find vdc \'%s\': %s' % (vdc_resource.get('name'),
                                             bool_to_msg(True)))
-        return
-        vapp_name = config['broker']['temp_vapp']
-        try:
-            vdc = VDC(client, resource=vdc_resource)
-            vapp_resource = vdc.get_vapp(vapp_name)
-            assert vapp_resource is not None
-            click.secho(
-                'Deleting vApp template \'%s\' ' % vapp_name, fg='green')
-            task = vdc.delete_vapp(vapp_name, force=True)
-            stdout(task, ctx)
-        except Exception:
-            click.secho('vApp template \'%s\' not found' % vapp_name)
-        try:
-            master_template = org.get_catalog_item(
-                config['broker']['catalog'],
-                config['broker']['master_template'])
-            assert master_template is not None
-            click.secho(
-                'Deleting master template \'%s\'' %
-                config['broker']['master_template'],
-                nl=False,
-                fg='green')
-            org.delete_catalog_item(config['broker']['catalog'],
-                                    config['broker']['master_template'])
-            click.secho('done', fg='blue')
-        except Exception:
-            click.secho('Master template \'%s\' not found' %
-                        config['broker']['master_template'])
+        vdc = VDC(client, resource=vdc_resource)
+        for template in config['broker']['templates']:
+            if template_name == '*' or template['name'] == template_name:
+                click.secho('Deleting template: %s' % template['name'])
+                org.delete_catalog_item(config['broker']['catalog'],
+                                        template['name'])
 
 
-def install_cse(ctx, config_file_name, template, no_capture):
+def install_cse(ctx, config_file_name, template_name, no_capture):
     click.secho('Installing CSE on vCD from file: %s, template: %s' %
-                (config_file_name, template))
+                (config_file_name, template_name))
     config = get_config(config_file_name)
     client = Client(
         config['vcd']['host'],
@@ -271,7 +233,6 @@ def install_cse(ctx, config_file_name, template, no_capture):
         vdc_resource = org.get_vdc(config['broker']['vdc'])
         click.echo('Find vdc \'%s\': %s' % (vdc_resource.get('name'),
                                             bool_to_msg(True)))
-        return
         try:
             catalog = org.get_catalog(config['broker']['catalog'])
         except Exception:
@@ -287,23 +248,24 @@ def install_cse(ctx, config_file_name, template, no_capture):
         click.echo('Find catalog \'%s\': %s' %
                    (config['broker']['catalog'],
                     bool_to_msg(catalog is not None)))
-        master_template = None
-        try:
-            master_template = org.get_catalog_item(
-                config['broker']['catalog'],
-                config['broker']['master_template'])
-        except Exception:
-            create_master_template(ctx, config, client, org, vdc_resource,
-                                   catalog, no_capture)
-        try:
-            master_template = org.get_catalog_item(
-                config['broker']['catalog'],
-                config['broker']['master_template'])
-        except Exception:
-            pass
-        click.echo('Find master template \'%s\': %s' %
-                   (config['broker']['master_template'],
-                    bool_to_msg(master_template is not None)))
+        for template in config['broker']['templates']:
+            if template_name == '*' or template['name'] == template_name:
+                click.secho('Processing template: %s' % template['name'])
+                try:
+                    org.get_catalog_item(config['broker']['catalog'],
+                                         template['name'])
+                except Exception:
+                    create_template(ctx, config, client, org, vdc_resource,
+                                    catalog, no_capture, template)
+                k8s_template = None
+                try:
+                    k8s_template = org.get_catalog_item(
+                        config['broker']['catalog'], template['name'])
+                except Exception:
+                    pass
+                click.echo('Find template \'%s\', \'%s\': %s' %
+                           (config['broker']['catalog'], template['name'],
+                            bool_to_msg(k8s_template is not None)))
         configure_amqp_settings(client, config)
         register_extension(client, config)
         click.secho('Start CSE with: \'cse run %s\'' % config_file_name)
@@ -322,23 +284,31 @@ def get_sha1(file):
 
 def get_data_file(file_name):
     path = None
-    if os.path.isfile('pv/%s' % file_name):
-        path = 'pv/%s' % file_name
-    elif os.path.isfile(site.getusersitepackages() + '/cse/' + file_name):
-        path = site.getusersitepackages() + '/cse/' + file_name
-    else:
-        sp = site.getsitepackages()
-        if isinstance(sp, list):
-            for item in sp:
-                if os.path.isfile(item + '/cse/' + file_name):
-                    path = item + '/cse/' + file_name
-                    break
-        elif os.path.isfile(sp + '/cse/' + file_name):
-            path = sp + '/cse/' + file_name
+    try:
+        if os.path.isfile('./%s' % file_name):
+            path = './%s' % file_name
+        elif os.path.isfile('scripts/%s' % file_name):
+            path = 'scripts/%s' % file_name
+        elif os.path.isfile(site.getusersitepackages() + '/cse/' + file_name):
+            path = site.getusersitepackages() + '/cse/' + file_name
+        else:
+            sp = site.getsitepackages()
+            if isinstance(sp, list):
+                for item in sp:
+                    if os.path.isfile(item + '/cse/' + file_name):
+                        path = item + '/cse/' + file_name
+                        break
+            elif os.path.isfile(sp + '/cse/' + file_name):
+                path = sp + '/cse/' + file_name
+    except Exception:
+        pass
     content = ''
     if path is not None:
         with open(path) as f:
             content = f.read()
+        click.secho('Reading data file: %s' % path)
+    else:
+        click.secho('Data file not found: %s' % path)
     return content
 
 
@@ -371,24 +341,29 @@ def upload_source_ova(config, client, org, catalog):
         return None
 
 
-def create_master_template(ctx, config, client, org, vdc_resource, catalog,
-                           no_capture):
-    if 'photon' in config['broker']['labels']:
-        cmd_prefix = '/usr/bin/'
-    elif 'ubuntu' in config['broker']['labels']:
-        cmd_prefix = '/bin/'
-    else:
-        cmd_prefix = '/bin/'
-    vapp_name = config['broker']['temp_vapp']
+def wait_for_tools_ready_callback(message, exception=None):
+    click.secho('waiting for guest tools, status: %s' % message)
+    if exception is not None:
+        print('  exception: %s' % str(exception))
+
+
+def wait_for_guest_execution_callback(message, exception=None):
+    click.secho(message)
+    if exception is not None:
+        print('  exception: %s' % str(exception))
+
+
+def create_template(ctx, config, client, org, vdc_resource, catalog,
+                    no_capture, template):
     ctx.obj = {}
     ctx.obj['client'] = client
     try:
-        source_ova_item = org.get_catalog_item(
-            config['broker']['catalog'], config['broker']['source_ova_name'])
+        source_ova_item = org.get_catalog_item(config['broker']['catalog'],
+                                               template['source_ova_name'])
     except Exception:
         source_ova_item = upload_source_ova(config, client, org, catalog)
     click.secho('Find source ova \'%s\': %s' %
-                (config['broker']['source_ova_name'],
+                (template['source_ova_name'],
                  bool_to_msg(source_ova_item is not None)))
     if source_ova_item is None:
         return None
@@ -414,308 +389,87 @@ def create_master_template(ctx, config, client, org, vdc_resource, catalog,
             time.sleep(5)
     vdc = VDC(client, resource=vdc_resource)
     try:
-        vapp_resource = vdc.get_vapp(vapp_name)
+        vapp_resource = vdc.get_vapp(template['temp_vapp'])
     except Exception:
         vapp_resource = None
-    if vapp_resource is not None:
-        return capture_as_template(ctx, config, vapp_resource, org, catalog)
-    click.secho('Creating vApp template \'%s\'' % vapp_name, fg='green')
-    if 'photon' in config['broker']['labels']:
-        cust_script = """
-#!/bin/bash
-/usr/bin/cp /etc/pam.d/sshd /etc/pam.d/vmtoolsd
-temp="use-autogenerated"
-echo -e "$temp\n$temp" | passwd root
-chage -I -1 -m 0 -M -1 -E -1 root
-"""
-    elif 'ubuntu' in config['broker']['labels']:
-        cust_script = """
-#!/bin/bash
-/bin/date >> /root/date.log
-/bin/sed -i 's/prohibit-password/yes/' /etc/ssh/sshd_config
-/bin/sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
-/usr/bin/apt-get remove -y cloud-init
-/usr/sbin/dpkg-reconfigure openssh-server
-"""  # NOQA
-    else:
-        cust_script = None
-    if config['broker']['master_template_disk'] == 0:
-        disk_size = None
-    else:
-        disk_size = config['broker']['master_template_disk']
-    vapp_resource = vdc.instantiate_vapp(
-        vapp_name,
-        catalog.get('name'),
-        config['broker']['source_ova_name'],
-        network=config['broker']['network'],
-        fence_mode='bridged',
-        ip_allocation_mode=config['broker']['ip_allocation_mode'],
-        deploy=True,
-        power_on=True,
-        memory=config['broker']['master_mem'],
-        cpu=config['broker']['master_cpu'],
-        disk_size=None,
-        password=None,
-        cust_script=cust_script,
-        accept_all_eulas=True,
-        vm_name=vapp_name,
-        hostname=vapp_name,
-        storage_profile=config['broker']['storage_profile'])
-    stdout(vapp_resource.Tasks.Task[0], ctx)
-    if disk_size is not None:
+    if vapp_resource is None:
+        click.secho(
+            'Creating vApp template \'%s\'' % template['temp_vapp'],
+            fg='green')
+
+        init_script = get_data_file('init-%s.txt' % template['name'])
+        vapp_resource = vdc.instantiate_vapp(
+            template['temp_vapp'],
+            catalog.get('name'),
+            template['source_ova_name'],
+            network=config['broker']['network'],
+            fence_mode='bridged',
+            ip_allocation_mode=config['broker']['ip_allocation_mode'],
+            deploy=True,
+            power_on=True,
+            memory=template['mem'],
+            cpu=template['cpu'],
+            password=None,
+            cust_script=init_script,
+            accept_all_eulas=True,
+            vm_name=template['temp_vapp'],
+            hostname=template['temp_vapp'],
+            storage_profile=config['broker']['storage_profile'])
+        stdout(vapp_resource.Tasks.Task[0], ctx)
+
         vapp = VApp(client, resource=vapp_resource)
-        vm_name = vapp_resource.Children.Vm[0].get('name')
-        task = vapp.add_disk_to_vm(vm_name, disk_size)
-        stdout(task, ctx)
-    ip = None
-    password_auto = None
-    vm_moid = None
-    click.secho('Waiting for IP address... ', nl=False, fg='green')
-    while True:
-        time.sleep(5)
-        vapp = VApp(client, href=vapp_resource.get('href'))
-        try:
-            ip = vapp.get_primary_ip(vapp_name)
-            password_auto = vapp.get_admin_password(vapp_name)
-            vm_moid = vapp.get_vm_moid(vapp_name)
-            if ip is not None and \
-               password_auto is not None and \
-               vm_moid is not None:
-                break
-        except Exception:
-            LOGGER.debug('waiting for template vm to be ready')
-            LOGGER.debug(traceback.format_exc())
-            pass
-    click.secho(ip, fg='blue')
-    click.secho('Customizing template, please wait...', nl=False, fg='green')
-    if 'photon' in config['broker']['labels']:
-        cust_script = """#!/bin/bash
-/bin/echo '{ssh_public_key}' >> $HOME/.ssh/authorized_keys
-/bin/chmod go-rwx $HOME/.ssh/authorized_keys
-
-/usr/bin/cat << EOF > /etc/systemd/system/iptables-ports.service
-[Unit]
-After=iptables.service
-Requires=iptables.service
-[Service]
-Type=oneshot
-ExecStartPre=/usr/sbin/iptables -P INPUT ACCEPT
-ExecStartPre=/usr/sbin/iptables -P OUTPUT ACCEPT
-ExecStart=/usr/sbin/iptables -P FORWARD ACCEPT
-TimeoutSec=0
-RemainAfterExit=yes
-[Install]
-WantedBy=iptables.service
-EOF
-
-/usr/bin/chmod 766 /etc/systemd/system/iptables-ports.service
-/usr/bin/systemctl enable iptables-ports.service
-/usr/bin/systemctl start iptables-ports.service
-
-/usr/bin/tdnf install -y docker-17.06.0-1.ph1
-/usr/bin/systemctl enable docker.service
-/usr/bin/systemctl start docker.service
-
-if [ -b /dev/sdb ]
-then
-    /usr/bin/echo -e 'n\n\n\n\n\nw' | /usr/sbin/fdisk /dev/sdb
-    /usr/sbin/mkfs -t ext4 /dev/sdb1
-    /usr/bin/mkdir /mnt/docker-data
-    /usr/bin/cat <<EOF >> /etc/fstab
-/dev/sdb1\t/mnt/docker-data\text4\tdefaults\t0\t0
-EOF
-    /usr/bin/mount /mnt/docker-data
-    /usr/bin/cat <<EOF > /etc/docker/daemon.json
-{{
-  "graph": "/mnt/docker-data"
-}}
-EOF
-    /usr/bin/systemctl restart docker.service
-fi
-
-
-/usr/bin/tdnf install -y wget kubernetes-1.8.1-3.ph1 kubernetes-kubeadm-1.8.1-3.ph1
-
-/usr/bin/docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.8.1
-/usr/bin/docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.8.1
-/usr/bin/docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.8.1
-/usr/bin/docker pull gcr.io/google_containers/kube-proxy-amd64:v1.8.1
-/usr/bin/docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.4
-/usr/bin/docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.4
-/usr/bin/docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.4
-/usr/bin/docker pull gcr.io/google_containers/etcd-amd64:3.0.17
-/usr/bin/docker pull gcr.io/google_containers/pause-amd64:3.0
-
-/usr/bin/docker pull weaveworks/weave-npc:2.0.5
-/usr/bin/docker pull weaveworks/weave-kube:2.0.5
-
-export kubever=$(/usr/bin/kubectl version | /usr/bin/base64 | /usr/bin/tr -d '\n')
-/usr/bin/wget -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&version=2.0.5"
-
-/bin/echo -n > /etc/machine-id
-
-echo 'customization completed'
-/bin/sync
-/bin/sync
-""".format(ssh_public_key=config['broker']['ssh_public_key'])  # NOQA
-    elif 'ubuntu' in config['broker']['labels']:
-        cust_script = """#!/bin/bash
-/bin/mkdir /root/.ssh
-/bin/chmod go-rwx /root/.ssh
-/bin/echo '{ssh_public_key}' >> /root/.ssh/authorized_keys
-/bin/chmod go-rwx /root/.ssh/authorized_keys
-/bin/echo 'nameserver 8.8.8.8' >> /etc/resolvconf/resolv.conf.d/tail
-/sbin/resolvconf -u
-/bin/systemctl restart networking.service
-
-/usr/bin/growpart /dev/sda 1
-/sbin/resize2fs /dev/sda1
-
-/usr/bin/apt-get update
-/usr/bin/apt-get install -y apt-transport-https ca-certificates curl software-properties-common
-/usr/bin/curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-/usr/bin/curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
-/bin/cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
-deb http://apt.kubernetes.io/ kubernetes-xenial main
-EOF
-/usr/bin/add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-/usr/bin/apt-get update
-/usr/bin/apt-get install -y docker-ce=17.09.0~ce-0~ubuntu
-/usr/bin/apt-get install -y kubelet=1.8.2-00 kubeadm=1.8.2-00 kubectl=1.8.2-00 kubernetes-cni=0.5.1-00 --allow-unauthenticated
-/usr/bin/apt-get autoremove -y
-echo "- - -" > /sys/class/scsi_host/host2/scan
-if [ -b /dev/sdb ]
-then
-    /bin/echo -e 'n\n\n\n\n\nw' | /sbin/fdisk /dev/sdb
-    /sbin/partprobe /dev/sdb
-    /sbin/mkfs -t ext4 /dev/sdb1
-    mkdir /mnt/docker-data
-    /bin/cat <<EOF >> /etc/fstab
-/dev/sdb1\t/mnt/docker-data\text4\tdefaults\t0\t0
-EOF
-    /bin/mount /mnt/docker-data
-    /bin/cat <<EOF > /etc/docker/daemon.json
-{{
-  "graph": "/mnt/docker-data"
-}}
-EOF
-    /bin/systemctl restart docker
-fi
-/usr/bin/docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.8.2
-/usr/bin/docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.8.2
-/usr/bin/docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.8.2
-/usr/bin/docker pull gcr.io/google_containers/kube-proxy-amd64:v1.8.2
-/usr/bin/docker pull gcr.io/google_containers/etcd-amd64:3.0.17
-/usr/bin/docker pull gcr.io/google_containers/pause-amd64:3.0
-/usr/bin/docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.5
-/usr/bin/docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.5
-/usr/bin/docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.5
-/usr/bin/docker pull weaveworks/weave-npc:2.0.5
-/usr/bin/docker pull weaveworks/weave-kube:2.0.5
-/usr/bin/docker pull weaveworks/weaveexec:2.0.5
-
-export kubever=$(/usr/bin/kubectl version --client | /usr/bin/base64 | /usr/bin/tr -d '\n')
-/usr/bin/wget -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&version=2.0.5"
-
-/usr/bin/curl -L git.io/weave -o /usr/local/bin/weave
-/bin/chmod a+x /usr/local/bin/weave
-
-mkdir -p /root/go/bin
-mkdir -p /root/go/src/github.com/vmware/container-service-extension/pv
-
-/usr/bin/wget https://storage.googleapis.com/golang/go1.9.2.linux-amd64.tar.gz
-/bin/tar -xvf go1.9.2.linux-amd64.tar.gz
-
-export GOPATH=/root/go
-export PATH=$GOPATH/bin:$PATH
-
-echo 'export GOPATH=/root/go' >> /root/.bashrc
-echo 'PATH=$GOPATH/bin:$PATH' >> /root/.bashrc
-
-go version
-curl https://glide.sh/get | sh
-
-cp /root/glide.* /root/vcd-provider.go /root/go/src/github.com/vmware/container-service-extension/pv
-cd /root/go/src/github.com/vmware/container-service-extension/pv
-glide install --strip-vendor
-echo 'about to build pv'
-go build
-echo 'pv built'
-
-/bin/echo -n > /etc/machine-id
-
-echo 'customization completed'
-/bin/sync
-/bin/sync
-""".format(ssh_public_key=config['broker']['ssh_public_key'])  # NOQA
-    else:
-        cust_script = None
-    if cust_script is not None:
+        vapp.reload()
+        moid = vapp.get_vm_moid(template['temp_vapp'])
         vs = VSphere(
             config['vcs']['host'],
             config['vcs']['username'],
             config['vcs']['password'],
             port=int(config['vcs']['port']))
         vs.connect()
-        vm = vs.get_vm_by_moid(vm_moid)
-        while True:
-            try:
-                vs = VSphere(
-                    config['vcs']['host'],
-                    config['vcs']['username'],
-                    config['vcs']['password'],
-                    port=int(config['vcs']['port']))
-                vs.connect()
-                vm = vs.get_vm_by_moid(vm_moid)
-                vs.execute_program_in_guest(
-                    vm,
-                    'root',
-                    password_auto,
-                    cmd_prefix + 'date',
-                    '',
-                    wait_for_completion=True)
-                break
-            except Exception:
-                click.secho('.', nl=False, fg='yellow')
-        click.secho('.', nl=False, fg='green')
-        for f in ['vcd-provider.go', 'glide.yaml', 'glide.lock', 'class.yaml']:
-            content = get_data_file(f)
-            vs.upload_file_to_guest(vm, 'root', password_auto, content,
-                                    '/root/' + f)
-            click.secho('.', nl=False, fg='green')
-        vs.upload_file_to_guest(vm, 'root', password_auto, cust_script,
-                                '/root/customize.sh')
-        click.secho('.', nl=False, fg='green')
-        vs.execute_program_in_guest(
+        vm = vs.get_vm_by_moid(moid)
+        vs.wait_until_tools_ready(
+            vm, sleep=5, callback=wait_for_tools_ready_callback)
+
+        click.secho(
+            'Customizing vApp template \'%s\'' % template['temp_vapp'],
+            fg='green')
+        vapp.reload()
+        password_auto = vapp.get_admin_password(template['temp_vapp'])
+        cust_script = get_data_file('cust-%s.txt' % template['name'])
+
+        result = vs.execute_script_in_guest(
             vm,
             'root',
             password_auto,
-            cmd_prefix + 'chmod',
-            'u+rx /root/customize.sh',
-            wait_for_completion=True)
-        click.secho('.', nl=False, fg='green')
-        vs.execute_program_in_guest(
-            vm,
-            'root',
-            password_auto,
-            '/root/customize.sh',
-            '> /root/customize.out 2>&1',
-            wait_for_completion=True)
-        click.secho('.', nl=False, fg='green')
-        # vs.execute_program_in_guest(
-        #     vm,
-        #     'root',
-        #     password_auto,
-        #     cmd_prefix + 'rm',
-        #     '-f /tmp/customize.sh',
-        #     wait_for_completion=True)
-        # click.secho('.', nl=False, fg='green')
-        click.secho('done', fg='blue')
+            cust_script,
+            target_file=None,
+            wait_for_completion=True,
+            wait_time=10,
+            get_output=True,
+            delete_script=True,
+            callback=wait_for_guest_execution_callback)
+        click.secho('Result: %s' % result, fg='green')
+        result_stdout = result[1].content.decode()
+        result_stderr = result[2].content.decode()
+        click.secho('stderr:')
+        if len(result_stderr) > 0:
+            click.secho(result_stderr, err=True)
+        click.secho('stdout:')
+        if len(result_stdout) > 0:
+            click.secho(result_stdout, err=False)
+
     if not no_capture:
-        capture_as_template(ctx, config, vapp_resource, org, catalog)
+        capture_as_template(ctx, config, vapp_resource, org, catalog, template)
+    if template['cleanup']:
+        click.secho(
+            'Deleting vApp template \'%s\' ' % template['temp_vapp'],
+            fg='green')
+        vdc.reload()
+        task = vdc.delete_vapp(template['temp_vapp'], force=True)
+        stdout(task, ctx)
 
 
-def capture_as_template(ctx, config, vapp_resource, org, catalog):
+def capture_as_template(ctx, config, vapp_resource, org, catalog, template):
     vapp_name = vapp_resource.get('name')
     click.secho(
         'Found vApp \'%s\', capturing as template on catalog \'%s\'' %
@@ -731,20 +485,18 @@ def capture_as_template(ctx, config, vapp_resource, org, catalog):
     task = org.capture_vapp(
         catalog,
         vapp_resource.get('href'),
-        config['broker']['master_template'],
-        'CSE master template',
+        template['name'],
+        'CSE Kubernetes template',
         customize_on_instantiate=True)
     stdout(task, ctx)
     return True
 
 
 def configure_amqp_settings(client, config):
-    click.secho(
-        'See https://vmware.github.io/container-service-extension to configure AMQP settings.'  # NOQA
-    )
+    click.secho('See https://vmware.github.io/container-service-extension '
+                'to configure AMQP settings.')
 
 
 def register_extension(client, config):
-    click.secho(
-        'See https://vmware.github.io/container-service-extension to register API extension.'  # NOQA
-    )
+    click.secho('See https://vmware.github.io/container-service-extension '
+                'to register API extension.')

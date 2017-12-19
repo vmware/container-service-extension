@@ -13,7 +13,9 @@ from container_service_extension.service import Service
 import logging
 import pkg_resources
 import platform
+import traceback
 from vcd_cli.utils import stdout
+from vcd_cli.vcd import abort_if_false
 
 LOGGER = logging.getLogger(__name__)
 
@@ -32,11 +34,21 @@ def cli(ctx):
         cse sample
             Generate sample config.
 \b
-        cse sample > config1.yaml
+        cse sample > config.yaml
             Save sample config.
 \b
         cse check
             Validate configuration.
+\b
+        cse install
+            Install CSE.
+\b
+        cse install --template photon-custom-hw11-1.0-62c543d-k8s
+            Install CSE. It only creates the template specified.
+\b
+        cse install --template photon-custom-hw11-1.0-62c543d-k8s --no-capture
+            Install CSE. It only creates the temporary vApp specified in the
+            config file. It will not capture the vApp in the catalog.
 \b
         cse version
             Display version.
@@ -54,6 +66,7 @@ def cli(ctx):
     if ctx.invoked_subcommand is None:
         click.secho(ctx.get_help())
         return
+    logging.basicConfig(filename='cse.log')
 
 
 @cli.command(short_help='show version')
@@ -95,8 +108,14 @@ def sample(ctx):
     help='Config file to use.')
 def check(ctx, config):
     """Validate CSE configuration"""
-    check_config(config)
-    click.secho('The configuration is valid.')
+
+    try:
+        check_config(config)
+        click.secho('The configuration is valid.')
+    except Exception as e:
+        LOGGER.error(traceback.format_exc())
+        click.secho('The configuration is invalid, %s'
+                    '. See \'cse.log\' for details' % str(e))
 
 
 @cli.command(short_help='install CSE on vCD')
@@ -127,7 +146,13 @@ def check(ctx, config):
     help='no capture')
 def install(ctx, config, template, no_capture):
     """Install CSE on vCloud Director"""
-    install_cse(ctx, config, template, no_capture)
+
+    try:
+        install_cse(ctx, config, template, no_capture)
+    except Exception as e:
+        LOGGER.error(traceback.format_exc())
+        click.secho('An error has ocurred, %s'
+                    '. See \'cse.log\' for details' % str(e))
 
 
 @cli.command(short_help='uninstall CSE from vCD')
@@ -146,9 +171,15 @@ def install(ctx, config, template, no_capture):
     '--template',
     'template',
     required=False,
-    default='photon-custom-hw11-2.0-304b817.ova',
+    default='*',
     metavar='<template>',
     help='template')
+@click.option('-y',
+              '--yes',
+              is_flag=True,
+              callback=abort_if_false,
+              expose_value=False,
+              prompt='Are you sure you want to uninstall CSE?')
 def uninstall(ctx, config, template):
     """Uninstall CSE from vCloud Director"""
     uninstall_cse(ctx, config, template)
