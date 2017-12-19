@@ -294,7 +294,7 @@ class DefaultBroker(threading.Thread):
         LOGGER.debug('about to create cluster %s on %s with %s nodes, sp=%s',
                      cluster_name, vdc_name, node_count,
                      body['storage_profile'])
-        result['body'] = {'message': 'can\'t create cluster'}
+        result['body'] = {'message': 'can\'t create cluster %s' % cluster_name}
         result['status_code'] = INTERNAL_SERVER_ERROR
         try:
             if not self.is_valid_name(cluster_name):
@@ -340,15 +340,53 @@ class DefaultBroker(threading.Thread):
         try:
             clusters = load_from_metadata(
                 self.client_tenant, name=cluster_name)
-            LOGGER.debug(clusters)
             if len(clusters) != 0:
                 raise Exception('Cluster already exists.')
 
+            org_resource = self.client_tenant.get_org()
+            org = Org(self.client_tenant, resource=org_resource)
+            vdc_resource = org.get_vdc(self.body['vdc'])
+            vdc = VDC(self.client_tenant, resource=vdc_resource)
+
+            vapp_resource = vdc.create_vapp(
+                cluster_name,
+                description='cluster %s' % cluster_name,
+                network=network_name,
+                fence_mode='bridged')
+            t = self.client_tenant.get_task_monitor().wait_for_status(
+                task=vapp_resource.Tasks.Task[0],
+                timeout=60,
+                poll_frequency=2,
+                fail_on_status=None,
+                expected_target_statuses=[
+                    TaskStatus.SUCCESS, TaskStatus.ABORTED, TaskStatus.ERROR,
+                    TaskStatus.CANCELED
+                ],
+                callback=None)
+
+            tags = {}
+            tags['cse.cluster.id'] = self.cluster_id
+            tags['cse.version'] = pkg_resources.require(
+                'container-service-extension')[0].version
+            vapp = VApp(self.client_tenant, href=vapp_resource.get('href'))
+            for k, v in tags.items():
+                t = vapp.set_metadata('GENERAL', 'READWRITE', k, v)
+                self.client_tenant.get_task_monitor().\
+                    wait_for_status(
+                        task=t,
+                        timeout=600,
+                        poll_frequency=5,
+                        fail_on_status=None,
+                        expected_target_statuses=[TaskStatus.SUCCESS],
+                        callback=None)
+
+            # self.customize_nodes()
+
             self.t = task.update(
-                TaskStatus.RUNNING.value,
+                TaskStatus.SUCCESS.value,
                 'vcloud.cse',
-                'Creating nodes %s(%s)' % (cluster_name, self.cluster_id),
                 self.op,
+                'create cluster',
                 '',
                 None,
                 'urn:cse:cluster:%s' % self.cluster_id,
@@ -358,174 +396,7 @@ class DefaultBroker(threading.Thread):
                 self.tenant_info['user_name'],
                 org_href=self.tenant_info['org_href'],
                 task_href=self.t.get('href'))
-            org_resource = self.client_tenant.get_org()
-            org = Org(self.client_tenant, resource=org_resource)
-            vdc_resource = org.get_vdc(self.body['vdc'])
 
-            master_count = 1
-            node_count = int(self.body['node_count'])
-            catalog = self.config['broker']['catalog']
-            master_template = self.config['broker']['master_template']
-            node_template = self.config['broker']['node_template']
-            master_cpu = self.config['broker']['master_cpu']
-            master_mem = self.config['broker']['master_mem']
-            node_cpu = self.config['broker']['node_cpu']
-            node_mem = self.config['broker']['node_mem']
-            storage_profile = self.body['storage_profile']
-
-            vdc = VDC(self.client_tenant, resource=vdc_resource)
-
-            masters = []
-            for n in range(master_count):
-                time.sleep(1)
-                name = cluster_name + '-m%s' % str(n + 1)
-                self.t = task.update(
-                    TaskStatus.RUNNING.value,
-                    'vcloud.cse',
-                    'Creating master node %s(%s)' % (name, self.cluster_id),
-                    self.op,
-                    '',
-                    None,
-                    'urn:cse:cluster:%s' % self.cluster_id,
-                    cluster_name,
-                    'application/vcloud.cse.cluster+xml',
-                    self.tenant_info['user_id'],
-                    self.tenant_info['user_name'],
-                    org_href=self.tenant_info['org_href'],
-                    task_href=self.t.get('href'))
-                vapp_resource = vdc.instantiate_vapp(
-                    name,
-                    catalog,
-                    master_template,
-                    memory=master_mem,
-                    cpu=master_cpu,
-                    network=network_name,
-                    deploy=True,
-                    power_on=True,
-                    cust_script=None,
-                    ip_allocation_mode='pool',
-                    accept_all_eulas=True,
-                    vm_name=name,
-                    hostname=name,
-                    storage_profile=storage_profile)
-                t = self.client_tenant.get_task_monitor().wait_for_status(
-                    task=vapp_resource.Tasks.Task[0],
-                    timeout=60,
-                    poll_frequency=2,
-                    fail_on_status=None,
-                    expected_target_statuses=[
-                        TaskStatus.SUCCESS, TaskStatus.ABORTED,
-                        TaskStatus.ERROR, TaskStatus.CANCELED
-                    ],
-                    callback=None)
-                masters.append(vapp_resource)
-            nodes = []
-            for n in range(node_count):
-                time.sleep(1)
-                name = cluster_name + '-n%s' % str(n + 1)
-                self.t = task.update(
-                    TaskStatus.RUNNING.value,
-                    'vcloud.cse',
-                    'Creating node %s(%s)' % (name, self.cluster_id),
-                    self.op,
-                    '',
-                    None,
-                    'urn:cse:cluster:%s' % self.cluster_id,
-                    cluster_name,
-                    'application/vcloud.cse.cluster+xml',
-                    self.tenant_info['user_id'],
-                    self.tenant_info['user_name'],
-                    org_href=self.tenant_info['org_href'],
-                    task_href=self.t.get('href'))
-                vapp_resource = vdc.instantiate_vapp(
-                    name,
-                    catalog,
-                    node_template,
-                    memory=node_mem,
-                    cpu=node_cpu,
-                    network=network_name,
-                    deploy=True,
-                    power_on=True,
-                    cust_script=None,
-                    ip_allocation_mode='pool',
-                    accept_all_eulas=True,
-                    vm_name=name,
-                    hostname=name,
-                    storage_profile=storage_profile)
-                t = self.client_tenant.get_task_monitor().wait_for_status(
-                    task=vapp_resource.Tasks.Task[0],
-                    timeout=60,
-                    poll_frequency=2,
-                    fail_on_status=None,
-                    expected_target_statuses=[
-                        TaskStatus.SUCCESS, TaskStatus.ABORTED,
-                        TaskStatus.ERROR, TaskStatus.CANCELED
-                    ],
-                    callback=None)
-                nodes.append(vapp_resource)
-            tagged = set([])
-            while len(tagged) < (master_count + node_count):
-                node = None
-                node_type = None
-                for n in masters:
-                    if n.get('name') not in tagged:
-                        node = n
-                        node_type = TYPE_MASTER
-                        break
-                if node is None:
-                    for n in nodes:
-                        if n.get('name') not in tagged:
-                            node = n
-                            node_type = TYPE_NODE
-                            break
-                if node is not None:
-                    LOGGER.debug('about to tag %s, href=%s', node.get('name'),
-                                 node.get('href'))
-                    try:
-                        self.t = task.update(
-                            TaskStatus.RUNNING.value,
-                            'vcloud.cse',
-                            'Tagging node %s(%s)' % (node.get('name'),
-                                                     self.cluster_id),
-                            self.op,
-                            '',
-                            None,
-                            'urn:cse:cluster:%s' % self.cluster_id,
-                            cluster_name,
-                            'application/vcloud.cse.cluster+xml',
-                            self.tenant_info['user_id'],
-                            self.tenant_info['user_name'],
-                            org_href=self.tenant_info['org_href'],
-                            task_href=self.t.get('href'))
-                        tags = {}
-                        tags['cse.cluster.id'] = self.cluster_id
-                        tags['cse.node.type'] = node_type
-                        tags['cse.cluster.name'] = cluster_name
-                        tags['cse.version'] = pkg_resources.require(
-                            'container-service-extension')[0].version
-                        tags['cse.labels'] = ','.join(
-                            self.config['broker']['labels'])
-                        vapp = VApp(self.client_tenant, href=node.get('href'))
-                        for k, v in tags.items():
-                            t = vapp.set_metadata('GENERAL', 'READWRITE', k, v)
-                            self.client_tenant.get_task_monitor().\
-                                wait_for_status(
-                                    task=t,
-                                    timeout=600,
-                                    poll_frequency=5,
-                                    fail_on_status=None,
-                                    expected_target_statuses=[TaskStatus.SUCCESS], # NOQA
-                                    callback=None)
-                        tagged.update([node.get('name')])
-                        LOGGER.debug('tagged %s', node.get('name'))
-                    except Exception:
-                        LOGGER.error(
-                            'can'
-                            't tag %s at this moment, will retry later',
-                            node.get('name'))
-                        LOGGER.error(traceback.format_exc())
-                        time.sleep(5)
-            self.customize_nodes()
         except Exception as e:
             LOGGER.error(traceback.format_exc())
             self.t = task.update(
@@ -555,8 +426,17 @@ class DefaultBroker(threading.Thread):
             self.headers = headers
             self.body = body
             self.op = OP_DELETE_CLUSTER
-            self.cluster_id = ''
             self._connect_sysadmin()
+
+            clusters = load_from_metadata(
+                self.client_tenant, name=self.cluster_name)
+
+            if len(clusters) != 1:
+                raise Exception('Cluster not found.')
+
+            self.cluster = clusters[0]
+            self.cluster_id = self.cluster['cluster_id']
+
             task = Task(self.client_sysadmin)
             self.t = task.update(
                 TaskStatus.RUNNING.value,
@@ -580,7 +460,10 @@ class DefaultBroker(threading.Thread):
             result['body'] = response_body
             result['status_code'] = ACCEPTED
         except Exception as e:
-            result['body'] = {'message': e.message}
+            if hasattr(e, 'message'):
+                result['body'] = {'message': e.message}
+            else:
+                result['body'] = {'message': str(e)}
             LOGGER.error(traceback.format_exc())
         return result
 
@@ -589,52 +472,16 @@ class DefaultBroker(threading.Thread):
                      self.cluster_name)
         task = Task(self.client_sysadmin)
         try:
-            clusters = load_from_metadata(
-                self.client_tenant, name=self.cluster_name)
-            LOGGER.debug(clusters)
-            if len(clusters) != 1:
-                raise Exception('Cluster not found.')
-            cluster = clusters[0]
-            # self.cluster_id = cluster['cluster_id']
-            vdc = None
-            # tasks = []
-            for node in cluster['master_nodes'] + cluster['nodes']:
-                if vdc is None:
-                    vdc = VDC(self.client_tenant, href=cluster['vdc_href'])
-                LOGGER.debug('about to delete vapp %s', node['name'])
-                try:
-                    self.t = task.update(
-                        TaskStatus.RUNNING.value,
-                        'vcloud.cse',
-                        'Deleting node %s(%s)' % (node['name'],
-                                                  self.cluster_id),
-                        self.op,
-                        '',
-                        None,
-                        'urn:cse:cluster:%s' % self.cluster_id,
-                        self.cluster_name,
-                        'application/vcloud.cse.cluster+xml',
-                        self.tenant_info['user_id'],
-                        self.tenant_info['user_name'],
-                        org_href=self.tenant_info['org_href'],
-                        task_href=self.t.get('href'))
-                    delete_task = vdc.delete_vapp(node['name'], force=True)
-                    self.client_tenant.get_task_monitor().\
-                        wait_for_status(
-                            task=delete_task,
-                            timeout=600,
-                            poll_frequency=5,
-                            fail_on_status=None,
-                            expected_target_statuses=[TaskStatus.SUCCESS],
-                            callback=None)
-                    # tasks.append(delete_task)
-
-                except Exception:
-                    print('exception')
-                    print(Exception)
-                    # pass
-                time.sleep(1)
-            # TODO(wait until all nodes are deleted)
+            vdc = VDC(self.client_tenant, href=self.cluster['vdc_href'])
+            delete_task = vdc.delete_vapp(self.cluster['name'], force=True)
+            self.client_tenant.get_task_monitor().\
+                wait_for_status(
+                    task=delete_task,
+                    timeout=600,
+                    poll_frequency=5,
+                    fail_on_status=None,
+                    expected_target_statuses=[TaskStatus.SUCCESS],
+                    callback=None)
             self.t = task.update(
                 TaskStatus.SUCCESS.value,
                 'vcloud.cse',

@@ -174,12 +174,13 @@ def install(ctx, config, template, no_capture):
     default='*',
     metavar='<template>',
     help='template')
-@click.option('-y',
-              '--yes',
-              is_flag=True,
-              callback=abort_if_false,
-              expose_value=False,
-              prompt='Are you sure you want to uninstall CSE?')
+@click.option(
+    '-y',
+    '--yes',
+    is_flag=True,
+    callback=abort_if_false,
+    expose_value=False,
+    prompt='Are you sure you want to uninstall CSE?')
 def uninstall(ctx, config, template):
     """Uninstall CSE from vCloud Director"""
     uninstall_cse(ctx, config, template)

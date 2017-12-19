@@ -196,6 +196,7 @@ def uninstall_cse(ctx, config_file_name, template_name):
         click.echo('Find vdc \'%s\': %s' % (vdc_resource.get('name'),
                                             bool_to_msg(True)))
         vdc = VDC(client, resource=vdc_resource)
+        assert vdc
         for template in config['broker']['templates']:
             if template_name == '*' or template['name'] == template_name:
                 click.secho('Deleting template: %s' % template['name'])
