@@ -58,8 +58,7 @@ class ServiceProcessor(object):
                 reply = self.get_spec(tokens[3])
             elif config_request:
                 broker = get_new_broker(self.config)
-                reply = broker.get_cluster_config(cluster_name,
-                                                  body['headers'], None)
+                reply = broker.get_cluster_config(body['headers'])
             elif cluster_name is None:
                 broker = get_new_broker(self.config)
                 reply = broker.list_clusters(body['headers'], request_body)
@@ -69,8 +68,9 @@ class ServiceProcessor(object):
                 reply = broker.create_cluster(body['headers'], request_body)
         elif body['method'] == 'DELETE':
             broker = get_new_broker(self.config)
-            reply = broker.delete_cluster(cluster_name, body['headers'],
-                                          request_body)
+            on_the_fly_request_body = {'name': cluster_name}
+            reply = broker.delete_cluster(body['headers'],
+                                          on_the_fly_request_body)
         LOGGER.debug('reply: %s' % str(reply))
         return reply
 

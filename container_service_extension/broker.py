@@ -1,11 +1,7 @@
-# container-service-extension
-# Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
 import click
 from container_service_extension.cluster import load_from_metadata
-from container_service_extension.cluster import TYPE_MASTER
-from container_service_extension.cluster import TYPE_NODE
 import logging
 import pkg_resources
 from pyvcloud.vcd.client import _WellKnownEndpoint
@@ -16,7 +12,6 @@ from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.task import Task
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
-from pyvcloud.vcd.vsphere import VSphere
 import re
 import requests
 import threading
@@ -34,6 +29,11 @@ INTERNAL_SERVER_ERROR = 500
 
 OP_CREATE_CLUSTER = 'create_cluster'
 OP_DELETE_CLUSTER = 'delete_cluster'
+
+OP_MESSAGE = {
+    OP_CREATE_CLUSTER: 'create cluster',
+    OP_DELETE_CLUSTER: 'delete cluster'
+}
 
 MAX_HOST_NAME_LENGTH = 25 - 4
 
@@ -145,22 +145,6 @@ def get_new_broker(config):
         return None
 
 
-def wait_until_ready(vs, vm, password, file='/proc/version'):
-    while True:
-        try:
-            vs.download_file_from_guest(vm, 'root', password, file)
-            LOGGER.debug('vm %s is ready' % vm)
-            return
-        except Exception:
-            LOGGER.error(traceback.format_exc())
-            LOGGER.debug('waiting for vm %s to be ready' % vm)
-            time.sleep(1)
-
-
-def wait_for_tools_ready_callback():
-    pass
-
-
 def wait_until_tools_ready(vm):
     while True:
         try:
@@ -251,6 +235,31 @@ class DefaultBroker(threading.Thread):
                 _WellKnownEndpoint.LOGGED_IN_ORG)
         }
 
+    def update_task(self, status, operation, message=None, error_message=None):
+        if not hasattr(self, 'task'):
+            self.task = Task(self.client_sysadmin)
+        if message is None:
+            message = OP_MESSAGE[operation]
+        if hasattr(self, 't'):
+            task_href = self.t.get('href')
+        else:
+            task_href = None
+        self.t = self.task.update(
+            status.value,
+            'vcloud.cse',
+            operation,
+            message,
+            '',
+            None,
+            'urn:cse:cluster:%s' % self.cluster_id,
+            self.cluster_name,
+            'application/vcloud.cse.cluster+xml',
+            self.tenant_info['user_id'],
+            self.tenant_info['user_name'],
+            org_href=self.tenant_info['org_href'],
+            task_href=task_href,
+            error_message=error_message)
+
     def is_valid_name(self, name):
         """Validates that the cluster name against the pattern.
 
@@ -302,27 +311,19 @@ class DefaultBroker(threading.Thread):
             self.tenant_info = self._connect_tenant(headers)
             self.headers = headers
             self.body = body
+            self.cluster_name = cluster_name
             self.cluster_id = str(uuid.uuid4())
             self.op = OP_CREATE_CLUSTER
             self._connect_sysadmin()
-            task = Task(self.client_sysadmin)
-            self.t = task.update(
-                TaskStatus.RUNNING.value,
-                'vcloud.cse',
-                'Creating cluster %s(%s)' % (cluster_name, self.cluster_id),
+            self.update_task(
+                TaskStatus.RUNNING,
                 self.op,
-                '',
-                None,
-                'urn:cse:cluster:%s' % self.cluster_id,
-                cluster_name,
-                'application/vcloud.cse.cluster+xml',
-                self.tenant_info['user_id'],
-                self.tenant_info['user_name'],
-                org_href=self.tenant_info['org_href'])
+                message='Creating cluster %s(%s)' % (cluster_name,
+                                                     self.cluster_id))
             self.daemon = True
             self.start()
             response_body = {}
-            response_body['name'] = cluster_name
+            response_body['name'] = self.cluster_name
             response_body['cluster_id'] = self.cluster_id
             response_body['task_href'] = self.t.get('href')
             result['body'] = response_body
@@ -333,24 +334,19 @@ class DefaultBroker(threading.Thread):
         return result
 
     def create_cluster_thread(self):
-        cluster_name = self.body['name']
         network_name = self.body['network']
-
-        task = Task(self.client_sysadmin)
         try:
             clusters = load_from_metadata(
-                self.client_tenant, name=cluster_name)
+                self.client_tenant, name=self.cluster_name)
             if len(clusters) != 0:
                 raise Exception('Cluster already exists.')
-
             org_resource = self.client_tenant.get_org()
             org = Org(self.client_tenant, resource=org_resource)
             vdc_resource = org.get_vdc(self.body['vdc'])
             vdc = VDC(self.client_tenant, resource=vdc_resource)
-
             vapp_resource = vdc.create_vapp(
-                cluster_name,
-                description='cluster %s' % cluster_name,
+                self.cluster_name,
+                description='cluster %s' % self.cluster_name,
                 network=network_name,
                 fence_mode='bridged')
             t = self.client_tenant.get_task_monitor().wait_for_status(
@@ -363,7 +359,6 @@ class DefaultBroker(threading.Thread):
                     TaskStatus.CANCELED
                 ],
                 callback=None)
-
             tags = {}
             tags['cse.cluster.id'] = self.cluster_id
             tags['cse.version'] = pkg_resources.require(
@@ -382,76 +377,40 @@ class DefaultBroker(threading.Thread):
 
             # self.customize_nodes()
 
-            self.t = task.update(
-                TaskStatus.SUCCESS.value,
-                'vcloud.cse',
+            self.update_task(
+                TaskStatus.SUCCESS,
                 self.op,
-                'create cluster',
-                '',
-                None,
-                'urn:cse:cluster:%s' % self.cluster_id,
-                cluster_name,
-                'application/vcloud.cse.cluster+xml',
-                self.tenant_info['user_id'],
-                self.tenant_info['user_name'],
-                org_href=self.tenant_info['org_href'],
-                task_href=self.t.get('href'))
+                message='Created cluster %s(%s)' % (self.cluster_name,
+                                                    self.cluster_id))
 
         except Exception as e:
             LOGGER.error(traceback.format_exc())
-            self.t = task.update(
-                TaskStatus.ERROR.value,
-                'vcloud.cse',
-                self.op,
-                'create cluster',
-                '',
-                None,
-                'urn:cse:cluster:%s' % self.cluster_id,
-                cluster_name,
-                'application/vcloud.cse.cluster+xml',
-                self.tenant_info['user_id'],
-                self.tenant_info['user_name'],
-                org_href=self.tenant_info['org_href'],
-                task_href=self.t.get('href'),
-                error_message=str(e))
+            self.update_task(TaskStatus.ERROR, self.op, error_message=str(e))
 
-    def delete_cluster(self, cluster_name, headers, body):
+    def delete_cluster(self, headers, body):
         result = {}
         result['body'] = {}
-        LOGGER.debug('about to delete cluster with name: %s', cluster_name)
+        LOGGER.debug('about to delete cluster with name: %s' % body['name'])
         result['status_code'] = INTERNAL_SERVER_ERROR
         try:
-            self.cluster_name = cluster_name
+            self.cluster_name = body['name']
             self.tenant_info = self._connect_tenant(headers)
             self.headers = headers
             self.body = body
             self.op = OP_DELETE_CLUSTER
             self._connect_sysadmin()
-
             clusters = load_from_metadata(
                 self.client_tenant, name=self.cluster_name)
-
             if len(clusters) != 1:
-                raise Exception('Cluster not found.')
-
+                raise Exception('Cluster %s not found.' % self.cluster_name)
             self.cluster = clusters[0]
             self.cluster_id = self.cluster['cluster_id']
 
-            task = Task(self.client_sysadmin)
-            self.t = task.update(
-                TaskStatus.RUNNING.value,
-                'vcloud.cse',
-                'Deleting cluster %s(%s)' % (self.cluster_name,
-                                             self.cluster_id),
+            self.update_task(
+                TaskStatus.RUNNING,
                 self.op,
-                '',
-                None,
-                'urn:cse:cluster:%s' % self.cluster_id,
-                self.cluster_name,
-                'application/vcloud.cse.cluster+xml',
-                self.tenant_info['user_id'],
-                self.tenant_info['user_name'],
-                org_href=self.tenant_info['org_href'])
+                message='Deleting cluster %s(%s)' % (self.cluster_name,
+                                                     self.cluster_id))
             self.daemon = True
             self.start()
             response_body = {}
@@ -470,7 +429,6 @@ class DefaultBroker(threading.Thread):
     def delete_cluster_thread(self):
         LOGGER.debug('about to delete cluster with name: %s',
                      self.cluster_name)
-        task = Task(self.client_sysadmin)
         try:
             vdc = VDC(self.client_tenant, href=self.cluster['vdc_href'])
             delete_task = vdc.delete_vapp(self.cluster['name'], force=True)
@@ -482,342 +440,22 @@ class DefaultBroker(threading.Thread):
                     fail_on_status=None,
                     expected_target_statuses=[TaskStatus.SUCCESS],
                     callback=None)
-            self.t = task.update(
-                TaskStatus.SUCCESS.value,
-                'vcloud.cse',
+            self.update_task(
+                TaskStatus.SUCCESS,
                 self.op,
-                'delete cluster',
-                '',
-                None,
-                'urn:cse:cluster:%s' % self.cluster_id,
-                self.cluster_name,
-                'application/vcloud.cse.cluster+xml',
-                self.tenant_info['user_id'],
-                self.tenant_info['user_name'],
-                org_href=self.tenant_info['org_href'],
-                task_href=self.t.get('href'))
+                message='Deleted cluster %s(%s)' % (self.cluster_name,
+                                                    self.cluster_id))
         except Exception as e:
             LOGGER.error(traceback.format_exc())
-            self.t = task.update(
-                TaskStatus.ERROR.value,
-                'vcloud.cse',
-                self.op,
-                'delete cluster',
-                '',
-                None,
-                'urn:cse:cluster:%s' % self.cluster_id,
+            self.update_task(
                 self.cluster_name,
-                'application/vcloud.cse.cluster+xml',
-                self.tenant_info['user_id'],
-                self.tenant_info['user_name'],
-                org_href=self.tenant_info['org_href'],
-                task_href=self.t.get('href'),
+                self.cluster_id,
+                TaskStatus.ERROR,
+                self.op,
                 error_message=str(e))
 
-    def customize_nodes(self, max_retries=60):
-        cluster_name = self.body['name']
-        node_count = int(self.body['node_count'])
-        task = Task(self.client_sysadmin)
-        self.t = task.update(
-            TaskStatus.RUNNING.value,
-            'vcloud.cse',
-            'Waiting for IPs %s(%s)' % (cluster_name, self.cluster_id),
-            self.op,
-            '',
-            None,
-            'urn:cse:cluster:%s' % self.cluster_id,
-            cluster_name,
-            'application/vcloud.cse.cluster+xml',
-            self.tenant_info['user_id'],
-            self.tenant_info['user_name'],
-            org_href=self.tenant_info['org_href'],
-            task_href=self.t.get('href'))
-        nodes = []
-        n = 0
-        all_nodes_configured = False
-        while n < max_retries:
-            try:
-                nodes = []
-                clusters = load_from_metadata(
-                    self.client_tenant, cluster_id=self.cluster_id)
-                LOGGER.debug(clusters)
-                assert len(clusters) == 1
-                cluster = clusters[0]
-                for cluster_node in cluster['master_nodes'] + cluster['nodes']:
-                    node = {
-                        'name': cluster_node['name'],
-                        'href': cluster_node['href']
-                    }
-                    vapp = VApp(self.client_tenant, href=cluster_node['href'])
-                    vapp.reload()
-                    node['password'] = vapp.get_admin_password(
-                        cluster_node['name'])
-                    node['ip'] = vapp.get_primary_ip(cluster_node['name'])
-                    node['moid'] = vapp.get_vm_moid(cluster_node['name'])
-                    if cluster_node['name'].endswith('-m1'):
-                        node['node_type'] = TYPE_MASTER
-                    else:
-                        node['node_type'] = TYPE_NODE
-                    nodes.append(node)
-                for node in nodes:
-                    if 'ip' in node.keys() and \
-                       node['ip'] is not None and \
-                       len(node['ip']) > 0 and \
-                       not node['ip'].startswith('172.17.'):
-                        pass
-                    else:
-                        n += 1
-                        raise Exception('missing ip, retry %s' % n)
-                all_nodes_configured = True
-                break
-            except Exception as e:
-                LOGGER.error(traceback.format_exc())
-                time.sleep(5)
-        if not all_nodes_configured:
-            message = 'ip not configured in at least one node'
-            LOGGER.error(message)
-            raise Exception(message)
-        LOGGER.debug('ip configured in all nodes')
-        master_node = None
-        password = self.config['broker']['password']
-        for node in nodes:
-            self.t = task.update(
-                TaskStatus.RUNNING.value,
-                'vcloud.cse',
-                'Customizing node %s(%s)' % (node['name'], self.cluster_id),
-                self.op,
-                '',
-                None,
-                'urn:cse:cluster:%s' % self.cluster_id,
-                cluster_name,
-                'application/vcloud.cse.cluster+xml',
-                self.tenant_info['user_id'],
-                self.tenant_info['user_name'],
-                org_href=self.tenant_info['org_href'],
-                task_href=self.t.get('href'))
-            vs = VSphere(
-                self.config['vcs']['host'],
-                self.config['vcs']['username'],
-                self.config['vcs']['password'],
-                port=int(self.config['vcs']['port']))
-            vs.connect()
-            vm = vs.get_vm_by_moid(node['moid'])
-            if 'photon' in self.config['broker']['labels']:
-                cmd_prefix = '/usr/bin/'
-            elif 'ubuntu' in self.config['broker']['labels']:
-                cmd_prefix = '/bin/'
-            else:
-                cmd_prefix = '/bin/'
-            wait_until_tools_ready(vm)
-            while True:
-                try:
-                    vs.execute_program_in_guest(
-                        vm,
-                        'root',
-                        node['password'],
-                        cmd_prefix + 'echo',
-                        '-e "{password}\n{password}" | /usr/bin/passwd root'.
-                        format(password=password),
-                        wait_for_completion=False)
-                    time.sleep(2)
-                    break
-                except Exception:
-                    LOGGER.error(traceback.format_exc())
-                    time.sleep(1)
-            wait_until_ready(vs, vm, password)
-            if node['node_type'] == TYPE_MASTER:
-                if 'photon' in self.config['broker']['labels']:
-                    cust_script = """#!/bin/bash
-/usr/bin/kubeadm init --kubernetes-version=v1.8.1 > /tmp/kubeadm-init.out
-{cmd_prefix}mkdir -p /root/.kube
-{cmd_prefix}cp -f /etc/kubernetes/admin.conf /root/.kube/config
-{cmd_prefix}chown $(id -u):$(id -g) /root/.kube/config
-/usr/bin/kubectl apply -f /root/weave.yml
-mkdir -p /root/cse/{{req,res}}
-                    """.format(cmd_prefix=cmd_prefix)
-                elif 'ubuntu' in self.config['broker']['labels']:
-                    cust_script = """#!/bin/bash
-/usr/bin/kubeadm init --kubernetes-version=v1.8.2 > /tmp/kubeadm-init.out
-{cmd_prefix}mkdir -p /root/.kube
-{cmd_prefix}cp -f /etc/kubernetes/admin.conf /root/.kube/config
-{cmd_prefix}chown $(id -u):$(id -g) /root/.kube/config
-/usr/bin/kubectl apply -f /root/weave.yml
-mkdir -p /root/cse/{{req,res}}
-HOST=`hostname` CSE_MSG_DIR=/root/cse nohup go/src/github.com/vmware/container-service-extension/pv/pv > /root/pv.out 2>&1 &
-                    """.format(cmd_prefix=cmd_prefix)  # NOQA
-                vs.upload_file_to_guest(vm, 'root', password, cust_script,
-                                        '/tmp/customize.sh')
-                vs.execute_program_in_guest(
-                    vm,
-                    'root',
-                    password,
-                    cmd_prefix + 'chmod',
-                    'u+rx /tmp/customize.sh',
-                    wait_for_completion=True)
-                vs.execute_program_in_guest(
-                    vm,
-                    'root',
-                    password,
-                    '/tmp/customize.sh',
-                    '',
-                    wait_for_completion=True)
-                vs.execute_program_in_guest(
-                    vm,
-                    'root',
-                    password,
-                    cmd_prefix + 'rm',
-                    '-f /tmp/customize.sh',
-                    wait_for_completion=True)
-                response = vs.download_file_from_guest(vm, 'root', password,
-                                                       '/tmp/kubeadm-init.out')
-                content = response.content.decode('utf-8')
-                if len(content) == 0:
-                    raise Exception('Failed executing "kubeadm init"')
-                try:
-                    # if 'photon' in self.config['broker']['labels']:
-                    #     token = [x for x in content.splitlines() if x.strip().startswith('[token] Using token: ')][0].split()[-1]  # NOQA
-                    #     token_hash = None
-                    # elif 'ubuntu' in self.config['broker']['labels']:
-                    if True:
-                        token = [
-                            x for x in content.splitlines()
-                            if x.strip().startswith(
-                                '[bootstraptoken] Using token: ')
-                        ][0].split()[-1]  # NOQA
-                        token_hash = [
-                            x for x in content.splitlines()
-                            if '--discovery-token-ca-cert-hash' in x.strip()
-                        ][0].split()[-1]  # NOQA
-                        token_hash = None
-                    else:
-                        raise Exception('not supported config broker label')
-                except Exception:
-                    LOGGER.error(traceback.format_exc())
-                    raise Exception(
-                        'Failed executing "kubeadm init", cannot find token:\%s'  # NOQA
-                        % content)
-                vapp = VApp(self.client_tenant, href=node['href'])
-                vapp.reload()
-                t = vapp.set_metadata('GENERAL', 'READWRITE',
-                                      'cse.cluster.token', token)
-                self.client_tenant.get_task_monitor().\
-                    wait_for_status(
-                        task=t,
-                        timeout=600,
-                        poll_frequency=5,
-                        fail_on_status=None,
-                        expected_target_statuses=[TaskStatus.SUCCESS],
-                        callback=None)
-                t = vapp.set_metadata('GENERAL', 'READWRITE',
-                                      'cse.cluster.status', 'ready')
-                self.client_tenant.get_task_monitor().\
-                    wait_for_status(
-                        task=t,
-                        timeout=600,
-                        poll_frequency=5,
-                        fail_on_status=None,
-                        expected_target_statuses=[TaskStatus.SUCCESS],
-                        callback=None)
-                node['token'] = token
-                master_node = node
-            LOGGER.debug('executed customization script on %s (%s)' %
-                         (node['name'], node['moid']))
-
-        if master_node is None:
-            raise Exception('No master node is configured.')
-        else:
-            for node in nodes:
-                vs = VSphere(
-                    self.config['vcs']['host'],
-                    self.config['vcs']['username'],
-                    self.config['vcs']['password'],
-                    port=int(self.config['vcs']['port']))
-                vs.connect()
-                vm = vs.get_vm_by_moid(node['moid'])
-                cust_script = """#!/bin/bash
-{cmd_prefix}sed -ri 's/preserve_hostname: false/preserve_hostname: true/' /etc/cloud/cloud.cfg
-""".format(cmd_prefix=cmd_prefix)  # NOQA
-                if node['node_type'] == TYPE_MASTER:
-                    if node_count == 0:
-                        cust_script += """
-/usr/bin/kubectl --kubeconfig=/etc/kubernetes/admin.conf taint nodes --all node-role.kubernetes.io/master-
-"""  # NOQA
-                else:
-                    cust_script += """
-/usr/bin/kubeadm join --token {token} {ip}:6443
-""".format(token=master_node['token'], ip=master_node['ip'])
-                if token_hash is not None:
-                    cust_script += ' --discovery-token-ca-cert-hash ' + token_hash  # NOQA
-                if cust_script is not None:
-                    LOGGER.debug('about to execute on %s:\n%s' % (vm,
-                                                                  cust_script))
-                    vs.upload_file_to_guest(vm, 'root', password, cust_script,
-                                            '/tmp/customize.sh')
-                    vs.execute_program_in_guest(
-                        vm,
-                        'root',
-                        password,
-                        cmd_prefix + 'chmod',
-                        'u+rx /tmp/customize.sh',
-                        wait_for_completion=True)
-                    vs.execute_program_in_guest(
-                        vm,
-                        'root',
-                        password,
-                        '/tmp/customize.sh',
-                        '',
-                        wait_for_completion=True)
-                    vs.execute_program_in_guest(
-                        vm,
-                        'root',
-                        password,
-                        cmd_prefix + 'rm',
-                        '-f /tmp/customize.sh',
-                        wait_for_completion=True)
-                    LOGGER.debug('executed on %s:\n%s' % (vm, cust_script))
-            self.t = task.update(
-                TaskStatus.SUCCESS.value,
-                'vcloud.cse',
-                self.op,
-                'create cluster',
-                '',
-                None,
-                'urn:cse:cluster:%s' % self.cluster_id,
-                cluster_name,
-                'application/vcloud.cse.cluster+xml',
-                self.tenant_info['user_id'],
-                self.tenant_info['user_name'],
-                org_href=self.tenant_info['org_href'],
-                task_href=self.t.get('href'))
-
-    def get_cluster_config(self, cluster_name, headers, body):
+    def get_cluster_config(self, headers, body=None):
         result = {}
         result['body'] = {}
         result['status_code'] = INTERNAL_SERVER_ERROR
-        try:
-            self._connect_tenant(headers)
-            self.headers = headers
-            self.cluster_name = cluster_name
-            clusters = load_from_metadata(
-                self.client_tenant, name=self.cluster_name, get_leader_ip=True)
-            LOGGER.debug(clusters)
-            assert len(clusters) == 1
-            cluster = clusters[0]
-            assert len(cluster['master_nodes']) == 1
-            result['body'] = {'cluster_config': '\'%s\'' % cluster_name}
-            vs = VSphere(
-                self.config['vcs']['host'],
-                self.config['vcs']['username'],
-                self.config['vcs']['password'],
-                port=int(self.config['vcs']['port']))
-            vs.connect()
-            vm = vs.get_vm_by_moid(cluster['leader_moid'])
-            response = vs.download_file_from_guest(
-                vm, 'root', self.config['broker']['password'],
-                '/root/.kube/config')
-            result['body'] = response.content.decode('utf-8')
-            result['status_code'] = response.status_code
-        except Exception as e:
-            LOGGER.error(traceback.format_exc())
-            result['body'] = {'message': e.message}
         return result
