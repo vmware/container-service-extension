@@ -307,7 +307,7 @@ def get_cluster_config(config, vapp, password):
 
 def init_cluster(config, vapp, template):
     from container_service_extension.config import get_data_file
-    script = get_data_file('master-%s.sh' % template['name'])
+    script = get_data_file('mstr-%s.sh' % template['name'])
     nodes = get_nodes(vapp, TYPE_MASTER)
     result = execute_script_in_nodes(config, vapp, template['admin_password'],
                                      script, nodes)
