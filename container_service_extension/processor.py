@@ -20,7 +20,6 @@ INTERNAL_SERVER_ERROR = 500
 
 
 class ServiceProcessor(object):
-
     def __init__(self, config, verify, log):
         self.config = config
         self.verify = verify
@@ -35,9 +34,12 @@ class ServiceProcessor(object):
         cluster_name = None
         spec_request = False
         config_request = False
+        template_request = False
         if len(tokens) > 3:
             if tokens[3] in ['swagger', 'swagger.json', 'swagger.yaml']:
                 spec_request = True
+            elif tokens[3] == 'template':
+                template_request = True
             elif tokens[3] != '':
                 cluster_name = tokens[3]
         if len(tokens) > 4:
@@ -60,22 +62,40 @@ class ServiceProcessor(object):
             elif config_request:
                 broker = get_new_broker(self.config)
                 reply = broker.get_cluster_config(cluster_name,
-                                                  body['headers'],
-                                                  None)
+                                                  body['headers'])
+            elif template_request:
+                result = {}
+                templates = []
+                for t in self.config['broker']['templates']:
+                    is_default = \
+                        t['name'] == self.config['broker']['default_template']
+                    templates.append({
+                        'name':
+                        t['name'],
+                        'is_default':
+                        is_default,
+                        'catalog':
+                        self.config['broker']['catalog'],
+                        'catalog_item':
+                        t['catalog_item'],
+                        'description':
+                        t['description']
+                    })
+                result['body'] = templates
+                result['status_code'] = 200
+                reply = result
             elif cluster_name is None:
                 broker = get_new_broker(self.config)
-                reply = broker.list_clusters(body['headers'],
-                                             request_body)
+                reply = broker.list_clusters(body['headers'], request_body)
         elif body['method'] == 'POST':
             if cluster_name is None:
                 broker = get_new_broker(self.config)
-                reply = broker.create_cluster(body['headers'],
-                                              request_body)
+                reply = broker.create_cluster(body['headers'], request_body)
         elif body['method'] == 'DELETE':
             broker = get_new_broker(self.config)
-            reply = broker.delete_cluster(cluster_name,
-                                          body['headers'],
-                                          request_body)
+            on_the_fly_request_body = {'name': cluster_name}
+            reply = broker.delete_cluster(body['headers'],
+                                          on_the_fly_request_body)
         LOGGER.debug('reply: %s' % str(reply))
         return reply
 

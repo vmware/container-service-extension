@@ -10,7 +10,7 @@ import string
 
 
 def hex_chunks(s):
-    return [s[i: i+2] for i in range(0, len(s), 2)]
+    return [s[i:i + 2] for i in range(0, len(s), 2)]
 
 
 def get_thumbprint(host, port):
@@ -25,5 +25,5 @@ def get_thumbprint(host, port):
 
 
 def random_word(length):
-   letters = string.ascii_lowercase
-   return ''.join(random.choice(letters) for i in range(length))
+    letters = string.ascii_lowercase
+    return ''.join(random.choice(letters) for i in range(length))

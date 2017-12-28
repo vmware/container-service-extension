@@ -6,14 +6,12 @@ import click
 from container_service_extension.config import check_config
 from container_service_extension.config import get_config
 from container_service_extension.consumer import MessageConsumer
-from container_service_extension.pv_provisioner import PVProvisioner
 import logging
 import signal
 import sys
 from threading import Thread
 import time
 import traceback
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -34,7 +32,6 @@ def consumer_thread(c):
 
 
 class Service(object):
-
     def __init__(self, config_file, check_config=True):
         self.config_file = config_file
         self.config = None
@@ -45,12 +42,14 @@ class Service(object):
             self.config = check_config(self.config_file)
         else:
             self.config = get_config(self.config_file)
-        logging.basicConfig(filename='cse.log',
-                            level=self.config['service']['logging_level'],
-                            format=self.config['service']['logging_format'])
+        logging.basicConfig(
+            filename='cse.log',
+            level=self.config['service']['logging_level'],
+            format=self.config['service']['logging_format'])
 
         click.echo('Container Service Extension for vCloud Director running')
-        click.echo('see file ''cse.log'' for details')
+        click.echo('config file: %s' % self.config_file)
+        click.echo('see file ' 'cse.log' ' for details')
         click.echo('press Ctrl+C to finish')
 
         signal.signal(signal.SIGINT, signal_handler)
@@ -69,18 +68,13 @@ class Service(object):
                     scheme = 'amqps'
                 else:
                     scheme = 'amqp'
-                c = MessageConsumer('%s://%s:%s@%s:%s/?socket_timeout=5' %
-                                    (scheme,
-                                     amqp['username'],
-                                     amqp['password'],
-                                     amqp['host'],
-                                     amqp['port']),
-                                    amqp['exchange'],
-                                    amqp['routing_key'],
-                                    self.config,
-                                    self.config['vcd']['verify'],
-                                    self.config['vcd']['log'])
-                t = Thread(target=consumer_thread, args=(c,))
+                c = MessageConsumer(
+                    '%s://%s:%s@%s:%s/?socket_timeout=5' %
+                    (scheme, amqp['username'], amqp['password'], amqp['host'],
+                     amqp['port']), amqp['exchange'], amqp['routing_key'],
+                    self.config, self.config['vcd']['verify'],
+                    self.config['vcd']['log'])
+                t = Thread(target=consumer_thread, args=(c, ))
                 t.daemon = True
                 t.start()
                 LOGGER.info('started thread %s', t.ident)
@@ -93,9 +87,6 @@ class Service(object):
                 print(traceback.format_exc())
 
         LOGGER.info('num of threads started: %s', len(threads))
-
-        pv_provisioner = PVProvisioner(self.config)
-        pv_provisioner.start()
 
         while True:
             try:
