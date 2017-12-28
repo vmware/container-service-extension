@@ -1,11 +1,11 @@
-The **container-service-extension** (`CSE`) is a VMware vCloud Director add-on that manages the life cycle of Kubernetes clusters for tenants.
+The **container-service-extension** (`CSE`) is an add-on to VMware vCloud Director that helps tenants work with Kubernetes clusters.
 
 
 ## Installation
 
 The `CSE` service is designed to be installed by the vCloud Director System Administrator on a virtual machine (the `CSE` appliance) with access to the vCD cell, AMQP server and vCenter server.
 
-vCD tenants can use `CSE` through [vcd-cli](https://vmware.github.io/vcd-cli).
+vCD tenants can use `CSE` through [vcd-cli](https://vmware.github.io/vcd-cli). Web UI access will be available in a future release.
 
 ### System Administrator Installation
 
