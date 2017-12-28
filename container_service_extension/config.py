@@ -324,7 +324,7 @@ def get_data_file(file_name):
     return content
 
 
-def upload_source_ova(config, client, org, catalog):
+def upload_source_ova(config, client, org, template):
     cse_cache_dir = os.path.join(os.getcwd(), 'cse_cache')
     cse_ova_file = os.path.join(cse_cache_dir,
                                 template['source_ova_name'])
@@ -373,7 +373,7 @@ def create_template(ctx, config, client, org, vdc_resource, catalog,
         source_ova_item = org.get_catalog_item(config['broker']['catalog'],
                                                template['source_ova_name'])
     except Exception:
-        source_ova_item = upload_source_ova(config, client, org, catalog)
+        source_ova_item = upload_source_ova(config, client, org, template)
     click.secho('Find source ova \'%s\': %s' %
                 (template['source_ova_name'],
                  bool_to_msg(source_ova_item is not None)))
