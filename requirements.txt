@@ -1,5 +1,5 @@
 pika >= 0.10.0
-vsphere-guest-run
-pyvcloud >= 18.2.1
-vcd-cli >= 19.2.2
+vsphere-guest-run >= 0.0.2
+pyvcloud >= 18.2.2
+vcd-cli >= 19.2.3
 humanfriendly

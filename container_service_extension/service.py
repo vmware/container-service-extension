@@ -48,6 +48,7 @@ class Service(object):
             format=self.config['service']['logging_format'])
 
         click.echo('Container Service Extension for vCloud Director running')
+        click.echo('config file: %s' % self.config_file)
         click.echo('see file ' 'cse.log' ' for details')
         click.echo('press Ctrl+C to finish')
 

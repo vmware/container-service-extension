@@ -53,8 +53,13 @@ echo 'PATH=$GOPATH/bin:$PATH' >> /root/.bashrc
 go version
 curl https://glide.sh/get | sh
 
-echo -n > /etc/machine-id
+### harbor
+curl -L https://github.com/docker/compose/releases/download/1.18.0/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
+wget --no-verbose https://github.com/vmware/harbor/releases/download/v1.2.2/harbor-offline-installer-v1.2.2.tgz
 
+### common
+echo -n > /etc/machine-id
 echo 'customization completed'
 sync
 sync

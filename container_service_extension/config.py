@@ -3,21 +3,26 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from __future__ import print_function
+
+import hashlib
+import logging
+import os
+
 import click
 from container_service_extension.broker import get_sample_broker_config
 from container_service_extension.broker import validate_broker_config_content
 from container_service_extension.broker import validate_broker_config_elements
-import hashlib
-import logging
-import os
-import pika
+from pyvcloud.vcd.amqp import AmqpService
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.client import SIZE_1MB
+from pyvcloud.vcd.extension import Extension
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
+
+import pika
 import requests
 import site
 import time
@@ -32,11 +37,14 @@ SAMPLE_AMQP_CONFIG = {
     'amqp': {
         'host': 'amqp.vmware.com',
         'port': 5672,
+        'prefix': 'vcd',
         'username': 'guest',
         'password': 'guest',
         'exchange': 'vcdext',
         'routing_key': 'cse',
-        'ssl': False
+        'ssl': False,
+        'ssl_accept_all': False,
+        'vhost': '/'
     }
 }
 
@@ -111,7 +119,7 @@ def get_config(config_file_name):
     return config
 
 
-def check_config(config_file_name):
+def check_config(config_file_name, template):
     click.secho('Validating CSE on vCD from file: %s' % config_file_name)
     config = get_config(config_file_name)
     validate_broker_config_elements(config['broker'])
@@ -148,7 +156,7 @@ def check_config(config_file_name):
                                               bool_to_msg(True)))
     click.secho('Validating \'%s\' service broker' % config['broker']['type'])
     if config['broker']['type'] == 'default':
-        validate_broker_config_content(config, client)
+        validate_broker_config_content(config, client, template)
 
     v = VSphere(
         config['vcs']['host'],
@@ -199,9 +207,11 @@ def uninstall_cse(ctx, config_file_name, template_name):
         assert vdc
         for template in config['broker']['templates']:
             if template_name == '*' or template['name'] == template_name:
-                click.secho('Deleting template: %s' % template['name'])
+                click.secho('Deleting template: %s (%s:%s)' %
+                            (template['name'], config['broker']['catalog'],
+                             template['catalog_item']))
                 org.delete_catalog_item(config['broker']['catalog'],
-                                        template['name'])
+                                        template['catalog_item'])
 
 
 def install_cse(ctx, config_file_name, template_name, no_capture):
@@ -254,18 +264,19 @@ def install_cse(ctx, config_file_name, template_name, no_capture):
                 click.secho('Processing template: %s' % template['name'])
                 try:
                     org.get_catalog_item(config['broker']['catalog'],
-                                         template['name'])
+                                         template['catalog_item'])
                 except Exception:
                     create_template(ctx, config, client, org, vdc_resource,
                                     catalog, no_capture, template)
                 k8s_template = None
                 try:
                     k8s_template = org.get_catalog_item(
-                        config['broker']['catalog'], template['name'])
+                        config['broker']['catalog'], template['catalog_item'])
                 except Exception:
                     pass
                 click.echo('Find template \'%s\', \'%s\': %s' %
-                           (config['broker']['catalog'], template['name'],
+                           (config['broker']['catalog'],
+                            template['catalog_item'],
                             bool_to_msg(k8s_template is not None)))
         configure_amqp_settings(client, config)
         register_extension(client, config)
@@ -398,7 +409,7 @@ def create_template(ctx, config, client, org, vdc_resource, catalog,
             'Creating vApp template \'%s\'' % template['temp_vapp'],
             fg='green')
 
-        init_script = get_data_file('init-%s.txt' % template['name'])
+        init_script = get_data_file('init-%s.sh' % template['name'])
         vapp_resource = vdc.instantiate_vapp(
             template['temp_vapp'],
             catalog.get('name'),
@@ -436,7 +447,7 @@ def create_template(ctx, config, client, org, vdc_resource, catalog,
             fg='green')
         vapp.reload()
         password_auto = vapp.get_admin_password(template['temp_vapp'])
-        cust_script = get_data_file('cust-%s.txt' % template['name'])
+        cust_script = get_data_file('cust-%s.sh' % template['name'])
 
         result = vs.execute_script_in_guest(
             vm,
@@ -486,7 +497,7 @@ def capture_as_template(ctx, config, vapp_resource, org, catalog, template):
     task = org.capture_vapp(
         catalog,
         vapp_resource.get('href'),
-        template['name'],
+        template['catalog_item'],
         'CSE Kubernetes template',
         customize_on_instantiate=True)
     stdout(task, ctx)
@@ -494,10 +505,38 @@ def capture_as_template(ctx, config, vapp_resource, org, catalog, template):
 
 
 def configure_amqp_settings(client, config):
-    click.secho('See https://vmware.github.io/container-service-extension '
-                'to configure AMQP settings.')
+    amqp_service = AmqpService(client)
+    amqp = config['amqp']
+    amqp_config = {
+        'AmqpExchange': amqp['exchange'],
+        'AmqpHost': amqp['host'],
+        'AmqpPort': amqp['port'],
+        'AmqpPrefix': amqp['prefix'],
+        'AmqpSslAcceptAll': amqp['ssl_accept_all'],
+        'AmqpUseSSL': amqp['ssl'],
+        'AmqpUsername': amqp['username'],
+        'AmqpVHost': amqp['vhost']
+    }
+    result = amqp_service.test_config(amqp_config, amqp['password'])
+    click.secho('AMQP test settings, result: %s' % result['Valid'].text)
+
+    if result['Valid'].text == 'true':
+        amqp_service.set_config(amqp_config, amqp['password'])
+        click.secho('Updated vCD AMQP configuration.')
+    else:
+        click.secho('Couldn\'t set vCD AMQP configuration.')
 
 
 def register_extension(client, config):
-    click.secho('See https://vmware.github.io/container-service-extension '
-                'to register API extension.')
+    ext = Extension(client)
+    try:
+        name = 'cse'
+        cse_ext = ext.get_extension(name)
+        click.secho('Find extension \'%s\', enabled: %s: %s' %
+                    (name, cse_ext['enabled'], bool_to_msg(True)))
+    except Exception:
+        exchange = 'vcdext'
+        patterns = '/api/cse,/api/cse/.*,/api/cse/.*/.*'
+        ext.add_extension(name, name, name, exchange, patterns.split(','))
+        click.secho('Registered extension \'%s\': %s' % (name,
+                                                         bool_to_msg(True)))

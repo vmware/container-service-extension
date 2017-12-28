@@ -43,10 +43,10 @@ def cli(ctx):
         cse install
             Install CSE.
 \b
-        cse install --template photon-custom-hw11-1.0-62c543d-k8s
+        cse install --template photon-v1
             Install CSE. It only creates the template specified.
 \b
-        cse install --template photon-custom-hw11-1.0-62c543d-k8s --no-capture
+        cse install --template photon-v1 --no-capture
             Install CSE. It only creates the temporary vApp specified in the
             config file. It will not capture the vApp in the catalog.
 \b
@@ -106,11 +106,19 @@ def sample(ctx):
     envvar='CSE_CONFIG',
     default='config.yaml',
     help='Config file to use.')
-def check(ctx, config):
+@click.option(
+    '-t',
+    '--template',
+    'template',
+    required=False,
+    default='*',
+    metavar='<template>',
+    help='template')
+def check(ctx, config, template):
     """Validate CSE configuration"""
 
     try:
-        check_config(config)
+        check_config(config, template)
         click.secho('The configuration is valid.')
     except Exception as e:
         LOGGER.error(traceback.format_exc())

@@ -1,9 +1,19 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import click
+
+from container_service_extension.cluster import add_nodes
+from container_service_extension.cluster import get_master_ip
+from container_service_extension.cluster import init_cluster
+from container_service_extension.cluster import join_cluster
 from container_service_extension.cluster import load_from_metadata
+from container_service_extension.cluster import TYPE_MASTER
+from container_service_extension.cluster import TYPE_NODE
+
 import logging
+
 import pkg_resources
+
 from pyvcloud.vcd.client import _WellKnownEndpoint
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
@@ -12,10 +22,10 @@ from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.task import Task
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
+
 import re
 import requests
 import threading
-import time
 import traceback
 import uuid
 import yaml
@@ -39,6 +49,8 @@ MAX_HOST_NAME_LENGTH = 25 - 4
 
 SAMPLE_TEMPLATE_PHOTON_V1 = {
     'name':
+    'photon-v1',
+    'catalog_item':
     'photon-custom-hw11-1.0-62c543d-k8s',
     'source_ova_name':
     'photon-custom-hw11-1.0-62c543d.ova',
@@ -55,11 +67,15 @@ SAMPLE_TEMPLATE_PHOTON_V1 = {
     'mem':
     2048,
     'admin_password':
-    'guest_os_admin_password'
+    'guest_os_admin_password',
+    'description':
+    "PhotonOS v1\nDocker 17.06.0-1\nKubernetes 1.8.1\nweave 2.0.5"
 }
 
 SAMPLE_TEMPLATE_UBUNTU_16_04 = {
     'name':
+    'ubuntu-16.04',
+    'catalog_item':
     'ubuntu-16.04-server-cloudimg-amd64-k8s',
     'source_ova_name':
     'ubuntu-16.04-server-cloudimg-amd64.ova',
@@ -76,7 +92,9 @@ SAMPLE_TEMPLATE_UBUNTU_16_04 = {
     'mem':
     2048,
     'admin_password':
-    'guest_os_admin_password'
+    'guest_os_admin_password',
+    'description':
+    'Ubuntu 16.04\nDocker 17.09.0~ce\nKubernetes 1.8.2\nweave 2.0.5'
 }
 
 SAMPLE_CONFIG = {
@@ -115,7 +133,7 @@ def validate_broker_config_elements(config):
                 raise Exception('invalid key: %s' % k)
 
 
-def validate_broker_config_content(config, client):
+def validate_broker_config_content(config, client, template):
     from container_service_extension.config import bool_to_msg
     logged_in_org = client.get_org()
     org = Org(client, resource=logged_in_org)
@@ -123,17 +141,19 @@ def validate_broker_config_content(config, client):
     click.echo('Find catalog \'%s\': %s' % (config['broker']['catalog'],
                                             bool_to_msg(True)))
     default_template_found = False
-    for template in config['broker']['templates']:
-        click.secho('Validating template: %s' % template['name'])
-        if config['broker']['default_template'] == template['name']:
-            default_template_found = True
-            click.secho('  Is default template: %s' % True)
-        else:
-            click.secho('  Is default template: %s' % False)
-        org.get_catalog_item(config['broker']['catalog'], template['name'])
-        click.echo('Find template \'%s\', \'%s\': %s' %
-                   (config['broker']['catalog'], template['name'],
-                    bool_to_msg(True)))
+    for t in config['broker']['templates']:
+        if template == '*' or template == t['name']:
+            click.secho('Validating template: %s' % t['name'])
+            if config['broker']['default_template'] == t['name']:
+                default_template_found = True
+                click.secho('  Is default template: %s' % True)
+            else:
+                click.secho('  Is default template: %s' % False)
+            org.get_catalog_item(config['broker']['catalog'],
+                                 t['catalog_item'])
+            click.echo('Find template \'%s\', \'%s\': %s' %
+                       (config['broker']['catalog'], t['catalog_item'],
+                        bool_to_msg(True)))
 
     assert default_template_found
 
@@ -143,22 +163,6 @@ def get_new_broker(config):
         return DefaultBroker(config)
     else:
         return None
-
-
-def wait_until_tools_ready(vm):
-    while True:
-        try:
-            status = vm.guest.toolsRunningStatus
-            if 'guestToolsRunning' == status:
-                LOGGER.debug('vm tools %s are ready' % vm)
-                return
-            LOGGER.debug('waiting for vm tools %s to be ready (%s)' % (vm,
-                                                                       status))
-            time.sleep(1)
-        except Exception:
-            LOGGER.debug('waiting for vm tools %s to be ready (%s)* ' %
-                         (vm, status))
-            time.sleep(1)
 
 
 def spinning_cursor():
@@ -247,8 +251,8 @@ class DefaultBroker(threading.Thread):
         self.t = self.task.update(
             status.value,
             'vcloud.cse',
-            operation,
             message,
+            operation,
             '',
             None,
             'urn:cse:cluster:%s' % self.cluster_id,
@@ -270,6 +274,16 @@ class DefaultBroker(threading.Thread):
             name = name[:-1]
         allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
         return all(allowed.match(x) for x in name.split("."))
+
+    def get_template(self):
+        if 'template' in self.body and self.body['template'] is not None:
+            name = self.body['template']
+        else:
+            name = self.config['broker']['default_template']
+        for template in self.config['broker']['templates']:
+            if template['name'] == name:
+                return template
+        raise Exception('Template %s not found' % name)
 
     def run(self):
         LOGGER.debug('thread started op=%s' % self.op)
@@ -344,6 +358,11 @@ class DefaultBroker(threading.Thread):
             org = Org(self.client_tenant, resource=org_resource)
             vdc_resource = org.get_vdc(self.body['vdc'])
             vdc = VDC(self.client_tenant, resource=vdc_resource)
+            self.update_task(
+                TaskStatus.RUNNING,
+                self.op,
+                message='Creating cluster vApp %s(%s)' % (self.cluster_name,
+                                                          self.cluster_id))
             vapp_resource = vdc.create_vapp(
                 self.cluster_name,
                 description='cluster %s' % self.cluster_name,
@@ -359,6 +378,7 @@ class DefaultBroker(threading.Thread):
                     TaskStatus.CANCELED
                 ],
                 callback=None)
+            assert t.get('status').lower() == TaskStatus.SUCCESS.value
             tags = {}
             tags['cse.cluster.id'] = self.cluster_id
             tags['cse.version'] = pkg_resources.require(
@@ -374,8 +394,73 @@ class DefaultBroker(threading.Thread):
                         fail_on_status=None,
                         expected_target_statuses=[TaskStatus.SUCCESS],
                         callback=None)
+            self.update_task(
+                TaskStatus.RUNNING,
+                self.op,
+                message='Creating master node for %s(%s)' % (self.cluster_name,
+                                                             self.cluster_id))
+            template = self.get_template()
+            vapp.reload()
+            add_nodes(
+                1,
+                template,
+                TYPE_MASTER,
+                self.config,
+                self.client_tenant,
+                org,
+                vdc,
+                vapp,
+                self.body,
+                wait=True)
 
-            # self.customize_nodes()
+            self.update_task(
+                TaskStatus.RUNNING,
+                self.op,
+                message='Initializing cluster %s(%s)' % (self.cluster_name,
+                                                         self.cluster_id))
+
+            vapp.reload()
+            init_cluster(self.config, vapp, template)
+
+            master_ip = get_master_ip(self.config, vapp, template)
+            t = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
+                                  master_ip)
+            self.client_tenant.get_task_monitor().\
+                wait_for_status(
+                    task=t,
+                    timeout=600,
+                    poll_frequency=5,
+                    fail_on_status=None,
+                    expected_target_statuses=[TaskStatus.SUCCESS],
+                    callback=None)
+
+            if self.body['node_count'] > 0:
+
+                self.update_task(
+                    TaskStatus.RUNNING,
+                    self.op,
+                    message='Creating %s node(s) for %s(%s)' %
+                    (self.body['node_count'], self.cluster_name,
+                     self.cluster_id))
+                add_nodes(
+                    self.body['node_count'],
+                    template,
+                    TYPE_NODE,
+                    self.config,
+                    self.client_tenant,
+                    org,
+                    vdc,
+                    vapp,
+                    self.body,
+                    wait=True)
+                self.update_task(
+                    TaskStatus.RUNNING,
+                    self.op,
+                    message='Adding %s node(s) to %s(%s)' %
+                    (self.body['node_count'], self.cluster_name,
+                     self.cluster_id))
+                vapp.reload()
+                join_cluster(self.config, vapp, template)
 
             self.update_task(
                 TaskStatus.SUCCESS,
