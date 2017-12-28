@@ -327,28 +327,28 @@ def get_data_file(file_name):
 def upload_source_ova(config, client, org, catalog):
     cse_cache_dir = os.path.join(os.getcwd(), 'cse_cache')
     cse_ova_file = os.path.join(cse_cache_dir,
-                                config['broker']['source_ova_name'])
+                                template['source_ova_name'])
     if not os.path.exists(cse_ova_file):
         if not os.path.isdir(cse_cache_dir):
             os.makedirs(cse_cache_dir)
         click.secho(
-            'Downloading %s' % config['broker']['source_ova'], fg='green')
-        r = requests.get(config['broker']['source_ova'], stream=True)
+            'Downloading %s' % template['source_ova_name'], fg='green')
+        r = requests.get(template['source_ova'], stream=True)
         with open(cse_ova_file, 'wb') as fd:
             for chunk in r.iter_content(chunk_size=SIZE_1MB):
                 fd.write(chunk)
     if os.path.exists(cse_ova_file):
         sha1 = get_sha1(cse_ova_file)
-        assert sha1 == config['broker']['sha1_ova']
+        assert sha1 == template['sha1_ova']
         click.secho(
-            'Uploading %s' % config['broker']['source_ova_name'], fg='green')
+            'Uploading %s' % template['source_ova_name'], fg='green')
         org.upload_ovf(
             config['broker']['catalog'],
             cse_ova_file,
-            config['broker']['source_ova_name'],
+            template['source_ova_name'],
             callback=None)
         return org.get_catalog_item(config['broker']['catalog'],
-                                    config['broker']['source_ova_name'])
+                                    template['source_ova_name'])
     else:
         return None
 
