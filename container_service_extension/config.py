@@ -131,6 +131,18 @@ def check_config(config_file_name, template):
     click.echo('Connected to AMQP server (%s:%s): %s' %
                (amqp['host'], amqp['port'], bool_to_msg(connection.is_open)))
     connection.close()
+
+    v = VSphere(
+        config['vcs']['host'],
+        config['vcs']['username'],
+        config['vcs']['password'],
+        port=int(config['vcs']['port']))
+    v.connect()
+    click.echo('Connected to vCenter Server as %s '
+               '(%s:%s): %s' % (config['vcs']['username'],
+                                config['vcs']['host'], config['vcs']['port'],
+                                bool_to_msg(True)))
+
     if not config['vcd']['verify']:
         click.secho(
             'InsecureRequestWarning: '
@@ -158,16 +170,6 @@ def check_config(config_file_name, template):
     if config['broker']['type'] == 'default':
         validate_broker_config_content(config, client, template)
 
-    v = VSphere(
-        config['vcs']['host'],
-        config['vcs']['username'],
-        config['vcs']['password'],
-        port=int(config['vcs']['port']))
-    v.connect()
-    click.echo('Connected to vCenter Server as %s '
-               '(%s:%s): %s' % (config['vcs']['username'],
-                                config['vcs']['host'], config['vcs']['port'],
-                                bool_to_msg(True)))
     return config
 
 
