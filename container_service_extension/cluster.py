@@ -52,7 +52,8 @@ def load_from_metadata(client, name=None, cluster_id=None,
         resource_type,
         query_result_format=QueryResultFormat.ID_RECORDS,
         qfilter=query_filter,
-        fields='metadata:cse.cluster.id,metadata:cse.master.ip')
+        fields='metadata:cse.cluster.id,metadata:cse.master.ip,'
+        'metadata:cse.version,metadata:cse.template')
     records = list(q.execute())
     nodes = []
     for record in records:
@@ -75,6 +76,8 @@ def load_from_metadata(client, name=None, cluster_id=None,
                     node['cse_version'] = str(me.TypedValue.Value)
                 elif me.Key == 'cse.master.ip':
                     node['master_ip'] = str(me.TypedValue.Value)
+                elif me.Key == 'cse.template':
+                    node['template'] = str(me.TypedValue.Value)
         nodes.append(node)
     for node in nodes:
         cluster = {}
@@ -89,6 +92,7 @@ def load_from_metadata(client, name=None, cluster_id=None,
         cluster['master_nodes'] = []
         cluster['nodes'] = []
         cluster['number_of_vms'] = node['record'].get('numberOfVMs')
+        cluster['template'] = node['template']
         clusters_dict[cluster['name']] = cluster
     return list(clusters_dict.values())
 
@@ -291,6 +295,16 @@ ip route get 1 | awk '{print $NF;exit}'
     return result[0][1].content.decode().split()[0]
 
 
+def get_cluster_config(config, vapp, password):
+    file_name = '/root/.kube/config'
+    nodes = get_nodes(vapp, TYPE_MASTER)
+    result = get_file_from_nodes(
+        config, vapp, password, file_name, nodes, check_tools=False)
+    if len(result) == 0 or result[0].status_code != 200:
+        raise Exception('Couldn\'t get cluster configuration')
+    return result[0].content.decode()
+
+
 def init_cluster(config, vapp, template):
     from container_service_extension.config import get_data_file
     script = get_data_file('master-%s.sh' % template['name'])
@@ -387,5 +401,31 @@ def execute_script_in_nodes(config,
         print(result[0])
         print(result_stderr)
         print(result_stdout)
+        all_results.append(result)
+    return all_results
+
+
+def get_file_from_nodes(config,
+                        vapp,
+                        password,
+                        file_name,
+                        nodes,
+                        check_tools=True):
+    vs = VSphere(
+        config['vcs']['host'],
+        config['vcs']['username'],
+        config['vcs']['password'],
+        port=int(config['vcs']['port']))
+    vs.connect()
+    all_results = []
+    for node in nodes:
+        LOGGER.debug('getting file from node %s' % node.get('name'))
+        moid = vapp.get_vm_moid(node.get('name'))
+        vm = vs.get_vm_by_moid(moid)
+        if check_tools:
+            vs.wait_until_tools_ready(
+                vm, sleep=5, callback=wait_for_tools_ready_callback)
+            wait_until_ready_to_exec(vs, vm, password)
+        result = vs.download_file_from_guest(vm, 'root', password, file_name)
         all_results.append(result)
     return all_results

@@ -1,1 +1,5 @@
-theme: jekyll-theme-minimal
+title: CSE for vCD
+description: Container Service Extension for VMware vCloud Director.
+show_downloads: false
+google_analytics:
+theme: jekyll-theme-cayman

@@ -61,7 +61,8 @@ class ServiceProcessor(object):
                 reply = self.get_spec(tokens[3])
             elif config_request:
                 broker = get_new_broker(self.config)
-                reply = broker.get_cluster_config(body['headers'])
+                reply = broker.get_cluster_config(cluster_name,
+                                                  body['headers'])
             elif template_request:
                 result = {}
                 templates = []

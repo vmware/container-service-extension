@@ -115,6 +115,7 @@ def list_clusters(ctx):
         for c in clusters:
             result.append({'name': c['name'],
                            'IP master': c['leader_endpoint'],
+                           'template': c['template'],
                            'VMs': c['number_of_vms'],
                            'vdc': c['vdc_name']
                            })

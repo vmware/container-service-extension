@@ -3,6 +3,7 @@
 import click
 
 from container_service_extension.cluster import add_nodes
+from container_service_extension.cluster import get_cluster_config
 from container_service_extension.cluster import get_master_ip
 from container_service_extension.cluster import init_cluster
 from container_service_extension.cluster import join_cluster
@@ -275,11 +276,12 @@ class DefaultBroker(threading.Thread):
         allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
         return all(allowed.match(x) for x in name.split("."))
 
-    def get_template(self):
-        if 'template' in self.body and self.body['template'] is not None:
-            name = self.body['template']
-        else:
-            name = self.config['broker']['default_template']
+    def get_template(self, name=None):
+        if name is None:
+            if 'template' in self.body and self.body['template'] is not None:
+                name = self.body['template']
+            else:
+                name = self.config['broker']['default_template']
         for template in self.config['broker']['templates']:
             if template['name'] == name:
                 return template
@@ -358,6 +360,7 @@ class DefaultBroker(threading.Thread):
             org = Org(self.client_tenant, resource=org_resource)
             vdc_resource = org.get_vdc(self.body['vdc'])
             vdc = VDC(self.client_tenant, resource=vdc_resource)
+            template = self.get_template()
             self.update_task(
                 TaskStatus.RUNNING,
                 self.op,
@@ -383,6 +386,7 @@ class DefaultBroker(threading.Thread):
             tags['cse.cluster.id'] = self.cluster_id
             tags['cse.version'] = pkg_resources.require(
                 'container-service-extension')[0].version
+            tags['cse.template'] = template['name']
             vapp = VApp(self.client_tenant, href=vapp_resource.get('href'))
             for k, v in tags.items():
                 t = vapp.set_metadata('GENERAL', 'READWRITE', k, v)
@@ -399,7 +403,6 @@ class DefaultBroker(threading.Thread):
                 self.op,
                 message='Creating master node for %s(%s)' % (self.cluster_name,
                                                              self.cluster_id))
-            template = self.get_template()
             vapp.reload()
             add_nodes(
                 1,
@@ -539,8 +542,20 @@ class DefaultBroker(threading.Thread):
                 self.op,
                 error_message=str(e))
 
-    def get_cluster_config(self, headers, body=None):
+    def get_cluster_config(self, cluster_name, headers):
         result = {}
-        result['body'] = {}
-        result['status_code'] = INTERNAL_SERVER_ERROR
+        try:
+            self._connect_tenant(headers)
+            clusters = load_from_metadata(
+                self.client_tenant, name=cluster_name)
+            if len(clusters) != 1:
+                raise Exception('Cluster \'%s\' not found' % cluster_name)
+            vapp = VApp(self.client_tenant, href=clusters[0]['vapp_href'])
+            template = self.get_template(name=clusters[0]['template'])
+            result['body'] = get_cluster_config(self.config, vapp,
+                                                template['admin_password'])
+            result['status_code'] = OK
+        except Exception as e:
+            result['body'] = str(e)
+            result['status_code'] = INTERNAL_SERVER_ERROR
         return result
