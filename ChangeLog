@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+0.2.0
+-----
+
+* docs
+* readme
 * fixed run issue
 * changed validation order
 * download
