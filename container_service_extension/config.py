@@ -474,13 +474,13 @@ def create_template(ctx, config, client, org, vdc_resource, catalog,
 
     if not no_capture:
         capture_as_template(ctx, config, vapp_resource, org, catalog, template)
-    if template['cleanup']:
-        click.secho(
-            'Deleting vApp template \'%s\' ' % template['temp_vapp'],
-            fg='green')
-        vdc.reload()
-        task = vdc.delete_vapp(template['temp_vapp'], force=True)
-        stdout(task, ctx)
+        if template['cleanup']:
+            click.secho(
+                'Deleting vApp template \'%s\' ' % template['temp_vapp'],
+                fg='green')
+            vdc.reload()
+            task = vdc.delete_vapp(template['temp_vapp'], force=True)
+            stdout(task, ctx)
 
 
 def capture_as_template(ctx, config, vapp_resource, org, catalog, template):
