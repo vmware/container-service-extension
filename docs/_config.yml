@@ -1,5 +1,5 @@
-title: CSE for vCD
-description: Container Service Extension for VMware vCloud Director.
+title: Container Service Extension
+description: Kubernetes as a Service for VMware vCloud Director.
 show_downloads: false
 google_analytics:
 theme: jekyll-theme-cayman

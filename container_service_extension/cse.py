@@ -214,7 +214,7 @@ def uninstall(ctx, config, template):
     help='Skip check')
 def run(ctx, config, skip_check):
     """Run CSE service"""
-    service = Service(config, check_config=not skip_check)
+    service = Service(config, should_check_config=not skip_check)
     service.run()
 
 

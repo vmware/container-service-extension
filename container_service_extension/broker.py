@@ -134,7 +134,7 @@ def validate_broker_config_elements(config):
                 raise Exception('invalid key: %s' % k)
 
 
-def validate_broker_config_content(config, client, template):
+def validate_broker_config_content(config, client, template='*'):
     from container_service_extension.config import bool_to_msg
     logged_in_org = client.get_org()
     org = Org(client, resource=logged_in_org)

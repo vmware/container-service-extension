@@ -32,13 +32,13 @@ def consumer_thread(c):
 
 
 class Service(object):
-    def __init__(self, config_file, check_config=True):
+    def __init__(self, config_file, should_check_config=True):
         self.config_file = config_file
         self.config = None
-        self.check_config = check_config
+        self.should_check_config = should_check_config
 
     def run(self):
-        if self.check_config:
+        if self.should_check_config:
             self.config = check_config(self.config_file)
         else:
             self.config = get_config(self.config_file)

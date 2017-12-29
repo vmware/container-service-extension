@@ -119,7 +119,7 @@ def get_config(config_file_name):
     return config
 
 
-def check_config(config_file_name, template):
+def check_config(config_file_name, template='*'):
     click.secho('Validating CSE on vCD from file: %s' % config_file_name)
     config = get_config(config_file_name)
     validate_broker_config_elements(config['broker'])
@@ -131,6 +131,18 @@ def check_config(config_file_name, template):
     click.echo('Connected to AMQP server (%s:%s): %s' %
                (amqp['host'], amqp['port'], bool_to_msg(connection.is_open)))
     connection.close()
+
+    v = VSphere(
+        config['vcs']['host'],
+        config['vcs']['username'],
+        config['vcs']['password'],
+        port=int(config['vcs']['port']))
+    v.connect()
+    click.echo('Connected to vCenter Server as %s '
+               '(%s:%s): %s' % (config['vcs']['username'],
+                                config['vcs']['host'], config['vcs']['port'],
+                                bool_to_msg(True)))
+
     if not config['vcd']['verify']:
         click.secho(
             'InsecureRequestWarning: '
@@ -158,16 +170,6 @@ def check_config(config_file_name, template):
     if config['broker']['type'] == 'default':
         validate_broker_config_content(config, client, template)
 
-    v = VSphere(
-        config['vcs']['host'],
-        config['vcs']['username'],
-        config['vcs']['password'],
-        port=int(config['vcs']['port']))
-    v.connect()
-    click.echo('Connected to vCenter Server as %s '
-               '(%s:%s): %s' % (config['vcs']['username'],
-                                config['vcs']['host'], config['vcs']['port'],
-                                bool_to_msg(True)))
     return config
 
 
@@ -324,31 +326,31 @@ def get_data_file(file_name):
     return content
 
 
-def upload_source_ova(config, client, org, catalog):
+def upload_source_ova(config, client, org, template):
     cse_cache_dir = os.path.join(os.getcwd(), 'cse_cache')
     cse_ova_file = os.path.join(cse_cache_dir,
-                                config['broker']['source_ova_name'])
+                                template['source_ova_name'])
     if not os.path.exists(cse_ova_file):
         if not os.path.isdir(cse_cache_dir):
             os.makedirs(cse_cache_dir)
         click.secho(
-            'Downloading %s' % config['broker']['source_ova'], fg='green')
-        r = requests.get(config['broker']['source_ova'], stream=True)
+            'Downloading %s' % template['source_ova_name'], fg='green')
+        r = requests.get(template['source_ova'], stream=True)
         with open(cse_ova_file, 'wb') as fd:
             for chunk in r.iter_content(chunk_size=SIZE_1MB):
                 fd.write(chunk)
     if os.path.exists(cse_ova_file):
         sha1 = get_sha1(cse_ova_file)
-        assert sha1 == config['broker']['sha1_ova']
+        assert sha1 == template['sha1_ova']
         click.secho(
-            'Uploading %s' % config['broker']['source_ova_name'], fg='green')
+            'Uploading %s' % template['source_ova_name'], fg='green')
         org.upload_ovf(
             config['broker']['catalog'],
             cse_ova_file,
-            config['broker']['source_ova_name'],
+            template['source_ova_name'],
             callback=None)
         return org.get_catalog_item(config['broker']['catalog'],
-                                    config['broker']['source_ova_name'])
+                                    template['source_ova_name'])
     else:
         return None
 
@@ -373,7 +375,7 @@ def create_template(ctx, config, client, org, vdc_resource, catalog,
         source_ova_item = org.get_catalog_item(config['broker']['catalog'],
                                                template['source_ova_name'])
     except Exception:
-        source_ova_item = upload_source_ova(config, client, org, catalog)
+        source_ova_item = upload_source_ova(config, client, org, template)
     click.secho('Find source ova \'%s\': %s' %
                 (template['source_ova_name'],
                  bool_to_msg(source_ova_item is not None)))
@@ -472,13 +474,13 @@ def create_template(ctx, config, client, org, vdc_resource, catalog,
 
     if not no_capture:
         capture_as_template(ctx, config, vapp_resource, org, catalog, template)
-    if template['cleanup']:
-        click.secho(
-            'Deleting vApp template \'%s\' ' % template['temp_vapp'],
-            fg='green')
-        vdc.reload()
-        task = vdc.delete_vapp(template['temp_vapp'], force=True)
-        stdout(task, ctx)
+        if template['cleanup']:
+            click.secho(
+                'Deleting vApp template \'%s\' ' % template['temp_vapp'],
+                fg='green')
+            vdc.reload()
+            task = vdc.delete_vapp(template['temp_vapp'], force=True)
+            stdout(task, ctx)
 
 
 def capture_as_template(ctx, config, vapp_resource, org, catalog, template):

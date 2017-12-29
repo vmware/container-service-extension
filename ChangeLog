@@ -1,6 +1,30 @@
 CHANGES
 =======
 
+0.2.0
+-----
+
+* docs
+* readme
+* fixed run issue
+* changed validation order
+* download
+* download
+* setup.cfg
+* wip
+* scripts
+* doc
+* doc
+* Update \_config.yml
+* rearchitect
+* refactor
+* refactoring
+* refactored config
+* cleanup
+* pv
+* wip
+* delete pvc
+* add PV as ID
 * fixed PV provider files location
 * customization directory
 * docs
