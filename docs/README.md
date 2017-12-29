@@ -27,7 +27,7 @@ The `CSE` appliance doesn't need access to the network where the master template
 $ pip3 install container-service-extension
 
 $ cse version
-Container Service Extension for VMware vCloud Director, version 0.1.3
+Container Service Extension for VMware vCloud Director, version 0.2.0
 ```
 The exact version might be different from the one listed above.
 
@@ -174,7 +174,7 @@ systemctl start cse
 
 ### Tenant Installation
 
-vCloud Director tenants use `CSE` through [vcd-cli](https://vmware.github.io/vcd-cli), which is included in `CSE`. Tenants will need to install the `CSE` package via Python pip3:
+vCloud Director tenants use `CSE` through [vcd-cli](https://vmware.github.io/vcd-cli), which is included in `CSE`. Tenants will need to install the `CSE` package via pip3:
 
 ```shell
 $ pip3 install container-service-extension
@@ -221,15 +221,21 @@ The virtual machines (master and nodes) will be provisioned on the tenant virtua
 
 The `CSE` service doesn't need a network connection to the tenant virtual datacenters.
 
+Below are some usage examples:
+
 ```shell
 # create cluster mycluster with one master and two nodes, connected to provided network
-$ vcd cse cluster create mycluster --network intranet
+# a public key is provided to be able to ssh into the VMs
+$ vcd cse cluster create mycluster --network intranet --ssh-key ~/.ssh/id_rsa.pub
+
+# list the VMs of the cluster
+$ vcd vapp list mycluster
 
 # create cluster mycluster with one master, three nodes and connected to provided network
-$ vcd cse cluster create mycluster --network intranet --nodes 3
+$ vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh/id_rsa.pub
 
 # create a single node cluster, connected to provided network
-$ vcd cse cluster create mycluster --network intranet --nodes 0
+$ vcd cse cluster create mycluster --network intranet --nodes 0 --ssh-key ~/.ssh/id_rsa.pub
 
 # list available clusters
 $ vcd cse cluster list
@@ -366,7 +372,7 @@ Commands:
 
 ### Versions
 
-#### CSE 0.1.3
+#### CSE 0.2.0
 
 Release date: 2017-12-29
 
