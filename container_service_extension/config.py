@@ -119,7 +119,7 @@ def get_config(config_file_name):
     return config
 
 
-def check_config(config_file_name, template):
+def check_config(config_file_name, template='*'):
     click.secho('Validating CSE on vCD from file: %s' % config_file_name)
     config = get_config(config_file_name)
     validate_broker_config_elements(config['broker'])

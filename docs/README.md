@@ -2,7 +2,12 @@ The **container-service-extension** (`CSE`) is an add-on to VMware vCloud Direct
 
 ## Overview
 
-`CSE`
+`CSE` enables Kubernetes as a service on vCloud Director (vCD) installations. `CSE` is based on VM templates that are automatically generated during the installation process, or anytime thereafter. vCD tenants can then request fully functional Kubernetes clusters that `CSE` instantiate on the tenant VDC from the templates, customized based on the tenant preferences.
+
+The current document covers `CSE`:
+  - installation
+  - configuration
+  - usage
 
 ## Installation
 
@@ -22,8 +27,9 @@ The `CSE` appliance doesn't need access to the network where the master template
 $ pip3 install container-service-extension
 
 $ cse version
-Container Service Extension for VMware vCloud Director, version 0.1.1
+Container Service Extension for VMware vCloud Director, version 0.1.3
 ```
+The exact version might be different from the one listed above.
 
 `CSE` can also be installed using [virtualenv](https://virtualenv.pypa.io) and [virtualenvwrapper](http://virtualenvwrapper.readthedocs.io). `pip3 install` can be used with additional parameters depending on the needs:
 
@@ -37,17 +43,7 @@ Container Service Extension for VMware vCloud Director, version 0.1.1
 #### 2. Generate a skeleton configuration and provide site specific settings.
 
 ```shell
-$ cse sample-config > config.yaml
-```
-
-The `--labels` option can be used to specify the type of template to generate:
-
-```shell
-# template based on PhotonOS
-$ cse sample-config --labels photon > config-photon.yaml
-
-# template based on Ubuntu
-$ cse sample-config --labels ubuntu > config-ubuntu.yaml
+$ cse sample > config.yaml
 ```
 
 Edit file `config.yaml` with the values for your vCloud Director installation. The following table describes the setting values.
