@@ -17,7 +17,7 @@ from vcd_cli.vcd import vcd
 
 import yaml
 
-@vcd.group(short_help='manage clusters')
+@vcd.group(short_help='manage kubernetes clusters')
 @click.pass_context
 def cse(ctx):
     """Work with kubernetes clusters in vCloud Director.

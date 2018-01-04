@@ -11,13 +11,17 @@ The current document covers the following `CSE` topics:
 
 ## Installation
 
-The `CSE` service is designed to be installed by the vCloud Director System Administrator on a virtual machine (the `CSE` appliance) with access to the vCD cell, AMQP server and vCenter server.
+The `CSE` service is designed to be installed by the vCloud Director System Administrator on a virtual machine (the `CSE` appliance) with network connectivity to the vCloud Director infrastructure where the following components access is required:
+
+- vCloud Director instance (Public Load Balancer VIP for multiple cells)
+- vCenter Server
+- AMQP Server
 
 vCD tenants can use `CSE` through [vcd-cli](https://vmware.github.io/vcd-cli). Web UI access will be available in a future release.
 
 ### System Administrator Installation
 
-Allocate a new virtual machine to run `CSE` (the `CSE` appliance) or use one of the existing servers in the vCloud Director installation. `CSE` requires Python 3.6 or higher. See the appendix at the end for installing Python 3 on different platforms.
+Allocate a new virtual machine to run `CSE` (the `CSE` appliance) or use one of the existing servers in the vCloud Director installation. `CSE` requires Python 3.6 or higher. See the [Appendix](#appendix) at the end for installing Python 3 on different platforms.
 
 The `CSE` appliance doesn't need access to the network where the master template will be created (`network` and `temp_vapp` configuration parameters) or the tenant networks where the clusters will be created. The `CSE` appliance requires network access to the vCD cell, AMQP server and vCenter server.
 
@@ -33,12 +37,12 @@ The exact version might be different from the one listed above.
 
 `CSE` can also be installed using [virtualenv](https://virtualenv.pypa.io) and [virtualenvwrapper](http://virtualenvwrapper.readthedocs.io). `pip3 install` can be used with additional parameters depending on the needs:
 
-| parameter | meaning |
-|-----------|---------|
-|`--user`   | install to the Python user install directory |
-| `--upgrade` | upgrade an existing installation |
-| `--pre`   | install a pre-release and development version |
-| `--no-cache-dir` | disable the cache and download the package |
+|    parameter     |                    meaning                    |
+| ---------------- | --------------------------------------------- |
+| `--user`         | install to the Python user install directory  |
+| `--upgrade`      | upgrade an existing installation              |
+| `--pre`          | install a pre-release and development version |
+| `--no-cache-dir` | disable the cache and download the package    |
 
 #### 2. Generate a skeleton configuration and provide site specific settings.
 
@@ -59,35 +63,35 @@ The configuration file has 5 sections:
   - `service`: service settings
   - `broker`: service broker settings
 
-|Group|Property|Value|
-|-----|--------|-----|
-|`broker`|||
-||`type`|Broker type, set to `default`|
-||`org`|vCD organization that contains the shared catalog where the master templates will be stored|
-||`vdc`|Virtual datacenter within `org` that will be used during the install process to build the template|
-||`network`|Org Network within `vdc` that will be used during the install process to build the template. It should have outbound access to the public Internet. The `CSE` appliance doesn't need to be connected to this network|
-||`ip_allocation_mode`|IP allocation mode to be used during the install process to build the template. Possible values are `dhcp` or `pool`. During creation of clusters for tenants, `pool` IP allocation mode is always used|
-||`catalog`|Public shared catalog within `org` where the template will be published|
-||`cse_msg_dir`|Reserved for future use|
-||`storage_profile`|Name of the storage profile to use when creating the temporary vApp used to build the template|
-||`default_template`|Name of the default template to use if none is specified|
-||`templates`| A list of templates available for clusters|
+|  Group   |       Property       |                                                                                                        Value                                                                                                         |
+| -------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `broker` |                      |                                                                                                                                                                                                                      |
+|          | `type`               | Broker type, set to `default`                                                                                                                                                                                        |
+|          | `org`                | vCD organization that contains the shared catalog where the master templates will be stored                                                                                                                          |
+|          | `vdc`                | Virtual datacenter within `org` that will be used during the install process to build the template                                                                                                                   |
+|          | `network`            | Org Network within `vdc` that will be used during the install process to build the template. It should have outbound access to the public Internet. The `CSE` appliance doesn't need to be connected to this network |
+|          | `ip_allocation_mode` | IP allocation mode to be used during the install process to build the template. Possible values are `dhcp` or `pool`. During creation of clusters for tenants, `pool` IP allocation mode is always used              |
+|          | `catalog`            | Public shared catalog within `org` where the template will be published                                                                                                                                              |
+|          | `cse_msg_dir`        | Reserved for future use                                                                                                                                                                                              |
+|          | `storage_profile`    | Name of the storage profile to use when creating the temporary vApp used to build the template                                                                                                                       |
+|          | `default_template`   | Name of the default template to use if none is specified                                                                                                                                                             |
+|          | `templates`          | A list of templates available for clusters                                                                                                                                                                           |
 
 Each `template` in the `templates` property of `broker` has the following properties:
 
-|Property|Value|
-|--------|-----|
-|`name`|Unique name of the template|
-|`source_ova`|URL of the source OVA to download|
-|`sha1_ova`|sha1 of the source OVA|
-|`source_ova_name`|Name of the source OVA in the catalog|
-|`catalog_item`|Name of the template in the catalog|
-|`description`|Information about the template|
-|`temp_vapp`|Name of the temporary vApp used to build the template. Once the template is created, this vApp can be deleted. It will be deleted by default during the installation based on the value of the `cleanup` property|
-|`cleanup`|If `True`, `temp_vapp` will be deleted by the install process after the master template is created|
-|`admin_password`|`root` password for the template and instantiated VMs. This password should not be shared with tenants|
-|`cpu`|Number of virtual CPUs to be allocated for each VM|
-|`mem`|Memory in MB to be allocated for each VM|
+|     Property      |                                                                                                       Value                                                                                                       |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`            | Unique name of the template                                                                                                                                                                                       |
+| `source_ova`      | URL of the source OVA to download                                                                                                                                                                                 |
+| `sha1_ova`        | sha1 of the source OVA                                                                                                                                                                                            |
+| `source_ova_name` | Name of the source OVA in the catalog                                                                                                                                                                             |
+| `catalog_item`    | Name of the template in the catalog                                                                                                                                                                               |
+| `description`     | Information about the template                                                                                                                                                                                    |
+| `temp_vapp`       | Name of the temporary vApp used to build the template. Once the template is created, this vApp can be deleted. It will be deleted by default during the installation based on the value of the `cleanup` property |
+| `cleanup`         | If `True`, `temp_vapp` will be deleted by the install process after the master template is created                                                                                                                |
+| `admin_password`  | `root` password for the template and instantiated VMs. This password should not be shared with tenants                                                                                                            |
+| `cpu`             | Number of virtual CPUs to be allocated for each VM                                                                                                                                                                |
+| `mem`             | Memory in MB to be allocated for each VM                                                                                                                                                                          |
 
 
 #### 3. Install the extension.
@@ -241,7 +245,7 @@ $ vcd cse cluster create mycluster --network intranet --nodes 0 --ssh-key ~/.ssh
 $ vcd cse cluster list
 
 # retrieve cluster config
-$ vcd cluster config mycluster > ~/.kube/config
+$ vcd cse cluster config mycluster > ~/.kube/config
 
 # check cluster configuration
 $ kubectl get nodes
@@ -376,34 +380,36 @@ Commands:
 
 Release date: 2017-12-29
 
-|vCD|OS                  |Docker    |Kubernetes|Pod Network|
-|---|--------------------|----------|----------|-----------|
-|9.0|Photon OS 1.0, Rev 2|17.06.0-ce|1.8.1     |Weave 2.0.5|
-|9.0|Ubuntu 16.04.3 LTS  |17.09.0-ce|1.8.2     |Weave 2.0.5|
+| vCD |          OS          |   Docker   | Kubernetes | Pod Network |
+| --- | -------------------- | ---------- | ---------- | ----------- |
+| 9.0 | Photon OS 1.0, Rev 2 | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
+| 9.0 | Ubuntu 16.04.3 LTS   | 17.09.0-ce | 1.8.2      | Weave 2.0.5 |
 
 #### CSE 0.1.2
 
 Release date: 2017-11-10
 
-|vCD|OS                  |Kubernetes|Pod Network|
-|---|--------------------|----------|-----------|
-|9.0|Photon OS 1.0, Rev 2|1.7.7     |Weave 2.0.5|
-|9.0|Ubuntu 16.04.3 LTS  |1.8.2     |Weave 2.0.5|
+| vCD |          OS          | Kubernetes | Pod Network |
+| --- | -------------------- | ---------- | ----------- |
+| 9.0 | Photon OS 1.0, Rev 2 | 1.7.7      | Weave 2.0.5 |
+| 9.0 | Ubuntu 16.04.3 LTS   | 1.8.2      | Weave 2.0.5 |
 
 #### CSE 0.1.1
 
 Release date: 2017-10-03
 
-|vCD|OS                  |Kubernetes|Pod Network|
-|---|--------------------|----------|-----------|
-|9.0|Photon OS 1.0, Rev 2|1.7.7     |Weave 2.0.4|
+| vCD |          OS          | Kubernetes | Pod Network |
+| --- | -------------------- | ---------- | ----------- |
+| 9.0 | Photon OS 1.0, Rev 2 | 1.7.7      | Weave 2.0.4 |
 
 ### Source OVA Files
 
-|OS                  |OVA Name| URL    |SHA1      |
-|--------------------|--------|--------|----------|
-|Photon OS 1.0, Rev 2|photon-custom-hw11-1.0-62c543d.ova |`https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova`|18c1a6d31545b757d897c61a0c3cc0e54d8aeeba|
-|Ubuntu 16.04.3 LTS|ubuntu-16.04-server-cloudimg-amd64.ova|`https://cloud-images.ubuntu.com/releases/xenial/release-20171011/ubuntu-16.04-server-cloudimg-amd64.ova`|1bddf68820c717e13c6d1acd800fb7b4d197b411|
+|          OS          |                OVA Name                |                                                    URL                                                    |                   SHA1                   |
+| -------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Photon OS 1.0, Rev 2 | photon-custom-hw11-1.0-62c543d.ova     | `https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova`            | 18c1a6d31545b757d897c61a0c3cc0e54d8aeeba |
+| Ubuntu 16.04.3 LTS   | ubuntu-16.04-server-cloudimg-amd64.ova | `https://cloud-images.ubuntu.com/releases/xenial/release-20171011/ubuntu-16.04-server-cloudimg-amd64.ova` | 1bddf68820c717e13c6d1acd800fb7b4d197b411 |
+
+## Appendix
 
 ### Installation Details
 
@@ -412,7 +418,7 @@ Release date: 2017-10-03
 Photon OS 2.0 RC:
 
 ```shell
-$ sudo tdnf install -y build-essential python3-setuptools python3-tools python3-pip
+$ sudo tdnf install -y build-essential python3-setuptools python3-tools python3-pip python3-devel
 $ pip3 install --user --pre --upgrade --no-cache container-service-extension
 $ export LANG=en_US.UTF-8
 $ cse version
