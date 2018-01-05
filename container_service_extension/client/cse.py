@@ -16,7 +16,7 @@ from vcd_cli.vcd import vcd
 from container_service_extension.client.cluster import Cluster
 
 
-@vcd.group(short_help='manage clusters')
+@vcd.group(short_help='manage kubernetes clusters')
 @click.pass_context
 def cse(ctx):
     """Work with kubernetes clusters in vCloud Director.
