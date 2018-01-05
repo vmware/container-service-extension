@@ -3,15 +3,13 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import logging
-
-from pyvcloud.vcd.client import QueryResultFormat
-from pyvcloud.vcd.client import TaskStatus
-from pyvcloud.vcd.vapp import VApp
-from pyvcloud.vcd.vm import VM
-
 import random
 import string
 import time
+
+from pyvcloud.vcd.client import QueryResultFormat
+from pyvcloud.vcd.vapp import VApp
+from pyvcloud.vcd.vm import VM
 from vsphere_guest_run.vsphere import VSphere
 
 TYPE_MASTER = 'mstr'
@@ -36,8 +34,7 @@ def wait_until_tools_ready(vm):
             time.sleep(1)
 
 
-def load_from_metadata(client, name=None, cluster_id=None,
-                       get_leader_ip=False):
+def load_from_metadata(client, name=None, cluster_id=None):
     clusters_dict = {}
     if cluster_id is None:
         query_filter = 'metadata:cse.cluster.id==STRING:*'
@@ -161,83 +158,31 @@ fi
         if storage_profile is not None:
             spec['storage_profile'] = storage_profile
         specs.append(spec)
-    if ('cpu_count' in body and body['cpu_count'] is not None) or (
-            'memory' in body and body['memory'] is not None):
+    if ('cpu' in body and body['cpu'] is not None) or \
+       ('memory' in body and body['memory'] is not None):
         reconfigure_hw = True
     else:
         reconfigure_hw = False
-
     task = vapp.add_vms(specs, power_on=not reconfigure_hw)
     if wait:
-        task = client.get_task_monitor().wait_for_status(
-            task=task,
-            timeout=600,
-            poll_frequency=5,
-            fail_on_status=None,
-            expected_target_statuses=[
-                TaskStatus.SUCCESS, TaskStatus.ABORTED, TaskStatus.ERROR,
-                TaskStatus.CANCELED
-            ],
-            callback=None)
-        if task.get('status').lower() != TaskStatus.SUCCESS.value:
-            task_resource = client.get_resource(task.get('href'))
-            if hasattr(task_resource, 'taskDetails'):
-                raise Exception(task_resource.get('taskDetails'))
-            elif hasattr(task_resource, 'Details'):
-                raise Exception(task_resource.Details.text)
-            else:
-                raise Exception('Couldn\'t add node(s).')
+        # TODO(get details of the exception like not enough resources avail)
+        client.get_task_monitor().wait_for_status_or_raise(task)
     if wait and reconfigure_hw:
         vapp.reload()
         for spec in specs:
             vm_resource = vapp.get_vm(spec['target_vm_name'])
-            if 'cpu_count' in body and body['cpu_count'] is not None:
+            if 'cpu' in body and body['cpu'] is not None:
                 vm = VM(client, resource=vm_resource)
-                task = vm.modify_cpu(body['cpu_count'])
-                task = client.get_task_monitor().wait_for_status(
-                    task=task,
-                    timeout=600,
-                    poll_frequency=5,
-                    fail_on_status=None,
-                    expected_target_statuses=[
-                        TaskStatus.SUCCESS, TaskStatus.ABORTED,
-                        TaskStatus.ERROR, TaskStatus.CANCELED
-                    ],
-                    callback=None)
+                task = vm.modify_cpu(body['cpu'])
+                client.get_task_monitor().wait_for_status_or_raise(task)
             if 'memory' in body and body['memory'] is not None:
                 vm = VM(client, resource=vm_resource)
                 task = vm.modify_memory(body['memory'])
-                task = client.get_task_monitor().wait_for_status(
-                    task=task,
-                    timeout=600,
-                    poll_frequency=5,
-                    fail_on_status=None,
-                    expected_target_statuses=[
-                        TaskStatus.SUCCESS, TaskStatus.ABORTED,
-                        TaskStatus.ERROR, TaskStatus.CANCELED
-                    ],
-                    callback=None)
+                client.get_task_monitor().wait_for_status_or_raise(task)
             vm = VM(client, resource=vm_resource)
             task = vm.power_on()
             if wait:
-                task = client.get_task_monitor().wait_for_status(
-                    task=task,
-                    timeout=600,
-                    poll_frequency=5,
-                    fail_on_status=None,
-                    expected_target_statuses=[
-                        TaskStatus.SUCCESS, TaskStatus.ABORTED,
-                        TaskStatus.ERROR, TaskStatus.CANCELED
-                    ],
-                    callback=None)
-                if task.get('status').lower() != TaskStatus.SUCCESS.value:
-                    task_resource = client.get_resource(task.get('href'))
-                    if hasattr(task_resource, 'taskDetails'):
-                        raise Exception(task_resource.get('taskDetails'))
-                    elif hasattr(task_resource, 'Details'):
-                        raise Exception(task_resource.Details.text)
-                    else:
-                        raise Exception('Couldn\'t add node(s).')
+                client.get_task_monitor().wait_for_status_or_raise(task)
     return {'task': task, 'specs': specs}
 
 
@@ -247,10 +192,6 @@ def get_nodes(vapp, node_type):
         if node.get('name').startswith(node_type):
             nodes.append(node)
     return nodes
-
-
-def delete_nodes(node_names, client, vapp):
-    pass
 
 
 def wait_for_tools_ready_callback(message, exception=None):
@@ -316,12 +257,18 @@ def init_cluster(config, vapp, template):
                         result[0][2].content.decode())
 
 
-def join_cluster(config, vapp, template):
+def join_cluster(config, vapp, template, target_nodes=None):
     from container_service_extension.config import get_data_file
     init_info = get_init_info(config, vapp, template['admin_password'])
     tmp_script = get_data_file('node-%s.sh' % template['name'])
     script = tmp_script.format(token=init_info[0], ip=init_info[1])
-    nodes = get_nodes(vapp, TYPE_NODE)
+    if target_nodes is None:
+        nodes = get_nodes(vapp, TYPE_NODE)
+    else:
+        nodes = []
+        for node in vapp.get_all_vms():
+            if node.get('name') in target_nodes:
+                nodes.append(node)
     results = execute_script_in_nodes(config, vapp, template['admin_password'],
                                       script, nodes)
     for result in results:
@@ -429,3 +376,17 @@ def get_file_from_nodes(config,
         result = vs.download_file_from_guest(vm, 'root', password, file_name)
         all_results.append(result)
     return all_results
+
+
+def delete_nodes_from_cluster(config, vapp, template, nodes):
+    script = '#!/usr/bin/env bash\nkubectl delete node '
+    for node in nodes:
+        script += ' %s' % node
+    script += '\n'
+    password = template['admin_password']
+    master_nodes = get_nodes(vapp, TYPE_MASTER)
+    result = execute_script_in_nodes(
+        config, vapp, password, script, master_nodes, check_tools=False)
+    if result[0][0] != 0:
+        raise Exception(
+            'Couldn\'t delete node(s):\n%s' % result[0][2].content.decode())

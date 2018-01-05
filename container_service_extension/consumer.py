@@ -3,13 +3,16 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import base64
-from container_service_extension.processor import ServiceProcessor
 import json
 import logging
-import pika
 import sys
 import threading
 import traceback
+
+import pika
+
+from container_service_extension.processor import ServiceProcessor
+
 
 LOGGER = logging.getLogger(__name__)
 

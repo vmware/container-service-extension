@@ -7,11 +7,13 @@ from __future__ import print_function
 import hashlib
 import logging
 import os
+import site
+import time
 
 import click
-from container_service_extension.broker import get_sample_broker_config
-from container_service_extension.broker import validate_broker_config_content
-from container_service_extension.broker import validate_broker_config_elements
+import pika
+import requests
+import yaml
 from pyvcloud.vcd.amqp import AmqpService
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
@@ -21,14 +23,13 @@ from pyvcloud.vcd.extension import Extension
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
-
-import pika
-import requests
-import site
-import time
 from vcd_cli.utils import stdout
 from vsphere_guest_run.vsphere import VSphere
-import yaml
+
+from container_service_extension.broker import get_sample_broker_config
+from container_service_extension.broker import validate_broker_config_content
+from container_service_extension.broker import validate_broker_config_elements
+
 
 LOGGER = logging.getLogger(__name__)
 BUF_SIZE = 65536
@@ -328,13 +329,11 @@ def get_data_file(file_name):
 
 def upload_source_ova(config, client, org, template):
     cse_cache_dir = os.path.join(os.getcwd(), 'cse_cache')
-    cse_ova_file = os.path.join(cse_cache_dir,
-                                template['source_ova_name'])
+    cse_ova_file = os.path.join(cse_cache_dir, template['source_ova_name'])
     if not os.path.exists(cse_ova_file):
         if not os.path.isdir(cse_cache_dir):
             os.makedirs(cse_cache_dir)
-        click.secho(
-            'Downloading %s' % template['source_ova_name'], fg='green')
+        click.secho('Downloading %s' % template['source_ova_name'], fg='green')
         r = requests.get(template['source_ova'], stream=True)
         with open(cse_ova_file, 'wb') as fd:
             for chunk in r.iter_content(chunk_size=SIZE_1MB):
@@ -342,8 +341,7 @@ def upload_source_ova(config, client, org, template):
     if os.path.exists(cse_ova_file):
         sha1 = get_sha1(cse_ova_file)
         assert sha1 == template['sha1_ova']
-        click.secho(
-            'Uploading %s' % template['source_ova_name'], fg='green')
+        click.secho('Uploading %s' % template['source_ova_name'], fg='green')
         org.upload_ovf(
             config['broker']['catalog'],
             cse_ova_file,

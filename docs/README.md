@@ -98,7 +98,15 @@ The installation will take a few minutes to complete. Use the command below:
 $ cse install --config config.yaml
 ```
 
-The `install` command will generate the templates required to run the service and will configure the vCD settings defined in the configuration file.
+The `install` command will generate the templates required to run the service and will configure the vCD settings defined in the configuration file. The output of the customization process is captured by the `install` command and displayed at the end of the process.
+
+To monitor the progress during the creation, it is possible to ssh into the `temp_vapp` while the script is being executed. In the `temp_vapp` the output of the customization script is being captured in a file in the `/tmp` directory and can be monitored with `tail -f /tmp/<file-name>.out`. The standard error is captured in a file with extension `.err` in the `/tmp` directory.
+
+The generated password of `temp_vapp` guest OS can be retrieved with:
+
+```shell
+$ vcd vapp info temp_vapp | grep password
+```
 
 To inspect the `temp_vapp` vApp, it is possible to pass the `--no-capture` option:
 
@@ -106,13 +114,8 @@ To inspect the `temp_vapp` vApp, it is possible to pass the `--no-capture` optio
 $ cse install --config config.yaml --no-capture
 ```
 
-With `--no-capture`, the install process will create the `temp_vapp` vApp, will keep it running and not capture it as a template. This allows to `ssh` into the vApp and inspect it. The output of the customization process is captured by the `install` command.
+With `--no-capture`, the install process will create the `temp_vapp` vApp, will keep it running and not capture it as a template. This allows to `ssh` into the vApp and inspect it.
 
-The generated password of `temp_vapp` guest OS can be retrieved with:
-
-```shell
-$ vcd vapp info temp_vapp | grep password
-```
 
 If you need to delete a template to generate a new one, use `vcd-cli`:
 
@@ -135,6 +138,29 @@ Validate the configuration with:
 ```shell
 $ cse check --config config.yaml
 
+```
+
+Using `vcd-cli`, check that the extension has been registered in vCD:
+
+```shell
+# login as system administrator
+$ vcd login vcd.serviceprovider.com System administrator --password passw0rd -w -i
+
+# list extensions
+vcd system extension list
+
+# get details of CSE extension
+vcd system extension info cse
+vcd search apifilter
+```
+
+When upgrading from versions previous to `0.2.0`, re-register the extension:
+```shell
+# remove previous registration of CSE
+$ vcd system extension delete cse -y
+
+# run the install process to register CSE again
+cse install --config config.yaml
 ```
 
 #### 5. Start `CSE`
@@ -369,6 +395,10 @@ Commands:
   uninstall  uninstall CSE from vCD
   version    show version
 ```
+
+### Adding new Templates
+
+Coming soon.
 
 ### Versions
 

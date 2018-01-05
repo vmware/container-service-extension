@@ -1,8 +1,28 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
+import logging
+import re
+import threading
+import traceback
+import uuid
+
 import click
+import pkg_resources
+import requests
+import yaml
+from pyvcloud.vcd.client import _WellKnownEndpoint
+from pyvcloud.vcd.client import BasicLoginCredentials
+from pyvcloud.vcd.client import Client
+from pyvcloud.vcd.client import TaskStatus
+from pyvcloud.vcd.client import VCLOUD_STATUS_MAP
+from pyvcloud.vcd.org import Org
+from pyvcloud.vcd.task import Task
+from pyvcloud.vcd.vapp import VApp
+from pyvcloud.vcd.vdc import VDC
+from pyvcloud.vcd.vm import VM
 
 from container_service_extension.cluster import add_nodes
+from container_service_extension.cluster import delete_nodes_from_cluster
 from container_service_extension.cluster import get_cluster_config
 from container_service_extension.cluster import get_master_ip
 from container_service_extension.cluster import init_cluster
@@ -10,26 +30,6 @@ from container_service_extension.cluster import join_cluster
 from container_service_extension.cluster import load_from_metadata
 from container_service_extension.cluster import TYPE_MASTER
 from container_service_extension.cluster import TYPE_NODE
-
-import logging
-
-import pkg_resources
-
-from pyvcloud.vcd.client import _WellKnownEndpoint
-from pyvcloud.vcd.client import BasicLoginCredentials
-from pyvcloud.vcd.client import Client
-from pyvcloud.vcd.client import TaskStatus
-from pyvcloud.vcd.org import Org
-from pyvcloud.vcd.task import Task
-from pyvcloud.vcd.vapp import VApp
-from pyvcloud.vcd.vdc import VDC
-
-import re
-import requests
-import threading
-import traceback
-import uuid
-import yaml
 
 LOGGER = logging.getLogger(__name__)
 
@@ -40,10 +40,14 @@ INTERNAL_SERVER_ERROR = 500
 
 OP_CREATE_CLUSTER = 'create_cluster'
 OP_DELETE_CLUSTER = 'delete_cluster'
+OP_CREATE_NODES = 'create_nodes'
+OP_DELETE_NODES = 'delete_nodes'
 
 OP_MESSAGE = {
     OP_CREATE_CLUSTER: 'create cluster',
-    OP_DELETE_CLUSTER: 'delete cluster'
+    OP_DELETE_CLUSTER: 'delete cluster',
+    OP_CREATE_NODES: 'create nodes in cluster',
+    OP_DELETE_NODES: 'delete nodes from cluster',
 }
 
 MAX_HOST_NAME_LENGTH = 25 - 4
@@ -240,20 +244,26 @@ class DefaultBroker(threading.Thread):
                 _WellKnownEndpoint.LOGGED_IN_ORG)
         }
 
-    def update_task(self, status, operation, message=None, error_message=None):
+    def _to_message(self, e):
+        if hasattr(e, 'message'):
+            return {'message': e.message}
+        else:
+            return {'message': str(e)}
+
+    def update_task(self, status, message=None, error_message=None):
         if not hasattr(self, 'task'):
             self.task = Task(self.client_sysadmin)
         if message is None:
-            message = OP_MESSAGE[operation]
-        if hasattr(self, 't'):
-            task_href = self.t.get('href')
+            message = OP_MESSAGE[self.op]
+        if hasattr(self, 'task_resource'):
+            task_href = self.task_resource.get('href')
         else:
             task_href = None
-        self.t = self.task.update(
+        self.task_resource = self.task.update(
             status.value,
             'vcloud.cse',
             message,
-            operation,
+            self.op,
             '',
             None,
             'urn:cse:cluster:%s' % self.cluster_id,
@@ -266,9 +276,7 @@ class DefaultBroker(threading.Thread):
             error_message=error_message)
 
     def is_valid_name(self, name):
-        """Validates that the cluster name against the pattern.
-
-        """
+        """Validate that the cluster name against the pattern."""
         if len(name) > MAX_HOST_NAME_LENGTH:
             return False
         if name[-1] == '.':
@@ -293,6 +301,10 @@ class DefaultBroker(threading.Thread):
             self.create_cluster_thread()
         elif self.op == OP_DELETE_CLUSTER:
             self.delete_cluster_thread()
+        elif self.op == OP_CREATE_NODES:
+            self.create_nodes_thread()
+        elif self.op == OP_DELETE_NODES:
+            self.delete_nodes_thread()
 
     def list_clusters(self, headers, body):
         result = {}
@@ -300,14 +312,47 @@ class DefaultBroker(threading.Thread):
             result['body'] = []
             result['status_code'] = OK
             self._connect_tenant(headers)
-            clusters = load_from_metadata(
-                self.client_tenant, get_leader_ip=True)
+            clusters = load_from_metadata(self.client_tenant)
             result['body'] = clusters
         except Exception:
             LOGGER.error(traceback.format_exc())
             result['body'] = []
             result['status_code'] = INTERNAL_SERVER_ERROR
             result['message'] = traceback.format_exc()
+        return result
+
+    def get_cluster_info(self, name, headers, body):
+        result = {}
+        try:
+            result['body'] = []
+            result['status_code'] = OK
+            self._connect_tenant(headers)
+            clusters = load_from_metadata(self.client_tenant, name=name)
+            if len(clusters) == 0:
+                raise Exception('Cluster \'%s\' not found.' % name)
+            vapp = VApp(self.client_tenant, href=clusters[0]['vapp_href'])
+            vms = vapp.get_all_vms()
+            for vm in vms:
+                node_info = {
+                    'name': vm.get('name'),
+                    'numberOfCpus': vm.VmSpecSection.NumCpus.text,
+                    'memoryMB':
+                    vm.VmSpecSection.MemoryResourceMb.Configured.text,
+                    'status': VCLOUD_STATUS_MAP.get(int(vm.get('status'))),
+                    'ipAddress': vapp.get_primary_ip(vm.get('name'))
+                }
+                if vm.get('name').startswith(TYPE_MASTER):
+                    node_info['node_type'] = 'master'
+                    clusters[0].get('master_nodes').append(node_info)
+                elif vm.get('name').startswith(TYPE_NODE):
+                    node_info['node_type'] = 'node'
+                    clusters[0].get('nodes').append(node_info)
+            result['body'] = clusters[0]
+        except Exception as e:
+            LOGGER.error(traceback.format_exc())
+            result['body'] = []
+            result['status_code'] = INTERNAL_SERVER_ERROR
+            result['message'] = str(e)
         return result
 
     def create_cluster(self, headers, body):
@@ -319,7 +364,9 @@ class DefaultBroker(threading.Thread):
         LOGGER.debug('about to create cluster %s on %s with %s nodes, sp=%s',
                      cluster_name, vdc_name, node_count,
                      body['storage_profile'])
-        result['body'] = {'message': 'can\'t create cluster %s' % cluster_name}
+        result['body'] = {
+            'message': 'can\'t create cluster \'%s\'' % cluster_name
+        }
         result['status_code'] = INTERNAL_SERVER_ERROR
         try:
             if not self.is_valid_name(cluster_name):
@@ -333,7 +380,6 @@ class DefaultBroker(threading.Thread):
             self._connect_sysadmin()
             self.update_task(
                 TaskStatus.RUNNING,
-                self.op,
                 message='Creating cluster %s(%s)' % (cluster_name,
                                                      self.cluster_id))
             self.daemon = True
@@ -341,11 +387,11 @@ class DefaultBroker(threading.Thread):
             response_body = {}
             response_body['name'] = self.cluster_name
             response_body['cluster_id'] = self.cluster_id
-            response_body['task_href'] = self.t.get('href')
+            response_body['task_href'] = self.task_resource.get('href')
             result['body'] = response_body
             result['status_code'] = ACCEPTED
         except Exception as e:
-            result['body'] = {'message': e.message}
+            result['body'] = self._to_message(e)
             LOGGER.error(traceback.format_exc())
         return result
 
@@ -363,7 +409,6 @@ class DefaultBroker(threading.Thread):
             template = self.get_template()
             self.update_task(
                 TaskStatus.RUNNING,
-                self.op,
                 message='Creating cluster vApp %s(%s)' % (self.cluster_name,
                                                           self.cluster_id))
             vapp_resource = vdc.create_vapp(
@@ -371,17 +416,8 @@ class DefaultBroker(threading.Thread):
                 description='cluster %s' % self.cluster_name,
                 network=network_name,
                 fence_mode='bridged')
-            t = self.client_tenant.get_task_monitor().wait_for_status(
-                task=vapp_resource.Tasks.Task[0],
-                timeout=60,
-                poll_frequency=2,
-                fail_on_status=None,
-                expected_target_statuses=[
-                    TaskStatus.SUCCESS, TaskStatus.ABORTED, TaskStatus.ERROR,
-                    TaskStatus.CANCELED
-                ],
-                callback=None)
-            assert t.get('status').lower() == TaskStatus.SUCCESS.value
+            self.client_tenant.get_task_monitor().wait_for_status_or_raise(
+                vapp_resource.Tasks.Task[0])
             tags = {}
             tags['cse.cluster.id'] = self.cluster_id
             tags['cse.version'] = pkg_resources.require(
@@ -389,18 +425,11 @@ class DefaultBroker(threading.Thread):
             tags['cse.template'] = template['name']
             vapp = VApp(self.client_tenant, href=vapp_resource.get('href'))
             for k, v in tags.items():
-                t = vapp.set_metadata('GENERAL', 'READWRITE', k, v)
-                self.client_tenant.get_task_monitor().\
-                    wait_for_status(
-                        task=t,
-                        timeout=600,
-                        poll_frequency=5,
-                        fail_on_status=None,
-                        expected_target_statuses=[TaskStatus.SUCCESS],
-                        callback=None)
+                task = vapp.set_metadata('GENERAL', 'READWRITE', k, v)
+                self.client_tenant.get_task_monitor().wait_for_status_or_raise(
+                    task)
             self.update_task(
                 TaskStatus.RUNNING,
-                self.op,
                 message='Creating master node for %s(%s)' % (self.cluster_name,
                                                              self.cluster_id))
             vapp.reload()
@@ -415,33 +444,20 @@ class DefaultBroker(threading.Thread):
                 vapp,
                 self.body,
                 wait=True)
-
             self.update_task(
                 TaskStatus.RUNNING,
-                self.op,
                 message='Initializing cluster %s(%s)' % (self.cluster_name,
                                                          self.cluster_id))
-
             vapp.reload()
             init_cluster(self.config, vapp, template)
-
             master_ip = get_master_ip(self.config, vapp, template)
-            t = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
-                                  master_ip)
-            self.client_tenant.get_task_monitor().\
-                wait_for_status(
-                    task=t,
-                    timeout=600,
-                    poll_frequency=5,
-                    fail_on_status=None,
-                    expected_target_statuses=[TaskStatus.SUCCESS],
-                    callback=None)
-
+            task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
+                                     master_ip)
+            self.client_tenant.get_task_monitor().wait_for_status_or_raise(
+                task)
             if self.body['node_count'] > 0:
-
                 self.update_task(
                     TaskStatus.RUNNING,
-                    self.op,
                     message='Creating %s node(s) for %s(%s)' %
                     (self.body['node_count'], self.cluster_name,
                      self.cluster_id))
@@ -458,22 +474,18 @@ class DefaultBroker(threading.Thread):
                     wait=True)
                 self.update_task(
                     TaskStatus.RUNNING,
-                    self.op,
                     message='Adding %s node(s) to %s(%s)' %
                     (self.body['node_count'], self.cluster_name,
                      self.cluster_id))
                 vapp.reload()
                 join_cluster(self.config, vapp, template)
-
             self.update_task(
                 TaskStatus.SUCCESS,
-                self.op,
                 message='Created cluster %s(%s)' % (self.cluster_name,
                                                     self.cluster_id))
-
         except Exception as e:
             LOGGER.error(traceback.format_exc())
-            self.update_task(TaskStatus.ERROR, self.op, error_message=str(e))
+            self.update_task(TaskStatus.ERROR, error_message=str(e))
 
     def delete_cluster(self, headers, body):
         result = {}
@@ -493,24 +505,19 @@ class DefaultBroker(threading.Thread):
                 raise Exception('Cluster %s not found.' % self.cluster_name)
             self.cluster = clusters[0]
             self.cluster_id = self.cluster['cluster_id']
-
             self.update_task(
                 TaskStatus.RUNNING,
-                self.op,
                 message='Deleting cluster %s(%s)' % (self.cluster_name,
                                                      self.cluster_id))
             self.daemon = True
             self.start()
             response_body = {}
             response_body['cluster_name'] = self.cluster_name
-            response_body['task_href'] = self.t.get('href')
+            response_body['task_href'] = self.task_resource.get('href')
             result['body'] = response_body
             result['status_code'] = ACCEPTED
         except Exception as e:
-            if hasattr(e, 'message'):
-                result['body'] = {'message': e.message}
-            else:
-                result['body'] = {'message': str(e)}
+            result['body'] = self._to_message(e)
             LOGGER.error(traceback.format_exc())
         return result
 
@@ -519,28 +526,16 @@ class DefaultBroker(threading.Thread):
                      self.cluster_name)
         try:
             vdc = VDC(self.client_tenant, href=self.cluster['vdc_href'])
-            delete_task = vdc.delete_vapp(self.cluster['name'], force=True)
-            self.client_tenant.get_task_monitor().\
-                wait_for_status(
-                    task=delete_task,
-                    timeout=600,
-                    poll_frequency=5,
-                    fail_on_status=None,
-                    expected_target_statuses=[TaskStatus.SUCCESS],
-                    callback=None)
+            task = vdc.delete_vapp(self.cluster['name'], force=True)
+            self.client_tenant.get_task_monitor().wait_for_status_or_raise(
+                task)
             self.update_task(
                 TaskStatus.SUCCESS,
-                self.op,
                 message='Deleted cluster %s(%s)' % (self.cluster_name,
                                                     self.cluster_id))
         except Exception as e:
             LOGGER.error(traceback.format_exc())
-            self.update_task(
-                self.cluster_name,
-                self.cluster_id,
-                TaskStatus.ERROR,
-                self.op,
-                error_message=str(e))
+            self.update_task(TaskStatus.ERROR, error_message=str(e))
 
     def get_cluster_config(self, cluster_name, headers):
         result = {}
@@ -556,6 +551,154 @@ class DefaultBroker(threading.Thread):
                                                 template['admin_password'])
             result['status_code'] = OK
         except Exception as e:
-            result['body'] = str(e)
+            result['body'] = self._to_message(e)
             result['status_code'] = INTERNAL_SERVER_ERROR
         return result
+
+    def create_nodes(self, headers, body):
+        result = {'body': {}}
+        self.cluster_name = body['name']
+        LOGGER.debug('about to add %s nodes to cluster %s on VDC %s, sp=%s',
+                     body['node_count'], self.cluster_name, body['vdc'],
+                     body['storage_profile'])
+        result['status_code'] = INTERNAL_SERVER_ERROR
+        try:
+            if body['node_count'] < 1:
+                raise Exception('Invalid node count: %s.' % body['node_count'])
+            self.tenant_info = self._connect_tenant(headers)
+            clusters = load_from_metadata(
+                self.client_tenant, name=self.cluster_name)
+            if len(clusters) != 1:
+                raise Exception(
+                    'Cluster \'%s\' not found.' % self.cluster_name)
+            self.cluster = clusters[0]
+            self.headers = headers
+            self.body = body
+            self.op = OP_CREATE_NODES
+            self._connect_sysadmin()
+            self.cluster_id = self.cluster['cluster_id']
+            self.update_task(
+                TaskStatus.RUNNING,
+                message='Adding %s node(s) to cluster %s(%s)' %
+                (body['node_count'], self.cluster_name, self.cluster_id))
+            self.daemon = True
+            self.start()
+            response_body = {}
+            response_body['cluster_name'] = self.cluster_name
+            response_body['task_href'] = self.task_resource.get('href')
+            result['body'] = response_body
+            result['status_code'] = ACCEPTED
+        except Exception as e:
+            result['body'] = self._to_message(e)
+            LOGGER.error(traceback.format_exc())
+        return result
+
+    def create_nodes_thread(self):
+        LOGGER.debug('about to add nodes to cluster with name: %s',
+                     self.cluster_name)
+        try:
+            org_resource = self.client_tenant.get_org()
+            org = Org(self.client_tenant, resource=org_resource)
+            vdc = VDC(self.client_tenant, href=self.cluster['vdc_href'])
+            vapp = VApp(self.client_tenant, href=self.cluster['vapp_href'])
+            template = self.get_template()
+            self.update_task(
+                TaskStatus.RUNNING,
+                message='Creating %s node(s) for %s(%s)' %
+                (self.body['node_count'], self.cluster_name, self.cluster_id))
+            new_nodes = add_nodes(
+                self.body['node_count'],
+                template,
+                TYPE_NODE,
+                self.config,
+                self.client_tenant,
+                org,
+                vdc,
+                vapp,
+                self.body,
+                wait=True)
+            self.update_task(
+                TaskStatus.RUNNING,
+                message='Adding %s node(s) to %s(%s)' %
+                (self.body['node_count'], self.cluster_name, self.cluster_id))
+            target_nodes = []
+            for spec in new_nodes['specs']:
+                target_nodes.append(spec['target_vm_name'])
+            vapp.reload()
+            join_cluster(self.config, vapp, template, target_nodes)
+            self.update_task(
+                TaskStatus.SUCCESS,
+                message='Added %s node(s) to cluster %s(%s)' %
+                (self.body['node_count'], self.cluster_name, self.cluster_id))
+        except Exception as e:
+            LOGGER.error(traceback.format_exc())
+            self.update_task(TaskStatus.ERROR, error_message=str(e))
+
+    def delete_nodes(self, headers, body):
+        result = {'body': {}}
+        self.cluster_name = body['name']
+        LOGGER.debug(
+            'about to delete nodes from cluster with name: %s' % body['name'])
+        result['status_code'] = INTERNAL_SERVER_ERROR
+        try:
+            if len(body['nodes']) < 1:
+                raise Exception('Invalid list of nodes: %s.' % body['nodes'])
+            for node in body['nodes']:
+                if node.startswith(TYPE_MASTER):
+                    raise Exception(
+                        'Can\'t delete a master node: \'%s\'.' % node)
+            self.tenant_info = self._connect_tenant(headers)
+            clusters = load_from_metadata(
+                self.client_tenant, name=self.cluster_name)
+            if len(clusters) != 1:
+                raise Exception(
+                    'Cluster \'%s\' not found.' % self.cluster_name)
+            self.cluster = clusters[0]
+            self.headers = headers
+            self.body = body
+            self.op = OP_DELETE_NODES
+            self._connect_sysadmin()
+            self.cluster_id = self.cluster['cluster_id']
+            self.update_task(
+                TaskStatus.RUNNING,
+                message='Deleting %s node(s) from cluster %s(%s)' %
+                (len(body['nodes']), self.cluster_name, self.cluster_id))
+            self.daemon = True
+            self.start()
+            response_body = {}
+            response_body['cluster_name'] = self.cluster_name
+            response_body['task_href'] = self.task_resource.get('href')
+            result['body'] = response_body
+            result['status_code'] = ACCEPTED
+        except Exception as e:
+            result['body'] = self._to_message(e)
+            LOGGER.error(traceback.format_exc())
+        return result
+
+    def delete_nodes_thread(self):
+        LOGGER.debug('about to delete nodes from cluster with name: %s',
+                     self.cluster_name)
+        try:
+            vapp = VApp(self.client_tenant, href=self.cluster['vapp_href'])
+            template = self.get_template()
+            self.update_task(
+                TaskStatus.RUNNING,
+                message='Deleting %s node(s) for %s(%s)' %
+                (len(self.body['nodes']), self.cluster_name, self.cluster_id))
+            delete_nodes_from_cluster(self.config, vapp, template,
+                                      self.body['nodes'])
+            for vm_name in self.body['nodes']:
+                vm = VM(self.client_tenant, resource=vapp.get_vm(vm_name))
+                task = vm.undeploy()
+                self.client_tenant.get_task_monitor().wait_for_status_or_raise(
+                    task)
+            task = vapp.delete_vms(self.body['nodes'])
+            self.client_tenant.get_task_monitor().wait_for_status_or_raise(
+                task)
+            self.update_task(
+                TaskStatus.SUCCESS,
+                message='Deleted %s node(s) to cluster %s(%s)' %
+                (len(self.body['nodes']), self.cluster_name, self.cluster_id))
+        except Exception as e:
+            LOGGER.error(traceback.format_exc())
+            self.update_task(TaskStatus.ERROR, error_message=str(e))
