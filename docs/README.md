@@ -54,7 +54,7 @@ Edit file `config.yaml` with the values for your vCloud Director installation. T
 
 ##### `CSE` Configuration Settings
 
-`CSE` supports multiple templates to create Kubernetes clusters. Each template might have a different guest OS or Kubernetes versions, and must have an unique name. One template has to be defined as the default. Tenants can specify the template to use during cluster creation, or use the default.
+`CSE` supports multiple templates to create Kubernetes clusters. Each template might have a different guest OS or Kubernetes versions, and must have an unique name. One template has to be defined as the default. Tenants can specify the template to use during cluster or node creation, or use the default.
 
 The configuration file has 5 sections:
   - `amqp`: AMQP settings

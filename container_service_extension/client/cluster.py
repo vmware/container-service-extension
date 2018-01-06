@@ -201,18 +201,19 @@ class Cluster(object):
         else:
             raise Exception(json.loads(response.content).get('message'))
 
-    def delete_nodes(self, vdc, name, nodes):
+    def delete_nodes(self, vdc, name, nodes, force=False):
         """Delete nodes from a Kubernetes cluster.
 
         :param vdc: (str): The name of the vdc that contains the cluster
         :param name: (str): The name of the cluster
         :param nodes: (list(str)): The list of nodes to delete
+        :param force: (bool): Force delete the node VM even if kubernetes fails
         :return: (json) A parsed json object describing the requested cluster
             operation.
         """
         method = 'DELETE'
         uri = '%s/%s/node' % (self._uri, name)
-        data = {'name': name, 'vdc': vdc, 'nodes': nodes}
+        data = {'name': name, 'vdc': vdc, 'nodes': nodes, 'force': force}
         response = self.client._do_request_prim(
             method,
             uri,

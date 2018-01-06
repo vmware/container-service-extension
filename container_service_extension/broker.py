@@ -8,8 +8,6 @@ import uuid
 
 import click
 import pkg_resources
-import requests
-import yaml
 from pyvcloud.vcd.client import _WellKnownEndpoint
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
@@ -20,6 +18,8 @@ from pyvcloud.vcd.task import Task
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
+import requests
+import yaml
 
 from container_service_extension.cluster import add_nodes
 from container_service_extension.cluster import delete_nodes_from_cluster
@@ -416,7 +416,7 @@ class DefaultBroker(threading.Thread):
                 description='cluster %s' % self.cluster_name,
                 network=network_name,
                 fence_mode='bridged')
-            self.client_tenant.get_task_monitor().wait_for_status_or_raise(
+            self.client_tenant.get_task_monitor().wait_for_status(
                 vapp_resource.Tasks.Task[0])
             tags = {}
             tags['cse.cluster.id'] = self.cluster_id
@@ -426,8 +426,7 @@ class DefaultBroker(threading.Thread):
             vapp = VApp(self.client_tenant, href=vapp_resource.get('href'))
             for k, v in tags.items():
                 task = vapp.set_metadata('GENERAL', 'READWRITE', k, v)
-                self.client_tenant.get_task_monitor().wait_for_status_or_raise(
-                    task)
+                self.client_tenant.get_task_monitor().wait_for_status(task)
             self.update_task(
                 TaskStatus.RUNNING,
                 message='Creating master node for %s(%s)' % (self.cluster_name,
@@ -453,8 +452,7 @@ class DefaultBroker(threading.Thread):
             master_ip = get_master_ip(self.config, vapp, template)
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      master_ip)
-            self.client_tenant.get_task_monitor().wait_for_status_or_raise(
-                task)
+            self.client_tenant.get_task_monitor().wait_for_status(task)
             if self.body['node_count'] > 0:
                 self.update_task(
                     TaskStatus.RUNNING,
@@ -527,8 +525,7 @@ class DefaultBroker(threading.Thread):
         try:
             vdc = VDC(self.client_tenant, href=self.cluster['vdc_href'])
             task = vdc.delete_vapp(self.cluster['name'], force=True)
-            self.client_tenant.get_task_monitor().wait_for_status_or_raise(
-                task)
+            self.client_tenant.get_task_monitor().wait_for_status(task)
             self.update_task(
                 TaskStatus.SUCCESS,
                 message='Deleted cluster %s(%s)' % (self.cluster_name,
@@ -683,18 +680,27 @@ class DefaultBroker(threading.Thread):
             template = self.get_template()
             self.update_task(
                 TaskStatus.RUNNING,
-                message='Deleting %s node(s) for %s(%s)' %
+                message='Deleting %s node(s) from %s(%s)' %
                 (len(self.body['nodes']), self.cluster_name, self.cluster_id))
             delete_nodes_from_cluster(self.config, vapp, template,
-                                      self.body['nodes'])
+                                      self.body['nodes'], self.body['force'])
+            self.update_task(
+                TaskStatus.RUNNING,
+                message='Undeploying %s node(s) for %s(%s)' %
+                (len(self.body['nodes']), self.cluster_name, self.cluster_id))
             for vm_name in self.body['nodes']:
                 vm = VM(self.client_tenant, resource=vapp.get_vm(vm_name))
-                task = vm.undeploy()
-                self.client_tenant.get_task_monitor().wait_for_status_or_raise(
-                    task)
+                try:
+                    task = vm.undeploy()
+                    self.client_tenant.get_task_monitor().wait_for_status(task)
+                except Exception as e:
+                    LOGGER.warning('couldn\'t undeploy VM %s' % vm_name)
+            self.update_task(
+                TaskStatus.RUNNING,
+                message='Deleting %s VM(s) for %s(%s)' %
+                (len(self.body['nodes']), self.cluster_name, self.cluster_id))
             task = vapp.delete_vms(self.body['nodes'])
-            self.client_tenant.get_task_monitor().wait_for_status_or_raise(
-                task)
+            self.client_tenant.get_task_monitor().wait_for_status(task)
             self.update_task(
                 TaskStatus.SUCCESS,
                 message='Deleted %s node(s) to cluster %s(%s)' %

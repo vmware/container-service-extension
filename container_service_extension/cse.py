@@ -19,7 +19,6 @@ from container_service_extension.config import install_cse
 from container_service_extension.config import uninstall_cse
 from container_service_extension.service import Service
 
-
 LOGGER = logging.getLogger(__name__)
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -152,10 +151,17 @@ def check(ctx, config, template):
     required=False,
     default=False,
     help='no capture')
-def install(ctx, config, template, no_capture):
+@click.option(
+    '-a',
+    '--amqp',
+    'amqp_install',
+    default='prompt',
+    type=click.Choice(['prompt', 'skip', 'config']),
+    help='AMQP configuration')
+def install(ctx, config, template, no_capture, amqp_install):
     """Install CSE on vCloud Director."""
     try:
-        install_cse(ctx, config, template, no_capture)
+        install_cse(ctx, config, template, no_capture, amqp_install)
     except Exception as e:
         LOGGER.error(traceback.format_exc())
         click.secho('An error has ocurred, %s'

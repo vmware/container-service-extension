@@ -13,7 +13,6 @@ import pika
 
 from container_service_extension.processor import ServiceProcessor
 
-
 LOGGER = logging.getLogger(__name__)
 
 

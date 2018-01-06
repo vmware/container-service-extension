@@ -6,12 +6,12 @@ from os.path import expanduser
 from os.path import join
 
 import click
-import yaml
 from vcd_cli.utils import restore_session
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
 from vcd_cli.vcd import abort_if_false
 from vcd_cli.vcd import vcd
+import yaml
 
 from container_service_extension.client.cluster import Cluster
 
@@ -377,12 +377,13 @@ def list_nodes(ctx, name):
     callback=abort_if_false,
     expose_value=False,
     prompt='Are you sure you want to delete the node(s)')
-def delete_nodes(ctx, name, node_names):
+@click.option('-f', '--force', is_flag=True, help='Force delete node VM(s)')
+def delete_nodes(ctx, name, node_names, force):
     try:
         client = ctx.obj['client']
         cluster = Cluster(client)
         result = cluster.delete_nodes(ctx.obj['profiles'].get('vdc_in_use'),
-                                      name, node_names)
+                                      name, node_names, force)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)

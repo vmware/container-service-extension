@@ -166,7 +166,7 @@ fi
     task = vapp.add_vms(specs, power_on=not reconfigure_hw)
     if wait:
         # TODO(get details of the exception like not enough resources avail)
-        client.get_task_monitor().wait_for_status_or_raise(task)
+        client.get_task_monitor().wait_for_status(task)
     if wait and reconfigure_hw:
         vapp.reload()
         for spec in specs:
@@ -174,15 +174,15 @@ fi
             if 'cpu' in body and body['cpu'] is not None:
                 vm = VM(client, resource=vm_resource)
                 task = vm.modify_cpu(body['cpu'])
-                client.get_task_monitor().wait_for_status_or_raise(task)
+                client.get_task_monitor().wait_for_status(task)
             if 'memory' in body and body['memory'] is not None:
                 vm = VM(client, resource=vm_resource)
                 task = vm.modify_memory(body['memory'])
-                client.get_task_monitor().wait_for_status_or_raise(task)
+                client.get_task_monitor().wait_for_status(task)
             vm = VM(client, resource=vm_resource)
             task = vm.power_on()
             if wait:
-                client.get_task_monitor().wait_for_status_or_raise(task)
+                client.get_task_monitor().wait_for_status(task)
     return {'task': task, 'specs': specs}
 
 
@@ -378,7 +378,7 @@ def get_file_from_nodes(config,
     return all_results
 
 
-def delete_nodes_from_cluster(config, vapp, template, nodes):
+def delete_nodes_from_cluster(config, vapp, template, nodes, force=False):
     script = '#!/usr/bin/env bash\nkubectl delete node '
     for node in nodes:
         script += ' %s' % node
@@ -388,5 +388,6 @@ def delete_nodes_from_cluster(config, vapp, template, nodes):
     result = execute_script_in_nodes(
         config, vapp, password, script, master_nodes, check_tools=False)
     if result[0][0] != 0:
-        raise Exception(
-            'Couldn\'t delete node(s):\n%s' % result[0][2].content.decode())
+        if not force:
+            raise Exception('Couldn\'t delete node(s):\n%s' %
+                            result[0][2].content.decode())

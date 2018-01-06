@@ -8,11 +8,10 @@ import logging
 import sys
 import traceback
 
-import yaml
 from pkg_resources import resource_string
+import yaml
 
 from container_service_extension.broker import get_new_broker
-
 
 LOGGER = logging.getLogger(__name__)
 
