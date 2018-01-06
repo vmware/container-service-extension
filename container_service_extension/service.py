@@ -2,16 +2,18 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import click
-from container_service_extension.config import check_config
-from container_service_extension.config import get_config
-from container_service_extension.consumer import MessageConsumer
 import logging
 import signal
 import sys
 from threading import Thread
 import time
 import traceback
+
+import click
+
+from container_service_extension.config import check_config
+from container_service_extension.config import get_config
+from container_service_extension.consumer import MessageConsumer
 
 LOGGER = logging.getLogger(__name__)
 

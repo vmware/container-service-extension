@@ -4,18 +4,20 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import logging
+import platform
+import traceback
+
 import click
+import pkg_resources
+from vcd_cli.utils import stdout
+from vcd_cli.vcd import abort_if_false
+
 from container_service_extension.config import check_config
 from container_service_extension.config import generate_sample_config
 from container_service_extension.config import install_cse
 from container_service_extension.config import uninstall_cse
 from container_service_extension.service import Service
-import logging
-import pkg_resources
-import platform
-import traceback
-from vcd_cli.utils import stdout
-from vcd_cli.vcd import abort_if_false
 
 LOGGER = logging.getLogger(__name__)
 
@@ -62,7 +64,6 @@ def cli(ctx):
             \'config.yaml\' in the current directory.
 
     """
-
     if ctx.invoked_subcommand is None:
         click.secho(ctx.get_help())
         return
@@ -72,11 +73,10 @@ def cli(ctx):
 @cli.command(short_help='show version')
 @click.pass_context
 def version(ctx):
-    """Show CSE version"""
-
+    """Show CSE version."""
     ver = pkg_resources.require('container-service-extension')[0].version
     ver_obj = {
-        'product': 'cse',
+        'product': 'CSE',
         'description':
         'Container Service Extension for VMware vCloud Director',
         'version': ver,
@@ -91,7 +91,7 @@ def version(ctx):
 @cli.command('sample', short_help='generate sample configuration')
 @click.pass_context
 def sample(ctx):
-    """Generate sample CSE configuration"""
+    """Generate sample CSE configuration."""
     click.secho(generate_sample_config())
 
 
@@ -113,10 +113,9 @@ def sample(ctx):
     required=False,
     default='*',
     metavar='<template>',
-    help='template')
+    help='Validate this template')
 def check(ctx, config, template):
-    """Validate CSE configuration"""
-
+    """Validate CSE configuration."""
     try:
         check_config(config, template)
         click.secho('The configuration is valid.')
@@ -144,7 +143,7 @@ def check(ctx, config, template):
     required=False,
     default='*',
     metavar='<template>',
-    help='template')
+    help='Install this template')
 @click.option(
     '-n',
     '--no-capture',
@@ -152,11 +151,17 @@ def check(ctx, config, template):
     required=False,
     default=False,
     help='no capture')
-def install(ctx, config, template, no_capture):
-    """Install CSE on vCloud Director"""
-
+@click.option(
+    '-a',
+    '--amqp',
+    'amqp_install',
+    default='prompt',
+    type=click.Choice(['prompt', 'skip', 'config']),
+    help='AMQP configuration')
+def install(ctx, config, template, no_capture, amqp_install):
+    """Install CSE on vCloud Director."""
     try:
-        install_cse(ctx, config, template, no_capture)
+        install_cse(ctx, config, template, no_capture, amqp_install)
     except Exception as e:
         LOGGER.error(traceback.format_exc())
         click.secho('An error has ocurred, %s'
@@ -190,7 +195,7 @@ def install(ctx, config, template, no_capture):
     expose_value=False,
     prompt='Are you sure you want to uninstall CSE?')
 def uninstall(ctx, config, template):
-    """Uninstall CSE from vCloud Director"""
+    """Uninstall CSE from vCloud Director."""
     uninstall_cse(ctx, config, template)
 
 
@@ -213,7 +218,7 @@ def uninstall(ctx, config, template):
     required=False,
     help='Skip check')
 def run(ctx, config, skip_check):
-    """Run CSE service"""
+    """Run CSE service."""
     service = Service(config, should_check_config=not skip_check)
     service.run()
 

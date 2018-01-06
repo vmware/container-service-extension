@@ -3,13 +3,15 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import base64
-from container_service_extension.broker import get_new_broker
 import json
 import logging
-from pkg_resources import resource_string
 import sys
 import traceback
+
+from pkg_resources import resource_string
 import yaml
+
+from container_service_extension.broker import get_new_broker
 
 LOGGER = logging.getLogger(__name__)
 
@@ -35,6 +37,8 @@ class ServiceProcessor(object):
         spec_request = False
         config_request = False
         template_request = False
+        node_request = False
+        info_request = False
         if len(tokens) > 3:
             if tokens[3] in ['swagger', 'swagger.json', 'swagger.yaml']:
                 spec_request = True
@@ -45,6 +49,10 @@ class ServiceProcessor(object):
         if len(tokens) > 4:
             if tokens[4] == 'config':
                 config_request = True
+            elif tokens[4] == 'info':
+                info_request = True
+            elif tokens[4] == 'node':
+                node_request = True
         if len(body['body']) > 0:
             try:
                 request_body = json.loads(
@@ -84,6 +92,10 @@ class ServiceProcessor(object):
                 result['body'] = templates
                 result['status_code'] = 200
                 reply = result
+            elif info_request:
+                broker = get_new_broker(self.config)
+                reply = broker.get_cluster_info(cluster_name, body['headers'],
+                                                request_body)
             elif cluster_name is None:
                 broker = get_new_broker(self.config)
                 reply = broker.list_clusters(body['headers'], request_body)
@@ -91,11 +103,19 @@ class ServiceProcessor(object):
             if cluster_name is None:
                 broker = get_new_broker(self.config)
                 reply = broker.create_cluster(body['headers'], request_body)
+            else:
+                if node_request:
+                    broker = get_new_broker(self.config)
+                    reply = broker.create_nodes(body['headers'], request_body)
         elif body['method'] == 'DELETE':
-            broker = get_new_broker(self.config)
-            on_the_fly_request_body = {'name': cluster_name}
-            reply = broker.delete_cluster(body['headers'],
-                                          on_the_fly_request_body)
+            if node_request:
+                broker = get_new_broker(self.config)
+                reply = broker.delete_nodes(body['headers'], request_body)
+            else:
+                broker = get_new_broker(self.config)
+                on_the_fly_request_body = {'name': cluster_name}
+                reply = broker.delete_cluster(body['headers'],
+                                              on_the_fly_request_body)
         LOGGER.debug('reply: %s' % str(reply))
         return reply
 

@@ -7,11 +7,11 @@ from __future__ import print_function
 import hashlib
 import logging
 import os
+import site
+import time
 
 import click
-from container_service_extension.broker import get_sample_broker_config
-from container_service_extension.broker import validate_broker_config_content
-from container_service_extension.broker import validate_broker_config_elements
+import pika
 from pyvcloud.vcd.amqp import AmqpService
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
@@ -21,14 +21,15 @@ from pyvcloud.vcd.extension import Extension
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
-
-import pika
 import requests
-import site
-import time
 from vcd_cli.utils import stdout
+from vcd_cli.utils import to_dict
 from vsphere_guest_run.vsphere import VSphere
 import yaml
+
+from container_service_extension.broker import get_sample_broker_config
+from container_service_extension.broker import validate_broker_config_content
+from container_service_extension.broker import validate_broker_config_elements
 
 LOGGER = logging.getLogger(__name__)
 BUF_SIZE = 65536
@@ -216,7 +217,8 @@ def uninstall_cse(ctx, config_file_name, template_name):
                                         template['catalog_item'])
 
 
-def install_cse(ctx, config_file_name, template_name, no_capture):
+def install_cse(ctx, config_file_name, template_name, no_capture,
+                amqp_install):
     click.secho('Installing CSE on vCD from file: %s, template: %s' %
                 (config_file_name, template_name))
     config = get_config(config_file_name)
@@ -280,8 +282,8 @@ def install_cse(ctx, config_file_name, template_name, no_capture):
                            (config['broker']['catalog'],
                             template['catalog_item'],
                             bool_to_msg(k8s_template is not None)))
-        configure_amqp_settings(client, config)
-        register_extension(client, config)
+        configure_amqp_settings(ctx, client, config, amqp_install)
+        register_extension(ctx, client, config)
         click.secho('Start CSE with: \'cse run %s\'' % config_file_name)
 
 
@@ -328,13 +330,11 @@ def get_data_file(file_name):
 
 def upload_source_ova(config, client, org, template):
     cse_cache_dir = os.path.join(os.getcwd(), 'cse_cache')
-    cse_ova_file = os.path.join(cse_cache_dir,
-                                template['source_ova_name'])
+    cse_ova_file = os.path.join(cse_cache_dir, template['source_ova_name'])
     if not os.path.exists(cse_ova_file):
         if not os.path.isdir(cse_cache_dir):
             os.makedirs(cse_cache_dir)
-        click.secho(
-            'Downloading %s' % template['source_ova_name'], fg='green')
+        click.secho('Downloading %s' % template['source_ova_name'], fg='green')
         r = requests.get(template['source_ova'], stream=True)
         with open(cse_ova_file, 'wb') as fd:
             for chunk in r.iter_content(chunk_size=SIZE_1MB):
@@ -342,8 +342,7 @@ def upload_source_ova(config, client, org, template):
     if os.path.exists(cse_ova_file):
         sha1 = get_sha1(cse_ova_file)
         assert sha1 == template['sha1_ova']
-        click.secho(
-            'Uploading %s' % template['source_ova_name'], fg='green')
+        click.secho('Uploading %s' % template['source_ova_name'], fg='green')
         org.upload_ovf(
             config['broker']['catalog'],
             cse_ova_file,
@@ -506,8 +505,14 @@ def capture_as_template(ctx, config, vapp_resource, org, catalog, template):
     return True
 
 
-def configure_amqp_settings(client, config):
+def configure_amqp_settings(ctx, client, config, amqp_install):
+    if amqp_install == 'skip':
+        click.secho('AMQP configuration: skipped')
+        return
     amqp_service = AmqpService(client)
+    current_settings = amqp_service.get_settings()
+    click.secho('AMQP current settings:')
+    stdout(to_dict(current_settings), ctx)
     amqp = config['amqp']
     amqp_config = {
         'AmqpExchange': amqp['exchange'],
@@ -519,6 +524,13 @@ def configure_amqp_settings(client, config):
         'AmqpUsername': amqp['username'],
         'AmqpVHost': amqp['vhost']
     }
+    click.secho('AMQP config file settings:')
+    stdout(amqp_config, ctx)
+    if amqp_install == 'prompt':
+        if not click.confirm('Do you want to configure AMQP with the '
+                             'config file settings?'):
+            click.secho('AMQP not updated')
+            return
     result = amqp_service.test_config(amqp_config, amqp['password'])
     click.secho('AMQP test settings, result: %s' % result['Valid'].text)
 
@@ -529,11 +541,11 @@ def configure_amqp_settings(client, config):
         click.secho('Couldn\'t set vCD AMQP configuration.')
 
 
-def register_extension(client, config):
+def register_extension(ctx, client, config):
     ext = Extension(client)
     try:
         name = 'cse'
-        cse_ext = ext.get_extension(name)
+        cse_ext = ext.get_extension_info(name)
         click.secho('Find extension \'%s\', enabled: %s: %s' %
                     (name, cse_ext['enabled'], bool_to_msg(True)))
     except Exception:
@@ -542,3 +554,6 @@ def register_extension(client, config):
         ext.add_extension(name, name, name, exchange, patterns.split(','))
         click.secho('Registered extension \'%s\': %s' % (name,
                                                          bool_to_msg(True)))
+    cse_ext = ext.get_extension_info(name)
+    click.secho('Current extension \'%s\' settings:' % name)
+    stdout(cse_ext, ctx)
