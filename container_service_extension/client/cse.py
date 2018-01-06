@@ -41,6 +41,9 @@ def cse(ctx):
         vcd cse cluster create c1 --nodes 0 --network net1
             Create a single node kubernetes cluster for dev/test.
 \b
+        vcd cse node list c1
+            List nodes in a cluster.
+\b
         vcd cse template list
             Get list of CSE templates available.
 \b
