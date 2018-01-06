@@ -76,7 +76,7 @@ def version(ctx):
     """Show CSE version."""
     ver = pkg_resources.require('container-service-extension')[0].version
     ver_obj = {
-        'product': 'cse',
+        'product': 'CSE',
         'description':
         'Container Service Extension for VMware vCloud Director',
         'version': ver,
@@ -113,7 +113,7 @@ def sample(ctx):
     required=False,
     default='*',
     metavar='<template>',
-    help='template')
+    help='Validate this template')
 def check(ctx, config, template):
     """Validate CSE configuration."""
     try:
@@ -143,7 +143,7 @@ def check(ctx, config, template):
     required=False,
     default='*',
     metavar='<template>',
-    help='template')
+    help='Install this template')
 @click.option(
     '-n',
     '--no-capture',

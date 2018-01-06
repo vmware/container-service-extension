@@ -4,8 +4,10 @@
 
 from os.path import expanduser
 from os.path import join
+import platform
 
 import click
+import pkg_resources
 from vcd_cli.utils import restore_session
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
@@ -41,6 +43,9 @@ def cse(ctx):
 \b
         vcd cse template list
             Get list of CSE templates available.
+\b
+        vcd cse version
+            Display version.
     """
     if ctx.invoked_subcommand is not None:
         try:
@@ -50,6 +55,24 @@ def cse(ctx):
                 raise Exception('select a virtual datacenter')
         except Exception as e:
             stderr(e, ctx)
+
+
+@cse.command(short_help='show version')
+@click.pass_context
+def version(ctx):
+    """Show CSE version."""
+    ver = pkg_resources.require('container-service-extension')[0].version
+    ver_obj = {
+        'product': 'CSE',
+        'description':
+        'Container Service Extension for VMware vCloud Director',
+        'version': ver,
+        'python': platform.python_version()
+    }
+    ver_str = '%s, %s, version %s' % (ver_obj['product'],
+                                      ver_obj['description'],
+                                      ver_obj['version'])
+    stdout(ver_obj, ctx, ver_str)
 
 
 @cse.group('cluster', short_help='work with clusters')
@@ -151,6 +174,7 @@ def delete(ctx, name):
     'node_count',
     required=False,
     default=2,
+    type=click.INT,
     help='Number of nodes to create')
 @click.option(
     '-c',
@@ -158,20 +182,22 @@ def delete(ctx, name):
     'cpu',
     required=False,
     default=None,
-    help='Number of virtual cpus on each node')
+    type=click.INT,
+    help='Number of virtual CPUs on each node')
 @click.option(
     '-m',
     '--memory',
     'memory',
     required=False,
     default=None,
+    type=click.INT,
     help='Amount of memory (in MB) on each node')
 @click.option(
     '-n',
     '--network',
     'network_name',
     default=None,
-    required=False,
+    required=True,
     help='Network name')
 @click.option(
     '-s',
@@ -264,38 +290,37 @@ def node_group(ctx):
 
 @node_group.command('create', short_help='add node(s) to cluster')
 @click.pass_context
-@click.argument('name', metavar='<name>', required=True)
+@click.argument('name', required=True)
 @click.option(
     '-N',
     '--nodes',
     'node_count',
     required=False,
-    default=1,
-    metavar='<nodes>',
-    help='Number of nodes to add')
+    default=2,
+    type=click.INT,
+    help='Number of nodes to create')
 @click.option(
     '-c',
     '--cpu',
     'cpu',
     required=False,
     default=None,
-    metavar='<cpu>',
-    help='Number of virtual cpus on each node')
+    type=click.INT,
+    help='Number of virtual CPUs on each node')
 @click.option(
     '-m',
     '--memory',
     'memory',
     required=False,
     default=None,
-    metavar='<memory>',
+    type=click.INT,
     help='Amount of memory (in MB) on each node')
 @click.option(
     '-n',
     '--network',
     'network_name',
     default=None,
-    required=False,
-    metavar='<network>',
+    required=True,
     help='Network name')
 @click.option(
     '-s',
@@ -303,7 +328,6 @@ def node_group(ctx):
     'storage_profile',
     required=False,
     default=None,
-    metavar='<storage-profile>',
     help='Name of the storage profile for the nodes')
 @click.option(
     '-k',
@@ -312,7 +336,6 @@ def node_group(ctx):
     required=False,
     default=None,
     type=click.File('r'),
-    metavar='<ssh-key>',
     help='SSH public key to connect to the guest OS on the VM')
 @click.option(
     '-t',
@@ -320,7 +343,6 @@ def node_group(ctx):
     'template',
     required=False,
     default=None,
-    metavar='<template>',
     help='Name of the template to instantiate nodes from')
 @click.option(
     '--type',
