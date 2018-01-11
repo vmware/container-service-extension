@@ -6,10 +6,13 @@ The **container-service-extension** (`CSE`) is an add-on to VMware vCloud Direct
 
 The current document covers the following `CSE` topics:
 
-- [installation](Installation)
+- [installation](#Installation)
 - configuration
-- operation
-- usage
+- [operation](#Operation)
+- [usage](#Using)
+- [reference](#Reference)
+  - [command syntax](#Command)
+  - [release notes](#Release)
 
 # Installation
 
