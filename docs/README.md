@@ -39,6 +39,12 @@ $ cse version
 CSE, Container Service Extension for VMware vCloud Director, version 0.3.0
 ```
 
+Alternatively, `CSE` can be installed directly from GitHub specifying a version number with:
+
+```shell
+$ pip3 install --user git+https://github.com/vmware/container-service-extension.git@0.3.0
+```
+
 The exact version might be different from the one listed above.
 
 `CSE` can also be installed using [virtualenv](https://virtualenv.pypa.io) and [virtualenvwrapper](http://virtualenvwrapper.readthedocs.io). `pip3 install` can be used with additional options depending on the needs:
@@ -421,6 +427,26 @@ $ vcd cse cluster delete mycluster --yes
 # Reference
 
 ## Command syntax
+
+`CSE` includes two commands:
+
+- `cse`
+  - used by the system administrator to install `CSE`, create templates and run the `CSE` service.
+- `vcd cse`
+  - used by the system administrator to operate the service:
+    - get status
+    - enable
+    - disable
+    - stop
+  - used by the tenants to:
+    - list templates
+    - create, list and delete clusters
+    - create, list and delete nodes
+    - get status of the service
+
+`CSE` also includes a `systemd` unit to:
+  - enable the service in the system
+  - start the service
 
 ### vcd cse
 
