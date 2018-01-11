@@ -14,8 +14,7 @@ from vsphere_guest_run.vsphere import VSphere
 
 TYPE_MASTER = 'mstr'
 TYPE_NODE = 'node'
-LOGGER = logging.getLogger(__name__)
-logging.basicConfig(filename='cse.log')
+LOGGER = logging.getLogger('cse.cluster')
 
 
 def wait_until_tools_ready(vm):
@@ -89,7 +88,10 @@ def load_from_metadata(client, name=None, cluster_id=None):
         cluster['master_nodes'] = []
         cluster['nodes'] = []
         cluster['number_of_vms'] = node['record'].get('numberOfVMs')
-        cluster['template'] = node['template']
+        if 'template' in node:
+            cluster['template'] = node['template']
+        else:
+            cluster['template'] = ''
         clusters_dict[cluster['name']] = cluster
     return list(clusters_dict.values())
 
@@ -195,7 +197,6 @@ def get_nodes(vapp, node_type):
 
 
 def wait_for_tools_ready_callback(message, exception=None):
-    print('waiting for guest tools, status: %s' % message)
     LOGGER.debug('waiting for guest tools, status: %s' % message)
     if exception is not None:
         LOGGER.error('exception: %s' % str(exception))
@@ -203,7 +204,6 @@ def wait_for_tools_ready_callback(message, exception=None):
 
 def wait_for_guest_execution_callback(message, exception=None):
     LOGGER.debug(message)
-    print(message)
     if exception is not None:
         LOGGER.error('exception: %s' % str(exception))
 
@@ -301,7 +301,7 @@ uname -a
                 break
             raise Exception('script returned %s' % result[0])
         except Exception:
-            print('VM is not ready to execute scripts, yet')
+            LOGGER.info('VM is not ready to execute scripts, yet')
             time.sleep(2)
     if not ready:
         raise Exception('VM is not ready to execute scripts')
@@ -321,14 +321,16 @@ def execute_script_in_nodes(config,
     vs.connect()
     all_results = []
     for node in nodes:
-        LOGGER.debug('running script on %s' % node.get('name'))
-        print('running script on %s' % node.get('name'))
+        LOGGER.debug('will try to execute script on %s:\n%s' %
+                     (node.get('name'), script))
         moid = vapp.get_vm_moid(node.get('name'))
         vm = vs.get_vm_by_moid(moid)
         if check_tools:
+            LOGGER.debug('waiting for tools on %s' % node.get('name'))
             vs.wait_until_tools_ready(
                 vm, sleep=5, callback=wait_for_tools_ready_callback)
             wait_until_ready_to_exec(vs, vm, password)
+        LOGGER.debug('about to execute script on %s' % node.get('name'))
         result = vs.execute_script_in_guest(
             vm,
             'root',
@@ -345,9 +347,6 @@ def execute_script_in_nodes(config,
         LOGGER.debug(result[0])
         LOGGER.debug(result_stderr)
         LOGGER.debug(result_stdout)
-        print(result[0])
-        print(result_stderr)
-        print(result_stdout)
         all_results.append(result)
     return all_results
 

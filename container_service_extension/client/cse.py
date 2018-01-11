@@ -2,12 +2,11 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import os
 from os.path import expanduser
 from os.path import join
-import platform
 
 import click
-import pkg_resources
 from vcd_cli.utils import restore_session
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
@@ -16,12 +15,25 @@ from vcd_cli.vcd import vcd
 import yaml
 
 from container_service_extension.client.cluster import Cluster
+from container_service_extension.client.system import System
+from container_service_extension.service import Service
 
 
 @vcd.group(short_help='manage kubernetes clusters')
 @click.pass_context
 def cse(ctx):
     """Work with kubernetes clusters in vCloud Director.
+
+\b
+    Description
+        The cse command works with kubernetes clusters on vCloud Director.
+\b
+        'vcd cse cluster create' creates a new kubernetes cluster in the
+        current virtual datacenter.
+\b
+        Cluster names should follow the syntax for valid hostnames and can have
+        up to 25 characters .`system`, `template` and `swagger*` are reserved
+        words and cannot be used to name a cluster.
 
 \b
     Examples
@@ -53,9 +65,10 @@ def cse(ctx):
     if ctx.invoked_subcommand is not None:
         try:
             restore_session(ctx)
-            if not ctx.obj['profiles'].get('vdc_in_use') or \
-               not ctx.obj['profiles'].get('vdc_href'):
-                raise Exception('select a virtual datacenter')
+            if ctx.invoked_subcommand not in ['system', 'template', 'version']:
+                if not ctx.obj['profiles'].get('vdc_in_use') or \
+                   not ctx.obj['profiles'].get('vdc_href'):
+                    raise Exception('select a virtual datacenter')
         except Exception as e:
             stderr(e, ctx)
 
@@ -64,14 +77,7 @@ def cse(ctx):
 @click.pass_context
 def version(ctx):
     """Show CSE version."""
-    ver = pkg_resources.require('container-service-extension')[0].version
-    ver_obj = {
-        'product': 'CSE',
-        'description':
-        'Container Service Extension for VMware vCloud Director',
-        'version': ver,
-        'python': platform.python_version()
-    }
+    ver_obj = Service.version()
     ver_str = '%s, %s, version %s' % (ver_obj['product'],
                                       ver_obj['description'],
                                       ver_obj['version'])
@@ -84,7 +90,6 @@ def cluster_group(ctx):
     """Work with kubernetes clusters."""
     if ctx.invoked_subcommand is not None:
         try:
-            restore_session(ctx)
             if not ctx.obj['profiles'].get('vdc_in_use') or \
                not ctx.obj['profiles'].get('vdc_href'):
                 raise Exception('select a virtual datacenter')
@@ -96,14 +101,7 @@ def cluster_group(ctx):
 @click.pass_context
 def template(ctx):
     """Work with CSE templates."""
-    if ctx.invoked_subcommand is not None:
-        try:
-            restore_session(ctx)
-            if not ctx.obj['profiles'].get('vdc_in_use') or \
-               not ctx.obj['profiles'].get('vdc_href'):
-                raise Exception('select a virtual datacenter')
-        except Exception as e:
-            stderr(e, ctx)
+    pass
 
 
 @template.command('list', short_help='list templates')
@@ -256,6 +254,8 @@ def config(ctx, name, save):
         client = ctx.obj['client']
         cluster = Cluster(client)
         cluster_config = cluster.get_config(name)
+        if os.name == 'nt':
+            cluster_config = str.replace(cluster_config, '\n', '\r\n')
         if save:
             save_config(ctx)
         else:
@@ -283,7 +283,6 @@ def node_group(ctx):
     """Work with CSE cluster nodes."""
     if ctx.invoked_subcommand is not None:
         try:
-            restore_session(ctx)
             if not ctx.obj['profiles'].get('vdc_in_use') or \
                not ctx.obj['profiles'].get('vdc_href'):
                 raise Exception('select a virtual datacenter')
@@ -432,5 +431,67 @@ def save_config(ctx):
                 elif k == 'users':
                     for user in v:
                         print(user['name'], user['user'])
+    except Exception as e:
+        stderr(e, ctx)
+
+
+@cse.group('system', short_help='work with CSE service')
+@click.pass_context
+def system_group(ctx):
+    """Work with CSE service."""
+    pass
+
+
+@system_group.command('info', short_help='CSE system info')
+@click.pass_context
+def info(ctx):
+    try:
+        client = ctx.obj['client']
+        system = System(client)
+        result = system.get_info()
+        stdout(result, ctx)
+    except Exception as e:
+        stderr(e, ctx)
+
+
+@system_group.command('stop', short_help='gracefully stop CSE service')
+@click.pass_context
+@click.option(
+    '-y',
+    '--yes',
+    is_flag=True,
+    callback=abort_if_false,
+    expose_value=False,
+    prompt='Are you sure you want to stop the service?')
+def stop_service(ctx):
+    try:
+        client = ctx.obj['client']
+        system = System(client)
+        result = system.stop()
+        stdout(result, ctx)
+    except Exception as e:
+        stderr(e, ctx)
+
+
+@system_group.command('enable', short_help='enable CSE service')
+@click.pass_context
+def enable_service(ctx):
+    try:
+        client = ctx.obj['client']
+        system = System(client)
+        result = system.enable_service()
+        stdout(result, ctx)
+    except Exception as e:
+        stderr(e, ctx)
+
+
+@system_group.command('disable', short_help='disable CSE service')
+@click.pass_context
+def disable_service(ctx):
+    try:
+        client = ctx.obj['client']
+        system = System(client)
+        result = system.enable_service(False)
+        stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)

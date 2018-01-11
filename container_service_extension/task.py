@@ -4,7 +4,7 @@
 
 import logging
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger('cse.task')
 
 
 def create_or_update_task(task,

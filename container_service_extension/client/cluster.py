@@ -14,6 +14,19 @@ class Cluster(object):
         self.client = client
         self._uri = self.client.get_api_uri() + '/cse'
 
+    def _process_response(self, response):
+        content = json.loads(response.content.decode("utf-8"))
+        if response.status_code in [
+                requests.codes.ok, requests.codes.created,
+                requests.codes.accepted
+        ]:
+            return content
+        else:
+            if 'message' in content:
+                raise Exception(content['message'])
+            else:
+                raise Exception(content)
+
     def get_templates(self):
         method = 'GET'
         uri = '%s/template' % (self._uri)
@@ -25,10 +38,7 @@ class Cluster(object):
             media_type=None,
             accept_type='application/*+json',
             auth=None)
-        if response.status_code == requests.codes.ok:
-            return json.loads(response.content.decode("utf-8"))
-        else:
-            raise Exception(json.loads(response.content))
+        return self._process_response(response)
 
     def get_clusters(self):
         method = 'GET'
@@ -41,10 +51,7 @@ class Cluster(object):
             media_type=None,
             accept_type='application/*+json',
             auth=None)
-        if response.status_code == requests.codes.ok:
-            return json.loads(response.content.decode("utf-8"))
-        else:
-            raise Exception(json.loads(response.content))
+        return self._process_response(response)
 
     def get_cluster_info(self, name):
         method = 'GET'
@@ -57,10 +64,7 @@ class Cluster(object):
             media_type=None,
             accept_type='application/*+json',
             auth=None)
-        if response.status_code == requests.codes.ok:
-            return json.loads(response.content.decode("utf-8"))
-        else:
-            raise Exception(json.loads(response.content))
+        return self._process_response(response)
 
     def create_cluster(self,
                        vdc,
@@ -112,10 +116,7 @@ class Cluster(object):
             contents=data,
             media_type=None,
             accept_type='application/*+json')
-        if response.status_code == requests.codes.accepted:
-            return json.loads(response.content)
-        else:
-            raise Exception(json.loads(response.content).get('message'))
+        return self._process_response(response)
 
     def delete_cluster(self, cluster_name):
         method = 'DELETE'
@@ -125,10 +126,7 @@ class Cluster(object):
             uri,
             self.client._session,
             accept_type='application/*+json')
-        if response.status_code == requests.codes.accepted:
-            return json.loads(response.content)
-        else:
-            raise Exception(json.loads(response.content).get('message'))
+        return self._process_response(response)
 
     def get_config(self, cluster_name):
         method = 'GET'
@@ -144,7 +142,7 @@ class Cluster(object):
         if response.status_code == requests.codes.ok:
             return response.content.decode('utf-8').replace('\\n', '\n')[1:-1]
         else:
-            raise Exception(json.loads(response.content))
+            return self._process_response(response)
 
     def add_node(self,
                  vdc,
@@ -196,10 +194,7 @@ class Cluster(object):
             contents=data,
             media_type=None,
             accept_type='application/*+json')
-        if response.status_code == requests.codes.accepted:
-            return json.loads(response.content)
-        else:
-            raise Exception(json.loads(response.content).get('message'))
+        return self._process_response(response)
 
     def delete_nodes(self, vdc, name, nodes, force=False):
         """Delete nodes from a Kubernetes cluster.
@@ -221,7 +216,4 @@ class Cluster(object):
             contents=data,
             media_type=None,
             accept_type='application/*+json')
-        if response.status_code == requests.codes.accepted:
-            return json.loads(response.content)
-        else:
-            raise Exception(json.loads(response.content).get('message'))
+        return self._process_response(response)

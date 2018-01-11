@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+set -e
+
 echo 'nameserver 8.8.8.8' >> /etc/resolvconf/resolv.conf.d/tail
 resolvconf -u
 systemctl restart networking.service

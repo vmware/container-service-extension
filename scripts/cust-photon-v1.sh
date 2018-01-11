@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 cat << EOF > /etc/systemd/system/iptables-ports.service
 [Unit]
 After=iptables.service

@@ -5,11 +5,9 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import logging
-import platform
 import traceback
 
 import click
-import pkg_resources
 from vcd_cli.utils import stdout
 from vcd_cli.vcd import abort_if_false
 
@@ -19,7 +17,7 @@ from container_service_extension.config import install_cse
 from container_service_extension.config import uninstall_cse
 from container_service_extension.service import Service
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger('cse.cli')
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -67,21 +65,13 @@ def cli(ctx):
     if ctx.invoked_subcommand is None:
         click.secho(ctx.get_help())
         return
-    logging.basicConfig(filename='cse.log')
 
 
 @cli.command(short_help='show version')
 @click.pass_context
 def version(ctx):
     """Show CSE version."""
-    ver = pkg_resources.require('container-service-extension')[0].version
-    ver_obj = {
-        'product': 'CSE',
-        'description':
-        'Container Service Extension for VMware vCloud Director',
-        'version': ver,
-        'python': platform.python_version()
-    }
+    ver_obj = Service.version()
     ver_str = '%s, %s, version %s' % (ver_obj['product'],
                                       ver_obj['description'],
                                       ver_obj['version'])
