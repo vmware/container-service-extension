@@ -639,6 +639,7 @@ Release date: 2018-01-10
 | 9.0 | Photon OS 1.0, Rev 2 | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
 | 9.0 | Ubuntu 16.04.3 LTS   | 17.09.0-ce | 1.8.2      | Weave 2.0.5 |
 
+New features:
 - added `node {create|list|delete}` commands
 - added `system {info|enable|disable|stop}` commands
 - support templates from versions `0.2.0` and up
@@ -651,6 +652,17 @@ Release date: 2017-12-29
 |:----|:---------------------|:-----------|:-----------|:------------|
 | 9.0 | Photon OS 1.0, Rev 2 | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
 | 9.0 | Ubuntu 16.04.3 LTS   | 17.09.0-ce | 1.8.2      | Weave 2.0.5 |
+
+New features:
+- new bootstrap method
+- customization as external scripts
+- improved visibility of the customization process
+- customize CPU, memory, ssh-key and storage-profile during cluster creation
+- single vApp cluster
+- multiple templates support, added list templates command
+- separate client SDK and commands from pyvcloud and vcd-cli
+- fully automated installation process
+- improved task information
 
 ### CSE 0.1.2
 

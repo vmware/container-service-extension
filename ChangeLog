@@ -1,6 +1,17 @@
 CHANGES
 =======
 
+0.3.0
+-----
+
+* added node and system commands
+* added CLA
+* updated doc for 0.3.0
+* node create/delete/list
+* create/delete node(s)
+* Markdown cosmetic/doc fixes
+* changelog
+
 0.2.0
 -----
 
