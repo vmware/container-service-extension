@@ -1,9 +1,6 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-
-from __future__ import print_function
-
 import hashlib
 import logging
 import os
@@ -31,7 +28,7 @@ from container_service_extension.broker import get_sample_broker_config
 from container_service_extension.broker import validate_broker_config_content
 from container_service_extension.broker import validate_broker_config_elements
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger('cse.config')
 BUF_SIZE = 65536
 
 SAMPLE_AMQP_CONFIG = {
@@ -71,16 +68,7 @@ SAMPLE_VCS_CONFIG = {
     }
 }
 
-SAMPLE_SERVICE_CONFIG = {
-    'service': {
-        'listeners':
-        2,
-        'logging_level':
-        5,
-        'logging_format':
-        '%(levelname) -8s %(asctime)s %(name) -40s %(funcName) -35s %(lineno) -5d: %(message)s',  # NOQA
-    }
-}
+SAMPLE_SERVICE_CONFIG = {'service': {'listeners': 5}}
 
 
 def generate_sample_config(labels=[]):
@@ -157,7 +145,7 @@ def check_config(config_file_name, template='*'):
         config['vcd']['host'],
         api_version=config['vcd']['api_version'],
         verify_ssl_certs=config['vcd']['verify'],
-        log_file='cse.log',
+        log_file='cse-check.log',
         log_headers=True,
         log_bodies=True)
     client.set_credentials(
@@ -182,7 +170,7 @@ def uninstall_cse(ctx, config_file_name, template_name):
         config['vcd']['host'],
         api_version=config['vcd']['api_version'],
         verify_ssl_certs=config['vcd']['verify'],
-        log_file='cse.log',
+        log_file='cse-uninstall.log',
         log_headers=True,
         log_bodies=True)
     client.set_credentials(
@@ -226,7 +214,7 @@ def install_cse(ctx, config_file_name, template_name, no_capture,
         config['vcd']['host'],
         api_version=config['vcd']['api_version'],
         verify_ssl_certs=config['vcd']['verify'],
-        log_file='cse.log',
+        log_file='cse-install.log',
         log_headers=True,
         log_bodies=True)
     client.set_credentials(
@@ -322,9 +310,9 @@ def get_data_file(file_name):
     if path is not None:
         with open(path) as f:
             content = f.read()
-        click.secho('Reading data file: %s' % path)
+        LOGGER.info('Reading data file: %s' % path)
     else:
-        click.secho('Data file not found: %s' % path)
+        LOGGER.error('Data file not found: %s' % path)
     return content
 
 
@@ -357,13 +345,13 @@ def upload_source_ova(config, client, org, template):
 def wait_for_tools_ready_callback(message, exception=None):
     click.secho('waiting for guest tools, status: %s' % message)
     if exception is not None:
-        print('  exception: %s' % str(exception))
+        click.secho('  exception: %s' % str(exception))
 
 
 def wait_for_guest_execution_callback(message, exception=None):
     click.secho(message)
     if exception is not None:
-        print('  exception: %s' % str(exception))
+        click.secho('  exception: %s' % str(exception))
 
 
 def create_template(ctx, config, client, org, vdc_resource, catalog,

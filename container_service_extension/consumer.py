@@ -13,7 +13,7 @@ import pika
 
 from container_service_extension.processor import ServiceProcessor
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger('cse.consumer')
 
 
 class MessageConsumer(object):
@@ -143,10 +143,14 @@ class MessageConsumer(object):
                          threading.currentThread().ident,
                          json.dumps(body_json), properties)
             result = self.service_processor.process_request(body_json)
-            reply_body = json.dumps(result['body'])
             status_code = result['status_code']
-        except Exception:
-            reply_body = '{}'
+            reply_body = json.dumps(result['body'])
+            if status_code == 500 and \
+               reply_body == '[]' and \
+               'message' in result:
+                reply_body = '{"message": "%s"}' % result['message']
+        except Exception as e:
+            reply_body = '{"message": "%s"}' % str(e)
             status_code = 500
             tb = traceback.format_exc()
             LOGGER.error(tb)

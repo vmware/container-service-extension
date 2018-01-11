@@ -31,7 +31,7 @@ from container_service_extension.cluster import load_from_metadata
 from container_service_extension.cluster import TYPE_MASTER
 from container_service_extension.cluster import TYPE_NODE
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger('cse.broker')
 
 OK = 200
 CREATED = 201
@@ -50,7 +50,7 @@ OP_MESSAGE = {
     OP_DELETE_NODES: 'delete nodes from cluster',
 }
 
-MAX_HOST_NAME_LENGTH = 25 - 4
+MAX_HOST_NAME_LENGTH = 25
 
 SAMPLE_TEMPLATE_PHOTON_V1 = {
     'name':
@@ -214,7 +214,6 @@ class DefaultBroker(threading.Thread):
             uri=self.host,
             api_version=self.version,
             verify_ssl_certs=self.verify,
-            log_file='sysadmin.log',
             log_headers=True,
             log_bodies=True)
         self.client_sysadmin.set_credentials(
@@ -228,7 +227,6 @@ class DefaultBroker(threading.Thread):
             uri=self.host,
             api_version=version,
             verify_ssl_certs=self.verify,
-            log_file='tenant.log',
             log_headers=True,
             log_bodies=True)
         session = self.client_tenant.rehydrate_from_token(token)

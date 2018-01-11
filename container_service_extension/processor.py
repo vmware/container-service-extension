@@ -13,11 +13,12 @@ import yaml
 
 from container_service_extension.broker import get_new_broker
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger('cse.processor')
 
 OK = 200
 CREATED = 201
 ACCEPTED = 202
+UNAUTHORIZED = 401
 INTERNAL_SERVER_ERROR = 500
 
 
@@ -26,7 +27,6 @@ class ServiceProcessor(object):
         self.config = config
         self.verify = verify
         self.log = log
-        self.broker = get_new_broker(config)
         self.fsencoding = sys.getfilesystemencoding()
 
     def process_request(self, body):
@@ -39,20 +39,24 @@ class ServiceProcessor(object):
         template_request = False
         node_request = False
         info_request = False
+        system_request = False
         if len(tokens) > 3:
             if tokens[3] in ['swagger', 'swagger.json', 'swagger.yaml']:
                 spec_request = True
             elif tokens[3] == 'template':
                 template_request = True
+            elif tokens[3] == 'system':
+                system_request = True
             elif tokens[3] != '':
                 cluster_name = tokens[3]
         if len(tokens) > 4:
-            if tokens[4] == 'config':
-                config_request = True
-            elif tokens[4] == 'info':
-                info_request = True
-            elif tokens[4] == 'node':
-                node_request = True
+            if cluster_name is not None:
+                if tokens[4] == 'config':
+                    config_request = True
+                elif tokens[4] == 'info':
+                    info_request = True
+                elif tokens[4] == 'node':
+                    node_request = True
         if len(body['body']) > 0:
             try:
                 request_body = json.loads(
@@ -63,6 +67,11 @@ class ServiceProcessor(object):
         else:
             request_body = None
         LOGGER.debug('request body: %s' % json.dumps(request_body))
+        from container_service_extension.service import Service
+        service = Service()
+        if not system_request and not service.is_enabled:
+            raise Exception('CSE service is disabled. '
+                            'Contact the System Administrator.')
 
         if body['method'] == 'GET':
             if spec_request:
@@ -96,6 +105,11 @@ class ServiceProcessor(object):
                 broker = get_new_broker(self.config)
                 reply = broker.get_cluster_info(cluster_name, body['headers'],
                                                 request_body)
+            elif system_request:
+                result = {}
+                result['body'] = service.info(body['headers'])
+                result['status_code'] = OK
+                reply = result
             elif cluster_name is None:
                 broker = get_new_broker(self.config)
                 reply = broker.list_clusters(body['headers'], request_body)
@@ -107,6 +121,9 @@ class ServiceProcessor(object):
                 if node_request:
                     broker = get_new_broker(self.config)
                     reply = broker.create_nodes(body['headers'], request_body)
+        elif body['method'] == 'PUT':
+            if system_request:
+                reply = service.update_status(body['headers'], request_body)
         elif body['method'] == 'DELETE':
             if node_request:
                 broker = get_new_broker(self.config)
