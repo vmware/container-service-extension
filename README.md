@@ -21,27 +21,28 @@ The **container-service-extension** is distributed as a Python package.
 Install and validate:
 
 ``` shell
-$ pip install container-service-extension
+$ pip3 install --user container-service-extension
 
 $ cse version
 ```
 
 #### Running the Service
 
-Follow the [configuration steps](https://vmware.github.io/container-service-extension/).
+Follow the [installation and configuration guide](https://vmware.github.io/container-service-extension/#installation).
 
 Start the service with:
 
 ``` shell
-$ cse run config.yml
+$ cse run --config config.yaml
 ```
 
-More information about `vcd-cli` commands to use the service can be found in the [vcd-cli](https://vmware.github.io/vcd-cli/vcd_cluster) site.
+More information about `vcd-cli` commands to use the service can be found in the [tenant's guide](https://vmware.github.io/container-service-extension/#using-the-container-service).
 
 ## Development
 
 ``` shell
 $ git clone https://github.com/vmware/container-service-extension.git
+$ cd container-service-extension
 $ python setup.py develop
 ```
 

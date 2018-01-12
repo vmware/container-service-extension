@@ -6,13 +6,16 @@ The **container-service-extension** (`CSE`) is an add-on to VMware vCloud Direct
 
 The current document covers the following `CSE` topics:
 
-- [installation](#installation)
-- configuration
-- [operation](#operation)
-- [usage](#using-the-container-service)
+- for System Administrators:
+  - [installation and configuration](#installation)
+  - [operation](#operation)
+- for Tenants:
+  - [installation](#tenant-installation)
+  - [usage](#using-the-container-service)
 - [reference](#reference)
   - [command syntax](#command-syntax)
   - [release notes](#release-notes)
+
 
 # Installation
 
@@ -702,6 +705,9 @@ Release date: 2017-11-10
 | 9.0 | Photon OS 1.0, Rev 2 | 1.7.7      | Weave 2.0.5 |
 | 9.0 | Ubuntu 16.04.3 LTS   | 1.8.2      | Weave 2.0.5 |
 
+Features:
+- added Ubuntu template
+
 ### CSE 0.1.1
 
 Release date: 2017-10-03
@@ -709,6 +715,10 @@ Release date: 2017-10-03
 | vCD | OS                   | Kubernetes | Pod Network |
 |:----|:---------------------|:-----------|:------------|
 | 9.0 | Photon OS 1.0, Rev 2 | 1.7.7      | Weave 2.0.4 |
+
+Features:
+- initial release
+- create and delete clusters
 
 ## Source OVA Files
 
