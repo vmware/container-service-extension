@@ -662,14 +662,16 @@ Documentation on how templates work and how to add new templates will be provide
 
 ## Release Notes
 
+`CSE` is supported on VMware vCloud Director versions `8.10.0` and up.
+
 ### CSE 0.3.0
 
 Release date: 2018-01-10
 
-| vCD | OS                   | Docker     | Kubernetes | Pod Network |
-|:----|:---------------------|:-----------|:-----------|:------------|
-| 9.0 | Photon OS 1.0, Rev 2 | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
-| 9.0 | Ubuntu 16.04.3 LTS   | 17.09.0-ce | 1.8.2      | Weave 2.0.5 |
+| vCD         | OS                   | Docker     | Kubernetes | Pod Network |
+|:------------|:---------------------|:-----------|:-----------|:------------|
+| 8.10 and up | Photon OS 1.0, Rev 2 | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
+| 8.10 and up | Ubuntu 16.04.3 LTS   | 17.09.0-ce | 1.8.2      | Weave 2.0.5 |
 
 New features:
 - added `node {create|list|delete}` commands
@@ -680,10 +682,10 @@ New features:
 
 Release date: 2017-12-29
 
-| vCD | OS                   | Docker     | Kubernetes | Pod Network |
-|:----|:---------------------|:-----------|:-----------|:------------|
-| 9.0 | Photon OS 1.0, Rev 2 | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
-| 9.0 | Ubuntu 16.04.3 LTS   | 17.09.0-ce | 1.8.2      | Weave 2.0.5 |
+| vCD         | OS                   | Docker     | Kubernetes | Pod Network |
+|:------------|:---------------------|:-----------|:-----------|:------------|
+| 8.10 and up | Photon OS 1.0, Rev 2 | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
+| 8.10 and up | Ubuntu 16.04.3 LTS   | 17.09.0-ce | 1.8.2      | Weave 2.0.5 |
 
 New features:
 - new bootstrap method
@@ -700,10 +702,10 @@ New features:
 
 Release date: 2017-11-10
 
-| vCD | OS                   | Kubernetes | Pod Network |
-|:----|:---------------------|:-----------|:------------|
-| 9.0 | Photon OS 1.0, Rev 2 | 1.7.7      | Weave 2.0.5 |
-| 9.0 | Ubuntu 16.04.3 LTS   | 1.8.2      | Weave 2.0.5 |
+| vCD         | OS                   | Kubernetes | Pod Network |
+|:------------|:---------------------|:-----------|:------------|
+| 8.10 and up | Photon OS 1.0, Rev 2 | 1.7.7      | Weave 2.0.5 |
+| 8.10 and up | Ubuntu 16.04.3 LTS   | 1.8.2      | Weave 2.0.5 |
 
 Features:
 - added Ubuntu template
@@ -712,9 +714,9 @@ Features:
 
 Release date: 2017-10-03
 
-| vCD | OS                   | Kubernetes | Pod Network |
-|:----|:---------------------|:-----------|:------------|
-| 9.0 | Photon OS 1.0, Rev 2 | 1.7.7      | Weave 2.0.4 |
+| vCD         | OS                   | Kubernetes | Pod Network |
+|:------------|:---------------------|:-----------|:------------|
+| 8.10 and up | Photon OS 1.0, Rev 2 | 1.7.7      | Weave 2.0.4 |
 
 Features:
 - initial release
