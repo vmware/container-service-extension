@@ -666,6 +666,22 @@ Documentation on how templates work and how to add new templates will be provide
 
 `CSE` is supported on VMware vCloud Director versions `8.10.0` and up.
 
+### CSE 0.4.0
+
+Release date: TBD
+
+| vCD         | OS                   | Docker     | Kubernetes | Pod Network |
+|:------------|:---------------------|:-----------|:-----------|:------------|
+| 8.10 and up | Photon OS 1.0, Rev 2 | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
+| 8.10 and up | Photon OS 2.0 GA     | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
+| 8.10 and up | Ubuntu 16.04.3 LTS   | 17.09.0-ce | 1.8.2      | Weave 2.0.5 |
+
+New features:
+- support multiple vCenters per vCD installation (new format of the `vcs` section in `config.yaml`)
+- added PhotonOS 2.0 template
+- support templates from versions `0.2.0` and up
+
+
 ### CSE 0.3.0
 
 Release date: 2018-01-10
@@ -729,6 +745,7 @@ Features:
 | OS                   | OVA Name                               | URL                                                                                                       | SHA1                                     |
 |:---------------------|:---------------------------------------|:----------------------------------------------------------------------------------------------------------|:-----------------------------------------|
 | Photon OS 1.0, Rev 2 | photon-custom-hw11-1.0-62c543d.ova     | `https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova`            | 18c1a6d31545b757d897c61a0c3cc0e54d8aeeba |
+| Photon OS 2.0 GA     | photon-custom-hw11-2.0-304b817.ova     | `http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova`                       | b8c183785bbf582bcd1be7cde7c22e5758fb3f16 |
 | Ubuntu 16.04.3 LTS   | ubuntu-16.04-server-cloudimg-amd64.ova | `https://cloud-images.ubuntu.com/releases/xenial/release-20171011/ubuntu-16.04-server-cloudimg-amd64.ova` | 1bddf68820c717e13c6d1acd800fb7b4d197b411 |
 
 # Appendix
