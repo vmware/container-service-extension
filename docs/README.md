@@ -361,6 +361,8 @@ Once installed, `CSE` can be used by tenants to create kubernetes clusters on de
 
 The virtual machines (master and nodes) will be provisioned on the tenant virtual datacenter within a vApp. The VMs will be connected to the network specified with the `--network` required parameter. The Organization VDC network should have a static IP pool and it doesn't require access to the Internet (access might be required if installing additional components).
 
+When creating clusters and nodes, the `--network` option is required, as they need a network to operate and no network will be selected by default if omitted.
+
 The `CSE` service doesn't need a network connection to the tenant virtual datacenters.
 
 When creating a cluster, the tenant can specify the template to use for the master and nodes of the cluster, as well as other options. When adding nodes to the cluster, the same type of options can be used to customize the new nodes.

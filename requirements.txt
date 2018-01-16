@@ -1,3 +1,4 @@
+cachetools
 humanfriendly
 pika >= 0.10.0
 vsphere-guest-run >= 0.0.3

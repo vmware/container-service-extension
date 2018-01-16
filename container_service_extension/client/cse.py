@@ -31,6 +31,13 @@ def cse(ctx):
         'vcd cse cluster create' creates a new kubernetes cluster in the
         current virtual datacenter.
 \b
+        'vcd cse node create' creates new and attach new nodes to an existing
+        kubernetes cluster in the current virtual datacenter.
+\b
+        When creating clusters and nodes, the '--network' option is required,
+        as they need a network to operate and no network will be selected by
+        default if omitted.
+\b
         Cluster names should follow the syntax for valid hostnames and can have
         up to 25 characters .`system`, `template` and `swagger*` are reserved
         words and cannot be used to name a cluster.

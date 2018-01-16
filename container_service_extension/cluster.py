@@ -10,7 +10,8 @@ import time
 from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
-from vsphere_guest_run.vsphere import VSphere
+
+from container_service_extension.utils import get_vsphere
 
 TYPE_MASTER = 'mstr'
 TYPE_NODE = 'node'
@@ -313,16 +314,12 @@ def execute_script_in_nodes(config,
                             script,
                             nodes,
                             check_tools=True):
-    vs = VSphere(
-        config['vcs']['host'],
-        config['vcs']['username'],
-        config['vcs']['password'],
-        port=int(config['vcs']['port']))
-    vs.connect()
     all_results = []
     for node in nodes:
         LOGGER.debug('will try to execute script on %s:\n%s' %
                      (node.get('name'), script))
+        vs = get_vsphere(config, vapp, node.get('name'))
+        vs.connect()
         moid = vapp.get_vm_moid(node.get('name'))
         vm = vs.get_vm_by_moid(moid)
         if check_tools:
@@ -357,15 +354,11 @@ def get_file_from_nodes(config,
                         file_name,
                         nodes,
                         check_tools=True):
-    vs = VSphere(
-        config['vcs']['host'],
-        config['vcs']['username'],
-        config['vcs']['password'],
-        port=int(config['vcs']['port']))
-    vs.connect()
     all_results = []
     for node in nodes:
         LOGGER.debug('getting file from node %s' % node.get('name'))
+        vs = get_vsphere(config, vapp, node.get('name'))
+        vs.connect()
         moid = vapp.get_vm_moid(node.get('name'))
         vm = vs.get_vm_by_moid(moid)
         if check_tools:

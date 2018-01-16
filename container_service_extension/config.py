@@ -5,17 +5,20 @@ import hashlib
 import logging
 import os
 import site
+import sys
 import time
+from urllib.parse import urlparse
 
 import click
 import pika
 from pyvcloud.vcd.amqp import AmqpService
+from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.client import SIZE_1MB
-from pyvcloud.vcd.extension import Extension
 from pyvcloud.vcd.org import Org
+from pyvcloud.vcd.platform import Platform
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 import requests
@@ -27,6 +30,7 @@ import yaml
 from container_service_extension.broker import get_sample_broker_config
 from container_service_extension.broker import validate_broker_config_content
 from container_service_extension.broker import validate_broker_config_elements
+from container_service_extension.utils import get_vsphere
 
 LOGGER = logging.getLogger('cse.config')
 BUF_SIZE = 65536
@@ -59,13 +63,15 @@ SAMPLE_VCD_CONFIG = {
 }
 
 SAMPLE_VCS_CONFIG = {
-    'vcs': {
-        'host': 'vcs.vmware.com',
-        'port': 443,
-        'username': 'administrator@vsphere.local',
+    'vcs': [{
+        'name': 'vc1',
         'password': 'my_secret_password',
         'verify': False
-    }
+    }, {
+        'name': 'vc2',
+        'password': 'my_secret_password',
+        'verify': False
+    }]
 }
 
 SAMPLE_SERVICE_CONFIG = {'service': {'listeners': 5}}
@@ -110,6 +116,15 @@ def get_config(config_file_name):
 
 def check_config(config_file_name, template='*'):
     click.secho('Validating CSE on vCD from file: %s' % config_file_name)
+    if sys.version_info.major >= 3 and sys.version_info.minor >= 6:
+        python_valid = True
+    else:
+        python_valid = False
+    click.echo('Python version >= 3.6 (installed: %s.%s.%s): %s' %
+               (sys.version_info.major, sys.version_info.minor,
+                sys.version_info.micro, bool_to_msg(python_valid)))
+    if not python_valid:
+        raise Exception('Python version not supported')
     config = get_config(config_file_name)
     validate_broker_config_elements(config['broker'])
     amqp = config['amqp']
@@ -120,17 +135,6 @@ def check_config(config_file_name, template='*'):
     click.echo('Connected to AMQP server (%s:%s): %s' %
                (amqp['host'], amqp['port'], bool_to_msg(connection.is_open)))
     connection.close()
-
-    v = VSphere(
-        config['vcs']['host'],
-        config['vcs']['username'],
-        config['vcs']['password'],
-        port=int(config['vcs']['port']))
-    v.connect()
-    click.echo('Connected to vCenter Server as %s '
-               '(%s:%s): %s' % (config['vcs']['username'],
-                                config['vcs']['host'], config['vcs']['port'],
-                                bool_to_msg(True)))
 
     if not config['vcd']['verify']:
         click.secho(
@@ -158,6 +162,29 @@ def check_config(config_file_name, template='*'):
     click.secho('Validating \'%s\' service broker' % config['broker']['type'])
     if config['broker']['type'] == 'default':
         validate_broker_config_content(config, client, template)
+
+    platform = Platform(client)
+    for vc in platform.list_vcenters():
+        found = False
+        for config_vc in config['vcs']:
+            if vc.get('name') == config_vc.get('name'):
+                found = True
+                break
+        if not found:
+            raise Exception('vCenter \'%s\' defined in vCloud Director '
+                            'but not in CSE config file' % vc.get('name'))
+            return None
+
+    for vc in config['vcs']:
+        vcenter = platform.get_vcenter(vc['name'])
+        vsphere_url = urlparse(vcenter.Url.text)
+        v = VSphere(vsphere_url.hostname, vcenter.Username.text,
+                    vc['password'], vsphere_url.port)
+        v.connect()
+        click.echo('Connected to vCenter Server %s as %s '
+                   '(%s:%s): %s' % (vc['name'], vcenter.Username.text,
+                                    vsphere_url.hostname, vsphere_url.port,
+                                    bool_to_msg(True)))
 
     return config
 
@@ -417,20 +444,14 @@ def create_template(ctx, config, client, org, vdc_resource, catalog,
             hostname=template['temp_vapp'],
             storage_profile=config['broker']['storage_profile'])
         stdout(vapp_resource.Tasks.Task[0], ctx)
-
         vapp = VApp(client, resource=vapp_resource)
         vapp.reload()
-        moid = vapp.get_vm_moid(template['temp_vapp'])
-        vs = VSphere(
-            config['vcs']['host'],
-            config['vcs']['username'],
-            config['vcs']['password'],
-            port=int(config['vcs']['port']))
+        vs = get_vsphere(config, vapp, template['temp_vapp'])
         vs.connect()
+        moid = vapp.get_vm_moid(template['temp_vapp'])
         vm = vs.get_vm_by_moid(moid)
         vs.wait_until_tools_ready(
             vm, sleep=5, callback=wait_for_tools_ready_callback)
-
         click.secho(
             'Customizing vApp template \'%s\'' % template['temp_vapp'],
             fg='green')
@@ -530,7 +551,7 @@ def configure_amqp_settings(ctx, client, config, amqp_install):
 
 
 def register_extension(ctx, client, config):
-    ext = Extension(client)
+    ext = APIExtension(client)
     try:
         name = 'cse'
         cse_ext = ext.get_extension_info(name)
