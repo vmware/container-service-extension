@@ -304,7 +304,7 @@ version               0.3.0
 
 The process to upgrade `CSE` to the latest version involves the following steps:
 - gracefully stop `CSE` service
-- install the new version of the `container_service_extension` module. Use the command below.
+- install the new version of the `container-service-extension` module. Use the command below.
 - consult the release notes at the end of this document for version compatibility:
   - review the configuration file for any new options introduced or deprecated in the new version
   - if the previously generated templates are not longer supported by the new version, delete the templates and re-generate new ones.
@@ -312,7 +312,7 @@ The process to upgrade `CSE` to the latest version involves the following steps:
 
 Upgrade command:
 ```bash
-pip3 install --user --upgrade container_service_extension
+pip3 install --user --upgrade container-service-extension
 ```
 
 ## Tenant Installation
@@ -379,6 +379,15 @@ Here is a summary of the commands available to manage templates, clusters and no
 | `vcd cse node list <cluster-name>`                | List nodes of a cluster.                    |
 | `vcd cse node delete <cluster-name> [node-name]+` | Delete nodes from a cluster.                |
 
+
+Most of the `CSE` operations (actions `create` and `delete`) return a task. By default, `vcd-cli` displays the progress of the task until the task finishes or fails. When using the `--no-wait` option of `vcd-cli`, the `CSE` command will return with the task information, including the task id. Use the `vcd task wait <task-id>` command to display the status and progress of the task. Another useful command is `vcd task list running` to list the current running tasks in the user's organization.
+
+```
+$ vcd --no-wait cse cluster create mycluster --network intranet --ssh-key ~/.ssh/id_rsa.pub
+
+$ vcd task wait 377e802d-f278-44e8-9282-7ab822017cbd
+```
+
 Below are some usage examples:
 
 ```shell
@@ -428,6 +437,29 @@ $ open "http://${IP}:30001"
 # delete cluster when no longer needed
 $ vcd cse cluster delete mycluster --yes
 ```
+
+## Scripting and Programming
+
+`CSE` can be easily scripted via `vcd-cli` commands to automate the creation and operation of kubernetes clusters and nodes. `CSE` is also available through REST API and a Python library included in the module. As an example, the following Python script creates a kubernetes cluster programmatically on vCloud Director:
+
+```python
+#!/usr/bin/env python3
+from pyvcloud.vcd.client import BasicLoginCredentials
+from pyvcloud.vcd.client import Client
+from container_service_extension.client.cluster import Cluster
+
+client = Client('vcd.mysp.com’)
+client.set_credentials(BasicLoginCredentials('usr1', 'org1', '******'))
+
+cse = Cluster(client)
+result= cse.create_cluster('vdc1', 'net1', 'cluster1')
+task = client.get_resource(result['task_href'])
+task = client.get_task_monitor().wait_for_status(task)
+print(task.get('status'))
+
+client.logout()
+```
+
 
 # Reference
 
@@ -680,7 +712,6 @@ New features:
 - support multiple vCenters per vCD installation (new format of the `vcs` section in `config.yaml`)
 - added PhotonOS 2.0 template
 - support templates from versions `0.2.0` and up
-
 
 ### CSE 0.3.0
 
