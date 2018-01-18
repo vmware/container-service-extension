@@ -12,6 +12,7 @@ The current document covers the following `CSE` topics:
 - for Tenants:
   - [installation](#tenant-installation)
   - [usage](#using-the-container-service)
+  - [programming](#scripting-and-programming)
 - [reference](#reference)
   - [command syntax](#command-syntax)
   - [release notes](#release-notes)
