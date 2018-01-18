@@ -448,7 +448,7 @@ from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from container_service_extension.client.cluster import Cluster
 
-client = Client('vcd.mysp.com’)
+client = Client('vcd.mysp.com')
 client.set_credentials(BasicLoginCredentials('usr1', 'org1', '******'))
 
 cse = Cluster(client)
