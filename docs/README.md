@@ -769,6 +769,7 @@ New features:
 - upgraded Ubuntu template to Kubernetes 1.9.1
 - support templates from versions `0.2.0` and up, but re-creating the templates is recommended
 - scripts now upgrade the OS during the creation of the template
+- added `--update` template option to `cse install`
 
 ### CSE 0.3.0
 
