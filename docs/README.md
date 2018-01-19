@@ -301,6 +301,20 @@ status                Shutting down
 version               0.3.0
 ```
 
+### Monitoring
+
+Tenants can list their own clusters with the `vcd cse cluster list`. System administrators can list all the clusters running in the system with a search command using the metadata in the cluster vApp. Here is an example:
+
+```bash
+$ vcd search adminvapp -f 'metadata:cse.cluster.id!=STRING:'
+id                                    isDeployed    isEnabled      memoryAllocationMB  name        numberOfCpus    numberOfVMs  ownerName    status        storageKB  vdcName
+------------------------------------  ------------  -----------  --------------------  --------  --------------  -------------  -----------  ----------  -----------  -------
+ca3ba2d6-4a97-42f4-8fa8-dff7c9bff88d  true          true                         6144  cluster1               6              3  tenant1      POWERED_ON     50331648  vdc1
+fa879527-c4e1-4955-a8d1-ca4de377b553  true          true                         6144  cluster2               6              3  tenant2      POWERED_ON     50331648  vcd2
+81ef3214-db6e-4341-b0c5-9f44aea1da26  true          true                         6144  cluster3               6              3  tenant2      POWERED_ON     50331648  vdc2
+
+```
+
 ### Tuning
 
 `CSE` service uses threads to process requests. The number of AMQP listener threads can be configured in the `config.yaml` with the `listeners` property under the `service` section. The default value is `5` threads.
