@@ -9,40 +9,45 @@ systemctl restart networking.service
 growpart /dev/sda 1
 resize2fs /dev/sda1
 
-apt-get update
-apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+export DEBIAN_FRONTEND=noninteractive
+apt-get -q update
+apt-get -q install -y apt-transport-https ca-certificates curl software-properties-common
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 cat <<EOF > /etc/apt/sources.list.d/kubernetes.list
 deb http://apt.kubernetes.io/ kubernetes-xenial main
 EOF
 add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-apt-get update
-apt-get install -y docker-ce=17.09.0~ce-0~ubuntu
-apt-get install -y kubelet=1.8.2-00 kubeadm=1.8.2-00 kubectl=1.8.2-00 kubernetes-cni=0.5.1-00 --allow-unauthenticated
-apt-get autoremove -y
+apt-get -q update
+apt-get -q dist-upgrade -y
+apt-get -q install -y docker-ce=17.12.0~ce-0~ubuntu
+apt-get -q install -y kubelet=1.9.1-00 kubeadm=1.9.1-00 kubectl=1.9.1-00 kubernetes-cni=0.6.0-00 --allow-unauthenticated
+apt-get -q autoremove -y
 systemctl restart docker
-docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.8.2
-docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.8.2
-docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.8.2
-docker pull gcr.io/google_containers/kube-proxy-amd64:v1.8.2
-docker pull gcr.io/google_containers/etcd-amd64:3.0.17
+while [ `systemctl is-active docker` != 'active' ]; do echo 'waiting for docker'; sleep 5; done
+
+docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.9.1
+docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.9.1
+docker pull gcr.io/google_containers/kube-proxy-amd64:v1.9.1
+docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.9.1
+
+docker pull gcr.io/google_containers/etcd-amd64:3.1.10
 docker pull gcr.io/google_containers/pause-amd64:3.0
-docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.5
-docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.5
-docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.5
-docker pull weaveworks/weave-npc:2.0.5
-docker pull weaveworks/weave-kube:2.0.5
-docker pull weaveworks/weaveexec:2.0.5
+
+docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7
+docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.7
+docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.7
+
+docker pull weaveworks/weave-kube:2.1.3
+docker pull weaveworks/weave-npc:2.1.3
 
 export kubever=$(kubectl version --client | base64 | tr -d '\n')
-wget -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&version=2.0.5"
+wget -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&version=2.1.3"
 
 curl -L git.io/weave -o /usr/local/bin/weave
 chmod a+x /usr/local/bin/weave
 
 mkdir -p /root/go/bin
-mkdir -p /root/go/src/github.com/vmware/container-service-extension/pv
 
 wget --no-verbose https://storage.googleapis.com/golang/go1.9.2.linux-amd64.tar.gz
 tar -xf go1.9.2.linux-amd64.tar.gz

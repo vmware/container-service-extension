@@ -142,7 +142,7 @@ class Service(object, metaclass=Singleton):
                     }
                     reply['status_code'] = 500
                 else:
-                    message = 'CSE grateful shutdown started.'
+                    message = 'CSE graceful shutdown started.'
                     n = self.active_requests_count()
                     if n > 0:
                         message += ' CSE will finish processing %s requests.' \

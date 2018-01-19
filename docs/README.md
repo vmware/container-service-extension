@@ -148,10 +148,14 @@ The `cse install` command supports the following options:
 |:-------------------------|:--------------------------------------------------------|
 | `--config <config-file>` | Config file to use.                                     |
 | `--template <template>`  | Install the specified template.                         |
+| `--update`               | Update and overwrite the templates                      |
 | `--no-capture`           | Customize `temp_vapp` but not capture it as a template. |
 | `--amqp prompt`          | Ask before configuring AMQP (default).                  |
 | `--amqp skip`            | Do not configure AMQP settings.                         |
 | `--amqp config`          | Configure AMQP without asking for confirmation.         |
+| `--ext prompt`           | Ask before registering CSE as an extension (default).   |
+| `--ext skip`             | Do not register CSE as an extension.                    |
+| `--ext config`           | Register CSE as an extension asking for confirmation.   |
 
 Optionally, configure the API extension timeout (seconds) on the vCloud Director cell:
 
@@ -281,7 +285,7 @@ message     Updated
 $ vcd cse system stop -y
 property    value
 ----------  ---------------------------------------------------------------------
-message     CSE grateful shutdown started. CSE will finish processing 4 requests.
+message     CSE graceful shutdown started. CSE will finish processing 4 requests.
 
 $ vcd cse system info
 property              value
@@ -306,7 +310,7 @@ version               0.3.0
 The process to upgrade `CSE` to the latest version involves the following steps:
 - gracefully stop `CSE` service
 - install the new version of the `container-service-extension` module. Use the command below.
-- consult the release notes at the end of this document for version compatibility:
+- check the release notes at the end of this document for version compatibility:
   - review the configuration file for any new options introduced or deprecated in the new version
   - if the previously generated templates are not longer supported by the new version, delete the templates and re-generate new ones.
 - start the new version of the service with `systemctl start cse`
@@ -315,6 +319,52 @@ Upgrade command:
 ```bash
 pip3 install --user --upgrade container-service-extension
 ```
+
+### Updating Templates
+
+The templates used by `CSE` can be updated at any time. The `CSE` service should be gracefully stopped before updating templates. When creating (or updating) a template, new upgrades to the OS are installed in the template, therefore it is recommended to perform template updates on a regular basis. During instantiation of the templates as master or worker nodes, the software on the instantiated VM is the original software installed in the template and is not upgraded.
+
+In general, updating a template doesn't have any effect on existing kubernetes master and worker nodes. The release notes provides information about compatibility between versions of `CSE` and templates.
+
+Follow these steps to update a template:
+
+- stop the `CSE` service
+- update the desired template, for example:
+
+```shell
+$ cse install --config config.yaml --template photon-v2 --update --amqp skip --ext skip
+```
+
+Once a template has been updated, the `versionNumber` of the corresponding catalog item will be increased by one. The `versionNumber` can be checked with the `vcd catalog info` command, for example:
+
+```shell
+$ vcd catalog info cse photon-custom-hw11-2.0-304b817-k8s
+```
+
+- start the `CSE` service
+
+### Adding New Templates
+
+Documentation on how to add new templates will be provided soon.
+
+### Uninstalling
+
+`CSE` can be uninstalled from a vCloud Director instance following these steps:
+
+- stop the `CSE` service
+- unregister the `cse` API extension. As a System Administrator run:
+
+```shell
+$ vcd system extension delete cse
+```
+
+- review the `AMQP Broker` settings. It might not require any modification if there are other API extensions installed in the system.
+
+```shell
+$ vcd system amqp info
+```
+
+- optionally, delete the templates and the shared catalog if the templates won't be used.
 
 ## Tenant Installation
 
@@ -405,10 +455,10 @@ $ vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh
 # create a single node cluster, connected to the specified network. Nodes can be added later
 $ vcd cse cluster create mycluster --network intranet --nodes 0 --ssh-key ~/.ssh/id_rsa.pub
 
-# add 2 nodes to a cluster with 4GB of ram and 4 CPUs each, from the photon-v1 template
+# add 2 nodes to a cluster with 4GB of ram and 4 CPUs each, from the photon-v2 template
 # and using the specified storage profile
 $ vcd cse node create mycluster --nodes 2 --network intranet --ssh-key ~/.ssh/id_rsa.pub \
-                                --memory 4096 --cpu 4 --template photon-v1
+                                --memory 4096 --cpu 4 --template photon-v2
                                 --storage-profile Development
 
 # delete 2 nodes from a cluster
@@ -461,7 +511,6 @@ print(task.get('status'))
 client.logout()
 ```
 
-
 # Reference
 
 ## Command syntax
@@ -469,7 +518,7 @@ client.logout()
 `CSE` includes two commands:
 
 - `cse`
-  - used by the system administrator to install `CSE`, create templates and run the `CSE` service.
+  - used by the system administrator to install `CSE`, create and update templates and run the `CSE` service.
 - `vcd cse`
   - used by the system administrator to operate the service:
     - get status
@@ -499,9 +548,16 @@ Usage: vcd cse [OPTIONS] COMMAND [ARGS]...
           'vcd cse cluster create' creates a new kubernetes cluster in the
           current virtual datacenter.
 
+          'vcd cse node create' creates new and attach new nodes to an existing
+          kubernetes cluster in the current virtual datacenter.
+
+          When creating clusters and nodes, the '--network' option is required,
+          as they need a network to operate and no network will be selected by
+          default if omitted.
+
           Cluster names should follow the syntax for valid hostnames and can have
-          up to 25 characters .`system`, `template` and `swagger*` are reserved words and
-          cannot be used to name a cluster.
+          up to 25 characters .`system`, `template` and `swagger*` are reserved
+          words and cannot be used to name a cluster.
 
       Examples
           vcd cse cluster list
@@ -657,15 +713,19 @@ Usage: cse [OPTIONS] COMMAND [ARGS]...
           cse check
               Validate configuration.
 
-          cse install
+          cse install --config config.yaml
               Install CSE.
 
-          cse install --template photon-v1
+          cse install --config config.yaml --template photon-v2
               Install CSE. It only creates the template specified.
 
-          cse install --template photon-v1 --no-capture
+          cse install --config config.yaml --template photon-v2 --no-capture
               Install CSE. It only creates the temporary vApp specified in the
               config file. It will not capture the vApp in the catalog.
+
+          cse install --config config.yaml --template photon-v2 --update \
+                      --amqp skip --ext skip
+              Update the specified template.
 
           cse version
               Display version.
@@ -679,21 +739,16 @@ Usage: cse [OPTIONS] COMMAND [ARGS]...
               'config.yaml' in the current directory.
 
 
-
 Options:
   -h, --help  Show this message and exit.
 
 Commands:
-  check      check configuration
-  install    install CSE on vCD
-  run        run service
-  sample     generate sample configuration
-  uninstall  uninstall CSE from v
+  check    check configuration
+  install  install CSE on vCD
+  run      run service
+  sample   generate sample configuration
+  version  show version
 ```
-
-## Adding new Templates
-
-Documentation on how templates work and how to add new templates will be provided soon.
 
 ## Release Notes
 
@@ -703,16 +758,17 @@ Documentation on how templates work and how to add new templates will be provide
 
 Release date: TBD
 
-| vCD         | OS                   | Docker     | Kubernetes | Pod Network |
-|:------------|:---------------------|:-----------|:-----------|:------------|
-| 8.10 and up | Photon OS 1.0, Rev 2 | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
-| 8.10 and up | Photon OS 2.0 GA     | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
-| 8.10 and up | Ubuntu 16.04.3 LTS   | 17.09.0-ce | 1.8.2      | Weave 2.0.5 |
+| vCD         | OS                 | Docker     | Kubernetes | Pod Network |
+|:------------|:-------------------|:-----------|:-----------|:------------|
+| 8.10 and up | Photon OS 2.0 GA   | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
+| 8.10 and up | Ubuntu 16.04.3 LTS | 17.12.0-ce | 1.9.1      | Weave 2.1.3 |
 
 New features:
 - support multiple vCenters per vCD installation (new format of the `vcs` section in `config.yaml`)
-- added PhotonOS 2.0 template
-- support templates from versions `0.2.0` and up
+- upgraded PhotonOS template to version 2.0
+- upgraded Ubuntu template to Kubernetes 1.9.1
+- support templates from versions `0.2.0` and up, but re-creating the templates is recommended
+- scripts now upgrade the OS during the creation of the template
 
 ### CSE 0.3.0
 

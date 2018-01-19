@@ -52,31 +52,6 @@ OP_MESSAGE = {
 
 MAX_HOST_NAME_LENGTH = 25
 
-SAMPLE_TEMPLATE_PHOTON_V1 = {
-    'name':
-    'photon-v1',
-    'catalog_item':
-    'photon-custom-hw11-1.0-62c543d-k8s',
-    'source_ova_name':
-    'photon-custom-hw11-1.0-62c543d.ova',
-    'source_ova':
-    'https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova',  # NOQA
-    'sha1_ova':
-    '18c1a6d31545b757d897c61a0c3cc0e54d8aeeba',
-    'temp_vapp':
-    'photon1-temp',
-    'cleanup':
-    True,
-    'cpu':
-    2,
-    'mem':
-    2048,
-    'admin_password':
-    'guest_os_admin_password',
-    'description':
-    "PhotonOS v1\nDocker 17.06.0-1\nKubernetes 1.8.1\nweave 2.0.5"
-}
-
 SAMPLE_TEMPLATE_PHOTON_V2 = {
     'name':
     'photon-v2',
@@ -124,7 +99,7 @@ SAMPLE_TEMPLATE_UBUNTU_16_04 = {
     'admin_password':
     'guest_os_admin_password',
     'description':
-    'Ubuntu 16.04\nDocker 17.09.0~ce\nKubernetes 1.8.2\nweave 2.0.5'
+    'Ubuntu 16.04\nDocker 17.12.0~ce\nKubernetes 1.9.1\nweave 2.1.3'
 }
 
 SAMPLE_CONFIG = {
@@ -144,9 +119,9 @@ SAMPLE_CONFIG = {
         'storage_profile':
         '*',
         'default_template':
-        SAMPLE_TEMPLATE_PHOTON_V1['name'],
+        SAMPLE_TEMPLATE_PHOTON_V2['name'],
         'templates': [
-            SAMPLE_TEMPLATE_PHOTON_V1, SAMPLE_TEMPLATE_PHOTON_V2,
+            SAMPLE_TEMPLATE_PHOTON_V2,
             SAMPLE_TEMPLATE_UBUNTU_16_04
         ],
         'cse_msg_dir':
@@ -167,11 +142,11 @@ def validate_broker_config_elements(config):
         if k not in SAMPLE_CONFIG['broker'].keys():
             raise Exception('invalid key: %s' % k)
     for template in config['templates']:
-        for k, v in SAMPLE_TEMPLATE_PHOTON_V1.items():
+        for k, v in SAMPLE_TEMPLATE_PHOTON_V2.items():
             if k not in template.keys():
                 raise Exception('missing key: %s' % k)
         for k, v in template.items():
-            if k not in SAMPLE_TEMPLATE_PHOTON_V1.keys():
+            if k not in SAMPLE_TEMPLATE_PHOTON_V2.keys():
                 raise Exception('invalid key: %s' % k)
 
 

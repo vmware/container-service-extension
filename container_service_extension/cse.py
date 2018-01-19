@@ -14,7 +14,6 @@ from vcd_cli.vcd import abort_if_false
 from container_service_extension.config import check_config
 from container_service_extension.config import generate_sample_config
 from container_service_extension.config import install_cse
-from container_service_extension.config import uninstall_cse
 from container_service_extension.service import Service
 
 LOGGER = logging.getLogger('cse.cli')
@@ -40,15 +39,19 @@ def cli(ctx):
         cse check
             Validate configuration.
 \b
-        cse install
+        cse install --config config.yaml
             Install CSE.
 \b
-        cse install --template photon-v1
+        cse install --config config.yaml --template photon-v2
             Install CSE. It only creates the template specified.
 \b
-        cse install --template photon-v1 --no-capture
+        cse install --config config.yaml --template photon-v2 --no-capture
             Install CSE. It only creates the temporary vApp specified in the
             config file. It will not capture the vApp in the catalog.
+\b
+        cse install --config config.yaml --template photon-v2 --update \\
+                    --amqp skip --ext skip
+            Update the specified template.
 \b
         cse version
             Display version.
@@ -60,7 +63,6 @@ def cli(ctx):
             with the \'--config\' option will have preference over the
             environment variable. If both are omitted, it defaults to file
             \'config.yaml\' in the current directory.
-
     """
     if ctx.invoked_subcommand is None:
         click.secho(ctx.get_help())
@@ -135,6 +137,13 @@ def check(ctx, config, template):
     metavar='<template>',
     help='Install this template')
 @click.option(
+    '-u',
+    '--update',
+    is_flag=True,
+    default=False,
+    required=False,
+    help='Update template')
+@click.option(
     '-n',
     '--no-capture',
     is_flag=True,
@@ -148,45 +157,23 @@ def check(ctx, config, template):
     default='prompt',
     type=click.Choice(['prompt', 'skip', 'config']),
     help='AMQP configuration')
-def install(ctx, config, template, no_capture, amqp_install):
+@click.option(
+    '-e',
+    '--ext',
+    'ext_install',
+    default='prompt',
+    type=click.Choice(['prompt', 'skip', 'config']),
+    help='API Extension configuration')
+def install(ctx, config, template, update,
+            no_capture, amqp_install, ext_install):
     """Install CSE on vCloud Director."""
     try:
-        install_cse(ctx, config, template, no_capture, amqp_install)
+        install_cse(ctx, config, template, no_capture, update, amqp_install,
+                    ext_install)
     except Exception as e:
         LOGGER.error(traceback.format_exc())
         click.secho('An error has ocurred, %s'
                     '. See \'cse.log\' for details' % str(e))
-
-
-@cli.command(short_help='uninstall CSE from vCD')
-@click.pass_context
-@click.option(
-    '-c',
-    '--config',
-    'config',
-    type=click.Path(exists=True),
-    metavar='<config-file>',
-    envvar='CSE_CONFIG',
-    default='config.yaml',
-    help='Config file to use.')
-@click.option(
-    '-t',
-    '--template',
-    'template',
-    required=False,
-    default='*',
-    metavar='<template>',
-    help='template')
-@click.option(
-    '-y',
-    '--yes',
-    is_flag=True,
-    callback=abort_if_false,
-    expose_value=False,
-    prompt='Are you sure you want to uninstall CSE?')
-def uninstall(ctx, config, template):
-    """Uninstall CSE from vCloud Director."""
-    uninstall_cse(ctx, config, template)
 
 
 @cli.command(short_help='run service')

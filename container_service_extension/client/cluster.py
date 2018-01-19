@@ -4,6 +4,7 @@
 
 import json
 
+from lxml import objectify
 import requests
 
 from container_service_extension.cluster import TYPE_NODE
@@ -15,7 +16,14 @@ class Cluster(object):
         self._uri = self.client.get_api_uri() + '/cse'
 
     def _process_response(self, response):
-        content = json.loads(response.content.decode("utf-8"))
+        if response.status_code == 504:
+            message = 'An error has occurred.'
+            if response.content is not None and len(response.content) > 0:
+                obj = objectify.fromstring(response.content)
+                message = obj.get('message')
+            raise Exception(message)
+        decoded = response.content.decode("utf-8")
+        content = json.loads(decoded)
         if response.status_code in [
                 requests.codes.ok, requests.codes.created,
                 requests.codes.accepted

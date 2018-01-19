@@ -7,6 +7,7 @@ import os
 import site
 import sys
 import time
+import traceback
 from urllib.parse import urlparse
 
 import click
@@ -189,51 +190,8 @@ def check_config(config_file_name, template='*'):
     return config
 
 
-def uninstall_cse(ctx, config_file_name, template_name):
-    click.secho('Uninstalling CSE from vCD from file: %s, template: %s' %
-                (config_file_name, template_name))
-    config = get_config(config_file_name)
-    client = Client(
-        config['vcd']['host'],
-        api_version=config['vcd']['api_version'],
-        verify_ssl_certs=config['vcd']['verify'],
-        log_file='cse-uninstall.log',
-        log_headers=True,
-        log_bodies=True)
-    client.set_credentials(
-        BasicLoginCredentials(config['vcd']['username'], 'System',
-                              config['vcd']['password']))
-    click.echo('Connected to vCloud Director as system '
-               'administrator (%s:%s): %s' % (config['vcd']['host'],
-                                              config['vcd']['port'],
-                                              bool_to_msg(True)))
-    ctx.obj = {}
-    ctx.obj['client'] = client
-    if config['broker']['type'] == 'default':
-        ctx.obj = {}
-        ctx.obj['client'] = client
-        orgs = client.get_org_list()
-        for org in [o for o in orgs.Org if hasattr(orgs, 'Org')]:
-            if org.get('name') == config['broker']['org']:
-                org_href = org.get('href')
-        org = Org(client, href=org_href)
-        click.echo('Find org \'%s\': %s' % (org.get_name(), bool_to_msg(True)))
-        vdc_resource = org.get_vdc(config['broker']['vdc'])
-        click.echo('Find vdc \'%s\': %s' % (vdc_resource.get('name'),
-                                            bool_to_msg(True)))
-        vdc = VDC(client, resource=vdc_resource)
-        assert vdc
-        for template in config['broker']['templates']:
-            if template_name == '*' or template['name'] == template_name:
-                click.secho('Deleting template: %s (%s:%s)' %
-                            (template['name'], config['broker']['catalog'],
-                             template['catalog_item']))
-                org.delete_catalog_item(config['broker']['catalog'],
-                                        template['catalog_item'])
-
-
-def install_cse(ctx, config_file_name, template_name, no_capture,
-                amqp_install):
+def install_cse(ctx, config_file_name, template_name, no_capture, update,
+                amqp_install, ext_install):
     click.secho('Installing CSE on vCD from file: %s, template: %s' %
                 (config_file_name, template_name))
     config = get_config(config_file_name)
@@ -281,24 +239,45 @@ def install_cse(ctx, config_file_name, template_name, no_capture,
         for template in config['broker']['templates']:
             if template_name == '*' or template['name'] == template_name:
                 click.secho('Processing template: %s' % template['name'])
-                try:
-                    org.get_catalog_item(config['broker']['catalog'],
-                                         template['catalog_item'])
-                except Exception:
-                    create_template(ctx, config, client, org, vdc_resource,
-                                    catalog, no_capture, template)
                 k8s_template = None
                 try:
                     k8s_template = org.get_catalog_item(
-                        config['broker']['catalog'], template['catalog_item'])
+                                    config['broker']['catalog'],
+                                    template['catalog_item'])
+                    click.echo('Find template \'%s\', \'%s\': %s' %
+                               (config['broker']['catalog'],
+                                template['catalog_item'],
+                                bool_to_msg(k8s_template is not None)))
                 except Exception:
                     pass
-                click.echo('Find template \'%s\', \'%s\': %s' %
-                           (config['broker']['catalog'],
-                            template['catalog_item'],
-                            bool_to_msg(k8s_template is not None)))
+                try:
+                    if k8s_template is None or update:
+                        if update:
+                            click.secho('Updating template')
+                        else:
+                            click.secho('Creating template')
+                        create_template(ctx, config, client, org, vdc_resource,
+                                        catalog, no_capture, template)
+                        k8s_template = org.get_catalog_item(
+                            config['broker']['catalog'], template['catalog_item'])
+                        if update:
+                            click.echo('Updated template \'%s\', \'%s\': %s' %
+                                       (config['broker']['catalog'],
+                                        template['catalog_item'],
+                                        bool_to_msg(k8s_template is not None)))
+                        else:
+                            click.echo('Find template \'%s\', \'%s\': %s' %
+                                       (config['broker']['catalog'],
+                                        template['catalog_item'],
+                                        bool_to_msg(k8s_template is not None)))
+                except Exception:
+                    LOGGER.error(traceback.format_exc())
+                    click.echo('Can\'t create or update template \'%s\' '
+                               '\'%s\': %s' % (template['name'],
+                                               config['broker']['catalog'],
+                                               template['catalog_item']))
         configure_amqp_settings(ctx, client, config, amqp_install)
-        register_extension(ctx, client, config)
+        register_extension(ctx, client, config, ext_install)
         click.secho('Start CSE with: \'cse run %s\'' % config_file_name)
 
 
@@ -479,6 +458,8 @@ def create_template(ctx, config, client, org, vdc_resource, catalog,
         click.secho('stdout:')
         if len(result_stdout) > 0:
             click.secho(result_stdout, err=False)
+        if result[0] != 0:
+            raise Exception('Failed customizing VM')
 
     if not no_capture:
         capture_as_template(ctx, config, vapp_resource, org, catalog, template)
@@ -509,7 +490,8 @@ def capture_as_template(ctx, config, vapp_resource, org, catalog, template):
         vapp_resource.get('href'),
         template['catalog_item'],
         'CSE Kubernetes template',
-        customize_on_instantiate=True)
+        customize_on_instantiate=True,
+        overwrite=True)
     stdout(task, ctx)
     return True
 
@@ -550,19 +532,27 @@ def configure_amqp_settings(ctx, client, config, amqp_install):
         click.secho('Couldn\'t set vCD AMQP configuration.')
 
 
-def register_extension(ctx, client, config):
+def register_extension(ctx, client, config, ext_install):
+    if ext_install == 'skip':
+        click.secho('Extension configuration: skipped')
+        return
     ext = APIExtension(client)
     try:
         name = 'cse'
         cse_ext = ext.get_extension_info(name)
-        click.secho('Find extension \'%s\', enabled: %s: %s' %
+        click.secho('Find extension \'%s\', enabled=%s: %s' %
                     (name, cse_ext['enabled'], bool_to_msg(True)))
     except Exception:
+        if ext_install == 'prompt':
+            if not click.confirm('Do you want to register CSE as an API '
+                                 'extension in vCD?'):
+                click.secho('CSE not registered')
+                return
         exchange = 'vcdext'
         patterns = '/api/cse,/api/cse/.*,/api/cse/.*/.*'
         ext.add_extension(name, name, name, exchange, patterns.split(','))
         click.secho('Registered extension \'%s\': %s' % (name,
                                                          bool_to_msg(True)))
-    cse_ext = ext.get_extension_info(name)
-    click.secho('Current extension \'%s\' settings:' % name)
-    stdout(cse_ext, ctx)
+    # cse_ext = ext.get_extension_info(name)
+    # click.secho('Current extension \'%s\' settings:' % name)
+    # stdout(cse_ext, ctx)
