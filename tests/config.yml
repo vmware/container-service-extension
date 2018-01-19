@@ -2,7 +2,7 @@ vcd:
   host: myvcd.eng.vmware.com
   org: org1
   user: usr1
-  password: 'Pa$$w0rd'
+  password: '********'
   api_version: '29.0'
   catalog: 'cse'
   template: 'ubuntu-16.04-server-cloudimg-amd64.ova'
