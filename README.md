@@ -1,6 +1,6 @@
 # container-service-extension
 
-[![License](https://img.shields.io/pypi/l/container-service-extension.svg)](https://pypi.python.org/pypi/container-service-extension) [![Stable Version](https://img.shields.io/pypi/v/container-service-extension.svg)](https://pypi.python.org/pypi/container-service-extension) [![Join the chat at https://gitter.im/container-service-extension/Lobby](https://badges.gitter.im/container-service-extension/Lobby.svg)](https://gitter.im/container-service-extension/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![License](https://img.shields.io/pypi/l/container-service-extension.svg)](https://pypi.python.org/pypi/container-service-extension) [![Stable Version](https://img.shields.io/pypi/v/container-service-extension.svg)](https://pypi.python.org/pypi/container-service-extension) [![Join the chat at https://gitter.im/container-service-extension/Lobby](https://badges.gitter.im/container-service-extension/Lobby.svg)](https://gitter.im/container-service-extension/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Build Status](https://img.shields.io/travis/vmware/container-service-extension.svg?style=flat)](https://travis-ci.org/vmware/container-service-extension/)
 
 ## Overview
 
