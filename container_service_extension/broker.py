@@ -104,28 +104,16 @@ SAMPLE_TEMPLATE_UBUNTU_16_04 = {
 
 SAMPLE_CONFIG = {
     'broker': {
-        'type':
-        'default',
-        'org':
-        'Admin',
-        'vdc':
-        'Catalog',
-        'catalog':
-        'cse',
-        'network':
-        'admin_network',
-        'ip_allocation_mode':
-        'pool',
-        'storage_profile':
-        '*',
-        'default_template':
-        SAMPLE_TEMPLATE_PHOTON_V2['name'],
-        'templates': [
-            SAMPLE_TEMPLATE_PHOTON_V2,
-            SAMPLE_TEMPLATE_UBUNTU_16_04
-        ],
-        'cse_msg_dir':
-        '/tmp/cse'
+        'type': 'default',
+        'org': 'Admin',
+        'vdc': 'Catalog',
+        'catalog': 'cse',
+        'network': 'admin_network',
+        'ip_allocation_mode': 'pool',
+        'storage_profile': '*',
+        'default_template': SAMPLE_TEMPLATE_PHOTON_V2['name'],
+        'templates': [SAMPLE_TEMPLATE_PHOTON_V2, SAMPLE_TEMPLATE_UBUNTU_16_04],
+        'cse_msg_dir': '/tmp/cse'
     }
 }
 

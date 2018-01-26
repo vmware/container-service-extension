@@ -115,7 +115,7 @@ def get_config(config_file_name):
     return config
 
 
-def check_config(config_file_name, template='*'):
+def check_config(config_file_name, template=None):
     click.secho('Validating CSE on vCD from file: %s' % config_file_name)
     if sys.version_info.major >= 3 and sys.version_info.minor >= 6:
         python_valid = True
@@ -160,10 +160,6 @@ def check_config(config_file_name, template='*'):
                'administrator (%s:%s): %s' % (config['vcd']['host'],
                                               config['vcd']['port'],
                                               bool_to_msg(True)))
-    click.secho('Validating \'%s\' service broker' % config['broker']['type'])
-    if config['broker']['type'] == 'default':
-        validate_broker_config_content(config, client, template)
-
     platform = Platform(client)
     for vc in platform.list_vcenters():
         found = False
@@ -187,11 +183,20 @@ def check_config(config_file_name, template='*'):
                                     vsphere_url.hostname, vsphere_url.port,
                                     bool_to_msg(True)))
 
+    if template is None:
+        pass
+    else:
+        click.secho(
+            'Validating \'%s\' service broker' % config['broker']['type'])
+        if config['broker']['type'] == 'default':
+            validate_broker_config_content(config, client, template)
+
     return config
 
 
 def install_cse(ctx, config_file_name, template_name, no_capture, update,
                 amqp_install, ext_install):
+    check_config(config_file_name)
     click.secho('Installing CSE on vCD from file: %s, template: %s' %
                 (config_file_name, template_name))
     config = get_config(config_file_name)
@@ -242,8 +247,7 @@ def install_cse(ctx, config_file_name, template_name, no_capture, update,
                 k8s_template = None
                 try:
                     k8s_template = org.get_catalog_item(
-                                    config['broker']['catalog'],
-                                    template['catalog_item'])
+                        config['broker']['catalog'], template['catalog_item'])
                     click.echo('Find template \'%s\', \'%s\': %s' %
                                (config['broker']['catalog'],
                                 template['catalog_item'],
@@ -259,7 +263,8 @@ def install_cse(ctx, config_file_name, template_name, no_capture, update,
                         create_template(ctx, config, client, org, vdc_resource,
                                         catalog, no_capture, template)
                         k8s_template = org.get_catalog_item(
-                            config['broker']['catalog'], template['catalog_item'])
+                            config['broker']['catalog'],
+                            template['catalog_item'])
                         if update:
                             click.echo('Updated template \'%s\', \'%s\': %s' %
                                        (config['broker']['catalog'],
@@ -273,9 +278,9 @@ def install_cse(ctx, config_file_name, template_name, no_capture, update,
                 except Exception:
                     LOGGER.error(traceback.format_exc())
                     click.echo('Can\'t create or update template \'%s\' '
-                               '\'%s\': %s' % (template['name'],
-                                               config['broker']['catalog'],
-                                               template['catalog_item']))
+                               '\'%s\': %s' %
+                               (template['name'], config['broker']['catalog'],
+                                template['catalog_item']))
         configure_amqp_settings(ctx, client, config, amqp_install)
         register_extension(ctx, client, config, ext_install)
         click.secho('Start CSE with: \'cse run %s\'' % config_file_name)
