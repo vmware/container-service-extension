@@ -770,7 +770,7 @@ Commands:
 
 ### CSE 0.4.0
 
-Release date: TBD
+Release date: 2018-01-26
 
 | vCD         | OS                 | Docker     | Kubernetes | Pod Network |
 |:------------|:-------------------|:-----------|:-----------|:------------|
