@@ -1,15 +1,13 @@
 language: python
 
-virtualenv:
-  system_site_packages: true
-
 python:
   - '3.6'
 
 install:
-  - sudo pip install -r requirements.txt
-  - sudo python setup.py develop
-  - sudo pip install tox
+  - sudo mkdir -p /cse && sudo chmod a+rwx /cse
+  - pip install -r requirements.txt
+  - python setup.py develop
+  - pip install tox
 
 script:
   - pip list --format=columns | grep container-service-extension
