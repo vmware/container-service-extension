@@ -12,4 +12,5 @@ install:
 script:
   - pip list --format=columns | grep container-service-extension
   - python -c 'import pkg_resources; print(pkg_resources.require("container_service_extension")[0].version)'
+  - cse version
   - tox -e flake8
