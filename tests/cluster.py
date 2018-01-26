@@ -2,18 +2,15 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import os
 import unittest
-import yaml
-from pyvcloud.vcd.client import Client
+
 from pyvcloud.vcd.client import TaskStatus
 from pyvcloud.vcd.test import TestCase
 
-
 from container_service_extension.client.cluster import Cluster
 
-class TestCluster(TestCase):
 
+class TestCluster(TestCase):
     def test_01_template_list(self):
         logged_in_org = self.client.get_org()
         assert self.config['vcd']['org'] == logged_in_org.get('name')
@@ -54,10 +51,6 @@ class TestCluster(TestCase):
         cluster = Cluster(self.client)
         clusters = cluster.get_clusters()
         assert len(clusters) == 0
-
-
-
-
 
 
 if __name__ == '__main__':

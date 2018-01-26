@@ -9,7 +9,6 @@ import traceback
 
 import click
 from vcd_cli.utils import stdout
-from vcd_cli.vcd import abort_if_false
 
 from container_service_extension.config import check_config
 from container_service_extension.config import generate_sample_config
@@ -164,8 +163,8 @@ def check(ctx, config, template):
     default='prompt',
     type=click.Choice(['prompt', 'skip', 'config']),
     help='API Extension configuration')
-def install(ctx, config, template, update,
-            no_capture, amqp_install, ext_install):
+def install(ctx, config, template, update, no_capture, amqp_install,
+            ext_install):
     """Install CSE on vCloud Director."""
     try:
         install_cse(ctx, config, template, no_capture, update, amqp_install,
