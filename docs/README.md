@@ -768,6 +768,15 @@ Commands:
 
 `CSE` is supported on VMware vCloud Director versions `8.10.0` and up.
 
+### CSE 0.4.1
+
+Release date: 2018-02-05
+
+Maintenance release, improvements and bug fixes:
+- guest password is now set using guest operations instead of using guest customization, so it is not visible in the vapp customization section; it is recommended to set new password in the templates of `config.yaml` and re-create the templates.
+- fixed issue with Ubuntu template when resizing disk
+- fixed issue listing nodes
+
 ### CSE 0.4.0
 
 Release date: 2018-01-26

@@ -1,7 +1,10 @@
 CHANGES
 =======
 
-* template preparation fix and cluster info
+0.4.1
+-----
+
+* template preparation fix and cluster info (#69)
 * updated docs
 
 0.4.0
