@@ -4,6 +4,7 @@
 
 import logging
 import random
+import re
 import string
 import time
 
@@ -97,16 +98,7 @@ def load_from_metadata(client, name=None, cluster_id=None):
     return list(clusters_dict.values())
 
 
-def add_nodes(qty,
-              template,
-              node_type,
-              config,
-              client,
-              org,
-              vdc,
-              vapp,
-              body,
-              wait=True):
+def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
     if qty < 1:
         return None
     specs = []
@@ -122,10 +114,7 @@ def add_nodes(qty,
 if [ x$1=x"postcustomization" ];
 then
 """ # NOQA
-    cust_script_common = \
-"""
-echo "root:{password}" | chpasswd
-""".format(password=template['admin_password']) # NOQA
+    cust_script_common = ''
     if 'ssh_key' in body:
         cust_script_common += \
 """
@@ -167,10 +156,9 @@ fi
     else:
         reconfigure_hw = False
     task = vapp.add_vms(specs, power_on=not reconfigure_hw)
-    if wait:
-        # TODO(get details of the exception like not enough resources avail)
-        client.get_task_monitor().wait_for_status(task)
-    if wait and reconfigure_hw:
+    # TODO(get details of the exception like not enough resources avail)
+    client.get_task_monitor().wait_for_status(task)
+    if reconfigure_hw:
         vapp.reload()
         for spec in specs:
             vm_resource = vapp.get_vm(spec['target_vm_name'])
@@ -184,8 +172,24 @@ fi
                 client.get_task_monitor().wait_for_status(task)
             vm = VM(client, resource=vm_resource)
             task = vm.power_on()
-            if wait:
-                client.get_task_monitor().wait_for_status(task)
+            client.get_task_monitor().wait_for_status(task)
+    password = source_vapp.get_admin_password(source_vm)
+    vapp.reload()
+    for spec in specs:
+        vm_resource = vapp.get_vm(spec['target_vm_name'])
+        script = \
+"""#!/usr/bin/env bash
+echo "root:{password}" | chpasswd
+""".format(password=template['admin_password']) # NOQA
+        nodes = [vm_resource]
+        execute_script_in_nodes(
+            config,
+            vapp,
+            password,
+            script,
+            nodes,
+            check_tools=True,
+            wait=False)
     return {'task': task, 'specs': specs}
 
 
@@ -313,11 +317,17 @@ def execute_script_in_nodes(config,
                             password,
                             script,
                             nodes,
-                            check_tools=True):
+                            check_tools=True,
+                            wait=True):
     all_results = []
     for node in nodes:
+        if 'chpasswd' in script:
+            p = re.compile(':.*\"')
+            debug_script = p.sub(':***\"', script)
+        else:
+            debug_script = script
         LOGGER.debug('will try to execute script on %s:\n%s' %
-                     (node.get('name'), script))
+                     (node.get('name'), debug_script))
         vs = get_vsphere(config, vapp, node.get('name'))
         vs.connect()
         moid = vapp.get_vm_moid(node.get('name'))
@@ -327,20 +337,35 @@ def execute_script_in_nodes(config,
             vs.wait_until_tools_ready(
                 vm, sleep=5, callback=wait_for_tools_ready_callback)
             wait_until_ready_to_exec(vs, vm, password)
-        LOGGER.debug('about to execute script on %s' % node.get('name'))
-        result = vs.execute_script_in_guest(
-            vm,
-            'root',
-            password,
-            script,
-            target_file=None,
-            wait_for_completion=True,
-            wait_time=10,
-            get_output=True,
-            delete_script=True,
-            callback=wait_for_guest_execution_callback)
-        result_stdout = result[1].content.decode()
-        result_stderr = result[2].content.decode()
+        LOGGER.debug('about to execute script on %s, wait=%s' %
+                     (node.get('name'), wait))
+        if wait:
+            result = vs.execute_script_in_guest(
+                vm,
+                'root',
+                password,
+                script,
+                target_file=None,
+                wait_for_completion=True,
+                wait_time=10,
+                get_output=True,
+                delete_script=True,
+                callback=wait_for_guest_execution_callback)
+            result_stdout = result[1].content.decode()
+            result_stderr = result[2].content.decode()
+        else:
+            result = vs.execute_script_in_guest(
+                vm,
+                'root',
+                password,
+                script,
+                target_file=None,
+                wait_for_completion=False,
+                get_output=False,
+                delete_script=False,
+                callback=wait_for_guest_execution_callback)
+            result_stdout = ''
+            result_stderr = ''
         LOGGER.debug(result[0])
         LOGGER.debug(result_stderr)
         LOGGER.debug(result_stdout)

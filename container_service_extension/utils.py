@@ -76,7 +76,8 @@ def get_vsphere(config, vapp, vm_name):
                 break
         cache[vm_id] = cache_item
     else:
-        LOGGER.debug('retrieved from cache:\n%s' % cache[vm_id])
+        LOGGER.debug('vCenter retrieved from cache: %s / %s' %
+                     (vm_id, cache[vm_id]['hostname']))
 
     v = VSphere(cache[vm_id]['hostname'], cache[vm_id]['username'],
                 cache[vm_id]['password'], cache[vm_id]['port'])
