@@ -333,12 +333,22 @@ class DefaultBroker(threading.Thread):
             for vm in vms:
                 node_info = {
                     'name': vm.get('name'),
-                    'numberOfCpus': vm.VmSpecSection.NumCpus.text,
-                    'memoryMB':
-                    vm.VmSpecSection.MemoryResourceMb.Configured.text,
+                    'numberOfCpus': '',
+                    'memoryMB': '',
                     'status': VCLOUD_STATUS_MAP.get(int(vm.get('status'))),
-                    'ipAddress': vapp.get_primary_ip(vm.get('name'))
+                    'ipAddress': ''
                 }
+                if hasattr(vm, 'VmSpecSection'):
+                    node_info['numberOfCpus'] = vm.VmSpecSection.NumCpus.text
+                    node_info[
+                        'memoryMB'] = \
+                        vm.VmSpecSection.MemoryResourceMb.Configured.text
+                try:
+                    node_info['ipAddress'] = vapp.get_primary_ip(
+                        vm.get('name'))
+                except Exception:
+                    LOGGER.debug(
+                        'cannot get ip address for node %s' % vm.get('name'))
                 if vm.get('name').startswith(TYPE_MASTER):
                     node_info['node_type'] = 'master'
                     clusters[0].get('master_nodes').append(node_info)
@@ -430,17 +440,8 @@ class DefaultBroker(threading.Thread):
                 message='Creating master node for %s(%s)' % (self.cluster_name,
                                                              self.cluster_id))
             vapp.reload()
-            add_nodes(
-                1,
-                template,
-                TYPE_MASTER,
-                self.config,
-                self.client_tenant,
-                org,
-                vdc,
-                vapp,
-                self.body,
-                wait=True)
+            add_nodes(1, template, TYPE_MASTER, self.config,
+                      self.client_tenant, org, vdc, vapp, self.body)
             self.update_task(
                 TaskStatus.RUNNING,
                 message='Initializing cluster %s(%s)' % (self.cluster_name,
@@ -457,17 +458,9 @@ class DefaultBroker(threading.Thread):
                     message='Creating %s node(s) for %s(%s)' %
                     (self.body['node_count'], self.cluster_name,
                      self.cluster_id))
-                add_nodes(
-                    self.body['node_count'],
-                    template,
-                    TYPE_NODE,
-                    self.config,
-                    self.client_tenant,
-                    org,
-                    vdc,
-                    vapp,
-                    self.body,
-                    wait=True)
+                add_nodes(self.body['node_count'], template, TYPE_NODE,
+                          self.config, self.client_tenant, org, vdc, vapp,
+                          self.body)
                 self.update_task(
                     TaskStatus.RUNNING,
                     message='Adding %s node(s) to %s(%s)' %
@@ -601,17 +594,9 @@ class DefaultBroker(threading.Thread):
                 TaskStatus.RUNNING,
                 message='Creating %s node(s) for %s(%s)' %
                 (self.body['node_count'], self.cluster_name, self.cluster_id))
-            new_nodes = add_nodes(
-                self.body['node_count'],
-                template,
-                TYPE_NODE,
-                self.config,
-                self.client_tenant,
-                org,
-                vdc,
-                vapp,
-                self.body,
-                wait=True)
+            new_nodes = add_nodes(self.body['node_count'], template, TYPE_NODE,
+                                  self.config, self.client_tenant, org, vdc,
+                                  vapp, self.body)
             self.update_task(
                 TaskStatus.RUNNING,
                 message='Adding %s node(s) to %s(%s)' %

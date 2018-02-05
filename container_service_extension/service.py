@@ -172,6 +172,7 @@ class Service(object, metaclass=Singleton):
             '%(levelname)-8s %(message)s',
             datefmt='%m-%d %H:%M:%S',
             handlers=(handler, ))
+        logging.getLogger("pika").setLevel(logging.WARNING)
 
         message = """
 Container Service Extension for vCloud Director running
