@@ -186,6 +186,12 @@ vcd system extension list
 vcd system extension info cse
 ```
 
+Alternatively, the `CSE` api extension can be manually registered with a `vcd-cli` command as follows:
+
+```shell
+$ vcd system extension create cse cse cse vcdext '/api/cse, /api/cse/.*, /api/cse/.*/.*'
+```
+
 When upgrading from versions previous to `0.2.0`, re-register the extension:
 
 ```shell
