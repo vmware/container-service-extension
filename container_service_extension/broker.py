@@ -99,7 +99,7 @@ SAMPLE_TEMPLATE_UBUNTU_16_04 = {
     'admin_password':
     'guest_os_admin_password',
     'description':
-    'Ubuntu 16.04\nDocker 17.12.0~ce\nKubernetes 1.9.1\nweave 2.1.3'
+    'Ubuntu 16.04\nDocker 17.12.0~ce\nKubernetes 1.9.3\nweave 2.1.3'
 }
 
 SAMPLE_CONFIG = {

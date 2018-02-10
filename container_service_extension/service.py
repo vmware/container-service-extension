@@ -190,16 +190,11 @@ waiting for requests, press Ctrl+C to finish
 
         for n in range(num_consumers):
             try:
-                if amqp['ssl']:
-                    scheme = 'amqps'
-                else:
-                    scheme = 'amqp'
                 c = MessageConsumer(
-                    '%s://%s:%s@%s:%s/?socket_timeout=5' %
-                    (scheme, amqp['username'], amqp['password'], amqp['host'],
-                     amqp['port']), amqp['exchange'], amqp['routing_key'],
-                    self.config, self.config['vcd']['verify'],
-                    self.config['vcd']['log'])
+                    amqp['host'], amqp['port'], amqp['ssl'], amqp['vhost'],
+                    amqp['username'], amqp['password'], amqp['exchange'],
+                    amqp['routing_key'], self.config,
+                    self.config['vcd']['verify'], self.config['vcd']['log'])
                 name = 'MessageConsumer-%s' % n
                 t = Thread(name=name, target=consumer_thread, args=(c, ))
                 t.daemon = True

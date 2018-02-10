@@ -31,6 +31,7 @@ import yaml
 from container_service_extension.broker import get_sample_broker_config
 from container_service_extension.broker import validate_broker_config_content
 from container_service_extension.broker import validate_broker_config_elements
+from container_service_extension.consumer import EXCHANGE_TYPE
 from container_service_extension.utils import get_vsphere
 
 LOGGER = logging.getLogger('cse.config')
@@ -131,7 +132,14 @@ def check_config(config_file_name, template=None):
     amqp = config['amqp']
     credentials = pika.PlainCredentials(amqp['username'], amqp['password'])
     parameters = pika.ConnectionParameters(
-        amqp['host'], amqp['port'], '/', credentials, ssl=amqp['ssl'])
+        amqp['host'],
+        amqp['port'],
+        amqp['vhost'],
+        credentials,
+        ssl=amqp['ssl'],
+        connection_attempts=3,
+        retry_delay=2,
+        socket_timeout=5)
     connection = pika.BlockingConnection(parameters)
     click.echo('Connected to AMQP server (%s:%s): %s' %
                (amqp['host'], amqp['port'], bool_to_msg(connection.is_open)))
@@ -363,6 +371,7 @@ def wait_for_guest_execution_callback(message, exception=None):
     click.secho(message)
     if exception is not None:
         click.secho('  exception: %s' % str(exception))
+        LOGGER.error(traceback.format_exc())
 
 
 def create_template(ctx, config, client, org, vdc_resource, catalog,
@@ -429,42 +438,73 @@ def create_template(ctx, config, client, org, vdc_resource, catalog,
             storage_profile=config['broker']['storage_profile'])
         stdout(vapp_resource.Tasks.Task[0], ctx)
         vapp = VApp(client, resource=vapp_resource)
-        vapp.reload()
-        vs = get_vsphere(config, vapp, template['temp_vapp'])
-        vs.connect()
-        moid = vapp.get_vm_moid(template['temp_vapp'])
-        vm = vs.get_vm_by_moid(moid)
-        vs.wait_until_tools_ready(
-            vm, sleep=5, callback=wait_for_tools_ready_callback)
+        if template[
+                'source_ova_name'] == 'ubuntu-16.04-server-cloudimg-amd64.ova':
+            vapp.reload()
+            vs = get_vsphere(config, vapp, template['temp_vapp'])
+            vs.connect()
+            moid = vapp.get_vm_moid(template['temp_vapp'])
+            vm = vs.get_vm_by_moid(moid)
+            vs.wait_until_tools_ready(
+                vm, sleep=5, callback=wait_for_tools_ready_callback)
+            click.secho('Rebooting vApp (Ubuntu)', fg='green')
+            vapp.reload()
+            task = vapp.shutdown()
+            stdout(task, ctx)
+            vapp.reload()
+            task = vapp.power_on()
+            stdout(task, ctx)
         click.secho(
             'Customizing vApp template \'%s\'' % template['temp_vapp'],
             fg='green')
         vapp.reload()
         password_auto = vapp.get_admin_password(template['temp_vapp'])
         cust_script = get_data_file('cust-%s.sh' % template['name'])
-
-        result = vs.execute_script_in_guest(
-            vm,
-            'root',
-            password_auto,
-            cust_script,
-            target_file=None,
-            wait_for_completion=True,
-            wait_time=10,
-            get_output=True,
-            delete_script=True,
-            callback=wait_for_guest_execution_callback)
-        click.secho('Result: %s' % result, fg='green')
-        result_stdout = result[1].content.decode()
-        result_stderr = result[2].content.decode()
-        click.secho('stderr:')
-        if len(result_stderr) > 0:
-            click.secho(result_stderr, err=True)
-        click.secho('stdout:')
-        if len(result_stdout) > 0:
-            click.secho(result_stdout, err=False)
-        if result[0] != 0:
-            raise Exception('Failed customizing VM')
+        for attempt in range(5):
+            click.secho('Attempt #%s' % str(attempt + 1), fg='green')
+            vs = get_vsphere(config, vapp, template['temp_vapp'])
+            vs.connect()
+            moid = vapp.get_vm_moid(template['temp_vapp'])
+            vm = vs.get_vm_by_moid(moid)
+            vs.wait_until_tools_ready(
+                vm, sleep=5, callback=wait_for_tools_ready_callback)
+            result = []
+            try:
+                result = vs.execute_script_in_guest(
+                    vm,
+                    'root',
+                    password_auto,
+                    cust_script,
+                    target_file=None,
+                    wait_for_completion=True,
+                    wait_time=10,
+                    get_output=True,
+                    delete_script=True,
+                    callback=wait_for_guest_execution_callback)
+            except Exception as e:
+                LOGGER.error(traceback.format_exc())
+                click.secho(traceback.format_exc(), fg='red')
+            if len(result) > 0:
+                click.secho('Result: %s' % result)
+                result_stdout = result[1].content.decode()
+                result_stderr = result[2].content.decode()
+                click.secho('stderr:')
+                if len(result_stderr) > 0:
+                    click.secho(result_stderr, err=True)
+                click.secho('stdout:')
+                if len(result_stdout) > 0:
+                    click.secho(result_stdout, err=False)
+                if result[0] == 0:
+                    break
+            if len(result) == 0 or result[0] != 0:
+                click.secho(
+                    'Customization attempt #%s failed' % int(attempt + 1),
+                    fg='red')
+                if attempt < 4:
+                    click.secho('Will try again')
+                    time.sleep(5)
+                else:
+                    raise Exception('Failed to customize VM')
 
     if not no_capture:
         capture_as_template(ctx, config, vapp_resource, org, catalog, template)
@@ -535,6 +575,44 @@ def configure_amqp_settings(ctx, client, config, amqp_install):
         click.secho('Updated vCD AMQP configuration.')
     else:
         click.secho('Couldn\'t set vCD AMQP configuration.')
+    click.secho('Checking AMQP exchange \'%s\'' % amqp['exchange'])
+    credentials = pika.PlainCredentials(amqp['username'], amqp['password'])
+    parameters = pika.ConnectionParameters(
+        amqp['host'],
+        amqp['port'],
+        amqp['vhost'],
+        credentials,
+        ssl=amqp['ssl'],
+        connection_attempts=3,
+        retry_delay=2,
+        socket_timeout=5)
+    connection = pika.BlockingConnection(parameters)
+    click.echo('Connected to AMQP server (%s:%s): %s' %
+               (amqp['host'], amqp['port'], bool_to_msg(connection.is_open)))
+    channel = connection.channel()
+    try:
+        channel.exchange_declare(
+            exchange=amqp['exchange'],
+            exchange_type=EXCHANGE_TYPE,
+            passive=True,
+            durable=True,
+            auto_delete=False)
+        click.secho('Exchange \'%s\' found.' % amqp['exchange'])
+    except Exception:
+        click.secho(
+            'Exchange not found, creating exchange \'%s\'' % amqp['exchange'])
+        try:
+            channel = connection.channel()
+            channel.exchange_declare(
+                exchange=amqp['exchange'],
+                exchange_type=EXCHANGE_TYPE,
+                durable=True,
+                auto_delete=False)
+            click.secho('Exchange \'%s\' created.' % amqp['exchange'])
+        except Exception:
+            LOGGER.error(traceback.format_exc())
+            click.secho('Couldn\'t create exchange \'%s\'' % amqp['exchange'])
+    connection.close()
 
 
 def register_extension(ctx, client, config, ext_install):
@@ -553,11 +631,9 @@ def register_extension(ctx, client, config, ext_install):
                                  'extension in vCD?'):
                 click.secho('CSE not registered')
                 return
-        exchange = 'vcdext'
+        amqp = config['amqp']
+        exchange = amqp['exchange']
         patterns = '/api/cse,/api/cse/.*,/api/cse/.*/.*'
         ext.add_extension(name, name, name, exchange, patterns.split(','))
         click.secho('Registered extension \'%s\': %s' % (name,
                                                          bool_to_msg(True)))
-    # cse_ext = ext.get_extension_info(name)
-    # click.secho('Current extension \'%s\' settings:' % name)
-    # stdout(cse_ext, ctx)

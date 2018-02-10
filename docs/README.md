@@ -361,6 +361,10 @@ Once a template has been updated, the `versionNumber` of the corresponding catal
 $ vcd catalog info cse photon-custom-hw11-2.0-304b817-k8s
 ```
 
+Templates can be generated on the same vCD instance as `CSE` is running or on a separate vCD instance. If using a different vCD instance, the generated templates should be transferred to the instance running `CSE`. Different templates can be generated in parallel.
+
+In the current version, `CSE` service should be gracefully stopped during the time that the catalog item is being updated, to avoid errors in the `cluster` and `node` `create` commands.
+
 - start the `CSE` service
 
 ### Adding New Templates
@@ -774,14 +778,31 @@ Commands:
 
 `CSE` is supported on VMware vCloud Director versions `8.10.0` and up.
 
+### CSE 0.4.2
+
+Release date: 2018-02-15
+
+| vCD         | OS                 | Docker     | Kubernetes | Pod Network |
+|:------------|:-------------------|:-----------|:-----------|:------------|
+| 8.10 and up | Photon OS 2.0 GA   | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
+| 8.10 and up | Ubuntu 16.04.3 LTS | 17.12.0-ce | 1.9.3      | Weave 2.1.3 |
+
+Maintenance release, improvements and bug fixes:
+- support for latest Kubernetes 1.9.3 in Ubuntu template.
+- improved guest password configuration. It is recommended to set new password in the templates in `config.yaml` and re-create the templates.
+- this version of the PhotonOS template doesn't upgrade the OS to the latest version, since there is a problem with the latest version of `open-vm-tools`.
+- fixed issue while preparing Ubuntu template.
+- updated license files.
+- improved installation and validation of the AMQP settings.
+
 ### CSE 0.4.1
 
 Release date: 2018-02-05
 
 Maintenance release, improvements and bug fixes:
 - guest password is now set using guest operations instead of using guest customization, so it is not visible in the vapp customization section; it is recommended to set new password in the templates of `config.yaml` and re-create the templates.
-- fixed issue with Ubuntu template when resizing disk
-- fixed issue listing nodes
+- fixed issue with Ubuntu template when resizing disk.
+- fixed issue listing nodes.
 
 ### CSE 0.4.0
 

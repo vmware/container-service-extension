@@ -115,20 +115,21 @@ if [ x$1=x"postcustomization" ];
 then
 """ # NOQA
     cust_script_common = ''
-    if 'ssh_key' in body:
+    cust_script_end = \
+"""
+fi
+"""  # NOQA
+    if 'ssh_key' in body and body['ssh_key'] is not None:
         cust_script_common += \
 """
 mkdir -p /root/.ssh
 echo '{ssh_key}' >> /root/.ssh/authorized_keys
 chmod -R go-rwx /root/.ssh
 """.format(ssh_key=body['ssh_key'])  # NOQA
-    cust_script_end = \
-"""
-fi
-"""  # NOQA
-    cust_script = cust_script_init
-    cust_script += cust_script_common
-    cust_script += cust_script_end
+    if cust_script_common is '':
+        cust_script = None
+    else:
+        cust_script = cust_script_init + cust_script_common + cust_script_end
     for n in range(qty):
         name = None
         while True:
@@ -144,9 +145,10 @@ fi
             'target_vm_name': name,
             'hostname': name,
             'network': body['network'],
-            'ip_allocation_mode': 'pool',
-            'cust_script': cust_script
+            'ip_allocation_mode': 'pool'
         }
+        if cust_script is not None:
+            spec['cust_script'] = cust_script
         if storage_profile is not None:
             spec['storage_profile'] = storage_profile
         specs.append(spec)
@@ -177,16 +179,14 @@ fi
     vapp.reload()
     for spec in specs:
         vm_resource = vapp.get_vm(spec['target_vm_name'])
-        script = \
-"""#!/usr/bin/env bash
-echo "root:{password}" | chpasswd
-""".format(password=template['admin_password']) # NOQA
+        command = '/bin/echo "root:{password}" | chpasswd'.format(
+            password=template['admin_password'])
         nodes = [vm_resource]
         execute_script_in_nodes(
             config,
             vapp,
             password,
-            script,
+            command,
             nodes,
             check_tools=True,
             wait=False)
@@ -226,6 +226,7 @@ ip route get 1 | awk '{print $NF;exit}'
 
 
 def get_master_ip(config, vapp, template):
+    LOGGER.debug('getting master IP for vapp: %s' % vapp.resource.get('name'))
     script = \
 """#!/usr/bin/env bash
 ip route get 1 | awk '{print $NF;exit}'
@@ -238,7 +239,10 @@ ip route get 1 | awk '{print $NF;exit}'
         script,
         nodes,
         check_tools=False)
-    return result[0][1].content.decode().split()[0]
+    master_ip = result[0][1].content.decode().split()[0]
+    LOGGER.debug('getting master IP for vapp: %s, ip: %s' %
+                 (vapp.resource.get('name'), master_ip))
+    return master_ip
 
 
 def get_cluster_config(config, vapp, password):
@@ -337,8 +341,8 @@ def execute_script_in_nodes(config,
             vs.wait_until_tools_ready(
                 vm, sleep=5, callback=wait_for_tools_ready_callback)
             wait_until_ready_to_exec(vs, vm, password)
-        LOGGER.debug('about to execute script on %s, wait=%s' %
-                     (node.get('name'), wait))
+        LOGGER.debug('about to execute script on %s (vm=%s), wait=%s' %
+                     (node.get('name'), vm, wait))
         if wait:
             result = vs.execute_script_in_guest(
                 vm,
@@ -354,16 +358,15 @@ def execute_script_in_nodes(config,
             result_stdout = result[1].content.decode()
             result_stderr = result[2].content.decode()
         else:
-            result = vs.execute_script_in_guest(
-                vm,
-                'root',
-                password,
-                script,
-                target_file=None,
-                wait_for_completion=False,
-                get_output=False,
-                delete_script=False,
-                callback=wait_for_guest_execution_callback)
+            result = [
+                vs.execute_program_in_guest(
+                    vm,
+                    'root',
+                    password,
+                    script,
+                    wait_for_completion=False,
+                    get_output=False)
+            ]
             result_stdout = ''
             result_stderr = ''
         LOGGER.debug(result[0])

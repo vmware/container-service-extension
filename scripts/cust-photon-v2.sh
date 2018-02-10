@@ -25,7 +25,7 @@ systemctl start docker
 while [ `systemctl is-active docker` != 'active' ]; do echo 'waiting for docker'; sleep 5; done
 
 echo 'installing kuberentes'
-tdnf install -yq wget kubernetes-1.8.1-3.ph2 kubernetes-kubeadm-1.8.1-3.ph2
+tdnf install -yq wget kubernetes-1.8.1-5.ph2 kubernetes-kubeadm-1.8.1-5.ph2
 
 echo 'downloading container images'
 docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.8.1
@@ -45,15 +45,17 @@ export kubever=$(kubectl version --client | base64 | tr -d '\n')
 wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&version=2.0.5"
 
 ### harbor
-echo 'downloading harbor'
-curl --show-error --silent -L https://github.com/docker/compose/releases/download/1.18.0/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
-chmod +x /usr/local/bin/docker-compose
-wget --no-verbose https://github.com/vmware/harbor/releases/download/v1.2.2/harbor-offline-installer-v1.2.2.tgz
+# echo 'downloading harbor'
+# curl --show-error --silent -L https://github.com/docker/compose/releases/download/1.18.0/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+# chmod +x /usr/local/bin/docker-compose
+# wget --no-verbose https://github.com/vmware/harbor/releases/download/v1.2.2/harbor-offline-installer-v1.2.2.tgz
 
 ### common
-echo 'upgrading the system'
-tdnf -yq distro-sync
+# echo 'upgrading the system'
+# tdnf -yq distro-sync --refresh
+echo 'Notice: system not upgraded to the latest version'
+
 echo -n > /etc/machine-id
+sync
+sync
 echo 'customization completed'
-sync
-sync
