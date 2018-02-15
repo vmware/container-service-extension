@@ -1,6 +1,6 @@
 cachetools >= 2.0.1
 humanfriendly >= 4.8
 pika >= 0.11.2
-pyvcloud >= 19.1.1
-vcd-cli >= 20.1.1
-vsphere-guest-run >= 0.0.4
+pyvcloud >= 19.1.2
+vcd-cli >= 20.1.2
+vsphere-guest-run >= 0.0.5

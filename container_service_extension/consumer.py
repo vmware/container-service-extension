@@ -15,12 +15,17 @@ from container_service_extension.processor import ServiceProcessor
 
 LOGGER = logging.getLogger('cse.consumer')
 
+EXCHANGE_TYPE = 'direct'
+
 
 class MessageConsumer(object):
-    EXCHANGE_TYPE = 'direct'
-
     def __init__(self,
-                 amqp_url,
+                 host,
+                 port,
+                 ssl,
+                 vhost,
+                 username,
+                 password,
                  exchange,
                  routing_key,
                  config,
@@ -30,7 +35,12 @@ class MessageConsumer(object):
         self._channel = None
         self._closing = False
         self._consumer_tag = None
-        self._url = amqp_url
+        self.host = host
+        self.port = port
+        self.ssl = ssl
+        self.vhost = vhost
+        self.username = username
+        self.password = password
         self.exchange = exchange
         self.routing_key = routing_key
         self.queue = routing_key
@@ -42,11 +52,19 @@ class MessageConsumer(object):
         self.fsencoding = sys.getfilesystemencoding()
 
     def connect(self):
-        LOGGER.info('Connecting to %s', self._url)
+        LOGGER.info('Connecting to %s:%s' % (self.host, self.port))
+        credentials = pika.PlainCredentials(self.username, self.password)
+        parameters = pika.ConnectionParameters(
+            self.host,
+            self.port,
+            self.vhost,
+            credentials,
+            ssl=self.ssl,
+            connection_attempts=3,
+            retry_delay=2,
+            socket_timeout=5)
         return pika.SelectConnection(
-            pika.URLParameters(self._url),
-            self.on_connection_open,
-            stop_ioloop_on_close=False)
+            parameters, self.on_connection_open, stop_ioloop_on_close=False)
 
     def on_connection_open(self, unused_connection):
         LOGGER.debug('Connection opened')
@@ -97,11 +115,13 @@ class MessageConsumer(object):
         self._channel.exchange_declare(
             self.on_exchange_declareok,
             exchange=exchange_name,
-            exchange_type=self.EXCHANGE_TYPE,
-            durable=True)
+            exchange_type=EXCHANGE_TYPE,
+            passive=True,
+            durable=True,
+            auto_delete=False)
 
     def on_exchange_declareok(self, unused_frame):
-        LOGGER.debug('Exchange declared')
+        LOGGER.debug('Exchange declared: %s' % unused_frame)
         self.setup_queue(self.queue)
 
     def setup_queue(self, queue_name):

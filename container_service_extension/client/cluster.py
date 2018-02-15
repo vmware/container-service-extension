@@ -23,7 +23,10 @@ class Cluster(object):
                 message = obj.get('message')
             raise Exception(message)
         decoded = response.content.decode("utf-8")
-        content = json.loads(decoded)
+        if len(decoded) > 0:
+            content = json.loads(decoded)
+        else:
+            content = {}
         if response.status_code in [
                 requests.codes.ok, requests.codes.created,
                 requests.codes.accepted
