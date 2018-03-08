@@ -42,13 +42,7 @@ docker pull weaveworks/weave-npc:2.0.5
 docker pull weaveworks/weave-kube:2.0.5
 
 export kubever=$(kubectl version --client | base64 | tr -d '\n')
-wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&version=2.0.5"
-
-### harbor
-# echo 'downloading harbor'
-# curl --show-error --silent -L https://github.com/docker/compose/releases/download/1.18.0/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
-# chmod +x /usr/local/bin/docker-compose
-# wget --no-verbose https://github.com/vmware/harbor/releases/download/v1.2.2/harbor-offline-installer-v1.2.2.tgz
+wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&v=2.0.5"
 
 ### common
 # echo 'upgrading the system'
