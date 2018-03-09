@@ -778,6 +778,20 @@ Commands:
 
 `CSE` is supported on VMware vCloud Director versions `8.10.0` and up.
 
+### CSE 1.0.0
+
+Release date: 2018-03-09
+
+| vCD         | OS                 | Docker     | Kubernetes | Pod Network |
+|:------------|:-------------------|:-----------|:-----------|:------------|
+| 8.10 and up | Photon OS 2.0 GA   | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
+| 8.10 and up | Ubuntu 16.04.3 LTS | 17.12.0-ce | 1.9.3      | Weave 2.1.3 |
+
+CSE General Availability (GA), improvements and bug fixes:
+- updated dependencies
+- fixed template preparation issues related to open-vm-tools update
+- removed unnecessary file downloads
+
 ### CSE 0.4.2
 
 Release date: 2018-02-15

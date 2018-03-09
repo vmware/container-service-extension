@@ -1,8 +1,9 @@
 CHANGES
 =======
 
-* fix ubuntu customization
-* Updated prep scripts
+* Updated requirements
+* Fix template customization (#75)
+* VCDA-356: Add code of conduct and pull request template
 
 0.4.2
 -----
