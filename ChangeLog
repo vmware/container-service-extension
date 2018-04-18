@@ -1,7 +1,10 @@
 CHANGES
 =======
 
-* Updated requirements
+1.0.0
+-----
+
+* 1.0.0-GA (#76)
 * Fix template customization (#75)
 * VCDA-356: Add code of conduct and pull request template
 

@@ -24,38 +24,39 @@ deb http://apt.kubernetes.io/ kubernetes-xenial main
 EOF
 add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 apt-get -q update
-apt-get -q install -y docker-ce=17.12.0~ce-0~ubuntu
-apt-get -q install -y kubelet=1.9.3-00 kubeadm=1.9.3-00 kubectl=1.9.3-00 kubernetes-cni=0.6.0-00 --allow-unauthenticated
+apt-get -q install -y docker-ce=18.03.0~ce-0~ubuntu
+apt-get -q install -y kubelet=1.10.1-00 kubeadm=1.10.1-00 kubectl=1.10.1-00 kubernetes-cni=0.6.0-00 --allow-unauthenticated
 apt-get -q autoremove -y
 systemctl restart docker
 while [ `systemctl is-active docker` != 'active' ]; do echo 'waiting for docker'; sleep 5; done
 
 echo 'downloading container images'
-docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.9.3
-docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.9.3
-docker pull gcr.io/google_containers/kube-proxy-amd64:v1.9.3
-docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.9.3
+docker pull k8s.gcr.io/kube-apiserver-amd64:v1.10.1
+docker pull k8s.gcr.io/kube-controller-manager-amd64:v1.10.1
+docker pull k8s.gcr.io/kube-proxy-amd64:v1.10.1
+docker pull k8s.gcr.io/kube-scheduler-amd64:v1.10.1
 
-docker pull gcr.io/google_containers/etcd-amd64:3.1.11
-docker pull gcr.io/google_containers/pause-amd64:3.0
+docker pull k8s.gcr.io/etcd-amd64:3.1.12
+docker pull k8s.gcr.io/pause-amd64:3.1
 
-docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7
-docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.7
-docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.7
+docker pull k8s.gcr.io/k8s-dns-dnsmasq-nanny-amd64:1.14.8
+docker pull k8s.gcr.io/k8s-dns-kube-dns-amd64:1.14.8
+docker pull k8s.gcr.io/k8s-dns-sidecar-amd64:1.14.8
 
-docker pull weaveworks/weave-kube:2.1.3
-docker pull weaveworks/weave-npc:2.1.3
+docker pull weaveworks/weave-kube:2.3.0
+docker pull weaveworks/weave-npc:2.3.0
 
 export kubever=$(kubectl version --client | base64 | tr -d '\n')
-wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&v=2.1.3"
+wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&v=2.3.0"
 
 curl -L git.io/weave -o /usr/local/bin/weave
 chmod a+x /usr/local/bin/weave
 
 ### common
 echo 'upgrading the system'
-apt-mark hold open-vm-tools
+# apt-mark hold open-vm-tools
 apt-get -q dist-upgrade -y
+apt-get -q autoremove -y
 
 echo -n > /etc/machine-id
 sync
