@@ -85,9 +85,9 @@ SAMPLE_TEMPLATE_UBUNTU_16_04 = {
     'source_ova_name':
     'ubuntu-16.04-server-cloudimg-amd64.ova',
     'source_ova':
-    'https://cloud-images.ubuntu.com/releases/xenial/release-20171011/ubuntu-16.04-server-cloudimg-amd64.ova',  # NOQA
+    'https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova',  # NOQA
     'sha1_ova':
-    '1bddf68820c717e13c6d1acd800fb7b4d197b411',
+    'b8c183785bbf582bcd1be7cde7c22e5758fb3f16',
     'temp_vapp':
     'ubuntu1604-temp',
     'cleanup':
@@ -99,7 +99,7 @@ SAMPLE_TEMPLATE_UBUNTU_16_04 = {
     'admin_password':
     'guest_os_admin_password',
     'description':
-    'Ubuntu 16.04\nDocker 17.12.0~ce\nKubernetes 1.9.3\nweave 2.1.3'
+    'Ubuntu 16.04\nDocker 18.03.0~ce\nKubernetes 1.10.1\nweave 2.3.0'
 }
 
 SAMPLE_CONFIG = {
