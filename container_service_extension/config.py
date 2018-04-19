@@ -426,6 +426,7 @@ def create_template(ctx, config, client, org, vdc_resource, catalog,
             network=config['broker']['network'],
             fence_mode='bridged',
             ip_allocation_mode=config['broker']['ip_allocation_mode'],
+            network_adapter_type='vmxnet3',
             deploy=True,
             power_on=True,
             memory=template['mem'],
@@ -451,9 +452,14 @@ def create_template(ctx, config, client, org, vdc_resource, catalog,
             vapp.reload()
             task = vapp.shutdown()
             stdout(task, ctx)
-            vapp.reload()
-            task = vapp.power_on()
-            stdout(task, ctx)
+            while True:
+                vapp.reload()
+                try:
+                    task = vapp.power_on()
+                    stdout(task, ctx)
+                    break
+                except Exception:
+                    time.sleep(5)
         click.secho(
             'Customizing vApp template \'%s\'' % template['temp_vapp'],
             fg='green')

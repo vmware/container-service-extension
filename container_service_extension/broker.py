@@ -74,7 +74,7 @@ SAMPLE_TEMPLATE_PHOTON_V2 = {
     'admin_password':
     'guest_os_admin_password',
     'description':
-    "PhotonOS v2\nDocker 17.06.0-1\nKubernetes 1.8.1\nweave 2.0.5"
+    "PhotonOS v2\nDocker 17.06.0-4\nKubernetes 1.9.1\nweave 2.3.0"
 }
 
 SAMPLE_TEMPLATE_UBUNTU_16_04 = {

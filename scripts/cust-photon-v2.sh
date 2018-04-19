@@ -25,24 +25,24 @@ systemctl start docker
 while [ `systemctl is-active docker` != 'active' ]; do echo 'waiting for docker'; sleep 5; done
 
 echo 'installing kuberentes'
-tdnf install -yq wget kubernetes-1.8.1-5.ph2 kubernetes-kubeadm-1.8.1-5.ph2
+tdnf install -yq wget kubernetes-1.9.6-1.ph2 kubernetes-kubeadm-1.9.6-1.ph2
 
 echo 'downloading container images'
-docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.8.1
-docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.8.1
-docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.8.1
-docker pull gcr.io/google_containers/kube-proxy-amd64:v1.8.1
-docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.4
-docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.4
-docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.4
-docker pull gcr.io/google_containers/etcd-amd64:3.0.17
+docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.9.1
+docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.9.1
+docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.9.1
+docker pull gcr.io/google_containers/kube-proxy-amd64:v1.9.1
+docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.7
+docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.7
+docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7
+docker pull gcr.io/google_containers/etcd-amd64:3.1.11
 docker pull gcr.io/google_containers/pause-amd64:3.0
-
-docker pull weaveworks/weave-npc:2.0.5
-docker pull weaveworks/weave-kube:2.0.5
+#
+docker pull weaveworks/weave-npc:2.3.0
+docker pull weaveworks/weave-kube:2.3.0
 
 export kubever=$(kubectl version --client | base64 | tr -d '\n')
-wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&v=2.0.5"
+wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&v=2.3.0"
 
 ### common
 # echo 'upgrading the system'
