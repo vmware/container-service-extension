@@ -87,7 +87,7 @@ SAMPLE_TEMPLATE_UBUNTU_16_04 = {
     'source_ova':
     'https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova',  # NOQA
     'sha1_ova':
-    'b8c183785bbf582bcd1be7cde7c22e5758fb3f16',
+    '12014032ec640c9dd98e1839adbf5c40aca86344',
     'temp_vapp':
     'ubuntu1604-temp',
     'cleanup':
