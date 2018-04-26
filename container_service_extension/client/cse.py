@@ -228,7 +228,7 @@ def delete(ctx, name):
     'template',
     required=False,
     default=None,
-    help='Name of the template to instantiate nodess from')
+    help='Name of the template to instantiate nodes from')
 def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
            ssh_key_file, template):
     try:

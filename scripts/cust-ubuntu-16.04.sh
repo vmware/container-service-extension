@@ -52,11 +52,14 @@ wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$k
 curl -L git.io/weave -o /usr/local/bin/weave
 chmod a+x /usr/local/bin/weave
 
+echo 'installing nfs-client'
+apt-get -q install -y nfs-common
+
 ### common
 echo 'upgrading the system'
 # apt-mark hold open-vm-tools
-apt-get -q dist-upgrade -y
-apt-get -q autoremove -y
+# apt-get -q dist-upgrade -y
+# apt-get -q autoremove -y
 
 echo -n > /etc/machine-id
 sync
