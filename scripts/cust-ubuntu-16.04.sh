@@ -58,8 +58,8 @@ apt-get -q install -y nfs-common
 ### common
 echo 'upgrading the system'
 # apt-mark hold open-vm-tools
-# apt-get -q dist-upgrade -y
-# apt-get -q autoremove -y
+apt-get -q dist-upgrade -y
+apt-get -q autoremove -y
 
 echo -n > /etc/machine-id
 sync
