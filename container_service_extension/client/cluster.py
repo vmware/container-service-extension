@@ -7,7 +7,7 @@ import json
 from lxml import objectify
 import requests
 
-from container_service_extension.cluster import TYPE_NODE
+from container_service_extension.cluster import TYPE_WORKER
 
 
 class Cluster(object):
@@ -165,7 +165,7 @@ class Cluster(object):
                  storage_profile=None,
                  ssh_key=None,
                  template=None,
-                 node_type=TYPE_NODE):
+                 node_type=TYPE_WORKER):
         """Add nodes to a Kubernetes cluster.
 
         :param vdc: (str): The name of the vdc that contains the cluster
@@ -196,7 +196,8 @@ class Cluster(object):
             'network': network_name,
             'storage_profile': storage_profile,
             'ssh_key': ssh_key,
-            'template': template
+            'template': template,
+            'node_type': node_type
         }
         response = self.client._do_request_prim(
             method,

@@ -228,7 +228,7 @@ def delete(ctx, name):
     'template',
     required=False,
     default=None,
-    help='Name of the template to instantiate nodes from')
+    help='Name of the template to instantiate nodess from')
 def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
            ssh_key_file, template):
     try:
@@ -358,7 +358,7 @@ def node_group(ctx):
     'node_type',
     required=False,
     default='node',
-    type=click.Choice(['node']),
+    type=click.Choice(['node', 'nfs']),
     help='type of node to add')
 def create_node(ctx, name, node_count, cpu, memory, network_name,
                 storage_profile, ssh_key_file, template, node_type):
@@ -377,7 +377,8 @@ def create_node(ctx, name, node_count, cpu, memory, network_name,
             memory=memory,
             storage_profile=storage_profile,
             ssh_key=ssh_key,
-            template=template)
+            template=template,
+            node_type=node_type)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
