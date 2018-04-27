@@ -12,11 +12,12 @@ from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
 
+from container_service_extension.config import get_data_file
 from container_service_extension.utils import get_vsphere
 
 TYPE_MASTER = 'mstr'
 TYPE_WORKER = 'node'
-TYPE_NFS = 'nfs'
+TYPE_NFS = 'nfsd'
 LOGGER = logging.getLogger('cse.cluster')
 
 
@@ -128,12 +129,6 @@ echo '{ssh_key}' >> /root/.ssh/authorized_keys
 chmod -R go-rwx /root/.ssh
 """.format(ssh_key=body['ssh_key'])  # NOQA
 
-    if node_type == TYPE_NFS:
-        LOGGER.debug('Creating node of type %s' % node_type)
-        cust_script_common += \
-"""
-apt-get -q install -y nfs-kernel-server
-""" # NOQA
     if cust_script_common is '':
         cust_script = None
     else:
@@ -198,6 +193,13 @@ apt-get -q install -y nfs-kernel-server
             nodes,
             check_tools=True,
             wait=False)
+        if node_type == TYPE_NFS:
+            LOGGER.debug('Installing NFS server on %s' %
+                         spec['target_vm_name'])
+            script = get_data_file('nfs-%s.sh' % template['name'])
+            execute_script_in_nodes(config, vapp,
+                                    template['admin_password'],
+                                    script, nodes)
     return {'task': task, 'specs': specs}
 
 
