@@ -358,7 +358,7 @@ def node_group(ctx):
     'node_type',
     required=False,
     default='node',
-    type=click.Choice(['node', 'nfs']),
+    type=click.Choice(['node', 'nfsd']),
     help='type of node to add')
 def create_node(ctx, name, node_count, cpu, memory, network_name,
                 storage_profile, ssh_key_file, template, node_type):

@@ -609,7 +609,7 @@ class DefaultBroker(threading.Thread):
                             (self.body['node_count'],
                              self.cluster_name,
                              self.cluster_id))
-            if self.body['node_type'] == TYPE_WORKER:
+            elif self.body['node_type'] == TYPE_WORKER:
                 self.update_task(
                     TaskStatus.RUNNING,
                     message='Adding %s node(s) to %s(%s)' %

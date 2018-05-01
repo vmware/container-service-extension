@@ -12,7 +12,6 @@ from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
 
-from container_service_extension.config import get_data_file
 from container_service_extension.utils import get_vsphere
 
 TYPE_MASTER = 'mstr'
@@ -194,8 +193,9 @@ chmod -R go-rwx /root/.ssh
             check_tools=True,
             wait=False)
         if node_type == TYPE_NFS:
-            LOGGER.debug('Installing NFS server on %s' %
+            LOGGER.debug('Enabling NFS server on %s' %
                          spec['target_vm_name'])
+            from container_service_extension.config import get_data_file
             script = get_data_file('nfs-%s.sh' % template['name'])
             execute_script_in_nodes(config, vapp,
                                     template['admin_password'],
