@@ -53,8 +53,7 @@ curl -L git.io/weave -o /usr/local/bin/weave
 chmod a+x /usr/local/bin/weave
 
 echo 'installing required software for NFS'
-apt-get -q install -y nfs-common
-apt-get -q install -y nfs-kernel-server
+apt-get -q install -y nfs-common nfs-kernel-server
 systemctl stop nfs-kernel-server.service
 systemctl disable nfs-kernel-server.service
 

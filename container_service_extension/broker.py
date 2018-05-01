@@ -30,7 +30,7 @@ from container_service_extension.cluster import join_cluster
 from container_service_extension.cluster import load_from_metadata
 from container_service_extension.cluster import TYPE_MASTER
 from container_service_extension.cluster import TYPE_NFS
-from container_service_extension.cluster import TYPE_WORKER
+from container_service_extension.cluster import TYPE_NODE
 
 
 LOGGER = logging.getLogger('cse.broker')
@@ -354,7 +354,7 @@ class DefaultBroker(threading.Thread):
                 if vm.get('name').startswith(TYPE_MASTER):
                     node_info['node_type'] = 'master'
                     clusters[0].get('master_nodes').append(node_info)
-                elif vm.get('name').startswith(TYPE_WORKER):
+                elif vm.get('name').startswith(TYPE_NODE):
                     node_info['node_type'] = 'node'
                     clusters[0].get('nodes').append(node_info)
             result['body'] = clusters[0]
@@ -460,7 +460,7 @@ class DefaultBroker(threading.Thread):
                     message='Creating %s node(s) for %s(%s)' %
                     (self.body['node_count'], self.cluster_name,
                      self.cluster_id))
-                add_nodes(self.body['node_count'], template, TYPE_WORKER,
+                add_nodes(self.body['node_count'], template, TYPE_NODE,
                           self.config, self.client_tenant, org, vdc, vapp,
                           self.body)
                 self.update_task(
@@ -609,7 +609,7 @@ class DefaultBroker(threading.Thread):
                             (self.body['node_count'],
                              self.cluster_name,
                              self.cluster_id))
-            elif self.body['node_type'] == TYPE_WORKER:
+            elif self.body['node_type'] == TYPE_NODE:
                 self.update_task(
                     TaskStatus.RUNNING,
                     message='Adding %s node(s) to %s(%s)' %

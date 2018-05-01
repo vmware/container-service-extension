@@ -15,8 +15,9 @@ from pyvcloud.vcd.vm import VM
 from container_service_extension.utils import get_vsphere
 
 TYPE_MASTER = 'mstr'
-TYPE_WORKER = 'node'
+TYPE_NODE = 'node'
 TYPE_NFS = 'nfsd'
+
 LOGGER = logging.getLogger('cse.cluster')
 
 
@@ -196,7 +197,7 @@ chmod -R go-rwx /root/.ssh
             LOGGER.debug('Enabling NFS server on %s' %
                          spec['target_vm_name'])
             from container_service_extension.config import get_data_file
-            script = get_data_file('nfs-%s.sh' % template['name'])
+            script = get_data_file('nfsd-%s.sh' % template['name'])
             execute_script_in_nodes(config, vapp,
                                     template['admin_password'],
                                     script, nodes)
@@ -282,7 +283,7 @@ def join_cluster(config, vapp, template, target_nodes=None):
     tmp_script = get_data_file('node-%s.sh' % template['name'])
     script = tmp_script.format(token=init_info[0], ip=init_info[1])
     if target_nodes is None:
-        nodes = get_nodes(vapp, TYPE_WORKER)
+        nodes = get_nodes(vapp, TYPE_NODE)
     else:
         nodes = []
         for node in vapp.get_all_vms():
