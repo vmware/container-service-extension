@@ -305,7 +305,7 @@ def node_group(ctx):
     '--nodes',
     'node_count',
     required=False,
-    default=2,
+    default=1,
     type=click.INT,
     help='Number of nodes to create')
 @click.option(
