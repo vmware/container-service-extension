@@ -305,7 +305,7 @@ def node_group(ctx):
     '--nodes',
     'node_count',
     required=False,
-    default=2,
+    default=1,
     type=click.INT,
     help='Number of nodes to create')
 @click.option(
@@ -358,7 +358,7 @@ def node_group(ctx):
     'node_type',
     required=False,
     default='node',
-    type=click.Choice(['node']),
+    type=click.Choice(['node', 'nfsd']),
     help='type of node to add')
 def create_node(ctx, name, node_count, cpu, memory, network_name,
                 storage_profile, ssh_key_file, template, node_type):
@@ -377,7 +377,8 @@ def create_node(ctx, name, node_count, cpu, memory, network_name,
             memory=memory,
             storage_profile=storage_profile,
             ssh_key=ssh_key,
-            template=template)
+            template=template,
+            node_type=node_type)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)

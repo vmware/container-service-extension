@@ -16,6 +16,8 @@ from container_service_extension.utils import get_vsphere
 
 TYPE_MASTER = 'mstr'
 TYPE_NODE = 'node'
+TYPE_NFS = 'nfsd'
+
 LOGGER = logging.getLogger('cse.cluster')
 
 
@@ -126,6 +128,7 @@ mkdir -p /root/.ssh
 echo '{ssh_key}' >> /root/.ssh/authorized_keys
 chmod -R go-rwx /root/.ssh
 """.format(ssh_key=body['ssh_key'])  # NOQA
+
     if cust_script_common is '':
         cust_script = None
     else:
@@ -190,6 +193,14 @@ chmod -R go-rwx /root/.ssh
             nodes,
             check_tools=True,
             wait=False)
+        if node_type == TYPE_NFS:
+            LOGGER.debug('Enabling NFS server on %s' %
+                         spec['target_vm_name'])
+            from container_service_extension.config import get_data_file
+            script = get_data_file('nfsd-%s.sh' % template['name'])
+            execute_script_in_nodes(config, vapp,
+                                    template['admin_password'],
+                                    script, nodes)
     return {'task': task, 'specs': specs}
 
 

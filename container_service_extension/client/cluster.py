@@ -196,7 +196,8 @@ class Cluster(object):
             'network': network_name,
             'storage_profile': storage_profile,
             'ssh_key': ssh_key,
-            'template': template
+            'template': template,
+            'node_type': node_type
         }
         response = self.client._do_request_prim(
             method,

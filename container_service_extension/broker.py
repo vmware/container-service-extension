@@ -29,7 +29,9 @@ from container_service_extension.cluster import init_cluster
 from container_service_extension.cluster import join_cluster
 from container_service_extension.cluster import load_from_metadata
 from container_service_extension.cluster import TYPE_MASTER
+from container_service_extension.cluster import TYPE_NFS
 from container_service_extension.cluster import TYPE_NODE
+
 
 LOGGER = logging.getLogger('cse.broker')
 
@@ -593,23 +595,38 @@ class DefaultBroker(threading.Thread):
             self.update_task(
                 TaskStatus.RUNNING,
                 message='Creating %s node(s) for %s(%s)' %
-                (self.body['node_count'], self.cluster_name, self.cluster_id))
-            new_nodes = add_nodes(self.body['node_count'], template, TYPE_NODE,
-                                  self.config, self.client_tenant, org, vdc,
-                                  vapp, self.body)
-            self.update_task(
-                TaskStatus.RUNNING,
-                message='Adding %s node(s) to %s(%s)' %
-                (self.body['node_count'], self.cluster_name, self.cluster_id))
-            target_nodes = []
-            for spec in new_nodes['specs']:
-                target_nodes.append(spec['target_vm_name'])
-            vapp.reload()
-            join_cluster(self.config, vapp, template, target_nodes)
-            self.update_task(
-                TaskStatus.SUCCESS,
-                message='Added %s node(s) to cluster %s(%s)' %
-                (self.body['node_count'], self.cluster_name, self.cluster_id))
+                        (self.body['node_count'],
+                         self.cluster_name,
+                         self.cluster_id))
+            new_nodes = add_nodes(self.body['node_count'], template,
+                                  self.body['node_type'],
+                                  self.config, self.client_tenant,
+                                  org, vdc, vapp, self.body)
+            if self.body['node_type'] == TYPE_NFS:
+                self.update_task(
+                    TaskStatus.SUCCESS,
+                    message='Created %s node(s) for %s(%s)' %
+                            (self.body['node_count'],
+                             self.cluster_name,
+                             self.cluster_id))
+            elif self.body['node_type'] == TYPE_NODE:
+                self.update_task(
+                    TaskStatus.RUNNING,
+                    message='Adding %s node(s) to %s(%s)' %
+                            (self.body['node_count'],
+                             self.cluster_name,
+                             self.cluster_id))
+                target_nodes = []
+                for spec in new_nodes['specs']:
+                    target_nodes.append(spec['target_vm_name'])
+                vapp.reload()
+                join_cluster(self.config, vapp, template, target_nodes)
+                self.update_task(
+                    TaskStatus.SUCCESS,
+                    message='Added %s node(s) to cluster %s(%s)' %
+                            (self.body['node_count'],
+                             self.cluster_name,
+                             self.cluster_id))
         except Exception as e:
             LOGGER.error(traceback.format_exc())
             self.update_task(TaskStatus.ERROR, error_message=str(e))
