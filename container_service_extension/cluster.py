@@ -91,6 +91,7 @@ def load_from_metadata(client, name=None, cluster_id=None):
         cluster['vdc_href'] = node['vdc_href']
         cluster['master_nodes'] = []
         cluster['nodes'] = []
+        cluster['nfs_nodes'] = []
         cluster['number_of_vms'] = node['record'].get('numberOfVMs')
         if 'template' in node:
             cluster['template'] = node['template']

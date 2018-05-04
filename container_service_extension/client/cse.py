@@ -54,6 +54,17 @@ def cse(ctx):
                     --network net1 --storage-profile '*'
             Create a kubernetes cluster with 4 worker nodes.
 \b
+        vcd cse cluster create dev-cluster --nodes 2 \\
+                    --network net1 --enable-nfs
+            Create a kubernetes cluster with NFS support
+\b
+        vcd cse node create dev-cluster -N 2 --network net1 \\
+            Add 2 worker nodes to the cluster
+\b
+        vcd cse node create dev-cluster -N 1 --network net1 \\
+                    --type nfsd
+            Add a node of type NFS to the cluster
+\b
         vcd cse cluster delete dev-cluster
             Delete a kubernetes cluster by name.
 \b
@@ -229,8 +240,16 @@ def delete(ctx, name):
     required=False,
     default=None,
     help='Name of the template to instantiate nodes from')
+@click.option(
+    '--enable-nfs',
+    'enable_nfs',
+    is_flag=True,
+    required=False,
+    default=False,
+    metavar='[enable nfs]',
+    help='Creates an additional node of type NFS')
 def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
-           ssh_key_file, template):
+           ssh_key_file, template, enable_nfs):
     try:
         client = ctx.obj['client']
         cluster = Cluster(client)
@@ -246,7 +265,8 @@ def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
             memory=memory,
             storage_profile=storage_profile,
             ssh_key=ssh_key,
-            template=template)
+            template=template,
+            enable_nfs=enable_nfs)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -296,6 +316,18 @@ def node_group(ctx):
         except Exception as e:
             stderr(e, ctx)
 
+@node_group.command('info', short_help='get node info')
+@click.pass_context
+@click.argument('cluster_name', required=True)
+@click.argument('node_name', required=True)
+def node_info(ctx, cluster_name, node_name):
+    try:
+        client = ctx.obj['client']
+        cluster = Cluster(client)
+        node_info = cluster.get_node_info(cluster_name, node_name)
+        stdout(node_info, ctx, show_id=True)
+    except Exception as e:
+        stderr(e, ctx)
 
 @node_group.command('create', short_help='add node(s) to cluster')
 @click.pass_context
