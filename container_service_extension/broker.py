@@ -323,6 +323,13 @@ class DefaultBroker(threading.Thread):
         return result
 
     def get_cluster_info(self, name, headers, body):
+        """Gets info of the cluster
+
+            :param cluster_name: (str): Name of the cluster
+            param headers: (str): Request headers
+
+            :return: (dict): Info of the cluster.
+        """
         result = {}
         try:
             result['body'] = []
