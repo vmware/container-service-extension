@@ -8,7 +8,6 @@ import uuid
 
 import click
 import pkg_resources
-import subprocess
 from pyvcloud.vcd.client import _WellKnownEndpoint
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
@@ -24,6 +23,7 @@ import yaml
 
 from container_service_extension.cluster import add_nodes
 from container_service_extension.cluster import delete_nodes_from_cluster
+from container_service_extension.cluster import execute_script_in_nodes
 from container_service_extension.cluster import get_cluster_config
 from container_service_extension.cluster import get_master_ip
 from container_service_extension.cluster import init_cluster
@@ -323,12 +323,12 @@ class DefaultBroker(threading.Thread):
         return result
 
     def get_cluster_info(self, name, headers, body):
-        """Gets info of the cluster
+        """Get the info of the cluster.
 
-            :param cluster_name: (str): Name of the cluster
-            param headers: (str): Request headers
+        :param cluster_name: (str): Name of the cluster
+        :param headers: (str): Request headers
 
-            :return: (dict): Info of the cluster.
+        :return: (dict): Info of the cluster.
         """
         result = {}
         try:
@@ -365,9 +365,8 @@ class DefaultBroker(threading.Thread):
             result['message'] = str(e)
         return result
 
-
     def get_node_info(self, cluster_name, node_name, headers):
-        """Gets info of a given node in the cluster
+        """Get the info of a given node in the cluster.
 
         :param cluster_name: (str): Name of the cluster
         :param node_name: (str): Name of the node
@@ -380,7 +379,8 @@ class DefaultBroker(threading.Thread):
             result['body'] = []
             result['status_code'] = OK
             self._connect_tenant(headers)
-            clusters = load_from_metadata(self.client_tenant, name=cluster_name)
+            clusters = load_from_metadata(self.client_tenant,
+                                          name=cluster_name)
             if len(clusters) == 0:
                 raise Exception('Cluster \'%s\' not found.' % cluster_name)
             vapp = VApp(self.client_tenant, href=clusters[0]['vapp_href'])
@@ -396,7 +396,8 @@ class DefaultBroker(threading.Thread):
                         'ipAddress': ''
                     }
                     if hasattr(vm, 'VmSpecSection'):
-                        node_info['numberOfCpus'] = vm.VmSpecSection.NumCpus.text
+                        node_info[
+                            'numberOfCpus'] = vm.VmSpecSection.NumCpus.text
                         node_info[
                             'memoryMB'] = \
                             vm.VmSpecSection.MemoryResourceMb.Configured.text
@@ -404,17 +405,19 @@ class DefaultBroker(threading.Thread):
                         node_info['ipAddress'] = vapp.get_primary_ip(
                             vm.get('name'))
                     except Exception:
-                        LOGGER.debug(
-                            'cannot get ip address for node %s' % vm.get('name'))
+                        LOGGER.debug('cannot get ip address '
+                                     'for node %s' % vm.get('name'))
                     if vm.get('name').startswith(TYPE_MASTER):
                         node_info['node_type'] = 'master'
                     elif vm.get('name').startswith(TYPE_NODE):
                         node_info['node_type'] = 'node'
                     elif vm.get('name').startswith(TYPE_NFS):
                         node_info['node_type'] = 'nfsd'
-                        exports = self._get_nfs_exports(node_info['ipAddress'])
+                        exports = self._get_nfs_exports(node_info['ipAddress'],
+                                                        vapp,
+                                                        vm)
                         node_info['exports'] = exports
-            if node_info == None:
+            if node_info is None:
                 raise Exception('Node \'%s\' not found in cluster \'%s\''
                                 % (node_name, cluster_name))
             result['body'] = node_info
@@ -425,18 +428,29 @@ class DefaultBroker(threading.Thread):
             result['message'] = str(e)
         return result
 
-    def _get_nfs_exports(self, ip):
-        """Helper method to get exports from remote NFS server.
+    def _get_nfs_exports(self, ip, vapp, node):
+        """Get the exports from remote NFS server (helper method).
 
         :param ip: (str): IP address of the NFS server
+        :param vapp: (pyvcloud.vcd.vapp.VApp): The vApp or cluster
+         to which node belongs
+        :param node: (str): IP address of the NFS server
+        :param node: (`lxml.objectify.StringElement`) object
+        representing the vm resource.
 
         :return: (List): List of exports
         """
-        result = subprocess.Popen(['showmount', '-e', ip], stdout=subprocess.PIPE).stdout
-        result.readline()
+        # TODO(right template) find a right way to retrieve
+        # the template from which nfs node was created.
+        template = self.config['broker']['templates'][0]
+        script = '#!/usr/bin/env bash\nshowmount -e ' + '%s' % ip
+        result = execute_script_in_nodes(
+            self.config, vapp, template['admin_password'],
+            script, nodes=[node], check_tools=False)
+        lines = result[0][1].content.decode().split('\n')
         exports = []
-        for line in result:
-            export = line.strip().decode().split()[0]
+        for index in range(1, len(lines) - 1):
+            export = lines[index].strip().split()[0]
             exports.append(export)
         return exports
 
@@ -545,7 +559,7 @@ class DefaultBroker(threading.Thread):
                      self.cluster_id))
                 vapp.reload()
                 join_cluster(self.config, vapp, template)
-            if self.body['enable_nfs'] == True:
+            if self.body['enable_nfs']:
                 self.update_task(
                     TaskStatus.RUNNING,
                     message='Creating NFS node for %s(%s)' %

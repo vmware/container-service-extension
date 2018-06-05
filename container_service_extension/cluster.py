@@ -337,6 +337,7 @@ def execute_script_in_nodes(config,
                             wait=True):
     all_results = []
     for node in nodes:
+        print("inside execute script" + node.get('name'))
         if 'chpasswd' in script:
             p = re.compile(':.*\"')
             debug_script = p.sub(':***\"', script)
