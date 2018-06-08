@@ -443,7 +443,7 @@ class DefaultBroker(threading.Thread):
         # TODO(right template) find a right way to retrieve
         # the template from which nfs node was created.
         template = self.config['broker']['templates'][0]
-        script = '#!/usr/bin/env bash\nshowmount -e ' + '%s' % ip
+        script = '#!/usr/bin/env bash\nshowmount -e %s' % ip
         result = execute_script_in_nodes(
             self.config, vapp, template['admin_password'],
             script, nodes=[node], check_tools=False)

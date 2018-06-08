@@ -338,7 +338,6 @@ def get_data_file(file_name):
 def upload_source_ova(config, client, org, template):
     cse_cache_dir = os.path.join(os.getcwd(), 'cse_cache')
     cse_ova_file = os.path.join(cse_cache_dir, template['source_ova_name'])
-    print(cse_ova_file)
     if not os.path.exists(cse_ova_file):
         if not os.path.isdir(cse_cache_dir):
             os.makedirs(cse_cache_dir)
