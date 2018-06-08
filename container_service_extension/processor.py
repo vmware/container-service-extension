@@ -34,11 +34,13 @@ class ServiceProcessor(object):
         reply = {}
         tokens = body['requestUri'].split('/')
         cluster_name = None
+        node_name = None
         spec_request = False
         config_request = False
         template_request = False
         node_request = False
-        info_request = False
+        cluster_info_request = False
+        node_info_request = False
         system_request = False
         if len(tokens) > 3:
             if tokens[3] in ['swagger', 'swagger.json', 'swagger.yaml']:
@@ -54,9 +56,15 @@ class ServiceProcessor(object):
                 if tokens[4] == 'config':
                     config_request = True
                 elif tokens[4] == 'info':
-                    info_request = True
+                    cluster_info_request = True
                 elif tokens[4] == 'node':
                     node_request = True
+                elif tokens[4] != '':
+                    node_name = tokens[4]
+        if len(tokens) > 5:
+            if node_name is not None:
+                if tokens[5] == 'info':
+                    node_info_request = True
         if len(body['body']) > 0:
             try:
                 request_body = json.loads(
@@ -101,10 +109,15 @@ class ServiceProcessor(object):
                 result['body'] = templates
                 result['status_code'] = 200
                 reply = result
-            elif info_request:
+            elif cluster_info_request:
                 broker = get_new_broker(self.config)
                 reply = broker.get_cluster_info(cluster_name, body['headers'],
                                                 request_body)
+            elif node_info_request:
+                broker = get_new_broker(self.config)
+                reply = broker.get_node_info(cluster_name,
+                                             node_name,
+                                             body['headers'])
             elif system_request:
                 result = {}
                 result['body'] = service.info(body['headers'])

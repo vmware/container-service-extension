@@ -23,6 +23,7 @@ import yaml
 
 from container_service_extension.cluster import add_nodes
 from container_service_extension.cluster import delete_nodes_from_cluster
+from container_service_extension.cluster import execute_script_in_nodes
 from container_service_extension.cluster import get_cluster_config
 from container_service_extension.cluster import get_master_ip
 from container_service_extension.cluster import init_cluster
@@ -322,6 +323,13 @@ class DefaultBroker(threading.Thread):
         return result
 
     def get_cluster_info(self, name, headers, body):
+        """Get the info of the cluster.
+
+        :param cluster_name: (str): Name of the cluster
+        :param headers: (str): Request headers
+
+        :return: (dict): Info of the cluster.
+        """
         result = {}
         try:
             result['body'] = []
@@ -335,16 +343,8 @@ class DefaultBroker(threading.Thread):
             for vm in vms:
                 node_info = {
                     'name': vm.get('name'),
-                    'numberOfCpus': '',
-                    'memoryMB': '',
-                    'status': VCLOUD_STATUS_MAP.get(int(vm.get('status'))),
                     'ipAddress': ''
                 }
-                if hasattr(vm, 'VmSpecSection'):
-                    node_info['numberOfCpus'] = vm.VmSpecSection.NumCpus.text
-                    node_info[
-                        'memoryMB'] = \
-                        vm.VmSpecSection.MemoryResourceMb.Configured.text
                 try:
                     node_info['ipAddress'] = vapp.get_primary_ip(
                         vm.get('name'))
@@ -352,11 +352,11 @@ class DefaultBroker(threading.Thread):
                     LOGGER.debug(
                         'cannot get ip address for node %s' % vm.get('name'))
                 if vm.get('name').startswith(TYPE_MASTER):
-                    node_info['node_type'] = 'master'
                     clusters[0].get('master_nodes').append(node_info)
                 elif vm.get('name').startswith(TYPE_NODE):
-                    node_info['node_type'] = 'node'
                     clusters[0].get('nodes').append(node_info)
+                elif vm.get('name').startswith(TYPE_NFS):
+                    clusters[0].get('nfs_nodes').append(node_info)
             result['body'] = clusters[0]
         except Exception as e:
             LOGGER.error(traceback.format_exc())
@@ -364,6 +364,95 @@ class DefaultBroker(threading.Thread):
             result['status_code'] = INTERNAL_SERVER_ERROR
             result['message'] = str(e)
         return result
+
+    def get_node_info(self, cluster_name, node_name, headers):
+        """Get the info of a given node in the cluster.
+
+        :param cluster_name: (str): Name of the cluster
+        :param node_name: (str): Name of the node
+        :param headers: (str): Request headers
+
+        :return: (dict): Info of the node.
+        """
+        result = {}
+        try:
+            result['body'] = []
+            result['status_code'] = OK
+            self._connect_tenant(headers)
+            clusters = load_from_metadata(self.client_tenant,
+                                          name=cluster_name)
+            if len(clusters) == 0:
+                raise Exception('Cluster \'%s\' not found.' % cluster_name)
+            vapp = VApp(self.client_tenant, href=clusters[0]['vapp_href'])
+            vms = vapp.get_all_vms()
+            node_info = None
+            for vm in vms:
+                if (node_name == vm.get('name')):
+                    node_info = {
+                        'name': vm.get('name'),
+                        'numberOfCpus': '',
+                        'memoryMB': '',
+                        'status': VCLOUD_STATUS_MAP.get(int(vm.get('status'))),
+                        'ipAddress': ''
+                    }
+                    if hasattr(vm, 'VmSpecSection'):
+                        node_info[
+                            'numberOfCpus'] = vm.VmSpecSection.NumCpus.text
+                        node_info[
+                            'memoryMB'] = \
+                            vm.VmSpecSection.MemoryResourceMb.Configured.text
+                    try:
+                        node_info['ipAddress'] = vapp.get_primary_ip(
+                            vm.get('name'))
+                    except Exception:
+                        LOGGER.debug('cannot get ip address '
+                                     'for node %s' % vm.get('name'))
+                    if vm.get('name').startswith(TYPE_MASTER):
+                        node_info['node_type'] = 'master'
+                    elif vm.get('name').startswith(TYPE_NODE):
+                        node_info['node_type'] = 'node'
+                    elif vm.get('name').startswith(TYPE_NFS):
+                        node_info['node_type'] = 'nfsd'
+                        exports = self._get_nfs_exports(node_info['ipAddress'],
+                                                        vapp,
+                                                        vm)
+                        node_info['exports'] = exports
+            if node_info is None:
+                raise Exception('Node \'%s\' not found in cluster \'%s\''
+                                % (node_name, cluster_name))
+            result['body'] = node_info
+        except Exception as e:
+            LOGGER.error(traceback.format_exc())
+            result['body'] = []
+            result['status_code'] = INTERNAL_SERVER_ERROR
+            result['message'] = str(e)
+        return result
+
+    def _get_nfs_exports(self, ip, vapp, node):
+        """Get the exports from remote NFS server (helper method).
+
+        :param ip: (str): IP address of the NFS server
+        :param vapp: (pyvcloud.vcd.vapp.VApp): The vApp or cluster
+         to which node belongs
+        :param node: (str): IP address of the NFS server
+        :param node: (`lxml.objectify.StringElement`) object
+        representing the vm resource.
+
+        :return: (List): List of exports
+        """
+        # TODO(right template) find a right way to retrieve
+        # the template from which nfs node was created.
+        template = self.config['broker']['templates'][0]
+        script = '#!/usr/bin/env bash\nshowmount -e %s' % ip
+        result = execute_script_in_nodes(
+            self.config, vapp, template['admin_password'],
+            script, nodes=[node], check_tools=False)
+        lines = result[0][1].content.decode().split('\n')
+        exports = []
+        for index in range(1, len(lines) - 1):
+            export = lines[index].strip().split()[0]
+            exports.append(export)
+        return exports
 
     def create_cluster(self, headers, body):
         result = {}
@@ -470,6 +559,15 @@ class DefaultBroker(threading.Thread):
                      self.cluster_id))
                 vapp.reload()
                 join_cluster(self.config, vapp, template)
+            if self.body['enable_nfs']:
+                self.update_task(
+                    TaskStatus.RUNNING,
+                    message='Creating NFS node for %s(%s)' %
+                            (self.cluster_name,
+                             self.cluster_id))
+                add_nodes(1, template, TYPE_NFS,
+                          self.config, self.client_tenant, org, vdc, vapp,
+                          self.body)
             self.update_task(
                 TaskStatus.SUCCESS,
                 message='Created cluster %s(%s)' % (self.cluster_name,

@@ -86,7 +86,8 @@ class Cluster(object):
                        memory=None,
                        storage_profile=None,
                        ssh_key=None,
-                       template=None):
+                       template=None,
+                       enable_nfs=False):
         """Create a new Kubernetes cluster.
 
         :param vdc: (str): The name of the vdc in which the cluster will be
@@ -105,6 +106,8 @@ class Cluster(object):
             node vms without explicitly providing passwords
         :param template: (str): The name of the template to use to
             instantiate the nodes
+        :param enable_nfs: (bool): bool value to indicate if NFS node is to be
+            created.
         :return: (json) A parsed json object describing the requested cluster.
         """
         method = 'POST'
@@ -118,7 +121,8 @@ class Cluster(object):
             'network': network_name,
             'storage_profile': storage_profile,
             'ssh_key': ssh_key,
-            'template': template
+            'template': template,
+            'enable_nfs': enable_nfs
         }
         response = self.client._do_request_prim(
             method,
@@ -154,6 +158,19 @@ class Cluster(object):
             return response.content.decode('utf-8').replace('\\n', '\n')[1:-1]
         else:
             return self._process_response(response)
+
+    def get_node_info(self, cluster_name, node_name):
+        method = 'GET'
+        uri = '%s/%s/%s/info' % (self._uri, cluster_name, node_name)
+        response = self.client._do_request_prim(
+            method,
+            uri,
+            self.client._session,
+            contents=None,
+            media_type=None,
+            accept_type='application/*+json',
+            auth=None)
+        return self._process_response(response)
 
     def add_node(self,
                  vdc,
