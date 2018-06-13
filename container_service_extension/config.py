@@ -5,6 +5,7 @@ import hashlib
 import logging
 import os
 import site
+import stat
 import sys
 import time
 import traceback
@@ -118,6 +119,22 @@ def get_config(config_file_name):
 
 def check_config(config_file_name, template=None):
     click.secho('Validating CSE on vCD from file: %s' % config_file_name)
+    st = os.stat(config_file_name).st_mode
+    invalid_file_permissions = False
+    if st & stat.S_IXUSR:
+        click.secho('Remove execute permission of the Owner for the '
+                    'file %s' % config_file_name, fg='red')
+        invalid_file_permissions = True
+    if st & stat.S_IROTH or st & stat.S_IWOTH or st & stat.S_IXOTH:
+        click.secho('Remove read, write and execute permissions of Others'
+                    ' for the file %s' % config_file_name, fg='red')
+        invalid_file_permissions = True
+    if st & stat.S_IRGRP or st & stat.S_IWGRP or st & stat.S_IXGRP:
+        click.secho('Remove read, write and execute permissions of Group'
+                    ' for the file %s' % config_file_name, fg='red')
+        invalid_file_permissions = True
+    if invalid_file_permissions:
+        sys.exit(1)
     if sys.version_info.major >= 3 and sys.version_info.minor >= 6:
         python_valid = True
     else:
