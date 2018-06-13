@@ -1,17 +1,17 @@
 vcd:
-  host: myvcd.eng.vmware.com
-  org: org1
-  user: usr1
-  password: '********'
-  api_version: '29.0'
+  host: 10.150.198.116
+  org: cseOrg
+  user: administrator
+  password: 'ca$hc0w'
+  api_version: '30.0'
   catalog: 'cse'
   template: 'ubuntu-16.04-server-cloudimg-amd64.ova'
   vm: 'ubuntu-xenial-16.04-cloudimg-20171011'
   local_template: 'photon-custom-hw10-1.0-62c543d.ova'
-  org_to_use: org1
-  vdc: vdc1
-  new_vdc: v2
-  network: global
+  org_to_use: cseOrg
+  vdc: cseOvdc
+  new_vdc: cseOvdc
+  network: TestbedPG
   vapp: kp
   vm: node-t59b
   cpu: 1
