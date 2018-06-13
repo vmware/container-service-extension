@@ -448,9 +448,11 @@ Here is a summary of the commands available to manage templates, clusters and no
 |:--------------------------------------------------|:--------------------------------------------|
 | `vcd cse template list`                           | List available templates to create clusters |
 | `vcd cse cluster create <cluster-name>`           | Create a new kubernetes cluster             |
+| `vcd cse cluster create <cluster-name> --enabe-nfs`| Create a new kubernetes cluster with NFS PV support.|
 | `vcd cse cluster list`                            | List created clusters.                      |
 | `vcd cse cluster delete <cluster-name>`           | Delete a kubernetes cluster.                |
 | `vcd cse node create <cluster-name> --nodes n`    | Add `n` nodes to a cluster.                 |
+| `vcd cse node create <cluster-name> --type nfsd`  | Add an NFS node to a cluster.               |
 | `vcd cse node list <cluster-name>`                | List nodes of a cluster.                    |
 | `vcd cse node delete <cluster-name> [node-name]+` | Delete nodes from a cluster.                |
 
@@ -479,6 +481,11 @@ $ vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh
 # create a single node cluster, connected to the specified network. Nodes can be added later
 $ vcd cse cluster create mycluster --network intranet --nodes 0 --ssh-key ~/.ssh/id_rsa.pub
 
+# create cluster mycluster with one master, three worker nodes, connected to provided network
+# and one node of type NFS server
+$ vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh/id_rsa.pub
+                                   --type nfsd
+
 # add 2 nodes to a cluster with 4GB of ram and 4 CPUs each, from the photon-v2 template
 # and using the specified storage profile
 $ vcd cse node create mycluster --nodes 2 --network intranet --ssh-key ~/.ssh/id_rsa.pub \
@@ -490,6 +497,9 @@ $ vcd cse node delete mycluster node-dj3s node-b4rt --yes
 
 # list available clusters
 $ vcd cse cluster list
+
+# Info on a given cluster
+$ vcd cse cluster info
 
 # retrieve cluster config
 $ vcd cse cluster config mycluster > ~/.kube/config
