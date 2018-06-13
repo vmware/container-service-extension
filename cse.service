@@ -8,6 +8,7 @@ ExecStart=/home/vmware/cse.sh
 Type=simple
 User=vmware
 WorkingDirectory=/home/vmware
+Restart=always
 
 [Install]
 WantedBy=default.target
