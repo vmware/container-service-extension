@@ -472,13 +472,13 @@ Below are some usage examples:
 # a public key is provided to be able to ssh into the VMs
 $ vcd cse cluster create mycluster --network intranet --ssh-key ~/.ssh/id_rsa.pub
 
-# list the nodes of a cluster
+# list the worker nodes of a cluster
 $ vcd cse node list mycluster
 
 # create cluster mycluster with one master, three nodes and connected to provided network
 $ vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh/id_rsa.pub
 
-# create a single node cluster, connected to the specified network. Nodes can be added later
+# create a single worker node cluster, connected to the specified network. Nodes can be added later
 $ vcd cse cluster create mycluster --network intranet --nodes 0 --ssh-key ~/.ssh/id_rsa.pub
 
 # create cluster mycluster with one master, three worker nodes, connected to provided network
@@ -486,11 +486,20 @@ $ vcd cse cluster create mycluster --network intranet --nodes 0 --ssh-key ~/.ssh
 $ vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh/id_rsa.pub
                                    --type nfsd
 
-# add 2 nodes to a cluster with 4GB of ram and 4 CPUs each, from the photon-v2 template
+# add 2 worker nodes to a cluster with 4GB of ram and 4 CPUs each, from the photon-v2 template
 # and using the specified storage profile
 $ vcd cse node create mycluster --nodes 2 --network intranet --ssh-key ~/.ssh/id_rsa.pub \
                                 --memory 4096 --cpu 4 --template photon-v2
                                 --storage-profile Development
+
+# add 1 nfsd node to a cluster with 4GB of ram and 4 CPUs each, from the photon-v2 template
+# and using the specified storage profile
+$ vcd cse node create mycluster --nodes 1 --type nfsd --network intranet --ssh-key ~/.ssh/id_rsa.pub \
+                                --memory 4096 --cpu 4 --template photon-v2
+                                --storage-profile Development
+
+# Info on a given node. If the node is of type nfsd, it displays info about Exports.
+$ vcd cse node info nfsd-xxxx mycluster
 
 # delete 2 nodes from a cluster
 $ vcd cse node delete mycluster node-dj3s node-b4rt --yes
@@ -692,6 +701,7 @@ Options:
 Commands:
   create  add node(s) to cluster
   delete  delete node(s)
+  info    get node info
   list    list nodes
 ```
 
@@ -708,7 +718,7 @@ Options:
   -k, --ssh-key FILENAME      SSH public key to connect to the guest OS on the
                               VM
   -t, --template TEXT         Name of the template to instantiate nodes from
-  --type [node]               type of node to add
+  --type [node|nfsd]          type of node to add
   -h, --help                  Show this message and exit.
   ```
 
@@ -800,6 +810,7 @@ Release date: 2018-04-20
 Maintenance release:
 - updated OS and software versions.
 - it is recommended to get the sample config with `cse sample` command, update the existing `config.yaml` with the changes and re-create the templates.
+- added NFS Persistent volume support.
 
 
 ### CSE 1.0.0
