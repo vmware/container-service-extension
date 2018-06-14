@@ -133,9 +133,9 @@ spec:
 - Does vCD-CLI (CSE client) directly talk to CSE server?
     - vCD-CLI communicates only with vCD. Behind the scenes, vCD relays the user (CSE relevant) commands to CSE server.
 - What is the difference between persistent volume (PV) and persistent volume claim (PVC)?
-    - Static PV is a ready-to-use storage space created by K8 cluster admin. PVC is the storage requirement specified by the user. Kubernetes dynamically binds/unbinds PVC to PV at runtime. Learn more here
+    - Static PV is a ready-to-use storage space created by K8 cluster admin. PVC is the storage requirement specified by the user. Kubernetes dynamically binds/unbinds PVC to PV at runtime. Learn more [here](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#static)
 - How does NFS exports are mounted to containers?
     - Once a PV backed by NFS export is created by K8 cluster admin, Kubernetes does the job of mounting specified NFS exports to Pods and Containers.
 - When to use vCD-CLI vs Kubectl?
     - vCD-CLI talks to vCD. It provides commands to create and manage K8 clusters including adding worker nodes, nfs nodes etc.
-    - Kubectl talks to Kubernetes cluster. It provides commands to develop, deploy applications and much more. Learn more here
+    - Kubectl talks to Kubernetes cluster. It provides commands to develop, deploy applications and much more. Learn more [here](https://kubernetes.io/docs/reference/kubectl/overview/)
