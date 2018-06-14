@@ -1,30 +1,32 @@
-**NFS based static persistent volumes**
+---
+title: NFS based static persistent volumes
+---
 
-# Overview
+## Introduction
 
 This feature of CSE enables users to deploy stateful applications by leveraging static persistent volumes backed by NFS server.
 
-## Difference between static and dynamic persistent volumes
+### Difference between static and dynamic persistent volumes
 
 [Static PVs](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#static) are pre-provisioned by cluster administrator. They carry the details of the real storage which is available for use by cluster users. They exist in the Kubernetes API and are available for consumption.
 
 [Dynamic PVs](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#dynamic) - When none of the static PVs the administrator created matches a user’s PersistentVolumeClaim, the cluster may try to dynamically provision a volume specially for the PVC.
 
-## Static NFS volumes
+### Static NFS volumes
 
 An nfs volume allows an existing NFS (Network File System) share to be mounted into your pod. When a Pod is removed, the contents of an nfs volume are preserved and the volume is merely unmounted. This means that an NFS volume can be pre-populated with data, and that data can be “handed off” between pods. NFS can be mounted by multiple writers simultaneously. However, we need to have our own NFS server running with the share exported. CSE provides commands to add pre-configured NFS server(s) to any given cluster and more.
 
-# Architecture
+## Architecture
 
 ![Image](k8cluster_with_nfs.png)
 
-# Who does what (roles and responsibilities)?
+## Who does what (roles and responsibilities)?
 
 ![Image](nfs_roles_responsibilities.png)
 
 # Sample CSE and/or NFS commands
 
-## By Cloud Admin
+### By Cloud Admin
 
 ```shell
     CSE setup & configuration
@@ -33,7 +35,7 @@ An nfs volume allows an existing NFS (Network File System) share to be mounted i
         cse run -c config.yaml
 ```
 
-## By Tenant Admin
+### By Tenant Admin
 
 ```shell
     Create K8 Cluster with 2 worker nodes and 1 nfs server
@@ -47,7 +49,7 @@ An nfs volume allows an existing NFS (Network File System) share to be mounted i
         kubectl get pv
 ```
 
-## By App Developer
+### By App Developer
 
 ```shell
     Tell Kubectl about the K8 cluster whereabouts
@@ -59,10 +61,9 @@ An nfs volume allows an existing NFS (Network File System) share to be mounted i
         kubectl create -f nfs_busybox.yaml
         kubectl get rc
         kubectl get pods
-```shell
-
-## Sample declarative K8 specs(in yaml format) to create and use NFS volumes
-### Create NFS persistent volume
+```
+### Sample declarative K8 specs(in yaml format) to create and use NFS volumes
+#### Create NFS persistent volume
 ```shell
 apiVersion: v1
 kind: PersistentVolume
@@ -78,7 +79,7 @@ spec:
     server: 10.150.211.68
     path: "/home"
 ```
-### Create NFS persistent volume claim
+#### Create NFS persistent volume claim
 ```shell
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -92,7 +93,7 @@ spec:
     requests:
       storage: 1Gi
 ```
-### Create application using NFS volumes
+#### Create application using NFS volumes
 ```shell
 apiVersion: v1
 kind: ReplicationController
@@ -125,7 +126,7 @@ spec:
             claimName: nfs-pvc
 ```
 
-# FAQ
+## FAQ
 
 - What is CSE server?
     - CSE server is an extension to vCD which enables users to create and manage K8 clusters.
