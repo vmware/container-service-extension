@@ -15,7 +15,7 @@ The current document covers the following `CSE` topics:
   - [installation](#tenant-installation)
   - [usage](#using-the-container-service)
   - [programming](#scripting-and-programming)
-  - [static persistent volumes](#nfs-based-static-pvs)
+  - [static persistent volumes](#nfs-based-static-persistent-volumes)
 - [reference](#reference)
   - [command syntax](#command-syntax)
   - [release notes](#release-notes)
