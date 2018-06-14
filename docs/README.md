@@ -4,6 +4,8 @@ The **container-service-extension** (`CSE`) is an add-on to VMware vCloud Direct
 
 `CSE` enables Kubernetes as a service on vCloud Director (vCD) installations. `CSE` is based on VM templates that are automatically generated during the installation process, or anytime thereafter. vCD tenants can then request fully functional Kubernetes clusters that `CSE` instantiate on the tenant VDC from the templates, customized based on the tenant preferences.
 
+![Image](cse_architecture.png)
+
 The current document covers the following `CSE` topics:
 
 - for System Administrators:
@@ -13,6 +15,7 @@ The current document covers the following `CSE` topics:
   - [installation](#tenant-installation)
   - [usage](#using-the-container-service)
   - [programming](#scripting-and-programming)
+  - [static persistent volumes](#nfs-based-static-pvs)
 - [reference](#reference)
   - [command syntax](#command-syntax)
   - [release notes](#release-notes)
@@ -553,6 +556,12 @@ print(task.get('status'))
 
 client.logout()
 ```
+
+## NFS based static persistent volumes
+
+On-disk files in a Container are ephemeral, which presents some problems for non-trivial applications when running in Containers. First, when a Container crashes, kubelet will restart it, but the files will be lost - the Container starts with a clean state. Second, when running Containers together in a Pod it is often necessary to share files between those Containers. The Kubernetes Volume abstraction solves both of these problems.
+
+CSE supports [NFS based static persistent volumes](nfs_static_pv.md). See [here](nfs_static_pv.md) for full details
 
 # Reference
 
