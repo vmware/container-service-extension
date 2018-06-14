@@ -498,7 +498,7 @@ $ vcd cse node create mycluster --nodes 1 --type nfsd --network intranet --ssh-k
                                 --memory 4096 --cpu 4 --template photon-v2
                                 --storage-profile Development
 
-# Info on a given node. If the node is of type nfsd, it displays info about Exports.
+# info on a given node. If the node is of type nfsd, it displays info about Exports.
 $ vcd cse node info nfsd-xxxx mycluster
 
 # delete 2 nodes from a cluster
@@ -507,7 +507,7 @@ $ vcd cse node delete mycluster node-dj3s node-b4rt --yes
 # list available clusters
 $ vcd cse cluster list
 
-# Info on a given cluster
+# info on a given cluster
 $ vcd cse cluster info
 
 # retrieve cluster config
