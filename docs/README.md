@@ -559,9 +559,8 @@ client.logout()
 
 ## NFS based static persistent volumes
 
-On-disk files in a Container are ephemeral, which presents some problems for non-trivial applications when running in Containers. First, when a Container crashes, kubelet will restart it, but the files will be lost - the Container starts with a clean state. Second, when running Containers together in a Pod it is often necessary to share files between those Containers. The Kubernetes Volume abstraction solves both of these problems.
-
-CSE supports [NFS based static persistent volumes](nfs_static_pv.md). See [here](nfs_static_pv.md) for full details
+Containers are stateless and ephemeral but most of the applications are stateful and need persistent storage. The Kubernetes addressed this by [PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) abstraction.
+CSE supports [NFS based static persistent volumes](nfs_static_pv.md). See [here](nfs_static_pv.md) for architecture and user guide.
 
 # Reference
 
