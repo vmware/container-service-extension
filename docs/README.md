@@ -4,6 +4,8 @@ The **container-service-extension** (`CSE`) is an add-on to VMware vCloud Direct
 
 `CSE` enables Kubernetes as a service on vCloud Director (vCD) installations. `CSE` is based on VM templates that are automatically generated during the installation process, or anytime thereafter. vCD tenants can then request fully functional Kubernetes clusters that `CSE` instantiate on the tenant VDC from the templates, customized based on the tenant preferences.
 
+![Image](cse_architecture.png)
+
 The current document covers the following `CSE` topics:
 
 - for System Administrators:
@@ -13,6 +15,7 @@ The current document covers the following `CSE` topics:
   - [installation](#tenant-installation)
   - [usage](#using-the-container-service)
   - [programming](#scripting-and-programming)
+  - [static persistent volumes](#nfs-based-static-persistent-volumes)
 - [reference](#reference)
   - [command syntax](#command-syntax)
   - [release notes](#release-notes)
@@ -448,9 +451,11 @@ Here is a summary of the commands available to manage templates, clusters and no
 |:--------------------------------------------------|:--------------------------------------------|
 | `vcd cse template list`                           | List available templates to create clusters |
 | `vcd cse cluster create <cluster-name>`           | Create a new kubernetes cluster             |
+| `vcd cse cluster create <cluster-name> --enabe-nfs`| Create a new kubernetes cluster with NFS PV support.|
 | `vcd cse cluster list`                            | List created clusters.                      |
 | `vcd cse cluster delete <cluster-name>`           | Delete a kubernetes cluster.                |
 | `vcd cse node create <cluster-name> --nodes n`    | Add `n` nodes to a cluster.                 |
+| `vcd cse node create <cluster-name> --type nfsd`  | Add an NFS node to a cluster.               |
 | `vcd cse node list <cluster-name>`                | List nodes of a cluster.                    |
 | `vcd cse node delete <cluster-name> [node-name]+` | Delete nodes from a cluster.                |
 
@@ -470,26 +475,43 @@ Below are some usage examples:
 # a public key is provided to be able to ssh into the VMs
 $ vcd cse cluster create mycluster --network intranet --ssh-key ~/.ssh/id_rsa.pub
 
-# list the nodes of a cluster
+# list the worker nodes of a cluster
 $ vcd cse node list mycluster
 
 # create cluster mycluster with one master, three nodes and connected to provided network
 $ vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh/id_rsa.pub
 
-# create a single node cluster, connected to the specified network. Nodes can be added later
+# create a single worker node cluster, connected to the specified network. Nodes can be added later
 $ vcd cse cluster create mycluster --network intranet --nodes 0 --ssh-key ~/.ssh/id_rsa.pub
 
-# add 2 nodes to a cluster with 4GB of ram and 4 CPUs each, from the photon-v2 template
+# create cluster mycluster with one master, three worker nodes, connected to provided network
+# and one node of type NFS server
+$ vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh/id_rsa.pub
+                                   --type nfsd
+
+# add 2 worker nodes to a cluster with 4GB of ram and 4 CPUs each, from the photon-v2 template
 # and using the specified storage profile
 $ vcd cse node create mycluster --nodes 2 --network intranet --ssh-key ~/.ssh/id_rsa.pub \
                                 --memory 4096 --cpu 4 --template photon-v2
                                 --storage-profile Development
+
+# add 1 nfsd node to a cluster with 4GB of ram and 4 CPUs each, from the photon-v2 template
+# and using the specified storage profile
+$ vcd cse node create mycluster --nodes 1 --type nfsd --network intranet --ssh-key ~/.ssh/id_rsa.pub \
+                                --memory 4096 --cpu 4 --template photon-v2
+                                --storage-profile Development
+
+# info on a given node. If the node is of type nfsd, it displays info about Exports.
+$ vcd cse node info nfsd-xxxx mycluster
 
 # delete 2 nodes from a cluster
 $ vcd cse node delete mycluster node-dj3s node-b4rt --yes
 
 # list available clusters
 $ vcd cse cluster list
+
+# info on a given cluster
+$ vcd cse cluster info
 
 # retrieve cluster config
 $ vcd cse cluster config mycluster > ~/.kube/config
@@ -534,6 +556,11 @@ print(task.get('status'))
 
 client.logout()
 ```
+
+## NFS based static persistent volumes
+
+Containers are stateless and ephemeral but most of the applications are stateful and need persistent storage. Kubernetes addressed this by [PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) abstraction.
+CSE supports [NFS based static persistent volumes](nfs_static_pv.md). See [here](nfs_static_pv.md) for CSE-NFS architecture and user guide.
 
 # Reference
 
@@ -682,6 +709,7 @@ Options:
 Commands:
   create  add node(s) to cluster
   delete  delete node(s)
+  info    get node info
   list    list nodes
 ```
 
@@ -698,7 +726,7 @@ Options:
   -k, --ssh-key FILENAME      SSH public key to connect to the guest OS on the
                               VM
   -t, --template TEXT         Name of the template to instantiate nodes from
-  --type [node]               type of node to add
+  --type [node|nfsd]          type of node to add
   -h, --help                  Show this message and exit.
   ```
 
@@ -790,6 +818,7 @@ Release date: 2018-04-20
 Maintenance release:
 - updated OS and software versions.
 - it is recommended to get the sample config with `cse sample` command, update the existing `config.yaml` with the changes and re-create the templates.
+- added NFS Persistent volume support.
 
 
 ### CSE 1.0.0
