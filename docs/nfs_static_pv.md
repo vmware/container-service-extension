@@ -28,40 +28,52 @@ An nfs volume allows an existing NFS (Network File System) share to be mounted i
 
 ### By Cloud Admin
 
-```shell
     CSE setup & configuration
+    ```shell
         cse install -c config.yaml
+     ```
     Start CSE server
+    ```shell
         cse run -c config.yaml
-```
+     ```
 
 ### By Tenant Admin
 
-```shell
     Create K8 Cluster with 2 worker nodes and 1 nfs server
+    ```shell
         vcd cse cluster create mycluster -N 2 -n mynetwork -t ubuntu-16.04 --enable-nfs
+     ```
     Add  1 nfs server (node of type NFS) to the existing K8 cluster
+    ```shell
         vcd cse node create mycluster -N 1 -n mynetwork -t ubuntu-16.04 --type nfsd
+     ```
     Get IP of the NFS server(s) & shares exposed (in a given cluster)
+    ```shell
         vcd cse cluster info mycluster
+     ```
     Create NFS persistent volume(s)
+    ```shell
         kubectl create -f nfs_pv.yaml
         kubectl get pv
-```
+     ```
 
 ### By App Developer
 
-```shell
     Tell Kubectl about the K8 cluster whereabouts
+    ```shell
         vcd cse cluster config mycluster > ~/.kube/config
+     ```
     Create NFS persistent volume claim
+    ```shell
         kubectl create -f nfs_pvc.yaml
         kubectl get pvc
+     ```
     Launch 2 pods of busybox application instances writing to the NFS volume
+    ```shell
         kubectl create -f nfs_busybox.yaml
         kubectl get rc
         kubectl get pods
-```
+     ```
 ### Sample declarative K8 specs(in yaml format) to create and use NFS volumes
 #### Create NFS persistent volume
 ```shell
