@@ -62,7 +62,7 @@ An nfs volume allows an existing NFS (Network File System) share to be mounted i
         kubectl get rc
         kubectl get pods
 ```
-### Sample declarative K8 specs(in yaml format) to create and use NFS volumes
+### Sample declarative K8 yaml specs to create and use NFS volumes
 #### Create NFS persistent volume
 ```shell
 apiVersion: v1
