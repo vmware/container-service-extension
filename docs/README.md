@@ -113,6 +113,20 @@ Each `template` in the `templates` property of `broker` has the following proper
 | `cpu`             | Number of virtual CPUs to be allocated for each VM                                                                                                                                                                |
 | `mem`             | Memory in MB to be allocated for each VM                                                                                                                                                                          |
 
+Each `vc` under `vcs` group has the following properties:
+
+| Property          | Value                                                                                           |
+|:------------------|:------------------------------------------------------------------------------------------------|
+| `name`            | Name of the vCenter                                                                             |
+| `username`        | Username of the vCenter service account with minimum of guest-operation privileges.             |
+| `password`        | Password of the vCenter service account.                                                        |
+
+Guest Operations Privileges required for vCenter service account:
+
+*Guest Operation Program Execution
+*Guest Operation Modifications
+*Guest Operation Queries
+
 ### 3\. Install the extension.
 
 The installation will take a few minutes to complete. Use the command below:

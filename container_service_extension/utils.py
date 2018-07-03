@@ -67,11 +67,11 @@ def get_vsphere(config, vapp, vm_name):
         vcenter_url = urlparse(vcenter.Url.text)
         cache_item = {
             'hostname': vcenter_url.hostname,
-            'username': vcenter.Username.text,
             'port': vcenter_url.port
         }
         for vc in config['vcs']:
             if vc['name'] == vcenter_name:
+                cache_item['username'] = vc['username']
                 cache_item['password'] = vc['password']
                 break
         cache[vm_id] = cache_item

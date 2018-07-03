@@ -1,6 +1,14 @@
 CHANGES
 =======
 
+1.1.0
+-----
+
+* VCDA-558: NFS PV documentation (#87)
+* VCDA-564 Restrict config file permissions (#85)
+* VCDA-608 & VCDA-609: Enhance cluster and node commands to support NFS (#81)
+* VCDA-557 & VCDA-607: Basic NFS PV support (#78)
+* sha1 fixed
 * updated photon
 * initial upgrade to 1.10
 * initial upgrade to 1.10
