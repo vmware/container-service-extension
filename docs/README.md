@@ -123,9 +123,9 @@ Each `vc` under `vcs` group has the following properties:
 
 Guest Operations Privileges required for vCenter service account:
 
-*Guest Operation Program Execution
-*Guest Operation Modifications
-*Guest Operation Queries
+- Guest Operation Program Execution
+- Guest Operation Modifications
+- Guest Operation Queries
 
 ### 3\. Install the extension.
 
