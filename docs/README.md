@@ -576,6 +576,8 @@ client.logout()
 Containers are stateless and ephemeral but most of the applications are stateful and need persistent storage. Kubernetes addressed this by [PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) abstraction.
 CSE supports [NFS based static persistent volumes](nfs_static_pv.md). See [here](nfs_static_pv.md) for CSE-NFS architecture and user guide.
 
+Note: NFS based static persistent volumes are currently supported on only Ubuntu templates. Support on Photon OS is coming soon.
+
 # Reference
 
 ## Command syntax
