@@ -117,7 +117,7 @@ Each `vc` under `vcs` group has the following properties:
 
 | Property          | Value                                                                                           |
 |:------------------|:------------------------------------------------------------------------------------------------|
-| `name`            | Name of the vCenter                                                                             |
+| `name`            | Name of the vCenter registered in vCD                                                                           |
 | `username`        | Username of the vCenter service account with minimum of guest-operation privileges.             |
 | `password`        | Password of the vCenter service account.                                                        |
 
