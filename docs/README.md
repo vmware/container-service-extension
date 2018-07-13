@@ -113,6 +113,20 @@ Each `template` in the `templates` property of `broker` has the following proper
 | `cpu`             | Number of virtual CPUs to be allocated for each VM                                                                                                                                                                |
 | `mem`             | Memory in MB to be allocated for each VM                                                                                                                                                                          |
 
+Each `vc` under `vcs` group has the following properties:
+
+| Property          | Value                                                                                           |
+|:------------------|:------------------------------------------------------------------------------------------------|
+| `name`            | Name of the vCenter registered in vCD                                                                           |
+| `username`        | Username of the vCenter service account with minimum of guest-operation privileges.             |
+| `password`        | Password of the vCenter service account.                                                        |
+
+Guest Operations Privileges required for vCenter service account:
+
+- Guest Operation Program Execution
+- Guest Operation Modifications
+- Guest Operation Queries
+
 ### 3\. Install the extension.
 
 The installation will take a few minutes to complete. Use the command below:
@@ -561,6 +575,8 @@ client.logout()
 
 Containers are stateless and ephemeral but most of the applications are stateful and need persistent storage. Kubernetes addressed this by [PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) abstraction.
 CSE supports [NFS based static persistent volumes](nfs_static_pv.md). See [here](nfs_static_pv.md) for CSE-NFS architecture and user guide.
+
+Note: NFS based static persistent volumes are currently supported on only Ubuntu templates. Support on Photon OS is coming soon.
 
 # Reference
 

@@ -68,10 +68,12 @@ SAMPLE_VCD_CONFIG = {
 SAMPLE_VCS_CONFIG = {
     'vcs': [{
         'name': 'vc1',
+        'username': 'cse_user@vsphere.local',
         'password': 'my_secret_password',
         'verify': False
     }, {
         'name': 'vc2',
+        'username': 'cse_user@vsphere.local',
         'password': 'my_secret_password',
         'verify': False
     }]
@@ -200,11 +202,11 @@ def check_config(config_file_name, template=None):
     for vc in config['vcs']:
         vcenter = platform.get_vcenter(vc['name'])
         vsphere_url = urlparse(vcenter.Url.text)
-        v = VSphere(vsphere_url.hostname, vcenter.Username.text,
+        v = VSphere(vsphere_url.hostname, vc['username'],
                     vc['password'], vsphere_url.port)
         v.connect()
         click.echo('Connected to vCenter Server %s as %s '
-                   '(%s:%s): %s' % (vc['name'], vcenter.Username.text,
+                   '(%s:%s): %s' % (vc['name'], vc['username'],
                                     vsphere_url.hostname, vsphere_url.port,
                                     bool_to_msg(True)))
 
