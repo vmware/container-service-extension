@@ -106,7 +106,7 @@ def bool_to_msg(value):
 def get_config(config_file_name):
     config = {}
     with open(config_file_name, 'r') as f:
-        config = yaml.load(f)
+        config = yaml.safe_load(f)
     if not config['vcd']['verify']:
         click.secho(
             'InsecureRequestWarning: '

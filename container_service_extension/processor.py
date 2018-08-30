@@ -157,7 +157,7 @@ class ServiceProcessor(object):
             if format == 'swagger.yaml':
                 result['body'] = file_name
             else:
-                spec = yaml.load(file_name)
+                spec = yaml.safe_load(file_name)
                 result['body'] = json.loads(json.dumps(spec))
             result['status_code'] = OK
         except Exception:
