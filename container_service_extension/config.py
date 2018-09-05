@@ -313,15 +313,15 @@ def install_cse(ctx, config_file_name, template_name, no_capture, update,
         click.secho('Start CSE with: \'cse run %s\'' % config_file_name)
 
 
-def get_sha1(file):
-    sha1 = hashlib.sha1()
+def get_sha256(file):
+    sha256 = hashlib.sha256()
     with open(file, 'rb') as f:
         while True:
             data = f.read(BUF_SIZE)
             if not data:
                 break
-            sha1.update(data)
-    return sha1.hexdigest()
+            sha256.update(data)
+    return sha256.hexdigest()
 
 
 def get_data_file(file_name):
@@ -366,8 +366,8 @@ def upload_source_ova(config, client, org, template):
             for chunk in r.iter_content(chunk_size=SIZE_1MB):
                 fd.write(chunk)
     if os.path.exists(cse_ova_file):
-        sha1 = get_sha1(cse_ova_file)
-        assert sha1 == template['sha1_ova']
+        sha256 = get_sha256(cse_ova_file)
+        assert sha256 == template['sha256_ova']
         click.secho('Uploading %s' % template['source_ova_name'], fg='green')
         org.upload_ovf(
             config['broker']['catalog'],
