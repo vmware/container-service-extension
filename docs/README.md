@@ -821,9 +821,9 @@ Commands:
 
 - When CSE installation is aborted for any reason, ensure temporary vApp is deleted in vCD before re-issuing the install command
     - Manually delete the problematic "ubuntu-temp" vApp.
-    - If temporary vApp still exists and `cse install` is ran again, CSE will just capture the vApp as the kubernetes template, even though the vApp is not set up properly
-- Customization of Ubuntu templates sometimes fails during CSE server installation. Probable cause is upgrade command fails because of latest updates from Ubuntu
-    - Comment below 2 lines in "scripts/cust-ubutnu-16.04.sh" as a workaround and run the install command again.
+    - If temporary vApp still exists and `cse install` command is run again, CSE will just capture the vApp as the kubernetes template, even though the vApp is not set up properly
+- Customization of Ubuntu templates sometimes fail during CSE server installation. These customization failures are probably caused by the upgrade command failures seen after incorporating latest updates from Ubuntu.
+    - Comment out the following lines in "scripts/cust-ubutnu-16.04.sh" as a workaround and run the install command again.
         - apt-get -q dist-upgrade -y
         - apt-get -q autoremove -y
 
