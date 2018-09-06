@@ -125,6 +125,27 @@ spec:
           persistentVolumeClaim:
             claimName: nfs-pvc
 ```
+## Known Issues
+
+### NFS server protection
+Currently, NFS servers in Kubernetes cluster can not only be accessed by nodes of that cluster but also by any VM (outside of the cluster) residing in the same orgVdc. Ideal solution is to have vApp network created for each Kubernetes cluster, which is in our road-map to implement. Until then, please choose one of below workarounds to avert this problem if the need arises.
+- Give access to only master & worker nodes of the cluster by adding individual IPs of the nodes into /etc/exports file on NFS server.
+    - Create and run a script periodically which retrieves IPs of nodes in the cluster and then add them to NFS server access list (/etc/exports).
+    - eg: /home 203.0.113.256(rw,sync,no_root_squash,no_subtree_check) 203.0.113.257(rw,sync,no_root_squash,no_subtree_check)
+- Admin can manually add a vApp network for each kubernetes cluster in vCD.
+- Create a ssh tunnel from each worker node (using ssh local port forwarding) and then use 127.0.0.1:<port> in the  Kubernetes declarative specs as IP of the NFS server.
+    - In NFS server, for any given shared directory, add below line to /etc/exports file.
+        - /home localhost(insecure,rw,sync,no_subtree_check)
+        - systemctl restart nfs-kernel-server.service
+    - Copy ssh public key of each worker node into ~/.ssh/authorized_keys in NFS server
+        - Client: Generate key using ssh-keygen and copy the contents of ~/.ssh/id_rsa.pub
+        - NFS server: Paste the contents (public key) from client into ~/.ssh/authorized_keys
+    - In each master/worker node,
+        - apt-get install portmap
+        - ssh -fNv -L 3049:127.0.0.1:2049 user@NFSServer
+    - Read more about this approach here
+        - http://www.debianadmin.com/howto-use-ssh-local-and-remote-port-forwarding.html
+        - https://gist.github.com/proudlygeek/5721498
 
 ## FAQ
 
