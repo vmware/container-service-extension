@@ -243,12 +243,8 @@ def install_cse(ctx, config_file_name, template_name, no_capture, update,
                                               bool_to_msg(True)))
     click.secho('Installing  \'%s\' service broker' % config['broker']['type'])
     if config['broker']['type'] == 'default':
-        orgs = client.get_org_list()
-        org_href = None
-        for org in [o for o in orgs.Org if hasattr(orgs, 'Org')]:
-            if org.get('name') == config['broker']['org']:
-                org_href = org.get('href')
-        org = Org(client, href=org_href)
+        org_resource = client.get_org_by_name(config['broker']['org'])
+        org = Org(client, resource=org_resource)
         click.echo('Find org \'%s\': %s' % (org.get_name(), bool_to_msg(True)))
         vdc_resource = org.get_vdc(config['broker']['vdc'])
         click.echo('Find vdc \'%s\': %s' % (vdc_resource.get('name'),
