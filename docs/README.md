@@ -969,6 +969,13 @@ Features:
 | Photon OS 2.0 GA     | photon-custom-hw11-2.0-304b817.ova     | `http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova`                       | b8c183785bbf582bcd1be7cde7c22e5758fb3f16 |
 | Ubuntu 16.04.4 LTS   | ubuntu-16.04-server-cloudimg-amd64.ova | `https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova` | b8c183785bbf582bcd1be7cde7c22e5758fb3f16 |
 
+## CSE-vCD compatibility Matrix
+
+| CSE     | VCD                  |
+|:--------|:---------------------|
+| 1.1.0   | 8.20, 9.0, 9.1       |
+| 1.2.0 (coming soon)| 8.20, 9.0, 9.1, 9.5 |
+
 # Appendix
 
 ## Installation Details
