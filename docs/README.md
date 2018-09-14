@@ -92,15 +92,27 @@ Group 'vcd' has following key properties
 | `password`        | Password of the vCDservice account.                                                             |
 
 It is recommended to create a service account for vCD with minimum required privileges (as it can be catastrophic if someone gets hold of credentials of the user account with admin-level privileges).
-Below are minimum roles and rights required for the service account:
+
+Below are minimum roles and rights required for the service account (they may subject to change with new versions of vCD)
 - Catalog Author (Role)
+- vApp Author (Role)
+- vApp User (Role)
 - vCenter: View (Right)
 - vCenter: Refresh (Right)
 - vCenter: Open in vSphere (Right)
 - Task: View Tasks (Right)
 - Task: Update (Right)
 - Task: Resume, Abort, or Fail (Right)
+- Catalog Item: Add to My Cloud (Right)
+- Catalog Item: Create/Upload a vApp Template/Media (Right)
+- Catalog Item: View vApp Templates/Media (Right)
+- Catalog Item: Copy/Move a vApp Template/Media (Right)
+- General: Administrator View (Right)
+- Organization VDC: View Organization VDCs (Right)
+- Organization VDC Network: View Properties (Right)
+- Organization: View Organizations (Right)
 
+NOTE: Always ensure vCD service account has enough privileges. Another way is to create a role with Admin privileges and unselect (or) delete rights which are not required from the newly created role.
 
 | Group                | Property                                                                                                                                                                                                             | Value |
 |:---------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:------|
