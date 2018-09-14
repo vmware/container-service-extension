@@ -83,6 +83,25 @@ The configuration file has 5 sections:
 - `service`: service settings
 - `broker`: service broker settings
 
+Group 'vcd' has following key properties
+
+| Property          | Value                                                                                           |
+|:------------------|:------------------------------------------------------------------------------------------------|
+| `host`            | IP or hostname of the vCloud Director                                                           |
+| `username`        | Username of the vCD service account with minimum roles and rights                               |
+| `password`        | Password of the vCDservice account.                                                             |
+
+It is recommended to create a service account for vCD with minimum required privileges (as it can be catastrophic if someone gets hold of credentials of the user account with admin-level privileges).
+Below are minimum roles and rights required for the service account:
+- Catalog Author (Role)
+- vCenter: View (Right)
+- vCenter: Refresh (Right)
+- vCenter: Open in vSphere (Right)
+- Task: View Tasks (Right)
+- Task: Update (Right)
+- Task: Resume, Abort, or Fail (Right)
+
+
 | Group                | Property                                                                                                                                                                                                             | Value |
 |:---------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:------|
 | `broker`             |                                                                                                                                                                                                                      |       |
