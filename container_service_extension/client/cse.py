@@ -457,7 +457,7 @@ def save_config(ctx):
     try:
         f = join(expanduser('~'), '.kube/config')
         stream = open(f, 'r')
-        docs = yaml.load_all(stream)
+        docs = yaml.safe_load_all(stream)
         for doc in docs:
             for k, v in doc.items():
                 if k == 'contexts':

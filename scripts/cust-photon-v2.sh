@@ -17,7 +17,7 @@ RemainAfterExit=yes
 WantedBy=iptables.service
 EOF
 
-chmod 766 /etc/systemd/system/iptables-ports.service
+chmod 0644 /etc/systemd/system/iptables-ports.service
 systemctl enable iptables-ports.service
 systemctl start iptables-ports.service
 systemctl enable docker

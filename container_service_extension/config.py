@@ -106,7 +106,7 @@ def bool_to_msg(value):
 def get_config(config_file_name):
     config = {}
     with open(config_file_name, 'r') as f:
-        config = yaml.load(f)
+        config = yaml.safe_load(f)
     if not config['vcd']['verify']:
         click.secho(
             'InsecureRequestWarning: '
@@ -243,12 +243,8 @@ def install_cse(ctx, config_file_name, template_name, no_capture, update,
                                               bool_to_msg(True)))
     click.secho('Installing  \'%s\' service broker' % config['broker']['type'])
     if config['broker']['type'] == 'default':
-        orgs = client.get_org_list()
-        org_href = None
-        for org in [o for o in orgs.Org if hasattr(orgs, 'Org')]:
-            if org.get('name') == config['broker']['org']:
-                org_href = org.get('href')
-        org = Org(client, href=org_href)
+        org_resource = client.get_org_by_name(config['broker']['org'])
+        org = Org(client, resource=org_resource)
         click.echo('Find org \'%s\': %s' % (org.get_name(), bool_to_msg(True)))
         vdc_resource = org.get_vdc(config['broker']['vdc'])
         click.echo('Find vdc \'%s\': %s' % (vdc_resource.get('name'),
@@ -313,15 +309,15 @@ def install_cse(ctx, config_file_name, template_name, no_capture, update,
         click.secho('Start CSE with: \'cse run %s\'' % config_file_name)
 
 
-def get_sha1(file):
-    sha1 = hashlib.sha1()
+def get_sha256(file):
+    sha256 = hashlib.sha256()
     with open(file, 'rb') as f:
         while True:
             data = f.read(BUF_SIZE)
             if not data:
                 break
-            sha1.update(data)
-    return sha1.hexdigest()
+            sha256.update(data)
+    return sha256.hexdigest()
 
 
 def get_data_file(file_name):
@@ -366,8 +362,8 @@ def upload_source_ova(config, client, org, template):
             for chunk in r.iter_content(chunk_size=SIZE_1MB):
                 fd.write(chunk)
     if os.path.exists(cse_ova_file):
-        sha1 = get_sha1(cse_ova_file)
-        assert sha1 == template['sha1_ova']
+        sha256 = get_sha256(cse_ova_file)
+        assert sha256 == template['sha256_ova']
         click.secho('Uploading %s' % template['source_ova_name'], fg='green')
         org.upload_ovf(
             config['broker']['catalog'],

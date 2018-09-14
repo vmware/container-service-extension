@@ -64,8 +64,8 @@ SAMPLE_TEMPLATE_PHOTON_V2 = {
     'photon-custom-hw11-2.0-304b817.ova',
     'source_ova':
     'http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova',  # NOQA
-    'sha1_ova':
-    'b8c183785bbf582bcd1be7cde7c22e5758fb3f16',
+    'sha256_ova':
+    'cb51e4b6d899c3588f961e73282709a0d054bb421787e140a1d80c24d4fd89e1',
     'temp_vapp':
     'photon2-temp',
     'cleanup':
@@ -89,8 +89,8 @@ SAMPLE_TEMPLATE_UBUNTU_16_04 = {
     'ubuntu-16.04-server-cloudimg-amd64.ova',
     'source_ova':
     'https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova',  # NOQA
-    'sha1_ova':
-    '12014032ec640c9dd98e1839adbf5c40aca86344',
+    'sha256_ova':
+    '3c1bec8e2770af5b9b0462e20b7b24633666feedff43c099a6fb1330fcc869a9',
     'temp_vapp':
     'ubuntu1604-temp',
     'cleanup':
