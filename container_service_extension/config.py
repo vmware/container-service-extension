@@ -19,6 +19,7 @@ from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.client import SIZE_1MB
+from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.platform import Platform
 from pyvcloud.vcd.vapp import VApp
@@ -249,21 +250,20 @@ def install_cse(ctx, config_file_name, template_name, no_capture, update,
         vdc_resource = org.get_vdc(config['broker']['vdc'])
         click.echo('Find vdc \'%s\': %s' % (vdc_resource.get('name'),
                                             bool_to_msg(True)))
+
+        catalog_name = config['broker']['catalog']
         try:
-            catalog = org.get_catalog(config['broker']['catalog'])
-        except Exception:
-            click.secho(
-                'Creating catalog %s ' % config['broker']['catalog'],
-                nl=False,
-                fg='green')
-            catalog = org.create_catalog(config['broker']['catalog'],
-                                         'CSE catalog')
-            org.share_catalog(config['broker']['catalog'])
-            click.secho('done', fg='blue')
-            catalog = org.get_catalog(config['broker']['catalog'])
-        click.echo('Find catalog \'%s\': %s' %
-                   (config['broker']['catalog'],
-                    bool_to_msg(catalog is not None)))
+            org.get_catalog(catalog_name)
+            click.echo(f"Found catalog {catalog_name}")
+        except EntityNotFoundException:
+            click.secho(f"Creating catalog {catalog_name}", fg='green')
+            org.create_catalog(catalog_name, 'CSE Catalog')
+            org.reload()
+            click.secho(f"Created catalog {catalog_name}", fg='blue')
+        org.share_catalog(catalog_name)
+        org.reload()
+        catalog = org.get_catalog(catalog_name)
+
         for template in config['broker']['templates']:
             if template_name == '*' or template['name'] == template_name:
                 click.secho('Processing template: %s' % template['name'])
