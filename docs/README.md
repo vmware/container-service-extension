@@ -114,9 +114,10 @@ Below are minimum roles and rights required for the service account (they may su
 
 NOTE: Always ensure vCD service account has enough privileges. Another way is to create a role with Admin privileges and unselect (or) delete rights which are not required from the newly created role.
 
+Group 'broker' has following key properties
+
 | Group                | Property                                                                                                                                                                                                             | Value |
 |:---------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:------|
-| `broker`             |                                                                                                                                                                                                                      |       |
 | `type`               | Broker type, set to `default`                                                                                                                                                                                        |       |
 | `org`                | vCD organization that contains the shared catalog where the master templates will be stored                                                                                                                          |       |
 | `vdc`                | Virtual datacenter within `org` that will be used during the install process to build the template                                                                                                                   |       |
