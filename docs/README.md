@@ -116,7 +116,7 @@ NOTE: Always ensure vCD service account has enough privileges. Another way is to
 
 Group 'broker' has following key properties
 
-| Group                | Property                                                                                                                                                                                                             | Value |
+| Property             | Value                                                                                                                                                                                                            | Value |
 |:---------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:------|
 | `type`               | Broker type, set to `default`                                                                                                                                                                                        |       |
 | `org`                | vCD organization that contains the shared catalog where the master templates will be stored                                                                                                                          |       |
