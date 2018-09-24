@@ -89,11 +89,11 @@ Group 'vcd' has following key properties
 |:------------------|:------------------------------------------------------------------------------------------------|
 | `host`            | IP or hostname of the vCloud Director                                                           |
 | `username`        | Username of the vCD service account with minimum roles and rights                               |
-| `password`        | Password of the vCDservice account.                                                             |
+| `password`        | Password of the vCD service account.                                                             |
 
 It is recommended to create a service account for vCD with minimum required privileges (as it can be catastrophic if someone gets hold of credentials of the user account with admin-level privileges).
 
-Below are minimum roles and rights required for the service account (they may subject to change with new versions of vCD)
+At high-level, below are minimum roles and (admin-view) rights required for the service account (they may subject to change with new versions of vCD)
 - Catalog Author (Role)
 - vApp Author (Role)
 - vApp User (Role)
