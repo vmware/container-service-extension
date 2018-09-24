@@ -566,37 +566,51 @@ def configure_amqp_settings(ctx, client, config, amqp_install):
     if amqp_install == 'skip':
         click.secho('AMQP configuration: skipped')
         return
-    amqp_service = AmqpService(client)
-    current_settings = amqp_service.get_settings()
-    click.secho('AMQP current settings:')
-    stdout(to_dict(current_settings), ctx)
+
     amqp = config['amqp']
+    amqp_service = AmqpService(client)
+    current_settings = to_dict(amqp_service.get_settings())
     amqp_config = {
         'AmqpExchange': amqp['exchange'],
         'AmqpHost': amqp['host'],
-        'AmqpPort': amqp['port'],
+        'AmqpPort': str(amqp['port']),
         'AmqpPrefix': amqp['prefix'],
-        'AmqpSslAcceptAll': amqp['ssl_accept_all'],
-        'AmqpUseSSL': amqp['ssl'],
+        'AmqpSslAcceptAll': str(amqp['ssl_accept_all']).lower(),
+        'AmqpUseSSL': str(amqp['ssl']).lower(),
         'AmqpUsername': amqp['username'],
         'AmqpVHost': amqp['vhost']
     }
-    click.secho('AMQP config file settings:')
-    stdout(amqp_config, ctx)
-    if amqp_install == 'prompt':
-        if not click.confirm('Do you want to configure AMQP with the '
-                             'config file settings?'):
-            click.secho('AMQP not updated')
-            return
+    same_settings = True
+    for key, value in current_settings.items():
+        if amqp_config[key] != value:
+            same_settings = False
+            break
+    if same_settings:
+        click.echo("AMQP settings are the same, skipping AMQP configuration")
+        return
+
+    click.echo('current AMQP settings:')
+    click.echo(current_settings)
+    click.echo('\nconfig AMQP settings:')
+    click.echo(amqp_config)
+    if amqp_install == 'prompt' and not click.confirm(
+            '\nDo you want to configure AMQP with the config file settings?'):
+        click.echo('AMQP not configured')
+        return
+
+    amqp_config['AmqpPort'] = amqp['port']
+    amqp_config['AmqpSslAcceptAll'] = amqp['ssl_accept_all']
+    amqp_config['AmqpUseSSL'] = amqp['ssl']
+
     result = amqp_service.test_config(amqp_config, amqp['password'])
-    click.secho('AMQP test settings, result: %s' % result['Valid'].text)
+    click.echo(f"AMQP test settings, result: {result['Valid'].text}")
 
     if result['Valid'].text == 'true':
         amqp_service.set_config(amqp_config, amqp['password'])
-        click.secho('Updated vCD AMQP configuration.')
+        click.echo('Updated vCD AMQP configuration.')
     else:
-        click.secho('Couldn\'t set vCD AMQP configuration.')
-    click.secho('Checking AMQP exchange \'%s\'' % amqp['exchange'])
+        click.echo('Couldn\'t set vCD AMQP configuration.')
+    click.echo(f"Checking AMQP exchange '{amqp['exchange']}'")
     credentials = pika.PlainCredentials(amqp['username'], amqp['password'])
     parameters = pika.ConnectionParameters(
         amqp['host'],
@@ -608,8 +622,8 @@ def configure_amqp_settings(ctx, client, config, amqp_install):
         retry_delay=2,
         socket_timeout=5)
     connection = pika.BlockingConnection(parameters)
-    click.echo('Connected to AMQP server (%s:%s): %s' %
-               (amqp['host'], amqp['port'], bool_to_msg(connection.is_open)))
+    click.echo(f"Connected to AMQP server ({amqp['host']}:{amqp['port']}): "
+               f"{bool_to_msg(connection.is_open)}")
     channel = connection.channel()
     try:
         channel.exchange_declare(
@@ -618,10 +632,10 @@ def configure_amqp_settings(ctx, client, config, amqp_install):
             passive=True,
             durable=True,
             auto_delete=False)
-        click.secho('Exchange \'%s\' found.' % amqp['exchange'])
+        click.echo(f"Exchange '{amqp['exchange']}' found")
     except Exception:
-        click.secho(
-            'Exchange not found, creating exchange \'%s\'' % amqp['exchange'])
+        click.echo(f"Exchange not found, creating exchange "
+                   f"'{amqp['exchange']}'")
         try:
             channel = connection.channel()
             channel.exchange_declare(
@@ -629,10 +643,10 @@ def configure_amqp_settings(ctx, client, config, amqp_install):
                 exchange_type=EXCHANGE_TYPE,
                 durable=True,
                 auto_delete=False)
-            click.secho('Exchange \'%s\' created.' % amqp['exchange'])
+            click.echo(f"Exchange '{amqp['exchange']}' created.")
         except Exception:
             LOGGER.error(traceback.format_exc())
-            click.secho('Couldn\'t create exchange \'%s\'' % amqp['exchange'])
+            click.echo(f"Couldn't create exchange '{amqp['exchange']}'")
     connection.close()
 
 
