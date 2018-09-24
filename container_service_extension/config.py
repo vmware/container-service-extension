@@ -222,8 +222,8 @@ def check_config(config_file_name, template=None):
     return config
 
 
-def install_cse(ctx, config_file_name, template_name, no_capture, update,
-                amqp_install, ext_install):
+def install_cse(ctx, config_file_name, template_name, update, no_capture,
+                ssh_key, amqp_install, ext_install):
     check_config(config_file_name)
     click.secho('Installing CSE on vCD from file: %s, template: %s' %
                 (config_file_name, template_name))
@@ -284,7 +284,7 @@ def install_cse(ctx, config_file_name, template_name, no_capture, update,
                         else:
                             click.secho('Creating template')
                         create_template(ctx, config, client, org, vdc_resource,
-                                        catalog, no_capture, template)
+                                        catalog, no_capture, template, ssh_key)
                         k8s_template = org.get_catalog_item(
                             config['broker']['catalog'],
                             template['catalog_item'])
@@ -390,7 +390,7 @@ def wait_for_guest_execution_callback(message, exception=None):
 
 
 def create_template(ctx, config, client, org, vdc_resource, catalog,
-                    no_capture, template):
+                    no_capture, template, ssh_key):
     ctx.obj = {}
     ctx.obj['client'] = client
     try:
@@ -434,6 +434,14 @@ def create_template(ctx, config, client, org, vdc_resource, catalog,
             fg='green')
 
         init_script = get_data_file('init-%s.sh' % template['name'])
+        if ssh_key is not None:
+            init_script += \
+                f"""
+mkdir -p /root/.ssh
+echo '{ssh_key}' >> /root/.ssh/authorized_keys
+chmod -R go-rwx /root/.ssh
+"""
+
         vapp_resource = vdc.instantiate_vapp(
             template['temp_vapp'],
             catalog.get('name'),

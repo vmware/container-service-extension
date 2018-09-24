@@ -157,15 +157,15 @@ $ vcd catalog delete <catalog> <catalog-item>
 
 The `cse install` command supports the following options:
 
-| Option       | Short | Description                                                                                                                                                                                | Default Value                               |
-|--------------|-------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------|
-| `--config`     | `-c`    | Config file to use                                                                                                                                                                         | config.yaml                                 |
-| `--template`   | `-t`    | Install the specified template                                                                                                                                                             | * (installs all templates from config file) |
-| `--update`     | `-u`    | Recreate templates during installation                                                                                                                                                     | False                                       |
-| `--no-capture` | `-n`    | Don't capture the temporary vApp as a template   (Leaves it standing for debugging purposes)                                                                                               | False                                       |
-| `--ssh-key`    | `-k`    | ssh-key file to use for vm access   (root password ssh access is disabled for security reasons)                                                                                            | None                                        |
-| `--amqp`       | `-a`    | **prompt**: ask before configuring AMQP settings<br>**skip**: do not configure AMQP settings<br>**config**: configure AMQP without asking for confirmation | prompt                                      |
-| `--ext`        | `-e`    | **prompt**: ask before registering CSE<br>**skip**: do not register CSE<br>**config**: register CSE without asking for confirmation                          | prompt                                      |
+| Option         | Short | Description                                                                                                                                                | Default Value                               |
+|----------------|-------|------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------|
+| `--config`     | `-c`  | Config file to use                                                                                                                                         | config.yaml                                 |
+| `--template`   | `-t`  | Install the specified template                                                                                                                             | * (installs all templates from config file) |
+| `--update`     | `-u`  | Recreate templates during installation                                                                                                                     | False                                       |
+| `--no-capture` | `-n`  | Don't capture the temporary vApp as a template   (Leaves it standing for debugging purposes)                                                               | False                                       |
+| `--ssh-key`    | `-k`  | ssh-key file to use for vm access   (root password ssh access on Ubuntu VMs is disabled for security reasons)                                              | None                                        |
+| `--amqp`       | `-a`  | **prompt**: ask before configuring AMQP settings<br>**skip**: do not configure AMQP settings<br>**config**: configure AMQP without asking for confirmation | prompt                                      |
+| `--ext`        | `-e`  | **prompt**: ask before registering CSE<br>**skip**: do not register CSE<br>**config**: register CSE without asking for confirmation                        | prompt                                      |
 
 Optionally, configure the API extension timeout (seconds) on the vCloud Director cell:
 
@@ -780,9 +780,12 @@ Usage: cse [OPTIONS] COMMAND [ARGS]...
           cse install --config config.yaml --template photon-v2
               Install CSE. It only creates the template specified.
 
-          cse install --config config.yaml --template photon-v2 --no-capture
-              Install CSE. It only creates the temporary vApp specified in the
-              config file. It will not capture the vApp in the catalog.
+          cse install --config config.yaml --no-capture --ssh-key  \
+                      ~/.etc/id_rsa.pub
+              Install CSE. The temporary vApp specified in the config file \
+              will be created, but the vApp will not be captured as a template \
+              in the catalog. --ssh-key option is required if --no-capture \
+              is used
 
           cse install --config config.yaml --template photon-v2 --update \
                       --amqp skip --ext skip
