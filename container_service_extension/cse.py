@@ -150,6 +150,15 @@ def check(ctx, config, template):
     default=False,
     help='no capture')
 @click.option(
+    '-k',
+    '--ssh-key',
+    'ssh_key_file',
+    required=False,
+    default=None,
+    type=click.File('r'),
+    help='SSH public key to connect to the guest OS on the VM'
+)
+@click.option(
     '-a',
     '--amqp',
     'amqp_install',
@@ -163,16 +172,18 @@ def check(ctx, config, template):
     default='prompt',
     type=click.Choice(['prompt', 'skip', 'config']),
     help='API Extension configuration')
-def install(ctx, config, template, update, no_capture, amqp_install,
-            ext_install):
+def install(ctx, config, template, update, no_capture, ssh_key_file,
+            amqp_install, ext_install):
     """Install CSE on vCloud Director."""
-    try:
-        install_cse(ctx, config, template, no_capture, update, amqp_install,
-                    ext_install)
-    except Exception as e:
-        LOGGER.error(traceback.format_exc())
-        click.secho('An error has ocurred, %s'
-                    '. See \'cse.log\' for details' % str(e))
+    if no_capture and ssh_key_file is None:
+        click.echo('Must provide ssh-key file (using -k) if --no-capture is '
+                   'True, or else temporary vm will be inaccessible')
+    else:
+        ssh_key = None
+        if ssh_key_file is not None:
+            ssh_key = ssh_key_file.read()
+        install_cse(ctx, config, template, update, no_capture, ssh_key,
+                    amqp_install, ext_install)
 
 
 @cli.command(short_help='run service')
