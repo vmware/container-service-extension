@@ -163,7 +163,7 @@ The `cse install` command supports the following options:
 | `--template`   | `-t`  | Install the specified template                                                                                                                             | * (installs all templates from config file) |
 | `--update`     | `-u`  | Recreate templates during installation                                                                                                                     | False                                       |
 | `--no-capture` | `-n`  | Don't capture the temporary vApp as a template   (Leaves it standing for debugging purposes)                                                               | False                                       |
-| `--ssh-key`    | `-k`  | ssh-key file to use for vm access   (root password ssh access on Ubuntu VMs is disabled for security reasons)                                              | None                                        |
+| `--ssh-key`    | `-k`  | ssh-key file to use for vm access   (root password ssh access is disabled for security reasons)                                              | None                                        |
 | `--amqp`       | `-a`  | **prompt**: ask before configuring AMQP settings<br>**skip**: do not configure AMQP settings<br>**config**: configure AMQP without asking for confirmation | prompt                                      |
 | `--ext`        | `-e`  | **prompt**: ask before registering CSE<br>**skip**: do not register CSE<br>**config**: register CSE without asking for confirmation                        | prompt                                      |
 
