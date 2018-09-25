@@ -7,6 +7,8 @@ from os.path import expanduser
 from os.path import join
 
 import click
+from pyvcloud.vcd.client import VCLOUD_STATUS_MAP
+from pyvcloud.vcd.vapp import VApp
 from vcd_cli.utils import restore_session
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
@@ -152,13 +154,16 @@ def list_clusters(ctx):
         result = []
         clusters = cluster.get_clusters()
         for c in clusters:
+            vapp = VApp(client, href=c['vapp_href'])
             result.append({
                 'name': c['name'],
                 'IP master': c['leader_endpoint'],
                 'template': c['template'],
                 'VMs': c['number_of_vms'],
-                'vdc': c['vdc_name']
+                'vdc': c['vdc_name'],
+                'status': VCLOUD_STATUS_MAP[vapp.get_power_state()]
             })
+
         stdout(result, ctx, show_id=True)
     except Exception as e:
         stderr(e, ctx)
