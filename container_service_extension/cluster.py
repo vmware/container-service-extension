@@ -83,7 +83,7 @@ def load_from_metadata(client, name=None, cluster_id=None):
         cluster = {}
         cluster['name'] = node['vapp_name']
         cluster['cluster_id'] = node['cluster_id']
-        cluster['status'] = ''
+        cluster['status'] = node['record'].get('status')
         cluster['leader_endpoint'] = node['master_ip']
         cluster['vapp_id'] = node['vapp_id']
         cluster['vapp_href'] = node['vapp_href']
