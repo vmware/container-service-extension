@@ -112,7 +112,10 @@ At high-level, below are minimum roles and (admin-view) rights required for the 
 - Organization VDC Network: View Properties (Right)
 - Organization: View Organizations (Right)
 
-NOTE: Always ensure vCD service account has enough privileges. Another way is to create a role with Admin privileges and unselect (or) delete rights which are not required from the newly created role.
+Notes:
+- Use commands from vcd-cli to get list of rights required by 'Catalog Author' and 'vApp Author' eg: vcd role list-rights 'Catalog Author'. Create a custom role with union of rights derived from above set of roles and rights and then assign the custom role to user account.
+- Always ensure vCD service account has enough privileges. Another way is to create a role with Admin privileges and unselect (or) delete rights which are not required from the newly created role.
+
 
 Group 'broker' has following key properties
 
