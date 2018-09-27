@@ -1,6 +1,18 @@
 CHANGES
 =======
 
+* [VCDA-745] Add --ssh-key option for cse install (#114)
+* [Doc] Privileges required for VCD service account & CSE-VCD compatibility matrix (#109)
+* Skip AMQP configuration if current is same as config file (#110)
+* [VCDA-755] Ensure templates catalog is always shared (#108)
+* Comment out problematic lines in ubuntu customization script (#107)
+* Fix for loop to iterate over a list (#106)
+* Update ova file hashing to use SHA256 instead of SHA1 (#105)
+* [VCDA-710] Replace yaml.load() with yaml.safe\_load() (#102)
+* Restrict permissions when setting up iptables-ports service (#103)
+* VCDA-611: Documentation on Known issues (#104)
+* [VCDA-566] Force users to provide vCenter service account (#91)
+
 1.1.0
 -----
 
