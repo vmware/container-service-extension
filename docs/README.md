@@ -83,9 +83,44 @@ The configuration file has 5 sections:
 - `service`: service settings
 - `broker`: service broker settings
 
-| Group                | Property                                                                                                                                                                                                             | Value |
+Group 'vcd' has following key properties
+
+| Property          | Value                                                                                           |
+|:------------------|:------------------------------------------------------------------------------------------------|
+| `host`            | IP or hostname of the vCloud Director                                                           |
+| `username`        | Username of the vCD service account with minimum roles and rights                               |
+| `password`        | Password of the vCD service account.                                                             |
+
+It is recommended to create a service account for vCD with minimum required privileges (as it can be catastrophic if someone gets hold of credentials of the user account with admin-level privileges).
+
+At high-level, below are minimum roles and (admin-view) rights required for the service account (they may subject to change with new versions of vCD)
+- Catalog Author (Role)
+- vApp Author (Role)
+- vApp User (Role)
+- vCenter: View (Right)
+- vCenter: Refresh (Right)
+- vCenter: Open in vSphere (Right)
+- Task: View Tasks (Right)
+- Task: Update (Right)
+- Task: Resume, Abort, or Fail (Right)
+- Catalog Item: Add to My Cloud (Right)
+- Catalog Item: Create/Upload a vApp Template/Media (Right)
+- Catalog Item: View vApp Templates/Media (Right)
+- Catalog Item: Copy/Move a vApp Template/Media (Right)
+- General: Administrator View (Right)
+- Organization VDC: View Organization VDCs (Right)
+- Organization VDC Network: View Properties (Right)
+- Organization: View Organizations (Right)
+
+Notes:
+- Use commands from vcd-cli to get list of rights required by 'Catalog Author' and 'vApp Author' eg: vcd role list-rights 'Catalog Author'. Create a custom role with union of rights derived from above set of roles and rights and then assign the custom role to user account.
+- Always ensure vCD service account has enough privileges. Another way is to create a role with Admin privileges and unselect (or) delete rights which are not required from the newly created role.
+
+
+Group 'broker' has following key properties
+
+| Property             | Value                                                                                                                                                                                                            | Value |
 |:---------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:------|
-| `broker`             |                                                                                                                                                                                                                      |       |
 | `type`               | Broker type, set to `default`                                                                                                                                                                                        |       |
 | `org`                | vCD organization that contains the shared catalog where the master templates will be stored                                                                                                                          |       |
 | `vdc`                | Virtual datacenter within `org` that will be used during the install process to build the template                                                                                                                   |       |
@@ -968,6 +1003,13 @@ Features:
 | Photon OS 1.0, Rev 2 | photon-custom-hw11-1.0-62c543d.ova     | `https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova`            | 18c1a6d31545b757d897c61a0c3cc0e54d8aeeba |
 | Photon OS 2.0 GA     | photon-custom-hw11-2.0-304b817.ova     | `http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova`                       | b8c183785bbf582bcd1be7cde7c22e5758fb3f16 |
 | Ubuntu 16.04.4 LTS   | ubuntu-16.04-server-cloudimg-amd64.ova | `https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova` | b8c183785bbf582bcd1be7cde7c22e5758fb3f16 |
+
+## CSE-vCD compatibility Matrix
+
+| CSE     | VCD                  |
+|:--------|:---------------------|
+| 1.1.0   | 8.20, 9.0, 9.1       |
+| 1.2.0 (coming soon)| 8.20, 9.0, 9.1, 9.5 |
 
 # Appendix
 
