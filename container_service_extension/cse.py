@@ -36,7 +36,7 @@ def cli(ctx):
             Save sample config.
 \b
         cse check
-            Validate configuration.
+            Validate CSE installation/configuration.
 \b
         cse install --config config.yaml
             Install CSE.
@@ -44,9 +44,12 @@ def cli(ctx):
         cse install --config config.yaml --template photon-v2
             Install CSE. It only creates the template specified.
 \b
-        cse install --config config.yaml --template photon-v2 --no-capture
-            Install CSE. It only creates the temporary vApp specified in the
-            config file. It will not capture the vApp in the catalog.
+        cse install --config config.yaml --no-capture --ssh-key  \\
+                    ~/.etc/id_rsa.pub
+            Install CSE. The temporary vApp specified in the config file \\
+            will be created, but the vApp will not be captured as a template \\
+            in the catalog. --ssh-key option is required if --no-capture \\
+            is used
 \b
         cse install --config config.yaml --template photon-v2 --update \\
                     --amqp skip --ext skip
@@ -148,7 +151,17 @@ def check(ctx, config, template):
     is_flag=True,
     required=False,
     default=False,
-    help='no capture')
+    help='Do not capture the temporary vApp as a catalog template. --ssh-key '
+         'option is required if this is enabled')
+@click.option(
+    '-k',
+    '--ssh-key',
+    'ssh_key_file',
+    required=False,
+    default=None,
+    type=click.File('r'),
+    help='SSH public key to connect to the guest OS on the VM'
+)
 @click.option(
     '-a',
     '--amqp',
@@ -163,16 +176,19 @@ def check(ctx, config, template):
     default='prompt',
     type=click.Choice(['prompt', 'skip', 'config']),
     help='API Extension configuration')
-def install(ctx, config, template, update, no_capture, amqp_install,
-            ext_install):
+def install(ctx, config, template, update, no_capture, ssh_key_file,
+            amqp_install, ext_install):
     """Install CSE on vCloud Director."""
-    try:
-        install_cse(ctx, config, template, no_capture, update, amqp_install,
-                    ext_install)
-    except Exception as e:
-        LOGGER.error(traceback.format_exc())
-        click.secho('An error has ocurred, %s'
-                    '. See \'cse.log\' for details' % str(e))
+    if no_capture and ssh_key_file is None:
+        click.echo('Must provide ssh-key file (using --ssh-key OR -k) if '
+                   '--no-capture is True, or else temporary vm will '
+                   'be inaccessible')
+    else:
+        ssh_key = None
+        if ssh_key_file is not None:
+            ssh_key = ssh_key_file.read()
+        install_cse(ctx, config, template, update, no_capture, ssh_key,
+                    amqp_install, ext_install)
 
 
 @cli.command(short_help='run service')

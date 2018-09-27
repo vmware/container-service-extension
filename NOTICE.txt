@@ -1,4 +1,4 @@
-container-service-extension 1.0 GA
+container-service-extension 1.2.0 GA
 
 Copyright (c) 2018 VMware, Inc. All Rights Reserved.
 
