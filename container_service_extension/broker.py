@@ -19,7 +19,6 @@ from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
 import requests
-import yaml
 
 from container_service_extension.cluster import add_nodes
 from container_service_extension.cluster import delete_nodes_from_cluster
@@ -54,91 +53,6 @@ OP_MESSAGE = {
 }
 
 MAX_HOST_NAME_LENGTH = 25
-
-SAMPLE_TEMPLATE_PHOTON_V2 = {
-    'name':
-    'photon-v2',
-    'catalog_item':
-    'photon-custom-hw11-2.0-304b817-k8s',
-    'source_ova_name':
-    'photon-custom-hw11-2.0-304b817.ova',
-    'source_ova':
-    'http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova',  # NOQA
-    'sha256_ova':
-    'cb51e4b6d899c3588f961e73282709a0d054bb421787e140a1d80c24d4fd89e1',
-    'temp_vapp':
-    'photon2-temp',
-    'cleanup':
-    True,
-    'cpu':
-    2,
-    'mem':
-    2048,
-    'admin_password':
-    'guest_os_admin_password',
-    'description':
-    "PhotonOS v2\nDocker 17.06.0-4\nKubernetes 1.9.1\nweave 2.3.0"
-}
-
-SAMPLE_TEMPLATE_UBUNTU_16_04 = {
-    'name':
-    'ubuntu-16.04',
-    'catalog_item':
-    'ubuntu-16.04-server-cloudimg-amd64-k8s',
-    'source_ova_name':
-    'ubuntu-16.04-server-cloudimg-amd64.ova',
-    'source_ova':
-    'https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova',  # NOQA
-    'sha256_ova':
-    '3c1bec8e2770af5b9b0462e20b7b24633666feedff43c099a6fb1330fcc869a9',
-    'temp_vapp':
-    'ubuntu1604-temp',
-    'cleanup':
-    True,
-    'cpu':
-    2,
-    'mem':
-    2048,
-    'admin_password':
-    'guest_os_admin_password',
-    'description':
-    'Ubuntu 16.04\nDocker 18.03.0~ce\nKubernetes 1.10.1\nweave 2.3.0'
-}
-
-SAMPLE_CONFIG = {
-    'broker': {
-        'type': 'default',
-        'org': 'Admin',
-        'vdc': 'Catalog',
-        'catalog': 'cse',
-        'network': 'admin_network',
-        'ip_allocation_mode': 'pool',
-        'storage_profile': '*',
-        'default_template': SAMPLE_TEMPLATE_PHOTON_V2['name'],
-        'templates': [SAMPLE_TEMPLATE_PHOTON_V2, SAMPLE_TEMPLATE_UBUNTU_16_04],
-        'cse_msg_dir': '/tmp/cse'
-    }
-}
-
-
-def get_sample_broker_config(labels):
-    return yaml.safe_dump(SAMPLE_CONFIG, default_flow_style=False)
-
-
-def validate_broker_config_elements(config):
-    for k, v in SAMPLE_CONFIG['broker'].items():
-        if k not in config.keys():
-            raise Exception('missing key: %s' % k)
-    for k, v in config.items():
-        if k not in SAMPLE_CONFIG['broker'].keys():
-            raise Exception('invalid key: %s' % k)
-    for template in config['templates']:
-        for k, v in SAMPLE_TEMPLATE_PHOTON_V2.items():
-            if k not in template.keys():
-                raise Exception('missing key: %s' % k)
-        for k, v in template.items():
-            if k not in SAMPLE_TEMPLATE_PHOTON_V2.keys():
-                raise Exception('invalid key: %s' % k)
 
 
 def validate_broker_config_content(config, client, template='*'):
