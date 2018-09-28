@@ -17,7 +17,7 @@ import pkg_resources
 from pyvcloud.vcd.client import Client
 
 from container_service_extension.broker import DefaultBroker
-from container_service_extension.config import check_config
+from container_service_extension.config import check_cse
 from container_service_extension.config import get_config
 from container_service_extension.consumer import MessageConsumer
 
@@ -50,10 +50,10 @@ def consumer_thread(c):
 
 
 class Service(object, metaclass=Singleton):
-    def __init__(self, config_file, should_check_config=True):
+    def __init__(self, config_file, should_check_cse=True):
         self.config_file = config_file
         self.config = None
-        self.should_check_config = should_check_config
+        self.should_check_cse = should_check_cse
         self.is_enabled = False
         self.consumers = []
         self.threads = []
@@ -159,10 +159,10 @@ class Service(object, metaclass=Singleton):
         return reply
 
     def run(self):
-        if self.should_check_config:
-            self.config = check_config(self.config_file)
-        else:
-            self.config = get_config(self.config_file)
+        if self.should_check_cse:
+            check_cse(self.config_file)
+
+        self.config = get_config(self.config_file)
         log_file = 'cse.log'
         handler = RotatingFileHandler(
             log_file, maxBytes=10 * 1024 * 1024, backupCount=10)

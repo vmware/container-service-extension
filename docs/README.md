@@ -807,7 +807,8 @@ Usage: cse [OPTIONS] COMMAND [ARGS]...
               Save sample config.
 
           cse check
-              Validate configuration.
+              Validate that CSE has been installed according to config file. \
+              (checks for catalog and templates)
 
           cse install --config config.yaml
               Install CSE.
@@ -842,7 +843,7 @@ Options:
   -h, --help  Show this message and exit.
 
 Commands:
-  check    check configuration
+  check    check that CSE is installed according to config file
   install  install CSE on vCD
   run      run service
   sample   generate sample configuration

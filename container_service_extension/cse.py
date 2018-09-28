@@ -10,7 +10,7 @@ import traceback
 import click
 from vcd_cli.utils import stdout
 
-from container_service_extension.config import check_config
+from container_service_extension.config import check_cse
 from container_service_extension.config import generate_sample_config
 from container_service_extension.config import install_cse
 from container_service_extension.service import Service
@@ -89,7 +89,7 @@ def sample(ctx):
     click.secho(generate_sample_config())
 
 
-@cli.command(short_help='check configuration')
+@cli.command(short_help='check that CSE is installed according to config file')
 @click.pass_context
 @click.option(
     '-c',
@@ -109,14 +109,13 @@ def sample(ctx):
     metavar='<template>',
     help='Validate this template')
 def check(ctx, config, template):
-    """Validate CSE configuration."""
+    """Validate CSE Installation"""
     try:
-        check_config(config, template)
-        click.secho('The configuration is valid.')
+        check_cse(config, template)
+        click.echo('The installation is valid.')
     except Exception as e:
         LOGGER.error(traceback.format_exc())
-        click.secho('The configuration is invalid, %s'
-                    '. See \'cse.log\' for details' % str(e))
+        click.echo(f"{e}\nCSE installation is invalid, check config file.")
 
 
 @cli.command(short_help='install CSE on vCD')
@@ -211,7 +210,7 @@ def install(ctx, config, template, update, no_capture, ssh_key_file,
     help='Skip check')
 def run(ctx, config, skip_check):
     """Run CSE service."""
-    service = Service(config, should_check_config=not skip_check)
+    service = Service(config, should_check_cse=not skip_check)
     service.run()
 
 
