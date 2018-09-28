@@ -30,9 +30,7 @@ from vcd_cli.utils import to_dict
 from vsphere_guest_run.vsphere import VSphere
 import yaml
 
-from container_service_extension.broker import get_sample_broker_config
 from container_service_extension.broker import validate_broker_config_content
-from container_service_extension.broker import validate_broker_config_elements
 from container_service_extension.consumer import EXCHANGE_TYPE
 from container_service_extension.utils import get_vsphere
 
@@ -82,17 +80,61 @@ SAMPLE_VCS_CONFIG = {
 
 SAMPLE_SERVICE_CONFIG = {'service': {'listeners': 5}}
 
+SAMPLE_TEMPLATE_PHOTON_V2 = {
+    'name': 'photon-v2',
+    'catalog_item': 'photon-custom-hw11-2.0-304b817-k8s',
+    'source_ova_name': 'photon-custom-hw11-2.0-304b817.ova',
+    'source_ova': 'http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova',  # noqa
+    'sha256_ova': 'cb51e4b6d899c3588f961e73282709a0d054bb421787e140a1d80c24d4fd89e1',  # noqa
+    'temp_vapp': 'photon2-temp',
+    'cleanup': True,
+    'cpu': 2,
+    'mem': 2048,
+    'admin_password': 'guest_os_admin_password',
+    'description': 'PhotonOS v2\nDocker 17.06.0-4\nKubernetes 1.9.1\nweave 2.3.0'  # noqa
+}
 
-def generate_sample_config(labels=[]):
-    sample_config = yaml.safe_dump(
-        SAMPLE_AMQP_CONFIG, default_flow_style=False) + '\n'
-    sample_config += yaml.safe_dump(
-        SAMPLE_VCD_CONFIG, default_flow_style=False) + '\n'
-    sample_config += yaml.safe_dump(
-        SAMPLE_VCS_CONFIG, default_flow_style=False) + '\n'
-    sample_config += yaml.safe_dump(
-        SAMPLE_SERVICE_CONFIG, default_flow_style=False) + '\n'
-    sample_config += get_sample_broker_config(labels)
+SAMPLE_TEMPLATE_UBUNTU_16_04 = {
+    'name': 'ubuntu-16.04',
+    'catalog_item': 'ubuntu-16.04-server-cloudimg-amd64-k8s',
+    'source_ova_name': 'ubuntu-16.04-server-cloudimg-amd64.ova',
+    'source_ova': 'https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova',  # noqa
+    'sha256_ova': '3c1bec8e2770af5b9b0462e20b7b24633666feedff43c099a6fb1330fcc869a9',  # noqa
+    'temp_vapp': 'ubuntu1604-temp',
+    'cleanup': True,
+    'cpu': 2,
+    'mem': 2048,
+    'admin_password': 'guest_os_admin_password',
+    'description': 'Ubuntu 16.04\nDocker 18.03.0~ce\nKubernetes 1.10.1\nweave 2.3.0'  # noqa
+}
+
+SAMPLE_BROKER_CONFIG = {
+    'broker': {
+        'type': 'default',
+        'org': 'Admin',
+        'vdc': 'Catalog',
+        'catalog': 'cse',
+        'network': 'admin_network',
+        'ip_allocation_mode': 'pool',
+        'storage_profile': '*',
+        'default_template': SAMPLE_TEMPLATE_PHOTON_V2['name'],
+        'templates': [SAMPLE_TEMPLATE_PHOTON_V2, SAMPLE_TEMPLATE_UBUNTU_16_04],
+        'cse_msg_dir': '/tmp/cse'
+    }
+}
+
+
+def generate_sample_config():
+    sample_config = yaml.safe_dump(SAMPLE_AMQP_CONFIG,
+                                   default_flow_style=False) + '\n'
+    sample_config += yaml.safe_dump(SAMPLE_VCD_CONFIG,
+                                    default_flow_style=False) + '\n'
+    sample_config += yaml.safe_dump(SAMPLE_VCS_CONFIG,
+                                    default_flow_style=False) + '\n'
+    sample_config += yaml.safe_dump(SAMPLE_SERVICE_CONFIG,
+                                    default_flow_style=False) + '\n'
+    sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
+                                    default_flow_style=False) + '\n'
 
     return sample_config.strip() + '\n'
 
@@ -148,7 +190,7 @@ def check_config(config_file_name, template=None):
     if not python_valid:
         raise Exception('Python version not supported')
     config = get_config(config_file_name)
-    validate_broker_config_elements(config['broker'])
+    validate_broker_config(config['broker'])
     amqp = config['amqp']
     credentials = pika.PlainCredentials(amqp['username'], amqp['password'])
     parameters = pika.ConnectionParameters(
@@ -220,6 +262,44 @@ def check_config(config_file_name, template=None):
             validate_broker_config_content(config, client, template)
 
     return config
+
+
+def validate_broker_config(broker_dict):
+    sample_keys = set(SAMPLE_BROKER_CONFIG['broker'].keys())
+    config_keys = set(broker_dict.keys())
+
+    missing_keys = sample_keys - config_keys
+    invalid_keys = config_keys - sample_keys
+
+    for key in missing_keys:
+        click.secho(f"Missing key (broker): {key}", fg='red')
+    for key in invalid_keys:
+        click.secho(f"Invalid key (broker): {key}", fg='red')
+    if missing_keys or invalid_keys:
+        raise Exception("Add missing keys or remove invalid keys from config "
+                        "file broker section")
+
+    default_exists = False
+    for template in broker_dict['templates']:
+        sample_keys = set(SAMPLE_TEMPLATE_PHOTON_V2.keys())
+        config_keys = set(template.keys())
+
+        missing_keys = sample_keys - config_keys
+        invalid_keys = config_keys - sample_keys
+
+        for key in missing_keys:
+            click.secho(f"Missing key (template): {key}", fg='red')
+        for key in invalid_keys:
+            click.secho(f"Invalid key (template): {key}", fg='red')
+        if missing_keys or invalid_keys:
+            raise Exception("Add missing keys or remove invalid keys from "
+                            "config file broker templates section")
+
+        if template['name'] == broker_dict['default_template']:
+            default_exists = True
+
+    if not default_exists:
+        raise Exception("Default template not found in listed templates")
 
 
 def install_cse(ctx, config_file_name, template_name, update, no_capture,
