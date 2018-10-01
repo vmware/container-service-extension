@@ -572,7 +572,7 @@ def capture_as_template(ctx, config, vapp_resource, org, catalog, template):
 
 def configure_amqp_settings(ctx, client, config, amqp_install):
     if amqp_install == 'skip':
-        click.secho('AMQP configuration: skipped')
+        click.echo('AMQP configuration: skipped')
         return
 
     amqp = config['amqp']
@@ -588,23 +588,25 @@ def configure_amqp_settings(ctx, client, config, amqp_install):
         'AmqpUsername': amqp['username'],
         'AmqpVHost': amqp['vhost']
     }
-    same_settings = True
-    for key, value in current_settings.items():
-        if amqp_config[key] != value:
-            same_settings = False
-            break
-    if same_settings:
+
+    diff_settings = [key for key, value in current_settings.items() if amqp_config[key] != value]  # noqa
+    if not diff_settings:
         click.echo("AMQP settings are the same, skipping AMQP configuration")
         return
 
-    click.echo('current AMQP settings:')
-    click.echo(current_settings)
-    click.echo('\nconfig AMQP settings:')
-    click.echo(amqp_config)
-    if amqp_install == 'prompt' and not click.confirm(
-            '\nDo you want to configure AMQP with the config file settings?'):
-        click.echo('AMQP not configured')
-        return
+    if amqp_install == 'prompt':
+        click.echo('\nDifferences between current and config AMQP settings')
+        click.echo('current AMQP setting:')
+        for setting in diff_settings:
+            click.echo(f"{setting}: {current_settings[setting]}")
+
+        click.echo('\nconfig AMQP setting:')
+        for setting in diff_settings:
+            click.echo(f"{setting}: {amqp_config[setting]}")
+
+        if not click.confirm('\nDo you want to configure AMQP with the config file settings?'):  # noqa
+            click.echo('AMQP not configured')
+            return
 
     amqp_config['AmqpPort'] = amqp['port']
     amqp_config['AmqpSslAcceptAll'] = amqp['ssl_accept_all']
