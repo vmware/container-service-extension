@@ -38,13 +38,12 @@ def wait_until_tools_ready(vm):
 
 
 def load_from_metadata(client, name=None, cluster_id=None):
-    clusters_dict = {}
     if cluster_id is None:
         query_filter = 'metadata:cse.cluster.id==STRING:*'
     else:
-        query_filter = 'metadata:cse.cluster.id==STRING:%s' % cluster_id
+        query_filter = f'metadata:cse.cluster.id==STRING:{cluster_id}'
     if name is not None:
-        query_filter += ';name==%s' % name
+        query_filter += f';name=={name}'
     resource_type = 'vApp'
     if client.is_sysadmin():
         resource_type = 'adminVApp'
@@ -53,52 +52,44 @@ def load_from_metadata(client, name=None, cluster_id=None):
         query_result_format=QueryResultFormat.ID_RECORDS,
         qfilter=query_filter,
         fields='metadata:cse.cluster.id,metadata:cse.master.ip,'
-        'metadata:cse.version,metadata:cse.template')
+               'metadata:cse.version,metadata:cse.template')
     records = list(q.execute())
-    nodes = []
+
+    clusters = []
     for record in records:
         vapp_id = record.get('id').split(':')[-1]
         vdc_id = record.get('vdc').split(':')[-1]
-        node = {
-            'vapp_name': record.get('name'),
-            'vdc_name': record.get('vdcName'),
+
+        cluster = {
+            'name': record.get('name'),
             'vapp_id': vapp_id,
-            'vapp_href': '%s/vApp/vapp-%s' % (client._uri, vapp_id),
-            'vdc_href': '%s/vdc/%s' % (client._uri, vdc_id),
-            'record': record,
-            'master_ip': ''
+            'vapp_href': f'{client._uri}/vApp/vapp-{vapp_id}',
+            'vdc_name': record.get('vdcName'),
+            'vdc_href': f'{client._uri}/vdc/{vdc_id}',
+            'leader_endpoint': '',
+            'master_nodes': [],
+            'nodes': [],
+            'nfs_nodes': [],
+            'number_of_vms': record.get('numberOfVMs'),
+            'template': '',
+            'cse_version': '',
+            'cluster_id': '',
+            'status': record.get('status')
         }
         if hasattr(record, 'Metadata'):
-            for me in record.Metadata.MetadataEntry:
-                if me.Key == 'cse.cluster.id':
-                    node['cluster_id'] = str(me.TypedValue.Value)
-                elif me.Key == 'cse.version':
-                    node['cse_version'] = str(me.TypedValue.Value)
-                elif me.Key == 'cse.master.ip':
-                    node['master_ip'] = str(me.TypedValue.Value)
-                elif me.Key == 'cse.template':
-                    node['template'] = str(me.TypedValue.Value)
-        nodes.append(node)
-    for node in nodes:
-        cluster = {}
-        cluster['name'] = node['vapp_name']
-        cluster['cluster_id'] = node['cluster_id']
-        cluster['status'] = node['record'].get('status')
-        cluster['leader_endpoint'] = node['master_ip']
-        cluster['vapp_id'] = node['vapp_id']
-        cluster['vapp_href'] = node['vapp_href']
-        cluster['vdc_name'] = node['vdc_name']
-        cluster['vdc_href'] = node['vdc_href']
-        cluster['master_nodes'] = []
-        cluster['nodes'] = []
-        cluster['nfs_nodes'] = []
-        cluster['number_of_vms'] = node['record'].get('numberOfVMs')
-        if 'template' in node:
-            cluster['template'] = node['template']
-        else:
-            cluster['template'] = ''
-        clusters_dict[cluster['name']] = cluster
-    return list(clusters_dict.values())
+            for entry in record.Metadata.MetadataEntry:
+                if entry.Key == 'cse.cluster.id':
+                    cluster['cluster_id'] = str(entry.TypedValue.Value)
+                elif entry.Key == 'cse.version':
+                    cluster['cse_version'] = str(entry.TypedValue.Value)
+                elif entry.Key == 'cse.master.ip':
+                    cluster['leader_endpoint'] = str(entry.TypedValue.Value)
+                elif entry.Key == 'cse.template':
+                    cluster['template'] = str(entry.TypedValue.Value)
+
+        clusters.append(cluster)
+
+    return clusters
 
 
 def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
