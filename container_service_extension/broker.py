@@ -141,31 +141,6 @@ def validate_broker_config_elements(config):
                 raise Exception('invalid key: %s' % k)
 
 
-def validate_broker_config_content(config, client, template='*'):
-    from container_service_extension.config import bool_to_msg
-    logged_in_org = client.get_org()
-    org = Org(client, resource=logged_in_org)
-    org.get_catalog(config['broker']['catalog'])
-    click.echo('Find catalog \'%s\': %s' % (config['broker']['catalog'],
-                                            bool_to_msg(True)))
-    default_template_found = False
-    for t in config['broker']['templates']:
-        if template == '*' or template == t['name']:
-            click.secho('Validating template: %s' % t['name'])
-            if config['broker']['default_template'] == t['name']:
-                default_template_found = True
-                click.secho('  Is default template: %s' % True)
-            else:
-                click.secho('  Is default template: %s' % False)
-            org.get_catalog_item(config['broker']['catalog'],
-                                 t['catalog_item'])
-            click.echo('Find template \'%s\', \'%s\': %s' %
-                       (config['broker']['catalog'], t['catalog_item'],
-                        bool_to_msg(True)))
-
-    assert default_template_found
-
-
 def get_new_broker(config):
     if config['broker']['type'] == 'default':
         return DefaultBroker(config)

@@ -31,7 +31,6 @@ from vsphere_guest_run.vsphere import VSphere
 import yaml
 
 from container_service_extension.broker import get_sample_broker_config
-from container_service_extension.broker import validate_broker_config_content
 from container_service_extension.broker import validate_broker_config_elements
 from container_service_extension.consumer import EXCHANGE_TYPE
 from container_service_extension.utils import get_vsphere
@@ -105,75 +104,40 @@ def bool_to_msg(value):
 
 
 def get_config(config_file_name):
-    config = {}
+    """Retrieves the config yaml as a dict and verifies that the specified
+    information is correct.
+
+    :param str config_file_name: relative filepath of the config file to use
+    :return: dict representation of config yaml file
+    :rtype: dict
+    """
+    click.echo(f"Validating config file: {config_file_name}")
+
+    check_file_permissions(config_file_name)
+
     with open(config_file_name, 'r') as f:
         config = yaml.safe_load(f)
-    if not config['vcd']['verify']:
-        click.secho(
-            'InsecureRequestWarning: '
-            'Unverified HTTPS request is being made. '
-            'Adding certificate verification is strongly '
-            'advised.',
-            fg='yellow',
-            err=True)
-        requests.packages.urllib3.disable_warnings()
+
+    validate_amqp_config(config['amqp'])
+    validate_vcd_and_vcs(config['vcd'], config['vcs'])
+    validate_broker_config_elements(config['broker'])
+
     return config
 
 
-def check_config(config_file_name, template=None):
-    click.secho('Validating CSE on vCD from file: %s' % config_file_name)
-    file_mode = os.stat(config_file_name).st_mode
-    invalid_file_permissions = False
-    if file_mode & stat.S_IXUSR:
-        click.secho('Remove execute permission of the Owner for the '
-                    'file %s' % config_file_name, fg='red')
-        invalid_file_permissions = True
-    if file_mode & stat.S_IROTH or file_mode & stat.S_IWOTH or file_mode & stat.S_IXOTH:
-        click.secho('Remove read, write and execute permissions of Others'
-                    ' for the file %s' % config_file_name, fg='red')
-        invalid_file_permissions = True
-    if file_mode & stat.S_IRGRP or file_mode & stat.S_IWGRP or file_mode & stat.S_IXGRP:
-        click.secho('Remove read, write and execute permissions of Group'
-                    ' for the file %s' % config_file_name, fg='red')
-        invalid_file_permissions = True
-    if invalid_file_permissions:
-        sys.exit(1)
-    if sys.version_info.major >= 3 and sys.version_info.minor >= 6:
-        python_valid = True
-    else:
-        python_valid = False
-    click.echo('Python version >= 3.6 (installed: %s.%s.%s): %s' %
-               (sys.version_info.major, sys.version_info.minor,
-                sys.version_info.micro, bool_to_msg(python_valid)))
-    if not python_valid:
-        raise Exception('Python version not supported')
-    config = get_config(config_file_name)
-    validate_broker_config_elements(config['broker'])
-    amqp = config['amqp']
-    credentials = pika.PlainCredentials(amqp['username'], amqp['password'])
-    parameters = pika.ConnectionParameters(
-        amqp['host'],
-        amqp['port'],
-        amqp['vhost'],
-        credentials,
-        ssl=amqp['ssl'],
-        connection_attempts=3,
-        retry_delay=2,
-        socket_timeout=5)
-    connection = pika.BlockingConnection(parameters)
-    click.echo('Connected to AMQP server (%s:%s): %s' %
-               (amqp['host'], amqp['port'], bool_to_msg(connection.is_open)))
-    connection.close()
+def check_cse(config_file_name, template='*'):
+    """Verifies that the vCD instance is working and that CSE has been
+    installed according to the config file (including catalog and templates).
 
-    if not config['vcd']['verify']:
-        click.secho(
-            'InsecureRequestWarning: '
-            'Unverified HTTPS request is being made. '
-            'Adding certificate verification is strongly '
-            'advised.',
-            fg='yellow',
-            err=True)
-        requests.packages.urllib3.disable_warnings()
+    :param str config_file_name: relative filepath of the config file
+    :param str template: name of template to validate. '*' means validate all
+        templates listed in config file
+    """
+    click.echo(f"Validating CSE on vCD from config file: {config_file_name}")
+
+    check_python_version()
+    config = get_config(config_file_name)
+
     client = Client(
         config['vcd']['host'],
         api_version=config['vcd']['api_version'],
@@ -181,52 +145,19 @@ def check_config(config_file_name, template=None):
         log_file='cse-check.log',
         log_headers=True,
         log_bodies=True)
-    client.set_credentials(
-        BasicLoginCredentials(config['vcd']['username'], 'System',
-                              config['vcd']['password']))
-    click.echo('Connected to vCloud Director as system '
-               'administrator (%s:%s): %s' % (config['vcd']['host'],
-                                              config['vcd']['port'],
-                                              bool_to_msg(True)))
-    platform = Platform(client)
-    for vc in platform.list_vcenters():
-        found = False
-        for config_vc in config['vcs']:
-            if vc.get('name') == config_vc.get('name'):
-                found = True
-                break
-        if not found:
-            raise Exception('vCenter \'%s\' defined in vCloud Director '
-                            'but not in CSE config file' % vc.get('name'))
-            return None
+    client.set_credentials(BasicLoginCredentials(config['vcd']['username'],
+                                                 'System',
+                                                 config['vcd']['password']))
 
-    for vc in config['vcs']:
-        vcenter = platform.get_vcenter(vc['name'])
-        vsphere_url = urlparse(vcenter.Url.text)
-        v = VSphere(vsphere_url.hostname, vc['username'],
-                    vc['password'], vsphere_url.port)
-        v.connect()
-        click.echo('Connected to vCenter Server %s as %s '
-                   '(%s:%s): %s' % (vc['name'], vc['username'],
-                                    vsphere_url.hostname, vsphere_url.port,
-                                    bool_to_msg(True)))
-
-    if template is None:
-        pass
-    else:
-        click.secho(
-            'Validating \'%s\' service broker' % config['broker']['type'])
-        if config['broker']['type'] == 'default':
-            validate_broker_config_content(config, client, template)
-
-    return config
+    click.echo(f"Validating '{config['broker']['type']}' service broker")
+    validate_templates(config, client, template)
 
 
 def install_cse(ctx, config_file_name, template_name, update, no_capture,
                 ssh_key, amqp_install, ext_install):
-    check_config(config_file_name)
     click.secho('Installing CSE on vCD from file: %s, template: %s' %
                 (config_file_name, template_name))
+    check_python_version()
     config = get_config(config_file_name)
     client = Client(
         config['vcd']['host'],
@@ -680,3 +611,105 @@ def register_extension(ctx, client, config, ext_install):
         ext.add_extension(name, name, name, exchange, patterns.split(','))
         click.secho('Registered extension \'%s\': %s' % (name,
                                                          bool_to_msg(True)))
+
+
+def check_file_permissions(file_name):
+    file_mode = os.stat(file_name).st_mode
+    if file_mode & stat.S_IXUSR:
+        click.secho(f"Remove execute permission of the Owner for the "
+                    f"file {file_name}", fg='red')
+        sys.exit(1)
+    if file_mode & stat.S_IROTH or file_mode & stat.S_IWOTH \
+            or file_mode & stat.S_IXOTH:
+        click.secho(f"Remove read, write and execute permissions of Others "
+                    f"for the file {file_name}", fg='red')
+        sys.exit(1)
+    if file_mode & stat.S_IRGRP or file_mode & stat.S_IWGRP \
+            or file_mode & stat.S_IXGRP:
+        click.secho(f"Remove read, write and execute permissions of Group "
+                    f"for the file {file_name}", fg='red')
+        sys.exit(1)
+
+
+def validate_amqp_config(amqp_dict):
+    credentials = pika.PlainCredentials(amqp_dict['username'],
+                                        amqp_dict['password'])
+    parameters = pika.ConnectionParameters(
+        amqp_dict['host'],
+        amqp_dict['port'],
+        amqp_dict['vhost'],
+        credentials,
+        ssl=amqp_dict['ssl'],
+        connection_attempts=3,
+        retry_delay=2,
+        socket_timeout=5)
+    connection = pika.BlockingConnection(parameters)
+    click.echo(f"Connected to AMQP server "
+               f"({amqp_dict['host']}:{amqp_dict['port']}): "
+               f"{bool_to_msg(connection.is_open)}")
+    connection.close()
+
+
+def validate_vcd_and_vcs(vcd_dict, vcs):
+    if not vcd_dict['verify']:
+        click.secho('InsecureRequestWarning: Unverified HTTPS request is '
+                    'being made. Adding certificate verification is strongly '
+                    'advised.', fg='yellow', err=True)
+        requests.packages.urllib3.disable_warnings()
+
+    # login to vcd
+    client = Client(
+        vcd_dict['host'],
+        api_version=vcd_dict['api_version'],
+        verify_ssl_certs=vcd_dict['verify'],
+        log_file='cse-check.log',
+        log_headers=True,
+        log_bodies=True)
+    client.set_credentials(BasicLoginCredentials(vcd_dict['username'],
+                                                 'System',
+                                                 vcd_dict['password']))
+    click.echo(f"Connected to vCloud Director as system administrator "
+               f"({vcd_dict['host']}:{vcd_dict['port']})")
+
+    # verify all vcs
+    platform = Platform(client)
+    config_vc_names = [vc['name'] for vc in vcs]
+    for platform_vc in platform.list_vcenters():
+        platform_vc_name = platform_vc.get('name')
+        if platform_vc_name not in config_vc_names:
+            raise Exception(f"vCenter '{platform_vc_name}' defined in "
+                            f"vCloud Director but not found in "
+                            f"config file")
+
+    for vc in vcs:
+        vcenter = platform.get_vcenter(vc['name'])
+        vsphere_url = urlparse(vcenter.Url.text)
+        v = VSphere(vsphere_url.hostname, vc['username'],
+                    vc['password'], vsphere_url.port)
+        v.connect()
+        click.echo(f"Connected to vCenter Server {vc['name']} as "
+                   f"{vc['username']} ({vsphere_url.hostname}:"
+                   f"{vsphere_url.port})")
+
+
+def validate_templates(config, client, template='*'):
+    logged_in_org = client.get_org()
+    org = Org(client, resource=logged_in_org)
+    catalog_name = config['broker']['catalog']
+    org.get_catalog(catalog_name)
+    click.echo(f"Found catalog '{catalog_name}")
+
+    for t in config['broker']['templates']:
+        if template == '*' or template == t['name']:
+            click.echo(f"Validating template: {t['name']}")
+            org.get_catalog_item(catalog_name, t['catalog_item'])
+            click.echo(f"Found template in '{catalog_name}': "
+                       f"'{t['catalog_item']}")
+
+
+def check_python_version():
+    click.echo(f"Required Python version: >= 3.6\nInstalled Python version: "
+               f"{sys.version_info.major}.{sys.version_info.minor}."
+               f"{sys.version_info.micro}")
+    if not sys.version_info.major >= 3 and sys.version_info.minor >= 6:
+        sys.exit(1)
