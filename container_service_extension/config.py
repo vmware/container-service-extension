@@ -4,7 +4,6 @@
 import hashlib
 import logging
 import os
-import site
 import stat
 import sys
 import time
@@ -34,6 +33,7 @@ from container_service_extension.broker import get_sample_broker_config
 from container_service_extension.broker import validate_broker_config_content
 from container_service_extension.broker import validate_broker_config_elements
 from container_service_extension.consumer import EXCHANGE_TYPE
+from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_vsphere
 
 LOGGER = logging.getLogger('cse.config')
@@ -318,36 +318,6 @@ def get_sha256(file):
                 break
             sha256.update(data)
     return sha256.hexdigest()
-
-
-def get_data_file(file_name):
-    path = None
-    try:
-        if os.path.isfile('./%s' % file_name):
-            path = './%s' % file_name
-        elif os.path.isfile('scripts/%s' % file_name):
-            path = 'scripts/%s' % file_name
-        elif os.path.isfile(site.getusersitepackages() + '/cse/' + file_name):
-            path = site.getusersitepackages() + '/cse/' + file_name
-        else:
-            sp = site.getsitepackages()
-            if isinstance(sp, list):
-                for item in sp:
-                    if os.path.isfile(item + '/cse/' + file_name):
-                        path = item + '/cse/' + file_name
-                        break
-            elif os.path.isfile(sp + '/cse/' + file_name):
-                path = sp + '/cse/' + file_name
-    except Exception:
-        pass
-    content = ''
-    if path is not None:
-        with open(path) as f:
-            content = f.read()
-        LOGGER.info('Reading data file: %s' % path)
-    else:
-        LOGGER.error('Data file not found: %s' % path)
-    return content
 
 
 def upload_source_ova(config, client, org, template):

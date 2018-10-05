@@ -12,6 +12,7 @@ from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
 
+from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_vsphere
 
 TYPE_MASTER = 'mstr'
@@ -197,7 +198,6 @@ chmod -R go-rwx /root/.ssh
         if node_type == TYPE_NFS:
             LOGGER.debug('Enabling NFS server on %s' %
                          spec['target_vm_name'])
-            from container_service_extension.config import get_data_file
             script = get_data_file('nfsd-%s.sh' % template['name'])
             execute_script_in_nodes(config, vapp,
                                     template['admin_password'],
@@ -268,7 +268,6 @@ def get_cluster_config(config, vapp, password):
 
 
 def init_cluster(config, vapp, template):
-    from container_service_extension.config import get_data_file
     script = get_data_file('mstr-%s.sh' % template['name'])
     nodes = get_nodes(vapp, TYPE_MASTER)
     result = execute_script_in_nodes(config, vapp, template['admin_password'],
@@ -279,7 +278,6 @@ def init_cluster(config, vapp, template):
 
 
 def join_cluster(config, vapp, template, target_nodes=None):
-    from container_service_extension.config import get_data_file
     init_info = get_init_info(config, vapp, template['admin_password'])
     tmp_script = get_data_file('node-%s.sh' % template['name'])
     script = tmp_script.format(token=init_info[0], ip=init_info[1])
