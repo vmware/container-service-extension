@@ -4,7 +4,6 @@
 import hashlib
 import logging
 import os
-import site
 import stat
 import sys
 import time
@@ -321,32 +320,41 @@ def get_sha256(file):
 
 
 def get_data_file(file_name):
+    """Used to retrieve builtin script files (as str) that users have installed
+    via pip install or setup.py. Looks inside cwd, user/global site-packages,
+    python libs, usr bins/Cellars, virtual environment site-packages, as well
+    as any subdirectories in these paths named 'scripts' or 'cse'.
+
+    :param str file_name: name of file (script) we want to get
+
+    :return: the file contents as a string
+
+    :rtype: str
+    """
     path = None
-    try:
-        if os.path.isfile('./%s' % file_name):
-            path = './%s' % file_name
-        elif os.path.isfile('scripts/%s' % file_name):
-            path = 'scripts/%s' % file_name
-        elif os.path.isfile(site.getusersitepackages() + '/cse/' + file_name):
-            path = site.getusersitepackages() + '/cse/' + file_name
-        else:
-            sp = site.getsitepackages()
-            if isinstance(sp, list):
-                for item in sp:
-                    if os.path.isfile(item + '/cse/' + file_name):
-                        path = item + '/cse/' + file_name
-                        break
-            elif os.path.isfile(sp + '/cse/' + file_name):
-                path = sp + '/cse/' + file_name
-    except Exception:
-        pass
+    for base_path in sys.path:
+        possible_paths = [
+            os.path.join(base_path, file_name),
+            os.path.join(base_path, 'scripts', file_name),
+            os.path.join(base_path, 'cse', file_name),
+        ]
+        for p in possible_paths:
+            if os.path.isfile(p):
+                path = p
+                break
+        if path is not None:
+            break
+
     content = ''
-    if path is not None:
-        with open(path) as f:
-            content = f.read()
-        LOGGER.info('Reading data file: %s' % path)
-    else:
-        LOGGER.error('Data file not found: %s' % path)
+    if path is None:
+        LOGGER.error('Data file not found!')
+        click.secho('Data file not found!', fg='yellow')
+        return content
+
+    with open(path) as f:
+        content = f.read()
+    LOGGER.info(f"Found data file: {path}")
+    click.secho(f"Found data file: {path}", fg='green')
     return content
 
 
