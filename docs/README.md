@@ -1,99 +1,139 @@
-The **container-service-extension** (`CSE`) is an add-on to VMware vCloud Director that helps tenants work with Kubernetes clusters.
+Container Service Extension (CSE) is a VMware vCloud Director extension that helps tenants create and work with Kubernetes clusters.
 
-# Overview
+# **Table of Contents** <a name="toc"></a> 
+(Section titles link back to table of contents)
+- [Overview](#overview)
+- [Getting CSE](#gettingcse)
+- [Enabling CSE Client Commands in vcd-cli](#enableclient)
+- [System/Cloud Administrator](#sysadmin)
+    - [CSE/vCD Compatibility](#compatibility)
+    - [Config File](#configfile)
+    - [VM Templates](#vmtemplates)
+    - [CSE Server](#cseserver)
+        - [Installing CSE Server](#installingcseserver)
+        - [Operating CSE Server](#operatingcseserver)
+        - [Maintaining CSE Server](#maintainingcseserver)
+    - [Useful Commands](#commandssysadmin)
+- [Tenant/Organization Administrator and Other Users](#otherusers)
+    - [Useful Commands](#commandstenantadmin)
+    - [Automation](#automation)
+    - [Example Use Case](#example)
+- [NFS-based Static Persistent Volumes](#nfs)
+- [CSE Example Use Case](#cseusage)
+- [Troubleshooting](#troubleshooting)
+- [Known Issues](#knownissues)
+- [Contributing Guide](#contributing)
+- [Release Notes](#releasenotes)
 
-`CSE` enables Kubernetes as a service on vCloud Director (vCD) installations. `CSE` is based on VM templates that are automatically generated during the installation process, or anytime thereafter. vCD tenants can then request fully functional Kubernetes clusters that `CSE` instantiate on the tenant VDC from the templates, customized based on the tenant preferences.
+---
+---
+# [__**Overview**__](#toc) <a name="overview"></a>
 
-![Image](cse_architecture.png)
+CSE brings Kubernetes as a service to vCD by creating customized VM templates and enabling tenant/organization administrators to deploy fully functional Kubernetes clusters.
 
-The current document covers the following `CSE` topics:
+**System/cloud administrators** handle setting up vCD, CSE config file, CSE Server, and VM templates. 
 
-- for System Administrators:
-  - [installation and configuration](#installation)
-  - [operation](#operation)
-- for Tenants:
-  - [installation](#tenant-installation)
-  - [usage](#using-the-container-service)
-  - [programming](#scripting-and-programming)
-  - [static persistent volumes](#nfs-based-static-persistent-volumes)
-- [reference](#reference)
-  - [command syntax](#command-syntax)
-  - [release notes](#release-notes)
+Once CSE Server is running and VM templates are available, **tenant/organization administrators and users** can use CSE client (**vcd-cli**) to handle Kubernetes cluster management (deploying clusters, adding worker nodes/NFS nodes/disks/etc)
 
+![cse-overview](img/cse-overview.png)
+![cse-roles](img/cse-roles.png)
 
-# Installation
+---
+---
+# [__**Getting CSE**__](#toc) <a name="gettingcse"></a>
 
-The `CSE` service is designed to be installed by the vCloud Director System Administrator on a virtual machine (the `CSE` appliance) with network connectivity to the vCloud Director infrastructure where the following components access is required:
+Install Python 3.6 or greater. Pip, Python's package manager, should come with Python.
+- https://realpython.com/installing-python/
+- https://vmware.github.io/vcd-cli/install.html
 
-- vCloud Director instance (Public Load Balancer VIP for multiple cells)
-- vCenter Server
-- AMQP Server
+Verify python and pip installation: 
+```sh
+> python3 --version
+Python 3.7.0
 
-vCD tenants can use `CSE` through [vcd-cli](https://vmware.github.io/vcd-cli). Web UI access will be available in a future release.
-
-## System Administrator Installation
-
-Allocate a new virtual machine to run `CSE` (the `CSE` appliance) or use one of the existing servers in the vCloud Director installation. `CSE` requires Python 3.6 or higher. See the [Appendix](#appendix) at the end for installing Python 3 on different platforms.
-
-The `CSE` appliance doesn't need access to the network where the master template will be created (`network` and `temp_vapp` configuration parameters) or the tenant networks where the clusters will be created. The `CSE` appliance requires network access to the vCD cell, AMQP server and vCenter server.
-
-### 1\. Install `CSE` package.
-
-```shell
-$ pip3 install --user container-service-extension
-
-$ cse version
-CSE, Container Service Extension for VMware vCloud Director, version 0.3.0
+> pip3 --version
+pip 18.0 from /usr/local/lib/python3.7/site-packages/pip (python 3.7)
 ```
+<br>
 
-Alternatively, `CSE` can be installed directly from GitHub specifying a version number with:
+Install and verify CSE:
+```sh
+> pip3 install container-service-extension
+...
 
-```shell
-$ pip3 install --user git+https://github.com/vmware/container-service-extension.git@0.3.0
+> cse version
+CSE, Container Service Extension for VMware vCloud Director, version 1.2.0
 ```
+<br>
 
-The exact version might be different from the one listed above.
+Alternatively, a specific version of CSE can be installed from GitHub
 
-`CSE` can also be installed using [virtualenv](https://virtualenv.pypa.io) and [virtualenvwrapper](http://virtualenvwrapper.readthedocs.io). `pip3 install` can be used with additional options depending on the needs:
-
-| option           | meaning                                       |
-|:-----------------|:----------------------------------------------|
-| `--user`         | install to the Python user install directory  |
-| `--upgrade`      | upgrade an existing installation              |
-| `--pre`          | install a pre-release and development version |
-| `--no-cache-dir` | disable the cache and download the package    |
-
-### 2\. Generate a skeleton configuration and provide site specific settings.
-
-```shell
-$ cse sample > config.yaml
+```sh
+> pip3 install git+https://github.com/vmware/container-service-extension.git@1.2.0
 ```
+All CSE versions on GitHub: https://github.com/vmware/container-service-extension/tags
 
-Edit file `config.yaml` with the values for your vCloud Director installation. The following table describes the setting values.
+---
+---
+# [__**Enabling CSE Client Commands in vcd-cli**__](#toc) <a name="enableclient"></a>
 
-#### `CSE` Configuration Settings
+CSE client is not enabled yet:
+```sh
+> vcd cse version
+Error: No such command "cse".
+```
+<br>
 
-`CSE` supports multiple templates to create Kubernetes clusters. Each template might have a different guest OS or Kubernetes versions, and must have an unique name. One template has to be defined as the default. Tenants can specify the template to use during cluster or node creation, or use the default.
+Edit `~/.vcd-cli/profiles.yaml` to include this section:
+```
+extensions:
+- container_service_extension.client.cse
+```
+<br>
 
-The configuration file has 5 sections:
+If `~/.vcd-cli/profiles.yaml` doesn't exist, logging in to vCD via **vcd-cli** will create it
+```bash
+> vcd login IP ORGNAME USERNAME -iwp PASSWORD
+```
+<br>
 
-- `amqp`: AMQP settings
-- `vcd`: vCD settings
-- `vcs`: vCenter Server settings
-- `service`: service settings
-- `broker`: service broker settings
+Verify that CSE client works:
+```sh
+> vcd cse version
+CSE, Container Service Extension for VMware vCloud Director, version 1.2.0
+```
+---
+---
+# [__**System/Cloud Administrator**__](#toc) <a name="sysadmin"></a>
 
-Group 'vcd' has following key properties
+## [**CSE/vCD Compatibility**](#toc) <a name="compatibility"></a>
+| CSE version     | vCD version                |
+|:--------|:---------------------|
+| 1.1.0   | 8.20, 9.0, 9.1       |
+| 1.2.0   | 8.20, 9.0, 9.1, 9.5 |
 
-| Property          | Value                                                                                           |
-|:------------------|:------------------------------------------------------------------------------------------------|
-| `host`            | IP or hostname of the vCloud Director                                                           |
-| `username`        | Username of the vCD service account with minimum roles and rights                               |
-| `password`        | Password of the vCD service account.                                                             |
+---
+## [**Config File**](#toc) <a name="configfile"></a>
+Generate a skeleton config yaml file:
+```sh
+> cse sample > config.yaml
+```
+Edit this file with values from your vCloud Director
 
-It is recommended to create a service account for vCD with minimum required privileges (as it can be catastrophic if someone gets hold of credentials of the user account with admin-level privileges).
+<br>
 
-At high-level, below are minimum roles and (admin-view) rights required for the service account (they may subject to change with new versions of vCD)
+Config file has 5 sections: `amqp`, `vcd`, `vcs`, `service`, `broker`
+### **`amqp` section**
+CSE Server will communicate with vCD using these settings
+
+During CSE Server installation, CSE can configure vCD's AMQP settings to match these settings
+
+<br>
+
+### **`vcd` section**
+It's recommended to create a service account for vCD with minimum required privileges. An attacker getting credentials for a user account with admin-level privileges can be catastrophic
+
+Minimum roles and (admin-view) rights required for the service account (subject to change with new vCD versions):
 - Catalog Author (Role)
 - vApp Author (Role)
 - vApp User (Role)
@@ -112,233 +152,238 @@ At high-level, below are minimum roles and (admin-view) rights required for the 
 - Organization VDC Network: View Properties (Right)
 - Organization: View Organizations (Right)
 
-Notes:
-- Use commands from vcd-cli to get list of rights required by 'Catalog Author' and 'vApp Author' eg: vcd role list-rights 'Catalog Author'. Create a custom role with union of rights derived from above set of roles and rights and then assign the custom role to user account.
-- Always ensure vCD service account has enough privileges. Another way is to create a role with Admin privileges and unselect (or) delete rights which are not required from the newly created role.
+Use vcd-cli to get list of rights required by 'Catalog Author' and 'vApp Author':
+```sh
+> vcd role list-rights 'Catalog Author'
+```
+Create a custom role with union of rights derived from above set of roles/rights and then assign the custom role to a user account.
 
+Always ensure vCD service account has enough privileges. Alternatively, you can create a role with Admin privileges and deselect/delete rights which are not required.
 
-Group 'broker' has following key properties
+<br>
 
-| Property             | Value                                                                                                                                                                                                            | Value |
-|:---------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:------|
-| `type`               | Broker type, set to `default`                                                                                                                                                                                        |       |
-| `org`                | vCD organization that contains the shared catalog where the master templates will be stored                                                                                                                          |       |
-| `vdc`                | Virtual datacenter within `org` that will be used during the install process to build the template                                                                                                                   |       |
-| `network`            | Org Network within `vdc` that will be used during the install process to build the template. It should have outbound access to the public Internet. The `CSE` appliance doesn't need to be connected to this network |       |
-| `ip_allocation_mode` | IP allocation mode to be used during the install process to build the template. Possible values are `dhcp` or `pool`. During creation of clusters for tenants, `pool` IP allocation mode is always used              |       |
-| `catalog`            | Public shared catalog within `org` where the template will be published                                                                                                                                              |       |
-| `cse_msg_dir`        | Reserved for future use                                                                                                                                                                                              |       |
-| `storage_profile`    | Name of the storage profile to use when creating the temporary vApp used to build the template                                                                                                                       |       |
-| `default_template`   | Name of the default template to use if none is specified                                                                                                                                                             |       |
-| `templates`          | A list of templates available for clusters                                                                                                                                                                           |       |
-
-Each `template` in the `templates` property of `broker` has the following properties:
-
-| Property          | Value                                                                                                                                                                                                             |
-|:------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `name`            | Unique name of the template                                                                                                                                                                                       |
-| `source_ova`      | URL of the source OVA to download                                                                                                                                                                                 |
-| `sha1_ova`        | sha1 of the source OVA                                                                                                                                                                                            |
-| `source_ova_name` | Name of the source OVA in the catalog                                                                                                                                                                             |
-| `catalog_item`    | Name of the template in the catalog                                                                                                                                                                               |
-| `description`     | Information about the template                                                                                                                                                                                    |
-| `temp_vapp`       | Name of the temporary vApp used to build the template. Once the template is created, this vApp can be deleted. It will be deleted by default during the installation based on the value of the `cleanup` property |
-| `cleanup`         | If `True`, `temp_vapp` will be deleted by the install process after the master template is created                                                                                                                |
-| `admin_password`  | `root` password for the template and instantiated VMs. This password should not be shared with tenants                                                                                                            |
-| `cpu`             | Number of virtual CPUs to be allocated for each VM                                                                                                                                                                |
-| `mem`             | Memory in MB to be allocated for each VM                                                                                                                                                                          |
-
-Each `vc` under `vcs` group has the following properties:
+`vcd` section has the following properties:
 
 | Property          | Value                                                                                           |
 |:------------------|:------------------------------------------------------------------------------------------------|
-| `name`            | Name of the vCenter registered in vCD                                                                           |
-| `username`        | Username of the vCenter service account with minimum of guest-operation privileges.             |
-| `password`        | Password of the vCenter service account.                                                        |
+| host            | IP or hostname of the vCloud Director                                                           |
+| username        | Username of the vCD service account with minimum roles and rights                               |
+| password        | Password of the vCD service account.                                                             |
 
+<br>
+
+### **`vcs` section**
 Guest Operations Privileges required for vCenter service account:
-
 - Guest Operation Program Execution
 - Guest Operation Modifications
 - Guest Operation Queries
 
-### 3\. Install the extension.
+<br>
 
-The installation will take a few minutes to complete. Use the command below:
+Each `vc` under `vcs` section has the following properties:
 
-```shell
-$ cse install --config config.yaml
+| Property          | Value                                                                                           |
+|:------------------|:------------------------------------------------------------------------------------------------|
+| name            | Name of the vCenter registered in vCD                                                                           |
+| username        | Username of the vCenter service account with minimum of guest-operation privileges.             |
+| password        | Password of the vCenter service account.                                                        |
+
+<br>
+
+### **`service` section**
+Specify how many threads you want CSE Server to create.
+
+<br>
+
+### **`broker` section**
+`broker` section has the following properties:
+
+| Property           | Value                                                                                                                                                                                                                |
+|:--------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| type               | Broker type, set to `default`                                                                                                                                                                                        |
+| org                | vCD organization that contains the shared catalog where the master templates will be stored                                                                                                                          |
+| vdc                | Virtual datacenter within `org` that will be used during the install process to build the template                                                                                                                   |
+| network            | Org Network within `vdc` that will be used during the install process to build the template. It should have outbound access to the public Internet. The `CSE` appliance doesn't need to be connected to this network |
+| ip_allocation_mode | IP allocation mode to be used during the install process to build the template. Possible values are `dhcp` or `pool`. During creation of clusters for tenants, `pool` IP allocation mode is always used              |
+| catalog            | Public shared catalog within `org` where the template will be published                                                                                                                                              |
+| cse_msg_dir        | Reserved for future use                                                                                                                                                                                              |
+| storage_profile    | Name of the storage profile to use when creating the temporary vApp used to build the template                                                                                                                       |
+| default_template   | Name of the default template to use if none is specified                                                                                                                                                             |
+| templates          | A list of templates available for clusters                                                                                                                                                                           |
+
+Each `template` in the `templates` property has the following properties:
+
+| Property          | Value                                                                                                                                                                                                             |
+|:------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| name            | Unique name of the template                                                                                                                                                                                       |
+| source_ova      | URL of the source OVA to download                                                                                                                                                                                 |
+| sha256_ova        | sha256 of the source OVA                                                                                                                                                                                            |
+| source_ova_name | Name of the source OVA in the catalog                                                                                                                                                                             |
+| catalog_item    | Name of the template in the catalog                                                                                                                                                                               |
+| description     | Information about the template                                                                                                                                                                                    |
+| temp_vapp       | Name of the temporary vApp used to build the template. Once the template is created, this vApp can be deleted. It will be deleted by default during the installation based on the value of the `cleanup` property |
+| cleanup         | If `True`, `temp_vapp` will be deleted by the install process after the master template is created                                                                                                                |
+| admin_password  | `root` password for the template and instantiated VMs. This password should not be shared with tenants                                                                                                            |
+| cpu             | Number of virtual CPUs to be allocated for each VM                                                                                                                                                                |
+| mem             | Memory in MB to be allocated for each VM                                                                                                                                                                          |
+
+---
+## [**VM Templates**](#toc) <a name="vmtemplates"></a>
+`CSE` supports multiple VM templates to create Kubernetes clusters from. Templates may vary in guest OS or software versions, and must have a unique name. One template must be defined as the default template, and tenants have the option to specify the template to use during cluster/node creation.
+
+### **Source .ova Files for VM Templates**
+| OS                   | OVA Name                               | URL                                                                                                       | SHA256                                                           |
+|:----------------------|:----------------------------------------|:-----------------------------------------------------------------------------------------------------------|:------------------------------------------------------------------|
+| Photon OS 1.0, Rev 2 | photon-custom-hw11-1.0-62c543d.ova     | `https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova`            | 6d6024c5531f5554bb0d2f51f3005078ce6d4ee63c142f2453a416824c5344ca |
+| Photon OS 2.0 GA     | photon-custom-hw11-2.0-304b817.ova     | `http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova`                       | cb51e4b6d899c3588f961e73282709a0d054bb421787e140a1d80c24d4fd89e1 |
+| Ubuntu 16.04.4 LTS   | ubuntu-16.04-server-cloudimg-amd64.ova | `https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova` | 3c1bec8e2770af5b9b0462e20b7b24633666feedff43c099a6fb1330fcc869a9 |
+
+<br>
+
+### **Updating VM Templates**
+CSE Server should be gracefully stopped before updating VM templates, to avoid errors that can occur when using `vcd cse cluster create ...` or `vcd cse node create ...`
+
+In general, updating a template doesn't have any effect on existing Kubernetes master and worker nodes. CSE and template compatibility can be found in release notes.
+
+Templates can also be generated on a vCD instance that CSE Server is not registered to. Templates can be generated in multiple vCD instances in parallel.
+
+<br>
+
+Update a template:
+```sh
+> cse install -c config.yaml --template photon-v2 --update --amqp skip --ext skip
+```
+<br>
+
+Updating a template increases `versionNumber` of the corresponding catalog item by 1:
+```sh
+> vcd catalog info cse photon-custom-hw11-2.0-304b817-k8s
+```
+---
+## [**CSE Server**](#toc) <a name="cseserver"></a>
+### [**Installing CSE Server**](#toc) <a name="installingcseserver"></a>
+
+`CSE` Server should be installed by the vCloud Director System/Cloud Administrator on a new VM or one of the existing servers that are part of vCD. This CSE VM is the **CSE appliance**.
+
+CSE appliance requires network access to the vCD cell, vCenter(s), and AMQP server.
+
+CSE appliance does not require access to the network(s) where the Kubernetes templates will be created (`network` and `temp_vapp` config file properties) or the tenant network(s) where the clusters will be created.
+
+`cse install` command supports the following options:
+
+| Option       | Short | Argument(s)              | Description                                                                                                                                                | Default Value                                 |
+|:--------------|:-------|:--------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------|
+| --config     | -c    | path/to/config.yaml      | Config file to use                                                                                                                                         | config.yaml                                   |
+| --template   | -t    | template-name            | Install the specified template                                                                                                                             | '*' (installs all templates specified in config file) |
+| --update     | -u    | n/a                      | Recreate templates during installation                                                                                                                     | False                                         |
+| --no-capture | -n    | n/a                      | Don't capture the temporary vApp as a template   (Leaves it standing for debugging purposes)                                                               | False                                         |
+| --ssh-key    | -k    | path/to/ssh-key.pub      | ssh-key file to use for vm access   (root password ssh access is disabled for security reasons)                                                            | None                                          |
+| --amqp       | -a    | prompt OR skip OR config | **prompt**: ask before configuring AMQP settings<br>**skip**: do not configure AMQP settings<br>**config**: configure AMQP without asking for confirmation | prompt                                        |
+| --ext        | -e    | prompt OR skip OR config | **prompt**: ask before registering CSE<br>**skip**: do not register CSE<br>**config**: register CSE without asking for confirmation                        | prompt                                        |
+
+<br>
+
+To monitor the vApp customization process, you can ssh into the temporary vApp. In the temporary vApp, the output of the customization script is captured in `/tmp/FILENAME.out` as well as `/tmp/FILENAME.err`:
+```sh
+# print out file contents as it's being written to
+> tail -f /tmp/FILENAME.out
+> tail -f /tmp/FILENAME.err
 ```
 
-The `install` command will generate the templates required to run the service and will configure the vCD settings defined in the configuration file. The output of the customization process is captured by the `install` command and displayed at the end of the process.
+The temporary vApp guest OS does not allow root ssh access via password for security reasons (use `--ssh-key` option to provide a public key).
 
-To monitor the progress during the creation, it is possible to ssh into the `temp_vapp` while the script is being executed. In the `temp_vapp`, the output of the customization script is being captured in a file in the `/tmp` directory and can be monitored with `tail -f /tmp/<file-name>.out`. The standard error is captured in a file with extension `.err` in the `/tmp` directory.
-
-`temp_vapp` guest OS does not allow root ssh access via password for security reasons.
-
-To inspect the `temp_vapp` vApp, use the `--no-capture` option. When using this option, the `--ssh-key <SSH_KEY_FILE>` option is required, so that you can access the vApp:
-
-```shell
-$ cse install --config config.yaml --no-capture --ssh-key ~/.ssh/id_rsa.pub
+To inspect the temporary vApp after customization, use the `--no-capture` option (also requires the `--ssh-key` option):
+```sh
+> cse install -c config.yaml --no-capture --ssh-key ~/.ssh/id_rsa.pub
 ```
+<br>
 
-With `--no-capture`, the install process will create the `temp_vapp` vApp, will keep it running and not capture it as a template. This allows to `ssh` into the vApp and inspect it.
+![cse-install](img/cse-install-2.png)
 
-If you need to delete a template to generate a new one, use `vcd-cli`:
-
-```shell
-$ vcd catalog delete <catalog> <catalog-item>
-```
-
-The `cse install` command supports the following options:
-
-| Option         | Short | Description                                                                                                                                                | Default Value                               |
-|----------------|-------|------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------|
-| `--config`     | `-c`  | Config file to use                                                                                                                                         | config.yaml                                 |
-| `--template`   | `-t`  | Install the specified template                                                                                                                             | * (installs all templates from config file) |
-| `--update`     | `-u`  | Recreate templates during installation                                                                                                                     | False                                       |
-| `--no-capture` | `-n`  | Don't capture the temporary vApp as a template   (Leaves it standing for debugging purposes)                                                               | False                                       |
-| `--ssh-key`    | `-k`  | ssh-key file to use for vm access   (root password ssh access is disabled for security reasons)                                              | None                                        |
-| `--amqp`       | `-a`  | **prompt**: ask before configuring AMQP settings<br>**skip**: do not configure AMQP settings<br>**config**: configure AMQP without asking for confirmation | prompt                                      |
-| `--ext`        | `-e`  | **prompt**: ask before registering CSE<br>**skip**: do not register CSE<br>**config**: register CSE without asking for confirmation                        | prompt                                      |
-
-Optionally, configure the API extension timeout (seconds) on the vCloud Director cell:
-
-```shell
-cd /opt/vmware/vcloud-director/bin
-./cell-management-tool manage-config -n extensibility.timeout -l
-./cell-management-tool manage-config -n extensibility.timeout -v 20
-```
-
-### 4\. Validate CSE Installation.
-
+#### **Validate CSE Installation**
 Validate that CSE has installed correctly with:
 
-```shell
-$ cse check --config config.yaml
+```sh
+> cse check --config config.yaml
 ```
-
-Using `vcd-cli`, check that the extension has been registered in vCD:
-
-```shell
-# login as system administrator
-$ vcd login vcd.serviceprovider.com System administrator --password passw0rd -w -i
-
-# list extensions
-vcd system extension list
-
-# get details of CSE extension
-vcd system extension info cse
-```
-
-Alternatively, the `CSE` api extension can be manually registered with a `vcd-cli` command as follows:
-
-```shell
-$ vcd system extension create cse cse cse vcdext '/api/cse, /api/cse/.*, /api/cse/.*/.*'
-```
-
-When upgrading from versions previous to `0.2.0`, re-register the extension:
-
-```shell
-# remove previous registration of CSE
-$ vcd system extension delete cse -y
-
-# run the install process to register CSE again
-cse install --config config.yaml
-```
-
 The `cse check` command supports the following options:
 
-| option                   | meaning                          |
-|:-------------------------|:---------------------------------|
-| `--config <config-file>` | Config file to use.              |
-| `--template <template>`  | Validate the specified template. |
+| Option     | Short | Argument(s)         | Description                              | Default                                                 |
+|:------------|:-------|:---------------------|:------------------------------------------|:---------------------------------------------------------|
+| --config   | -c    | path/to/config.yaml | Config file to use                       | config.yaml                                             |
+| --template | -t    | template-name       | Check that the specified template exists | '*' (checks for all templates specified in config file) |
 
-### 5\. Start `CSE`
+<br>
 
-Start the service with the command below. Output log is appended to file `cse.log`
+Validate that CSE has been registered in vCD
+Using `vcd-cli`, check that the extension has been registered in vCD:
 
-```shell
-$ cse run --config config.yaml
+```sh
+# login as system administrator
+> vcd login vcd.serviceprovider.com System administrator --password passw0rd -w -i
+
+# list extensions
+> vcd system extension list
+
+# get details of CSE extension
+> vcd system extension info cse
 ```
+<br>
 
-To run it in the background:
-
-```shell
-$ nohup cse run --config config.yaml > nohup.out 2>&1 &
+#### **Optional**
+Configure the API extension timeout (seconds) on the vCloud Director cell:
+```sh
+> cd /opt/vmware/vcloud-director/bin
+> ./cell-management-tool manage-config -n extensibility.timeout -l
+> ./cell-management-tool manage-config -n extensibility.timeout -v 20
 ```
+<br>
 
-On Photon OS, check file `/etc/systemd/logind.conf` and make sure `KillUserProcesses` is set to 'no' to keep the service running after login out.
-
+Manually register CSE api extension to vCD:
+```sh
+> vcd system extension create cse cse cse vcdext '/api/cse, /api/cse/.*, /api/cse/.*/.*'
 ```
-[Login]
-KillUserProcesses=no
+---
+### [**Operating CSE Server**](#toc) <a name="operatingcseserver"></a>
+`CSE` Server uses threads to process requests. The number of AMQP listener threads can be configured in the config file with `listeners` property under `service` section (default is 5).
+
+#### **Running CSE Server Manually**
+```sh
+> cse run --config config.yaml
+
+# run server in the background
+> nohup cse run --config config.yaml > nohup.out 2>&1 &
 ```
+Server output log can be found in `cse.log`
 
-A sample `systemd` unit is provided. Customize and copy file `cse.service` in the repository to `/etc/systemd/system/cse.service`. A sample `cse.sh` is also provided.
+<br>
 
-Install with:
+#### **Running CSE Server as a Service**
+A sample `systemd` unit is provided by CSE. Copy file `cse.service` from where CSE is installed to, and move it to `/etc/systemd/system/cse.service`. A sample `cse.sh` is also provided. (what does cse.sh does and is it used in this?)
 
-```
-systemctl enable cse
-```
+CSE service daemon should be started using `systemctl start cse`. To enable, disable, and stop CSE service, use CSE client.
+```sh
+# hook CSE unit into relevant places to automatically do things
+# depending on what's specified in the unit file
+> vcd cse system enable
 
-Start with:
+# start CSE service now
+> systemctl start cse
 
-```
-systemctl start cse
-```
-
-## Operation
-
-### Starting and Stopping
-
-The preferred method to start `CSE` is by configuring a `systemd` unit. Once installed, `CSE` can be started with `systemctl start cse`. In version `0.3.0` we are introducing a new command to monitor and operate the `CSE` service (`vcd cse system`). A `vCD` System Administrator can monitor the status of `CSE` with:
-
-```bash
-$ vcd cse system info
-property              value
---------------------  ------------------------------------------------------
-all_threads           10
-config_file           /opt/vmware/cse/testbed-202-34.yaml
-consumer_threads      6
-description           Container Service Extension for VMware vCloud Director
-product               CSE
-python                3.6.4
-requests_in_progress  3
-status                Running
-version               0.3.0
-```
-
-`CSE` service can be `disabled` to stop processing new requests. Existing in-flight requests will continue processing until they finish. If `CSE` is disabled, users will get the following message when executing any `CSE` command:
-
-```bash
-$ vcd cse cluster list
-Usage: vcd cse cluster list [OPTIONS]
-
-Error: CSE service is disabled. Contact the System Administrator.
-```
-
-`CSE` service can be `enabled` by the `vCD` System Administrator with the command: `vcd cse system enable`.
-
-The preferred method to stop `CSE` is through the `vcd cse system` command, to ensure that no new requests can be processed and in-flight requests can finish before stoping the service. Using directly `systemctl` is not recommended since that would interrupt requests that might be in progress.
-
-To stop `CSE` gracefully, first disable the service with the `vcd cse system disable` command and then stop it with the `vcd cse system stop` command. Once the `stop` command is issued, `CSE` will wait until all the active requests are completed and then it will exit. The status of `CSE` can be monitored during shutdown. `CSE` can't be re-enabled again while it is shutting down, use `systemctl start cse` to re-start `CSE` again after it finished.
-
-Here is an example of the shutdown sequence:
-
-```bash
-$ vcd cse system disable
+# stop processing new requests, and finish processing existing requests
+# disables CSE service
+> vcd cse system disable
 property    value
 ----------  -------
 message     Updated
 
-$ vcd cse system stop -y
+# wait until all active threads have finished, then exits CSE service
+> vcd cse system stop -y
 property    value
 ----------  ---------------------------------------------------------------------
 message     CSE graceful shutdown started. CSE will finish processing 4 requests.
 
-$ vcd cse system info
+> vcd cse system info
 property              value
 --------------------  ------------------------------------------------------
 all_threads           8
@@ -349,238 +394,161 @@ product               CSE
 python                3.6.4
 requests_in_progress  4
 status                Shutting down
-version               0.3.0
+version               1.2.0
 ```
+<br>
 
-### Monitoring
-
-Tenants can list their own clusters with the `vcd cse cluster list`. System administrators can list all the clusters running in the system with a search command using the metadata in the cluster vApp. Here is an example:
+If CSE Server is disabled, users will get the following message when executing any CSE command:
 
 ```bash
-$ vcd search adminvapp -f 'metadata:cse.cluster.id!=STRING:'
-id                                    isDeployed    isEnabled      memoryAllocationMB  name        numberOfCpus    numberOfVMs  ownerName    status        storageKB  vdcName
-------------------------------------  ------------  -----------  --------------------  --------  --------------  -------------  -----------  ----------  -----------  -------
-ca3ba2d6-4a97-42f4-8fa8-dff7c9bff88d  true          true                         6144  cluster1               6              3  tenant1      POWERED_ON     50331648  vdc1
-fa879527-c4e1-4955-a8d1-ca4de377b553  true          true                         6144  cluster2               6              3  tenant2      POWERED_ON     50331648  vcd2
-81ef3214-db6e-4341-b0c5-9f44aea1da26  true          true                         6144  cluster3               6              3  tenant2      POWERED_ON     50331648  vdc2
+$ vcd cse cluster list
+Usage: vcd cse cluster list [OPTIONS]
 
+Error: CSE service is disabled. Contact the System Administrator.
 ```
+<br>
 
-### Tuning
+#### **Monitoring CSE Service**
+vCD System Administrator can monitor CSE service status via CSE client:
+```sh
+> vcd cse system info
+property              value
+--------------------  ------------------------------------------------------
+all_threads           10
+config_file           /opt/vmware/cse/testbed-202-34.yaml
+consumer_threads      6
+description           Container Service Extension for VMware vCloud Director
+product               CSE
+python                3.6.4
+requests_in_progress  3
+status                Running
+version               1.2.0
+```
+<br>
 
-`CSE` service uses threads to process requests. The number of AMQP listener threads can be configured in the `config.yaml` with the `listeners` property under the `service` section. The default value is `5` threads.
+On Photon OS, to keep the service running after logout, check `/etc/systemd/logind.conf` and set `KillUserProcesses` to `no`
+```
+[Login]
+KillUserProcesses=no
+```
+<br>
 
-### Upgrading
+System administrators can list all the clusters running in vCD with a search command using cluster vApp metadata:
+```bash
+> vcd search adminvapp -f 'metadata:cse.cluster.id!=STRING:'
+```
+---
+### [**Maintaining CSE Server**](#toc) <a name="maintainingcseserver"></a>
+When upgrading CSE versions, re-register the extension:
+```sh
+# remove previous registration of CSE
+> vcd system extension delete cse
 
-The process to upgrade `CSE` to the latest version involves the following steps:
-- gracefully stop `CSE` service
-- install the new version of the `container-service-extension` module. Use the command below.
-- check the release notes at the end of this document for version compatibility:
-  - review the configuration file for any new options introduced or deprecated in the new version
-  - if the previously generated templates are not longer supported by the new version, delete the templates and re-generate new ones.
-- start the new version of the service with `systemctl start cse`
+# run cse installation again
+> cse install --config config.yaml
+```
+<br>
 
-Upgrade command:
+#### **Updating CSE Server**
+- Gracefully stop CSE Server
+- Reinstall `container-service-extension` from PyPI:
 ```bash
 pip3 install --user --upgrade container-service-extension
 ```
+- Check the release notes at the end of this document for version compatibility:
+  - Review the configuration file for any new options introduced or deprecated in the new version
+  - If the previously generated templates are not longer supported by the new version, delete the templates and re-generate new ones.
+- If running CSE as a service, start the new version of the service with `systemctl start cse`
+<br>
 
-### Updating Templates
-
-The templates used by `CSE` can be updated at any time. The `CSE` service should be gracefully stopped before updating templates. When creating (or updating) a template, new upgrades to the OS are installed in the template, therefore it is recommended to perform template updates on a regular basis. During instantiation of the templates as master or worker nodes, the software on the instantiated VM is the original software installed in the template and is not upgraded.
-
-In general, updating a template doesn't have any effect on existing kubernetes master and worker nodes. The release notes provides information about compatibility between versions of `CSE` and templates.
-
-Follow these steps to update a template:
-
-- stop the `CSE` service
-- update the desired template, for example:
-
+#### **Uninstalling CSE Server**
+- Gracefully stop CSE Server
+- As System Administrator, unregister CSE from vCD:
+```sh
+> vcd system extension delete cse
+```
+- Review vCD AMQP settings. May not require any modifications
 ```shell
-$ cse install --config config.yaml --template photon-v2 --update --amqp skip --ext skip
+> vcd system amqp info
 ```
+- (Optional) Delete VM templates and the CSE catalog from vCD
 
-Once a template has been updated, the `versionNumber` of the corresponding catalog item will be increased by one. The `versionNumber` can be checked with the `vcd catalog info` command, for example:
+---
+## [**Useful Commands**](#toc) <a name="commandssysadmin"></a>
+`cse ...` commands are used by system administrators to:
+- Install CSE Server
+- Create/update templates
+- Run CSE Server manually
 
-```shell
-$ vcd catalog info cse photon-custom-hw11-2.0-304b817-k8s
+`vcd cse ...` commands are used by system administrators to:
+- Monitor status of CSE Server and clusters
+- Operate CSE as a service
+
+```sh
+### Use '-h' option to see help page and options for any command
+> cse install --config config.yaml
+> cse check --config config.yaml
+> cse run --config config.yaml
+
+# login to vCD to use vcd-cli commands
+> vcd login IP system USERNAME -iwp PASSWORD
+
+# set ORGNAME to be active org for this session
+> vcd org use ORGNAME
+
+# set VDCNAME to be active vdc for this session
+> vcd vdc use VDCNAME
 ```
+---
+---
+# [__**Tenant/Organization Administrator and Other Users**__](#toc) <a name="otherusers"></a>
+Once CSE Server is installed and running, tenants can use CSE client ([vcd-cli](https://vmware.github.io/vcd-cli)) to create Kubernetes clusters on demand.
 
-Templates can be generated on the same vCD instance as `CSE` is running or on a separate vCD instance. If using a different vCD instance, the generated templates should be transferred to the instance running `CSE`. Different templates can be generated in parallel.
+Master and worker nodes are VMs within a vApp on the tenant virtual datacenter. The VMs are required to be connected to an organization VDC network specified with the `--network` required command-line option. This network should have a static IP pool, and may require access to the internet if installing additional components.
 
-In the current version, `CSE` service should be gracefully stopped during the time that the catalog item is being updated, to avoid errors in the `cluster` and `node` `create` commands.
+<br>
 
-- start the `CSE` service
+## [**Useful Commands**](#toc) <a name="commandstenantadmin"></a>
+`vcd cse ...` commands are used by tenant/org administrators and users to:
+- list templates
+- get CSE Server status
+- create, list, and delete clusters/nodes
 
-### Adding New Templates
+<br>
 
-Documentation on how to add new templates will be provided soon.
+Summary of commands available to manage templates, clusters and nodes:
 
-### Uninstalling
-
-`CSE` can be uninstalled from a vCloud Director instance following these steps:
-
-- stop the `CSE` service
-- unregister the `cse` API extension. As a System Administrator run:
-
-```shell
-$ vcd system extension delete cse
-```
-
-- review the `AMQP Broker` settings. It might not require any modification if there are other API extensions installed in the system.
-
-```shell
-$ vcd system amqp info
-```
-
-- optionally, delete the templates and the shared catalog if the templates won't be used.
-
-## Tenant Installation
-
-vCloud Director tenants use `CSE` through [vcd-cli](https://vmware.github.io/vcd-cli), which is included in `CSE`. Tenants will need to install the `CSE` package via pip3:
-
-```shell
-$ pip3 install --user container-service-extension
-
-$ vcd version
-vcd-cli, VMware vCloud Director Command Line Interface, 20.0.0
-```
-
-The exact versions might be different from the ones listed above.
-
-After the install, edit `~/.vcd-cli/profiles.yaml` and add the following two lines between the `active` and `profiles` entries:
-
-`~/.vcd-cli/profiles.yaml` before changes:
-
-```yaml
-active: default
-profiles:
-```
-
-after changes:
-
-```yaml
-active: default
-extensions:
-- container_service_extension.client.cse
-profiles:
-```
-
-Validate the new commands are installed with:
-
-```shell
-$ vcd cse version
-CSE, Container Service Extension for VMware vCloud Director, version 0.3.0
-```
-
-The exact version might be different from the one listed above.
-
-# Using the Container Service
-
-Once installed, `CSE` can be used by tenants to create kubernetes clusters on demand, using `vcd-cli`. See [vcd-cli](https://vmware.github.io/vcd-cli) for more information about all the available commands.
-
-The virtual machines (master and nodes) will be provisioned on the tenant virtual datacenter within a vApp. The VMs will be connected to the network specified with the `--network` required parameter. The Organization VDC network should have a static IP pool and it doesn't require access to the Internet (access might be required if installing additional components).
-
-When creating clusters and nodes, the `--network` option is required, as they need a network to operate and no network will be selected by default if omitted.
-
-The `CSE` service doesn't need a network connection to the tenant virtual datacenters.
-
-When creating a cluster, the tenant can specify the template to use for the master and nodes of the cluster, as well as other options. When adding nodes to the cluster, the same type of options can be used to customize the new nodes.
-
-Here is a summary of the commands available to manage templates, clusters and nodes:
-
-| command                                           | purpose                                     |
+| Command                                           | Description                                     |
 |:--------------------------------------------------|:--------------------------------------------|
 | `vcd cse template list`                           | List available templates to create clusters |
-| `vcd cse cluster create <cluster-name>`           | Create a new kubernetes cluster             |
-| `vcd cse cluster create <cluster-name> --enabe-nfs`| Create a new kubernetes cluster with NFS PV support.|
+| `vcd cse cluster create CLUSTER_NAME`           | Create a new Kubernetes cluster             |
+| `vcd cse cluster create CLUSTER_NAME --enable-nfs`| Create a new Kubernetes cluster with NFS PV support.|
 | `vcd cse cluster list`                            | List created clusters.                      |
-| `vcd cse cluster delete <cluster-name>`           | Delete a kubernetes cluster.                |
-| `vcd cse node create <cluster-name> --nodes n`    | Add `n` nodes to a cluster.                 |
-| `vcd cse node create <cluster-name> --type nfsd`  | Add an NFS node to a cluster.               |
-| `vcd cse node list <cluster-name>`                | List nodes of a cluster.                    |
-| `vcd cse node delete <cluster-name> [node-name]+` | Delete nodes from a cluster.                |
+| `vcd cse cluster delete CLUSTER_NAME`           | Delete a Kubernetes cluster.                |
+| `vcd cse node create CLUSTER_NAME --nodes n`    | Add `n` nodes to a cluster.                 |
+| `vcd cse node create CLUSTER_NAME --type nfsd`  | Add an NFS node to a cluster.               |
+| `vcd cse node list CLUSTER_NAME`                | List nodes of a cluster.                    |
+| `vcd cse node delete CLUSTER_NAME NODE_NAME` | Delete nodes from a cluster.                |
 
+<br>
 
-Most of the `CSE` operations (actions `create` and `delete`) return a task. By default, `vcd-cli` displays the progress of the task until the task finishes or fails. When using the `--no-wait` option of `vcd-cli`, the `CSE` command will return with the task information, including the task id. Use the `vcd task wait <task-id>` command to display the status and progress of the task. Another useful command is `vcd task list running` to list the current running tasks in the user's organization.
+By default, CSE Client will display the task progress until the task finishes or fails. The `--no-wait` will return the task information, which you can use to monitor the task progress:
+```sh
+> vcd --no-wait cse cluster create CLUSTER_NAME --network intranet --ssh-key ~/.ssh/id_rsa.pub
 
+# displays the status and progress of the task
+> vcd task wait 377e802d-f278-44e8-9282-7ab822017cbd
+
+# lists the current running tasks in the organization
+> vcd task list running
 ```
-$ vcd --no-wait cse cluster create mycluster --network intranet --ssh-key ~/.ssh/id_rsa.pub
+---
+## [**Automation**](#toc) <a name="automation"></a>
+CSE can be easily scripted to automate the creation and operation of Kubernetes clusters and nodes.
 
-$ vcd task wait 377e802d-f278-44e8-9282-7ab822017cbd
-```
+Users can also interact with CSE via the Python package or the CSE API exposed in vCD. 
 
-Below are some usage examples:
-
-```shell
-# create cluster mycluster with one master and two nodes, connected to provided network
-# a public key is provided to be able to ssh into the VMs
-$ vcd cse cluster create mycluster --network intranet --ssh-key ~/.ssh/id_rsa.pub
-
-# list the worker nodes of a cluster
-$ vcd cse node list mycluster
-
-# create cluster mycluster with one master, three nodes and connected to provided network
-$ vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh/id_rsa.pub
-
-# create a single worker node cluster, connected to the specified network. Nodes can be added later
-$ vcd cse cluster create mycluster --network intranet --nodes 0 --ssh-key ~/.ssh/id_rsa.pub
-
-# create cluster mycluster with one master, three worker nodes, connected to provided network
-# and one node of type NFS server
-$ vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh/id_rsa.pub
-                                   --type nfsd
-
-# add 2 worker nodes to a cluster with 4GB of ram and 4 CPUs each, from the photon-v2 template
-# and using the specified storage profile
-$ vcd cse node create mycluster --nodes 2 --network intranet --ssh-key ~/.ssh/id_rsa.pub \
-                                --memory 4096 --cpu 4 --template photon-v2
-                                --storage-profile Development
-
-# add 1 nfsd node to a cluster with 4GB of ram and 4 CPUs each, from the photon-v2 template
-# and using the specified storage profile
-$ vcd cse node create mycluster --nodes 1 --type nfsd --network intranet --ssh-key ~/.ssh/id_rsa.pub \
-                                --memory 4096 --cpu 4 --template photon-v2
-                                --storage-profile Development
-
-# info on a given node. If the node is of type nfsd, it displays info about Exports.
-$ vcd cse node info mycluster nfsd-dj3s
-
-# delete 2 nodes from a cluster
-$ vcd cse node delete mycluster node-dj3s node-b4rt --yes
-
-# list available clusters
-$ vcd cse cluster list
-
-# info on a given cluster
-$ vcd cse cluster info
-
-# retrieve cluster config
-$ vcd cse cluster config mycluster > ~/.kube/config
-
-# check cluster configuration
-$ kubectl get nodes
-
-# deploy a sample application
-$ kubectl create namespace sock-shop
-
-$ kubectl apply -n sock-shop -f "https://github.com/microservices-demo/microservices-demo/blob/master/deploy/kubernetes/complete-demo.yaml?raw=true"
-
-# check that all pods are running and ready
-$ kubectl get pods --namespace sock-shop
-
-# access the application
-$ IP=`vcd cse cluster list|grep '\ mycluster'|cut -f 1 -d ' '`
-$ open "http://${IP}:30001"
-
-# delete cluster when no longer needed
-$ vcd cse cluster delete mycluster --yes
-```
-
-## Scripting and Programming
-
-`CSE` can be easily scripted via `vcd-cli` commands to automate the creation and operation of kubernetes clusters and nodes. `CSE` is also available through REST API and a Python library included in the module. As an example, the following Python script creates a kubernetes cluster programmatically on vCloud Director:
-
+This Python script creates a Kubernetes cluster on vCloud Director:
 ```python
 #!/usr/bin/env python3
 from pyvcloud.vcd.client import BasicLoginCredentials
@@ -598,462 +566,160 @@ print(task.get('status'))
 
 client.logout()
 ```
+---
+## [**Example Use Case**](#toc) <a name="example"></a>
+```sh
+# create cluster mycluster with one master and two nodes, connected to provided network
+# a public key is provided to be able to ssh into the VMs
+> vcd cse cluster create mycluster --network intranet --ssh-key ~/.ssh/id_rsa.pub
 
-## NFS based static persistent volumes
+# list the worker nodes of a cluster
+> vcd cse node list mycluster
 
-Containers are stateless and ephemeral but most of the applications are stateful and need persistent storage. Kubernetes addressed this by [PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) abstraction.
-CSE supports [NFS based static persistent volumes](nfs_static_pv.md). See [here](nfs_static_pv.md) for CSE-NFS architecture and user guide.
+# create cluster mycluster with one master, three nodes and connected to provided network
+> vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh/id_rsa.pub
 
-Note: NFS based static persistent volumes are currently supported on only Ubuntu templates. Support on Photon OS is coming soon.
+# create a single worker node cluster, connected to the specified network. Nodes can be added later
+> vcd cse cluster create mycluster --network intranet --nodes 0 --ssh-key ~/.ssh/id_rsa.pub
 
-# Reference
+# create cluster mycluster with one master, three worker nodes, connected to provided network
+# and one node of type NFS server
+> vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh/id_rsa.pub --type nfsd
 
-## Command syntax
+# add 2 worker nodes to a cluster with 4GB of ram and 4 CPUs each, from the photon-v2 template
+# and using the specified storage profile
+> vcd cse node create mycluster --nodes 2 --network intranet --ssh-key ~/.ssh/id_rsa.pub --memory 4096 --cpu 4 --template photon-v2 --storage-profile Development
 
-`CSE` includes two commands:
+# add 1 nfsd node to a cluster with 4GB of ram and 4 CPUs each, from the photon-v2 template
+# and using the specified storage profile
+> vcd cse node create mycluster --nodes 1 --type nfsd --network intranet --ssh-key ~/.ssh/id_rsa.pub --memory 4096 --cpu 4 --template photon-v2 --storage-profile Development
 
-- `cse`
-  - used by the system administrator to install `CSE`, create and update templates and run the `CSE` service.
-- `vcd cse`
-  - used by the system administrator to operate the service:
-    - get status
-    - enable
-    - disable
-    - stop
-  - used by the tenants to:
-    - list templates
-    - create, list and delete clusters
-    - create, list and delete nodes
-    - get status of the service
+# info on a given node. If the node is of type nfsd, it displays info about Exports.
+> vcd cse node info mycluster nfsd-dj3s
 
-`CSE` also includes a `systemd` unit to:
-  - enable the service in the system
-  - start the service
+# delete 2 nodes from a cluster
+> vcd cse node delete mycluster node-dj3s node-b4rt --yes
 
-### vcd cse
+# list available clusters
+> vcd cse cluster list
 
+# info on a given cluster
+> vcd cse cluster info
+
+# retrieve cluster config
+> vcd cse cluster config mycluster > ~/.kube/config
+
+# check cluster configuration
+> kubectl get nodes
+
+# deploy a sample application
+> kubectl create namespace sock-shop
+
+> kubectl apply -n sock-shop -f "https://github.com/microservices-demo/microservices-demo/blob/master/deploy/kubernetes/complete-demo.yaml?raw=true"
+
+# check that all pods are running and ready
+> kubectl get pods --namespace sock-shop
+
+# access the application
+> IP=`vcd cse cluster list|grep '\ mycluster'|cut -f 1 -d ' '`
+> open "http://${IP}:30001"
+
+# delete cluster when no longer needed
+> vcd cse cluster delete mycluster --yes
 ```
-Usage: vcd cse [OPTIONS] COMMAND [ARGS]...
-
-  Work with kubernetes clusters in vCloud Director.
-
-      Description
-          The cse command works with kubernetes clusters on vCloud Director.
-
-          'vcd cse cluster create' creates a new kubernetes cluster in the
-          current virtual datacenter.
-
-          'vcd cse node create' creates new and attach new nodes to an existing
-          kubernetes cluster in the current virtual datacenter.
-
-          When creating clusters and nodes, the '--network' option is required,
-          as they need a network to operate and no network will be selected by
-          default if omitted.
-
-          Cluster names should follow the syntax for valid hostnames and can have
-          up to 25 characters .`system`, `template` and `swagger*` are reserved
-          words and cannot be used to name a cluster.
-
-      Examples
-          vcd cse cluster list
-              Get list of kubernetes clusters in current virtual datacenter.
-
-          vcd cse cluster create dev-cluster --network net1
-              Create a kubernetes cluster in current virtual datacenter.
-
-          vcd cse cluster create prod-cluster --nodes 4 \
-                      --network net1 --storage-profile '*'
-              Create a kubernetes cluster with 4 worker nodes.
-
-          vcd cse cluster delete dev-cluster
-              Delete a kubernetes cluster by name.
-
-          vcd cse cluster create c1 --nodes 0 --network net1
-              Create a single node kubernetes cluster for dev/test.
-
-          vcd cse node list c1
-              List nodes in a cluster.
-
-          vcd cse template list
-              Get list of CSE templates available.
-
-          vcd cse version
-              Display version.
-
-
-Options:
-  -h, --help  Show this message and exit.
-
-Commands:
-  cluster   work with clusters
-  node      work with nodes
-  system    work with CSE service
-  template  work with templates
-  version   show version
-```
-
-### vcd cse template
-
-```
-Usage: vcd cse template [OPTIONS] COMMAND [ARGS]...
-
-  Work with CSE templates.
-
-Options:
-  -h, --help  Show this message and exit.
-
-Commands:
-  list  list templates
-```
-
-### vcd cse cluster
-
-```
-Usage: vcd cse cluster [OPTIONS] COMMAND [ARGS]...
-
-  Work with kubernetes clusters.
-
-Options:
-  -h, --help  Show this message and exit.
-
-Commands:
-  config  get cluster config
-  create  create cluster
-  delete  delete cluster
-  info    get cluster info
-  list    list clusters
-```
-
-### vcd cse cluster create
-```
-Usage: vcd cse cluster create [OPTIONS] NAME
-
-Options:
-  -N, --nodes INTEGER         Number of nodes to create
-  -c, --cpu INTEGER           Number of virtual CPUs on each node
-  -m, --memory INTEGER        Amount of memory (in MB) on each node
-  -n, --network TEXT          Network name  [required]
-  -s, --storage-profile TEXT  Name of the storage profile for the nodes
-  -k, --ssh-key FILENAME      SSH public key to connect to the guest OS on the
-                              VM
-  -t, --template TEXT         Name of the template to instantiate nodes from
-  -h, --help                  Show this message and exit.
-```
-
-### vcd cse node
-
-```
-Usage: vcd cse node [OPTIONS] COMMAND [ARGS]...
-
-  Work with CSE cluster nodes.
-
-Options:
-  -h, --help  Show this message and exit.
-
-Commands:
-  create  add node(s) to cluster
-  delete  delete node(s)
-  info    get node info
-  list    list nodes
-```
-
-### vcd cse node create
-```
-Usage: vcd cse node create [OPTIONS] NAME
-
-Options:
-  -N, --nodes INTEGER         Number of nodes to create
-  -c, --cpu INTEGER           Number of virtual CPUs on each node
-  -m, --memory INTEGER        Amount of memory (in MB) on each node
-  -n, --network TEXT          Network name  [required]
-  -s, --storage-profile TEXT  Name of the storage profile for the nodes
-  -k, --ssh-key FILENAME      SSH public key to connect to the guest OS on the
-                              VM
-  -t, --template TEXT         Name of the template to instantiate nodes from
-  --type [node|nfsd]          type of node to add
-  -h, --help                  Show this message and exit.
-  ```
-
-### vcd cse system
-```
-Usage: vcd cse system [OPTIONS] COMMAND [ARGS]...
-
-  Work with CSE service.
-
-Options:
-  -h, --help  Show this message and exit.
-
-Commands:
-  disable  disable CSE service
-  enable   enable CSE service
-  info     CSE system info
-  stop     gracefully stop CSE service
-```
-
-### cse
-
-```
-Usage: cse [OPTIONS] COMMAND [ARGS]...
-
-  Container Service Extension for VMware vCloud Director.
-
-      Manages CSE.
-
-      Examples
-          cse sample
-              Generate sample config.
-
-          cse sample > config.yaml
-              Save sample config.
-
-          cse check
-              Validate configuration.
-
-          cse install --config config.yaml
-              Install CSE.
-
-          cse install --config config.yaml --template photon-v2
-              Install CSE. It only creates the template specified.
-
-          cse install --config config.yaml --no-capture --ssh-key  \
-                      ~/.etc/id_rsa.pub
-              Install CSE. The temporary vApp specified in the config file \
-              will be created, but the vApp will not be captured as a template \
-              in the catalog. --ssh-key option is required if --no-capture \
-              is used
-
-          cse install --config config.yaml --template photon-v2 --update \
-                      --amqp skip --ext skip
-              Update the specified template.
-
-          cse version
-              Display version.
-
-      Environment Variables
-          CSE_CONFIG
-              If this environment variable is set, the commands will use the file
-              indicated in the variable as the config file. The file indicated
-              with the '--config' option will have preference over the
-              environment variable. If both are omitted, it defaults to file
-              'config.yaml' in the current directory.
-
-
-Options:
-  -h, --help  Show this message and exit.
-
-Commands:
-  check    check configuration
-  install  install CSE on vCD
-  run      run service
-  sample   generate sample configuration
-  version  show version
-```
-## Known Issues
-
-- When CSE installation is aborted for any reason, ensure temporary vApp is deleted in vCD before re-issuing the install command
-    - Manually delete the problematic "ubuntu-temp" vApp.
-    - If temporary vApp still exists and `cse install` command is run again, CSE will just capture the vApp as the kubernetes template, even though the vApp is not set up properly
-- Customization of Ubuntu templates sometimes fail during CSE server installation. These customization failures are probably caused by the upgrade command failures seen after incorporating latest updates from Ubuntu.
-    - Comment out the following lines in "scripts/cust-ubutnu-16.04.sh" as a workaround and run the install command again.
-        - apt-get -q dist-upgrade -y
-        - apt-get -q autoremove -y
-- CSE fails to connect to vSphere 6.7. Please follow below workaround while we are working on the fix.
-    - https://github.com/vmware/container-service-extension/issues/92#issuecomment-403421974
-
-## Release Notes
-
-`CSE` is supported on VMware vCloud Director versions `8.10.0` and up.
-
-### CSE 1.1.0
-
-Release date: 2018-04-20
-
-| vCD         | OS                 | Docker     | Kubernetes | Pod Network |
-|:------------|:-------------------|:-----------|:-----------|:------------|
-| 8.10 and up | Photon OS 2.0 GA   | 17.06.4-ce | 1.9.1      | Weave 2.3.0 |
-| 8.10 and up | Ubuntu 16.04.4 LTS | 18.03.0-ce | 1.10.1     | Weave 2.3.0 |
-
-Maintenance release:
-- updated OS and software versions.
-- it is recommended to get the sample config with `cse sample` command, update the existing `config.yaml` with the changes and re-create the templates.
-- added NFS Persistent volume support.
-
-
-### CSE 1.0.0
-
-Release date: 2018-03-09
-
-| vCD         | OS                 | Docker     | Kubernetes | Pod Network |
-|:------------|:-------------------|:-----------|:-----------|:------------|
-| 8.10 and up | Photon OS 2.0 GA   | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
-| 8.10 and up | Ubuntu 16.04.3 LTS | 17.12.0-ce | 1.9.3      | Weave 2.1.3 |
-
-CSE General Availability (GA), improvements and bug fixes:
-- updated dependencies.
-- fixed template preparation issues related to open-vm-tools update.
-- removed unnecessary file downloads.
-
-### CSE 0.4.2
-
-Release date: 2018-02-15
-
-| vCD         | OS                 | Docker     | Kubernetes | Pod Network |
-|:------------|:-------------------|:-----------|:-----------|:------------|
-| 8.10 and up | Photon OS 2.0 GA   | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
-| 8.10 and up | Ubuntu 16.04.3 LTS | 17.12.0-ce | 1.9.3      | Weave 2.1.3 |
-
-Maintenance release, improvements and bug fixes:
-- support for latest Kubernetes 1.9.3 in Ubuntu template.
-- improved guest password configuration. It is recommended to set new password in the templates in `config.yaml` and re-create the templates.
-- this version of the PhotonOS template doesn't upgrade the OS to the latest version, since there is a problem with the latest version of `open-vm-tools`.
-- fixed issue while preparing Ubuntu template.
-- updated license files.
-- improved installation and validation of the AMQP settings.
-
-### CSE 0.4.1
-
-Release date: 2018-02-05
-
-Maintenance release, improvements and bug fixes:
-- guest password is now set using guest operations instead of using guest customization, so it is not visible in the vapp customization section; it is recommended to set new password in the templates of `config.yaml` and re-create the templates.
-- fixed issue with Ubuntu template when resizing disk.
-- fixed issue listing nodes.
-
-### CSE 0.4.0
-
-Release date: 2018-01-26
-
-| vCD         | OS                 | Docker     | Kubernetes | Pod Network |
-|:------------|:-------------------|:-----------|:-----------|:------------|
-| 8.10 and up | Photon OS 2.0 GA   | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
-| 8.10 and up | Ubuntu 16.04.3 LTS | 17.12.0-ce | 1.9.1      | Weave 2.1.3 |
-
-New features:
-- support multiple vCenters per vCD installation (new format of the `vcs` section in `config.yaml`)
-- upgraded PhotonOS template to version 2.0
-- upgraded Ubuntu template to Kubernetes 1.9.1
-- support templates from versions `0.2.0` and up, but re-creating the templates is recommended
-- scripts now upgrade the OS during the creation of the template
-- added `--update` template option to `cse install`
-
-### CSE 0.3.0
-
-Release date: 2018-01-10
-
-| vCD         | OS                   | Docker     | Kubernetes | Pod Network |
-|:------------|:---------------------|:-----------|:-----------|:------------|
-| 8.10 and up | Photon OS 1.0, Rev 2 | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
-| 8.10 and up | Ubuntu 16.04.3 LTS   | 17.09.0-ce | 1.8.2      | Weave 2.0.5 |
-
-New features:
-- added `node {create|list|delete}` commands
-- added `system {info|enable|disable|stop}` commands
-- support templates from versions `0.2.0` and up
-
-### CSE 0.2.0
-
-Release date: 2017-12-29
-
-| vCD         | OS                   | Docker     | Kubernetes | Pod Network |
-|:------------|:---------------------|:-----------|:-----------|:------------|
-| 8.10 and up | Photon OS 1.0, Rev 2 | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
-| 8.10 and up | Ubuntu 16.04.3 LTS   | 17.09.0-ce | 1.8.2      | Weave 2.0.5 |
-
-New features:
-- new bootstrap method
-- customization as external scripts
-- improved visibility of the customization process
-- customize CPU, memory, ssh-key and storage-profile during cluster creation
-- single vApp cluster
-- multiple templates support, added list templates command
-- separate client SDK and commands from pyvcloud and vcd-cli
-- fully automated installation process
-- improved task information
-
-### CSE 0.1.2
-
-Release date: 2017-11-10
-
-| vCD         | OS                   | Kubernetes | Pod Network |
-|:------------|:---------------------|:-----------|:------------|
-| 8.10 and up | Photon OS 1.0, Rev 2 | 1.7.7      | Weave 2.0.5 |
-| 8.10 and up | Ubuntu 16.04.3 LTS   | 1.8.2      | Weave 2.0.5 |
-
-Features:
-- added Ubuntu template
-
-### CSE 0.1.1
-
-Release date: 2017-10-03
-
-| vCD         | OS                   | Kubernetes | Pod Network |
-|:------------|:---------------------|:-----------|:------------|
-| 8.10 and up | Photon OS 1.0, Rev 2 | 1.7.7      | Weave 2.0.4 |
-
-Features:
-- initial release
-- create and delete clusters
-
-## Source OVA Files
-
-| OS                   | OVA Name                               | URL                                                                                                       | SHA1                                     |
-|:---------------------|:---------------------------------------|:----------------------------------------------------------------------------------------------------------|:-----------------------------------------|
-| Photon OS 1.0, Rev 2 | photon-custom-hw11-1.0-62c543d.ova     | `https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova`            | 18c1a6d31545b757d897c61a0c3cc0e54d8aeeba |
-| Photon OS 2.0 GA     | photon-custom-hw11-2.0-304b817.ova     | `http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova`                       | b8c183785bbf582bcd1be7cde7c22e5758fb3f16 |
-| Ubuntu 16.04.4 LTS   | ubuntu-16.04-server-cloudimg-amd64.ova | `https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova` | b8c183785bbf582bcd1be7cde7c22e5758fb3f16 |
-
-## CSE-vCD compatibility Matrix
-
-| CSE     | VCD                  |
-|:--------|:---------------------|
-| 1.1.0   | 8.20, 9.0, 9.1       |
-| 1.2.0 (coming soon)| 8.20, 9.0, 9.1, 9.5 |
-
-# Appendix
-
-## Installation Details
-
-### Installing Python 3 and CSE on Photon OS
-
-Photon OS 2.0 RC:
-
-```shell
-$ sudo tdnf install -y build-essential python3-setuptools python3-tools python3-pip python3-devel
-$ pip3 install --user --pre --upgrade --no-cache container-service-extension
-$ export LANG=en_US.UTF-8
-$ cse version
-```
-
-Photon OS 1.0, Revision 2:
-
-```shell
-$ sudo tdnf install -y gcc glibc-devel glibc-lang binutils python3-devel linux-api-headers gawk
-$ sudo locale-gen.sh
-$ pip3 install --user --pre --upgrade --no-cache container-service-extension
-$ cse version
-```
-
-### Installing Python 3 on macOS
-
-Install using [Homebrew](https://brew.sh):
-
-```shell
-$ brew install python3
-```
-
-### Installing Python 3.6 on Centos 7
-
-```shell
-$ sudo yum update
-$ sudo yum install -y yum-utils
-$ sudo yum groupinstall -y development
-$ sudo yum -y install https://centos7.iuscommunity.org/ius-release.rpm
-$ sudo yum -y install python36u python36u-pip python36u-devel
-$ sudo easy_install-3.6 pip
-```
-
-### Installing Python 3 on Ubuntu 16.04
-
-```shell
-$ sudo apt install python3-pip
-```
+---
+---
+# [__**NFS-based Static Persistent Volumes**__](#toc) <a name="nfs"></a>
+
+[Link](NFS_STATIC_PV.md)
+
+---
+---
+![cse-usage](img/cse-usage-2.png) <a name="cseusage"></a>
+
+---
+---
+## [**Troubleshooting**](#toc) <a name="troubleshooting"></a>
+`cse.log` logs CSE Server activity. Server requests and responses are recorded here, as well as outputs of scripts that were run on VMs.
+
+`cse-check.log` logs CSE operations, such as `cse install`. Stack traces and HTTP messages specific to CSE are recorded here.
+
+`vcd.log` logs vcd-cli and pyvcloud activity. Stack traces and HTTP messages specific to vcd-cli are recorded here.
+
+Common mistakes:
+- Config file fields are incorrect
+- Not logged in to vCD via vcd-cli
+- Logged in to vCD via vcd-cli as wrong user or user without required permissions
+- Config file and vCD should have same host/exchange, and make sure exchange exists on vCD
+    - On server start, monitor with `tail -f cse.log`
+- If CSE installation/updates failed, broken VMs/clusters/templates may exist, and CSE will not know that entities are invalid.
+    - Remove these entities from vCD manually
+
+---
+---
+## [**Known Issues**](#toc) <a name="knownissues"></a>
+Failures during template creation during installation
+- One of the template-creation scripts may have exited with an error
+- One of the scripts may be hung waiting for a response
+- If the VM has no internet access, scripts may fail
+- Check CSE logs for script outputs
+
+<br>
+
+CSE service fails to start
+- Workaround: rebooting the VM starts the service
+
+<br>
+
+CSE fails to connect to vSphere 6.7. Please follow below workaround while we are working on the fix.
+- https://github.com/vmware/container-service-extension/issues/92#issuecomment-403421974
+  
+<br>
+
+CSE does not clean up after itself if something goes wrong. When CSE installation is aborted for any reason, ensure temporary vApp is deleted in vCD before re-issuing the install command
+- Manually delete the problematic "ubuntu-temp" vApp.
+- If temporary vApp still exists and `cse install` command is run again, CSE will just capture the vApp as the Kubernetes template, even though the vApp is not set up properly
+  
+<br>
+
+`pip install container-service-extension` while in a virtual environment will result in CSE not being able to find the script files it requires. Fix is in review.
+- Workaround: do not install cse while in a virtual environment
+
+<br>
+
+During `cse install`, if vCD and config file AMQP configuration is the same, but the specified AMQP exchange has not been created yet, `cse install` will skip the exchange creation. Fix is in review.
+- Workaround: change one of the vCD AMQP configuration values to trigger AMQP configuration during `cse install`. This will change the vCD AMQP value back as well as create the exchange
+
+<br>
+
+### **NFS-related Issues**
+Currently, NFS servers in Kubernetes cluster can not only be accessed by nodes of that cluster but also by any VM (outside of the cluster) residing in the same orgVdc. Ideal solution is to have vApp network created for each Kubernetes cluster, which is in our road-map to implement. Until then, please choose one of below workarounds to avert this problem if the need arises.
+- Give access to only master & worker nodes of the cluster by adding individual IPs of the nodes into /etc/exports file on NFS server.
+    - Create and run a script periodically which retrieves IPs of nodes in the cluster and then add them to NFS server access list (/etc/exports).
+    - eg: /home 203.0.113.256(rw,sync,no_root_squash,no_subtree_check) 203.0.113.257(rw,sync,no_root_squash,no_subtree_check)
+- Admin can manually add a vApp network for each kubernetes cluster in vCD.
+- Create a ssh tunnel from each worker node (using ssh local port forwarding) and then use 127.0.0.1:<port> in the  Kubernetes declarative specs as IP of the NFS server.
+    - In NFS server, for any given shared directory, add below line to /etc/exports file.
+        - /home localhost(insecure,rw,sync,no_subtree_check)
+        - systemctl restart nfs-kernel-server.service
+    - Copy ssh public key of each worker node into ~/.ssh/authorized_keys in NFS server
+        - Client: Generate key using ssh-keygen and copy the contents of ~/.ssh/id_rsa.pub
+        - NFS server: Paste the contents (public key) from client into ~/.ssh/authorized_keys
+    - In each master/worker node,
+        - apt-get install portmap
+        - ssh -fNv -L 3049:127.0.0.1:2049 user@NFSServer
+    - Read more about this approach here
+        - http://www.debianadmin.com/howto-use-ssh-local-and-remote-port-forwarding.html
+        - https://gist.github.com/proudlygeek/5721498
+
+---
+---
+# [__**Contributing Guide**__](#toc) <a name="contributing"></a>
+
+[Link](CONTRIBUTING.md)
+
+---
+---
+# [__**Release Notes**__](#toc) <a name="releasenotes"></a>
+
+[Link](RELEASE_NOTES.md)
