@@ -576,6 +576,7 @@ def configure_amqp_settings(ctx, client, config, amqp_install):
         return
 
     amqp = config['amqp']
+
     amqp_service = AmqpService(client)
     current_settings = to_dict(amqp_service.get_settings())
     amqp_config = {
@@ -590,13 +591,8 @@ def configure_amqp_settings(ctx, client, config, amqp_install):
     }
 
     diff_settings = [key for key, value in current_settings.items() if amqp_config[key] != value]  # noqa
-    if not diff_settings:
-        click.echo("AMQP settings are the same, skipping AMQP configuration")
-        return
-
-    if amqp_install == 'prompt':
-        click.echo('\nDifferences between current and config AMQP settings')
-        click.echo('current AMQP setting:')
+    if diff_settings:
+        click.echo('current vCD AMQP setting:')
         for setting in diff_settings:
             click.echo(f"{setting}: {current_settings[setting]}")
 
@@ -604,22 +600,28 @@ def configure_amqp_settings(ctx, client, config, amqp_install):
         for setting in diff_settings:
             click.echo(f"{setting}: {amqp_config[setting]}")
 
-        if not click.confirm('\nDo you want to configure AMQP with the config file settings?'):  # noqa
-            click.echo('AMQP not configured')
+        if amqp_install == 'prompt' and not click.confirm('\nDo you want to configure AMQP with the config file settings?'):  # noqa
+            click.echo('Not configuring vCD AMQP settings/exchange')
             return
 
-    amqp_config['AmqpPort'] = amqp['port']
-    amqp_config['AmqpSslAcceptAll'] = amqp['ssl_accept_all']
-    amqp_config['AmqpUseSSL'] = amqp['ssl']
+        amqp_config['AmqpPort'] = amqp['port']
+        amqp_config['AmqpSslAcceptAll'] = amqp['ssl_accept_all']
+        amqp_config['AmqpUseSSL'] = amqp['ssl']
 
-    result = amqp_service.test_config(amqp_config, amqp['password'])
-    click.echo(f"AMQP test settings, result: {result['Valid'].text}")
+        result = amqp_service.test_config(amqp_config, amqp['password'])
+        click.echo(f"AMQP test settings, result: {result['Valid'].text}")
 
-    if result['Valid'].text == 'true':
-        amqp_service.set_config(amqp_config, amqp['password'])
-        click.echo('Updated vCD AMQP configuration.')
+        if result['Valid'].text == 'true':
+            amqp_service.set_config(amqp_config, amqp['password'])
+            click.echo('Updated vCD AMQP configuration.')
+        else:
+            click.echo("Couldn't set vCD AMQP configuration.")
     else:
-        click.echo('Couldn\'t set vCD AMQP configuration.')
+        click.echo('vCD and config AMQP settings are the same')
+        if amqp_install == 'prompt' and not click.confirm('\nDo you want to configure/create AMQP exchange with the config file settings?'):  # noqa
+            click.echo('Not configuring/creating AMQP exchange')
+            return
+
     click.echo(f"Checking AMQP exchange '{amqp['exchange']}'")
     credentials = pika.PlainCredentials(amqp['username'], amqp['password'])
     parameters = pika.ConnectionParameters(
