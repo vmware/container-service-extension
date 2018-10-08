@@ -304,7 +304,10 @@ def install_cse(ctx, config_file_name, template_name, update, no_capture,
                                '\'%s\': %s' %
                                (template['name'], config['broker']['catalog'],
                                 template['catalog_item']))
-        configure_amqp_settings(ctx, client, config, amqp_install)
+
+        if should_configure_amqp(client, config['amqp'], amqp_install):
+            configure_amqp(client, config['amqp'])
+
         register_extension(ctx, client, config, ext_install)
         click.secho('Start CSE with: \'cse run %s\'' % config_file_name)
 
@@ -570,94 +573,128 @@ def capture_as_template(ctx, config, vapp_resource, org, catalog, template):
     return True
 
 
-def configure_amqp_settings(ctx, client, config, amqp_install):
-    if amqp_install == 'skip':
-        click.echo('AMQP configuration: skipped')
-        return
+def should_configure_amqp(client, amqp_config, amqp_install):
+    """Handles the logic in deciding whether CSE installation should
+    configure vCD AMQP settings/exchange
 
-    amqp = config['amqp']
+    :param pyvcloud.vcd.client.Client client:
+    :param dict amqp_config: The 'amqp' section of the config file
+    :param str amqp_install: One of: prompt/skip/config
+
+    :return: boolean that signals whether we should configure AMQP settings
+
+    :rtype: bool
+    """
+    if amqp_install == 'skip':
+        return False
+
     amqp_service = AmqpService(client)
     current_settings = to_dict(amqp_service.get_settings())
-    amqp_config = {
-        'AmqpExchange': amqp['exchange'],
-        'AmqpHost': amqp['host'],
-        'AmqpPort': str(amqp['port']),
-        'AmqpPrefix': amqp['prefix'],
-        'AmqpSslAcceptAll': str(amqp['ssl_accept_all']).lower(),
-        'AmqpUseSSL': str(amqp['ssl']).lower(),
-        'AmqpUsername': amqp['username'],
-        'AmqpVHost': amqp['vhost']
+    amqp = {
+        'AmqpExchange': amqp_config['exchange'],
+        'AmqpHost': amqp_config['host'],
+        'AmqpPort': str(amqp_config['port']),
+        'AmqpPrefix': amqp_config['prefix'],
+        'AmqpSslAcceptAll': str(amqp_config['ssl_accept_all']).lower(),
+        'AmqpUseSSL': str(amqp_config['ssl']).lower(),
+        'AmqpUsername': amqp_config['username'],
+        'AmqpVHost': amqp_config['vhost']
     }
 
-    diff_settings = [key for key, value in current_settings.items() if amqp_config[key] != value]  # noqa
-    if not diff_settings:
-        click.echo("AMQP settings are the same, skipping AMQP configuration")
-        return
-
-    if amqp_install == 'prompt':
-        click.echo('\nDifferences between current and config AMQP settings')
-        click.echo('current AMQP setting:')
+    diff_settings = [k for k, v in current_settings.items() if amqp[k] != v]
+    if diff_settings:
+        click.echo('current vCD AMQP setting:')
         for setting in diff_settings:
             click.echo(f"{setting}: {current_settings[setting]}")
-
         click.echo('\nconfig AMQP setting:')
         for setting in diff_settings:
-            click.echo(f"{setting}: {amqp_config[setting]}")
+            click.echo(f"{setting}: {amqp[setting]}")
+        prompt_msg = '\nConfigure AMQP with the config file settings?'
+    else:
+        click.echo('vCD and config AMQP settings are the same')
+        prompt_msg = f"\nConfigure/create AMQP exchange " \
+                     f"'{amqp_config['exchange']}'?"
 
-        if not click.confirm('\nDo you want to configure AMQP with the config file settings?'):  # noqa
-            click.echo('AMQP not configured')
-            return
+    if amqp_install == 'prompt' and not click.confirm(prompt_msg):
+        return False
 
-    amqp_config['AmqpPort'] = amqp['port']
-    amqp_config['AmqpSslAcceptAll'] = amqp['ssl_accept_all']
-    amqp_config['AmqpUseSSL'] = amqp['ssl']
+    return True
 
-    result = amqp_service.test_config(amqp_config, amqp['password'])
+
+def configure_amqp(client, amqp_config):
+    """Configures vCD AMQP settings/exchange to match those in the config file
+
+    :param pyvcloud.vcd.client.Client client:
+    :param dict amqp_config: The 'amqp' section of the config file
+    """
+    amqp_service = AmqpService(client)
+    amqp = {
+        'AmqpExchange': amqp_config['exchange'],
+        'AmqpHost': amqp_config['host'],
+        'AmqpPort': amqp_config['port'],
+        'AmqpPrefix': amqp_config['prefix'],
+        'AmqpSslAcceptAll': amqp_config['ssl_accept_all'],
+        'AmqpUseSSL': amqp_config['ssl'],
+        'AmqpUsername': amqp_config['username'],
+        'AmqpVHost': amqp_config['vhost']
+    }
+
+    # This block sets the AMQP setting values on the
+    # vCD "System Administration Extensibility page"
+    result = amqp_service.test_config(amqp, amqp_config['password'])
     click.echo(f"AMQP test settings, result: {result['Valid'].text}")
-
     if result['Valid'].text == 'true':
-        amqp_service.set_config(amqp_config, amqp['password'])
+        amqp_service.set_config(amqp, amqp_config['password'])
         click.echo('Updated vCD AMQP configuration.')
     else:
-        click.echo('Couldn\'t set vCD AMQP configuration.')
-    click.echo(f"Checking AMQP exchange '{amqp['exchange']}'")
-    credentials = pika.PlainCredentials(amqp['username'], amqp['password'])
-    parameters = pika.ConnectionParameters(
-        amqp['host'],
-        amqp['port'],
-        amqp['vhost'],
-        credentials,
-        ssl=amqp['ssl'],
-        connection_attempts=3,
-        retry_delay=2,
-        socket_timeout=5)
+        click.echo("Couldn't set vCD AMQP configuration.")
+
+    # Simply applying the AMQP settings to vCD does not mean that the
+    # exchange exists or has been created. We have to go into the AMQP
+    # connection and create the exchange.
+    create_amqp_exchange(amqp_config['exchange'], amqp_config['username'],
+                         amqp_config['password'], amqp_config['host'],
+                         amqp_config['port'], amqp_config['vhost'],
+                         amqp_config['ssl'])
+
+
+def create_amqp_exchange(exchange_name, username, password, host, port, vhost,
+                         use_ssl):
+    """Checks if the specified AMQP exchange exists. If it doesn't exist,
+    creates it
+
+    :param str exchange_name: The AMQP exchange name to check for or create
+    :param str username: AMQP username
+    :param str password: AMQP password
+    :param str host: AMQP host name
+    :param int port: AMQP port number
+    :param str vhost: AMQP vhost
+    :param bool use_ssl: Enable ssl
+
+    :raises: Exception if AMQP exchange cannot be created
+    """
+    click.echo(f"Checking for AMQP exchange '{exchange_name}'")
+    credentials = pika.PlainCredentials(username, password)
+    parameters = pika.ConnectionParameters(host, port, vhost, credentials,
+                                           ssl=use_ssl, connection_attempts=3,
+                                           retry_delay=2, socket_timeout=5)
     connection = pika.BlockingConnection(parameters)
-    click.echo(f"Connected to AMQP server ({amqp['host']}:{amqp['port']}): "
+    click.echo(f"Connected to AMQP server ({host}:{port}): "
                f"{bool_to_msg(connection.is_open)}")
+
     channel = connection.channel()
     try:
         channel.exchange_declare(
-            exchange=amqp['exchange'],
+            exchange=exchange_name,
             exchange_type=EXCHANGE_TYPE,
-            passive=True,
             durable=True,
             auto_delete=False)
-        click.echo(f"Exchange '{amqp['exchange']}' found")
     except Exception:
-        click.echo(f"Exchange not found, creating exchange "
-                   f"'{amqp['exchange']}'")
-        try:
-            channel = connection.channel()
-            channel.exchange_declare(
-                exchange=amqp['exchange'],
-                exchange_type=EXCHANGE_TYPE,
-                durable=True,
-                auto_delete=False)
-            click.echo(f"Exchange '{amqp['exchange']}' created.")
-        except Exception:
-            LOGGER.error(traceback.format_exc())
-            click.echo(f"Couldn't create exchange '{amqp['exchange']}'")
-    connection.close()
+        LOGGER.error(traceback.format_exc())
+        click.echo(f"Couldn't create exchange '{exchange_name}'")
+    finally:
+        connection.close()
+    click.echo(f"AMQP exchange '{exchange_name}' created")
 
 
 def register_extension(ctx, client, config, ext_install):
