@@ -393,7 +393,7 @@ def install_cse(ctx, config_file_name, template_name, update, no_capture,
             configure_amqp(client, config['amqp'])
 
         register_extension(ctx, client, config, ext_install)
-        click.secho('Start CSE with: \'cse run %s\'' % config_file_name)
+        click.echo(f'Start CSE with: \'cse run --config {config_file_name}\'')
 
 
 def get_sha256(file):
