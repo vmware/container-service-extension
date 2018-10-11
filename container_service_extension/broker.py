@@ -682,6 +682,7 @@ class DefaultBroker(threading.Thread):
         return result
 
     def create_nodes_thread(self):
+        result = {'body': {}}
         LOGGER.debug('about to add nodes to cluster with name: %s',
                      self.cluster_name)
         try:
@@ -728,6 +729,10 @@ class DefaultBroker(threading.Thread):
         except Exception as e:
             LOGGER.error(traceback.format_exc())
             self.update_task(TaskStatus.ERROR, error_message=str(e))
+            result['body'] = []
+            result['status_code'] = INTERNAL_SERVER_ERROR
+            result['message'] = str(e)
+        return result
 
     def delete_nodes(self, headers, body):
         result = {'body': {}}
