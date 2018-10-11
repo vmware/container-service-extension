@@ -26,7 +26,7 @@ class Cluster(object):
         if len(decoded) > 0:
             content = json.loads(decoded)
         else:
-            content = {}
+            content = {'message': f"Server status {response.status_code}"}
         if response.status_code in [
                 requests.codes.ok, requests.codes.created,
                 requests.codes.accepted
