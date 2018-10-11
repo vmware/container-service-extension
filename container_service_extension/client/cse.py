@@ -157,8 +157,10 @@ def list_clusters(ctx):
                 'IP master': c['leader_endpoint'],
                 'template': c['template'],
                 'VMs': c['number_of_vms'],
-                'vdc': c['vdc_name']
+                'vdc': c['vdc_name'],
+                'status': c['status']
             })
+
         stdout(result, ctx, show_id=True)
     except Exception as e:
         stderr(e, ctx)
