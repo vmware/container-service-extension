@@ -22,63 +22,13 @@ from container_service_extension.service import Service
 @vcd.group(short_help='manage kubernetes clusters')
 @click.pass_context
 def cse(ctx):
-    """Work with kubernetes clusters in vCloud Director.
-
-\b
-    Description
-        The cse command works with kubernetes clusters on vCloud Director.
-\b
-        'vcd cse cluster create' creates a new kubernetes cluster in the
-        current virtual datacenter.
-\b
-        'vcd cse node create' creates new and attach new nodes to an existing
-        kubernetes cluster in the current virtual datacenter.
-\b
-        When creating clusters and nodes, the '--network' option is required,
-        as they need a network to operate and no network will be selected by
-        default if omitted.
-\b
-        Cluster names should follow the syntax for valid hostnames and can have
-        up to 25 characters .`system`, `template` and `swagger*` are reserved
-        words and cannot be used to name a cluster.
+    """Work with Kubernetes clusters in vCloud Director.
 
 \b
     Examples
-        vcd cse cluster list
-            Get list of kubernetes clusters in current virtual datacenter.
-\b
-        vcd cse cluster create dev-cluster --network net1
-            Create a kubernetes cluster in current virtual datacenter.
-\b
-        vcd cse cluster create prod-cluster --nodes 4 \\
-                    --network net1 --storage-profile '*'
-            Create a kubernetes cluster with 4 worker nodes.
-\b
-        vcd cse cluster create dev-cluster --nodes 2 \\
-                    --network net1 --enable-nfs
-            Create a kubernetes cluster with NFS support
-\b
-        vcd cse node create dev-cluster -N 2 --network net1 \\
-            Add 2 worker nodes to the cluster
-\b
-        vcd cse node create dev-cluster -N 1 --network net1 \\
-                    --type nfsd
-            Add a node of type NFS to the cluster
-\b
-        vcd cse cluster delete dev-cluster
-            Delete a kubernetes cluster by name.
-\b
-        vcd cse cluster create c1 --nodes 0 --network net1
-            Create a single node kubernetes cluster for dev/test.
-\b
-        vcd cse node list c1
-            List nodes in a cluster.
-\b
-        vcd cse template list
-            Get list of CSE templates available.
-\b
         vcd cse version
-            Display version.
+            Display CSE version. If CSE version is displayed, then vcd-cli has
+            been properly configured to run CSE commands
     """
     if ctx.invoked_subcommand is not None:
         try:
@@ -105,7 +55,43 @@ def version(ctx):
 @cse.group('cluster', short_help='work with clusters')
 @click.pass_context
 def cluster_group(ctx):
-    """Work with kubernetes clusters."""
+    """Work with Kubernetes clusters. 
+
+\b
+    Cluster names should follow the syntax for valid hostnames and can have
+    up to 25 characters .`system`, `template` and `swagger*` are reserved
+    words and cannot be used to name a cluster.
+\b
+    Examples
+        vcd cse cluster list
+            Displays clusters in vCD that are visible to your user status
+\b
+        vcd cse cluster delete mycluster --yes
+            Attempts to delete cluster 'mycluster' without prompting
+\b
+        vcd cse cluster create mycluster -n mynetwork
+            Attempts to create a Kubernetes cluster named 'mycluster' 
+            with 2 worker nodes in the current VDC. This cluster will be
+            connected to Org VDC network 'mynetwork'. All VMs will use the
+            default template
+\b
+        vcd cse cluster create mycluster -n mynetwork --template photon-v2 \\
+        --nodes 1 --cpu 3 --memory 1024 --storage-profile mystorageprofile \\
+        --ssh-key ~/.ssh/id_rsa.pub --enable-nfs
+            Attempts to create a Kubernetes cluster named 'mycluster' on vCD
+            with 1 worker node and 1 NFS node. This cluster will be connected
+            to Org VDC network 'mynetwork'. All VMs will use the template
+            'photon-v2'. All VMs in the cluster will have 3 vCPUs on each node
+            with 1024mb of memory each. All VMs will use the storage profile
+            'mystorageprofile'. The public ssh key at '~/.ssh/id_rsa.pub' will
+            be placed into all VMs for user accessibility.
+\b
+        vcd cse cluster config mycluster
+            Display configuration information about a cluster
+\b
+        vcd cse cluster info mycluster
+            Display detailed information about a cluster
+    """
     if ctx.invoked_subcommand is not None:
         try:
             if not ctx.obj['profiles'].get('vdc_in_use') or \
@@ -118,13 +104,20 @@ def cluster_group(ctx):
 @cse.group(short_help='work with templates')
 @click.pass_context
 def template(ctx):
-    """Work with CSE templates."""
+    """Work with CSE templates.
+
+\b
+    Examples
+        vcd cse template list
+            Displays CSE templates in vCD that are visible to your user status
+    """
     pass
 
 
 @template.command('list', short_help='list templates')
 @click.pass_context
 def list_templates(ctx):
+    """Display CSE templates."""
     try:
         client = ctx.obj['client']
         cluster = Cluster(client)
@@ -146,6 +139,7 @@ def list_templates(ctx):
 @cluster_group.command('list', short_help='list clusters')
 @click.pass_context
 def list_clusters(ctx):
+    """Display current Kubernetes clusters."""
     try:
         client = ctx.obj['client']
         cluster = Cluster(client)
@@ -177,6 +171,7 @@ def list_clusters(ctx):
     expose_value=False,
     prompt='Are you sure you want to delete the cluster?')
 def delete(ctx, name):
+    """Delete a Kubernetes cluster."""
     try:
         client = ctx.obj['client']
         cluster = Cluster(client)
@@ -252,6 +247,7 @@ def delete(ctx, name):
     help='Creates an additional node of type NFS')
 def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
            ssh_key_file, template, enable_nfs):
+    """Create a Kubernetes cluster."""
     try:
         client = ctx.obj['client']
         cluster = Cluster(client)
@@ -279,6 +275,7 @@ def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
 @click.argument('name', required=True)
 @click.option('-s', '--save', is_flag=True)
 def config(ctx, name, save):
+    """Display cluster configuration info."""
     try:
         client = ctx.obj['client']
         cluster = Cluster(client)
@@ -297,6 +294,7 @@ def config(ctx, name, save):
 @click.pass_context
 @click.argument('name', required=True)
 def cluster_info(ctx, name):
+    """Display info about a Kubernetes cluster."""
     try:
         client = ctx.obj['client']
         cluster = Cluster(client)
@@ -309,7 +307,36 @@ def cluster_info(ctx, name):
 @cse.group('node', short_help='work with nodes')
 @click.pass_context
 def node_group(ctx):
-    """Work with CSE cluster nodes."""
+    """Work with CSE cluster nodes.
+
+\b
+    Examples
+        vcd cse node create mycluster -n mynetwork
+            Attempts to add a node to Kubernetes cluster named 'mycluster' on
+            vCD. The node will be connected to Org VDC network 'mynetwork' and
+            will be created from the default template
+\b
+        vcd cse node create mycluster -n mynetwork --nodes 2 --cpu 3 \\
+        --memory 1024 --storage-profile mystorageprofile \\
+        --ssh-key ~/.ssh/id_rsa.pub --template photon-v2 --type nfsd
+            Attempts to add 2 nfsd nodes to Kubernetes cluster named
+            'mycluster' on vCD. The nodes will be connected to Org VDC
+            network 'mynetwork' and will be created from the template
+            'photon-v2'. Each node will use 3 vCPUs, have 1024mb of memory,
+            and use the storage profile 'mystorageprofile'. The public ssh
+            key at '~/.ssh/id_rsa.pub' will be placed into all VMs for
+            user accessibility.
+\b
+        vcd cse node list
+            Displays nodes in vCD that are visible to your user status
+\b
+        vcd cse node info node-xxxx
+            Display detailed information about a node
+\b
+        vcd cse node delete node-xxxx --yes
+            Attempts to delete node 'node-xxxx' without prompting
+    """
+
     if ctx.invoked_subcommand is not None:
         try:
             if not ctx.obj['profiles'].get('vdc_in_use') or \
@@ -318,11 +345,13 @@ def node_group(ctx):
         except Exception as e:
             stderr(e, ctx)
 
+
 @node_group.command('info', short_help='get node info')
 @click.pass_context
 @click.argument('cluster_name', required=True)
 @click.argument('node_name', required=True)
 def node_info(ctx, cluster_name, node_name):
+    """Display info about a specific node."""
     try:
         client = ctx.obj['client']
         cluster = Cluster(client)
@@ -330,6 +359,7 @@ def node_info(ctx, cluster_name, node_name):
         stdout(node_info, ctx, show_id=True)
     except Exception as e:
         stderr(e, ctx)
+
 
 @node_group.command('create', short_help='add node(s) to cluster')
 @click.pass_context
@@ -396,6 +426,7 @@ def node_info(ctx, cluster_name, node_name):
     help='type of node to add')
 def create_node(ctx, name, node_count, cpu, memory, network_name,
                 storage_profile, ssh_key_file, template, node_type):
+    """Add a node to a Kubernetes cluster."""
     try:
         client = ctx.obj['client']
         cluster = Cluster(client)
@@ -422,6 +453,7 @@ def create_node(ctx, name, node_count, cpu, memory, network_name,
 @click.pass_context
 @click.argument('name', required=True)
 def list_nodes(ctx, name):
+    """Display nodes in a Kubernetes cluster."""
     try:
         client = ctx.obj['client']
         cluster = Cluster(client)
@@ -445,6 +477,7 @@ def list_nodes(ctx, name):
     prompt='Are you sure you want to delete the node(s)')
 @click.option('-f', '--force', is_flag=True, help='Force delete node VM(s)')
 def delete_nodes(ctx, name, node_names, force):
+    """Delete node(s) in a Kubernetes cluster."""
     try:
         client = ctx.obj['client']
         cluster = Cluster(client)
@@ -480,13 +513,29 @@ def save_config(ctx):
 @cse.group('system', short_help='work with CSE service')
 @click.pass_context
 def system_group(ctx):
-    """Work with CSE service."""
+    """Work with CSE service (system daemon).
+
+\b
+    Examples
+        vcd cse system info
+            Displays detailed information about CSE
+\b
+        vcd cse system enable --yes
+            Attempts to enable CSE system daemon without prompting
+\b
+        vcd cse system stop --yes
+            Attempts to stop CSE system daemon without prompting
+\b
+        vcd cse system disable --yes
+            Attempts to disable CSE system daemon without prompting
+    """
     pass
 
 
 @system_group.command('info', short_help='CSE system info')
 @click.pass_context
 def info(ctx):
+    """Display info about CSE."""
     try:
         client = ctx.obj['client']
         system = System(client)
@@ -506,6 +555,7 @@ def info(ctx):
     expose_value=False,
     prompt='Are you sure you want to stop the service?')
 def stop_service(ctx):
+    """Stop CSE system daemon."""
     try:
         client = ctx.obj['client']
         system = System(client)
@@ -518,6 +568,7 @@ def stop_service(ctx):
 @system_group.command('enable', short_help='enable CSE service')
 @click.pass_context
 def enable_service(ctx):
+    """Enable CSE system daemon."""
     try:
         client = ctx.obj['client']
         system = System(client)
@@ -530,6 +581,7 @@ def enable_service(ctx):
 @system_group.command('disable', short_help='disable CSE service')
 @click.pass_context
 def disable_service(ctx):
+    """Disable CSE system daemon."""
     try:
         client = ctx.obj['client']
         system = System(client)
