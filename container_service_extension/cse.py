@@ -26,45 +26,57 @@ def cli(ctx):
     """Container Service Extension for VMware vCloud Director.
 
 \b
-    Manages CSE.
-\b
     Examples
-        cse sample
-            Generate sample config.
+        cse version
+            Display CSE version.
 \b
         cse sample > config.yaml
-            Save sample config.
+            Generate sample CSE config in a file named 'config.yaml'.
+\b
+        cse install
+            Install CSE using data from 'config.yaml'.
+\b
+        cse install -c myconfig.yaml --template photon-v2
+            Install CSE using data from 'myconfig.yaml' but only create
+            template 'photon-v2'.
+\b
+        cse install --update
+            Install CSE, and if the templates already exist in vCD, create
+            them again.
+\b
+        cse install --no-capture --ssh-key ~/.ssh/id_rsa.pub
+            Install CSE, but don't capture temporary vApps to a template.
+            Instead, leave them running for debugging purposes. Copy specified
+            SSH key into all VMs so users with the cooresponding private key
+            have access (--ssh-key is required when --no-capture is used).
+\b
+        cse install --amqp skip --ext config
+            Install CSE, but skip amqp configuration step and register CSE to
+            vCD without prompting.
 \b
         cse check
-            Validate CSE installation/configuration.
+            Validate CSE was installed correctly according to 'config.yaml'.
+            Validates all specified templates.
 \b
-        cse install --config config.yaml
-            Install CSE.
+        cse check -c myconfig.yaml --template photon-v2
+            Validate CSE was installed correctly according to 'myconfig.yaml'.
+            Only validates template 'photon-v2'.
 \b
-        cse install --config config.yaml --template photon-v2
-            Install CSE. It only creates the template specified.
+        cse run
+            Run CSE Server using data from 'config.yaml', but first validate
+            that CSE was installed according to 'config.yaml'.
 \b
-        cse install --config config.yaml --no-capture --ssh-key  \\
-                    ~/.etc/id_rsa.pub
-            Install CSE. The temporary vApp specified in the config file \\
-            will be created, but the vApp will not be captured as a template \\
-            in the catalog. --ssh-key option is required if --no-capture \\
-            is used
-\b
-        cse install --config config.yaml --template photon-v2 --update \\
-                    --amqp skip --ext skip
-            Update the specified template.
-\b
-        cse version
-            Display version.
+        cse run --config myconfig.yaml --skip-check
+            Run CSE Server using data from 'myconfig.yaml' without first
+            validating that CSE was installed according to 'myconfig.yaml'.
 \b
     Environment Variables
         CSE_CONFIG
             If this environment variable is set, the commands will use the file
             indicated in the variable as the config file. The file indicated
-            with the \'--config\' option will have preference over the
+            with the '--config' option will have preference over the
             environment variable. If both are omitted, it defaults to file
-            \'config.yaml\' in the current directory.
+            'config.yaml' in the current directory.
     """
     if ctx.invoked_subcommand is None:
         click.secho(ctx.get_help())
