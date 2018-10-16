@@ -25,9 +25,13 @@ The current document covers the following `CSE` topics:
 
 The `CSE` service is designed to be installed by the vCloud Director System Administrator on a virtual machine (the `CSE` appliance) with network connectivity to the vCloud Director infrastructure where the following components access is required:
 
-- vCloud Director instance (Public Load Balancer VIP for multiple cells)
-- vCenter Server
-- AMQP Server
+**Source** | **Destination** | **Port** | **Description**
+-------|-------------|------|------------
+CSE | vCloud Director | 443 | vCloud API
+CSE | vCenter Server | 443 | Virtual Machine Configuration
+CSE | vCloud ESXi hosts | 443 | Virtual Machine Guest Interaction
+CSE | AMQP Host | 5671 | AMQP/S traffic
+CSE | AMQP Host | 5672 | AMQP traffic
 
 vCD tenants can use `CSE` through [vcd-cli](https://vmware.github.io/vcd-cli). Web UI access will be available in a future release.
 
