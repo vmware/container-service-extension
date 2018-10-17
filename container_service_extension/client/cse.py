@@ -32,7 +32,8 @@ def cse(ctx):
     """
     if ctx.invoked_subcommand is not None:
         try:
-            restore_session(ctx)
+            if ctx.invoked_subcommand != 'version':
+                restore_session(ctx)
             if ctx.invoked_subcommand not in ['system', 'template', 'version']:
                 if not ctx.obj['profiles'].get('vdc_in_use') or \
                    not ctx.obj['profiles'].get('vdc_href'):
