@@ -544,7 +544,7 @@ $ vcd cse node create mycluster --nodes 1 --type nfsd --network intranet --ssh-k
                                 --storage-profile Development
 
 # info on a given node. If the node is of type nfsd, it displays info about Exports.
-$ vcd cse node info nfsd-xxxx mycluster
+$ vcd cse node info mycluster nfsd-dj3s
 
 # delete 2 nodes from a cluster
 $ vcd cse node delete mycluster node-dj3s node-b4rt --yes
@@ -857,6 +857,8 @@ Commands:
     - Comment out the following lines in "scripts/cust-ubutnu-16.04.sh" as a workaround and run the install command again.
         - apt-get -q dist-upgrade -y
         - apt-get -q autoremove -y
+- CSE fails to connect to vSphere 6.7. Please follow below workaround while we are working on the fix.
+    - https://github.com/vmware/container-service-extension/issues/92#issuecomment-403421974
 
 ## Release Notes
 

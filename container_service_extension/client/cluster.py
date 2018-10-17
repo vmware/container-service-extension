@@ -170,7 +170,14 @@ class Cluster(object):
             media_type=None,
             accept_type='application/*+json',
             auth=None)
-        return self._process_response(response)
+        try:
+            content = self._process_response(response)
+        except Exception as e:
+            if str(e) == '{}':
+                raise Exception("Invalid cluster/node name")
+            else:
+                raise e
+        return content
 
     def add_node(self,
                  vdc,
