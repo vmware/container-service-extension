@@ -9,6 +9,7 @@ import os
 import random
 import socket
 import ssl
+import stat
 import string
 import sys
 from urllib.parse import urlparse
@@ -22,8 +23,103 @@ from pyvcloud.vcd.vm import VM
 from vsphere_guest_run.vsphere import VSphere
 
 cache = LRUCache(maxsize=1024)
-
 LOGGER = logging.getLogger('cse.utils')
+
+# chunk size in bytes for file reading
+BUF_SIZE = 65536
+
+
+def bool_to_msg(value):
+    if value:
+        return 'success'
+    return 'fail'
+
+
+def get_sha256(filepath):
+    """Gets sha256 hash of file as a string.
+
+    :param str filepath: path to file.
+
+    :return: sha256 string for the file.
+
+    :rtype: str
+    """
+    sha256 = hashlib.sha256()
+    with open(filepath, 'rb') as f:
+        while True:
+            data = f.read(BUF_SIZE)
+            if not data:
+                break
+            sha256.update(data)
+    return sha256.hexdigest()
+
+
+def check_keys_and_value_types(dikt, ref_dict, location='dictionary'):
+    """Compares a dictionary with a reference dictionary to ensure that
+    all keys and value types are the same.
+
+    :param dict dikt: the dictionary to check for validity
+    :param dict ref_dict: the dictionary to check against
+    :param str location: where this check is taking place, so error messages
+        can be more descriptive.
+
+    :raises KeyError: if @dikt has missing or invalid keys
+    :raises ValueError: if the value of a property in @dikt does not match with
+        the value of the same property in @ref_dict
+    """
+    ref_keys = set(ref_dict.keys())
+    keys = set(dikt.keys())
+
+    missing_keys = ref_keys - keys
+    invalid_keys = keys - ref_keys
+
+    if missing_keys:
+        raise KeyError(f"Missing keys in {location}:\n{missing_keys}")
+    if invalid_keys:
+        raise KeyError(f"Invalid keys in {location}:\n{invalid_keys}")
+
+    for k in keys:
+        value_type = type(ref_dict[k])
+        if not isinstance(dikt[k], value_type):
+            raise ValueError(f"Value for {location} property '{k}' should "
+                             f"be '{value_type}'")
+
+
+def check_python_version():
+    """Ensures that user's Python version >= 3.6.
+
+    :raises Exception: if user's Python version < 3.6.
+    """
+    click.echo(f"Required Python version: >= 3.6\nInstalled Python version: "
+               f"{sys.version_info.major}.{sys.version_info.minor}."
+               f"{sys.version_info.micro}")
+    if not sys.version_info.major >= 3 and sys.version_info.minor >= 6:
+        raise Exception('Python version is not up to date')
+
+
+def check_file_permissions(filename):
+    """Ensures that the file only has rw permission for Owner, and no
+    permissions for anyone else.
+
+    :param str filename: path to file.
+
+    :raises Exception: if file has 'x' permissions for Owner or 'rwx'
+        permissions for 'Others' or 'Group'.
+    """
+    file_mode = os.stat(filename).st_mode
+    if file_mode & stat.S_IXUSR:
+        click.secho(f"Remove execute permission of the Owner for the "
+                    f"file {filename}", fg='red')
+        raise Exception(f"Remove execute permission of the Owner for the "
+                        f"file {filename}")
+    if file_mode & stat.S_IROTH or file_mode & stat.S_IWOTH \
+            or file_mode & stat.S_IXOTH:
+        raise Exception(f"Remove read, write and execute permissions of "
+                        f"Others for the file {filename}", fg='red')
+    if file_mode & stat.S_IRGRP or file_mode & stat.S_IWGRP \
+            or file_mode & stat.S_IXGRP:
+        raise Exception(f"Remove read, write and execute permissions of "
+                        f"Group for the file {filename}", fg='red')
 
 
 def get_data_file(filename):

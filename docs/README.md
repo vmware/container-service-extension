@@ -304,14 +304,15 @@ To inspect the temporary vApp after customization, use the `--no-capture` option
 Validate that CSE has installed correctly with:
 
 ```sh
-> cse check --config config.yaml
+> cse check --config config.yaml --check-install
 ```
 The `cse check` command supports the following options:
 
-| Option     | Short | Argument(s)         | Description                              | Default                                                 |
-|:------------|:-------|:---------------------|:------------------------------------------|:---------------------------------------------------------|
-| --config   | -c    | path/to/config.yaml | Config file to use                       | config.yaml                                             |
-| --template | -t    | template-name       | Check that the specified template exists | '*' (checks for all templates specified in config file) |
+| Option          | Short | Argument(s)         | Description                                                           | Default                                                 |
+|-----------------|-------|---------------------|-----------------------------------------------------------------------|---------------------------------------------------------|
+| --config        | -c    | path/to/config.yaml | Config file to use                                                    | config.yaml                                             |
+| --check-install | -i    | n/a                 | Check CSE installation on vCD                                         | False                                                   |
+| --template      | -t    | template-name       | If `--check-install` is set, check that the specified template exists | '*' (checks for all templates specified in config file) |
 
 <br>
 

@@ -56,14 +56,17 @@ def cli(ctx):
             vCD without prompting.
 \b
         cse check
-            Checks that the info in 'config.yaml' is correct. Ensures that vCD,
-            VCs, AMQP are available, and checks that all specified templates
-            have been created.
+            Checks that 'config.yaml' is valid.
 \b
-        cse check -c myconfig.yaml --template photon-v2
-            Checks that the info in 'myconfig.yaml' is correct. Ensures that
-            vCD, VCs, AMQP are available, and checks that template
-            'photon-v2' exists.
+        cse check -c myconfig.yaml --check-install
+            Checks that 'myconfig.yaml' is valid. Also checks that CSE is
+            installed on vCD according to 'myconfig.yaml' (Checks that all
+            templates specified in 'myconfig.yaml' exist.)
+\b
+        cse check --check-install --template photon-v2
+            Checks that 'config.yaml' is valid. Also checks that CSE is
+            installed on vCD according to 'config.yaml' (Checks that
+            template 'photon-v2' exists.)
 \b
         cse run
             Run CSE Server using data from 'config.yaml', but first validate
@@ -104,7 +107,9 @@ def sample(ctx):
     click.secho(generate_sample_config())
 
 
-@cli.command(short_help='check configuration')
+@cli.command(short_help="Checks that config file is valid. Using "
+                        "'--check-install' option will also verify that CSE "
+                        "is installed according to config file.")
 @click.pass_context
 @click.option(
     '-c',
@@ -116,22 +121,29 @@ def sample(ctx):
     default='config.yaml',
     help='Config file to use.')
 @click.option(
+    '-i',
+    '--check-install',
+    'check_install',
+    is_flag=True,
+    required=False,
+    default=False,
+    help='Checks that CSE is installed on vCD according to the config file')
+@click.option(
     '-t',
     '--template',
     'template',
     required=False,
     default='*',
     metavar='<template>',
-    help='Validate this template')
-def check(ctx, config, template):
+    help="If '--check-install' flag is set, validate specified template. "
+         "All templates in config file will be validated if this option "
+         "is not used.")
+def check(ctx, config, check_install, template):
     """Validate CSE configuration."""
     try:
-        check_config(config, template)
-        click.secho('The configuration is valid.')
-    except Exception as e:
+        check_config(config, check_install, template)
+    except Exception:
         LOGGER.error(traceback.format_exc())
-        click.secho('The configuration is invalid, %s'
-                    '. See \'cse.log\' for details' % str(e))
 
 
 @cli.command(short_help='install CSE on vCD')
