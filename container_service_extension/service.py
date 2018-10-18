@@ -18,7 +18,7 @@ from pyvcloud.vcd.client import Client
 
 from container_service_extension.broker import DefaultBroker
 from container_service_extension.config import check_config
-from container_service_extension.config import get_config
+from container_service_extension.config import get_validated_config
 from container_service_extension.consumer import MessageConsumer
 
 LOGGER = logging.getLogger('cse.service')
@@ -159,10 +159,10 @@ class Service(object, metaclass=Singleton):
         return reply
 
     def run(self):
+        self.config = get_validated_config(self.config_file)
         if self.should_check_config:
-            self.config = check_config(self.config_file)
-        else:
-            self.config = get_config(self.config_file)
+            check_config(self.config_file)
+
         log_file = 'cse.log'
         handler = RotatingFileHandler(
             log_file, maxBytes=10 * 1024 * 1024, backupCount=10)

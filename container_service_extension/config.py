@@ -1,12 +1,9 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-import hashlib
 import logging
 import os
 import site
-import stat
-import sys
 import time
 import traceback
 from urllib.parse import urlparse
@@ -30,12 +27,15 @@ from vcd_cli.utils import to_dict
 from vsphere_guest_run.vsphere import VSphere
 import yaml
 
-from container_service_extension.broker import validate_broker_config_content
 from container_service_extension.consumer import EXCHANGE_TYPE
+from container_service_extension.utils import bool_to_msg
+from container_service_extension.utils import check_file_permissions
+from container_service_extension.utils import check_keys_and_value_types
+from container_service_extension.utils import check_python_version
+from container_service_extension.utils import get_sha256
 from container_service_extension.utils import get_vsphere
 
 LOGGER = logging.getLogger('cse.config')
-BUF_SIZE = 65536
 
 SAMPLE_AMQP_CONFIG = {
     'amqp': {
@@ -124,7 +124,14 @@ SAMPLE_BROKER_CONFIG = {
 }
 
 
+# This allows us to compare top-level config keys and value types
+SAMPLE_CONFIG = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
+                 **SAMPLE_VCS_CONFIG, **SAMPLE_SERVICE_CONFIG,
+                 **SAMPLE_BROKER_CONFIG}
+
+
 def generate_sample_config():
+    """Generates a sample config file for cse."""
     sample_config = yaml.safe_dump(SAMPLE_AMQP_CONFIG,
                                    default_flow_style=False) + '\n'
     sample_config += yaml.safe_dump(SAMPLE_VCD_CONFIG,
@@ -135,183 +142,196 @@ def generate_sample_config():
                                     default_flow_style=False) + '\n'
     sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
                                     default_flow_style=False) + '\n'
-
     return sample_config.strip() + '\n'
 
 
-def bool_to_msg(value):
-    if value:
-        return 'success'
-    else:
-        return 'fail'
+def get_validated_config(filename):
+    """Gets the config file as a dictionary, then ensures that all properties
+    exist and are valid.
 
+    :param str filename: path to config file.
 
-def get_config(config_file_name):
-    config = {}
-    with open(config_file_name, 'r') as f:
+    :return: cse config
+
+    :rtype: dict
+    """
+    check_file_permissions(filename)
+    with open(filename) as f:
         config = yaml.safe_load(f)
+
+    check_keys_and_value_types(config, SAMPLE_CONFIG, location='config file')
+    validate_amqp_config(config['amqp'])
+    validate_broker_config(config['broker'])
+    check_keys_and_value_types(config['service'],
+                               SAMPLE_SERVICE_CONFIG['service'],
+                               location="config file 'service' property")
+    check_keys_and_value_types(config['vcd'], SAMPLE_VCD_CONFIG['vcd'],
+                               location="config file 'vcd' property")
+
     if not config['vcd']['verify']:
-        click.secho(
-            'InsecureRequestWarning: '
-            'Unverified HTTPS request is being made. '
-            'Adding certificate verification is strongly '
-            'advised.',
-            fg='yellow',
-            err=True)
+        click.secho('InsecureRequestWarning: Unverified HTTPS request is '
+                    'being made. Adding certificate verification is '
+                    'strongly advised.', fg='yellow', err=True)
         requests.packages.urllib3.disable_warnings()
+
+    client = Client(config['vcd']['host'],
+                    api_version=config['vcd']['api_version'],
+                    verify_ssl_certs=config['vcd']['verify'],
+                    log_file='cse-check.log',
+                    log_headers=True,
+                    log_bodies=True)
+    client.set_credentials(BasicLoginCredentials(config['vcd']['username'],
+                                                 'System',
+                                                 config['vcd']['password']))
+    click.echo(f"Connected to vCloud Director as system administrator "
+               f"({config['vcd']['host']}:{config['vcd']['port']})")
+
+    validate_vcs_config(config['vcs'], client)
+
     return config
 
 
-def check_config(config_file_name, template=None):
-    click.secho('Validating CSE on vCD from file: %s' % config_file_name)
-    file_mode = os.stat(config_file_name).st_mode
-    invalid_file_permissions = False
-    if file_mode & stat.S_IXUSR:
-        click.secho('Remove execute permission of the Owner for the '
-                    'file %s' % config_file_name, fg='red')
-        invalid_file_permissions = True
-    if file_mode & stat.S_IROTH or file_mode & stat.S_IWOTH or file_mode & stat.S_IXOTH:
-        click.secho('Remove read, write and execute permissions of Others'
-                    ' for the file %s' % config_file_name, fg='red')
-        invalid_file_permissions = True
-    if file_mode & stat.S_IRGRP or file_mode & stat.S_IWGRP or file_mode & stat.S_IXGRP:
-        click.secho('Remove read, write and execute permissions of Group'
-                    ' for the file %s' % config_file_name, fg='red')
-        invalid_file_permissions = True
-    if invalid_file_permissions:
-        sys.exit(1)
-    if sys.version_info.major >= 3 and sys.version_info.minor >= 6:
-        python_valid = True
-    else:
-        python_valid = False
-    click.echo('Python version >= 3.6 (installed: %s.%s.%s): %s' %
-               (sys.version_info.major, sys.version_info.minor,
-                sys.version_info.micro, bool_to_msg(python_valid)))
-    if not python_valid:
-        raise Exception('Python version not supported')
-    config = get_config(config_file_name)
-    validate_broker_config(config['broker'])
-    amqp = config['amqp']
-    credentials = pika.PlainCredentials(amqp['username'], amqp['password'])
-    parameters = pika.ConnectionParameters(
-        amqp['host'],
-        amqp['port'],
-        amqp['vhost'],
-        credentials,
-        ssl=amqp['ssl'],
-        connection_attempts=3,
-        retry_delay=2,
-        socket_timeout=5)
+def validate_amqp_config(amqp_dict):
+    """Ensures that 'amqp' section of config has correct keys and value types.
+    Also ensures that connection to AMQP server is valid.
+
+    :param dict amqp_dict: 'amqp' section of config file as a dict.
+
+    :raises KeyError: if @amqp_dict has missing or extra properties.
+    :raises ValueError: if the value type for an @amqp_dict property
+        is incorrect.
+    """
+    check_keys_and_value_types(amqp_dict, SAMPLE_AMQP_CONFIG['amqp'],
+                               location="config file 'amqp' property")
+    credentials = pika.PlainCredentials(amqp_dict['username'],
+                                        amqp_dict['password'])
+    parameters = pika.ConnectionParameters(amqp_dict['host'],
+                                           amqp_dict['port'],
+                                           amqp_dict['vhost'],
+                                           credentials,
+                                           ssl=amqp_dict['ssl'],
+                                           connection_attempts=3,
+                                           retry_delay=2,
+                                           socket_timeout=5)
     connection = pika.BlockingConnection(parameters)
-    click.echo('Connected to AMQP server (%s:%s): %s' %
-               (amqp['host'], amqp['port'], bool_to_msg(connection.is_open)))
+    click.echo(f"Connected to AMQP server "
+               f"({amqp_dict['host']}:{amqp_dict['port']}): "
+               f"{bool_to_msg(connection.is_open)}")
     connection.close()
 
-    if not config['vcd']['verify']:
-        click.secho(
-            'InsecureRequestWarning: '
-            'Unverified HTTPS request is being made. '
-            'Adding certificate verification is strongly '
-            'advised.',
-            fg='yellow',
-            err=True)
-        requests.packages.urllib3.disable_warnings()
-    client = Client(
-        config['vcd']['host'],
-        api_version=config['vcd']['api_version'],
-        verify_ssl_certs=config['vcd']['verify'],
-        log_file='cse-check.log',
-        log_headers=True,
-        log_bodies=True)
-    client.set_credentials(
-        BasicLoginCredentials(config['vcd']['username'], 'System',
-                              config['vcd']['password']))
-    click.echo('Connected to vCloud Director as system '
-               'administrator (%s:%s): %s' % (config['vcd']['host'],
-                                              config['vcd']['port'],
-                                              bool_to_msg(True)))
-    platform = Platform(client)
-    for vc in platform.list_vcenters():
-        found = False
-        for config_vc in config['vcs']:
-            if vc.get('name') == config_vc.get('name'):
-                found = True
-                break
-        if not found:
-            raise Exception('vCenter \'%s\' defined in vCloud Director '
-                            'but not in CSE config file' % vc.get('name'))
-            return None
 
-    for vc in config['vcs']:
+def validate_vcs_config(vcs, client):
+    """Ensures that 'vcs' section of config has correct keys and value types.
+    Also ensures that all vCD VCs are listed in config file and are accessible.
+
+    :param list vcs: 'vcs' section of config file as a list.
+
+    :raises KeyError: if a vc in @vcs has missing or extra properties.
+    :raises: ValueError: if the value type for a vc property is incorrect, or
+        if vCD has a VC that is not listed in the config file.
+    """
+    for vc in vcs:
+        check_keys_and_value_types(vc, SAMPLE_VCS_CONFIG['vcs'][0],
+                                   location="config file 'vcs' property")
+
+    # Check that all vCD VCs are listed in config file
+    platform = Platform(client)
+    config_vc_names = [vc['name'] for vc in vcs]
+    for platform_vc in platform.list_vcenters():
+        platform_vc_name = platform_vc.get('name')
+        if platform_vc_name not in config_vc_names:
+            raise ValueError(f"vCenter '{platform_vc_name}' defined in vCloud "
+                             f"Director but not found in config file")
+
+    # Check that all VCs listed in config file are accessible
+    for vc in vcs:
         vcenter = platform.get_vcenter(vc['name'])
         vsphere_url = urlparse(vcenter.Url.text)
         v = VSphere(vsphere_url.hostname, vc['username'],
                     vc['password'], vsphere_url.port)
         v.connect()
-        click.echo('Connected to vCenter Server %s as %s '
-                   '(%s:%s): %s' % (vc['name'], vc['username'],
-                                    vsphere_url.hostname, vsphere_url.port,
-                                    bool_to_msg(True)))
-
-    if template is None:
-        pass
-    else:
-        click.secho(
-            'Validating \'%s\' service broker' % config['broker']['type'])
-        if config['broker']['type'] == 'default':
-            validate_broker_config_content(config, client, template)
-
-    return config
+        click.echo(f"Connected to vCenter Server {vc['name']} as "
+                   f"{vc['username']} ({vsphere_url.hostname}:"
+                   f"{vsphere_url.port})")
 
 
 def validate_broker_config(broker_dict):
-    sample_keys = set(SAMPLE_BROKER_CONFIG['broker'].keys())
-    config_keys = set(broker_dict.keys())
+    """Ensures that 'broker' section of config has correct keys and value
+    types. Also checks that 'default_broker' property is a valid template.
 
-    missing_keys = sample_keys - config_keys
-    invalid_keys = config_keys - sample_keys
+    :param dict broker_dict: 'broker' section of config file as a dict.
 
-    if missing_keys:
-        click.secho(f"Missing keys in broker section:\n{missing_keys}",
-                    fg='red')
-    if invalid_keys:
-        click.secho(f"Invalid keys in broker section:\n{invalid_keys}",
-                    fg='red')
-    if missing_keys or invalid_keys:
-        raise Exception("Add missing keys/remove invalid keys from config "
-                        "file's broker section")
+    :raises KeyError: if @broker_dict has missing or extra properties.
+    :raises ValueError: if the value type for a @broker_dict property is
+        incorrect, or if 'default_template' has a value not listed in the
+        'templates' property
+    """
+    check_keys_and_value_types(broker_dict, SAMPLE_BROKER_CONFIG['broker'],
+                               location="config file 'broker' property")
 
     default_exists = False
     for template in broker_dict['templates']:
-        sample_keys = set(SAMPLE_TEMPLATE_PHOTON_V2.keys())
-        config_keys = set(template.keys())
-
-        missing_keys = sample_keys - config_keys
-        invalid_keys = config_keys - sample_keys
-
-        if missing_keys:
-            click.secho(f"Missing keys in template section:\n{missing_keys}",
-                        fg='red')
-        if invalid_keys:
-            click.secho(f"Invalid keys in template section:\n{invalid_keys}",
-                        fg='red')
-        if missing_keys or invalid_keys:
-            raise Exception("Add missing keys/remove invalid keys from "
-                            "config file broker templates section")
-
+        check_keys_and_value_types(template, SAMPLE_TEMPLATE_PHOTON_V2,
+                                   location="config file broker "
+                                            "template section")
         if template['name'] == broker_dict['default_template']:
             default_exists = True
 
     if not default_exists:
-        raise Exception("Default template not found in listed templates")
+        raise ValueError('Default template not found in listed templates')
+
+
+# TODO need a better way to validate templates (not just name checking)
+def validate_cse_templates(config, client, template='*'):
+    """Ensures that specified templates from config file exist in vCD.
+
+    :param dict config:
+    :param pyvcloud.vcd.client.Client client:
+    :param str template:
+
+    :raises pyvcloud.vcd.exceptions.EntityNotFoundException: if catalog or
+        template is not found in vCD
+    """
+    logged_in_org = client.get_org()
+    org = Org(client, resource=logged_in_org)
+    catalog_name = config['broker']['catalog']
+    org.get_catalog(catalog_name)
+    click.echo(f"Found catalog '{catalog_name}")
+
+    for t in config['broker']['templates']:
+        if template == '*' or template == t['name']:
+            click.echo(f"Validating template: {t['name']}")
+            org.get_catalog_item(catalog_name, t['catalog_item'])
+            click.echo(f"Found template in '{catalog_name}': "
+                       f"'{t['catalog_item']}")
+
+
+# TODO also need to validate cse registration and whatever
+def check_config(config_file_name, template=None):
+    click.echo(f'Validating CSE on vCD from file: {config_file_name}')
+
+    check_python_version()
+
+    config = get_validated_config(config_file_name)
+    if template is not None:
+        client = Client(config['vcd']['host'],
+                        api_version=config['vcd']['api_version'],
+                        verify_ssl_certs=config['vcd']['verify'],
+                        log_file='cse-check.log',
+                        log_headers=True,
+                        log_bodies=True)
+        client.set_credentials(
+            BasicLoginCredentials(config['vcd']['username'],
+                                  'System',
+                                  config['vcd']['password']))
+        validate_cse_templates(config, client, template)
 
 
 def install_cse(ctx, config_file_name, template_name, update, no_capture,
                 ssh_key, amqp_install, ext_install):
-    check_config(config_file_name)
     click.secho('Installing CSE on vCD from file: %s, template: %s' %
                 (config_file_name, template_name))
-    config = get_config(config_file_name)
+    config = get_validated_config(config_file_name)
     client = Client(
         config['vcd']['host'],
         api_version=config['vcd']['api_version'],
@@ -394,17 +414,6 @@ def install_cse(ctx, config_file_name, template_name, update, no_capture,
 
         register_extension(ctx, client, config, ext_install)
         click.echo(f'Start CSE with: \'cse run --config {config_file_name}\'')
-
-
-def get_sha256(file):
-    sha256 = hashlib.sha256()
-    with open(file, 'rb') as f:
-        while True:
-            data = f.read(BUF_SIZE)
-            if not data:
-                break
-            sha256.update(data)
-    return sha256.hexdigest()
 
 
 def get_data_file(file_name):
@@ -755,7 +764,7 @@ def create_amqp_exchange(exchange_name, username, password, host, port, vhost,
     :param str vhost: AMQP vhost
     :param bool use_ssl: Enable ssl
 
-    :raises: Exception if AMQP exchange cannot be created
+    :raises Exception: if AMQP exchange cannot be created
     """
     click.echo(f"Checking for AMQP exchange '{exchange_name}'")
     credentials = pika.PlainCredentials(username, password)
