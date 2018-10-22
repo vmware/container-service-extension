@@ -80,17 +80,7 @@ def cse(ctx):
         vcd cse version
             Display version.
     """
-    if ctx.invoked_subcommand is not None:
-        try:
-            if ctx.invoked_subcommand != 'version':
-                restore_session(ctx)
-            if ctx.invoked_subcommand not in ['system', 'template', 'version']:
-                if not ctx.obj['profiles'].get('vdc_in_use') or \
-                   not ctx.obj['profiles'].get('vdc_href'):
-                    raise Exception('select a virtual datacenter')
-        except Exception as e:
-            stderr(e, ctx)
-
+    pass
 
 @cse.command(short_help='show version')
 @click.pass_context
@@ -107,13 +97,7 @@ def version(ctx):
 @click.pass_context
 def cluster_group(ctx):
     """Work with kubernetes clusters."""
-    if ctx.invoked_subcommand is not None:
-        try:
-            if not ctx.obj['profiles'].get('vdc_in_use') or \
-               not ctx.obj['profiles'].get('vdc_href'):
-                raise Exception('select a virtual datacenter')
-        except Exception as e:
-            stderr(e, ctx)
+    pass
 
 
 @cse.group(short_help='work with templates')
@@ -127,6 +111,7 @@ def template(ctx):
 @click.pass_context
 def list_templates(ctx):
     try:
+        restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         result = []
@@ -148,6 +133,7 @@ def list_templates(ctx):
 @click.pass_context
 def list_clusters(ctx):
     try:
+        restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         result = []
@@ -179,6 +165,7 @@ def list_clusters(ctx):
     prompt='Are you sure you want to delete the cluster?')
 def delete(ctx, name):
     try:
+        restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         result = cluster.delete_cluster(name)
@@ -254,6 +241,7 @@ def delete(ctx, name):
 def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
            ssh_key_file, template, enable_nfs):
     try:
+        restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         ssh_key = None
@@ -281,6 +269,7 @@ def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
 @click.option('-s', '--save', is_flag=True)
 def config(ctx, name, save):
     try:
+        restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         cluster_config = cluster.get_config(name)
@@ -299,6 +288,7 @@ def config(ctx, name, save):
 @click.argument('name', required=True)
 def cluster_info(ctx, name):
     try:
+        restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         cluster_info = cluster.get_cluster_info(name)
@@ -311,13 +301,7 @@ def cluster_info(ctx, name):
 @click.pass_context
 def node_group(ctx):
     """Work with CSE cluster nodes."""
-    if ctx.invoked_subcommand is not None:
-        try:
-            if not ctx.obj['profiles'].get('vdc_in_use') or \
-               not ctx.obj['profiles'].get('vdc_href'):
-                raise Exception('select a virtual datacenter')
-        except Exception as e:
-            stderr(e, ctx)
+    pass
 
 @node_group.command('info', short_help='get node info')
 @click.pass_context
@@ -325,6 +309,7 @@ def node_group(ctx):
 @click.argument('node_name', required=True)
 def node_info(ctx, cluster_name, node_name):
     try:
+        restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         node_info = cluster.get_node_info(cluster_name, node_name)
@@ -398,6 +383,7 @@ def node_info(ctx, cluster_name, node_name):
 def create_node(ctx, name, node_count, cpu, memory, network_name,
                 storage_profile, ssh_key_file, template, node_type):
     try:
+        restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         ssh_key = None
@@ -424,6 +410,7 @@ def create_node(ctx, name, node_count, cpu, memory, network_name,
 @click.argument('name', required=True)
 def list_nodes(ctx, name):
     try:
+        restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         cluster_info = cluster.get_cluster_info(name)
@@ -447,6 +434,7 @@ def list_nodes(ctx, name):
 @click.option('-f', '--force', is_flag=True, help='Force delete node VM(s)')
 def delete_nodes(ctx, name, node_names, force):
     try:
+        restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         result = cluster.delete_nodes(ctx.obj['profiles'].get('vdc_in_use'),
@@ -489,6 +477,7 @@ def system_group(ctx):
 @click.pass_context
 def info(ctx):
     try:
+        restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
         result = system.get_info()
@@ -508,6 +497,7 @@ def info(ctx):
     prompt='Are you sure you want to stop the service?')
 def stop_service(ctx):
     try:
+        restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
         result = system.stop()
@@ -520,6 +510,7 @@ def stop_service(ctx):
 @click.pass_context
 def enable_service(ctx):
     try:
+        restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
         result = system.enable_service()
@@ -532,6 +523,7 @@ def enable_service(ctx):
 @click.pass_context
 def disable_service(ctx):
     try:
+        restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
         result = system.enable_service(False)
