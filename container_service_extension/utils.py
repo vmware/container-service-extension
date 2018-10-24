@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import click
+import hashlib
 import logging
 import os
 import pathlib
@@ -215,6 +216,17 @@ def bool_to_msg(b):
     if b:
         return 'success'
     return 'fail'
+
+
+def get_sha256(file):
+    sha256 = hashlib.sha256()
+    with open(file, 'rb') as f:
+        while True:
+            data = f.read(BUF_SIZE)
+            if not data:
+                break
+            sha256.update(data)
+    return sha256.hexdigest()
 
 
 def get_vsphere(config, vapp, vm_name):
