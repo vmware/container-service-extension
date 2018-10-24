@@ -31,7 +31,7 @@ from container_service_extension.cluster import load_from_metadata
 from container_service_extension.cluster import TYPE_MASTER
 from container_service_extension.cluster import TYPE_NFS
 from container_service_extension.cluster import TYPE_NODE
-
+from container_service_extension.utils import bool_to_msg
 
 LOGGER = logging.getLogger('cse.broker')
 
@@ -56,7 +56,6 @@ MAX_HOST_NAME_LENGTH = 25
 
 
 def validate_broker_config_content(config, client, template='*'):
-    from container_service_extension.config import bool_to_msg
     logged_in_org = client.get_org()
     org = Org(client, resource=logged_in_org)
     org.get_catalog(config['broker']['catalog'])

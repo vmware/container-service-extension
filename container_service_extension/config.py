@@ -31,6 +31,7 @@ import yaml
 
 from container_service_extension.broker import validate_broker_config_content
 from container_service_extension.consumer import EXCHANGE_TYPE
+from container_service_extension.utils import bool_to_msg
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_vsphere
 
@@ -139,11 +140,6 @@ def generate_sample_config():
     return sample_config.strip() + '\n'
 
 
-def bool_to_msg(value):
-    if value:
-        return 'success'
-    else:
-        return 'fail'
 
 
 def get_config(config_file_name):
