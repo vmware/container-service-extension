@@ -38,6 +38,7 @@ from container_service_extension.utils import CSE_EXT_NAMESPACE
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_sha256
 from container_service_extension.utils import get_vsphere
+from container_service_extension.utils import get_sha256
 
 LOGGER = logging.getLogger('cse.config')
 
