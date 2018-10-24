@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import click
-import hashlib
 import logging
 import os
 import pathlib
@@ -212,24 +211,10 @@ def get_data_file(filename):
     return path.read_text()
 
 
-def hex_chunks(s):
-    return [s[i:i + 2] for i in range(0, len(s), 2)]
-
-
-def get_thumbprint(host, port):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(10)
-    wrappedSocket = ssl.wrap_socket(sock)
-    wrappedSocket.connect((host, port))
-    der_cert_bin = wrappedSocket.getpeercert(True)
-    thumb_sha1 = hashlib.sha1(der_cert_bin).hexdigest()
-    wrappedSocket.close()
-    return ':'.join(map(str, hex_chunks(thumb_sha1))).upper()
-
-
-def random_word(length):
-    letters = string.ascii_lowercase
-    return ''.join(random.choice(letters) for i in range(length))
+def bool_to_msg(b):
+    if b:
+        return 'success'
+    return 'fail'
 
 
 def get_vsphere(config, vapp, vm_name):
@@ -272,3 +257,29 @@ def get_vsphere(config, vapp, vm_name):
                 cache[vm_id]['password'], cache[vm_id]['port'])
 
     return v
+
+
+# unused functions, unsure what to do with these
+# import hashlib
+# import random
+# import socket
+# import ssl
+# import string
+# def hex_chunks(s):
+#     return [s[i:i + 2] for i in range(0, len(s), 2)]
+
+
+# def get_thumbprint(host, port):
+#     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#     sock.settimeout(10)
+#     wrappedSocket = ssl.wrap_socket(sock)
+#     wrappedSocket.connect((host, port))
+#     der_cert_bin = wrappedSocket.getpeercert(True)
+#     thumb_sha1 = hashlib.sha1(der_cert_bin).hexdigest()
+#     wrappedSocket.close()
+#     return ':'.join(map(str, hex_chunks(thumb_sha1))).upper()
+
+
+# def random_word(length):
+#     letters = string.ascii_lowercase
+#     return ''.join(random.choice(letters) for i in range(length))
