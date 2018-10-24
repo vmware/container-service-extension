@@ -1,7 +1,6 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-import hashlib
 import logging
 import os
 import stat
@@ -34,9 +33,9 @@ from container_service_extension.consumer import EXCHANGE_TYPE
 from container_service_extension.utils import bool_to_msg
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_vsphere
+from container_service_extension.utils import get_sha256
 
 LOGGER = logging.getLogger('cse.config')
-BUF_SIZE = 65536
 
 SAMPLE_AMQP_CONFIG = {
     'amqp': {
@@ -390,17 +389,6 @@ def install_cse(ctx, config_file_name, template_name, update, no_capture,
 
         register_extension(ctx, client, config, ext_install)
         click.echo(f'Start CSE with: \'cse run --config {config_file_name}\'')
-
-
-def get_sha256(file):
-    sha256 = hashlib.sha256()
-    with open(file, 'rb') as f:
-        while True:
-            data = f.read(BUF_SIZE)
-            if not data:
-                break
-            sha256.update(data)
-    return sha256.hexdigest()
 
 
 def upload_source_ova(config, client, org, template):

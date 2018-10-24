@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import click
+import hashlib
 import logging
 import os
 import sys
@@ -17,6 +18,7 @@ from pyvcloud.vcd.vm import VM
 from vsphere_guest_run.vsphere import VSphere
 
 cache = LRUCache(maxsize=1024)
+BUF_SIZE = 65536
 
 LOGGER = logging.getLogger('cse.utils')
 
@@ -64,6 +66,17 @@ def bool_to_msg(b):
     if b:
         return 'success'
     return 'fail'
+
+
+def get_sha256(file):
+    sha256 = hashlib.sha256()
+    with open(file, 'rb') as f:
+        while True:
+            data = f.read(BUF_SIZE)
+            if not data:
+                break
+            sha256.update(data)
+    return sha256.hexdigest()
 
 
 def get_vsphere(config, vapp, vm_name):
