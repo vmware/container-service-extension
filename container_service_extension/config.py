@@ -15,7 +15,6 @@ from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.client import SIZE_1MB
-from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.platform import Platform
@@ -32,6 +31,7 @@ from container_service_extension.utils import catalog_exists
 from container_service_extension.utils import catalog_item_exists
 from container_service_extension.utils import check_file_permissions
 from container_service_extension.utils import check_keys_and_value_types
+from container_service_extension.utils import create_and_share_catalog
 from container_service_extension.utils import CSE_EXT_NAME
 from container_service_extension.utils import CSE_EXT_NAMESPACE
 from container_service_extension.utils import EXCHANGE_TYPE
@@ -440,11 +440,9 @@ def check_cse_installation(config, check_template='*'):
 
 def install_cse(ctx, config_file_name, template_name, update, no_capture,
                 ssh_key, amqp_install, ext_install):
-    click.secho('Installing CSE on vCD from file: %s, template: %s' %
-                (config_file_name, template_name))
     config = get_validated_config(config_file_name)
     click.secho(f"Installing CSE on vCloud Director using config file "
-                f"'{config_file_name}'")
+                f"'{config_file_name}'", fg='yellow')
 
     org_name = config['broker']['org']
     vdc_name = config['broker']['vdc']
@@ -464,18 +462,7 @@ def install_cse(ctx, config_file_name, template_name, update, no_capture,
     org = Org(client, resource=client.get_org_by_name(org_name))
     click.secho(f"Found organization '{org_name}'", fg='green')
     vdc_resource = org.get_vdc(vdc_name)
-    vdc = VDC(client, resource=vdc_resource)
     click.secho(f"Found VDC '{vdc_name}'", fg='green')
-
-    # set up cse catalog
-    try:
-        org.get_catalog(catalog_name)
-    except EntityNotFoundException:
-        org.create_catalog(catalog_name, 'CSE Catalog')
-        org.reload()
-    org.share_catalog(catalog_name)
-    org.reload()
-    catalog = org.get_catalog(catalog_name)
 
     # configure amqp
     amqp = config['amqp']
@@ -483,39 +470,23 @@ def install_cse(ctx, config_file_name, template_name, update, no_capture,
                          amqp['vhost'], amqp['ssl'], amqp['username'],
                          amqp['password'])
     if should_configure_amqp(client, amqp, amqp_install):
-            configure_vcd_amqp(client, amqp['exchange'], amqp['host'],
-                               amqp['port'], amqp['prefix'],
-                               amqp['ssl_accept_all'], amqp['ssl'],
-                               amqp['vhost'], amqp['username'],
-                               amqp['password'])
+        configure_vcd_amqp(client, amqp['exchange'], amqp['host'],
+                           amqp['port'], amqp['prefix'],
+                           amqp['ssl_accept_all'], amqp['ssl'],
+                           amqp['vhost'], amqp['username'],
+                           amqp['password'])
 
     # register cse as extension to vCD
     if should_register_cse(client, ext_install):
         register_extension(client, 'cse', amqp['exchange'])
 
+    # set up cse catalog
+    catalog = create_and_share_catalog(org, catalog_name,
+                                       catalog_desc='CSE templates')
+
     # create, customize, capture VM templates
     click.secho('Installing  \'%s\' service broker' % config['broker']['type'])
     if config['broker']['type'] == 'default':
-        org_resource = client.get_org_by_name(config['broker']['org'])
-        org = Org(client, resource=org_resource)
-        click.echo('Find org \'%s\': %s' % (org.get_name(), bool_to_msg(True)))
-        vdc_resource = org.get_vdc(config['broker']['vdc'])
-        click.echo('Find vdc \'%s\': %s' % (vdc_resource.get('name'),
-                                            bool_to_msg(True)))
-
-        catalog_name = config['broker']['catalog']
-        try:
-            org.get_catalog(catalog_name)
-            click.echo(f"Found catalog {catalog_name}")
-        except EntityNotFoundException:
-            click.secho(f"Creating catalog {catalog_name}", fg='green')
-            org.create_catalog(catalog_name, 'CSE Catalog')
-            org.reload()
-            click.secho(f"Created catalog {catalog_name}", fg='blue')
-        org.share_catalog(catalog_name)
-        org.reload()
-        catalog = org.get_catalog(catalog_name)
-
         for template in config['broker']['templates']:
             if template_name == '*' or template['name'] == template_name:
                 click.secho('Processing template: %s' % template['name'])
@@ -556,20 +527,6 @@ def install_cse(ctx, config_file_name, template_name, update, no_capture,
                                '\'%s\': %s' %
                                (template['name'], config['broker']['catalog'],
                                 template['catalog_item']))
-
-        if should_configure_amqp(client, config['amqp'], amqp_install):
-            configure_vcd_amqp(client, config['amqp']['exchange'],
-                               config['amqp']['host'],
-                               config['amqp']['port'],
-                               config['amqp']['prefix'],
-                               config['amqp']['ssl_accept_all'],
-                               config['amqp']['ssl'],
-                               config['amqp']['vhost'],
-                               config['amqp']['username'],
-                               config['amqp']['password'])
-
-        if should_register_cse(client, ext_install):
-            register_extension(client, 'cse', config['amqp']['exchange'])
 
         click.echo(f'Start CSE with: \'cse run --config {config_file_name}\'')
 
@@ -795,14 +752,18 @@ def capture_as_template(ctx, config, vapp_resource, org, catalog, template):
 
 
 def should_configure_amqp(client, amqp_config, amqp_install):
-    """Handles the logic in deciding whether CSE installation should
-    configure vCD AMQP settings/exchange
+    """Decides if CSE installation should configure vCD AMQP settings.
+
+    Returns False if config file AMQP settings are the same as vCD AMQP
+    settings, or if the user declines configuration.
 
     :param pyvcloud.vcd.client.Client client:
-    :param dict amqp_config: The 'amqp' section of the config file
-    :param str amqp_install: One of: prompt/skip/config
+    :param dict amqp_config: 'amqp' section of the config file
+    :param str amqp_install: 'skip' skips vCD AMQP configuration,
+        'config' configures vCD AMQP settings without prompting user,
+        'prompt' asks user before configuring vCD AMQP settings.
 
-    :return: boolean that signals whether we should configure AMQP settings
+    :return: boolean that signals whether we should configure AMQP settings.
 
     :rtype: bool
     """
@@ -811,8 +772,7 @@ def should_configure_amqp(client, amqp_config, amqp_install):
                     f"have different AMQP settings.", fg='yellow')
         return False
 
-    amqp_service = AmqpService(client)
-    current_settings = to_dict(amqp_service.get_settings())
+    current_settings = to_dict(AmqpService(client).get_settings())
     amqp = {
         'AmqpExchange': amqp_config['exchange'],
         'AmqpHost': amqp_config['host'],
@@ -826,10 +786,10 @@ def should_configure_amqp(client, amqp_config, amqp_install):
 
     diff_settings = [k for k, v in current_settings.items() if amqp[k] != v]
     if diff_settings:
-        click.echo('current vCD AMQP setting(s):')
+        click.secho('current vCD AMQP setting(s):', fg='blue')
         for setting in diff_settings:
             click.echo(f"{setting}: {current_settings[setting]}")
-        click.echo('\nconfig file AMQP setting(s):')
+        click.secho('\nconfig file AMQP setting(s):', fg='blue')
         for setting in diff_settings:
             click.echo(f"{setting}: {amqp[setting]}")
         msg = '\nConfigure AMQP with the config file settings?'
@@ -837,8 +797,11 @@ def should_configure_amqp(client, amqp_config, amqp_install):
             click.secho(f"Skipping AMQP configuration. vCD and config file "
                         f"may have different AMQP settings.", fg='yellow')
             return False
+        return True
 
-    return True
+    click.secho("vCD and config file AMQP settings are the same. "
+                "Skipping AMQP configuration", fg='green')
+    return False
 
 
 def configure_amqp(client, amqp_config):
@@ -918,7 +881,7 @@ def create_amqp_exchange(exchange_name, username, password, host, port, vhost,
 
 
 def should_register_cse(client, ext_install):
-    """Decides if CSE should be registered, depending on user inputs.
+    """Decides if CSE installation should register CSE to vCD.
 
     Returns False if CSE is already registered, or if the user declines
     registration.
@@ -928,15 +891,17 @@ def should_register_cse(client, ext_install):
         'config' allows registration without prompting user,
         'prompt' asks user before registration.
 
+    :return: boolean that signals whether we should register CSE to vCD.
+
     :rtype: bool
     """
     if ext_install == 'skip':
         return False
 
-    ext = APIExtension(client)
     try:
-        cse_info_dict = ext.get_extension_info('cse')
-        click.echo(f"Found cse', enabled={cse_info_dict['enabled']}")
+        cse_info_dict = APIExtension(client).get_extension_info('cse')
+        click.secho(f"Found 'cse' extension on vCD, "
+                    f"enabled={cse_info_dict['enabled']}", fg='green')
         return False
     except MissingRecordException:
         prompt_msg = "Register 'cse' as an API extension in vCD?"
