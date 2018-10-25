@@ -13,6 +13,7 @@ import click
 import pika
 from cachetools import LRUCache
 from pyvcloud.vcd.amqp import AmqpService
+from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.platform import Platform
@@ -63,6 +64,27 @@ def get_data_file(filename):
     LOGGER.info(f"Found data file: {path}")
     click.secho(f"Found data file: {path}", fg='green')
     return content
+
+
+def register_extension(client, ext_name, exchange_name, patterns=None):
+    """Registers an API extension in vCD.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str ext_name: extension name
+    :param str exchange_name: AMQP exchange name
+    :param list patterns: list of urls that map to this API extension
+    """
+    ext = APIExtension(client)
+    if patterns is None:
+        patterns = [
+            f'/api/{ext_name}',
+            f'/api/{ext_name}/.*',
+            f'/api/{ext_name}/.*/.*'
+        ]
+
+    ext.add_extension(ext_name, ext_name, ext_name, exchange_name, patterns)
+    click.secho(f"Registered extension {ext_name} as an API extension in vCD.",
+                fg='green')
 
 
 def configure_vcd_amqp(client, exchange_name, host, port, prefix,

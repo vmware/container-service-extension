@@ -18,6 +18,7 @@ from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.client import SIZE_1MB
 from pyvcloud.vcd.exceptions import EntityNotFoundException
+from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.platform import Platform
 from pyvcloud.vcd.vapp import VApp
@@ -35,6 +36,8 @@ from container_service_extension.utils import create_amqp_exchange
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_vsphere
 from container_service_extension.utils import get_sha256
+from container_service_extension.utils import register_extension
+
 
 LOGGER = logging.getLogger('cse.config')
 
@@ -433,7 +436,9 @@ def install_cse(ctx, config_file_name, template_name, update, no_capture,
                                config['amqp']['username'],
                                config['amqp']['password'])
 
-        register_extension(ctx, client, config, ext_install)
+        if should_register_cse(client, ext_install):
+            register_extension(client, 'cse', config['amqp']['exchange'])
+
         click.echo(f'Start CSE with: \'cse run --config {config_file_name}\'')
 
 
@@ -704,25 +709,30 @@ def should_configure_amqp(client, amqp_config, amqp_install):
     return True
 
 
-def register_extension(ctx, client, config, ext_install):
+def should_register_cse(client, ext_install):
+    """Decides if CSE should be registered, depending on user inputs.
+
+    Returns False if CSE is already registered, or if the user declines
+    registration.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str ext_install: 'skip' skips registration,
+        'config' allows registration without prompting user,
+        'prompt' asks user before registration.
+
+    :rtype: bool
+    """
     if ext_install == 'skip':
-        click.secho('Extension configuration: skipped')
-        return
+        return False
+
     ext = APIExtension(client)
     try:
-        name = 'cse'
-        cse_ext = ext.get_extension_info(name)
-        click.secho('Find extension \'%s\', enabled=%s: %s' %
-                    (name, cse_ext['enabled'], bool_to_msg(True)))
-    except Exception:
-        if ext_install == 'prompt':
-            if not click.confirm('Do you want to register CSE as an API '
-                                 'extension in vCD?'):
-                click.secho('CSE not registered')
-                return
-        amqp = config['amqp']
-        exchange = amqp['exchange']
-        patterns = '/api/cse,/api/cse/.*,/api/cse/.*/.*'
-        ext.add_extension(name, name, name, exchange, patterns.split(','))
-        click.secho('Registered extension \'%s\': %s' % (name,
-                                                         bool_to_msg(True)))
+        cse_info_dict = ext.get_extension_info('cse')
+        click.echo(f"Found cse', enabled={cse_info_dict['enabled']}")
+        return False
+    except MissingRecordException:
+        prompt_msg = "Register 'cse' as an API extension in vCD?"
+        if ext_install == 'prompt' and not click.confirm(prompt_msg):
+            return False
+
+    return True
