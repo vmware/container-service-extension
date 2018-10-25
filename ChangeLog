@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+1.2.0
+-----
+
+* Requirement change of pyvcloud and vcd-cli versions & known-issue doc update (#121)
+* Upload License files for CSE (#116)
 * [VCDA-745] Add --ssh-key option for cse install (#114)
 * [Doc] Privileges required for VCD service account & CSE-VCD compatibility matrix (#109)
 * Skip AMQP configuration if current is same as config file (#110)
