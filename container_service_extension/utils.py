@@ -16,6 +16,7 @@ from pyvcloud.vcd.amqp import AmqpService
 from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
+from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.platform import Platform
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
@@ -64,6 +65,35 @@ def get_data_file(filename):
     LOGGER.info(f"Found data file: {path}")
     click.secho(f"Found data file: {path}", fg='green')
     return content
+
+
+def create_and_share_catalog(org, catalog_name, catalog_desc=''):
+    """Creates and shares specified catalog.
+
+    If catalog does not exist in vCD, create it. Share the specified catalog.
+
+    :param pyvcloud.vcd.org.Org org:
+    :param str catalog_name:
+    :param str catalog_desc:
+
+    :return: XML representation of specified catalog.
+
+    :rtype: lxml.objectify.ObjectifiedElement
+
+    :raises pyvcloud.vcd.exceptions.EntityNotFoundException: if catalog sharing
+        fails due to catalog not being created.
+    """
+    try:
+        org.get_catalog(catalog_name)
+        click.secho(f"Found catalog '{catalog_name}'", fg='green')
+    except EntityNotFoundException:
+        click.secho(f"Creating catalog '{catalog_name}'", fg='yellow')
+        org.create_catalog(catalog_name, catalog_desc)
+        org.reload()
+        click.secho(f"Created catalog '{catalog_name}'", fg='green')
+    org.share_catalog(catalog_name)
+    org.reload()
+    return org.get_catalog(catalog_name)
 
 
 def register_extension(client, ext_name, exchange_name, patterns=None):
@@ -121,9 +151,9 @@ def configure_vcd_amqp(client, exchange_name, host, port, prefix,
                 fg='yellow')
     if result['Valid'].text == 'true':
         amqp_service.set_config(amqp, password)
-        click.secho('Updated vCD AMQP configuration.', fg='green')
+        click.secho('Updated vCD AMQP configuration', fg='green')
     else:
-        click.secho("Couldn't set vCD AMQP configuration.", fg='red')
+        click.secho("Couldn't set vCD AMQP configuration", fg='red')
 
 
 def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
