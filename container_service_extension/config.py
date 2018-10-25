@@ -143,8 +143,6 @@ def generate_sample_config():
     return sample_config.strip() + '\n'
 
 
-
-
 def get_config(config_file_name):
     config = {}
     with open(config_file_name, 'r') as f:
@@ -308,8 +306,6 @@ def validate_broker_config(broker_dict):
 def install_cse(ctx, config_file_name, template_name, update, no_capture,
                 ssh_key, amqp_install, ext_install):
     check_config(config_file_name)
-    click.secho('Installing CSE on vCD from file: %s, template: %s' %
-                (config_file_name, template_name))
     config = get_config(config_file_name)
     click.secho(f"Installing CSE on vCloud Director using config file "
                 f"'{config_file_name}'")
@@ -335,16 +331,6 @@ def install_cse(ctx, config_file_name, template_name, update, no_capture,
     vdc = VDC(client, resource=vdc_resource)
     click.secho(f"Found VDC '{vdc_name}'", fg='green')
 
-    # set up cse catalog
-    try:
-        org.get_catalog(catalog_name)
-    except EntityNotFoundException:
-        org.create_catalog(catalog_name, 'CSE Catalog')
-        org.reload()
-    org.share_catalog(catalog_name)
-    org.reload()
-    catalog = org.get_catalog(catalog_name)
-
     # configure amqp
     amqp = config['amqp']
     create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
@@ -361,29 +347,19 @@ def install_cse(ctx, config_file_name, template_name, update, no_capture,
     if should_register_cse(client, ext_install):
         register_extension(client, 'cse', amqp['exchange'])
 
+    # set up cse catalog
+    try:
+        org.get_catalog(catalog_name)
+    except EntityNotFoundException:
+        org.create_catalog(catalog_name, 'CSE Catalog')
+        org.reload()
+    org.share_catalog(catalog_name)
+    org.reload()
+    catalog = org.get_catalog(catalog_name)
+
     # create, customize, capture VM templates
     click.secho('Installing  \'%s\' service broker' % config['broker']['type'])
     if config['broker']['type'] == 'default':
-        org_resource = client.get_org_by_name(config['broker']['org'])
-        org = Org(client, resource=org_resource)
-        click.echo('Find org \'%s\': %s' % (org.get_name(), bool_to_msg(True)))
-        vdc_resource = org.get_vdc(config['broker']['vdc'])
-        click.echo('Find vdc \'%s\': %s' % (vdc_resource.get('name'),
-                                            bool_to_msg(True)))
-
-        catalog_name = config['broker']['catalog']
-        try:
-            org.get_catalog(catalog_name)
-            click.echo(f"Found catalog {catalog_name}")
-        except EntityNotFoundException:
-            click.secho(f"Creating catalog {catalog_name}", fg='green')
-            org.create_catalog(catalog_name, 'CSE Catalog')
-            org.reload()
-            click.secho(f"Created catalog {catalog_name}", fg='blue')
-        org.share_catalog(catalog_name)
-        org.reload()
-        catalog = org.get_catalog(catalog_name)
-
         for template in config['broker']['templates']:
             if template_name == '*' or template['name'] == template_name:
                 click.secho('Processing template: %s' % template['name'])
@@ -424,20 +400,6 @@ def install_cse(ctx, config_file_name, template_name, update, no_capture,
                                '\'%s\': %s' %
                                (template['name'], config['broker']['catalog'],
                                 template['catalog_item']))
-
-        if should_configure_amqp(client, config['amqp'], amqp_install):
-            configure_vcd_amqp(client, config['amqp']['exchange'],
-                               config['amqp']['host'],
-                               config['amqp']['port'],
-                               config['amqp']['prefix'],
-                               config['amqp']['ssl_accept_all'],
-                               config['amqp']['ssl'],
-                               config['amqp']['vhost'],
-                               config['amqp']['username'],
-                               config['amqp']['password'])
-
-        if should_register_cse(client, ext_install):
-            register_extension(client, 'cse', config['amqp']['exchange'])
 
         click.echo(f'Start CSE with: \'cse run --config {config_file_name}\'')
 
