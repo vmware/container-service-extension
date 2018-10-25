@@ -2,7 +2,6 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import click
 import hashlib
 import logging
 import os
@@ -13,9 +12,13 @@ import ssl
 import stat
 import string
 import sys
+import traceback
 from urllib.parse import urlparse
 
+import click
+import pika
 from cachetools import LRUCache
+from pyvcloud.vcd.amqp import AmqpService
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -31,6 +34,7 @@ CSE_SCRIPTS_DIR = 'container_service_extension_scripts'
 # used for registering CSE to vCD
 CSE_EXT_NAME = 'cse'
 CSE_EXT_NAMESPACE = 'cse'
+EXCHANGE_TYPE = 'direct'
 
 # chunk size in bytes for file reading
 BUF_SIZE = 65536
@@ -210,6 +214,81 @@ def get_data_file(filename):
     LOGGER.info(f"Found data file: {path}")
     click.secho(f"Found data file: {path}", fg='green')
     return path.read_text()
+
+
+def configure_vcd_amqp(client, exchange_name, host, port, prefix,
+                       ssl_accept_all, use_ssl, vhost, username, password):
+    """Configures vCD AMQP settings/exchange using parameter values.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str exchange_name: name of exchange
+    :param str host: AMQP host name
+    :param str password: AMQP password
+    :param int port: AMQP port
+    :param str prefix:
+    :param bool ssl_accept_all:
+    :param bool use_ssl: Enable ssl
+    :param str username: AMQP username
+    :param str vhost: AMQP vhost
+    """
+    amqp_service = AmqpService(client)
+    amqp = {
+        'AmqpExchange': exchange_name,
+        'AmqpHost': host,
+        'AmqpPort': port,
+        'AmqpPrefix': prefix,
+        'AmqpSslAcceptAll': ssl_accept_all,
+        'AmqpUseSSL': use_ssl,
+        'AmqpUsername': username,
+        'AmqpVHost': vhost
+    }
+
+    # This block sets the AMQP setting values on the
+    # vCD "System Administration Extensibility page"
+    result = amqp_service.test_config(amqp, password)
+    click.secho(f"AMQP test settings, result: {result['Valid'].text}",
+                fg='yellow')
+    if result['Valid'].text == 'true':
+        amqp_service.set_config(amqp, password)
+        click.secho('Updated vCD AMQP configuration.', fg='green')
+    else:
+        click.secho("Couldn't set vCD AMQP configuration.", fg='red')
+
+
+def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
+                         username, password):
+    """Creates the specified AMQP exchange if it does not exist.
+
+    If specified AMQP exchange exists already, does nothing.
+
+    :param str exchange_name: The AMQP exchange name to check for or create
+    :param str host: AMQP host name
+    :param str password: AMQP password
+    :param int port: AMQP port number
+    :param bool use_ssl: Enable ssl
+    :param str username: AMQP username
+    :param str vhost: AMQP vhost
+    """
+    click.secho(f"Checking for AMQP exchange '{exchange_name}'", fg='yellow')
+    credentials = pika.PlainCredentials(username, password)
+    parameters = pika.ConnectionParameters(host, port, vhost, credentials,
+                                           ssl=use_ssl, connection_attempts=3,
+                                           retry_delay=2, socket_timeout=5)
+    connection = pika.BlockingConnection(parameters)
+    click.secho(f"Connected to AMQP server: {host}:{port}", fg='green')
+
+    channel = connection.channel()
+    try:
+        channel.exchange_declare(exchange=exchange_name,
+                                 exchange_type=EXCHANGE_TYPE,
+                                 durable=True, auto_delete=False)
+    except Exception:
+        LOGGER.error(traceback.format_exc())
+        click.secho(f"Couldn't create exchange '{exchange_name}'", fg='red')
+        raise
+    finally:
+        connection.close()
+    click.secho(f"AMQP exchange '{exchange_name}' is ready", fg='green')
 
 
 def bool_to_msg(b):
