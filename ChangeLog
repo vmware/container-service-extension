@@ -1,10 +1,33 @@
 CHANGES
 =======
 
+1.2.2
+-----
+
+* VCDA 799 vcd cse help commands should not require login to display help (#137)
+* VCDA-739: Fix SSL support for vCenter 6.7 (#135)
+
+1.2.1
+-----
+
+* Changing requirements of Pyvcloud to >= 20.0.1 (#138)
+* Update CSE main documentation (#132)
+* Improve how get\_data\_file() searches for data files (#123)
+* Update docstrings for commands (#133)
+* [VCDA-695] Returns the server status code when there is no server response content
+* Add \`status\` display for \`vcd cse cluster list\` (#117)
+* switched from click.secho to click.echo and from the %s operator to f-strings
+* Updated help text during cluster creation
+* Create AMQP exchange even if settings are the same
+* Refactor sample config responsibilities
+* [VCD-743] Documentation fix on incorrect command usage example
+* Fix paths in data section of setup.cfg for windows
+
 1.2.0
 -----
 
 * Requirement change of pyvcloud and vcd-cli versions & known-issue doc update (#121)
+* Fix AMQP settings display
 * Upload License files for CSE (#116)
 * [VCDA-745] Add --ssh-key option for cse install (#114)
 * [Doc] Privileges required for VCD service account & CSE-VCD compatibility matrix (#109)
