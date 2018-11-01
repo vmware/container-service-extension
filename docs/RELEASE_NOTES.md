@@ -1,4 +1,4 @@
-# __**CSE Release Notes**__
+# **CSE Release Notes**
 [back to main CSE page](README.md#releasenotes)
 ### CSE 1.1.0
 

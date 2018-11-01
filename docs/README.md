@@ -27,7 +27,7 @@ Container Service Extension (CSE) is a VMware vCloud Director extension that hel
 
 ---
 ---
-# [__**Overview**__](#toc) <a name="overview"></a>
+# [**Overview**](#toc) <a name="overview"></a>
 
 CSE brings Kubernetes as a service to vCD by creating customized VM templates and enabling tenant/organization administrators to deploy fully functional Kubernetes clusters.
 
@@ -40,7 +40,7 @@ Once CSE Server is running and VM templates are available, **tenant/organization
 
 ---
 ---
-# [__**Getting CSE**__](#toc) <a name="gettingcse"></a>
+# [**Getting CSE**](#toc) <a name="gettingcse"></a>
 
 Install Python 3.6 or greater. Pip, Python's package manager, should come with Python.
 - https://realpython.com/installing-python/
@@ -75,7 +75,7 @@ All CSE versions on GitHub: https://github.com/vmware/container-service-extensio
 
 ---
 ---
-# [__**Enabling CSE Client Commands in vcd-cli**__](#toc) <a name="enableclient"></a>
+# [**Enabling CSE Client Commands in vcd-cli**](#toc) <a name="enableclient"></a>
 
 CSE client is not enabled yet:
 ```sh
@@ -104,13 +104,13 @@ CSE, Container Service Extension for VMware vCloud Director, version 1.2.0
 ```
 ---
 ---
-# [__**System/Cloud Administrator**__](#toc) <a name="sysadmin"></a>
+# [**System/Cloud Administrator**](#toc) <a name="sysadmin"></a>
 
 ## [**CSE/vCD Compatibility**](#toc) <a name="compatibility"></a>
-| CSE version     | vCD version                |
-|:--------|:---------------------|
-| 1.1.0   | 8.20, 9.0, 9.1       |
-| 1.2.0   | 8.20, 9.0, 9.1, 9.5 |
+| CSE version | vCD version         |
+|-------------|---------------------|
+| 1.1.0       | 8.20, 9.0, 9.1      |
+| 1.2.0       | 8.20, 9.0, 9.1, 9.5 |
 
 ---
 ## [**Config File**](#toc) <a name="configfile"></a>
@@ -123,14 +123,14 @@ Edit this file with values from your vCloud Director
 <br>
 
 Config file has 5 sections: `amqp`, `vcd`, `vcs`, `service`, `broker`
-### **`amqp` section**
+### **amqp** section
 CSE Server will communicate with vCD using these settings
 
 During CSE Server installation, CSE can configure vCD's AMQP settings to match these settings
 
 <br>
 
-### **`vcd` section**
+### **vcd** section
 It's recommended to create a service account for vCD with minimum required privileges. An attacker getting credentials for a user account with admin-level privileges can be catastrophic
 
 Minimum roles and (admin-view) rights required for the service account (subject to change with new vCD versions):
@@ -172,7 +172,7 @@ Always ensure vCD service account has enough privileges. Alternatively, you can 
 
 <br>
 
-### **`vcs` section**
+### **vcs** section
 Guest Operations Privileges required for vCenter service account:
 - Guest Operation Program Execution
 - Guest Operation Modifications
@@ -190,12 +190,12 @@ Each `vc` under `vcs` section has the following properties:
 
 <br>
 
-### **`service` section**
+### **service** section
 Specify how many threads you want CSE Server to create.
 
 <br>
 
-### **`broker` section**
+### **broker** section
 `broker` section has the following properties:
 
 | Property           | Value                                                                                                                                                                                                                |
@@ -232,8 +232,9 @@ Each `template` in the `templates` property has the following properties:
 `CSE` supports multiple VM templates to create Kubernetes clusters from. Templates may vary in guest OS or software versions, and must have a unique name. One template must be defined as the default template, and tenants have the option to specify the template to use during cluster/node creation.
 
 ### **Source .ova Files for VM Templates**
+
 | OS                   | OVA Name                               | URL                                                                                                       | SHA256                                                           |
-|:----------------------|:----------------------------------------|:-----------------------------------------------------------------------------------------------------------|:------------------------------------------------------------------|
+|----------------------|----------------------------------------|-----------------------------------------------------------------------------------------------------------|------------------------------------------------------------------|
 | Photon OS 1.0, Rev 2 | photon-custom-hw11-1.0-62c543d.ova     | `https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova`            | 6d6024c5531f5554bb0d2f51f3005078ce6d4ee63c142f2453a416824c5344ca |
 | Photon OS 2.0 GA     | photon-custom-hw11-2.0-304b817.ova     | `http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova`                       | cb51e4b6d899c3588f961e73282709a0d054bb421787e140a1d80c24d4fd89e1 |
 | Ubuntu 16.04.4 LTS   | ubuntu-16.04-server-cloudimg-amd64.ova | `https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova` | 3c1bec8e2770af5b9b0462e20b7b24633666feedff43c099a6fb1330fcc869a9 |
@@ -501,7 +502,7 @@ pip3 install --user --upgrade container-service-extension
 ```
 ---
 ---
-# [__**Tenant/Organization Administrator and Other Users**__](#toc) <a name="otherusers"></a>
+# [**Tenant/Organization Administrator and Other Users**](#toc) <a name="otherusers"></a>
 Once CSE Server is installed and running, tenants can use CSE client ([vcd-cli](https://vmware.github.io/vcd-cli)) to create Kubernetes clusters on demand.
 
 Master and worker nodes are VMs within a vApp on the tenant virtual datacenter. The VMs are required to be connected to an organization VDC network specified with the `--network` required command-line option. This network should have a static IP pool, and may require access to the internet if installing additional components.
@@ -629,7 +630,7 @@ client.logout()
 ```
 ---
 ---
-# [__**NFS-based Static Persistent Volumes**__](#toc) <a name="nfs"></a>
+# [**NFS-based Static Persistent Volumes**](#toc) <a name="nfs"></a>
 
 [Link](NFS_STATIC_PV.md)
 
@@ -714,12 +715,12 @@ Currently, NFS servers in Kubernetes cluster can not only be accessed by nodes o
 
 ---
 ---
-# [__**Contributing Guide**__](#toc) <a name="contributing"></a>
+# [**Contributing Guide**](#toc) <a name="contributing"></a>
 
-[Link](../CONTRIBUTING.md)
+[Link](CONTRIBUTING.md)
 
 ---
 ---
-# [__**Release Notes**__](#toc) <a name="releasenotes"></a>
+# [**Release Notes**](#toc) <a name="releasenotes"></a>
 
 [Link](RELEASE_NOTES.md)
