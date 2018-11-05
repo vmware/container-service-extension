@@ -12,6 +12,7 @@ import socket
 import ssl
 import stat
 import sys
+import traceback
 from urllib.parse import urlparse
 
 import click
@@ -20,7 +21,6 @@ from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.platform import Platform
-from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
 from vsphere_guest_run.vsphere import VSphere
 
@@ -414,6 +414,26 @@ def get_vsphere(config, vapp, vm_name):
     return VSphere(cache[vm_id]['hostname'], cache[vm_id]['username'],
                    cache[vm_id]['password'], cache[vm_id]['port'])
 
+
+def vgr_callback(prepend_msg='', logger=None):
+    """Creates a callback function to use for vsphere-guest-run functions.
+
+    :param str prepend_msg: string to prepend to all messages received from
+        vsphere-guest-run function.
+    :param logging.Logger logger: logger to use in case of error.
+
+    :return: callback function to print messages received
+        from vsphere-guest-run
+
+    :rtype: function
+    """
+    def callback(message, exception=None):
+        click.echo(f"{prepend_msg}{message}")
+        if exception is not None:
+            click.echo(exception)
+            if logger is not None:
+                logger.error(traceback.format_exc())
+    return callback
 def get_sha256(filepath):
     sha256 = hashlib.sha256()
     with open(filepath, 'rb') as f:
