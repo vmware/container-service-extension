@@ -21,6 +21,7 @@ from pyvcloud.vcd.vm import VM
 from vsphere_guest_run.vsphere import VSphere
 
 cache = LRUCache(maxsize=1024)
+SYSTEM_ORG_NAME = "System"
 LOGGER = logging.getLogger('cse.utils')
 CSE_SCRIPTS_DIR = 'container_service_extension_scripts'
 SYSTEM_ORG_NAME = 'System'
@@ -242,15 +243,15 @@ def get_vsphere(config, vapp, vm_name):
     vm_resource = vapp.get_vm(vm_name)
     vm_id = vm_resource.get('id')
     if vm_id not in cache:
-        client_sysadmin = Client(
-            uri=config['vcd']['host'],
-            api_version=config['vcd']['api_version'],
-            verify_ssl_certs=config['vcd']['verify'],
-            log_headers=True,
-            log_bodies=True)
-        client_sysadmin.set_credentials(
-            BasicLoginCredentials(config['vcd']['username'], SYSTEM_ORG_NAME,
-                                  config['vcd']['password']))
+        client = Client(uri=config['vcd']['host'],
+                        api_version=config['vcd']['api_version'],
+                        verify_ssl_certs=config['vcd']['verify'],
+                        log_headers=True,
+                        log_bodies=True)
+        credentials = BasicLoginCredentials(config['vcd']['username'],
+                                            SYSTEM_ORG_NAME,
+                                            config['vcd']['password'])
+        client.set_credentials(credentials)
 
         vapp_sys = VApp(client_sysadmin, href=vapp.href)
         vm_resource = vapp_sys.get_vm(vm_name)
