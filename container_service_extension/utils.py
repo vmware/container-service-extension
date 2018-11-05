@@ -203,6 +203,39 @@ def download_file(url, filepath, sha256=None):
     click.secho(f"Download complete", fg='green')
 
 
+def catalog_exists(org, catalog_name):
+    """Boolean function to check if catalog exists.
+
+    :param pyvcloud.vcd.org.Org org:
+    :param str catalog_name:
+
+    :return: True if catalog exists, False otherwise.
+
+    :rtype: bool
+    """
+    try:
+        org.get_catalog(catalog_name)
+        return True
+    except EntityNotFoundException:
+        return False
+
+
+def catalog_item_exists(org, catalog_name, catalog_item):
+    """Boolean function to check if catalog item exists (name check).
+
+    :param pyvcloud.vcd.org.Org org:
+    :param str catalog_name:
+    :param str catalog_item:
+
+    :return: True if catalog item exists, False otherwise.
+
+    :rtype: bool
+    """
+    try:
+        org.get_catalog_item(catalog_name, catalog_item)
+        return True
+    except EntityNotFoundException:
+        return False
 def get_data_file(filename):
     """Searches paths from sys.path to retrieve file contents
 
