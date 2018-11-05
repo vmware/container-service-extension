@@ -434,6 +434,24 @@ def vgr_callback(prepend_msg='', logger=None):
             if logger is not None:
                 logger.error(traceback.format_exc())
     return callback
+
+
+def wait_until_tools_ready(vapp, vsphere, callback=vgr_callback()):
+    """Blocking function to ensure that a VSphere has VMware Tools ready.
+
+    :param pyvcloud.vcd.vapp.VApp vapp:
+    :param vsphere_guest_run.vsphere.VSphere vsphere:
+    :param function callback: a function to print out messages received from
+        vsphere-guest-run functions. Function signature should be like this:
+        def callback(message, exception=None), where parameter 'message'
+        is a string.
+    """
+    vsphere.connect()
+    moid = vapp.get_vm_moid(vapp.name)
+    vm = vsphere.get_vm_by_moid(moid)
+    vsphere.wait_until_tools_ready(vm, sleep=5, callback=callback)
+
+
 def get_sha256(filepath):
     sha256 = hashlib.sha256()
     with open(filepath, 'rb') as f:
