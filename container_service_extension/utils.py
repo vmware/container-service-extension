@@ -6,7 +6,9 @@ import click
 import hashlib
 import logging
 import os
+import pathlib
 import random
+import requests
 import socket
 import ssl
 import string
@@ -24,7 +26,39 @@ from vsphere_guest_run.vsphere import VSphere
 cache = LRUCache(maxsize=1024)
 SYSTEM_ORG_NAME = "System"
 
-LOGGER = logging.getLogger('cse.utils')
+# chunk size for downloading files
+SIZE_1MB = 1024 * 1024
+
+# chunk size for reading files
+BUF_SIZE = 65536
+
+
+def download_file(url, filepath, sha256=None):
+    """Downloads a file from a url to local filepath.
+
+    Will not overwrite files unless @sha256 is given.
+    Recursively creates specified directories in @filepath.
+
+    :param str url: source url.
+    :param str filepath: destination filepath.
+    :param str sha256: without this argument, if a file already exists at
+        @filepath, download will be skipped. If @sha256 matches the file's
+        sha256, download will be skipped.
+    """
+    path = pathlib.Path(filepath)
+    if path.is_file() and (sha256 is None or get_sha256(filepath) == sha256):
+        click.secho(f"Skipping download of '{filepath}'. File already exists.",
+                    fg='green')
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    click.secho(f"Downloading file from '{url}' to '{filepath}'...",
+                fg='yellow')
+    response = requests.get(url, stream=True)
+    with path.open(mode='wb') as f:
+        for chunk in response.iter_content(chunk_size=SIZE_1MB):
+            f.write(chunk)
+    click.secho(f"Download complete", fg='green')
 
 
 def get_data_file(filename):
@@ -125,4 +159,12 @@ def get_vsphere(config, vapp, vm_name):
     v = VSphere(cache[vm_id]['hostname'], cache[vm_id]['username'],
                 cache[vm_id]['password'], cache[vm_id]['port'])
 
-    return v
+def get_sha256(filepath):
+    sha256 = hashlib.sha256()
+    with open(filepath, 'rb') as f:
+        while True:
+            data = f.read(BUF_SIZE)
+            if not data:
+                break
+            sha256.update(data)
+    return sha256.hexdigest()
