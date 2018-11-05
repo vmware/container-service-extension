@@ -95,6 +95,19 @@ def catalog_item_exists(org, catalog_name, catalog_item):
         return True
     except EntityNotFoundException:
         return False
+def wait_for_catalog_item_to_resolve(client, org, catalog_name, catalog_item):
+    """Waits for catalog item's most recent task to resolve.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param pyvcloud.vcd.org.Org org:
+    :param str catalog_name:
+    :param str catalog_item:
+    """
+    item = org.get_catalog_item(catalog_name, catalog_item)
+    resource = client.get_resource(item.Entity.get('href'))
+    client.get_task_monitor().wait_for_success(resource.Tasks.Task[0])
+
+
 def get_data_file(filename):
     """Used to retrieve builtin script files (as str) that users have installed
     via pip install or setup.py. Looks inside virtualenv site-packages, cwd,
