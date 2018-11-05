@@ -235,6 +235,53 @@ def catalog_item_exists(org, catalog_name, catalog_item):
         return True
     except EntityNotFoundException:
         return False
+
+
+def upload_ova_to_catalog(client, org, catalog_name, filepath, update=False):
+    """Uploads local ova file to vCD catalog.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str filepath: file path to the .ova file.
+    :param pyvcloud.vcd.org.Org org: Org to upload to.
+    :param str catalog_name: name of catalog.
+    :param bool update: signals whether to overwrite an existing catalog
+        item with this new one.
+
+    :raises pyvcloud.vcd.exceptions.EntityNotFoundException if catalog
+        does not exist.
+    :raises pyvcloud.vcd.exceptions.UploadException if upload fails.
+    """
+    catalog_item = pathlib.Path(filepath).name
+    if update:
+        try:
+            click.secho(f"Update flag set. Checking catalog '{catalog_name}' "
+                        f"for '{catalog_item}'", fg='yellow')
+            org.delete_catalog_item(catalog_name, catalog_item)
+            org.reload()
+            wait_for_catalog_item_to_resolve(client, org, catalog_name,
+                                             catalog_item)
+            click.secho(f"Update flag set. Checking catalog '{catalog_name}' "
+                        f"for '{catalog_item}'", fg='yellow')
+        except EntityNotFoundException:
+            pass
+    else:
+        try:
+            org.get_catalog_item(catalog_name, catalog_item)
+            click.secho(f"'{catalog_item}' already exists in catalog "
+                        f"'{catalog_name}'", fg='green')
+            return
+        except EntityNotFoundException:
+            pass
+
+    click.secho(f"Uploading '{catalog_item}' to catalog '{catalog_name}'",
+                fg='yellow')
+    org.upload_ovf(catalog_name, filepath)
+    org.reload()
+    wait_for_catalog_item_to_resolve(client, org, catalog_name, catalog_item)
+    click.secho(f"Uploaded '{catalog_item}' to catalog '{catalog_name}'",
+                fg='green')
+
+
 def wait_for_catalog_item_to_resolve(client, org, catalog_name, catalog_item):
     """Waits for catalog item's most recent task to resolve.
 
