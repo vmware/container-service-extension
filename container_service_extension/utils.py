@@ -215,6 +215,16 @@ def random_word(length):
 
 
 def get_vsphere(config, vapp, vm_name):
+    """Get the VSphere object for a specific VM inside a VApp.
+
+    :param dict config: CSE config as a dictionary
+    :param pyvcloud.vcd.vapp.VApp vapp:
+    :param str vm_name:
+
+    :return: VSphere object for a specific VM inside a VApp
+
+    :rtype: vsphere_guest_run.vsphere.VSphere
+    """
     global cache
     vm_resource = vapp.get_vm(vm_name)
     vm_id = vm_resource.get('id')
@@ -229,11 +239,9 @@ def get_vsphere(config, vapp, vm_name):
                                             config['vcd']['password'])
         client.set_credentials(credentials)
 
-        vapp_sys = VApp(client_sysadmin, href=vapp.href)
-        vm_resource = vapp_sys.get_vm(vm_name)
-        vm_sys = VM(client_sysadmin, resource=vm_resource)
+        vm_sys = VM(client, resource=vm_resource)
         vcenter_name = vm_sys.get_vc()
-        platform = Platform(client_sysadmin)
+        platform = Platform(client)
         vcenter = platform.get_vcenter(vcenter_name)
         vcenter_url = urlparse(vcenter.Url.text)
         cache_item = {
@@ -247,11 +255,11 @@ def get_vsphere(config, vapp, vm_name):
                 break
         cache[vm_id] = cache_item
     else:
-        LOGGER.debug('vCenter retrieved from cache: %s / %s' %
-                     (vm_id, cache[vm_id]['hostname']))
+        LOGGER.debug(f"vCenter retrieved from cache\nVM ID: {vm_id}"
+                     f"\nHostname: {cache[vm_id]['hostname']}")
 
-    v = VSphere(cache[vm_id]['hostname'], cache[vm_id]['username'],
-                cache[vm_id]['password'], cache[vm_id]['port'])
+    return VSphere(cache[vm_id]['hostname'], cache[vm_id]['username'],
+                   cache[vm_id]['password'], cache[vm_id]['port'])
 
 def get_sha256(filepath):
     sha256 = hashlib.sha256()
