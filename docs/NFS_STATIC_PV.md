@@ -1,4 +1,4 @@
-# __**CSE: NFS-based Static Persistent Volumes**__
+# **CSE: NFS-based Static Persistent Volumes**
 [back to main CSE page](README.md#nfs)
 
 CSE now enables users to deploy stateful applications on vCD Kubernetes clusters by leveraging static persistent volumes backed by an NFS server.
