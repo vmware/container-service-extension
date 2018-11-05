@@ -32,9 +32,9 @@ def write_config_dict_to_file(config_dict, output_file_name):
     output_file = None
     try:
         output_file = open(output_file_name, 'w')
-        output_file.write()
+        output_file.write(config_yaml)
         return True
-    except exception as e:
+    except Exception:
         return False
     finally:
         if output_file is not None:
