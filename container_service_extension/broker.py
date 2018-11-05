@@ -31,6 +31,7 @@ from container_service_extension.cluster import load_from_metadata
 from container_service_extension.cluster import TYPE_MASTER
 from container_service_extension.cluster import TYPE_NFS
 from container_service_extension.cluster import TYPE_NODE
+from container_service_extension.utils import SYSTEM_ORG_NAME
 
 
 LOGGER = logging.getLogger('cse.broker')
@@ -133,8 +134,10 @@ class DefaultBroker(threading.Thread):
             verify_ssl_certs=self.verify,
             log_headers=True,
             log_bodies=True)
-        self.client_sysadmin.set_credentials(
-            BasicLoginCredentials(self.username, 'System', self.password))
+        credentials = BasicLoginCredentials(self.username,
+                                            SYSTEM_ORG_NAME,
+                                            self.password)
+        self.client_sysadmin.set_credentials(credentials)
 
     def _connect_tenant(self, headers):
         token = headers.get('x-vcloud-authorization')
