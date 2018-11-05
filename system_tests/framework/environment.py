@@ -17,6 +17,8 @@ import logging
 
 import requests
 
+from container_service_extension.config import SAMPLE_TEMPLATE_PHOTON_V2
+from container_service_extension.config import SAMPLE_TEMPLATE_UBUNTU_16_04
 
 def developerModeAware(function):
     """A decorator function to skip execution of decorated function.
@@ -42,8 +44,9 @@ def developerModeAware(function):
 
 
 class Environment(object):
-    _config = None
     _logger = None
+    _install_config = None
+    _test_config = None
 
     @classmethod
     def init(cls, config_data):
@@ -53,21 +56,35 @@ class Environment(object):
             representation of configuration data read from the configuration
             file.
         """
-        cls._config = config_data
-        if not cls._config['test']['connection']['verify'] and \
-           cls._config['test']['connection']['disable_ssl_warnings']:
-            requests.packages.urllib3.disable_warnings()
+        cls._install_config = dict(config_data)
+        if 'test' in config_data:
+            cls._test_config = config_data['test']
+            if not cls._test_config['connection']['verify'] and \
+               cls._test_config['connection']['disable_ssl_warnings']:
+                requests.packages.urllib3.disable_warnings()
+
+            # get rid of test specific configurations from installation config
+            del cls._install_config['test']
+
+        if 'broker' in cls._install_config:
+            if 'templates' not in cls._install_config['broker']:
+                cls._install_config['broker']['templates'] = \
+                    [SAMPLE_TEMPLATE_PHOTON_V2, SAMPLE_TEMPLATE_UBUNTU_16_04]
+            if 'default_template' not in cls._install_config['broker']:
+                cls._install_config['broker']['default_template'] = \
+                    SAMPLE_TEMPLATE_PHOTON_V2['name']
+
         cls._logger = cls.get_default_logger()
 
     @classmethod
-    def get_config(cls):
+    def get_install_config(cls):
         """Get test configuration parameter dictionary.
 
         :return: a dict containing configuration information.
 
         :rtype: dict
         """
-        return cls._config
+        return cls._install_config
 
     @classmethod
     def get_default_logger(cls):

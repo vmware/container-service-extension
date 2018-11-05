@@ -22,16 +22,14 @@ import yaml
 
 class BaseServerInstallTestCase(unittest.TestCase):
     _config_file = 'base_config.yaml'
-    _config_yaml = None
 
     @classmethod
     def setUpClass(cls):
         if 'CSE_INSTALL_TEST_BASE_CONFIG_FILE' in os.environ:
             cls._config_file = os.environ['CSE_INSTALL_TEST_BASE_CONFIG_FILE']
         with open(cls._config_file, 'r') as f:
-            cls._config_yaml = yaml.safe_load(f)
-
-        Environment.init(cls._config_yaml)
+            config_yaml = yaml.safe_load(f)
+            Environment.init(config_yaml)
 
     @classmethod
     def tearDownClass(cls):

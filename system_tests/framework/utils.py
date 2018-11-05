@@ -13,37 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from system_test.framework.environment import Environment
 import yaml
 
 
-def __merge_inner(old_data, new_data):
-    for key, value in old_data.items():
-        if isinstance(value, dict):
-            # get node or create one
-            node = new_data.setdefault(key, {})
-            __merge_inner(value, node)
-        else:
-            new_data[key] = value
+def write_config_dict_to_file(config_dict, output_file_name):
+    """Write a config dict as yaml to a file.
 
-    return new_data
+    :param dict config_dict: the dictionary that needs to be written to a file.
+    :param str output_file_name: name of the output file.
 
+    :return: True if the data is written successfully to the file, else False.
 
-def merge_with_environment_config(new_config, output_file_name=None):
-    """."""
-    if Environment.get_config() is not None:
-        current_config = dict(Environment.get_config())
-        # get rid of test specific configurations
-        del current_config['test']
-        merged_config = __merge_inner(current_config, new_config)
-    else:
-        merged_config = new_config
+    :rtype: bool
+    """
+    config_yaml = yaml.safe_dump(
+        config_dict, default_flow_style=False) + '\n'
 
-    merged_yaml_config = yaml.safe_dump(
-        merged_config, default_flow_style=False) + '\n'
-
-    if output_file_name is not None:
-        with open(output_file_name, 'w') as f:
-            f.write()
-
-    return merged_yaml_config.strip() + '\n'
+    output_file = None
+    try:
+        output_file = open(output_file_name, 'w')
+        output_file.write()
+        return True
+    except exception as e:
+        return False
+    finally:
+        if output_file is not None:
+            output_file.close()
