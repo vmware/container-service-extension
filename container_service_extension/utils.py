@@ -18,6 +18,7 @@ from urllib.parse import urlparse
 from cachetools import LRUCache
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
+from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.platform import Platform
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
@@ -61,6 +62,39 @@ def download_file(url, filepath, sha256=None):
     click.secho(f"Download complete", fg='green')
 
 
+def catalog_exists(org, catalog_name):
+    """Boolean function to check if catalog exists.
+
+    :param pyvcloud.vcd.org.Org org:
+    :param str catalog_name:
+
+    :return: True if catalog exists, False otherwise.
+
+    :rtype: bool
+    """
+    try:
+        org.get_catalog(catalog_name)
+        return True
+    except EntityNotFoundException:
+        return False
+
+
+def catalog_item_exists(org, catalog_name, catalog_item):
+    """Boolean function to check if catalog item exists (name check).
+
+    :param pyvcloud.vcd.org.Org org:
+    :param str catalog_name:
+    :param str catalog_item:
+
+    :return: True if catalog item exists, False otherwise.
+
+    :rtype: bool
+    """
+    try:
+        org.get_catalog_item(catalog_name, catalog_item)
+        return True
+    except EntityNotFoundException:
+        return False
 def get_data_file(filename):
     """Used to retrieve builtin script files (as str) that users have installed
     via pip install or setup.py. Looks inside virtualenv site-packages, cwd,
