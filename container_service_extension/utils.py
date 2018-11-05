@@ -24,6 +24,7 @@ from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
 from vsphere_guest_run.vsphere import VSphere
 
+LOGGER = logging.getLogger('cse.utils')
 cache = LRUCache(maxsize=1024)
 SYSTEM_ORG_NAME = "System"
 
