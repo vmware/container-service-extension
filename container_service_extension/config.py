@@ -30,13 +30,13 @@ import yaml
 
 from container_service_extension.broker import validate_broker_config_content
 from container_service_extension.utils import bool_to_msg
-from container_service_extension.utils import configure_vcd_amqp
-from container_service_extension.utils import create_amqp_exchange
 from container_service_extension.utils import create_and_share_catalog
+from container_service_extension.utils import CSE_NAME
+from container_service_extension.utils import CSE_NAMESPACE
+from container_service_extension.utils import EXCHANGE_TYPE
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_vsphere
 from container_service_extension.utils import get_sha256
-from container_service_extension.utils import register_extension
 
 
 LOGGER = logging.getLogger('cse.config')
@@ -305,6 +305,24 @@ def validate_broker_config(broker_dict):
 
 def install_cse(ctx, config_file_name, template_name, update, no_capture,
                 ssh_key, amqp_install, ext_install):
+    """Handles logistics for CSE installation.
+
+    Handles decision making for configuring AMQP exchange/settings,
+    extension registration, catalog setup, and template creation.
+
+    See container_service_extension.cse.install() for default paramter values.
+
+    :param click.core.Context ctx:
+    :param str config_file_name: value taken from '--config'
+    :param str template_name: value taken from '--template'
+    :param bool update: value taken from '--update'
+    :param no_capture: value taken from '--no-capture'
+    :param ssh_key: ssh_key from file given from '--ssh-key'
+    :param amqp_install: value taken from '--amqp'
+    :param ext_install: value taken from '--ext'
+
+    :raises Exception: if AMQP connection fails.
+    """
     check_config(config_file_name)
     config = get_config(config_file_name)
     click.secho(f"Installing CSE on vCloud Director using config file "
@@ -344,7 +362,7 @@ def install_cse(ctx, config_file_name, template_name, update, no_capture,
 
     # register cse as extension to vCD
     if should_register_cse(client, ext_install):
-        register_extension(client, 'cse', amqp['exchange'])
+        register_cse(client, amqp['routing_key'], amqp['exchange'])
 
     # set up cse catalog
     catalog = create_and_share_catalog(org, catalog_name,
@@ -617,6 +635,43 @@ def capture_as_template(ctx, config, vapp_resource, org, catalog, template):
     return True
 
 
+def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
+                         username, password):
+    """Creates the specified AMQP exchange if it does not exist.
+
+    If specified AMQP exchange exists already, does nothing.
+
+    :param str exchange_name: The AMQP exchange name to check for or create.
+    :param str host: AMQP host name.
+    :param str password: AMQP password.
+    :param int port: AMQP port number.
+    :param bool use_ssl: Enable ssl.
+    :param str username: AMQP username.
+    :param str vhost: AMQP vhost.
+
+    :raises Exception: if AMQP exchange could not be created.
+    """
+    click.secho(f"Checking for AMQP exchange '{exchange_name}'", fg='yellow')
+    credentials = pika.PlainCredentials(username, password)
+    parameters = pika.ConnectionParameters(host, port, vhost, credentials,
+                                           ssl=use_ssl, connection_attempts=3,
+                                           retry_delay=2, socket_timeout=5)
+    try:
+        connection = pika.BlockingConnection(parameters)
+        click.secho(f"Connected to AMQP server: {host}:{port}", fg='green')
+        channel = connection.channel()
+        channel.exchange_declare(exchange=exchange_name,
+                                 exchange_type=EXCHANGE_TYPE,
+                                 durable=True, auto_delete=False)
+    except Exception:  # TODO replace with specific exception
+        LOGGER.error(traceback.format_exc())
+        click.secho(f"Couldn't create exchange '{exchange_name}'", fg='red')
+        raise
+    finally:
+        connection.close()
+    click.secho(f"AMQP exchange '{exchange_name}' is ready", fg='green')
+
+
 def should_configure_amqp(client, amqp_config, amqp_install):
     """Decides if CSE installation should configure vCD AMQP settings.
 
@@ -670,6 +725,50 @@ def should_configure_amqp(client, amqp_config, amqp_install):
     return False
 
 
+def configure_vcd_amqp(client, exchange_name, host, port, prefix,
+                       ssl_accept_all, use_ssl, vhost, username, password):
+    """Configures vCD AMQP settings/exchange using parameter values.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str exchange_name: name of exchange.
+    :param str host: AMQP host name.
+    :param str password: AMQP password.
+    :param int port: AMQP port.
+    :param str prefix:
+    :param bool ssl_accept_all:
+    :param bool use_ssl: Enable ssl.
+    :param str username: AMQP username.
+    :param str vhost: AMQP vhost.
+
+    :raises Exception: if could not set AMQP configuration.
+    """
+    amqp_service = AmqpService(client)
+    amqp = {
+        'AmqpExchange': exchange_name,
+        'AmqpHost': host,
+        'AmqpPort': port,
+        'AmqpPrefix': prefix,
+        'AmqpSslAcceptAll': ssl_accept_all,
+        'AmqpUseSSL': use_ssl,
+        'AmqpUsername': username,
+        'AmqpVHost': vhost
+    }
+
+    # This block sets the AMQP setting values on the
+    # vCD "System Administration Extensibility page"
+    result = amqp_service.test_config(amqp, password)
+    click.secho(f"AMQP test settings, result: {result['Valid'].text}",
+                fg='yellow')
+    if result['Valid'].text == 'true':
+        amqp_service.set_config(amqp, password)
+        click.secho("Updated vCD AMQP configuration", fg='green')
+    else:
+        msg = "Couldn't set vCD AMQP configuration"
+        click.secho(msg, fg='red')
+        # TODO replace raw exception with specific
+        raise Exception(msg)
+
+
 def should_register_cse(client, ext_install):
     """Decides if CSE installation should register CSE to vCD.
 
@@ -699,3 +798,23 @@ def should_register_cse(client, ext_install):
             return False
 
     return True
+
+
+def register_cse(client, amqp_routing_key, exchange_name):
+    """Registers CSE to vCD.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str amqp_routing_key:
+    :param str exchange_name: AMQP exchange name.
+    """
+    ext = APIExtension(client)
+    patterns = [
+        f'/api/{CSE_NAME}',
+        f'/api/{CSE_NAME}/.*',
+        f'/api/{CSE_NAME}/.*/.*'
+    ]
+
+    ext.add_extension(CSE_NAME, CSE_NAMESPACE, amqp_routing_key,
+                      exchange_name, patterns)
+    click.secho(f"Registered {CSE_NAME} as an API extension in vCD",
+                fg='green')
