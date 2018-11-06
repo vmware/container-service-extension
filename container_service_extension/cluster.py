@@ -14,6 +14,8 @@ from pyvcloud.vcd.vm import VM
 
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_vsphere
+from container_service_extension.exceptions import ClusterJoinException
+from container_service_extension.exceptions import ClusterInitializationException
 
 TYPE_MASTER = 'mstr'
 TYPE_NODE = 'node'
@@ -264,7 +266,7 @@ def init_cluster(config, vapp, template):
     result = execute_script_in_nodes(config, vapp, template['admin_password'],
                                      script, nodes)
     if result[0][0] != 0:
-        raise Exception('Couldn\'t initialize cluster:\n%s' %
+        raise ClusterInitializationException('Couldn\'t initialize cluster:\n%s' %
                         result[0][2].content.decode())
 
 
@@ -283,7 +285,7 @@ def join_cluster(config, vapp, template, target_nodes=None):
                                       script, nodes)
     for result in results:
         if result[0] != 0:
-            raise Exception(
+            raise ClusterJoinException(
                 'Couldn\'t join cluster:\n%s' % result[2].content.decode())
 
 
