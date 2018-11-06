@@ -32,6 +32,13 @@ from container_service_extension.cluster import TYPE_MASTER
 from container_service_extension.cluster import TYPE_NFS
 from container_service_extension.cluster import TYPE_NODE
 
+from container_service_extension.exceptions import ClusterOperationException
+from container_service_extension.exceptions import CreateVAppException
+from container_service_extension.exceptions import CreateWorkerNodeException
+from container_service_extension.exceptions import CreateMasterNodeException
+from container_service_extension.exceptions import ClusterInitializationException
+from container_service_extension.exceptions import CreateNFSNodeException
+from container_service_extension.exceptions import ClusterJoinException
 
 LOGGER = logging.getLogger('cse.broker')
 
@@ -414,7 +421,7 @@ class DefaultBroker(threading.Thread):
             clusters = load_from_metadata(
                 self.client_tenant, name=self.cluster_name)
             if len(clusters) != 0:
-                raise Exception('Cluster already exists.')
+                raise ClusterOperationException('Cluster already exists.')
             org_resource = self.client_tenant.get_org()
             org = Org(self.client_tenant, resource=org_resource)
             vdc_resource = org.get_vdc(self.body['vdc'])
@@ -424,11 +431,16 @@ class DefaultBroker(threading.Thread):
                 TaskStatus.RUNNING,
                 message='Creating cluster vApp %s(%s)' % (self.cluster_name,
                                                           self.cluster_id))
-            vapp_resource = vdc.create_vapp(
-                self.cluster_name,
-                description='cluster %s' % self.cluster_name,
-                network=network_name,
-                fence_mode='bridged')
+            try:
+                vapp_resource = vdc.create_vapp(
+                    self.cluster_name,
+                    description='cluster %s' % self.cluster_name,
+                    network=network_name,
+                    fence_mode='bridged')
+            except Exception as e:
+                raise CreateVAppException('Error while creating vApp:', str(e))
+
+
             self.client_tenant.get_task_monitor().wait_for_status(
                 vapp_resource.Tasks.Task[0])
             tags = {}
@@ -445,14 +457,24 @@ class DefaultBroker(threading.Thread):
                 message='Creating master node for %s(%s)' % (self.cluster_name,
                                                              self.cluster_id))
             vapp.reload()
-            add_nodes(1, template, TYPE_MASTER, self.config,
-                      self.client_tenant, org, vdc, vapp, self.body)
+
+            try:
+                add_nodes(1, template, TYPE_MASTER, self.config,
+                          self.client_tenant, org, vdc, vapp, self.body)
+            except Exception as e:
+                raise CreateMasterNodeException("Error while adding master node:", str(e))
+
             self.update_task(
                 TaskStatus.RUNNING,
                 message='Initializing cluster %s(%s)' % (self.cluster_name,
                                                          self.cluster_id))
             vapp.reload()
-            init_cluster(self.config, vapp, template)
+
+            try:
+                init_cluster(self.config, vapp, template)
+            except Exception as e:
+                raise ClusterInitializationException("Error while initializing cluster:", str(e))
+
             master_ip = get_master_ip(self.config, vapp, template)
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      master_ip)
@@ -463,29 +485,48 @@ class DefaultBroker(threading.Thread):
                     message='Creating %s node(s) for %s(%s)' %
                     (self.body['node_count'], self.cluster_name,
                      self.cluster_id))
-                add_nodes(self.body['node_count'], template, TYPE_NODE,
-                          self.config, self.client_tenant, org, vdc, vapp,
-                          self.body)
+                try:
+                    add_nodes(self.body['node_count'], template, TYPE_NODE,
+                              self.config, self.client_tenant, org, vdc, vapp,
+                              self.body)
+                except Exception as e:
+                    raise CreateWorkerNodeException("Error while creating worker node:", str(e))
+
                 self.update_task(
                     TaskStatus.RUNNING,
                     message='Adding %s node(s) to %s(%s)' %
                     (self.body['node_count'], self.cluster_name,
                      self.cluster_id))
                 vapp.reload()
-                join_cluster(self.config, vapp, template)
+
+                try:
+                    join_cluster(self.config, vapp, template)
+                except Exception as e:
+                    raise ClusterJoinException("Error while joining cluster", str(e))
+
             if self.body['enable_nfs']:
                 self.update_task(
                     TaskStatus.RUNNING,
                     message='Creating NFS node for %s(%s)' %
                             (self.cluster_name,
                              self.cluster_id))
-                add_nodes(1, template, TYPE_NFS,
-                          self.config, self.client_tenant, org, vdc, vapp,
-                          self.body)
+                try:
+                    add_nodes(1, template, TYPE_NFS,
+                              self.config, self.client_tenant, org, vdc, vapp,
+                              self.body)
+                except Exception as e:
+                    raise CreateNFSNodeException("Error while creating NFS node:", str(e))
+
             self.update_task(
                 TaskStatus.SUCCESS,
                 message='Created cluster %s(%s)' % (self.cluster_name,
                                                     self.cluster_id))
+        except (CreateVAppException, CreateMasterNodeException,
+                CreateWorkerNodeException, ClusterJoinException,
+                CreateNFSNodeException) as e:
+            LOGGER.error(traceback.format_exc())
+            self.update_task(TaskStatus.ERROR, error_message=str(e))
+            raise e
         except Exception as e:
             LOGGER.error(traceback.format_exc())
             self.update_task(TaskStatus.ERROR, error_message=str(e))
