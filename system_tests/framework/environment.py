@@ -53,9 +53,8 @@ class Environment(object):
     def init(cls, config_dict):
         """Initializer for Environment class.
 
-        :param object config_data: a PyYAML object that contains the yaml
-            representation of configuration data read from the configuration
-            file.
+        :param dict config_dict: contains the yaml representation of
+            configuration data read from the configuration file.
         """
         cls._install_config = dict(config_dict)
         if 'test' in config_dict:
