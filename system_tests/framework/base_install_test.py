@@ -28,8 +28,8 @@ class BaseServerInstallTestCase(unittest.TestCase):
         if 'CSE_INSTALL_TEST_BASE_CONFIG_FILE' in os.environ:
             cls._config_file = os.environ['CSE_INSTALL_TEST_BASE_CONFIG_FILE']
         with open(cls._config_file, 'r') as f:
-            config_yaml = yaml.safe_load(f)
-            Environment.init(config_yaml)
+            config_dict = yaml.safe_load(f)
+        Environment.init(config_dict)
 
     @classmethod
     def tearDownClass(cls):

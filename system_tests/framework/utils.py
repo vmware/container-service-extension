@@ -16,26 +16,12 @@
 import yaml
 
 
-def write_config_dict_to_file(config_dict, output_file_name):
-    """Write a config dict as yaml to a file.
+def write_dict_to_file_as_yaml(input_dict, output_file_name):
+    """Write a dictionary as yaml to a file.
 
-    :param dict config_dict: the dictionary that needs to be written to a file.
+    :param dict input_dict: the dictionary that needs to be written to file.
     :param str output_file_name: name of the output file.
-
-    :return: True if the data is written successfully to the file, else False.
-
-    :rtype: bool
     """
-    config_yaml = yaml.safe_dump(
-        config_dict, default_flow_style=False) + '\n'
-
-    output_file = None
-    try:
-        output_file = open(output_file_name, 'w')
+    config_yaml = yaml.safe_dump(input_dict, default_flow_style=False)
+    with open(output_file_name, 'w') as output_file:
         output_file.write(config_yaml)
-        return True
-    except Exception:
-        return False
-    finally:
-        if output_file is not None:
-            output_file.close()

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from system_test.framework.base_install_test import BaseServerInstallTestCase
-from system_tets.framework.environment import developerModeAware
+from system_test.framework.environment import developerModeAware
 
 
 class CSEServerInstallationTest(BaseServerInstallTestCase):

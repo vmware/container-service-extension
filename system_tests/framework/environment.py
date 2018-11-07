@@ -50,16 +50,16 @@ class Environment(object):
     _test_config = None
 
     @classmethod
-    def init(cls, config_data):
+    def init(cls, config_dict):
         """Initializer for Environment class.
 
         :param object config_data: a PyYAML object that contains the yaml
             representation of configuration data read from the configuration
             file.
         """
-        cls._install_config = dict(config_data)
-        if 'test' in config_data:
-            cls._test_config = config_data['test']
+        cls._install_config = dict(config_dict)
+        if 'test' in config_dict:
+            cls._test_config = config_dict['test']
             if not cls._test_config['connection']['verify'] and \
                cls._test_config['connection']['disable_ssl_warnings']:
                 requests.packages.urllib3.disable_warnings()
