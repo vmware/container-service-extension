@@ -137,20 +137,84 @@ Minimum roles and (admin-view) rights required for the service account (subject 
 - Catalog Author (Role)
 - vApp Author (Role)
 - vApp User (Role)
-- vCenter: View (Right)
-- vCenter: Refresh (Right)
-- vCenter: Open in vSphere (Right)
-- Task: View Tasks (Right)
-- Task: Update (Right)
-- Task: Resume, Abort, or Fail (Right)
-- Catalog Item: Add to My Cloud (Right)
-- Catalog Item: Create/Upload a vApp Template/Media (Right)
-- Catalog Item: View vApp Templates/Media (Right)
-- Catalog Item: Copy/Move a vApp Template/Media (Right)
-- General: Administrator View (Right)
-- Organization VDC: View Organization VDCs (Right)
-- Organization VDC Network: View Properties (Right)
-- Organization: View Organizations (Right)
+- Catalog: CLSP Publish Subscribe
+- Catalog: Create / Delete a Catalog
+- Catalog: Edit Properties
+- Catalog: Import Media from vSphere
+- Catalog: Publish
+- Catalog: Sharing
+- Catalog: View ACL
+- Catalog: View Private and Shared Catalogs
+- Catalog: View Published Catalogs
+- Cell Configuration: View
+- Disk: Change Owner
+- Disk: Create
+- Disk: Delete
+- Disk: Edit Properties
+- Disk: View Properties
+- General: Administrator View
+- General: View Error Details
+- Host: View
+- Organization Default Settings: View default settings for new Organizations.
+- Organization Network: Open in vSphere
+- Organization Network: View
+- Organization vDC Network: View Properties
+- Organization vDC Resource Pool: Open in vSphere
+- Organization vDC Resource Pool: View
+- Organization vDC Storage Policy: Open in vSphere
+- Organization vDC: Extended View
+- Organization vDC: View
+- Organization vDC: View ACL
+- Organization: View
+- System Operations: Execute System Operations
+- Task: Resume, Abort, or Fail
+- Task: Update
+- VAPP_VM_METADATA_TO_VCENTER
+- VDC Template: Instantiate
+- VDC Template: View
+- vApp Template / Media: Copy
+- vApp Template / Media: Create / Upload
+- vApp Template / Media: Edit
+- vApp Template / Media: View
+- vApp Template: Checkout
+- vApp Template: Download
+- vApp Template: Import
+- vApp Template: Open in vSphere
+- vApp: Allow All Extra Config
+- vApp: Allow Ethernet Coalescing Extra Config
+- vApp: Allow Latency Extra Config
+- vApp: Allow Matching Extra Config
+- vApp: Allow NUMA Node Affinity Extra Config
+- vApp: Change Owner
+- vApp: Copy
+- vApp: Create / Reconfigure
+- vApp: Delete
+- vApp: Download
+- vApp: Edit Properties
+- vApp: Edit VM CPU
+- vApp: Edit VM CPU and Memory reservation settings in all VDC types
+- vApp: Edit VM Hard Disk
+- vApp: Edit VM Memory
+- vApp: Edit VM Network
+- vApp: Edit VM Properties
+- vApp: Enter/Exit Maintenance Mode
+- vApp: Import Options
+- vApp: Manage VM Password Settings
+- vApp: Open in vSphere
+- vApp: Power Operations
+- vApp: Shadow VM View
+- vApp: Sharing
+- vApp: Snapshot Operations
+- vApp: Upload
+- vApp: Use Console
+- vApp: VM Boot Options
+- vApp: VM Check Compliance
+- vApp: VM Migrate, Force Undeploy, Relocate, Consolidate
+- vApp: View ACL
+- vApp: View VM metrics
+- vCenter: Open in vSphere
+- vCenter: Refresh
+- vCenter: View
 
 Use vcd-cli to get list of rights required by 'Catalog Author' and 'vApp Author':
 ```sh
