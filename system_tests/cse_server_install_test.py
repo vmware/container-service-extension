@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from system_test.framework.base_install_test import BaseServerInstallTestCase
-from system_test.framework.environment import developerModeAware
+from system_tests.framework.base_install_test import BaseServerInstallTestCase
+from system_tests.framework.environment import developerModeAware
 
 
 class CSEServerInstallationTest(BaseServerInstallTestCase):

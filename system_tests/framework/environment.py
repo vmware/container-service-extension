@@ -35,7 +35,7 @@ def developerModeAware(function):
     :rtype: function
     """
     def wrapper(self):
-        if not Environment._config['test']['developer_mode']:
+        if not Environment._test_config['developer_mode']:
             function(self)
         else:
             Environment.get_default_logger().debug(
@@ -99,7 +99,7 @@ class Environment(object):
             cls._logger.setLevel(logging.DEBUG)
             if not cls._logger.handlers:
                 log_file = \
-                    cls._config['test']['logging']['default_log_filename']
+                    cls._test_config['logging']['default_log_filename']
                 if log_file is not None:
                     handler = logging.FileHandler(log_file)
                 else:
