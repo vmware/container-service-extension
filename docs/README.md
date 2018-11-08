@@ -133,10 +133,7 @@ During CSE Server installation, CSE can configure vCD's AMQP settings to match t
 ### **vcd** section
 It's recommended to create a service account for vCD with minimum required privileges. An attacker getting credentials for a user account with admin-level privileges can be catastrophic
 
-Minimum roles and (admin-view) rights required for the service account (subject to change with new vCD versions):
-- Catalog Author (Role)
-- vApp Author (Role)
-- vApp User (Role)
+Minimum service account Rights required for installing CSE (subject to change with new vCD versions):
 - Catalog: CLSP Publish Subscribe
 - Catalog: Create / Delete a Catalog
 - Catalog: Edit Properties
@@ -216,11 +213,6 @@ Minimum roles and (admin-view) rights required for the service account (subject 
 - vCenter: Refresh
 - vCenter: View
 
-Use vcd-cli to get list of rights required by 'Catalog Author' and 'vApp Author':
-```sh
-> vcd role list-rights 'Catalog Author'
-```
-Create a custom role with union of rights derived from above set of roles/rights and then assign the custom role to a user account.
 
 Always ensure vCD service account has enough privileges. Alternatively, you can create a role with Admin privileges and deselect/delete rights which are not required.
 
