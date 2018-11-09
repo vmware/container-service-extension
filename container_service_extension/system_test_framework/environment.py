@@ -22,7 +22,7 @@ from container_service_extension.config import SAMPLE_TEMPLATE_UBUNTU_16_04
 
 
 def developerModeAware(function):
-    """A decorator function to skip execution of decorated function.
+    """Skip execution of decorated function.
 
     To be used on test teardown methods.
 
@@ -51,7 +51,7 @@ class Environment(object):
 
     @classmethod
     def init(cls, config_dict):
-        """Initializer for Environment class.
+        """Initialize Environment class attributes.
 
         :param dict config_dict: contains the yaml representation of
             configuration data read from the configuration file.
@@ -116,5 +116,5 @@ class Environment(object):
 
     @classmethod
     def cleanup(cls):
-        """Cleans up the environment."""
+        """Clean up the environment."""
         pass

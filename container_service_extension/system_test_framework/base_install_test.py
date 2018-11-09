@@ -16,8 +16,10 @@
 import os
 import unittest
 
-from system_tests.framework.environment import Environment
 import yaml
+
+from container_service_extension.system_test_framework.environment \
+    import Environment
 
 
 class BaseServerInstallTestCase(unittest.TestCase):
