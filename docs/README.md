@@ -133,7 +133,7 @@ During CSE Server installation, CSE can configure vCD's AMQP settings to match t
 ### **vcd** section
 It's recommended to create a service account for vCD with minimum required privileges. An attacker getting credentials for a user account with admin-level privileges can be catastrophic
 
-Minimum service account Rights required for installing CSE (subject to change with new vCD versions):
+Minimum set of rights required by a service account to install CSE properly (subject to change with new vCD versions):
 - Catalog: CLSP Publish Subscribe
 - Catalog: Create / Delete a Catalog
 - Catalog: Edit Properties
