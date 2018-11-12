@@ -45,6 +45,11 @@ def developerModeAware(function):
 
 
 class Environment(object):
+    """Hold configuration details of the vCD testbed.
+
+    Also acts as a single point for management of logging for tests.
+    """
+
     _logger = None
     _install_config = None
     _test_config = None
