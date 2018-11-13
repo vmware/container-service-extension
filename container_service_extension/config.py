@@ -15,6 +15,7 @@ from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.client import SIZE_1MB
+from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.platform import Platform
@@ -32,16 +33,18 @@ from container_service_extension.utils import catalog_item_exists
 from container_service_extension.utils import check_file_permissions
 from container_service_extension.utils import check_keys_and_value_types
 from container_service_extension.utils import create_and_share_catalog
-from container_service_extension.utils import CSE_EXT_NAME
-from container_service_extension.utils import CSE_EXT_NAMESPACE
 from container_service_extension.utils import EXCHANGE_TYPE
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_sha256
 from container_service_extension.utils import get_vsphere
-from container_service_extension.utils import get_sha256
+from container_service_extension.utils import SYSTEM_ORG_NAME
 
 
 LOGGER = logging.getLogger('cse.config')
+
+# used for registering CSE to vCD
+CSE_NAME = 'cse'
+CSE_NAMESPACE = 'cse'
 
 SAMPLE_AMQP_CONFIG = {
     'amqp': {
@@ -128,7 +131,6 @@ SAMPLE_BROKER_CONFIG = {
         'cse_msg_dir': '/tmp/cse'
     }
 }
-
 
 # This allows us to compare top-level config keys and value types
 SAMPLE_CONFIG = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
@@ -261,7 +263,7 @@ def validate_vcd_and_vcs_config(vcd_dict, vcs):
                         log_headers=True,
                         log_bodies=True)
         client.set_credentials(BasicLoginCredentials(vcd_dict['username'],
-                                                     'System',
+                                                     SYSTEM_ORG_NAME,
                                                      vcd_dict['password']))
         click.secho(f"Connected to vCloud Director "
                     f"({vcd_dict['host']}:{vcd_dict['port']})", fg='green')
@@ -352,7 +354,7 @@ def check_cse_installation(config, check_template='*'):
                         log_headers=True,
                         log_bodies=True)
         credentials = BasicLoginCredentials(config['vcd']['username'],
-                                            'System',
+                                            SYSTEM_ORG_NAME,
                                             config['vcd']['password'])
         client.set_credentials(credentials)
 
@@ -391,8 +393,8 @@ def check_cse_installation(config, check_template='*'):
         # check that CSE is registered to vCD
         ext = APIExtension(client)
         try:
-            cse_info = ext.get_extension(CSE_EXT_NAME,
-                                         namespace=CSE_EXT_NAMESPACE)
+            cse_info = ext.get_extension(CSE_NAME,
+                                         namespace=CSE_NAMESPACE)
             if cse_info['enabled'] == 'true':
                 click.secho("CSE is registered to vCD and is currently "
                             "enabled", fg='green')
@@ -478,7 +480,7 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
                     log_headers=True,
                     log_bodies=True)
     client.set_credentials(BasicLoginCredentials(config['vcd']['username'],
-                                                 'System',
+                                                 SYSTEM_ORG_NAME,
                                                  config['vcd']['password']))
     click.secho(f"Connected to vCD as system administrator: "
                 f"{config['vcd']['host']}:{config['vcd']['port']}", fg='green')
@@ -797,14 +799,13 @@ def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
                                            retry_delay=2, socket_timeout=5)
     try:
         connection = pika.BlockingConnection(parameters)
-        click.secho(f"Connected to AMQP server: {host}:{port}", fg='green')
         channel = connection.channel()
         channel.exchange_declare(exchange=exchange_name,
                                  exchange_type=EXCHANGE_TYPE,
                                  durable=True, auto_delete=False)
     except Exception:  # TODO replace with specific exception
         LOGGER.error(traceback.format_exc())
-        click.secho(f"Couldn't create exchange '{exchange_name}'", fg='red')
+        click.secho(f"Cannot create AMQP exchange '{exchange_name}'", fg='red')
         raise
     finally:
         connection.close()
