@@ -15,6 +15,7 @@ from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.client import SIZE_1MB
+from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.platform import Platform
@@ -32,13 +33,12 @@ from container_service_extension.utils import catalog_item_exists
 from container_service_extension.utils import check_file_permissions
 from container_service_extension.utils import check_keys_and_value_types
 from container_service_extension.utils import create_and_share_catalog
-from container_service_extension.utils import CSE_EXT_NAME
-from container_service_extension.utils import CSE_EXT_NAMESPACE
+from container_service_extension.utils import CSE_NAME
+from container_service_extension.utils import CSE_NAMESPACE
 from container_service_extension.utils import EXCHANGE_TYPE
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_sha256
 from container_service_extension.utils import get_vsphere
-from container_service_extension.utils import get_sha256
 
 
 LOGGER = logging.getLogger('cse.config')
@@ -391,8 +391,8 @@ def check_cse_installation(config, check_template='*'):
         # check that CSE is registered to vCD
         ext = APIExtension(client)
         try:
-            cse_info = ext.get_extension(CSE_EXT_NAME,
-                                         namespace=CSE_EXT_NAMESPACE)
+            cse_info = ext.get_extension(CSE_NAME,
+                                         namespace=CSE_NAMESPACE)
             if cse_info['enabled'] == 'true':
                 click.secho("CSE is registered to vCD and is currently "
                             "enabled", fg='green')

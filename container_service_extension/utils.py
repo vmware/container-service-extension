@@ -6,11 +6,7 @@ import hashlib
 import logging
 import os
 import pathlib
-import random
-import socket
-import ssl
 import stat
-import string
 import sys
 from urllib.parse import urlparse
 
@@ -29,8 +25,8 @@ LOGGER = logging.getLogger('cse.utils')
 CSE_SCRIPTS_DIR = 'container_service_extension_scripts'
 
 # used for registering CSE to vCD
-CSE_EXT_NAME = 'cse'
-CSE_EXT_NAMESPACE = 'cse'
+CSE_NAME = 'cse'
+CSE_NAMESPACE = 'cse'
 EXCHANGE_TYPE = 'direct'
 
 # chunk size in bytes for file reading
@@ -213,14 +209,6 @@ def get_data_file(filename):
     return path.read_text()
 
 
-def catalog_exists(org, catalog_name):
-    try:
-        org.get_catalog(catalog_name)
-        return True
-    except EntityNotFoundException:
-        return False
-
-
 def create_and_share_catalog(org, catalog_name, catalog_desc=''):
     """Creates and shares specified catalog.
 
@@ -248,23 +236,6 @@ def create_and_share_catalog(org, catalog_name, catalog_desc=''):
     org.share_catalog(catalog_name)
     org.reload()
     return org.get_catalog(catalog_name)
-
-
-def bool_to_msg(b):
-    if b:
-        return 'success'
-    return 'fail'
-
-
-def get_sha256(file):
-    sha256 = hashlib.sha256()
-    with open(file, 'rb') as f:
-        while True:
-            data = f.read(BUF_SIZE)
-            if not data:
-                break
-            sha256.update(data)
-    return sha256.hexdigest()
 
 
 def get_vsphere(config, vapp, vm_name):
