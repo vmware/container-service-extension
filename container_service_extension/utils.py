@@ -5,7 +5,7 @@
 import click
 import hashlib
 import logging
-import os
+import pathlib
 import random
 import socket
 import ssl
@@ -24,45 +24,49 @@ from vsphere_guest_run.vsphere import VSphere
 cache = LRUCache(maxsize=1024)
 
 LOGGER = logging.getLogger('cse.utils')
+CSE_SCRIPTS_DIR = 'container_service_extension_scripts'
 
 
 def get_data_file(filename):
-    """Used to retrieve builtin script files (as str) that users have installed
-    via pip install or setup.py. Looks inside virtualenv site-packages, cwd,
-    user/global site-packages, python libs, usr bins/Cellars, as well
-    as any subdirectories in these paths named 'scripts' or 'cse'.
+    """Searches paths from sys.path to retrieve file contents
 
-    :param str filename: name of file (script) we want to get
+    Looks for @filename at paths listed by sys.path, as well as any
+    subdirectory named container_service_extension_scripts.
+    Paths along sys.path include: virtualenv site-packages, cwd,
+    user/global site-packages, python libs, usr bins/Cellars.
 
-    :return: the file contents as a string
+    :param str filename: name of file (script) we want to get.
+
+    :return: the file contents as a string.
 
     :rtype: str
+
+    :raises FileNotFoundError: if requested data file cannot be
+        found.
     """
     path = None
     for base_path in sys.path:
         possible_paths = [
-            os.path.join(base_path, filename),
-            os.path.join(base_path, 'scripts', filename),
-            os.path.join(base_path, 'cse', filename),
+            pathlib.Path(f"{base_path}/{CSE_SCRIPTS_DIR}/{filename}"),
+            pathlib.Path(f"{base_path}/{filename}"),
+            pathlib.Path(f"{base_path}/scripts/{filename}")
         ]
         for p in possible_paths:
-            if os.path.isfile(p):
+            if p.is_file():
                 path = p
                 break
         if path is not None:
             break
 
-    content = ''
     if path is None:
-        LOGGER.error('Data file not found!')
-        click.secho('Data file not found!', fg='yellow')
-        return content
+        msg = f"Requested data file '{filename}' not found"
+        LOGGER.error(msg)
+        click.secho(msg, fg='red')
+        raise FileNotFoundError(msg)
 
-    with open(path) as f:
-        content = f.read()
     LOGGER.info(f"Found data file: {path}")
     click.secho(f"Found data file: {path}", fg='green')
-    return content
+    return path.read_text()
 
 
 def hex_chunks(s):
