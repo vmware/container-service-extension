@@ -5,6 +5,7 @@
 import click
 import hashlib
 import logging
+import os
 import pathlib
 import random
 import socket
