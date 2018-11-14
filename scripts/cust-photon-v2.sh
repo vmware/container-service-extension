@@ -44,6 +44,13 @@ docker pull weaveworks/weave-kube:2.3.0
 export kubever=$(kubectl version --client | base64 | tr -d '\n')
 wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&v=2.3.0"
 
+
+#Installing NFS
+echo 'installing required software for NFS'
+tdnf -y install nfs-utils
+systemctl stop nfs-server.service
+systemctl disable nfs-server.service
+
 ### common
 # echo 'upgrading the system'
 # tdnf -yq distro-sync --refresh
