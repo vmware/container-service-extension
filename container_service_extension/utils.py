@@ -21,7 +21,9 @@ from cachetools import LRUCache
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
+from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.platform import Platform
+from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
 from vsphere_guest_run.vsphere import VSphere
 
@@ -205,80 +207,132 @@ def catalog_exists(org, catalog_name):
         return False
 
 
-def catalog_item_exists(org, catalog_name, catalog_item):
+def catalog_item_exists(org, catalog_name, catalog_item_name):
     """Boolean function to check if catalog item exists (name check).
 
     :param pyvcloud.vcd.org.Org org:
     :param str catalog_name:
-    :param str catalog_item:
+    :param str catalog_item_name:
 
     :return: True if catalog item exists, False otherwise.
 
     :rtype: bool
     """
     try:
-        org.get_catalog_item(catalog_name, catalog_item)
+        org.get_catalog_item(catalog_name, catalog_item_name)
         return True
     except EntityNotFoundException:
         return False
 
 
-def upload_ova_to_catalog(client, org, catalog_name, filepath, update=False):
+def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
+                          org_name=None):
     """Uploads local ova file to vCD catalog.
 
     :param pyvcloud.vcd.client.Client client:
     :param str filepath: file path to the .ova file.
-    :param pyvcloud.vcd.org.Org org: Org to upload to.
     :param str catalog_name: name of catalog.
     :param bool update: signals whether to overwrite an existing catalog
         item with this new one.
+    :param str org_name: which org to use. If None, uses currently logged-in
+        org from @client.
 
     :raises pyvcloud.vcd.exceptions.EntityNotFoundException if catalog
         does not exist.
     :raises pyvcloud.vcd.exceptions.UploadException if upload fails.
     """
-    catalog_item = pathlib.Path(filepath).name
+    org = get_org(client, org_name=org_name)
+    catalog_item_name = pathlib.Path(filepath).name
     if update:
         try:
             click.secho(f"Update flag set. Checking catalog '{catalog_name}' "
-                        f"for '{catalog_item}'", fg='yellow')
-            org.delete_catalog_item(catalog_name, catalog_item)
+                        f"for '{catalog_item_name}'", fg='yellow')
+            org.delete_catalog_item(catalog_name, catalog_item_name)
             org.reload()
-            wait_for_catalog_item_to_resolve(client, org, catalog_name,
-                                             catalog_item)
+            wait_for_catalog_item_to_resolve(client, catalog_name,
+                                             catalog_item_name,
+                                             org_name=org_name)
             click.secho(f"Update flag set. Checking catalog '{catalog_name}' "
-                        f"for '{catalog_item}'", fg='yellow')
+                        f"for '{catalog_item_name}'", fg='yellow')
         except EntityNotFoundException:
             pass
     else:
         try:
-            org.get_catalog_item(catalog_name, catalog_item)
-            click.secho(f"'{catalog_item}' already exists in catalog "
+            org.get_catalog_item(catalog_name, catalog_item_name)
+            click.secho(f"'{catalog_item_name}' already exists in catalog "
                         f"'{catalog_name}'", fg='green')
             return
         except EntityNotFoundException:
             pass
 
-    click.secho(f"Uploading '{catalog_item}' to catalog '{catalog_name}'",
+    click.secho(f"Uploading '{catalog_item_name}' to catalog '{catalog_name}'",
                 fg='yellow')
     org.upload_ovf(catalog_name, filepath)
     org.reload()
-    wait_for_catalog_item_to_resolve(client, org, catalog_name, catalog_item)
-    click.secho(f"Uploaded '{catalog_item}' to catalog '{catalog_name}'",
+    wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
+                                     org_name=org_name)
+    click.secho(f"Uploaded '{catalog_item_name}' to catalog '{catalog_name}'",
                 fg='green')
 
 
-def wait_for_catalog_item_to_resolve(client, org, catalog_name, catalog_item):
+def wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
+                                     org_name=None):
     """Waits for catalog item's most recent task to resolve.
 
     :param pyvcloud.vcd.client.Client client:
-    :param pyvcloud.vcd.org.Org org:
     :param str catalog_name:
-    :param str catalog_item:
+    :param str catalog_item_name:
+    :param str org_name: which org to use. If unused, gets the currently
+        logged-in org from @client.
+
+    :raises EntityNotFoundException: if the org or catalog or catalog item
+        could not be found.
     """
-    item = org.get_catalog_item(catalog_name, catalog_item)
+    org = get_org(client, org_name=org_name)
+    item = org.get_catalog_item(catalog_name, catalog_item_name)
     resource = client.get_resource(item.Entity.get('href'))
     client.get_task_monitor().wait_for_success(resource.Tasks.Task[0])
+
+
+def get_org(client, org_name=None):
+    """Gets the specified or currently logged-in Org object.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str org_name: which org to use. If None, uses currently logged-in
+        org from @client.
+
+    :return: pyvcloud Org object
+
+    :rtype: pyvcloud.vcd.org.Org
+
+    :raises EntityNotFoundException: if the org could not be found.
+    """
+    if org_name is None:
+        org = Org(client, resource=client.get_org())
+    else:
+        org = Org(client, resource=client.get_org_by_name(org_name))
+    org.reload()
+    return org
+
+
+def get_vdc(client, vdc_name, org_name=None):
+    """Gets the specified VDC object.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str vdc_name:
+    :param str org_name: which org to use. If None, uses currently logged-in
+        org from @client.
+
+    :return: pyvcloud VDC object
+
+    :rtype: pyvcloud.vcd.vdc.VDC
+
+    :raises EntityNotFoundException: if the vdc could not be found.
+    """
+    org = get_org(client, org_name=org_name)
+    vdc = VDC(client, resource=org.get_vdc(vdc_name))
+    vdc.reload()
+    return vdc
 
 
 def get_data_file(filename):
@@ -426,4 +480,3 @@ def wait_until_tools_ready(vapp, vsphere, callback=vgr_callback()):
     moid = vapp.get_vm_moid(vapp.name)
     vm = vsphere.get_vm_by_moid(moid)
     vsphere.wait_until_tools_ready(vm, sleep=5, callback=callback)
-
