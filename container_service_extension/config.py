@@ -20,7 +20,6 @@ from pyvcloud.vcd.exceptions import OperationNotSupportedException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.platform import Platform
 from pyvcloud.vcd.vapp import VApp
-from pyvcloud.vcd.vdc import VDC
 from vcd_cli.utils import stdout
 from vcd_cli.utils import to_dict
 from vsphere_guest_run.vsphere import VSphere
@@ -40,6 +39,8 @@ from container_service_extension.utils import CSE_EXT_NAME
 from container_service_extension.utils import CSE_EXT_NAMESPACE
 from container_service_extension.utils import download_file
 from container_service_extension.utils import get_data_file
+from container_service_extension.utils import get_org
+from container_service_extension.utils import get_vdc
 from container_service_extension.utils import get_vsphere
 from container_service_extension.utils import upload_ova_to_catalog
 from container_service_extension.utils import vgr_callback
@@ -390,7 +391,7 @@ def check_cse_installation(config, check_template='*'):
                 msg = f"AMQP exchange '{amqp['exchange']}' does not exist"
                 click.secho(msg, fg='red')
                 err_msgs.append(msg)
-        except Exception:
+        except Exception:  # TODO replace raw exception with specific
             msg = f"Could not connect to AMQP exchange '{amqp['exchange']}'"
             click.secho(msg, fg='red')
             err_msgs.append(msg)
@@ -424,13 +425,13 @@ def check_cse_installation(config, check_template='*'):
                 if check_template != '*' and \
                         check_template != template['name']:
                     continue
-                catalog_item = template['catalog_item']
-                if catalog_item_exists(org, catalog_name, catalog_item):
-                    click.secho(f"Found template '{catalog_item}' in catalog "
-                                f"'{catalog_name}'", fg='green')
+                catalog_item_name = template['catalog_item']
+                if catalog_item_exists(org, catalog_name, catalog_item_name):
+                    click.secho(f"Found template '{catalog_item_name}' in "
+                                f"catalog '{catalog_name}'", fg='green')
                 else:
-                    msg = f"Template '{catalog_item}' not found in catalog " \
-                          f"'{catalog_name}'"
+                    msg = f"Template '{catalog_item_name}' not found in " \
+                          f"catalog '{catalog_name}'"
                     click.secho(msg, fg='red')
                     err_msgs.append(msg)
         else:
@@ -524,7 +525,6 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
         org = Org(client, resource=org_resource)
         click.echo('Find org \'%s\': %s' % (org.get_name(), bool_to_msg(True)))
         vdc_resource = org.get_vdc(config['broker']['vdc'])
-        vdc = VDC(client, resource=vdc_resource)
         click.echo('Find vdc \'%s\': %s' % (vdc_resource.get('name'),
                                             bool_to_msg(True)))
 
@@ -539,42 +539,40 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
             click.secho(f"Created catalog {catalog_name}", fg='blue')
         org.share_catalog(catalog_name)
         org.reload()
-        catalog = org.get_catalog(catalog_name)
 
         for template in config['broker']['templates']:
             if template_name == '*' or template['name'] == template_name:
-                create_template(ctx, client, config, template, catalog, org,
-                                vdc, update=update, no_capture=no_capture,
-                                ssh_key=ssh_key)
+                create_template(ctx, client, config, template, update=update,
+                                no_capture=no_capture, ssh_key=ssh_key)
 
 
-def create_template(ctx, client, config, template_config, catalog, org, vdc,
-                    update=False, no_capture=False, ssh_key=None):
+def create_template(ctx, client, config, template_config, update=False,
+                    no_capture=False, ssh_key=None):
     """Handles template creation phase during CSE installation.
 
     :param click.core.Context ctx: click context object.
     :param pyvcloud.vcd.client.Client client:
     :param dict config: CSE config.
     :param dict template_config: specific template section of @config.
-    :param lxml.objectify.ObjectifiedElement catalog: XML representation of
-        a catalog.
-    :param pyvcloud.vcd.org.Org org:
-    :param pyvcloud.vcd.vdc.VDC vdc:
     :param bool update: if True and templates already exist in vCD, overwrites
         existing templates.
     :param bool no_capture: if True, temporary vApp will not be captured or
         destroyed, so the user can ssh into the VM and debug.
     :param str ssh_key: public ssh key to place into the template vApp(s).
     """
+    org_name = config['broker']['org']
+    vdc_name = config['broker']['vdc']
+    org = get_org(client, org_name=org_name)
+    vdc = get_vdc(client, vdc_name, org_name=org_name)
     ctx.obj = {'client': client}
-    catalog_name = catalog.get('name')
-    catalog_item = template_config['catalog_item']
+    catalog_name = config['broker']['catalog']
+    template_name = template_config['catalog_item']
     vapp_name = template_config['temp_vapp']
     ova_name = template_config['source_ova_name']
     ova_url = template_config['source_ova']
 
-    if not update and catalog_item_exists(org, catalog_name, catalog_item):
-        click.secho(f"Found template '{catalog_item}' in catalog "
+    if not update and catalog_item_exists(org, catalog_name, template_name):
+        click.secho(f"Found template '{template_name}' in catalog "
                     f"'{catalog_name}'", fg='green')
         return
 
@@ -583,17 +581,17 @@ def create_template(ctx, client, config, template_config, catalog, org, vdc,
         click.secho(f"Update flag set. If template, source ova file, and "
                     f"temporary vApp exist, they will be deleted", fg='yellow')
         try:
-            org.delete_catalog_item(catalog_name, catalog_item)
-            wait_for_catalog_item_to_resolve(client, org, catalog_name,
-                                             catalog_item)
+            org.delete_catalog_item(catalog_name, template_name)
+            wait_for_catalog_item_to_resolve(client, catalog_name,
+                                             template_name, org_name=org_name)
             org.reload()
             click.secho("Deleted vApp template", fg='green')
         except EntityNotFoundException:
             pass
         try:
             org.delete_catalog_item(catalog_name, ova_name)
-            wait_for_catalog_item_to_resolve(client, org, catalog_name,
-                                             ova_name)
+            wait_for_catalog_item_to_resolve(client, catalog_name,
+                                             ova_name, org_name=org_name)
             org.reload()
             click.secho("Deleted ova file", fg='green')
         except EntityNotFoundException:
@@ -606,7 +604,7 @@ def create_template(ctx, client, config, template_config, catalog, org, vdc,
         except EntityNotFoundException:
             pass
 
-    click.secho(f"Creating template '{catalog_item}' in catalog "
+    click.secho(f"Creating template '{template_name}' in catalog "
                 f"'{catalog_name}'", fg='yellow')
     try:
         vapp = VApp(client, resource=vdc.get_vapp(vapp_name))
@@ -620,21 +618,23 @@ def create_template(ctx, client, config, template_config, catalog, org, vdc,
             ova_filepath = f"cse_cache/{ova_name}"
             download_file(ova_url, ova_filepath,
                           sha256=template_config['sha256_ova'])
-            upload_ova_to_catalog(client, org, catalog_name, ova_filepath)
+            upload_ova_to_catalog(client, catalog_name, ova_filepath,
+                                  org_name=org_name)
 
-        vapp = create_temp_vapp(ctx, client, config, template_config, vdc,
-                                ssh_key)
+        vapp = _create_temp_vapp(ctx, client, config, template_config, ssh_key)
 
     if no_capture:
         click.secho(f"'no-capture' flag set. Not capturing vApp '{vapp.name}' "
                     f"as a template", fg='yellow')
         return
 
-    click.secho(f"Creating template '{catalog_item}' from vApp '{vapp.name}'",
+    click.secho(f"Creating template '{template_name}' from vApp '{vapp.name}'",
                 fg='yellow')
-    capture_vapp_to_template(ctx, org, catalog, vapp, catalog_item,
-                             desc=template_config['description'])
-    click.secho(f"Created template '{catalog_item}' from vApp '{vapp_name}'",
+    capture_vapp_to_template(ctx, vapp, catalog_name, template_name,
+                             desc=template_config['description'],
+                             power_on=not template_config['cleanup'],
+                             org_name=org_name)
+    click.secho(f"Created template '{template_name}' from vApp '{vapp_name}'",
                 fg='green')
 
     if template_config['cleanup']:
@@ -645,7 +645,7 @@ def create_template(ctx, client, config, template_config, catalog, org, vdc,
         click.secho(f"Deleted vApp '{vapp_name}'", fg='green')
 
 
-def create_temp_vapp(ctx, client, config, template_config, vdc, ssh_key):
+def _create_temp_vapp(ctx, client, config, template_config, ssh_key):
     """Handles temporary VApp creation and customization step of CSE install.
 
     Initializes and customizes VApp.
@@ -654,12 +654,11 @@ def create_temp_vapp(ctx, client, config, template_config, vdc, ssh_key):
     :param pyvcloud.vcd.client.Client client:
     :param dict config: CSE config.
     :param dict template_config: specific template config section of @config.
-    :param pyvcloud.vcd.vdc.VDC vdc:
     :param str ssh_key: ssh key to use in temporary VApp's VM. Can be None.
 
     :return: VApp object for temporary VApp.
 
-    :rtype: pyvcloud.vdc.vapp.VApp
+    :rtype: pyvcloud.vcd.vapp.VApp
     """
     vapp_name = template_config['temp_vapp']
     init_script = get_data_file(f"init-{template_config['name']}.sh")
@@ -671,26 +670,28 @@ def create_temp_vapp(ctx, client, config, template_config, vdc, ssh_key):
             chmod -R go-rwx /root/.ssh
             """
     click.secho(f"Creating vApp '{vapp_name}'", fg='yellow')
-    vapp = create_vapp_from_config(client, vdc, config, template_config,
-                                   init_script)
+    vapp = _create_vapp_from_config(client, config, template_config,
+                                    init_script)
     click.secho(f"Created vApp '{vapp_name}'", fg='green')
 
     click.secho(f"Customizing vApp '{vapp_name}'", fg='yellow')
     cust_script = get_data_file(f"cust-{template_config['name']}.sh")
     ova_name = template_config['source_ova_name']
     is_photon = True if 'photon' in ova_name else False
-    customize_vm(ctx, config, vapp, vapp.name, cust_script,
-                 is_photon=is_photon)
+    _customize_vm(ctx, config, vapp, vapp.name, cust_script,
+                  is_photon=is_photon)
     click.secho(f"Customized vApp '{vapp_name}'", fg='green')
 
     return vapp
 
 
-def create_vapp_from_config(client, vdc, config, template_config, init_script):
+def _create_vapp_from_config(client, config, template_config, init_script):
     """Creates a VApp from a specific template config.
 
+    This vApp is intended to be captured as a vApp template for CSE.
+    Fence mode and network adapter type are fixed.
+
     :param pyvcloud.vcd.client.Client client:
-    :param pyvcloud.vcd.vdc.VDC vdc:
     :param dict config: CSE config.
     :param dict template_config: specific template section of CSE config.
     :param str init_script: initialization script for VApp.
@@ -699,6 +700,8 @@ def create_vapp_from_config(client, vdc, config, template_config, init_script):
 
     :rtype: pyvcloud.vcd.vapp.VApp
     """
+    vdc = get_vdc(client, config['broker']['vdc'],
+                  org_name=config['broker']['org'])
     vapp_sparse_resource = vdc.instantiate_vapp(
         template_config['temp_vapp'],
         config['broker']['catalog'],
@@ -724,7 +727,7 @@ def create_vapp_from_config(client, vdc, config, template_config, init_script):
     return vapp
 
 
-def customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
+def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
     """Customizes a VM in a VApp using the customization script @cust_script.
 
     :param click.core.Context ctx: click context object. Needed to pass to
@@ -759,7 +762,7 @@ def customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
 
     try:
         result = vs.execute_script_in_guest(
-            vs.get_vm_by_moid(vapp.get_vm_moid((vm_name))),
+            vs.get_vm_by_moid(vapp.get_vm_moid(vm_name)),
             'root',
             password_auto,
             cust_script,
@@ -793,20 +796,26 @@ def customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
         raise Exception(msg)
 
 
-def capture_vapp_to_template(ctx, org, catalog, vapp, catalog_item, desc=''):
-    """Captures existing VApp as a template in @catalog.
+def capture_vapp_to_template(ctx, vapp, catalog_name, catalog_item_name,
+                             desc='', power_on=False, org_name=None):
+    """Shutdown and capture existing VApp as a template in @catalog.
 
     VApp should have tools ready, or shutdown will fail, and VApp will be
     unavailable to be captured.
 
     :param click.core.Context ctx: click context object needed for stdout.
-    :param pyvcloud.vcd.org.Org org:
-    :param lxml.objectify.ObjectifiedElement catalog: XML representation of
-        a catalog.
     :param pyvcloud.vcd.vapp.VApp vapp:
-    :param str catalog_item: catalog item name for the template.
+    :param str catalog_name:
+    :param str catalog_item_name: catalog item name for the template.
     :param str desc: template description.
+    :param bool power_on: if True, turns on VApp after capturing.
+    :param str org_name: which org to use. If None, uses currently logged-in
+        org from @client.
+
+    :raises EntityNotFoundException: if the org could not be found.
     """
+    org = get_org(vapp.client, org_name=org_name)
+    catalog = org.get_catalog(catalog_name)
     try:
         task = vapp.shutdown()
         stdout(task, ctx=ctx)
@@ -814,10 +823,15 @@ def capture_vapp_to_template(ctx, org, catalog, vapp, catalog_item, desc=''):
     except OperationNotSupportedException:
         pass
 
-    task = org.capture_vapp(catalog, vapp.href, catalog_item, desc,
+    task = org.capture_vapp(catalog, vapp.href, catalog_item_name, desc,
                             customize_on_instantiate=True, overwrite=True)
     stdout(task, ctx=ctx)
     vapp.reload()
+
+    if power_on:
+        task = vapp.power_on()
+        stdout(task, ctx=ctx)
+        vapp.reload()
 
 
 def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
