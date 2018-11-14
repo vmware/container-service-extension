@@ -2,10 +2,6 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 import logging
-import os
-import time
-import stat
-import sys
 import traceback
 from urllib.parse import urlparse
 
@@ -44,7 +40,6 @@ from container_service_extension.utils import CSE_EXT_NAME
 from container_service_extension.utils import CSE_EXT_NAMESPACE
 from container_service_extension.utils import download_file
 from container_service_extension.utils import get_data_file
-from container_service_extension.utils import get_sha256
 from container_service_extension.utils import get_vsphere
 from container_service_extension.utils import upload_ova_to_catalog
 from container_service_extension.utils import vgr_callback
@@ -612,7 +607,7 @@ def create_template(ctx, client, config, template_config, catalog, org, vdc,
             pass
 
     click.secho(f"Creating template '{catalog_item}' in catalog "
-                f"'{catalog_name}'", fg='green')
+                f"'{catalog_name}'", fg='yellow')
     try:
         vapp = VApp(client, resource=vdc.get_vapp(vapp_name))
         click.secho(f"Found vApp '{vapp_name}'", fg='green')
@@ -794,6 +789,7 @@ def customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
     if len(result) == 0 or result[0] != 0:
         msg = 'Failed to customize VM'
         click.secho(msg, fg='red')
+        # TODO replace raw exception with specific exception
         raise Exception(msg)
 
 

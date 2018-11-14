@@ -49,22 +49,6 @@ _type_to_string = {
 }
 
 
-def catalog_exists(org, catalog_name):
-    try:
-        org.get_catalog(catalog_name)
-        return True
-    except EntityNotFoundException:
-        return False
-
-
-def catalog_item_exists(org, catalog_name, catalog_item):
-    try:
-        org.get_catalog_item(catalog_name, catalog_item)
-        return True
-    except EntityNotFoundException:
-        return False
-
-
 def bool_to_msg(value):
     if value:
         return 'success'
@@ -189,7 +173,7 @@ def download_file(url, filepath, sha256=None):
     """
     path = pathlib.Path(filepath)
     if path.is_file() and (sha256 is None or get_sha256(filepath) == sha256):
-        click.secho(f"Skipping download of '{filepath}'. File already exists.",
+        click.secho(f"Skipping download to '{filepath}' (file already exists)",
                     fg='green')
         return
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -451,13 +435,3 @@ def wait_until_tools_ready(vapp, vsphere, callback=vgr_callback()):
     vm = vsphere.get_vm_by_moid(moid)
     vsphere.wait_until_tools_ready(vm, sleep=5, callback=callback)
 
-
-def get_sha256(filepath):
-    sha256 = hashlib.sha256()
-    with open(filepath, 'rb') as f:
-        while True:
-            data = f.read(BUF_SIZE)
-            if not data:
-                break
-            sha256.update(data)
-    return sha256.hexdigest()
