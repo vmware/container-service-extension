@@ -222,7 +222,7 @@ def catalog_item_exists(org, catalog_name, catalog_item_name):
 
 
 def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
-                          org_name=None):
+                          org=None, org_name=None):
     """Uploads local ova file to vCD catalog.
 
     :param pyvcloud.vcd.client.Client client:
@@ -230,14 +230,16 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
     :param str catalog_name: name of catalog.
     :param bool update: signals whether to overwrite an existing catalog
         item with this new one.
-    :param str org_name: which org to use. If None, uses currently logged-in
-        org from @client.
+    :param pyvcloud.vcd.org.Org org: specific org to use.
+    :param str org_name: specific org to use if @org is not given.
+        If None, uses currently logged-in org from @client.
 
     :raises pyvcloud.vcd.exceptions.EntityNotFoundException if catalog
         does not exist.
     :raises pyvcloud.vcd.exceptions.UploadException if upload fails.
     """
-    org = get_org(client, org_name=org_name)
+    if org is None:
+        org = get_org(client, org_name=org_name)
     catalog_item_name = pathlib.Path(filepath).name
     if update:
         try:
@@ -246,8 +248,7 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
             org.delete_catalog_item(catalog_name, catalog_item_name)
             org.reload()
             wait_for_catalog_item_to_resolve(client, catalog_name,
-                                             catalog_item_name,
-                                             org_name=org_name)
+                                             catalog_item_name, org=org)
             click.secho(f"Update flag set. Checking catalog '{catalog_name}' "
                         f"for '{catalog_item_name}'", fg='yellow')
         except EntityNotFoundException:
@@ -266,25 +267,27 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
     org.upload_ovf(catalog_name, filepath)
     org.reload()
     wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
-                                     org_name=org_name)
+                                     org=org)
     click.secho(f"Uploaded '{catalog_item_name}' to catalog '{catalog_name}'",
                 fg='green')
 
 
 def wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
-                                     org_name=None):
+                                     org=None, org_name=None):
     """Waits for catalog item's most recent task to resolve.
 
     :param pyvcloud.vcd.client.Client client:
     :param str catalog_name:
     :param str catalog_item_name:
-    :param str org_name: which org to use. If unused, gets the currently
-        logged-in org from @client.
+    :param pyvcloud.vcd.org.Org org: specific org to use.
+    :param str org_name: specific org to use if @org is not given.
+        If None, uses currently logged-in org from @client.
 
     :raises EntityNotFoundException: if the org or catalog or catalog item
         could not be found.
     """
-    org = get_org(client, org_name=org_name)
+    if org is None:
+        org = get_org(client, org_name=org_name)
     item = org.get_catalog_item(catalog_name, catalog_item_name)
     resource = client.get_resource(item.Entity.get('href'))
     client.get_task_monitor().wait_for_success(resource.Tasks.Task[0])
@@ -311,13 +314,14 @@ def get_org(client, org_name=None):
     return org
 
 
-def get_vdc(client, vdc_name, org_name=None):
+def get_vdc(client, vdc_name, org=None, org_name=None):
     """Gets the specified VDC object.
 
     :param pyvcloud.vcd.client.Client client:
     :param str vdc_name:
-    :param str org_name: which org to use. If None, uses currently logged-in
-        org from @client.
+    :param pyvcloud.vcd.org.Org org: specific org to use.
+    :param str org_name: specific org to use if @org is not given.
+        If None, uses currently logged-in org from @client.
 
     :return: pyvcloud VDC object
 
@@ -325,7 +329,8 @@ def get_vdc(client, vdc_name, org_name=None):
 
     :raises EntityNotFoundException: if the vdc could not be found.
     """
-    org = get_org(client, org_name=org_name)
+    if org is None:
+        org = get_org(client, org_name=org_name)
     vdc = VDC(client, resource=org.get_vdc(vdc_name))
     vdc.reload()
     return vdc
