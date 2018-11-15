@@ -2,19 +2,15 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import click
 import hashlib
 import logging
 import os
 import pathlib
-import random
-import socket
-import ssl
 import stat
-import string
 import sys
 from urllib.parse import urlparse
 
+import click
 from cachetools import LRUCache
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
@@ -27,10 +23,10 @@ from vsphere_guest_run.vsphere import VSphere
 cache = LRUCache(maxsize=1024)
 LOGGER = logging.getLogger('cse.utils')
 CSE_SCRIPTS_DIR = 'container_service_extension_scripts'
+SYSTEM_ORG_NAME = 'System'
 
-# used for registering CSE to vCD
-CSE_EXT_NAME = 'cse'
-CSE_EXT_NAMESPACE = 'cse'
+# used to set up and start AMQP exchange
+EXCHANGE_TYPE = 'direct'
 
 # chunk size in bytes for file reading
 BUF_SIZE = 65536
@@ -171,12 +167,12 @@ def check_file_permissions(filename):
 
 
 def get_data_file(filename):
-    """Searches paths from sys.path to retrieve file contents
+    """Retrieves CSE script file content as a string.
 
-    Looks for @filename at paths listed by sys.path, as well as any
-    subdirectory named container_service_extension_scripts.
-    Paths along sys.path include: virtualenv site-packages, cwd,
-    user/global site-packages, python libs, usr bins/Cellars.
+    Used to retrieve builtin script files that users have installed
+    via pip install or setup.py. Looks inside virtualenv site-packages, cwd,
+    user/global site-packages, python libs, usr bins/Cellars, as well
+    as any subdirectories in these paths named 'scripts' or 'cse'.
 
     :param str filename: name of file (script) we want to get.
 
@@ -212,24 +208,33 @@ def get_data_file(filename):
     return path.read_text()
 
 
-def hex_chunks(s):
-    return [s[i:i + 2] for i in range(0, len(s), 2)]
+def create_and_share_catalog(org, catalog_name, catalog_desc=''):
+    """Creates and shares specified catalog.
 
+    If catalog does not exist in vCD, create it. Share the specified catalog
+    to all orgs.
 
-def get_thumbprint(host, port):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(10)
-    wrappedSocket = ssl.wrap_socket(sock)
-    wrappedSocket.connect((host, port))
-    der_cert_bin = wrappedSocket.getpeercert(True)
-    thumb_sha1 = hashlib.sha1(der_cert_bin).hexdigest()
-    wrappedSocket.close()
-    return ':'.join(map(str, hex_chunks(thumb_sha1))).upper()
+    :param pyvcloud.vcd.org.Org org:
+    :param str catalog_name:
+    :param str catalog_desc:
 
+    :return: XML representation of specified catalog.
 
-def random_word(length):
-    letters = string.ascii_lowercase
-    return ''.join(random.choice(letters) for i in range(length))
+    :rtype: lxml.objectify.ObjectifiedElement
+
+    :raises pyvcloud.vcd.exceptions.EntityNotFoundException: if catalog sharing
+        fails due to catalog creation failing.
+    """
+    if catalog_exists(org, catalog_name):
+        click.secho(f"Found catalog '{catalog_name}'", fg='green')
+    else:
+        click.secho(f"Creating catalog '{catalog_name}'", fg='yellow')
+        org.create_catalog(catalog_name, catalog_desc)
+        click.secho(f"Created catalog '{catalog_name}'", fg='green')
+        org.reload()
+    org.share_catalog(catalog_name)
+    org.reload()
+    return org.get_catalog(catalog_name)
 
 
 def get_vsphere(config, vapp, vm_name):
@@ -244,7 +249,7 @@ def get_vsphere(config, vapp, vm_name):
             log_headers=True,
             log_bodies=True)
         client_sysadmin.set_credentials(
-            BasicLoginCredentials(config['vcd']['username'], 'System',
+            BasicLoginCredentials(config['vcd']['username'], SYSTEM_ORG_NAME,
                                   config['vcd']['password']))
 
         vapp_sys = VApp(client_sysadmin, href=vapp.href)

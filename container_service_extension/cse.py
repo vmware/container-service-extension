@@ -222,8 +222,9 @@ def install(ctx, config, template, update, no_capture, ssh_key_file,
         ssh_key = None
         if ssh_key_file is not None:
             ssh_key = ssh_key_file.read()
-        install_cse(ctx, config, template, update, no_capture, ssh_key,
-                    amqp_install, ext_install)
+        install_cse(ctx, config_file_name=config, template_name=template,
+                    update=update, no_capture=no_capture, ssh_key=ssh_key,
+                    amqp_install=amqp_install, ext_install=ext_install)
 
 
 @cli.command(short_help='run service')
