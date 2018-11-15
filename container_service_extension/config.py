@@ -24,24 +24,18 @@ from vcd_cli.utils import stdout
 from vcd_cli.utils import to_dict
 from vsphere_guest_run.vsphere import VSphere
 
-from container_service_extension.utils import bool_to_msg
 from container_service_extension.utils import catalog_exists
 from container_service_extension.utils import catalog_item_exists
 from container_service_extension.utils import check_file_permissions
 from container_service_extension.utils import check_keys_and_value_types
 from container_service_extension.utils import create_and_share_catalog
-from container_service_extension.utils import EXCHANGE_TYPE
-from container_service_extension.utils import get_data_file
-from container_service_extension.utils import get_sha256
-from container_service_extension.utils import get_vsphere
-from container_service_extension.utils import SYSTEM_ORG_NAME
-from container_service_extension.utils import CSE_EXT_NAME
-from container_service_extension.utils import CSE_EXT_NAMESPACE
 from container_service_extension.utils import download_file
+from container_service_extension.utils import EXCHANGE_TYPE
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_org
 from container_service_extension.utils import get_vdc
 from container_service_extension.utils import get_vsphere
+from container_service_extension.utils import SYSTEM_ORG_NAME
 from container_service_extension.utils import upload_ova_to_catalog
 from container_service_extension.utils import vgr_callback
 from container_service_extension.utils import wait_until_tools_ready
@@ -477,73 +471,53 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
     config = get_validated_config(config_file_name)
     click.secho(f"Installing CSE on vCloud Director using config file "
                 f"'{config_file_name}'", fg='yellow')
-
     org_name = config['broker']['org']
-    vdc_name = config['broker']['vdc']
     catalog_name = config['broker']['catalog']
+    client = None
+    try:
+        client = Client(config['vcd']['host'],
+                        api_version=config['vcd']['api_version'],
+                        verify_ssl_certs=config['vcd']['verify'],
+                        log_file='cse-install.log',
+                        log_headers=True,
+                        log_bodies=True)
+        credentials = BasicLoginCredentials(config['vcd']['username'],
+                                            SYSTEM_ORG_NAME,
+                                            config['vcd']['password'])
+        client.set_credentials(credentials)
+        click.secho(f"Connected to vCD as system administrator: "
+                    f"{config['vcd']['host']}:{config['vcd']['port']}",
+                    fg='green')
 
-    client = Client(config['vcd']['host'],
-                    api_version=config['vcd']['api_version'],
-                    verify_ssl_certs=config['vcd']['verify'],
-                    log_file='cse-install.log',
-                    log_headers=True,
-                    log_bodies=True)
-    client.set_credentials(BasicLoginCredentials(config['vcd']['username'],
-                                                 SYSTEM_ORG_NAME,
-                                                 config['vcd']['password']))
-    click.secho(f"Connected to vCD as system administrator: "
-                f"{config['vcd']['host']}:{config['vcd']['port']}", fg='green')
-    org = Org(client, resource=client.get_org_by_name(org_name))
-    click.secho(f"Found organization '{org_name}'", fg='green')
-    vdc_resource = org.get_vdc(vdc_name)
-    click.secho(f"Found VDC '{vdc_name}'", fg='green')
+        # configure amqp
+        amqp = config['amqp']
+        create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
+                             amqp['vhost'], amqp['ssl'], amqp['username'],
+                             amqp['password'])
+        if should_configure_amqp(client, amqp, amqp_install):
+            configure_vcd_amqp(client, amqp['exchange'], amqp['host'],
+                               amqp['port'], amqp['prefix'],
+                               amqp['ssl_accept_all'], amqp['ssl'],
+                               amqp['vhost'], amqp['username'],
+                               amqp['password'])
 
-    # configure amqp
-    amqp = config['amqp']
-    create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
-                         amqp['vhost'], amqp['ssl'], amqp['username'],
-                         amqp['password'])
-    if should_configure_amqp(client, amqp, amqp_install):
-        configure_vcd_amqp(client, amqp['exchange'], amqp['host'],
-                           amqp['port'], amqp['prefix'],
-                           amqp['ssl_accept_all'], amqp['ssl'],
-                           amqp['vhost'], amqp['username'],
-                           amqp['password'])
+        # register cse as extension to vCD
+        if should_register_cse(client, ext_install):
+            register_cse(client, amqp['routing_key'], amqp['exchange'])
 
-    # register cse as extension to vCD
-    if should_register_cse(client, ext_install):
-        register_cse(client, amqp['routing_key'], amqp['exchange'])
+        # set up cse catalog
+        org = get_org(client, org_name=org_name)
+        create_and_share_catalog(org, catalog_name,
+                                 catalog_desc='CSE templates')
 
-    # set up cse catalog
-    catalog = create_and_share_catalog(org, catalog_name,
-                                       catalog_desc='CSE templates')
-
-    # create, customize, capture VM templates
-    click.secho('Installing  \'%s\' service broker' % config['broker']['type'])
-    if config['broker']['type'] == 'default':
-        org_resource = client.get_org_by_name(config['broker']['org'])
-        org = Org(client, resource=org_resource)
-        click.echo('Find org \'%s\': %s' % (org.get_name(), bool_to_msg(True)))
-        vdc_resource = org.get_vdc(config['broker']['vdc'])
-        click.echo('Find vdc \'%s\': %s' % (vdc_resource.get('name'),
-                                            bool_to_msg(True)))
-
-        catalog_name = config['broker']['catalog']
-        try:
-            org.get_catalog(catalog_name)
-            click.echo(f"Found catalog {catalog_name}")
-        except EntityNotFoundException:
-            click.secho(f"Creating catalog {catalog_name}", fg='green')
-            org.create_catalog(catalog_name, 'CSE Catalog')
-            org.reload()
-            click.secho(f"Created catalog {catalog_name}", fg='blue')
-        org.share_catalog(catalog_name)
-        org.reload()
-
+        # create, customize, capture VM templates
         for template in config['broker']['templates']:
             if template_name == '*' or template['name'] == template_name:
                 create_template(ctx, client, config, template, update=update,
                                 no_capture=no_capture, ssh_key=ssh_key)
+    finally:
+        if client is not None:
+            client.logout()
 
 
 def create_template(ctx, client, config, template_config, update=False,

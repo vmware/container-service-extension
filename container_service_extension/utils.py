@@ -6,10 +6,7 @@ import hashlib
 import logging
 import os
 import pathlib
-import random
 import requests
-import socket
-import ssl
 import stat
 import sys
 import traceback
@@ -308,9 +305,9 @@ def get_org(client, org_name=None):
     """
     if org_name is None:
         org = Org(client, resource=client.get_org())
+        org.reload()
     else:
         org = Org(client, resource=client.get_org_by_name(org_name))
-    org.reload()
     return org
 
 
