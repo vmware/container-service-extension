@@ -6,8 +6,10 @@ import hashlib
 import logging
 import os
 import pathlib
+import requests
 import stat
 import sys
+import traceback
 from urllib.parse import urlparse
 
 import click
@@ -15,21 +17,25 @@ from cachetools import LRUCache
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
+from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.platform import Platform
-from pyvcloud.vcd.vapp import VApp
+from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
 from vsphere_guest_run.vsphere import VSphere
 
-cache = LRUCache(maxsize=1024)
 LOGGER = logging.getLogger('cse.utils')
+cache = LRUCache(maxsize=1024)
+SYSTEM_ORG_NAME = "System"
 CSE_SCRIPTS_DIR = 'container_service_extension_scripts'
-SYSTEM_ORG_NAME = 'System'
 
 # used to set up and start AMQP exchange
 EXCHANGE_TYPE = 'direct'
 
 # chunk size in bytes for file reading
 BUF_SIZE = 65536
+
+# chunk size for downloading files
+SIZE_1MB = 1024 * 1024
 
 _type_to_string = {
     str: 'string',
@@ -38,22 +44,6 @@ _type_to_string = {
     dict: 'mapping',
     list: 'sequence',
 }
-
-
-def catalog_exists(org, catalog_name):
-    try:
-        org.get_catalog(catalog_name)
-        return True
-    except EntityNotFoundException:
-        return False
-
-
-def catalog_item_exists(org, catalog_name, catalog_item):
-    try:
-        org.get_catalog_item(catalog_name, catalog_item)
-        return True
-    except EntityNotFoundException:
-        return False
 
 
 def bool_to_msg(value):
@@ -166,6 +156,183 @@ def check_file_permissions(filename):
         raise IOError(err_msgs)
 
 
+def download_file(url, filepath, sha256=None):
+    """Downloads a file from a url to local filepath.
+
+    Will not overwrite files unless @sha256 is given.
+    Recursively creates specified directories in @filepath.
+
+    :param str url: source url.
+    :param str filepath: destination filepath.
+    :param str sha256: without this argument, if a file already exists at
+        @filepath, download will be skipped. If @sha256 matches the file's
+        sha256, download will be skipped.
+    """
+    path = pathlib.Path(filepath)
+    if path.is_file() and (sha256 is None or get_sha256(filepath) == sha256):
+        click.secho(f"Skipping download to '{filepath}' (file already exists)",
+                    fg='green')
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    click.secho(f"Downloading file from '{url}' to '{filepath}'...",
+                fg='yellow')
+    response = requests.get(url, stream=True)
+    with path.open(mode='wb') as f:
+        for chunk in response.iter_content(chunk_size=SIZE_1MB):
+            f.write(chunk)
+    click.secho(f"Download complete", fg='green')
+
+
+def catalog_exists(org, catalog_name):
+    """Boolean function to check if catalog exists.
+
+    :param pyvcloud.vcd.org.Org org:
+    :param str catalog_name:
+
+    :return: True if catalog exists, False otherwise.
+
+    :rtype: bool
+    """
+    try:
+        org.get_catalog(catalog_name)
+        return True
+    except EntityNotFoundException:
+        return False
+
+
+def catalog_item_exists(org, catalog_name, catalog_item_name):
+    """Boolean function to check if catalog item exists (name check).
+
+    :param pyvcloud.vcd.org.Org org:
+    :param str catalog_name:
+    :param str catalog_item_name:
+
+    :return: True if catalog item exists, False otherwise.
+
+    :rtype: bool
+    """
+    try:
+        org.get_catalog_item(catalog_name, catalog_item_name)
+        return True
+    except EntityNotFoundException:
+        return False
+
+
+def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
+                          org=None, org_name=None):
+    """Uploads local ova file to vCD catalog.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str filepath: file path to the .ova file.
+    :param str catalog_name: name of catalog.
+    :param bool update: signals whether to overwrite an existing catalog
+        item with this new one.
+    :param pyvcloud.vcd.org.Org org: specific org to use.
+    :param str org_name: specific org to use if @org is not given.
+        If None, uses currently logged-in org from @client.
+
+    :raises pyvcloud.vcd.exceptions.EntityNotFoundException if catalog
+        does not exist.
+    :raises pyvcloud.vcd.exceptions.UploadException if upload fails.
+    """
+    if org is None:
+        org = get_org(client, org_name=org_name)
+    catalog_item_name = pathlib.Path(filepath).name
+    if update:
+        try:
+            click.secho(f"Update flag set. Checking catalog '{catalog_name}' "
+                        f"for '{catalog_item_name}'", fg='yellow')
+            org.delete_catalog_item(catalog_name, catalog_item_name)
+            org.reload()
+            wait_for_catalog_item_to_resolve(client, catalog_name,
+                                             catalog_item_name, org=org)
+            click.secho(f"Update flag set. Checking catalog '{catalog_name}' "
+                        f"for '{catalog_item_name}'", fg='yellow')
+        except EntityNotFoundException:
+            pass
+    else:
+        try:
+            org.get_catalog_item(catalog_name, catalog_item_name)
+            click.secho(f"'{catalog_item_name}' already exists in catalog "
+                        f"'{catalog_name}'", fg='green')
+            return
+        except EntityNotFoundException:
+            pass
+
+    click.secho(f"Uploading '{catalog_item_name}' to catalog '{catalog_name}'",
+                fg='yellow')
+    org.upload_ovf(catalog_name, filepath)
+    org.reload()
+    wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
+                                     org=org)
+    click.secho(f"Uploaded '{catalog_item_name}' to catalog '{catalog_name}'",
+                fg='green')
+
+
+def wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
+                                     org=None, org_name=None):
+    """Waits for catalog item's most recent task to resolve.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str catalog_name:
+    :param str catalog_item_name:
+    :param pyvcloud.vcd.org.Org org: specific org to use.
+    :param str org_name: specific org to use if @org is not given.
+        If None, uses currently logged-in org from @client.
+
+    :raises EntityNotFoundException: if the org or catalog or catalog item
+        could not be found.
+    """
+    if org is None:
+        org = get_org(client, org_name=org_name)
+    item = org.get_catalog_item(catalog_name, catalog_item_name)
+    resource = client.get_resource(item.Entity.get('href'))
+    client.get_task_monitor().wait_for_success(resource.Tasks.Task[0])
+
+
+def get_org(client, org_name=None):
+    """Gets the specified or currently logged-in Org object.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str org_name: which org to use. If None, uses currently logged-in
+        org from @client.
+
+    :return: pyvcloud Org object
+
+    :rtype: pyvcloud.vcd.org.Org
+
+    :raises EntityNotFoundException: if the org could not be found.
+    """
+    if org_name is None:
+        org_sparse_resource = client.get_org()
+        org = Org(client, href=org_sparse_resource.get('href'))
+    else:
+        org = Org(client, resource=client.get_org_by_name(org_name))
+    return org
+
+
+def get_vdc(client, vdc_name, org=None, org_name=None):
+    """Gets the specified VDC object.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str vdc_name:
+    :param pyvcloud.vcd.org.Org org: specific org to use.
+    :param str org_name: specific org to use if @org is not given.
+        If None, uses currently logged-in org from @client.
+
+    :return: pyvcloud VDC object
+
+    :rtype: pyvcloud.vcd.vdc.VDC
+
+    :raises EntityNotFoundException: if the vdc could not be found.
+    """
+    if org is None:
+        org = get_org(client, org_name=org_name)
+    vdc = VDC(client, resource=org.get_vdc(vdc_name))
+    return vdc
+
+
 def get_data_file(filename):
     """Retrieves CSE script file content as a string.
 
@@ -238,25 +405,33 @@ def create_and_share_catalog(org, catalog_name, catalog_desc=''):
 
 
 def get_vsphere(config, vapp, vm_name):
+    """Get the VSphere object for a specific VM inside a VApp.
+
+    :param dict config: CSE config as a dictionary
+    :param pyvcloud.vcd.vapp.VApp vapp:
+    :param str vm_name:
+
+    :return: VSphere object for a specific VM inside a VApp
+
+    :rtype: vsphere_guest_run.vsphere.VSphere
+    """
     global cache
     vm_resource = vapp.get_vm(vm_name)
     vm_id = vm_resource.get('id')
     if vm_id not in cache:
-        client_sysadmin = Client(
-            uri=config['vcd']['host'],
-            api_version=config['vcd']['api_version'],
-            verify_ssl_certs=config['vcd']['verify'],
-            log_headers=True,
-            log_bodies=True)
-        client_sysadmin.set_credentials(
-            BasicLoginCredentials(config['vcd']['username'], SYSTEM_ORG_NAME,
-                                  config['vcd']['password']))
+        client = Client(uri=config['vcd']['host'],
+                        api_version=config['vcd']['api_version'],
+                        verify_ssl_certs=config['vcd']['verify'],
+                        log_headers=True,
+                        log_bodies=True)
+        credentials = BasicLoginCredentials(config['vcd']['username'],
+                                            SYSTEM_ORG_NAME,
+                                            config['vcd']['password'])
+        client.set_credentials(credentials)
 
-        vapp_sys = VApp(client_sysadmin, href=vapp.href)
-        vm_resource = vapp_sys.get_vm(vm_name)
-        vm_sys = VM(client_sysadmin, resource=vm_resource)
+        vm_sys = VM(client, resource=vm_resource)
         vcenter_name = vm_sys.get_vc()
-        platform = Platform(client_sysadmin)
+        platform = Platform(client)
         vcenter = platform.get_vcenter(vcenter_name)
         vcenter_url = urlparse(vcenter.Url.text)
         cache_item = {
@@ -270,10 +445,45 @@ def get_vsphere(config, vapp, vm_name):
                 break
         cache[vm_id] = cache_item
     else:
-        LOGGER.debug('vCenter retrieved from cache: %s / %s' %
-                     (vm_id, cache[vm_id]['hostname']))
+        LOGGER.debug(f"vCenter retrieved from cache\nVM ID: {vm_id}"
+                     f"\nHostname: {cache[vm_id]['hostname']}")
 
-    v = VSphere(cache[vm_id]['hostname'], cache[vm_id]['username'],
-                cache[vm_id]['password'], cache[vm_id]['port'])
+    return VSphere(cache[vm_id]['hostname'], cache[vm_id]['username'],
+                   cache[vm_id]['password'], cache[vm_id]['port'])
 
-    return v
+
+def vgr_callback(prepend_msg='', logger=None):
+    """Creates a callback function to use for vsphere-guest-run functions.
+
+    :param str prepend_msg: string to prepend to all messages received from
+        vsphere-guest-run function.
+    :param logging.Logger logger: logger to use in case of error.
+
+    :return: callback function to print messages received
+        from vsphere-guest-run
+
+    :rtype: function
+    """
+    def callback(message, exception=None):
+        click.echo(f"{prepend_msg}{message}")
+        if exception is not None:
+            click.echo(exception)
+            if logger is not None:
+                logger.error(traceback.format_exc())
+    return callback
+
+
+def wait_until_tools_ready(vapp, vsphere, callback=vgr_callback()):
+    """Blocking function to ensure that a VSphere has VMware Tools ready.
+
+    :param pyvcloud.vcd.vapp.VApp vapp:
+    :param vsphere_guest_run.vsphere.VSphere vsphere:
+    :param function callback: a function to print out messages received from
+        vsphere-guest-run functions. Function signature should be like this:
+        def callback(message, exception=None), where parameter 'message'
+        is a string.
+    """
+    vsphere.connect()
+    moid = vapp.get_vm_moid(vapp.name)
+    vm = vsphere.get_vm_by_moid(moid)
+    vsphere.wait_until_tools_ready(vm, sleep=5, callback=callback)
