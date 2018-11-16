@@ -305,8 +305,8 @@ def get_org(client, org_name=None):
     :raises EntityNotFoundException: if the org could not be found.
     """
     if org_name is None:
-        org = Org(client, resource=client.get_org())
-        org.reload()
+        org_sparse_resource = client.get_org()
+        org = Org(client, href=org_sparse_resource.get('href'))
     else:
         org = Org(client, resource=client.get_org_by_name(org_name))
     return org
@@ -330,7 +330,6 @@ def get_vdc(client, vdc_name, org=None, org_name=None):
     if org is None:
         org = get_org(client, org_name=org_name)
     vdc = VDC(client, resource=org.get_vdc(vdc_name))
-    vdc.reload()
     return vdc
 
 

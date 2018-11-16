@@ -699,6 +699,9 @@ def _create_vapp_from_config(client, vdc, config, template_config,
         storage_profile=config['broker']['storage_profile'])
     task = vapp_sparse_resource.Tasks.Task[0]
     client.get_task_monitor().wait_for_success(task)
+    
+    # we don't do lazy loading here using vapp_sparse_resource.get('href'), 
+    # because VApp would have an uninitialized attribute (vapp.name)
     vapp = VApp(client, resource=vapp_sparse_resource)
     vapp.reload()
     return vapp
