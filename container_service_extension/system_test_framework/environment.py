@@ -20,6 +20,7 @@ import requests
 from container_service_extension.config import SAMPLE_TEMPLATE_PHOTON_V2
 from container_service_extension.config import SAMPLE_TEMPLATE_UBUNTU_16_04
 
+CONFIGS_DIR = 'configs'
 
 def developerModeAware(function):
     """Skip execution of decorated function.
