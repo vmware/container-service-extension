@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+1.2.4
+-----
+
+* Fixed master node creation bug
+
 1.2.3
 -----
 
