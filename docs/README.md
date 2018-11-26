@@ -107,6 +107,7 @@ CSE, Container Service Extension for VMware vCloud Director, version 1.2.0
 # [**System/Cloud Administrator**](#toc) <a name="sysadmin"></a>
 
 ## [**CSE/vCD Compatibility**](#toc) <a name="compatibility"></a>
+
 | CSE version | vCD version         |
 |-------------|---------------------|
 | 1.1.0       | 8.20, 9.0, 9.1      |
