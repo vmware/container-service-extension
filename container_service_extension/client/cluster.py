@@ -8,6 +8,8 @@ from lxml import objectify
 import requests
 
 from container_service_extension.cluster import TYPE_NODE
+from container_service_extension.utils import SHORT_ERROR
+from container_service_extension.utils import MESSAGE
 
 
 class Cluster(object):
@@ -20,7 +22,7 @@ class Cluster(object):
             message = 'An error has occurred.'
             if response.content is not None and len(response.content) > 0:
                 obj = objectify.fromstring(response.content)
-                message = obj.get('message')
+                message = obj.get(MESSAGE)
             raise Exception(message)
         decoded = response.content.decode("utf-8")
         if len(decoded) > 0:
@@ -33,8 +35,10 @@ class Cluster(object):
         ]:
             return content
         else:
-            if 'message' in content:
-                raise Exception(content['message'])
+            if MESSAGE in content:
+                if SHORT_ERROR in content[MESSAGE]:
+                    raise Exception(content[MESSAGE][SHORT_ERROR])
+                raise Exception(content[MESSAGE])
             else:
                 raise Exception(content)
 

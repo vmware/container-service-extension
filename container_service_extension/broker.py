@@ -5,6 +5,7 @@ import re
 import threading
 import traceback
 import uuid
+import json
 
 import click
 import pkg_resources
@@ -32,6 +33,7 @@ from container_service_extension.cluster import TYPE_MASTER
 from container_service_extension.cluster import TYPE_NFS
 from container_service_extension.cluster import TYPE_NODE
 from container_service_extension.utils import SYSTEM_ORG_NAME
+from container_service_extension.utils import error_to_json
 
 from container_service_extension.exceptions import ClusterOperationError
 from container_service_extension.exceptions import ClusterInitializationError
@@ -40,6 +42,7 @@ from container_service_extension.exceptions import MasterNodeCreationError
 from container_service_extension.exceptions import NFSNodeCreationError
 from container_service_extension.exceptions import ClusterJoiningError
 from container_service_extension.exceptions import ClusterAlreadyExistsError
+from container_service_extension.exceptions import CseServerError
 
 LOGGER = logging.getLogger('cse.broker')
 
@@ -368,7 +371,7 @@ class DefaultBroker(threading.Thread):
         result['status_code'] = INTERNAL_SERVER_ERROR
         try:
             if not self.is_valid_name(cluster_name):
-                raise Exception('Invalid cluster name')
+                raise CseServerError('Invalid cluster name \'%s\'' % cluster_name)
             self.tenant_info = self._connect_tenant(headers)
             self.headers = headers
             self.body = body
@@ -389,7 +392,7 @@ class DefaultBroker(threading.Thread):
             result['body'] = response_body
             result['status_code'] = ACCEPTED
         except Exception as e:
-            result['body'] = self._to_message(e)
+            result['body'] = error_to_json(e)
             LOGGER.error(traceback.format_exc())
         return result
 
@@ -399,7 +402,7 @@ class DefaultBroker(threading.Thread):
             clusters = load_from_metadata(
                 self.client_tenant, name=self.cluster_name)
             if len(clusters) != 0:
-                raise ClusterAlreadyExistsError('Cluster already exists.')
+                raise ClusterAlreadyExistsError('Cluster %s already exists.' % self.cluster_name)
             org_resource = self.client_tenant.get_org()
             org = Org(self.client_tenant, resource=org_resource)
             vdc_resource = org.get_vdc(self.body['vdc'])
@@ -492,11 +495,11 @@ class DefaultBroker(threading.Thread):
                 NFSNodeCreationError, ClusterJoiningError,
                 ClusterInitializationError, ClusterOperationError) as e:
             LOGGER.error(traceback.format_exc())
-            self.update_task(TaskStatus.ERROR, error_message=str(e))
+            self.update_task(TaskStatus.ERROR, error_message=json.dumps(error_to_json(e)))
             raise e
         except Exception as e:
             LOGGER.error(traceback.format_exc())
-            self.update_task(TaskStatus.ERROR, error_message=str(e))
+            self.update_task(TaskStatus.ERROR, error_message=json.dumps(error_to_json(e)))
 
     def delete_cluster(self, headers, body):
         result = {}
