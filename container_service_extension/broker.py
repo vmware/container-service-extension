@@ -32,6 +32,7 @@ from container_service_extension.cluster import TYPE_MASTER
 from container_service_extension.cluster import TYPE_NFS
 from container_service_extension.cluster import TYPE_NODE
 from container_service_extension.utils import SYSTEM_ORG_NAME
+from container_service_extension.utils import error_to_json
 
 from container_service_extension.exceptions import ClusterOperationError
 from container_service_extension.exceptions import ClusterInitializationError
@@ -399,7 +400,7 @@ class DefaultBroker(threading.Thread):
             clusters = load_from_metadata(
                 self.client_tenant, name=self.cluster_name)
             if len(clusters) != 0:
-                raise ClusterAlreadyExistsError('Cluster already exists.')
+                raise ClusterAlreadyExistsError('Cluster %s already exists.' % self.cluster_name)
             org_resource = self.client_tenant.get_org()
             org = Org(self.client_tenant, resource=org_resource)
             vdc_resource = org.get_vdc(self.body['vdc'])
@@ -492,11 +493,11 @@ class DefaultBroker(threading.Thread):
                 NFSNodeCreationError, ClusterJoiningError,
                 ClusterInitializationError, ClusterOperationError) as e:
             LOGGER.error(traceback.format_exc())
-            self.update_task(TaskStatus.ERROR, error_message=str(e))
+            self.update_task(TaskStatus.ERROR, error_message=error_to_json(e))
             raise e
         except Exception as e:
             LOGGER.error(traceback.format_exc())
-            self.update_task(TaskStatus.ERROR, error_message=str(e))
+            self.update_task(TaskStatus.ERROR, error_message=error_to_json(e))
 
     def delete_cluster(self, headers, body):
         result = {}

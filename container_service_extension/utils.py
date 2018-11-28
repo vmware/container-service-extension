@@ -8,6 +8,7 @@ import os
 import pathlib
 import requests
 import stat
+import json
 import sys
 import traceback
 from urllib.parse import urlparse
@@ -28,6 +29,9 @@ LOGGER = logging.getLogger('cse.utils')
 cache = LRUCache(maxsize=1024)
 SYSTEM_ORG_NAME = "System"
 CSE_SCRIPTS_DIR = 'container_service_extension_scripts'
+SHORT_ERROR = "reason"
+LONG_ERROR = "description"
+STACKTRACE = "stacktrace"
 
 # used to set up and start AMQP exchange
 EXCHANGE_TYPE = 'direct'
@@ -45,6 +49,20 @@ _type_to_string = {
     dict: 'mapping',
     list: 'sequence',
 }
+
+
+def error_to_json(error):
+    if error:
+        error_string = str(error)
+        reasons = error_string.split(',')
+        response = {
+
+            SHORT_ERROR: reasons[0],
+            LONG_ERROR: error_string,
+            STACKTRACE: traceback.format_exception(error.__class__, error, error.__traceback__)
+        }
+        return json.dumps(response)
+    return None
 
 
 def bool_to_msg(value):
