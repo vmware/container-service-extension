@@ -8,18 +8,21 @@ import uuid
 
 import click
 import pkg_resources
-from pyvcloud.vcd.client import _WellKnownEndpoint
+import requests
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import TaskStatus
 from pyvcloud.vcd.client import VCLOUD_STATUS_MAP
+from pyvcloud.vcd.client import _WellKnownEndpoint
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.task import Task
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
-import requests
 
+from container_service_extension.cluster import TYPE_MASTER
+from container_service_extension.cluster import TYPE_NFS
+from container_service_extension.cluster import TYPE_NODE
 from container_service_extension.cluster import add_nodes
 from container_service_extension.cluster import delete_nodes_from_cluster
 from container_service_extension.cluster import execute_script_in_nodes
@@ -28,18 +31,18 @@ from container_service_extension.cluster import get_master_ip
 from container_service_extension.cluster import init_cluster
 from container_service_extension.cluster import join_cluster
 from container_service_extension.cluster import load_from_metadata
-from container_service_extension.cluster import TYPE_MASTER
-from container_service_extension.cluster import TYPE_NFS
-from container_service_extension.cluster import TYPE_NODE
-from container_service_extension.utils import SYSTEM_ORG_NAME
-
-from container_service_extension.exceptions import ClusterOperationError
+from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterInitializationError
-from container_service_extension.exceptions import WorkerNodeCreationError
+from container_service_extension.exceptions import ClusterJoiningError
+from container_service_extension.exceptions import ClusterOperationError
+from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import MasterNodeCreationError
 from container_service_extension.exceptions import NFSNodeCreationError
-from container_service_extension.exceptions import ClusterJoiningError
-from container_service_extension.exceptions import ClusterAlreadyExistsError
+from container_service_extension.exceptions import WorkerNodeCreationError
+from container_service_extension.utils import ERROR_DESCRIPTION
+from container_service_extension.utils import ERROR_MESSAGE
+from container_service_extension.utils import SYSTEM_ORG_NAME
+from container_service_extension.utils import error_to_json
 
 LOGGER = logging.getLogger('cse.broker')
 
@@ -390,7 +393,7 @@ class DefaultBroker(threading.Thread):
         result['status_code'] = INTERNAL_SERVER_ERROR
         try:
             if not self.is_valid_name(cluster_name):
-                raise Exception('Invalid cluster name')
+                raise CseServerError(f"Invalid cluster name \'{cluster_name}\'")
             self.tenant_info = self._connect_tenant(headers)
             self.headers = headers
             self.body = body
@@ -411,7 +414,7 @@ class DefaultBroker(threading.Thread):
             result['body'] = response_body
             result['status_code'] = ACCEPTED
         except Exception as e:
-            result['body'] = self._to_message(e)
+            result['body'] = error_to_json(e)
             LOGGER.error(traceback.format_exc())
         return result
 
@@ -422,7 +425,7 @@ class DefaultBroker(threading.Thread):
             clusters = load_from_metadata(
                 self.client_tenant, name=self.cluster_name)
             if len(clusters) != 0:
-                raise ClusterAlreadyExistsError('Cluster already exists.')
+                raise ClusterAlreadyExistsError(f'Cluster {self.cluster_name} already exists.')
             org_resource = self.client_tenant.get_org()
             org = Org(self.client_tenant, resource=org_resource)
             vdc_resource = org.get_vdc(self.body['vdc'])
@@ -515,11 +518,14 @@ class DefaultBroker(threading.Thread):
                 NFSNodeCreationError, ClusterJoiningError,
                 ClusterInitializationError, ClusterOperationError) as e:
             LOGGER.error(traceback.format_exc())
-            self.update_task(TaskStatus.ERROR, error_message=str(e))
+            error_obj = error_to_json(e)
+            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
             raise e
         except Exception as e:
             LOGGER.error(traceback.format_exc())
-            self.update_task(TaskStatus.ERROR, error_message=str(e))
+            error_obj = error_to_json(e)
+            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
+            raise CseServerError(e)
 
     def delete_cluster(self, headers, body):
         result = {}

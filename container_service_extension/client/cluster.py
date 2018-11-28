@@ -4,10 +4,12 @@
 
 import json
 
-from lxml import objectify
 import requests
+from lxml import objectify
 
 from container_service_extension.cluster import TYPE_NODE
+from container_service_extension.utils import ERROR_MESSAGE
+from container_service_extension.utils import ERROR_REASON
 
 
 class Cluster(object):
@@ -20,7 +22,7 @@ class Cluster(object):
             message = 'An error has occurred.'
             if response.content is not None and len(response.content) > 0:
                 obj = objectify.fromstring(response.content)
-                message = obj.get('message')
+                message = obj.get(ERROR_MESSAGE)
             raise Exception(message)
         decoded = response.content.decode("utf-8")
         if len(decoded) > 0:
@@ -33,8 +35,10 @@ class Cluster(object):
         ]:
             return content
         else:
-            if 'message' in content:
-                raise Exception(content['message'])
+            if ERROR_MESSAGE in content:
+                if ERROR_REASON in content[ERROR_MESSAGE]:
+                    raise Exception(content[ERROR_MESSAGE][ERROR_REASON])
+                raise Exception(content[ERROR_MESSAGE])
             else:
                 raise Exception(content)
 
