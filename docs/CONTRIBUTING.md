@@ -1,5 +1,5 @@
-# __**CSE Contributing Guide**__
-[back to main CSE page](docs/README.md#contributing)
+# **CSE Contributing Guide**
+[back to main CSE page](README.md#contributing)
 
 Commits should follow this guide: https://chris.beams.io/posts/git-commit/
 
@@ -25,7 +25,7 @@ Community: https://vmwarecode.slack.com  #vcd (channel)
 - [CSE Usage and Testing](#usage)
 - [Standard Git Workflow](#git)
 
-## [__**Python**__](#toc) <a name="python"></a>
+## [**Python**](#toc) <a name="python"></a>
 - Install Python 3.6 or greater (https://realpython.com/installing-python/)
 - Install pip (Python's package manager)
 
@@ -39,7 +39,7 @@ Python 3.7.0
 pip 18.0 from /usr/local/lib/python3.7/site-packages/pip (python 3.7)
 ```
 ---
-## [__**Virtual Environments**__](#toc) <a name="virtualenvs"></a>
+## [**Virtual Environments**](#toc) <a name="virtualenvs"></a>
 A virtual environment is a project workspace (a folder/directory) where your project's dependencies are isolated from the user/global space and from the dependencies of other projects. For example, if one project you're working on requires Flask 1.0 and another project requires Flask 2.0, these projects have different dependencies, and without virtual environments, you can't have both Flask 1.0 and 2.0. Having a virtual environment for each project will allow you to develop and test both of these projects on one machine.
 
 The virtual environment program we will use is [`virtualenv`](https://virtualenv.pypa.io/en/stable/), though there are others that do the same thing, such as `pipenv`, `conda`, `venv`, etc. The program [`virtualenvwrapper`](https://virtualenvwrapper.readthedocs.io/en/latest/) includes a lot of helpful shortcuts/functionality for managing your virtual environments, and using it is personal preference.
@@ -87,7 +87,7 @@ More on virtual environments:
 - https://www.geeksforgeeks.org/python-virtual-environment/
 - https://realpython.com/python-virtual-environments-a-primer/
 ---
-## [__**Project Setup**__](#toc) <a name="projectsetup"></a>
+## [**Project Setup**](#toc) <a name="projectsetup"></a>
 
 ### **Git Setup**
 - VMware CSE repository (https://github.com/vmware/container-service-extension) is the **upstream** remote repository
@@ -147,7 +147,7 @@ wheel                       0.32.1
 ![cse-workflow](img/cse-workflow-2.png) <a name="cseworkflow"></a>
 
 ---
-## [__**CSE Usage and Testing**__](#toc) <a name="usage"></a>
+## [**CSE Usage and Testing**](#toc) <a name="usage"></a>
 
 ### **Configure vcd-cli to enable `vcd cse ...` commands**
 Edit `~/.vcd-cli/profiles.yaml` to include this section:
@@ -234,7 +234,7 @@ If `~/.vcd-cli/profiles.yaml` doesn't exist, logging in to vCD via **vcd-cli** w
 > vcd cse cluster delete mycluster
 ```
 ---
-## [__**Standard Git Workflow**__](#toc) <a name="git"></a>
+## [**Standard Git Workflow**](#toc) <a name="git"></a>
 - Never push to **upstream master**
 - Check if upstream master has any updates
     - if it does, pull these changes into your local project's master branch, then push these changes to update your remote origin master branch

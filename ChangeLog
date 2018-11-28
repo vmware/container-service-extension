@@ -1,6 +1,27 @@
 CHANGES
 =======
 
+1.2.4
+-----
+
+* Fixed master node creation bug
+
+1.2.3
+-----
+
+* VCDA-806 Updated list of minimum required rights for limited account for CSE installation
+* VCDA-789 Refactor CSE Installation - AMQP, registration, catalog
+* VCDA-614 Enable NFS support for Photon OS
+* VCDA-790 Implement basic framework that will be used to run system tests related to installation of cse server
+* Refactor config validation and cse check
+* Update CSE main documentation
+
+1.2.2
+-----
+
+* VCDA 799 vcd cse help commands should not require login to display help (#137)
+* VCDA-739: Fix SSL support for vCenter 6.7 (#135)
+
 1.2.1
 -----
 

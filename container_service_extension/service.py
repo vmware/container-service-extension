@@ -17,9 +17,10 @@ import pkg_resources
 from pyvcloud.vcd.client import Client
 
 from container_service_extension.broker import DefaultBroker
-from container_service_extension.config import check_config
-from container_service_extension.config import get_config
+from container_service_extension.config import check_cse_installation
+from container_service_extension.config import get_validated_config
 from container_service_extension.consumer import MessageConsumer
+from container_service_extension.utils import SYSTEM_ORG_NAME
 
 LOGGER = logging.getLogger('cse.service')
 
@@ -94,7 +95,7 @@ class Service(object, metaclass=Singleton):
     def info(self, headers):
         client_tenant, session = self.connect_tenant(headers)
         result = Service.version()
-        if session.get('org') == 'System':
+        if session.get('org') == SYSTEM_ORG_NAME:
             result['consumer_threads'] = len(self.threads)
             result['all_threads'] = threading.activeCount()
             result['requests_in_progress'] = self.active_requests_count()
@@ -122,7 +123,7 @@ class Service(object, metaclass=Singleton):
     def update_status(self, headers, body):
         client_tenant, session = self.connect_tenant(headers)
         reply = {}
-        if session.get('org') == 'System':
+        if session.get('org') == SYSTEM_ORG_NAME:
             if 'enabled' in body:
                 if body['enabled'] and self.should_stop:
                     reply['body'] = {
@@ -159,10 +160,10 @@ class Service(object, metaclass=Singleton):
         return reply
 
     def run(self):
+        self.config = get_validated_config(self.config_file)
         if self.should_check_config:
-            self.config = check_config(self.config_file)
-        else:
-            self.config = get_config(self.config_file)
+            check_cse_installation(self.config)
+
         log_file = 'cse.log'
         handler = RotatingFileHandler(
             log_file, maxBytes=10 * 1024 * 1024, backupCount=10)
