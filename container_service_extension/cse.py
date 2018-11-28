@@ -5,12 +5,13 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import logging
-import traceback
 
 import click
 from vcd_cli.utils import stdout
+from pyvcloud.vcd.exceptions import EntityNotFoundException
 
-from container_service_extension.config import check_config
+from container_service_extension.config import get_validated_config
+from container_service_extension.config import check_cse_installation
 from container_service_extension.config import generate_sample_config
 from container_service_extension.config import install_cse
 from container_service_extension.service import Service
@@ -56,14 +57,17 @@ def cli(ctx):
             vCD without prompting.
 \b
         cse check
-            Checks that the info in 'config.yaml' is correct. Ensures that vCD,
-            VCs, AMQP are available, and checks that all specified templates
-            have been created.
+            Checks that 'config.yaml' is valid.
 \b
-        cse check -c myconfig.yaml --template photon-v2
-            Checks that the info in 'myconfig.yaml' is correct. Ensures that
-            vCD, VCs, AMQP are available, and checks that template
-            'photon-v2' exists.
+        cse check -c myconfig.yaml --check-install
+            Checks that 'myconfig.yaml' is valid. Also checks that CSE is
+            installed on vCD according to 'myconfig.yaml' (Checks that all
+            templates specified in 'myconfig.yaml' exist.)
+\b
+        cse check --check-install --template photon-v2
+            Checks that 'config.yaml' is valid. Also checks that CSE is
+            installed on vCD according to 'config.yaml' (Checks that
+            template 'photon-v2' exists.)
 \b
         cse run
             Run CSE Server using data from 'config.yaml', but first validate
@@ -104,7 +108,8 @@ def sample(ctx):
     click.secho(generate_sample_config())
 
 
-@cli.command(short_help='check configuration')
+@cli.command(short_help="Checks that config file is valid. Can also check that"
+                        " CSE is installed according to config file.")
 @click.pass_context
 @click.option(
     '-c',
@@ -116,22 +121,36 @@ def sample(ctx):
     default='config.yaml',
     help='Config file to use.')
 @click.option(
+    '-i',
+    '--check-install',
+    'check_install',
+    is_flag=True,
+    required=False,
+    default=False,
+    help='Checks that CSE is installed on vCD according to the config file')
+@click.option(
     '-t',
     '--template',
     'template',
     required=False,
     default='*',
     metavar='<template>',
-    help='Validate this template')
-def check(ctx, config, template):
+    help="If '--check-install' flag is set, validate specified template. "
+         "Default value of '*' means that all templates in config file"
+         " will be validated.")
+def check(ctx, config, check_install, template):
     """Validate CSE configuration."""
     try:
-        check_config(config, template)
-        click.secho('The configuration is valid.')
-    except Exception as e:
-        LOGGER.error(traceback.format_exc())
-        click.secho('The configuration is invalid, %s'
-                    '. See \'cse.log\' for details' % str(e))
+        config_dict = get_validated_config(config)
+    except (KeyError, ValueError, Exception):
+        # TODO replace Exception with specific (see validate_amqp_config)
+        click.secho(f"Config file '{config}' is invalid", fg='red')
+        return
+    if check_install:
+        try:
+            check_cse_installation(config_dict, check_template=template)
+        except EntityNotFoundException:
+            click.secho("CSE installation is invalid", fg='red')
 
 
 @cli.command(short_help='install CSE on vCD')
@@ -152,7 +171,8 @@ def check(ctx, config, template):
     required=False,
     default='*',
     metavar='<template>',
-    help='Install this template')
+    help="Install only the specified template. Default value of '*' means that"
+         " all templates in config file will be installed.")
 @click.option(
     '-u',
     '--update',
@@ -202,8 +222,9 @@ def install(ctx, config, template, update, no_capture, ssh_key_file,
         ssh_key = None
         if ssh_key_file is not None:
             ssh_key = ssh_key_file.read()
-        install_cse(ctx, config, template, update, no_capture, ssh_key,
-                    amqp_install, ext_install)
+        install_cse(ctx, config_file_name=config, template_name=template,
+                    update=update, no_capture=no_capture, ssh_key=ssh_key,
+                    amqp_install=amqp_install, ext_install=ext_install)
 
 
 @cli.command(short_help='run service')

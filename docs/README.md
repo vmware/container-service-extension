@@ -27,7 +27,7 @@ Container Service Extension (CSE) is a VMware vCloud Director extension that hel
 
 ---
 ---
-# [__**Overview**__](#toc) <a name="overview"></a>
+# [**Overview**](#toc) <a name="overview"></a>
 
 CSE brings Kubernetes as a service to vCD by creating customized VM templates and enabling tenant/organization administrators to deploy fully functional Kubernetes clusters.
 
@@ -40,7 +40,7 @@ Once CSE Server is running and VM templates are available, **tenant/organization
 
 ---
 ---
-# [__**Getting CSE**__](#toc) <a name="gettingcse"></a>
+# [**Getting CSE**](#toc) <a name="gettingcse"></a>
 
 Install Python 3.6 or greater. Pip, Python's package manager, should come with Python.
 - https://realpython.com/installing-python/
@@ -75,7 +75,7 @@ All CSE versions on GitHub: https://github.com/vmware/container-service-extensio
 
 ---
 ---
-# [__**Enabling CSE Client Commands in vcd-cli**__](#toc) <a name="enableclient"></a>
+# [**Enabling CSE Client Commands in vcd-cli**](#toc) <a name="enableclient"></a>
 
 CSE client is not enabled yet:
 ```sh
@@ -104,13 +104,14 @@ CSE, Container Service Extension for VMware vCloud Director, version 1.2.0
 ```
 ---
 ---
-# [__**System/Cloud Administrator**__](#toc) <a name="sysadmin"></a>
+# [**System/Cloud Administrator**](#toc) <a name="sysadmin"></a>
 
 ## [**CSE/vCD Compatibility**](#toc) <a name="compatibility"></a>
-| CSE version     | vCD version                |
-|:--------|:---------------------|
-| 1.1.0   | 8.20, 9.0, 9.1       |
-| 1.2.0   | 8.20, 9.0, 9.1, 9.5 |
+
+| CSE version | vCD version         |
+|-------------|---------------------|
+| 1.1.0       | 8.20, 9.0, 9.1      |
+| 1.2.0       | 8.20, 9.0, 9.1, 9.5 |
 
 ---
 ## [**Config File**](#toc) <a name="configfile"></a>
@@ -123,40 +124,96 @@ Edit this file with values from your vCloud Director
 <br>
 
 Config file has 5 sections: `amqp`, `vcd`, `vcs`, `service`, `broker`
-### **`amqp` section**
+### **amqp** section
 CSE Server will communicate with vCD using these settings
 
 During CSE Server installation, CSE can configure vCD's AMQP settings to match these settings
 
 <br>
 
-### **`vcd` section**
+### **vcd** section
 It's recommended to create a service account for vCD with minimum required privileges. An attacker getting credentials for a user account with admin-level privileges can be catastrophic
 
-Minimum roles and (admin-view) rights required for the service account (subject to change with new vCD versions):
-- Catalog Author (Role)
-- vApp Author (Role)
-- vApp User (Role)
-- vCenter: View (Right)
-- vCenter: Refresh (Right)
-- vCenter: Open in vSphere (Right)
-- Task: View Tasks (Right)
-- Task: Update (Right)
-- Task: Resume, Abort, or Fail (Right)
-- Catalog Item: Add to My Cloud (Right)
-- Catalog Item: Create/Upload a vApp Template/Media (Right)
-- Catalog Item: View vApp Templates/Media (Right)
-- Catalog Item: Copy/Move a vApp Template/Media (Right)
-- General: Administrator View (Right)
-- Organization VDC: View Organization VDCs (Right)
-- Organization VDC Network: View Properties (Right)
-- Organization: View Organizations (Right)
+Minimum set of rights required by a service account to install CSE properly (subject to change with new vCD versions):
+- Catalog: CLSP Publish Subscribe
+- Catalog: Create / Delete a Catalog
+- Catalog: Edit Properties
+- Catalog: Import Media from vSphere
+- Catalog: Publish
+- Catalog: Sharing
+- Catalog: View ACL
+- Catalog: View Private and Shared Catalogs
+- Catalog: View Published Catalogs
+- Cell Configuration: View
+- Disk: Change Owner
+- Disk: Create
+- Disk: Delete
+- Disk: Edit Properties
+- Disk: View Properties
+- General: Administrator View
+- General: View Error Details
+- Host: View
+- Organization Default Settings: View default settings for new Organizations.
+- Organization Network: Open in vSphere
+- Organization Network: View
+- Organization vDC Network: View Properties
+- Organization vDC Resource Pool: Open in vSphere
+- Organization vDC Resource Pool: View
+- Organization vDC Storage Policy: Open in vSphere
+- Organization vDC: Extended View
+- Organization vDC: View
+- Organization vDC: View ACL
+- Organization: View
+- System Operations: Execute System Operations
+- Task: Resume, Abort, or Fail
+- Task: Update
+- VAPP_VM_METADATA_TO_VCENTER
+- VDC Template: Instantiate
+- VDC Template: View
+- vApp Template / Media: Copy
+- vApp Template / Media: Create / Upload
+- vApp Template / Media: Edit
+- vApp Template / Media: View
+- vApp Template: Checkout
+- vApp Template: Download
+- vApp Template: Import
+- vApp Template: Open in vSphere
+- vApp: Allow All Extra Config
+- vApp: Allow Ethernet Coalescing Extra Config
+- vApp: Allow Latency Extra Config
+- vApp: Allow Matching Extra Config
+- vApp: Allow NUMA Node Affinity Extra Config
+- vApp: Change Owner
+- vApp: Copy
+- vApp: Create / Reconfigure
+- vApp: Delete
+- vApp: Download
+- vApp: Edit Properties
+- vApp: Edit VM CPU
+- vApp: Edit VM CPU and Memory reservation settings in all VDC types
+- vApp: Edit VM Hard Disk
+- vApp: Edit VM Memory
+- vApp: Edit VM Network
+- vApp: Edit VM Properties
+- vApp: Enter/Exit Maintenance Mode
+- vApp: Import Options
+- vApp: Manage VM Password Settings
+- vApp: Open in vSphere
+- vApp: Power Operations
+- vApp: Shadow VM View
+- vApp: Sharing
+- vApp: Snapshot Operations
+- vApp: Upload
+- vApp: Use Console
+- vApp: VM Boot Options
+- vApp: VM Check Compliance
+- vApp: VM Migrate, Force Undeploy, Relocate, Consolidate
+- vApp: View ACL
+- vApp: View VM metrics
+- vCenter: Open in vSphere
+- vCenter: Refresh
+- vCenter: View
 
-Use vcd-cli to get list of rights required by 'Catalog Author' and 'vApp Author':
-```sh
-> vcd role list-rights 'Catalog Author'
-```
-Create a custom role with union of rights derived from above set of roles/rights and then assign the custom role to a user account.
 
 Always ensure vCD service account has enough privileges. Alternatively, you can create a role with Admin privileges and deselect/delete rights which are not required.
 
@@ -172,7 +229,7 @@ Always ensure vCD service account has enough privileges. Alternatively, you can 
 
 <br>
 
-### **`vcs` section**
+### **vcs** section
 Guest Operations Privileges required for vCenter service account:
 - Guest Operation Program Execution
 - Guest Operation Modifications
@@ -190,12 +247,12 @@ Each `vc` under `vcs` section has the following properties:
 
 <br>
 
-### **`service` section**
+### **service** section
 Specify how many threads you want CSE Server to create.
 
 <br>
 
-### **`broker` section**
+### **broker** section
 `broker` section has the following properties:
 
 | Property           | Value                                                                                                                                                                                                                |
@@ -232,8 +289,9 @@ Each `template` in the `templates` property has the following properties:
 `CSE` supports multiple VM templates to create Kubernetes clusters from. Templates may vary in guest OS or software versions, and must have a unique name. One template must be defined as the default template, and tenants have the option to specify the template to use during cluster/node creation.
 
 ### **Source .ova Files for VM Templates**
+
 | OS                   | OVA Name                               | URL                                                                                                       | SHA256                                                           |
-|:----------------------|:----------------------------------------|:-----------------------------------------------------------------------------------------------------------|:------------------------------------------------------------------|
+|----------------------|----------------------------------------|-----------------------------------------------------------------------------------------------------------|------------------------------------------------------------------|
 | Photon OS 1.0, Rev 2 | photon-custom-hw11-1.0-62c543d.ova     | `https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova`            | 6d6024c5531f5554bb0d2f51f3005078ce6d4ee63c142f2453a416824c5344ca |
 | Photon OS 2.0 GA     | photon-custom-hw11-2.0-304b817.ova     | `http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova`                       | cb51e4b6d899c3588f961e73282709a0d054bb421787e140a1d80c24d4fd89e1 |
 | Ubuntu 16.04.4 LTS   | ubuntu-16.04-server-cloudimg-amd64.ova | `https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova` | 3c1bec8e2770af5b9b0462e20b7b24633666feedff43c099a6fb1330fcc869a9 |
@@ -304,14 +362,15 @@ To inspect the temporary vApp after customization, use the `--no-capture` option
 Validate that CSE has installed correctly with:
 
 ```sh
-> cse check --config config.yaml
+> cse check --config config.yaml --check-install
 ```
 The `cse check` command supports the following options:
 
-| Option     | Short | Argument(s)         | Description                              | Default                                                 |
-|:------------|:-------|:---------------------|:------------------------------------------|:---------------------------------------------------------|
-| --config   | -c    | path/to/config.yaml | Config file to use                       | config.yaml                                             |
-| --template | -t    | template-name       | Check that the specified template exists | '*' (checks for all templates specified in config file) |
+| Option          | Short | Argument(s)         | Description                                                           | Default                                                 |
+|-----------------|-------|---------------------|-----------------------------------------------------------------------|---------------------------------------------------------|
+| --config        | -c    | path/to/config.yaml | Config file to use                                                    | config.yaml                                             |
+| --check-install | -i    | n/a                 | Check CSE installation on vCD                                         | False                                                   |
+| --template      | -t    | template-name       | If `--check-install` is set, check that the specified template exists | '*' (checks for all templates specified in config file) |
 
 <br>
 
@@ -501,7 +560,7 @@ pip3 install --user --upgrade container-service-extension
 ```
 ---
 ---
-# [__**Tenant/Organization Administrator and Other Users**__](#toc) <a name="otherusers"></a>
+# [**Tenant/Organization Administrator and Other Users**](#toc) <a name="otherusers"></a>
 Once CSE Server is installed and running, tenants can use CSE client ([vcd-cli](https://vmware.github.io/vcd-cli)) to create Kubernetes clusters on demand.
 
 Master and worker nodes are VMs within a vApp on the tenant virtual datacenter. The VMs are required to be connected to an organization VDC network specified with the `--network` required command-line option. This network should have a static IP pool, and may require access to the internet if installing additional components.
@@ -629,7 +688,7 @@ client.logout()
 ```
 ---
 ---
-# [__**NFS-based Static Persistent Volumes**__](#toc) <a name="nfs"></a>
+# [**NFS-based Static Persistent Volumes**](#toc) <a name="nfs"></a>
 
 [Link](NFS_STATIC_PV.md)
 
@@ -671,24 +730,10 @@ CSE service fails to start
 
 <br>
 
-CSE fails to connect to vSphere 6.7. Please follow below workaround while we are working on the fix.
-- https://github.com/vmware/container-service-extension/issues/92#issuecomment-403421974
-  
-<br>
-
 CSE does not clean up after itself if something goes wrong. When CSE installation is aborted for any reason, ensure temporary vApp is deleted in vCD before re-issuing the install command
 - Manually delete the problematic "ubuntu-temp" vApp.
-- If temporary vApp still exists and `cse install` command is run again, CSE will just capture the vApp as the Kubernetes template, even though the vApp is not set up properly
-  
-<br>
-
-`pip install container-service-extension` while in a virtual environment will result in CSE not being able to find the script files it requires. Fix is in review.
-- Workaround: do not install cse while in a virtual environment
-
-<br>
-
-During `cse install`, if vCD and config file AMQP configuration is the same, but the specified AMQP exchange has not been created yet, `cse install` will skip the exchange creation. Fix is in review.
-- Workaround: change one of the vCD AMQP configuration values to trigger AMQP configuration during `cse install`. This will change the vCD AMQP value back as well as create the exchange
+- If temporary vApp still exists and `cse install` command is run again, CSE will just capture the vApp as the Kubernetes template, even though the vApp is not set up properly.
+- Running CSE install with the `--update` option will remove this invalid vApp.
 
 <br>
 
@@ -714,12 +759,12 @@ Currently, NFS servers in Kubernetes cluster can not only be accessed by nodes o
 
 ---
 ---
-# [__**Contributing Guide**__](#toc) <a name="contributing"></a>
+# [**Contributing Guide**](#toc) <a name="contributing"></a>
 
-[Link](../CONTRIBUTING.md)
+[Link](CONTRIBUTING.md)
 
 ---
 ---
-# [__**Release Notes**__](#toc) <a name="releasenotes"></a>
+# [**Release Notes**](#toc) <a name="releasenotes"></a>
 
 [Link](RELEASE_NOTES.md)
