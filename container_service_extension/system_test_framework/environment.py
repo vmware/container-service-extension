@@ -42,7 +42,8 @@ def developerModeAware(function):
     :rtype: function
     """
     def wrapper(self):
-        if not Environment._test_config['developer_mode']:
+        if Environment._test_config is not None and \
+                Environment._test_config['developer_mode']:
             function(self)
         else:
             Environment.get_default_logger().debug(
@@ -68,7 +69,7 @@ class Environment(object):
         :param dict config_dict: contains the yaml representation of
             configuration data read from the configuration file.
         """
-        cls._install_config = dict(config_dict)
+        cls._install_config = config_dict
         if 'test' in config_dict:
             cls._test_config = config_dict['test']
             if not cls._test_config['connection']['verify'] and \
@@ -106,24 +107,27 @@ class Environment(object):
 
         :rtype: logging.Logger
         """
-        if cls._logger is None:
-            cls._logger = logging.getLogger('cse.server.installation.tests')
-            cls._logger.setLevel(logging.DEBUG)
-            if not cls._logger.handlers:
-                log_file = \
-                    cls._test_config['logging']['default_log_filename']
-                if log_file is not None:
-                    handler = logging.FileHandler(log_file)
-                else:
-                    handler = logging.NullHandler()
-                formatter = logging.Formatter('%(asctime)-23.23s | '
-                                              '%(levelname)-5.5s | '
-                                              '%(name)-15.15s | '
-                                              '%(module)-15.15s | '
-                                              '%(funcName)-30.30s | '
-                                              '%(message)s')
-                handler.setFormatter(formatter)
-                cls._logger.addHandler(handler)
+        if cls._logger is not None:
+            return cls._logger
+
+        cls._logger = logging.getLogger('cse.server.installation.tests')
+        cls._logger.setLevel(logging.DEBUG)
+        if not cls._logger.handlers:
+            try:
+                log_file = cls._test_config['logging']['default_log_filename']
+                handler = logging.FileHandler(log_file)
+            except (TypeError, KeyError):
+                handler = logging.NullHandler()
+
+            formatter = logging.Formatter('%(asctime)-23.23s | '
+                                          '%(levelname)-5.5s | '
+                                          '%(name)-15.15s | '
+                                          '%(module)-15.15s | '
+                                          '%(funcName)-30.30s | '
+                                          '%(message)s')
+            handler.setFormatter(formatter)
+            cls._logger.addHandler(handler)
+
         return cls._logger
 
     @classmethod
