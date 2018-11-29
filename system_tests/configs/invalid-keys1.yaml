@@ -12,7 +12,7 @@ amqp:
 
 vcd:
   api_version: '31.0'
-  host: 10.150.204.184
+  host: 10.150.202.236
   log: true
   password: ca$hc0w
   port: 443

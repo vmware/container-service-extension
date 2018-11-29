@@ -1,10 +1,10 @@
 amqp:
-  exchange: vcdext
+  exchange: test-exchange
   host: bos1-vcd-sp-static-202-233.eng.vmware.com
   password: guest
   port: 5672
-  prefix: vcd
-  routing_key: cse
+  prefix: test-prefix-vcd
+  routing_key: test-routing-key-cse
   ssl: false
   ssl_accept_all: false
   username: guest
@@ -12,7 +12,7 @@ amqp:
 
 vcd:
   api_version: '31.0'
-  host: 10.150.204.184
+  host: 10.150.202.236
   log: true
   password: ca$hc0w
   port: 443

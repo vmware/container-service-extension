@@ -12,7 +12,7 @@ amqp:
 
 vcd:
   api_version: '31.0'
-  host: 10.150.204.184
+  host: 10.150.202.236
   log: true
   password: ca$hc0w
   port: 443
@@ -40,7 +40,7 @@ broker:
   storage_profile: '*' # name of the storage profile to use when creating the temporary vApp used to build the template
   templates:
   - admin_password: guest_os_admin_password
-    catalog_item: ubuntu-16.04-server-cloudimg-amd64-k8s
+    catalog_item: bad_template1
     cleanup: false
     cpu: 2
     description: 'Ubuntu 16.04
@@ -57,7 +57,7 @@ broker:
     source_ova_name: ubuntu-16.04-server-cloudimg-amd64.ova
     temp_vapp: ubuntu1604-temp
   - admin_password: guest_os_admin_password
-    catalog_item: photon-custom-hw11-2.0-304b817-k8s
+    catalog_item: bad_template2
     cleanup: false
     cpu: 2
     description: 'PhotonOS v2

@@ -1,10 +1,10 @@
 amqp:
-  exchange: vcdext
+  exchange: test-exchange
   host: bos1-vcd-sp-static-202-233.eng.vmware.com
   password: guest
   port: 5672
-  prefix: vcd
-  routing_key: cse
+  prefix: test-prefix-vcd
+  routing_key: test-routing-key-cse
   ssl: false
   ssl_accept_all: false
   username: guest
@@ -12,7 +12,7 @@ amqp:
 
 vcd:
   api_version: '31.0'
-  host: 10.150.204.184
+  host: 10.150.202.236
   log: true
   password: ca$hc0w
   port: 443
@@ -41,7 +41,7 @@ broker:
   templates:
   - admin_password: guest_os_admin_password
     catalog_item: ubuntu-16.04-server-cloudimg-amd64-k8s
-    cleanup: false
+    cleanup: true
     cpu: 2
     description: 'Ubuntu 16.04
 
@@ -58,7 +58,7 @@ broker:
     temp_vapp: ubuntu1604-temp
   - admin_password: guest_os_admin_password
     catalog_item: photon-custom-hw11-2.0-304b817-k8s
-    cleanup: false
+    cleanup: true
     cpu: 2
     description: 'PhotonOS v2
 
