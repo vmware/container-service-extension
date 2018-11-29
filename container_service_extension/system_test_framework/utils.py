@@ -18,8 +18,8 @@ import pathlib
 import yaml
 from vcd_cli.utils import to_dict
 
-# from container_service_extension.system_test_framework.environment import SCRIPTS_DIR, ACTIVE_PHOTON_CUST_SCRIPT, ACTIVE_UBUNTU_CUST_SCRIPT, 
 import container_service_extension.system_test_framework.environment as env
+
 
 def write_dict_to_file_as_yaml(input_dict, output_file_name):
     """Write a dictionary as yaml to a file.
@@ -30,6 +30,44 @@ def write_dict_to_file_as_yaml(input_dict, output_file_name):
     config_yaml = yaml.safe_dump(input_dict, default_flow_style=False)
     with open(output_file_name, 'w') as output_file:
         output_file.write(config_yaml)
+
+
+def yaml_to_dict(filepath):
+    """Gets a dictionary from a yaml file.
+
+    :param str filepath:
+
+    :return: dictionary representation of the yaml file.
+
+    :rtype: dict
+    """
+    with open(filepath, 'r') as f:
+        return yaml.safe_load(f)
+
+
+def diff_amqp_settings(amqp_service, amqp_config):
+    """Gets a list of settings that differ between vCD and config file amqp.
+    Returns an empty list if settings are the same.
+
+    :param pyvcloud.vcd.amqp.AmqpService amqp_service:
+    :param dict amqp_config: amqp section of config file.
+
+    :return: list containing the keys that differ.
+
+    :rtype: List[str]
+    """
+    cur_settings = to_dict(amqp_service.get_settings())
+    amqp = {
+        'AmqpExchange': amqp_config['exchange'],
+        'AmqpHost': amqp_config['host'],
+        'AmqpPort': str(amqp_config['port']),
+        'AmqpPrefix': amqp_config['prefix'],
+        'AmqpSslAcceptAll': str(amqp_config['ssl_accept_all']).lower(),
+        'AmqpUseSSL': str(amqp_config['ssl']).lower(),
+        'AmqpUsername': amqp_config['username'],
+        'AmqpVHost': amqp_config['vhost']
+    }
+    return [k for k, v in cur_settings.items() if amqp[k] != v]
 
 
 def prepare_customization_scripts():
