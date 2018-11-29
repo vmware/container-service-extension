@@ -21,6 +21,12 @@ from container_service_extension.config import SAMPLE_TEMPLATE_PHOTON_V2
 from container_service_extension.config import SAMPLE_TEMPLATE_UBUNTU_16_04
 
 CONFIGS_DIR = 'configs'
+SCRIPTS_DIR = 'scripts'
+ACTIVE_PHOTON_CUST_SCRIPT = 'cust-photon-v2.sh'
+ACTIVE_UBUNTU_CUST_SCRIPT = 'cust-ubuntu-16.04.sh'
+STATIC_PHOTON_CUST_SCRIPT = 'CUST-PHOTON.sh'
+STATIC_UBUNTU_CUST_SCRIPT = 'CUST-UBUNTU.sh'
+
 
 def developerModeAware(function):
     """Skip execution of decorated function.

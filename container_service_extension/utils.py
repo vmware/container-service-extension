@@ -350,8 +350,10 @@ def get_data_file(filename):
     :raises FileNotFoundError: if requested data file cannot be
         found.
     """
+    # look in cwd first
+    base_paths = [str(pathlib.Path())] + sys.path
     path = None
-    for base_path in sys.path:
+    for base_path in base_paths:
         possible_paths = [
             pathlib.Path(f"{base_path}/{CSE_SCRIPTS_DIR}/{filename}"),
             pathlib.Path(f"{base_path}/{filename}"),
