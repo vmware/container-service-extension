@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+1.2.5
+-----
+
+* Updating Kubernetes packages and docker images to address CVE-2018-1002105
+
 1.2.4
 -----
 
