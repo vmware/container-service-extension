@@ -107,6 +107,7 @@ CSE, Container Service Extension for VMware vCloud Director, version 1.2.0
 # [**System/Cloud Administrator**](#toc) <a name="sysadmin"></a>
 
 ## [**CSE/vCD Compatibility**](#toc) <a name="compatibility"></a>
+
 | CSE version | vCD version         |
 |-------------|---------------------|
 | 1.1.0       | 8.20, 9.0, 9.1      |
@@ -729,24 +730,10 @@ CSE service fails to start
 
 <br>
 
-CSE fails to connect to vSphere 6.7. Please follow below workaround while we are working on the fix.
-- https://github.com/vmware/container-service-extension/issues/92#issuecomment-403421974
-  
-<br>
-
 CSE does not clean up after itself if something goes wrong. When CSE installation is aborted for any reason, ensure temporary vApp is deleted in vCD before re-issuing the install command
 - Manually delete the problematic "ubuntu-temp" vApp.
-- If temporary vApp still exists and `cse install` command is run again, CSE will just capture the vApp as the Kubernetes template, even though the vApp is not set up properly
-  
-<br>
-
-`pip install container-service-extension` while in a virtual environment will result in CSE not being able to find the script files it requires. Fix is in review.
-- Workaround: do not install cse while in a virtual environment
-
-<br>
-
-During `cse install`, if vCD and config file AMQP configuration is the same, but the specified AMQP exchange has not been created yet, `cse install` will skip the exchange creation. Fix is in review.
-- Workaround: change one of the vCD AMQP configuration values to trigger AMQP configuration during `cse install`. This will change the vCD AMQP value back as well as create the exchange
+- If temporary vApp still exists and `cse install` command is run again, CSE will just capture the vApp as the Kubernetes template, even though the vApp is not set up properly.
+- Running CSE install with the `--update` option will remove this invalid vApp.
 
 <br>
 

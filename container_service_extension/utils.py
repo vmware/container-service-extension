@@ -19,6 +19,7 @@ from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.platform import Platform
+from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
 from vsphere_guest_run.vsphere import VSphere
@@ -410,7 +411,7 @@ def get_vsphere(config, vapp, vm_name):
     """Get the VSphere object for a specific VM inside a VApp.
 
     :param dict config: CSE config as a dictionary
-    :param pyvcloud.vcd.vapp.VApp vapp:
+    :param pyvcloud.vcd.vapp.VApp vapp: VApp used to get the VM ID.
     :param str vm_name:
 
     :return: VSphere object for a specific VM inside a VApp
@@ -418,8 +419,9 @@ def get_vsphere(config, vapp, vm_name):
     :rtype: vsphere_guest_run.vsphere.VSphere
     """
     global cache
-    vm_resource = vapp.get_vm(vm_name)
-    vm_id = vm_resource.get('id')
+    
+    # get vm id from vm resource
+    vm_id = vapp.get_vm(vm_name).get('id')
     if vm_id not in cache:
         client = Client(uri=config['vcd']['host'],
                         api_version=config['vcd']['api_version'],
@@ -431,6 +433,9 @@ def get_vsphere(config, vapp, vm_name):
                                             config['vcd']['password'])
         client.set_credentials(credentials)
 
+        # must recreate vapp, or cluster creation fails
+        vapp = VApp(client, href=vapp.href)
+        vm_resource = vapp.get_vm(vm_name)
         vm_sys = VM(client, resource=vm_resource)
         vcenter_name = vm_sys.get_vc()
         platform = Platform(client)

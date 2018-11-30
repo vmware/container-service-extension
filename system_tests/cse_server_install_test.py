@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import pathlib
-import time
 import unittest
 
 from click.testing import CliRunner
@@ -112,7 +111,12 @@ class CSEServerInstallationTest(unittest.TestCase):
 
         cls._ssh_key_filepath = f"{pathlib.Path.home() / '.ssh' / 'id_rsa.pub'}"  # noqa
 
-        configure_vcd_amqp(cls._client, 'vcdext', config['amqp']['host'], config['amqp']['port'], 'vcd', config['amqp']['ssl_accept_all'], config['amqp']['ssl'], '/', config['amqp']['username'], config['amqp']['password'], quiet=True)
+        configure_vcd_amqp(cls._client, 'vcdext', config['amqp']['host'],
+                           config['amqp']['port'], 'vcd',
+                           config['amqp']['ssl_accept_all'],
+                           config['amqp']['ssl'], '/',
+                           config['amqp']['username'],
+                           config['amqp']['password'], quiet=True)
         cls._default_amqp_settings = to_dict(cls._amqp_service.get_settings())
         assert cls._default_amqp_settings is not None
 
@@ -137,7 +141,8 @@ class CSEServerInstallationTest(unittest.TestCase):
 
     # runs after each test method
     def tearDown(self):
-        """Resets vcd amqp settings, unregisters cse from vcd, and blanks out customization scripts."""
+        """Resets vcd amqp settings, unregisters cse from vcd, and blanks out
+        customization scripts."""
         # reset vcd amqp configuration
         configure_vcd_amqp(self._client,
                            self._default_amqp_settings['AmqpExchange'],
@@ -512,7 +517,8 @@ class CSEServerInstallationTest(unittest.TestCase):
 
         # check that vapp template exist
         try:
-            self._org.get_catalog_item(config['broker']['catalog'], template_config['catalog_item'])
+            self._org.get_catalog_item(config['broker']['catalog'],
+                                       template_config['catalog_item'])
         except EntityNotFoundException:
             print('vApp template does not exist when it should')
             assert False
