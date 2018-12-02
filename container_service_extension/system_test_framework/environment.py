@@ -26,7 +26,7 @@ ACTIVE_PHOTON_CUST_SCRIPT = 'cust-photon-v2.sh'
 ACTIVE_UBUNTU_CUST_SCRIPT = 'cust-ubuntu-16.04.sh'
 STATIC_PHOTON_CUST_SCRIPT = 'CUST-PHOTON.sh'
 STATIC_UBUNTU_CUST_SCRIPT = 'CUST-UBUNTU.sh'
-
+PHOTON_TEMPLATE_NAME = 'photon-v2'
 
 def developerModeAware(function):
     """Skip execution of decorated function.

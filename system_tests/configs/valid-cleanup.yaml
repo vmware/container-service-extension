@@ -1,6 +1,8 @@
+# Valid config file, cleanup=True for templates
+
 amqp:
   exchange: test-exchange
-  host: bos1-vcd-sp-static-202-233.eng.vmware.com
+  host: amqp_host
   password: guest
   port: 5672
   prefix: test-prefix-vcd
@@ -12,17 +14,17 @@ amqp:
 
 vcd:
   api_version: '31.0'
-  host: 10.150.202.236
+  host: 1.1.1.1
   log: true
-  password: ca$hc0w
+  password: x
   port: 443
-  username: administrator
+  username: x
   verify: false
 
 vcs:
-- name: vc1
-  password: Welcome@123
-  username: administrator@vsphere.local
+- name: x
+  password: x
+  username: x
   verify: false
 
 service:
