@@ -12,8 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pathlib
 import unittest
+from pathlib import Path
 
 from click.testing import CliRunner
 from pyvcloud.vcd.amqp import AmqpService
@@ -32,7 +32,7 @@ from container_service_extension.config import CSE_NAMESPACE
 from container_service_extension.cse import cli
 # TODO from container_service_extension.system_test_framework.base_install_test import BaseServerInstallTestCase  # noqa
 from container_service_extension.system_test_framework.environment import \
-    CONFIGS_DIR
+    CONFIGS_DIR, PHOTON_TEMPLATE_NAME
 from container_service_extension.system_test_framework.utils import \
     yaml_to_dict
 from container_service_extension.system_test_framework.utils import \
@@ -109,7 +109,7 @@ class CSEServerInstallationTest(unittest.TestCase):
         cls._runner = CliRunner()
         assert cls._runner is not None
 
-        cls._ssh_key_filepath = f"{pathlib.Path.home() / '.ssh' / 'id_rsa.pub'}"  # noqa
+        cls._ssh_key_filepath = f"{Path.home() / '.ssh' / 'id_rsa.pub'}"
 
         configure_vcd_amqp(cls._client, 'vcdext', config['amqp']['host'],
                            config['amqp']['port'], 'vcd',
@@ -252,7 +252,13 @@ class CSEServerInstallationTest(unittest.TestCase):
         config validation.
         """
         config_filename = 'valid-cleanup.yaml'
-        get_validated_config(f'{CONFIGS_DIR}/{config_filename}')
+        try:
+            get_validated_config(f'{CONFIGS_DIR}/{config_filename}')
+        except (KeyError, ValueError):
+            print(f"{config_filename} did not pass validation when it should "
+                  f"have")
+            assert False
+
 
     def test_0030_check_invalid_installation(self):
         """Tests cse check against config files that are invalid/have not been
@@ -286,7 +292,7 @@ class CSEServerInstallationTest(unittest.TestCase):
         """
         config_filepath = f"{CONFIGS_DIR}/valid-cleanup.yaml"
         config = yaml_to_dict(config_filepath)
-        target_template = 'photon-v2'
+        target_template = PHOTON_TEMPLATE_NAME
         template_config = None
         for template_dict in config['broker']['templates']:
             if template_dict['name'] == target_template:
@@ -342,7 +348,11 @@ class CSEServerInstallationTest(unittest.TestCase):
             pass
 
         # check that temp vapp exists (--no-capture)
-        self._vdc.get_vapp(template_config['temp_vapp'])
+        try:
+            self._vdc.get_vapp(template_config['temp_vapp'])
+        except EntityNotFoundException:
+            print('vApp does not exist when it should (cleanup: false)')
+            assert False
 
     def test_0050_install_temp_vapp_already_exists(self):
         """Tests installation when temp vapp already exists.
@@ -359,7 +369,7 @@ class CSEServerInstallationTest(unittest.TestCase):
             photon-v2 template exists, temp-vapp exists
         """
         config_filepath = f"{CONFIGS_DIR}/valid-no-cleanup.yaml"
-        target_template = 'photon-v2'
+        target_template = PHOTON_TEMPLATE_NAME
         config = yaml_to_dict(config_filepath)
         template_config = None
         for template_dict in config['broker']['templates']:
@@ -479,7 +489,7 @@ class CSEServerInstallationTest(unittest.TestCase):
         """
         config_filepath = f"{CONFIGS_DIR}/valid-cleanup.yaml"
         config = yaml_to_dict(config_filepath)
-        target_template = 'photon-v2'
+        target_template = PHOTON_TEMPLATE_NAME
         template_config = None
         for template_dict in config['broker']['templates']:
             if template_dict['name'] == target_template:

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pathlib
+from pathlib import Path
 
 import yaml
 from vcd_cli.utils import to_dict
@@ -86,7 +86,7 @@ def prepare_customization_scripts():
     }
 
     for src, dst in scripts_filepaths:
-        pathlib.Path(dst).write_text(pathlib.Path(src).read_text())
+        Path(dst).write_text(Path(src).read_text())
 
 
 def restore_customizaton_scripts():
@@ -96,8 +96,8 @@ def restore_customizaton_scripts():
     """
 
     scripts_paths = [
-        pathlib.Path(f"{env.SCRIPTS_DIR}/{env.ACTIVE_PHOTON_CUST_SCRIPT}"),
-        pathlib.Path(f"{env.SCRIPTS_DIR}/{env.ACTIVE_UBUNTU_CUST_SCRIPT}")
+        Path(f"{env.SCRIPTS_DIR}/{env.ACTIVE_PHOTON_CUST_SCRIPT}"),
+        Path(f"{env.SCRIPTS_DIR}/{env.ACTIVE_UBUNTU_CUST_SCRIPT}")
     ]
 
     for path in scripts_paths:

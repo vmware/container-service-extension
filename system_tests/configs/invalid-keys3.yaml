@@ -1,10 +1,13 @@
+# Missing property in 'vcs' section vc #1, 'username'
+# Extra property in 'vcs' section vc #1, 'extra_property'
+
 amqp:
-  exchange: vcdext
-  host: bos1-vcd-sp-static-202-233.eng.vmware.com
+  exchange: exchange_name
+  host: amqp_host
   password: guest
   port: 5672
-  prefix: vcd
-  routing_key: cse
+  prefix: x
+  routing_key: x
   ssl: false
   ssl_accept_all: false
   username: guest
@@ -12,16 +15,16 @@ amqp:
 
 vcd:
   api_version: '31.0'
-  host: 10.150.202.236
+  host: 1.1.1.1
   log: true
-  password: ca$hc0w
+  password: x
   port: 443
-  username: administrator
+  username: x
   verify: false
 
 vcs:
-- name: vc1
-  password: Welcome@123
+- name: x
+  password: x
   extra_property: a
   verify: false
 

@@ -1,10 +1,13 @@
+# Incorrect value type in 'vcs' section
+# Incorrect value type in 'vcd' section
+
 amqp:
-  exchange: vcdext
-  host: bos1-vcd-sp-static-202-233.eng.vmware.com
+  exchange: exchange_name
+  host: amqp_host
   password: guest
   port: 5672
-  prefix: vcd
-  routing_key: cse
+  prefix: x
+  routing_key: x
   ssl: false
   ssl_accept_all: false
   username: guest
