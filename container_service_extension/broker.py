@@ -79,6 +79,28 @@ def spinning_cursor():
 spinner = spinning_cursor()
 
 
+def rollbackdecorator(func):
+    def wrapper(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except (MasterNodeCreationError, WorkerNodeCreationError,
+                NFSNodeCreationError, ClusterJoiningError,
+                ClusterInitializationError) as e:
+            LOGGER.debug("Rollback started for cluster creation exception")
+            try:
+                broker_instance = args[0]
+                clusters = load_from_metadata(
+                    broker_instance.client_tenant, name=broker_instance.cluster_name)
+                if len(clusters) != 1:
+                    raise Exception('Cluster %s not found.' % broker_instance.cluster_name)
+                broker_instance.cluster = clusters[0]
+                vdc = VDC(broker_instance.client_tenant, href=broker_instance.cluster['vdc_href'])
+                task = vdc.delete_vapp(broker_instance.cluster['name'], force=True)
+            except Exception as erx:
+                LOGGER.error("Failed to rollback cluster creation")
+    return wrapper
+
+
 def task_callback(task):
     message = '\x1b[2K\r{}: {}, status: {}'.format(
         task.get('operationName'), task.get('operation'), task.get('status'))
@@ -393,6 +415,7 @@ class DefaultBroker(threading.Thread):
             LOGGER.error(traceback.format_exc())
         return result
 
+    @rollbackdecorator
     def create_cluster_thread(self):
         network_name = self.body['network']
         try:
@@ -546,6 +569,7 @@ class DefaultBroker(threading.Thread):
         except Exception as e:
             LOGGER.error(traceback.format_exc())
             self.update_task(TaskStatus.ERROR, error_message=str(e))
+
 
     def get_cluster_config(self, cluster_name, headers):
         result = {}
