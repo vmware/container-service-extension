@@ -21,27 +21,26 @@ from vcd_cli.utils import to_dict
 import container_service_extension.system_test_framework.environment as env
 
 
-def write_dict_to_file_as_yaml(input_dict, output_file_name):
-    """Write a dictionary as yaml to a file.
+def dict_to_yaml_file(dikt, filepath):
+    """Write a dictionary to a yaml file.
 
-    :param dict input_dict: the dictionary that needs to be written to file.
-    :param str output_file_name: name of the output file.
+    :param dict dikt: the dictionary to write to a yaml file.
+    :param str filepath: the output file path.
     """
-    config_yaml = yaml.safe_dump(input_dict, default_flow_style=False)
-    with open(output_file_name, 'w') as output_file:
-        output_file.write(config_yaml)
+    with Path(filepath).open('w') as f:
+        f.write(yaml.safe_dump(dikt, default_flow_style=False))
 
 
 def yaml_to_dict(filepath):
     """Gets a dictionary from a yaml file.
 
-    :param str filepath:
+    :param str filepath: the file path to the yaml file.
 
     :return: dictionary representation of the yaml file.
 
     :rtype: dict
     """
-    with open(filepath, 'r') as f:
+    with Path(filepath).open('r') as f:
         return yaml.safe_load(f)
 
 
