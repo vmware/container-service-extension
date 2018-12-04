@@ -12,7 +12,7 @@ class ClusterOperationError(CseServerError):
     """Base class for all cluster operation related exceptions"""
 
 
-class ClusterAlreadyExistsError(ClusterOperationError):
+class ClusterAlreadyExistsError(CseServerError):
     """Raised when creating a cluster that already exists"""
 
 
