@@ -28,6 +28,16 @@ class NodeOperationError(ClusterOperationError):
     """Base class for all node operation related exceptions"""
 
 
+class NodeCreationError(NodeOperationError):
+    """Raised when node creation fails for any reason"""
+    def __init__(self, node_names, error_message):
+        self.node_names = node_names
+        self.error_message = error_message
+
+    def __str__(self):
+        return "failure on creating nodes " + ','.join(self.node_names) + ',' + self.error_message
+
+
 class MasterNodeCreationError(NodeOperationError):
     """Raised when any error happens while adding master node"""
 
@@ -38,6 +48,7 @@ class WorkerNodeCreationError(NodeOperationError):
 
 class NFSNodeCreationError(NodeOperationError):
     """Raised when any error happens while adding NFS node"""
+
 
 
 

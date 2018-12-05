@@ -38,6 +38,7 @@ from container_service_extension.exceptions import ClusterOperationError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import MasterNodeCreationError
 from container_service_extension.exceptions import NFSNodeCreationError
+from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import WorkerNodeCreationError
 from container_service_extension.utils import ERROR_DESCRIPTION
 from container_service_extension.utils import ERROR_MESSAGE
@@ -677,9 +678,16 @@ class DefaultBroker(threading.Thread):
                             (self.body['node_count'],
                              self.cluster_name,
                              self.cluster_id))
-        except Exception as e:
+        except NodeCreationError as e:
+            error_obj = error_to_json(e)
             LOGGER.error(traceback.format_exc())
-            self.update_task(TaskStatus.ERROR, error_message=str(e))
+            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
+            raise e
+        except Exception as e:
+            error_obj = error_to_json(e)
+            LOGGER.error(traceback.format_exc())
+            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
+            raise CseServerError(e)
 
     def delete_nodes(self, headers, body):
         result = {'body': {}}
