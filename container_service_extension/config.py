@@ -699,7 +699,7 @@ def _create_vapp_from_config(client, vdc, config, template_config,
         storage_profile=config['broker']['storage_profile'])
     task = vapp_sparse_resource.Tasks.Task[0]
     client.get_task_monitor().wait_for_success(task)
-    
+    vdc.reload()
     # we don't do lazy loading here using vapp_sparse_resource.get('href'), 
     # because VApp would have an uninitialized attribute (vapp.name)
     vapp = VApp(client, resource=vapp_sparse_resource)
@@ -808,7 +808,7 @@ def capture_vapp_to_template(ctx, vapp, catalog_name, catalog_item_name,
     task = org.capture_vapp(catalog, vapp.href, catalog_item_name, desc,
                             customize_on_instantiate=True, overwrite=True)
     stdout(task, ctx=ctx)
-    vapp.reload()
+    org.reload()
 
     if power_on:
         task = vapp.power_on()
@@ -907,7 +907,7 @@ def should_configure_amqp(client, amqp_config, amqp_install):
 
 
 def configure_vcd_amqp(client, exchange_name, host, port, prefix,
-                       ssl_accept_all, use_ssl, vhost, username, password):
+                       ssl_accept_all, use_ssl, vhost, username, password, quiet=False):
     """Configures vCD AMQP settings/exchange using parameter values.
 
     :param pyvcloud.vcd.client.Client client:
@@ -938,14 +938,17 @@ def configure_vcd_amqp(client, exchange_name, host, port, prefix,
     # This block sets the AMQP setting values on the
     # vCD "System Administration Extensibility page"
     result = amqp_service.test_config(amqp, password)
-    click.secho(f"AMQP test settings, result: {result['Valid'].text}",
-                fg='yellow')
+    if not quiet:
+        click.secho(f"AMQP test settings, result: {result['Valid'].text}",
+                    fg='yellow')
     if result['Valid'].text == 'true':
         amqp_service.set_config(amqp, password)
-        click.secho("Updated vCD AMQP configuration", fg='green')
+        if not quiet:
+            click.secho("Updated vCD AMQP configuration", fg='green')
     else:
         msg = "Couldn't set vCD AMQP configuration"
-        click.secho(msg, fg='red')
+        if not quiet:
+            click.secho(msg, fg='red')
         # TODO replace raw exception with specific
         raise Exception(msg)
 
