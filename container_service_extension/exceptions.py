@@ -30,6 +30,7 @@ class NodeOperationError(ClusterOperationError):
 
 class NodeCreationError(NodeOperationError):
     """Raised when node creation fails for any reason"""
+
     def __init__(self, node_names, error_message):
         self.node_names = node_names
         self.error_message = error_message
@@ -50,5 +51,9 @@ class NFSNodeCreationError(NodeOperationError):
     """Raised when any error happens while adding NFS node"""
 
 
+class AmqpError(Exception):
+    """Base class for Amqp related errors"""
 
 
+class AmqpConnectionError(AmqpError):
+    """ Raised when amqp connection is not open"""

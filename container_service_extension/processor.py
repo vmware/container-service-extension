@@ -12,6 +12,7 @@ from pkg_resources import resource_string
 import yaml
 
 from container_service_extension.broker import get_new_broker
+from container_service_extension.exceptions import CseServerError
 
 LOGGER = logging.getLogger('cse.processor')
 
@@ -78,7 +79,7 @@ class ServiceProcessor(object):
         from container_service_extension.service import Service
         service = Service()
         if not system_request and not service.is_enabled:
-            raise Exception('CSE service is disabled. '
+            raise CseServerError('CSE service is disabled. '
                             'Contact the System Administrator.')
 
         if body['method'] == 'GET':

@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
+import functools
 import logging
 import re
 import threading
@@ -103,6 +104,20 @@ def rollbackdecorator(func):
             except Exception as erx:
                 LOGGER.error("Failed to rollback cluster creation")
     return wrapper
+
+
+def exception_handler(func):
+    @functools.wraps(func)
+    def exception_handler_wrapper(*args, **kwargs):
+        result = {}
+        try:
+            result = func(*args, **kwargs)
+        except Exception as ex:
+            result['status_code'] = INTERNAL_SERVER_ERROR
+            result['body'] = error_to_json(ex)
+            LOGGER.error(traceback.format_exc())
+        return result
+    return exception_handler_wrapper
 
 
 def task_callback(task):
@@ -232,21 +247,17 @@ class DefaultBroker(threading.Thread):
         elif self.op == OP_DELETE_NODES:
             self.delete_nodes_thread()
 
+    @exception_handler
     def list_clusters(self, headers, body):
         result = {}
-        try:
-            result['body'] = []
-            result['status_code'] = OK
-            self._connect_tenant(headers)
-            clusters = load_from_metadata(self.client_tenant)
-            result['body'] = clusters
-        except Exception:
-            LOGGER.error(traceback.format_exc())
-            result['body'] = []
-            result['status_code'] = INTERNAL_SERVER_ERROR
-            result['message'] = traceback.format_exc()
+        result['body'] = []
+        result['status_code'] = OK
+        self._connect_tenant(headers)
+        clusters = load_from_metadata(self.client_tenant)
+        result['body'] = clusters
         return result
 
+    @exception_handler
     def get_cluster_info(self, name, headers, body):
         """Get the info of the cluster.
 
@@ -255,41 +266,37 @@ class DefaultBroker(threading.Thread):
 
         :return: (dict): Info of the cluster.
         """
+
         result = {}
-        try:
-            result['body'] = []
-            result['status_code'] = OK
-            self._connect_tenant(headers)
-            clusters = load_from_metadata(self.client_tenant, name=name)
-            if len(clusters) == 0:
-                raise Exception('Cluster \'%s\' not found.' % name)
-            vapp = VApp(self.client_tenant, href=clusters[0]['vapp_href'])
-            vms = vapp.get_all_vms()
-            for vm in vms:
-                node_info = {
-                    'name': vm.get('name'),
-                    'ipAddress': ''
-                }
-                try:
-                    node_info['ipAddress'] = vapp.get_primary_ip(
-                        vm.get('name'))
-                except Exception:
-                    LOGGER.debug(
-                        'cannot get ip address for node %s' % vm.get('name'))
-                if vm.get('name').startswith(TYPE_MASTER):
-                    clusters[0].get('master_nodes').append(node_info)
-                elif vm.get('name').startswith(TYPE_NODE):
-                    clusters[0].get('nodes').append(node_info)
-                elif vm.get('name').startswith(TYPE_NFS):
-                    clusters[0].get('nfs_nodes').append(node_info)
-            result['body'] = clusters[0]
-        except Exception as e:
-            LOGGER.error(traceback.format_exc())
-            result['body'] = []
-            result['status_code'] = INTERNAL_SERVER_ERROR
-            result['message'] = str(e)
+        result['body'] = []
+        result['status_code'] = OK
+        self._connect_tenant(headers)
+        clusters = load_from_metadata(self.client_tenant, name=name)
+        if len(clusters) == 0:
+            raise CseServerError('Cluster \'%s\' not found.' % name)
+        vapp = VApp(self.client_tenant, href=clusters[0]['vapp_href'])
+        vms = vapp.get_all_vms()
+        for vm in vms:
+            node_info = {
+                'name': vm.get('name'),
+                'ipAddress': ''
+            }
+            try:
+                node_info['ipAddress'] = vapp.get_primary_ip(
+                    vm.get('name'))
+            except Exception:
+                LOGGER.debug(
+                    'cannot get ip address for node %s' % vm.get('name'))
+            if vm.get('name').startswith(TYPE_MASTER):
+                clusters[0].get('master_nodes').append(node_info)
+            elif vm.get('name').startswith(TYPE_NODE):
+                clusters[0].get('nodes').append(node_info)
+            elif vm.get('name').startswith(TYPE_NFS):
+                clusters[0].get('nfs_nodes').append(node_info)
+        result['body'] = clusters[0]
         return result
 
+    @exception_handler
     def get_node_info(self, cluster_name, node_name, headers):
         """Get the info of a given node in the cluster.
 
@@ -300,57 +307,52 @@ class DefaultBroker(threading.Thread):
         :return: (dict): Info of the node.
         """
         result = {}
-        try:
-            result['body'] = []
-            result['status_code'] = OK
-            self._connect_tenant(headers)
-            clusters = load_from_metadata(self.client_tenant,
-                                          name=cluster_name)
-            if len(clusters) == 0:
-                raise Exception('Cluster \'%s\' not found.' % cluster_name)
-            vapp = VApp(self.client_tenant, href=clusters[0]['vapp_href'])
-            vms = vapp.get_all_vms()
-            node_info = None
-            for vm in vms:
-                if (node_name == vm.get('name')):
-                    node_info = {
-                        'name': vm.get('name'),
-                        'numberOfCpus': '',
-                        'memoryMB': '',
-                        'status': VCLOUD_STATUS_MAP.get(int(vm.get('status'))),
-                        'ipAddress': ''
-                    }
-                    if hasattr(vm, 'VmSpecSection'):
-                        node_info[
-                            'numberOfCpus'] = vm.VmSpecSection.NumCpus.text
-                        node_info[
-                            'memoryMB'] = \
-                            vm.VmSpecSection.MemoryResourceMb.Configured.text
-                    try:
-                        node_info['ipAddress'] = vapp.get_primary_ip(
-                            vm.get('name'))
-                    except Exception:
-                        LOGGER.debug('cannot get ip address '
-                                     'for node %s' % vm.get('name'))
-                    if vm.get('name').startswith(TYPE_MASTER):
-                        node_info['node_type'] = 'master'
-                    elif vm.get('name').startswith(TYPE_NODE):
-                        node_info['node_type'] = 'node'
-                    elif vm.get('name').startswith(TYPE_NFS):
-                        node_info['node_type'] = 'nfsd'
-                        exports = self._get_nfs_exports(node_info['ipAddress'],
-                                                        vapp,
-                                                        vm)
-                        node_info['exports'] = exports
-            if node_info is None:
-                raise Exception('Node \'%s\' not found in cluster \'%s\''
-                                % (node_name, cluster_name))
-            result['body'] = node_info
-        except Exception as e:
-            LOGGER.error(traceback.format_exc())
-            result['body'] = []
-            result['status_code'] = INTERNAL_SERVER_ERROR
-            result['message'] = str(e)
+
+        result['body'] = []
+        result['status_code'] = OK
+        self._connect_tenant(headers)
+        clusters = load_from_metadata(self.client_tenant,
+                                      name=cluster_name)
+        if len(clusters) == 0:
+            raise CseServerError('Cluster \'%s\' not found.' % cluster_name)
+        vapp = VApp(self.client_tenant, href=clusters[0]['vapp_href'])
+        vms = vapp.get_all_vms()
+        node_info = None
+        for vm in vms:
+            if (node_name == vm.get('name')):
+                node_info = {
+                    'name': vm.get('name'),
+                    'numberOfCpus': '',
+                    'memoryMB': '',
+                    'status': VCLOUD_STATUS_MAP.get(int(vm.get('status'))),
+                    'ipAddress': ''
+                }
+                if hasattr(vm, 'VmSpecSection'):
+                    node_info[
+                        'numberOfCpus'] = vm.VmSpecSection.NumCpus.text
+                    node_info[
+                        'memoryMB'] = \
+                        vm.VmSpecSection.MemoryResourceMb.Configured.text
+                try:
+                    node_info['ipAddress'] = vapp.get_primary_ip(
+                        vm.get('name'))
+                except Exception:
+                    LOGGER.debug('cannot get ip address '
+                                 'for node %s' % vm.get('name'))
+                if vm.get('name').startswith(TYPE_MASTER):
+                    node_info['node_type'] = 'master'
+                elif vm.get('name').startswith(TYPE_NODE):
+                    node_info['node_type'] = 'node'
+                elif vm.get('name').startswith(TYPE_NFS):
+                    node_info['node_type'] = 'nfsd'
+                    exports = self._get_nfs_exports(node_info['ipAddress'],
+                                                    vapp,
+                                                    vm)
+                    node_info['exports'] = exports
+        if node_info is None:
+            raise CseServerError('Node \'%s\' not found in cluster \'%s\''
+                                 % (node_name, cluster_name))
+        result['body'] = node_info
         return result
 
     def _get_nfs_exports(self, ip, vapp, node):
@@ -379,6 +381,7 @@ class DefaultBroker(threading.Thread):
             exports.append(export)
         return exports
 
+    @exception_handler
     def create_cluster(self, headers, body):
         result = {}
         result['body'] = {}
@@ -391,32 +394,28 @@ class DefaultBroker(threading.Thread):
         result['body'] = {
             'message': 'can\'t create cluster \'%s\'' % cluster_name
         }
-        result['status_code'] = INTERNAL_SERVER_ERROR
-        try:
-            if not self.is_valid_name(cluster_name):
-                raise CseServerError(f"Invalid cluster name \'{cluster_name}\'")
-            self.tenant_info = self._connect_tenant(headers)
-            self.headers = headers
-            self.body = body
-            self.cluster_name = cluster_name
-            self.cluster_id = str(uuid.uuid4())
-            self.op = OP_CREATE_CLUSTER
-            self._connect_sysadmin()
-            self.update_task(
-                TaskStatus.RUNNING,
-                message='Creating cluster %s(%s)' % (cluster_name,
-                                                     self.cluster_id))
-            self.daemon = True
-            self.start()
-            response_body = {}
-            response_body['name'] = self.cluster_name
-            response_body['cluster_id'] = self.cluster_id
-            response_body['task_href'] = self.task_resource.get('href')
-            result['body'] = response_body
-            result['status_code'] = ACCEPTED
-        except Exception as e:
-            result['body'] = error_to_json(e)
-            LOGGER.error(traceback.format_exc())
+
+        if not self.is_valid_name(cluster_name):
+            raise CseServerError(f"Invalid cluster name \'{cluster_name}\'")
+        self.tenant_info = self._connect_tenant(headers)
+        self.headers = headers
+        self.body = body
+        self.cluster_name = cluster_name
+        self.cluster_id = str(uuid.uuid4())
+        self.op = OP_CREATE_CLUSTER
+        self._connect_sysadmin()
+        self.update_task(
+            TaskStatus.RUNNING,
+            message='Creating cluster %s(%s)' % (cluster_name,
+                                                 self.cluster_id))
+        self.daemon = True
+        self.start()
+        response_body = {}
+        response_body['name'] = self.cluster_name
+        response_body['cluster_id'] = self.cluster_id
+        response_body['task_href'] = self.task_resource.get('href')
+        result['body'] = response_body
+        result['status_code'] = ACCEPTED
         return result
 
     @rollbackdecorator
@@ -528,38 +527,36 @@ class DefaultBroker(threading.Thread):
             self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
             raise CseServerError(e)
 
+    @exception_handler
     def delete_cluster(self, headers, body):
         result = {}
         result['body'] = {}
         LOGGER.debug('about to delete cluster with name: %s' % body['name'])
         result['status_code'] = INTERNAL_SERVER_ERROR
-        try:
-            self.cluster_name = body['name']
-            self.tenant_info = self._connect_tenant(headers)
-            self.headers = headers
-            self.body = body
-            self.op = OP_DELETE_CLUSTER
-            self._connect_sysadmin()
-            clusters = load_from_metadata(
-                self.client_tenant, name=self.cluster_name)
-            if len(clusters) != 1:
-                raise Exception('Cluster %s not found.' % self.cluster_name)
-            self.cluster = clusters[0]
-            self.cluster_id = self.cluster['cluster_id']
-            self.update_task(
-                TaskStatus.RUNNING,
-                message='Deleting cluster %s(%s)' % (self.cluster_name,
-                                                     self.cluster_id))
-            self.daemon = True
-            self.start()
-            response_body = {}
-            response_body['cluster_name'] = self.cluster_name
-            response_body['task_href'] = self.task_resource.get('href')
-            result['body'] = response_body
-            result['status_code'] = ACCEPTED
-        except Exception as e:
-            result['body'] = self._to_message(e)
-            LOGGER.error(traceback.format_exc())
+
+        self.cluster_name = body['name']
+        self.tenant_info = self._connect_tenant(headers)
+        self.headers = headers
+        self.body = body
+        self.op = OP_DELETE_CLUSTER
+        self._connect_sysadmin()
+        clusters = load_from_metadata(
+            self.client_tenant, name=self.cluster_name)
+        if len(clusters) != 1:
+            raise CseServerError('Cluster %s not found.' % self.cluster_name)
+        self.cluster = clusters[0]
+        self.cluster_id = self.cluster['cluster_id']
+        self.update_task(
+            TaskStatus.RUNNING,
+            message='Deleting cluster %s(%s)' % (self.cluster_name,
+                                                 self.cluster_id))
+        self.daemon = True
+        self.start()
+        response_body = {}
+        response_body['cluster_name'] = self.cluster_name
+        response_body['task_href'] = self.task_resource.get('href')
+        result['body'] = response_body
+        result['status_code'] = ACCEPTED
         return result
 
     def delete_cluster_thread(self):
@@ -577,61 +574,53 @@ class DefaultBroker(threading.Thread):
             LOGGER.error(traceback.format_exc())
             self.update_task(TaskStatus.ERROR, error_message=str(e))
 
-
+    @exception_handler
     def get_cluster_config(self, cluster_name, headers):
         result = {}
-        try:
-            self._connect_tenant(headers)
-            clusters = load_from_metadata(
-                self.client_tenant, name=cluster_name)
-            if len(clusters) != 1:
-                raise Exception('Cluster \'%s\' not found' % cluster_name)
-            vapp = VApp(self.client_tenant, href=clusters[0]['vapp_href'])
-            template = self.get_template(name=clusters[0]['template'])
-            result['body'] = get_cluster_config(self.config, vapp,
-                                                template['admin_password'])
-            result['status_code'] = OK
-        except Exception as e:
-            result['body'] = self._to_message(e)
-            result['status_code'] = INTERNAL_SERVER_ERROR
+        self._connect_tenant(headers)
+        clusters = load_from_metadata(
+            self.client_tenant, name=cluster_name)
+        if len(clusters) != 1:
+            raise CseServerError('Cluster \'%s\' not found' % cluster_name)
+        vapp = VApp(self.client_tenant, href=clusters[0]['vapp_href'])
+        template = self.get_template(name=clusters[0]['template'])
+        result['body'] = get_cluster_config(self.config, vapp,
+                                            template['admin_password'])
+        result['status_code'] = OK
         return result
 
+    @exception_handler
     def create_nodes(self, headers, body):
         result = {'body': {}}
         self.cluster_name = body['name']
         LOGGER.debug('about to add %s nodes to cluster %s on VDC %s, sp=%s',
                      body['node_count'], self.cluster_name, body['vdc'],
                      body['storage_profile'])
-        result['status_code'] = INTERNAL_SERVER_ERROR
-        try:
-            if body['node_count'] < 1:
-                raise Exception('Invalid node count: %s.' % body['node_count'])
-            self.tenant_info = self._connect_tenant(headers)
-            clusters = load_from_metadata(
-                self.client_tenant, name=self.cluster_name)
-            if len(clusters) != 1:
-                raise Exception(
-                    'Cluster \'%s\' not found.' % self.cluster_name)
-            self.cluster = clusters[0]
-            self.headers = headers
-            self.body = body
-            self.op = OP_CREATE_NODES
-            self._connect_sysadmin()
-            self.cluster_id = self.cluster['cluster_id']
-            self.update_task(
-                TaskStatus.RUNNING,
-                message='Adding %s node(s) to cluster %s(%s)' %
-                (body['node_count'], self.cluster_name, self.cluster_id))
-            self.daemon = True
-            self.start()
-            response_body = {}
-            response_body['cluster_name'] = self.cluster_name
-            response_body['task_href'] = self.task_resource.get('href')
-            result['body'] = response_body
-            result['status_code'] = ACCEPTED
-        except Exception as e:
-            result['body'] = self._to_message(e)
-            LOGGER.error(traceback.format_exc())
+        if body['node_count'] < 1:
+            raise CseServerError('Invalid node count: %s.' % body['node_count'])
+        self.tenant_info = self._connect_tenant(headers)
+        clusters = load_from_metadata(
+            self.client_tenant, name=self.cluster_name)
+        if len(clusters) != 1:
+            raise CseServerError(
+                'Cluster \'%s\' not found.' % self.cluster_name)
+        self.cluster = clusters[0]
+        self.headers = headers
+        self.body = body
+        self.op = OP_CREATE_NODES
+        self._connect_sysadmin()
+        self.cluster_id = self.cluster['cluster_id']
+        self.update_task(
+            TaskStatus.RUNNING,
+            message='Adding %s node(s) to cluster %s(%s)' %
+                    (body['node_count'], self.cluster_name, self.cluster_id))
+        self.daemon = True
+        self.start()
+        response_body = {}
+        response_body['cluster_name'] = self.cluster_name
+        response_body['task_href'] = self.task_resource.get('href')
+        result['body'] = response_body
+        result['status_code'] = ACCEPTED
         return result
 
     def create_nodes_thread(self):
@@ -689,45 +678,42 @@ class DefaultBroker(threading.Thread):
             self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
             raise CseServerError(e)
 
+    @exception_handler
     def delete_nodes(self, headers, body):
         result = {'body': {}}
         self.cluster_name = body['name']
         LOGGER.debug(
             'about to delete nodes from cluster with name: %s' % body['name'])
-        result['status_code'] = INTERNAL_SERVER_ERROR
-        try:
-            if len(body['nodes']) < 1:
-                raise Exception('Invalid list of nodes: %s.' % body['nodes'])
-            for node in body['nodes']:
-                if node.startswith(TYPE_MASTER):
-                    raise Exception(
-                        'Can\'t delete a master node: \'%s\'.' % node)
-            self.tenant_info = self._connect_tenant(headers)
-            clusters = load_from_metadata(
-                self.client_tenant, name=self.cluster_name)
-            if len(clusters) != 1:
-                raise Exception(
-                    'Cluster \'%s\' not found.' % self.cluster_name)
-            self.cluster = clusters[0]
-            self.headers = headers
-            self.body = body
-            self.op = OP_DELETE_NODES
-            self._connect_sysadmin()
-            self.cluster_id = self.cluster['cluster_id']
-            self.update_task(
-                TaskStatus.RUNNING,
-                message='Deleting %s node(s) from cluster %s(%s)' %
-                (len(body['nodes']), self.cluster_name, self.cluster_id))
-            self.daemon = True
-            self.start()
-            response_body = {}
-            response_body['cluster_name'] = self.cluster_name
-            response_body['task_href'] = self.task_resource.get('href')
-            result['body'] = response_body
-            result['status_code'] = ACCEPTED
-        except Exception as e:
-            result['body'] = self._to_message(e)
-            LOGGER.error(traceback.format_exc())
+
+        if len(body['nodes']) < 1:
+            raise CseServerError('Invalid list of nodes: %s.' % body['nodes'])
+        for node in body['nodes']:
+            if node.startswith(TYPE_MASTER):
+                raise CseServerError(
+                    'Can\'t delete a master node: \'%s\'.' % node)
+        self.tenant_info = self._connect_tenant(headers)
+        clusters = load_from_metadata(
+            self.client_tenant, name=self.cluster_name)
+        if len(clusters) != 1:
+            raise CseServerError(
+                'Cluster \'%s\' not found.' % self.cluster_name)
+        self.cluster = clusters[0]
+        self.headers = headers
+        self.body = body
+        self.op = OP_DELETE_NODES
+        self._connect_sysadmin()
+        self.cluster_id = self.cluster['cluster_id']
+        self.update_task(
+            TaskStatus.RUNNING,
+            message='Deleting %s node(s) from cluster %s(%s)' %
+                    (len(body['nodes']), self.cluster_name, self.cluster_id))
+        self.daemon = True
+        self.start()
+        response_body = {}
+        response_body['cluster_name'] = self.cluster_name
+        response_body['task_href'] = self.task_resource.get('href')
+        result['body'] = response_body
+        result['status_code'] = ACCEPTED
         return result
 
     def delete_nodes_thread(self):
