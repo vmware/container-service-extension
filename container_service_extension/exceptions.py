@@ -36,7 +36,7 @@ class NodeCreationError(NodeOperationError):
         self.error_message = error_message
 
     def __str__(self):
-        return "failure on creating nodes " + ','.join(self.node_names) + ',' + self.error_message
+        return f"failure on creating nodes {self.node_names}\nError:{self.error_message}"
 
 
 class MasterNodeCreationError(NodeOperationError):
@@ -57,3 +57,14 @@ class AmqpError(Exception):
 
 class AmqpConnectionError(AmqpError):
     """ Raised when amqp connection is not open"""
+
+
+class VcdResponseError(Exception):
+    """Base class for all vcd response related Exceptions."""
+
+    def __init__(self, status_code, error_message):
+        self.status_code = status_code
+        self.error_message = error_message
+
+    def __str__(self):
+        return self.error_message
