@@ -107,14 +107,26 @@ def rollbackdecorator(func):
 
 
 def exception_handler(func):
+    """ This function is used as decorator, executes the function that is passed as argument.
+    returns exactly what the passed function returns.
+
+    If there is any exception, returns new dictionary with keys status code and body.
+
+    NOTE: This decorator should be applied only on those functions that constructs the final
+    HTTP responses and also needs exception handler as additional behaviour.
+
+    :param func: original function that needs to be executed
+
+    :return: reference to the function that executes the passed function 'func'
+    """
     @functools.wraps(func)
     def exception_handler_wrapper(*args, **kwargs):
         result = {}
         try:
             result = func(*args, **kwargs)
-        except Exception as ex:
+        except Exception as err:
             result['status_code'] = INTERNAL_SERVER_ERROR
-            result['body'] = error_to_json(ex)
+            result['body'] = error_to_json(err)
             LOGGER.error(traceback.format_exc())
         return result
     return exception_handler_wrapper
