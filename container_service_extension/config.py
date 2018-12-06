@@ -1,8 +1,6 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-import logging
-import traceback
 from urllib.parse import urlparse
 
 import click
@@ -24,6 +22,9 @@ from vcd_cli.utils import stdout
 from vcd_cli.utils import to_dict
 from vsphere_guest_run.vsphere import VSphere
 
+from container_service_extension.logger import configure_install_logger
+from container_service_extension.logger import INSTALL_LOGGER as LOGGER
+from container_service_extension.logger import INSTALL_LOG_FILEPATH
 from container_service_extension.utils import catalog_exists
 from container_service_extension.utils import catalog_item_exists
 from container_service_extension.utils import check_file_permissions
@@ -41,7 +42,7 @@ from container_service_extension.utils import vgr_callback
 from container_service_extension.utils import wait_until_tools_ready
 from container_service_extension.utils import wait_for_catalog_item_to_resolve
 
-LOGGER = logging.getLogger('cse.config')
+# used for creating temp vapp
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = 'vmxnet3'
 TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
 
@@ -261,10 +262,7 @@ def validate_vcd_and_vcs_config(vcd_dict, vcs):
     try:
         client = Client(vcd_dict['host'],
                         api_version=vcd_dict['api_version'],
-                        verify_ssl_certs=vcd_dict['verify'],
-                        log_file='cse-check.log',
-                        log_headers=True,
-                        log_bodies=True)
+                        verify_ssl_certs=vcd_dict['verify'])
         client.set_credentials(BasicLoginCredentials(vcd_dict['username'],
                                                      SYSTEM_ORG_NAME,
                                                      vcd_dict['password']))
@@ -352,10 +350,7 @@ def check_cse_installation(config, check_template='*'):
     try:
         client = Client(config['vcd']['host'],
                         api_version=config['vcd']['api_version'],
-                        verify_ssl_certs=config['vcd']['verify'],
-                        log_file='cse-check.log',
-                        log_headers=True,
-                        log_bodies=True)
+                        verify_ssl_certs=config['vcd']['verify'])
         credentials = BasicLoginCredentials(config['vcd']['username'],
                                             SYSTEM_ORG_NAME,
                                             config['vcd']['password'])
@@ -469,23 +464,27 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
     :raises Exception: if AMQP connection fails.
     """
     config = get_validated_config(config_file_name)
-    click.secho(f"Installing CSE on vCloud Director using config file "
-                f"'{config_file_name}'", fg='yellow')
+    configure_install_logger()
+    msg = f"Installing CSE on vCloud Director using config file " \
+          f"'{config_file_name}'"
+    click.secho(msg, fg='yellow')
+    LOGGER.info(msg)
     client = None
     try:
         client = Client(config['vcd']['host'],
                         api_version=config['vcd']['api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
-                        log_file='cse-install.log',
+                        log_file=INSTALL_LOG_FILEPATH,
                         log_headers=True,
                         log_bodies=True)
         credentials = BasicLoginCredentials(config['vcd']['username'],
                                             SYSTEM_ORG_NAME,
                                             config['vcd']['password'])
         client.set_credentials(credentials)
-        click.secho(f"Connected to vCD as system administrator: "
-                    f"{config['vcd']['host']}:{config['vcd']['port']}",
-                    fg='green')
+        msg = f"Connected to vCD as system administrator: " \
+              f"{config['vcd']['host']}:{config['vcd']['port']}"
+        click.secho(msg, fg='green')
+        LOGGER.info(msg)
 
         # configure amqp
         amqp = config['amqp']
@@ -507,13 +506,16 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
         org = get_org(client, org_name=config['broker']['org'])
         create_and_share_catalog(org, config['broker']['catalog'],
                                  catalog_desc='CSE templates')
-
         # create, customize, capture VM templates
         for template in config['broker']['templates']:
             if template_name == '*' or template['name'] == template_name:
                 create_template(ctx, client, config, template, update=update,
                                 no_capture=no_capture, ssh_key=ssh_key,
                                 org=org)
+    except Exception:
+        click.secho("CSE Installation Error. Check CSE install logs", fg='red')
+        LOGGER.error("CSE Installation Error", exc_info=True)
+        raise  # TODO need installation relevant exceptions for rollback
     finally:
         if client is not None:
             client.logout()
@@ -548,20 +550,25 @@ def create_template(ctx, client, config, template_config, update=False,
     ova_name = template_config['source_ova_name']
 
     if not update and catalog_item_exists(org, catalog_name, template_name):
-        click.secho(f"Found template '{template_name}' in catalog "
-                    f"'{catalog_name}'", fg='green')
+        msg = f"Found template '{template_name}' in catalog '{catalog_name}'"
+        click.secho(msg, fg='green')
+        LOGGER.info(msg)
         return
 
     # if update flag is set, delete existing template/ova file/temp vapp
     if update:
-        click.secho(f"Update flag set. If template, source ova file, and "
-                    f"temporary vApp exist, they will be deleted", fg='yellow')
+        msg = f"--update flag set. If template, source ova file, " \
+              f"and temporary vApp exist, they will be deleted"
+        click.secho(msg, fg='yellow')
+        LOGGER.info(msg)
         try:
             org.delete_catalog_item(catalog_name, template_name)
             wait_for_catalog_item_to_resolve(client, catalog_name,
                                              template_name, org=org)
             org.reload()
-            click.secho("Deleted vApp template", fg='green')
+            msg = "Deleted vApp template"
+            click.secho(msg, fg='green')
+            LOGGER.info(msg)
         except EntityNotFoundException:
             pass
         try:
@@ -569,58 +576,75 @@ def create_template(ctx, client, config, template_config, update=False,
             wait_for_catalog_item_to_resolve(client, catalog_name, ova_name,
                                              org=org)
             org.reload()
-            click.secho("Deleted ova file", fg='green')
+            msg = "Deleted ova file"
+            click.secho(msg, fg='green')
+            LOGGER.info(msg)
         except EntityNotFoundException:
             pass
         try:
             task = vdc.delete_vapp(vapp_name, force=True)
             stdout(task, ctx=ctx)
             vdc.reload()
-            click.secho("Deleted temporary vApp", fg='green')
+            msg = "Deleted temporary vApp"
+            click.secho(msg, fg='green')
+            LOGGER.info(msg)
         except EntityNotFoundException:
             pass
 
     # if needed, upload ova and create temp vapp
-    click.secho(f"Creating template '{template_name}' in catalog "
-                f"'{catalog_name}'", fg='yellow')
+    msg = f"Creating template '{template_name}' in catalog '{catalog_name}'"
+    click.secho(msg, fg='yellow')
+    LOGGER.info(msg)
     try:
         vapp = VApp(client, resource=vdc.get_vapp(vapp_name))
-        click.secho(f"Found vApp '{vapp_name}'", fg='green')
+        msg = f"Found vApp '{vapp_name}'"
+        click.secho(msg, fg='green')
+        LOGGER.info(msg)
     except EntityNotFoundException:
         if catalog_item_exists(org, catalog_name, ova_name):
-            click.secho(f"Found ova file '{ova_name}' in catalog "
-                        f"'{catalog_name}'", fg='green')
+            msg = f"Found ova file '{ova_name}' in catalog '{catalog_name}'"
+            click.secho(msg, fg='green')
+            LOGGER.info(msg)
         else:
             # download/upload files to catalog if necessary
             ova_filepath = f"cse_cache/{ova_name}"
             download_file(template_config['source_ova'], ova_filepath,
-                          sha256=template_config['sha256_ova'])
-            upload_ova_to_catalog(client, catalog_name, ova_filepath, org=org)
+                          sha256=template_config['sha256_ova'], logger=LOGGER)
+            upload_ova_to_catalog(client, catalog_name, ova_filepath, org=org,
+                                  logger=LOGGER)
 
         vapp = _create_temp_vapp(ctx, client, vdc, config, template_config,
                                  ssh_key)
 
     if no_capture:
-        click.secho(f"'no-capture' flag set. Not capturing vApp '{vapp.name}' "
-                    f"as a template", fg='yellow')
+        msg = f"'--no-capture' flag set. " \
+              f"Not capturing vApp '{vapp.name}' as a template"
+        click.secho(msg, fg='yellow')
+        LOGGER.info(msg)
         return
 
     # capture temp vapp as template
-    click.secho(f"Creating template '{template_name}' from vApp '{vapp.name}'",
-                fg='yellow')
+    msg = f"Creating template '{template_name}' from vApp '{vapp.name}'"
+    click.secho(msg, fg='yellow')
+    LOGGER.info(msg)
     capture_vapp_to_template(ctx, vapp, catalog_name, template_name,
                              org=org, desc=template_config['description'],
                              power_on=not template_config['cleanup'])
-    click.secho(f"Created template '{template_name}' from vApp '{vapp_name}'",
-                fg='green')
+    msg = f"Created template '{template_name}' from vApp '{vapp_name}'"
+    click.secho(msg, fg='green')
+    LOGGER.info(msg)
 
     # delete temp vapp
     if template_config['cleanup']:
-        click.secho(f"Deleting vApp '{vapp_name}'", fg='yellow')
+        msg = f"Deleting vApp '{vapp_name}'"
+        click.secho(msg, fg='yellow')
+        LOGGER.info(msg)
         task = vdc.delete_vapp(vapp_name, force=True)
         stdout(task, ctx=ctx)
         vdc.reload()
-        click.secho(f"Deleted vApp '{vapp_name}'", fg='green')
+        msg = f"Deleted vApp '{vapp_name}'"
+        click.secho(msg, fg='green')
+        LOGGER.info(msg)
 
 
 def _create_temp_vapp(ctx, client, vdc, config, template_config, ssh_key):
@@ -639,7 +663,8 @@ def _create_temp_vapp(ctx, client, vdc, config, template_config, ssh_key):
     :rtype: pyvcloud.vcd.vapp.VApp
     """
     vapp_name = template_config['temp_vapp']
-    init_script = get_data_file(f"init-{template_config['name']}.sh")
+    init_script = get_data_file(f"init-{template_config['name']}.sh",
+                                logger=LOGGER)
     if ssh_key is not None:
         init_script += \
             f"""
@@ -647,18 +672,26 @@ def _create_temp_vapp(ctx, client, vdc, config, template_config, ssh_key):
             echo '{ssh_key}' >> /root/.ssh/authorized_keys
             chmod -R go-rwx /root/.ssh
             """
-    click.secho(f"Creating vApp '{vapp_name}'", fg='yellow')
+    msg = f"Creating vApp '{vapp_name}'"
+    click.secho(msg, fg='yellow')
+    LOGGER.info(msg)
     vapp = _create_vapp_from_config(client, vdc, config, template_config,
                                     init_script)
-    click.secho(f"Created vApp '{vapp_name}'", fg='green')
-
-    click.secho(f"Customizing vApp '{vapp_name}'", fg='yellow')
-    cust_script = get_data_file(f"cust-{template_config['name']}.sh")
+    msg = f"Created vApp '{vapp_name}'"
+    click.secho(msg, fg='green')
+    LOGGER.info(msg)
+    msg = f"Customizing vApp '{vapp_name}'"
+    click.secho(msg, fg='yellow')
+    LOGGER.info(msg)
+    cust_script = get_data_file(f"cust-{template_config['name']}.sh",
+                                logger=LOGGER)
     ova_name = template_config['source_ova_name']
     is_photon = True if 'photon' in ova_name else False
     _customize_vm(ctx, config, vapp, vapp.name, cust_script,
                   is_photon=is_photon)
-    click.secho(f"Customized vApp '{vapp_name}'", fg='green')
+    msg = f"Customized vApp '{vapp_name}'"
+    click.secho(msg, fg='green')
+    LOGGER.info(msg)
 
     return vapp
 
@@ -700,7 +733,7 @@ def _create_vapp_from_config(client, vdc, config, template_config,
     task = vapp_sparse_resource.Tasks.Task[0]
     client.get_task_monitor().wait_for_success(task)
     vdc.reload()
-    # we don't do lazy loading here using vapp_sparse_resource.get('href'), 
+    # we don't do lazy loading here using vapp_sparse_resource.get('href'),
     # because VApp would have an uninitialized attribute (vapp.name)
     vapp = VApp(client, resource=vapp_sparse_resource)
     vapp.reload()
@@ -725,7 +758,7 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
     """
     callback = vgr_callback(prepend_msg='Waiting for guest tools, status: "')
     if not is_photon:
-        vs = get_vsphere(config, vapp, vm_name)
+        vs = get_vsphere(config, vapp, vm_name, logger=LOGGER)
         wait_until_tools_ready(vapp, vs, callback=callback)
 
         vapp.reload()
@@ -736,7 +769,7 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
         stdout(task, ctx=ctx)
         vapp.reload()
 
-    vs = get_vsphere(config, vapp, vm_name)
+    vs = get_vsphere(config, vapp, vm_name, logger=LOGGER)
     wait_until_tools_ready(vapp, vs, callback=callback)
     password_auto = vapp.get_admin_password(vm_name)
 
@@ -755,23 +788,32 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
     except Exception:
         # TODO replace raw exception with specific exception
         # unsure what exception execute_script_in_guest can throw
-        LOGGER.error(traceback.format_exc())
-        click.secho(traceback.format_exc(), fg='red')
+        click.secho("Failed VM customization. Check CSE install log", fg='red')
+        LOGGER.error("Failed VM customization", exc_info=True)
         raise
 
     if len(result) > 0:
-        click.echo(f'Result: {result}')
+        msg = f'Result: {result}'
+        click.echo(msg)
+        LOGGER.info(msg)
         result_stdout = result[1].content.decode()
         result_stderr = result[2].content.decode()
-        click.secho('stderr:')
+        msg = 'stderr:'
+        click.echo(msg)
+        LOGGER.info(msg)
         if len(result_stderr) > 0:
-            click.secho(result_stderr, err=True)
-        click.secho('stdout:')
+            click.echo(result_stderr)
+            LOGGER.info(result_stderr)
+        msg = 'stdout:'
+        click.echo(msg)
+        LOGGER.info(msg)
         if len(result_stdout) > 0:
-            click.secho(result_stdout, err=False)
+            click.echo(result_stdout)
+            LOGGER.info(result_stdout)
     if len(result) == 0 or result[0] != 0:
-        msg = 'Failed to customize VM'
-        click.secho(msg, fg='red')
+        msg = "Failed VM customization"
+        click.secho(f"{msg}. Check CSE install log", fg='red')
+        LOGGER.error(msg, exc_info=True)
         # TODO replace raw exception with specific exception
         raise Exception(msg)
 
@@ -832,7 +874,9 @@ def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
 
     :raises Exception: if AMQP exchange could not be created.
     """
-    click.secho(f"Checking for AMQP exchange '{exchange_name}'", fg='yellow')
+    msg = f"Checking for AMQP exchange '{exchange_name}'"
+    click.secho(msg, fg='yellow')
+    LOGGER.info(msg)
     credentials = pika.PlainCredentials(username, password)
     parameters = pika.ConnectionParameters(host, port, vhost, credentials,
                                            ssl=use_ssl, connection_attempts=3,
@@ -845,12 +889,16 @@ def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
                                  exchange_type=EXCHANGE_TYPE,
                                  durable=True, auto_delete=False)
     except Exception:  # TODO replace with specific exception
-        LOGGER.error(traceback.format_exc())
-        click.secho(f"Cannot create AMQP exchange '{exchange_name}'", fg='red')
+        msg = f"Cannot create AMQP exchange '{exchange_name}'"
+        click.secho(msg, fg='red')
+        LOGGER.error(msg, exc_info=True)
         raise
     finally:
-        connection.close()
-    click.secho(f"AMQP exchange '{exchange_name}' is ready", fg='green')
+        if connection is not None:
+            connection.close()
+    msg = f"AMQP exchange '{exchange_name}' is ready"
+    click.secho(msg, fg='green')
+    LOGGER.info(msg)
 
 
 def should_configure_amqp(client, amqp_config, amqp_install):
@@ -870,8 +918,10 @@ def should_configure_amqp(client, amqp_config, amqp_install):
     :rtype: bool
     """
     if amqp_install == 'skip':
-        click.secho(f"Skipping AMQP configuration. vCD and config file may "
-                    f"have different AMQP settings.", fg='yellow')
+        msg = f"Skipping AMQP configuration. vCD and config file may have " \
+              f"different AMQP settings"
+        click.secho(msg, fg='yellow')
+        LOGGER.warning(msg)
         return False
 
     current_settings = to_dict(AmqpService(client).get_settings())
@@ -888,38 +938,52 @@ def should_configure_amqp(client, amqp_config, amqp_install):
 
     diff_settings = [k for k, v in current_settings.items() if amqp[k] != v]
     if diff_settings:
-        click.secho('current vCD AMQP setting(s):', fg='blue')
+        msg = 'current vCD AMQP setting(s):'
+        click.secho(msg, fg='blue')
+        LOGGER.info(msg)
         for setting in diff_settings:
-            click.echo(f"{setting}: {current_settings[setting]}")
-        click.secho('\nconfig file AMQP setting(s):', fg='blue')
+            msg = f"{setting}: {current_settings[setting]}"
+            click.echo(msg)
+            LOGGER.info(msg)
+        msg = '\nconfig file AMQP setting(s):'
+        click.secho(msg, fg='blue')
+        LOGGER.info(msg)
         for setting in diff_settings:
-            click.echo(f"{setting}: {amqp[setting]}")
+            msg = f"{setting}: {amqp[setting]}"
+            click.echo(msg)
+            LOGGER.info(msg)
         msg = '\nConfigure AMQP with the config file settings?'
         if amqp_install == 'prompt' and not click.confirm(msg):
-            click.secho(f"Skipping AMQP configuration. vCD and config file "
-                        f"may have different AMQP settings.", fg='yellow')
+            msg = f"Skipping AMQP configuration. vCD and config file may " \
+                  f"have different AMQP settings"
+            click.secho(msg, fg='yellow')
+            LOGGER.warning(msg)
             return False
         return True
 
-    click.secho("vCD and config file AMQP settings are the same. "
-                "Skipping AMQP configuration", fg='green')
+    msg = "vCD and config file AMQP settings are the same, " \
+          "skipping AMQP configuration"
+    click.secho(msg, fg='green')
+    LOGGER.info(msg)
     return False
 
 
 def configure_vcd_amqp(client, exchange_name, host, port, prefix,
-                       ssl_accept_all, use_ssl, vhost, username, password, quiet=False):
+                       ssl_accept_all, use_ssl, vhost, username, password,
+                       quiet=False):
     """Configures vCD AMQP settings/exchange using parameter values.
 
     :param pyvcloud.vcd.client.Client client:
     :param str exchange_name: name of exchange.
     :param str host: AMQP host name.
-    :param str password: AMQP password.
     :param int port: AMQP port.
     :param str prefix:
     :param bool ssl_accept_all:
     :param bool use_ssl: Enable ssl.
-    :param str username: AMQP username.
     :param str vhost: AMQP vhost.
+    :param str username: AMQP username.
+    :param str password: AMQP password.
+    :param bool quiet: if True, disables all console and log output
 
     :raises Exception: if could not set AMQP configuration.
     """
@@ -939,16 +1003,20 @@ def configure_vcd_amqp(client, exchange_name, host, port, prefix,
     # vCD "System Administration Extensibility page"
     result = amqp_service.test_config(amqp, password)
     if not quiet:
-        click.secho(f"AMQP test settings, result: {result['Valid'].text}",
-                    fg='yellow')
+        msg = f"AMQP test settings, result: {result['Valid'].text}"
+        click.secho(msg, fg='yellow')
+        LOGGER.info(msg)
     if result['Valid'].text == 'true':
         amqp_service.set_config(amqp, password)
         if not quiet:
-            click.secho("Updated vCD AMQP configuration", fg='green')
+            msg = "Updated vCD AMQP configuration"
+            click.secho(msg, fg='green')
+            LOGGER.info(msg)
     else:
         msg = "Couldn't set vCD AMQP configuration"
         if not quiet:
             click.secho(msg, fg='red')
+            LOGGER.error(msg, exc_info=True)
         # TODO replace raw exception with specific
         raise Exception(msg)
 
@@ -974,10 +1042,10 @@ def should_register_cse(client, ext_install):
     ext = APIExtension(client)
 
     try:
-        cse_info_dict = ext.get_extension_info(CSE_NAME,
-                                               namespace=CSE_NAMESPACE)
-        click.secho(f"Found 'cse' extension on vCD, "
-                    f"enabled={cse_info_dict['enabled']}", fg='green')
+        cse_info = ext.get_extension_info(CSE_NAME, namespace=CSE_NAMESPACE)
+        msg = f"Found 'cse' extension on vCD, enabled={cse_info['enabled']}"
+        click.secho(msg, fg='green')
+        LOGGER.info(msg)
         return False
     except MissingRecordException:
         prompt_msg = "Register 'cse' as an API extension in vCD?"
@@ -1003,5 +1071,6 @@ def register_cse(client, amqp_routing_key, exchange_name):
 
     ext.add_extension(CSE_NAME, CSE_NAMESPACE, amqp_routing_key,
                       exchange_name, patterns)
-    click.secho(f"Registered {CSE_NAME} as an API extension in vCD",
-                fg='green')
+    msg = f"Registered {CSE_NAME} as an API extension in vCD"
+    click.secho(msg, fg='green')
+    LOGGER.info(msg)
