@@ -16,6 +16,7 @@ from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_vsphere
 from container_service_extension.exceptions import ClusterJoiningError
 from container_service_extension.exceptions import ClusterInitializationError
+from container_service_extension.exceptions import NodeCreationError
 
 TYPE_MASTER = 'mstr'
 TYPE_NODE = 'node'
@@ -96,105 +97,109 @@ def load_from_metadata(client, name=None, cluster_id=None):
 
 
 def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
-    if qty < 1:
-        return None
-    specs = []
-    catalog_item = org.get_catalog_item(config['broker']['catalog'],
-                                        template['catalog_item'])
-    source_vapp = VApp(client, href=catalog_item.Entity.get('href'))
-    source_vm = source_vapp.get_all_vms()[0].get('name')
-    storage_profile = None
-    if 'storage_profile' in body and body['storage_profile'] is not None:
-        storage_profile = vdc.get_storage_profile(body['storage_profile'])
-    cust_script_init = \
-"""#!/usr/bin/env bash
-if [ x$1=x"postcustomization" ];
-then
-""" # NOQA
-    cust_script_common = ''
-    cust_script_end = \
-"""
-fi
-"""  # NOQA
-    if 'ssh_key' in body and body['ssh_key'] is not None:
-        cust_script_common += \
-"""
-mkdir -p /root/.ssh
-echo '{ssh_key}' >> /root/.ssh/authorized_keys
-chmod -R go-rwx /root/.ssh
-""".format(ssh_key=body['ssh_key'])  # NOQA
+    try:
+        if qty < 1:
+            return None
+        specs = []
+        catalog_item = org.get_catalog_item(config['broker']['catalog'],
+                                            template['catalog_item'])
+        source_vapp = VApp(client, href=catalog_item.Entity.get('href'))
+        source_vm = source_vapp.get_all_vms()[0].get('name')
+        storage_profile = None
+        if 'storage_profile' in body and body['storage_profile'] is not None:
+            storage_profile = vdc.get_storage_profile(body['storage_profile'])
+        cust_script_init = \
+    """#!/usr/bin/env bash
+    if [ x$1=x"postcustomization" ];
+    then
+    """ # NOQA
+        cust_script_common = ''
+        cust_script_end = \
+    """
+    fi
+    """  # NOQA
+        if 'ssh_key' in body and body['ssh_key'] is not None:
+            cust_script_common += \
+    """
+    mkdir -p /root/.ssh
+    echo '{ssh_key}' >> /root/.ssh/authorized_keys
+    chmod -R go-rwx /root/.ssh
+    """.format(ssh_key=body['ssh_key'])  # NOQA
 
-    if cust_script_common is '':
-        cust_script = None
-    else:
-        cust_script = cust_script_init + cust_script_common + cust_script_end
-    for n in range(qty):
-        name = None
-        while True:
-            name = '%s-%s' % (node_type, ''.join(
-                random.choices(string.ascii_lowercase + string.digits, k=4)))
-            try:
-                vapp.get_vm(name)
-            except Exception:
-                break
-        spec = {
-            'source_vm_name': source_vm,
-            'vapp': source_vapp.resource,
-            'target_vm_name': name,
-            'hostname': name,
-            'network': body['network'],
-            'ip_allocation_mode': 'pool'
-        }
-        if cust_script is not None:
-            spec['cust_script'] = cust_script
-        if storage_profile is not None:
-            spec['storage_profile'] = storage_profile
-        specs.append(spec)
-    if ('cpu' in body and body['cpu'] is not None) or \
-       ('memory' in body and body['memory'] is not None):
-        reconfigure_hw = True
-    else:
-        reconfigure_hw = False
-    task = vapp.add_vms(specs, power_on=not reconfigure_hw)
-    # TODO(get details of the exception like not enough resources avail)
-    client.get_task_monitor().wait_for_status(task)
-    if reconfigure_hw:
+        if cust_script_common is '':
+            cust_script = None
+        else:
+            cust_script = cust_script_init + cust_script_common + cust_script_end
+        for n in range(qty):
+            name = None
+            while True:
+                name = '%s-%s' % (node_type, ''.join(
+                    random.choices(string.ascii_lowercase + string.digits, k=4)))
+                try:
+                    vapp.get_vm(name)
+                except Exception:
+                    break
+            spec = {
+                'source_vm_name': source_vm,
+                'vapp': source_vapp.resource,
+                'target_vm_name': name,
+                'hostname': name,
+                'network': body['network'],
+                'ip_allocation_mode': 'pool'
+            }
+            if cust_script is not None:
+                spec['cust_script'] = cust_script
+            if storage_profile is not None:
+                spec['storage_profile'] = storage_profile
+            specs.append(spec)
+        if ('cpu' in body and body['cpu'] is not None) or \
+           ('memory' in body and body['memory'] is not None):
+            reconfigure_hw = True
+        else:
+            reconfigure_hw = False
+        task = vapp.add_vms(specs, power_on=not reconfigure_hw)
+        # TODO(get details of the exception like not enough resources avail)
+        client.get_task_monitor().wait_for_status(task)
+        if reconfigure_hw:
+            vapp.reload()
+            for spec in specs:
+                vm_resource = vapp.get_vm(spec['target_vm_name'])
+                if 'cpu' in body and body['cpu'] is not None:
+                    vm = VM(client, resource=vm_resource)
+                    task = vm.modify_cpu(body['cpu'])
+                    client.get_task_monitor().wait_for_status(task)
+                if 'memory' in body and body['memory'] is not None:
+                    vm = VM(client, resource=vm_resource)
+                    task = vm.modify_memory(body['memory'])
+                    client.get_task_monitor().wait_for_status(task)
+                vm = VM(client, resource=vm_resource)
+                task = vm.power_on()
+                client.get_task_monitor().wait_for_status(task)
+        password = source_vapp.get_admin_password(source_vm)
         vapp.reload()
         for spec in specs:
             vm_resource = vapp.get_vm(spec['target_vm_name'])
-            if 'cpu' in body and body['cpu'] is not None:
-                vm = VM(client, resource=vm_resource)
-                task = vm.modify_cpu(body['cpu'])
-                client.get_task_monitor().wait_for_status(task)
-            if 'memory' in body and body['memory'] is not None:
-                vm = VM(client, resource=vm_resource)
-                task = vm.modify_memory(body['memory'])
-                client.get_task_monitor().wait_for_status(task)
-            vm = VM(client, resource=vm_resource)
-            task = vm.power_on()
-            client.get_task_monitor().wait_for_status(task)
-    password = source_vapp.get_admin_password(source_vm)
-    vapp.reload()
-    for spec in specs:
-        vm_resource = vapp.get_vm(spec['target_vm_name'])
-        command = '/bin/echo "root:{password}" | chpasswd'.format(
-            password=template['admin_password'])
-        nodes = [vm_resource]
-        execute_script_in_nodes(
-            config,
-            vapp,
-            password,
-            command,
-            nodes,
-            check_tools=True,
-            wait=False)
-        if node_type == TYPE_NFS:
-            LOGGER.debug('Enabling NFS server on %s' %
-                         spec['target_vm_name'])
-            script = get_data_file('nfsd-%s.sh' % template['name'])
-            execute_script_in_nodes(config, vapp,
-                                    template['admin_password'],
-                                    script, nodes)
+            command = '/bin/echo "root:{password}" | chpasswd'.format(
+                password=template['admin_password'])
+            nodes = [vm_resource]
+            execute_script_in_nodes(
+                config,
+                vapp,
+                password,
+                command,
+                nodes,
+                check_tools=True,
+                wait=False)
+            if node_type == TYPE_NFS:
+                LOGGER.debug('Enabling NFS server on %s' %
+                             spec['target_vm_name'])
+                script = get_data_file('nfsd-%s.sh' % template['name'])
+                execute_script_in_nodes(config, vapp,
+                                        template['admin_password'],
+                                        script, nodes)
+    except Exception as e:
+        node_list = [entry.get('target_vm_name') for entry in specs]
+        raise NodeCreationError(node_list, str(e))
     return {'task': task, 'specs': specs}
 
 
