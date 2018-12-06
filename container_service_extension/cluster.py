@@ -14,9 +14,10 @@ from pyvcloud.vcd.vm import VM
 
 from container_service_extension.exceptions import ClusterInitializationError
 from container_service_extension.exceptions import ClusterJoiningError
-from container_service_extension.exceptions import ClusterOperationError
 from container_service_extension.exceptions import CseServerError
+from container_service_extension.exceptions import DeleteNodeError
 from container_service_extension.exceptions import NodeCreationError
+from container_service_extension.exceptions import ScriptExecutionError
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_vsphere
 
@@ -196,9 +197,12 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
                 LOGGER.debug('Enabling NFS server on %s' %
                              spec['target_vm_name'])
                 script = get_data_file('nfsd-%s.sh' % template['name'])
-                execute_script_in_nodes(config, vapp,
+                exec_results = execute_script_in_nodes(config, vapp,
                                         template['admin_password'],
                                         script, nodes)
+                errors = get_script_execution_errors(exec_results)
+                if errors:
+                    raise ScriptExecutionError(f"Script execution failed on node {spec['target_vm_name']}:{errors}")
     except Exception as e:
         node_list = [entry.get('target_vm_name') for entry in specs]
         raise NodeCreationError(node_list, str(e))
@@ -419,5 +423,12 @@ def delete_nodes_from_cluster(config, vapp, template, nodes, force=False):
         config, vapp, password, script, master_nodes, check_tools=False)
     if result[0][0] != 0:
         if not force:
-            raise ClusterOperationError('Couldn\'t delete node(s):\n%s' %
-                            result[0][2].content.decode())
+            raise DeleteNodeError(f"Couldn't delete node(s):\n{result[0][2].content.decode()}")
+
+
+def get_script_execution_errors(results):
+    errors = []
+    for result in results:
+        if result[0] != 0:
+            errors.append(result[2].content.decode())
+    return errors
