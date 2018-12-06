@@ -732,8 +732,11 @@ class DefaultBroker(threading.Thread):
                 TaskStatus.RUNNING,
                 message='Deleting %s node(s) from %s(%s)' %
                 (len(self.body['nodes']), self.cluster_name, self.cluster_id))
-            delete_nodes_from_cluster(self.config, vapp, template,
+            try:
+                delete_nodes_from_cluster(self.config, vapp, template,
                                       self.body['nodes'], self.body['force'])
+            except Exception:
+                LOGGER.error("Couldn't delete node %s from cluster:%s" % (node_list, self.cluster_name))
             self.update_task(
                 TaskStatus.RUNNING,
                 message='Undeploying %s node(s) for %s(%s)' %
