@@ -6,7 +6,6 @@ import hashlib
 import logging
 import os
 import pathlib
-import requests
 import stat
 import json
 import sys
@@ -14,7 +13,10 @@ import traceback
 from urllib.parse import urlparse
 
 import click
+import requests
 from cachetools import LRUCache
+from container_service_extension.exceptions import VcdResponseException
+from lxml import objectify
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -75,6 +77,66 @@ def error_to_json(error):
             }
         }
     return dict()
+
+
+def process_response(response):
+    """Process the given response object
+
+    :param dict response: response object.
+
+    :return: response content if status code is 2xx.
+             else raise exception
+
+    :rtype: dict
+    """
+    if response.status_code in [
+        requests.codes.ok, requests.codes.created,
+        requests.codes.accepted
+    ]:
+        return deserialize_response_content(response)
+    else:
+        response_to_exception(response)
+
+
+def deserialize_response_content(response):
+    """Decode and deserialize the response content
+
+    :param string response: response string
+
+    :return: response content object
+
+    :rtype: dict
+    """
+    decoded = response.content.decode("utf-8")
+    if len(decoded) > 0:
+        return json.loads(decoded)
+    else:
+        return dict()
+
+
+def response_to_exception(response):
+    """Raise exception based on the response status code
+
+    :param response: response object
+
+    :return: raise exception
+
+    :rtype: exception object
+    """
+    if response.status_code == 504:
+        message = 'An error has occurred.'
+        if response.content is not None and len(response.content) > 0:
+            obj = objectify.fromstring(response.content)
+            message = obj.get(ERROR_MESSAGE)
+        raise VcdResponseException(response.status_code, message)
+
+    content = deserialize_response_content(response)
+    if ERROR_MESSAGE in content:
+        if ERROR_REASON in content[ERROR_MESSAGE]:
+            raise VcdResponseException(response.status_code, content[ERROR_MESSAGE][ERROR_REASON])
+        raise VcdResponseException(response.status_code, content[ERROR_MESSAGE])
+    else:
+        raise VcdResponseException(response.status_code, content)
 
 
 def bool_to_msg(value):
@@ -449,7 +511,7 @@ def get_vsphere(config, vapp, vm_name):
     :rtype: vsphere_guest_run.vsphere.VSphere
     """
     global cache
-    
+
     # get vm id from vm resource
     vm_id = vapp.get_vm(vm_name).get('id')
     if vm_id not in cache:
@@ -501,12 +563,14 @@ def vgr_callback(prepend_msg='', logger=None):
 
     :rtype: function
     """
+
     def callback(message, exception=None):
         click.echo(f"{prepend_msg}{message}")
         if exception is not None:
             click.echo(exception)
             if logger is not None:
                 logger.error(traceback.format_exc())
+
     return callback
 
 

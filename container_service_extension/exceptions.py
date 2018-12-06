@@ -57,3 +57,14 @@ class AmqpError(Exception):
 
 class AmqpConnectionError(AmqpError):
     """ Raised when amqp connection is not open"""
+
+
+class VcdResponseException(Exception):
+    """Base class for all vcd response related Exceptions."""
+
+    def __init__(self, status_code, error_message):
+        self.status_code = status_code
+        self.error_message = error_message
+
+    def __str__(self):
+        return f"{self.error_message}"
