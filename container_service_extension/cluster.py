@@ -14,8 +14,8 @@ from pyvcloud.vcd.vm import VM
 
 from container_service_extension.exceptions import ClusterInitializationError
 from container_service_extension.exceptions import ClusterJoiningError
-from container_service_extension.exceptions import ClusterOperationError
 from container_service_extension.exceptions import CseServerError
+from container_service_extension.exceptions import DeleteNodeError
 from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_vsphere
@@ -419,5 +419,5 @@ def delete_nodes_from_cluster(config, vapp, template, nodes, force=False):
         config, vapp, password, script, master_nodes, check_tools=False)
     if result[0][0] != 0:
         if not force:
-            raise ClusterOperationError('Couldn\'t delete node(s):\n%s' %
+            raise DeleteNodeError('Couldn\'t delete node(s):\n%s' %
                             result[0][2].content.decode())

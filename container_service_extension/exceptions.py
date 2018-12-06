@@ -36,7 +36,7 @@ class NodeCreationError(NodeOperationError):
         self.error_message = error_message
 
     def __str__(self):
-        return "failure on creating nodes " + ','.join(self.node_names) + ',' + self.error_message
+        return f"failure on creating nodes {self.node_names}\nError:{self.error_message}"
 
 
 class MasterNodeCreationError(NodeOperationError):
@@ -51,9 +51,25 @@ class NFSNodeCreationError(NodeOperationError):
     """Raised when any error happens while adding NFS node"""
 
 
+class DeleteNodeError(NodeOperationError):
+    """ Raised when there is any error while deleting node """
+
+
 class AmqpError(Exception):
     """Base class for Amqp related errors"""
 
 
 class AmqpConnectionError(AmqpError):
     """ Raised when amqp connection is not open"""
+
+
+class VcdResponseError(Exception):
+    """Base class for all vcd response related Exceptions."""
+
+    def __init__(self, status_code, error_message):
+        self.status_code = status_code
+        self.error_message = error_message
+
+    def __str__(self):
+        return self.error_message
+
