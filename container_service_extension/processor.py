@@ -12,8 +12,8 @@ from pkg_resources import resource_string
 import yaml
 
 from container_service_extension.broker import get_new_broker
+from container_service_extension.logger import SERVER_LOGGER as LOGGER
 
-LOGGER = logging.getLogger('cse.processor')
 
 OK = 200
 CREATED = 201

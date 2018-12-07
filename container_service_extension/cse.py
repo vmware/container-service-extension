@@ -16,8 +16,6 @@ from container_service_extension.config import generate_sample_config
 from container_service_extension.config import install_cse
 from container_service_extension.service import Service
 
-LOGGER = logging.getLogger('cse.cli')
-
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
