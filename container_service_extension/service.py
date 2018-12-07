@@ -27,8 +27,6 @@ from container_service_extension.logger import SERVER_LOGGER as LOGGER
 
 from container_service_extension.utils import SYSTEM_ORG_NAME
 
-LOGGER = logging.getLogger('cse.service')
-
 
 class Singleton(type):
     _instances = {}

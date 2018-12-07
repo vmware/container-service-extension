@@ -13,8 +13,8 @@ import yaml
 
 from container_service_extension.broker import get_new_broker
 from container_service_extension.exceptions import CseServerError
+from container_service_extension.logger import SERVER_LOGGER as LOGGER
 
-LOGGER = logging.getLogger('cse.processor')
 
 OK = 200
 CREATED = 201
@@ -80,7 +80,7 @@ class ServiceProcessor(object):
         service = Service()
         if not system_request and not service.is_enabled:
             raise CseServerError('CSE service is disabled. '
-                            'Contact the System Administrator.')
+                                 'Contact the System Administrator.')
 
         if body['method'] == 'GET':
             if spec_request:
