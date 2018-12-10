@@ -795,21 +795,21 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
     if len(result) > 0:
         msg = f'Result: {result}'
         click.echo(msg)
-        LOGGER.info(msg)
+        LOGGER.debug(msg)
         result_stdout = result[1].content.decode()
         result_stderr = result[2].content.decode()
         msg = 'stderr:'
         click.echo(msg)
-        LOGGER.info(msg)
+        LOGGER.debug(msg)
         if len(result_stderr) > 0:
             click.echo(result_stderr)
-            LOGGER.info(result_stderr)
+            LOGGER.debug(result_stderr)
         msg = 'stdout:'
         click.echo(msg)
-        LOGGER.info(msg)
+        LOGGER.debug(msg)
         if len(result_stdout) > 0:
             click.echo(result_stdout)
-            LOGGER.info(result_stdout)
+            LOGGER.debug(result_stdout)
     if len(result) == 0 or result[0] != 0:
         msg = "Failed VM customization"
         click.secho(f"{msg}. Check CSE install log", fg='red')
@@ -1050,6 +1050,9 @@ def should_register_cse(client, ext_install):
     except MissingRecordException:
         prompt_msg = "Register 'cse' as an API extension in vCD?"
         if ext_install == 'prompt' and not click.confirm(prompt_msg):
+            msg = f"Skipping CSE registration."
+            click.secho(msg, fg='yellow')
+            LOGGER.warning(msg)
             return False
 
     return True
