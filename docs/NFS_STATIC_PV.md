@@ -1,25 +1,50 @@
-# **CSE: NFS-based Static Persistent Volumes**
-[back to main CSE page](README.md#nfs)
+---
+layout: default
+title: NFS Persistent Volumes
+---
+# NFS Node Management
+<a name="overview"></a>
+## Overview
 
-CSE now enables users to deploy stateful applications on vCD Kubernetes clusters by leveraging static persistent volumes backed by an NFS server.
+CSE enables users to deploy stateful applications on vCD Kubernetes
+clusters by leveraging static persistent volumes backed by an NFS
+server.
 
 ---
-## **Static vs. Dynamic Persistent Volumes**
-[Static PVs](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#static) are pre-provisioned by cluster administrator. They carry the details of the real storage which is available for use by cluster users. They exist in the Kubernetes API and are available for consumption.
+<a name="volumes"></a>
+## Persistent Volume Types
 
-[Dynamic PVs](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#dynamic) are not pre-provisioned by cluster administrator. When none of the static PVs match a user’s PersistentVolumeClaim, the cluster may try to dynamically provision a volume for the PVC.
+[Static PVs](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#static)
+are pre-provisioned by cluster administrator. They carry the details
+of the real storage which is available for use by cluster users.
+They exist in the Kubernetes API and are available for consumption.
 
-### Static NFS volumes
+[Dynamic PVs](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#dynamic)
+are not pre-provisioned by cluster administrator. When none of the
+static PVs match a user’s PersistentVolumeClaim, the cluster may
+try to dynamically provision a volume for the PVC.
 
-An nfs volume allows an existing NFS (Network File System) share to be mounted into your pod. When a Pod is removed, the contents of an nfs volume are preserved and the volume is merely unmounted. This means that an NFS volume can be pre-populated with data, and that data can be “handed off” between pods. NFS can be mounted by multiple writers simultaneously. However, we need to have our own NFS server running with the share exported. CSE provides commands to add pre-configured NFS server(s) to any given cluster and more.
+## Static NFS volumes
+
+An nfs volume allows an existing NFS (Network File System) share
+to be mounted into your pod. When a Pod is removed, the contents
+of an nfs volume are preserved and the volume is merely unmounted.
+This means that an NFS volume can be pre-populated with data, and
+that data can be “handed off” between pods. NFS can be mounted by
+multiple writers simultaneously. However, we need to have our own
+NFS server running with the share exported. CSE provides commands
+to add pre-configured NFS server(s) to any given cluster and more.
 
 ---
-## **Architecture**
+<a name="architecture"></a>
+## Architecture
 
 ![cse-nfs](img/cse-nfs.png)
 
 ---
-## **Sample CSE and/or NFS commands**
+
+<a name="samplecommands"></a>
+## Sample Management Commands
 
 ### Cloud/System Administrator
 
@@ -125,8 +150,39 @@ spec:
             claimName: nfs-pvc
 ```
 ---
-## **FAQ**
+
+<a name="faq"></a>
+## FAQ
 - What is the difference between persistent volume (PV) and persistent volume claim (PVC)?
     - Static PV is a ready-to-use storage space created by K8 cluster admin. PVC is the storage requirement specified by the user. Kubernetes dynamically binds/unbinds PVC to PV at runtime. Learn more [here](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#static)
 - How are NFS exports mounted to containers?
     - Once a PV backed by NFS is created by K8 cluster admin, Kubernetes mounts specified NFS exports to pods and containers.
+
+<a name="issues"></a>
+## Known Issues
+
+Currently, NFS servers in Kubernetes cluster can not only be accessed
+by nodes of that cluster but also by any VM (outside of the cluster)
+residing in the same orgVdc. Ideal solution is to have vApp network
+created for each Kubernetes cluster, which is in our road-map to
+implement. Until then, please choose one of below workarounds to
+avert this problem if the need arises.
+
+- Give access to only master & worker nodes of the cluster by adding individual IPs of the nodes into /etc/exports file on NFS server.
+    - Create and run a script periodically which retrieves IPs of nodes in the cluster and then add them to NFS server access list (/etc/exports).
+    - eg: /home 203.0.113.256(rw,sync,no_root_squash,no_subtree_check) 203.0.113.257(rw,sync,no_root_squash,no_subtree_check)
+- Admin can manually add a vApp network for each kubernetes cluster in vCD.
+- Create a ssh tunnel from each worker node (using ssh local port forwarding) and then use 127.0.0.1:<port> in the  Kubernetes declarative specs as IP of the NFS server.
+    - In NFS server, for any given shared directory, add below line to /etc/exports file.
+        - /home localhost(insecure,rw,sync,no_subtree_check)
+        - systemctl restart nfs-kernel-server.service
+    - Copy ssh public key of each worker node into ~/.ssh/authorized_keys in NFS server
+        - Client: Generate key using ssh-keygen and copy the contents of ~/.ssh/id_rsa.pub
+        - NFS server: Paste the contents (public key) from client into ~/.ssh/authorized_keys
+    - In each master/worker node,
+        - apt-get install portmap
+        - ssh -fNv -L 3049:127.0.0.1:2049 user@NFSServer
+    - Read more about this approach here
+        - http://www.debianadmin.com/howto-use-ssh-local-and-remote-port-forwarding.html
+        - https://gist.github.com/proudlygeek/5721498
+
