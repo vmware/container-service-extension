@@ -1,6 +1,13 @@
-# **CSE Contributing Guide**
-[back to main CSE page](README.md#contributing)
+---
+layout: default
+title: Contributing Guide
+sidebar:
+  nav: "contributing"
+---
+# Contributing Guide
 
+<a name="overview"></a>
+## Overview
 Commits should follow this guide: https://chris.beams.io/posts/git-commit/
 
 When opening a new issue, try to roughly follow the commit message format conventions above.
@@ -15,17 +22,8 @@ Please read our [Developer Certificate of Origin](https://cla.vmware.com/dco). A
 
 Community: https://vmwarecode.slack.com  #vcd (channel)
 
-
-## **Table of Contents** <a name="toc"></a>
-(Section titles link back to table of contents)
-- [Python](#python)
-- [Virtual Environments](#virtualenvs)
-- [Project Setup](#projectsetup)
-- [How CSE Works](#cseworkflow)
-- [CSE Usage and Testing](#usage)
-- [Standard Git Workflow](#git)
-
-## [**Python**](#toc) <a name="python"></a>
+<a name="python"></a>
+## Python
 - Install Python 3.6 or greater (https://realpython.com/installing-python/)
 - Install pip (Python's package manager)
 
@@ -39,7 +37,9 @@ Python 3.7.0
 pip 18.0 from /usr/local/lib/python3.7/site-packages/pip (python 3.7)
 ```
 ---
-## [**Virtual Environments**](#toc) <a name="virtualenvs"></a>
+
+<a name="virtualenvs"></a>
+## Virtual Environments
 A virtual environment is a project workspace (a folder/directory) where your project's dependencies are isolated from the user/global space and from the dependencies of other projects. For example, if one project you're working on requires Flask 1.0 and another project requires Flask 2.0, these projects have different dependencies, and without virtual environments, you can't have both Flask 1.0 and 2.0. Having a virtual environment for each project will allow you to develop and test both of these projects on one machine.
 
 The virtual environment program we will use is [`virtualenv`](https://virtualenv.pypa.io/en/stable/), though there are others that do the same thing, such as `pipenv`, `conda`, `venv`, etc. The program [`virtualenvwrapper`](https://virtualenvwrapper.readthedocs.io/en/latest/) includes a lot of helpful shortcuts/functionality for managing your virtual environments, and using it is personal preference.
@@ -48,12 +48,12 @@ When no virtual environment is active, python packages install to user or global
 
 With a virtual environment active, python packages install to the virtual environment's site-packages, and user/global site-packages are hidden from the interpreter
 
-### **Install virtualenv**
+### Install virtualenv
 ```bash
 > pip3 install virtualenv
 ```
 
-### **Virtual Environment Setup**
+### Virtual Environment Setup
 - Create a directory to store all your virtual environments (typically the `~/.virtualenvs` folder)
 - Create a virtual environment for CSE
 ```bash
@@ -83,13 +83,17 @@ wheel      0.32.1
 ```bash
 > deactivate
 ```
+
 More on virtual environments:
 - https://www.geeksforgeeks.org/python-virtual-environment/
 - https://realpython.com/python-virtual-environments-a-primer/
----
-## [**Project Setup**](#toc) <a name="projectsetup"></a>
 
-### **Git Setup**
+---
+
+<a name="projectsetup"></a>
+## Project Setup
+
+### Git Setup
 - VMware CSE repository (https://github.com/vmware/container-service-extension) is the **upstream** remote repository
 - Fork VMware CSE repository to your personal Github account
 - Your forked CSE repository (https://github.com/USERNAME/container-service-extension) is the **origin** remote repository
@@ -106,7 +110,8 @@ upstream	https://github.com/vmware/container-service-extension.git (fetch)
 upstream	https://github.com/vmware/container-service-extension.git (push)
 ```
 ---
-### **Project Setup**
+
+### Creating a Development Environment
 - Activate virtual environment (Always be in virtual environment when developing/testing)
 - Install CSE package to virtual environment so we can test our code changes
 ```bash
@@ -143,13 +148,11 @@ vcd-cli                     21.0.0
 vsphere-guest-run           0.0.6
 wheel                       0.32.1
 ```
----
-![cse-workflow](img/cse-workflow-2.png) <a name="cseworkflow"></a>
 
----
-## [**CSE Usage and Testing**](#toc) <a name="usage"></a>
+<a name="usage"></a>
+## CSE Usage and Testing
 
-### **Configure vcd-cli to enable `vcd cse ...` commands**
+### Configure vcd-cli to enable `vcd cse ...` commands
 Edit `~/.vcd-cli/profiles.yaml` to include this section:
 ```
 extensions:
@@ -160,7 +163,7 @@ If `~/.vcd-cli/profiles.yaml` doesn't exist, logging in to vCD via **vcd-cli** w
 > vcd login IP ORGNAME USERNAME -iwp PASSWORD
 ```
 ---
-### **Useful Commands**
+### Useful Commands
 ```bash
 # see all commands with:
 > vcd -h
@@ -181,7 +184,7 @@ If `~/.vcd-cli/profiles.yaml` doesn't exist, logging in to vCD via **vcd-cli** w
 > vcd pwd
 ```
 ---
-### **Set up vCD**
+### Set up vCD for Testing
 *In a vCD instance where you are system administrator. Assume default settings unless stated otherwise*
 - Create External Network with internet connection
     - May need static IP pool
@@ -189,12 +192,15 @@ If `~/.vcd-cli/profiles.yaml` doesn't exist, logging in to vCD via **vcd-cli** w
 - Create org VDC for org
 - Add org VDC network to org VDC. Org network must have internet access
   - vcd > org > Administration > Cloud Resources > Virtual Datacenters > orgvdc > Org VDC Networks
+
 ---
-### **Set up config.yaml**
+
+### Set up config.yaml
 ```bash
 # get a sample config file to edit
-> cse sample > config.yaml
+cse sample > config.yaml
 ```
+
 - Configure **amqp** settings
   - vcd > System > Administration > System Settings > Extensibility > Settings > AMQP Broker Settings
 - Configure **vcd** settings
@@ -209,8 +215,10 @@ If `~/.vcd-cli/profiles.yaml` doesn't exist, logging in to vCD via **vcd-cli** w
   - Set **org** to the vCD org that will store the kubernetes templates
   - Set **vdc** to VDC for the org that will be used during the install process
 - Adjust config file permissions with: `chmod 600 path/to/config.yaml` (unsure how to do this step on windows)
+
 ---
-### **Testing Cheat Sheet**
+
+### Testing Cheat Sheet
 - Current working directory should have the script files or the `container-service-extension/scripts/` directory (fix is in review for this)
 - CSE Server log is **cse.log**
 - CSE Installation log is **cse-check.log**
@@ -234,7 +242,8 @@ If `~/.vcd-cli/profiles.yaml` doesn't exist, logging in to vCD via **vcd-cli** w
 > vcd cse cluster delete mycluster
 ```
 ---
-## [**Standard Git Workflow**](#toc) <a name="git"></a>
+<a name="git"></a>
+## Standard Git Workflow
 - Never push to **upstream master**
 - Check if upstream master has any updates
     - if it does, pull these changes into your local project's master branch, then push these changes to update your remote origin master branch
@@ -303,4 +312,3 @@ Git resources:
 - https://guides.github.com/activities/forking/
 - https://www.atlassian.com/git/tutorials/saving-changes/gitignore#personal-git-ignore-rules
 - http://shafiulazam.com/gitbook/4_rebasing.html
----

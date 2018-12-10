@@ -1,7 +1,9 @@
-# **CSE Release Notes**
-
-[back to main CSE page](README.md#releasenotes)
 ---
+layout: default
+title: Release Notes
+---
+
+# Release Notes
 
 ## CSE 1.2.5
 
