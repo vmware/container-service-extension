@@ -18,10 +18,8 @@ INFO_LOG_FORMATTER = logging.Formatter(fmt='%(asctime)s | '
                                        '%(message)s',
                                        datefmt='%y-%m-%d %H:%M:%S')
 DEBUG_LOG_FORMATTER = logging.Formatter(fmt='%(asctime)s | '
-                                        '%(levelname)s | '
-                                        '%(module)s | '
-                                        '%(lineno)s | '
-                                        '%(funcName)s :: '
+                                        '%(module)s:%(lineno)s - %(funcName)s '
+                                        '| %(levelname)s :: '
                                         '%(message)s',
                                         datefmt='%y-%m-%d %H:%M:%S')
 

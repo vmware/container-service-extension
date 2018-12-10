@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import hashlib
+import json
 import logging
 import os
 import pathlib
