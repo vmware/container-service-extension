@@ -791,13 +791,13 @@ class DefaultBroker(threading.Thread):
         template = self.get_template()
         try:
             delete_nodes_from_cluster(self.config, vapp, template,node_list, force=True)
-        except Exception as e:
-            LOGGER.error("Couldn't delete node %s from cluster:%s" % (node_list, self.cluster_name))
+        except Exception:
+            LOGGER.warning("Couldn't delete node %s from cluster:%s" % (node_list, self.cluster_name))
         for vm_name in node_list:
             vm = VM(self.client_tenant, resource=vapp.get_vm(vm_name))
             try:
                 vm.undeploy()
-            except Exception as e:
+            except Exception:
                LOGGER.warning("Couldn't undeploy VM %s" % vm_name)
         vapp.delete_vms(node_list)
         LOGGER.debug('Successfully deleted nodes: %s' % node_list)
