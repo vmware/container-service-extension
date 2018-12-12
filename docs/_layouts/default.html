@@ -13,27 +13,30 @@
         /* Use flexbox to lay out nav and content. */
         .main {
              display: flex;
-             flex-direction: row;
         }
-        /* Nav disappears on narrow screens. */
+
+        /* When screen is narrow, nav appears on top. */
         @media screen and (max-width: 42em) {
-          .main-nav {
-               display: none;
-          }
+            .main {
+                flex-direction: column;
+            }
         }
-        /* When screen is large enough nav appears. */
+        /* When screen is large enough nav appears on left. */
         @media screen and (min-width: 42em) {
-          .main-nav {
-               padding: 2rem 1rem 2rem 2rem;
-          }
-          .main-nav>h1 {
-              margin: 0 0 .5rem 0;
-              padding: 0;
-              color: #159957;
-              font-weight: 100;
-          }
+            .main {
+                flex-direction: row;
+            }
         }
         /* Nav entries are non-bulleted lists with bold active entries. */
+        .main-nav {
+            padding: 2rem 1rem 2rem 2rem;
+        }
+        .main-nav>h1 {
+            margin: 0 0 .5rem 0;
+            padding: 0;
+            color: #159957;
+            font-weight: 100;
+        }
         .main-nav>ol {
             margin: 0;
             padding: 0;

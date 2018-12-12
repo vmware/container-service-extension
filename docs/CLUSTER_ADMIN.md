@@ -148,39 +148,3 @@ client.logout()
 > vcd cse cluster delete mycluster --yes
 ```
 
-<a name="troubleshooting"></a>
-## Troubleshooting
-
-`cse.log` logs CSE Server activity. Server requests and responses are recorded here, as well as outputs of scripts that were run on VMs.
-
-`cse-check.log` logs CSE operations, such as `cse install`. Stack traces and HTTP messages specific to CSE are recorded here.
-
-`vcd.log` logs vcd-cli and pyvcloud activity. Stack traces and HTTP messages specific to vcd-cli are recorded here.
-
-Common mistakes:
-- Config file fields are incorrect
-- Not logged in to vCD via vcd-cli
-- Logged in to vCD via vcd-cli as wrong user or user without required permissions
-- Config file and vCD should have same host/exchange, and make sure exchange exists on vCD
-    - On server start, monitor with `tail -f cse.log`
-- If CSE installation/updates failed, broken VMs/clusters/templates may exist, and CSE will not know that entities are invalid.
-    - Remove these entities from vCD manually
-
-<a name="issues"></a>
-## Known Issues
-
-### Failures during template creation or installation
-- One of the template-creation scripts may have exited with an error
-- One of the scripts may be hung waiting for a response
-- If the VM has no internet access, scripts may fail
-- Check CSE logs for script outputs
-
-### CSE service fails to start
-- Workaround: rebooting the VM starts the service
-
-### CSE does not clean up after itself if something goes wrong. 
-
-When CSE installation is aborted for any reason, ensure temporary vApp is deleted in vCD before re-issuing the install command
-- Manually delete the problematic "ubuntu-temp" vApp.
-- If temporary vApp still exists and `cse install` command is run again, CSE will just capture the vApp as the Kubernetes template, even though the vApp is not set up properly.
-- Running CSE install with the `--update` option will remove this invalid vApp.

@@ -1,5 +1,5 @@
 - name: Introduction
-  link: INDEX.html
+  link: README.html
   subtoc:
   - name: Overview
     sublink: overview
@@ -48,10 +48,6 @@
     sublink: automation
   - name: Example Use Case
     sublink: example
-  - name: Troubleshooting
-    sublink: troubleshooting
-  - name: Known Issues
-    sublink: issues
 - name: "NFS Node Management"
   link: NFS_STATIC_PV.html
   subtoc:
@@ -65,8 +61,15 @@
     sublink: samplecommands
   - name: FAQ
     sublink: faq
-  - name: Known Issues
-    sublink: issues
+- name: "Troubleshooting"
+  link: TROUBLESHOOTING.html
+- name: "Known Issues"
+  link: KNOWN_ISSUES.html
+  subtoc:
+  - name: General Problems
+    sublink: general
+  - name: NFS Limitations
+    sublink: nfs
 - name: "Release Notes"
   link: RELEASE_NOTES.html
 - name: Contributing
@@ -84,3 +87,12 @@
     sublink: usage
   - name: Standard Git Workflow
     sublink: git
+- name: Editing Documentation
+  link: EDITING.html
+  subtoc:
+  - name: Publishing Process
+    sublink: enabling
+  - name: How Rendering Works
+    sublink: rendering
+  - name: Making Changes
+    sublink: changes
