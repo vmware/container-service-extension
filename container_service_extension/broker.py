@@ -39,10 +39,12 @@ from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import MasterNodeCreationError
 from container_service_extension.exceptions import NFSNodeCreationError
 from container_service_extension.exceptions import WorkerNodeCreationError
+from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.utils import ERROR_DESCRIPTION
 from container_service_extension.utils import ERROR_MESSAGE
 from container_service_extension.utils import SYSTEM_ORG_NAME
 from container_service_extension.utils import error_to_json
+
 
 LOGGER = logging.getLogger('cse.broker')
 
@@ -82,25 +84,34 @@ def spinning_cursor():
 spinner = spinning_cursor()
 
 
-def rollbackdecorator(func):
+def rollback(func):
+    """Decorator for handling rollback for cluster and node creation
+
+    :param func: reference to the original function that is decorated
+
+    :return: reference to the decorator wrapper
+    """
     def wrapper(*args, **kwargs):
         try:
             func(*args, **kwargs)
         except (MasterNodeCreationError, WorkerNodeCreationError,
                 NFSNodeCreationError, ClusterJoiningError,
                 ClusterInitializationError) as e:
-            LOGGER.debug("Rollback started for cluster creation exception")
+            LOGGER.debug('Rollback started for cluster creation exception')
+            try:
+                '''arg[0] refers to the current instance of the broker thread'''
+                broker_instance = args[0]
+                broker_instance.cluster_rollback()
+            except Exception as err:
+                LOGGER.error('Failed to rollback cluster creation:%s', str(err))
+        except (NodeCreationError) as e:
+            LOGGER.debug('Rollback started for node creation exception')
             try:
                 broker_instance = args[0]
-                clusters = load_from_metadata(
-                    broker_instance.client_tenant, name=broker_instance.cluster_name)
-                if len(clusters) != 1:
-                    raise Exception('Cluster %s not found.' % broker_instance.cluster_name)
-                broker_instance.cluster = clusters[0]
-                vdc = VDC(broker_instance.client_tenant, href=broker_instance.cluster['vdc_href'])
-                task = vdc.delete_vapp(broker_instance.cluster['name'], force=True)
-            except Exception as erx:
-                LOGGER.error("Failed to rollback cluster creation")
+                node_list = e.node_names
+                broker_instance.node_rollback(node_list)
+            except Exception as err:
+                LOGGER.error('Failed to rollback node creation:%s', str(err))
     return wrapper
 
 
@@ -418,7 +429,7 @@ class DefaultBroker(threading.Thread):
             LOGGER.error(traceback.format_exc())
         return result
 
-    @rollbackdecorator
+    @rollback
     def create_cluster_thread(self):
         network_name = self.body['network']
         try:
@@ -633,6 +644,8 @@ class DefaultBroker(threading.Thread):
             LOGGER.error(traceback.format_exc())
         return result
 
+
+    @rollback
     def create_nodes_thread(self):
         LOGGER.debug('about to add nodes to cluster with name: %s',
                      self.cluster_name)
@@ -677,6 +690,11 @@ class DefaultBroker(threading.Thread):
                             (self.body['node_count'],
                              self.cluster_name,
                              self.cluster_id))
+        except NodeCreationError as e:
+            error_obj = error_to_json(e)
+            LOGGER.error(traceback.format_exc())
+            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
+            raise
         except Exception as e:
             LOGGER.error(traceback.format_exc())
             self.update_task(TaskStatus.ERROR, error_message=str(e))
@@ -722,6 +740,7 @@ class DefaultBroker(threading.Thread):
             LOGGER.error(traceback.format_exc())
         return result
 
+
     def delete_nodes_thread(self):
         LOGGER.debug('about to delete nodes from cluster with name: %s',
                      self.cluster_name)
@@ -761,3 +780,43 @@ class DefaultBroker(threading.Thread):
         except Exception as e:
             LOGGER.error(traceback.format_exc())
             self.update_task(TaskStatus.ERROR, error_message=str(e))
+
+
+    def node_rollback(self, node_list):
+        """Implements rollback for node creation failure
+
+        :param list node_list: faulty nodes to be deleted
+        """
+        LOGGER.debug('About to rollback nodes from cluster with name: %s' %
+                     self.cluster_name)
+        LOGGER.debug('Node list to be deleted:%s' % node_list)
+        vapp = VApp(self.client_tenant, href=self.cluster['vapp_href'])
+        template = self.get_template()
+        try:
+            delete_nodes_from_cluster(self.config, vapp, template,node_list, force=True)
+        except Exception:
+            LOGGER.warning("Couldn't delete node %s from cluster:%s" % (node_list, self.cluster_name))
+        for vm_name in node_list:
+            vm = VM(self.client_tenant, resource=vapp.get_vm(vm_name))
+            try:
+                vm.undeploy()
+            except Exception:
+               LOGGER.warning("Couldn't undeploy VM %s" % vm_name)
+        vapp.delete_vms(node_list)
+        LOGGER.debug('Successfully deleted nodes: %s' % node_list)
+
+
+    def cluster_rollback(self):
+        """Implements rollback for cluster creation failure"""
+        LOGGER.debug('About to rollback cluster with name: %s' %
+                     self.cluster_name)
+        clusters = load_from_metadata(
+            self.client_tenant, name=self.cluster_name)
+        if len(clusters) != 1:
+            LOGGER.debug('Cluster %s not found.' % self.cluster_name)
+            return
+        self.cluster = clusters[0]
+        vdc = VDC(self.client_tenant, href=self.cluster['vdc_href'])
+        vdc.delete_vapp(self.cluster['name'], force=True)
+        LOGGER.debug('Successfully deleted cluster: %s' % self.cluster_name)
+

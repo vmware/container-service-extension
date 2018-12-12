@@ -27,6 +27,10 @@ class ClusterInitializationError(ClusterOperationError):
 class NodeOperationError(ClusterOperationError):
     """Base class for all node operation related exceptions"""
 
+class NodeCreationError(NodeOperationError):
+   def __init__(self, node_names, error_message):
+       self.node_names = node_names
+       self.error_message = error_message
 
 class MasterNodeCreationError(NodeOperationError):
     """Raised when any error happens while adding master node"""
