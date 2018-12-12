@@ -1,5 +1,5 @@
 - name: Introduction
-  link: README.html
+  link: INTRO.html
   subtoc:
   - name: Overview
     sublink: overview
@@ -87,12 +87,3 @@
     sublink: usage
   - name: Standard Git Workflow
     sublink: git
-- name: Editing Documentation
-  link: EDITING.html
-  subtoc:
-  - name: Publishing Process
-    sublink: enabling
-  - name: How Rendering Works
-    sublink: rendering
-  - name: Making Changes
-    sublink: changes
