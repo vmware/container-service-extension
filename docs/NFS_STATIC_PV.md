@@ -1,25 +1,50 @@
-# **CSE: NFS-based Static Persistent Volumes**
-[back to main CSE page](README.md#nfs)
+---
+layout: default
+title: NFS Persistent Volumes
+---
+# NFS Node Management
+<a name="overview"></a>
+## Overview
 
-CSE now enables users to deploy stateful applications on vCD Kubernetes clusters by leveraging static persistent volumes backed by an NFS server.
+CSE enables users to deploy stateful applications on vCD Kubernetes
+clusters by leveraging static persistent volumes backed by an NFS
+server.
 
 ---
-## **Static vs. Dynamic Persistent Volumes**
-[Static PVs](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#static) are pre-provisioned by cluster administrator. They carry the details of the real storage which is available for use by cluster users. They exist in the Kubernetes API and are available for consumption.
+<a name="volumes"></a>
+## Persistent Volume Types
 
-[Dynamic PVs](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#dynamic) are not pre-provisioned by cluster administrator. When none of the static PVs match a user’s PersistentVolumeClaim, the cluster may try to dynamically provision a volume for the PVC.
+[Static PVs](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#static)
+are pre-provisioned by cluster administrator. They carry the details
+of the real storage which is available for use by cluster users.
+They exist in the Kubernetes API and are available for consumption.
 
-### Static NFS volumes
+[Dynamic PVs](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#dynamic)
+are not pre-provisioned by cluster administrator. When none of the
+static PVs match a user’s PersistentVolumeClaim, the cluster may
+try to dynamically provision a volume for the PVC.
 
-An nfs volume allows an existing NFS (Network File System) share to be mounted into your pod. When a Pod is removed, the contents of an nfs volume are preserved and the volume is merely unmounted. This means that an NFS volume can be pre-populated with data, and that data can be “handed off” between pods. NFS can be mounted by multiple writers simultaneously. However, we need to have our own NFS server running with the share exported. CSE provides commands to add pre-configured NFS server(s) to any given cluster and more.
+## Static NFS volumes
+
+An nfs volume allows an existing NFS (Network File System) share
+to be mounted into your pod. When a Pod is removed, the contents
+of an nfs volume are preserved and the volume is merely unmounted.
+This means that an NFS volume can be pre-populated with data, and
+that data can be “handed off” between pods. NFS can be mounted by
+multiple writers simultaneously. However, we need to have our own
+NFS server running with the share exported. CSE provides commands
+to add pre-configured NFS server(s) to any given cluster and more.
 
 ---
-## **Architecture**
+<a name="architecture"></a>
+## Architecture
 
 ![cse-nfs](img/cse-nfs.png)
 
 ---
-## **Sample CSE and/or NFS commands**
+
+<a name="samplecommands"></a>
+## Sample Management Commands
 
 ### Cloud/System Administrator
 
@@ -125,7 +150,9 @@ spec:
             claimName: nfs-pvc
 ```
 ---
-## **FAQ**
+
+<a name="faq"></a>
+## FAQ
 - What is the difference between persistent volume (PV) and persistent volume claim (PVC)?
     - Static PV is a ready-to-use storage space created by K8 cluster admin. PVC is the storage requirement specified by the user. Kubernetes dynamically binds/unbinds PVC to PV at runtime. Learn more [here](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#static)
 - How are NFS exports mounted to containers?

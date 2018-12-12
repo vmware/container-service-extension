@@ -9,9 +9,67 @@
     <meta name="theme-color" content="#157878">
     <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
+    <style type="text/css">
+        /* Use flexbox to lay out nav and content. */
+        .main {
+             display: flex;
+        }
+
+        /* When screen is narrow, nav appears on top. */
+        @media screen and (max-width: 42em) {
+            .main {
+                flex-direction: column;
+            }
+        }
+        /* When screen is large enough nav appears on left. */
+        @media screen and (min-width: 42em) {
+            .main {
+                flex-direction: row;
+            }
+        }
+        /* Nav entries are non-bulleted lists with bold active entries. */
+        .main-nav {
+            padding: 2rem 1rem 2rem 2rem;
+        }
+        .main-nav>h1 {
+            margin: 0 0 .5rem 0;
+            padding: 0;
+            color: #159957;
+            font-weight: 100;
+        }
+        .main-nav>ol {
+            margin: 0;
+            padding: 0;
+        }
+        .main-nav ol {           
+            list-style-type: none;
+        }
+        .main-nav li.current a {
+            font-weight: bold;
+        }
+
+        /* Override theme CSS to reduce header size. */
+        @media screen and (min-width: 64em) { 
+            .page-header { 
+                padding: 1rem 2rem; 
+            } 
+        }
+        @media screen and (min-width: 42em) and (max-width: 64em) { 
+            .page-header { 
+                padding: 1rem 2rem;
+            }
+        }
+        @media screen and (max-width: 42em) { 
+            .page-header { 
+                 padding: 1rem 2rem; 
+            }    
+        }        
+    </style>
+
   </head>
+
   <body>
-    <section class="page-header">
+    <header class="page-header">
       <h1 class="project-name">{{ site.title | default: site.github.repository_name }}</h1>
       <h2 class="project-tagline">{{ site.description | default: site.github.project_tagline }}</h2>
       {% if site.github.is_project_page %}
@@ -21,17 +79,23 @@
         <a href="{{ site.github.zip_url }}" class="btn">Download .zip</a>
         <a href="{{ site.github.tar_url }}" class="btn">Download .tar.gz</a>
       {% endif %}
+    </header>
+
+    <section class="main">
+      <nav class="main-nav">
+        {% include navigation.html %}
+      </nav>
+
+      <main class="main-content">
+        {{ content }}
+      </main>
     </section>
 
-    <section class="main-content">
-      {{ content }}
-
-      <footer class="site-footer">
+    <footer class="site-footer">
         {% if site.github.is_project_page %}
           <span class="site-footer-owner"><a href="{{ site.github.repository_url }}">{{ site.github.repository_name }}</a> is maintained by <a href="{{ site.github.owner_url }}">VMware</a>.</span>
         {% endif %}
-      </footer>
-    </section>
+    </footer>
 
     {% if site.google_analytics %}
       <script type="text/javascript">
