@@ -54,14 +54,12 @@ _type_to_string = {
 
 
 def error_to_json(error):
-    """converts the given python exception object to dict object
-    with short, long and stacktrace as attributes with respective
-    values
+    """converts the given python exception object to dictionary
+    with attributes short reason, long description and stacktrace of the error.
 
-    :param Exception error: Exception object.
+    :param error: Exception object.
 
-    :return: dictionary with short, long and stacktrace or empty dictionary
-             on None param
+    :return: dictionary with error reason, error description and stacktrace; or empty dictionary
 
     :rtype: dict
     """
@@ -86,7 +84,7 @@ def process_response(response):
     Returns the response content, if the value of status code property is 2xx
     Otherwise raises exception with error message
 
-    :param dict response: dictionary with status code, content
+    :param response: response object with attributes status code and content
 
     :return: response content if status code is 2xx.
 
@@ -108,9 +106,11 @@ def deserialize_response_content(response):
     regular python string that will be in json string. That gets converted to
     python dictionary.
 
-    :param string response: response string, by default in encoded utf-8
+    Note: Do not use this method to process non-json response.content
 
-    :return: response dictionary
+    :param response: response object with attributes status code and content
+
+    :return: response content as decoded json
 
     :rtype: dict
     """
@@ -124,7 +124,7 @@ def deserialize_response_content(response):
 def response_to_exception(response):
     """Raises exception with appropriate messages, depending on the key: status code
 
-    :param response: response dictionary with status code and content as keys
+    :param response: response object with attributes status code and content
 
     :raises: VcdResponseError
     """
