@@ -65,7 +65,8 @@ class Cluster(object):
                        storage_profile=None,
                        ssh_key=None,
                        template=None,
-                       enable_nfs=False):
+                       enable_nfs=False,
+                       disable_rollback=True):
         """Create a new Kubernetes cluster.
 
         :param vdc: (str): The name of the vdc in which the cluster will be
@@ -85,7 +86,11 @@ class Cluster(object):
         :param template: (str): The name of the template to use to
             instantiate the nodes
         :param enable_nfs: (bool): bool value to indicate if NFS node is to be
-            created.
+            created
+        :param disable_rollback: (bool): Flag to control weather rollback should be
+            performed or not in case of errors. True to rollback,
+            False to not rollback
+
         :return: (json) A parsed json object describing the requested cluster.
         """
         method = 'POST'
@@ -100,7 +105,8 @@ class Cluster(object):
             'storage_profile': storage_profile,
             'ssh_key': ssh_key,
             'template': template,
-            'enable_nfs': enable_nfs
+            'enable_nfs': enable_nfs,
+            'disable_rollback': disable_rollback
         }
         response = self.client._do_request_prim(
             method,
@@ -167,7 +173,8 @@ class Cluster(object):
                  storage_profile=None,
                  ssh_key=None,
                  template=None,
-                 node_type=TYPE_NODE):
+                 node_type=TYPE_NODE,
+                 disable_rollback=True):
         """Add nodes to a Kubernetes cluster.
 
         :param vdc: (str): The name of the vdc that contains the cluster
@@ -185,6 +192,10 @@ class Cluster(object):
             node vms without explicitly providing passwords
         :param template: (str): The name of the catalog template to use to
             instantiate the nodes
+        :param disable_rollback: (bool): Flag to control weather rollback should be
+            performed or not in case of errors. True to rollback,
+            False to not rollback
+
         :return: (json) A parsed json object describing the requested cluster.
         """
         method = 'POST'
@@ -199,7 +210,8 @@ class Cluster(object):
             'storage_profile': storage_profile,
             'ssh_key': ssh_key,
             'template': template,
-            'node_type': node_type
+            'node_type': node_type,
+            'disable_rollback': disable_rollback
         }
         response = self.client._do_request_prim(
             method,
