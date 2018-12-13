@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import functools
-import logging
 import re
 import threading
 import traceback

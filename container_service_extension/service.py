@@ -2,8 +2,6 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import logging
-from logging.handlers import RotatingFileHandler
 import platform
 import signal
 import sys

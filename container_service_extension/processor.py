@@ -4,7 +4,6 @@
 
 import base64
 import json
-import logging
 import sys
 import traceback
 

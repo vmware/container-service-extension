@@ -4,7 +4,6 @@
 
 import hashlib
 import json
-import logging
 import os
 import pathlib
 import stat
