@@ -16,6 +16,7 @@ import yaml
 
 from container_service_extension.client.cluster import Cluster
 from container_service_extension.client.system import System
+# from container_service_extension.logger import configure_client_logger TODO
 from container_service_extension.service import Service
 
 
@@ -30,7 +31,9 @@ def cse(ctx):
             Display CSE version. If CSE version is displayed, then vcd-cli has
             been properly configured to run CSE commands.
     """
-    pass
+    # TODO client logging is set up, but need to write log statements
+    # configure_client_logger()
+
 
 @cse.command(short_help='show version')
 @click.pass_context
