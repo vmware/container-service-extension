@@ -234,8 +234,15 @@ def delete(ctx, name):
     default=False,
     metavar='[enable nfs]',
     help='Creates an additional node of type NFS')
+@click.option(
+    '--disable-rollback',
+    'rollback',
+    is_flag=True,
+    required=False,
+    default=False,
+    help='Disable rollback for cluster, Default:enabled')
 def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
-           ssh_key_file, template, enable_nfs):
+           ssh_key_file, template, enable_nfs,rollback):
     """Create a Kubernetes cluster."""
     try:
         restore_session(ctx, vdc_required=True)
@@ -254,7 +261,8 @@ def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
             storage_profile=storage_profile,
             ssh_key=ssh_key,
             template=template,
-            enable_nfs=enable_nfs)
+            enable_nfs=enable_nfs,
+            rollback=rollback)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -413,8 +421,15 @@ def node_info(ctx, cluster_name, node_name):
     default='node',
     type=click.Choice(['node', 'nfsd']),
     help='type of node to add')
+@click.option(
+    '--disable-rollback',
+    'rollback',
+    is_flag=True,
+    required=False,
+    default=False,
+    help='Disable rollback for node, Default:enabled')
 def create_node(ctx, name, node_count, cpu, memory, network_name,
-                storage_profile, ssh_key_file, template, node_type):
+                storage_profile, ssh_key_file, template, node_type, rollback):
     """Add a node to a Kubernetes cluster."""
     try:
         restore_session(ctx)
@@ -433,7 +448,8 @@ def create_node(ctx, name, node_count, cpu, memory, network_name,
             storage_profile=storage_profile,
             ssh_key=ssh_key,
             template=template,
-            node_type=node_type)
+            node_type=node_type,
+            rollback=rollback)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)

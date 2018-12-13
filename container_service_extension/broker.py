@@ -41,7 +41,6 @@ from container_service_extension.exceptions import MasterNodeCreationError
 from container_service_extension.exceptions import NFSNodeCreationError
 from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import WorkerNodeCreationError
-from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.utils import ERROR_DESCRIPTION
 from container_service_extension.utils import ERROR_MESSAGE
 from container_service_extension.utils import SYSTEM_ORG_NAME
@@ -99,19 +98,19 @@ def rollback(func):
         except (MasterNodeCreationError, WorkerNodeCreationError,
                 NFSNodeCreationError, ClusterJoiningError,
                 ClusterInitializationError) as e:
-            LOGGER.debug('Rollback started for cluster creation exception')
             try:
                 '''arg[0] refers to the current instance of the broker thread'''
                 broker_instance = args[0]
-                broker_instance.cluster_rollback()
+                if not broker_instance.body['rollback']:
+                    broker_instance.cluster_rollback()
             except Exception as err:
                 LOGGER.error('Failed to rollback cluster creation:%s', str(err))
         except NodeCreationError as e:
-            LOGGER.debug('Rollback started for node creation exception')
             try:
                 broker_instance = args[0]
                 node_list = e.node_names
-                broker_instance.node_rollback(node_list)
+                if not broker_instance.body['rollback']:
+                    broker_instance.node_rollback(node_list)
             except Exception as err:
                 LOGGER.error('Failed to rollback node creation:%s', str(err))
     return wrapper
@@ -803,7 +802,6 @@ class DefaultBroker(threading.Thread):
                LOGGER.warning("Couldn't undeploy VM %s" % vm_name)
         vapp.delete_vms(node_list)
         LOGGER.debug('Successfully deleted nodes: %s' % node_list)
-
 
     def cluster_rollback(self):
         """Implements rollback for cluster creation failure"""
