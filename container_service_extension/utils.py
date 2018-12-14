@@ -84,9 +84,9 @@ def process_response(response):
     Returns the response content, if the value of status code property is 2xx
     Otherwise raises exception with error message
 
-    :param response: response object with attributes status code and content
+    :param requests.models.Response response: object with attributes status code and content
 
-    :return: response content if status code is 2xx.
+    :return: decoded response content if status code is 2xx.
 
     :rtype: dict
 
@@ -108,9 +108,9 @@ def deserialize_response_content(response):
 
     Note: Do not use this method to process non-json response.content
 
-    :param response: response object with attributes status code and content
+    :param requests.models.Response response: object that includes attributes status code and content
 
-    :return: response content as decoded json
+    :return: response content as decoded dictionary
 
     :rtype: dict
     """
@@ -124,7 +124,7 @@ def deserialize_response_content(response):
 def response_to_exception(response):
     """Raises exception with appropriate messages, depending on the key: status code
 
-    :param response: response object with attributes status code and content
+    :param requests.models.Response response: object that has attributes status code and content
 
     :raises: VcdResponseError
     """
@@ -138,10 +138,13 @@ def response_to_exception(response):
     content = deserialize_response_content(response)
     if ERROR_MESSAGE in content:
         if ERROR_REASON in content[ERROR_MESSAGE]:
-            raise VcdResponseError(response.status_code, content[ERROR_MESSAGE][ERROR_REASON])
-        raise VcdResponseError(response.status_code, content[ERROR_MESSAGE])
+            message = content[ERROR_MESSAGE][ERROR_REASON]
+        else:
+            message = content[ERROR_MESSAGE]
     else:
-        raise VcdResponseError(response.status_code, ERROR_UNKNOWN)
+        message = ERROR_UNKNOWN
+
+    raise VcdResponseError(response.status_code, message)
 
 
 def bool_to_msg(value):
