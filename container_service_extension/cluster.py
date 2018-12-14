@@ -2,7 +2,6 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import logging
 import random
 import re
 import string
@@ -20,12 +19,11 @@ from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import ScriptExecutionError
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_vsphere
+from container_service_extension.logger import SERVER_LOGGER as LOGGER
 
 TYPE_MASTER = 'mstr'
 TYPE_NODE = 'node'
 TYPE_NFS = 'nfsd'
-
-LOGGER = logging.getLogger('cse.cluster')
 
 
 def wait_until_tools_ready(vm):

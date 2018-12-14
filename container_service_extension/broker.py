@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import functools
-import logging
 import re
 import threading
 import traceback
@@ -42,13 +41,11 @@ from container_service_extension.exceptions import NFSNodeCreationError
 from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import WorkerNodeCreationError
 from container_service_extension.exceptions import NodeCreationError
+from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.utils import ERROR_DESCRIPTION
 from container_service_extension.utils import ERROR_MESSAGE
 from container_service_extension.utils import SYSTEM_ORG_NAME
 from container_service_extension.utils import error_to_json
-
-
-LOGGER = logging.getLogger('cse.broker')
 
 OK = 200
 CREATED = 201

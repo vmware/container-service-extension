@@ -2,8 +2,6 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import logging
-from logging.handlers import RotatingFileHandler
 import platform
 import signal
 import sys
@@ -20,9 +18,12 @@ from container_service_extension.broker import DefaultBroker
 from container_service_extension.config import check_cse_installation
 from container_service_extension.config import get_validated_config
 from container_service_extension.consumer import MessageConsumer
-from container_service_extension.utils import SYSTEM_ORG_NAME
+from container_service_extension.logger import configure_server_logger
+from container_service_extension.logger import SERVER_DEBUG_LOG_FILEPATH
+from container_service_extension.logger import SERVER_INFO_LOG_FILEPATH
+from container_service_extension.logger import SERVER_LOGGER as LOGGER
 
-LOGGER = logging.getLogger('cse.service')
+from container_service_extension.utils import SYSTEM_ORG_NAME
 
 
 class Singleton(type):
@@ -68,6 +69,7 @@ class Service(object, metaclass=Singleton):
             uri=self.config['vcd']['host'],
             api_version=version,
             verify_ssl_certs=self.config['vcd']['verify'],
+            log_file=SERVER_DEBUG_LOG_FILEPATH,
             log_headers=True,
             log_bodies=True)
         session = client_tenant.rehydrate_from_token(token)
@@ -164,23 +166,13 @@ class Service(object, metaclass=Singleton):
         if self.should_check_config:
             check_cse_installation(self.config)
 
-        log_file = 'cse.log'
-        handler = RotatingFileHandler(
-            log_file, maxBytes=10 * 1024 * 1024, backupCount=10)
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format='%(asctime)s %(name)-12s %(lineno)s '
-            '%(levelname)-8s %(message)s',
-            datefmt='%m-%d %H:%M:%S',
-            handlers=(handler, ))
-        logging.getLogger("pika").setLevel(logging.WARNING)
+        configure_server_logger()
 
-        message = """
-Container Service Extension for vCloud Director running
-config file: {config_file}
-see file log file for details: {log_file}
-waiting for requests, press Ctrl+C to finish
-""".format(config_file=self.config_file, log_file=log_file)
+        message = f"Container Service Extension for vCloudDirector" \
+                  f"\nServer running using config file: {self.config_file}" \
+                  f"\nLog files: {SERVER_INFO_LOG_FILEPATH}, " \
+                  f"{SERVER_DEBUG_LOG_FILEPATH}" \
+                  f"\nwaiting for requests (ctrl+c to close)"
 
         signal.signal(signal.SIGINT, signal_handler)
         click.secho(message)
