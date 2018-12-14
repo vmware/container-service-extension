@@ -23,6 +23,7 @@ from vcd_cli.utils import stdout
 from vcd_cli.utils import to_dict
 from vsphere_guest_run.vsphere import VSphere
 
+from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
@@ -226,12 +227,10 @@ def validate_amqp_config(amqp_dict):
     connection = None
     try:
         connection = pika.BlockingConnection(parameters)
-        if not connection.is_open:
-            click.secho(f"AMQP connection is not open", fg='red')
-            # TODO replace raw exception with specific
-            raise Exception('AMQP connection is not open')
         click.secho(f"Connected to AMQP server "
                     f"({amqp_dict['host']}:{amqp_dict['port']})", fg='green')
+    except Exception as err:
+        raise AmqpConnectionError("Amqp connection failed:", str(err))
     finally:
         if connection is not None:
             connection.close()
