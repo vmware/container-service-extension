@@ -24,6 +24,7 @@ from vcd_cli.utils import to_dict
 from vsphere_guest_run.vsphere import VSphere
 
 from container_service_extension.exceptions import AmqpConnectionError
+from container_service_extension.exceptions import AmqpError
 from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
@@ -461,7 +462,7 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
         to vCD. 'skip' does not register CSE to vCD. 'config' registers CSE
         to vCD without asking the user.
 
-    :raises Exception: if AMQP connection fails.
+    :raises AmqpError: if AMQP connection fails.
     """
     config = get_validated_config(config_file_name)
     configure_install_logger()
@@ -872,7 +873,7 @@ def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
     :param str username: AMQP username.
     :param str vhost: AMQP vhost.
 
-    :raises Exception: if AMQP exchange could not be created.
+    :raises AmqpError: if AMQP exchange could not be created.
     """
     msg = f"Checking for AMQP exchange '{exchange_name}'"
     click.secho(msg, fg='yellow')
@@ -888,11 +889,11 @@ def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
         channel.exchange_declare(exchange=exchange_name,
                                  exchange_type=EXCHANGE_TYPE,
                                  durable=True, auto_delete=False)
-    except Exception:  # TODO replace with specific exception
+    except Exception as err:  
         msg = f"Cannot create AMQP exchange '{exchange_name}'"
         click.secho(msg, fg='red')
         LOGGER.error(msg, exc_info=True)
-        raise
+        raise AmqpError(msg, str(err))
     finally:
         if connection is not None:
             connection.close()
