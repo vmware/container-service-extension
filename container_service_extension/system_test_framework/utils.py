@@ -79,12 +79,12 @@ def prepare_customization_scripts():
 
     scripts_filepaths = {
         f"{env.SCRIPTS_DIR}/{env.STATIC_PHOTON_CUST_SCRIPT}":
-            f"{env.SCRIPTS_DIR}/{env.STATIC_PHOTON_CUST_SCRIPT}",
+            f"{env.SCRIPTS_DIR}/{env.ACTIVE_PHOTON_CUST_SCRIPT}",
         f"{env.SCRIPTS_DIR}/{env.STATIC_UBUNTU_CUST_SCRIPT}":
-            f"{env.SCRIPTS_DIR}/{env.STATIC_UBUNTU_CUST_SCRIPT}",
+            f"{env.SCRIPTS_DIR}/{env.ACTIVE_UBUNTU_CUST_SCRIPT}",
     }
 
-    for src, dst in scripts_filepaths:
+    for src, dst in scripts_filepaths.items():
         Path(dst).write_text(Path(src).read_text())
 
 
