@@ -468,7 +468,8 @@ def get_data_file(filename, logger=None):
     Used to retrieve builtin script files that users have installed
     via pip install or setup.py. Looks inside virtualenv site-packages, cwd,
     user/global site-packages, python libs, usr bins/Cellars, as well
-    as any subdirectories in these paths named 'scripts' or 'cse'.
+    as any subdirectories in these paths named 'scripts' or
+    'container_service_extension_scripts'.
 
     :param str filename: name of file (script) we want to get.
     :param logging.Logger logger: optional logger to log with.

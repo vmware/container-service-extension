@@ -29,6 +29,7 @@ PHOTON_TEMPLATE_NAME = 'photon-v2'
 BASE_CONFIG_FILENAME = 'base_config.yaml'
 ACTIVE_CONFIG_FILENAME = 'cse_test_config.yaml'
 
+
 def developerModeAware(function):
     """Skip execution of decorated function.
 
