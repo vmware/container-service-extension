@@ -26,8 +26,8 @@ ACTIVE_UBUNTU_CUST_SCRIPT = 'cust-ubuntu-16.04.sh'
 STATIC_PHOTON_CUST_SCRIPT = 'CUST-PHOTON.sh'
 STATIC_UBUNTU_CUST_SCRIPT = 'CUST-UBUNTU.sh'
 PHOTON_TEMPLATE_NAME = 'photon-v2'
-BASE_CONFIG_FILENAME = 'base_config.yaml'
-ACTIVE_CONFIG_FILENAME = 'cse_test_config.yaml'
+BASE_CONFIG_FILEPATH = 'base_config.yaml'
+ACTIVE_CONFIG_FILEPATH = 'cse_test_config.yaml'
 
 
 def developerModeAware(function):

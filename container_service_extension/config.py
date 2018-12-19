@@ -596,12 +596,17 @@ def create_template(ctx, client, config, template_config, update=False,
     msg = f"Creating template '{template_name}' in catalog '{catalog_name}'"
     click.secho(msg, fg='yellow')
     LOGGER.info(msg)
+    temp_vapp_exists = True
     try:
         vapp = VApp(client, resource=vdc.get_vapp(vapp_name))
         msg = f"Found vApp '{vapp_name}'"
         click.secho(msg, fg='green')
         LOGGER.info(msg)
     except EntityNotFoundException:
+        temp_vapp_exists = False
+
+    # flag is used to hide previous try/except error if an error occurs below
+    if not temp_vapp_exists:
         if catalog_item_exists(org, catalog_name, ova_name):
             msg = f"Found ova file '{ova_name}' in catalog '{catalog_name}'"
             click.secho(msg, fg='green')
@@ -662,6 +667,9 @@ def _create_temp_vapp(ctx, client, vdc, config, template_config, ssh_key):
     :return: VApp object for temporary VApp.
 
     :rtype: pyvcloud.vcd.vapp.VApp
+
+    :raises FileNotFoundError: if init/customization scripts are not found.
+    :raises Exception: if VM customization fails.
     """
     vapp_name = template_config['temp_vapp']
     init_script = get_data_file(f"init-{template_config['name']}.sh",
@@ -786,11 +794,13 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
             get_output=True,
             delete_script=True,
             callback=vgr_callback())
-    except Exception:
+    except Exception as err:
         # TODO replace raw exception with specific exception
-        # unsure what exception execute_script_in_guest can throw
+        # unsure all errors execute_script_in_guest can result in
+        # Docker TLS handshake timeout can occur when internet is slow
         click.secho("Failed VM customization. Check CSE install log", fg='red')
-        LOGGER.error("Failed VM customization", exc_info=True)
+        LOGGER.error(f"Failed VM customization with error: f{err}",
+                     exc_info=True)
         raise
 
     if len(result) > 0:
