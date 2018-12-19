@@ -51,20 +51,20 @@ from container_service_extension.utils import get_data_file
 class CSEServerInstallationTest(unittest.TestCase):
     """Test CSE server installation.
     NOTES:
-        - Edit 'base_config.yaml' for your own vCD instance.
-        - These tests will use your public/private SSH keys (RSA).
-            Ensure that you have the required keys and have set up
-            your ssh-agent properly.
-            Keys should be at '~/.ssh/id_rsa' and '~/.ssh/id_rsa.pub'
-            (https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/)
-        - These tests will run in sequence, but can be run independently.
-        - vCD entities related to CSE (vapps, catalog items) persist through
-            test cases, and are deleted before and after tests run
-            (SetUpClass and TearDownClass).
+        - Edit 'base_config.yaml' for your own vCD instance
+        - These tests will use your public/private SSH keys (RSA)
+            - Required keys: '~/.ssh/id_rsa' and '~/.ssh/id_rsa.pub'
+            - Keys should not be password protected, or test will fail.
+                To remove key password, use `ssh-keygen -p`.
+            - For help, check out: https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/  # noqa
+        - vCD entities related to CSE (vapps, catalog items) are not cleaned
+            up after all tests have run. See setUpClass, tearDownClass, and
+            setUp method docstrings for more info.
         - !!! These tests will fail on Windows !!! We generate temporary config
             files and restrict its permissions due to the check that
             cse install/check performs. This permissions check is incompatible
             with Windows, and is a known issue.
+        - These tests are meant to run in sequence, but can run independently.
 
     Tests these following commands:
     $ cse check --config cse_test_config.yaml (missing/invalid keys)
@@ -103,10 +103,15 @@ class CSEServerInstallationTest(unittest.TestCase):
     _base_config_filepath = None
     _active_config_filepath = None
 
-    # runs once for this class, before all test methods
     @classmethod
     def setUpClass(cls):
-        """."""
+        """Runs once for this class, before all test methods.
+
+        Tasks:
+            - Initialize client, config, and other attributes.
+            - Restore VCD AMQP settings to defaults.
+            - Delete any pre-existing CSE entities.
+        """
         cls._active_config_filepath = f'{ACTIVE_CONFIG_FILENAME}'
         cls._base_config_filepath = f'{BASE_CONFIG_FILENAME}'
 
@@ -116,10 +121,7 @@ class CSEServerInstallationTest(unittest.TestCase):
 
         cls._client = Client(cls._config['vcd']['host'],
                              api_version=cls._config['vcd']['api_version'],
-                             verify_ssl_certs=cls._config['vcd']['verify'],
-                             log_file='cse-install.log',
-                             log_headers=True,
-                             log_bodies=True)
+                             verify_ssl_certs=cls._config['vcd']['verify'])
         credentials = BasicLoginCredentials(cls._config['vcd']['username'],
                                             SYSTEM_ORG_NAME,
                                             cls._config['vcd']['password'])
@@ -159,27 +161,21 @@ class CSEServerInstallationTest(unittest.TestCase):
         cls._amqp_password = cls._config['amqp']['password']
         assert cls._amqp_password is not None
 
-        try:
-            cls._api_extension.delete_extension(CSE_NAME, CSE_NAMESPACE)
-        except MissingRecordException:
-            pass
-
-        restore_customizaton_scripts()
-
         CSEServerInstallationTest.delete_cse_entities()
 
-    # runs before each test method
     def setUp(self):
-        # reset any modifications that were made to config
+        """Runs before each test method.
+
+        Tasks:
+            - Create a new active config and file from base config file.
+            - Reset VCD AMQP settings.
+            - Unregister CSE from VCD.
+            - Blank out customization scripts.
+        """
         self._config = yaml_to_dict(self._base_config_filepath)
         dict_to_yaml_file(self._config, self._active_config_filepath)
         os.chmod(self._active_config_filepath, 0o600)
 
-    # runs after each test method
-    def tearDown(self):
-        """Resets vcd amqp settings, unregisters cse from vcd, and blanks out
-        customization scripts."""
-        # reset vcd amqp configuration
         configure_vcd_amqp(self._client,
                            self._default_amqp_settings['AmqpExchange'],
                            self._default_amqp_settings['AmqpHost'],
@@ -192,7 +188,6 @@ class CSEServerInstallationTest(unittest.TestCase):
                            self._amqp_password,
                            quiet=True)
 
-        # remove cse as an extension from vcd
         try:
             self._api_extension.delete_extension(CSE_NAME, CSE_NAMESPACE)
         except MissingRecordException:
@@ -200,13 +195,24 @@ class CSEServerInstallationTest(unittest.TestCase):
 
         restore_customizaton_scripts()
 
-    # runs once for this class, after all test methods
     @classmethod
     def tearDownClass(cls):
-        CSEServerInstallationTest.delete_cse_entities()
+        """Runs once for this class, after all test methods.
 
+        Cleans up lingering connections/files. Does not clean up CSE entities.
+        If a test fails, we can inspect the invalid state.
+        If tests pass, subsequent tests can use this valid installation.
+        Clean up is handled by setUpClass, to start testing froma clean state.
+
+        Tasks:
+            - Delete active config file.
+            - Logout client.
+        """
         # Remove active config file
-        Path(cls._active_config_filepath).unlink()
+        try:
+            Path(cls._active_config_filepath).unlink()
+        except FileNotFoundError:
+            pass
 
         if cls._client is not None:
             cls._client.logout()
@@ -345,7 +351,6 @@ class CSEServerInstallationTest(unittest.TestCase):
             print("cse check passed when it should have failed.")
             assert False
         except EntityNotFoundException:
-            # TODO should use CSE specific exception
             pass
 
     def test_0050_install_no_capture(self):
@@ -504,7 +509,6 @@ class CSEServerInstallationTest(unittest.TestCase):
             --ssh-key ~/.ssh/id_rsa.pub --update --no-capture
         required files: cse_test_config.yaml, ~/.ssh/id_rsa.pub,
             ubuntu/photon init/cust scripts
-            TODO uses blank customization scripts for now.
         expected: cse registered, amqp configured, ubuntu/photon ovas exist,
             temp vapps exist, templates exist.
         """
@@ -563,20 +567,21 @@ class CSEServerInstallationTest(unittest.TestCase):
                     pattern = r'(kubernetes\S*)'
                     packages = re.findall(pattern, script)
                     stdin, stdout, stderr = ssh_client.exec_command("rpm -qa")
-                    installed_packages = [line.strip('.x86_64\n') for line in stdout]
+                    installed = [line.strip('.x86_64\n') for line in stdout]
                     for package in packages:
-                        if package not in installed_packages:
+                        if package not in installed:
                             print(f"{package} not found in Photon VM")
                             assert False
                 elif 'ubuntu' in temp_vapp_name:
                     script = get_data_file(STATIC_UBUNTU_CUST_SCRIPT)
-                    pattern = r'((kubernetes|docker\S*|kubelet|kubeadm|kubectl)\S*=\S*)'
+                    pattern = r'((kubernetes|docker\S*|kubelet|kubeadm|kubectl)\S*=\S*)'  # noqa
                     packages = [tup[0] for tup in re.findall(pattern, script)]
-                    stdin, stdout, stderr = ssh_client.exec_command("dpkg -l | grep '^ii' | awk '{print $2\"=\"$3}'")
-                    installed_packages = [line.strip() for line in stdout]
+                    cmd = "dpkg -l | grep '^ii' | awk '{print $2\"=\"$3}'"
+                    stdin, stdout, stderr = ssh_client.exec_command(cmd)
+                    installed = [line.strip() for line in stdout]
                     for package in packages:
-                        if package not in installed_packages:
-                            print(f"{package} not found in Photon VM")
+                        if package not in installed:
+                            print(f"{package} not found in Ubuntu VM")
                             assert False
             finally:
                 ssh_client.close()
@@ -588,20 +593,12 @@ class CSEServerInstallationTest(unittest.TestCase):
         command: cse install --config cse_test_config.yaml
         expected: temp vapps are deleted
         """
-        template_config = None
-        for template_dict in self._config['broker']['templates']:
-            if template_dict['name'] == PHOTON_TEMPLATE_NAME:
-                template_config = template_dict
-                assert template_config['cleanup']
-                break
-        if template_config is None:
-            print('Target template not found in config file')
-            assert False
+        for template_config in self._config['broker']['templates']:
+            assert template_config['cleanup']
 
         result = self._runner.invoke(cli,
                                      ['install',
                                       '--config', self._active_config_filepath,
-                                      '--template', PHOTON_TEMPLATE_NAME,
                                       '--amqp', 'config',
                                       '--ext', 'config'],
                                      catch_exceptions=False)
@@ -623,26 +620,26 @@ class CSEServerInstallationTest(unittest.TestCase):
             print('CSE is not registered as an extension when it should be.')
             assert False
 
-        # check that vapp template exist
-        try:
-            self._org.get_catalog_item(self._config['broker']['catalog'],
-                                       template_config['catalog_item'])
-        except EntityNotFoundException:
-            print('vApp template does not exist when it should')
-            assert False
+        for template_config in self._config['broker']['templates']:
+            # check that vapp template exists
+            try:
+                self._org.get_catalog_item(self._config['broker']['catalog'],
+                                           template_config['catalog_item'])
+            except EntityNotFoundException:
+                print('vApp template does not exist when it should')
+                assert False
 
-        # check that temp vapp does not exist (cleanup: true)
-        try:
-            self._vdc.get_vapp(template_config['temp_vapp'])
-            print('Temp vapp should not exist (cleanup: True')
-            assert False
-        except EntityNotFoundException:
-            pass
+            # check that temp vapp does not exist (cleanup: true)
+            try:
+                self._vdc.get_vapp(template_config['temp_vapp'])
+                print('Temp vapp should not exist (cleanup: True')
+                assert False
+            except EntityNotFoundException:
+                pass
 
         # sub-test to make sure `cse check` works for valid installation
         try:
-            check_cse_installation(self._config,
-                                   check_template=PHOTON_TEMPLATE_NAME)
+            check_cse_installation(self._config)
         except EntityNotFoundException:
             print("cse check failed when it should have passed.")
             assert False
