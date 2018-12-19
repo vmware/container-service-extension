@@ -596,12 +596,17 @@ def create_template(ctx, client, config, template_config, update=False,
     msg = f"Creating template '{template_name}' in catalog '{catalog_name}'"
     click.secho(msg, fg='yellow')
     LOGGER.info(msg)
+    temp_vapp_exists = True
     try:
         vapp = VApp(client, resource=vdc.get_vapp(vapp_name))
         msg = f"Found vApp '{vapp_name}'"
         click.secho(msg, fg='green')
         LOGGER.info(msg)
     except EntityNotFoundException:
+        temp_vapp_exists = False
+
+    # flag is used to hide previous try/except error if an error occurs below
+    if not temp_vapp_exists:
         if catalog_item_exists(org, catalog_name, ova_name):
             msg = f"Found ova file '{ova_name}' in catalog '{catalog_name}'"
             click.secho(msg, fg='green')
@@ -788,7 +793,8 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
             callback=vgr_callback())
     except Exception:
         # TODO replace raw exception with specific exception
-        # unsure what exception execute_script_in_guest can throw
+        # unsure all errors execute_script_in_guest can result in
+        # Docker TLS handshake timeout can occur when internet is slow
         click.secho("Failed VM customization. Check CSE install log", fg='red')
         LOGGER.error("Failed VM customization", exc_info=True)
         raise
