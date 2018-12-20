@@ -21,8 +21,8 @@ class UaaClient:
         self.clientId = clientId
         self.clientSecret = clientSecret
         auth = self.clientId + ':' + self.clientSecret
-        self.authString = base64.b64encode(auth)
-        self.authString = 'Basic ' + self.authString
+        self.authString = base64.b64encode(auth.encode())
+        self.authString = b'Basic ' + self.authString
 
     def getToken(self):
         url = self.baseUrl + self.tokenService
@@ -33,8 +33,15 @@ class UaaClient:
             'cache-control': "no-cache"
 
         }
+        http_proxy = f"http://10.161.148.112:80"
+        proxy_env = {
+            'http_proxy': http_proxy,
+            'https_proxy': http_proxy,
+            'http': http_proxy,
+            'https': http_proxy,
+        }
 
-        response = requests.request("POST", url, verify=False, data=self.payload, headers=headers)
+        response = requests.request("POST", url, verify=False, data=self.payload, headers=headers, proxies=proxy_env)
 
         access_token = json.loads(response.text)
 
@@ -42,11 +49,12 @@ class UaaClient:
 
 
 
-uaaClient = UaaClient('https://api.pks.local:8443', 'admin', 'VqROLWFRunBghy_GIjfHzOwBm82bAWVg')
+uaaClient = UaaClient('https://api.pks.local:8443', 'admin', 'YtAU6Rl2dEvj1_hH9wEQxDUkxO1Lcjm3')
 token = uaaClient.getToken()
 print(token)
 
 config = Configuration()
+config.proxy = 'http://10.161.148.112:80'
 config.host = 'https://api.pks.local:9021/v1'
 config.access_token = token
 config.username = 'admin'
@@ -56,5 +64,6 @@ pksClient = ApiClient(configuration=config)
 
 clusterApi = ClusterApi(api_client=pksClient)
 clusters = clusterApi.list_clusters()
+print(clusters)
 #plansApi = PlansApi(api_client=pksClient)
 #plans = plansApi.list_plans()
