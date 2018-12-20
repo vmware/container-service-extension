@@ -1,6 +1,37 @@
-# **CSE Release Notes**
+---
+layout: default
+title: Release Notes
+---
 
-[back to main CSE page](README.md#releasenotes)
+# Release Notes
+
+## CSE 1.2.5
+
+Release date: 2018-12-03
+
+This is a security release to address Kubernetes CVE-2018-1002105
+
+Supported vCD versions: 8.20, 9.0, 9.1, 9.5
+
+| Template OS        | Docker     | Kubernetes | Pod Network |
+|:-------------------|:-----------|:-----------|:------------|
+| Photon OS 2.0 GA   | 17.06.4-ce | 1.10.11    | Weave 2.3.0 |
+| Ubuntu 16.04.4 LTS | 18.03.0-ce | 1.10.11    | Weave 2.3.0 |
+
+**Bug Fixes:**
+- Updated Kubernetes packages and docker images to address CVE-2018-1002105 for both Ubuntu and Photon OS templates.
+
+**Systems patching:**
+* Action required (by Admins and Users)
+
+* Cloud Admin:
+    * Update CSE to 1.2.5
+    * Update the templates
+    * Command for updating template -> cse install -c config.yaml --template template-name --update --amqp skip --ext skip
+
+* Tenant Users:
+    * Delete clusters that were created with older templates (with older K8 versions of 1.9.1 and 1.10.1). Recreate clusters with new templates (with latest K8 version of 1.10.11).
+    * Alternatively, tenant-users can update kubernetes packages and docker images manually on existing clusters
 
 ---
 

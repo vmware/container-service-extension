@@ -4,17 +4,15 @@
 
 import base64
 import json
-import logging
 import sys
 import threading
 import traceback
 
 import pika
 
+from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.processor import ServiceProcessor
 from container_service_extension.utils import EXCHANGE_TYPE
-
-LOGGER = logging.getLogger('cse.consumer')
 
 
 class MessageConsumer(object):

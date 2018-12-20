@@ -25,16 +25,16 @@ EOF
 add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 apt-get -q update
 apt-get -q install -y docker-ce=18.03.0~ce-0~ubuntu
-apt-get -q install -y kubelet=1.10.11-00 kubeadm=1.10.11-00 kubectl=1.10.11-00 kubernetes-cni=0.6.0-00 --allow-unauthenticated
+apt-get -q install -y kubelet=1.10.1-00 kubeadm=1.10.1-00 kubectl=1.10.1-00 kubernetes-cni=0.6.0-00 --allow-unauthenticated
 apt-get -q autoremove -y
 systemctl restart docker
 while [ `systemctl is-active docker` != 'active' ]; do echo 'waiting for docker'; sleep 5; done
 
 echo 'downloading container images'
-docker pull k8s.gcr.io/kube-apiserver-amd64:v1.10.11
-docker pull k8s.gcr.io/kube-controller-manager-amd64:v1.10.11
-docker pull k8s.gcr.io/kube-proxy-amd64:v1.10.11
-docker pull k8s.gcr.io/kube-scheduler-amd64:v1.10.11
+docker pull k8s.gcr.io/kube-apiserver-amd64:v1.10.1
+docker pull k8s.gcr.io/kube-controller-manager-amd64:v1.10.1
+docker pull k8s.gcr.io/kube-proxy-amd64:v1.10.1
+docker pull k8s.gcr.io/kube-scheduler-amd64:v1.10.1
 
 docker pull k8s.gcr.io/etcd-amd64:3.1.12
 docker pull k8s.gcr.io/pause-amd64:3.1
