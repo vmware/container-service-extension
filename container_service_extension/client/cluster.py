@@ -2,41 +2,19 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import json
-
-from lxml import objectify
 import requests
 
 from container_service_extension.cluster import TYPE_NODE
+from container_service_extension.exceptions import VcdResponseError
+from container_service_extension.utils import ERROR_UNKNOWN
+from container_service_extension.utils import process_response
+
 
 
 class Cluster(object):
     def __init__(self, client):
         self.client = client
         self._uri = self.client.get_api_uri() + '/cse'
-
-    def _process_response(self, response):
-        if response.status_code == 504:
-            message = 'An error has occurred.'
-            if response.content is not None and len(response.content) > 0:
-                obj = objectify.fromstring(response.content)
-                message = obj.get('message')
-            raise Exception(message)
-        decoded = response.content.decode("utf-8")
-        if len(decoded) > 0:
-            content = json.loads(decoded)
-        else:
-            content = {}
-        if response.status_code in [
-                requests.codes.ok, requests.codes.created,
-                requests.codes.accepted
-        ]:
-            return content
-        else:
-            if 'message' in content:
-                raise Exception(content['message'])
-            else:
-                raise Exception(content)
 
     def get_templates(self):
         method = 'GET'
@@ -49,7 +27,7 @@ class Cluster(object):
             media_type=None,
             accept_type='application/*+json',
             auth=None)
-        return self._process_response(response)
+        return process_response(response)
 
     def get_clusters(self):
         method = 'GET'
@@ -62,7 +40,7 @@ class Cluster(object):
             media_type=None,
             accept_type='application/*+json',
             auth=None)
-        return self._process_response(response)
+        return process_response(response)
 
     def get_cluster_info(self, name):
         method = 'GET'
@@ -75,7 +53,7 @@ class Cluster(object):
             media_type=None,
             accept_type='application/*+json',
             auth=None)
-        return self._process_response(response)
+        return process_response(response)
 
     def create_cluster(self,
                        vdc,
@@ -131,7 +109,7 @@ class Cluster(object):
             contents=data,
             media_type=None,
             accept_type='application/*+json')
-        return self._process_response(response)
+        return process_response(response)
 
     def delete_cluster(self, cluster_name):
         method = 'DELETE'
@@ -141,7 +119,7 @@ class Cluster(object):
             uri,
             self.client._session,
             accept_type='application/*+json')
-        return self._process_response(response)
+        return process_response(response)
 
     def get_config(self, cluster_name):
         method = 'GET'
@@ -157,7 +135,7 @@ class Cluster(object):
         if response.status_code == requests.codes.ok:
             return response.content.decode('utf-8').replace('\\n', '\n')[1:-1]
         else:
-            return self._process_response(response)
+            return process_response(response)
 
     def get_node_info(self, cluster_name, node_name):
         method = 'GET'
@@ -171,9 +149,9 @@ class Cluster(object):
             accept_type='application/*+json',
             auth=None)
         try:
-            content = self._process_response(response)
-        except Exception as e:
-            if str(e) == '{}':
+            content = process_response(response)
+        except VcdResponseError as e:
+            if e.error_message == ERROR_UNKNOWN:
                 raise Exception("Invalid cluster/node name")
             else:
                 raise e
@@ -230,7 +208,7 @@ class Cluster(object):
             contents=data,
             media_type=None,
             accept_type='application/*+json')
-        return self._process_response(response)
+        return process_response(response)
 
     def delete_nodes(self, vdc, name, nodes, force=False):
         """Delete nodes from a Kubernetes cluster.
@@ -252,4 +230,4 @@ class Cluster(object):
             contents=data,
             media_type=None,
             accept_type='application/*+json')
-        return self._process_response(response)
+        return process_response(response)

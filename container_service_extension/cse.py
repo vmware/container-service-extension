@@ -4,8 +4,6 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import logging
-
 import click
 from vcd_cli.utils import stdout
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -15,8 +13,6 @@ from container_service_extension.config import check_cse_installation
 from container_service_extension.config import generate_sample_config
 from container_service_extension.config import install_cse
 from container_service_extension.service import Service
-
-LOGGER = logging.getLogger('cse.cli')
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 

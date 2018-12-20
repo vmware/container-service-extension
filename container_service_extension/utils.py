@@ -3,17 +3,19 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import hashlib
-import logging
+import json
 import os
 import pathlib
-import requests
 import stat
 import sys
 import traceback
 from urllib.parse import urlparse
 
 import click
+import requests
 from cachetools import LRUCache
+from container_service_extension.exceptions import VcdResponseError
+from lxml import objectify
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -24,10 +26,14 @@ from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
 from vsphere_guest_run.vsphere import VSphere
 
-LOGGER = logging.getLogger('cse.utils')
 cache = LRUCache(maxsize=1024)
 SYSTEM_ORG_NAME = "System"
 CSE_SCRIPTS_DIR = 'container_service_extension_scripts'
+ERROR_REASON = "reason"
+ERROR_DESCRIPTION = "description"
+ERROR_STACKTRACE = "stacktrace"
+ERROR_MESSAGE = "message"
+ERROR_UNKNOWN = "unknown error"
 
 # used to set up and start AMQP exchange
 EXCHANGE_TYPE = 'direct'
@@ -45,6 +51,97 @@ _type_to_string = {
     dict: 'mapping',
     list: 'sequence',
 }
+
+
+def error_to_json(error):
+    """converts the given python exception object to dict object
+    with short, long and stacktrace as attributes with respective
+    values
+
+    :param Exception error: Exception object.
+
+    :return: dictionary with short, long and stacktrace or empty dictionary
+             on None param
+
+    :rtype: dict
+    """
+    if error:
+        error_string = str(error)
+        reasons = error_string.split(',')
+        return {
+            ERROR_MESSAGE: {
+                ERROR_REASON: reasons[0],
+                ERROR_DESCRIPTION: error_string,
+                ERROR_STACKTRACE: traceback.format_exception(error.__class__, error, error.__traceback__)
+            }
+        }
+    return dict()
+
+
+def process_response(response):
+    """Process the given response dictionary with following keys.
+    status_code: http status code
+    content: response result as string
+
+    Returns the response content, if the value of status code property is 2xx
+    Otherwise raises exception with error message
+
+    :param dict response: dictionary with status code, content
+
+    :return: response content if status code is 2xx.
+
+    :rtype: dict
+
+    :raises VcdResponseError: if response http status code is not 2xx
+    """
+    if response.status_code in [
+        requests.codes.ok, requests.codes.created,
+        requests.codes.accepted
+    ]:
+        return deserialize_response_content(response)
+    else:
+        response_to_exception(response)
+
+
+def deserialize_response_content(response):
+    """Since the response is encoded in utf-8, it gets decoded to
+    regular python string that will be in json string. That gets converted to
+    python dictionary.
+
+    :param string response: response string, by default in encoded utf-8
+
+    :return: response dictionary
+
+    :rtype: dict
+    """
+    decoded = response.content.decode("utf-8")
+    if len(decoded) > 0:
+        return json.loads(decoded)
+    else:
+        return dict()
+
+
+def response_to_exception(response):
+    """Raises exception with appropriate messages, depending on the key: status code
+
+    :param response: response dictionary with status code and content as keys
+
+    :raises: VcdResponseError
+    """
+    if response.status_code == 504:
+        message = 'An error has occurred.'
+        if response.content is not None and len(response.content) > 0:
+            obj = objectify.fromstring(response.content)
+            message = obj.get(ERROR_MESSAGE)
+        raise VcdResponseError(response.status_code, message)
+
+    content = deserialize_response_content(response)
+    if ERROR_MESSAGE in content:
+        if ERROR_REASON in content[ERROR_MESSAGE]:
+            raise VcdResponseError(response.status_code, content[ERROR_MESSAGE][ERROR_REASON])
+        raise VcdResponseError(response.status_code, content[ERROR_MESSAGE])
+    else:
+        raise VcdResponseError(response.status_code, ERROR_UNKNOWN)
 
 
 def bool_to_msg(value):
@@ -157,7 +254,7 @@ def check_file_permissions(filename):
         raise IOError(err_msgs)
 
 
-def download_file(url, filepath, sha256=None):
+def download_file(url, filepath, sha256=None, quiet=False, logger=None):
     """Downloads a file from a url to local filepath.
 
     Will not overwrite files unless @sha256 is given.
@@ -168,21 +265,33 @@ def download_file(url, filepath, sha256=None):
     :param str sha256: without this argument, if a file already exists at
         @filepath, download will be skipped. If @sha256 matches the file's
         sha256, download will be skipped.
+    :param bool quiet: If True, console output is disabled.
+    :param logging.Logger logger: optional logger to log with.
     """
     path = pathlib.Path(filepath)
     if path.is_file() and (sha256 is None or get_sha256(filepath) == sha256):
-        click.secho(f"Skipping download to '{filepath}' (file already exists)",
-                    fg='green')
+        msg = f"Skipping download to '{filepath}' (file already exists)"
+        if logger:
+            logger.info(msg)
+        if not quiet:
+            click.secho(msg, fg='green')
         return
-    path.parent.mkdir(parents=True, exist_ok=True)
 
-    click.secho(f"Downloading file from '{url}' to '{filepath}'...",
-                fg='yellow')
+    path.parent.mkdir(parents=True, exist_ok=True)
+    msg = f"Downloading file from '{url}' to '{filepath}'..."
+    if logger:
+        logger.info(msg)
+    if not quiet:
+        click.secho(msg, fg='yellow')
     response = requests.get(url, stream=True)
     with path.open(mode='wb') as f:
         for chunk in response.iter_content(chunk_size=SIZE_1MB):
             f.write(chunk)
-    click.secho(f"Download complete", fg='green')
+    msg = f"Download complete"
+    if logger:
+        logger.info(msg)
+    if not quiet:
+        click.secho(msg, fg='green')
 
 
 def catalog_exists(org, catalog_name):
@@ -221,7 +330,7 @@ def catalog_item_exists(org, catalog_name, catalog_item_name):
 
 
 def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
-                          org=None, org_name=None):
+                          org=None, org_name=None, logger=None):
     """Uploads local ova file to vCD catalog.
 
     :param pyvcloud.vcd.client.Client client:
@@ -232,6 +341,8 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
     :param pyvcloud.vcd.org.Org org: specific org to use.
     :param str org_name: specific org to use if @org is not given.
         If None, uses currently logged-in org from @client.
+    :param logging.Logger logger: optional logger to log with.
+
 
     :raises pyvcloud.vcd.exceptions.EntityNotFoundException if catalog
         does not exist.
@@ -242,33 +353,47 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
     catalog_item_name = pathlib.Path(filepath).name
     if update:
         try:
-            click.secho(f"Update flag set. Checking catalog '{catalog_name}' "
-                        f"for '{catalog_item_name}'", fg='yellow')
+            msg = f"Update flag set. Checking catalog '{catalog_name}' for " \
+                  f"'{catalog_item_name}'"
+            click.secho(msg, fg='yellow')
+            if logger:
+                logger.info(msg)
             org.delete_catalog_item(catalog_name, catalog_item_name)
             org.reload()
             wait_for_catalog_item_to_resolve(client, catalog_name,
                                              catalog_item_name, org=org)
-            click.secho(f"Update flag set. Checking catalog '{catalog_name}' "
-                        f"for '{catalog_item_name}'", fg='yellow')
+            msg = f"Update flag set. Checking catalog '{catalog_name}' for " \
+                  f"'{catalog_item_name}'"
+            click.secho(msg, fg='yellow')
+            if logger:
+                logger.info(msg)
         except EntityNotFoundException:
             pass
     else:
         try:
             org.get_catalog_item(catalog_name, catalog_item_name)
-            click.secho(f"'{catalog_item_name}' already exists in catalog "
-                        f"'{catalog_name}'", fg='green')
+            msg = f"'{catalog_item_name}' already exists in catalog " \
+                  f"'{catalog_name}'"
+            click.secho(msg, fg='green')
+            if logger:
+                logger.info(msg)
+
             return
         except EntityNotFoundException:
             pass
 
-    click.secho(f"Uploading '{catalog_item_name}' to catalog '{catalog_name}'",
-                fg='yellow')
+    msg = f"Uploading '{catalog_item_name}' to catalog '{catalog_name}'"
+    click.secho(msg, fg='yellow')
+    if logger:
+        logger.info(msg)
     org.upload_ovf(catalog_name, filepath)
     org.reload()
     wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
                                      org=org)
-    click.secho(f"Uploaded '{catalog_item_name}' to catalog '{catalog_name}'",
-                fg='green')
+    msg = f"Uploaded '{catalog_item_name}' to catalog '{catalog_name}'"
+    click.secho(msg, fg='green')
+    if logger:
+        logger.info(msg)
 
 
 def wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
@@ -334,7 +459,7 @@ def get_vdc(client, vdc_name, org=None, org_name=None):
     return vdc
 
 
-def get_data_file(filename):
+def get_data_file(filename, logger=None):
     """Retrieves CSE script file content as a string.
 
     Used to retrieve builtin script files that users have installed
@@ -343,6 +468,7 @@ def get_data_file(filename):
     as any subdirectories in these paths named 'scripts' or 'cse'.
 
     :param str filename: name of file (script) we want to get.
+    :param logging.Logger logger: optional logger to log with.
 
     :return: the file contents as a string.
 
@@ -351,8 +477,10 @@ def get_data_file(filename):
     :raises FileNotFoundError: if requested data file cannot be
         found.
     """
+    # look in cwd first
+    base_paths = [str(pathlib.Path())] + sys.path
     path = None
-    for base_path in sys.path:
+    for base_path in base_paths:
         possible_paths = [
             pathlib.Path(f"{base_path}/{CSE_SCRIPTS_DIR}/{filename}"),
             pathlib.Path(f"{base_path}/{filename}"),
@@ -367,16 +495,19 @@ def get_data_file(filename):
 
     if path is None:
         msg = f"Requested data file '{filename}' not found"
-        LOGGER.error(msg)
         click.secho(msg, fg='red')
+        if logger:
+            logger.error(msg, exc_info=True)
         raise FileNotFoundError(msg)
 
-    LOGGER.info(f"Found data file: {path}")
-    click.secho(f"Found data file: {path}", fg='green')
+    msg = f"Found data file: {path}"
+    click.secho(msg, fg='green')
+    if logger:
+        logger.info(msg)
     return path.read_text()
 
 
-def create_and_share_catalog(org, catalog_name, catalog_desc=''):
+def create_and_share_catalog(org, catalog_name, catalog_desc='', logger=None):
     """Creates and shares specified catalog.
 
     If catalog does not exist in vCD, create it. Share the specified catalog
@@ -385,6 +516,7 @@ def create_and_share_catalog(org, catalog_name, catalog_desc=''):
     :param pyvcloud.vcd.org.Org org:
     :param str catalog_name:
     :param str catalog_desc:
+    :param logging.Logger logger: optional logger to log with.
 
     :return: XML representation of specified catalog.
 
@@ -394,30 +526,40 @@ def create_and_share_catalog(org, catalog_name, catalog_desc=''):
         fails due to catalog creation failing.
     """
     if catalog_exists(org, catalog_name):
-        click.secho(f"Found catalog '{catalog_name}'", fg='green')
+        msg = f"Found catalog '{catalog_name}'"
+        click.secho(msg, fg='green')
+        if logger:
+            logger.info(msg)
     else:
-        click.secho(f"Creating catalog '{catalog_name}'", fg='yellow')
+        msg = f"Creating catalog '{catalog_name}'"
+        click.secho(msg, fg='yellow')
+        if logger:
+            logger.info(msg)
         org.create_catalog(catalog_name, catalog_desc)
-        click.secho(f"Created catalog '{catalog_name}'", fg='green')
+        msg = f"Created catalog '{catalog_name}'"
+        click.secho(msg, fg='green')
+        if logger:
+            logger.info(msg)
         org.reload()
     org.share_catalog(catalog_name)
     org.reload()
     return org.get_catalog(catalog_name)
 
 
-def get_vsphere(config, vapp, vm_name):
+def get_vsphere(config, vapp, vm_name, logger=None):
     """Get the VSphere object for a specific VM inside a VApp.
 
     :param dict config: CSE config as a dictionary
     :param pyvcloud.vcd.vapp.VApp vapp: VApp used to get the VM ID.
     :param str vm_name:
+    :param logging.Logger logger: optional logger to log with.
 
     :return: VSphere object for a specific VM inside a VApp
 
     :rtype: vsphere_guest_run.vsphere.VSphere
     """
     global cache
-    
+
     # get vm id from vm resource
     vm_id = vapp.get_vm(vm_name).get('id')
     if vm_id not in cache:
@@ -449,9 +591,9 @@ def get_vsphere(config, vapp, vm_name):
                 cache_item['password'] = vc['password']
                 break
         cache[vm_id] = cache_item
-    else:
-        LOGGER.debug(f"vCenter retrieved from cache\nVM ID: {vm_id}"
-                     f"\nHostname: {cache[vm_id]['hostname']}")
+
+    if logger:
+        logger.debug(f"VM ID: {vm_id}, Hostname: {cache[vm_id]['hostname']}")
 
     return VSphere(cache[vm_id]['hostname'], cache[vm_id]['username'],
                    cache[vm_id]['password'], cache[vm_id]['port'])
@@ -469,12 +611,16 @@ def vgr_callback(prepend_msg='', logger=None):
 
     :rtype: function
     """
+
     def callback(message, exception=None):
-        click.echo(f"{prepend_msg}{message}")
+        msg = f"{prepend_msg}{message}"
+        click.echo(msg)
+        if logger:
+            logger.info(msg)
         if exception is not None:
-            click.echo(exception)
-            if logger is not None:
-                logger.error(traceback.format_exc())
+            click.secho(f"vsphere-guest-run error: {exception}", fg='red')
+            if logger:
+                logger.error("vsphere-guest-run error", exc_info=True)
     return callback
 
 

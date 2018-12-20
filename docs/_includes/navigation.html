@@ -1,0 +1,15 @@
+<h1>Navigation</h1>
+<ol>
+  {% for item in site.data.navigation %}
+    <li {% if page.url contains item.link %}class="current"{% endif %}>
+    <a href="{{ item.link }}" {% if page.url == item.link %}class="current"{% endif %}>{{ item.name }}</a>
+    {% if page.url contains item.link %}
+    <ol>
+    {% for subitem in item.subtoc %}
+      <li><a href="{{ item.link }}#{{ subitem.sublink }}">{{ subitem.name }}</a></li>
+    {% endfor %}
+    </ol>
+    {% endif %}
+    </li>
+  {% endfor %}
+</ol>
