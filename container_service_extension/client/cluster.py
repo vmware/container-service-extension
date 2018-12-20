@@ -5,9 +5,11 @@
 import requests
 
 from container_service_extension.cluster import TYPE_NODE
+from container_service_extension.exceptions import CseClientError
 from container_service_extension.exceptions import VcdResponseError
 from container_service_extension.utils import ERROR_UNKNOWN
 from container_service_extension.utils import process_response
+from container_service_extension.utils import response_to_exception
 
 
 
@@ -53,7 +55,14 @@ class Cluster(object):
             media_type=None,
             accept_type='application/*+json',
             auth=None)
-        return process_response(response)
+        try:
+            result = process_response(response)
+        except VcdResponseError as e:
+            if e.error_message == ERROR_UNKNOWN:
+                raise CseClientError("Invalid cluster name")
+            else:
+                raise e
+        return result
 
     def create_cluster(self,
                        vdc,
@@ -125,7 +134,14 @@ class Cluster(object):
             uri,
             self.client._session,
             accept_type='application/*+json')
-        return process_response(response)
+        try:
+            result = process_response(response)
+        except VcdResponseError as e:
+            if e.error_message == ERROR_UNKNOWN:
+                raise CseClientError("Invalid cluster/node name")
+            else:
+                raise e
+        return result
 
     def get_config(self, cluster_name):
         method = 'GET'
@@ -140,8 +156,13 @@ class Cluster(object):
             auth=None)
         if response.status_code == requests.codes.ok:
             return response.content.decode('utf-8').replace('\\n', '\n')[1:-1]
-        else:
-            return process_response(response)
+        try:
+            response_to_exception(response)
+        except VcdResponseError as e:
+            if e.error_message == ERROR_UNKNOWN:
+                raise CseClientError("Invalid cluster name")
+            else:
+                raise e
 
     def get_node_info(self, cluster_name, node_name):
         method = 'GET'
@@ -155,13 +176,13 @@ class Cluster(object):
             accept_type='application/*+json',
             auth=None)
         try:
-            content = process_response(response)
+            result = process_response(response)
         except VcdResponseError as e:
             if e.error_message == ERROR_UNKNOWN:
-                raise Exception("Invalid cluster/node name")
+                raise CseClientError("Invalid cluster/node name")
             else:
                 raise e
-        return content
+        return result
 
     def add_node(self,
                  vdc,

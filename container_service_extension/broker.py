@@ -545,7 +545,6 @@ class DefaultBroker(threading.Thread):
             LOGGER.error(traceback.format_exc())
             error_obj = error_to_json(e)
             self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
-            raise CseServerError(e)
 
     @exception_handler
     def delete_cluster(self, headers, body):
@@ -698,7 +697,6 @@ class DefaultBroker(threading.Thread):
             error_obj = error_to_json(e)
             LOGGER.error(traceback.format_exc())
             self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
-            raise CseServerError(e)
 
     @exception_handler
     def delete_nodes(self, headers, body):
