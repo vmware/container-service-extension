@@ -21,10 +21,12 @@
 - name: "CSE Server Management"
   link: CSE_ADMIN.html
   subtoc:
-  - name: CSE/vCD Compatibility
+  - name: Overview
+    sublink: overview
+  - name: CSE Server Versions
     sublink: compatibility
-  - name: Service Account
-    sublink: privileges
+  - name: vCD Prerequisites
+    sublink: prerequisites
   - name: Server Config File
     sublink: configfile
   - name: VM Templates
