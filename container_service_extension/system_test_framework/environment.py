@@ -1,33 +1,104 @@
-# VMware vCloud Director Python SDK
-# Copyright (c) 2018 VMware, Inc. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import logging
-
 import requests
+from pathlib import Path
 
+from click.testing import CliRunner
+from pyvcloud.vcd.amqp import AmqpService
+from pyvcloud.vcd.client import BasicLoginCredentials
+from pyvcloud.vcd.client import Client
+from vcd_cli.utils import to_dict
+
+import container_service_extension.system_test_framework.utils as testutils
+import container_service_extension.utils as utils
+from container_service_extension.config import configure_vcd_amqp
 from container_service_extension.config import SAMPLE_TEMPLATE_PHOTON_V2
 from container_service_extension.config import SAMPLE_TEMPLATE_UBUNTU_16_04
+"""
+This module manages environment state during CSE system tests.
 
-SCRIPTS_DIR = 'scripts'
-ACTIVE_PHOTON_CUST_SCRIPT = 'cust-photon-v2.sh'
-ACTIVE_UBUNTU_CUST_SCRIPT = 'cust-ubuntu-16.04.sh'
-STATIC_PHOTON_CUST_SCRIPT = 'CUST-PHOTON.sh'
-STATIC_UBUNTU_CUST_SCRIPT = 'CUST-UBUNTU.sh'
-PHOTON_TEMPLATE_NAME = 'photon-v2'
+These variables persist through all test cases and do not change.
+"""
+
 BASE_CONFIG_FILEPATH = 'base_config.yaml'
 ACTIVE_CONFIG_FILEPATH = 'cse_test_config.yaml'
+
+STATIC_PHOTON_CUST_SCRIPT = 'CUST-PHOTON.sh'
+STATIC_UBUNTU_CUST_SCRIPT = 'CUST-UBUNTU.sh'
+ACTIVE_PHOTON_CUST_SCRIPT = 'cust-photon-v2.sh'
+ACTIVE_UBUNTU_CUST_SCRIPT = 'cust-ubuntu-16.04.sh'
+
+PHOTON_TEMPLATE_NAME = 'photon-v2'
+SCRIPTS_DIR = 'scripts'
+SSH_KEY_FILEPATH = str(Path.home() / '.ssh' / 'id_rsa.pub')
+CLI_RUNNER = CliRunner()
+
+DEFAULT_AMQP_SETTINGS = None
+AMQP_USERNAME = None
+AMQP_PASSWORD = None
+CLIENT = None
+ORG_HREF = None
+VDC_HREF = None
+
+
+def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
+    """Set up module variables according to config dict.
+
+    :param str config_filepath:
+    """
+    global DEFAULT_AMQP_SETTINGS, AMQP_USERNAME, AMQP_PASSWORD, CLIENT, \
+        ORG_HREF, VDC_HREF
+
+    config = testutils.yaml_to_dict(config_filepath)
+    CLIENT = Client(config['vcd']['host'],
+                    api_version=config['vcd']['api_version'],
+                    verify_ssl_certs=config['vcd']['verify'])
+    credentials = BasicLoginCredentials(config['vcd']['username'],
+                                        utils.SYSTEM_ORG_NAME,
+                                        config['vcd']['password'])
+    CLIENT.set_credentials(credentials)
+
+    org = utils.get_org(CLIENT, org_name=config['broker']['org'])
+    vdc = utils.get_vdc(CLIENT, config['broker']['vdc'], org=org)
+    ORG_HREF = org.href
+    VDC_HREF = vdc.href
+
+    amqp_service = AmqpService(CLIENT)
+    configure_vcd_amqp(CLIENT, 'vcdext', config['amqp']['host'],
+                       config['amqp']['port'], 'vcd',
+                       config['amqp']['ssl_accept_all'],
+                       config['amqp']['ssl'], '/',
+                       config['amqp']['username'],
+                       config['amqp']['password'], quiet=True)
+    DEFAULT_AMQP_SETTINGS = to_dict(amqp_service.get_settings())
+    AMQP_USERNAME = config['amqp']['username']
+    AMQP_PASSWORD = config['amqp']['password']
+
+    _init_vcd()
+
+
+def cleanup_environment():
+    _cleanup_vcd()
+    if CLIENT is not None:
+        CLIENT.logout()
+
+
+def _init_vcd():
+    """Set up VCD constructs if they do not already exist.
+
+    Tasks (in order):
+        - Create external network
+        - Create org
+            - Create org vdc
+            - Create org vdc network
+    """
+    # TODO
+    pass
+
+
+def _cleanup_vcd():
+    """Destroys VCD constructs set up by init_vcd() if they exist."""
+    # TODO
+    pass
 
 
 def developerModeAware(function):
@@ -54,6 +125,7 @@ def developerModeAware(function):
     return wrapper
 
 
+# TODO currently unused. maybe remove
 class Environment(object):
     """Hold configuration details of the vCD testbed.
 
