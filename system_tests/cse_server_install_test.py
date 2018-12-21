@@ -18,34 +18,23 @@ import unittest
 from pathlib import Path
 
 import paramiko
-from click.testing import CliRunner
 from pyvcloud.vcd.amqp import AmqpService
 from pyvcloud.vcd.api_extension import APIExtension
-from pyvcloud.vcd.client import BasicLoginCredentials
-from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.vapp import VApp
-from vcd_cli.utils import to_dict
+from pyvcloud.vcd.org import Org
+from pyvcloud.vcd.vdc import VDC
 
+import container_service_extension.system_test_framework.environment as env
+import container_service_extension.system_test_framework.utils as testutils
+import container_service_extension.utils as utils
 from container_service_extension.config import get_validated_config
 from container_service_extension.config import check_cse_installation
 from container_service_extension.config import configure_vcd_amqp
 from container_service_extension.config import CSE_NAME
 from container_service_extension.config import CSE_NAMESPACE
 from container_service_extension.cse import cli
-# TODO from container_service_extension.system_test_framework.base_install_test import BaseServerInstallTestCase  # noqa
-from container_service_extension.system_test_framework.environment import \
-    PHOTON_TEMPLATE_NAME, BASE_CONFIG_FILEPATH, ACTIVE_CONFIG_FILEPATH, \
-    STATIC_PHOTON_CUST_SCRIPT, STATIC_UBUNTU_CUST_SCRIPT
-from container_service_extension.system_test_framework.utils import \
-    yaml_to_dict, dict_to_yaml_file, diff_amqp_settings, \
-    restore_customizaton_scripts, prepare_customization_scripts
-from container_service_extension.utils import get_org
-from container_service_extension.utils import get_vdc
-from container_service_extension.utils import SYSTEM_ORG_NAME
-from container_service_extension.utils import wait_for_catalog_item_to_resolve
-from container_service_extension.utils import get_data_file
 
 
 class CSEServerInstallationTest(unittest.TestCase):
@@ -83,20 +72,9 @@ class CSEServerInstallationTest(unittest.TestCase):
     $ cse check --config cse_test_config.yaml -i
     $ cse check --config cse_test_config.yaml -i (invalid templates)
     """
-    _client = None
-    _org = None
-    _vdc = None
-    _api_extension = None
-    _amqp_service = None
-    _runner = None
-    _ssh_key_filepath = None
-    _default_amqp_settings = None
-    _amqp_username = None
-    _amqp_password = None
-
-    # test methods should use and modify _config
+    # test methods should use and modify self.config
     # this is reset to base_config.yaml before each test
-    _config = None
+    config = None
 
     # base config is source of truth, get config via BASE_CONFIG_FILEPATH
 
@@ -109,49 +87,9 @@ class CSEServerInstallationTest(unittest.TestCase):
             - Restore VCD AMQP settings to defaults.
             - Delete any pre-existing CSE entities.
         """
-        cls._config = yaml_to_dict(BASE_CONFIG_FILEPATH)
+        env.init_environment()
 
-        cls._client = Client(cls._config['vcd']['host'],
-                             api_version=cls._config['vcd']['api_version'],
-                             verify_ssl_certs=cls._config['vcd']['verify'])
-        credentials = BasicLoginCredentials(cls._config['vcd']['username'],
-                                            SYSTEM_ORG_NAME,
-                                            cls._config['vcd']['password'])
-        cls._client.set_credentials(credentials)
-        assert cls._client is not None
-
-        cls._org = get_org(cls._client, org_name=cls._config['broker']['org'])
-        assert cls._org is not None
-
-        cls._vdc = get_vdc(cls._client, cls._config['broker']['vdc'],
-                           org=cls._org)
-        assert cls._vdc is not None
-
-        cls._api_extension = APIExtension(cls._client)
-        assert cls._api_extension is not None
-
-        cls._amqp_service = AmqpService(cls._client)
-        assert cls._amqp_service is not None
-
-        cls._runner = CliRunner()
-        assert cls._runner is not None
-
-        cls._ssh_key_filepath = f"{Path.home() / '.ssh' / 'id_rsa.pub'}"
-
-        configure_vcd_amqp(cls._client, 'vcdext', cls._config['amqp']['host'],
-                           cls._config['amqp']['port'], 'vcd',
-                           cls._config['amqp']['ssl_accept_all'],
-                           cls._config['amqp']['ssl'], '/',
-                           cls._config['amqp']['username'],
-                           cls._config['amqp']['password'], quiet=True)
-        cls._default_amqp_settings = to_dict(cls._amqp_service.get_settings())
-        assert cls._default_amqp_settings is not None
-
-        cls._amqp_username = cls._config['amqp']['username']
-        assert cls._amqp_username is not None
-
-        cls._amqp_password = cls._config['amqp']['password']
-        assert cls._amqp_password is not None
+        cls.config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
 
         CSEServerInstallationTest.delete_cse_entities()
 
@@ -164,29 +102,31 @@ class CSEServerInstallationTest(unittest.TestCase):
             - Unregister CSE from VCD.
             - Blank out customization scripts.
         """
-        self._config = yaml_to_dict(BASE_CONFIG_FILEPATH)
-        dict_to_yaml_file(self._config, ACTIVE_CONFIG_FILEPATH)
-        os.chmod(ACTIVE_CONFIG_FILEPATH, 0o600)
+        self.config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
+        testutils.dict_to_yaml_file(self.config, env.ACTIVE_CONFIG_FILEPATH)
+        os.chmod(env.ACTIVE_CONFIG_FILEPATH, 0o600)
 
-        configure_vcd_amqp(self._client,
-                           self._default_amqp_settings['AmqpExchange'],
-                           self._default_amqp_settings['AmqpHost'],
-                           self._default_amqp_settings['AmqpPort'],
-                           self._default_amqp_settings['AmqpPrefix'],
-                           self._default_amqp_settings['AmqpSslAcceptAll'],
-                           self._default_amqp_settings['AmqpUseSSL'],
-                           self._default_amqp_settings['AmqpVHost'],
-                           self._amqp_username,
-                           self._amqp_password,
+        configure_vcd_amqp(env.CLIENT,
+                           env.DEFAULT_AMQP_SETTINGS['AmqpExchange'],
+                           env.DEFAULT_AMQP_SETTINGS['AmqpHost'],
+                           env.DEFAULT_AMQP_SETTINGS['AmqpPort'],
+                           env.DEFAULT_AMQP_SETTINGS['AmqpPrefix'],
+                           env.DEFAULT_AMQP_SETTINGS['AmqpSslAcceptAll'],
+                           env.DEFAULT_AMQP_SETTINGS['AmqpUseSSL'],
+                           env.DEFAULT_AMQP_SETTINGS['AmqpVHost'],
+                           env.AMQP_USERNAME,
+                           env.AMQP_PASSWORD,
                            quiet=True)
 
         try:
-            self._api_extension.delete_extension(CSE_NAME, CSE_NAMESPACE)
+            APIExtension(env.CLIENT).delete_extension(CSE_NAME, CSE_NAMESPACE)
         except MissingRecordException:
             pass
 
-        restore_customizaton_scripts()
+        testutils.restore_customizaton_scripts()
 
+    # TODO implement chain mode? Need a way to signal that cleanup_environment
+    # should not be called, because there are subsequent tests that will run.
     @classmethod
     def tearDownClass(cls):
         """Runs once for this class, after all test methods.
@@ -202,54 +142,58 @@ class CSEServerInstallationTest(unittest.TestCase):
         """
         # Remove active config file
         try:
-            Path(ACTIVE_CONFIG_FILEPATH).unlink()
+            Path(env.ACTIVE_CONFIG_FILEPATH).unlink()
         except FileNotFoundError:
             pass
 
-        restore_customizaton_scripts()
+        testutils.restore_customizaton_scripts()
 
-        if cls._client is not None:
-            cls._client.logout()
+        # TODO: likely put this in the chain mode decorator, and have
+        # that decorator call this, instead of this tearDownClass()
+        env.cleanup_environment()
 
     @classmethod
     def delete_cse_entities(cls):
         """Deletes ovas, templates, temp vapps, cse catalog."""
-        catalog_name = cls._config['broker']['catalog']
-        for template in cls._config['broker']['templates']:
+        catalog_name = cls.config['broker']['catalog']
+        org = Org(env.CLIENT, href=env.ORG_HREF)
+        vdc = VDC(env.CLIENT, href=env.VDC_HREF)
+
+        for tmpl in cls.config['broker']['templates']:
             try:
-                cls._org.delete_catalog_item(catalog_name,
-                                             template['catalog_item'])
-                wait_for_catalog_item_to_resolve(cls._client,
-                                                 catalog_name,
-                                                 template['catalog_item'],
-                                                 org=cls._org)
-                cls._org.reload()
+                org.delete_catalog_item(catalog_name,
+                                        tmpl['catalog_item'])
+                utils.wait_for_catalog_item_to_resolve(env.CLIENT,
+                                                       catalog_name,
+                                                       tmpl['catalog_item'],
+                                                       org=org)
+                org.reload()
             except EntityNotFoundException:
                 pass
             try:
-                cls._org.delete_catalog_item(catalog_name,
-                                             template['source_ova_name'])
-                wait_for_catalog_item_to_resolve(cls._client,
-                                                 catalog_name,
-                                                 template['source_ova_name'],
-                                                 org=cls._org)
-                cls._org.reload()
+                org.delete_catalog_item(catalog_name,
+                                        tmpl['source_ova_name'])
+                utils.wait_for_catalog_item_to_resolve(env.CLIENT,
+                                                       catalog_name,
+                                                       tmpl['source_ova_name'],
+                                                       org=org)
+                org.reload()
             except EntityNotFoundException:
                 pass
             try:
-                task = cls._vdc.delete_vapp(template['temp_vapp'], force=True)
-                cls._client.get_task_monitor().wait_for_success(task)
-                cls._vdc.reload()
+                task = vdc.delete_vapp(tmpl['temp_vapp'], force=True)
+                env.CLIENT.get_task_monitor().wait_for_success(task)
+                vdc.reload()
             except EntityNotFoundException:
                 pass
 
         try:
-            cls._org.delete_catalog(catalog_name)
+            org.delete_catalog(catalog_name)
             # TODO no way currently to wait for catalog deletion.
             # https://github.com/vmware/pyvcloud/issues/334
             # below causes EntityNotFoundException, catalog not found.
             # time.sleep(15)
-            # cls._org.reload()
+            # org.reload()
         except EntityNotFoundException:
             pass
 
@@ -259,30 +203,30 @@ class CSEServerInstallationTest(unittest.TestCase):
         """
 
         # 3 tests for when config file has missing or extra keys
-        invalid_keys_config1 = yaml_to_dict(ACTIVE_CONFIG_FILEPATH)
-        del invalid_keys_config1['amqp']
-        invalid_keys_config1['extra_section'] = True
+        bad_key_config1 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
+        del bad_key_config1['amqp']
+        bad_key_config1['extra_section'] = True
 
-        invalid_keys_config2 = yaml_to_dict(ACTIVE_CONFIG_FILEPATH)
-        del invalid_keys_config2['vcs'][0]['username']
-        invalid_keys_config2['vcs'][0]['extra_property'] = 'a'
+        bad_key_config2 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
+        del bad_key_config2['vcs'][0]['username']
+        bad_key_config2['vcs'][0]['extra_property'] = 'a'
 
-        invalid_keys_config3 = yaml_to_dict(ACTIVE_CONFIG_FILEPATH)
-        del invalid_keys_config3['broker']['templates'][0]['mem']
-        del invalid_keys_config3['broker']['templates'][0]['name']
-        invalid_keys_config3['broker']['templates'][0]['extra_property'] = 0
+        bad_key_config3 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
+        del bad_key_config3['broker']['templates'][0]['mem']
+        del bad_key_config3['broker']['templates'][0]['name']
+        bad_key_config3['broker']['templates'][0]['extra_property'] = 0
 
         configs = [
-            invalid_keys_config1,
-            invalid_keys_config2,
-            invalid_keys_config3
+            bad_key_config1,
+            bad_key_config2,
+            bad_key_config3
         ]
 
-        for config_dict in configs:
-            dict_to_yaml_file(config_dict, ACTIVE_CONFIG_FILEPATH)
+        for config in configs:
+            testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
             try:
-                get_validated_config(ACTIVE_CONFIG_FILEPATH)
-                print(f"{ACTIVE_CONFIG_FILEPATH} passed validation when "
+                get_validated_config(env.ACTIVE_CONFIG_FILEPATH)
+                print(f"{env.ACTIVE_CONFIG_FILEPATH} passed validation when "
                       f"it should not have")
                 assert False
             except KeyError:
@@ -290,36 +234,36 @@ class CSEServerInstallationTest(unittest.TestCase):
 
     def test_0020_config_invalid_value_types(self):
         # tests for when config file has incorrect value types
-        invalid_values_config1 = yaml_to_dict(ACTIVE_CONFIG_FILEPATH)
-        invalid_values_config1['vcd'] = True
-        invalid_values_config1['vcs'] = 'a'
+        bad_values_config1 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
+        bad_values_config1['vcd'] = True
+        bad_values_config1['vcs'] = 'a'
 
-        invalid_values_config2 = yaml_to_dict(ACTIVE_CONFIG_FILEPATH)
-        invalid_values_config2['vcd']['username'] = True
-        invalid_values_config2['vcd']['api_version'] = 123
-        invalid_values_config2['vcd']['port'] = 'a'
+        bad_values_config2 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
+        bad_values_config2['vcd']['username'] = True
+        bad_values_config2['vcd']['api_version'] = 123
+        bad_values_config2['vcd']['port'] = 'a'
 
-        invalid_values_config3 = yaml_to_dict(ACTIVE_CONFIG_FILEPATH)
-        invalid_values_config3['vcs'][0]['username'] = True
-        invalid_values_config3['vcs'][0]['password'] = 123
-        invalid_values_config3['vcs'][0]['verify'] = 'a'
+        bad_values_config3 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
+        bad_values_config3['vcs'][0]['username'] = True
+        bad_values_config3['vcs'][0]['password'] = 123
+        bad_values_config3['vcs'][0]['verify'] = 'a'
 
-        invalid_values_config4 = yaml_to_dict(ACTIVE_CONFIG_FILEPATH)
-        invalid_values_config4['broker']['templates'][0]['cpu'] = 'a'
-        invalid_values_config4['broker']['templates'][0]['name'] = 123
+        bad_values_config4 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
+        bad_values_config4['broker']['templates'][0]['cpu'] = 'a'
+        bad_values_config4['broker']['templates'][0]['name'] = 123
 
         configs = [
-            invalid_values_config1,
-            invalid_values_config2,
-            invalid_values_config3,
-            invalid_values_config4
+            bad_values_config1,
+            bad_values_config2,
+            bad_values_config3,
+            bad_values_config4
         ]
 
-        for config_dict in configs:
-            dict_to_yaml_file(config_dict, ACTIVE_CONFIG_FILEPATH)
+        for config in configs:
+            testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
             try:
-                get_validated_config(ACTIVE_CONFIG_FILEPATH)
-                print(f"{ACTIVE_CONFIG_FILEPATH} passed validation when "
+                get_validated_config(env.ACTIVE_CONFIG_FILEPATH)
+                print(f"{env.ACTIVE_CONFIG_FILEPATH} passed validation when "
                       f"it should not have")
                 assert False
             except ValueError:
@@ -330,9 +274,9 @@ class CSEServerInstallationTest(unittest.TestCase):
         config validation.
         """
         try:
-            get_validated_config(ACTIVE_CONFIG_FILEPATH)
+            get_validated_config(env.ACTIVE_CONFIG_FILEPATH)
         except (KeyError, ValueError):
-            print(f"{ACTIVE_CONFIG_FILEPATH} did not pass validation "
+            print(f"{env.ACTIVE_CONFIG_FILEPATH} did not pass validation "
                   f"when it should have")
             assert False
 
@@ -341,7 +285,7 @@ class CSEServerInstallationTest(unittest.TestCase):
         used for installation.
         """
         try:
-            check_cse_installation(self._config)
+            check_cse_installation(self.config)
             print("cse check passed when it should have failed.")
             assert False
         except EntityNotFoundException:
@@ -365,37 +309,36 @@ class CSEServerInstallationTest(unittest.TestCase):
             template does not exist.
         """
         template_config = None
-        for template_dict in self._config['broker']['templates']:
-            if template_dict['name'] == PHOTON_TEMPLATE_NAME:
+        for template_dict in self.config['broker']['templates']:
+            if template_dict['name'] == env.PHOTON_TEMPLATE_NAME:
                 template_config = template_dict
                 break
         if template_config is None:
             print('Target template not found in config file')
             assert False
 
-        result = self._runner.invoke(cli,
-                                     ['install',
-                                      '--config', ACTIVE_CONFIG_FILEPATH,
-                                      '--ssh-key', self._ssh_key_filepath,
-                                      '--template', PHOTON_TEMPLATE_NAME,
-                                      '--amqp', 'skip',
-                                      '--ext', 'skip',
-                                      '--no-capture'],
-                                     catch_exceptions=False)
+        result = env.CLI_RUNNER.invoke(cli,
+                                       ['install',
+                                        '--config', env.ACTIVE_CONFIG_FILEPATH,
+                                        '--ssh-key', env.SSH_KEY_FILEPATH,
+                                        '--template', env.PHOTON_TEMPLATE_NAME,
+                                        '--amqp', 'skip',
+                                        '--ext', 'skip',
+                                        '--no-capture'],
+                                       catch_exceptions=False)
         assert result.exit_code == 0
 
-        # reloads required due to inability to wait for catalog deletion.
-        # vdc can't find vapp unless we reload
-        self._org.reload()
-        self._vdc.reload()
+        org = Org(env.CLIENT, href=env.ORG_HREF)
+        vdc = VDC(env.CLIENT, href=env.VDC_HREF)
 
         # check that amqp was not configured
-        assert diff_amqp_settings(self._amqp_service, self._config['amqp'])
+        assert testutils.diff_amqp_settings(AmqpService(env.CLIENT),
+                                            self.config['amqp'])
 
         # check that cse was not registered
         try:
-            self._api_extension.get_extension(CSE_NAME,
-                                              namespace=CSE_NAMESPACE)
+            APIExtension(env.CLIENT).get_extension(CSE_NAME,
+                                                   namespace=CSE_NAMESPACE)
             print('CSE is registered as an extension when it should not be.')
             assert False
         except MissingRecordException:
@@ -403,16 +346,16 @@ class CSEServerInstallationTest(unittest.TestCase):
 
         # check that source ova file exists in catalog
         try:
-            self._org.get_catalog_item(self._config['broker']['catalog'],
-                                       template_config['source_ova_name'])
+            org.get_catalog_item(self.config['broker']['catalog'],
+                                 template_config['source_ova_name'])
         except EntityNotFoundException:
             print('Source ova files do not exist when they should.')
             assert False
 
         # check that vapp templates do not exist
         try:
-            self._org.get_catalog_item(self._config['broker']['catalog'],
-                                       template_config['catalog_item'])
+            org.get_catalog_item(self.config['broker']['catalog'],
+                                 template_config['catalog_item'])
             print('vApp templates should not exist (--no-capture was used).')
             assert False
         except EntityNotFoundException:
@@ -420,7 +363,7 @@ class CSEServerInstallationTest(unittest.TestCase):
 
         # check that temp vapp exists (--no-capture)
         try:
-            self._vdc.get_vapp(template_config['temp_vapp'])
+            vdc.get_vapp(template_config['temp_vapp'])
         except EntityNotFoundException:
             print('vApp does not exist when it should (--no-capture)')
             assert False
@@ -440,38 +383,37 @@ class CSEServerInstallationTest(unittest.TestCase):
             photon-v2 template exists, temp-vapp exists
         """
         template_config = None
-        for i, template_dict in enumerate(self._config['broker']['templates']):
+        for i, template_dict in enumerate(self.config['broker']['templates']):
             # set cleanup to false for this test
-            self._config['broker']['templates'][i]['cleanup'] = False
-            if template_dict['name'] == PHOTON_TEMPLATE_NAME:
+            self.config['broker']['templates'][i]['cleanup'] = False
+            if template_dict['name'] == env.PHOTON_TEMPLATE_NAME:
                 template_config = template_dict
                 break
         if template_config is None:
             print('Target template not found in config file')
             assert False
 
-        dict_to_yaml_file(self._config, ACTIVE_CONFIG_FILEPATH)
+        testutils.dict_to_yaml_file(self.config, env.ACTIVE_CONFIG_FILEPATH)
 
-        result = self._runner.invoke(cli,
-                                     ['install',
-                                      '--config', ACTIVE_CONFIG_FILEPATH,
-                                      '--template', PHOTON_TEMPLATE_NAME],
-                                     input='N\nN',
-                                     catch_exceptions=False)
-        assert result.exit_code == 0
+        res = env.CLI_RUNNER.invoke(cli,
+                                    ['install',
+                                     '--config', env.ACTIVE_CONFIG_FILEPATH,
+                                     '--template', env.PHOTON_TEMPLATE_NAME],
+                                    input='N\nN',
+                                    catch_exceptions=False)
+        assert res.exit_code == 0
 
-        # reloads required due to inability to wait for catalog deletion.
-        # vdc can't find vapp unless we reload
-        self._org.reload()
-        self._vdc.reload()
+        org = Org(env.CLIENT, href=env.ORG_HREF)
+        vdc = VDC(env.CLIENT, href=env.VDC_HREF)
 
         # check that amqp was not configured
-        assert diff_amqp_settings(self._amqp_service, self._config['amqp'])
+        assert testutils.diff_amqp_settings(AmqpService(env.CLIENT),
+                                            self.config['amqp'])
 
         # check that cse was not registered
         try:
-            self._api_extension.get_extension(CSE_NAME,
-                                              namespace=CSE_NAMESPACE)
+            APIExtension(env.CLIENT).get_extension(CSE_NAME,
+                                                   namespace=CSE_NAMESPACE)
             print('CSE is registered as an extension when it should not be.')
             assert False
         except MissingRecordException:
@@ -479,15 +421,15 @@ class CSEServerInstallationTest(unittest.TestCase):
 
         # check that vapp template exists in catalog
         try:
-            self._org.get_catalog_item(self._config['broker']['catalog'],
-                                       template_config['catalog_item'])
+            org.get_catalog_item(self.config['broker']['catalog'],
+                                 template_config['catalog_item'])
         except EntityNotFoundException:
             print('vApp template does not exist when it should')
             assert False
 
         # check that temp vapp exists (cleanup: false)
         try:
-            self._vdc.get_vapp(template_config['temp_vapp'])
+            vdc.get_vapp(template_config['temp_vapp'])
         except EntityNotFoundException:
             print('vApp does not exist when it should (cleanup: false)')
             assert False
@@ -506,29 +448,28 @@ class CSEServerInstallationTest(unittest.TestCase):
         expected: cse registered, amqp configured, ubuntu/photon ovas exist,
             temp vapps exist, templates exist.
         """
-        prepare_customization_scripts()
-        result = self._runner.invoke(cli,
-                                     ['install',
-                                      '--config', ACTIVE_CONFIG_FILEPATH,
-                                      '--ssh-key', self._ssh_key_filepath,
-                                      '--update',
-                                      '--no-capture'],
-                                     input='y\ny',
-                                     catch_exceptions=False)
+        testutils.prepare_customization_scripts()
+        result = env.CLI_RUNNER.invoke(cli,
+                                       ['install',
+                                        '--config', env.ACTIVE_CONFIG_FILEPATH,
+                                        '--ssh-key', env.SSH_KEY_FILEPATH,
+                                        '--update',
+                                        '--no-capture'],
+                                       input='y\ny',
+                                       catch_exceptions=False)
         assert result.exit_code == 0
 
-        # reloads required due to inability to wait for catalog deletion.
-        # vdc can't find vapp unless we reload
-        self._org.reload()
-        self._vdc.reload()
+        org = Org(env.CLIENT, href=env.ORG_HREF)
+        vdc = VDC(env.CLIENT, href=env.VDC_HREF)
 
         # check that amqp was configured
-        assert not diff_amqp_settings(self._amqp_service, self._config['amqp'])
+        assert not testutils.diff_amqp_settings(AmqpService(env.CLIENT),
+                                                self.config['amqp'])
 
         # check that cse was registered
         try:
-            self._api_extension.get_extension(CSE_NAME,
-                                              namespace=CSE_NAMESPACE)
+            APIExtension(env.CLIENT).get_extension(CSE_NAME,
+                                                   namespace=CSE_NAMESPACE)
         except MissingRecordException:
             print('CSE is not registered as an extension when it should be.')
             assert False
@@ -538,26 +479,26 @@ class CSEServerInstallationTest(unittest.TestCase):
         ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         # check that ova files and temp vapps exist
-        for template_config in self._config['broker']['templates']:
+        for template_config in self.config['broker']['templates']:
             try:
-                self._org.get_catalog_item(self._config['broker']['catalog'],
-                                           template_config['source_ova_name'])
+                org.get_catalog_item(self.config['broker']['catalog'],
+                                     template_config['source_ova_name'])
             except EntityNotFoundException:
                 print('Source ova files do not exist when they should')
                 assert False
             temp_vapp_name = template_config['temp_vapp']
             try:
-                vapp_resource = self._vdc.get_vapp(temp_vapp_name)
+                vapp_resource = vdc.get_vapp(temp_vapp_name)
             except EntityNotFoundException:
                 print('vApp does not exist when it should (--no-capture)')
                 assert False
-            vapp = VApp(self._client, resource=vapp_resource)
+            vapp = VApp(env.CLIENT, resource=vapp_resource)
             ip = vapp.get_primary_ip(temp_vapp_name)
             try:
                 ssh_client.connect(ip, username='root')
                 # run different commands depending on OS
                 if 'photon' in temp_vapp_name:
-                    script = get_data_file(STATIC_PHOTON_CUST_SCRIPT)
+                    script = utils.get_data_file(env.STATIC_PHOTON_CUST_SCRIPT)
                     pattern = r'(kubernetes\S*)'
                     packages = re.findall(pattern, script)
                     stdin, stdout, stderr = ssh_client.exec_command("rpm -qa")
@@ -567,7 +508,7 @@ class CSEServerInstallationTest(unittest.TestCase):
                             print(f"{package} not found in Photon VM")
                             assert False
                 elif 'ubuntu' in temp_vapp_name:
-                    script = get_data_file(STATIC_UBUNTU_CUST_SCRIPT)
+                    script = utils.get_data_file(env.STATIC_UBUNTU_CUST_SCRIPT)
                     pattern = r'((kubernetes|docker\S*|kubelet|kubeadm|kubectl)\S*=\S*)'  # noqa
                     packages = [tup[0] for tup in re.findall(pattern, script)]
                     cmd = "dpkg -l | grep '^ii' | awk '{print $2\"=\"$3}'"
@@ -587,45 +528,44 @@ class CSEServerInstallationTest(unittest.TestCase):
         command: cse install --config cse_test_config.yaml
         expected: temp vapps are deleted
         """
-        for template_config in self._config['broker']['templates']:
+        for template_config in self.config['broker']['templates']:
             assert template_config['cleanup']
 
-        result = self._runner.invoke(cli,
-                                     ['install',
-                                      '--config', ACTIVE_CONFIG_FILEPATH,
-                                      '--amqp', 'config',
-                                      '--ext', 'config'],
-                                     catch_exceptions=False)
+        result = env.CLI_RUNNER.invoke(cli,
+                                       ['install',
+                                        '--config', env.ACTIVE_CONFIG_FILEPATH,
+                                        '--amqp', 'config',
+                                        '--ext', 'config'],
+                                       catch_exceptions=False)
         assert result.exit_code == 0
 
-        # reloads required due to inability to wait for catalog deletion.
-        # vdc can't find vapp unless we reload
-        self._org.reload()
-        self._vdc.reload()
+        org = Org(env.CLIENT, href=env.ORG_HREF)
+        vdc = VDC(env.CLIENT, href=env.VDC_HREF)
 
         # check that amqp was configured
-        assert not diff_amqp_settings(self._amqp_service, self._config['amqp'])
+        assert not testutils.diff_amqp_settings(AmqpService(env.CLIENT),
+                                                self.config['amqp'])
 
         # check that cse was registered
         try:
-            self._api_extension.get_extension(CSE_NAME,
-                                              namespace=CSE_NAMESPACE)
+            APIExtension(env.CLIENT).get_extension(CSE_NAME,
+                                                   namespace=CSE_NAMESPACE)
         except MissingRecordException:
             print('CSE is not registered as an extension when it should be.')
             assert False
 
-        for template_config in self._config['broker']['templates']:
+        for template_config in self.config['broker']['templates']:
             # check that vapp template exists
             try:
-                self._org.get_catalog_item(self._config['broker']['catalog'],
-                                           template_config['catalog_item'])
+                org.get_catalog_item(self.config['broker']['catalog'],
+                                     template_config['catalog_item'])
             except EntityNotFoundException:
                 print('vApp template does not exist when it should')
                 assert False
 
             # check that temp vapp does not exist (cleanup: true)
             try:
-                self._vdc.get_vapp(template_config['temp_vapp'])
+                vdc.get_vapp(template_config['temp_vapp'])
                 print('Temp vapp should not exist (cleanup: True')
                 assert False
             except EntityNotFoundException:
@@ -633,7 +573,7 @@ class CSEServerInstallationTest(unittest.TestCase):
 
         # sub-test to make sure `cse check` works for valid installation
         try:
-            check_cse_installation(self._config)
+            check_cse_installation(self.config)
         except EntityNotFoundException:
             print("cse check failed when it should have passed.")
             assert False
@@ -641,11 +581,11 @@ class CSEServerInstallationTest(unittest.TestCase):
         # sub-test to make sure `cse check` fails for config file with
         # invalid templates.
         # change config file to make template names invalid
-        for i, template_dict in enumerate(self._config['broker']['templates']):
-            self._config['broker']['templates'][i]['catalog_item'] = f"_bad{i}"
+        for i, template_dict in enumerate(self.config['broker']['templates']):
+            self.config['broker']['templates'][i]['catalog_item'] = f"_bad{i}"
 
         try:
-            check_cse_installation(self._config)
+            check_cse_installation(self.config)
             print("cse check passed when it should have failed.")
             assert False
         except EntityNotFoundException:
