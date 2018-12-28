@@ -57,10 +57,10 @@
     sublink: overview
   - name: Persistent Volume Types
     sublink: volumes
-  - name: Architecture
+  - name: NFS Volume Architecture
     sublink: architecture
-  - name: Sample Management Commands
-    sublink: samplecommands
+  - name: Storage Tutorial
+    sublink: tutorial
   - name: FAQ
     sublink: faq
 - name: "Troubleshooting"
