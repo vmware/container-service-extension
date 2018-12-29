@@ -22,8 +22,7 @@ See the linked articles for more information if needed.
 <a name="volumes"></a>
 ## Persistent Volume Types
 
-[Static persistent
-volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#static)
+[Static persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#static)
 are pre-provisioned by the cluster administrator. They carry the
 details of the real storage which is available for use by cluster
 users.  They exist in the Kubernetes API and are available for
@@ -31,8 +30,7 @@ consumption. Users can allocate a static persistent volume by
 creating a persistent volume claim that requires the same or less
 storage.  CSE supports static volumes hosted on NFS.
 
-[Dynamic persistent
-volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#dynamic)
+[Dynamic persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#dynamic)
 are not pre-provisioned by the cluster administrator. When none of
 the static persistent volumes match a user’s persistent volume claim,
 the cluster may try to dynamically provision a volume for the PVC.
@@ -94,20 +92,15 @@ vcd cse node create mycluster --nodes 1 --network mynetwork \
   -t ubuntu-16.04 --type nfsd
 ```
 
-*Important note:* Older versions of CSE do not provision NFS client
-packages for worker nodes in clusters that start without an NFS
-node. In this case you can add a node but the workers will not have
-software running that allows them to mount shares.
-
 ### Setting up NFS Shares
 
 The next step is to create NFS shares that can be allocated via persistent
 volume resources.  First, we need to add an independent disk to the NFS
-node to create a volume that we can export. 
+node to create a file system that we can export. 
 
 ```shell
-# List the VMs in the vApp to find the NFS node. Look for a VM name like 
-# 'nfsd-ljsn' that starts with 'nfsd-'.  Note the VM name and IP address.
+# List the VMs in the vApp to find the NFS node. Look for a VM name that
+# starts with 'nfsd-', e.g., 'nfsd-ljsn'. Note the VM name and IP address.
 vcd vapp info mycluster
 # Create a 100Gb independent disk and attach to the NFS VM. 
 vcd disk create nfs-shares-1 100g --description 'Kubernetes NFS shares'
@@ -120,12 +113,9 @@ ssh root@10.150.200.22
 ... (root prompt appears) ...
 ```
 
-Partition and format the new volume.  On Ubuntu the volume will
+Partition and format the new disk.  On Ubuntu the disk will
 show up as /dev/sdb. The procedure below is an example; feel free
-to use other tools depending on your taste in administration.  Note
-for those not used to Linux sysadmin: check the device names and
-type carefully.  It is possible to wipe out the root file system
-by typing the wrong device name.
+to use other methods depending on your taste in Linux administration.
 
 ```
 root@nfsd-ljsn:~# parted /dev/sdb
