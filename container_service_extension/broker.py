@@ -43,6 +43,7 @@ from container_service_extension.exceptions import WorkerNodeCreationError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.utils import ERROR_DESCRIPTION
 from container_service_extension.utils import ERROR_MESSAGE
+from container_service_extension.utils import ERROR_STACKTRACE
 from container_service_extension.utils import SYSTEM_ORG_NAME
 from container_service_extension.utils import error_to_json
 
@@ -211,7 +212,7 @@ class DefaultBroker(threading.Thread):
         else:
             return {'message': str(e)}
 
-    def update_task(self, status, message=None, error_message=None):
+    def update_task(self, status, message=None, error_message=None, stack_trace=''):
         if not hasattr(self, 'task'):
             self.task = Task(self.client_sysadmin)
         if message is None:
@@ -234,7 +235,9 @@ class DefaultBroker(threading.Thread):
             self.tenant_info['user_name'],
             org_href=self.tenant_info['org_href'],
             task_href=task_href,
-            error_message=error_message)
+            error_message=error_message,
+            stack_trace=stack_trace
+        )
 
     def is_valid_name(self, name):
         """Validate that the cluster name against the pattern."""
@@ -539,12 +542,18 @@ class DefaultBroker(threading.Thread):
                 ClusterInitializationError, ClusterOperationError) as e:
             LOGGER.error(traceback.format_exc())
             error_obj = error_to_json(e)
-            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
+            stack_trace = ''
+            if self.client_tenant.is_sysadmin():
+                stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION], stack_trace=stack_trace)
             raise e
         except Exception as e:
             LOGGER.error(traceback.format_exc())
             error_obj = error_to_json(e)
-            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
+            stack_trace = ''
+            if self.client_tenant.is_sysadmin():
+                stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION], stack_trace=stack_trace)
 
     @exception_handler
     def delete_cluster(self, headers, body):
@@ -691,12 +700,18 @@ class DefaultBroker(threading.Thread):
         except NodeCreationError as e:
             error_obj = error_to_json(e)
             LOGGER.error(traceback.format_exc())
-            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
+            stack_trace = ''
+            if self.client_tenant.is_sysadmin():
+                stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION], stack_trace=stack_trace)
             raise
         except Exception as e:
             error_obj = error_to_json(e)
             LOGGER.error(traceback.format_exc())
-            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
+            stack_trace = ''
+            if self.client_tenant.is_sysadmin():
+                stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION], stack_trace=stack_trace)
 
     @exception_handler
     def delete_nodes(self, headers, body):
@@ -774,7 +789,11 @@ class DefaultBroker(threading.Thread):
                 (len(self.body['nodes']), self.cluster_name, self.cluster_id))
         except Exception as e:
             LOGGER.error(traceback.format_exc())
-            self.update_task(TaskStatus.ERROR, error_message=str(e))
+            error_obj = error_to_json(e)
+            stack_trace = ''
+            if self.client_tenant.is_sysadmin():
+                stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION], stack_trace=stack_trace)
 
     def node_rollback(self, node_list):
         """Implements rollback for node creation failure
