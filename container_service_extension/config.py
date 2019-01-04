@@ -23,6 +23,8 @@ from vcd_cli.utils import stdout
 from vcd_cli.utils import to_dict
 from vsphere_guest_run.vsphere import VSphere
 
+from container_service_extension.exceptions import AmqpConnectionError
+from container_service_extension.exceptions import AmqpError
 from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
@@ -180,7 +182,7 @@ def get_validated_config(config_file_name):
     :raises KeyError: if config file has missing or extra properties.
     :raises ValueError: if the value type for a config file property
         is incorrect.
-    :raises Exception: if AMQP connection failed.
+    :raises AmqpConnectionError: if AMQP connection failed.
     """
     check_file_permissions(config_file_name)
     with open(config_file_name) as config_file:
@@ -209,7 +211,7 @@ def validate_amqp_config(amqp_dict):
     :raises KeyError: if @amqp_dict has missing or extra properties.
     :raises ValueError: if the value type for an @amqp_dict property
         is incorrect.
-    :raises Exception: if AMQP connection failed.
+    :raises AmqpConnectionError: if AMQP connection failed.
     """
     check_keys_and_value_types(amqp_dict, SAMPLE_AMQP_CONFIG['amqp'],
                                location="config file 'amqp' section")
@@ -226,12 +228,10 @@ def validate_amqp_config(amqp_dict):
     connection = None
     try:
         connection = pika.BlockingConnection(parameters)
-        if not connection.is_open:
-            click.secho(f"AMQP connection is not open", fg='red')
-            # TODO replace raw exception with specific
-            raise Exception('AMQP connection is not open')
         click.secho(f"Connected to AMQP server "
                     f"({amqp_dict['host']}:{amqp_dict['port']})", fg='green')
+    except Exception as err:
+        raise AmqpConnectionError("Amqp connection failed:", str(err))
     finally:
         if connection is not None:
             connection.close()
@@ -462,7 +462,7 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
         to vCD. 'skip' does not register CSE to vCD. 'config' registers CSE
         to vCD without asking the user.
 
-    :raises Exception: if AMQP connection fails.
+    :raises AmqpError: if AMQP exchange could not be created.
     """
     config = get_validated_config(config_file_name)
     configure_install_logger()
@@ -596,12 +596,17 @@ def create_template(ctx, client, config, template_config, update=False,
     msg = f"Creating template '{template_name}' in catalog '{catalog_name}'"
     click.secho(msg, fg='yellow')
     LOGGER.info(msg)
+    temp_vapp_exists = True
     try:
         vapp = VApp(client, resource=vdc.get_vapp(vapp_name))
         msg = f"Found vApp '{vapp_name}'"
         click.secho(msg, fg='green')
         LOGGER.info(msg)
     except EntityNotFoundException:
+        temp_vapp_exists = False
+
+    # flag is used to hide previous try/except error if an error occurs below
+    if not temp_vapp_exists:
         if catalog_item_exists(org, catalog_name, ova_name):
             msg = f"Found ova file '{ova_name}' in catalog '{catalog_name}'"
             click.secho(msg, fg='green')
@@ -662,6 +667,9 @@ def _create_temp_vapp(ctx, client, vdc, config, template_config, ssh_key):
     :return: VApp object for temporary VApp.
 
     :rtype: pyvcloud.vcd.vapp.VApp
+
+    :raises FileNotFoundError: if init/customization scripts are not found.
+    :raises Exception: if VM customization fails.
     """
     vapp_name = template_config['temp_vapp']
     init_script = get_data_file(f"init-{template_config['name']}.sh",
@@ -786,11 +794,13 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
             get_output=True,
             delete_script=True,
             callback=vgr_callback())
-    except Exception:
+    except Exception as err:
         # TODO replace raw exception with specific exception
-        # unsure what exception execute_script_in_guest can throw
+        # unsure all errors execute_script_in_guest can result in
+        # Docker TLS handshake timeout can occur when internet is slow
         click.secho("Failed VM customization. Check CSE install log", fg='red')
-        LOGGER.error("Failed VM customization", exc_info=True)
+        LOGGER.error(f"Failed VM customization with error: f{err}",
+                     exc_info=True)
         raise
 
     if len(result) > 0:
@@ -873,7 +883,7 @@ def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
     :param str username: AMQP username.
     :param str vhost: AMQP vhost.
 
-    :raises Exception: if AMQP exchange could not be created.
+    :raises AmqpError: if AMQP exchange could not be created.
     """
     msg = f"Checking for AMQP exchange '{exchange_name}'"
     click.secho(msg, fg='yellow')
@@ -889,11 +899,11 @@ def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
         channel.exchange_declare(exchange=exchange_name,
                                  exchange_type=EXCHANGE_TYPE,
                                  durable=True, auto_delete=False)
-    except Exception:  # TODO replace with specific exception
+    except Exception as err:  
         msg = f"Cannot create AMQP exchange '{exchange_name}'"
         click.secho(msg, fg='red')
         LOGGER.error(msg, exc_info=True)
-        raise
+        raise AmqpError(msg, str(err))
     finally:
         if connection is not None:
             connection.close()

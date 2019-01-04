@@ -5,9 +5,11 @@
 import requests
 
 from container_service_extension.cluster import TYPE_NODE
+from container_service_extension.exceptions import CseClientError
 from container_service_extension.exceptions import VcdResponseError
 from container_service_extension.utils import ERROR_UNKNOWN
 from container_service_extension.utils import process_response
+from container_service_extension.utils import response_to_exception
 
 
 
@@ -53,7 +55,14 @@ class Cluster(object):
             media_type=None,
             accept_type='application/*+json',
             auth=None)
-        return process_response(response)
+        try:
+            result = process_response(response)
+        except VcdResponseError as e:
+            if e.error_message == ERROR_UNKNOWN:
+                raise CseClientError("Invalid cluster name")
+            else:
+                raise e
+        return result
 
     def create_cluster(self,
                        vdc,
@@ -65,7 +74,8 @@ class Cluster(object):
                        storage_profile=None,
                        ssh_key=None,
                        template=None,
-                       enable_nfs=False):
+                       enable_nfs=False,
+                       disable_rollback=True):
         """Create a new Kubernetes cluster.
 
         :param vdc: (str): The name of the vdc in which the cluster will be
@@ -85,7 +95,11 @@ class Cluster(object):
         :param template: (str): The name of the template to use to
             instantiate the nodes
         :param enable_nfs: (bool): bool value to indicate if NFS node is to be
-            created.
+            created
+        :param disable_rollback: (bool): Flag to control weather rollback should be
+            performed or not in case of errors. True to rollback,
+            False to not rollback
+
         :return: (json) A parsed json object describing the requested cluster.
         """
         method = 'POST'
@@ -100,7 +114,8 @@ class Cluster(object):
             'storage_profile': storage_profile,
             'ssh_key': ssh_key,
             'template': template,
-            'enable_nfs': enable_nfs
+            'enable_nfs': enable_nfs,
+            'disable_rollback': disable_rollback
         }
         response = self.client._do_request_prim(
             method,
@@ -119,7 +134,14 @@ class Cluster(object):
             uri,
             self.client._session,
             accept_type='application/*+json')
-        return process_response(response)
+        try:
+            result = process_response(response)
+        except VcdResponseError as e:
+            if e.error_message == ERROR_UNKNOWN:
+                raise CseClientError("Invalid cluster/node name")
+            else:
+                raise e
+        return result
 
     def get_config(self, cluster_name):
         method = 'GET'
@@ -134,8 +156,13 @@ class Cluster(object):
             auth=None)
         if response.status_code == requests.codes.ok:
             return response.content.decode('utf-8').replace('\\n', '\n')[1:-1]
-        else:
-            return process_response(response)
+        try:
+            response_to_exception(response)
+        except VcdResponseError as e:
+            if e.error_message == ERROR_UNKNOWN:
+                raise CseClientError("Invalid cluster name")
+            else:
+                raise e
 
     def get_node_info(self, cluster_name, node_name):
         method = 'GET'
@@ -149,13 +176,13 @@ class Cluster(object):
             accept_type='application/*+json',
             auth=None)
         try:
-            content = process_response(response)
+            result = process_response(response)
         except VcdResponseError as e:
             if e.error_message == ERROR_UNKNOWN:
-                raise Exception("Invalid cluster/node name")
+                raise CseClientError("Invalid cluster/node name")
             else:
                 raise e
-        return content
+        return result
 
     def add_node(self,
                  vdc,
@@ -167,7 +194,8 @@ class Cluster(object):
                  storage_profile=None,
                  ssh_key=None,
                  template=None,
-                 node_type=TYPE_NODE):
+                 node_type=TYPE_NODE,
+                 disable_rollback=True):
         """Add nodes to a Kubernetes cluster.
 
         :param vdc: (str): The name of the vdc that contains the cluster
@@ -185,6 +213,10 @@ class Cluster(object):
             node vms without explicitly providing passwords
         :param template: (str): The name of the catalog template to use to
             instantiate the nodes
+        :param disable_rollback: (bool): Flag to control weather rollback should be
+            performed or not in case of errors. True to rollback,
+            False to not rollback
+
         :return: (json) A parsed json object describing the requested cluster.
         """
         method = 'POST'
@@ -199,7 +231,8 @@ class Cluster(object):
             'storage_profile': storage_profile,
             'ssh_key': ssh_key,
             'template': template,
-            'node_type': node_type
+            'node_type': node_type,
+            'disable_rollback': disable_rollback
         }
         response = self.client._do_request_prim(
             method,

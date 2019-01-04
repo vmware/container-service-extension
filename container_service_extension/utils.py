@@ -54,14 +54,12 @@ _type_to_string = {
 
 
 def error_to_json(error):
-    """converts the given python exception object to dict object
-    with short, long and stacktrace as attributes with respective
-    values
+    """converts the given python exception object to dictionary
+    with attributes short reason, long description and stacktrace of the error.
 
-    :param Exception error: Exception object.
+    :param error: Exception object.
 
-    :return: dictionary with short, long and stacktrace or empty dictionary
-             on None param
+    :return: dictionary with error reason, error description and stacktrace; or empty dictionary
 
     :rtype: dict
     """
@@ -86,9 +84,9 @@ def process_response(response):
     Returns the response content, if the value of status code property is 2xx
     Otherwise raises exception with error message
 
-    :param dict response: dictionary with status code, content
+    :param requests.models.Response response: object with attributes status code and content
 
-    :return: response content if status code is 2xx.
+    :return: decoded response content if status code is 2xx.
 
     :rtype: dict
 
@@ -108,9 +106,11 @@ def deserialize_response_content(response):
     regular python string that will be in json string. That gets converted to
     python dictionary.
 
-    :param string response: response string, by default in encoded utf-8
+    Note: Do not use this method to process non-json response.content
 
-    :return: response dictionary
+    :param requests.models.Response response: object that includes attributes status code and content
+
+    :return: response content as decoded dictionary
 
     :rtype: dict
     """
@@ -124,7 +124,7 @@ def deserialize_response_content(response):
 def response_to_exception(response):
     """Raises exception with appropriate messages, depending on the key: status code
 
-    :param response: response dictionary with status code and content as keys
+    :param requests.models.Response response: object that has attributes status code and content
 
     :raises: VcdResponseError
     """
@@ -138,10 +138,13 @@ def response_to_exception(response):
     content = deserialize_response_content(response)
     if ERROR_MESSAGE in content:
         if ERROR_REASON in content[ERROR_MESSAGE]:
-            raise VcdResponseError(response.status_code, content[ERROR_MESSAGE][ERROR_REASON])
-        raise VcdResponseError(response.status_code, content[ERROR_MESSAGE])
+            message = content[ERROR_MESSAGE][ERROR_REASON]
+        else:
+            message = content[ERROR_MESSAGE]
     else:
-        raise VcdResponseError(response.status_code, ERROR_UNKNOWN)
+        message = ERROR_UNKNOWN
+
+    raise VcdResponseError(response.status_code, message)
 
 
 def bool_to_msg(value):
@@ -465,7 +468,8 @@ def get_data_file(filename, logger=None):
     Used to retrieve builtin script files that users have installed
     via pip install or setup.py. Looks inside virtualenv site-packages, cwd,
     user/global site-packages, python libs, usr bins/Cellars, as well
-    as any subdirectories in these paths named 'scripts' or 'cse'.
+    as any subdirectories in these paths named 'scripts' or
+    'container_service_extension_scripts'.
 
     :param str filename: name of file (script) we want to get.
     :param logging.Logger logger: optional logger to log with.

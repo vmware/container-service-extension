@@ -1,4 +1,4 @@
-# Editing CSE Documentation
+#Editing CSE Documentation
 
 <a name="enabling"></a>
 ## Publishing Process
@@ -37,13 +37,9 @@ The HTML layout assumes HTML5.  It will not display correctly on older
 browsers. 
 
 <a name="changes"></a>
-## Making Changes
+## Making Changes and Testing Them
 
 Just edit files in the docs directory and check them in!
-
-Before you do that it's a good idea to run them using a local version of 
-Jekyll. See [Setting up your GitHub Pages site locally with Jekyll](https://help.github.com/articles/setting-up-your-github-pages-site-locally-with-jekyll/) 
-for a helpful guide to this. 
 
 Content changes do not require any special knowledge of HTML: 
 
@@ -56,3 +52,23 @@ Jekyll works first. (Start with [this tutorial](https://jekyllrb.com/docs/step-b
 
 You'll also need to understand CSS since we use it to control
 alignment in the browser.
+
+Before checking in it's an excellent idea to test your changes using a 
+local version of 
+Jekyll. See [Setting up your GitHub Pages site locally with Jekyll](https://help.github.com/articles/setting-up-your-github-pages-site-locally-with-jekyll/) 
+for a helpful guide.  The short version of the commands looks like the
+following Mac OS X example:
+
+```
+# Check for Ruby version 2.x.x and ensure bundler gem is installed.
+ruby --version
+gem install bundler
+# Cd to directory and install Jekyll components. 
+cd docs/
+bundle install
+# Run Jekyll server.
+bundle exec jekyll serve
+```
+
+You can access the locally served content by openining a browser on 
+http://localhost:4000. 

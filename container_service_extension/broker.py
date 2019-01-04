@@ -40,7 +40,6 @@ from container_service_extension.exceptions import MasterNodeCreationError
 from container_service_extension.exceptions import NFSNodeCreationError
 from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import WorkerNodeCreationError
-from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.utils import ERROR_DESCRIPTION
 from container_service_extension.utils import ERROR_MESSAGE
@@ -65,6 +64,7 @@ OP_MESSAGE = {
 }
 
 MAX_HOST_NAME_LENGTH = 25
+ROLLBACK_FLAG = 'disable_rollback'
 
 
 def get_new_broker(config):
@@ -96,19 +96,19 @@ def rollback(func):
         except (MasterNodeCreationError, WorkerNodeCreationError,
                 NFSNodeCreationError, ClusterJoiningError,
                 ClusterInitializationError) as e:
-            LOGGER.debug('Rollback started for cluster creation exception')
             try:
                 '''arg[0] refers to the current instance of the broker thread'''
                 broker_instance = args[0]
-                broker_instance.cluster_rollback()
+                if broker_instance.body[ROLLBACK_FLAG]:
+                    broker_instance.cluster_rollback()
             except Exception as err:
                 LOGGER.error('Failed to rollback cluster creation:%s', str(err))
         except NodeCreationError as e:
-            LOGGER.debug('Rollback started for node creation exception')
             try:
                 broker_instance = args[0]
                 node_list = e.node_names
-                broker_instance.node_rollback(node_list)
+                if broker_instance.body[ROLLBACK_FLAG]:
+                    broker_instance.node_rollback(node_list)
             except Exception as err:
                 LOGGER.error('Failed to rollback node creation:%s', str(err))
     return wrapper
@@ -545,7 +545,6 @@ class DefaultBroker(threading.Thread):
             LOGGER.error(traceback.format_exc())
             error_obj = error_to_json(e)
             self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
-            raise CseServerError(e)
 
     @exception_handler
     def delete_cluster(self, headers, body):
@@ -698,7 +697,6 @@ class DefaultBroker(threading.Thread):
             error_obj = error_to_json(e)
             LOGGER.error(traceback.format_exc())
             self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
-            raise CseServerError(e)
 
     @exception_handler
     def delete_nodes(self, headers, body):
@@ -783,9 +781,9 @@ class DefaultBroker(threading.Thread):
 
         :param list node_list: faulty nodes to be deleted
         """
-        LOGGER.debug('About to rollback nodes from cluster with name: %s' %
+        LOGGER.info('About to rollback nodes from cluster with name: %s' %
                      self.cluster_name)
-        LOGGER.debug('Node list to be deleted:%s' % node_list)
+        LOGGER.info('Node list to be deleted:%s' % node_list)
         vapp = VApp(self.client_tenant, href=self.cluster['vapp_href'])
         template = self.get_template()
         try:
@@ -799,12 +797,11 @@ class DefaultBroker(threading.Thread):
             except Exception:
                LOGGER.warning("Couldn't undeploy VM %s" % vm_name)
         vapp.delete_vms(node_list)
-        LOGGER.debug('Successfully deleted nodes: %s' % node_list)
-
+        LOGGER.info('Successfully deleted nodes: %s' % node_list)
 
     def cluster_rollback(self):
         """Implements rollback for cluster creation failure"""
-        LOGGER.debug('About to rollback cluster with name: %s' %
+        LOGGER.info('About to rollback cluster with name: %s' %
                      self.cluster_name)
         clusters = load_from_metadata(
             self.client_tenant, name=self.cluster_name)
@@ -814,5 +811,5 @@ class DefaultBroker(threading.Thread):
         self.cluster = clusters[0]
         vdc = VDC(self.client_tenant, href=self.cluster['vdc_href'])
         vdc.delete_vapp(self.cluster['name'], force=True)
-        LOGGER.debug('Successfully deleted cluster: %s' % self.cluster_name)
+        LOGGER.info('Successfully deleted cluster: %s' % self.cluster_name)
 
