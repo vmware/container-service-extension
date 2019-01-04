@@ -8,6 +8,10 @@ class CseServerError(VcdException):
     """Base class for cse server side operation related exceptions"""
 
 
+class CseClientError(Exception):
+    """Raised for any client side error"""
+
+
 class ClusterOperationError(CseServerError):
     """Base class for all cluster operation related exceptions"""
 
