@@ -72,6 +72,7 @@ def diff_amqp_settings(amqp_service, amqp_config):
 def prepare_customization_scripts():
     """Copies real customization scripts to the active customization scripts.
     Copy 'CUST-PHOTON.sh' to 'cust-photon-v2.sh'
+    Copy 'CUST-PHOTONU.sh' to 'cust-photon-v2u.sh'
     Copy 'CUST-UBUNTU.sh' to 'cust-ubuntu-16.04.sh'
 
     :raises FileNotFoundError: if script files cannot be found.
@@ -82,6 +83,8 @@ def prepare_customization_scripts():
             f"{env.SCRIPTS_DIR}/{env.ACTIVE_PHOTON_CUST_SCRIPT}",
         f"{env.SCRIPTS_DIR}/{env.STATIC_UBUNTU_CUST_SCRIPT}":
             f"{env.SCRIPTS_DIR}/{env.ACTIVE_UBUNTU_CUST_SCRIPT}",
+        f"{env.SCRIPTS_DIR}/{env.STATIC_PHOTONU_CUST_SCRIPT}":
+            f"{env.SCRIPTS_DIR}/{env.ACTIVE_PHOTONU_CUST_SCRIPT}",
     }
 
     for src, dst in scripts_filepaths.items():
@@ -89,14 +92,15 @@ def prepare_customization_scripts():
 
 
 def restore_customizaton_scripts():
-    """Blanks out 'cust-photon-v2.sh' and 'cust-ubuntu-16.04.sh'.
+    """Blanks out 'cust-photon-v2.sh', 'cust-photon-v2u.sh' and 'cust-ubuntu-16.04.sh'.
 
     :raises FileNotFoundError: if script files cannot be found.
     """
 
     scripts_paths = [
         Path(f"{env.SCRIPTS_DIR}/{env.ACTIVE_PHOTON_CUST_SCRIPT}"),
-        Path(f"{env.SCRIPTS_DIR}/{env.ACTIVE_UBUNTU_CUST_SCRIPT}")
+        Path(f"{env.SCRIPTS_DIR}/{env.ACTIVE_UBUNTU_CUST_SCRIPT}"),
+        Path(f"{env.SCRIPTS_DIR}/{env.ACTIVE_PHOTONU_CUST_SCRIPT}")
     ]
 
     for path in scripts_paths:
