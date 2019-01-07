@@ -18,12 +18,15 @@ import logging
 import requests
 
 from container_service_extension.config import SAMPLE_TEMPLATE_PHOTON_V2
+from container_service_extension.config import SAMPLE_TEMPLATE_PHOTON_V2U
 from container_service_extension.config import SAMPLE_TEMPLATE_UBUNTU_16_04
 
 SCRIPTS_DIR = 'scripts'
 ACTIVE_PHOTON_CUST_SCRIPT = 'cust-photon-v2.sh'
+ACTIVE_PHOTONU_CUST_SCRIPT = 'cust-photon-v2u.sh'
 ACTIVE_UBUNTU_CUST_SCRIPT = 'cust-ubuntu-16.04.sh'
 STATIC_PHOTON_CUST_SCRIPT = 'CUST-PHOTON.sh'
+STATIC_PHOTONU_CUST_SCRIPT = 'CUST-PHOTONU.sh'
 STATIC_UBUNTU_CUST_SCRIPT = 'CUST-UBUNTU.sh'
 PHOTON_TEMPLATE_NAME = 'photon-v2'
 BASE_CONFIG_FILEPATH = 'base_config.yaml'
@@ -84,7 +87,7 @@ class Environment(object):
         if 'broker' in cls._install_config:
             if 'templates' not in cls._install_config['broker']:
                 cls._install_config['broker']['templates'] = \
-                    [SAMPLE_TEMPLATE_PHOTON_V2, SAMPLE_TEMPLATE_UBUNTU_16_04]
+                    [SAMPLE_TEMPLATE_PHOTON_V2, SAMPLE_TEMPLATE_PHOTON_V2U, SAMPLE_TEMPLATE_UBUNTU_16_04]
             if 'default_template' not in cls._install_config['broker']:
                 cls._install_config['broker']['default_template'] = \
                     SAMPLE_TEMPLATE_PHOTON_V2['name']

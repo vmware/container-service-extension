@@ -110,6 +110,20 @@ SAMPLE_TEMPLATE_PHOTON_V2 = {
     'description': 'PhotonOS v2\nDocker 17.06.0-4\nKubernetes 1.9.1\nweave 2.3.0'  # noqa
 }
 
+SAMPLE_TEMPLATE_PHOTON_V2U = {
+    'name': 'photon-v2u',
+    'catalog_item': 'photon-custom-hw11-2.0u-304b817-k8s',
+    'source_ova_name': 'photon-custom-hw11-2.0u-304b817.ova',
+    'source_ova': 'http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova',  # noqa
+    'sha256_ova': 'cb51e4b6d899c3588f961e73282709a0d054bb421787e140a1d80c24d4fd89e1',  # noqa
+    'temp_vapp': 'photon2u-temp',
+    'cleanup': True,
+    'cpu': 2,
+    'mem': 2048,
+    'admin_password': 'guest_os_admin_password',
+    'description': 'PhotonOS v2\nDocker 18.06.1\nKubernetes 1.11.6\nweave 2.5.0'  # noqa
+}
+
 SAMPLE_TEMPLATE_UBUNTU_16_04 = {
     'name': 'ubuntu-16.04',
     'catalog_item': 'ubuntu-16.04-server-cloudimg-amd64-k8s',
@@ -134,7 +148,7 @@ SAMPLE_BROKER_CONFIG = {
         'ip_allocation_mode': 'pool',
         'storage_profile': '*',
         'default_template': SAMPLE_TEMPLATE_PHOTON_V2['name'],
-        'templates': [SAMPLE_TEMPLATE_PHOTON_V2, SAMPLE_TEMPLATE_UBUNTU_16_04],
+        'templates': [SAMPLE_TEMPLATE_PHOTON_V2, SAMPLE_TEMPLATE_PHOTON_V2U, SAMPLE_TEMPLATE_UBUNTU_16_04],
         'cse_msg_dir': '/tmp/cse'
     }
 }
