@@ -23,6 +23,10 @@ When CSE installation is aborted for any reason, ensure temporary vApp is delete
 - If temporary vApp still exists and `cse install` command is run again, CSE will just capture the vApp as the Kubernetes template, even though the vApp is not set up properly.
 - Running CSE install with the `--update` option will remove this invalid vApp.
 
+### CSE v1.1.x compatibility with vCD 8.20 requires following package versions
+- pyvcloud 19.3.0
+- vcd_cli 20.3.0
+
 <a name="nfs"></a>
 ## NFS Limitations
 
