@@ -11,7 +11,7 @@ Release date: 2018-12-03
 
 This is a security release to address Kubernetes CVE-2018-1002105
 
-Supported vCD versions: 8.20, 9.0, 9.1, 9.5
+Supported vCD versions: 9.0, 9.1, 9.5
 
 | Template OS        | Docker     | Kubernetes | Pod Network |
 |:-------------------|:-----------|:-----------|:------------|
@@ -39,7 +39,7 @@ Supported vCD versions: 8.20, 9.0, 9.1, 9.5
 
 Release date: 2018-11-26
 
-Supported vCD versions: 8.20, 9.0, 9.1, 9.5
+Supported vCD versions: 9.0, 9.1, 9.5
 
 | Template OS        | Docker     | Kubernetes | Pod Network |
 |:-------------------|:-----------|:-----------|:------------|
@@ -75,7 +75,7 @@ Replaced with 1.2.4 due to bug where master node creation fails during cluster c
 
 Release date: 2018-10-29
 
-Supported vCD versions: 8.20, 9.0, 9.1, 9.5
+Supported vCD versions: 9.0, 9.1, 9.5
 
 | Template OS        | Docker     | Kubernetes | Pod Network |
 |:-------------------|:-----------|:-----------|:------------|
@@ -93,7 +93,7 @@ Supported vCD versions: 8.20, 9.0, 9.1, 9.5
 
 Release date: 2018-10-23
 
-Supported vCD versions: 8.20, 9.0, 9.1, 9.5
+Supported vCD versions: 9.0, 9.1, 9.5
 
 | Template OS        | Docker     | Kubernetes | Pod Network |
 |:-------------------|:-----------|:-----------|:------------|
@@ -119,7 +119,7 @@ Supported vCD versions: 8.20, 9.0, 9.1, 9.5
 
 Release date: 2018-10-02
 
-Supported vCD versions: 8.20, 9.0, 9.1, 9.5
+Supported vCD versions: 9.0, 9.1, 9.5
 
 | Template OS        | Docker     | Kubernetes | Pod Network |
 |:-------------------|:-----------|:-----------|:------------|
@@ -165,6 +165,9 @@ Maintenance release:
 * updated OS and software versions.
 * it is recommended to get the sample config with `cse sample` command, update the existing `config.yaml` with the changes and re-create the templates.
 * added NFS Persistent volume support.
+
+**Usibility Improvements and Bug Fixes:**
+* vCD 8.20 requires pyvcloud 19.3.0 and vcd_cli 20.3.0 versions.
 
 ---
 
