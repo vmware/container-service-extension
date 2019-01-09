@@ -1,6 +1,9 @@
 # Valid config file, cleanup=True for templates
 # Fill in fields marked with '???'
-# Other fields can be left as is for testing
+# developer_mode_aware: True does not remove CSE entities or unregister CSE after tests
+
+test:
+  developer_mode_aware: true
 
 amqp:
   exchange: test-exchange # do not change (used to test that vcd amqp is not configured when we don't want it to be)
