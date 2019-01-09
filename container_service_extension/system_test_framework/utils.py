@@ -18,8 +18,6 @@ from pathlib import Path
 import yaml
 from vcd_cli.utils import to_dict
 
-import container_service_extension.system_test_framework.environment as env
-
 
 def dict_to_yaml_file(dikt, filepath):
     """Write a dictionary to a yaml file.
@@ -67,37 +65,3 @@ def diff_amqp_settings(amqp_service, amqp_config):
         'AmqpVHost': amqp_config['vhost']
     }
     return [k for k, v in cur_settings.items() if amqp[k] != v]
-
-
-def prepare_customization_scripts():
-    """Copies real customization scripts to the active customization scripts.
-    Copy 'CUST-PHOTON.sh' to 'cust-photon-v2.sh'
-    Copy 'CUST-UBUNTU.sh' to 'cust-ubuntu-16.04.sh'
-
-    :raises FileNotFoundError: if script files cannot be found.
-    """
-
-    scripts_filepaths = {
-        f"{env.SCRIPTS_DIR}/{env.STATIC_PHOTON_CUST_SCRIPT}":
-            f"{env.SCRIPTS_DIR}/{env.ACTIVE_PHOTON_CUST_SCRIPT}",
-        f"{env.SCRIPTS_DIR}/{env.STATIC_UBUNTU_CUST_SCRIPT}":
-            f"{env.SCRIPTS_DIR}/{env.ACTIVE_UBUNTU_CUST_SCRIPT}",
-    }
-
-    for src, dst in scripts_filepaths.items():
-        Path(dst).write_text(Path(src).read_text())
-
-
-def restore_customizaton_scripts():
-    """Blanks out 'cust-photon-v2.sh' and 'cust-ubuntu-16.04.sh'.
-
-    :raises FileNotFoundError: if script files cannot be found.
-    """
-
-    scripts_paths = [
-        Path(f"{env.SCRIPTS_DIR}/{env.ACTIVE_PHOTON_CUST_SCRIPT}"),
-        Path(f"{env.SCRIPTS_DIR}/{env.ACTIVE_UBUNTU_CUST_SCRIPT}")
-    ]
-
-    for path in scripts_paths:
-        path.write_text('')

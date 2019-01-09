@@ -4,19 +4,37 @@ from pathlib import Path
 
 from click.testing import CliRunner
 from pyvcloud.vcd.amqp import AmqpService
+from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
+from pyvcloud.vcd.exceptions import EntityNotFoundException
+from pyvcloud.vcd.exceptions import MissingRecordException
+from pyvcloud.vcd.org import Org
+from pyvcloud.vcd.vdc import VDC
 from vcd_cli.utils import to_dict
 
 import container_service_extension.system_test_framework.utils as testutils
 import container_service_extension.utils as utils
 from container_service_extension.config import configure_vcd_amqp
+from container_service_extension.config import CSE_NAME
+from container_service_extension.config import CSE_NAMESPACE
 from container_service_extension.config import SAMPLE_TEMPLATE_PHOTON_V2
 from container_service_extension.config import SAMPLE_TEMPLATE_UBUNTU_16_04
 """
 This module manages environment state during CSE system tests.
-
 These variables persist through all test cases and do not change.
+
+Module usage example:
+```
+import container_service_extension.system_test_framework.environment as env
+
+env.init_environment()
+# do something with env.CLIENT
+```
+
+NOTE: Imports using 'from environment import CLIENT' imports the variable to
+the local module namespace, so calling 'init_environment' will change
+environment.CLIENT but will not change the CLIENT that was imported.
 """
 
 BASE_CONFIG_FILEPATH = 'base_config.yaml'
@@ -32,12 +50,14 @@ SCRIPTS_DIR = 'scripts'
 SSH_KEY_FILEPATH = str(Path.home() / '.ssh' / 'id_rsa.pub')
 CLI_RUNNER = CliRunner()
 
+DEFAULT_AMQP_EXCHANGE = 'vCD_topic_exchange'
 DEFAULT_AMQP_SETTINGS = None
 AMQP_USERNAME = None
 AMQP_PASSWORD = None
 CLIENT = None
 ORG_HREF = None
 VDC_HREF = None
+CATALOG_NAME = None
 
 
 def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
@@ -46,7 +66,7 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     :param str config_filepath:
     """
     global DEFAULT_AMQP_SETTINGS, AMQP_USERNAME, AMQP_PASSWORD, CLIENT, \
-        ORG_HREF, VDC_HREF
+        ORG_HREF, VDC_HREF, CATALOG_NAME
 
     config = testutils.yaml_to_dict(config_filepath)
     CLIENT = Client(config['vcd']['host'],
@@ -61,9 +81,10 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     vdc = utils.get_vdc(CLIENT, config['broker']['vdc'], org=org)
     ORG_HREF = org.href
     VDC_HREF = vdc.href
+    CATALOG_NAME = config['broker']['catalog']
 
     amqp_service = AmqpService(CLIENT)
-    configure_vcd_amqp(CLIENT, 'vcdext', config['amqp']['host'],
+    configure_vcd_amqp(CLIENT, DEFAULT_AMQP_EXCHANGE, config['amqp']['host'],
                        config['amqp']['port'], 'vcd',
                        config['amqp']['ssl_accept_all'],
                        config['amqp']['ssl'], '/',
@@ -73,56 +94,139 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     AMQP_USERNAME = config['amqp']['username']
     AMQP_PASSWORD = config['amqp']['password']
 
-    _init_vcd()
-
 
 def cleanup_environment():
-    _cleanup_vcd()
     if CLIENT is not None:
         CLIENT.logout()
 
 
-def _init_vcd():
-    """Set up VCD constructs if they do not already exist.
-
-    Tasks (in order):
-        - Create external network
-        - Create org
-            - Create org vdc
-            - Create org vdc network
+def delete_cse_entities(config):
+    """Deletes ovas, templates, temp vapps, cse catalog, and unregisters CSE.
     """
-    # TODO
-    pass
+    catalog_name = config['broker']['catalog']
+    org = Org(CLIENT, href=ORG_HREF)
+    vdc = VDC(CLIENT, href=VDC_HREF)
+
+    for tmpl in config['broker']['templates']:
+        try:
+            org.delete_catalog_item(catalog_name,
+                                    tmpl['catalog_item'])
+            utils.wait_for_catalog_item_to_resolve(CLIENT,
+                                                   catalog_name,
+                                                   tmpl['catalog_item'],
+                                                   org=org)
+            org.reload()
+        except EntityNotFoundException:
+            pass
+        try:
+            org.delete_catalog_item(catalog_name,
+                                    tmpl['source_ova_name'])
+            utils.wait_for_catalog_item_to_resolve(CLIENT,
+                                                   catalog_name,
+                                                   tmpl['source_ova_name'],
+                                                   org=org)
+            org.reload()
+        except EntityNotFoundException:
+            pass
+        try:
+            task = vdc.delete_vapp(tmpl['temp_vapp'], force=True)
+            CLIENT.get_task_monitor().wait_for_success(task)
+            vdc.reload()
+        except EntityNotFoundException:
+            pass
+
+    try:
+        org.delete_catalog(catalog_name)
+        # TODO no way currently to wait for catalog deletion.
+        # https://github.com/vmware/pyvcloud/issues/334
+        # below causes EntityNotFoundException, catalog not found.
+        # time.sleep(15)
+        # org.reload()
+    except EntityNotFoundException:
+        pass
+
+    unregister_cse()
 
 
-def _cleanup_vcd():
-    """Destroys VCD constructs set up by init_vcd() if they exist."""
-    # TODO
-    pass
+def reset_vcd_amqp_settings():
+    configure_vcd_amqp(CLIENT,
+                       DEFAULT_AMQP_SETTINGS['AmqpExchange'],
+                       DEFAULT_AMQP_SETTINGS['AmqpHost'],
+                       DEFAULT_AMQP_SETTINGS['AmqpPort'],
+                       DEFAULT_AMQP_SETTINGS['AmqpPrefix'],
+                       DEFAULT_AMQP_SETTINGS['AmqpSslAcceptAll'],
+                       DEFAULT_AMQP_SETTINGS['AmqpUseSSL'],
+                       DEFAULT_AMQP_SETTINGS['AmqpVHost'],
+                       AMQP_USERNAME,
+                       AMQP_PASSWORD,
+                       quiet=True)
 
 
-def developerModeAware(function):
-    """Skip execution of decorated function.
+def unregister_cse():
+    try:
+        APIExtension(CLIENT).delete_extension(CSE_NAME, CSE_NAMESPACE)
+    except MissingRecordException:
+        pass
 
-    To be used on test teardown methods.
 
-    :param function function: decorated function.
+def prepare_customization_scripts():
+    """Copies real customization scripts to the active customization scripts.
+    Copy 'CUST-PHOTON.sh' to 'cust-photon-v2.sh'
+    Copy 'CUST-UBUNTU.sh' to 'cust-ubuntu-16.04.sh'
 
-    :return: a function that either executes the decorated function or skips
-        it, based on the value of a particular param in the environment
-        configuration.
-
-    :rtype: function
+    :raises FileNotFoundError: if script files cannot be found.
     """
-    def wrapper(self):
-        if Environment._test_config is not None and \
-                Environment._test_config['developer_mode']:
-            function(self)
-        else:
-            Environment.get_default_logger().debug(
-                f'Skipping {function.__name__} because developer mode is on.')
 
-    return wrapper
+    scripts_filepaths = {
+        f"{SCRIPTS_DIR}/{STATIC_PHOTON_CUST_SCRIPT}":
+            f"{SCRIPTS_DIR}/{ACTIVE_PHOTON_CUST_SCRIPT}",
+        f"{SCRIPTS_DIR}/{STATIC_UBUNTU_CUST_SCRIPT}":
+            f"{SCRIPTS_DIR}/{ACTIVE_UBUNTU_CUST_SCRIPT}",
+    }
+
+    for src, dst in scripts_filepaths.items():
+        Path(dst).write_text(Path(src).read_text())
+
+
+def blank_customizaton_scripts():
+    """Blanks out 'cust-photon-v2.sh' and 'cust-ubuntu-16.04.sh'.
+
+    :raises FileNotFoundError: if script files cannot be found.
+    """
+
+    scripts_paths = [
+        Path(f"{SCRIPTS_DIR}/{ACTIVE_PHOTON_CUST_SCRIPT}"),
+        Path(f"{SCRIPTS_DIR}/{ACTIVE_UBUNTU_CUST_SCRIPT}")
+    ]
+
+    for path in scripts_paths:
+        path.write_text('')
+
+
+def catalog_item_exists(catalog_item, catalog_name=CATALOG_NAME):
+    org = Org(CLIENT, href=ORG_HREF)
+    try:
+        org.get_catalog_item(catalog_name, catalog_item)
+        return True
+    except EntityNotFoundException:
+        return False
+
+
+def vapp_exists(vapp_name):
+    vdc = VDC(CLIENT, href=VDC_HREF)
+    try:
+        vdc.get_vapp(vapp_name)
+        return True
+    except EntityNotFoundException:
+        return False
+
+
+def is_cse_registered():
+    try:
+        APIExtension(CLIENT).get_extension(CSE_NAME, namespace=CSE_NAMESPACE)
+        return True
+    except MissingRecordException:
+        return False
 
 
 # TODO currently unused. maybe remove
