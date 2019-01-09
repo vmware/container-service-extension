@@ -1,3 +1,7 @@
+# container-service-extension
+# This file is a modified version of https://github.com/dattnguyen82/PyUaaClient/blob/master/PyUaaClient.py
+# The license agreement is still being worked on.
+
 import requests
 import json
 import base64
@@ -17,8 +21,8 @@ class UaaClient:
         self.clientId = clientId
         self.clientSecret = clientSecret
         auth = self.clientId + ':' + self.clientSecret
-        self.authString = base64.b64encode(auth)
-        self.authString = 'Basic ' + self.authString
+        self.authString = base64.b64encode(auth.encode())
+        self.authString = b'Basic ' + self.authString
 
     def getToken(self):
         url = self.baseUrl + self.tokenService
@@ -27,9 +31,17 @@ class UaaClient:
             'content-type': "application/x-www-form-urlencoded",
             'authorization': self.authString,
             'cache-control': "no-cache"
+
+        }
+        http_proxy = f"http://10.161.148.112:80"
+        proxy_env = {
+            'http_proxy': http_proxy,
+            'https_proxy': http_proxy,
+            'http': http_proxy,
+            'https': http_proxy,
         }
 
-        response = requests.request("POST", url, data=self.payload, headers=headers)
+        response = requests.request("POST", url, verify=False, data=self.payload, headers=headers, proxies=proxy_env)
 
         access_token = json.loads(response.text)
 
