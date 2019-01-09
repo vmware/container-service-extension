@@ -11,7 +11,7 @@ Release date: 2018-12-03
 
 This is a security release to address Kubernetes CVE-2018-1002105
 
-Supported vCD versions: 8.20, 9.0, 9.1, 9.5
+Supported vCD versions: 9.0, 9.1, 9.5
 
 | Template OS        | Docker     | Kubernetes | Pod Network |
 |:-------------------|:-----------|:-----------|:------------|
@@ -39,7 +39,7 @@ Supported vCD versions: 8.20, 9.0, 9.1, 9.5
 
 Release date: 2018-11-26
 
-Supported vCD versions: 8.20, 9.0, 9.1, 9.5
+Supported vCD versions: 9.0, 9.1, 9.5
 
 | Template OS        | Docker     | Kubernetes | Pod Network |
 |:-------------------|:-----------|:-----------|:------------|
@@ -75,7 +75,7 @@ Replaced with 1.2.4 due to bug where master node creation fails during cluster c
 
 Release date: 2018-10-29
 
-Supported vCD versions: 8.20, 9.0, 9.1, 9.5
+Supported vCD versions: 9.0, 9.1, 9.5
 
 | Template OS        | Docker     | Kubernetes | Pod Network |
 |:-------------------|:-----------|:-----------|:------------|
@@ -93,7 +93,7 @@ Supported vCD versions: 8.20, 9.0, 9.1, 9.5
 
 Release date: 2018-10-23
 
-Supported vCD versions: 8.20, 9.0, 9.1, 9.5
+Supported vCD versions: 9.0, 9.1, 9.5
 
 | Template OS        | Docker     | Kubernetes | Pod Network |
 |:-------------------|:-----------|:-----------|:------------|
@@ -119,7 +119,7 @@ Supported vCD versions: 8.20, 9.0, 9.1, 9.5
 
 Release date: 2018-10-02
 
-Supported vCD versions: 8.20, 9.0, 9.1, 9.5
+Supported vCD versions: 9.0, 9.1, 9.5
 
 | Template OS        | Docker     | Kubernetes | Pod Network |
 |:-------------------|:-----------|:-----------|:------------|
