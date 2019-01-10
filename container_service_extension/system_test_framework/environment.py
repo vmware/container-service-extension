@@ -203,7 +203,9 @@ def blank_customizaton_scripts():
         path.write_text('')
 
 
-def catalog_item_exists(catalog_item, catalog_name=CATALOG_NAME):
+def catalog_item_exists(catalog_item, catalog_name=None):
+    if catalog_name is None:
+        catalog_name = CATALOG_NAME
     org = Org(CLIENT, href=ORG_HREF)
     try:
         org.get_catalog_item(catalog_name, catalog_item)

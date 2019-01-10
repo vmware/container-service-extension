@@ -38,10 +38,7 @@ import pytest
 import re
 
 from pyvcloud.vcd.amqp import AmqpService
-from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.exceptions import EntityNotFoundException
-from pyvcloud.vcd.exceptions import MissingRecordException
-from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 
@@ -51,8 +48,6 @@ import container_service_extension.system_test_framework.utils as testutils
 import container_service_extension.utils as utils
 from container_service_extension.config import get_validated_config
 from container_service_extension.config import check_cse_installation
-from container_service_extension.config import CSE_NAME
-from container_service_extension.config import CSE_NAMESPACE
 from container_service_extension.cse import cli
 
 
@@ -222,44 +217,29 @@ def test_0050_install_no_capture(config, blank_cust_scripts,
                                    catch_exceptions=False)
     assert result.exit_code == 0
 
-    org = Org(env.CLIENT, href=env.ORG_HREF)
-    vdc = VDC(env.CLIENT, href=env.VDC_HREF)
-
     # check that amqp was not configured
     assert testutils.diff_amqp_settings(AmqpService(env.CLIENT),
                                         config['amqp'])
 
     # check that cse was not registered
-    try:
-        APIExtension(env.CLIENT).get_extension(CSE_NAME,
-                                               namespace=CSE_NAMESPACE)
+    if env.is_cse_registered():
         print('CSE is registered as an extension when it should not be.')
         assert False
-    except MissingRecordException:
-        pass
 
     # check that source ova file exists in catalog
-    try:
-        org.get_catalog_item(config['broker']['catalog'],
-                             template_config['source_ova_name'])
-    except EntityNotFoundException:
-        print('Source ova files do not exist when they should.')
+    if not env.catalog_item_exists(template_config['source_ova_name']):
+        print('Source ova file does not exist when it should.')
         assert False
 
     # check that vapp templates do not exist
-    try:
-        org.get_catalog_item(config['broker']['catalog'],
-                             template_config['catalog_item'])
-        print('vApp templates should not exist (--no-capture was used).')
+    if env.catalog_item_exists(template_config['catalog_item']):
+        print('vApp templates exist when they should not (--no-capture was '
+              'used).')
         assert False
-    except EntityNotFoundException:
-        pass
 
     # check that temp vapp exists (--no-capture)
-    try:
-        vdc.get_vapp(template_config['temp_vapp'])
-    except EntityNotFoundException:
-        print('vApp does not exist when it should (--no-capture)')
+    if not env.vapp_exists(template_config['temp_vapp']):
+        print('vApp does not exist when it should (--no-capture).')
         assert False
 
 
@@ -300,35 +280,23 @@ def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
                                 catch_exceptions=False)
     assert res.exit_code == 0
 
-    org = Org(env.CLIENT, href=env.ORG_HREF)
-    vdc = VDC(env.CLIENT, href=env.VDC_HREF)
-
     # check that amqp was not configured
     assert testutils.diff_amqp_settings(AmqpService(env.CLIENT),
                                         config['amqp'])
 
     # check that cse was not registered
-    try:
-        APIExtension(env.CLIENT).get_extension(CSE_NAME,
-                                               namespace=CSE_NAMESPACE)
+    if env.is_cse_registered():
         print('CSE is registered as an extension when it should not be.')
         assert False
-    except MissingRecordException:
-        pass
 
     # check that vapp template exists in catalog
-    try:
-        org.get_catalog_item(config['broker']['catalog'],
-                             template_config['catalog_item'])
-    except EntityNotFoundException:
-        print('vApp template does not exist when it should')
+    if not env.catalog_item_exists(template_config['catalog_item']):
+        print('vApp template does not exist when it should.')
         assert False
 
     # check that temp vapp exists (cleanup: false)
-    try:
-        vdc.get_vapp(template_config['temp_vapp'])
-    except EntityNotFoundException:
-        print('vApp does not exist when it should (cleanup: false)')
+    if not env.vapp_exists(template_config['temp_vapp']):
+        print('vApp does not exist when it should (cleanup: false).')
         assert False
 
 
@@ -358,7 +326,6 @@ def test_0070_install_update(config, blank_cust_scripts,
                                    catch_exceptions=False)
     assert result.exit_code == 0
 
-    org = Org(env.CLIENT, href=env.ORG_HREF)
     vdc = VDC(env.CLIENT, href=env.VDC_HREF)
 
     # check that amqp was configured
@@ -366,10 +333,7 @@ def test_0070_install_update(config, blank_cust_scripts,
                                             config['amqp'])
 
     # check that cse was registered
-    try:
-        APIExtension(env.CLIENT).get_extension(CSE_NAME,
-                                               namespace=CSE_NAMESPACE)
-    except MissingRecordException:
+    if not env.is_cse_registered():
         print('CSE is not registered as an extension when it should be.')
         assert False
 
@@ -379,18 +343,17 @@ def test_0070_install_update(config, blank_cust_scripts,
 
     # check that ova files and temp vapps exist
     for template_config in config['broker']['templates']:
-        try:
-            org.get_catalog_item(config['broker']['catalog'],
-                                 template_config['source_ova_name'])
-        except EntityNotFoundException:
-            print('Source ova files do not exist when they should')
+        if not env.catalog_item_exists(template_config['source_ova_name']):
+            print('Source ova files do not exist when they should.')
             assert False
+
         temp_vapp_name = template_config['temp_vapp']
         try:
             vapp_resource = vdc.get_vapp(temp_vapp_name)
         except EntityNotFoundException:
             print('vApp does not exist when it should (--no-capture)')
             assert False
+
         vapp = VApp(env.CLIENT, resource=vapp_resource)
         ip = vapp.get_primary_ip(temp_vapp_name)
         try:
@@ -440,48 +403,46 @@ def test_0080_install_cleanup_true(config, blank_cust_scripts,
                                    catch_exceptions=False)
     assert result.exit_code == 0
 
-    org = Org(env.CLIENT, href=env.ORG_HREF)
-    vdc = VDC(env.CLIENT, href=env.VDC_HREF)
-
     # check that amqp was configured
     assert not testutils.diff_amqp_settings(AmqpService(env.CLIENT),
                                             config['amqp'])
 
     # check that cse was registered
-    try:
-        APIExtension(env.CLIENT).get_extension(CSE_NAME,
-                                               namespace=CSE_NAMESPACE)
-    except MissingRecordException:
+    if not env.is_cse_registered():
         print('CSE is not registered as an extension when it should be.')
         assert False
 
     for template_config in config['broker']['templates']:
-        # check that vapp template exists
-        try:
-            org.get_catalog_item(config['broker']['catalog'],
-                                 template_config['catalog_item'])
-        except EntityNotFoundException:
-            print('vApp template does not exist when it should')
+        # check that vapp templates exists
+        if not env.catalog_item_exists(template_config['catalog_item']):
+            print('vApp template does not exist when it should.')
             assert False
 
-        # check that temp vapp does not exist (cleanup: true)
-        try:
-            vdc.get_vapp(template_config['temp_vapp'])
-            print('Temp vapp should not exist (cleanup: True')
+        # check that temp vapps do not exist (cleanup: true)
+        if env.vapp_exists(template_config['temp_vapp']):
+            print('Temp vapp exists when it should not (cleanup: True).')
             assert False
-        except EntityNotFoundException:
-            pass
 
-    # sub-test to make sure `cse check` works for valid installation
+
+def test_0090_cse_check_valid_installation(config):
+    """Tests that `cse check` passes for a valid installation.
+
+    command: cse check -c cse_test_config.yaml
+    expected: check passes
+    """
     try:
         check_cse_installation(config)
     except EntityNotFoundException:
         print("cse check failed when it should have passed.")
         assert False
 
-    # sub-test to make sure `cse check` fails for config file with
-    # invalid templates.
-    # change config file to make template names invalid
+
+def test_0100_cse_check_invalid_installation(config):
+    """Tests that `cse check` fails for an invalid installation.
+
+    command: cse check -c cse_test_config.yaml
+    expected: check fails
+    """
     for i, template_dict in enumerate(config['broker']['templates']):
         config['broker']['templates'][i]['catalog_item'] = f"_bad{i}"
 
@@ -493,13 +454,13 @@ def test_0080_install_cleanup_true(config, blank_cust_scripts,
         pass
 
 
-def test_0090_cse_run():
+def test_0110_cse_run():
     pass
 
 
-def test_0100_cse_sample():
+def test_0120_cse_sample():
     pass
 
 
-def test_0110_cse_version():
+def test_0130_cse_version():
     pass
