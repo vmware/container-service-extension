@@ -5,3 +5,4 @@ flake8_docstrings
 hacking
 yapf
 paramiko
+pytest
