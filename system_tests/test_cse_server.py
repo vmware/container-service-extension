@@ -16,6 +16,7 @@ NOTES:
         files and restrict its permissions due to the check that
         cse install/check performs. This permissions check is incompatible
         with Windows, and is a known issue.
+    - This test module typically takes ~40 minutes to finish.
 
 Tests these following commands:
 $ cse check --config cse_test_config.yaml (missing/invalid keys)

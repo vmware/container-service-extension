@@ -51,6 +51,8 @@ SSH_KEY_FILEPATH = str(Path.home() / '.ssh' / 'id_rsa.pub')
 CLI_RUNNER = CliRunner()
 
 DEFAULT_AMQP_EXCHANGE = 'vCD_topic_exchange'
+DEFAULT_AMQP_PREFIX = 'vcd'
+DEFAULT_AMQP_VHOST = '/'
 DEFAULT_AMQP_SETTINGS = None
 AMQP_USERNAME = None
 AMQP_PASSWORD = None
@@ -85,9 +87,9 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
 
     amqp_service = AmqpService(CLIENT)
     configure_vcd_amqp(CLIENT, DEFAULT_AMQP_EXCHANGE, config['amqp']['host'],
-                       config['amqp']['port'], 'vcd',
+                       config['amqp']['port'], DEFAULT_AMQP_PREFIX,
                        config['amqp']['ssl_accept_all'],
-                       config['amqp']['ssl'], '/',
+                       config['amqp']['ssl'], DEFAULT_AMQP_VHOST,
                        config['amqp']['username'],
                        config['amqp']['password'], quiet=True)
     DEFAULT_AMQP_SETTINGS = to_dict(amqp_service.get_settings())
