@@ -462,6 +462,26 @@ def get_vdc(client, vdc_name, org=None, org_name=None):
     return vdc
 
 
+def get_ovdc_resource_pool(client, ovdc_name, org_name=None):
+    """Gets the specified VDC object.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str ovdc_name:
+    :param str org_name: specific org to use if @org is not given.
+        If None, uses currently logged-in org from @client.
+
+    :return: OVDC resourcePool
+
+    :rtype: str
+
+    :raises EntityNotFoundException: if the ovdc could not be found.
+    """
+    ovdc = get_vdc(client, ovdc_name, org_name=org_name)
+    ovdc_id = ovdc.href.split('/')[-1]
+    resource_pool = f"{ovdc.name}({ovdc_id})"
+    return resource_pool
+
+
 def get_data_file(filename, logger=None):
     """Retrieves CSE script file content as a string.
 
