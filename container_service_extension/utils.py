@@ -477,7 +477,8 @@ def get_ovdc_resource_pool(client, ovdc_name, org_name=None):
     :raises EntityNotFoundException: if the ovdc could not be found.
     """
     ovdc = get_vdc(client, ovdc_name, org_name=org_name)
-    ovdc_id = ovdc.href.split('/')[-1]
+    # Get urn from id="urn:vcloud:vdc:2ddf0027-5e54-40d8-838e-59814dd3fc35"
+    ovdc_id = ovdc.resource.get('id').split(':')[-1]
     resource_pool = f"{ovdc.name}({ovdc_id})"
     return resource_pool
 
