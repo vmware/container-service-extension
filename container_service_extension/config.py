@@ -421,8 +421,8 @@ def check_cse_installation(config, check_template='*'):
             click.secho(f"Found catalog '{catalog_name}'", fg='green')
             # check that templates exist in vCD
             for template in config['broker']['templates']:
-                if check_template != '*' and \
-                        check_template != template['name']:
+                if check_template != '*' \
+                        and check_template != template['name']:
                     continue
                 catalog_item_name = template['catalog_item']
                 if catalog_item_exists(org, catalog_name, catalog_item_name):
@@ -509,7 +509,9 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
                                amqp['password'])
 
         # register cse as extension to vCD
-        if should_register_cse(client, ext_install):
+        if should_register_cse(client, routing_key=amqp['routing_key'],
+                               exchange=amqp['exchange'],
+                               ext_install=ext_install):
             register_cse(client, amqp['routing_key'], amqp['exchange'])
 
         # set up cse catalog
@@ -1041,13 +1043,16 @@ def configure_vcd_amqp(client, exchange_name, host, port, prefix,
         raise Exception(msg)
 
 
-def should_register_cse(client, ext_install):
-    """Decide if CSE installation should register CSE to vCD.
+def should_register_cse(client, routing_key, exchange, ext_install='prompt'):
+    """Decides if CSE installation should register CSE to vCD.
 
-    Returns False if CSE is already registered, or if the user declines
-    registration.
+    Returns False if @ext_install='skip' or if user declines
+    registration/update. Will print relevant information about CSE on vCD
+    if it is already registered.
 
     :param pyvcloud.vcd.client.Client client:
+    :param str routing_key: routing_key to use for CSE
+    :param str exchange: exchange to use for CSE
     :param str ext_install: 'skip' skips registration,
         'config' allows registration without prompting user,
         'prompt' asks user before registration.
@@ -1056,37 +1061,68 @@ def should_register_cse(client, ext_install):
 
     :rtype: bool
     """
-    if ext_install == 'skip':
-        return False
+    ext_config = {
+        'routingKey': routing_key,
+        'exchange': exchange
+    }
 
     ext = APIExtension(client)
-
+    cse_info = None
     try:
         cse_info = ext.get_extension_info(CSE_SERVICE_NAME,
                                           namespace=CSE_SERVICE_NAMESPACE)
-        msg = f"Found '{CSE_SERVICE_NAME}' extension on vCD, enabled=" \
-            f"{cse_info['enabled']}"
-        click.secho(msg, fg='green')
-        LOGGER.info(msg)
-        return False
     except MissingRecordException:
-        prompt_msg = f"Register '{CSE_SERVICE_NAME}' as an API extension in " \
-            "vCD?"
-        if ext_install == 'prompt' and not click.confirm(prompt_msg):
-            msg = f"Skipping CSE registration."
+        pass
+
+    if cse_info is None:
+        msg = 'Register CSE to vCD?'
+        if ext_install == 'skip' \
+                or (ext_install == 'prompt' and not click.confirm(msg)):
+            msg = 'CSE is not registered to vCD. Skipping API extension ' \
+                  'registration'
             click.secho(msg, fg='yellow')
             LOGGER.warning(msg)
             return False
+        return True
 
-    return True
+    # cse is already registered to vCD, but settings might be off
+    diff_settings = [p for p, v in ext_config.items() if cse_info[p] != v]
+    if diff_settings:
+        msg = 'CSE on vCD has different settings than config file\nCurrent ' \
+              'CSE settings on vCD:'
+        for setting in diff_settings:
+            msg += f"{setting}: {cse_info[setting]}"
+
+        msg += '\nCurrent config file settings:'
+        for setting in diff_settings:
+            msg += f"{setting}: {ext_config[setting]}"
+        click.echo(msg)
+        LOGGER.info(msg)
+
+        msg = 'Update CSE on vCD to match config file settings?'
+        if ext_install == 'skip' \
+                or (ext_install == 'prompt' and not click.confirm(msg)):
+            msg = 'Skipping CSE registration to vCD. CSE on vCD has ' \
+                  'different settings than config file'
+            click.secho(msg, fg='yellow')
+            LOGGER.warning(msg)
+            return False
+        return True
+
+    # cse is already registered to vCD, and the settings match with config file
+    msg = 'CSE is registered to vCD and has same settings as config file'
+    click.secho(msg, fg='green')
+    LOGGER.info(msg)
+    return False
 
 
-def register_cse(client, amqp_routing_key, exchange_name):
-    """Register CSE to vCD.
+def register_cse(client, routing_key, exchange):
+    """Register or update CSE on vCD.
 
     :param pyvcloud.vcd.client.Client client:
-    :param str amqp_routing_key:
-    :param str exchange_name: AMQP exchange name.
+    :param pyvcloud.vcd.client.Client client:
+    :param str routing_key:
+    :param str exchange:
     """
     ext = APIExtension(client)
     patterns = [
@@ -1095,8 +1131,21 @@ def register_cse(client, amqp_routing_key, exchange_name):
         f'/api/{CSE_SERVICE_NAME}/.*/.*'
     ]
 
-    ext.add_extension(CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE,
-                      amqp_routing_key, exchange_name, patterns)
-    msg = f"Registered {CSE_SERVICE_NAME} as an API extension in vCD"
+    cse_info = None
+    try:
+        cse_info = ext.get_extension_info(CSE_SERVICE_NAME,
+                                          namespace=CSE_SERVICE_NAMESPACE)
+    except MissingRecordException:
+        pass
+
+    if cse_info is None:
+        ext.add_extension(CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, routing_key,
+                          exchange, patterns)
+        msg = f"Registered {CSE_SERVICE_NAME} as an API extension in vCD"
+    else:
+        ext.update_extension(CSE_SERVICE_NAME, namespace=CSE_SERVICE_NAMESPACE,
+                             routing_key=routing_key, exchange=exchange)
+        msg = f"Updated {CSE_SERVICE_NAME} API Extension in vCD"
+
     click.secho(msg, fg='green')
     LOGGER.info(msg)
