@@ -6,7 +6,6 @@ from urllib.parse import urlparse
 
 import click
 import pika
-from pyvcloud.vcd.amqp import AmqpService
 from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
@@ -19,7 +18,6 @@ from pyvcloud.vcd.platform import Platform
 from pyvcloud.vcd.vapp import VApp
 import requests
 from vcd_cli.utils import stdout
-from vcd_cli.utils import to_dict
 from vsphere_guest_run.vsphere import VSphere
 import yaml
 
@@ -511,12 +509,6 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
         create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
                              amqp['vhost'], amqp['ssl'], amqp['username'],
                              amqp['password'])
-        if should_configure_amqp(client, amqp, amqp_install):
-            configure_vcd_amqp(client, amqp['exchange'], amqp['host'],
-                               amqp['port'], amqp['prefix'],
-                               amqp['ssl_accept_all'], amqp['ssl'],
-                               amqp['vhost'], amqp['username'],
-                               amqp['password'])
 
         # register cse as extension to vCD
         if should_register_cse(client, routing_key=amqp['routing_key'],
@@ -931,126 +923,6 @@ def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
     msg = f"AMQP exchange '{exchange_name}' is ready"
     click.secho(msg, fg='green')
     LOGGER.info(msg)
-
-
-def should_configure_amqp(client, amqp_config, amqp_install):
-    """Decide if CSE installation should configure vCD AMQP settings.
-
-    Returns False if config file AMQP settings are the same as vCD AMQP
-    settings, or if the user declines configuration.
-
-    :param pyvcloud.vcd.client.Client client:
-    :param dict amqp_config: 'amqp' section of the config file
-    :param str amqp_install: 'skip' skips vCD AMQP configuration,
-        'config' configures vCD AMQP settings without prompting user,
-        'prompt' asks user before configuring vCD AMQP settings.
-
-    :return: boolean that signals whether we should configure AMQP settings.
-
-    :rtype: bool
-    """
-    if amqp_install == 'skip':
-        msg = f"Skipping AMQP configuration. vCD and config file may have " \
-              f"different AMQP settings"
-        click.secho(msg, fg='yellow')
-        LOGGER.warning(msg)
-        return False
-
-    current_settings = to_dict(AmqpService(client).get_settings())
-    amqp = {
-        'AmqpExchange': amqp_config['exchange'],
-        'AmqpHost': amqp_config['host'],
-        'AmqpPort': str(amqp_config['port']),
-        'AmqpPrefix': amqp_config['prefix'],
-        'AmqpSslAcceptAll': str(amqp_config['ssl_accept_all']).lower(),
-        'AmqpUseSSL': str(amqp_config['ssl']).lower(),
-        'AmqpUsername': amqp_config['username'],
-        'AmqpVHost': amqp_config['vhost']
-    }
-
-    diff_settings = [k for k, v in current_settings.items() if amqp[k] != v]
-    if diff_settings:
-        msg = 'current vCD AMQP setting(s):'
-        click.secho(msg, fg='blue')
-        LOGGER.info(msg)
-        for setting in diff_settings:
-            msg = f"{setting}: {current_settings[setting]}"
-            click.echo(msg)
-            LOGGER.info(msg)
-        msg = '\nconfig file AMQP setting(s):'
-        click.secho(msg, fg='blue')
-        LOGGER.info(msg)
-        for setting in diff_settings:
-            msg = f"{setting}: {amqp[setting]}"
-            click.echo(msg)
-            LOGGER.info(msg)
-        msg = '\nConfigure AMQP with the config file settings?'
-        if amqp_install == 'prompt' and not click.confirm(msg):
-            msg = f"Skipping AMQP configuration. vCD and config file may " \
-                  f"have different AMQP settings"
-            click.secho(msg, fg='yellow')
-            LOGGER.warning(msg)
-            return False
-        return True
-
-    msg = "vCD and config file AMQP settings are the same, " \
-          "skipping AMQP configuration"
-    click.secho(msg, fg='green')
-    LOGGER.info(msg)
-    return False
-
-
-def configure_vcd_amqp(client, exchange_name, host, port, prefix,
-                       ssl_accept_all, use_ssl, vhost, username, password,
-                       quiet=False):
-    """Configure vCD AMQP settings/exchange using parameter values.
-
-    :param pyvcloud.vcd.client.Client client:
-    :param str exchange_name: name of exchange.
-    :param str host: AMQP host name.
-    :param int port: AMQP port.
-    :param str prefix:
-    :param bool ssl_accept_all:
-    :param bool use_ssl: Enable ssl.
-    :param str vhost: AMQP vhost.
-    :param str username: AMQP username.
-    :param str password: AMQP password.
-    :param bool quiet: if True, disables all console and log output
-
-    :raises Exception: if could not set AMQP configuration.
-    """
-    amqp_service = AmqpService(client)
-    amqp = {
-        'AmqpExchange': exchange_name,
-        'AmqpHost': host,
-        'AmqpPort': port,
-        'AmqpPrefix': prefix,
-        'AmqpSslAcceptAll': ssl_accept_all,
-        'AmqpUseSSL': use_ssl,
-        'AmqpUsername': username,
-        'AmqpVHost': vhost
-    }
-
-    # This block sets the AMQP setting values on the
-    # vCD "System Administration Extensibility page"
-    result = amqp_service.test_config(amqp, password)
-    if not quiet:
-        msg = f"AMQP test settings, result: {result['Valid'].text}"
-        click.secho(msg, fg='yellow')
-        LOGGER.info(msg)
-    if result['Valid'].text == 'true':
-        amqp_service.set_config(amqp, password)
-        if not quiet:
-            msg = "Updated vCD AMQP configuration"
-            click.secho(msg, fg='green')
-            LOGGER.info(msg)
-    else:
-        msg = "Couldn't set vCD AMQP configuration"
-        if not quiet:
-            click.secho(msg, fg='red')
-            LOGGER.error(msg, exc_info=True)
-        # TODO() replace raw exception with specific
-        raise Exception(msg)
 
 
 def should_register_cse(client, routing_key, exchange, ext_install='prompt'):
