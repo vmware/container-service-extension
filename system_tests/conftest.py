@@ -32,7 +32,6 @@ def environment():
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     env.init_environment()
     env.delete_cse_entities(config)
-    env.reset_vcd_amqp_settings()
 
     dev_mode_aware = False
     try:
@@ -44,7 +43,6 @@ def environment():
 
     if not dev_mode_aware:
         env.delete_cse_entities(config)
-        env.reset_vcd_amqp_settings()
 
     env.cleanup_environment()
 
