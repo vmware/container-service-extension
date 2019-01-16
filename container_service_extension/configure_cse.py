@@ -396,17 +396,28 @@ def check_cse_installation(config, check_template='*'):
             if connection is not None:
                 connection.close()
 
-        # check that CSE is registered to vCD
+        # check that CSE is registered to vCD correctly
         ext = APIExtension(client)
         try:
             cse_info = ext.get_extension(CSE_SERVICE_NAME,
                                          namespace=CSE_SERVICE_NAMESPACE)
+            rkey_matches = cse_info['routingKey'] == amqp['routing_key']
+            exchange_matches = cse_info['exchange'] == amqp['exchange']
+            if not rkey_matches or not exchange_matches:
+                msg = "CSE is registered as an extension, but the extension " \
+                      "settings on vCD are not the same as config settings."
+                if not rkey_matches:
+                    msg += f"\nvCD-CSE routing key: {cse_info['routingKey']}" \
+                           f"\nCSE config routing key: {amqp['routing_key']}"
+                if not exchange_matches:
+                    msg += f"\nvCD-CSE exchange: {cse_info['exchange']}" \
+                           f"\nCSE config exchange: {amqp['exchange']}"
+                click.secho(msg, fg='yellow')
+                err_msgs.append(msg)
             if cse_info['enabled'] == 'true':
-                click.secho("CSE is registered to vCD and is currently "
-                            "enabled", fg='green')
+                click.secho("CSE on vCD is currently enabled", fg='green')
             else:
-                click.secho("CSE is registered to vCD and is currently "
-                            "disabled", fg='yellow')
+                click.secho("CSE on vCD is currently disabled", fg='yellow')
         except MissingRecordException:
             msg = "CSE is not registered to vCD"
             click.secho(msg, fg='red')
