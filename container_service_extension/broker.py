@@ -213,6 +213,8 @@ class DefaultBroker(threading.Thread):
             return {'message': str(e)}
 
     def update_task(self, status, message=None, error_message=None, stack_trace=''):
+        if not self.client_tenant.is_sysadmin():
+            stack_trace = ''
         if not hasattr(self, 'task'):
             self.task = Task(self.client_sysadmin)
         if message is None:
@@ -542,17 +544,13 @@ class DefaultBroker(threading.Thread):
                 ClusterInitializationError, ClusterOperationError) as e:
             LOGGER.error(traceback.format_exc())
             error_obj = error_to_json(e)
-            stack_trace = ''
-            if self.client_tenant.is_sysadmin():
-                stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
             self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION], stack_trace=stack_trace)
             raise e
         except Exception as e:
             LOGGER.error(traceback.format_exc())
             error_obj = error_to_json(e)
-            stack_trace = ''
-            if self.client_tenant.is_sysadmin():
-                stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
             self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION], stack_trace=stack_trace)
 
     @exception_handler
@@ -700,17 +698,13 @@ class DefaultBroker(threading.Thread):
         except NodeCreationError as e:
             error_obj = error_to_json(e)
             LOGGER.error(traceback.format_exc())
-            stack_trace = ''
-            if self.client_tenant.is_sysadmin():
-                stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
             self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION], stack_trace=stack_trace)
             raise
         except Exception as e:
             error_obj = error_to_json(e)
             LOGGER.error(traceback.format_exc())
-            stack_trace = ''
-            if self.client_tenant.is_sysadmin():
-                stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
             self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION], stack_trace=stack_trace)
 
     @exception_handler
@@ -790,9 +784,7 @@ class DefaultBroker(threading.Thread):
         except Exception as e:
             LOGGER.error(traceback.format_exc())
             error_obj = error_to_json(e)
-            stack_trace = ''
-            if self.client_tenant.is_sysadmin():
-                stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
             self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION], stack_trace=stack_trace)
 
     def node_rollback(self, node_list):
