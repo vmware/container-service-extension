@@ -471,23 +471,23 @@ def get_vdc(client, vdc_name, org=None, org_name=None):
 
 
 def get_ovdc_resource_pool(client, ovdc_name, org_name=None):
-    """Gets the specified VDC object.
+    """Gets the name of the resource-pool of a given oVdc.
 
     :param pyvcloud.vcd.client.Client client:
     :param str ovdc_name:
     :param str org_name: specific org to use if @org is not given.
         If None, uses currently logged-in org from @client.
 
-    :return: OVDC resourcePool
+    :return: name of the ovdc resource pool in vSphere.
 
     :rtype: str
 
     :raises EntityNotFoundException: if the ovdc could not be found.
     """
     ovdc = get_vdc(client, ovdc_name, org_name=org_name)
-    # Get urn from id="urn:vcloud:vdc:2ddf0027-5e54-40d8-838e-59814dd3fc35"
+    # Get UUID from id="urn:vcloud:vdc:2ddf0027-5e54-40d8-838e-59814dd3fc35"
     ovdc_id = ovdc.resource.get('id').split(':')[-1]
-    resource_pool = f"{ovdc.name}({ovdc_id})"
+    resource_pool = f"{ovdc.name} ({ovdc_id})"
     return resource_pool
 
 
