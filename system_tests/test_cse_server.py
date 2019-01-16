@@ -38,7 +38,6 @@ $ cse check --config cse_test_config.yaml -i (invalid templates)
 import pytest
 import re
 
-from pyvcloud.vcd.amqp import AmqpService
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
@@ -50,15 +49,6 @@ import container_service_extension.utils as utils
 from container_service_extension.config import get_validated_config
 from container_service_extension.config import check_cse_installation
 from container_service_extension.cse import cli
-
-
-@pytest.fixture
-def default_amqp_settings():
-    """Fixture to ensure that the vCD instance has default AMQP settings.
-
-    Usage: add the parameter 'default_amqp_settings' to the test function.
-    """
-    env.reset_vcd_amqp_settings()
 
 
 @pytest.fixture
@@ -75,7 +65,7 @@ def blank_cust_scripts():
 
 @pytest.fixture
 def unregister_cse():
-    """Fixture to ensure that the CSE is not registered to vCD.
+    """Fixture to ensure that CSE is not registered to vCD.
 
     Usage: add the parameter 'unregister_cse' to the test function.
     """
@@ -180,13 +170,11 @@ def test_0040_check_invalid_installation(config):
         pass
 
 
-def test_0050_install_no_capture(config, blank_cust_scripts,
-                                 default_amqp_settings, unregister_cse):
+def test_0050_install_no_capture(config, blank_cust_scripts, unregister_cse):
     """Tests installation options: '--config', '--template', '--amqp skip',
         '--ext skip', '--ssh-key', '--no-capture'.
     Tests that installation downloads/uploads ova file,
     creates photon temp vapp,
-    skips amqp configuration,
     skips cse registration,
     and skips temp vapp capture.
 
@@ -218,10 +206,6 @@ def test_0050_install_no_capture(config, blank_cust_scripts,
                                    catch_exceptions=False)
     assert result.exit_code == 0
 
-    # check that amqp was not configured
-    assert testutils.diff_amqp_settings(AmqpService(env.CLIENT),
-                                        config['amqp'])
-
     # check that cse was not registered
     if env.is_cse_registered():
         print('CSE is registered as an extension when it should not be.')
@@ -245,12 +229,9 @@ def test_0050_install_no_capture(config, blank_cust_scripts,
 
 
 def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
-                                               default_amqp_settings,
                                                unregister_cse):
     """Tests installation when temp vapp already exists.
-    Tests that installation skips amqp configuration (when answering no
-    to prompt),
-    skips cse registration (when answering no to prompt),
+    Tests that installation skips cse registration (answering no to prompt),
     captures temp vapp as template correctly,
     does not delete temp_vapp when config file 'cleanup' property is false.
 
@@ -275,15 +256,11 @@ def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
 
     res = env.CLI_RUNNER.invoke(cli,
                                 ['install',
-                                    '--config', env.ACTIVE_CONFIG_FILEPATH,
-                                    '--template', env.PHOTON_TEMPLATE_NAME],
+                                 '--config', env.ACTIVE_CONFIG_FILEPATH,
+                                 '--template', env.PHOTON_TEMPLATE_NAME],
                                 input='N\nN',
                                 catch_exceptions=False)
     assert res.exit_code == 0
-
-    # check that amqp was not configured
-    assert testutils.diff_amqp_settings(AmqpService(env.CLIENT),
-                                        config['amqp'])
 
     # check that cse was not registered
     if env.is_cse_registered():
@@ -301,11 +278,9 @@ def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
         assert False
 
 
-def test_0070_install_update(config, blank_cust_scripts,
-                             default_amqp_settings, unregister_cse):
+def test_0070_install_update(config, blank_cust_scripts, unregister_cse):
     """Tests installation option: '--update'.
-    Tests that installation configures amqp (when answering yes to prompt),
-    registers cse (when answering yes to prompt),
+    Tests that installation registers cse (when answering yes to prompt),
     creates all templates correctly,
     customizes temp vapps correctly.
 
@@ -329,13 +304,14 @@ def test_0070_install_update(config, blank_cust_scripts,
 
     vdc = VDC(env.CLIENT, href=env.VDC_HREF)
 
-    # check that amqp was configured
-    assert not testutils.diff_amqp_settings(AmqpService(env.CLIENT),
-                                            config['amqp'])
-
-    # check that cse was registered
+    # check that cse was registered correctly
     if not env.is_cse_registered():
         print('CSE is not registered as an extension when it should be.')
+        assert False
+    if not env.is_cse_registration_valid(config['amqp']['routing_key'],
+                                         config['amqp']['exchange']):
+        print('CSE is registered as an extension, but the extension settings '
+              'on vCD are not the same as config settings.')
         assert False
 
     # ssh into vms to check for installed software
@@ -385,8 +361,7 @@ def test_0070_install_update(config, blank_cust_scripts,
             ssh_client.close()
 
 
-def test_0080_install_cleanup_true(config, blank_cust_scripts,
-                                   default_amqp_settings, unregister_cse):
+def test_0080_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
     """Tests that installation deletes temp vapps when 'cleanup' is True.
     Tests that '--amqp/--ext config' configures vcd amqp and registers cse.
 
@@ -404,13 +379,14 @@ def test_0080_install_cleanup_true(config, blank_cust_scripts,
                                    catch_exceptions=False)
     assert result.exit_code == 0
 
-    # check that amqp was configured
-    assert not testutils.diff_amqp_settings(AmqpService(env.CLIENT),
-                                            config['amqp'])
-
-    # check that cse was registered
+    # check that cse was registered correctly
     if not env.is_cse_registered():
         print('CSE is not registered as an extension when it should be.')
+        assert False
+    if not env.is_cse_registration_valid(config['amqp']['routing_key'],
+                                         config['amqp']['exchange']):
+        print('CSE is registered as an extension, but the extension settings '
+              'on vCD are not the same as config settings.')
         assert False
 
     for template_config in config['broker']['templates']:

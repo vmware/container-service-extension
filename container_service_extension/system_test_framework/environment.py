@@ -3,7 +3,6 @@ import requests
 from pathlib import Path
 
 from click.testing import CliRunner
-from pyvcloud.vcd.amqp import AmqpService
 from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
@@ -11,11 +10,9 @@ from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vdc import VDC
-from vcd_cli.utils import to_dict
 
 import container_service_extension.system_test_framework.utils as testutils
 import container_service_extension.utils as utils
-from container_service_extension.config import configure_vcd_amqp
 from container_service_extension.config import CSE_NAME
 from container_service_extension.config import CSE_NAMESPACE
 from container_service_extension.config import SAMPLE_TEMPLATE_PHOTON_V2
@@ -50,10 +47,6 @@ SCRIPTS_DIR = 'scripts'
 SSH_KEY_FILEPATH = str(Path.home() / '.ssh' / 'id_rsa.pub')
 CLI_RUNNER = CliRunner()
 
-DEFAULT_AMQP_EXCHANGE = 'vCD_topic_exchange'
-DEFAULT_AMQP_PREFIX = 'vcd'
-DEFAULT_AMQP_VHOST = '/'
-DEFAULT_AMQP_SETTINGS = None
 AMQP_USERNAME = None
 AMQP_PASSWORD = None
 CLIENT = None
@@ -67,8 +60,8 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
 
     :param str config_filepath:
     """
-    global DEFAULT_AMQP_SETTINGS, AMQP_USERNAME, AMQP_PASSWORD, CLIENT, \
-        ORG_HREF, VDC_HREF, CATALOG_NAME
+    global AMQP_USERNAME, AMQP_PASSWORD, CLIENT, ORG_HREF, VDC_HREF, \
+        CATALOG_NAME
 
     config = testutils.yaml_to_dict(config_filepath)
     CLIENT = Client(config['vcd']['host'],
@@ -84,15 +77,6 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     ORG_HREF = org.href
     VDC_HREF = vdc.href
     CATALOG_NAME = config['broker']['catalog']
-
-    amqp_service = AmqpService(CLIENT)
-    configure_vcd_amqp(CLIENT, DEFAULT_AMQP_EXCHANGE, config['amqp']['host'],
-                       config['amqp']['port'], DEFAULT_AMQP_PREFIX,
-                       config['amqp']['ssl_accept_all'],
-                       config['amqp']['ssl'], DEFAULT_AMQP_VHOST,
-                       config['amqp']['username'],
-                       config['amqp']['password'], quiet=True)
-    DEFAULT_AMQP_SETTINGS = to_dict(amqp_service.get_settings())
     AMQP_USERNAME = config['amqp']['username']
     AMQP_PASSWORD = config['amqp']['password']
 
@@ -148,20 +132,6 @@ def delete_cse_entities(config):
         pass
 
     unregister_cse()
-
-
-def reset_vcd_amqp_settings():
-    configure_vcd_amqp(CLIENT,
-                       DEFAULT_AMQP_SETTINGS['AmqpExchange'],
-                       DEFAULT_AMQP_SETTINGS['AmqpHost'],
-                       DEFAULT_AMQP_SETTINGS['AmqpPort'],
-                       DEFAULT_AMQP_SETTINGS['AmqpPrefix'],
-                       DEFAULT_AMQP_SETTINGS['AmqpSslAcceptAll'],
-                       DEFAULT_AMQP_SETTINGS['AmqpUseSSL'],
-                       DEFAULT_AMQP_SETTINGS['AmqpVHost'],
-                       AMQP_USERNAME,
-                       AMQP_PASSWORD,
-                       quiet=True)
 
 
 def unregister_cse():
@@ -231,6 +201,19 @@ def is_cse_registered():
         return True
     except MissingRecordException:
         return False
+
+
+def is_cse_registration_valid(routing_key, exchange):
+    try:
+        ext = APIExtension(CLIENT).get_extension(CSE_NAME,
+                                                 namespace=CSE_NAMESPACE)
+    except MissingRecordException:
+        return False
+
+    if ext['routingKey'] != routing_key or ext['exchange'] != exchange:
+        return False
+
+    return True
 
 
 # TODO currently unused. maybe remove

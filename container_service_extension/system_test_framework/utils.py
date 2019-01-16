@@ -16,7 +16,6 @@
 from pathlib import Path
 
 import yaml
-from vcd_cli.utils import to_dict
 
 
 def dict_to_yaml_file(dikt, filepath):
@@ -40,28 +39,3 @@ def yaml_to_dict(filepath):
     """
     with Path(filepath).open('r') as f:
         return yaml.safe_load(f)
-
-
-def diff_amqp_settings(amqp_service, amqp_config):
-    """Gets a list of settings that differ between vCD and config file amqp.
-    Returns an empty list if settings are the same.
-
-    :param pyvcloud.vcd.amqp.AmqpService amqp_service:
-    :param dict amqp_config: amqp section of config file.
-
-    :return: list containing the keys that differ.
-
-    :rtype: List[str]
-    """
-    cur_settings = to_dict(amqp_service.get_settings())
-    amqp = {
-        'AmqpExchange': amqp_config['exchange'],
-        'AmqpHost': amqp_config['host'],
-        'AmqpPort': str(amqp_config['port']),
-        'AmqpPrefix': amqp_config['prefix'],
-        'AmqpSslAcceptAll': str(amqp_config['ssl_accept_all']).lower(),
-        'AmqpUseSSL': str(amqp_config['ssl']).lower(),
-        'AmqpUsername': amqp_config['username'],
-        'AmqpVHost': amqp_config['vhost']
-    }
-    return [k for k, v in cur_settings.items() if amqp[k] != v]
