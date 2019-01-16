@@ -2,6 +2,7 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import functools
 import hashlib
 import json
 import os
@@ -25,6 +26,8 @@ from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
 from vsphere_guest_run.vsphere import VSphere
+
+from container_service_extension.logger import SERVER_LOGGER as LOGGER
 
 cache = LRUCache(maxsize=1024)
 SYSTEM_ORG_NAME = "System"
@@ -51,6 +54,11 @@ _type_to_string = {
     dict: 'mapping',
     list: 'sequence',
 }
+
+OK = 200
+CREATED = 201
+ACCEPTED = 202
+INTERNAL_SERVER_ERROR = 500
 
 
 def error_to_json(error):
@@ -663,3 +671,29 @@ def wait_until_tools_ready(vapp, vsphere, callback=vgr_callback()):
     moid = vapp.get_vm_moid(vapp.name)
     vm = vsphere.get_vm_by_moid(moid)
     vsphere.wait_until_tools_ready(vm, sleep=5, callback=callback)
+
+
+def exception_handler(func):
+    """ This function is used as decorator, executes the function that is passed as argument.
+    returns exactly what the passed function returns.
+
+    If there is any exception, returns new dictionary with keys status code and body.
+
+    NOTE: This decorator should be applied only on those functions that constructs the final
+    HTTP responses and also needs exception handler as additional behaviour.
+
+    :param func: original function that needs to be executed
+
+    :return: reference to the function that executes the passed function 'func'
+    """
+    @functools.wraps(func)
+    def exception_handler_wrapper(*args, **kwargs):
+        result = {}
+        try:
+            result = func(*args, **kwargs)
+        except Exception as err:
+            result['status_code'] = INTERNAL_SERVER_ERROR
+            result['body'] = error_to_json(err)
+            LOGGER.error(traceback.format_exc())
+        return result
+    return exception_handler_wrapper
