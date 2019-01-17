@@ -30,6 +30,12 @@ $ pytest --disable-warnings
 
 ## Writing Tests with Pytest
 
+Before writing a test, first check **conftest.py** for any 'autouse=True' fixtures. Then check
+the module itself for any 'autouse=True' fixtures. When writing a test, any fixtures
+defined in **conftest.py** can be used. When creating new fixtures, place it in the module
+if its functionality is specific to that test module. If the functionality can be used
+across multiple test modules, then place it in **conftest.py**
+
 ### Fixtures (setUp, tearDown)
 
 ```python
