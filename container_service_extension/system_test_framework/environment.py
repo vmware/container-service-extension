@@ -106,6 +106,15 @@ def cleanup_environment():
 
 
 def setup_active_config():
+    """Set up the active config file from BASE_CONFIG_FILEPATH.
+
+    'test' section is removed if it exists in base config, active config is
+    created at ACTIVE_CONFIG_FILEPATH.
+
+    :returns: config dict without 'test' key
+
+    :rtype: dict
+    """
     config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
     try:
         del config['test']
@@ -119,6 +128,7 @@ def setup_active_config():
 
 
 def teardown_active_config():
+    """Delete the active config file if it exists."""
     try:
         Path(ACTIVE_CONFIG_FILEPATH).unlink()
     except FileNotFoundError:
@@ -241,4 +251,3 @@ def is_cse_registration_valid(routing_key, exchange):
         return False
 
     return True
-
