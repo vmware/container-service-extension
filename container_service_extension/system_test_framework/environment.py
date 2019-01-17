@@ -1,4 +1,5 @@
 import logging
+import os
 import requests
 from pathlib import Path
 
@@ -84,6 +85,26 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
 def cleanup_environment():
     if CLIENT is not None:
         CLIENT.logout()
+
+
+def setup_active_config():
+    config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
+    try:
+        del config['test']
+    except KeyError:
+        pass
+
+    testutils.dict_to_yaml_file(config, ACTIVE_CONFIG_FILEPATH)
+    os.chmod(ACTIVE_CONFIG_FILEPATH, 0o600)
+
+    return config
+
+
+def teardown_active_config():
+    try:
+        Path(ACTIVE_CONFIG_FILEPATH).unlink()
+    except FileNotFoundError:
+        pass
 
 
 def delete_cse_entities(config):
