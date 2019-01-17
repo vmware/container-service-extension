@@ -23,8 +23,7 @@ def cse_server(config_module):
             installation_exists = False
             break
 
-    if installation_exists and not env.is_cse_registered():
-        installation_exists = False
+    installation_exists = installation_exists and env.is_cse_registered()
 
     if not installation_exists:
         result = env.CLI_RUNNER.invoke(cli,
