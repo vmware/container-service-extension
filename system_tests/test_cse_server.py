@@ -51,6 +51,16 @@ from container_service_extension.config import check_cse_installation
 from container_service_extension.cse import cli
 
 
+@pytest.fixture(scope='module', autouse='true')
+def delete_cse_entities():
+    """Fixture to ensure that CSE entities do not exist in vCD.
+
+    This function executes automatically for this module.
+    """
+    config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
+    env.delete_cse_entities(config)
+
+
 @pytest.fixture
 def blank_cust_scripts():
     """Fixture to ensure that the customization scripts for installation are

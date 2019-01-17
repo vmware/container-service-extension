@@ -2,10 +2,7 @@
 conftest.py is used by pytest to automatically find shared fixtures.
 Fixtures defined here can be used without importing.
 """
-
 import pytest
-import os
-from pathlib import Path
 
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
@@ -31,7 +28,6 @@ def environment():
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     env.init_environment()
-    env.delete_cse_entities(config)
 
     dev_mode_aware = False
     try:
@@ -62,18 +58,25 @@ def config():
 
     yields config dict
     """
-    config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
-    try:
-        del config['test']
-    except KeyError:
-        pass
-
-    testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
-    os.chmod(env.ACTIVE_CONFIG_FILEPATH, 0o600)
-
+    config = env.setup_active_config()
     yield config
+    env.teardown_active_config()
 
-    try:
-        Path(env.ACTIVE_CONFIG_FILEPATH).unlink()
-    except FileNotFoundError:
-        pass
+
+@pytest.fixture(scope='module')
+def config_module():
+    """Same as 'function' scoped fixture 'config', but 'module' scope is
+    required to use this fixture in 'module' scoped fixtures.
+    """
+    config = env.setup_active_config()
+    yield config
+    env.teardown_active_config()
+
+
+@pytest.fixture
+def test_config():
+    """Fixture to provide 'test' section of test config to individual tests.
+
+    """
+    config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
+    yield config['test']

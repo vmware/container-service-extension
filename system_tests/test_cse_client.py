@@ -1,21 +1,25 @@
 import pytest
 
 import container_service_extension.system_test_framework.environment as env
+import container_service_extension.system_test_framework.utils as testutils
+import container_service_extension.utils as utils
 from container_service_extension.cse import cli
+from vcd_cli.vcd import vcd
 
 
 @pytest.fixture(scope='module', autouse=True)
-def cse_server(config):
+def cse_server(config_module):
     """Fixture to ensure that CSE is installed before client tests.
 
-    This function will execute before tests run in this module.
+    This function will execute once for this module.
 
     Setup tasks:
     - install CSE if it is not already installed
     """
+    config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     installation_exists = True
-    for template in config['broker']['template']:
-        if not env.catalog_item_exists():
+    for template in config['broker']['templates']:
+        if not env.catalog_item_exists(template['catalog_item']):
             installation_exists = False
             break
 
