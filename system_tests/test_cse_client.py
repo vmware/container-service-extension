@@ -38,5 +38,30 @@ def cse_server(config_module):
         assert result.exit_code == 0
 
 
+@pytest.fixture(scope='module', autouse=True)
+def vcd_login(config_module):
+    """Fixture to ensure that we are logged in to vcd-cli.
+
+    This function will execute once for this module.
+
+    Setup tasks:
+    - log into vcd using vcd-cli
+
+    Teardown tasks:
+    - log out of vcd
+    """
+    result = env.CLI_RUNNER.invoke(vcd,
+                                   ['login',
+                                    config_module['vcd']['host'],
+                                    utils.SYSTEM_ORG_NAME,
+                                    config_module['vcd']['username'],
+                                    '-iwp', config_module['vcd']['password']],
+                                   catch_exceptions=False)
+    assert result.exit_code == 0
+    yield
+    result = env.CLI_RUNNER.invoke(vcd, ['logout'])
+    assert result.exit_code == 0
+
+
 def test_0010():
     pass
