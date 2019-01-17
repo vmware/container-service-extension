@@ -52,13 +52,30 @@ from container_service_extension.cse import cli
 
 
 @pytest.fixture(scope='module', autouse='true')
-def delete_cse_entities():
+def delete_installation_entities():
     """Fixture to ensure that CSE entities do not exist in vCD.
 
-    This function executes automatically for this module.
+    This fixture executes automatically for test module setup and teardown
+    If 'developer_mode_aware' is enabled, then the teardown deletion will not
+    occur.
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
-    env.delete_cse_entities(config)
+    for template in config['broker']['templates']:
+        env.delete_catalog_item(template['source_ova'])
+        env.delete_catalog_item(template['catalog_item'])
+        env.delete_vapp(template['temp_vapp'])
+    env.delete_catalog()
+    env.unregister_cse()
+
+    yield
+
+    if not env.DEV_MODE_AWARE:
+        for template in config['broker']['templates']:
+            env.delete_catalog_item(template['source_ova'])
+            env.delete_catalog_item(template['catalog_item'])
+            env.delete_vapp(template['temp_vapp'])
+        env.delete_catalog()
+        env.unregister_cse()
 
 
 @pytest.fixture

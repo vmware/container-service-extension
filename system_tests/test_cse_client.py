@@ -38,7 +38,7 @@ def cse_server(config_module):
 
 
 @pytest.fixture(scope='module', autouse=True)
-def vcd_login(config_module):
+def vcd_login_sys_admin():
     """Fixture to ensure that we are logged in to vcd-cli.
 
     This function will execute once for this module.
