@@ -46,20 +46,8 @@ def config():
     env.teardown_active_config()
 
 
-@pytest.fixture(scope='module')
-def config_module():
-    """Same as 'function' scoped fixture 'config', but 'module' scope is
-    required to use this fixture in 'module' scoped fixtures.
-    """
-    config = env.setup_active_config()
-    yield config
-    env.teardown_active_config()
-
-
 @pytest.fixture
 def test_config():
-    """Fixture to provide 'test' section of test config to individual tests.
-
-    """
+    """Fixture to provide 'test' section of test config to individual tests."""
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     yield config['test']

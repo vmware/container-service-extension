@@ -8,7 +8,7 @@ from vcd_cli.vcd import vcd
 
 
 @pytest.fixture(scope='module', autouse=True)
-def cse_server(config_module):
+def cse_server():
     """Fixture to ensure that CSE is installed before client tests.
 
     This function will execute once for this module.
@@ -49,15 +49,18 @@ def vcd_login_sys_admin():
     Teardown tasks:
     - log out of vcd
     """
+    config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     result = env.CLI_RUNNER.invoke(vcd,
                                    ['login',
-                                    config_module['vcd']['host'],
+                                    config['vcd']['host'],
                                     utils.SYSTEM_ORG_NAME,
-                                    config_module['vcd']['username'],
-                                    '-iwp', config_module['vcd']['password']],
+                                    config['vcd']['username'],
+                                    '-iwp', config['vcd']['password']],
                                    catch_exceptions=False)
     assert result.exit_code == 0
+
     yield
+
     result = env.CLI_RUNNER.invoke(vcd, ['logout'])
     assert result.exit_code == 0
 
