@@ -83,11 +83,9 @@ def unregister_cse():
 
 
 def test_0010_config_invalid_keys(config):
-    """Tests that config file with invalid/extra keys or invalid value
-    types do not pass config validation.
+    """Tests that config files with invalid/extra keys do not pass
+    config validation.
     """
-
-    # 3 tests for when config file has missing or extra keys
     bad_key_config1 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
     del bad_key_config1['amqp']
     bad_key_config1['extra_section'] = True
@@ -119,6 +117,9 @@ def test_0010_config_invalid_keys(config):
 
 
 def test_0020_config_invalid_value_types(config):
+    """Tests that config file with invalid value types do not pass
+    config validation.
+    """
     # tests for when config file has incorrect value types
     bad_values_config1 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
     bad_values_config1['vcd'] = True
@@ -252,8 +253,8 @@ def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
         photon-v2 template exists, temp-vapp exists
     """
     template_config = None
+    # set cleanup to false for this test
     for i, template_dict in enumerate(config['broker']['templates']):
-        # set cleanup to false for this test
         config['broker']['templates'][i]['cleanup'] = False
         if template_dict['name'] == env.PHOTON_TEMPLATE_NAME:
             template_config = template_dict
@@ -414,7 +415,7 @@ def test_0080_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
 def test_0090_cse_check_valid_installation(config):
     """Tests that `cse check` passes for a valid installation.
 
-    command: cse check -c cse_test_config.yaml
+    command: cse check -c cse_test_config.yaml -i
     expected: check passes
     """
     try:
@@ -427,7 +428,7 @@ def test_0090_cse_check_valid_installation(config):
 def test_0100_cse_check_invalid_installation(config):
     """Tests that `cse check` fails for an invalid installation.
 
-    command: cse check -c cse_test_config.yaml
+    command: cse check -c cse_test_config.yaml -i
     expected: check fails
     """
     for i, template_dict in enumerate(config['broker']['templates']):
