@@ -12,34 +12,17 @@ import container_service_extension.system_test_framework.utils as testutils
 def environment():
     """Fixture to setup and teardown the session environment.
 
-    ALWAYS runs for each test session (don't invoke this fixture)
+    This fixture executes automatically for test session setup and teardown.
+    Does not have any side effects to vCD.
 
     Setup tasks:
     - initialize variables (org/vdc href, client, amqp settings)
-    - delete ova files, templates, temp vapps, clusters
-    - unregister cse from vcd
-    - reset vcd amqp settings
 
     Teardown tasks:
-    - delete ova files, templates, temp vapps, clusters
-    - unregister cse from vcd
-    - reset vcd amqp settings
     - logout client
     """
-    config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     env.init_environment()
-
-    dev_mode_aware = False
-    try:
-        dev_mode_aware = config['test']['developer_mode_aware']
-    except KeyError:
-        pass
-
     yield
-
-    if not dev_mode_aware:
-        env.delete_cse_entities(config)
-
     env.cleanup_environment()
 
 
