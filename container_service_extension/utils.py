@@ -673,6 +673,30 @@ def wait_until_tools_ready(vapp, vsphere, callback=vgr_callback()):
     vsphere.wait_until_tools_ready(vm, sleep=5, callback=callback)
 
 
+def get_vcd_client(host, authorization_token, accept_header,
+                   verify_ssl_certs=False):
+    """Generates vCD client from the authorization token
+
+    :param str host: vCD host
+    :param str authorization_token: Value of 'x-vcloud-authorization' header in the http request
+    :param str accept_header: Value of 'Accept' header in the http request
+    :param boolean verify_ssl_certs: Boolean value specified in config.yaml to verify ssl_certs
+
+    :return: Returns vCD client
+
+    :rtype: pyvcloud.vcd.client.Client
+    """
+    version = accept_header.split('version=')[1]
+    client = Client(
+        uri=host,
+        api_version=version,
+        verify_ssl_certs=verify_ssl_certs,
+        log_headers=True,
+        log_bodies=True)
+    client.rehydrate_from_token(authorization_token)
+    return client
+
+
 def exception_handler(func):
     """ This function is used as decorator, executes the function that is passed as argument.
     returns exactly what the passed function returns.
