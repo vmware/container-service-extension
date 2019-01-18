@@ -657,7 +657,6 @@ def get_vcd_client(host, authorization_token, accept_header,
 
     :rtype: pyvcloud.vcd.client.Client
     """
-    token = authorization_token
     version = accept_header.split('version=')[1]
     client = Client(
         uri=host,
@@ -665,5 +664,5 @@ def get_vcd_client(host, authorization_token, accept_header,
         verify_ssl_certs=verify_ssl_certs,
         log_headers=True,
         log_bodies=True)
-    client.rehydrate_from_token(token)
+    client.rehydrate_from_token(authorization_token)
     return client
