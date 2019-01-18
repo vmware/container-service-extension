@@ -1,4 +1,6 @@
 import pytest
+import subprocess
+import time
 
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
@@ -23,8 +25,8 @@ def cse_server():
             installation_exists = False
             break
 
+    env.setup_active_config()
     installation_exists = installation_exists and env.is_cse_registered()
-
     if not installation_exists:
         result = env.CLI_RUNNER.invoke(cli,
                                        ['install',
@@ -35,6 +37,17 @@ def cse_server():
                                        input='y\ny',
                                        catch_exceptions=False)
         assert result.exit_code == 0
+
+    # start cse server as subprocess
+    cmd = f"cse run -c {env.ACTIVE_CONFIG_FILEPATH}"
+    p = subprocess.Popen(cmd.split(), stdout=subprocess.DEVNULL,
+                         stderr=subprocess.STDOUT)
+    time.sleep(10)
+
+    yield
+
+    # terminate cse server subprocess
+    p.terminate()
 
 
 @pytest.fixture(scope='module', autouse=True)
