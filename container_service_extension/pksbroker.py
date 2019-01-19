@@ -28,6 +28,7 @@ class PKSBroker(object):
         :param ovdc_cache: ovdc cache (subject to change) is used to
         initialize PKS broker.
         """
+        # TODO(ovdc_cache) Below fields to be populated from ovdc_cache
         self.host = 'pkshost.local'
         self.port = 9021
         self.username = 'username'
@@ -97,8 +98,8 @@ class PKSBroker(object):
                 'k8_master_ips': cluster.kubernetes_master_ips
             }
             list_of_cluster_dicts.append(cluster_dict)
-        LOGGER.debug('Received response from PKS: %s on list of clusters: %s',
-                     self.host, list_of_cluster_dicts)
+        LOGGER.debug('Received response from PKS: %s on the list of clusters:'
+                     ' %s', self.host, list_of_cluster_dicts)
         result['body'] = list_of_cluster_dicts
         return result
 
@@ -163,7 +164,6 @@ class PKSBroker(object):
         LOGGER.debug('Received response from PKS:%s on cluster %s details: %s',
                      self.host, name, cluster_dict)
         result['body'] = cluster_dict
-        print(cluster_dict)
         return result
 
     @exception_handler
