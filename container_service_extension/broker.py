@@ -41,15 +41,15 @@ from container_service_extension.exceptions import NFSNodeCreationError
 from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import WorkerNodeCreationError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import ERROR_DESCRIPTION
 from container_service_extension.utils import ERROR_MESSAGE
+from container_service_extension.utils import ERROR_STACKTRACE
+from container_service_extension.utils import OK
 from container_service_extension.utils import SYSTEM_ORG_NAME
 from container_service_extension.utils import error_to_json
+from container_service_extension.utils import exception_handler
 
-OK = 200
-CREATED = 201
-ACCEPTED = 202
-INTERNAL_SERVER_ERROR = 500
 
 OP_CREATE_CLUSTER = 'create_cluster'
 OP_DELETE_CLUSTER = 'delete_cluster'
@@ -112,32 +112,6 @@ def rollback(func):
             except Exception as err:
                 LOGGER.error('Failed to rollback node creation:%s', str(err))
     return wrapper
-
-
-def exception_handler(func):
-    """ This function is used as decorator, executes the function that is passed as argument.
-    returns exactly what the passed function returns.
-
-    If there is any exception, returns new dictionary with keys status code and body.
-
-    NOTE: This decorator should be applied only on those functions that constructs the final
-    HTTP responses and also needs exception handler as additional behaviour.
-
-    :param func: original function that needs to be executed
-
-    :return: reference to the function that executes the passed function 'func'
-    """
-    @functools.wraps(func)
-    def exception_handler_wrapper(*args, **kwargs):
-        result = {}
-        try:
-            result = func(*args, **kwargs)
-        except Exception as err:
-            result['status_code'] = INTERNAL_SERVER_ERROR
-            result['body'] = error_to_json(err)
-            LOGGER.error(traceback.format_exc())
-        return result
-    return exception_handler_wrapper
 
 
 def task_callback(task):
@@ -211,7 +185,9 @@ class DefaultBroker(threading.Thread):
         else:
             return {'message': str(e)}
 
-    def update_task(self, status, message=None, error_message=None):
+    def update_task(self, status, message=None, error_message=None, stack_trace=''):
+        if not self.client_tenant.is_sysadmin():
+            stack_trace = ''
         if not hasattr(self, 'task'):
             self.task = Task(self.client_sysadmin)
         if message is None:
@@ -234,7 +210,9 @@ class DefaultBroker(threading.Thread):
             self.tenant_info['user_name'],
             org_href=self.tenant_info['org_href'],
             task_href=task_href,
-            error_message=error_message)
+            error_message=error_message,
+            stack_trace=stack_trace
+        )
 
     def is_valid_name(self, name):
         """Validate that the cluster name against the pattern."""
@@ -539,19 +517,20 @@ class DefaultBroker(threading.Thread):
                 ClusterInitializationError, ClusterOperationError) as e:
             LOGGER.error(traceback.format_exc())
             error_obj = error_to_json(e)
-            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
+            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION], stack_trace=stack_trace)
             raise e
         except Exception as e:
             LOGGER.error(traceback.format_exc())
             error_obj = error_to_json(e)
-            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
+            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION], stack_trace=stack_trace)
 
     @exception_handler
     def delete_cluster(self, headers, body):
         result = {}
         result['body'] = {}
         LOGGER.debug('about to delete cluster with name: %s' % body['name'])
-        result['status_code'] = INTERNAL_SERVER_ERROR
 
         self.cluster_name = body['name']
         self.tenant_info = self._connect_tenant(headers)
@@ -691,12 +670,14 @@ class DefaultBroker(threading.Thread):
         except NodeCreationError as e:
             error_obj = error_to_json(e)
             LOGGER.error(traceback.format_exc())
-            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
+            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION], stack_trace=stack_trace)
             raise
         except Exception as e:
             error_obj = error_to_json(e)
             LOGGER.error(traceback.format_exc())
-            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION])
+            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION], stack_trace=stack_trace)
 
     @exception_handler
     def delete_nodes(self, headers, body):
@@ -774,7 +755,9 @@ class DefaultBroker(threading.Thread):
                 (len(self.body['nodes']), self.cluster_name, self.cluster_id))
         except Exception as e:
             LOGGER.error(traceback.format_exc())
-            self.update_task(TaskStatus.ERROR, error_message=str(e))
+            error_obj = error_to_json(e)
+            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            self.update_task(TaskStatus.ERROR, error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION], stack_trace=stack_trace)
 
     def node_rollback(self, node_list):
         """Implements rollback for node creation failure

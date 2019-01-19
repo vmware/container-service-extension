@@ -2,6 +2,7 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import functools
 import hashlib
 import json
 import os
@@ -25,6 +26,8 @@ from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
 from vsphere_guest_run.vsphere import VSphere
+
+from container_service_extension.logger import SERVER_LOGGER as LOGGER
 
 cache = LRUCache(maxsize=1024)
 SYSTEM_ORG_NAME = "System"
@@ -51,6 +54,11 @@ _type_to_string = {
     dict: 'mapping',
     list: 'sequence',
 }
+
+OK = 200
+CREATED = 201
+ACCEPTED = 202
+INTERNAL_SERVER_ERROR = 500
 
 
 def error_to_json(error):
@@ -462,6 +470,27 @@ def get_vdc(client, vdc_name, org=None, org_name=None):
     return vdc
 
 
+def get_ovdc_resource_pool(client, ovdc_name, org_name=None):
+    """Gets the name of the resource-pool of a given oVdc.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str ovdc_name:
+    :param str org_name: specific org to use if @org is not given.
+        If None, uses currently logged-in org from @client.
+
+    :return: name of the ovdc resource pool in vSphere.
+
+    :rtype: str
+
+    :raises EntityNotFoundException: if the ovdc could not be found.
+    """
+    ovdc = get_vdc(client, ovdc_name, org_name=org_name)
+    # Get UUID from id="urn:vcloud:vdc:2ddf0027-5e54-40d8-838e-59814dd3fc35"
+    ovdc_id = ovdc.resource.get('id').split(':')[-1]
+    resource_pool = f"{ovdc.name} ({ovdc_id})"
+    return resource_pool
+
+
 def get_data_file(filename, logger=None):
     """Retrieves CSE script file content as a string.
 
@@ -642,3 +671,53 @@ def wait_until_tools_ready(vapp, vsphere, callback=vgr_callback()):
     moid = vapp.get_vm_moid(vapp.name)
     vm = vsphere.get_vm_by_moid(moid)
     vsphere.wait_until_tools_ready(vm, sleep=5, callback=callback)
+
+
+def get_vcd_client(host, authorization_token, accept_header,
+                   verify_ssl_certs=False):
+    """Generates vCD client from the authorization token
+
+    :param str host: vCD host
+    :param str authorization_token: Value of 'x-vcloud-authorization' header in the http request
+    :param str accept_header: Value of 'Accept' header in the http request
+    :param boolean verify_ssl_certs: Boolean value specified in config.yaml to verify ssl_certs
+
+    :return: Returns vCD client
+
+    :rtype: pyvcloud.vcd.client.Client
+    """
+    version = accept_header.split('version=')[1]
+    client = Client(
+        uri=host,
+        api_version=version,
+        verify_ssl_certs=verify_ssl_certs,
+        log_headers=True,
+        log_bodies=True)
+    client.rehydrate_from_token(authorization_token)
+    return client
+
+
+def exception_handler(func):
+    """ This function is used as decorator, executes the function that is passed as argument.
+    returns exactly what the passed function returns.
+
+    If there is any exception, returns new dictionary with keys status code and body.
+
+    NOTE: This decorator should be applied only on those functions that constructs the final
+    HTTP responses and also needs exception handler as additional behaviour.
+
+    :param func: original function that needs to be executed
+
+    :return: reference to the function that executes the passed function 'func'
+    """
+    @functools.wraps(func)
+    def exception_handler_wrapper(*args, **kwargs):
+        result = {}
+        try:
+            result = func(*args, **kwargs)
+        except Exception as err:
+            result['status_code'] = INTERNAL_SERVER_ERROR
+            result['body'] = error_to_json(err)
+            LOGGER.error(traceback.format_exc())
+        return result
+    return exception_handler_wrapper

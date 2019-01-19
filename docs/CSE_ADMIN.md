@@ -34,7 +34,7 @@ using the highest available CSE version.
 | CSE version | vCD version         |
 |-------------|---------------------|
 | 1.1.x       | 8.20, 9.0, 9.1      |
-| 1.2.x       | 8.20, 9.0, 9.1, 9.5 |
+| 1.2.x       | 9.0, 9.1, 9.5       |
 
 ---
 
