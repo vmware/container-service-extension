@@ -7,8 +7,8 @@ import functools
 from pyvcloud.vcd.client import EntityType
 from pyvcloud.vcd.client import find_link
 from pyvcloud.vcd.client import RelationType
-from pyvcloud.vcd.client import Role
 from pyvcloud.vcd.org import Org
+from pyvcloud.vcd.role import Role
 
 from container_service_extension.exceptions import AccessForbiddenException
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
