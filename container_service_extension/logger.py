@@ -1,8 +1,11 @@
+# container-service-extension
+# Copyright (c) 2018 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
 import datetime
 import logging
-from pathlib import Path
-
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 # max size for log files (8MB)
 _MAX_BYTES = 2**23

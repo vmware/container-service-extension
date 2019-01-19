@@ -85,9 +85,8 @@ class ServiceProcessor(object):
             if spec_request:
                 reply = self.get_spec(tokens[3])
             elif config_request:
-                broker = get_new_broker(self.config)
-                reply = broker.get_cluster_config(cluster_name,
-                                                  body['headers'])
+                broker = get_new_broker(self.config, body['headers'])
+                reply = broker.get_cluster_config(cluster_name)
             elif template_request:
                 result = {}
                 templates = []
@@ -110,42 +109,50 @@ class ServiceProcessor(object):
                 result['status_code'] = 200
                 reply = result
             elif cluster_info_request:
-                broker = get_new_broker(self.config)
-                reply = broker.get_cluster_info(cluster_name, body['headers'],
-                                                request_body)
+                broker = get_new_broker(self.config,
+                                        body['headers'],
+                                        request_body)
+                reply = broker.get_cluster_info(cluster_name)
             elif node_info_request:
-                broker = get_new_broker(self.config)
-                reply = broker.get_node_info(cluster_name,
-                                             node_name,
-                                             body['headers'])
+                broker = get_new_broker(self.config, body['headers'])
+                reply = broker.get_node_info(cluster_name, node_name)
             elif system_request:
                 result = {}
                 result['body'] = service.info(body['headers'])
                 result['status_code'] = OK
                 reply = result
             elif cluster_name is None:
-                broker = get_new_broker(self.config)
-                reply = broker.list_clusters(body['headers'], request_body)
+                broker = get_new_broker(self.config,
+                                        body['headers'],
+                                        request_body)
+                reply = broker.list_clusters()
         elif body['method'] == 'POST':
             if cluster_name is None:
-                broker = get_new_broker(self.config)
-                reply = broker.create_cluster(body['headers'], request_body)
+                broker = get_new_broker(self.config,
+                                        body['headers'],
+                                        request_body)
+                reply = broker.create_cluster()
             else:
                 if node_request:
-                    broker = get_new_broker(self.config)
-                    reply = broker.create_nodes(body['headers'], request_body)
+                    broker = get_new_broker(self.config,
+                                            body['headers'],
+                                            request_body)
+                    reply = broker.create_nodes()
         elif body['method'] == 'PUT':
             if system_request:
                 reply = service.update_status(body['headers'], request_body)
         elif body['method'] == 'DELETE':
             if node_request:
-                broker = get_new_broker(self.config)
-                reply = broker.delete_nodes(body['headers'], request_body)
+                broker = get_new_broker(self.config,
+                                        body['headers'],
+                                        request_body)
+                reply = broker.delete_nodes()
             else:
-                broker = get_new_broker(self.config)
                 on_the_fly_request_body = {'name': cluster_name}
-                reply = broker.delete_cluster(body['headers'],
-                                              on_the_fly_request_body)
+                broker = get_new_broker(self.config,
+                                        body['headers'],
+                                        on_the_fly_request_body)
+                reply = broker.delete_cluster()
         LOGGER.debug('reply: %s' % str(reply))
         return reply
 
