@@ -7,6 +7,7 @@ import functools
 from pyvcloud.vcd.client import EntityType
 from pyvcloud.vcd.client import find_link
 from pyvcloud.vcd.client import RelationType
+from pyvcloud.vcd.client import Role
 from pyvcloud.vcd.org import Org
 
 from container_service_extension.exceptions import AccessForbiddenException
@@ -19,8 +20,9 @@ def _get_user_rights(sys_admin_client, user_session):
                               media_type=EntityType.ORG.value)
     user_org_href = user_org_link.get('href')
     org = Org(sys_admin_client, href=user_org_href)
-    user_role = user_session.get('roles')
-    role = org.get_role_resource(user_role)
+    user_role_name = user_session.get('roles')
+    role = Role(sys_admin_client,
+                resource=org.get_role_resource(user_role_name))
     return role.list_rights()
 
 
