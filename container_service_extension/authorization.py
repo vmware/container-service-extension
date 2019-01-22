@@ -15,6 +15,18 @@ from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
 
 
 def _get_user_rights(sys_admin_client, user_session):
+    """Return rights associated with the role of an user.
+
+    :param pyvcloud.vcd.client.Client sys_admin_client: the sys admin cilent
+        that will be used to query vCD about the rights and roles of the
+        concerned user.
+    :param lxml.objectify.ObjectifiedElement user_session:
+
+    :return: the list of rights contained in the role of the user
+        (corresponding to the user_session).
+
+    :rtype: list of str
+    """
     user_org_link = find_link(resource=user_session,
                               rel=RelationType.DOWN,
                               media_type=EntityType.ORG.value)
@@ -32,6 +44,22 @@ def _get_user_rights(sys_admin_client, user_session):
 
 
 def _is_authorized(sys_admin_client, user_session, required_rights):
+    """Verify if a given user role has all the required rights or not.
+
+    :param pyvcloud.vcd.client.Client sys_admin_client: the sys admin cilent
+        that will be used to query vCD about the rights and roles of the
+        concerned user.
+    :param lxml.objectify.ObjectifiedElement user_session:
+    :param list required_rights: a list of str representing the rights that
+        we want the user to have.
+
+    :return: True, if the user has all the required rights, else False.
+
+    :rtype: bool
+    """
+    if required_rights is None or len(required_rights) == 0:
+        return True
+
     user_rights = _get_user_rights(sys_admin_client, user_session)
 
     missing_rights = []
@@ -49,7 +77,17 @@ def _is_authorized(sys_admin_client, user_session, required_rights):
 
 
 def secure(required_rights=[]):
-    """."""
+    """Decorator to secure methods against unauthorized access.
+
+    Is compatible with methods in classes that derive from abstract_broker.
+
+    :param list required_rights: a list of rights (as str). The right name
+        shouldn't be qualified with by namespace.
+
+    :return: a method reference to the decorating method.
+
+    :rtype: method
+    """
     def decorator_secure(func):
         @functools.wraps(func)
         def decorator_wrapper(*args, **kwargs):
