@@ -207,7 +207,6 @@ SAMPLE_CONFIG_WITH_PKS = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
                  **SAMPLE_VCS_CONFIG,**SAMPLE_PKS_CONFIG_FILE_LOCATION, **SAMPLE_SERVICE_CONFIG,
                  **SAMPLE_BROKER_CONFIG}
 
-
 def generate_sample_config(with_pks):
     """Generates a sample config file for cse.
 
@@ -237,7 +236,6 @@ def generate_sample_config(with_pks):
 
 def get_validated_config(config_file_name, pks_config_file_name):
     """Gets the config file as a dictionary and checks for validity.
-
 
     Ensures that all properties exist and all values are the expected type.
     Checks that AMQP connection is available, and vCD/VCs are valid.
@@ -352,7 +350,6 @@ def validate_vcd_and_vcs_config(vcd_dict, vcs):
                     f"({vcd_dict['host']}:{vcd_dict['port']})", fg='green')
 
         for index, vc in enumerate(vcs, 1):
-
             check_keys_and_value_types(vc, SAMPLE_VCS_CONFIG['vcs'][0],
                                            location=f"config file 'vcs' section, "
                                                     f"vc #{index}")
