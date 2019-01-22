@@ -116,6 +116,7 @@ class OvdcCache(object):
         meta_data['port'] = pks_info['port']
         meta_data['uaac_port'] = pks_info['uaac_port']
         meta_data['plans'] = plans
+        meta_data['back_end'] = back_end
         meta_data['pks_compute_profile_name'] = f"{org_name}-{ovdc_name}-{ovdc_id}"
 
         # set ovdc metadata into Vcd
