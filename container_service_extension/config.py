@@ -25,25 +25,25 @@ from vsphere_guest_run.vsphere import VSphere
 
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.exceptions import AmqpError
-from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
+from container_service_extension.logger import configure_install_logger
+from container_service_extension.utils import EXCHANGE_TYPE
+from container_service_extension.utils import SYSTEM_ORG_NAME
 from container_service_extension.utils import catalog_exists
 from container_service_extension.utils import catalog_item_exists
 from container_service_extension.utils import check_file_permissions
 from container_service_extension.utils import check_keys_and_value_types
 from container_service_extension.utils import create_and_share_catalog
 from container_service_extension.utils import download_file
-from container_service_extension.utils import EXCHANGE_TYPE
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_org
 from container_service_extension.utils import get_vdc
 from container_service_extension.utils import get_vsphere
-from container_service_extension.utils import SYSTEM_ORG_NAME
 from container_service_extension.utils import upload_ova_to_catalog
 from container_service_extension.utils import vgr_callback
-from container_service_extension.utils import wait_until_tools_ready
 from container_service_extension.utils import wait_for_catalog_item_to_resolve
+from container_service_extension.utils import wait_until_tools_ready
 
 # used for creating temp vapp
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = 'vmxnet3'
@@ -91,6 +91,63 @@ SAMPLE_VCS_CONFIG = {
         'username': 'cse_user@vsphere.local',
         'password': 'my_secret_password',
         'verify': False
+    }]
+}
+
+SAMPLE_PKS_CONFIG_FILE_LOCATION = {
+    'pks_details':{
+        'config': 'pks.yaml'
+    }
+}
+
+SAMPLE_PKS_CONFIG = {
+    'universal_pks_account_for_orgs': 'false',
+    'orgs': [{
+        'name': 'Pepsi',
+        'pks_acounts': [{
+            'vc_name_in_vcd': 'vc1',
+            'host': '10.161.148.112',
+            'port':'9021',
+            'uacc': {
+                'port':'8443',
+                'username': 'pepsiSvcAccount',
+                'secret': 'YtAU6Rl2dEvj1_hH9wEQxDUkxO1Lcjm3'
+            }
+        },{
+            'vc_name_in_vcd': 'vc2',
+            'host': '10.160.146.163',
+            'port':'9021',
+            'uacc': {
+                'port':'8443',
+                'username': 'pepsiSvcAccount',
+                'secret': 'jsfgYikddEvj1_hH9wEQxdsfgdfghlkl78'
+            }
+        }]
+    },{
+        'name': 'Coke',
+        'pks_acounts': [{
+            'vc_name_in_vcd': 'vc1',
+            'host': '10.161.148.112',
+            'port':'9021',
+            'uacc': {
+                'port':'8443',
+                'username': 'cokeSvcAccount',
+                'secret': 'GhujkdfRl2dEvj1_hH9wEQxDUkxO1Lcjm3'
+            }
+        }]
+    }],
+    'pvdcs':[{
+        'name': 'pvdc1',
+        'vc_name_in_vcd': 'vc1',
+        'rp_path': ['datacenter1/cluster1/rp1', 'datacenter1/cluster1/rp2']
+    },{
+        'name': 'pvdc2',
+        'vc_name_in_vcd': 'vc1',
+        'rp_path': ['HA_datacenter/HA_cluster1/gold_rp/sub-rp', 'datacenter1/cluster1/ssd_rp']
+    },{
+        'name': 'pvdc3',
+        'vc_name_in_vcd': 'vc2',
+        'rp_path': ['datacenter/cluster1/rp1/sub-rp1/sub-rp2', 'datacenter1/cluster1/rp2']
     }]
 }
 
@@ -144,9 +201,17 @@ SAMPLE_CONFIG = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
                  **SAMPLE_VCS_CONFIG, **SAMPLE_SERVICE_CONFIG,
                  **SAMPLE_BROKER_CONFIG}
 
+# This allows us to compare top-level config keys and value types
+# for pks enabled customers
+SAMPLE_CONFIG_WITH_PKS = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
+                 **SAMPLE_VCS_CONFIG,**SAMPLE_PKS_CONFIG_FILE_LOCATION, **SAMPLE_SERVICE_CONFIG,
+                 **SAMPLE_BROKER_CONFIG}
 
-def generate_sample_config():
+
+def generate_sample_config(with_pks):
     """Generates a sample config file for cse.
+
+    :param bool with_pks: flag to generate config with pks configs.
 
     :return: sample config as dict.
 
@@ -158,15 +223,21 @@ def generate_sample_config():
                                     default_flow_style=False) + '\n'
     sample_config += yaml.safe_dump(SAMPLE_VCS_CONFIG,
                                     default_flow_style=False) + '\n'
+    if with_pks:
+        sample_config += yaml.safe_dump(SAMPLE_PKS_CONFIG_FILE_LOCATION,
+                                        default_flow_style=False) + '\n'
+        sample_pks_config = yaml.safe_dump(SAMPLE_PKS_CONFIG)
+        with open('pks.yaml', 'w') as f:
+            f.write(sample_pks_config)
     sample_config += yaml.safe_dump(SAMPLE_SERVICE_CONFIG,
                                     default_flow_style=False) + '\n'
     sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
                                     default_flow_style=False) + '\n'
     return sample_config.strip() + '\n'
 
-
-def get_validated_config(config_file_name):
+def get_validated_config(config_file_name, pks_config_file_name):
     """Gets the config file as a dictionary and checks for validity.
+
 
     Ensures that all properties exist and all values are the expected type.
     Checks that AMQP connection is available, and vCD/VCs are valid.
@@ -174,6 +245,8 @@ def get_validated_config(config_file_name):
     config file.
 
     :param str config_file_name: path to config file.
+
+    :param str pks_config_file_name: path to pks config file.
 
     :return: CSE config.
 
@@ -189,7 +262,16 @@ def get_validated_config(config_file_name):
         config = yaml.safe_load(config_file)
 
     click.secho(f"Validating config file '{config_file_name}'", fg='yellow')
-    check_keys_and_value_types(config, SAMPLE_CONFIG, location='config file')
+    if config.get('pks_details', None) is not None:
+        check_keys_and_value_types(config, SAMPLE_CONFIG_WITH_PKS, location='pks config file')
+        check_file_permissions(pks_config_file_name)
+        with open(pks_config_file_name) as pks_config_file:
+            pks_config = yaml.safe_load(pks_config_file)
+        click.secho(f"Validating pks config file '{pks_config_file_name}'", fg='yellow')
+        check_keys_and_value_types(pks_config, SAMPLE_PKS_CONFIG, location='pks config file')
+        click.secho(f"Pks Config file '{pks_config_file_name}' is valid", fg='green')
+    else:
+        check_keys_and_value_types(config, SAMPLE_CONFIG, location='config file')
     validate_amqp_config(config['amqp'])
     validate_vcd_and_vcs_config(config['vcd'], config['vcs'])
     validate_broker_config(config['broker'])
@@ -198,7 +280,6 @@ def get_validated_config(config_file_name):
                                location="config file 'service' section")
     click.secho(f"Config file '{config_file_name}' is valid", fg='green')
     return config
-
 
 def validate_amqp_config(amqp_dict):
     """Ensures that 'amqp' section of config is correct.
@@ -271,9 +352,10 @@ def validate_vcd_and_vcs_config(vcd_dict, vcs):
                     f"({vcd_dict['host']}:{vcd_dict['port']})", fg='green')
 
         for index, vc in enumerate(vcs, 1):
+
             check_keys_and_value_types(vc, SAMPLE_VCS_CONFIG['vcs'][0],
-                                       location=f"config file 'vcs' section, "
-                                                f"vc #{index}")
+                                           location=f"config file 'vcs' section, "
+                                                    f"vc #{index}")
 
         # Check that all registered VCs in vCD are listed in config file
         platform = Platform(client)

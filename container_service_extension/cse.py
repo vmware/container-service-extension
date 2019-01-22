@@ -99,10 +99,18 @@ def version(ctx):
 
 @cli.command('sample', short_help='generate sample configuration')
 @click.pass_context
-def sample(ctx):
+@click.option(
+    '-pks',
+    '--with-pks',
+    'with_pks',
+    is_flag=True,
+    required=False,
+    default=False,
+    help="If '--with-pks' flag is set, CSE sample config file is "
+         "generated along with pks details in it.")
+def sample(ctx, with_pks):
     """Generate sample CSE configuration."""
-    click.secho(generate_sample_config())
-
+    click.secho(generate_sample_config(with_pks))
 
 @cli.command(short_help="Checks that config file is valid. Can also check that"
                         " CSE is installed according to config file.")
@@ -116,6 +124,15 @@ def sample(ctx):
     envvar='CSE_CONFIG',
     default='config.yaml',
     help='Config file to use.')
+@click.option(
+    '-pks',
+    '--pks-config',
+    'pks_config',
+    type=click.Path(exists=True),
+    metavar='<pks-config-file>',
+    envvar='CSE_PKS_CONFIG',
+    default='pks.yaml',
+    help='PKS Config file to use.')
 @click.option(
     '-i',
     '--check-install',
@@ -134,10 +151,10 @@ def sample(ctx):
     help="If '--check-install' flag is set, validate specified template. "
          "Default value of '*' means that all templates in config file"
          " will be validated.")
-def check(ctx, config, check_install, template):
+def check(ctx, config, pks_config, check_install, template):
     """Validate CSE configuration."""
     try:
-        config_dict = get_validated_config(config)
+        config_dict = get_validated_config(config, pks_config)
     except (KeyError, ValueError, Exception):
         # TODO replace Exception with specific (see validate_amqp_config)
         click.secho(f"Config file '{config}' is invalid", fg='red')
