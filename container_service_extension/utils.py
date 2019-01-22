@@ -449,7 +449,7 @@ def get_org(client, org_name=None):
     return org
 
 
-def get_vdc(client, vdc_name, org=None, org_name=None):
+def get_vdc(client, vdc_name, org=None, org_name=None, is_admin_operation=False):
     """Gets the specified VDC object.
 
     :param pyvcloud.vcd.client.Client client:
@@ -457,6 +457,8 @@ def get_vdc(client, vdc_name, org=None, org_name=None):
     :param pyvcloud.vcd.org.Org org: specific org to use.
     :param str org_name: specific org to use if @org is not given.
         If None, uses currently logged-in org from @client.
+    :param bool is_admin_operation: if set True, will return the admin
+            view of the org vdc resource.
 
     :return: pyvcloud VDC object
 
@@ -466,7 +468,7 @@ def get_vdc(client, vdc_name, org=None, org_name=None):
     """
     if org is None:
         org = get_org(client, org_name=org_name)
-    vdc = VDC(client, resource=org.get_vdc(vdc_name))
+    vdc = VDC(client, resource=org.get_vdc(vdc_name, is_admin_operation=is_admin_operation))
     return vdc
 
 
