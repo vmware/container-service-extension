@@ -4,12 +4,13 @@
 
 
 # CSE SERVICE
-# used for registering CSE to vCD
+# used for registering CSE to vCD as an api extension service.
 CSE_SERVICE_NAME = 'cse'
 CSE_SERVICE_NAMESPACE = 'cse'
 
 # DEPLOY RIGHTS
+# used by authorization framework to weed out unauthorized calls.
 CSE_NATIVE_DEPLOY_RIGHT_NAME = 'CSE NATIVE DEPLOY RIGHT'
 CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION = ''
-CSE_PKS_DEPLOY_RIGHT_NAME = ''
+CSE_PKS_DEPLOY_RIGHT_NAME = 'PKS DEPLOY RIGHT'
 CSE_PKS_DEPLOY_RIGHT_DESCRIPTION = ''
