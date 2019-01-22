@@ -1,5 +1,9 @@
-from container_service_extension.utils import get_vdc
+# container-service-extension
+# Copyright (c) 2019 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
 from container_service_extension.utils import get_org
+from container_service_extension.utils import get_vdc
 from pyvcloud.vcd import utils
 
 
@@ -45,16 +49,17 @@ class OvdcCache(object):
     def __init__(self, client):
         """ Constructor of OvdcCache
 
-        :param pyvcloud.vcd.client.Client client:he client that will be used
+        :param pyvcloud.vcd.client.Client client:the client that will be used
             to make REST calls to vCD.
         """
         self.client = client
         self.pvdc_cache = PvdcCacheStub()
 
-    def get_ovdc_metadata(self, ovdc_name, org_name=None):
-        """Gets ovdc metadata for given ovdc name
+    def get_ovdc_backend_metadata(self, ovdc_name, org_name=None):
+        """Gets ovdc metadata pertaining to the backend(vcd/pks),
+        this ovdc to dedicated to deploy K8 clusters on
 
-        :param str ovdc_name:
+        :param str ovdc_name: name of the ovdc
         :param str org_name: specific org to use if @org is not given.
             If None, uses currently logged-in org from @client.
 
@@ -64,59 +69,84 @@ class OvdcCache(object):
 
         :raises EntityNotFoundException: if the ovdc could not be found.
         """
+
         # Get pvdc and pks information from pvdc cache
-        ovdc = get_vdc(self.client, ovdc_name, org_name=org_name, is_admin_operation=True)
+        ovdc = get_vdc(self.client, ovdc_name, org_name=org_name,
+                       is_admin_operation=True)
+        metadata = utils.metadata_to_dict(ovdc.get_all_metadata())
+
+        if metadata['backend'] is None or metadata['backend'].lower() == 'vcd':
+            return {'backend': metadata['backend']}
+
         pvdc_element = ovdc.resource.ProviderVdcReference
         pvdc_id = pvdc_element.get('id')
         pvdc_info = self.pvdc_cache.get_pvdc_info(pvdc_id)
         pks_info = self.pvdc_cache.get_pks_info(ovdc.name, pvdc_info['vc'])
 
         # Get ovdc metadata from vcd; copy the credentials from pvdc cache
-        metadata = utils.metadata_to_dict(ovdc.get_all_metadata())
         metadata['rp_path'] = metadata['rp_path'].split(',')
-        metadata['plans'] = metadata['plans'].split(',')
-        pks_connection_details = dict()
-        pks_connection_details['host'] = metadata.pop('host')
-        pks_connection_details['port'] = metadata.pop('port')
-        pks_connection_details['uaac_port'] = metadata.pop('uaac_port')
-        pks_connection_details['username'] = pks_info['username']
-        pks_connection_details['secret'] = pks_info['secret']
-        metadata['pks_connection_details'] = pks_connection_details
+        metadata['pks_plans'] = metadata['pks_plans'].split(',')
+        metadata['username'] = pks_info['username']
+        metadata['secret'] = pks_info['secret']
         return metadata
 
-    def set_ovdc_meta_data(self, ovdc_name, org_name=None, back_end='', plans=''):
+    def set_ovdc_backend_meta_data(self, ovdc_name, org_name=None,
+                                   backend=None,
+                                   pks_plans=''):
         """sets the backing pvdc and pks information of a given oVdc.
 
         :param str ovdc_name: name of the ovdc
         :param str org_name: specific org to use if @org is not given.
             If None, uses currently logged-in org from @client.
-        :param str back_end: name of back end for which this metadata is required.
-        :param str plans: pks plan for deployment
+        :param str backend: name of back end for which this metadata is
+        required.
+        :param str pks_plans: pks plan for deployment. If backend is vcd
+            or None, plans are not used and not relevant to the context.
         """
 
-        # Get resource pool
+        metadata = dict()
         org = get_org(self.client, org_name=org_name)
-        ovdc = get_vdc(self.client, ovdc_name, org=org, is_admin_operation=True)
-        ovdc_id = ovdc.resource.get('id').split(':')[-1]
-        resource_pool = f"{ovdc.name} ({ovdc_id})"
+        ovdc = get_vdc(self.client, ovdc_name, org=org,
+                       is_admin_operation=True)
+        if backend is None:
+            self._remove_metadata(ovdc,
+                                  keys=['name', 'vc', 'rp_path', 'host',
+                                        'port',
+                                        'uaac_port', 'pks_plans',
+                                        'pks_compute_profile_name'])
+            metadata['backend'] = ''
+        else:
+            # Get resource pool
+            ovdc_id = ovdc.resource.get('id').split(':')[-1]
+            resource_pool = f"{ovdc.name} ({ovdc_id})"
 
-        # Get pvdc and pks information from pvdc cache
-        org_name = org.resource.get('name')
-        pvdc_element = ovdc.resource.ProviderVdcReference
-        pvdc_id = pvdc_element.get('id')
-        pvdc_info = self.pvdc_cache.get_pvdc_info(pvdc_id)
-        pks_info = self.pvdc_cache.get_pks_info(org_name, pvdc_info['vc'])
+            # Get pvdc and pks information from pvdc cache
+            org_name = org.resource.get('name')
+            pvdc_element = ovdc.resource.ProviderVdcReference
+            pvdc_id = pvdc_element.get('id')
+            pvdc_info = self.pvdc_cache.get_pvdc_info(pvdc_id)
+            pks_info = self.pvdc_cache.get_pks_info(org_name, pvdc_info['vc'])
 
-        # construct ovdc metadata
-        meta_data = dict()
-        meta_data['name'] = pvdc_info['name']
-        meta_data['vc'] = pvdc_info['vc']
-        meta_data['rp_path'] = ','.join(f'{rp_path}/{resource_pool}' for rp_path in pvdc_info['rp_path'])
-        meta_data['host'] = pks_info['host']
-        meta_data['port'] = pks_info['port']
-        meta_data['uaac_port'] = pks_info['uaac_port']
-        meta_data['plans'] = plans
-        meta_data['pks_compute_profile_name'] = f"{org_name}-{ovdc_name}-{ovdc_id}"
+            # construct ovdc metadata
+
+            metadata['name'] = pvdc_info['name']
+            metadata['vc'] = pvdc_info['vc']
+            metadata['rp_path'] = ','.join(
+                f'{rp_path}/{resource_pool}' for rp_path in
+                pvdc_info['rp_path'])
+            metadata['host'] = pks_info['host']
+            metadata['port'] = pks_info['port']
+            metadata['uaac_port'] = pks_info['uaac_port']
+            metadata['pks_plans'] = pks_plans
+            metadata['backend'] = backend
+            pks_compute_profile_name = f"{org_name}-{ovdc_name}-{ovdc_id}"
+            metadata['pks_compute_profile_name'] = pks_compute_profile_name
 
         # set ovdc metadata into Vcd
-        return ovdc.set_multiple_metadata(meta_data)
+        ovdc.set_multiple_metadata(metadata)
+
+    def _remove_metadata(self, ovdc, keys=[]):
+        metadata = utils.metadata_to_dict(ovdc.get_all_metadata())
+        for k in keys:
+            if k in metadata:
+                ovdc.remove_metadata(k)
