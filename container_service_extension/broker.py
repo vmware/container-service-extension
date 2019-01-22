@@ -147,7 +147,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         self.headers = headers
         self.body = request_body
 
-    def get_system_client(self):
+    def get_sys_admin_client(self):
         self._connect_sysadmin()
         return self.client_sysadmin
 

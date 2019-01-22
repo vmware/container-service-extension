@@ -6,8 +6,6 @@ from urllib.parse import urlparse
 
 import click
 import pika
-import requests
-import yaml
 from pyvcloud.vcd.amqp import AmqpService
 from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
@@ -19,15 +17,19 @@ from pyvcloud.vcd.exceptions import OperationNotSupportedException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.platform import Platform
 from pyvcloud.vcd.vapp import VApp
+import requests
 from vcd_cli.utils import stdout
 from vcd_cli.utils import to_dict
 from vsphere_guest_run.vsphere import VSphere
+import yaml
 
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.exceptions import AmqpError
 from container_service_extension.logger import configure_install_logger
-from container_service_extension.logger import INSTALL_LOGGER as LOGGER
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
+from container_service_extension.logger import INSTALL_LOGGER as LOGGER
+from container_service_extension.server_constants import CSE_SERVICE_NAME
+from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
 from container_service_extension.utils import catalog_exists
 from container_service_extension.utils import catalog_item_exists
 from container_service_extension.utils import check_file_permissions
@@ -42,16 +44,12 @@ from container_service_extension.utils import get_vsphere
 from container_service_extension.utils import SYSTEM_ORG_NAME
 from container_service_extension.utils import upload_ova_to_catalog
 from container_service_extension.utils import vgr_callback
-from container_service_extension.utils import wait_until_tools_ready
 from container_service_extension.utils import wait_for_catalog_item_to_resolve
+from container_service_extension.utils import wait_until_tools_ready
 
 # used for creating temp vapp
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = 'vmxnet3'
 TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
-
-# used for registering CSE to vCD
-CSE_NAME = 'cse'
-CSE_NAMESPACE = 'cse'
 
 SAMPLE_AMQP_CONFIG = {
     'amqp': {
@@ -146,7 +144,7 @@ SAMPLE_CONFIG = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
 
 
 def generate_sample_config():
-    """Generates a sample config file for cse.
+    """Generate a sample config file for cse.
 
     :return: sample config as dict.
 
@@ -166,7 +164,7 @@ def generate_sample_config():
 
 
 def get_validated_config(config_file_name):
-    """Gets the config file as a dictionary and checks for validity.
+    """Get the config file as a dictionary and checks for validity.
 
     Ensures that all properties exist and all values are the expected type.
     Checks that AMQP connection is available, and vCD/VCs are valid.
@@ -201,7 +199,7 @@ def get_validated_config(config_file_name):
 
 
 def validate_amqp_config(amqp_dict):
-    """Ensures that 'amqp' section of config is correct.
+    """Ensure that 'amqp' section of config is correct.
 
     Checks that 'amqp' section of config has correct keys and value types.
     Also ensures that connection to AMQP server is valid.
@@ -238,7 +236,7 @@ def validate_amqp_config(amqp_dict):
 
 
 def validate_vcd_and_vcs_config(vcd_dict, vcs):
-    """Ensures that 'vcd' and vcs' section of config are correct.
+    """Ensure that 'vcd' and vcs' section of config are correct.
 
     Checks that 'vcd' and 'vcs' section of config have correct keys and value
     types. Also checks that vCD and all registered VCs in vCD are accessible.
@@ -300,7 +298,7 @@ def validate_vcd_and_vcs_config(vcd_dict, vcs):
 
 
 def validate_broker_config(broker_dict):
-    """Ensures that 'broker' section of config is correct.
+    """Ensure that 'broker' section of config is correct.
 
     Checks that 'broker' section of config has correct keys and value
     types. Also checks that 'default_broker' property is a valid template.
@@ -331,7 +329,7 @@ def validate_broker_config(broker_dict):
 
 
 def check_cse_installation(config, check_template='*'):
-    """Ensures that CSE is installed on vCD according to the config file.
+    """Ensure that CSE is installed on vCD according to the config file.
 
     Checks if CSE is registered to vCD, if catalog exists, and if templates
     exist.
@@ -381,7 +379,7 @@ def check_cse_installation(config, check_template='*'):
                 msg = f"AMQP exchange '{amqp['exchange']}' does not exist"
                 click.secho(msg, fg='red')
                 err_msgs.append(msg)
-        except Exception:  # TODO replace raw exception with specific
+        except Exception:  # TODO() replace raw exception with specific
             msg = f"Could not connect to AMQP exchange '{amqp['exchange']}'"
             click.secho(msg, fg='red')
             err_msgs.append(msg)
@@ -392,8 +390,8 @@ def check_cse_installation(config, check_template='*'):
         # check that CSE is registered to vCD
         ext = APIExtension(client)
         try:
-            cse_info = ext.get_extension(CSE_NAME,
-                                         namespace=CSE_NAMESPACE)
+            cse_info = ext.get_extension(CSE_SERVICE_NAME,
+                                         namespace=CSE_SERVICE_NAMESPACE)
             if cse_info['enabled'] == 'true':
                 click.secho("CSE is registered to vCD and is currently "
                             "enabled", fg='green')
@@ -441,7 +439,7 @@ def check_cse_installation(config, check_template='*'):
 def install_cse(ctx, config_file_name='config.yaml', template_name='*',
                 update=False, no_capture=False, ssh_key=None,
                 amqp_install='prompt', ext_install='prompt'):
-    """Handles logistics for CSE installation.
+    """Handle logistics for CSE installation.
 
     Handles decision making for configuring AMQP exchange/settings,
     extension registration, catalog setup, and template creation.
@@ -516,7 +514,7 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
     except Exception:
         click.secho("CSE Installation Error. Check CSE install logs", fg='red')
         LOGGER.error("CSE Installation Error", exc_info=True)
-        raise  # TODO need installation relevant exceptions for rollback
+        raise  # TODO() need installation relevant exceptions for rollback
     finally:
         if client is not None:
             client.logout()
@@ -524,7 +522,7 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
 
 def create_template(ctx, client, config, template_config, update=False,
                     no_capture=False, ssh_key=None, org=None, vdc=None):
-    """Handles template creation phase during CSE installation.
+    """Handle template creation phase during CSE installation.
 
     :param click.core.Context ctx: click context object.
     :param pyvcloud.vcd.client.Client client:
@@ -654,7 +652,7 @@ def create_template(ctx, client, config, template_config, update=False,
 
 
 def _create_temp_vapp(ctx, client, vdc, config, template_config, ssh_key):
-    """Handles temporary VApp creation and customization step of CSE install.
+    """Handle temporary VApp creation and customization step of CSE install.
 
     Initializes and customizes VApp.
 
@@ -707,7 +705,7 @@ def _create_temp_vapp(ctx, client, vdc, config, template_config, ssh_key):
 
 def _create_vapp_from_config(client, vdc, config, template_config,
                              init_script):
-    """Creates a VApp from a specific template config.
+    """Create a VApp from a specific template config.
 
     This vApp is intended to be captured as a vApp template for CSE.
     Fence mode and network adapter type are fixed.
@@ -750,7 +748,7 @@ def _create_vapp_from_config(client, vdc, config, template_config,
 
 
 def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
-    """Customizes a VM in a VApp using the customization script @cust_script.
+    """Customize a VM in a VApp using the customization script @cust_script.
 
     :param click.core.Context ctx: click context object. Needed to pass to
         stdout.
@@ -795,7 +793,7 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
             delete_script=True,
             callback=vgr_callback())
     except Exception as err:
-        # TODO replace raw exception with specific exception
+        # TODO() replace raw exception with specific exception
         # unsure all errors execute_script_in_guest can result in
         # Docker TLS handshake timeout can occur when internet is slow
         click.secho("Failed VM customization. Check CSE install log", fg='red')
@@ -825,7 +823,7 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
         msg = "Failed VM customization"
         click.secho(f"{msg}. Check CSE install log", fg='red')
         LOGGER.error(msg, exc_info=True)
-        # TODO replace raw exception with specific exception
+        # TODO() replace raw exception with specific exception
         raise Exception(msg)
 
 
@@ -871,7 +869,7 @@ def capture_vapp_to_template(ctx, vapp, catalog_name, catalog_item_name,
 
 def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
                          username, password):
-    """Creates the specified AMQP exchange if it does not exist.
+    """Create the specified AMQP exchange if it does not exist.
 
     If specified AMQP exchange exists already, does nothing.
 
@@ -899,7 +897,7 @@ def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
         channel.exchange_declare(exchange=exchange_name,
                                  exchange_type=EXCHANGE_TYPE,
                                  durable=True, auto_delete=False)
-    except Exception as err:  
+    except Exception as err:
         msg = f"Cannot create AMQP exchange '{exchange_name}'"
         click.secho(msg, fg='red')
         LOGGER.error(msg, exc_info=True)
@@ -913,7 +911,7 @@ def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
 
 
 def should_configure_amqp(client, amqp_config, amqp_install):
-    """Decides if CSE installation should configure vCD AMQP settings.
+    """Decide if CSE installation should configure vCD AMQP settings.
 
     Returns False if config file AMQP settings are the same as vCD AMQP
     settings, or if the user declines configuration.
@@ -982,7 +980,7 @@ def should_configure_amqp(client, amqp_config, amqp_install):
 def configure_vcd_amqp(client, exchange_name, host, port, prefix,
                        ssl_accept_all, use_ssl, vhost, username, password,
                        quiet=False):
-    """Configures vCD AMQP settings/exchange using parameter values.
+    """Configure vCD AMQP settings/exchange using parameter values.
 
     :param pyvcloud.vcd.client.Client client:
     :param str exchange_name: name of exchange.
@@ -1028,12 +1026,12 @@ def configure_vcd_amqp(client, exchange_name, host, port, prefix,
         if not quiet:
             click.secho(msg, fg='red')
             LOGGER.error(msg, exc_info=True)
-        # TODO replace raw exception with specific
+        # TODO() replace raw exception with specific
         raise Exception(msg)
 
 
 def should_register_cse(client, ext_install):
-    """Decides if CSE installation should register CSE to vCD.
+    """Decide if CSE installation should register CSE to vCD.
 
     Returns False if CSE is already registered, or if the user declines
     registration.
@@ -1053,13 +1051,16 @@ def should_register_cse(client, ext_install):
     ext = APIExtension(client)
 
     try:
-        cse_info = ext.get_extension_info(CSE_NAME, namespace=CSE_NAMESPACE)
-        msg = f"Found 'cse' extension on vCD, enabled={cse_info['enabled']}"
+        cse_info = ext.get_extension_info(CSE_SERVICE_NAME,
+                                          namespace=CSE_SERVICE_NAMESPACE)
+        msg = f"Found '{CSE_SERVICE_NAME}' extension on vCD, enabled=" \
+            f"{cse_info['enabled']}"
         click.secho(msg, fg='green')
         LOGGER.info(msg)
         return False
     except MissingRecordException:
-        prompt_msg = "Register 'cse' as an API extension in vCD?"
+        prompt_msg = f"Register '{CSE_SERVICE_NAME}' as an API extension in " \
+            "vCD?"
         if ext_install == 'prompt' and not click.confirm(prompt_msg):
             msg = f"Skipping CSE registration."
             click.secho(msg, fg='yellow')
@@ -1070,7 +1071,7 @@ def should_register_cse(client, ext_install):
 
 
 def register_cse(client, amqp_routing_key, exchange_name):
-    """Registers CSE to vCD.
+    """Register CSE to vCD.
 
     :param pyvcloud.vcd.client.Client client:
     :param str amqp_routing_key:
@@ -1078,13 +1079,13 @@ def register_cse(client, amqp_routing_key, exchange_name):
     """
     ext = APIExtension(client)
     patterns = [
-        f'/api/{CSE_NAME}',
-        f'/api/{CSE_NAME}/.*',
-        f'/api/{CSE_NAME}/.*/.*'
+        f'/api/{CSE_SERVICE_NAME}',
+        f'/api/{CSE_SERVICE_NAME}/.*',
+        f'/api/{CSE_SERVICE_NAME}/.*/.*'
     ]
 
-    ext.add_extension(CSE_NAME, CSE_NAMESPACE, amqp_routing_key,
-                      exchange_name, patterns)
-    msg = f"Registered {CSE_NAME} as an API extension in vCD"
+    ext.add_extension(CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE,
+                      amqp_routing_key, exchange_name, patterns)
+    msg = f"Registered {CSE_SERVICE_NAME} as an API extension in vCD"
     click.secho(msg, fg='green')
     LOGGER.info(msg)

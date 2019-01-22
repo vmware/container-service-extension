@@ -22,7 +22,6 @@ from container_service_extension.logger import configure_server_logger
 from container_service_extension.logger import SERVER_DEBUG_LOG_FILEPATH
 from container_service_extension.logger import SERVER_INFO_LOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-
 from container_service_extension.utils import SYSTEM_ORG_NAME
 
 

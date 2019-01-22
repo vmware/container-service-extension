@@ -7,7 +7,7 @@ import abc
 
 class AbstractBroker(abc.ABC):
     @abc.abstractmethod
-    def get_system_client(self):
+    def get_sys_admin_client(self):
         pass
 
     @abc.abstractmethod
