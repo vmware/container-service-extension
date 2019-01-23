@@ -42,6 +42,7 @@ class ServiceProcessor(object):
         cluster_info_request = False
         node_info_request = False
         system_request = False
+
         if len(tokens) > 3:
             if tokens[3] in ['swagger', 'swagger.json', 'swagger.yaml']:
                 spec_request = True
@@ -75,6 +76,7 @@ class ServiceProcessor(object):
         else:
             request_body = None
         LOGGER.debug('request body: %s' % json.dumps(request_body))
+
         from container_service_extension.service import Service
         service = Service()
         if not system_request and not service.is_enabled:
@@ -153,6 +155,7 @@ class ServiceProcessor(object):
                                         body['headers'],
                                         on_the_fly_request_body)
                 reply = broker.delete_cluster()
+
         LOGGER.debug('reply: %s' % str(reply))
         return reply
 
