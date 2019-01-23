@@ -504,7 +504,7 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
         click.secho(msg, fg='green')
         LOGGER.info(msg)
 
-        # configure amqp
+        # create amqp exchange if it doesn't exist
         amqp = config['amqp']
         create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
                              amqp['vhost'], amqp['ssl'], amqp['username'],
@@ -970,18 +970,18 @@ def should_register_cse(client, routing_key, exchange, ext_install='prompt'):
     # cse is already registered to vCD, but settings might be off
     diff_settings = [p for p, v in ext_config.items() if cse_info[p] != v]
     if diff_settings:
-        msg = 'CSE on vCD has different settings than config file\nCurrent ' \
-              'CSE settings on vCD:'
+        msg = 'CSE on vCD has different settings than config file' \
+              '\n\nCurrent CSE settings on vCD:'
         for setting in diff_settings:
-            msg += f"{setting}: {cse_info[setting]}"
+            msg += f"\n{setting}: {cse_info[setting]}"
 
-        msg += '\nCurrent config file settings:'
+        msg += '\n\nCurrent config file settings:'
         for setting in diff_settings:
-            msg += f"{setting}: {ext_config[setting]}"
+            msg += f"\n{setting}: {ext_config[setting]}"
         click.echo(msg)
         LOGGER.info(msg)
 
-        msg = 'Update CSE on vCD to match config file settings?'
+        msg = '\nUpdate CSE on vCD to match config file settings?'
         if ext_install == 'skip' \
                 or (ext_install == 'prompt' and not click.confirm(msg)):
             msg = 'Skipping CSE registration to vCD. CSE on vCD has ' \
