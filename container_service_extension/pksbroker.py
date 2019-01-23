@@ -1,3 +1,5 @@
+# container-service-extension
+# Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
@@ -17,7 +19,7 @@ from container_service_extension.utils import OK
 
 
 class PKSBroker(object):
-    """PKSBroker makes appropriate API calls to PKS server.
+    """PKSBroker makes API calls to PKS server.
 
     It performs CRUD operations on Kubernetes clusters.
     """
@@ -84,8 +86,10 @@ class PKSBroker(object):
         result['body'] = []
         result['status_code'] = OK
         cluster_api = ClusterApi(api_client=self.pks_client)
-        LOGGER.debug('Sending request to PKS: %s to list all clusters',
-                     self.host)
+
+        LOGGER.debug(f'Sending request to PKS: {self.host} '
+                     f'to list all clusters')
+
         clusters = cluster_api.list_clusters()
         list_of_cluster_dicts = []
         for cluster in clusters:
@@ -98,8 +102,10 @@ class PKSBroker(object):
                 'k8_master_ips': cluster.kubernetes_master_ips
             }
             list_of_cluster_dicts.append(cluster_dict)
-        LOGGER.debug('Received response from PKS: %s on the list of clusters:'
-                     ' %s', self.host, list_of_cluster_dicts)
+
+        LOGGER.debug(f'Received response from PKS: {self.host} on the list of '
+                     f'clusters: {list_of_cluster_dicts}')
+
         result['body'] = list_of_cluster_dicts
         return result
 
@@ -121,7 +127,7 @@ class PKSBroker(object):
 
         :rtype: dict
         """
-        # Note: Invalidate cluster names containing '-' character.
+        # TODO() Invalidate cluster names containing '-' character.
         result = {}
         result['body'] = []
         cluster_api = ClusterApi(api_client=self.pks_client)
@@ -130,14 +136,18 @@ class PKSBroker(object):
             nsxt_network_profile=network_profile)
         cluster_request = ClusterRequest(name=name, plan_name=plan,
                                          parameters=cluster_params)
-        LOGGER.debug('Sending request to PKS: %s to create cluster of'
-                     ' name: %s', self.host, name)
+
+        LOGGER.debug(f'Sending request to PKS: {self.host} to create cluster'
+                     f' of name: {name}')
+
         cluster = cluster_api.add_cluster(cluster_request)
         cluster_dict = cluster.to_dict()
         cluster_params_dict = cluster_dict.pop('parameters')
         cluster_dict.update(cluster_params_dict)
-        LOGGER.debug('PKS: %s accepted the request to create cluster: %s',
-                     self.host, name)
+
+        LOGGER.debug(f'PKS: {self.host} accepted the request to create'
+                     f' cluster: {name}')
+
         result['body'] = cluster_dict
         result['status_code'] = ACCEPTED
         return result
@@ -155,14 +165,18 @@ class PKSBroker(object):
         result['body'] = []
         result['status_code'] = OK
         cluster_api = ClusterApi(api_client=self.pks_client)
-        LOGGER.debug('Sending request to PKS: %s to get details of cluster '
-                     'with name: %s', self.host, name)
+
+        LOGGER.debug(f'Sending request to PKS: {self.host} to get details'
+                     f' of cluster with name: {name}')
+
         cluster = cluster_api.get_cluster(cluster_name=name)
         cluster_dict = cluster.to_dict()
         cluster_params_dict = cluster_dict.pop('parameters')
         cluster_dict.update(cluster_params_dict)
-        LOGGER.debug('Received response from PKS:%s on cluster %s details: %s',
-                     self.host, name, cluster_dict)
+
+        LOGGER.debug(f'Received response from PKS: {self.host} on cluster:'
+                     f' {name} with details: {cluster_dict}')
+
         result['body'] = cluster_dict
         return result
 
@@ -176,11 +190,15 @@ class PKSBroker(object):
         result = {}
         result['body'] = []
         cluster_api = ClusterApi(api_client=self.pks_client)
-        LOGGER.debug('Sending request to PKS: %s to delete the cluster with '
-                     'name: %s', self.host, name)
+
+        LOGGER.debug(f'Sending request to PKS: {self.host} to delete the '
+                     f'cluster with name: {name}')
+
         cluster_api.delete_cluster(cluster_name=name)
-        LOGGER.debug('PKS: %s accepted the request to delete the cluster: %s',
-                     self.host, name)
+
+        LOGGER.debug(f'PKS: {self.host} accepted the request to delete the '
+                     f'cluster: {name}')
+
         result['status_code'] = ACCEPTED
         return result
 
@@ -196,13 +214,17 @@ class PKSBroker(object):
         result = {}
         result['body'] = []
         cluster_api = ClusterApi(api_client=self.pks_client)
-        LOGGER.debug('Sending request to PKS: %s to resize the cluster with '
-                     'name: %s to %s worker nodes',
-                     self.host, name, num_worker_nodes)
+
+        LOGGER.debug(f'Sending request to PKS:{self.host} to resize the '
+                     f'cluster with name: {name} to '
+                     f'{num_worker_nodes} worker nodes')
+
         resize_params = UpdateClusterParameters(
             kubernetes_worker_instances=num_worker_nodes)
         cluster_api.update_cluster(name, body=resize_params)
-        LOGGER.debug('PKS: %s accepted the request to resize the cluster: %s',
-                     self.host, name)
+
+        LOGGER.debug(f'PKS: {self.host} accepted the request to resize the '
+                     f'cluster: {name}')
+
         result['status_code'] = ACCEPTED
         return result
