@@ -116,10 +116,8 @@ def setup_active_config():
     :rtype: dict
     """
     config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
-    try:
+    if 'test' in config:
         del config['test']
-    except KeyError:
-        pass
 
     testutils.dict_to_yaml_file(config, ACTIVE_CONFIG_FILEPATH)
     os.chmod(ACTIVE_CONFIG_FILEPATH, 0o600)

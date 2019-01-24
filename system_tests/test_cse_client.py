@@ -36,8 +36,7 @@ def cse_server():
                                        ['install',
                                         '--config', env.ACTIVE_CONFIG_FILEPATH,
                                         '--ssh-key', env.SSH_KEY_FILEPATH,
-                                        '--update',
-                                        '--no-capture'],
+                                        '--update'],
                                        input='y\ny',
                                        catch_exceptions=False)
         assert result.exit_code == 0
@@ -58,7 +57,8 @@ def cse_server():
 def vcd_sys_admin():
     """Fixture to ensure that we are logged in to vcd-cli as sys admin.
 
-    Usage: add the parameter 'vcd_sys_admin' to the test function.
+    Usage: add the parameter 'vcd_sys_admin' to the test function. Do not use
+    both `vcd_sys_admin` and `vcd_org_admin` fixtures in the same function.
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     result = env.CLI_RUNNER.invoke(vcd,
@@ -80,7 +80,8 @@ def vcd_sys_admin():
 def vcd_org_admin():
     """Fixture to ensure that we are logged in to vcd-cli as org admin.
 
-    Usage: add the parameter 'vcd_org_admin' to the test function.
+    Usage: add the parameter 'vcd_org_admin' to the test function. Do not use
+    both `vcd_sys_admin` and `vcd_org_admin` fixtures in the same function.
 
     vCD instance must have an org admin user in the specified org with
     username and password identical to those described in config['vcd'].
