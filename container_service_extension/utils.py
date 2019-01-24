@@ -111,7 +111,7 @@ def process_response(response):
 
 
 def deserialize_response_content(response):
-    """Convert utf-9 encoded string to a dict.
+    """Convert utf-8 encoded string to a dict.
 
     Since the response is encoded in utf-8, it gets decoded to regular python
     string that will be in json string. That gets converted to python
