@@ -54,23 +54,42 @@ def cse_server():
     p.terminate()
 
 
-@pytest.fixture(scope='module', autouse=True)
-def vcd_login_sys_admin():
-    """Fixture to ensure that we are logged in to vcd-cli.
+@pytest.fixture
+def vcd_sys_admin():
+    """Fixture to ensure that we are logged in to vcd-cli as sys admin.
 
-    This function will execute once for this module.
-
-    Setup tasks:
-    - log into vcd using vcd-cli
-
-    Teardown tasks:
-    - log out of vcd
+    Usage: add the parameter 'vcd_sys_admin' to the test function.
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     result = env.CLI_RUNNER.invoke(vcd,
                                    ['login',
                                     config['vcd']['host'],
                                     utils.SYSTEM_ORG_NAME,
+                                    config['vcd']['username'],
+                                    '-iwp', config['vcd']['password']],
+                                   catch_exceptions=False)
+    assert result.exit_code == 0
+
+    yield
+
+    result = env.CLI_RUNNER.invoke(vcd, ['logout'])
+    assert result.exit_code == 0
+
+
+@pytest.fixture
+def vcd_org_admin():
+    """Fixture to ensure that we are logged in to vcd-cli as org admin.
+
+    Usage: add the parameter 'vcd_org_admin' to the test function.
+
+    vCD instance must have an org admin user in the specified org with
+    username and password identical to those described in config['vcd'].
+    """
+    config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
+    result = env.CLI_RUNNER.invoke(vcd,
+                                   ['login',
+                                    config['vcd']['host'],
+                                    config['broker']['org'],
                                     config['vcd']['username'],
                                     '-iwp', config['vcd']['password']],
                                    catch_exceptions=False)
