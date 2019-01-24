@@ -12,10 +12,8 @@ import sys
 import traceback
 from urllib.parse import urlparse
 
-import click
-import requests
 from cachetools import LRUCache
-from container_service_extension.exceptions import VcdResponseError
+import click
 from lxml import objectify
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
@@ -25,8 +23,10 @@ from pyvcloud.vcd.platform import Platform
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
+import requests
 from vsphere_guest_run.vsphere import VSphere
 
+from container_service_extension.exceptions import VcdResponseError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 
 cache = LRUCache(maxsize=1024)
@@ -62,12 +62,11 @@ INTERNAL_SERVER_ERROR = 500
 
 
 def error_to_json(error):
-    """converts the given python exception object to dictionary
-    with attributes short reason, long description and stacktrace of the error.
+    """Convert the given python exception object to a dictionary.
 
     :param error: Exception object.
 
-    :return: dictionary with error reason, error description and stacktrace; or empty dictionary
+    :return: dictionary with error reason, error description and stacktrace
 
     :rtype: dict
     """
@@ -78,7 +77,8 @@ def error_to_json(error):
             ERROR_MESSAGE: {
                 ERROR_REASON: reasons[0],
                 ERROR_DESCRIPTION: error_string,
-                ERROR_STACKTRACE: traceback.format_exception(error.__class__, error, error.__traceback__)
+                ERROR_STACKTRACE: traceback.format_exception(
+                    error.__class__, error, error.__traceback__)
             }
         }
     return dict()
@@ -86,15 +86,16 @@ def error_to_json(error):
 
 def process_response(response):
     """Process the given response dictionary with following keys.
-    status_code: http status code
-    content: response result as string
 
-    Returns the response content, if the value of status code property is 2xx
-    Otherwise raises exception with error message
+    If the value of status code is 2xx, return the response content, else
+    raise exception with proper error message
 
-    :param requests.models.Response response: object with attributes status code and content
+    :param requests.models.Response response: object with attributes viz.
+        status code and content
+        status_code: http status code
+        content: response result as string
 
-    :return: decoded response content if status code is 2xx.
+    :return: decoded response content, if status code is 2xx.
 
     :rtype: dict
 
@@ -110,13 +111,16 @@ def process_response(response):
 
 
 def deserialize_response_content(response):
-    """Since the response is encoded in utf-8, it gets decoded to
-    regular python string that will be in json string. That gets converted to
-    python dictionary.
+    """Convert utf-8 encoded string to a dict.
+
+    Since the response is encoded in utf-8, it gets decoded to regular python
+    string that will be in json string. That gets converted to python
+    dictionary.
 
     Note: Do not use this method to process non-json response.content
 
-    :param requests.models.Response response: object that includes attributes status code and content
+    :param requests.models.Response response: object that includes attributes
+        status code and content
 
     :return: response content as decoded dictionary
 
@@ -130,9 +134,12 @@ def deserialize_response_content(response):
 
 
 def response_to_exception(response):
-    """Raises exception with appropriate messages, depending on the key: status code
+    """Raise exception with appropriate messages.
 
-    :param requests.models.Response response: object that has attributes status code and content
+    The class of exception raised depends on the key: status code
+
+    :param requests.models.Response response: object that has attributes
+        status code and content
 
     :raises: VcdResponseError
     """
@@ -162,7 +169,7 @@ def bool_to_msg(value):
 
 
 def get_sha256(filepath):
-    """Gets sha256 hash of file as a string.
+    """Get sha256 hash of file as a string.
 
     :param str filepath: path to file.
 
@@ -181,8 +188,10 @@ def get_sha256(filepath):
 
 
 def check_keys_and_value_types(dikt, ref_dict, location='dictionary'):
-    """Compares a dictionary with a reference dictionary to ensure that
-    all keys and value types are the same.
+    """Compare a dictionary with a reference dictionary.
+
+    The method ensures that  all keys and value types are the same in the
+    dictionaries.
 
     :param dict dikt: the dictionary to check for validity
     :param dict ref_dict: the dictionary to check against
@@ -221,7 +230,7 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary'):
 
 
 def check_python_version():
-    """Ensures that user's Python version >= 3.6.
+    """Ensure that user's Python version >= 3.6.
 
     :raises Exception: if user's Python version < 3.6.
     """
@@ -234,8 +243,10 @@ def check_python_version():
 
 
 def check_file_permissions(filename):
-    """Ensures that the file only has rw permission for Owner, and no
-    permissions for anyone else.
+    """Ensure that the file has correct permissions.
+
+    Owner - r/w permission
+    Other - No access
 
     :param str filename: path to file.
 
@@ -266,7 +277,7 @@ def check_file_permissions(filename):
 
 
 def download_file(url, filepath, sha256=None, quiet=False, logger=None):
-    """Downloads a file from a url to local filepath.
+    """Download a file from a url to local filepath.
 
     Will not overwrite files unless @sha256 is given.
     Recursively creates specified directories in @filepath.
@@ -306,7 +317,7 @@ def download_file(url, filepath, sha256=None, quiet=False, logger=None):
 
 
 def catalog_exists(org, catalog_name):
-    """Boolean function to check if catalog exists.
+    """Check if catalog exists.
 
     :param pyvcloud.vcd.org.Org org:
     :param str catalog_name:
@@ -342,7 +353,7 @@ def catalog_item_exists(org, catalog_name, catalog_item_name):
 
 def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
                           org=None, org_name=None, logger=None):
-    """Uploads local ova file to vCD catalog.
+    """Upload local ova file to vCD catalog.
 
     :param pyvcloud.vcd.client.Client client:
     :param str filepath: file path to the .ova file.
@@ -409,7 +420,7 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
 
 def wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
                                      org=None, org_name=None):
-    """Waits for catalog item's most recent task to resolve.
+    """Wait for catalog item's most recent task to resolve.
 
     :param pyvcloud.vcd.client.Client client:
     :param str catalog_name:
@@ -429,7 +440,7 @@ def wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
 
 
 def get_org(client, org_name=None):
-    """Gets the specified or currently logged-in Org object.
+    """Get the specified or currently logged-in Org object.
 
     :param pyvcloud.vcd.client.Client client:
     :param str org_name: which org to use. If None, uses currently logged-in
@@ -450,7 +461,7 @@ def get_org(client, org_name=None):
 
 
 def get_vdc(client, vdc_name, org=None, org_name=None, is_admin_operation=False):
-    """Gets the specified VDC object.
+    """Get the specified VDC object.
 
     :param pyvcloud.vcd.client.Client client:
     :param str vdc_name:
@@ -473,7 +484,7 @@ def get_vdc(client, vdc_name, org=None, org_name=None, is_admin_operation=False)
 
 
 def get_ovdc_resource_pool(client, ovdc_name, org_name=None):
-    """Gets the name of the resource-pool of a given oVdc.
+    """Get the name of the resource-pool of a given oVdc.
 
     :param pyvcloud.vcd.client.Client client:
     :param str ovdc_name:
@@ -494,7 +505,7 @@ def get_ovdc_resource_pool(client, ovdc_name, org_name=None):
 
 
 def get_data_file(filename, logger=None):
-    """Retrieves CSE script file content as a string.
+    """Retrieve CSE script file content as a string.
 
     Used to retrieve builtin script files that users have installed
     via pip install or setup.py. Looks inside virtualenv site-packages, cwd,
@@ -543,7 +554,7 @@ def get_data_file(filename, logger=None):
 
 
 def create_and_share_catalog(org, catalog_name, catalog_desc='', logger=None):
-    """Creates and shares specified catalog.
+    """Create and share specified catalog.
 
     If catalog does not exist in vCD, create it. Share the specified catalog
     to all orgs.
@@ -635,7 +646,7 @@ def get_vsphere(config, vapp, vm_name, logger=None):
 
 
 def vgr_callback(prepend_msg='', logger=None):
-    """Creates a callback function to use for vsphere-guest-run functions.
+    """Create a callback function to use for vsphere-guest-run functions.
 
     :param str prepend_msg: string to prepend to all messages received from
         vsphere-guest-run function.
@@ -646,7 +657,6 @@ def vgr_callback(prepend_msg='', logger=None):
 
     :rtype: function
     """
-
     def callback(message, exception=None):
         msg = f"{prepend_msg}{message}"
         click.echo(msg)
@@ -677,12 +687,14 @@ def wait_until_tools_ready(vapp, vsphere, callback=vgr_callback()):
 
 def get_vcd_client(host, authorization_token, accept_header,
                    verify_ssl_certs=False):
-    """Generates vCD client from the authorization token
+    """Generate vCD client from the authorization token.
 
     :param str host: vCD host
-    :param str authorization_token: Value of 'x-vcloud-authorization' header in the http request
+    :param str authorization_token: Value of 'x-vcloud-authorization' header
+        in the http request
     :param str accept_header: Value of 'Accept' header in the http request
-    :param boolean verify_ssl_certs: Boolean value specified in config.yaml to verify ssl_certs
+    :param boolean verify_ssl_certs: Boolean value specified in config.yaml
+        to verify ssl_certs
 
     :return: Returns vCD client
 
@@ -700,17 +712,19 @@ def get_vcd_client(host, authorization_token, accept_header,
 
 
 def exception_handler(func):
-    """ This function is used as decorator, executes the function that is passed as argument.
-    returns exactly what the passed function returns.
+    """Decorator to trap exceptions and process them.
 
-    If there is any exception, returns new dictionary with keys status code and body.
+    If there are any exceptions, a dictionary containing the status code, body
+        and stacktrace will be returned.
 
-    NOTE: This decorator should be applied only on those functions that constructs the final
-    HTTP responses and also needs exception handler as additional behaviour.
+    This decorator should be applied only on those functions that constructs
+    the final HTTP responses and also needs exception handler as additional
+    behaviour.
 
-    :param func: original function that needs to be executed
+    :param method func: decorated function
 
-    :return: reference to the function that executes the passed function 'func'
+    :return: reference to the function that executes the decorated function
+        and traps exceptions raised by it.
     """
     @functools.wraps(func)
     def exception_handler_wrapper(*args, **kwargs):

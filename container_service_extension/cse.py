@@ -5,12 +5,12 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import click
-from vcd_cli.utils import stdout
 from pyvcloud.vcd.exceptions import EntityNotFoundException
+from vcd_cli.utils import stdout
 
-from container_service_extension.config import get_validated_config
 from container_service_extension.config import check_cse_installation
 from container_service_extension.config import generate_sample_config
+from container_service_extension.config import get_validated_config
 from container_service_extension.config import install_cse
 from container_service_extension.service import Service
 
@@ -139,7 +139,7 @@ def check(ctx, config, check_install, template):
     try:
         config_dict = get_validated_config(config)
     except (KeyError, ValueError, Exception):
-        # TODO replace Exception with specific (see validate_amqp_config)
+        # TODO() replace Exception with specific (see validate_amqp_config)
         click.secho(f"Config file '{config}' is invalid", fg='red')
         return
     if check_install:
