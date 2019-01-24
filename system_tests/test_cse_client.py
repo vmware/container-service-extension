@@ -20,23 +20,24 @@ def cse_server():
     This function will execute once for this module.
 
     Setup tasks:
-    - install CSE if it is not already installed
+    - If templates do not exist, install CSE using `--upgrade`
+    - If CSE is not registered properly, install CSE normally
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
+    install_cmd = ['install', '--config', env.ACTIVE_CONFIG_FILEPATH,
+                   '--ssh-key', env.SSH_KEY_FILEPATH]
     installation_exists = True
     for template in config['broker']['templates']:
         if not env.catalog_item_exists(template['catalog_item']):
             installation_exists = False
+            install_cmd.append('--update')
             break
 
     env.setup_active_config()
-    installation_exists = installation_exists and env.is_cse_registered()
-    if not installation_exists:
-        result = env.CLI_RUNNER.invoke(cli,
-                                       ['install',
-                                        '--config', env.ACTIVE_CONFIG_FILEPATH,
-                                        '--ssh-key', env.SSH_KEY_FILEPATH,
-                                        '--update'],
+    if not installation_exists \
+            or not env.is_cse_registration_valid(config['amqp']['routing_key'],
+                                                 config['amqp']['exchange']):
+        result = env.CLI_RUNNER.invoke(cli, install_cmd,
                                        input='y\ny',
                                        catch_exceptions=False)
         assert result.exit_code == 0
