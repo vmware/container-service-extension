@@ -17,9 +17,9 @@ from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import DeleteNodeError
 from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import ScriptExecutionError
+from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_vsphere
-from container_service_extension.logger import SERVER_LOGGER as LOGGER
 
 TYPE_MASTER = 'mstr'
 TYPE_NODE = 'node'
@@ -130,12 +130,15 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
         if cust_script_common is '':
             cust_script = None
         else:
-            cust_script = cust_script_init + cust_script_common + cust_script_end
+            cust_script = cust_script_init + cust_script_common + \
+                cust_script_end
         for n in range(qty):
             name = None
             while True:
-                name = '%s-%s' % (node_type, ''.join(
-                    random.choices(string.ascii_lowercase + string.digits, k=4)))
+                name = '%s-%s' % (
+                    node_type,
+                    ''.join(random.choices(
+                        string.ascii_lowercase + string.digits, k=4)))
                 try:
                     vapp.get_vm(name)
                 except Exception:
@@ -195,12 +198,15 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
                 LOGGER.debug('Enabling NFS server on %s' %
                              spec['target_vm_name'])
                 script = get_data_file('nfsd-%s.sh' % template['name'])
-                exec_results = execute_script_in_nodes(config, vapp,
-                                        template['admin_password'],
-                                        script, nodes)
+                exec_results = execute_script_in_nodes(
+                    config, vapp,
+                    template['admin_password'],
+                    script, nodes)
                 errors = get_script_execution_errors(exec_results)
                 if errors:
-                    raise ScriptExecutionError(f"Script execution failed on node {spec['target_vm_name']}:{errors}")
+                    raise ScriptExecutionError(
+                        f"Script execution failed on node "
+                        f"{spec['target_vm_name']}:{errors}")
     except Exception as e:
         node_list = [entry.get('target_vm_name') for entry in specs]
         raise NodeCreationError(node_list, str(e))
@@ -275,8 +281,8 @@ def init_cluster(config, vapp, template):
     result = execute_script_in_nodes(config, vapp, template['admin_password'],
                                      script, nodes)
     if result[0][0] != 0:
-        raise ClusterInitializationError('Couldn\'t initialize cluster:\n%s' %
-                        result[0][2].content.decode())
+        raise ClusterInitializationError(
+            f"Couldn\'t initialize cluster:\n{result[0][2].content.decode()}")
 
 
 def join_cluster(config, vapp, template, target_nodes=None):
@@ -421,7 +427,9 @@ def delete_nodes_from_cluster(config, vapp, template, nodes, force=False):
         config, vapp, password, script, master_nodes, check_tools=False)
     if result[0][0] != 0:
         if not force:
-            raise DeleteNodeError(f"Couldn't delete node(s):\n{result[0][2].content.decode()}")
+            raise DeleteNodeError(
+                f"Couldn't delete node(s):\n"
+                f"{result[0][2].content.decode()}")
 
 
 def get_script_execution_errors(results):

@@ -71,7 +71,7 @@ def _is_authorized(sys_admin_client, user_session, required_rights):
     if len(missing_rights) == 0:
         return True
 
-    LOGGER.debug(f"Authorization failed for user: {user_session.get('name')}."
+    LOGGER.debug(f"Authorization failed for user: {user_session.get('user')}."
                  f" Missing rights:{missing_rights}.")
     return False
 
