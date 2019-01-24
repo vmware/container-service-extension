@@ -1,5 +1,5 @@
 # VMware vCloud Director Python SDK
-# Copyright (c) 2018 VMware, Inc. All Rights Reserved.
+# Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ CLI_RUNNER = CliRunner()
 
 # if True, then the person testing would like to keep all artifacts that
 # were made during testing.
-DEV_MODE_AWARE = False
+DEV_MODE = False
 
 AMQP_USERNAME = None
 AMQP_PASSWORD = None
@@ -75,7 +75,7 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     :param str config_filepath:
     """
     global AMQP_USERNAME, AMQP_PASSWORD, CLIENT, ORG_HREF, VDC_HREF, \
-        CATALOG_NAME, DEV_MODE_AWARE
+        CATALOG_NAME, DEV_MODE
 
     config = testutils.yaml_to_dict(config_filepath)
     CLIENT = Client(config['vcd']['host'],
@@ -95,7 +95,7 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     AMQP_PASSWORD = config['amqp']['password']
 
     try:
-        DEV_MODE_AWARE = config['test']['developer_mode_aware']
+        DEV_MODE = config['test']['developer_mode']
     except KeyError:
         pass
 

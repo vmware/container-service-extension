@@ -1,5 +1,5 @@
 # container-service-extension
-# Copyright (c) 2017 VMware, Inc. All Rights Reserved.
+# Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
 """
@@ -65,7 +65,7 @@ def delete_installation_entities():
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     for template in config['broker']['templates']:
-        env.delete_catalog_item(template['source_ova'])
+        env.delete_catalog_item(template['source_ova_name'])
         env.delete_catalog_item(template['catalog_item'])
         env.delete_vapp(template['temp_vapp'])
     env.delete_catalog()
@@ -73,9 +73,9 @@ def delete_installation_entities():
 
     yield
 
-    if not env.DEV_MODE_AWARE:
+    if not env.DEV_MODE:
         for template in config['broker']['templates']:
-            env.delete_catalog_item(template['source_ova'])
+            env.delete_catalog_item(template['source_ova_name'])
             env.delete_catalog_item(template['catalog_item'])
             env.delete_vapp(template['temp_vapp'])
         env.delete_catalog()
@@ -130,9 +130,8 @@ def test_0010_config_invalid_keys(config):
         testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
         try:
             get_validated_config(env.ACTIVE_CONFIG_FILEPATH)
-            print(f"{env.ACTIVE_CONFIG_FILEPATH} passed validation when "
-                  f"it should not have")
-            assert False
+            assert False, f"{env.ACTIVE_CONFIG_FILEPATH} passed validation " \
+                          f"when it should not have"
         except KeyError:
             pass
 
@@ -171,9 +170,8 @@ def test_0020_config_invalid_value_types(config):
         testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
         try:
             get_validated_config(env.ACTIVE_CONFIG_FILEPATH)
-            print(f"{env.ACTIVE_CONFIG_FILEPATH} passed validation when "
-                  f"it should not have")
-            assert False
+            assert False, f"{env.ACTIVE_CONFIG_FILEPATH} passed validation " \
+                          f"when it should not have"
         except ValueError:
             pass
 
@@ -185,9 +183,8 @@ def test_0030_config_valid(config):
     try:
         get_validated_config(env.ACTIVE_CONFIG_FILEPATH)
     except (KeyError, ValueError):
-        print(f"{env.ACTIVE_CONFIG_FILEPATH} did not pass validation "
-              f"when it should have")
-        assert False
+        assert False, f"{env.ACTIVE_CONFIG_FILEPATH} did not pass validation" \
+                      f" when it should have"
 
 
 def test_0040_check_invalid_installation(config):
@@ -196,8 +193,7 @@ def test_0040_check_invalid_installation(config):
     """
     try:
         check_cse_installation(config)
-        print("cse check passed when it should have failed.")
-        assert False
+        assert False, "cse check passed when it should have failed."
     except EntityNotFoundException:
         pass
 
@@ -223,9 +219,8 @@ def test_0050_install_no_capture(config, blank_cust_scripts, unregister_cse):
         if template_dict['name'] == env.PHOTON_TEMPLATE_NAME:
             template_config = template_dict
             break
-    if template_config is None:
-        print('Target template not found in config file')
-        assert False
+    assert template_config is not None, \
+        'Target template not found in config file'
 
     result = env.CLI_RUNNER.invoke(cli,
                                    ['install',
@@ -239,25 +234,20 @@ def test_0050_install_no_capture(config, blank_cust_scripts, unregister_cse):
     assert result.exit_code == 0
 
     # check that cse was not registered
-    if env.is_cse_registered():
-        print('CSE is registered as an extension when it should not be.')
-        assert False
+    assert not env.is_cse_registered(), \
+        'CSE is registered as an extension when it should not be.'
 
     # check that source ova file exists in catalog
-    if not env.catalog_item_exists(template_config['source_ova_name']):
-        print('Source ova file does not exist when it should.')
-        assert False
+    assert env.catalog_item_exists(template_config['source_ova_name']), \
+        'Source ova file does not exist when it should.'
 
     # check that vapp templates do not exist
-    if env.catalog_item_exists(template_config['catalog_item']):
-        print('vApp templates exist when they should not (--no-capture was '
-              'used).')
-        assert False
+    assert not env.catalog_item_exists(template_config['catalog_item']), \
+        'vApp templates exist when they should not (--no-capture was used).'
 
     # check that temp vapp exists (--no-capture)
-    if not env.vapp_exists(template_config['temp_vapp']):
-        print('vApp does not exist when it should (--no-capture).')
-        assert False
+    assert env.vapp_exists(template_config['temp_vapp']), \
+        'vApp does not exist when it should (--no-capture).'
 
 
 def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
@@ -280,9 +270,8 @@ def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
         if template_dict['name'] == env.PHOTON_TEMPLATE_NAME:
             template_config = template_dict
             break
-    if template_config is None:
-        print('Target template not found in config file')
-        assert False
+    assert template_config is not None, \
+        'Target template not found in config file'
 
     testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
 
@@ -295,19 +284,16 @@ def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
     assert res.exit_code == 0
 
     # check that cse was not registered
-    if env.is_cse_registered():
-        print('CSE is registered as an extension when it should not be.')
-        assert False
+    assert not env.is_cse_registered(), \
+        'CSE is registered as an extension when it should not be.'
 
     # check that vapp template exists in catalog
-    if not env.catalog_item_exists(template_config['catalog_item']):
-        print('vApp template does not exist when it should.')
-        assert False
+    assert env.catalog_item_exists(template_config['catalog_item']), \
+        'vApp template does not exist when it should.'
 
     # check that temp vapp exists (cleanup: false)
-    if not env.vapp_exists(template_config['temp_vapp']):
-        print('vApp does not exist when it should (cleanup: false).')
-        assert False
+    assert env.vapp_exists(template_config['temp_vapp']), \
+        'vApp does not exist when it should (cleanup: false).'
 
 
 def test_0070_install_update(config, blank_cust_scripts, unregister_cse):
@@ -337,14 +323,14 @@ def test_0070_install_update(config, blank_cust_scripts, unregister_cse):
     vdc = VDC(env.CLIENT, href=env.VDC_HREF)
 
     # check that cse was registered correctly
-    if not env.is_cse_registered():
-        print('CSE is not registered as an extension when it should be.')
-        assert False
-    if not env.is_cse_registration_valid(config['amqp']['routing_key'],
-                                         config['amqp']['exchange']):
-        print('CSE is registered as an extension, but the extension settings '
-              'on vCD are not the same as config settings.')
-        assert False
+    is_cse_registered = env.is_cse_registered()
+    assert is_cse_registered, \
+        'CSE is not registered as an extension when it should be.'
+    if is_cse_registered:
+        assert env.is_cse_registration_valid(config['amqp']['routing_key'],
+                                             config['amqp']['exchange']), \
+            'CSE is registered as an extension, but the extension settings ' \
+            'on vCD are not the same as config settings.'
 
     # ssh into vms to check for installed software
     ssh_client = paramiko.SSHClient()
@@ -352,16 +338,14 @@ def test_0070_install_update(config, blank_cust_scripts, unregister_cse):
 
     # check that ova files and temp vapps exist
     for template_config in config['broker']['templates']:
-        if not env.catalog_item_exists(template_config['source_ova_name']):
-            print('Source ova files do not exist when they should.')
-            assert False
+        assert env.catalog_item_exists(template_config['source_ova_name']), \
+            'Source ova files do not exist when they should.'
 
         temp_vapp_name = template_config['temp_vapp']
         try:
             vapp_resource = vdc.get_vapp(temp_vapp_name)
         except EntityNotFoundException:
-            print('vApp does not exist when it should (--no-capture)')
-            assert False
+            assert False, 'vApp does not exist when it should (--no-capture)'
 
         vapp = VApp(env.CLIENT, resource=vapp_resource)
         ip = vapp.get_primary_ip(temp_vapp_name)
@@ -375,9 +359,8 @@ def test_0070_install_update(config, blank_cust_scripts, unregister_cse):
                 stdin, stdout, stderr = ssh_client.exec_command("rpm -qa")
                 installed = [line.strip('.x86_64\n') for line in stdout]
                 for package in packages:
-                    if package not in installed:
-                        print(f"{package} not found in Photon VM")
-                        assert False
+                    assert package in installed, \
+                        f"{package} not found in Photon VM"
             elif 'ubuntu' in temp_vapp_name:
                 script = utils.get_data_file(env.STATIC_UBUNTU_CUST_SCRIPT)
                 pattern = r'((kubernetes|docker\S*|kubelet|kubeadm|kubectl)\S*=\S*)'  # noqa
@@ -386,9 +369,8 @@ def test_0070_install_update(config, blank_cust_scripts, unregister_cse):
                 stdin, stdout, stderr = ssh_client.exec_command(cmd)
                 installed = [line.strip() for line in stdout]
                 for package in packages:
-                    if package not in installed:
-                        print(f"{package} not found in Ubuntu VM")
-                        assert False
+                    assert package in installed, \
+                        f"{package} not found in Ubuntu VM"
         finally:
             ssh_client.close()
 
@@ -401,7 +383,8 @@ def test_0080_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
     expected: temp vapps are deleted
     """
     for template_config in config['broker']['templates']:
-        assert template_config['cleanup']
+        assert template_config['cleanup'], \
+            "'cleanup' key in template config should be True"
 
     result = env.CLI_RUNNER.invoke(cli,
                                    ['install',
@@ -412,25 +395,23 @@ def test_0080_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
     assert result.exit_code == 0
 
     # check that cse was registered correctly
-    if not env.is_cse_registered():
-        print('CSE is not registered as an extension when it should be.')
-        assert False
-    if not env.is_cse_registration_valid(config['amqp']['routing_key'],
-                                         config['amqp']['exchange']):
-        print('CSE is registered as an extension, but the extension settings '
-              'on vCD are not the same as config settings.')
-        assert False
+    is_cse_registered = env.is_cse_registered()
+    assert is_cse_registered, \
+        'CSE is not registered as an extension when it should be.'
+    if is_cse_registered:
+        assert env.is_cse_registration_valid(config['amqp']['routing_key'],
+                                             config['amqp']['exchange']), \
+            'CSE is registered as an extension, but the extension settings ' \
+            'on vCD are not the same as config settings.'
 
     for template_config in config['broker']['templates']:
         # check that vapp templates exists
-        if not env.catalog_item_exists(template_config['catalog_item']):
-            print('vApp template does not exist when it should.')
-            assert False
+        assert env.catalog_item_exists(template_config['catalog_item']), \
+            'vApp template does not exist when it should.'
 
         # check that temp vapps do not exist (cleanup: true)
-        if env.vapp_exists(template_config['temp_vapp']):
-            print('Temp vapp exists when it should not (cleanup: True).')
-            assert False
+        assert not env.vapp_exists(template_config['temp_vapp']), \
+            'Temp vapp exists when it should not (cleanup: True).'
 
 
 def test_0090_cse_check_valid_installation(config):
@@ -442,8 +423,7 @@ def test_0090_cse_check_valid_installation(config):
     try:
         check_cse_installation(config)
     except EntityNotFoundException:
-        print("cse check failed when it should have passed.")
-        assert False
+        assert False, "cse check failed when it should have passed."
 
 
 def test_0100_cse_check_invalid_installation(config):
@@ -457,8 +437,7 @@ def test_0100_cse_check_invalid_installation(config):
 
     try:
         check_cse_installation(config)
-        print("cse check passed when it should have failed.")
-        assert False
+        assert False, "cse check passed when it should have failed."
     except EntityNotFoundException:
         pass
 
@@ -468,8 +447,12 @@ def test_0110_cse_run():
 
 
 def test_0120_cse_sample():
-    pass
+    # TODO: maybe add a check
+    result = env.CLI_RUNNER.invoke(cli, ['sample'], catch_exceptions=False)
+    assert result.exit_code == 0
 
 
 def test_0130_cse_version():
-    pass
+    # TODO: maybe add a check
+    result = env.CLI_RUNNER.invoke(cli, ['version'], catch_exceptions=False)
+    assert result.exit_code == 0
