@@ -100,13 +100,12 @@ def version(ctx):
 @cli.command('sample', short_help='generate sample configuration')
 @click.pass_context
 @click.option(
-    '-pks',
-    '--with-pks',
+    '--pks',
     'with_pks',
     is_flag=True,
     required=False,
     default=False,
-    help="If '--with-pks' flag is set, CSE sample config file is "
+    help="If '--pks' flag is set, CSE sample config file is "
          "generated along with pks details in it.")
 def sample(ctx, with_pks):
     """Generate sample CSE configuration."""
@@ -125,7 +124,6 @@ def sample(ctx, with_pks):
     default='config.yaml',
     help='Config file to use.')
 @click.option(
-    '-pks',
     '--pks-config',
     'pks_config',
     type=click.Path(exists=True),
