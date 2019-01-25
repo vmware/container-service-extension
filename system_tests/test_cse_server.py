@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 """
-CSE server tests
+CSE server tests.
 
 NOTES:
     - Edit 'base_config.yaml' for your own vCD instance
@@ -38,21 +38,23 @@ $ cse install --config cse_test_config.yaml --ssh-key ~/.ssh/id_rsa.pub
 $ cse install --config cse_test_config.yaml
 $ cse check --config cse_test_config.yaml -i
 $ cse check --config cse_test_config.yaml -i (invalid templates)
+
 """
-import pytest
+
 import re
 
+import paramiko
+import pytest
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 
-import paramiko
+from container_service_extension.config import check_cse_installation
+from container_service_extension.config import get_validated_config
+from container_service_extension.cse import cli
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
 import container_service_extension.utils as utils
-from container_service_extension.config import get_validated_config
-from container_service_extension.config import check_cse_installation
-from container_service_extension.cse import cli
 
 
 @pytest.fixture(scope='module', autouse='true')
@@ -84,8 +86,7 @@ def delete_installation_entities():
 
 @pytest.fixture
 def blank_cust_scripts():
-    """Fixture to ensure that the customization scripts for installation are
-        empty (so we don't waste time running the scripts).
+    """Fixture to ensure that the customization scripts are empty.
 
     Usage: add the parameter 'default_amqp_settings' to the test function.
     """
@@ -104,9 +105,7 @@ def unregister_cse():
 
 
 def test_0010_config_invalid_keys(config):
-    """Tests that config files with invalid/extra keys do not pass
-    config validation.
-    """
+    """Test that config files with invalid/extra keys don't pass validation."""
     bad_key_config1 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
     del bad_key_config1['amqp']
     bad_key_config1['extra_section'] = True
@@ -137,10 +136,7 @@ def test_0010_config_invalid_keys(config):
 
 
 def test_0020_config_invalid_value_types(config):
-    """Tests that config file with invalid value types do not pass
-    config validation.
-    """
-    # tests for when config file has incorrect value types
+    """Test that configs with invalid value types don't pass validation."""
     bad_values_config1 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
     bad_values_config1['vcd'] = True
     bad_values_config1['vcs'] = 'a'
@@ -177,9 +173,7 @@ def test_0020_config_invalid_value_types(config):
 
 
 def test_0030_config_valid(config):
-    """Tests that config file with valid keys and value types pass
-    config validation.
-    """
+    """Test that configs with valid keys and value types pass validation."""
     try:
         get_validated_config(env.ACTIVE_CONFIG_FILEPATH)
     except (KeyError, ValueError):
@@ -188,9 +182,7 @@ def test_0030_config_valid(config):
 
 
 def test_0040_check_invalid_installation(config):
-    """Tests cse check against config files that are invalid/have not been
-    used for installation.
-    """
+    """Test cse check against configs that are invalid/haven't been used."""
     try:
         check_cse_installation(config)
         assert False, "cse check passed when it should have failed."
@@ -199,12 +191,16 @@ def test_0040_check_invalid_installation(config):
 
 
 def test_0050_install_no_capture(config, blank_cust_scripts, unregister_cse):
-    """Tests installation options: '--config', '--template', '--amqp skip',
+    """Test install.
+
+    Installation options: '--config', '--template', '--amqp skip',
         '--ext skip', '--ssh-key', '--no-capture'.
-    Tests that installation downloads/uploads ova file,
-    creates photon temp vapp,
-    skips cse registration,
-    and skips temp vapp capture.
+
+    Tests that installation:
+    - downloads/uploads ova file,
+    - creates photon temp vapp,
+    - skips cse registration,
+    - skips temp vapp capture.
 
     command: cse install --config cse_test_config.yaml --template photon-v2
         --amqp skip --ext skip --ssh-key ~/.ssh/id_rsa.pub --no-capture
@@ -252,10 +248,12 @@ def test_0050_install_no_capture(config, blank_cust_scripts, unregister_cse):
 
 def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
                                                unregister_cse):
-    """Tests installation when temp vapp already exists.
-    Tests that installation skips cse registration (answering no to prompt),
-    captures temp vapp as template correctly,
-    does not delete temp_vapp when config file 'cleanup' property is false.
+    """Test installation when temp vapp already exists.
+
+    Tests that installation:
+    - skips cse registration (answering no to prompt),
+    - captures temp vapp as template correctly,
+    - does not delete temp_vapp when config file 'cleanup' property is false.
 
     command: cse install --config cse_test_config.yaml
         --template photon-v2
@@ -298,9 +296,11 @@ def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
 
 def test_0070_install_update(config, blank_cust_scripts, unregister_cse):
     """Tests installation option: '--update'.
-    Tests that installation registers cse (when answering yes to prompt),
-    creates all templates correctly,
-    customizes temp vapps correctly.
+
+    Tests that installation:
+    - registers cse (when answering yes to prompt),
+    - creates all templates correctly,
+    - customizes temp vapps correctly.
 
     command: cse install --config cse_test_config.yaml
         --ssh-key ~/.ssh/id_rsa.pub --update --no-capture
@@ -377,6 +377,7 @@ def test_0070_install_update(config, blank_cust_scripts, unregister_cse):
 
 def test_0080_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
     """Tests that installation deletes temp vapps when 'cleanup' is True.
+
     Tests that '--amqp/--ext config' configures vcd amqp and registers cse.
 
     command: cse install --config cse_test_config.yaml
@@ -447,12 +448,12 @@ def test_0110_cse_run():
 
 
 def test_0120_cse_sample():
-    # TODO: maybe add a check
+    # TODO(): maybe add a check
     result = env.CLI_RUNNER.invoke(cli, ['sample'], catch_exceptions=False)
     assert result.exit_code == 0
 
 
 def test_0130_cse_version():
-    # TODO: maybe add a check
+    # TODO(): maybe add a check
     result = env.CLI_RUNNER.invoke(cli, ['version'], catch_exceptions=False)
     assert result.exit_code == 0

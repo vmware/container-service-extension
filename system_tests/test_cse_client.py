@@ -2,15 +2,16 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import pytest
 import subprocess
 import time
 
+import pytest
+from vcd_cli.vcd import vcd
+
+from container_service_extension.cse import cli
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
 import container_service_extension.utils as utils
-from container_service_extension.cse import cli
-from vcd_cli.vcd import vcd
 
 
 @pytest.fixture(scope='module', autouse=True)

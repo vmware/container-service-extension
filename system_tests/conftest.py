@@ -4,6 +4,7 @@
 
 """
 conftest.py is used by pytest to automatically find shared fixtures.
+
 Fixtures defined here can be used without importing.
 """
 import pytest

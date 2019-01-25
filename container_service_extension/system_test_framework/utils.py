@@ -29,7 +29,7 @@ def dict_to_yaml_file(dikt, filepath):
 
 
 def yaml_to_dict(filepath):
-    """Gets a dictionary from a yaml file.
+    """Get a dictionary from a yaml file.
 
     :param str filepath: the file path to the yaml file.
 

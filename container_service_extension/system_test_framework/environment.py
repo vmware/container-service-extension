@@ -24,10 +24,10 @@ from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vdc import VDC
 
-import container_service_extension.system_test_framework.utils as testutils
-import container_service_extension.utils as utils
 from container_service_extension.server_constants import CSE_SERVICE_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
+import container_service_extension.system_test_framework.utils as testutils
+import container_service_extension.utils as utils
 """
 This module manages environment state during CSE system tests.
 These variables persist through all test cases and do not change.
@@ -160,7 +160,7 @@ def delete_catalog(catalog_name=None):
     org = Org(CLIENT, href=ORG_HREF)
     try:
         org.delete_catalog(catalog_name)
-        # TODO no way currently to wait for catalog deletion.
+        # TODO() no way currently to wait for catalog deletion.
         # https://github.com/vmware/pyvcloud/issues/334
         # below causes EntityNotFoundException, catalog not found.
         # time.sleep(15)
@@ -178,13 +178,13 @@ def unregister_cse():
 
 
 def prepare_customization_scripts():
-    """Copies real customization scripts to the active customization scripts.
+    """Copy real customization scripts to the active customization scripts.
+
     Copy 'CUST-PHOTON.sh' to 'cust-photon-v2.sh'
     Copy 'CUST-UBUNTU.sh' to 'cust-ubuntu-16.04.sh'
 
     :raises FileNotFoundError: if script files cannot be found.
     """
-
     scripts_filepaths = {
         f"{SCRIPTS_DIR}/{STATIC_PHOTON_CUST_SCRIPT}":
             f"{SCRIPTS_DIR}/{ACTIVE_PHOTON_CUST_SCRIPT}",
@@ -201,7 +201,6 @@ def blank_customizaton_scripts():
 
     :raises FileNotFoundError: if script files cannot be found.
     """
-
     scripts_paths = [
         Path(f"{SCRIPTS_DIR}/{ACTIVE_PHOTON_CUST_SCRIPT}"),
         Path(f"{SCRIPTS_DIR}/{ACTIVE_UBUNTU_CUST_SCRIPT}")
