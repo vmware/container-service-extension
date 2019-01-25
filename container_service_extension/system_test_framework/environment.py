@@ -26,8 +26,8 @@ from pyvcloud.vcd.vdc import VDC
 
 import container_service_extension.system_test_framework.utils as testutils
 import container_service_extension.utils as utils
-from container_service_extension.config import CSE_NAME
-from container_service_extension.config import CSE_NAMESPACE
+from container_service_extension.server_constants import CSE_SERVICE_NAME
+from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
 """
 This module manages environment state during CSE system tests.
 These variables persist through all test cases and do not change.
@@ -171,7 +171,8 @@ def delete_catalog(catalog_name=None):
 
 def unregister_cse():
     try:
-        APIExtension(CLIENT).delete_extension(CSE_NAME, CSE_NAMESPACE)
+        APIExtension(CLIENT).delete_extension(CSE_SERVICE_NAME,
+                                              CSE_SERVICE_NAMESPACE)
     except MissingRecordException:
         pass
 
@@ -232,7 +233,8 @@ def vapp_exists(vapp_name):
 
 def is_cse_registered():
     try:
-        APIExtension(CLIENT).get_extension(CSE_NAME, namespace=CSE_NAMESPACE)
+        APIExtension(CLIENT).get_extension(CSE_SERVICE_NAME,
+                                           namespace=CSE_SERVICE_NAMESPACE)
         return True
     except MissingRecordException:
         return False
@@ -240,8 +242,8 @@ def is_cse_registered():
 
 def is_cse_registration_valid(routing_key, exchange):
     try:
-        ext = APIExtension(CLIENT).get_extension(CSE_NAME,
-                                                 namespace=CSE_NAMESPACE)
+        ext = APIExtension(CLIENT).get_extension(CSE_SERVICE_NAME,
+                                                 namespace=CSE_SERVICE_NAMESPACE)  # noqa
     except MissingRecordException:
         return False
 
