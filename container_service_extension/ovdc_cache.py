@@ -2,18 +2,19 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from pyvcloud.vcd import utils
+
 from container_service_extension.utils import get_org
 from container_service_extension.utils import get_vdc
-from pyvcloud.vcd import utils
 
 
 class PvdcCacheStub(object):
 
     def __init__(self):
-        """ Constructor for pvdc cache. Initializes pvdc and pks cache.
+        """Construct, initialize pvdc and pks cache.
 
-            Always returns the canned data. This is a thrown away class
-            after actual PvdcCache is implemented
+        Always returns the scanned data. This is a thrown away class
+        after actual PvdcCache is implemented
 
         """
         self.pvdc_cache = dict()
@@ -47,7 +48,7 @@ class PvdcCacheStub(object):
 class OvdcCache(object):
 
     def __init__(self, client):
-        """ Constructor of OvdcCache
+        """Construct the cache for ovdc.
 
         :param pyvcloud.vcd.client.Client client:the client that will be used
             to make REST calls to vCD.
@@ -56,8 +57,9 @@ class OvdcCache(object):
         self.pvdc_cache = PvdcCacheStub()
 
     def get_ovdc_backend_metadata(self, ovdc_name, org_name=None):
-        """Gets ovdc metadata pertaining to the backend(vcd/pks),
-        this ovdc is dedicated to deploy K8 clusters on.
+        """Get ovdc metadata pertaining to the backend(vcd/pks).
+
+        The backend that this ovdc is dedicated to deploy K8 clusters on.
 
         :param str ovdc_name: name of the ovdc
         :param str org_name: specific org to use if @org is not given.
@@ -69,7 +71,6 @@ class OvdcCache(object):
 
         :raises EntityNotFoundException: if the ovdc could not be found.
         """
-
         # Get pvdc and pks information from pvdc cache
         ovdc = get_vdc(self.client, ovdc_name, org_name=org_name,
                        is_admin_operation=True)
@@ -94,7 +95,7 @@ class OvdcCache(object):
     def set_ovdc_backend_meta_data(self, ovdc_name, org_name=None,
                                    backend=None,
                                    pks_plans=''):
-        """sets the backing pvdc and pks information of a given oVdc.
+        """Set the backing pvdc and pks information of a given oVdc.
 
         :param str ovdc_name: name of the ovdc
         :param str org_name: specific org to use if @org is not given.
@@ -104,7 +105,6 @@ class OvdcCache(object):
         :param str pks_plans: pks plan for deployment. If backend is vcd
             or None, plans are not used and not relevant to the context.
         """
-
         metadata = dict()
         org = get_org(self.client, org_name=org_name)
         ovdc = get_vdc(self.client, ovdc_name, org=org,
