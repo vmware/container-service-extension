@@ -11,8 +11,6 @@ import uuid
 import click
 import pkg_resources
 from pyvcloud.vcd.client import _WellKnownEndpoint
-from pyvcloud.vcd.client import BasicLoginCredentials
-from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import TaskStatus
 from pyvcloud.vcd.client import VCLOUD_STATUS_MAP
 from pyvcloud.vcd.org import Org
@@ -20,7 +18,6 @@ from pyvcloud.vcd.task import Task
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
-import requests
 
 from container_service_extension.abstract_broker import AbstractBroker
 # from container_service_extension.authorization import secure
@@ -47,14 +44,15 @@ from container_service_extension.exceptions import WorkerNodeCreationError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 # from container_service_extension.server_constants import \
 #     CSE_NATIVE_DEPLOY_RIGHT_NAME
+from container_service_extension.service import Service
 from container_service_extension.utils import ACCEPTED
+from container_service_extension.utils import connect_vcd_user_via_token
 from container_service_extension.utils import ERROR_DESCRIPTION
 from container_service_extension.utils import ERROR_MESSAGE
 from container_service_extension.utils import ERROR_STACKTRACE
 from container_service_extension.utils import error_to_json
 from container_service_extension.utils import exception_handler
 from container_service_extension.utils import OK
-from container_service_extension.utils import SYSTEM_ORG_NAME
 
 
 OP_CREATE_CLUSTER = 'create_cluster'
@@ -73,9 +71,10 @@ MAX_HOST_NAME_LENGTH = 25
 ROLLBACK_FLAG = 'disable_rollback'
 
 
-def get_new_broker(config, headers, request_body=None):
-    if config['broker']['type'] == 'default':
-        return DefaultBroker(config, headers, request_body)
+def get_new_broker(headers, request_body):
+    server_run_config = Service().get_service_run_config()
+    if server_run_config['broker']['type'] == 'default':
+        return DefaultBroker(headers, request_body)
     else:
         return None
 
@@ -135,66 +134,35 @@ def task_callback(task):
 
 
 class DefaultBroker(AbstractBroker, threading.Thread):
-    def __init__(self, config, headers, request_body):
+    def __init__(self, headers, request_body):
         threading.Thread.__init__(self)
-        self.config = config
-        self.host = config['vcd']['host']
-        self.username = config['vcd']['username']
-        self.password = config['vcd']['password']
-        self.version = config['vcd']['api_version']
-        self.verify = config['vcd']['verify']
-        self.log = config['vcd']['log']
         self.headers = headers
         self.body = request_body
-
-    def get_sys_admin_client(self):
-        self._connect_sysadmin()
-        return self.client_sysadmin
+        self.client_tenant = None
 
     def get_tenant_client_session(self):
-        return self._get_tenant_session()
+        client, session = self._get_tenant_session()
+        return session
 
-    def _connect_sysadmin(self):
-        if not self.verify:
-            LOGGER.warning('InsecureRequestWarning: '
-                           'Unverified HTTPS request is being made. '
-                           'Adding certificate verification is strongly '
-                           'advised.')
-            requests.packages.urllib3.disable_warnings()
-        self.client_sysadmin = Client(
-            uri=self.host,
-            api_version=self.version,
-            verify_ssl_certs=self.verify,
-            log_headers=True,
-            log_bodies=True)
-        credentials = BasicLoginCredentials(self.username,
-                                            SYSTEM_ORG_NAME,
-                                            self.password)
-        self.client_sysadmin.set_credentials(credentials)
-
-    def _get_tenant_session(self):
+    def _get_tenant_client_and_session(self):
+        server_run_config = Service().get_service_run_config()
+        host = server_run_config['vcd']['host']
+        verify = server_run_config['vcd']['verify']
         token = self.headers.get('x-vcloud-authorization')
         accept_header = self.headers.get('Accept')
-        version = accept_header.split('version=')[1]
-        self.client_tenant = Client(
-            uri=self.host,
-            api_version=version,
-            verify_ssl_certs=self.verify,
-            log_headers=True,
-            log_bodies=True)
-        return self.client_tenant.rehydrate_from_token(token)
+        return connect_vcd_user_via_token(
+            vcd_uri=host,
+            token=token,
+            accept_header=accept_header,
+            verify_ssl_certs=verify)
 
     def _connect_tenant(self):
-        session = self._get_tenant_session()
+        self.client_tenant, session = self._get_tenant_client_and_session()
         return {
-            'user_name':
-            session.get('user'),
-            'user_id':
-            session.get('userId'),
-            'org_name':
-            session.get('org'),
-            'org_href':
-            self.client_tenant._get_wk_endpoint(
+            'user_name': session.get('user'),
+            'user_id': session.get('userId'),
+            'org_name': session.get('org'),
+            'org_href': self.client_tenant._get_wk_endpoint(
                 _WellKnownEndpoint.LOGGED_IN_ORG)
         }
 
@@ -247,12 +215,13 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         return all(allowed.match(x) for x in name.split("."))
 
     def get_template(self, name=None):
+        server_run_config = Service().get_service_run_config()
         if name is None:
             if 'template' in self.body and self.body['template'] is not None:
                 name = self.body['template']
             else:
-                name = self.config['broker']['default_template']
-        for template in self.config['broker']['templates']:
+                name = server_run_config['broker']['default_template']
+        for template in server_run_config['broker']['templates']:
             if template['name'] == name:
                 return template
         raise Exception('Template %s not found' % name)
@@ -387,10 +356,11 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         """
         # TODO(right template) find a right way to retrieve
         # the template from which nfs node was created.
-        template = self.config['broker']['templates'][0]
+        server_run_config = Service().get_service_run_config()
+        template = server_run_config['broker']['templates'][0]
         script = '#!/usr/bin/env bash\nshowmount -e %s' % ip
         result = execute_script_in_nodes(
-            self.config, vapp, template['admin_password'],
+            server_run_config, vapp, template['admin_password'],
             script, nodes=[node], check_tools=False)
         lines = result[0][1].content.decode().split('\n')
         exports = []
@@ -480,8 +450,9 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                                                              self.cluster_id))
             vapp.reload()
 
+            server_run_config = Service().get_service_run_config()
             try:
-                add_nodes(1, template, TYPE_MASTER, self.config,
+                add_nodes(1, template, TYPE_MASTER, server_run_config,
                           self.client_tenant, org, vdc, vapp, self.body)
             except Exception as e:
                 raise MasterNodeCreationError(
@@ -492,8 +463,8 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                 message='Initializing cluster %s(%s)' % (self.cluster_name,
                                                          self.cluster_id))
             vapp.reload()
-            init_cluster(self.config, vapp, template)
-            master_ip = get_master_ip(self.config, vapp, template)
+            init_cluster(server_run_config, vapp, template)
+            master_ip = get_master_ip(server_run_config, vapp, template)
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      master_ip)
             self.client_tenant.get_task_monitor().wait_for_status(task)
@@ -505,8 +476,8 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                      self.cluster_id))
                 try:
                     add_nodes(self.body['node_count'], template, TYPE_NODE,
-                              self.config, self.client_tenant, org, vdc, vapp,
-                              self.body)
+                              server_run_config, self.client_tenant, org, vdc,
+                              vapp, self.body)
                 except Exception as e:
                     raise WorkerNodeCreationError(
                         "Error while creating worker node:", str(e))
@@ -517,7 +488,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                     (self.body['node_count'], self.cluster_name,
                      self.cluster_id))
                 vapp.reload()
-                join_cluster(self.config, vapp, template)
+                join_cluster(server_run_config, vapp, template)
             if self.body['enable_nfs']:
                 self.update_task(
                     TaskStatus.RUNNING,
@@ -526,8 +497,8 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                              self.cluster_id))
                 try:
                     add_nodes(1, template, TYPE_NFS,
-                              self.config, self.client_tenant, org, vdc, vapp,
-                              self.body)
+                              server_run_config, self.client_tenant, org, vdc,
+                              vapp, self.body)
                 except Exception as e:
                     raise NFSNodeCreationError(
                         "Error while creating NFS node:", str(e))
@@ -655,6 +626,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         LOGGER.debug('about to add nodes to cluster with name: %s',
                      self.cluster_name)
         try:
+            server_run_config = Service().get_service_run_config()
             org_resource = self.client_tenant.get_org()
             org = Org(self.client_tenant, resource=org_resource)
             vdc = VDC(self.client_tenant, href=self.cluster['vdc_href'])
@@ -668,7 +640,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                          self.cluster_id))
             new_nodes = add_nodes(self.body['node_count'], template,
                                   self.body['node_type'],
-                                  self.config, self.client_tenant,
+                                  server_run_config, self.client_tenant,
                                   org, vdc, vapp, self.body)
             if self.body['node_type'] == TYPE_NFS:
                 self.update_task(
@@ -688,7 +660,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                 for spec in new_nodes['specs']:
                     target_nodes.append(spec['target_vm_name'])
                 vapp.reload()
-                join_cluster(self.config, vapp, template, target_nodes)
+                join_cluster(server_run_config, vapp, template, target_nodes)
                 self.update_task(
                     TaskStatus.SUCCESS,
                     message='Added %s node(s) to cluster %s(%s)' %
@@ -762,7 +734,8 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                 message='Deleting %s node(s) from %s(%s)' %
                 (len(self.body['nodes']), self.cluster_name, self.cluster_id))
             try:
-                delete_nodes_from_cluster(self.config,
+                server_run_config = Service().get_service_run_config
+                delete_nodes_from_cluster(server_run_config,
                                           vapp,
                                           template,
                                           self.body['nodes'],

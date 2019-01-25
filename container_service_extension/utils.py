@@ -27,6 +27,7 @@ import requests
 from vsphere_guest_run.vsphere import VSphere
 
 from container_service_extension.exceptions import VcdResponseError
+from container_service_extension.logger import SERVER_DEBUG_LOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 
 cache = LRUCache(maxsize=1024)
@@ -59,6 +60,29 @@ OK = 200
 CREATED = 201
 ACCEPTED = 202
 INTERNAL_SERVER_ERROR = 500
+
+
+def connect_vcd_user_via_token(vcd_uri, token, accept_header,
+                               verify_ssl_certs=True):
+    if not verify_ssl_certs:
+        LOGGER.warning('InsecureRequestWarning: Unverified HTTPS request is '
+                       'being made. Adding certificate verification is '
+                       'strongly advised.')
+        requests.packages.urllib3.disable_warnings()
+    version = accept_header.split('version=')[1]
+    client_tenant = Client(
+        uri=vcd_uri,
+        api_version=version,
+        verify_ssl_certs=verify_ssl_certs,
+        log_file=SERVER_DEBUG_LOG_FILEPATH,
+        log_requests=True,
+        log_headers=True,
+        log_bodies=True)
+    session = client_tenant.rehydrate_from_token(token)
+    return (
+        client_tenant,
+        session,
+    )
 
 
 def error_to_json(error):
@@ -460,7 +484,8 @@ def get_org(client, org_name=None):
     return org
 
 
-def get_vdc(client, vdc_name, org=None, org_name=None, is_admin_operation=False):
+def get_vdc(client, vdc_name, org=None, org_name=None,
+            is_admin_operation=False):
     """Get the specified VDC object.
 
     :param pyvcloud.vcd.client.Client client:
@@ -479,7 +504,8 @@ def get_vdc(client, vdc_name, org=None, org_name=None, is_admin_operation=False)
     """
     if org is None:
         org = get_org(client, org_name=org_name)
-    vdc = VDC(client, resource=org.get_vdc(vdc_name, is_admin_operation=is_admin_operation))
+    vdc = VDC(client, resource=org.get_vdc(vdc_name,
+              is_admin_operation=is_admin_operation))
     return vdc
 
 
