@@ -29,14 +29,14 @@ from container_service_extension.exceptions import AmqpError
 from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
-from container_service_extension.server_constants import \
-    CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY
-from container_service_extension.server_constants import \
-    CSE_NATIVE_DEPLOY_RIGHT_CATEGORY
-from container_service_extension.server_constants import \
-    CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION
-from container_service_extension.server_constants import \
-    CSE_NATIVE_DEPLOY_RIGHT_NAME
+from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY
+from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_CATEGORY
+from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION
+from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_NAME
+from container_service_extension.server_constants import CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY
+from container_service_extension.server_constants import CSE_PKS_DEPLOY_RIGHT_CATEGORY
+from container_service_extension.server_constants import CSE_PKS_DEPLOY_RIGHT_DESCRIPTION
+from container_service_extension.server_constants import CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
 from container_service_extension.utils import catalog_exists
@@ -107,34 +107,28 @@ SAMPLE_TEMPLATE_PHOTON_V2 = {
     'name': 'photon-v2',
     'catalog_item': 'photon-custom-hw11-2.0-304b817-k8s',
     'source_ova_name': 'photon-custom-hw11-2.0-304b817.ova',
-    'source_ova': 'http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova',
-# noqa
-    'sha256_ova': 'cb51e4b6d899c3588f961e73282709a0d054bb421787e140a1d80c24d4fd89e1',
-# noqa
+    'source_ova': 'http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova',  # noqa
+    'sha256_ova': 'cb51e4b6d899c3588f961e73282709a0d054bb421787e140a1d80c24d4fd89e1',  # noqa
     'temp_vapp': 'photon2-temp',
     'cleanup': True,
     'cpu': 2,
     'mem': 2048,
     'admin_password': 'guest_os_admin_password',
-    'description': 'PhotonOS v2\nDocker 17.06.0-4\nKubernetes 1.9.1\nweave 2.3.0'
-# noqa
+    'description': 'PhotonOS v2\nDocker 17.06.0-4\nKubernetes 1.9.1\nweave 2.3.0'  # noqa
 }
 
 SAMPLE_TEMPLATE_UBUNTU_16_04 = {
     'name': 'ubuntu-16.04',
     'catalog_item': 'ubuntu-16.04-server-cloudimg-amd64-k8s',
     'source_ova_name': 'ubuntu-16.04-server-cloudimg-amd64.ova',
-    'source_ova': 'https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova',
-# noqa
-    'sha256_ova': '3c1bec8e2770af5b9b0462e20b7b24633666feedff43c099a6fb1330fcc869a9',
-# noqa
+    'source_ova': 'https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova',  # noqa
+    'sha256_ova': '3c1bec8e2770af5b9b0462e20b7b24633666feedff43c099a6fb1330fcc869a9',  # noqa
     'temp_vapp': 'ubuntu1604-temp',
     'cleanup': True,
     'cpu': 2,
     'mem': 2048,
     'admin_password': 'guest_os_admin_password',
-    'description': 'Ubuntu 16.04\nDocker 18.03.0~ce\nKubernetes 1.10.1\nweave 2.3.0'
-# noqa
+    'description': 'Ubuntu 16.04\nDocker 18.03.0~ce\nKubernetes 1.10.1\nweave 2.3.0'  # noqa
 }
 
 SAMPLE_BROKER_CONFIG = {
@@ -517,7 +511,16 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
             register_cse(client, amqp['routing_key'], amqp['exchange'])
 
         # register new right for CSE
-        register_right(client)
+        register_right(client, right_name=CSE_NATIVE_DEPLOY_RIGHT_NAME,
+                       description=CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,
+                       category=CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,
+                       bundle_key=CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY)
+
+        # register new right for PKS
+        register_right(client, right_name=CSE_PKS_DEPLOY_RIGHT_NAME,
+                       description=CSE_PKS_DEPLOY_RIGHT_DESCRIPTION,
+                       category=CSE_PKS_DEPLOY_RIGHT_CATEGORY,
+                       bundle_key=CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY)
 
         # set up cse catalog
         org = get_org(client, org_name=config['broker']['org'])
@@ -1072,13 +1075,13 @@ def should_register_cse(client, ext_install):
         cse_info = ext.get_extension_info(CSE_SERVICE_NAME,
                                           namespace=CSE_SERVICE_NAMESPACE)
         msg = f"Found '{CSE_SERVICE_NAME}' extension on vCD, enabled=" \
-              f"{cse_info['enabled']}"
+            f"{cse_info['enabled']}"
         click.secho(msg, fg='green')
         LOGGER.info(msg)
         return False
     except MissingRecordException:
         prompt_msg = f"Register '{CSE_SERVICE_NAME}' as an API extension in " \
-                     "vCD?"
+            "vCD?"
         if ext_install == 'prompt' and not click.confirm(prompt_msg):
             msg = f"Skipping CSE registration."
             click.secho(msg, fg='yellow')
@@ -1109,34 +1112,42 @@ def register_cse(client, amqp_routing_key, exchange_name):
     LOGGER.info(msg)
 
 
-def register_right(client):
+def register_right(client, right_name, description, category, bundle_key):
     """Register a right for CSE.
 
     :param pyvcloud.vcd.client.Client client:
+    :param str right_name: the name of the new right to be registered.
+    :param str description: brief description about the new right.
+    :param str category: add the right in existing categories in
+        vCD Roles and Rights or specify a new category name.
+    :param str bundle_key: is used to identify the right name and change
+        its value to different languages using localization bundle.
+
     :raises BadRequestException: if a right with given name already
         exists in vCD.
     """
     ext = APIExtension(client)
     try:
         ext.add_service_right(
-            CSE_NATIVE_DEPLOY_RIGHT_NAME,
+            right_name,
             CSE_SERVICE_NAME,
             CSE_SERVICE_NAMESPACE,
-            CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,
-            CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,
-            CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY)
+            description,
+            category,
+            bundle_key)
 
-        msg = f"Register {CSE_NATIVE_DEPLOY_RIGHT_NAME} as a Right in vCD"
+        msg = f"Register {right_name} as a Right in vCD"
         click.secho(msg, fg='green')
         LOGGER.info(msg)
     except BadRequestException as err:
-
+        # TODO() replace string matching logic to look for specific right
         right_exists_msg = f'Right with name "{{{CSE_SERVICE_NAME}}}:' \
-                           f'{CSE_NATIVE_DEPLOY_RIGHT_NAME}" already exists'
+                           f'{right_name}" already exists'
         if right_exists_msg in str(err):
-            msg = f"Right: {CSE_NATIVE_DEPLOY_RIGHT_NAME} already " \
+            msg = f"Right: {right_name} already " \
                   f"exists in vCD"
             click.secho(msg, fg='green')
             LOGGER.debug(msg)
         else:
             raise err
+
