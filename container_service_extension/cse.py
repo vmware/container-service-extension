@@ -48,10 +48,6 @@ def cli(ctx):
             private key have access (--ssh-key is required when --no-capture
             is used).
 \b
-        cse install --amqp skip --ext config
-            Install CSE, but skip amqp configuration step and register CSE to
-            vCD without prompting.
-\b
         cse check
             Checks that 'config.yaml' is valid.
 \b
@@ -194,13 +190,6 @@ def check(ctx, config, check_install, template):
     help='SSH public key to connect to the guest OS on the VM'
 )
 @click.option(
-    '-a',
-    '--amqp',
-    'amqp_install',
-    default='prompt',
-    type=click.Choice(['prompt', 'skip', 'config']),
-    help='AMQP configuration')
-@click.option(
     '-e',
     '--ext',
     'ext_install',
@@ -208,7 +197,7 @@ def check(ctx, config, check_install, template):
     type=click.Choice(['prompt', 'skip', 'config']),
     help='API Extension configuration')
 def install(ctx, config, template, update, no_capture, ssh_key_file,
-            amqp_install, ext_install):
+            ext_install):
     """Install CSE on vCloud Director."""
     if no_capture and ssh_key_file is None:
         click.echo('Must provide ssh-key file (using --ssh-key OR -k) if '
@@ -220,7 +209,7 @@ def install(ctx, config, template, update, no_capture, ssh_key_file,
             ssh_key = ssh_key_file.read()
         install_cse(ctx, config_file_name=config, template_name=template,
                     update=update, no_capture=no_capture, ssh_key=ssh_key,
-                    amqp_install=amqp_install, ext_install=ext_install)
+                    ext_install=ext_install)
 
 
 @cli.command(short_help='run service')

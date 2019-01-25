@@ -447,7 +447,7 @@ def check_cse_installation(config, check_template='*'):
 
 def install_cse(ctx, config_file_name='config.yaml', template_name='*',
                 update=False, no_capture=False, ssh_key=None,
-                amqp_install='prompt', ext_install='prompt'):
+                ext_install='prompt'):
     """Handle logistics for CSE installation.
 
     Handles decision making for configuring AMQP exchange/settings,
@@ -462,9 +462,6 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
     :param bool no_capture: if True, temporary vApp will not be captured or
         destroyed, so the user can ssh into and debug the VM.
     :param str ssh_key: public ssh key to place into template vApp(s).
-    :param str amqp_install: 'prompt' asks the user if vCD AMQP should be
-        configured. 'skip' does not configure vCD AMQP. 'config' configures
-        vCD AMQP without asking the user.
     :param str ext_install: 'prompt' asks the user if CSE should be registered
         to vCD. 'skip' does not register CSE to vCD. 'config' registers CSE
         to vCD without asking the user.
