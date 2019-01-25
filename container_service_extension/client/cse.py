@@ -16,7 +16,7 @@ import yaml
 
 from container_service_extension.client.cluster import Cluster
 from container_service_extension.client.system import System
-# from container_service_extension.logger import configure_client_logger TODO
+# TODO() from container_service_extension.logger import configure_client_logger
 from container_service_extension.service import Service
 
 
@@ -31,7 +31,7 @@ def cse(ctx):
             Display CSE version. If CSE version is displayed, then vcd-cli has
             been properly configured to run CSE commands.
     """
-    # TODO client logging is set up, but need to write log statements
+    # TODO() client logging is set up, but need to write log statements
     # configure_client_logger()
 
 
@@ -245,7 +245,7 @@ def delete(ctx, name):
     default=True,
     help='Disable rollback for cluster')
 def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
-           ssh_key_file, template, enable_nfs,disable_rollback):
+           ssh_key_file, template, enable_nfs, disable_rollback):
     """Create a Kubernetes cluster."""
     try:
         restore_session(ctx, vdc_required=True)
@@ -432,7 +432,8 @@ def node_info(ctx, cluster_name, node_name):
     default=True,
     help='Disable rollback for node')
 def create_node(ctx, name, node_count, cpu, memory, network_name,
-                storage_profile, ssh_key_file, template, node_type, disable_rollback):
+                storage_profile, ssh_key_file, template, node_type,
+                disable_rollback):
     """Add a node to a Kubernetes cluster."""
     try:
         restore_session(ctx)
