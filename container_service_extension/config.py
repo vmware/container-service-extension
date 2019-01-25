@@ -95,20 +95,23 @@ SAMPLE_VCS_CONFIG = {
 }
 
 SAMPLE_PKS_CONFIG_FILE_LOCATION = {
-    'pks_details':{
-        'config': 'pks.yaml'
-    }
+    #Absolute path to pks config file location
+    'pks_config': 'pks.yaml'
 }
 
 SAMPLE_PKS_CONFIG = {
-    'universal_pks_account_for_orgs': 'false',
+    # If set, indicates that PKS service account is per vCenter.
+    # Only the first org's pks accounts will be used as default.
+    # If not set, indicates that PKS service account is per Org
+    # per vCenter.
+    'universal_pks_account_for_all_tenants': 'false',
     'orgs': [{
         'name': 'Pepsi',
-        'pks_acounts': [{
+        'pks_accounts': [{
             'vc_name_in_vcd': 'vc1',
             'host': '10.161.148.112',
             'port':'9021',
-            'uacc': {
+            'uaac': {
                 'port':'8443',
                 'username': 'pepsiSvcAccount',
                 'secret': 'YtAU6Rl2dEvj1_hH9wEQxDUkxO1Lcjm3'
@@ -117,7 +120,7 @@ SAMPLE_PKS_CONFIG = {
             'vc_name_in_vcd': 'vc2',
             'host': '10.160.146.163',
             'port':'9021',
-            'uacc': {
+            'uaac': {
                 'port':'8443',
                 'username': 'pepsiSvcAccount',
                 'secret': 'jsfgYikddEvj1_hH9wEQxdsfgdfghlkl78'
@@ -125,17 +128,18 @@ SAMPLE_PKS_CONFIG = {
         }]
     },{
         'name': 'Coke',
-        'pks_acounts': [{
+        'pks_accounts': [{
             'vc_name_in_vcd': 'vc1',
             'host': '10.161.148.112',
             'port':'9021',
-            'uacc': {
+            'uaac': {
                 'port':'8443',
                 'username': 'cokeSvcAccount',
                 'secret': 'GhujkdfRl2dEvj1_hH9wEQxDUkxO1Lcjm3'
             }
         }]
     }],
+    #Only mention the provide vDCs dedicated for PKS enabled CSE set up
     'pvdcs':[{
         'name': 'pvdc1',
         'vc_name_in_vcd': 'vc1',
@@ -207,7 +211,7 @@ SAMPLE_CONFIG_WITH_PKS = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
                  **SAMPLE_VCS_CONFIG,**SAMPLE_PKS_CONFIG_FILE_LOCATION, **SAMPLE_SERVICE_CONFIG,
                  **SAMPLE_BROKER_CONFIG}
 
-def generate_sample_config(with_pks):
+def generate_sample_config(with_pks=False):
     """Generates a sample config file for cse.
 
     :param bool with_pks: flag to generate config with pks configs.
@@ -260,14 +264,15 @@ def get_validated_config(config_file_name, pks_config_file_name):
         config = yaml.safe_load(config_file)
 
     click.secho(f"Validating config file '{config_file_name}'", fg='yellow')
-    if config.get('pks_details', None) is not None:
-        check_keys_and_value_types(config, SAMPLE_CONFIG_WITH_PKS, location='pks config file')
+    if config.get('pks_config', None) is not None:
+        check_keys_and_value_types(config, SAMPLE_CONFIG_WITH_PKS, location='PKS config file')
         check_file_permissions(pks_config_file_name)
         with open(pks_config_file_name) as pks_config_file:
             pks_config = yaml.safe_load(pks_config_file)
-        click.secho(f"Validating pks config file '{pks_config_file_name}'", fg='yellow')
-        check_keys_and_value_types(pks_config, SAMPLE_PKS_CONFIG, location='pks config file')
-        click.secho(f"Pks Config file '{pks_config_file_name}' is valid", fg='green')
+        click.secho(f"Validating PKS config file '{pks_config_file_name}'", fg='yellow')
+        check_keys_and_value_types(pks_config, SAMPLE_PKS_CONFIG, location='PKS config file')
+        click.secho(f"PKS Config file '{pks_config_file_name}' is valid", fg='green')
+        config['pks_config'] = pks_config
     else:
         check_keys_and_value_types(config, SAMPLE_CONFIG, location='config file')
     validate_amqp_config(config['amqp'])
