@@ -21,6 +21,7 @@ from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.consumer import MessageConsumer
 from container_service_extension.logger import configure_server_logger
 from container_service_extension.logger import SERVER_DEBUG_LOG_FILEPATH
+from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_INFO_LOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.utils import connect_vcd_user_via_token
@@ -77,7 +78,7 @@ class Service(object, metaclass=Singleton):
                 uri=self.config['vcd']['host'],
                 api_version=self.config['vcd']['api_version'],
                 verify_ssl_certs=self.config['vcd']['verify'],
-                log_file=SERVER_DEBUG_LOG_FILEPATH,
+                log_file=SERVER_DEBUG_WIRELOG_FILEPATH,
                 log_requests=True,
                 log_headers=True,
                 log_bodies=True)
@@ -137,10 +138,9 @@ class Service(object, metaclass=Singleton):
             vcd_uri=self.config['vcd']['host'],
             headers=headers,
             verify_ssl_certs=self.config['vcd']['verify'])
-        is_sys_admin = tenant_client.is_sysadmin()
 
         reply = {}
-        if is_sys_admin:
+        if tenant_client.is_sysadmin():
             if 'enabled' in body:
                 if body['enabled'] and self.should_stop:
                     reply['body'] = {

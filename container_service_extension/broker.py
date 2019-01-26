@@ -131,6 +131,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         self.body = request_body
         self.tenant_client = None
         self.client_session = None
+        self.tenant_info = None
 
     def get_tenant_client_session(self):
         if self.client_session is None:
@@ -168,7 +169,8 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         if not self.tenant_client.is_sysadmin():
             stack_trace = ''
         if not hasattr(self, 'task'):
-            self.task = Task(self.tenant_client)
+            from container_service_extension.service import Service
+            self.task = Task(Service().get_sys_admin_client())
         if message is None:
             message = OP_MESSAGE[self.op]
         if hasattr(self, 'task_resource'):
@@ -367,7 +369,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         cluster_name = self.body['name']
         vdc_name = self.body['vdc']
         node_count = self.body['node_count']
-        LOGGER.debug('about to create cluster %s on %s with %s nodes, sp=%s',
+        LOGGER.debug('About to create cluster %s on %s with %s nodes, sp=%s',
                      cluster_name, vdc_name, node_count,
                      self.body['storage_profile'])
         result['body'] = {
@@ -380,7 +382,6 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         self.cluster_name = cluster_name
         self.cluster_id = str(uuid.uuid4())
         self.op = OP_CREATE_CLUSTER
-        self._connect_sysadmin()
         self.update_task(
             TaskStatus.RUNNING,
             message='Creating cluster %s(%s)' % (cluster_name,
@@ -523,12 +524,11 @@ class DefaultBroker(AbstractBroker, threading.Thread):
     def delete_cluster(self):
         result = {}
         result['body'] = {}
-        LOGGER.debug(f"about to delete cluster with name: {self.body['name']}")
+        LOGGER.debug(f"About to delete cluster with name: {self.body['name']}")
 
         self.cluster_name = self.body['name']
         self.tenant_info = self._connect_tenant()
         self.op = OP_DELETE_CLUSTER
-        self._connect_sysadmin()
         clusters = load_from_metadata(
             self.tenant_client, name=self.cluster_name)
         if len(clusters) != 1:
@@ -549,7 +549,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         return result
 
     def delete_cluster_thread(self):
-        LOGGER.debug('about to delete cluster with name: %s',
+        LOGGER.debug('About to delete cluster with name: %s',
                      self.cluster_name)
         try:
             vdc = VDC(self.tenant_client, href=self.cluster['vdc_href'])
@@ -583,7 +583,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
     def create_nodes(self):
         result = {'body': {}}
         self.cluster_name = self.body['name']
-        LOGGER.debug(f"about to add {self.body['node_count']} nodes to cluster"
+        LOGGER.debug(f"About to add {self.body['node_count']} nodes to cluster"
                      " {self.cluster_name} on VDC {self.body['vdc']}, "
                      "sp={self.body['storage_profile']}")
         if self.body['node_count'] < 1:
@@ -597,7 +597,6 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                 'Cluster \'%s\' not found.' % self.cluster_name)
         self.cluster = clusters[0]
         self.op = OP_CREATE_NODES
-        self._connect_sysadmin()
         self.cluster_id = self.cluster['cluster_id']
         self.update_task(
             TaskStatus.RUNNING,
@@ -614,7 +613,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
 
     @rollback
     def create_nodes_thread(self):
-        LOGGER.debug('about to add nodes to cluster with name: %s',
+        LOGGER.debug('About to add nodes to cluster with name: %s',
                      self.cluster_name)
         try:
             from container_service_extension.service import Service
@@ -682,7 +681,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
     def delete_nodes(self):
         result = {'body': {}}
         self.cluster_name = self.body['name']
-        LOGGER.debug(f"about to delete nodes from cluster with name: "
+        LOGGER.debug(f"About to delete nodes from cluster with name: "
                      "{self.body['name']}")
 
         if len(self.body['nodes']) < 1:
@@ -715,7 +714,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         return result
 
     def delete_nodes_thread(self):
-        LOGGER.debug('about to delete nodes from cluster with name: %s',
+        LOGGER.debug('About to delete nodes from cluster with name: %s',
                      self.cluster_name)
         try:
             vapp = VApp(self.tenant_client, href=self.cluster['vapp_href'])

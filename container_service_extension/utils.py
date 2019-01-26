@@ -27,7 +27,7 @@ import requests
 from vsphere_guest_run.vsphere import VSphere
 
 from container_service_extension.exceptions import VcdResponseError
-from container_service_extension.logger import SERVER_DEBUG_LOG_FILEPATH
+from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 
 cache = LRUCache(maxsize=1024)
@@ -75,7 +75,7 @@ def connect_vcd_user_via_token(vcd_uri, headers, verify_ssl_certs=True):
         uri=vcd_uri,
         api_version=version,
         verify_ssl_certs=verify_ssl_certs,
-        log_file=SERVER_DEBUG_LOG_FILEPATH,
+        log_file=SERVER_DEBUG_WIRELOG_FILEPATH,
         log_requests=True,
         log_headers=True,
         log_bodies=True)

@@ -12,7 +12,6 @@ from pyvcloud.vcd.role import Role
 
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
-from container_service_extension.service import Service
 
 
 def _get_user_rights(sys_admin_client, user_session):
@@ -92,6 +91,7 @@ def secure(required_rights=[]):
     def decorator_secure(func):
         @functools.wraps(func)
         def decorator_wrapper(*args, **kwargs):
+            from container_service_extension.service import Service
             sys_admin_client = Service().get_sys_admin_client()
             broker_instance = args[0]  # self
             user_session = broker_instance.get_tenant_client_session()
