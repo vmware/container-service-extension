@@ -4,6 +4,7 @@
 
 from container_service_extension.broker import DefaultBroker
 
+
 def get_new_broker(headers, request_body):
     from container_service_extension.service import Service
     server_run_config = Service().get_service_run_config()

@@ -62,19 +62,18 @@ class Service(object, metaclass=Singleton):
         self.consumers = []
         self.threads = []
         self.should_stop = False
-        self.sys_admin_client = None
 
     def get_service_run_config(self):
         return self.config
 
     def get_sys_admin_client(self):
-        if self.sys_admin_client is None and self.config is not None:
+        if self.config is not None:
             if not self.config['vcd']['verify']:
                 LOGGER.warning('InsecureRequestWarning: Unverified HTTPS '
                                'request is being made. Adding certificate '
                                'verification is strongly advised.')
                 requests.packages.urllib3.disable_warnings()
-            self.sys_admin_client = Client(
+            client = Client(
                 uri=self.config['vcd']['host'],
                 api_version=self.config['vcd']['api_version'],
                 verify_ssl_certs=self.config['vcd']['verify'],
@@ -85,8 +84,9 @@ class Service(object, metaclass=Singleton):
             credentials = BasicLoginCredentials(self.config['vcd']['username'],
                                                 SYSTEM_ORG_NAME,
                                                 self.config['vcd']['password'])
-            self.sys_admin_client.set_credentials(credentials)
-        return self.sys_admin_client
+            client.set_credentials(credentials)
+            return client
+        return None
 
     def active_requests_count(self):
         n = 0

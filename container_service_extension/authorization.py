@@ -91,13 +91,20 @@ def secure(required_rights=[]):
     def decorator_secure(func):
         @functools.wraps(func)
         def decorator_wrapper(*args, **kwargs):
-            from container_service_extension.service import Service
-            sys_admin_client = Service().get_sys_admin_client()
-            broker_instance = args[0]  # self
-            user_session = broker_instance.get_tenant_client_session()
-            if _is_authorized(sys_admin_client, user_session, required_rights):
-                return func(*args, **kwargs)
-            else:
-                raise Exception('Access Forbidden. Missing required rights.')
+            sys_admin_client = None
+            try:
+                from container_service_extension.service import Service
+                sys_admin_client = Service().get_sys_admin_client()
+                broker_instance = args[0]  # self
+                user_session = broker_instance.get_tenant_client_session()
+                if _is_authorized(sys_admin_client, user_session,
+                                  required_rights):
+                    return func(*args, **kwargs)
+                else:
+                    raise Exception(
+                        'Access Forbidden. Missing required rights.')
+            finally:
+                if sys_admin_client is not None:
+                    sys_admin_client.logout()
         return decorator_wrapper
     return decorator_secure
