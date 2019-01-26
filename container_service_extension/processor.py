@@ -10,7 +10,7 @@ import traceback
 from pkg_resources import resource_string
 import yaml
 
-from container_service_extension.broker import get_new_broker
+from container_service_extension.broker_selector import get_new_broker
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 

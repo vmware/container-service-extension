@@ -16,7 +16,6 @@ from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 import requests
 
-from container_service_extension.broker import DefaultBroker
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.consumer import MessageConsumer
@@ -64,17 +63,6 @@ class Service(object, metaclass=Singleton):
         self.should_stop = False
         self.sys_admin_client = None
 
-    def _connect_tenant(self, headers):
-        host = self.config['vcd']['host']
-        token = headers.get('x-vcloud-authorization')
-        accept_header = headers.get('Accept')
-        verify_ssl_certs = self.config['vcd']['verify']
-        tenant_client, session = connect_vcd_user_via_token(
-            vcd_uri=host,
-            token=token,
-            accept_header=accept_header,
-            verify_ssl_certs=verify_ssl_certs)
-
     def get_service_run_config(self):
         return self.config
 
@@ -102,6 +90,7 @@ class Service(object, metaclass=Singleton):
     def active_requests_count(self):
         n = 0
         for t in threading.enumerate():
+            from container_service_extension.broker import DefaultBroker
             if type(t) == DefaultBroker:
                 n += 1
         return n
@@ -116,9 +105,12 @@ class Service(object, metaclass=Singleton):
                 return 'Disabled'
 
     def info(self, headers):
-        client_tenant, session = self._connect_tenant(headers)
+        tenant_client, session = connect_vcd_user_via_token(
+            vcd_uri=self.config['vcd']['host'],
+            headers=headers,
+            verify_ssl_certs=self.config['vcd']['verify'])
         result = Service.version()
-        if client_tenant.is_sysadmin():
+        if tenant_client.is_sysadmin():
             result['consumer_threads'] = len(self.threads)
             result['all_threads'] = threading.activeCount()
             result['requests_in_progress'] = self.active_requests_count()
@@ -141,14 +133,11 @@ class Service(object, metaclass=Singleton):
         return ver_obj
 
     def update_status(self, headers, body):
-        is_sys_admin = False
-        client_tenant = None
-        try:
-            client_tenant, session = self._connect_tenant(headers)
-            is_sys_admin = client_tenant.is_sysadmin()
-        finally:
-            if client_tenant is not None:
-                client_tenant.logout()
+        tenant_client, session = connect_vcd_user_via_token(
+            vcd_uri=self.config['vcd']['host'],
+            headers=headers,
+            verify_ssl_certs=self.config['vcd']['verify'])
+        is_sys_admin = tenant_client.is_sysadmin()
 
         reply = {}
         if is_sys_admin:

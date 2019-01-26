@@ -62,13 +62,14 @@ ACCEPTED = 202
 INTERNAL_SERVER_ERROR = 500
 
 
-def connect_vcd_user_via_token(vcd_uri, token, accept_header,
-                               verify_ssl_certs=True):
+def connect_vcd_user_via_token(vcd_uri, headers, verify_ssl_certs=True):
     if not verify_ssl_certs:
         LOGGER.warning('InsecureRequestWarning: Unverified HTTPS request is '
                        'being made. Adding certificate verification is '
                        'strongly advised.')
         requests.packages.urllib3.disable_warnings()
+    token = headers.get('x-vcloud-authorization')
+    accept_header = headers.get('Accept')
     version = accept_header.split('version=')[1]
     client_tenant = Client(
         uri=vcd_uri,
