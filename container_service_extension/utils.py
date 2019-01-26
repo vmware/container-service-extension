@@ -59,7 +59,9 @@ _type_to_string = {
 OK = 200
 CREATED = 201
 ACCEPTED = 202
+UNAUTHORIZED = 401
 INTERNAL_SERVER_ERROR = 500
+GATEWAY_TIMEOUT = 504
 
 
 def connect_vcd_user_via_token(vcd_uri, headers, verify_ssl_certs=True):
@@ -168,21 +170,25 @@ def response_to_exception(response):
 
     :raises: VcdResponseError
     """
-    if response.status_code == 504:
+    if response.status_code == GATEWAY_TIMEOUT:
         message = 'An error has occurred.'
         if response.content is not None and len(response.content) > 0:
             obj = objectify.fromstring(response.content)
             message = obj.get(ERROR_MESSAGE)
-        raise VcdResponseError(response.status_code, message)
-
-    content = deserialize_response_content(response)
-    if ERROR_MESSAGE in content:
-        if ERROR_REASON in content[ERROR_MESSAGE]:
-            message = content[ERROR_MESSAGE][ERROR_REASON]
-        else:
-            message = content[ERROR_MESSAGE]
+    elif response.status_code == UNAUTHORIZED:
+        message = 'Session has expired or user not logged in. Please re-login.'
+        if response.content is not None and len(response.content) > 0:
+            obj = objectify.fromstring(response.content)
+            message = obj.get(ERROR_MESSAGE)
     else:
-        message = ERROR_UNKNOWN
+        content = deserialize_response_content(response)
+        if ERROR_MESSAGE in content:
+            if ERROR_REASON in content[ERROR_MESSAGE]:
+                message = content[ERROR_MESSAGE][ERROR_REASON]
+            else:
+                message = content[ERROR_MESSAGE]
+        else:
+            message = ERROR_UNKNOWN
 
     raise VcdResponseError(response.status_code, message)
 

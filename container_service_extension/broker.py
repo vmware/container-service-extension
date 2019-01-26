@@ -165,13 +165,6 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                 _WellKnownEndpoint.LOGGED_IN_ORG)
         }
 
-    def _disconnect_tenant(self):
-        if self.tenant_client is not None:
-            self.tenant_client.logout()
-            self.tenant_client = None
-            self.client_session = None
-            self.tenant_info = None
-
     def _connect_sys_admin(self):
         from container_service_extension.service import Service
         self.sys_admin_client = Service().get_sys_admin_client()
@@ -262,13 +255,10 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         result = {}
         result['body'] = []
         result['status_code'] = OK
-        try:
-            self._connect_tenant()
-            clusters = load_from_metadata(self.tenant_client)
-            result['body'] = clusters
-            return result
-        finally:
-            self._disconnect_tenant()
+        self._connect_tenant()
+        clusters = load_from_metadata(self.tenant_client)
+        result['body'] = clusters
+        return result
 
     @exception_handler
     def get_cluster_info(self, name):
@@ -281,34 +271,32 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         result = {}
         result['body'] = []
         result['status_code'] = OK
-        try:
-            self._connect_tenant()
-            clusters = load_from_metadata(self.tenant_client, name=name)
-            if len(clusters) == 0:
-                raise CseServerError('Cluster \'%s\' not found.' % name)
-            vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
-            vms = vapp.get_all_vms()
-            for vm in vms:
-                node_info = {
-                    'name': vm.get('name'),
-                    'ipAddress': ''
-                }
-                try:
-                    node_info['ipAddress'] = vapp.get_primary_ip(
-                        vm.get('name'))
-                except Exception:
-                    LOGGER.debug(
-                        'cannot get ip address for node %s' % vm.get('name'))
-                if vm.get('name').startswith(TYPE_MASTER):
-                    clusters[0].get('master_nodes').append(node_info)
-                elif vm.get('name').startswith(TYPE_NODE):
-                    clusters[0].get('nodes').append(node_info)
-                elif vm.get('name').startswith(TYPE_NFS):
-                    clusters[0].get('nfs_nodes').append(node_info)
-            result['body'] = clusters[0]
-            return result
-        finally:
-            self._disconnect_tenant()
+
+        self._connect_tenant()
+        clusters = load_from_metadata(self.tenant_client, name=name)
+        if len(clusters) == 0:
+            raise CseServerError('Cluster \'%s\' not found.' % name)
+        vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
+        vms = vapp.get_all_vms()
+        for vm in vms:
+            node_info = {
+                'name': vm.get('name'),
+                'ipAddress': ''
+            }
+            try:
+                node_info['ipAddress'] = vapp.get_primary_ip(
+                    vm.get('name'))
+            except Exception:
+                LOGGER.debug(
+                    'cannot get ip address for node %s' % vm.get('name'))
+            if vm.get('name').startswith(TYPE_MASTER):
+                clusters[0].get('master_nodes').append(node_info)
+            elif vm.get('name').startswith(TYPE_NODE):
+                clusters[0].get('nodes').append(node_info)
+            elif vm.get('name').startswith(TYPE_NFS):
+                clusters[0].get('nfs_nodes').append(node_info)
+        result['body'] = clusters[0]
+        return result
 
     @exception_handler
     def get_node_info(self, cluster_name, node_name):
@@ -322,53 +310,50 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         result = {}
         result['body'] = []
         result['status_code'] = OK
-        try:
-            self._connect_tenant()
-            clusters = load_from_metadata(self.tenant_client,
-                                          name=cluster_name)
-            if len(clusters) == 0:
-                raise CseServerError(f"Cluster \'{cluster_name}\' not found.")
-            vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
-            vms = vapp.get_all_vms()
-            node_info = None
-            for vm in vms:
-                if (node_name == vm.get('name')):
-                    node_info = {
-                        'name': vm.get('name'),
-                        'numberOfCpus': '',
-                        'memoryMB': '',
-                        'status': VCLOUD_STATUS_MAP.get(int(vm.get('status'))),
-                        'ipAddress': ''
-                    }
-                    if hasattr(vm, 'VmSpecSection'):
-                        node_info[
-                            'numberOfCpus'] = vm.VmSpecSection.NumCpus.text
-                        node_info[
-                            'memoryMB'] = \
-                            vm.VmSpecSection.MemoryResourceMb.Configured.text
-                    try:
-                        node_info['ipAddress'] = vapp.get_primary_ip(
-                            vm.get('name'))
-                    except Exception:
-                        LOGGER.debug('cannot get ip address '
-                                     'for node %s' % vm.get('name'))
-                    if vm.get('name').startswith(TYPE_MASTER):
-                        node_info['node_type'] = 'master'
-                    elif vm.get('name').startswith(TYPE_NODE):
-                        node_info['node_type'] = 'node'
-                    elif vm.get('name').startswith(TYPE_NFS):
-                        node_info['node_type'] = 'nfsd'
-                        exports = self._get_nfs_exports(node_info['ipAddress'],
-                                                        vapp,
-                                                        vm)
-                        node_info['exports'] = exports
-            if node_info is None:
-                raise CseServerError('Node \'%s\' not found in cluster \'%s\''
-                                     % (node_name, cluster_name))
-            result['body'] = node_info
-            return result
-        finally:
-            self._disconnect_tenant()
+        self._connect_tenant()
+        clusters = load_from_metadata(self.tenant_client,
+                                      name=cluster_name)
+        if len(clusters) == 0:
+            raise CseServerError(f"Cluster \'{cluster_name}\' not found.")
+        vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
+        vms = vapp.get_all_vms()
+        node_info = None
+        for vm in vms:
+            if (node_name == vm.get('name')):
+                node_info = {
+                    'name': vm.get('name'),
+                    'numberOfCpus': '',
+                    'memoryMB': '',
+                    'status': VCLOUD_STATUS_MAP.get(int(vm.get('status'))),
+                    'ipAddress': ''
+                }
+                if hasattr(vm, 'VmSpecSection'):
+                    node_info[
+                        'numberOfCpus'] = vm.VmSpecSection.NumCpus.text
+                    node_info[
+                        'memoryMB'] = \
+                        vm.VmSpecSection.MemoryResourceMb.Configured.text
+                try:
+                    node_info['ipAddress'] = vapp.get_primary_ip(
+                        vm.get('name'))
+                except Exception:
+                    LOGGER.debug('cannot get ip address '
+                                 'for node %s' % vm.get('name'))
+                if vm.get('name').startswith(TYPE_MASTER):
+                    node_info['node_type'] = 'master'
+                elif vm.get('name').startswith(TYPE_NODE):
+                    node_info['node_type'] = 'node'
+                elif vm.get('name').startswith(TYPE_NFS):
+                    node_info['node_type'] = 'nfsd'
+                    exports = self._get_nfs_exports(node_info['ipAddress'],
+                                                    vapp,
+                                                    vm)
+                    node_info['exports'] = exports
+        if node_info is None:
+            raise CseServerError('Node \'%s\' not found in cluster \'%s\''
+                                 % (node_name, cluster_name))
+        result['body'] = node_info
+        return result
 
     def _get_nfs_exports(self, ip, vapp, node):
         """Get the exports from remote NFS server (helper method).
@@ -558,7 +543,6 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                 error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION],
                 stack_trace=stack_trace)
         finally:
-            self._disconnect_tenant()
             self._disconnect_sys_admin()
 
     @exception_handler
@@ -606,26 +590,22 @@ class DefaultBroker(AbstractBroker, threading.Thread):
             LOGGER.error(traceback.format_exc())
             self.update_task(TaskStatus.ERROR, error_message=str(e))
         finally:
-            self._disconnect_tenant()
             self._disconnect_sys_admin()
 
     @exception_handler
     def get_cluster_config(self, cluster_name):
         result = {}
-        try:
-            self._connect_tenant()
-            clusters = load_from_metadata(
-                self.tenant_client, name=cluster_name)
-            if len(clusters) != 1:
-                raise CseServerError('Cluster \'%s\' not found' % cluster_name)
-            vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
-            template = self.get_template(name=clusters[0]['template'])
-            result['body'] = get_cluster_config(self.config, vapp,
-                                                template['admin_password'])
-            result['status_code'] = OK
-            return result
-        finally:
-            self._disconnect_tenant()
+        self._connect_tenant()
+        clusters = load_from_metadata(
+            self.tenant_client, name=cluster_name)
+        if len(clusters) != 1:
+            raise CseServerError('Cluster \'%s\' not found' % cluster_name)
+        vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
+        template = self.get_template(name=clusters[0]['template'])
+        result['body'] = get_cluster_config(self.config, vapp,
+                                            template['admin_password'])
+        result['status_code'] = OK
+        return result
 
     @exception_handler
     # @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
@@ -726,7 +706,6 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                 error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION],
                 stack_trace=stack_trace)
         finally:
-            self._disconnect_tenant()
             self._disconnect_sys_admin()
 
     @exception_handler
@@ -818,7 +797,6 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                 error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION],
                 stack_trace=stack_trace)
         finally:
-            self._disconnect_tenant()
             self._disconnect_sys_admin()
 
     def node_rollback(self, node_list):
@@ -829,41 +807,34 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         LOGGER.info(f"About to rollback nodes from cluster with name: "
                     "{self.cluster_name}")
         LOGGER.info(f"Node list to be deleted:{node_list}")
+        vapp = VApp(self.tenant_client, href=self.cluster['vapp_href'])
+        template = self.get_template()
         try:
-            self._connect_tenant()
-            vapp = VApp(self.tenant_client, href=self.cluster['vapp_href'])
-            template = self.get_template()
+            delete_nodes_from_cluster(self.config, vapp, template,
+                                      node_list, force=True)
+        except Exception:
+            LOGGER.warning("Couldn't delete node {node_list} from cluster:"
+                           "{self.cluster_name}")
+        for vm_name in node_list:
+            vm = VM(self.tenant_client, resource=vapp.get_vm(vm_name))
             try:
-                delete_nodes_from_cluster(self.config, vapp, template,
-                                          node_list, force=True)
+                vm.undeploy()
             except Exception:
-                LOGGER.warning("Couldn't delete node {node_list} from cluster:"
-                               "{self.cluster_name}")
-            for vm_name in node_list:
-                vm = VM(self.tenant_client, resource=vapp.get_vm(vm_name))
-                try:
-                    vm.undeploy()
-                except Exception:
-                    LOGGER.warning(f"Couldn't undeploy VM {vm_name}")
-            vapp.delete_vms(node_list)
-        finally:
-            self._disconnect_tenant()
+                LOGGER.warning(f"Couldn't undeploy VM {vm_name}")
+        vapp.delete_vms(node_list)
         LOGGER.info(f"Successfully deleted nodes: {node_list}")
 
     def cluster_rollback(self):
         """Rollback for cluster creation failure."""
         LOGGER.info(f"About to rollback cluster with name: "
                     "{self.cluster_name}")
-        try:
-            self._connect_tenant()
-            clusters = load_from_metadata(
-                self.tenant_client, name=self.cluster_name)
-            if len(clusters) != 1:
-                LOGGER.debug('Cluster %s not found.' % self.cluster_name)
-                return
-            self.cluster = clusters[0]
-            vdc = VDC(self.tenant_client, href=self.cluster['vdc_href'])
-            vdc.delete_vapp(self.cluster['name'], force=True)
-        finally:
-            self._disconnect_tenant()
+        self._connect_tenant()
+        clusters = load_from_metadata(
+            self.tenant_client, name=self.cluster_name)
+        if len(clusters) != 1:
+            LOGGER.debug('Cluster %s not found.' % self.cluster_name)
+            return
+        self.cluster = clusters[0]
+        vdc = VDC(self.tenant_client, href=self.cluster['vdc_href'])
+        vdc.delete_vapp(self.cluster['name'], force=True)
         LOGGER.info(f"Successfully deleted cluster: {self.cluster_name}")
