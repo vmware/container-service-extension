@@ -100,46 +100,45 @@ SAMPLE_PKS_CONFIG_FILE_LOCATION = {
 }
 
 SAMPLE_PKS_CONFIG = {
-    # If set, indicates that PKS service account is per vCenter.
-    # Only the first org's pks accounts will be used as default.
-    # If not set, indicates that PKS service account is per Org
-    # per vCenter.
-    'universal_pks_account_for_all_tenants': 'false',
+    'pks_accounts': [{
+        'name' : 'PepsiServiceAccount1',
+        'host' : '10.161.148.112',
+        'port' : '9021',
+        'uaac' : {
+            'port': '8443',
+            'secret' : 'YtAU6Rl2dEvj1_hH9wEQxDUkxO1Lcjm3',
+            'username': 'pepsiSvcAccount'
+        },
+        'vc_name_in_vcd': 'vc1'
+    },{
+        'name' : 'PepsiServiceAccount2',
+        'host' : '10.160.146.163',
+        'port' : '9021',
+        'uaac' : {
+            'port': '8443',
+            'secret' : 'jsfgYikddEvj1_hH9wEQxdsfgdfghlkl78',
+            'username': 'pepsiSvcAccount'
+        },
+        'vc_name_in_vcd': 'vc2'
+    },{
+        'name' : 'CokeServiceAccount',
+        'host' : '10.161.148.113',
+        'port' : '9021',
+        'uaac' : {
+            'port': '8443',
+            'secret' : 'GhujkdfRl2dEvj1_hH9wEQxDUkxO1Lcjm3',
+            'username': 'cokeSvcAccount'
+        },
+        'vc_name_in_vcd': 'vc1'
+    }],
     'orgs': [{
         'name': 'Pepsi',
-        'pks_accounts': [{
-            'vc_name_in_vcd': 'vc1',
-            'host': '10.161.148.112',
-            'port':'9021',
-            'uaac': {
-                'port':'8443',
-                'username': 'pepsiSvcAccount',
-                'secret': 'YtAU6Rl2dEvj1_hH9wEQxDUkxO1Lcjm3'
-            }
-        },{
-            'vc_name_in_vcd': 'vc2',
-            'host': '10.160.146.163',
-            'port':'9021',
-            'uaac': {
-                'port':'8443',
-                'username': 'pepsiSvcAccount',
-                'secret': 'jsfgYikddEvj1_hH9wEQxdsfgdfghlkl78'
-            }
-        }]
+        'tenant_pks_accounts': ['PepsiServiceAccount1', 'PepsiServiceAccount2']
     },{
         'name': 'Coke',
-        'pks_accounts': [{
-            'vc_name_in_vcd': 'vc1',
-            'host': '10.161.148.112',
-            'port':'9021',
-            'uaac': {
-                'port':'8443',
-                'username': 'cokeSvcAccount',
-                'secret': 'GhujkdfRl2dEvj1_hH9wEQxDUkxO1Lcjm3'
-            }
-        }]
+        'tenant_pks_accounts': ['CokeServiceAccount']
     }],
-    #Only mention the provide vDCs dedicated for PKS enabled CSE set up
+    #Only mention the provider vDCs dedicated for PKS enabled CSE set up
     'pvdcs':[{
         'name': 'pvdc1',
         'vc_name_in_vcd': 'vc1',
@@ -231,6 +230,13 @@ def generate_sample_config(with_pks=False):
                                         default_flow_style=False) + '\n'
         sample_pks_config = yaml.safe_dump(SAMPLE_PKS_CONFIG)
         with open('pks.yaml', 'w') as f:
+            f.write("##Config file for PKS enabled CSE Server.\n")
+            f.write("##1. Includes PKS accounts information for the "
+                    "set up\n")
+            f.write("##2. [Optional]Org associations of PKS accounts "
+                    "if set up has pks accounts per tenant per vcenter\n")
+            f.write("##3. List of Provider vDCs dedicated for PKS "
+                    "enabled CSE set up only\n")
             f.write(sample_pks_config)
     sample_config += yaml.safe_dump(SAMPLE_SERVICE_CONFIG,
                                     default_flow_style=False) + '\n'
@@ -275,9 +281,9 @@ def get_validated_config(config_file_name, pks_config_file_name):
         config['pks_config'] = pks_config
     else:
         check_keys_and_value_types(config, SAMPLE_CONFIG, location='config file')
-    validate_amqp_config(config['amqp'])
-    validate_vcd_and_vcs_config(config['vcd'], config['vcs'])
-    validate_broker_config(config['broker'])
+    # validate_amqp_config(config['amqp'])
+    # validate_vcd_and_vcs_config(config['vcd'], config['vcs'])
+    # validate_broker_config(config['broker'])
     check_keys_and_value_types(config['service'],
                                SAMPLE_SERVICE_CONFIG['service'],
                                location="config file 'service' section")
