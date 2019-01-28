@@ -281,9 +281,9 @@ def get_validated_config(config_file_name, pks_config_file_name):
         config['pks_config'] = pks_config
     else:
         check_keys_and_value_types(config, SAMPLE_CONFIG, location='config file')
-    # validate_amqp_config(config['amqp'])
-    # validate_vcd_and_vcs_config(config['vcd'], config['vcs'])
-    # validate_broker_config(config['broker'])
+    validate_amqp_config(config['amqp'])
+    validate_vcd_and_vcs_config(config['vcd'], config['vcs'])
+    validate_broker_config(config['broker'])
     check_keys_and_value_types(config['service'],
                                SAMPLE_SERVICE_CONFIG['service'],
                                location="config file 'service' section")
