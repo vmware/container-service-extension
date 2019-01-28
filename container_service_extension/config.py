@@ -210,7 +210,22 @@ SAMPLE_CONFIG_WITH_PKS = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
                  **SAMPLE_VCS_CONFIG,**SAMPLE_PKS_CONFIG_FILE_LOCATION, **SAMPLE_SERVICE_CONFIG,
                  **SAMPLE_BROKER_CONFIG}
 
-def generate_sample_config(with_pks=False):
+
+def get_pks_config_instructions():
+    instructions = '''##Config file for PKS enabled CSE Server.
+    ##1. Includes PKS accounts information for the set up
+    ##2. [Optional]Tenant/Org associations of PKS accounts if set up has pks accounts per tenant per vcenter
+    ##3. List of Provider vDCs dedicated for PKS enabled CSE set up only\n'''
+    instructions +='''##Each PKS account has the following information:
+    ## 1. PKS account name
+    ## 2. vCenter name associated with this account
+    ## 3. PKS server host
+    ## 4. PKS server port
+    ## 5. PKS UAAC account information\n'''
+    return instructions
+
+
+def generate_sample_config(with_pks=False, default_flow_style=False):
     """Generates a sample config file for cse.
 
     :param bool with_pks: flag to generate config with pks configs.
@@ -229,21 +244,9 @@ def generate_sample_config(with_pks=False):
         sample_config += yaml.safe_dump(SAMPLE_PKS_CONFIG_FILE_LOCATION,
                                         default_flow_style=False) + '\n'
         sample_pks_config = yaml.safe_dump(SAMPLE_PKS_CONFIG)
+        instructions = get_pks_config_instructions()
         with open('pks.yaml', 'w') as f:
-            f.write("##Config file for PKS enabled CSE Server.\n")
-            f.write("##1. Includes PKS accounts information for the "
-                    "set up\n")
-            f.write("##2. [Optional]Tenant/Org associations of PKS accounts "
-                    "if set up has pks accounts per tenant per vcenter\n")
-            f.write("##3. List of Provider vDCs dedicated for PKS "
-                    "enabled CSE set up only\n\n")
-            f.write("##Each PKS account has the following information:\n")
-            f.write("## 1. PKS account name")
-            f.write("## 2. Name of the vCenter that this account is "
-                    "associated with \n")
-            f.write("## 3. PKS server host\n")
-            f.write("## 4. PKS server port\n")
-            f.write("## 5. PKS UAAC account information \n\n")
+            f.write(instructions)
             f.write(sample_pks_config)
     sample_config += yaml.safe_dump(SAMPLE_SERVICE_CONFIG,
                                     default_flow_style=False) + '\n'
