@@ -100,57 +100,57 @@ SAMPLE_PKS_CONFIG_FILE_LOCATION = {
 }
 
 SAMPLE_PKS_CONFIG = {
+    'orgs': [{
+        'name': 'Pepsi',
+        'pks_accounts': ['PepsiServiceAccount1', 'PepsiServiceAccount2']
+    },{
+        'name': 'Coke',
+        'pks_accounts': ['CokeServiceAccount']
+    }],
     'pks_accounts': [{
         'name' : 'PepsiServiceAccount1',
+        'vc': 'vc1',
         'host' : '10.161.148.112',
         'port' : '9021',
         'uaac' : {
             'port': '8443',
             'secret' : 'YtAU6Rl2dEvj1_hH9wEQxDUkxO1Lcjm3',
             'username': 'pepsiSvcAccount'
-        },
-        'vc_name_in_vcd': 'vc1'
+        }
     },{
         'name' : 'PepsiServiceAccount2',
+        'vc': 'vc2',
         'host' : '10.160.146.163',
         'port' : '9021',
         'uaac' : {
             'port': '8443',
             'secret' : 'jsfgYikddEvj1_hH9wEQxdsfgdfghlkl78',
             'username': 'pepsiSvcAccount'
-        },
-        'vc_name_in_vcd': 'vc2'
+        }
     },{
         'name' : 'CokeServiceAccount',
+        'vc': 'vc1',
         'host' : '10.161.148.113',
         'port' : '9021',
         'uaac' : {
             'port': '8443',
             'secret' : 'GhujkdfRl2dEvj1_hH9wEQxDUkxO1Lcjm3',
             'username': 'cokeSvcAccount'
-        },
-        'vc_name_in_vcd': 'vc1'
-    }],
-    'orgs': [{
-        'name': 'Pepsi',
-        'tenant_pks_accounts': ['PepsiServiceAccount1', 'PepsiServiceAccount2']
-    },{
-        'name': 'Coke',
-        'tenant_pks_accounts': ['CokeServiceAccount']
+        }
     }],
     #Only mention the provider vDCs dedicated for PKS enabled CSE set up
     'pvdcs':[{
         'name': 'pvdc1',
         'vc_name_in_vcd': 'vc1',
-        'rp_path': ['datacenter1/cluster1/rp1', 'datacenter1/cluster1/rp2']
+        'rp_paths': ['datacenter1/cluster1/rp1', 'datacenter1/cluster1/rp2']
     },{
         'name': 'pvdc2',
         'vc_name_in_vcd': 'vc1',
-        'rp_path': ['HA_datacenter/HA_cluster1/gold_rp/sub-rp', 'datacenter1/cluster1/ssd_rp']
+        'rp_paths': ['HA_datacenter/HA_cluster1/gold_rp/sub-rp', 'datacenter1/cluster1/ssd_rp']
     },{
         'name': 'pvdc3',
         'vc_name_in_vcd': 'vc2',
-        'rp_path': ['datacenter/cluster1/rp1/sub-rp1/sub-rp2', 'datacenter1/cluster1/rp2']
+        'rp_paths': ['datacenter/cluster1/rp1/sub-rp1/sub-rp2', 'datacenter1/cluster1/rp2']
     }]
 }
 
@@ -233,10 +233,17 @@ def generate_sample_config(with_pks=False):
             f.write("##Config file for PKS enabled CSE Server.\n")
             f.write("##1. Includes PKS accounts information for the "
                     "set up\n")
-            f.write("##2. [Optional]Org associations of PKS accounts "
+            f.write("##2. [Optional]Tenant/Org associations of PKS accounts "
                     "if set up has pks accounts per tenant per vcenter\n")
             f.write("##3. List of Provider vDCs dedicated for PKS "
-                    "enabled CSE set up only\n")
+                    "enabled CSE set up only\n\n")
+            f.write("##Each PKS account has the following information:\n")
+            f.write("## 1. PKS account name")
+            f.write("## 2. Name of the vCenter that this account is "
+                    "associated with \n")
+            f.write("## 3. PKS server host\n")
+            f.write("## 4. PKS server port\n")
+            f.write("## 5. PKS UAAC account information \n\n")
             f.write(sample_pks_config)
     sample_config += yaml.safe_dump(SAMPLE_SERVICE_CONFIG,
                                     default_flow_style=False) + '\n'
