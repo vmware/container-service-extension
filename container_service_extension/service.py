@@ -63,7 +63,7 @@ class Service(object, metaclass=Singleton):
         self.threads = []
         self.should_stop = False
 
-    def get_service_run_config(self):
+    def get_service_config(self):
         return self.config
 
     def get_sys_admin_client(self):

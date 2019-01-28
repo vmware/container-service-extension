@@ -13,7 +13,7 @@ import yaml
 from container_service_extension.broker_selector import get_new_broker
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-
+from container_service_extension.utils import get_server_runtime_config
 
 OK = 200
 CREATED = 201
@@ -87,15 +87,15 @@ class ServiceProcessor(object):
             elif template_request:
                 result = {}
                 templates = []
-                server_run_config = Service().get_service_run_config()
+                server_config = get_server_runtime_config()
                 default_template_name = \
-                    server_run_config['broker']['default_template']
-                for t in server_run_config['broker']['templates']:
+                    server_config['broker']['default_template']
+                for t in server_config['broker']['templates']:
                     is_default = t['name'] == default_template_name
                     templates.append({
                         'name': t['name'],
                         'is_default': is_default,
-                        'catalog': server_run_config['broker']['catalog'],
+                        'catalog': server_config['broker']['catalog'],
                         'catalog_item': t['catalog_item'],
                         'description': t['description']
                     })

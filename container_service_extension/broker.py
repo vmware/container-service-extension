@@ -51,8 +51,9 @@ from container_service_extension.utils import ERROR_MESSAGE
 from container_service_extension.utils import ERROR_STACKTRACE
 from container_service_extension.utils import error_to_json
 from container_service_extension.utils import exception_handler
+from container_service_extension.utils import get_server_runtime_config
+from container_service_extension.utils import get_vcd_sys_admin_client
 from container_service_extension.utils import OK
-
 
 OP_CREATE_CLUSTER = 'create_cluster'
 OP_DELETE_CLUSTER = 'delete_cluster'
@@ -149,10 +150,9 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         return self._client_session
 
     def _connect_tenant(self):
-        from container_service_extension.service import Service
-        server_run_config = Service().get_service_run_config()
-        host = server_run_config['vcd']['host']
-        verify = server_run_config['vcd']['verify']
+        server_config = get_server_runtime_config()
+        host = server_config['vcd']['host']
+        verify = server_config['vcd']['verify']
         self.tenant_client, self.client_session = connect_vcd_user_via_token(
             vcd_uri=host,
             headers=self.headers,
@@ -166,8 +166,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         }
 
     def _connect_sys_admin(self):
-        from container_service_extension.service import Service
-        self.sys_admin_client = Service().get_sys_admin_client()
+        self.sys_admin_client = get_vcd_sys_admin_client()
 
     def _disconnect_sys_admin(self):
         if self.sys_admin_client is not None:
@@ -227,14 +226,13 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         return all(allowed.match(x) for x in name.split("."))
 
     def get_template(self, name=None):
-        from container_service_extension.service import Service
-        server_run_config = Service().get_service_run_config()
+        server_config = get_server_runtime_config()
         if name is None:
             if 'template' in self.body and self.body['template'] is not None:
                 name = self.body['template']
             else:
-                name = server_run_config['broker']['default_template']
-        for template in server_run_config['broker']['templates']:
+                name = server_config['broker']['default_template']
+        for template in server_config['broker']['templates']:
             if template['name'] == name:
                 return template
         raise Exception('Template %s not found' % name)
@@ -369,12 +367,11 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         """
         # TODO(right template) find a right way to retrieve
         # the template from which nfs node was created.
-        from container_service_extension.service import Service
-        server_run_config = Service().get_service_run_config()
-        template = server_run_config['broker']['templates'][0]
+        server_config = get_server_runtime_config()
+        template = server_config['broker']['templates'][0]
         script = '#!/usr/bin/env bash\nshowmount -e %s' % ip
         result = execute_script_in_nodes(
-            server_run_config, vapp, template['admin_password'],
+            server_config, vapp, template['admin_password'],
             script, nodes=[node], check_tools=False)
         lines = result[0][1].content.decode().split('\n')
         exports = []
@@ -465,10 +462,9 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                                                              self.cluster_id))
             vapp.reload()
 
-            from container_service_extension.service import Service
-            server_run_config = Service().get_service_run_config()
+            server_config = get_server_runtime_config()
             try:
-                add_nodes(1, template, TYPE_MASTER, server_run_config,
+                add_nodes(1, template, TYPE_MASTER, server_config,
                           self.tenant_client, org, vdc, vapp, self.body)
             except Exception as e:
                 raise MasterNodeCreationError(
@@ -479,8 +475,8 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                 message='Initializing cluster %s(%s)' % (self.cluster_name,
                                                          self.cluster_id))
             vapp.reload()
-            init_cluster(server_run_config, vapp, template)
-            master_ip = get_master_ip(server_run_config, vapp, template)
+            init_cluster(server_config, vapp, template)
+            master_ip = get_master_ip(server_config, vapp, template)
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      master_ip)
             self.tenant_client.get_task_monitor().wait_for_status(task)
@@ -492,7 +488,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                      self.cluster_id))
                 try:
                     add_nodes(self.body['node_count'], template, TYPE_NODE,
-                              server_run_config, self.tenant_client, org, vdc,
+                              server_config, self.tenant_client, org, vdc,
                               vapp, self.body)
                 except Exception as e:
                     raise WorkerNodeCreationError(
@@ -504,7 +500,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                     (self.body['node_count'], self.cluster_name,
                      self.cluster_id))
                 vapp.reload()
-                join_cluster(server_run_config, vapp, template)
+                join_cluster(server_config, vapp, template)
             if self.body['enable_nfs']:
                 self.update_task(
                     TaskStatus.RUNNING,
@@ -513,7 +509,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                              self.cluster_id))
                 try:
                     add_nodes(1, template, TYPE_NFS,
-                              server_run_config, self.tenant_client, org, vdc,
+                              server_config, self.tenant_client, org, vdc,
                               vapp, self.body)
                 except Exception as e:
                     raise NFSNodeCreationError(
@@ -617,7 +613,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                      "sp={self.body['storage_profile']}")
         if self.body['node_count'] < 1:
             raise CseServerError(f"Invalid node count: "
-                                 "{self.body['node_count']}.")
+                                 f"{self.body['node_count']}.")
         self._connect_tenant()
         self._connect_sys_admin()
         clusters = load_from_metadata(
@@ -646,8 +642,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         LOGGER.debug('About to add nodes to cluster with name: %s',
                      self.cluster_name)
         try:
-            from container_service_extension.service import Service
-            server_run_config = Service().get_service_run_config()
+            server_config = get_server_runtime_config()
             org_resource = self.tenant_client.get_org()
             org = Org(self.tenant_client, resource=org_resource)
             vdc = VDC(self.tenant_client, href=self.cluster['vdc_href'])
@@ -661,7 +656,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                          self.cluster_id))
             new_nodes = add_nodes(self.body['node_count'], template,
                                   self.body['node_type'],
-                                  server_run_config, self.tenant_client,
+                                  server_config, self.tenant_client,
                                   org, vdc, vapp, self.body)
             if self.body['node_type'] == TYPE_NFS:
                 self.update_task(
@@ -681,7 +676,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                 for spec in new_nodes['specs']:
                     target_nodes.append(spec['target_vm_name'])
                 vapp.reload()
-                join_cluster(server_run_config, vapp, template, target_nodes)
+                join_cluster(server_config, vapp, template, target_nodes)
                 self.update_task(
                     TaskStatus.SUCCESS,
                     message='Added %s node(s) to cluster %s(%s)' %
@@ -718,7 +713,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
 
         if len(self.body['nodes']) < 1:
             raise CseServerError(f"Invalid list of nodes: "
-                                 "{self.body['nodes']}.")
+                                 f"{self.body['nodes']}.")
         for node in self.body['nodes']:
             if node.startswith(TYPE_MASTER):
                 raise CseServerError(
@@ -757,9 +752,8 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                 message='Deleting %s node(s) from %s(%s)' %
                 (len(self.body['nodes']), self.cluster_name, self.cluster_id))
             try:
-                from container_service_extension.service import Service
-                server_run_config = Service().get_service_run_config
-                delete_nodes_from_cluster(server_run_config,
+                server_config = get_server_runtime_config()
+                delete_nodes_from_cluster(server_config,
                                           vapp,
                                           template,
                                           self.body['nodes'],
