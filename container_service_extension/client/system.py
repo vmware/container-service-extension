@@ -2,11 +2,6 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import json
-
-from lxml import objectify
-import requests
-
 from container_service_extension.utils import process_response
 
 
