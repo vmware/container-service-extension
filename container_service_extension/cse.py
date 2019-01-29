@@ -8,10 +8,10 @@ import click
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from vcd_cli.utils import stdout
 
-from container_service_extension.config import check_cse_installation
-from container_service_extension.config import generate_sample_config
-from container_service_extension.config import get_validated_config
-from container_service_extension.config import install_cse
+from container_service_extension.configure_cse import check_cse_installation
+from container_service_extension.configure_cse import generate_sample_config
+from container_service_extension.configure_cse import get_validated_config
+from container_service_extension.configure_cse import install_cse
 from container_service_extension.service import Service
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])

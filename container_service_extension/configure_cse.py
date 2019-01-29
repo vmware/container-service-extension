@@ -28,6 +28,7 @@ from container_service_extension.exceptions import AmqpError
 from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
+from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.server_constants import CSE_SERVICE_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
 from container_service_extension.utils import catalog_exists
@@ -261,7 +262,11 @@ def validate_vcd_and_vcs_config(vcd_dict, vcs):
     try:
         client = Client(vcd_dict['host'],
                         api_version=vcd_dict['api_version'],
-                        verify_ssl_certs=vcd_dict['verify'])
+                        verify_ssl_certs=vcd_dict['verify'],
+                        log_file=SERVER_DEBUG_WIRELOG_FILEPATH,
+                        log_requests=True,
+                        log_headers=True,
+                        log_bodies=True)
         client.set_credentials(BasicLoginCredentials(vcd_dict['username'],
                                                      SYSTEM_ORG_NAME,
                                                      vcd_dict['password']))
@@ -349,7 +354,11 @@ def check_cse_installation(config, check_template='*'):
     try:
         client = Client(config['vcd']['host'],
                         api_version=config['vcd']['api_version'],
-                        verify_ssl_certs=config['vcd']['verify'])
+                        verify_ssl_certs=config['vcd']['verify'],
+                        log_file=SERVER_DEBUG_WIRELOG_FILEPATH,
+                        log_requests=True,
+                        log_headers=True,
+                        log_bodies=True)
         credentials = BasicLoginCredentials(config['vcd']['username'],
                                             SYSTEM_ORG_NAME,
                                             config['vcd']['password'])
@@ -474,6 +483,7 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
                         api_version=config['vcd']['api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
                         log_file=INSTALL_LOG_FILEPATH,
+                        log_requests=True,
                         log_headers=True,
                         log_bodies=True)
         credentials = BasicLoginCredentials(config['vcd']['username'],
