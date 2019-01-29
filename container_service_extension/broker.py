@@ -147,7 +147,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
     def get_tenant_client_session(self):
         if self.client_session is None:
             self._connect_tenant()
-        return self._client_session
+        return self.client_session
 
     def _connect_tenant(self):
         server_config = get_server_runtime_config()
