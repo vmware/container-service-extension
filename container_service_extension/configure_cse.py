@@ -93,7 +93,12 @@ SAMPLE_VCS_CONFIG = {
     }]
 }
 
-SAMPLE_SERVICE_CONFIG = {'service': {'listeners': 5}}
+SAMPLE_SERVICE_CONFIG = {
+    'service': {
+        'listeners': 5,
+        'enforce_authorization': False
+    }
+}
 
 SAMPLE_TEMPLATE_PHOTON_V2 = {
     'name': 'photon-v2',

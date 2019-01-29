@@ -12,6 +12,7 @@ from pyvcloud.vcd.role import Role
 
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
+from container_service_extension.utils import get_server_runtime_config
 from container_service_extension.utils import get_vcd_sys_admin_client
 
 
@@ -94,11 +95,16 @@ def secure(required_rights=[]):
         def decorator_wrapper(*args, **kwargs):
             sys_admin_client = None
             try:
-                sys_admin_client = get_vcd_sys_admin_client()
-                broker_instance = args[0]  # self
-                user_session = broker_instance.get_tenant_client_session()
-                if _is_authorized(sys_admin_client, user_session,
-                                  required_rights):
+                is_authorized = True;
+                server_config = get_server_runtime_config()
+                if server_config['service']['enforce_authorization']:
+                    sys_admin_client = get_vcd_sys_admin_client()
+                    broker_instance = args[0]  # self
+                    user_session = broker_instance.get_tenant_client_session()
+                    is_authorized = _is_authorized(sys_admin_client,
+                                                   user_session,
+                                                   required_rights)
+                if is_authorized:
                     return func(*args, **kwargs)
                 else:
                     raise Exception(

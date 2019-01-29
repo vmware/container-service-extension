@@ -34,6 +34,7 @@ vcs:
 
 service:
   listeners: 5
+  enforce_authorization: false
 
 broker:
   catalog: cse # public shared catalog within org where the template will be published
