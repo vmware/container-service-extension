@@ -24,10 +24,7 @@ class MessageConsumer(object):
                  username,
                  password,
                  exchange,
-                 routing_key,
-                 config,
-                 verify,
-                 log=False):
+                 routing_key):
         self._connection = None
         self._channel = None
         self._closing = False
@@ -41,11 +38,7 @@ class MessageConsumer(object):
         self.exchange = exchange
         self.routing_key = routing_key
         self.queue = routing_key
-        self.config = config
-        self.verify = verify
-        self.log = log
-        self.service_processor = ServiceProcessor(self.config, self.verify,
-                                                  self.log)
+        self.service_processor = ServiceProcessor()
         self.fsencoding = sys.getfilesystemencoding()
 
     def connect(self):

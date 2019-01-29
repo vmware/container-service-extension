@@ -12,7 +12,6 @@ from container_service_extension.utils import process_response
 from container_service_extension.utils import response_to_exception
 
 
-
 class Cluster(object):
     def __init__(self, client):
         self.client = client
@@ -96,8 +95,8 @@ class Cluster(object):
             instantiate the nodes
         :param enable_nfs: (bool): bool value to indicate if NFS node is to be
             created
-        :param disable_rollback: (bool): Flag to control weather rollback should be
-            performed or not in case of errors. True to rollback,
+        :param disable_rollback: (bool): Flag to control weather rollback
+            should be performed or not in case of errors. True to rollback,
             False to not rollback
 
         :return: (json) A parsed json object describing the requested cluster.
@@ -213,8 +212,8 @@ class Cluster(object):
             node vms without explicitly providing passwords
         :param template: (str): The name of the catalog template to use to
             instantiate the nodes
-        :param disable_rollback: (bool): Flag to control weather rollback should be
-            performed or not in case of errors. True to rollback,
+        :param disable_rollback: (bool): Flag to control weather rollback
+            should be performed or not in case of errors. True to rollback,
             False to not rollback
 
         :return: (json) A parsed json object describing the requested cluster.
