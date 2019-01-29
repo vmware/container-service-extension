@@ -64,6 +64,7 @@ CLIENT_LOGGER = logging.getLogger(CLIENT_LOGGER_NAME)
 SERVER_LOGGER_NAME = 'container_service_extension.server'
 SERVER_INFO_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-server-info.log"
 SERVER_DEBUG_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-server-debug.log"
+SERVER_DEBUG_WIRELOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-server-wire-debug.log"
 SERVER_LOGGER = logging.getLogger(SERVER_LOGGER_NAME)
 
 

@@ -12,16 +12,19 @@ import traceback
 
 import click
 import pkg_resources
+from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
+import requests
 
-from container_service_extension.broker import DefaultBroker
-from container_service_extension.config import check_cse_installation
-from container_service_extension.config import get_validated_config
+from container_service_extension.configure_cse import check_cse_installation
+from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.consumer import MessageConsumer
 from container_service_extension.logger import configure_server_logger
 from container_service_extension.logger import SERVER_DEBUG_LOG_FILEPATH
+from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_INFO_LOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.utils import connect_vcd_user_via_token
 from container_service_extension.utils import SYSTEM_ORG_NAME
 
 
@@ -42,10 +45,10 @@ def signal_handler(signal, frame):
 
 def consumer_thread(c):
     try:
-        LOGGER.info('about to start consumer_thread %s', c)
+        LOGGER.info('About to start consumer_thread %s.', c)
         c.run()
     except Exception:
-        click.echo('about to stop consumer_thread')
+        click.echo('About to stop consumer_thread.')
         LOGGER.error(traceback.format_exc())
         c.stop()
 
@@ -60,26 +63,35 @@ class Service(object, metaclass=Singleton):
         self.threads = []
         self.should_stop = False
 
-    def connect_tenant(self, headers):
-        token = headers.get('x-vcloud-authorization')
-        accept_header = headers.get('Accept')
-        version = accept_header.split('version=')[1]
-        client_tenant = Client(
-            uri=self.config['vcd']['host'],
-            api_version=version,
-            verify_ssl_certs=self.config['vcd']['verify'],
-            log_file=SERVER_DEBUG_LOG_FILEPATH,
-            log_headers=True,
-            log_bodies=True)
-        session = client_tenant.rehydrate_from_token(token)
-        return (
-            client_tenant,
-            session,
-        )
+    def get_service_config(self):
+        return self.config
+
+    def get_sys_admin_client(self):
+        if self.config is not None:
+            if not self.config['vcd']['verify']:
+                LOGGER.warning('InsecureRequestWarning: Unverified HTTPS '
+                               'request is being made. Adding certificate '
+                               'verification is strongly advised.')
+                requests.packages.urllib3.disable_warnings()
+            client = Client(
+                uri=self.config['vcd']['host'],
+                api_version=self.config['vcd']['api_version'],
+                verify_ssl_certs=self.config['vcd']['verify'],
+                log_file=SERVER_DEBUG_WIRELOG_FILEPATH,
+                log_requests=True,
+                log_headers=True,
+                log_bodies=True)
+            credentials = BasicLoginCredentials(self.config['vcd']['username'],
+                                                SYSTEM_ORG_NAME,
+                                                self.config['vcd']['password'])
+            client.set_credentials(credentials)
+            return client
+        return None
 
     def active_requests_count(self):
         n = 0
         for t in threading.enumerate():
+            from container_service_extension.broker import DefaultBroker
             if type(t) == DefaultBroker:
                 n += 1
         return n
@@ -94,9 +106,12 @@ class Service(object, metaclass=Singleton):
                 return 'Disabled'
 
     def info(self, headers):
-        client_tenant, session = self.connect_tenant(headers)
+        tenant_client, session = connect_vcd_user_via_token(
+            vcd_uri=self.config['vcd']['host'],
+            headers=headers,
+            verify_ssl_certs=self.config['vcd']['verify'])
         result = Service.version()
-        if session.get('org') == SYSTEM_ORG_NAME:
+        if tenant_client.is_sysadmin():
             result['consumer_threads'] = len(self.threads)
             result['all_threads'] = threading.activeCount()
             result['requests_in_progress'] = self.active_requests_count()
@@ -110,21 +125,22 @@ class Service(object, metaclass=Singleton):
     def version(cls):
         ver = pkg_resources.require('container-service-extension')[0].version
         ver_obj = {
-            'product':
-            'CSE',
-            'description':
-            'Container Service Extension for VMware vCloud Director',
-            'version':
-            ver,
-            'python':
-            platform.python_version()
+            'product': 'CSE',
+            'description': 'Container Service Extension for VMware vCloud '
+                           'Director',
+            'version': ver,
+            'python': platform.python_version()
         }
         return ver_obj
 
     def update_status(self, headers, body):
-        client_tenant, session = self.connect_tenant(headers)
+        tenant_client, session = connect_vcd_user_via_token(
+            vcd_uri=self.config['vcd']['host'],
+            headers=headers,
+            verify_ssl_certs=self.config['vcd']['verify'])
+
         reply = {}
-        if session.get('org') == SYSTEM_ORG_NAME:
+        if tenant_client.is_sysadmin():
             if 'enabled' in body:
                 if body['enabled'] and self.should_stop:
                     reply['body'] = {
@@ -185,8 +201,7 @@ class Service(object, metaclass=Singleton):
                 c = MessageConsumer(
                     amqp['host'], amqp['port'], amqp['ssl'], amqp['vhost'],
                     amqp['username'], amqp['password'], amqp['exchange'],
-                    amqp['routing_key'], self.config,
-                    self.config['vcd']['verify'], self.config['vcd']['log'])
+                    amqp['routing_key'])
                 name = 'MessageConsumer-%s' % n
                 t = Thread(name=name, target=consumer_thread, args=(c, ))
                 t.daemon = True

@@ -27,6 +27,7 @@ import requests
 from vsphere_guest_run.vsphere import VSphere
 
 from container_service_extension.exceptions import VcdResponseError
+from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 
 cache = LRUCache(maxsize=1024)
@@ -58,7 +59,43 @@ _type_to_string = {
 OK = 200
 CREATED = 201
 ACCEPTED = 202
+UNAUTHORIZED = 401
 INTERNAL_SERVER_ERROR = 500
+GATEWAY_TIMEOUT = 504
+
+
+def connect_vcd_user_via_token(vcd_uri, headers, verify_ssl_certs=True):
+    if not verify_ssl_certs:
+        LOGGER.warning('InsecureRequestWarning: Unverified HTTPS request is '
+                       'being made. Adding certificate verification is '
+                       'strongly advised.')
+        requests.packages.urllib3.disable_warnings()
+    token = headers.get('x-vcloud-authorization')
+    accept_header = headers.get('Accept')
+    version = accept_header.split('version=')[1]
+    client_tenant = Client(
+        uri=vcd_uri,
+        api_version=version,
+        verify_ssl_certs=verify_ssl_certs,
+        log_file=SERVER_DEBUG_WIRELOG_FILEPATH,
+        log_requests=True,
+        log_headers=True,
+        log_bodies=True)
+    session = client_tenant.rehydrate_from_token(token)
+    return (
+        client_tenant,
+        session,
+    )
+
+
+def get_server_runtime_config():
+    from container_service_extension.service import Service
+    return Service().get_service_config()
+
+
+def get_vcd_sys_admin_client():
+    from container_service_extension.service import Service
+    return Service().get_sys_admin_client()
 
 
 def error_to_json(error):
@@ -143,21 +180,25 @@ def response_to_exception(response):
 
     :raises: VcdResponseError
     """
-    if response.status_code == 504:
+    if response.status_code == GATEWAY_TIMEOUT:
         message = 'An error has occurred.'
         if response.content is not None and len(response.content) > 0:
             obj = objectify.fromstring(response.content)
             message = obj.get(ERROR_MESSAGE)
-        raise VcdResponseError(response.status_code, message)
-
-    content = deserialize_response_content(response)
-    if ERROR_MESSAGE in content:
-        if ERROR_REASON in content[ERROR_MESSAGE]:
-            message = content[ERROR_MESSAGE][ERROR_REASON]
-        else:
-            message = content[ERROR_MESSAGE]
+    elif response.status_code == UNAUTHORIZED:
+        message = 'Session has expired or user not logged in. Please re-login.'
+        if response.content is not None and len(response.content) > 0:
+            obj = objectify.fromstring(response.content)
+            message = obj.get(ERROR_MESSAGE)
     else:
-        message = ERROR_UNKNOWN
+        content = deserialize_response_content(response)
+        if ERROR_MESSAGE in content:
+            if ERROR_REASON in content[ERROR_MESSAGE]:
+                message = content[ERROR_MESSAGE][ERROR_REASON]
+            else:
+                message = content[ERROR_MESSAGE]
+        else:
+            message = ERROR_UNKNOWN
 
     raise VcdResponseError(response.status_code, message)
 
@@ -460,7 +501,8 @@ def get_org(client, org_name=None):
     return org
 
 
-def get_vdc(client, vdc_name, org=None, org_name=None, is_admin_operation=False):
+def get_vdc(client, vdc_name, org=None, org_name=None,
+            is_admin_operation=False):
     """Get the specified VDC object.
 
     :param pyvcloud.vcd.client.Client client:
@@ -479,7 +521,8 @@ def get_vdc(client, vdc_name, org=None, org_name=None, is_admin_operation=False)
     """
     if org is None:
         org = get_org(client, org_name=org_name)
-    vdc = VDC(client, resource=org.get_vdc(vdc_name, is_admin_operation=is_admin_operation))
+    vdc = VDC(client, resource=org.get_vdc(vdc_name,
+              is_admin_operation=is_admin_operation))
     return vdc
 
 
@@ -683,32 +726,6 @@ def wait_until_tools_ready(vapp, vsphere, callback=vgr_callback()):
     moid = vapp.get_vm_moid(vapp.name)
     vm = vsphere.get_vm_by_moid(moid)
     vsphere.wait_until_tools_ready(vm, sleep=5, callback=callback)
-
-
-def get_vcd_client(host, authorization_token, accept_header,
-                   verify_ssl_certs=False):
-    """Generate vCD client from the authorization token.
-
-    :param str host: vCD host
-    :param str authorization_token: Value of 'x-vcloud-authorization' header
-        in the http request
-    :param str accept_header: Value of 'Accept' header in the http request
-    :param boolean verify_ssl_certs: Boolean value specified in config.yaml
-        to verify ssl_certs
-
-    :return: Returns vCD client
-
-    :rtype: pyvcloud.vcd.client.Client
-    """
-    version = accept_header.split('version=')[1]
-    client = Client(
-        uri=host,
-        api_version=version,
-        verify_ssl_certs=verify_ssl_certs,
-        log_headers=True,
-        log_bodies=True)
-    client.rehydrate_from_token(authorization_token)
-    return client
 
 
 def exception_handler(func):
