@@ -1,5 +1,5 @@
 # VMware vCloud Director Python SDK
-# Copyright (c) 2018 VMware, Inc. All Rights Reserved.
+# Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,127 +12,241 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
+from pathlib import Path
 
-import logging
+from click.testing import CliRunner
+from pyvcloud.vcd.api_extension import APIExtension
+from pyvcloud.vcd.client import BasicLoginCredentials
+from pyvcloud.vcd.client import Client
+from pyvcloud.vcd.exceptions import EntityNotFoundException
+from pyvcloud.vcd.exceptions import MissingRecordException
+from pyvcloud.vcd.org import Org
+from pyvcloud.vcd.vdc import VDC
 
-import requests
+from container_service_extension.server_constants import CSE_SERVICE_NAME
+from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
+import container_service_extension.system_test_framework.utils as testutils
+import container_service_extension.utils as utils
+"""
+This module manages environment state during CSE system tests.
+These variables persist through all test cases and do not change.
 
-from container_service_extension.config import SAMPLE_TEMPLATE_PHOTON_V2
-from container_service_extension.config import SAMPLE_TEMPLATE_UBUNTU_16_04
+Module usage example:
+```
+import container_service_extension.system_test_framework.environment as env
 
-SCRIPTS_DIR = 'scripts'
-ACTIVE_PHOTON_CUST_SCRIPT = 'cust-photon-v2.sh'
-ACTIVE_UBUNTU_CUST_SCRIPT = 'cust-ubuntu-16.04.sh'
-STATIC_PHOTON_CUST_SCRIPT = 'CUST-PHOTON.sh'
-STATIC_UBUNTU_CUST_SCRIPT = 'CUST-UBUNTU.sh'
-PHOTON_TEMPLATE_NAME = 'photon-v2'
+env.init_environment()
+# do something with env.CLIENT
+```
+
+NOTE: Imports using 'from environment import CLIENT' imports the variable to
+the local module namespace, so calling 'init_environment' will change
+environment.CLIENT but will not change the CLIENT that was imported.
+"""
 BASE_CONFIG_FILEPATH = 'base_config.yaml'
 ACTIVE_CONFIG_FILEPATH = 'cse_test_config.yaml'
 
+STATIC_PHOTON_CUST_SCRIPT = 'CUST-PHOTON.sh'
+STATIC_UBUNTU_CUST_SCRIPT = 'CUST-UBUNTU.sh'
+ACTIVE_PHOTON_CUST_SCRIPT = 'cust-photon-v2.sh'
+ACTIVE_UBUNTU_CUST_SCRIPT = 'cust-ubuntu-16.04.sh'
 
-def developerModeAware(function):
-    """Skip execution of decorated function.
+PHOTON_TEMPLATE_NAME = 'photon-v2'
+SCRIPTS_DIR = 'scripts'
+SSH_KEY_FILEPATH = str(Path.home() / '.ssh' / 'id_rsa.pub')
+CLI_RUNNER = CliRunner()
 
-    To be used on test teardown methods.
+# if True, then the person testing would like to keep all artifacts that
+# were made during testing.
+DEV_MODE = False
 
-    :param function function: decorated function.
+AMQP_USERNAME = None
+AMQP_PASSWORD = None
+CLIENT = None
+ORG_HREF = None
+VDC_HREF = None
+CATALOG_NAME = None
 
-    :return: a function that either executes the decorated function or skips
-        it, based on the value of a particular param in the environment
-        configuration.
 
-    :rtype: function
+def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
+    """Set up module variables according to config dict.
+
+    :param str config_filepath:
     """
-    def wrapper(self):
-        if Environment._test_config is not None and \
-                Environment._test_config['developer_mode']:
-            function(self)
-        else:
-            Environment.get_default_logger().debug(
-                f'Skipping {function.__name__} because developer mode is on.')
+    global AMQP_USERNAME, AMQP_PASSWORD, CLIENT, ORG_HREF, VDC_HREF, \
+        CATALOG_NAME, DEV_MODE
 
-    return wrapper
+    config = testutils.yaml_to_dict(config_filepath)
+    CLIENT = Client(config['vcd']['host'],
+                    api_version=config['vcd']['api_version'],
+                    verify_ssl_certs=config['vcd']['verify'])
+    credentials = BasicLoginCredentials(config['vcd']['username'],
+                                        utils.SYSTEM_ORG_NAME,
+                                        config['vcd']['password'])
+    CLIENT.set_credentials(credentials)
 
+    org = utils.get_org(CLIENT, org_name=config['broker']['org'])
+    vdc = utils.get_vdc(CLIENT, config['broker']['vdc'], org=org)
+    ORG_HREF = org.href
+    VDC_HREF = vdc.href
+    CATALOG_NAME = config['broker']['catalog']
+    AMQP_USERNAME = config['amqp']['username']
+    AMQP_PASSWORD = config['amqp']['password']
 
-class Environment(object):
-    """Hold configuration details of the vCD testbed.
-
-    Also acts as a single point for management of logging for tests.
-    """
-
-    _logger = None
-    _install_config = None
-    _test_config = None
-
-    @classmethod
-    def init(cls, config_dict):
-        """Initialize Environment class attributes.
-
-        :param dict config_dict: contains the yaml representation of
-            configuration data read from the configuration file.
-        """
-        cls._install_config = config_dict
-        if 'test' in config_dict:
-            cls._test_config = config_dict['test']
-            if not cls._test_config['connection']['verify'] and \
-               cls._test_config['connection']['disable_ssl_warnings']:
-                requests.packages.urllib3.disable_warnings()
-
-            # get rid of test specific configurations from installation config
-            del cls._install_config['test']
-
-        if 'broker' in cls._install_config:
-            if 'templates' not in cls._install_config['broker']:
-                cls._install_config['broker']['templates'] = \
-                    [SAMPLE_TEMPLATE_PHOTON_V2, SAMPLE_TEMPLATE_UBUNTU_16_04]
-            if 'default_template' not in cls._install_config['broker']:
-                cls._install_config['broker']['default_template'] = \
-                    SAMPLE_TEMPLATE_PHOTON_V2['name']
-
-        cls._logger = cls.get_default_logger()
-
-    @classmethod
-    def get_install_config(cls):
-        """Get test configuration parameter dictionary.
-
-        :return: a dict containing configuration information.
-
-        :rtype: dict
-        """
-        return cls._install_config
-
-    @classmethod
-    def get_default_logger(cls):
-        """Get a handle to the logger for system_tests.
-
-        :return: default logger instance.
-
-        :rtype: logging.Logger
-        """
-        if cls._logger is not None:
-            return cls._logger
-
-        cls._logger = logging.getLogger('cse.server.installation.tests')
-        cls._logger.setLevel(logging.DEBUG)
-        if not cls._logger.handlers:
-            try:
-                log_file = cls._test_config['logging']['default_log_filename']
-                handler = logging.FileHandler(log_file)
-            except (TypeError, KeyError):
-                handler = logging.NullHandler()
-
-            formatter = logging.Formatter('%(asctime)-23.23s | '
-                                          '%(levelname)-5.5s | '
-                                          '%(name)-15.15s | '
-                                          '%(module)-15.15s | '
-                                          '%(funcName)-30.30s | '
-                                          '%(message)s')
-            handler.setFormatter(formatter)
-            cls._logger.addHandler(handler)
-
-        return cls._logger
-
-    @classmethod
-    def cleanup(cls):
-        """Clean up the environment."""
+    try:
+        DEV_MODE = config['test']['developer_mode']
+    except KeyError:
         pass
+
+
+def cleanup_environment():
+    if CLIENT is not None:
+        CLIENT.logout()
+
+
+def setup_active_config():
+    """Set up the active config file from BASE_CONFIG_FILEPATH.
+
+    'test' section is removed if it exists in base config, active config is
+    created at ACTIVE_CONFIG_FILEPATH.
+
+    :returns: config dict without 'test' key
+
+    :rtype: dict
+    """
+    config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
+    if 'test' in config:
+        del config['test']
+
+    testutils.dict_to_yaml_file(config, ACTIVE_CONFIG_FILEPATH)
+    os.chmod(ACTIVE_CONFIG_FILEPATH, 0o600)
+
+    return config
+
+
+def teardown_active_config():
+    """Delete the active config file if it exists."""
+    try:
+        Path(ACTIVE_CONFIG_FILEPATH).unlink()
+    except FileNotFoundError:
+        pass
+
+
+def delete_catalog_item(item_name):
+    org = Org(CLIENT, href=ORG_HREF)
+    try:
+        org.delete_catalog_item(CATALOG_NAME, item_name)
+        utils.wait_for_catalog_item_to_resolve(CLIENT, CATALOG_NAME, item_name,
+                                               org=org)
+        org.reload()
+    except EntityNotFoundException:
+        pass
+
+
+def delete_vapp(vapp_name):
+    vdc = VDC(CLIENT, href=VDC_HREF)
+    try:
+        task = vdc.delete_vapp(vapp_name, force=True)
+        CLIENT.get_task_monitor().wait_for_success(task)
+        vdc.reload()
+    except EntityNotFoundException:
+        pass
+
+
+def delete_catalog(catalog_name=None):
+    if catalog_name is None:
+        catalog_name = CATALOG_NAME
+    org = Org(CLIENT, href=ORG_HREF)
+    try:
+        org.delete_catalog(catalog_name)
+        # TODO() no way currently to wait for catalog deletion.
+        # https://github.com/vmware/pyvcloud/issues/334
+        # below causes EntityNotFoundException, catalog not found.
+        # time.sleep(15)
+        # org.reload()
+    except EntityNotFoundException:
+        pass
+
+
+def unregister_cse():
+    try:
+        APIExtension(CLIENT).delete_extension(CSE_SERVICE_NAME,
+                                              CSE_SERVICE_NAMESPACE)
+    except MissingRecordException:
+        pass
+
+
+def prepare_customization_scripts():
+    """Copy real customization scripts to the active customization scripts.
+
+    Copy 'CUST-PHOTON.sh' to 'cust-photon-v2.sh'
+    Copy 'CUST-UBUNTU.sh' to 'cust-ubuntu-16.04.sh'
+
+    :raises FileNotFoundError: if script files cannot be found.
+    """
+    scripts_filepaths = {
+        f"{SCRIPTS_DIR}/{STATIC_PHOTON_CUST_SCRIPT}":
+            f"{SCRIPTS_DIR}/{ACTIVE_PHOTON_CUST_SCRIPT}",
+        f"{SCRIPTS_DIR}/{STATIC_UBUNTU_CUST_SCRIPT}":
+            f"{SCRIPTS_DIR}/{ACTIVE_UBUNTU_CUST_SCRIPT}",
+    }
+
+    for src, dst in scripts_filepaths.items():
+        Path(dst).write_text(Path(src).read_text())
+
+
+def blank_customizaton_scripts():
+    """Blanks out 'cust-photon-v2.sh' and 'cust-ubuntu-16.04.sh'.
+
+    :raises FileNotFoundError: if script files cannot be found.
+    """
+    scripts_paths = [
+        Path(f"{SCRIPTS_DIR}/{ACTIVE_PHOTON_CUST_SCRIPT}"),
+        Path(f"{SCRIPTS_DIR}/{ACTIVE_UBUNTU_CUST_SCRIPT}")
+    ]
+
+    for path in scripts_paths:
+        path.write_text('')
+
+
+def catalog_item_exists(catalog_item, catalog_name=None):
+    if catalog_name is None:
+        catalog_name = CATALOG_NAME
+    org = Org(CLIENT, href=ORG_HREF)
+    try:
+        org.get_catalog_item(catalog_name, catalog_item)
+        return True
+    except EntityNotFoundException:
+        return False
+
+
+def vapp_exists(vapp_name):
+    vdc = VDC(CLIENT, href=VDC_HREF)
+    try:
+        vdc.get_vapp(vapp_name)
+        return True
+    except EntityNotFoundException:
+        return False
+
+
+def is_cse_registered():
+    try:
+        APIExtension(CLIENT).get_extension(CSE_SERVICE_NAME,
+                                           namespace=CSE_SERVICE_NAMESPACE)
+        return True
+    except MissingRecordException:
+        return False
+
+
+def is_cse_registration_valid(routing_key, exchange):
+    try:
+        ext = APIExtension(CLIENT).get_extension(CSE_SERVICE_NAME,
+                                                 namespace=CSE_SERVICE_NAMESPACE)  # noqa
+    except MissingRecordException:
+        return False
+
+    if ext['routingKey'] != routing_key or ext['exchange'] != exchange:
+        return False
+
+    return True
