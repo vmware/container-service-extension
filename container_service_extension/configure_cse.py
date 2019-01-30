@@ -62,7 +62,7 @@ SAMPLE_AMQP_CONFIG = {
         'prefix': 'vcd',
         'username': 'guest',
         'password': 'guest',
-        'exchange': 'vcdext',
+        'exchange': 'cse-ext',
         'routing_key': 'cse',
         'ssl': False,
         'ssl_accept_all': False,
