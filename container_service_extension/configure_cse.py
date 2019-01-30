@@ -487,8 +487,14 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
 
     :raises AmqpError: if AMQP exchange could not be created.
     """
-    config = get_validated_config(config_file_name)
+    # TODO() configure_install_logger should occur after get_validated_config,
+    # but we get an error during client initialization in validate_vcd_and_vcs,
+    # where the specified logfile points to the directory 'cse-logs' and it
+    # may not have been created yet. This fix should probably go into pyvcloud,
+    # where the logging setup creates directories used in the log filepath if
+    # they do not exist yet.
     configure_install_logger()
+    config = get_validated_config(config_file_name)
     msg = f"Installing CSE on vCloud Director using config file " \
           f"'{config_file_name}'"
     click.secho(msg, fg='yellow')
