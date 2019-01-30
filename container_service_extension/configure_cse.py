@@ -28,16 +28,12 @@ from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
-from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY
-from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_CATEGORY
-from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION
-from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_NAME
-from container_service_extension.server_constants import CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY
-from container_service_extension.server_constants import CSE_PKS_DEPLOY_RIGHT_CATEGORY
-from container_service_extension.server_constants import CSE_PKS_DEPLOY_RIGHT_DESCRIPTION
-from container_service_extension.server_constants import CSE_PKS_DEPLOY_RIGHT_NAME
-from container_service_extension.server_constants import CSE_SERVICE_NAME
-from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
+from container_service_extension.server_constants import \
+    CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY, CSE_NATIVE_DEPLOY_RIGHT_CATEGORY, \
+    CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION, CSE_NATIVE_DEPLOY_RIGHT_NAME, \
+    CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY, CSE_PKS_DEPLOY_RIGHT_CATEGORY, \
+    CSE_PKS_DEPLOY_RIGHT_DESCRIPTION, CSE_PKS_DEPLOY_RIGHT_NAME, \
+    CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE  # noqa
 from container_service_extension.utils import catalog_exists
 from container_service_extension.utils import catalog_item_exists
 from container_service_extension.utils import check_file_permissions
@@ -526,18 +522,16 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
                                exchange=amqp['exchange'],
                                ext_install=ext_install):
             register_cse(client, amqp['routing_key'], amqp['exchange'])
-
-        # register new right for CSE
-        register_right(client, right_name=CSE_NATIVE_DEPLOY_RIGHT_NAME,
-                       description=CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,
-                       category=CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,
-                       bundle_key=CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY)
-
-        # register new right for PKS
-        register_right(client, right_name=CSE_PKS_DEPLOY_RIGHT_NAME,
-                       description=CSE_PKS_DEPLOY_RIGHT_DESCRIPTION,
-                       category=CSE_PKS_DEPLOY_RIGHT_CATEGORY,
-                       bundle_key=CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY)
+            # register new right for CSE
+            register_right(client, right_name=CSE_NATIVE_DEPLOY_RIGHT_NAME,
+                           description=CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,
+                           category=CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,
+                           bundle_key=CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY)
+            # register new right for PKS
+            register_right(client, right_name=CSE_PKS_DEPLOY_RIGHT_NAME,
+                           description=CSE_PKS_DEPLOY_RIGHT_DESCRIPTION,
+                           category=CSE_PKS_DEPLOY_RIGHT_CATEGORY,
+                           bundle_key=CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY)
 
         # set up cse catalog
         org = get_org(client, org_name=config['broker']['org'])
