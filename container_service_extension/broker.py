@@ -20,7 +20,7 @@ from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
 
 from container_service_extension.abstract_broker import AbstractBroker
-# from container_service_extension.authorization import secure
+from container_service_extension.authorization import secure
 from container_service_extension.cluster import add_nodes
 from container_service_extension.cluster import delete_nodes_from_cluster
 from container_service_extension.cluster import execute_script_in_nodes
@@ -42,8 +42,8 @@ from container_service_extension.exceptions import NFSNodeCreationError
 from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import WorkerNodeCreationError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-# from container_service_extension.server_constants import \
-#     CSE_NATIVE_DEPLOY_RIGHT_NAME
+from container_service_extension.server_constants import \
+    CSE_NATIVE_DEPLOY_RIGHT_NAME
 from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import connect_vcd_user_via_token
 from container_service_extension.utils import ERROR_DESCRIPTION
@@ -147,7 +147,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
     def get_tenant_client_session(self):
         if self.client_session is None:
             self._connect_tenant()
-        return self._client_session
+        return self.client_session
 
     def _connect_tenant(self):
         server_config = get_server_runtime_config()
@@ -381,7 +381,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         return exports
 
     @exception_handler
-    # @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
+    @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def create_cluster(self):
         result = {}
         result['body'] = {}
@@ -542,7 +542,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
             self._disconnect_sys_admin()
 
     @exception_handler
-    # @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
+    @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def delete_cluster(self):
         result = {}
         result['body'] = {}
@@ -604,7 +604,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         return result
 
     @exception_handler
-    # @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
+    @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def create_nodes(self):
         result = {'body': {}}
         self.cluster_name = self.body['name']
@@ -704,7 +704,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
             self._disconnect_sys_admin()
 
     @exception_handler
-    # @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
+    @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def delete_nodes(self):
         result = {'body': {}}
         self.cluster_name = self.body['name']

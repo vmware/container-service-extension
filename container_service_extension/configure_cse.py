@@ -11,6 +11,7 @@ from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import FenceMode
+from pyvcloud.vcd.exceptions import BadRequestException
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
@@ -30,6 +31,14 @@ from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
+from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY
+from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_CATEGORY
+from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION
+from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_NAME
+from container_service_extension.server_constants import CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY
+from container_service_extension.server_constants import CSE_PKS_DEPLOY_RIGHT_CATEGORY
+from container_service_extension.server_constants import CSE_PKS_DEPLOY_RIGHT_DESCRIPTION
+from container_service_extension.server_constants import CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
 
@@ -155,7 +164,12 @@ SAMPLE_PKS_CONFIG = {
     }]
 }
 
-SAMPLE_SERVICE_CONFIG = {'service': {'listeners': 5}}
+SAMPLE_SERVICE_CONFIG = {
+    'service': {
+        'listeners': 5,
+        'enforce_authorization': False
+    }
+}
 
 SAMPLE_TEMPLATE_PHOTON_V2 = {
     'name': 'photon-v2',
@@ -613,6 +627,18 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
         # register cse as extension to vCD
         if should_register_cse(client, ext_install):
             register_cse(client, amqp['routing_key'], amqp['exchange'])
+
+        # register new right for CSE
+        register_right(client, right_name=CSE_NATIVE_DEPLOY_RIGHT_NAME,
+                       description=CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,
+                       category=CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,
+                       bundle_key=CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY)
+
+        # register new right for PKS
+        register_right(client, right_name=CSE_PKS_DEPLOY_RIGHT_NAME,
+                       description=CSE_PKS_DEPLOY_RIGHT_DESCRIPTION,
+                       category=CSE_PKS_DEPLOY_RIGHT_CATEGORY,
+                       bundle_key=CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY)
 
         # set up cse catalog
         org = get_org(client, org_name=config['broker']['org'])
@@ -1202,3 +1228,43 @@ def register_cse(client, amqp_routing_key, exchange_name):
     msg = f"Registered {CSE_SERVICE_NAME} as an API extension in vCD"
     click.secho(msg, fg='green')
     LOGGER.info(msg)
+
+
+def register_right(client, right_name, description, category, bundle_key):
+    """Register a right for CSE.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str right_name: the name of the new right to be registered.
+    :param str description: brief description about the new right.
+    :param str category: add the right in existing categories in
+        vCD Roles and Rights or specify a new category name.
+    :param str bundle_key: is used to identify the right name and change
+        its value to different languages using localization bundle.
+
+    :raises BadRequestException: if a right with given name already
+        exists in vCD.
+    """
+    ext = APIExtension(client)
+    try:
+        ext.add_service_right(
+            right_name,
+            CSE_SERVICE_NAME,
+            CSE_SERVICE_NAMESPACE,
+            description,
+            category,
+            bundle_key)
+
+        msg = f"Register {right_name} as a Right in vCD"
+        click.secho(msg, fg='green')
+        LOGGER.info(msg)
+    except BadRequestException as err:
+        # TODO() replace string matching logic to look for specific right
+        right_exists_msg = f'Right with name "{{{CSE_SERVICE_NAME}}}:' \
+                           f'{right_name}" already exists'
+        if right_exists_msg in str(err):
+            msg = f"Right: {right_name} already " \
+                  f"exists in vCD"
+            click.secho(msg, fg='green')
+            LOGGER.debug(msg)
+        else:
+            raise err
