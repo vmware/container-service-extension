@@ -48,8 +48,8 @@ from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 
-from container_service_extension.config import check_cse_installation
-from container_service_extension.config import get_validated_config
+from container_service_extension.configure_cse import check_cse_installation
+from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.cse import cli
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
