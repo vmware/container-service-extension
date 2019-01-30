@@ -6,12 +6,12 @@ test:
   developer_mode: true
 
 amqp:
-  exchange: test-exchange # do not change (used to test that vcd amqp is not configured when we don't want it to be)
+  exchange: test-exchange # cse exclusive exchange used by amqp server
   host: '???'
   password: guest
   port: 5672
-  prefix: test-prefix-vcd # do not change
-  routing_key: test-routing-key-cse # do not change
+  prefix: test-prefix-vcd
+  routing_key: test-routing-key-cse
   ssl: false
   ssl_accept_all: false
   username: guest
