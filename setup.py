@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from pathlib import Path
+
 from setuptools import setup
 
 osl = 'open_source_license_container-service-extension_1.2.0_GA.txt'
