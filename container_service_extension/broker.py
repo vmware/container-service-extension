@@ -796,21 +796,32 @@ class DefaultBroker(AbstractBroker, threading.Thread):
 
     @exception_handler
     def enable_ovdc_for_kubernetes(self):
+        """Enable ovdc for k8s on the given cloud provider.
 
-            LOGGER.debug(f'{self.body}')
-            self._connect_sys_admin()
-            ovdc_cache = OvdcCache(self.sys_admin_client)
-            task = ovdc_cache.set_ovdc_backend_meta_data(
+        :return: result object
+
+        :rtype: dict
+
+        :raises CseServerError: if the user is not system administrator.
+        """
+        LOGGER.debug(f'{self.body}')
+        result = dict()
+        self._connect_tenant()
+        if self.tenant_client.is_sysadmin():
+            ovdc_cache = OvdcCache(self.tenant_client)
+            task = ovdc_cache.set_container_provider_meta_data(
                 self.body['ovdc_name'],
-                container_provider=self.body[
-                    'container_provider'],
+                container_provider=self.body['container_provider'],
                 pks_plans=self.body['pks_plans'],
                 org_name=self.body['org_name'])
-
-            result = dict()
-            result['body'] = {'status': task.get('operation')}
+            response_body = dict()
+            response_body['ovdc_name'] = self.body['ovdc_name']
+            response_body['task_href'] = task.get('href')
+            result['body'] = response_body
             result['status_code'] = ACCEPTED
             return result
+        else:
+            raise CseServerError("Unauthorized Operation")
 
     def node_rollback(self, node_list):
         """Rollback for node creation failure.

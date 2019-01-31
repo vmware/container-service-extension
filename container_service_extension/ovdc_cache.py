@@ -4,6 +4,7 @@
 
 from pyvcloud.vcd import utils
 
+from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.utils import get_org
 from container_service_extension.utils import get_vdc
 
@@ -56,7 +57,7 @@ class OvdcCache(object):
         self.client = client
         self.pvdc_cache = PvdcCacheStub()
 
-    def get_ovdc_backend_metadata(self, ovdc_name, org_name=None):
+    def get_container_provider_metadata(self, ovdc_name, org_name=None):
         """Get ovdc metadata pertaining to the backend(vcd/pks).
 
         The backend that this ovdc is dedicated to deploy K8 clusters on.
@@ -92,30 +93,31 @@ class OvdcCache(object):
         metadata['secret'] = pks_info['secret']
         return metadata
 
-    def set_ovdc_backend_meta_data(self, ovdc_name, org_name=None,
-                                   container_provider=None,
-                                   pks_plans=''):
+    def set_container_provider_meta_data(self, ovdc_name, org_name=None,
+                                         container_provider=None,
+                                         pks_plans=''):
         """Set the backing pvdc and pks information of a given oVdc.
 
         :param str ovdc_name: name of the ovdc
         :param str org_name: specific org to use if @org is not given.
             If None, uses currently logged-in org from @client.
-        :param str container_provider: name of back end for which this
-            metadata is required.
-        :param str pks_plans: pks plan for deployment. If backend is vcd
-            or None, plans are not used and not relevant to the context.
+        :param str container_provider: name of container provider for which
+            this metadata is required.
+        :param str pks_plans: pks plan for deployment. If container provider
+            is vcd or None, plans are not used and not relevant to the context.
         """
         metadata = dict()
         org = get_org(self.client, org_name=org_name)
         ovdc = get_vdc(self.client, ovdc_name, org=org,
                        is_admin_operation=True)
         if container_provider is None:
+            LOGGER.debug(f'Remove metadata for ovdc:{ovdc_name}')
             self._remove_metadata(ovdc,
                                   keys=['name', 'vc', 'rp_path', 'host',
                                         'port',
                                         'uaac_port', 'pks_plans',
                                         'pks_compute_profile_name'])
-            metadata['backend'] = ''
+            metadata['container_provider'] = ''
         else:
             # Get resource pool
             ovdc_id = ovdc.resource.get('id').split(':')[-1]

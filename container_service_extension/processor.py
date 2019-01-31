@@ -36,6 +36,7 @@ class ServiceProcessor(object):
         cluster_info_request = False
         node_info_request = False
         system_request = False
+        ovdc_request = False
 
         if len(tokens) > 3:
             if tokens[3] in ['swagger', 'swagger.json', 'swagger.yaml']:
