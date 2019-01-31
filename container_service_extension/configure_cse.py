@@ -531,6 +531,7 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
             register_cse(client, amqp['routing_key'], amqp['exchange'])
 
         # register rights to vCD
+        # TODO() should also remove rights when unregistering CSE
         if is_cse_registered(client):
             register_right(client, right_name=CSE_NATIVE_DEPLOY_RIGHT_NAME,
                            description=CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,
@@ -1074,13 +1075,9 @@ def register_right(client, right_name, description, category, bundle_key):
     """
     ext = APIExtension(client)
     try:
-        ext.add_service_right(
-            right_name,
-            CSE_SERVICE_NAME,
-            CSE_SERVICE_NAMESPACE,
-            description,
-            category,
-            bundle_key)
+        ext.add_service_right(right_name, CSE_SERVICE_NAME,
+                              CSE_SERVICE_NAMESPACE, description, category,
+                              bundle_key)
 
         msg = f"Register {right_name} as a Right in vCD"
         click.secho(msg, fg='green')
@@ -1090,8 +1087,7 @@ def register_right(client, right_name, description, category, bundle_key):
         right_exists_msg = f'Right with name "{{{CSE_SERVICE_NAME}}}:' \
                            f'{right_name}" already exists'
         if right_exists_msg in str(err):
-            msg = f"Right: {right_name} already " \
-                  f"exists in vCD"
+            msg = f"Right: {right_name} already exists in vCD"
             click.secho(msg, fg='green')
             LOGGER.debug(msg)
         else:
