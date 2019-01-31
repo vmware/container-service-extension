@@ -15,9 +15,11 @@ from urllib.parse import urlparse
 from cachetools import LRUCache
 import click
 from lxml import objectify
+from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
+from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.platform import Platform
 from pyvcloud.vcd.vapp import VApp
@@ -29,6 +31,9 @@ from vsphere_guest_run.vsphere import VSphere
 from container_service_extension.exceptions import VcdResponseError
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.server_constants import CSE_SERVICE_NAME
+from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
+
 
 cache = LRUCache(maxsize=1024)
 SYSTEM_ORG_NAME = "System"
@@ -726,6 +731,15 @@ def wait_until_tools_ready(vapp, vsphere, callback=vgr_callback()):
     moid = vapp.get_vm_moid(vapp.name)
     vm = vsphere.get_vm_by_moid(moid)
     vsphere.wait_until_tools_ready(vm, sleep=5, callback=callback)
+
+
+def is_cse_registered(client):
+    try:
+        APIExtension(client).get_extension(CSE_SERVICE_NAME,
+                                           namespace=CSE_SERVICE_NAMESPACE)
+        return True
+    except MissingRecordException:
+        return False
 
 
 def exception_handler(func):
