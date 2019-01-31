@@ -95,7 +95,7 @@ def secure(required_rights=[]):
         def decorator_wrapper(*args, **kwargs):
             sys_admin_client = None
             try:
-                is_authorized = True;
+                is_authorized = True
                 server_config = get_server_runtime_config()
                 if server_config['service']['enforce_authorization']:
                     sys_admin_client = get_vcd_sys_admin_client()
