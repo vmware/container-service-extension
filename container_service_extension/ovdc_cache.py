@@ -93,15 +93,15 @@ class OvdcCache(object):
         return metadata
 
     def set_ovdc_backend_meta_data(self, ovdc_name, org_name=None,
-                                   backend=None,
+                                   container_provider=None,
                                    pks_plans=''):
         """Set the backing pvdc and pks information of a given oVdc.
 
         :param str ovdc_name: name of the ovdc
         :param str org_name: specific org to use if @org is not given.
             If None, uses currently logged-in org from @client.
-        :param str backend: name of back end for which this metadata is
-        required.
+        :param str container_provider: name of back end for which this
+            metadata is required.
         :param str pks_plans: pks plan for deployment. If backend is vcd
             or None, plans are not used and not relevant to the context.
         """
@@ -109,7 +109,7 @@ class OvdcCache(object):
         org = get_org(self.client, org_name=org_name)
         ovdc = get_vdc(self.client, ovdc_name, org=org,
                        is_admin_operation=True)
-        if backend is None:
+        if container_provider is None:
             self._remove_metadata(ovdc,
                                   keys=['name', 'vc', 'rp_path', 'host',
                                         'port',
@@ -139,12 +139,12 @@ class OvdcCache(object):
             metadata['port'] = pks_info['port']
             metadata['uaac_port'] = pks_info['uaac_port']
             metadata['pks_plans'] = pks_plans
-            metadata['backend'] = backend
+            metadata['container_provider'] = container_provider
             pks_compute_profile_name = f"{org_name}-{ovdc_name}-{ovdc_id}"
             metadata['pks_compute_profile_name'] = pks_compute_profile_name
 
         # set ovdc metadata into Vcd
-        ovdc.set_multiple_metadata(metadata)
+        return ovdc.set_multiple_metadata(metadata)
 
     def _remove_metadata(self, ovdc, keys=[]):
         metadata = utils.metadata_to_dict(ovdc.get_all_metadata())

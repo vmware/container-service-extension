@@ -15,6 +15,7 @@ from vcd_cli.vcd import vcd
 import yaml
 
 from container_service_extension.client.cluster import Cluster
+from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.system import System
 # TODO()
 # from container_service_extension.logger import configure_client_logger
@@ -606,3 +607,67 @@ def disable_service(ctx):
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
+
+
+@cse.group('ovdc', short_help='enable/disable ovdc for kubernetes on pks|vcd')
+@click.pass_context
+def ovdc_group(ctx):
+
+    """Enable/disable ovdc for kubernetes deployment on pks or vcd.
+
+\b
+    Examples
+        vcd cse ovdc enablek8s myOrgVdc --container-provider pks
+        --pks-plans plan1,plan2
+            Enable myOrgVdc for k8s deployment on pks with plans plan1 and
+            plan2. By default, organization of the logged-in user's is used to
+            find myOrgVdc.
+\b
+        vcd cse ovdc enablek8s myOrgVdc --container-provider vcd
+        --org-name myOrg
+            Enable myOrgVdc that has myOrg for k8s deployment on vcd.
+    """
+    pass
+
+
+@ovdc_group.command('enablek8s', short_help='enable ovdc for kubernetes')
+@click.pass_context
+@click.argument('ovdc_name', required=True, metavar='<ovdc_name>')
+@click.option(
+    '-c',
+    '--container-provider',
+    'container_provider',
+    required=True,
+    type=click.Choice(['vcd', 'pks']),
+    help="name of the container provider, defaults to 'vcd'. If set to 'pks', "
+         "--pks-plans argument is required")
+@click.option(
+    '-p',
+    '--pks-plans',
+    'pks_plans',
+    required=False,
+    help="If '--container-provider' is set to 'pks', --pks-plans argument is "
+         "required")
+@click.option(
+    '-o',
+    '--org-name',
+    'org_name',
+    default=None,
+    required=False,
+    help="org name")
+def enablek8s(ctx, ovdc_name, container_provider, pks_plans, org_name):
+    """Enable ovdc for k8s deployment on pks or vcd."""
+    if 'pks' == container_provider and pks_plans is None:
+        click.echo("Must provide pks plans using --pks-plans")
+    else:
+        try:
+            restore_session(ctx)
+            client = ctx.obj['client']
+            ovdc = Ovdc(client)
+            result = ovdc.enable_ovdc_for_k8s(ovdc_name, container_provider,
+                                              pks_plans=pks_plans,
+                                              org_name=org_name)
+
+            stdout(result, ctx)
+        except Exception as e:
+            stderr(e, ctx)

@@ -44,6 +44,8 @@ class ServiceProcessor(object):
                 template_request = True
             elif tokens[3] == 'system':
                 system_request = True
+            elif tokens[3] == 'ovdc':
+                ovdc_request = True
             elif tokens[3] != '':
                 cluster_name = tokens[3]
         if len(tokens) > 4:
@@ -117,13 +119,18 @@ class ServiceProcessor(object):
                 broker = get_new_broker(body['headers'], request_body)
                 reply = broker.list_clusters()
         elif body['method'] == 'POST':
-            if cluster_name is None:
+            if ovdc_request:
                 broker = get_new_broker(body['headers'], request_body)
-                reply = broker.create_cluster()
+                reply = broker.enable_ovdc_for_kubernetes()
+
             else:
-                if node_request:
+                if cluster_name is None:
                     broker = get_new_broker(body['headers'], request_body)
-                    reply = broker.create_nodes()
+                    reply = broker.create_cluster()
+                else:
+                    if node_request:
+                        broker = get_new_broker(body['headers'], request_body)
+                        reply = broker.create_nodes()
         elif body['method'] == 'PUT':
             if system_request:
                 reply = service.update_status(body['headers'], request_body)

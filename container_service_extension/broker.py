@@ -42,6 +42,7 @@ from container_service_extension.exceptions import NFSNodeCreationError
 from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import WorkerNodeCreationError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.ovdc_cache import OvdcCache
 # from container_service_extension.server_constants import \
 #     CSE_NATIVE_DEPLOY_RIGHT_NAME
 from container_service_extension.utils import ACCEPTED
@@ -81,7 +82,7 @@ spinner = spinning_cursor()
 
 
 def rollback(func):
-    """Decorator to rollback on cluster and node creation failures.
+    """Decorate to rollback on cluster and node creation failures.
 
     :param func: reference to the original function that is decorated
 
@@ -792,6 +793,24 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                 stack_trace=stack_trace)
         finally:
             self._disconnect_sys_admin()
+
+    @exception_handler
+    def enable_ovdc_for_kubernetes(self):
+
+            LOGGER.debug(f'{self.body}')
+            self._connect_sys_admin()
+            ovdc_cache = OvdcCache(self.sys_admin_client)
+            task = ovdc_cache.set_ovdc_backend_meta_data(
+                self.body['ovdc_name'],
+                container_provider=self.body[
+                    'container_provider'],
+                pks_plans=self.body['pks_plans'],
+                org_name=self.body['org_name'])
+
+            result = dict()
+            result['body'] = {'status': task.get('operation')}
+            result['status_code'] = ACCEPTED
+            return result
 
     def node_rollback(self, node_list):
         """Rollback for node creation failure.
