@@ -63,6 +63,17 @@ from container_service_extension.utils import wait_until_tools_ready
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = 'vmxnet3'
 TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
 
+INSTRUCTIONS = '''##Config file for PKS enabled CSE Server.
+    ##1. Includes PKS accounts information for the set up
+    ##2. [Optional]Tenant/Org associations of PKS accounts if set up has pks accounts per tenant per vcenter
+    ##3. List of Provider vDCs dedicated for PKS enabled CSE set up only\n
+    ##Each PKS account has the following information:
+    ## 1. PKS account name
+    ## 2. vCenter name associated with this account
+    ## 3. PKS server host
+    ## 4. PKS server port
+    ## 5. PKS UAAC account information\n'''
+
 SAMPLE_AMQP_CONFIG = {
     'amqp': {
         'host': 'amqp.vmware.com',
@@ -111,56 +122,56 @@ SAMPLE_PKS_CONFIG_FILE_LOCATION = {
 
 SAMPLE_PKS_CONFIG = {
     'orgs': [{
-        'name': 'Pepsi',
-        'pks_accounts': ['PepsiServiceAccount1', 'PepsiServiceAccount2']
+        'name': 'Org1',
+        'pks_accounts': ['Org1ServiceAccount1', 'Org1ServiceAccount2']
     },{
-        'name': 'Coke',
-        'pks_accounts': ['CokeServiceAccount']
+        'name': 'Org2',
+        'pks_accounts': ['Org2ServiceAccount']
     }],
     'pks_accounts': [{
-        'name' : 'PepsiServiceAccount1',
+        'name' : 'Org1ServiceAccount1',
         'vc': 'vc1',
-        'host' : '10.161.148.112',
+        'host' : 'https://deadend-12345.eng.vmware.com',
         'port' : '9021',
         'uaac' : {
             'port': '8443',
-            'secret' : 'YtAU6Rl2dEvj1_hH9wEQxDUkxO1Lcjm3',
-            'username': 'pepsiSvcAccount'
+            'secret' : 'secret',
+            'username': 'org1SvcAccount'
         }
     },{
-        'name' : 'PepsiServiceAccount2',
+        'name' : 'Org1ServiceAccount2',
         'vc': 'vc2',
-        'host' : '10.160.146.163',
+        'host' : 'https://deadend-12345.eng.vmware.com',
         'port' : '9021',
         'uaac' : {
             'port': '8443',
-            'secret' : 'jsfgYikddEvj1_hH9wEQxdsfgdfghlkl78',
-            'username': 'pepsiSvcAccount'
+            'secret' : 'secret',
+            'username': 'org1SvcAccount'
         }
     },{
-        'name' : 'CokeServiceAccount',
+        'name' : 'Org2ServiceAccount',
         'vc': 'vc1',
-        'host' : '10.161.148.113',
+        'host' : 'https://deadend-12345.eng.vmware.com',
         'port' : '9021',
         'uaac' : {
             'port': '8443',
-            'secret' : 'GhujkdfRl2dEvj1_hH9wEQxDUkxO1Lcjm3',
-            'username': 'cokeSvcAccount'
+            'secret' : 'secret',
+            'username': 'org2SvcAccount'
         }
     }],
     #Only mention the provider vDCs dedicated for PKS enabled CSE set up
     'pvdcs':[{
         'name': 'pvdc1',
         'vc_name_in_vcd': 'vc1',
-        'rp_paths': ['datacenter1/cluster1/rp1', 'datacenter1/cluster1/rp2']
+        'rp_paths': ['datacenter1/cluster1/rp1']
     },{
         'name': 'pvdc2',
         'vc_name_in_vcd': 'vc1',
-        'rp_paths': ['HA_datacenter/HA_cluster1/gold_rp/sub-rp', 'datacenter1/cluster1/ssd_rp']
+        'rp_paths': ['HA_datacenter/HA_cluster1/gold_rp/sub-rp']
     },{
         'name': 'pvdc3',
         'vc_name_in_vcd': 'vc2',
-        'rp_paths': ['datacenter/cluster1/rp1/sub-rp1/sub-rp2', 'datacenter1/cluster1/rp2']
+        'rp_paths': ['datacenter/cluster1/rp1/sub-rp1/sub-rp2']
     }]
 }
 
@@ -226,27 +237,16 @@ SAMPLE_CONFIG_WITH_PKS = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
                  **SAMPLE_BROKER_CONFIG}
 
 
-def get_pks_config_instructions():
-    instructions = '''##Config file for PKS enabled CSE Server.
-    ##1. Includes PKS accounts information for the set up
-    ##2. [Optional]Tenant/Org associations of PKS accounts if set up has pks accounts per tenant per vcenter
-    ##3. List of Provider vDCs dedicated for PKS enabled CSE set up only\n'''
-    instructions +='''##Each PKS account has the following information:
-    ## 1. PKS account name
-    ## 2. vCenter name associated with this account
-    ## 3. PKS server host
-    ## 4. PKS server port
-    ## 5. PKS UAAC account information\n'''
-    return instructions
 
-
-
-def generate_sample_config(with_pks=False, default_flow_style=False):
-    """Generates a sample config file for cse.
+def generate_sample_config(with_pks=False, output_file_names=None):
+    """Generates sample configs for cse. If config file names are
+    provided, configs are dumped into respective files.
 
     :param bool with_pks: flag to generate config with pks configs.
+    :param list generate: list of file(YAML) names where generated configs
+    need to be dumped.
 
-    :return: sample config as dict.
+    :return: sample config/ sample config files
 
     :rtype: dict
     """
@@ -256,21 +256,29 @@ def generate_sample_config(with_pks=False, default_flow_style=False):
                                     default_flow_style=False) + '\n'
     sample_config += yaml.safe_dump(SAMPLE_VCS_CONFIG,
                                     default_flow_style=False) + '\n'
-    if with_pks:
-        sample_config += yaml.safe_dump(SAMPLE_PKS_CONFIG_FILE_LOCATION,
-                                        default_flow_style=False) + '\n'
-        sample_pks_config = yaml.safe_dump(SAMPLE_PKS_CONFIG)
-        instructions = get_pks_config_instructions()
-        with open('pks.yaml', 'w') as f:
-            f.write(instructions)
-            f.write(sample_pks_config)
+
     sample_config += yaml.safe_dump(SAMPLE_SERVICE_CONFIG,
                                     default_flow_style=False) + '\n'
     sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
                                     default_flow_style=False) + '\n'
-    return sample_config.strip() + '\n'
+    sample_pks_config = ""
+    if with_pks:
+        sample_config += yaml.safe_dump(SAMPLE_PKS_CONFIG_FILE_LOCATION,
+                                        default_flow_style=False) + '\n'
+        sample_pks_config = yaml.safe_dump(SAMPLE_PKS_CONFIG,
+                                        default_flow_style=False) + '\n'
+    if len(output_file_names) > 0:
+        with open(output_file_names[0], 'w') as f:
+            f.write(sample_config)
+            click.secho(f"Config file '{output_file_names[0]}' is generated.", fg='green')
+        if len(output_file_names) > 1:
+            with open(output_file_names[1], 'w') as f:
+                f.write(f"{INSTRUCTIONS}\n{sample_pks_config}")
+                click.secho(f"PKS config file '{output_file_names[1]}' is generated.", fg='green')
+        return
+    return sample_config.strip() + '\n\n' + sample_pks_config.strip()
 
-def get_validated_config(config_file_name, pks_config_file_name):
+def get_validated_config(config_file_name, pks_config='pks.yaml'):
     """Gets the config file as a dictionary and checks for validity.
 
     Ensures that all properties exist and all values are the expected type.
@@ -282,7 +290,7 @@ def get_validated_config(config_file_name, pks_config_file_name):
 
     :param str pks_config_file_name: path to pks config file.
 
-    :return: CSE config.
+    :return: CSE config
 
     :rtype: dict
 
@@ -296,15 +304,15 @@ def get_validated_config(config_file_name, pks_config_file_name):
         config = yaml.safe_load(config_file)
 
     click.secho(f"Validating config file '{config_file_name}'", fg='yellow')
-    if config.get('pks_config', None) is not None:
-        check_keys_and_value_types(config, SAMPLE_CONFIG_WITH_PKS, location='PKS config file')
-        check_file_permissions(pks_config_file_name)
-        with open(pks_config_file_name) as pks_config_file:
-            pks_config = yaml.safe_load(pks_config_file)
-        click.secho(f"Validating PKS config file '{pks_config_file_name}'", fg='yellow')
-        check_keys_and_value_types(pks_config, SAMPLE_PKS_CONFIG, location='PKS config file')
-        click.secho(f"PKS Config file '{pks_config_file_name}' is valid", fg='green')
-        config['pks_config'] = pks_config
+    if 'pks_config' in config:
+        check_keys_and_value_types(config, SAMPLE_CONFIG_WITH_PKS, location='config file')
+        check_file_permissions(pks_config)
+        with open(pks_config) as pks_config_file:
+            pks = yaml.safe_load(pks_config_file)
+        click.secho(f"Validating PKS config file '{pks_config}'", fg='yellow')
+        check_keys_and_value_types(pks, SAMPLE_PKS_CONFIG, location='PKS config file')
+        click.secho(f"PKS Config file '{pks_config}' is valid", fg='green')
+        config['pks_config'] = pks
     else:
         check_keys_and_value_types(config, SAMPLE_CONFIG, location='config file')
     validate_amqp_config(config['amqp'])

@@ -99,6 +99,9 @@ def version(ctx):
 
 @cli.command('sample', short_help='generate sample configuration')
 @click.pass_context
+@click.argument(
+    'output_file_names',
+    nargs=-1)
 @click.option(
     '--pks',
     'with_pks',
@@ -107,9 +110,9 @@ def version(ctx):
     default=False,
     help="If '--pks' flag is set, CSE sample config file is "
          "generated along with pks details in it.")
-def sample(ctx, with_pks):
+def sample(ctx, with_pks, output_file_names):
     """Generate sample CSE configuration."""
-    click.secho(generate_sample_config(with_pks))
+    click.secho(generate_sample_config(with_pks=with_pks, output_file_names=output_file_names))
 
 @cli.command(short_help="Checks that config file is valid. Can also check that"
                         " CSE is installed according to config file.")
@@ -152,7 +155,7 @@ def sample(ctx, with_pks):
 def check(ctx, config, pks_config, check_install, template):
     """Validate CSE configuration."""
     try:
-        config_dict = get_validated_config(config, pks_config)
+        config_dict = get_validated_config(config, pks_config=pks_config)
     except (KeyError, ValueError, Exception):
         # TODO() replace Exception with specific (see validate_amqp_config)
         click.secho(f"Config file '{config}' is invalid", fg='red')
