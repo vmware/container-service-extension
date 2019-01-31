@@ -28,6 +28,7 @@ from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
+from container_service_extension.logger import setup_log_file_directory
 from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY, CSE_NATIVE_DEPLOY_RIGHT_CATEGORY, \
     CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION, CSE_NATIVE_DEPLOY_RIGHT_NAME, \
@@ -269,6 +270,11 @@ def validate_vcd_and_vcs_config(vcd_dict, vcs):
 
     client = None
     try:
+        # TODO() we get an error during client initialization if the specified
+        # logfile points to the directory which doesn't exist. This issue
+        # should be fixed in pyvcloud, where the logging setup creates
+        # directories used in the log filepath if they do not exist yet.
+        setup_log_file_directory()
         client = Client(vcd_dict['host'],
                         api_version=vcd_dict['api_version'],
                         verify_ssl_certs=vcd_dict['verify'],
@@ -488,14 +494,8 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
 
     :raises AmqpError: if AMQP exchange could not be created.
     """
-    # TODO() configure_install_logger should occur after get_validated_config,
-    # but we get an error during client initialization in validate_vcd_and_vcs,
-    # where the specified logfile points to the directory 'cse-logs' and it
-    # may not have been created yet. This fix should probably go into pyvcloud,
-    # where the logging setup creates directories used in the log filepath if
-    # they do not exist yet.
-    configure_install_logger()
     config = get_validated_config(config_file_name)
+    configure_install_logger()
     msg = f"Installing CSE on vCloud Director using config file " \
           f"'{config_file_name}'"
     click.secho(msg, fg='yellow')
