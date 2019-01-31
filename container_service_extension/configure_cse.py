@@ -45,6 +45,7 @@ from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_org
 from container_service_extension.utils import get_vdc
 from container_service_extension.utils import get_vsphere
+from container_service_extension.utils import is_cse_registered
 from container_service_extension.utils import SYSTEM_ORG_NAME
 from container_service_extension.utils import upload_ova_to_catalog
 from container_service_extension.utils import vgr_callback
@@ -528,12 +529,14 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
                                exchange=amqp['exchange'],
                                ext_install=ext_install):
             register_cse(client, amqp['routing_key'], amqp['exchange'])
-            # register new right for CSE
+
+        # register rights to vCD
+        # TODO() should also remove rights when unregistering CSE
+        if is_cse_registered(client):
             register_right(client, right_name=CSE_NATIVE_DEPLOY_RIGHT_NAME,
                            description=CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,
                            category=CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,
                            bundle_key=CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY)
-            # register new right for PKS
             register_right(client, right_name=CSE_PKS_DEPLOY_RIGHT_NAME,
                            description=CSE_PKS_DEPLOY_RIGHT_DESCRIPTION,
                            category=CSE_PKS_DEPLOY_RIGHT_CATEGORY,
@@ -1072,13 +1075,9 @@ def register_right(client, right_name, description, category, bundle_key):
     """
     ext = APIExtension(client)
     try:
-        ext.add_service_right(
-            right_name,
-            CSE_SERVICE_NAME,
-            CSE_SERVICE_NAMESPACE,
-            description,
-            category,
-            bundle_key)
+        ext.add_service_right(right_name, CSE_SERVICE_NAME,
+                              CSE_SERVICE_NAMESPACE, description, category,
+                              bundle_key)
 
         msg = f"Register {right_name} as a Right in vCD"
         click.secho(msg, fg='green')
@@ -1088,8 +1087,7 @@ def register_right(client, right_name, description, category, bundle_key):
         right_exists_msg = f'Right with name "{{{CSE_SERVICE_NAME}}}:' \
                            f'{right_name}" already exists'
         if right_exists_msg in str(err):
-            msg = f"Right: {right_name} already " \
-                  f"exists in vCD"
+            msg = f"Right: {right_name} already exists in vCD"
             click.secho(msg, fg='green')
             LOGGER.debug(msg)
         else:

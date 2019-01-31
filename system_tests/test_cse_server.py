@@ -5,6 +5,11 @@
 """
 CSE server tests.
 
+TODO() need to check that rights exist when CSE is registered and that rights
+don't exist when CSE is not registered. Need a pyvcloud function to check
+if a right exists without adding it. Also need functionality to remove CSE
+rights when CSE is unregistered.
+
 NOTES:
     - Edit 'base_config.yaml' for your own vCD instance
     - These tests will use your public/private SSH keys (RSA)
