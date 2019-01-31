@@ -36,6 +36,9 @@ class ServiceProcessor(object):
         cluster_info_request = False
         node_info_request = False
         system_request = False
+        ovdc_request = False
+        ovdc_id = None
+        ovdc_info_request = False
 
         if len(tokens) > 3:
             if tokens[3] in ['swagger', 'swagger.json', 'swagger.yaml']:
@@ -58,10 +61,16 @@ class ServiceProcessor(object):
                     node_request = True
                 elif tokens[4] != '':
                     node_name = tokens[4]
+            elif ovdc_request:
+                ovdc_id = tokens[4]
+
         if len(tokens) > 5:
             if node_name is not None:
                 if tokens[5] == 'info':
                     node_info_request = True
+            elif ovdc_request:
+                if tokens[5] == 'info':
+                    ovdc_info_request = True
         if len(body['body']) > 0:
             try:
                 request_body = json.loads(
@@ -81,7 +90,11 @@ class ServiceProcessor(object):
                                  'Contact the System Administrator.')
 
         if body['method'] == 'GET':
-            if spec_request:
+            if ovdc_info_request:
+                broker = get_new_broker(body['headers'], {'ovdc_id': ovdc_id})
+                reply = broker.ovdc_info_for_kubernetes()
+
+            elif spec_request:
                 reply = self.get_spec(tokens[3])
             elif config_request:
                 broker = get_new_broker(body['headers'], request_body)
@@ -119,20 +132,18 @@ class ServiceProcessor(object):
                 broker = get_new_broker(body['headers'], request_body)
                 reply = broker.list_clusters()
         elif body['method'] == 'POST':
+            if cluster_name is None:
+                broker = get_new_broker(body['headers'], request_body)
+                reply = broker.create_cluster()
+            else:
+                if node_request:
+                    broker = get_new_broker(body['headers'], request_body)
+                    reply = broker.create_nodes()
+        elif body['method'] == 'PUT':
             if ovdc_request:
                 broker = get_new_broker(body['headers'], request_body)
                 reply = broker.enable_ovdc_for_kubernetes()
-
-            else:
-                if cluster_name is None:
-                    broker = get_new_broker(body['headers'], request_body)
-                    reply = broker.create_cluster()
-                else:
-                    if node_request:
-                        broker = get_new_broker(body['headers'], request_body)
-                        reply = broker.create_nodes()
-        elif body['method'] == 'PUT':
-            if system_request:
+            elif system_request:
                 reply = service.update_status(body['headers'], request_body)
         elif body['method'] == 'DELETE':
             if node_request:

@@ -796,21 +796,58 @@ class DefaultBroker(AbstractBroker, threading.Thread):
 
     @exception_handler
     def enable_ovdc_for_kubernetes(self):
+        """Enable a given ovdc for k8s on the given cloud provider.
 
-            LOGGER.debug(f'{self.body}')
-            self._connect_sys_admin()
-            ovdc_cache = OvdcCache(self.sys_admin_client)
-            task = ovdc_cache.set_ovdc_backend_meta_data(
+        :return: result object
+
+        :rtype: dict
+
+        :raises CseServerError: if the user is not system administrator.
+        """
+        result = dict()
+        self._connect_tenant()
+        if self.tenant_client.is_sysadmin():
+            ovdc_cache = OvdcCache(self.tenant_client)
+            task = ovdc_cache.set_container_provider_metadata_of_ovdc(
                 self.body['ovdc_name'],
-                container_provider=self.body[
-                    'container_provider'],
+                ovdc_id=self.body.get('ovdc_id', None),
+                container_provider=self.body.get('container_provider', None),
                 pks_plans=self.body['pks_plans'],
-                org_name=self.body['org_name'])
-
-            result = dict()
-            result['body'] = {'status': task.get('operation')}
+                org_name=self.body.get('org_name', None))
+            response_body = dict()
+            response_body['ovdc_name'] = self.body['ovdc_name']
+            response_body['task_href'] = task.get('href')
+            result['body'] = response_body
             result['status_code'] = ACCEPTED
             return result
+        else:
+            raise CseServerError("Unauthorized Operation")
+
+    @exception_handler
+    def ovdc_info_for_kubernetes(self):
+        """Info on ovdc for k8s on the given cloud provider.
+
+        :return: result object
+
+        :rtype: dict
+
+        :raises CseServerError: if the user is not system administrator.
+        """
+        result = dict()
+        self._connect_tenant()
+        if self.tenant_client.is_sysadmin():
+            ovdc_cache = OvdcCache(self.tenant_client)
+            meta_data = ovdc_cache.get_container_provider_metadata_of_ovdc(
+                self.body.get('ovdc_name', None),
+                ovdc_id=self.body.get('ovdc_id', None),
+                org_name=self.body.get('org_name', None))
+            result = dict()
+            result['status_code'] = OK
+            result['body'] = meta_data
+            LOGGER.debug(f'ovdc_metata_for_kubernetes={meta_data}')
+            return result
+        else:
+            raise CseServerError("Unauthorized Operation")
 
     def node_rollback(self, node_list):
         """Rollback for node creation failure.

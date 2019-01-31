@@ -609,23 +609,46 @@ def disable_service(ctx):
         stderr(e, ctx)
 
 
-@cse.group('ovdc', short_help='enable/disable ovdc for kubernetes on pks|vcd')
+@cse.group('ovdc', short_help='enable/disable ovdc for kubernetes on container'
+                              ' providers like PKS or vCD',
+           options_metavar='[options]')
 @click.pass_context
 def ovdc_group(ctx):
+    """Enable/disable ovdc for kubernetes deployment on container-provider.
 
-    """Enable/disable ovdc for kubernetes deployment on pks or vcd.
+\b
+    Note
+       All sub-commands execute in the context of organization specified
+       via --org option; it defaults to current organization-in-use
+       if --org option is not specified.
 
 \b
     Examples
-        vcd cse ovdc enablek8s myOrgVdc --container-provider pks
-        --pks-plans plan1,plan2
-            Enable myOrgVdc for k8s deployment on pks with plans plan1 and
-            plan2. By default, organization of the logged-in user's is used to
-            find myOrgVdc.
+        vcd cse ovdc enablek8s 'myOrgVdc' --container-provider pks
+        --pks-plans 'plan1,plan2'
+            Enable 'myOrgVdc' for k8s deployment on container-provider
+            PKS with plans 'plan1' and 'plan2'. If no --org-name is provided,
+            organization of the logged-in user is used to find 'myOrgVdc'.
 \b
-        vcd cse ovdc enablek8s myOrgVdc --container-provider vcd
-        --org-name myOrg
-            Enable myOrgVdc that has myOrg for k8s deployment on vcd.
+        vcd cse ovdc enablek8s 'myOrgVdc' --container-provider pks
+        --pks-plans 'plan1,plan2' --org 'myOrg'
+            Enable 'myOrgVdc' that backs organization 'myOrg', for k8s
+            deployment on PKS with plans:'plan1' and 'plan2'.
+\b
+        vcd cse ovdc enablek8s 'myOrgVdc' --container-provider vcd
+        --org 'myOrg'
+            Enable 'myOrgVdc' that backs 'myOrg' for k8s deployment on vCD.
+\b
+        vcd cse ovdc disablek8s 'myOrgVdc' --org 'myOrg'
+            Disable 'myOrgVdc' that backs 'myOrg' for k8s deployment.
+\b
+        vcd cse ovdc disablek8s 'myOrgVdc'
+            Disable 'myOrgVdc' that backs organization of the logged-in user
+            for k8s deployment.
+\b
+        vcd cse ovdc infok8s 'myOrgVdc' --org 'myOrg'
+            Displays metadata information about 'myOrgVdc' that backs
+            organization 'myOrg' of the logged-in user for k8s deployment.
     """
     pass
 
@@ -639,35 +662,92 @@ def ovdc_group(ctx):
     'container_provider',
     required=True,
     type=click.Choice(['vcd', 'pks']),
-    help="name of the container provider, defaults to 'vcd'. If set to 'pks', "
-         "--pks-plans argument is required")
+    help="name of the container provider. If set to 'pks', --pks-plans "
+         "argument is required")
 @click.option(
     '-p',
     '--pks-plans',
     'pks_plans',
     required=False,
-    help="If '--container-provider' is set to 'pks', --pks-plans argument is "
-         "required")
+    help="This is a required argument, if --container-provider"
+         " is set to 'pks'")
 @click.option(
     '-o',
-    '--org-name',
+    '--org',
     'org_name',
     default=None,
     required=False,
+    metavar='[org-name]',
     help="org name")
 def enablek8s(ctx, ovdc_name, container_provider, pks_plans, org_name):
-    """Enable ovdc for k8s deployment on pks or vcd."""
+    """Enable ovdc for k8s deployment on PKS or vCD."""
     if 'pks' == container_provider and pks_plans is None:
-        click.echo("Must provide pks plans using --pks-plans")
+        click.echo("Must provide PKS plans using --pks-plans")
     else:
         try:
             restore_session(ctx)
             client = ctx.obj['client']
             ovdc = Ovdc(client)
-            result = ovdc.enable_ovdc_for_k8s(ovdc_name, container_provider,
-                                              pks_plans=pks_plans,
-                                              org_name=org_name)
-
+            if client.is_sysadmin():
+                result = ovdc.enable_ovdc_for_k8s(
+                    ovdc_name,
+                    container_provider=container_provider,
+                    pks_plans=pks_plans,
+                    org_name=org_name)
+            else:
+                stderr("Unauthorized operation", ctx)
             stdout(result, ctx)
         except Exception as e:
             stderr(e, ctx)
+
+
+@ovdc_group.command('disablek8s', short_help='disable ovdc for kubernetes')
+@click.pass_context
+@click.argument('ovdc_name', required=True, metavar='<ovdc_name>')
+@click.option(
+    '-o',
+    '--org',
+    'org_name',
+    default=None,
+    required=False,
+    metavar='[org-name]',
+    help="org name")
+def disablek8s(ctx, ovdc_name, org_name):
+    """Disable ovdc for k8s deployment."""
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        if client.is_sysadmin():
+            ovdc = Ovdc(client)
+            result = ovdc.disable_ovdc_for_k8s(ovdc_name, org_name=org_name)
+            stdout(result, ctx)
+        else:
+            stderr("Unauthorized operation", ctx)
+    except Exception as e:
+        stderr(e, ctx)
+
+
+@ovdc_group.command('infok8s', short_help='info on ovdc for kubernetes')
+@click.pass_context
+@click.argument('ovdc_name', required=True, metavar='<ovdc_name>')
+@click.option(
+    '-o',
+    '--org',
+    'org_name',
+    default=None,
+    required=False,
+    metavar='[org-name]',
+    help="org name")
+def infok8s(ctx, ovdc_name, org_name):
+    """Get information on ovdc for k8s deployment."""
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        if client.is_sysadmin():
+            ovdc = Ovdc(client)
+            result = ovdc.info_ovdc_for_k8s(ovdc_name, org_name=org_name)
+            stdout(result, ctx)
+        else:
+            stderr("Unauthorized operation", ctx)
+    except Exception as e:
+        stderr(e, ctx)
