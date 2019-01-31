@@ -12,7 +12,7 @@ Extension on vCloud Director.  Users who perform these procedures
 are cloud administrators with sysadmin access and a solid understanding
 of vCD management.
 
-Information on the page falls into three main areas. 
+Information on the page falls into three main areas.
 
 1. System prerequisites and background relevant to managing CSE server.
 2. Step-by-step server installation.
@@ -42,12 +42,12 @@ using the highest available CSE version.
 ## vCD Prerequisites
 
 There are several important requirements that must be fulfilled to install
-CSE successfully on vCD. 
+CSE successfully on vCD.
 
-* Provide an org. 
-* Provide a VDC within the org that has an external org network in which vApps may be instantiated and sufficient storage to create vApps and publish them as templates. The external network connection is required to enable template VMs to download packages during configuration. 
+* Provide an org.
+* Provide a VDC within the org that has an external org network in which vApps may be instantiated and sufficient storage to create vApps and publish them as templates. The external network connection is required to enable template VMs to download packages during configuration.
 * Provide a user in the org with privileges necessary to perform operations like configuring AMQP, creating public catalog entries, and managing vApps.  
-* A good network connection from the host running installation to vCD as well as the Internet.  This avoids intermittent failures in OVA upload/download operations. 
+* A good network connection from the host running installation to vCD as well as the Internet.  This avoids intermittent failures in OVA upload/download operations.
 
 You can use existing resources from your vCD installation or create
 new ones. The following sub-sections illustrate how to set up a
@@ -55,7 +55,7 @@ suitable org + VDC + user from scratch.
 
 ### Create an Org
 
-Use the UI or vcd-cli to create an org for CSE use. 
+Use the UI or vcd-cli to create an org for CSE use.
 ```
 vcd org create --enabled cse_org_1 'Org for CSE work'
 ```
@@ -63,9 +63,9 @@ vcd org create --enabled cse_org_1 'Org for CSE work'
 ### Create a VDC with Attached Network
 
 Next create a VDC that has an org VDC network that can route network traffic
-from VMs to the Internet. Here are sample vcd-cli commands. 
+from VMs to the Internet. Here are sample vcd-cli commands.
 ```
-# Switch to org and create VDC under it. 
+# Switch to org and create VDC under it.
 vcd org use cse_org_1
 vcd vdc create cse_vdc_1 --provider-vdc=vc1-TestbedCluster-21:14:12 \
   --allocation-model=AllocationVApp \
@@ -73,7 +73,7 @@ vcd vdc create cse_vdc_1 --provider-vdc=vc1-TestbedCluster-21:14:12 \
   --description='CSE work'
 # Switch to the new VDC and add an outbound network. The 'Corporate'
 # network must already exist as an external network. Create this in the
-# UI. 
+# UI.
 vcd vdc use cse_vdc_1
 vcd network direct create Outside \
   --description='Internet facing network' \
@@ -85,7 +85,7 @@ vcd network direct create Outside \
 
 You can use a vCD admin account for CSE but it is better to create
 a service account that minimizes required privileges.  This reduces the
-chances of an attacker gaining full access to the system. 
+chances of an attacker gaining full access to the system.
 
 The simplest way to set privileges is first to create a role with
 necessary rights and then assign it to the CSE user.  The following
@@ -93,13 +93,13 @@ vcd-cli commands show how to create the role.  Note that required
 rights may change in a future CSE release, so check back here when
 upgrading.
 
-**NOTE:** The privilege set does not appear to be correct at this time. 
+**NOTE:** The privilege set does not appear to be correct at this time.
 We recommend using a vCD admin account for the time being.  See [Issue 139](https://github.com/vmware/container-service-extension/issues/139).
 
 ```
-# Create a role. 
+# Create a role.
 vcd role create --org System CSE 'CSE Administrator'
-# Add required rights to role. 
+# Add required rights to role.
 vcd role add-right --org System CSE \
   "Catalog: CLSP Publish Subscribe" \
   "Catalog: Create / Delete a Catalog" \
@@ -177,10 +177,10 @@ vcd role add-right --org System CSE \
   "vApp: View VM metrics" \
   "vCenter: Open in vSphere" \
   "vCenter: Refresh" \
-  "vCenter: View" 
+  "vCenter: View"
 ```
 
-You can now create a CSE admin user with the CSE role as follows 
+You can now create a CSE admin user with the CSE role as follows
 
 ```
 vcd user create --enabled cse_admin 't0pS3cret!' CSE
@@ -196,11 +196,11 @@ file as follows.
 cse sample > config.yaml
 ```
 
-Edit this file to add values from your vCloud Director installation. The 
-following example shows a file with sample values filled out. 
+Edit this file to add values from your vCloud Director installation. The
+following example shows a file with sample values filled out.
 
 ```
-# Sample CSE configuration file. 
+# Sample CSE configuration file.
 amqp:
   exchange: cse-exchange
   host: bos1-vcd-sp-static-202-42.eng.vmware.com
@@ -290,8 +290,8 @@ used.
 
 During CSE Server installation, CSE will set up AMQP to ensure
 communication between vCD and the running CSE server.  The `amqp`
-section controls the AMQP communication paramters. The following
-properties will need to be set for all deployments. 
+section controls the AMQP communication parameters. The following
+properties will need to be set for all deployments.
 
 | Property          | Value |
 |:------------------|:------------------------------------------------------------------------------------------------|
@@ -299,12 +299,12 @@ properties will need to be set for all deployments.
 | username        | Username of the vCD service account with minimum roles and rights |
 | password        | Password of the vCD service account |
 
-Other properties may be left as is or edited to match site conventions. 
+Other properties may be left as is or edited to match site conventions.
 
-For more information on AMQP settings, see the [vCD API documention on AMQP](https://code.vmware.com/apis/442/vcloud#/doc/doc/types/AmqpSettingsType.html). 
+For more information on AMQP settings, see the [vCD API documention on AMQP](https://code.vmware.com/apis/442/vcloud#/doc/doc/types/AmqpSettingsType.html).
 
 ### `vcs` Section
-Properties in this section supply credentials necessary for the following operations: 
+Properties in this section supply credentials necessary for the following operations:
 - Guest Operation Program Execution
 - Guest Operation Modifications
 - Guest Operation Queries
@@ -319,14 +319,14 @@ Each `vc` under the `vcs` section has the following properties:
 
 ### `service` Section
 
-The service section specifies the number of threads to run in the CSE 
-server process. 
+The service section specifies the number of threads to run in the CSE
+server process.
 
 ### `broker` Section
 
-The `broker` section contains properties to define resources used by 
-the CSE server including org and VDC as well as template definitions. 
-The following table summariize key parameters. 
+The `broker` section contains properties to define resources used by
+the CSE server including org and VDC as well as template definitions.
+The following table summariize key parameters.
 
 | Property           | Value                                                                                                                                                                                                                |
 |:--------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -370,7 +370,7 @@ use during cluster/node creation.
 
 ### Source .ova Files for VM Templates
 
-The following table shows URLs for OVA files used as VM templates. 
+The following table shows URLs for OVA files used as VM templates.
 
 | OS                   | OVA Name                               | URL                                                                                                       | SHA256                                                           |
 |----------------------|----------------------------------------|-----------------------------------------------------------------------------------------------------------|------------------------------------------------------------------|
@@ -394,7 +394,7 @@ Templates can also be generated on a vCD instance that CSE Server
 is not registered to. Templates can be generated in multiple vCD
 instances in parallel.
 
-To update a template rerun the `cse install` command as follows: 
+To update a template rerun the `cse install` command as follows:
 ```sh
 cse install -c config.yaml --template photon-v2 --update --amqp skip --ext skip
 ```
@@ -425,12 +425,12 @@ will be created.
 
 You should install the CSE software on the CSE appliance as described
 in [Software Installation](/INSTALLATION.html).  Once this is done
-you can invoke server setup using the `cse install` command.  The 
-example below shows a typical command. 
+you can invoke server setup using the `cse install` command.  The
+example below shows a typical command.
 
 ```
 cse install -c config.yaml --ssh-key=$HOME/.ssh/id_rsa.pub \
- --ext config --amqp config 
+ --ext config --amqp config
 ```
 
 The following diagram illustrates installation steps visually.
@@ -465,7 +465,7 @@ cse install -c config.yaml --no-capture --ssh-key ~/.ssh/id_rsa.pub
 
 ### Validate CSE Installation
 You can validate that CSE is installed correctly using `cse check`.  Use
-this command to check the configuration at any time. 
+this command to check the configuration at any time.
 
 ```sh
 cse check --config config.yaml --check-install
@@ -495,11 +495,11 @@ vcd system extension info cse
 ### Setting the API Extension Timeout
 
 The API extension timeout is the number of seconds that vCD waits for
-a response from the CSE server extension.  The default value is 10 seconds, 
+a response from the CSE server extension.  The default value is 10 seconds,
 which may be too short for some environments.  To alter the time follow
-the steps shown below. 
+the steps shown below.
 
-Configure the API extension timeout (seconds) on the vCloud 
+Configure the API extension timeout (seconds) on the vCloud
 Director cell:
 ```sh
 cd /opt/vmware/vcloud-director/bin
@@ -509,9 +509,9 @@ cd /opt/vmware/vcloud-director/bin
 
 ### Manual CSE API Registration
 
-If you need to re-register the CSE API extension for any reason, use the 
-command shown below.  You may need to delete the extension first for 
-this command to work. 
+If you need to re-register the CSE API extension for any reason, use the
+command shown below.  You may need to delete the extension first for
+this command to work.
 ```sh
 vcd system extension create cse cse cse vcdext '/api/cse, /api/cse/.*, /api/cse/.*/.*'
 ```
@@ -523,9 +523,9 @@ listener threads can be configured in the config file using the `listeners`
 property in the `service` section.  The default value is 5.
 
 ### Running CSE Server Manually
-To start the manually run the command shown below. 
+To start the manually run the command shown below.
 ```sh
-# Run server in foreground. 
+# Run server in foreground.
 cse run --config config.yaml
 
 # Run server in background
@@ -535,13 +535,13 @@ Server output log can be found in `cse.log`
 
 ### Running CSE Server as a Service
 
-A sample `systemd` unit is provided by CSE. Here are instructions for 
-installaion. 
+A sample `systemd` unit is provided by CSE. Here are instructions for
+installaion.
 
 1. Copy file `cse.service` from CSE installation location and move it to
 `/etc/systemd/system/cse.service`.  
 
-2. Copy `cse.sh` to /home/vmware. 
+2. Copy `cse.sh` to /home/vmware.
 
 Once installed you can start the CSE service daemon using `systemctl
 start cse`. To enable, disable, and stop the CSE service, use CSE
@@ -600,7 +600,7 @@ To keep the service running after logout on Photon OS, check
 KillUserProcesses=no
 ```
 
-### Monitoring CSE 
+### Monitoring CSE
 
 vCD System Administrators can monitor CSE service status via CSE client:
 
@@ -647,7 +647,7 @@ pip3 install --user --upgrade container-service-extension
 ```
 3. Check the release notes at the end of this document for version compatibility.
 4. Review the configuration file for any new options introduced or deprecated in the new version.
-5. If the previously generated templates are not longer supported by the new version, delete the templates and re-generate new ones.
+5. If the previously generated templates are no longer supported by the new version, delete the templates and re-generate new ones.
 6. If running CSE as a service, start the new version of the service with `systemctl start cse`.
 
 ### Uninstalling CSE Server
@@ -661,7 +661,7 @@ vcd system extension delete cse
 ```shell
 vcd system amqp info
 ```
-4. (Optional) Delete VM templates and the CSE catalog from vCD. 
+4. (Optional) Delete VM templates and the CSE catalog from vCD.
 
 ---
 <a name="commandssysadmin"></a>
@@ -675,7 +675,7 @@ vcd system amqp info
 - Monitor status of CSE Server and clusters
 - Operate CSE as a service
 
-The following show useful sample commands. 
+The following show useful sample commands.
 
 ```sh
 # Use '-h' option to see help page and options for any cse command.
@@ -684,7 +684,7 @@ cse install --config config.yaml -h
 cse check --config config.yaml -h
 cse run --config config.yaml -h
 
-# Show all available vcd cse commands. 
+# Show all available vcd cse commands.
 vcd cse -h
 
 # Login to vCD to use vcd-cli commands.
