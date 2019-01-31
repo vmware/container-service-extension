@@ -237,7 +237,6 @@ SAMPLE_CONFIG_WITH_PKS = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
                  **SAMPLE_BROKER_CONFIG}
 
 
-
 def generate_sample_config(with_pks=False, output_file_names=None):
     """Generates sample configs for cse. If config file names are
     provided, configs are dumped into respective files.
@@ -265,18 +264,21 @@ def generate_sample_config(with_pks=False, output_file_names=None):
     if with_pks:
         sample_config += yaml.safe_dump(SAMPLE_PKS_CONFIG_FILE_LOCATION,
                                         default_flow_style=False) + '\n'
-        sample_pks_config = yaml.safe_dump(SAMPLE_PKS_CONFIG,
-                                        default_flow_style=False) + '\n'
+        sample_pks_config = yaml.safe_dump(
+            SAMPLE_PKS_CONFIG, default_flow_style=False) + '\n'
     if len(output_file_names) > 0:
         with open(output_file_names[0], 'w') as f:
             f.write(sample_config)
-            click.secho(f"Config file '{output_file_names[0]}' is generated.", fg='green')
+            click.secho(f"Config file '{output_file_names[0]}' is generated.",
+                        fg='green')
         if len(output_file_names) > 1:
             with open(output_file_names[1], 'w') as f:
                 f.write(f"{INSTRUCTIONS}\n{sample_pks_config}")
-                click.secho(f"PKS config file '{output_file_names[1]}' is generated.", fg='green')
+                click.secho(f"PKS config file '{output_file_names[1]}' is "
+                            f"generated.", fg='green')
         return
     return sample_config.strip() + '\n\n' + sample_pks_config.strip()
+
 
 def get_validated_config(config_file_name, pks_config='pks.yaml'):
     """Gets the config file as a dictionary and checks for validity.
@@ -305,16 +307,19 @@ def get_validated_config(config_file_name, pks_config='pks.yaml'):
 
     click.secho(f"Validating config file '{config_file_name}'", fg='yellow')
     if 'pks_config' in config:
-        check_keys_and_value_types(config, SAMPLE_CONFIG_WITH_PKS, location='config file')
+        check_keys_and_value_types(config, SAMPLE_CONFIG_WITH_PKS,
+                                   location='config file')
         check_file_permissions(pks_config)
         with open(pks_config) as pks_config_file:
             pks = yaml.safe_load(pks_config_file)
         click.secho(f"Validating PKS config file '{pks_config}'", fg='yellow')
-        check_keys_and_value_types(pks, SAMPLE_PKS_CONFIG, location='PKS config file')
+        check_keys_and_value_types(pks, SAMPLE_PKS_CONFIG,
+                                   location='PKS config file')
         click.secho(f"PKS Config file '{pks_config}' is valid", fg='green')
         config['pks_config'] = pks
     else:
-        check_keys_and_value_types(config, SAMPLE_CONFIG, location='config file')
+        check_keys_and_value_types(config, SAMPLE_CONFIG,
+                                   location='config file')
     validate_amqp_config(config['amqp'])
     validate_vcd_and_vcs_config(config['vcd'], config['vcs'])
     validate_broker_config(config['broker'])
@@ -323,6 +328,7 @@ def get_validated_config(config_file_name, pks_config='pks.yaml'):
                                location="config file 'service' section")
     click.secho(f"Config file '{config_file_name}' is valid", fg='green')
     return config
+
 
 def validate_amqp_config(amqp_dict):
     """Ensure that 'amqp' section of config is correct.
@@ -400,8 +406,8 @@ def validate_vcd_and_vcs_config(vcd_dict, vcs):
 
         for index, vc in enumerate(vcs, 1):
             check_keys_and_value_types(vc, SAMPLE_VCS_CONFIG['vcs'][0],
-                                           location=f"config file 'vcs' section, "
-                                                    f"vc #{index}")
+                                       location=f"config file 'vcs' section,"
+                                                f" "f"vc #{index}")
 
         # Check that all registered VCs in vCD are listed in config file
         platform = Platform(client)

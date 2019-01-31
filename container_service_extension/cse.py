@@ -112,7 +112,8 @@ def version(ctx):
          "generated along with pks details in it.")
 def sample(ctx, with_pks, output_file_names):
     """Generate sample CSE configuration."""
-    click.secho(generate_sample_config(with_pks=with_pks, output_file_names=output_file_names))
+    click.secho(generate_sample_config(with_pks=with_pks,
+                                       output_file_names=output_file_names))
 
 @cli.command(short_help="Checks that config file is valid. Can also check that"
                         " CSE is installed according to config file.")
