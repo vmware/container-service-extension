@@ -29,11 +29,11 @@ def cli(ctx):
 \b
         cse sample
             Generate sample CSE config as dict
-            and prints it to the console.
+            and print it to the console.
 \b
         cse sample --pks
             Generate sample CSE and PKS config as dict
-            and prints it to the console.
+            and print it to the console.
 \b
         cse sample --output config.yaml
             Generate sample CSE config in the provided file name
