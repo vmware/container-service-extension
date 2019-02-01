@@ -101,6 +101,7 @@ def version(ctx):
 @click.pass_context
 @click.argument(
     'output_file_names',
+    metavar='<output_file_names>',
     nargs=-1)
 @click.option(
     '--pks',

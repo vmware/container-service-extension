@@ -63,16 +63,32 @@ from container_service_extension.utils import wait_until_tools_ready
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = 'vmxnet3'
 TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
 
-INSTRUCTIONS = '''##Config file for PKS enabled CSE Server.
-    ##1. Includes PKS accounts information for the set up
-    ##2. [Optional]Tenant/Org associations of PKS accounts if set up has pks accounts per tenant per vcenter
-    ##3. List of Provider vDCs dedicated for PKS enabled CSE set up only\n
-    ##Each PKS account has the following information:
-    ## 1. PKS account name
-    ## 2. vCenter name associated with this account
-    ## 3. PKS server host
-    ## 4. PKS server port
-    ## 5. PKS UAAC account information\n'''
+INSTRUCTIONS = '''#Config file for PKS enabled CSE Server to be filled by the administrator.
+#This config file has the following three sections:
+#   1. pks_accounts:
+#       a. Cloud Admins can specify PKS service account for every (PKS managed) vCenter in vCD
+#          i.e. a common PKS account per vCenter will be used for all the
+#          organizations.
+#       b. Cloud Admin can choose to create separate PKS service
+#          account per organization per vCenter, if this option is chosen,
+#          admins need to ensure that PKS accounts are correctly mapped to
+#          their respective organization in the 'orgs' section of this
+#          config file.
+#   2. orgs: [OPTIONAL SECTION for admins who chose 1a above.]
+#       a. If cloud admin chooses to define PKS service account per
+#          organization per vCenter, include the organization and respective
+#          pks_account names in this section, else should be left blank with empty values.
+#   3. pvdcs:
+#        a. List of Provider vDCs dedicated for PKS enabled CSE set up only\n
+#Each PKS service account needs to have the following information fields to be filled in:
+#       1. PKS account name
+#       2. vCenter name in vCD for this PKS account
+#       3. PKS server host
+#       4. PKS server port
+#       5. PKS UAAC account information
+#For more information, please refer to CSE documentation page :
+#               https://vmware.github.io/container-service-extension/INSTALLATION.html\n'''
+
 
 SAMPLE_AMQP_CONFIG = {
     'amqp': {
@@ -124,54 +140,53 @@ SAMPLE_PKS_CONFIG = {
     'orgs': [{
         'name': 'Org1',
         'pks_accounts': ['Org1ServiceAccount1', 'Org1ServiceAccount2']
-    },{
+    }, {
         'name': 'Org2',
         'pks_accounts': ['Org2ServiceAccount']
     }],
-    'pks_accounts': [{
+    'pks_accounts' : [{
         'name' : 'Org1ServiceAccount1',
-        'vc': 'vc1',
+        'vc' : 'vc1',
         'host' : 'https://deadend-12345.eng.vmware.com',
         'port' : '9021',
         'uaac' : {
-            'port': '8443',
+            'port' : '8443',
             'secret' : 'secret',
-            'username': 'org1SvcAccount'
+            'username' : 'org1Admin'
         }
     },{
         'name' : 'Org1ServiceAccount2',
-        'vc': 'vc2',
+        'vc' : 'vc2',
         'host' : 'https://deadend-12345.eng.vmware.com',
         'port' : '9021',
         'uaac' : {
-            'port': '8443',
+            'port' : '8443',
             'secret' : 'secret',
-            'username': 'org1SvcAccount'
+            'username' : 'org1Admin'
         }
     },{
         'name' : 'Org2ServiceAccount',
-        'vc': 'vc1',
+        'vc' : 'vc1',
         'host' : 'https://deadend-12345.eng.vmware.com',
         'port' : '9021',
         'uaac' : {
-            'port': '8443',
+            'port' : '8443',
             'secret' : 'secret',
-            'username': 'org2SvcAccount'
+            'username' : 'org2Admin'
         }
     }],
-    #Only mention the provider vDCs dedicated for PKS enabled CSE set up
     'pvdcs':[{
-        'name': 'pvdc1',
-        'vc_name_in_vcd': 'vc1',
+        'name' : 'pvdc1',
+        'vc' : 'vc1',
         'rp_paths': ['datacenter1/cluster1/rp1']
     },{
-        'name': 'pvdc2',
-        'vc_name_in_vcd': 'vc1',
-        'rp_paths': ['HA_datacenter/HA_cluster1/gold_rp/sub-rp']
+        'name' : 'pvdc2',
+        'vc': 'vc1',
+        'rp_paths' : ['HA_datacenter/HA_cluster1/gold_rp/sub-rp']
     },{
-        'name': 'pvdc3',
-        'vc_name_in_vcd': 'vc2',
-        'rp_paths': ['datacenter/cluster1/rp1/sub-rp1/sub-rp2']
+        'name' : 'pvdc3',
+        'vc' : 'vc2',
+        'rp_paths' : ['datacenter/cluster1/rp1/sub-rp1/sub-rp2']
     }]
 }
 
@@ -233,8 +248,10 @@ SAMPLE_CONFIG = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
 # This allows us to compare top-level config keys and value types
 # for pks enabled customers
 SAMPLE_CONFIG_WITH_PKS = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
-                 **SAMPLE_VCS_CONFIG,**SAMPLE_PKS_CONFIG_FILE_LOCATION, **SAMPLE_SERVICE_CONFIG,
-                 **SAMPLE_BROKER_CONFIG}
+                          **SAMPLE_VCS_CONFIG,
+                          **SAMPLE_PKS_CONFIG_FILE_LOCATION,
+                          **SAMPLE_SERVICE_CONFIG,
+                          **SAMPLE_BROKER_CONFIG}
 
 
 def generate_sample_config(with_pks=False, output_file_names=None):
