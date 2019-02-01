@@ -46,9 +46,6 @@ def cli(ctx):
         cse sample --pks-output pks.yaml
             Generate sample PKS config in a file named 'pks.yaml'.
 \b
-        cse sample --output config.yaml
-            Generate sample CSE config in a file named 'config.yaml'.
-\b
         cse sample --output config.yaml --pks-output pks.yaml
             Generate sample CSE and PKS config in the respective file
             named provided as param.
