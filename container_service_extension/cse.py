@@ -27,8 +27,31 @@ def cli(ctx):
         cse version
             Display CSE version.
 \b
-        cse sample > config.yaml
+        cse sample
+            Generate sample CSE config as dict
+            and prints it to the console.
+\b
+        cse sample --pks
+            Generate sample CSE and PKS config as dict
+            and prints it to the console.
+\b
+        cse sample --output config.yaml
+            Generate sample CSE config in the provided file name
+            'config.yaml'.
+\b
+        cse sample --output config.yaml --pks
+            Generate sample CSE config in the provided file name
+            'config.yaml' along with pks detail file location.
+\b
+        cse sample --pks-output pks.yaml
+            Generate sample PKS config in a file named 'pks.yaml'.
+\b
+        cse sample --output config.yaml
             Generate sample CSE config in a file named 'config.yaml'.
+\b
+        cse sample --output config.yaml --pks-output pks.yaml
+            Generate sample CSE and PKS config in the respective file
+            named provided as param.
 \b
         cse install
             Install CSE using data from 'config.yaml'.
@@ -99,10 +122,6 @@ def version(ctx):
 
 @cli.command('sample', short_help='generate sample configuration')
 @click.pass_context
-@click.argument(
-    'output_file_names',
-    metavar='<output_file_names>',
-    nargs=-1)
 @click.option(
     '--pks',
     'with_pks',
@@ -111,10 +130,26 @@ def version(ctx):
     default=False,
     help="If '--pks' flag is set, CSE sample config file is "
          "generated along with pks details in it.")
-def sample(ctx, with_pks, output_file_names):
+@click.option(
+    '--output',
+    'output',
+    required=False,
+    default=None,
+    metavar='<output-file-name>',
+    help="Name of the config file to dump the CSE configs to.")
+@click.option(
+    '--pks-output',
+    'pks_output',
+    required=False,
+    default=None,
+    metavar='<pks-output-file-name>',
+    help="Name of the PKS config file to dump the PKS configs to.")
+def sample(ctx, with_pks, output, pks_output):
     """Generate sample CSE configuration."""
     click.secho(generate_sample_config(with_pks=with_pks,
-                                       output_file_names=output_file_names))
+                                       output=output,
+                                       pks_output=pks_output))
+
 
 @cli.command(short_help="Checks that config file is valid. Can also check that"
                         " CSE is installed according to config file.")

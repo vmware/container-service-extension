@@ -254,13 +254,14 @@ SAMPLE_CONFIG_WITH_PKS = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
                           **SAMPLE_BROKER_CONFIG}
 
 
-def generate_sample_config(with_pks=False, output_file_names=None):
+def generate_sample_config(with_pks=False, output=None, pks_output=None):
     """Generates sample configs for cse. If config file names are
     provided, configs are dumped into respective files.
 
     :param bool with_pks: flag to generate config with pks configs.
-    :param list generate: list of file(YAML) names where generated configs
-    need to be dumped.
+    :param str output: name of the config file to dump the CSE configs.
+    :param str pks_output: name of the PKS config file to dump the PKS
+    configs.
 
     :return: sample config/ sample config files
 
@@ -283,16 +284,20 @@ def generate_sample_config(with_pks=False, output_file_names=None):
                                         default_flow_style=False) + '\n'
         sample_pks_config = yaml.safe_dump(
             SAMPLE_PKS_CONFIG, default_flow_style=False) + '\n'
-    if len(output_file_names) > 0:
-        with open(output_file_names[0], 'w') as f:
+    if output is not None:
+        with open(output, 'w') as f:
             f.write(sample_config)
-            click.secho(f"Config file '{output_file_names[0]}' is generated.",
+            click.secho(f"Config file '{output}' is generated.",
                         fg='green')
-        if len(output_file_names) > 1:
-            with open(output_file_names[1], 'w') as f:
-                f.write(f"{INSTRUCTIONS}\n{sample_pks_config}")
-                click.secho(f"PKS config file '{output_file_names[1]}' is "
-                            f"generated.", fg='green')
+            if pks_output is None:
+                return
+    if pks_output is not None:
+        sample_pks_config = yaml.safe_dump(
+            SAMPLE_PKS_CONFIG, default_flow_style=False) + '\n'
+        with open(pks_output, 'w') as f:
+            f.write(f"{INSTRUCTIONS}\n{sample_pks_config}")
+            click.secho(f"PKS config file '{pks_output}' is "
+                        f"generated.", fg='green')
         return
     return sample_config.strip() + '\n\n' + sample_pks_config.strip()
 
