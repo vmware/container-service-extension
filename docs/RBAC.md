@@ -1,36 +1,36 @@
 ---
 layout: default
-title: Role Based Access Control for CSE
+title: Role Based Access Control
 ---
 
-# Role Based Access Control (RBAC) for CSE
+# Role Based Access Control (RBAC)
 <a name="rbac"></a>
 ## Overview
 
-Till CSE v1.2.5, any authenticated vCD user was able to issue commands against
-a CSE installation. There was no way to restrict access to CSE services at any
-level (viz. Tentant, User, CSE operations). This page describes the new role
-based access control mechanism in CSE, how to turn it on and in general how to
-use the feature.
+Till CSE 1.2.5, any authenticated vCloud Director user is able to leverage CSE
+for Kubernetes Cluster deployments. There are no mechanics in CSE Service to 
+restrict its usage. This page describes the new role based access
+control (RBAC) mechanism through which administrators can administer
+restrictive usage of CSE. It also explains the functioning of RBAC along with
+desired behaviors.
 
-## What is RBAC
+## Capability
 
-In CSE v1.2.6 we have restricted access to few core operations. To perform
-these operations a user will need to have a certain right in their assigned
-role. The following table lays out the right reqruiements for all the
-restricted operations.
+CSE 1.2.6 has the capability to restrict access to certain deployment
+operations. To perform these operations, a user must have a certain right in
+their assigned role. The following table lays out the right requirement for all
+the restricted operations.
 
-| Opeation       | Required right                |
+| Operation      |  Right                        |
 |:---------------|:------------------------------|
 | cluster create | {cse}:CSE NATIVE DEPLOY RIGHT |
 | cluster delete | {cse}:CSE NATIVE DEPLOY RIGHT |
 | node create    | {cse}:CSE NATIVE DEPLOY RIGHT |
 | node delete    | {cse}:CSE NATIVE DEPLOY RIGHT |
 
-Note: Out of box (on a fresh install/upgrade) the feature is turned off by
-default.
+Note: Role Based Access Control feature is turned off by default.
 
-## How it works?
+## Functioning 
 
 Once the feature is turned on, any invocation of the the restricted CSE
 operations will cause the call to go through an authorization filter. In the
@@ -39,38 +39,42 @@ required to perform the operation are found, then the call will go through
 normally, else the call will fail and an appropriate error message will be
 displayed on the client console.
 
-## What Cloud admin needs to do?
+## Enablement
 
-As soon as CSE v1.2.6 is installed (or upgraded from v1.2.5 and below). CSE
-registers few rights to vCD. These rights end up in the hidden 'System'
-organization in vCD. A Cloud admin will be able to see these new rights.
+When CSE v1.2.6 is installed (or upgraded from v1.2.5 and below), CSE registers
+the above mentioned right to vCloud Director. The right belongs to the hidden
+'System' organization in vCloud Director and the Cloud administrator has the
+visibility of it.
 
-Cloud admins will need to award these new rights to Tenants, whom they wish to
-grant access to restricted CSE operations.
+Cloud Administrator turns on the role based access control for CSE
+- sets the 'enable_authorization' flag to 'true' under 'service' section of the
+  configuration file
+- restarts the CSE server
 
->vcd right add -o 'org name' "{cse}:CSE NATIVE DEPLOY RIGHT"
+Cloud administrator propagates the new right to Tenants, in order to grant
+access for CSE operations. 
 
-To turn on the feature, Cloud admin needs to flip the entry
-'enable_authorization' under 'service' section of the configuration file to
-'true', and then *restart* the CSE server. 
+    >vcd right add -o 'org name' "{cse}:CSE NATIVE DEPLOY RIGHT"
 
-## What Tenant admin needs to do?
+Cloud administrator can revoke access by removal of the right from the
+concerned Tenants.
 
-Once the RBAC feature is turned on a CSE server. Any user who doesn't have the
-required rights in their role will be unable to perform the restricted operations.
+    >vcd right remove -o 'org name' "{cse}:CSE NATIVE DEPLOY RIGHT"
 
-A Tenant admin should add the new right(s) (granted to them by Cloud admin) to
-existing roles in the organizaiton, or create new roles around these new
-rights. And subsequently assign these new/updated roles to users whom they wish
-to grant access to the restricted CSE operations.
+At this point, a user can't access restrictive operations, if the required
+right is not propagated to his/her role.
 
-  >vcd role add-right 'role name' "{cse}:CSE NATIVE DEPLOY RIGHT"
+Tenant administrators should add the new right (granted to them by Cloud admin)
+to existing roles in the organization, or create new roles with the new right.
+Subsequently, they assign new or updated roles to users whom they wish to grant
+access to the restricted CSE operations.
 
-## What Tenant users need to do?
+    >vcd role add-right 'role name' "{cse}:CSE NATIVE DEPLOY RIGHT"
+
 There is no action required on tenant users.
 
 ## FAQ
 * I just upgraded CSE to v1.2.6, I don't want RBAC, will the upgrade disrupt my userbase?
-    * No, out of box CSE doesn't have RBAC turned on. It needs to be explitly turned on by a Cloud Admin.
+    * No, out of box CSE doesn't have RBAC turned on. It needs to be explicitly turned on by a Cloud Admin.
 * Tenant User - If my Tenant admin doesn't grant me the new rights, will I lose access to all my previously deployed cluster?
     * No, you can still access previously deployed clusters. But you won't be able to modify them.
