@@ -92,7 +92,7 @@ INSTRUCTIONS_FOR_PKS_CONFIG_FILE = '''#Config file for PKS enabled CSE Server to
 NOTE_FOR_PKS_KEY_IN_CONFIG_FILE = '''#Filling out this key for regular CSE set up is optional and should be left as is.
 #Only for CSE set up enabled for PKS container provider, this value needs to point to a valid PKS config file name. 
 '''
-OPTIONTAL_CONFIGS_NOTE = '''#[OPTIONAL] PKS CONFIGS
+PKS_CONFIG_NOTE = '''#[OPTIONAL] PKS CONFIGS
 #These configs are required only for customers with PKS enabled CSE. Regular CSE users with 
 # no PKS container provider do not need these configs to be filled out in a separate yaml file.
 '''
@@ -139,7 +139,7 @@ SAMPLE_VCS_CONFIG = {
 }
 
 SAMPLE_PKS_CONFIG_FILE_LOCATION = {
-    #Absolute path to pks config file location
+    #Path to pks config file location
     'pks_config': 'None'
 }
 
@@ -304,7 +304,7 @@ def generate_sample_config(output=None, pks_output=None):
             click.secho(f"PKS config file '{pks_output}' is "
                         f"generated.", fg='green')
         return
-    return sample_config.strip() + '\n\n' + OPTIONTAL_CONFIGS_NOTE + \
+    return sample_config.strip() + '\n\n' + PKS_CONFIG_NOTE + \
            '\n' + sample_pks_config.strip()
 
 
