@@ -23,7 +23,7 @@ Supported vCD versions: 9.1, 9.5
 **Bug Fixes:**
 * Changed default AMQP exchange to cse-ext. CSE will no longer use or update vCD's global exchange settings.
 
-Known Issues:
+**Known Issues:**
 * CSE installation fails on vCD 9.0 with MissingLinkException.
     * We are aware of this issue, and will fix it in the next release. Till then vCD 9.0 is not officially supported by CSE 1.2.6.
 
