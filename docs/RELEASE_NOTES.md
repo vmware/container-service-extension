@@ -5,6 +5,28 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 1.2.6
+
+Release Date : 2019-02-04
+
+Supported vCD versions: 9.1, 9.5
+
+| Template OS        | Docker     | Kubernetes | Pod Network |
+|:-------------------|:-----------|:-----------|:------------|
+| Photon OS 2.0 GA   | 17.06.4-ce | 1.10.11    | Weave 2.3.0 |
+| Ubuntu 16.04.4 LTS | 18.03.0-ce | 1.10.11    | Weave 2.3.0 |
+
+**New Feature:**
+* Role based access control for deployment of kubernetes cluster
+* Improved logging and error messages.
+
+**Bug Fixes:**
+* Changed default AMQP exchange to cse-ext. CSE will no longer use or update vCD's global exchange settings.
+
+Known Issues:
+* CSE installation fails on vCD 9.0 with MissingLinkException.
+    * We are aware of this issue, and will fix it in the next release. Till then vCD 9.0 is not officially supported by CSE 1.2.6.
+
 ## CSE 1.2.5
 
 Release date: 2018-12-03
