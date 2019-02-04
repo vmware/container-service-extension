@@ -31,17 +31,9 @@ def cli(ctx):
             Generate sample CSE config as dict
             and print it to the console.
 \b
-        cse sample --pks
-            Generate sample CSE and PKS config as dict
-            and print it to the console.
-\b
         cse sample --output config.yaml
             Generate sample CSE config in the provided file name
             'config.yaml'.
-\b
-        cse sample --output config.yaml --pks
-            Generate sample CSE config in the provided file name
-            'config.yaml' along with pks detail file location.
 \b
         cse sample --pks-output pks.yaml
             Generate sample PKS config in a file named 'pks.yaml'.
@@ -120,14 +112,6 @@ def version(ctx):
 @cli.command('sample', short_help='generate sample configuration')
 @click.pass_context
 @click.option(
-    '--pks',
-    'with_pks',
-    is_flag=True,
-    required=False,
-    default=False,
-    help="If '--pks' flag is set, CSE sample config file is "
-         "generated along with pks details in it.")
-@click.option(
     '--output',
     'output',
     required=False,
@@ -141,10 +125,9 @@ def version(ctx):
     default=None,
     metavar='<pks-output-file-name>',
     help="Name of the PKS config file to dump the PKS configs to.")
-def sample(ctx, with_pks, output, pks_output):
+def sample(ctx, output, pks_output):
     """Generate sample CSE configuration."""
-    click.secho(generate_sample_config(with_pks=with_pks,
-                                       output=output,
+    click.secho(generate_sample_config(output=output,
                                        pks_output=pks_output))
 
 

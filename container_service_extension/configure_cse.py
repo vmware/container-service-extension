@@ -88,7 +88,10 @@ INSTRUCTIONS = '''#Config file for PKS enabled CSE Server to be filled by the ad
 #       5. PKS UAAC account information
 #For more information, please refer to CSE documentation page :
 #               https://vmware.github.io/container-service-extension/INSTALLATION.html\n'''
-
+OPTIONTAL_CONFIGS_NOTE = '''#[OPTIONAL] PKS CONFIGS
+#These configs are required only for customers with PKS enabled CSE. Regular CSE users with 
+# no PKS backend do not need these configs to be filled out.
+'''
 
 SAMPLE_AMQP_CONFIG = {
     'amqp': {
@@ -133,7 +136,7 @@ SAMPLE_VCS_CONFIG = {
 
 SAMPLE_PKS_CONFIG_FILE_LOCATION = {
     #Absolute path to pks config file location
-    'pks_config': 'pks.yaml'
+    'pks_config': 'None'
 }
 
 SAMPLE_PKS_CONFIG = {
@@ -254,11 +257,10 @@ SAMPLE_CONFIG_WITH_PKS = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
                           **SAMPLE_BROKER_CONFIG}
 
 
-def generate_sample_config(with_pks=False, output=None, pks_output=None):
+def generate_sample_config(output=None, pks_output=None):
     """Generates sample configs for cse. If config file names are
     provided, configs are dumped into respective files.
 
-    :param bool with_pks: flag to generate config with pks configs.
     :param str output: name of the config file to dump the CSE configs.
     :param str pks_output: name of the PKS config file to dump the PKS
     configs.
@@ -278,11 +280,9 @@ def generate_sample_config(with_pks=False, output=None, pks_output=None):
                                     default_flow_style=False) + '\n'
     sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
                                     default_flow_style=False) + '\n'
-    sample_pks_config = ""
-    if with_pks:
-        sample_config += yaml.safe_dump(SAMPLE_PKS_CONFIG_FILE_LOCATION,
+    sample_config += yaml.safe_dump(SAMPLE_PKS_CONFIG_FILE_LOCATION,
                                         default_flow_style=False) + '\n'
-        sample_pks_config = yaml.safe_dump(
+    sample_pks_config = yaml.safe_dump(
             SAMPLE_PKS_CONFIG, default_flow_style=False) + '\n'
     if output is not None:
         with open(output, 'w') as f:
@@ -299,7 +299,8 @@ def generate_sample_config(with_pks=False, output=None, pks_output=None):
             click.secho(f"PKS config file '{pks_output}' is "
                         f"generated.", fg='green')
         return
-    return sample_config.strip() + '\n\n' + sample_pks_config.strip()
+    return sample_config.strip() + '\n\n' + OPTIONTAL_CONFIGS_NOTE + \
+           '\n' + sample_pks_config.strip()
 
 
 def get_validated_config(config_file_name, pks_config='pks.yaml'):
