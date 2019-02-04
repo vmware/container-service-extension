@@ -4,7 +4,7 @@ title: Role Based Access Control for CSE
 ---
 
 # Role Based Access Control (RBAC) for CSE
-<a name="rbac"/>
+<a name="rbac"></a>
 ## Overview
 
 Till CSE v1.2.5, any authenticated vCD user was able to issue commands against
@@ -48,7 +48,7 @@ organization in vCD. A Cloud admin will be able to see these new rights.
 Cloud admins will need to award these new rights to Tenants, whom they wish to
 grant access to restricted CSE operations.
 
->vcd right add -o <org name> "{cse}:CSE NATIVE DEPLOY RIGHT"
+>vcd right add -o 'org name' "{cse}:CSE NATIVE DEPLOY RIGHT"
 
 To turn on the feature, Cloud admin needs to flip the entry
 'enable_authorization' under 'service' section of the configuration file to
@@ -64,7 +64,7 @@ existing roles in the organizaiton, or create new roles around these new
 rights. And subsequently assign these new/updated roles to users whom they wish
 to grant access to the restricted CSE operations.
 
-  >vcd role add-right <role name> "{cse}:CSE NATIVE DEPLOY RIGHT"
+  >vcd role add-right 'role name' "{cse}:CSE NATIVE DEPLOY RIGHT"
 
 ## What Tenant users need to do?
 There is no action required on tenant users.
