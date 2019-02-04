@@ -4,7 +4,7 @@ title: Role Based Access Control
 ---
 
 # Role Based Access Control (RBAC)
-<a name="rbac"></a>
+<a name="overview"></a>
 ## Overview
 
 Till CSE 1.2.5, any authenticated vCloud Director user is able to leverage CSE
@@ -14,6 +14,7 @@ control (RBAC) mechanism through which administrators can administer
 restrictive usage of CSE. It also explains the functioning of RBAC along with
 desired behaviors.
 
+<a name="capability"></a>
 ## Capability
 
 CSE 1.2.6 has the capability to restrict access to certain deployment
@@ -30,6 +31,7 @@ the restricted operations.
 
 Note: Role Based Access Control feature is turned off by default.
 
+<a name="functioning"></a>
 ## Functioning 
 
 Once the feature is turned on, any invocation of the the restricted CSE
@@ -39,6 +41,7 @@ required to perform the operation are found, then the call will go through
 normally, else the call will fail and an appropriate error message will be
 displayed on the client console.
 
+<a name="enablement"></a>
 ## Enablement
 
 When CSE v1.2.6 is installed (or upgraded from v1.2.5 and below), CSE registers
@@ -73,6 +76,7 @@ access to the restricted CSE operations.
 
 There is no action required on tenant users.
 
+<a name="faq"></a>
 ## FAQ
 * I just upgraded CSE to v1.2.6, I don't want RBAC, will the upgrade disrupt
   my userbase?
