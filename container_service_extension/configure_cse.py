@@ -90,7 +90,7 @@ INSTRUCTIONS = '''#Config file for PKS enabled CSE Server to be filled by the ad
 #               https://vmware.github.io/container-service-extension/INSTALLATION.html\n'''
 OPTIONTAL_CONFIGS_NOTE = '''#[OPTIONAL] PKS CONFIGS
 #These configs are required only for customers with PKS enabled CSE. Regular CSE users with 
-# no PKS backend do not need these configs to be filled out.
+# no PKS container provider do not need these configs to be filled out in a separate yaml file.
 '''
 
 SAMPLE_AMQP_CONFIG = {
