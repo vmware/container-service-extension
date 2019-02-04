@@ -63,7 +63,7 @@ from container_service_extension.utils import wait_until_tools_ready
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = 'vmxnet3'
 TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
 
-INSTRUCTIONS = '''#Config file for PKS enabled CSE Server to be filled by the administrator.
+INSTRUCTIONS_FOR_PKS_CONFIG_FILE = '''#Config file for PKS enabled CSE Server to be filled by the administrator.
 #This config file has the following three sections:
 #   1. pks_accounts:
 #       a. Cloud Admins can specify PKS service account for every (PKS managed) vCenter in vCD
@@ -88,6 +88,10 @@ INSTRUCTIONS = '''#Config file for PKS enabled CSE Server to be filled by the ad
 #       5. PKS UAAC account information
 #For more information, please refer to CSE documentation page :
 #               https://vmware.github.io/container-service-extension/INSTALLATION.html\n'''
+
+NOTE_FOR_PKS_KEY_IN_CONFIG_FILE = '''#Filling out this key for regular CSE set up is optional and should be left as is.
+#Only for CSE set up enabled for PKS container provider, this value needs to point to a valid PKS config file name. 
+'''
 OPTIONTAL_CONFIGS_NOTE = '''#[OPTIONAL] PKS CONFIGS
 #These configs are required only for customers with PKS enabled CSE. Regular CSE users with 
 # no PKS container provider do not need these configs to be filled out in a separate yaml file.
@@ -280,6 +284,7 @@ def generate_sample_config(output=None, pks_output=None):
                                     default_flow_style=False) + '\n'
     sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
                                     default_flow_style=False) + '\n'
+    sample_config += NOTE_FOR_PKS_KEY_IN_CONFIG_FILE
     sample_config += yaml.safe_dump(SAMPLE_PKS_CONFIG_FILE_LOCATION,
                                         default_flow_style=False) + '\n'
     sample_pks_config = yaml.safe_dump(
@@ -295,7 +300,7 @@ def generate_sample_config(output=None, pks_output=None):
         sample_pks_config = yaml.safe_dump(
             SAMPLE_PKS_CONFIG, default_flow_style=False) + '\n'
         with open(pks_output, 'w') as f:
-            f.write(f"{INSTRUCTIONS}\n{sample_pks_config}")
+            f.write(f"{INSTRUCTIONS_FOR_PKS_CONFIG_FILE}\n{sample_pks_config}")
             click.secho(f"PKS config file '{pks_output}' is "
                         f"generated.", fg='green')
         return
