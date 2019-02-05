@@ -57,9 +57,8 @@ SCRIPTS_DIR = 'scripts'
 SSH_KEY_FILEPATH = str(Path.home() / '.ssh' / 'id_rsa.pub')
 CLI_RUNNER = CliRunner()
 
-# if True, then the person testing would like to keep all artifacts that
-# were made during testing.
-DEV_MODE = False
+TEARDOWN_INSTALLATION = True
+TEARDOWN_CLUSTERS = True
 
 AMQP_USERNAME = None
 AMQP_PASSWORD = None
@@ -75,7 +74,7 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     :param str config_filepath:
     """
     global AMQP_USERNAME, AMQP_PASSWORD, CLIENT, ORG_HREF, VDC_HREF, \
-        CATALOG_NAME, DEV_MODE
+        CATALOG_NAME, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS
 
     config = testutils.yaml_to_dict(config_filepath)
     CLIENT = Client(config['vcd']['host'],
@@ -95,7 +94,11 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     AMQP_PASSWORD = config['amqp']['password']
 
     try:
-        DEV_MODE = config['test']['developer_mode']
+        TEARDOWN_INSTALLATION = config['test']['teardown_installation']
+    except KeyError:
+        pass
+    try:
+        TEARDOWN_CLUSTERS = config['test']['teardown_clusters']
     except KeyError:
         pass
 

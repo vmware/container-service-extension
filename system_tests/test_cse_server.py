@@ -11,20 +11,20 @@ if a right exists without adding it. Also need functionality to remove CSE
 rights when CSE is unregistered.
 
 NOTES:
-    - Edit 'base_config.yaml' for your own vCD instance
-    - These tests will use your public/private SSH keys (RSA)
-        - Required keys: '~/.ssh/id_rsa' and '~/.ssh/id_rsa.pub'
-        - Keys should not be password protected, or tests will fail.
-            To remove key password, use `ssh-keygen -p`.
-        - ssh-key help: https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/  # noqa
-    - vCD entities related to CSE (vapps, catalog items) are cleaned up after
-        tests run, unless 'developer_mode'=True in 'base_config.yaml'.
-    - These tests are meant to run in sequence, but can run independently.
-    - !!! These tests will fail on Windows !!! We generate temporary config
-        files and restrict its permissions due to the check that
-        cse install/check performs. This permissions check is incompatible
-        with Windows, and is a known issue.
-    - This test module typically takes ~40 minutes to finish.
+- Edit 'base_config.yaml' for your own vCD instance.
+- These tests will use your public/private SSH keys (RSA)
+    - Required keys: '~/.ssh/id_rsa' and '~/.ssh/id_rsa.pub'
+    - Keys should not be password protected, or tests will fail.
+        To remove key password, use `ssh-keygen -p`.
+    - ssh-key help: https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/  # noqa
+- vCD entities related to CSE (vapps, catalog items) are cleaned up after
+    tests run, unless 'teardown_installation'=false in 'base_config.yaml'.
+- These tests are meant to run in sequence, but can run independently.
+- !!! These tests will fail on Windows !!! We generate temporary config
+    files and restrict its permissions due to the check that
+    cse install/check performs. This permissions check is incompatible
+    with Windows, and is a known issue.
+- This test module typically takes ~40 minutes to finish.
 
 Tests these following commands:
 $ cse check --config cse_test_config.yaml (missing/invalid keys)
@@ -65,9 +65,15 @@ import container_service_extension.utils as utils
 def delete_installation_entities():
     """Fixture to ensure that CSE entities do not exist in vCD.
 
-    This fixture executes automatically for test module setup and teardown
-    If 'developer_mode_aware' is enabled, then the teardown deletion will not
-    occur.
+    This fixture executes automatically for this module's setup and teardown.
+
+    Setup tasks:
+    - Delete source ova files, vapp templates, temp vapps, catalogs
+    - Unregister CSE from vCD
+
+    Teardown tasks (only if config key 'teardown_installation'=True):
+    - Delete source ova files, vapp templates, temp vapps, catalogs
+    - Unregister CSE from vCD
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     for template in config['broker']['templates']:
@@ -79,7 +85,7 @@ def delete_installation_entities():
 
     yield
 
-    if not env.DEV_MODE:
+    if env.TEARDOWN_INSTALLATION:
         for template in config['broker']['templates']:
             env.delete_catalog_item(template['source_ova_name'])
             env.delete_catalog_item(template['catalog_item'])
