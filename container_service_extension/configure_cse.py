@@ -333,6 +333,7 @@ def get_validated_config(config_file_name, pks_config='pks.yaml'):
     if 'pks_config' in config:
         check_keys_and_value_types(config, SAMPLE_CONFIG_WITH_PKS,
                                    location='config file')
+        pks_config = config['pks_config']
         check_file_permissions(pks_config)
         with open(pks_config) as pks_config_file:
             pks = yaml.safe_load(pks_config_file)

@@ -63,6 +63,7 @@ class Service(object, metaclass=Singleton):
         self.consumers = []
         self.threads = []
         self.should_stop = False
+        self.cse_cache = None
 
     def get_service_config(self):
         return self.config
@@ -193,7 +194,7 @@ class Service(object, metaclass=Singleton):
         signal.signal(signal.SIGINT, signal_handler)
         click.secho(message)
         LOGGER.info(message)
-        cse_cache = CseCache(self.config['pks_config']['orgs'], self.config['pks_config']['pks_accounts'], self.config['pks_config']['pvdcs'])
+        self.cse_cache = CseCache(self.config['pks_config']['orgs'], self.config['pks_config']['pks_accounts'], self.config['pks_config']['pvdcs'])
         amqp = self.config['amqp']
         num_consumers = self.config['service']['listeners']
 
