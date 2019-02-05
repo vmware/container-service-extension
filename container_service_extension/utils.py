@@ -10,13 +10,11 @@ import pathlib
 import stat
 import sys
 import traceback
-from collections import namedtuple
 from urllib.parse import urlparse
 
 from cachetools import LRUCache
 import click
 from lxml import objectify
-
 from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials, QueryResultFormat, ResourceType
 
