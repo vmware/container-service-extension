@@ -173,3 +173,27 @@ def test_vcd_cse_template_list(vcd_org_admin):
     result = env.CLI_RUNNER.invoke(vcd, ['cse', 'template', 'list'],
                                    catch_exceptions=False)
     assert result.exit_code == 0
+
+
+def test_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
+                                         delete_test_cluster):
+    """Test that --disable-rollback option works during cluster creation.
+
+    commands:
+    $ vcd cse cluster create -n NETWORK -N 1 -t photon-v2 -c 1000
+    $ vcd cse cluster create -n NETWORK -N 1 -t photon-v2 -c 1000
+        --disable-rollback
+    """
+    cmd = f"cse cluster create {env.TEST_CLUSTER_NAME} -n " \
+          f"{config['broker']['network']} -N 1 -c 1000"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    time.sleep(10)  # wait for vApp to be deleted
+    assert not env.vapp_exists(env.TEST_CLUSTER_NAME), \
+        "Cluster exists when it should not."
+
+    cmd += " --disable-rollback"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    assert env.vapp_exists(env.TEST_CLUSTER_NAME), \
+        "Cluster does not exist when it should."
