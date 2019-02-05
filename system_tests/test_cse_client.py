@@ -152,3 +152,24 @@ def delete_test_cluster():
     yield
     if env.TEARDOWN_CLUSTERS:
         env.delete_vapp(env.TEST_CLUSTER_NAME)
+
+
+def test_vcd_cse_version(vcd_org_admin):
+    """Test vcd cse version command."""
+    result = env.CLI_RUNNER.invoke(vcd, ['cse', 'version'],
+                                   catch_exceptions=False)
+    assert result.exit_code == 0
+
+
+def test_vcd_cse_system_info(vcd_org_admin):
+    """Test vcd cse system info command."""
+    result = env.CLI_RUNNER.invoke(vcd, ['cse', 'system', 'info'],
+                                   catch_exceptions=False)
+    assert result.exit_code == 0
+
+
+def test_vcd_cse_template_list(vcd_org_admin):
+    """Test vcd cse template list command."""
+    result = env.CLI_RUNNER.invoke(vcd, ['cse', 'template', 'list'],
+                                   catch_exceptions=False)
+    assert result.exit_code == 0
