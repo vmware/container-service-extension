@@ -1,6 +1,9 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+
+from pyvcloud.vcd import utils
+
 from container_service_extension.utils import get_vdc
 from container_service_extension.utils import process_response
 
@@ -29,7 +32,7 @@ class Ovdc(object):
         method = 'PUT'
         ovdc = get_vdc(self.client, ovdc_name, org_name=org_name,
                        is_admin_operation=True)
-        ovdc_id = ovdc.resource.get('id').split(':')[-1]
+        ovdc_id = utils.extract_id(ovdc.resource.get('id'))
         uri = f'{self._uri}/ovdc/{ovdc_id}/info'
         data = {
             'ovdc_id': ovdc_id,
@@ -62,7 +65,7 @@ class Ovdc(object):
         method = 'PUT'
         ovdc = get_vdc(self.client, ovdc_name, org_name=org_name,
                        is_admin_operation=True)
-        ovdc_id = ovdc.resource.get('id').split(':')[-1]
+        ovdc_id = utils.extract_id(ovdc.resource.get('id'))
         uri = f'{self._uri}/ovdc/{ovdc_id}/info'
         data = {
             'ovdc_id': ovdc_id,
@@ -95,7 +98,7 @@ class Ovdc(object):
         method = 'GET'
         ovdc = get_vdc(self.client, ovdc_name, org_name=org_name,
                        is_admin_operation=True)
-        ovdc_id = ovdc.resource.get('id').split(':')[-1]
+        ovdc_id = utils.extract_id(ovdc.resource.get('id'))
         uri = f'{self._uri}/ovdc/{ovdc_id}/info'
 
         response = self.client._do_request_prim(
