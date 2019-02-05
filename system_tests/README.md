@@ -7,6 +7,7 @@ $ pip install -r test-requirements.txt
 $ cd container-service-extension/system_tests
 
 # modify base_config.yaml
+# set up vCD instance (org, ovdc, ovdc network)
 
 # Run all tests (either works)
 $ pytest
@@ -28,6 +29,15 @@ $ pytest --disable-warnings
 # Common use case (outputs to 'testlog')
 $ pytest --disable-warnings -x -v -s test_cse_server.py > testlog
 ```
+
+## Notes
+
+- Client tests (**test_cse_client.py**) require an org admin user with the same username and password specified in the config file **vcd** section
+- Server tests (**test_cse_server.py**) require you to have a public/private SSH key (RSA)
+  - These keys should be at: `~/.ssh/id_rsa` and `~/.ssh/id_rsa.pub`
+  - Keys must not be password protected (to remove key password, use `ssh-keygen -p`)
+  - ssh-key help: <https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/>
+- More detailed information can be found in the module docstring
 
 ---
 
@@ -75,7 +85,7 @@ Common keyword arguments for @pytest.fixture()
 
 ---
 
-### Helpful links:
+### Helpful links
 
-- Usage and Invocations: https://docs.pytest.org/en/latest/usage.html
-- Fixtures: https://docs.pytest.org/en/latest/fixture.html
+- Usage and Invocations: <https://docs.pytest.org/en/latest/usage.html>
+- Fixtures: <https://docs.pytest.org/en/latest/fixture.html>
