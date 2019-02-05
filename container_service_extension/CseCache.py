@@ -7,6 +7,8 @@
 from container_service_extension.PksInfo import PksInfo
 from container_service_extension.PvdcResourcePoolPathInfo import PvdcResourcePoolPathInfo
 from container_service_extension.Uaac import Uaac
+from container_service_extension.utils import get_datacenter_cluster_rp_path
+from container_service_extension.utils import get_pvdc_id_by_name
 
 
 class CseCache(object):
@@ -118,9 +120,7 @@ class CseCache(object):
         """
         pvdc_table ={}
         for pvdc in self.pvdcs:
-            from container_service_extension.utils import get_pvdc_id_by_name
             pvdc_id = get_pvdc_id_by_name(pvdc['name'], pvdc['vc'])
-            from container_service_extension.utils import get_datacenter_cluster_rp_path
             datacenter, cluster, rp = get_datacenter_cluster_rp_path(pvdc['rp_paths'])
             pvdc_rp_info = PvdcResourcePoolPathInfo(pvdc['name'], pvdc['vc'], datacenter,cluster,rp)
             pvdc_table[str(pvdc_id)] = pvdc_rp_info
