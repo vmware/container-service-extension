@@ -63,6 +63,19 @@
     sublink: tutorial
   - name: FAQ
     sublink: faq
+- name: "Role Based Access Control"
+  link: RBAC.html
+  subtoc:
+  - name: Overview
+    sublink: overview
+  - name: Capability
+    sublink: capability
+  - name: Functioning
+    sublink: functioning
+  - name: Enablement
+    sublink: enablement
+  - name: FAQ
+    sublink: faq
 - name: "Troubleshooting"
   link: TROUBLESHOOTING.html
 - name: "Known Issues"

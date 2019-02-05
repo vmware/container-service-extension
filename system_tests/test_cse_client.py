@@ -39,7 +39,7 @@ def cse_server():
             or not env.is_cse_registration_valid(config['amqp']['routing_key'],
                                                  config['amqp']['exchange']):
         result = env.CLI_RUNNER.invoke(cli, install_cmd,
-                                       input='y\ny',
+                                       input='y',
                                        catch_exceptions=False)
         assert result.exit_code == 0
 
