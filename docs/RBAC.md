@@ -34,7 +34,7 @@ Note: Role Based Access Control feature is turned off by default.
 <a name="functioning"></a>
 ## Functioning 
 
-Once the feature is turned on, any invocation of the the restricted CSE
+Once the feature is turned on, any invocation of the restricted CSE
 operations will cause the call to go through an authorization filter. In the
 filter, CSE will look for certain right(s) in user's role. If the right(s)
 required to perform the operation are found, then the call will go through
