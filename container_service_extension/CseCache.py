@@ -7,14 +7,13 @@
 from container_service_extension.PksInfo import PksInfo
 from container_service_extension.PvdcResourcePoolPathInfo import PvdcResourcePoolPathInfo
 from container_service_extension.Uaac import Uaac
-from container_service_extension.utils import get_pvdc_id_by_name, get_datacenter_cluster_rp_path
 
 
 class CseCache(object):
     """
     An immutable class acting as an in-memory cache for Container Service Extention(CSE)
     """
-    __slots__ = ["orgs","pks_accounts","pvdcs","pvdc_table", "pks_info_table", "orgs_table"]
+    __slots__ = ["orgs","pks_accounts","pvdcs","pvdc_table", "pks_info_table", "org_pks_table"]
 
     def __init__(self, orgs, pks_accounts, pvdcs):
         """
@@ -26,12 +25,12 @@ class CseCache(object):
         super(CseCache, self).__setattr__("orgs", orgs)
         super(CseCache, self).__setattr__("pks_accounts", pks_accounts)
         super(CseCache, self).__setattr__("pvdcs", pvdcs)
-        # pks_info_table = self.__load_pks_accounts(pks_accounts)
+        pks_info_table = self.__load_pks_accounts(pks_accounts)
         pvdc_table = self.__load_pvdc_info(pvdcs)
-        # orgs_table = self.__load_org_pks_accounts(orgs, pks_info_table)
+        org_pks_table = self.__load_org_pks_accounts(orgs, pks_info_table)
         super(CseCache,self).__setattr__("pvdc_table",pvdc_table)
-        # super(CseCache, self).__setattr__("pks_info_table", pks_info_table)
-        # super(CseCache, self).__setattr__("orgs_table", orgs_table)
+        super(CseCache, self).__setattr__("pks_info_table", pks_info_table)
+        super(CseCache, self).__setattr__("org_pks_table", org_pks_table)
 
 
 
@@ -45,40 +44,61 @@ class CseCache(object):
         raise AttributeError(msg)
 
     def get_pvdc_info(self, pvdc_id):
+        """ Returns an immutable PvdcResourcePoolPathInfo object which has details of pvdc
+        associated with this identifier. Details include datacenter name, cluster name and
+        sub resource pool path for this provider vdc.
+
+        :param pvdc_id:
+        :return:
+        """
         return self.pvdc_table[pvdc_id]
 
 
-    # def get_pks_account_details(self, org_name, vc_name):
-    #     list = self.org_pks_accounts_table[org_name]
-    #     for account in list:
-    #         if account.vc == vc_name:
-    #             return account
-    #
-    # def __load_pks_accounts(self, pks_accounts_list):
-    #     pks_information = {}
-    #     for account in pks_accounts_list:
-    #         uaac = Uaac(account['uaac']['port'],
-    #                     account['uaac']['secret'],
-    #                     account['uaac']['username'])
-    #         pks_info = PksInfo(account['name'],
-    #                            account['host'],
-    #                            account['port'],
-    #                            uaac,
-    #                            account['vc'])
-    #         pks_information[account['name']] = pks_info
-    #
-    #     return  pks_information
-    #
-    # def __load_org_pks_accounts(self, orgs_list, pks_info_list):
-    #     org_pks_accounts = {}
-    #     for org in self.orgs:
-    #         key = org['name']
-    #         values = []
-    #         for account in org['pks_accounts']:
-    #             values.append(pks_info_list[account])
-    #             org_pks_accounts[key] = values
-    #
-    #     return org_pks_accounts
+    def get_pks_account_details(self, org_name, vc_name):
+        return self.org_pks_table[(org_name,vc_name)]
+
+
+    def __load_pks_accounts(self, pks_accounts):
+        """Construct a dict to access PKS account information (account name, host, port, uaac and vc name)
+        based on its account name, from the pks information obtained from configuration.
+
+        :param dict pks_accounts: array of dict, each representing PKS information in CSE PKS config.
+        :return: dict of PKS information where key is the PKS account name and value is PksInfo object.
+
+        :rtype: dict
+        """
+        pks = {}
+        for account in pks_accounts:
+            uaac = Uaac(account['uaac']['port'],
+                        account['uaac']['secret'],
+                        account['uaac']['username'])
+            pks_info = PksInfo(account['name'],
+                               account['host'],
+                               account['port'],
+                               uaac,
+                               account['vc'])
+            pks[account['name']] = pks_info
+
+        return pks
+
+    def __load_org_pks_accounts(self, orgs, pks_accounts):
+        """Construct a dict to access PKS account information (account name, host, port, uaac and vc name)
+        associated with each organization per vCenter based on the organization name and associated vCenter name.
+
+        :param dict orgs: array of dict, each representing organization and its associated PKS accounts.
+        :param dict pks_accounts: array of dict, each representing PKS information in CSE PKS config.
+        :return: dict of PKS information where key is the PKS account name and value is PksInfo object.
+
+        :rtype: dict
+        """
+        org_pks_association = {}
+        for org in orgs:
+            org_name = org['name']
+            for account_name in org['pks_accounts']:
+                associated_pks_account = pks_accounts[account_name]
+                org_pks_association[(org_name, associated_pks_account.vc)] = associated_pks_account
+
+        return org_pks_association
 
     def __load_pvdc_info(self, pvdcs_list):
         """Construct a dict to access pvdc information (datacenter, cluser and resourcepool path)
@@ -91,13 +111,11 @@ class CseCache(object):
         """
         pvdc_table ={}
         for pvdc in self.pvdcs:
-            pvdc_id = get_pvdc_id_by_name(pvdc['name'], pvdc['vc_name_in_vcd'])
-            datacenter, cluster, rp = get_datacenter_cluster_rp_path(pvdc['rp_path'])
-            pvdc_rp_info = PvdcResourcePoolPathInfo(pvdc['name'], pvdc['vc_name_in_vcd'], datacenter,cluster,rp)
+            from container_service_extension.utils import get_pvdc_id_by_name
+            pvdc_id = get_pvdc_id_by_name(pvdc['name'], pvdc['vc'])
+            from container_service_extension.utils import get_datacenter_cluster_rp_path
+            datacenter, cluster, rp = get_datacenter_cluster_rp_path(pvdc['rp_paths'])
+            pvdc_rp_info = PvdcResourcePoolPathInfo(pvdc['name'], pvdc['vc'], datacenter,cluster,rp)
             pvdc_table[str(pvdc_id)] = pvdc_rp_info
 
         return pvdc_table
-
-
-
-
