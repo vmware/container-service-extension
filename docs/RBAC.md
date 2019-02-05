@@ -78,11 +78,11 @@ There is no action required on tenant users.
 
 <a name="faq"></a>
 ## FAQ
-* I just upgraded CSE to v1.2.6, I don't want RBAC, will the upgrade disrupt
-  my userbase?
-    * No, out of box CSE doesn't have RBAC turned on. It needs to be explicitly
-      turned on by a Cloud Admin.
-* Tenant User - If my Tenant admin doesn't grant me the new rights, will I lose
-  access to all my previously deployed cluster?
-    * No, you can still access previously deployed clusters. But you won't be
-      able to modify them.
+* I upgraded to CSE v1.2.6 and I do not want to leverage RBAC. Will the upgrade
+  disrupt my userbase?
+    * CSE v1.2.6 does not turn RBAC on by default upon upgrade or
+      fresh-install. It needs to be [explicitly enabled](#enablement).
+* If my administrator does not grant me the new right, will I lose access to my
+  previously deployed clusters?
+    * You will still be able to access previously deployed clusters. You will
+      not be able to modify them.

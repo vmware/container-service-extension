@@ -4,11 +4,13 @@ title: Troubleshooting
 ---
 # TroubleShooting
 
-`cse.log` logs CSE Server activity. Server requests and responses are recorded here, as well as outputs of scripts that were run on VMs.
+`cse-server-debug.log`, `cse-server-info.log` logs CSE Server activity. Server requests and responses are recorded here, as well as outputs of scripts that were run on VMs.
 
-`cse-check.log` logs CSE operations, such as `cse install`. Stack traces and HTTP messages specific to CSE are recorded here.
+`cse-install_[datetimestamp].log` logs CSE install activity. Any output from scripts or error messages during CSE installation will be logged here.
 
-`vcd.log` logs vcd-cli and pyvcloud activity. Stack traces and HTTP messages specific to vcd-cli are recorded here.
+'cse-server-wire-debug.log' logs all REST calls originating in CSE for vCD.
+
+`vcd.log` logs vcd-cli and pyvcloud activity on client side. Stack traces and HTTP messages specific to vcd-cli are recorded here.
 
 Common mistakes:
 - Config file fields are incorrect
