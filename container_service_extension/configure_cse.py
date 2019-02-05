@@ -29,7 +29,6 @@ from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
-
 from container_service_extension.logger import setup_log_file_directory
 from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY, CSE_NATIVE_DEPLOY_RIGHT_CATEGORY, \
@@ -37,6 +36,7 @@ from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY, CSE_PKS_DEPLOY_RIGHT_CATEGORY, \
     CSE_PKS_DEPLOY_RIGHT_DESCRIPTION, CSE_PKS_DEPLOY_RIGHT_NAME, \
     CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE  # noqa
+
 from container_service_extension.utils import catalog_exists
 from container_service_extension.utils import catalog_item_exists
 from container_service_extension.utils import check_file_permissions
@@ -88,7 +88,7 @@ INSTRUCTIONS_FOR_PKS_CONFIG_FILE = '''#Config file for PKS enabled CSE Server to
 NOTE_FOR_PKS_KEY_IN_CONFIG_FILE = '''#Filling out this key for regular CSE set up is optional and should be left as is.
 #Only for CSE set up enabled for PKS container provider, this value needs to point to a valid PKS config file name. 
 '''
-OPTIONTAL_CONFIGS_NOTE = '''#[OPTIONAL] PKS CONFIGS
+PKS_CONFIG_NOTE = '''#[OPTIONAL] PKS CONFIGS
 #These configs are required only for customers with PKS enabled CSE. Regular CSE users with 
 # no PKS container provider do not need these configs to be filled out in a separate yaml file.
 '''
@@ -135,7 +135,7 @@ SAMPLE_VCS_CONFIG = {
 }
 
 SAMPLE_PKS_CONFIG_FILE_LOCATION = {
-    #Absolute path to pks config file location
+    #Path to pks config file location
     'pks_config': 'None'
 }
 
@@ -256,7 +256,6 @@ SAMPLE_CONFIG_WITH_PKS = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
                           **SAMPLE_SERVICE_CONFIG,
                           **SAMPLE_BROKER_CONFIG}
 
-
 def generate_sample_config(output=None, pks_output=None):
     """Generates sample configs for cse. If config file names are
     provided, configs are dumped into respective files.
@@ -300,7 +299,7 @@ def generate_sample_config(output=None, pks_output=None):
             click.secho(f"PKS config file '{pks_output}' is "
                         f"generated.", fg='green')
         return
-    return sample_config.strip() + '\n\n' + OPTIONTAL_CONFIGS_NOTE + \
+    return sample_config.strip() + '\n\n' + PKS_CONFIG_NOTE + \
            '\n' + sample_pks_config.strip()
 
 
