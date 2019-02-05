@@ -2,6 +2,38 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+"""
+CSE client tests.
+
+TODO() include tests/fixtures to test command accessibility for various
+users/roles, test accessing cluster via kubectl, test nfs functionality,
+test pks functionality.
+
+NOTES:
+- These tests will install CSE on vCD if CSE is not installed already.
+- Edit 'base_config.yaml' for your own vCD instance.
+- Clusters are deleted on test failure, unless 'teardown_clusters'=false in
+    'base_config.yaml'.
+- This test module typically takes ~40 minutes to finish.
+
+Tests these following commands:
+$ cse check --config cse_test_config.yaml (missing/invalid keys)
+$ cse check --config cse_test_config.yaml (incorrect value types)
+$ cse check --config cse_test_config.yaml -i (cse not installed yet)
+
+$ cse install --config cse_test_config.yaml --template photon-v2
+    --ext skip --ssh-key ~/.ssh/id_rsa.pub --no-capture
+
+$ cse install --config cse_test_config.yaml --template photon-v2
+
+$ cse install --config cse_test_config.yaml --ssh-key ~/.ssh/id_rsa.pub
+    --update --no-capture
+
+$ cse install --config cse_test_config.yaml
+$ cse check --config cse_test_config.yaml -i
+$ cse check --config cse_test_config.yaml -i (invalid templates)
+
+"""
 import subprocess
 import time
 
@@ -16,13 +48,18 @@ import container_service_extension.utils as utils
 
 @pytest.fixture(scope='module', autouse=True)
 def cse_server():
-    """Fixture to ensure that CSE is installed before client tests.
+    """Fixture to ensure that CSE is installed and running before client tests.
 
-    This function will execute once for this module.
+    This fixture executes automatically for this module's setup and teardown.
 
     Setup tasks:
     - If templates do not exist, install CSE using `--upgrade`
-    - If CSE is not registered properly, install CSE normally
+    - Run `cse install` to ensure that CSE is registered and AMQP
+        exchange exists.
+    - Run CSE server as a subprocess
+
+    Teardown tasks:
+    - Stop CSE server
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     install_cmd = ['install', '--config', env.ACTIVE_CONFIG_FILEPATH,
@@ -47,7 +84,7 @@ def cse_server():
     cmd = f"cse run -c {env.ACTIVE_CONFIG_FILEPATH}"
     p = subprocess.Popen(cmd.split(), stdout=subprocess.DEVNULL,
                          stderr=subprocess.STDOUT)
-    time.sleep(10)
+    time.sleep(10)  # server takes a little time to set itself up
 
     yield
 
