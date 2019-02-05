@@ -34,6 +34,8 @@ $ cse check --config cse_test_config.yaml -i
 $ cse check --config cse_test_config.yaml -i (invalid templates)
 
 """
+
+import re
 import subprocess
 import time
 
@@ -197,3 +199,73 @@ def test_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
     assert result.exit_code == 0
     assert env.vapp_exists(env.TEST_CLUSTER_NAME), \
         "Cluster does not exist when it should."
+
+
+def test_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
+                                             delete_test_cluster):
+    """Test cse cluster/node commands.
+
+    This test function contains several sub-test blocks that can be commented
+    out or moved around for speed optimization purposes during testing.
+    """
+    # keeps track of the number of nodes that should exist
+    # so that devs don't have to update assert statements when removing/editing
+    # these subtests
+    num_nodes = 0
+    pattern = r'(node-\S+)'
+
+    def check_node_list():
+        """Use `vcd cse node list` to verify that nodes were added/deleted."""
+        node_list_cmd = f"cse node list {env.TEST_CLUSTER_NAME}"
+        node_list_result = env.CLI_RUNNER.invoke(vcd, node_list_cmd.split(),
+                                                 catch_exceptions=False)
+        assert node_list_result.exit_code == 0
+        node_list = re.findall(pattern, node_list_result.output)
+        assert len(node_list) == num_nodes, \
+            f"Test cluster has {len(node_list)} nodes, when it should have " \
+            f"{num_nodes} node(s)."
+        return node_list
+
+    # vcd cse cluster create testcluster -n NETWORK -N 1 -t PHOTON
+    cmd = f"cse cluster create {env.TEST_CLUSTER_NAME} -n " \
+          f"{config['broker']['network']} -N 1 -t {env.PHOTON_TEMPLATE_NAME}"
+    num_nodes += 1
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    assert env.vapp_exists(env.TEST_CLUSTER_NAME), \
+        "Cluster doesn't exist when it should."
+
+    # vcd cse cluster info testcluster
+    cmd = f"cse cluster info {env.TEST_CLUSTER_NAME}"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+    # vcd cse node info testcluster TESTNODE
+    nodes = check_node_list()
+    cmd = f"cse node info {env.TEST_CLUSTER_NAME} {nodes[0]}"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+    # vcd cse node delete testcluster TESTNODE
+    cmd = f"cse node delete {env.TEST_CLUSTER_NAME} {nodes[0]}"
+    num_nodes -= 1
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), input='y',
+                                   catch_exceptions=False)
+    assert result.exit_code == 0
+    check_node_list()
+
+    # vcd cse node create testcluster -n NETWORK -t PHOTON
+    cmd = f"cse node create {env.TEST_CLUSTER_NAME} -n " \
+          f"{config['broker']['network']} -t {env.PHOTON_TEMPLATE_NAME}"
+    num_nodes += 1
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    check_node_list()
+
+    # vcd cse cluster delete testcluster
+    cmd = f"cse cluster delete {env.TEST_CLUSTER_NAME}"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), input='y',
+                                   catch_exceptions=False)
+    assert result.exit_code == 0
+    assert not env.vapp_exists(env.TEST_CLUSTER_NAME), \
+        "Cluster exists when it should not"
