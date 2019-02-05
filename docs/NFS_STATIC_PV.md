@@ -37,7 +37,7 @@ the cluster may try to dynamically provision a volume for the PVC.
 CSE does not currently support dynamic persistent volumes.
 
 <a name="architecture"></a>
-## NFS Volume Architecture 
+## NFS Volume Architecture
 
 An NFS volume allows an existing NFS (Network File System) share
 to be mounted into one or more pods. When the pod(s) are removed, the
@@ -81,10 +81,10 @@ vcd cse cluster create mycluster --nodes 2 \
  --ssh-key ~/.ssh/id_rsa.pub
 ```
 This operation will take several minutes while the CSE extension builds the
-Kubernetes vApp. 
+Kubernetes vApp.
 
-You can also add a node to an existing cluster using a command like the 
-following. 
+You can also add a node to an existing cluster using a command like the
+following.
 
 ```shell
 # Add an NFS server (node of type NFS).
@@ -96,18 +96,18 @@ vcd cse node create mycluster --nodes 1 --network mynetwork \
 
 The next step is to create NFS shares that can be allocated via persistent
 volume resources.  First, we need to add an independent disk to the NFS
-node to create a file system that we can export. 
+node to create a file system that we can export.
 
 ```shell
 # List the VMs in the vApp to find the NFS node. Look for a VM name that
 # starts with 'nfsd-', e.g., 'nfsd-ljsn'. Note the VM name and IP address.
 vcd vapp info mycluster
-# Create a 100Gb independent disk and attach to the NFS VM. 
+# Create a 100Gb independent disk and attach to the NFS VM.
 vcd disk create nfs-shares-1 100g --description 'Kubernetes NFS shares'
 vcd vapp attach mycluster nfsd-ljsn nfs-shares-1
 ```
 
-Next, ssh into the NFS host itself. 
+Next, ssh into the NFS host itself.
 ```shell
 ssh root@10.150.200.22
 ... (root prompt appears) ...
@@ -130,7 +130,7 @@ Model: VMware Virtual disk (scsi)
 Disk /dev/sdb: 100GB
 Sector size (logical/physical): 512B/512B
 Partition Table: gpt
-Disk Flags: 
+Disk Flags:
 
 Number  Start   End    Size   File system  Name     Flags
  1      0.00GB  100GB  100GB               primary
@@ -139,8 +139,8 @@ Number  Start   End    Size   File system  Name     Flags
 root@nfsd-ljsn:~# mkfs -t ext4 /dev/sdb1
 Creating filesystem with 24413696 4k blocks and 6111232 inodes
 Filesystem UUID: 8622c0f5-4044-4ebf-95a5-0372256b34f0
-Superblock backups stored on blocks: 
-	32768, 98304, 163840, 229376, 294912, 819200, 884736, 1605632, 2654208, 
+Superblock backups stored on blocks:
+	32768, 98304, 163840, 229376, 294912, 819200, 884736, 1605632, 2654208,
 	4096000, 7962624, 11239424, 20480000, 23887872
 
 Allocating group tables: done
@@ -149,7 +149,7 @@ Creating journal (32768 blocks): done
 Writing superblocks and filesystem accounting information: done   
 ```
 
-Create a mount point, add the new partition to your list of file systems, 
+Create a mount point, add the new partition to your list of file systems,
 and mount it.
 
 ```shell
@@ -180,8 +180,8 @@ logout from the NFS node.
 
 ### Using Kubernetes Persistent Volumes
 
-To use the shares we must create persistent volume resources. To start 
-with let's grab the kubeconfig so we can access the new Kubernetes cluster. 
+To use the shares we must create persistent volume resources. To start
+with let's grab the kubeconfig so we can access the new Kubernetes cluster.
 
 ```shell
 vcd cse cluster config mycluster > mycluster.cfg
@@ -210,8 +210,8 @@ spec:
 EOF
 ```
 
-Next create a persistent volume claim that matches the persistent 
-volume size. 
+Next create a persistent volume claim that matches the persistent
+volume size.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -270,7 +270,7 @@ EOF
 ### Checking Health
 
 We can check the state of the deployed application and its storage.  First
-let's ensure all resources are in good health. 
+let's ensure all resources are in good health.
 ```shell
 kubectl get pv
 kubectl get pvc
@@ -278,8 +278,8 @@ kubectl get rc
 kubectl get pods
 ```
 
-We can now look at the state of the storage using the handy 
-`kubectl exec` command to run a command on one of the pods.  (Substitute 
+We can now look at the state of the storage using the handy
+`kubectl exec` command to run a command on one of the pods.  (Substitute
 the correct pod name from your `kubectl get pods` output.)
 ```
 $ kubectl exec -it nfs-busybox-gcnht cat /mnt/index.html
@@ -287,11 +287,11 @@ Fri Dec 28 00:16:08 UTC 2018
 nfs-busybox-gcnht
 ```
 
-If you run the previous command multiple times you will see the date and host change as pods write to the index.html file. 
+If you run the previous command multiple times you will see the date and host change as pods write to the index.html file.
 
 ### Cleaning Up
 
-To complete the tutorial, clean up Kubernetes resources as follows. 
+To complete the tutorial, clean up Kubernetes resources as follows.
 ```shell
 kubectl delete rc/nfs-busybox
 kubectl delete pvc/nfs-pvc
@@ -300,11 +300,11 @@ kubectl delete pv/nfs-vol1
 
 <a name="faq"></a>
 ## FAQ
-- What is the difference between a persistent volume (PV) and persistent 
+- What is the difference between a persistent volume (PV) and persistent
 volume claim (PVC)?
     - A persistent volume is ready-to-use storage space created by
     the cluster admin. CSE currently only supports static persistent
-    volumes.  A persistent volumen claim is the storage requirement
+    volumes.  A persistent volume claim is the storage requirement
     specified by the user. Kubernetes dynamically binds/unbinds the PVC
     to PV at runtime. Learn more
     [here](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#static)
@@ -312,9 +312,9 @@ volume claim (PVC)?
 - How are NFS exports mounted to containers?
     - Once a persistent volume backed by NFS is created by the cluster
     admin, Kubernetes mounts the specified NFS export to pod(s) and
-    hence the containers they run. 
+    hence the containers they run.
 
-- What happens to storage when a Kubernetes application terminates? 
+- What happens to storage when a Kubernetes application terminates?
     - Kubernetes returns the persistent volume and its claim to the
     pool.  The data from the application remains on the volume.  It
     can be cleaned up manually by logging into the NFS node VM and

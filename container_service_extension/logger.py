@@ -69,9 +69,15 @@ SERVER_LOGGER = logging.getLogger(SERVER_LOGGER_NAME)
 
 
 @run_once
+def setup_log_file_directory():
+    """Create directory for log files."""
+    Path(LOGS_DIR_NAME).mkdir(parents=True, exist_ok=True)
+
+
+@run_once
 def configure_install_logger():
     """Configure cse install logger if it is not configured."""
-    Path(LOGS_DIR_NAME).mkdir(parents=True, exist_ok=True)
+    setup_log_file_directory()
     INSTALL_LOGGER.setLevel(logging.DEBUG)
     file_handler = logging.FileHandler(INSTALL_LOG_FILEPATH)
     file_handler.setFormatter(DEBUG_LOG_FORMATTER)
@@ -81,7 +87,7 @@ def configure_install_logger():
 @run_once
 def configure_client_logger():
     """Configure cse client logger if it is not configured."""
-    Path(LOGS_DIR_NAME).mkdir(parents=True, exist_ok=True)
+    setup_log_file_directory()
     info_file_handler = RotatingFileHandler(CLIENT_INFO_LOG_FILEPATH,
                                             maxBytes=_MAX_BYTES,
                                             backupCount=_BACKUP_COUNT)
@@ -100,7 +106,7 @@ def configure_client_logger():
 @run_once
 def configure_server_logger():
     """Configure cse server & pika loggers if they are not configured."""
-    Path(LOGS_DIR_NAME).mkdir(parents=True, exist_ok=True)
+    setup_log_file_directory()
     info_file_handler = RotatingFileHandler(SERVER_INFO_LOG_FILEPATH,
                                             maxBytes=_MAX_BYTES,
                                             backupCount=_BACKUP_COUNT)

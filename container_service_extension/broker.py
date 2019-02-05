@@ -20,7 +20,7 @@ from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
 
 from container_service_extension.abstract_broker import AbstractBroker
-# from container_service_extension.authorization import secure
+from container_service_extension.authorization import secure
 from container_service_extension.cluster import add_nodes
 from container_service_extension.cluster import delete_nodes_from_cluster
 from container_service_extension.cluster import execute_script_in_nodes
@@ -43,8 +43,8 @@ from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import WorkerNodeCreationError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.ovdc_cache import OvdcCache
-# from container_service_extension.server_constants import \
-#     CSE_NATIVE_DEPLOY_RIGHT_NAME
+from container_service_extension.server_constants import \
+    CSE_NATIVE_DEPLOY_RIGHT_NAME
 from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import connect_vcd_user_via_token
 from container_service_extension.utils import ERROR_DESCRIPTION
@@ -148,7 +148,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
     def get_tenant_client_session(self):
         if self.client_session is None:
             self._connect_tenant()
-        return self._client_session
+        return self.client_session
 
     def _connect_tenant(self):
         server_config = get_server_runtime_config()
@@ -382,7 +382,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         return exports
 
     @exception_handler
-    # @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
+    @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def create_cluster(self):
         result = {}
         result['body'] = {}
@@ -543,7 +543,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
             self._disconnect_sys_admin()
 
     @exception_handler
-    # @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
+    @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def delete_cluster(self):
         result = {}
         result['body'] = {}
@@ -605,7 +605,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         return result
 
     @exception_handler
-    # @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
+    @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def create_nodes(self):
         result = {'body': {}}
         self.cluster_name = self.body['name']
@@ -705,7 +705,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
             self._disconnect_sys_admin()
 
     @exception_handler
-    # @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
+    @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def delete_nodes(self):
         result = {'body': {}}
         self.cluster_name = self.body['name']
@@ -796,7 +796,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
 
     @exception_handler
     def enable_ovdc_for_kubernetes(self):
-        """Enable a given ovdc for k8s on the given cloud provider.
+        """Enable ovdc for k8-cluster deployment on given container provider.
 
         :return: result object
 
@@ -825,7 +825,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
 
     @exception_handler
     def ovdc_info_for_kubernetes(self):
-        """Info on ovdc for k8s on the given cloud provider.
+        """Info on ovdc for k8s deployment on the given container provider.
 
         :return: result object
 
@@ -837,14 +837,16 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         self._connect_tenant()
         if self.tenant_client.is_sysadmin():
             ovdc_cache = OvdcCache(self.tenant_client)
-            meta_data = ovdc_cache.get_container_provider_metadata_of_ovdc(
+            metadata = ovdc_cache.get_container_provider_metadata_of_ovdc(
                 self.body.get('ovdc_name', None),
                 ovdc_id=self.body.get('ovdc_id', None),
                 org_name=self.body.get('org_name', None))
+            # remove username, secret from sending to client
+            metadata.pop('username', None)
+            metadata.pop('secret', None)
             result = dict()
             result['status_code'] = OK
-            result['body'] = meta_data
-            LOGGER.debug(f'ovdc_metata_for_kubernetes={meta_data}')
+            result['body'] = metadata
             return result
         else:
             raise CseServerError("Unauthorized Operation")
