@@ -27,8 +27,20 @@ def cli(ctx):
         cse version
             Display CSE version.
 \b
-        cse sample > config.yaml
-            Generate sample CSE config in a file named 'config.yaml'.
+        cse sample
+            Generate sample CSE config as dict
+            and print it to the console.
+\b
+        cse sample --output config.yaml
+            Generate sample CSE config in the provided file name
+            'config.yaml'.
+\b
+        cse sample --pks-output pks.yaml
+            Generate sample PKS config in a file named 'pks.yaml'.
+\b
+        cse sample --output config.yaml --pks-output pks.yaml
+            Generate sample CSE and PKS config in the respective file
+            named provided as param.
 \b
         cse install
             Install CSE using data from 'config.yaml'.
@@ -47,10 +59,6 @@ def cli(ctx):
             SSH key into all template VMs so users with the cooresponding
             private key have access (--ssh-key is required when --no-capture
             is used).
-\b
-        cse install --amqp skip --ext config
-            Install CSE, but skip amqp configuration step and register CSE to
-            vCD without prompting.
 \b
         cse check
             Checks that 'config.yaml' is valid.
@@ -99,9 +107,24 @@ def version(ctx):
 
 @cli.command('sample', short_help='generate sample configuration')
 @click.pass_context
-def sample(ctx):
+@click.option(
+    '--output',
+    'output',
+    required=False,
+    default=None,
+    metavar='<output-file-name>',
+    help="Name of the config file to dump the CSE configs to.")
+@click.option(
+    '--pks-output',
+    'pks_output',
+    required=False,
+    default=None,
+    metavar='<pks-output-file-name>',
+    help="Name of the PKS config file to dump the PKS configs to.")
+def sample(ctx, output, pks_output):
     """Generate sample CSE configuration."""
-    click.secho(generate_sample_config())
+    click.secho(generate_sample_config(output=output,
+                                       pks_output=pks_output))
 
 
 @cli.command(short_help="Checks that config file is valid. Can also check that"
@@ -116,6 +139,14 @@ def sample(ctx):
     envvar='CSE_CONFIG',
     default='config.yaml',
     help='Config file to use.')
+@click.option(
+    '--pks-config',
+    'pks_config',
+    type=click.Path(exists=True),
+    metavar='<pks-config-file>',
+    envvar='CSE_PKS_CONFIG',
+    default='pks.yaml',
+    help='PKS Config file to use.')
 @click.option(
     '-i',
     '--check-install',
@@ -134,10 +165,10 @@ def sample(ctx):
     help="If '--check-install' flag is set, validate specified template. "
          "Default value of '*' means that all templates in config file"
          " will be validated.")
-def check(ctx, config, check_install, template):
+def check(ctx, config, pks_config, check_install, template):
     """Validate CSE configuration."""
     try:
-        config_dict = get_validated_config(config)
+        config_dict = get_validated_config(config, pks_config=pks_config)
     except (KeyError, ValueError, Exception):
         # TODO() replace Exception with specific (see validate_amqp_config)
         click.secho(f"Config file '{config}' is invalid", fg='red')
@@ -194,13 +225,6 @@ def check(ctx, config, check_install, template):
     help='SSH public key to connect to the guest OS on the VM'
 )
 @click.option(
-    '-a',
-    '--amqp',
-    'amqp_install',
-    default='prompt',
-    type=click.Choice(['prompt', 'skip', 'config']),
-    help='AMQP configuration')
-@click.option(
     '-e',
     '--ext',
     'ext_install',
@@ -208,7 +232,7 @@ def check(ctx, config, check_install, template):
     type=click.Choice(['prompt', 'skip', 'config']),
     help='API Extension configuration')
 def install(ctx, config, template, update, no_capture, ssh_key_file,
-            amqp_install, ext_install):
+            ext_install):
     """Install CSE on vCloud Director."""
     if no_capture and ssh_key_file is None:
         click.echo('Must provide ssh-key file (using --ssh-key OR -k) if '
@@ -220,7 +244,7 @@ def install(ctx, config, template, update, no_capture, ssh_key_file,
             ssh_key = ssh_key_file.read()
         install_cse(ctx, config_file_name=config, template_name=template,
                     update=update, no_capture=no_capture, ssh_key=ssh_key,
-                    amqp_install=amqp_install, ext_install=ext_install)
+                    ext_install=ext_install)
 
 
 @cli.command(short_help='run service')

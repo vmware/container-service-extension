@@ -5,6 +5,11 @@
 """
 CSE server tests.
 
+TODO() need to check that rights exist when CSE is registered and that rights
+don't exist when CSE is not registered. Need a pyvcloud function to check
+if a right exists without adding it. Also need functionality to remove CSE
+rights when CSE is unregistered.
+
 NOTES:
     - Edit 'base_config.yaml' for your own vCD instance
     - These tests will use your public/private SSH keys (RSA)
@@ -12,9 +17,8 @@ NOTES:
         - Keys should not be password protected, or tests will fail.
             To remove key password, use `ssh-keygen -p`.
         - ssh-key help: https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/  # noqa
-    - vCD entities related to CSE (vapps, catalog items) are not cleaned
-        up after all tests have run. See setUpClass, tearDownClass, and
-        setUp method docstrings for more info.
+    - vCD entities related to CSE (vapps, catalog items) are cleaned up after
+        tests run, unless 'developer_mode'=True in 'base_config.yaml'.
     - These tests are meant to run in sequence, but can run independently.
     - !!! These tests will fail on Windows !!! We generate temporary config
         files and restrict its permissions due to the check that
@@ -28,7 +32,7 @@ $ cse check --config cse_test_config.yaml (incorrect value types)
 $ cse check --config cse_test_config.yaml -i (cse not installed yet)
 
 $ cse install --config cse_test_config.yaml --template photon-v2
-    --amqp skip --ext skip --ssh-key ~/.ssh/id_rsa.pub --no-capture
+    --ext skip --ssh-key ~/.ssh/id_rsa.pub --no-capture
 
 $ cse install --config cse_test_config.yaml --template photon-v2
 
@@ -49,8 +53,8 @@ from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 
-from container_service_extension.config import check_cse_installation
-from container_service_extension.config import get_validated_config
+from container_service_extension.configure_cse import check_cse_installation
+from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.cse import cli
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
@@ -88,7 +92,7 @@ def delete_installation_entities():
 def blank_cust_scripts():
     """Fixture to ensure that the customization scripts are empty.
 
-    Usage: add the parameter 'default_amqp_settings' to the test function.
+    Usage: add the parameter 'blank_cust_scripts' to the test function.
     """
     env.blank_customizaton_scripts()
     yield
@@ -193,8 +197,8 @@ def test_0040_check_invalid_installation(config):
 def test_0050_install_no_capture(config, blank_cust_scripts, unregister_cse):
     """Test install.
 
-    Installation options: '--config', '--template', '--amqp skip',
-        '--ext skip', '--ssh-key', '--no-capture'.
+    Installation options: '--config', '--template', '--ext skip',
+        '--ssh-key', '--no-capture'.
 
     Tests that installation:
     - downloads/uploads ova file,
@@ -203,12 +207,11 @@ def test_0050_install_no_capture(config, blank_cust_scripts, unregister_cse):
     - skips temp vapp capture.
 
     command: cse install --config cse_test_config.yaml --template photon-v2
-        --amqp skip --ext skip --ssh-key ~/.ssh/id_rsa.pub --no-capture
+        --ext skip --ssh-key ~/.ssh/id_rsa.pub --no-capture
     required files: ~/.ssh/id_rsa.pub, cse_test_config.yaml,
         photon-v2 init, photon-v2 cust (blank)
-    expected: cse not registered, amqp not configured, catalog exists,
-        photon-v2 ova exists, temp vapp does not exist,
-        template does not exist.
+    expected: cse not registered, catalog exists, photon-v2 ova exists,
+        temp vapp does not exist, template does not exist.
     """
     template_config = None
     for template_dict in config['broker']['templates']:
@@ -223,7 +226,6 @@ def test_0050_install_no_capture(config, blank_cust_scripts, unregister_cse):
                                     '--config', env.ACTIVE_CONFIG_FILEPATH,
                                     '--ssh-key', env.SSH_KEY_FILEPATH,
                                     '--template', env.PHOTON_TEMPLATE_NAME,
-                                    '--amqp', 'skip',
                                     '--ext', 'skip',
                                     '--no-capture'],
                                    catch_exceptions=False)
@@ -258,8 +260,7 @@ def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
     command: cse install --config cse_test_config.yaml
         --template photon-v2
     required files: cse_test_config.yaml
-    expected: cse not registered, amqp not configured,
-        photon-v2 template exists, temp-vapp exists
+    expected: cse not registered, photon-v2 template exists, temp-vapp exists
     """
     template_config = None
     # set cleanup to false for this test
@@ -306,8 +307,8 @@ def test_0070_install_update(config, blank_cust_scripts, unregister_cse):
         --ssh-key ~/.ssh/id_rsa.pub --update --no-capture
     required files: cse_test_config.yaml, ~/.ssh/id_rsa.pub,
         ubuntu/photon init/cust scripts
-    expected: cse registered, amqp configured, ubuntu/photon ovas exist,
-        temp vapps exist, templates exist.
+    expected: cse registered, ubuntu/photon ovas exist, temp vapps exist,
+        templates exist.
     """
     env.prepare_customization_scripts()
     result = env.CLI_RUNNER.invoke(cli,
@@ -378,7 +379,7 @@ def test_0070_install_update(config, blank_cust_scripts, unregister_cse):
 def test_0080_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
     """Tests that installation deletes temp vapps when 'cleanup' is True.
 
-    Tests that '--amqp/--ext config' configures vcd amqp and registers cse.
+    Also tests that '--ext config' registers cse.
 
     command: cse install --config cse_test_config.yaml
     expected: temp vapps are deleted
@@ -390,7 +391,6 @@ def test_0080_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
     result = env.CLI_RUNNER.invoke(cli,
                                    ['install',
                                     '--config', env.ACTIVE_CONFIG_FILEPATH,
-                                    '--amqp', 'config',
                                     '--ext', 'config'],
                                    catch_exceptions=False)
     assert result.exit_code == 0

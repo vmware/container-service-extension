@@ -27,6 +27,9 @@ When CSE installation is aborted for any reason, ensure temporary vApp is delete
 - pyvcloud 19.3.0
 - vcd_cli 20.3.0
 
+### CSE 1.2.x is incompatible with vCD 9.0
+- CSE installation fails with MissingLinkException
+
 <a name="nfs"></a>
 ## NFS Limitations
 
