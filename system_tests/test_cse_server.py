@@ -46,6 +46,8 @@ $ cse check --config cse_test_config.yaml -i (invalid templates)
 """
 
 import re
+import subprocess
+import time
 
 import paramiko
 import pytest
@@ -284,7 +286,7 @@ def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
                                 ['install',
                                  '--config', env.ACTIVE_CONFIG_FILEPATH,
                                  '--template', env.PHOTON_TEMPLATE_NAME],
-                                input='N\nN',
+                                input='N',
                                 catch_exceptions=False)
     assert res.exit_code == 0
 
@@ -323,7 +325,7 @@ def test_0070_install_update(config, blank_cust_scripts, unregister_cse):
                                     '--ssh-key', env.SSH_KEY_FILEPATH,
                                     '--update',
                                     '--no-capture'],
-                                   input='y\ny',
+                                   input='y',
                                    catch_exceptions=False)
     assert result.exit_code == 0
 
@@ -450,16 +452,21 @@ def test_0100_cse_check_invalid_installation(config):
 
 
 def test_0110_cse_run():
-    pass
+    # start cse server as subprocess
+    cmd = f"cse run -c {env.ACTIVE_CONFIG_FILEPATH}"
+    p = subprocess.Popen(cmd.split(), stdout=subprocess.DEVNULL,
+                         stderr=subprocess.STDOUT)
+    time.sleep(10)  # cse server takes a little time to start up
+
+    # terminate cse server subprocess
+    p.terminate()
 
 
 def test_0120_cse_sample():
-    # TODO(): maybe add a check
     result = env.CLI_RUNNER.invoke(cli, ['sample'], catch_exceptions=False)
     assert result.exit_code == 0
 
 
 def test_0130_cse_version():
-    # TODO(): maybe add a check
     result = env.CLI_RUNNER.invoke(cli, ['version'], catch_exceptions=False)
     assert result.exit_code == 0
