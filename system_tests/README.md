@@ -24,6 +24,9 @@ $ pytest --maxfail=2 # stop after 2 failures
 $ pytest --verbose # -v increases testing verbosity
 $ pytest --capture=no # -s print all output during testing (tells pytest not to capture output)
 $ pytest --disable-warnings
+
+# Common use case (outputs to 'testlog')
+$ pytest --disable-warnings -x -v -s test_cse_server.py > testlog
 ```
 
 ---
