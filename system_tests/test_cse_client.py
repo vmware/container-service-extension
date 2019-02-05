@@ -156,29 +156,29 @@ def delete_test_cluster():
         env.delete_vapp(env.TEST_CLUSTER_NAME)
 
 
-def test_vcd_cse_version(vcd_org_admin):
+def test_0010_vcd_cse_version(vcd_org_admin):
     """Test vcd cse version command."""
     result = env.CLI_RUNNER.invoke(vcd, ['cse', 'version'],
                                    catch_exceptions=False)
     assert result.exit_code == 0
 
 
-def test_vcd_cse_system_info(vcd_org_admin):
+def test_0020_vcd_cse_system_info(vcd_org_admin):
     """Test vcd cse system info command."""
     result = env.CLI_RUNNER.invoke(vcd, ['cse', 'system', 'info'],
                                    catch_exceptions=False)
     assert result.exit_code == 0
 
 
-def test_vcd_cse_template_list(vcd_org_admin):
+def test_0030_vcd_cse_template_list(vcd_org_admin):
     """Test vcd cse template list command."""
     result = env.CLI_RUNNER.invoke(vcd, ['cse', 'template', 'list'],
                                    catch_exceptions=False)
     assert result.exit_code == 0
 
 
-def test_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
-                                         delete_test_cluster):
+def test_0040_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
+                                              delete_test_cluster):
     """Test that --disable-rollback option works during cluster creation.
 
     commands:
@@ -201,8 +201,8 @@ def test_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
         "Cluster does not exist when it should."
 
 
-def test_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
-                                             delete_test_cluster):
+def test_0050_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
+                                                  delete_test_cluster):
     """Test cse cluster/node commands.
 
     This test function contains several sub-test blocks that can be commented
