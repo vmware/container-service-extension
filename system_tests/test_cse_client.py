@@ -136,5 +136,19 @@ def vcd_org_admin():
     assert result.exit_code == 0
 
 
-def test_0010():
-    pass
+@pytest.fixture
+def delete_test_cluster():
+    """Fixture to ensure that test cluster doesn't exist before or after tests.
+
+    Usage: add the parameter 'delete_test_cluster' to the test function.
+
+    Setup tasks:
+    - Delete test cluster vApp
+
+    Teardown tasks (only if config key 'teardown_clusters'=True):
+    - Delete test cluster vApp
+    """
+    env.delete_vapp(env.TEST_CLUSTER_NAME)
+    yield
+    if env.TEARDOWN_CLUSTERS:
+        env.delete_vapp(env.TEST_CLUSTER_NAME)
