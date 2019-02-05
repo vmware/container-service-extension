@@ -46,15 +46,22 @@ class CseCache(object):
     def get_pvdc_info(self, pvdc_id):
         """ Returns an immutable PvdcResourcePoolPathInfo object which has details of pvdc
         associated with this identifier. Details include datacenter name, cluster name and
-        sub resource pool path for this provider vdc.
+        sub resource pool path for this provider vDC.
 
-        :param pvdc_id:
-        :return:
+        :param pvdc_id: UUID of the provider vDC
+        :return: PvdcResourcePoolPathInfo object
         """
         return self.pvdc_table[pvdc_id]
 
 
     def get_pks_account_details(self, org_name, vc_name):
+        """Returns an immutable PksInfo object which has details of PKS account associated
+        with the given organization and vCenter name.
+
+        :param org_name: name of organization.
+        :param vc_name: name of associated vCenter.
+        :return: PksInfo object.
+        """
         return self.org_pks_table[(org_name,vc_name)]
 
 
