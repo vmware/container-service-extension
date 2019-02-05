@@ -256,6 +256,7 @@ SAMPLE_CONFIG_WITH_PKS = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
                           **SAMPLE_SERVICE_CONFIG,
                           **SAMPLE_BROKER_CONFIG}
 
+
 def generate_sample_config(output=None, pks_output=None):
     """Generates sample configs for cse. If config file names are
     provided, configs are dumped into respective files.
