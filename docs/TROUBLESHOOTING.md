@@ -8,7 +8,7 @@ title: Troubleshooting
 
 `cse-install_[datetimestamp].log` logs CSE install activity. Any output from scripts or error messages during CSE installation will be logged here.
 
-'cse-server-wire-debug.log' logs all REST calls originating in CSE for vCD.
+`cse-server-wire-debug.log` logs all REST calls originating in CSE for vCD.
 
 `vcd.log` logs vcd-cli and pyvcloud activity on client side. Stack traces and HTTP messages specific to vcd-cli are recorded here.
 
