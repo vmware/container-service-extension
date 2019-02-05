@@ -64,21 +64,16 @@ def cse_server():
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     install_cmd = ['install', '--config', env.ACTIVE_CONFIG_FILEPATH,
                    '--ssh-key', env.SSH_KEY_FILEPATH]
-    installation_exists = True
     for template in config['broker']['templates']:
         if not env.catalog_item_exists(template['catalog_item']):
-            installation_exists = False
             install_cmd.append('--update')
             break
 
     env.setup_active_config()
-    if not installation_exists \
-            or not env.is_cse_registration_valid(config['amqp']['routing_key'],
-                                                 config['amqp']['exchange']):
-        result = env.CLI_RUNNER.invoke(cli, install_cmd,
-                                       input='y',
-                                       catch_exceptions=False)
-        assert result.exit_code == 0
+    result = env.CLI_RUNNER.invoke(cli, install_cmd,
+                                   input='y',
+                                   catch_exceptions=False)
+    assert result.exit_code == 0
 
     # start cse server as subprocess
     cmd = f"cse run -c {env.ACTIVE_CONFIG_FILEPATH}"
