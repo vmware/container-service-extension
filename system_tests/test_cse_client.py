@@ -14,7 +14,7 @@ NOTES:
 - Edit 'base_config.yaml' for your own vCD instance.
 - Clusters are deleted on test failure, unless 'teardown_clusters'=false in
     'base_config.yaml'.
-- This test module typically takes ~40 minutes to finish.
+- This test module typically takes ~20 minutes to finish.
 
 Tests these following commands:
 $ cse check --config cse_test_config.yaml (missing/invalid keys)
