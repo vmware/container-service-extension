@@ -61,7 +61,7 @@ class OvdcCache(object):
         self.client = client
         self.pvdc_cache = PvdcCacheStub()
 
-    def get_container_provider_metadata_of_ovdc(self, ovdc_name,
+    def get_ovdc_container_provider_metadata(self, ovdc_name,
                                                 ovdc_id=None, org_name=None):
         """Get metadata of given ovdc, pertaining to the container provider.
 
@@ -80,32 +80,28 @@ class OvdcCache(object):
             ovdc = get_vdc(self.client, ovdc_name, org_name=org_name,
                            is_admin_operation=True)
         else:
-            admin_href = self.client.get_admin().get('href')
-            ovdc_href = f'{admin_href}vdc/{ovdc_id}'
-            resource = self.client.get_resource(ovdc_href)
-            ovdc = VDC(self.client, resource=resource)
+            # TODO() - Implement this in pyvcloud
+            ovdc = self._get_vdc_by_id(ovdc_id)
 
         metadata = utils.metadata_to_dict(ovdc.get_all_metadata())
         metadata['container_provider'] = metadata.get('container_provider',
                                                       None)
 
-        if metadata['container_provider'] is None or \
-                metadata['container_provider'].lower() == 'vcd':
-            return {'container_provider': metadata['container_provider']}
+        if metadata['container_provider'] == 'pks':
+            pvdc_element = ovdc.resource.ProviderVdcReference
+            pvdc_id = pvdc_element.get('id')
+            pvdc_info = self.pvdc_cache.get_pvdc_info(pvdc_id)
+            pks_info = self.pvdc_cache.get_pks_info(ovdc.name, pvdc_info['vc'])
 
-        pvdc_element = ovdc.resource.ProviderVdcReference
-        pvdc_id = pvdc_element.get('id')
-        pvdc_info = self.pvdc_cache.get_pvdc_info(pvdc_id)
-        pks_info = self.pvdc_cache.get_pks_info(ovdc.name, pvdc_info['vc'])
+            # Get ovdc metadata from vcd; copy the credentials from pvdc cache
+            metadata['rp_path'] = metadata['rp_path'].split(',')
+            metadata['pks_plans'] = metadata['pks_plans'].split(',')
+            metadata['username'] = pks_info['username']
+            metadata['secret'] = pks_info['secret']
 
-        # Get ovdc metadata from vcd; copy the credentials from pvdc cache
-        metadata['rp_path'] = metadata['rp_path'].split(',')
-        metadata['pks_plans'] = metadata['pks_plans'].split(',')
-        metadata['username'] = pks_info['username']
-        metadata['secret'] = pks_info['secret']
         return metadata
 
-    def set_container_provider_metadata_of_ovdc(self, ovdc_name, ovdc_id=None,
+    def set_ovdc_container_provider_metadata(self, ovdc_name, ovdc_id=None,
                                                 org_name=None,
                                                 container_provider=None,
                                                 pks_plans=''):
@@ -125,23 +121,20 @@ class OvdcCache(object):
         if ovdc_id is None:
             ovdc = get_vdc(self.client, ovdc_name, org=org,
                            is_admin_operation=True)
+            ovdc_id = ovdc.resource.get('id').split(':')[-1]
         else:
-            admin_href = self.client.get_admin().get('href')
-            ovdc_href = f'{admin_href}vdc/{ovdc_id}'
-            resource = self.client.get_resource(ovdc_href)
-            ovdc = VDC(self.client, resource=resource)
+            ovdc = self._get_vdc_by_id(ovdc_id)
 
-        if container_provider is None:
+        if container_provider != 'pks':
             LOGGER.debug(f'Remove metadata for ovdc:{ovdc_name}')
             self._remove_metadata(ovdc,
                                   keys=['name', 'vc', 'rp_path', 'host',
                                         'port',
                                         'uaac_port', 'pks_plans',
                                         'pks_compute_profile_name'])
-            metadata['container_provider'] = ''
+            metadata['container_provider'] = container_provider or ''
         else:
             # Get resource pool
-            ovdc_id = ovdc.resource.get('id').split(':')[-1]
             resource_pool = f"{ovdc.name} ({ovdc_id})"
 
             # Get pvdc and pks information from pvdc cache
@@ -152,7 +145,6 @@ class OvdcCache(object):
             pks_info = self.pvdc_cache.get_pks_info(org_name, pvdc_info['vc'])
 
             # construct ovdc metadata
-
             metadata['name'] = pvdc_info['name']
             metadata['vc'] = pvdc_info['vc']
             metadata['rp_path'] = ','.join(
@@ -161,12 +153,13 @@ class OvdcCache(object):
             metadata['host'] = pks_info['host']
             metadata['port'] = pks_info['port']
             metadata['uaac_port'] = pks_info['uaac_port']
-            metadata['pks_plans'] = pks_plans
+            metadata['pks_plans'] = pks_plans or ''
             metadata['container_provider'] = container_provider
             pks_compute_profile_name = f"{org_name}-{ovdc_name}-{ovdc_id}"
             metadata['pks_compute_profile_name'] = pks_compute_profile_name
 
         # set ovdc metadata into Vcd
+        LOGGER.debug(f"Setting below metadata on ovdc {ovdc_name}:{metadata}")
         return ovdc.set_multiple_metadata(metadata, MetadataDomain.SYSTEM,
                                           MetadataVisibility.PRIVATE)
 
@@ -175,3 +168,10 @@ class OvdcCache(object):
         for k in keys:
             if k in metadata:
                 ovdc.remove_metadata(k, domain=MetadataDomain.SYSTEM)
+
+    def _get_vdc_by_id(self, vdc_id):
+        LOGGER.debug(f"Getting vdc by id:{vdc_id}")
+        admin_href = self.client.get_admin().get('href')
+        ovdc_href = f'{admin_href}vdc/{vdc_id}'
+        resource = self.client.get_resource(ovdc_href)
+        return VDC(self.client, resource=resource)

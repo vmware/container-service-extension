@@ -1,25 +1,70 @@
 CHANGES
 =======
 
+1.2.6
+-----
+
+* [VCDA-864] Add documentation for RBAC, update release notes. (#218)
+* Update pyvcloud>=20.0.3, vcd-cli>=21.0.2 (#217)
+* Fix to make sure the logger directories are created before trying to write into logs. (#214)
+* Fix rights registration bug (#213)
+* Fix minor spelling and spacing issues (#199)
+* Fixed new validation error after updating flake8 to v3.7.2 (#212)
+* [VCDA-865] Remove vCD AMQP configuration and Enhance Extension Checks (#206)
+* [VCDA-843] Update CSE install method to add rights for CSE/PKS authorization (#211)
+* [VCDA-871] Implement toggle switch for CSE authorization (#210)
+* [VCDA-870] Refactor CSE files to not pass around server running configuration. (#208)
+* [VCDA-859] PKS Broker implementation (#200)
+* Flake8 errors fixed (#205)
+* Update system test framework (#184)
+* [VCDA-856] Implement authorization framework for CSE (#201)
+* [VCDA 853] Construct ovdc metada and persist in Vcd (#202)
+* VCDA-858: PKS and Uaac Client; Sample code to establish connection with PKS (#194)
+* [VCDA-852] Get ovdc resource pool (#197)
+* Client side changes - Task update with stacktrace (#192)
+* [VCDA-846] Update release notes with CSE 1.2.x incompatibility with vCD 8.20 (#193)
+* [VCDA-820] Improve documentation on NFS persistent volumes (#188)
+* [VCDA-835] Add VM customization tests to installation test suite (#180)
+* [VCDA-815] Cleaned up and enhanced CSE server installation docs (#183)
+* [VCDA-825] client side exception handling (#179)
+* [VCDA-834] Implement flag to disable rollback for troubleshooting (#178)
+* [VCDA-813] Implement centralized logging system (#174)
+* [VCDA-814] Restructured CSE documentation to improve navigation (#177)
+* [VCDA-824] server side exception handling (#175)
+* [VCDA-817] Implement rollback for node creation failure
+* [VCDA-833] Delete faulty/unregistered node from cse
+* [VCDA-792] Implement CSE server installation tests (#168)
+* [VCDA-798] Create cluster server exception enhancement (#167)
+* [VCDA-816] Implement POC for rollback
+
 1.2.5
 -----
 
-* Updating Kubernetes packages and docker images to address CVE-2018-1002105
+* [VCDA-828] K8s vulnerability patching
 
 1.2.4
 -----
 
-* Fixed master node creation bug
+* Update Release Notes for 1.2.4 (#165)
+* Updated ChangeLog for 1.2.4 (#164)
+* [VCDA-822] Updated changelog (#162)
+* get\_vsphere() requires a VApp refresh, or cluster creation fails (#163)
 
 1.2.3
 -----
 
-* VCDA-806 Updated list of minimum required rights for limited account for CSE installation
-* VCDA-789 Refactor CSE Installation - AMQP, registration, catalog
-* VCDA-614 Enable NFS support for Photon OS
-* VCDA-790 Implement basic framework that will be used to run system tests related to installation of cse server
-* Refactor config validation and cse check
-* Update CSE main documentation
+* [VCDA-806] Full list of required rights for limited account for CSE (#152)
+* [VCDA-789] Refactor CSE Installation - template creation (#148)
+* [VCDA-789] Refactor CSE Installation - AMQP, registration, catalog (#141)
+* Enable NFS support for Photon OS template based CSE clusters (#154)
+* [VCDA-790] Implement basic framework that will be used to run system tests related to installation of cse server. (#150)
+* Add os import back to utils.py (#155)
+* Refactor config validation and cse check (#136)
+* Fix static data file installation (#146)
+* [VCDA-809] Exception Handling Implementation For Create Cluster
+* [VCDA-809] Exception Handling Implementation For Create Cluster
+* Update CSE main documentation (#140)
+* ChangeLog after push to pypi (#143)
 
 1.2.2
 -----
