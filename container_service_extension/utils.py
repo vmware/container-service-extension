@@ -10,13 +10,16 @@ import pathlib
 import stat
 import sys
 import traceback
+from collections import namedtuple
 from urllib.parse import urlparse
 
 from cachetools import LRUCache
 import click
 from lxml import objectify
+
 from pyvcloud.vcd.api_extension import APIExtension
-from pyvcloud.vcd.client import BasicLoginCredentials
+from pyvcloud.vcd.client import BasicLoginCredentials, QueryResultFormat, ResourceType
+
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
@@ -33,7 +36,6 @@ from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.server_constants import CSE_SERVICE_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
-
 
 cache = LRUCache(maxsize=1024)
 SYSTEM_ORG_NAME = "System"
@@ -505,7 +507,6 @@ def get_org(client, org_name=None):
         org = Org(client, resource=client.get_org_by_name(org_name))
     return org
 
-
 def get_vdc(client, vdc_name, org=None, org_name=None,
             is_admin_operation=False):
     """Get the specified VDC object.
@@ -550,6 +551,40 @@ def get_ovdc_resource_pool(client, ovdc_name, org_name=None):
     ovdc_id = ovdc.resource.get('id').split(':')[-1]
     resource_pool = f"{ovdc.name} ({ovdc_id})"
     return resource_pool
+
+
+def get_pvdc_id_by_name( name, vc_name_in_vcd):
+    """
+    Retrieves the pvdc identifier based on the pvdc name and vcenter name.
+
+    :param str name: name of the pvdc.
+    :param str vc_name_in_vcd: name of the vcenter in vcd.
+
+    :return: UUID of the pvdc in vcd.
+
+    :rtype: str
+    """
+    client = get_vcd_sys_admin_client()
+    query = client.get_typed_query(
+            ResourceType.PROVIDER_VDC.value,
+            query_result_format=QueryResultFormat.RECORDS,
+            equality_filter=('name', name))
+    for pvdc_record  in list(query.execute()):
+        if pvdc_record.get('vcName') == vc_name_in_vcd:
+            href = pvdc_record.get('href')
+            pvdc_id = href.split("/")[-1]
+            return pvdc_id
+    return ""
+
+
+def get_datacenter_cluster_rp_path(rp_path):
+    fragments = rp_path.split("/")
+    datacenter = fragments[0]
+    cluster = fragments[1]
+    rp_path = ""
+    for i in range(2, len(fragments)):
+        rp_path += (fragments+"/")
+    return [datacenter,cluster, rp_path[:-1]]
 
 
 def get_data_file(filename, logger=None):
