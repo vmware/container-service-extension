@@ -39,3 +39,16 @@ def yaml_to_dict(filepath):
     """
     with Path(filepath).open('r') as f:
         return yaml.safe_load(f)
+
+
+def get_default_template_config(config):
+    template_config = None
+    for template_dict in config['broker']['templates']:
+        if template_dict['name'] == config['broker']['default_template']:
+            template_config = template_dict
+            break
+
+    assert template_config is not None, \
+        'Default template not found in config file.'
+
+    return template_config

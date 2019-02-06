@@ -53,8 +53,6 @@ ACTIVE_PHOTON_CUST_SCRIPT = 'cust-photon-v2.sh'
 ACTIVE_UBUNTU_CUST_SCRIPT = 'cust-ubuntu-16.04.sh'
 SCRIPTS_DIR = 'scripts'
 
-PHOTON_TEMPLATE_NAME = 'photon-v2'
-UBUNTU_TEMPLATE_NAME = 'ubuntu-16.04'
 SSH_KEY_FILEPATH = str(Path.home() / '.ssh' / 'id_rsa.pub')
 CLI_RUNNER = CliRunner()
 TEST_CLUSTER_NAME = 'testcluster'
