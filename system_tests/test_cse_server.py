@@ -221,19 +221,13 @@ def test_0050_install_no_capture(config, blank_cust_scripts, unregister_cse):
     expected: cse not registered, catalog exists, photon-v2 ova exists,
         temp vapp does not exist, template does not exist.
     """
-    template_config = None
-    for template_dict in config['broker']['templates']:
-        if template_dict['name'] == env.PHOTON_TEMPLATE_NAME:
-            template_config = template_dict
-            break
-    assert template_config is not None, \
-        'Target template not found in config file'
+    template_config = testutils.get_default_template_config()
 
     result = env.CLI_RUNNER.invoke(cli,
                                    ['install',
                                     '--config', env.ACTIVE_CONFIG_FILEPATH,
                                     '--ssh-key', env.SSH_KEY_FILEPATH,
-                                    '--template', env.PHOTON_TEMPLATE_NAME,
+                                    '--template', template_config['name'],
                                     '--ext', 'skip',
                                     '--no-capture'],
                                    catch_exceptions=False)
@@ -270,22 +264,18 @@ def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
     required files: cse_test_config.yaml
     expected: cse not registered, photon-v2 template exists, temp-vapp exists
     """
-    template_config = None
     # set cleanup to false for this test
     for i, template_dict in enumerate(config['broker']['templates']):
         config['broker']['templates'][i]['cleanup'] = False
-        if template_dict['name'] == env.PHOTON_TEMPLATE_NAME:
-            template_config = template_dict
-            break
-    assert template_config is not None, \
-        'Target template not found in config file'
+
+    template_config = testutils.get_default_template_config()
 
     testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
 
     res = env.CLI_RUNNER.invoke(cli,
                                 ['install',
                                  '--config', env.ACTIVE_CONFIG_FILEPATH,
-                                 '--template', env.PHOTON_TEMPLATE_NAME],
+                                 '--template', template_config['name']],
                                 input='N',
                                 catch_exceptions=False)
     assert res.exit_code == 0
