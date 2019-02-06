@@ -6,7 +6,7 @@
 $ pip install -r test-requirements.txt
 $ cd container-service-extension/system_tests
 
-# modify base_config.yaml
+# modify base_config.yaml (more info in next section)
 # set up vCD instance (org, ovdc, ovdc network)
 
 # Run all tests (either works)
@@ -30,6 +30,18 @@ $ pytest --disable-warnings
 $ pytest --disable-warnings -x -v -s test_cse_server.py > testlog
 ```
 
+## base_config.yaml
+
+Testers should fill out this config file with vCD instance details
+
+Options for **'test'** section:
+
+| key                  | description                                                                                                                                                                                                                                         | value type | possible values | default value |
+|-----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|-----------------|---------------|
+| teardown_installation | - Affects **test_cse_server.py** <br> - If True, delete all installation entities (even on test failure) <br> - If False, do not delete installation entities (even on test failure) <br> - If omitted, defaults to True                            | bool       | True, False     | True          |
+| teardown_clusters     | - Affects **test_cse_client.py** <br> - If True, delete test cluster on test failure <br> - If False, do not delete test cluster on test failure <br> - If omitted, defaults to True <br> - Successful client tests will not leave clusters up <br> | bool       | True, False     | True          |
+| test_all_templates    | - Affects **test_cse_client.py** <br> - If True, tests cluster operations on all templates found <br> - If False, tests cluster operations only for 1st template found <br> - If omitted, defaults to False                                         | bool       | True, False     | False         |
+
 ## Notes
 
 - Client tests (**test_cse_client.py**) require an org admin user with the same username and password specified in the config file **vcd** section
@@ -37,7 +49,7 @@ $ pytest --disable-warnings -x -v -s test_cse_server.py > testlog
   - These keys should be at: `~/.ssh/id_rsa` and `~/.ssh/id_rsa.pub`
   - Keys must not be password protected (to remove key password, use `ssh-keygen -p`)
   - ssh-key help: <https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/>
-- More detailed information can be found in the module docstring
+- More detailed information can be found in the module docstrings
 
 ---
 
