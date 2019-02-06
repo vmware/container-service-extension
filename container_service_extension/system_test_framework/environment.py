@@ -59,8 +59,10 @@ SSH_KEY_FILEPATH = str(Path.home() / '.ssh' / 'id_rsa.pub')
 CLI_RUNNER = CliRunner()
 TEST_CLUSTER_NAME = 'testcluster'
 
-TEARDOWN_INSTALLATION = True
-TEARDOWN_CLUSTERS = True
+# config file 'test' section flags
+TEARDOWN_INSTALLATION = None
+TEARDOWN_CLUSTERS = None
+TEST_ALL_TEMPLATES = None
 
 AMQP_USERNAME = None
 AMQP_PASSWORD = None
@@ -76,7 +78,8 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     :param str config_filepath:
     """
     global AMQP_USERNAME, AMQP_PASSWORD, CLIENT, ORG_HREF, VDC_HREF, \
-        CATALOG_NAME, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS
+        CATALOG_NAME, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
+        TEST_ALL_TEMPLATES
 
     config = testutils.yaml_to_dict(config_filepath)
     CLIENT = Client(config['vcd']['host'],
@@ -95,14 +98,11 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     AMQP_USERNAME = config['amqp']['username']
     AMQP_PASSWORD = config['amqp']['password']
 
-    try:
-        TEARDOWN_INSTALLATION = config['test']['teardown_installation']
-    except KeyError:
-        pass
-    try:
-        TEARDOWN_CLUSTERS = config['test']['teardown_clusters']
-    except KeyError:
-        pass
+    test_config = config.get('test')
+    if test_config is not None:
+        TEARDOWN_INSTALLATION = test_config.get('teardown_installation', True)
+        TEARDOWN_CLUSTERS = test_config.get('teardown_clusters', True)
+        TEST_ALL_TEMPLATES = test_config.get('test_all_templates', False)
 
 
 def cleanup_environment():
