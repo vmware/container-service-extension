@@ -14,7 +14,7 @@ NOTES:
 - Edit 'base_config.yaml' for your own vCD instance.
 - Clusters are deleted on test failure, unless 'teardown_clusters'=false in
     'base_config.yaml'.
-- This test module typically takes ~20 minutes to finish.
+- This test module typically takes ~20 minutes to finish per template.
 
 Tests these following commands:
 $ vcd cse version
@@ -22,7 +22,8 @@ $ vcd cse system info
 $ vcd cse template list
 
 $ vcd cse cluster create -n NETWORK -N 1 -t photon-v2 -c 1000
-$ vcd cse cluster create -n NETWORK -N 1 -t photon-v2 -c 1000 --disable-rollback
+$ vcd cse cluster create -n NETWORK -N 1 -t photon-v2 -c 1000
+    --disable-rollback
 $ vcd cse cluster create testcluster -n NETWORK -N 1 -t photon-v2
 $ vcd cse cluster info testcluster
 
@@ -212,15 +213,27 @@ def test_0050_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
     # so that devs don't have to update assert statements when removing/editing
     # these subtests
     num_nodes = 0
-    pattern = r'(node-\S+)'
 
     def check_node_list():
-        """Use `vcd cse node list` to verify that nodes were added/deleted."""
+        """Use `vcd cse node list` to verify that nodes were added/deleted.
+
+        Internal function used to count nodes and validate that
+        create/delete commands work as expected.
+
+        Example: if we add a node to a cluster with 1 node, we expect to have
+        2 nodes total. If this function finds that only 1 node exists, then
+        this test will fail.
+
+        :return: list of node names
+
+        :rtype: List[str]
+        """
+        node_pattern = r'(node-\S+)'
         node_list_cmd = f"cse node list {env.TEST_CLUSTER_NAME}"
         node_list_result = env.CLI_RUNNER.invoke(vcd, node_list_cmd.split(),
                                                  catch_exceptions=False)
         assert node_list_result.exit_code == 0
-        node_list = re.findall(pattern, node_list_result.output)
+        node_list = re.findall(node_pattern, node_list_result.output)
         assert len(node_list) == num_nodes, \
             f"Test cluster has {len(node_list)} nodes, when it should have " \
             f"{num_nodes} node(s)."
