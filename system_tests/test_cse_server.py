@@ -221,7 +221,7 @@ def test_0050_install_no_capture(config, blank_cust_scripts, unregister_cse):
     expected: cse not registered, catalog exists, photon-v2 ova exists,
         temp vapp does not exist, template does not exist.
     """
-    template_config = testutils.get_default_template_config()
+    template_config = testutils.get_default_template_config(config)
 
     result = env.CLI_RUNNER.invoke(cli,
                                    ['install',
@@ -268,7 +268,7 @@ def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
     for i, template_dict in enumerate(config['broker']['templates']):
         config['broker']['templates'][i]['cleanup'] = False
 
-    template_config = testutils.get_default_template_config()
+    template_config = testutils.get_default_template_config(config)
 
     testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
 
