@@ -17,21 +17,21 @@ NOTES:
 - This test module typically takes ~20 minutes to finish.
 
 Tests these following commands:
-$ cse check --config cse_test_config.yaml (missing/invalid keys)
-$ cse check --config cse_test_config.yaml (incorrect value types)
-$ cse check --config cse_test_config.yaml -i (cse not installed yet)
+$ vcd cse version
+$ vcd cse system info
+$ vcd cse template list
 
-$ cse install --config cse_test_config.yaml --template photon-v2
-    --ext skip --ssh-key ~/.ssh/id_rsa.pub --no-capture
+$ vcd cse cluster create -n NETWORK -N 1 -t photon-v2 -c 1000
+$ vcd cse cluster create -n NETWORK -N 1 -t photon-v2 -c 1000 --disable-rollback
+$ vcd cse cluster create testcluster -n NETWORK -N 1 -t photon-v2
+$ vcd cse cluster info testcluster
 
-$ cse install --config cse_test_config.yaml --template photon-v2
+$ vcd cse node list testcluster
+$ vcd cse node info testcluster TESTNODE
+$ vcd cse node delete testcluster TESTNODE
+$ vcd cse node create testcluster -n NETWORK -t photon-v2
 
-$ cse install --config cse_test_config.yaml --ssh-key ~/.ssh/id_rsa.pub
-    --update --no-capture
-
-$ cse install --config cse_test_config.yaml
-$ cse check --config cse_test_config.yaml -i
-$ cse check --config cse_test_config.yaml -i (invalid templates)
+$ vcd cse cluster delete testcluster
 
 """
 
