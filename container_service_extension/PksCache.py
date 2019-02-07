@@ -3,36 +3,42 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-
-from container_service_extension.PksInfo import PksInfo
-from container_service_extension.PvdcResourcePoolPathInfo import PvdcResourcePoolPathInfo
-from container_service_extension.Uaac import Uaac
+from collections import namedtuple
 from container_service_extension.utils import get_datacenter_cluster_rp_path
 from container_service_extension.utils import get_pvdc_id_by_name
 
 
-class CseCache(object):
+class PksCache(object):
     """
-    An immutable class acting as an in-memory cache for Container Service Extention(CSE)
+    An immutable class acting as an in-memory cache for Container Service Extention(CSE) PKS.
     """
-    __slots__ = ["orgs","pks_accounts","pvdcs","pvdc_table", "pks_info_table", "org_pks_table"]
+    __slots__ = ["orgs","pks_accounts","pvdcs","pvdc_table", "pks_info_table", "org_pks_table", "pks_service_accounts_per_vc_info_table"]
 
     def __init__(self, orgs, pks_accounts, pvdcs):
         """
-        Constructor for CseCache cache
+        Constructor for PksCache cache
         :param orgs: array of dicts, each representing organization information in CSE PKS config
         :param pks_accounts: array of dicts, each representing PKS account information in CSE PKS config
         :param pvdcs: array of dicts, each representing Pvdc information in CSE PKS config
         """
-        super(CseCache, self).__setattr__("orgs", orgs)
-        super(CseCache, self).__setattr__("pks_accounts", pks_accounts)
-        super(CseCache, self).__setattr__("pvdcs", pvdcs)
+        super(PksCache, self).__setattr__("orgs", orgs)
+        super(PksCache, self).__setattr__("pks_accounts", pks_accounts)
+        super(PksCache, self).__setattr__("pvdcs", pvdcs)
         pks_info_table = self.__load_pks_accounts(pks_accounts)
         pvdc_table = self.__load_pvdc_info(pvdcs)
-        org_pks_table = self.__load_org_pks_accounts(orgs, pks_info_table)
-        super(CseCache,self).__setattr__("pvdc_table",pvdc_table)
-        super(CseCache, self).__setattr__("pks_info_table", pks_info_table)
-        super(CseCache, self).__setattr__("org_pks_table", org_pks_table)
+        if orgs[0]['name'] == 'None':
+            pks_service_accounts_per_vc_info_table = self.__load_pks_service_accounts_per_vc(orgs, pks_info_table)
+            super(PksCache, self).__setattr__("pks_service_accounts_per_vc_info_table",
+                                              pks_service_accounts_per_vc_info_table)
+            super(PksCache, self).__setattr__("org_pks_table", {})
+        else:
+            org_pks_table = self.__load_pks_service_accounts_per_org_per_vc(orgs, pks_info_table)
+            super(PksCache, self).__setattr__("org_pks_table", org_pks_table)
+            super(PksCache, self).__setattr__("pks_service_accounts_per_vc_info_table",
+                                              {})
+        super(PksCache, self).__setattr__("pvdc_table", pvdc_table)
+        super(PksCache, self).__setattr__("pks_info_table", pks_info_table)
+
 
 
 
@@ -64,7 +70,9 @@ class CseCache(object):
         :param vc_name: name of associated vCenter.
         :return: PksInfo object.
         """
-        return self.org_pks_table[(org_name,vc_name)]
+        if len(self.org_pks_table) == 0:
+            return self.pks_service_accounts_per_vc_info_table[vc_name]
+        return self.org_pks_table[(org_name, vc_name)]
 
 
     def __load_pks_accounts(self, pks_accounts):
@@ -90,7 +98,25 @@ class CseCache(object):
 
         return pks
 
-    def __load_org_pks_accounts(self, orgs, pks_accounts):
+    def __load_pks_service_accounts_per_vc(self, orgs, pks_accounts):
+        """Construct a dict to access PKS account information (account name, host, port, uaac and vc name)
+       per vCenter based on the associated vCenter name.
+
+        :param dict orgs: array of dict, each representing organization and its associated PKS accounts.
+        :param dict pks_accounts: array of dict, each representing PKS information in CSE PKS config.
+        :return: dict of PKS information where key is the vCenter name and value is PksInfo object.
+
+        :rtype: dict
+        """
+        if orgs[0]['name'] == 'None':
+            pks_service_accounts_per_vc_info_table = {}
+            for account in pks_accounts.values():
+                pks_service_accounts_per_vc_info_table[account.vc] = account
+            return pks_service_accounts_per_vc_info_table
+
+
+
+    def __load_pks_service_accounts_per_org_per_vc(self, orgs, pks_accounts):
         """Construct a dict to access PKS account information (account name, host, port, uaac and vc name)
         associated with each organization per vCenter based on the organization name and associated vCenter name.
 
@@ -106,8 +132,8 @@ class CseCache(object):
             for account_name in org['pks_accounts']:
                 associated_pks_account = pks_accounts[account_name]
                 org_pks_association[(org_name, associated_pks_account.vc)] = associated_pks_account
+            return org_pks_association
 
-        return org_pks_association
 
     def __load_pvdc_info(self, pvdcs_list):
         """Construct a dict to access pvdc information (datacenter, cluser and resourcepool path)
@@ -126,3 +152,40 @@ class CseCache(object):
             pvdc_table[str(pvdc_id)] = pvdc_rp_info
 
         return pvdc_table
+
+class PksInfo(namedtuple("PksInfo", 'name, host, port, uaac, vc')):
+    """
+    Immutable class representing PKS account information.
+    """
+    def __str__(self):
+        return "class:{c}, name: {name}, host: {host}, port : {port}," \
+               " uaac : {uaac}, vc : {vc}".format(c=PksInfo.__name__,
+                                                  name= self.name,
+                                                  host= self.host,
+                                                  port= self.port,
+                                                  uaac = self.uaac,
+                                                  vc = self.vc)
+
+class PvdcResourcePoolPathInfo(namedtuple("PvdcResourcePoolPathInfo", 'name, vc, datacenter, cluster, rp_path')):
+    """
+    Immutable class representing Provider vDC related information for PKS setup.
+    """
+    def __str__(self):
+        return "class:{c}, name : {name}, vc : {vc}, datacenter: {datacenter}, cluster : {cluster}," \
+               " rp_path : {rp_path}".format(c=PvdcResourcePoolPathInfo.__name__,
+                                             name = self.name,
+                                             vc = self.vc,
+                                             datacenter= self.datacenter,
+                                             cluster= self.cluster,
+                                             rp_path= self.rp_path)
+
+class Uaac(namedtuple("Uaac", 'port, secret, username')):
+    """
+    Immutable class representing information on UAAC from PKS configuration
+    """
+    def __str__(self):
+        return "class:{c}, port : {port}," \
+               " secret : {secret}, username : {username}".format(c=Uaac.__name__,
+                                                  port= self.port,
+                                                  secret = self.secret,
+                                                  username = self.username)
