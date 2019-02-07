@@ -79,7 +79,7 @@ class PksCache(object):
         """Construct a dict to access PKS account information (account name, host, port, uaac and vc name)
         based on its account name, from the pks information obtained from configuration.
 
-        :param dict pks_accounts: array of dict, each representing PKS information in CSE PKS config.
+        :param list pks_accounts: array of dict, each representing PKS information in CSE PKS config.
         :return: dict of PKS information where key is the PKS account name and value is PksInfo object.
 
         :rtype: dict
@@ -102,8 +102,8 @@ class PksCache(object):
         """Construct a dict to access PKS account information (account name, host, port, uaac and vc name)
        per vCenter based on the associated vCenter name.
 
-        :param dict orgs: array of dict, each representing organization and its associated PKS accounts.
-        :param dict pks_accounts: array of dict, each representing PKS information in CSE PKS config.
+        :param list orgs: array of dict, each representing organization and its associated PKS accounts.
+        :param list pks_accounts: array of dict, each representing PKS information in CSE PKS config.
         :return: dict of PKS information where key is the vCenter name and value is PksInfo object.
 
         :rtype: dict
@@ -120,8 +120,8 @@ class PksCache(object):
         """Construct a dict to access PKS account information (account name, host, port, uaac and vc name)
         associated with each organization per vCenter based on the organization name and associated vCenter name.
 
-        :param dict orgs: array of dict, each representing organization and its associated PKS accounts.
-        :param dict pks_accounts: array of dict, each representing PKS information in CSE PKS config.
+        :param list orgs: array of dict, each representing organization and its associated PKS accounts.
+        :param list pks_accounts: array of dict, each representing PKS information in CSE PKS config.
         :return: dict of PKS information where key is the PKS account name and value is PksInfo object.
 
         :rtype: dict
@@ -139,7 +139,7 @@ class PksCache(object):
         """Construct a dict to access pvdc information (datacenter, cluser and resourcepool path)
          based on its identifier, from the pvdc information obtained from PKS configuration.
 
-        :param dict pvdcs_list: array of dict, each representing Pvdc information in CSE PKS config
+        :param list pvdcs_list: array of dict, each representing Pvdc information in CSE PKS config
         :return: dict of pvdc information where key is the pvdc identifier and value is PvdcResourcePoolPathInfo object.
 
         :rtype: dict
