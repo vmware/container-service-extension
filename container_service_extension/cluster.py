@@ -127,7 +127,7 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
     chmod -R go-rwx /root/.ssh
     """.format(ssh_key=body['ssh_key'])  # NOQA
 
-        if cust_script_common is '':
+        if cust_script_common == '':
             cust_script = None
         else:
             cust_script = cust_script_init + cust_script_common + \
