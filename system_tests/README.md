@@ -91,9 +91,11 @@ Common keyword arguments for @pytest.fixture()
 |   | scope   | defines when and how often the fixture should run          | str        | 'session', 'module', 'class', 'function' | 'function'    |
 |   | autouse | if True, fixture runs automatically with respect to @scope | bool       | True, False                              | False         |
 
-*Shared fixtures should be defined in **conftest.py** according to pytest conventions. Fixtures defined here are autodiscovered by pytest and don't need to be imported.*
+- Fixture teardown (after yield) executes even if test raises an exception (including AssertionError)
 
-*Fixtures specific to a test module should be defined in the module directly.*
+- Shared fixtures should be defined in **conftest.py** according to pytest conventions. Fixtures defined here are autodiscovered by pytest and don't need to be imported.
+
+- Fixtures specific to a test module should be defined in the module directly.
 
 ---
 

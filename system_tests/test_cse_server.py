@@ -112,6 +112,9 @@ def unregister_cse():
     """Fixture to ensure that CSE is not registered to vCD.
 
     Usage: add the parameter 'unregister_cse' to the test function.
+
+    Note: we do not do teardown unregister_cse(), because the user may want
+    to preserve the state of vCD after tests run.
     """
     env.unregister_cse()
 
