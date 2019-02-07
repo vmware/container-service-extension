@@ -21,23 +21,23 @@ class PksCache(object):
         :param pks_accounts: array of dicts, each representing PKS account information in CSE PKS config
         :param pvdcs: array of dicts, each representing Pvdc information in CSE PKS config
         """
-        super(PksCache, self).__setattr__("orgs", orgs)
-        super(PksCache, self).__setattr__("pks_accounts", pks_accounts)
-        super(PksCache, self).__setattr__("pvdcs", pvdcs)
+        super().__setattr__("orgs", orgs)
+        super().__setattr__("pks_accounts", pks_accounts)
+        super().__setattr__("pvdcs", pvdcs)
         pks_info_table = self.__load_pks_accounts(pks_accounts)
         pvdc_table = self.__load_pvdc_info(pvdcs)
         if orgs[0]['name'] == 'None':
             pks_service_accounts_per_vc_info_table = self.__load_pks_service_accounts_per_vc(orgs, pks_info_table)
-            super(PksCache, self).__setattr__("pks_service_accounts_per_vc_info_table",
+            super().__setattr__("pks_service_accounts_per_vc_info_table",
                                               pks_service_accounts_per_vc_info_table)
-            super(PksCache, self).__setattr__("org_pks_table", {})
+            super().__setattr__("org_pks_table", {})
         else:
             org_pks_table = self.__load_pks_service_accounts_per_org_per_vc(orgs, pks_info_table)
-            super(PksCache, self).__setattr__("org_pks_table", org_pks_table)
-            super(PksCache, self).__setattr__("pks_service_accounts_per_vc_info_table",
+            super().__setattr__("org_pks_table", org_pks_table)
+            super().__setattr__("pks_service_accounts_per_vc_info_table",
                                               {})
-        super(PksCache, self).__setattr__("pvdc_table", pvdc_table)
-        super(PksCache, self).__setattr__("pks_info_table", pks_info_table)
+        super().__setattr__("pvdc_table", pvdc_table)
+        super().__setattr__("pks_info_table", pks_info_table)
 
 
 
@@ -103,7 +103,7 @@ class PksCache(object):
        per vCenter based on the associated vCenter name.
 
         :param list orgs: array of dict, each representing organization and its associated PKS accounts.
-        :param list pks_accounts: array of dict, each representing PKS information in CSE PKS config.
+        :param dict pks_accounts: dict of pks account name(key) and PKS information(value) in CSE PKS config.
         :return: dict of PKS information where key is the vCenter name and value is PksInfo object.
 
         :rtype: dict
@@ -121,7 +121,7 @@ class PksCache(object):
         associated with each organization per vCenter based on the organization name and associated vCenter name.
 
         :param list orgs: array of dict, each representing organization and its associated PKS accounts.
-        :param list pks_accounts: array of dict, each representing PKS information in CSE PKS config.
+        :param dict pks_accounts: dict of pks account name(key) and PKS information(value) in CSE PKS config.
         :return: dict of PKS information where key is the PKS account name and value is PksInfo object.
 
         :rtype: dict
