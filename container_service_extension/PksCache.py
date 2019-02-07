@@ -15,8 +15,7 @@ class PksCache(object):
     __slots__ = ["orgs","pks_accounts","pvdcs","pvdc_table", "pks_info_table", "org_pks_table", "pks_service_accounts_per_vc_info_table"]
 
     def __init__(self, orgs, pks_accounts, pvdcs):
-        """
-        Constructor for PksCache cache
+        """Constructor for PksCache cache
         :param orgs: array of dicts, each representing organization information in CSE PKS config
         :param pks_accounts: array of dicts, each representing PKS account information in CSE PKS config
         :param pvdcs: array of dicts, each representing Pvdc information in CSE PKS config
@@ -40,16 +39,23 @@ class PksCache(object):
         super().__setattr__("pks_info_table", pks_info_table)
 
 
-
-
     def __setattr__(self, key, value):
-        """
-        Overridden method to customize the meaning of attribute access.
+        """Overridden method to customize the meaning of attribute access.
         Called when an attribute assignment is attempted.
         """
-        msg = f"{self.class} has no attribute {key}"
+        msg = f"{self.__class__} has no attribute {key}"
 
         raise AttributeError(msg)
+
+
+    def __delattr__(self, *args):
+        """Overridden method to customize the meaning of attribute access.
+        Called when an attribute deletion is attempted.
+        """
+        msg = f"Attributes of {self.__class__} cannot be deleted"
+
+        raise AttributeError(msg)
+
 
     def get_pvdc_info(self, pvdc_id):
         """ Returns an immutable PvdcResourcePoolPathInfo object which has details of pvdc
@@ -98,9 +104,10 @@ class PksCache(object):
 
         return pks
 
+
     def __load_pks_service_accounts_per_vc(self, orgs, pks_accounts):
         """Construct a dict to access PKS account information (account name, host, port, uaac and vc name)
-       per vCenter based on the associated vCenter name.
+        per vCenter based on the associated vCenter name.
 
         :param list orgs: array of dict, each representing organization and its associated PKS accounts.
         :param dict pks_accounts: dict of pks account name(key) and PKS information(value) in CSE PKS config.
@@ -113,7 +120,6 @@ class PksCache(object):
             for account in pks_accounts.values():
                 pks_service_accounts_per_vc_info_table[account.vc] = account
             return pks_service_accounts_per_vc_info_table
-
 
 
     def __load_pks_service_accounts_per_org_per_vc(self, orgs, pks_accounts):
@@ -153,6 +159,7 @@ class PksCache(object):
 
         return pvdc_table
 
+
 class PksInfo(namedtuple("PksInfo", 'name, host, port, uaac, vc')):
     """
     Immutable class representing PKS account information.
@@ -166,6 +173,7 @@ class PksInfo(namedtuple("PksInfo", 'name, host, port, uaac, vc')):
                                                   uaac = self.uaac,
                                                   vc = self.vc)
 
+
 class PvdcResourcePoolPathInfo(namedtuple("PvdcResourcePoolPathInfo", 'name, vc, datacenter, cluster, rp_path')):
     """
     Immutable class representing Provider vDC related information for PKS setup.
@@ -178,6 +186,7 @@ class PvdcResourcePoolPathInfo(namedtuple("PvdcResourcePoolPathInfo", 'name, vc,
                                              datacenter= self.datacenter,
                                              cluster= self.cluster,
                                              rp_path= self.rp_path)
+
 
 class Uaac(namedtuple("Uaac", 'port, secret, username')):
     """
