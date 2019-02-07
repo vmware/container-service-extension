@@ -47,8 +47,8 @@ class PksCache(object):
         Overridden method to customize the meaning of attribute access.
         Called when an attribute assignment is attempted.
         """
-        msg = "'%s' has no attribute %s" % (self.__class__,
-                                            key)
+        msg = f"{self.class} has no attribute {key}"
+
         raise AttributeError(msg)
 
     def get_pvdc_info(self, pvdc_id):
@@ -84,7 +84,7 @@ class PksCache(object):
 
         :rtype: dict
         """
-        pks = {}
+        pks = dict()
         for account in pks_accounts:
             uaac = Uaac(account['uaac']['port'],
                         account['uaac']['secret'],

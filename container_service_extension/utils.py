@@ -572,7 +572,7 @@ def get_pvdc_id_by_name( name, vc_name_in_vcd):
             href = pvdc_record.get('href')
             pvdc_id = href.split("/")[-1]
             return pvdc_id
-    return ""
+    return None
 
 
 def get_datacenter_cluster_rp_path(rp_path):
