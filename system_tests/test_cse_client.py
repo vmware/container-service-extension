@@ -251,6 +251,19 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
         assert result.exit_code == 0
         check_node_list()
 
+        # test node rollback - does not need to be tested for every template
+        # TODO() add test for --disable-rollback flag when it's implemented
+        # vcd cse node create testcluster -n NETWORK -t PHOTON -c 1000
+        has_run = False
+        if not has_run:
+            cmd = f"cse node create {env.TEST_CLUSTER_NAME} -n " \
+                f"{config['broker']['network']} -t {template_name} -c 1000"
+            result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
+                                           catch_exceptions=False)
+            assert result.exit_code == 0
+            check_node_list()
+            has_run = True
+
         # vcd cse node create testcluster -n NETWORK -t PHOTON
         cmd = f"cse node create {env.TEST_CLUSTER_NAME} -n " \
               f"{config['broker']['network']} -t {template_name}"
