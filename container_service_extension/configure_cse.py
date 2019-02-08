@@ -136,7 +136,7 @@ SAMPLE_VCS_CONFIG = {
 
 SAMPLE_PKS_CONFIG_FILE_LOCATION = {
     #Path to pks config file location
-    'pks_config': 'None'
+    'pks_config': None
 }
 
 SAMPLE_PKS_CONFIG = {
@@ -304,7 +304,7 @@ def generate_sample_config(output=None, pks_output=None):
            '\n' + sample_pks_config.strip()
 
 
-def get_validated_config(config_file_name, pks_config='pks.yaml'):
+def get_validated_config(config_file_name):
     """Gets the config file as a dictionary and checks for validity.
 
     Ensures that all properties exist and all values are the expected type.
@@ -313,8 +313,6 @@ def get_validated_config(config_file_name, pks_config='pks.yaml'):
     config file.
 
     :param str config_file_name: path to config file.
-
-    :param str pks_config_file_name: path to pks config file.
 
     :return: CSE config
 
@@ -330,9 +328,8 @@ def get_validated_config(config_file_name, pks_config='pks.yaml'):
         config = yaml.safe_load(config_file)
 
     click.secho(f"Validating config file '{config_file_name}'", fg='yellow')
-    if 'pks_config' in config:
-        check_keys_and_value_types(config, SAMPLE_CONFIG_WITH_PKS,
-                                   location='config file')
+    if 'pks_config' in config and isinstance(config.get('pks_config'), str):
+        pks_config = config['pks_config']
         check_file_permissions(pks_config)
         with open(pks_config) as pks_config_file:
             pks = yaml.safe_load(pks_config_file)
@@ -342,6 +339,7 @@ def get_validated_config(config_file_name, pks_config='pks.yaml'):
         click.secho(f"PKS Config file '{pks_config}' is valid", fg='green')
         config['pks_config'] = pks
     else:
+        del config['pks_config']
         check_keys_and_value_types(config, SAMPLE_CONFIG,
                                    location='config file')
     validate_amqp_config(config['amqp'])
