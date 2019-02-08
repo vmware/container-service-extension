@@ -317,18 +317,9 @@ def get_validated_config(config_file_name):
     check_file_permissions(config_file_name)
     with open(config_file_name) as config_file:
         config = yaml.safe_load(config_file)
-
-    click.secho(f"Validating config file '{config_file_name}'", fg='yellow')
     pks_config = config.get('pks_config')
-    if isinstance(pks_config, str):
-        check_file_permissions(pks_config)
-        with open(pks_config) as f:
-            pks = yaml.safe_load(f)
-        click.secho(f"Validating PKS config file '{pks_config}'", fg='yellow')
-        check_keys_and_value_types(pks, SAMPLE_PKS_CONFIG,
-                                   location='PKS config file')
-        click.secho(f"PKS Config file '{pks_config}' is valid", fg='green')
-        config['pks_config'] = pks
+    #Basic validation of Configs
+    click.secho(f"Validating config file '{config_file_name}'", fg='yellow')
     if 'pks_config' in config:
         del config['pks_config']
     check_keys_and_value_types(config, SAMPLE_CONFIG,
@@ -340,6 +331,19 @@ def get_validated_config(config_file_name):
                                SAMPLE_SERVICE_CONFIG['service'],
                                location="config file 'service' section")
     click.secho(f"Config file '{config_file_name}' is valid", fg='green')
+    #Validation of optional configs if present
+    if isinstance(pks_config, str):
+        check_file_permissions(pks_config)
+        with open(pks_config) as f:
+            pks = yaml.safe_load(f)
+        click.secho(f"Validating PKS config file '{pks_config}'", fg='yellow')
+        check_keys_and_value_types(pks, SAMPLE_PKS_CONFIG,
+                                   location='PKS config file')
+        click.secho(f"PKS Config file '{pks_config}' is valid", fg='green')
+        config['pks_config'] = pks
+    else:
+        config['pks_config'] = None
+
     return config
 
 
