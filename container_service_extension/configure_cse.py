@@ -248,15 +248,6 @@ SAMPLE_CONFIG = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
                  **SAMPLE_VCS_CONFIG, **SAMPLE_SERVICE_CONFIG,
                  **SAMPLE_BROKER_CONFIG}
 
-# This allows us to compare top-level config keys and value types
-# for pks enabled customers
-SAMPLE_CONFIG_WITH_PKS = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
-                          **SAMPLE_VCS_CONFIG,
-                          **SAMPLE_PKS_CONFIG_FILE_LOCATION,
-                          **SAMPLE_SERVICE_CONFIG,
-                          **SAMPLE_BROKER_CONFIG}
-
-
 def generate_sample_config(output=None, pks_output=None):
     """Generates sample configs for cse. If config file names are
     provided, configs are dumped into respective files.
@@ -338,9 +329,9 @@ def get_validated_config(config_file_name):
                                    location='PKS config file')
         click.secho(f"PKS Config file '{pks_config}' is valid", fg='green')
         config['pks_config'] = pks
-    else:
+    if 'pks_config' in config:
         del config['pks_config']
-        check_keys_and_value_types(config, SAMPLE_CONFIG,
+    check_keys_and_value_types(config, SAMPLE_CONFIG,
                                    location='config file')
     validate_amqp_config(config['amqp'])
     validate_vcd_and_vcs_config(config['vcd'], config['vcs'])
