@@ -36,12 +36,11 @@ class UaaClient(object):
             'cache-control': "no-cache"
 
         }
-        http_proxy = self.proxy_uri
         proxy_env = {
-            'http_proxy': http_proxy,
-            'https_proxy': http_proxy,
-            'http': http_proxy,
-            'https': http_proxy,
+            'http_proxy': self.proxy_uri,
+            'https_proxy': self.proxy_uri,
+            'http': self.proxy_uri,
+            'https': self.proxy_uri,
         }
 
         response = requests.request("POST", url, verify=False,
