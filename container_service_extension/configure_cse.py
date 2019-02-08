@@ -450,13 +450,18 @@ def validate_vcd_and_vcs_config(vcd_dict, vcs):
         # Check that all VCs listed in config file are registered in vCD
         for vc in vcs:
             vcenter = platform.get_vcenter(vc['name'])
-            vsphere_url = urlparse(vcenter.Url.text)
-            v = VSphere(vsphere_url.hostname, vc['username'],
+            try:
+                vsphere_url = urlparse(vcenter.Url.text)
+                v = VSphere(vsphere_url.hostname, vc['username'],
                         vc['password'], vsphere_url.port)
-            v.connect()
-            click.secho(f"Connected to vCenter Server '{vc['name']}' as "
+                v.connect()
+                click.secho(f"Connected to vCenter Server '{vc['name']}' as "
                         f"'{vc['username']}' ({vsphere_url.hostname}:"
                         f"{vsphere_url.port})", fg='green')
+            except Exception as e:
+                click.secho(f"Error connecting to vSphere '{vc['name']}': " + str(e.msg),
+                            fg='red', err=True)
+                raise
     finally:
         if client is not None:
             client.logout()
