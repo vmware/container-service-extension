@@ -86,10 +86,10 @@ def my_test_2(another_fixture):
 
 Common keyword arguments for @pytest.fixture()
 
-|   | keyword | description                                                | value type | possible values                          | default value |
-|---|---------|------------------------------------------------------------|------------|------------------------------------------|---------------|
-|   | scope   | defines when and how often the fixture should run          | str        | 'session', 'module', 'class', 'function' | 'function'    |
-|   | autouse | if True, fixture runs automatically with respect to @scope | bool       | True, False                              | False         |
+| keyword | description                                                | value type | possible values                          | default value |
+|---------|------------------------------------------------------------|------------|------------------------------------------|---------------|
+| scope   | defines when and how often the fixture should run          | str        | 'session', 'module', 'class', 'function' | 'function'    |
+| autouse | if True, fixture runs automatically with respect to @scope | bool       | True, False                              | False         |
 
 - Fixture teardown (after yield) executes even if test raises an exception (including AssertionError)
 
