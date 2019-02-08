@@ -178,9 +178,8 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
     This test function contains several sub-test blocks that can be commented
     out or moved around for speed optimization purposes during testing.
     """
-    # keeps track of the number of nodes that should exist
-    # so that devs don't have to update assert statements when removing/editing
-    # these subtests
+    # keeps track of the number of nodes that should exist.
+    # Streamlines assert statements when checking node count
     num_nodes = 0
 
     def check_node_list():
