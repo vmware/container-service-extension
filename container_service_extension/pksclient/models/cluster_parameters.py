@@ -36,7 +36,8 @@ class ClusterParameters(object):
         'worker_haproxy_ip_addresses': 'str',
         'kubernetes_worker_instances': 'int',
         'authorization_mode': 'str',
-        'nsxt_network_profile': 'str'
+        'nsxt_network_profile': 'str',
+        'compute_profile': 'str'
     }
 
     attribute_map = {
@@ -45,10 +46,11 @@ class ClusterParameters(object):
         'worker_haproxy_ip_addresses': 'worker_haproxy_ip_addresses',
         'kubernetes_worker_instances': 'kubernetes_worker_instances',
         'authorization_mode': 'authorization_mode',
-        'nsxt_network_profile': 'nsxt_network_profile'
+        'nsxt_network_profile': 'nsxt_network_profile',
+        'compute_profile': 'compute_profile'
     }
 
-    def __init__(self, kubernetes_master_host=None, kubernetes_master_port=8443, worker_haproxy_ip_addresses=None, kubernetes_worker_instances=None, authorization_mode=None, nsxt_network_profile=None):  # noqa: E501
+    def __init__(self, kubernetes_master_host=None, kubernetes_master_port=8443, worker_haproxy_ip_addresses=None, kubernetes_worker_instances=None, authorization_mode=None, nsxt_network_profile=None, compute_profile=None):  # noqa: E501
         """ClusterParameters - a model defined in Swagger"""  # noqa: E501
 
         self._kubernetes_master_host = None
@@ -57,6 +59,7 @@ class ClusterParameters(object):
         self._kubernetes_worker_instances = None
         self._authorization_mode = None
         self._nsxt_network_profile = None
+        self._compute_profile = None
         self.discriminator = None
 
         self.kubernetes_master_host = kubernetes_master_host
@@ -70,6 +73,8 @@ class ClusterParameters(object):
             self.authorization_mode = authorization_mode
         if nsxt_network_profile is not None:
             self.nsxt_network_profile = nsxt_network_profile
+        if compute_profile is not None:
+            self.compute_profile = compute_profile
 
     @property
     def kubernetes_master_host(self):
@@ -200,6 +205,27 @@ class ClusterParameters(object):
         """
 
         self._nsxt_network_profile = nsxt_network_profile
+
+    @property
+    def compute_profile(self):
+        """Gets the compute_profile of this ClusterParameters.  # noqa: E501
+
+
+        :return: The compute_profile of this ClusterParameters.  # noqa: E501
+        :rtype: str
+        """
+        return self._compute_profile
+
+    @compute_profile.setter
+    def compute_profile(self, compute_profile):
+        """Sets the compute_profile of this ClusterParameters.
+
+
+        :param compute_profile: The compute_profile of this ClusterParameters.  # noqa: E501
+        :type: str
+        """
+
+        self._compute_profile = compute_profile
 
     def to_dict(self):
         """Returns the model properties as a dict"""
