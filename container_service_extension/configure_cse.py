@@ -328,11 +328,11 @@ def get_validated_config(config_file_name):
         config = yaml.safe_load(config_file)
 
     click.secho(f"Validating config file '{config_file_name}'", fg='yellow')
-    if 'pks_config' in config and isinstance(config.get('pks_config'), str):
-        pks_config = config['pks_config']
+    pks_config = config.get('pks_config')
+    if isinstance(pks_config, str):
         check_file_permissions(pks_config)
-        with open(pks_config) as pks_config_file:
-            pks = yaml.safe_load(pks_config_file)
+        with open(pks_config) as f:
+            pks = yaml.safe_load(f)
         click.secho(f"Validating PKS config file '{pks_config}'", fg='yellow')
         check_keys_and_value_types(pks, SAMPLE_PKS_CONFIG,
                                    location='PKS config file')
