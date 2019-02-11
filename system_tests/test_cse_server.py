@@ -49,7 +49,6 @@ rights when CSE is unregistered.
 
 import re
 import subprocess
-import time
 
 import paramiko
 import pytest
@@ -198,7 +197,7 @@ def test_0040_config_invalid_keys(config):
             pass
 
 
-def test_0020_config_invalid_value_types(config):
+def test_0050_config_invalid_value_types(config):
     """Test that configs with invalid value types don't pass validation."""
     bad_values_config1 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
     bad_values_config1['vcd'] = True
@@ -235,7 +234,7 @@ def test_0020_config_invalid_value_types(config):
             pass
 
 
-def test_0030_config_valid(config):
+def test_0060_config_valid(config):
     """Test that configs with valid keys and value types pass validation."""
     try:
         get_validated_config(env.ACTIVE_CONFIG_FILEPATH)
@@ -244,8 +243,8 @@ def test_0030_config_valid(config):
                       f" when it should have"
 
 
-def test_0040_check_invalid_installation(config):
-    """Test cse check against configs that are invalid/haven't been used."""
+def test_0070_check_invalid_installation(config):
+    """Test cse check against config that hasn't been used for installation."""
     try:
         check_cse_installation(config)
         assert False, "cse check passed when it should have failed."
@@ -253,7 +252,7 @@ def test_0040_check_invalid_installation(config):
         pass
 
 
-def test_0050_install_no_capture(config, blank_cust_scripts, unregister_cse):
+def test_0080_install_no_capture(config, blank_cust_scripts, unregister_cse):
     """Test install.
 
     Installation options: '--config', '--template', '--ext skip',
@@ -301,7 +300,7 @@ def test_0050_install_no_capture(config, blank_cust_scripts, unregister_cse):
         'vApp does not exist when it should (--no-capture).'
 
 
-def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
+def test_0090_install_temp_vapp_already_exists(config, blank_cust_scripts,
                                                unregister_cse):
     """Test installation when temp vapp already exists.
 
@@ -344,7 +343,7 @@ def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
         'vApp does not exist when it should (cleanup: false).'
 
 
-def test_0070_install_update(config, blank_cust_scripts, unregister_cse):
+def test_0100_install_update(config, blank_cust_scripts, unregister_cse):
     """Tests installation option: '--update'.
 
     Tests that installation:
@@ -425,7 +424,7 @@ def test_0070_install_update(config, blank_cust_scripts, unregister_cse):
             ssh_client.close()
 
 
-def test_0080_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
+def test_0110_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
     """Tests that installation deletes temp vapps when 'cleanup' is True.
 
     Also tests that '--ext config' registers cse.
@@ -464,7 +463,7 @@ def test_0080_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
             'Temp vapp exists when it should not (cleanup: True).'
 
 
-def test_0090_cse_check_valid_installation(config):
+def test_0120_cse_check_valid_installation(config):
     """Tests that `cse check` passes for a valid installation.
 
     command: cse check -c cse_test_config.yaml -i
@@ -498,24 +497,3 @@ def test_0130_cse_run(config):
             assert False, f"`{cmd}` failed with returncode {p.returncode}"
         except subprocess.TimeoutExpired:
             pass
-
-
-def test_0110_cse_run():
-    # start cse server as subprocess
-    cmd = f"cse run -c {env.ACTIVE_CONFIG_FILEPATH}"
-    p = subprocess.Popen(cmd.split(), stdout=subprocess.DEVNULL,
-                         stderr=subprocess.STDOUT)
-    time.sleep(10)  # cse server takes a little time to start up
-
-    # terminate cse server subprocess
-    p.terminate()
-
-
-def test_0120_cse_sample():
-    result = env.CLI_RUNNER.invoke(cli, ['sample'], catch_exceptions=False)
-    assert result.exit_code == 0
-
-
-def test_0130_cse_version():
-    result = env.CLI_RUNNER.invoke(cli, ['version'], catch_exceptions=False)
-    assert result.exit_code == 0
