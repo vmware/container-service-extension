@@ -4,12 +4,15 @@
 
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pksclient.api.cluster_api import ClusterApi
+from container_service_extension.pksclient.api.profile_api import ProfileApi
 from container_service_extension.pksclient.api_client import ApiClient
 from container_service_extension.pksclient.configuration import Configuration
 from container_service_extension.pksclient.models.cluster_parameters\
     import ClusterParameters
 from container_service_extension.pksclient.models.cluster_request \
     import ClusterRequest
+from container_service_extension.pksclient.models.compute_profile_request \
+    import ComputeProfileRequest
 from container_service_extension.pksclient.models.update_cluster_parameters\
     import UpdateClusterParameters
 from container_service_extension.uaaclient.uaaclient import UaaClient
@@ -53,7 +56,8 @@ class PKSBroker(object):
         :rtype:
         container_service_extension.pksclient.configuration.Configuration
         """
-        uaaClient = UaaClient(self.uaac_uri, self.username, self.secret)
+        uaaClient = UaaClient(self.uaac_uri, self.username, self.secret,
+                              proxy_uri=self.proxy_uri)
         token = uaaClient.getToken()
         pks_config = Configuration()
         pks_config.proxy = self.proxy_uri
@@ -112,7 +116,8 @@ class PKSBroker(object):
     @exception_handler
     def create_cluster(self, name, plan,
                        external_host_name='cluster.pks.local',
-                       network_profile=None):
+                       network_profile=None,
+                       compute_profile=None):
         """Create cluster in PKS environment.
 
         :param str name: Name of the cluster
@@ -120,9 +125,9 @@ class PKSBroker(object):
         that PKS supports.
         :param str external_host_name: User-preferred external hostname
          of the K8 cluster
-        :param container_service_extension.pksclient.models.
-        network_profile.NetworkProfile network_profile: Network profile params
-        for the cluster to be deployed.
+        :param str network_profile: Name of the network profile
+        :param str compute_profile: Name of the compute profile
+
         :return: Details of the cluster.
 
         :rtype: dict
@@ -133,7 +138,8 @@ class PKSBroker(object):
         cluster_api = ClusterApi(api_client=self.pks_client)
         cluster_params = ClusterParameters(
             kubernetes_master_host=external_host_name,
-            nsxt_network_profile=network_profile)
+            nsxt_network_profile=network_profile,
+            compute_profile=compute_profile)
         cluster_request = ClusterRequest(name=name, plan_name=plan,
                                          parameters=cluster_params)
 
