@@ -1,0 +1,30 @@
+FROM photon:2.0-20190122
+
+RUN tdnf install -y \
+    python3-3.6.5-3.ph2 \
+    python3-pip-3.6.5-3.ph2 \
+    gzip tar \
+    && pip3 install --upgrade pip setuptools
+
+RUN mkdir /var/config
+VOLUME /var/config
+
+## Set WORKDIR, PORT, expose $PORT, cd to $WORKDIR
+ENV WORKDIR=/root \
+    PORT=8080 \
+    LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8 \
+    PYTHONPATH=/root:/usr/local/lib/python36.zip:/usr/local/lib/python3.6:/usr/local/lib/python3.6/lib-dynload:/usr/local/lib/python3.6/site-packages
+
+# For dev version, copy python sources from local directory
+
+COPY requirements.txt /tmp/requirements.txt
+RUN pip3 install -r /tm p/requirements.txt
+
+COPY . /root/
+RUN chmod a+x /root/cse.sh
+
+EXPOSE ${PORT}
+WORKDIR ${WORKDIR}
+
+ENTRYPOINT [ "/bin/python3", "container_service_extension/cse.py" ]

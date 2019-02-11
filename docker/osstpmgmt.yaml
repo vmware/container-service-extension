@@ -1,0 +1,408 @@
+baseos:rpm:bash:4.4.12:3.ph2:photon:
+    repository: BaseOS
+    name: 'bash'
+    version: '4.4.12'
+    baseos-style: rpm
+    baseos-source: 'bash-4.4.12-3.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '3.ph2'
+baseos:rpm:bzip2-libs:1.0.6:8.ph2:photon:
+    repository: BaseOS
+    name: 'bzip2-libs'
+    version: '1.0.6'
+    baseos-style: rpm
+    baseos-source: 'bzip2-1.0.6-8.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '8.ph2'
+baseos:rpm:ca-certificates-pki:20180919:1.ph2:photon:
+    repository: BaseOS
+    name: 'ca-certificates-pki'
+    version: '20180919'
+    baseos-style: rpm
+    baseos-source: 'ca-certificates-20180919-1.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '1.ph2'
+baseos:rpm:ca-certificates:20180919:1.ph2:photon:
+    repository: BaseOS
+    name: 'ca-certificates'
+    version: '20180919'
+    baseos-style: rpm
+    baseos-source: 'ca-certificates-20180919-1.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '1.ph2'
+baseos:rpm:curl-libs:7.59.0:3.ph2:photon:
+    repository: BaseOS
+    name: 'curl-libs'
+    version: '7.59.0'
+    baseos-style: rpm
+    baseos-source: 'curl-7.59.0-3.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '3.ph2'
+baseos:rpm:curl:7.59.0:3.ph2:photon:
+    repository: BaseOS
+    name: 'curl'
+    version: '7.59.0'
+    baseos-style: rpm
+    baseos-source: 'curl-7.59.0-3.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '3.ph2'
+baseos:rpm:e2fsprogs-libs:1.43.4:2.ph2:photon:
+    repository: BaseOS
+    name: 'e2fsprogs-libs'
+    version: '1.43.4'
+    baseos-style: rpm
+    baseos-source: 'e2fsprogs-1.43.4-2.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '2.ph2'
+baseos:rpm:elfutils-libelf:0.169:3.ph2:photon:
+    repository: BaseOS
+    name: 'elfutils-libelf'
+    version: '0.169'
+    baseos-style: rpm
+    baseos-source: 'elfutils-0.169-3.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '3.ph2'
+baseos:rpm:expat-libs:2.2.4:1.ph2:photon:
+    repository: BaseOS
+    name: 'expat-libs'
+    version: '2.2.4'
+    baseos-style: rpm
+    baseos-source: 'expat-2.2.4-1.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '1.ph2'
+baseos:rpm:expat:2.2.4:1.ph2:photon:
+    repository: BaseOS
+    name: 'expat'
+    version: '2.2.4'
+    baseos-style: rpm
+    baseos-source: 'expat-2.2.4-1.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '1.ph2'
+baseos:rpm:filesystem:1.1:2.ph2:photon:
+    repository: BaseOS
+    name: 'filesystem'
+    version: '1.1'
+    baseos-style: rpm
+    baseos-source: 'filesystem-1.1-2.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '2.ph2'
+baseos:rpm:gawk:4.1.4:1.ph2:photon:
+    repository: BaseOS
+    name: 'gawk'
+    version: '4.1.4'
+    baseos-style: rpm
+    baseos-source: 'gawk-4.1.4-1.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '1.ph2'
+baseos:rpm:gdbm:1.13:3.ph2:photon:
+    repository: BaseOS
+    name: 'gdbm'
+    version: '1.13'
+    baseos-style: rpm
+    baseos-source: 'gdbm-1.13-3.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '3.ph2'
+baseos:rpm:glibc:2.26:13.ph2:photon:
+    repository: BaseOS
+    name: 'glibc'
+    version: '2.26'
+    baseos-style: rpm
+    baseos-source: 'glibc-2.26-13.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '13.ph2'
+baseos:rpm:gmp:6.1.2:2.ph2:photon:
+    repository: BaseOS
+    name: 'gmp'
+    version: '6.1.2'
+    baseos-style: rpm
+    baseos-source: 'gmp-6.1.2-2.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '2.ph2'
+baseos:rpm:gpg-pubkey:66fd4949:4803fe57:photon:
+    repository: BaseOS
+    name: 'gpg-pubkey'
+    version: '66fd4949'
+    baseos-style: rpm
+    baseos-source: '(none)'
+    baseos-osname: 'photon'
+    baseos-release: '4803fe57'
+baseos:rpm:gzip:1.8:1.ph2:photon:
+    repository: BaseOS
+    name: 'gzip'
+    version: '1.8'
+    baseos-style: rpm
+    baseos-source: 'gzip-1.8-1.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '1.ph2'
+baseos:rpm:hawkey:2017.1:6.ph2:photon:
+    repository: BaseOS
+    name: 'hawkey'
+    version: '2017.1'
+    baseos-style: rpm
+    baseos-source: 'hawkey-2017.1-6.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '6.ph2'
+baseos:rpm:krb5:1.16:2.ph2:photon:
+    repository: BaseOS
+    name: 'krb5'
+    version: '1.16'
+    baseos-style: rpm
+    baseos-source: 'krb5-1.16-2.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '2.ph2'
+baseos:rpm:libarchive:3.3.1:2.ph2:photon:
+    repository: BaseOS
+    name: 'libarchive'
+    version: '3.3.1'
+    baseos-style: rpm
+    baseos-source: 'libarchive-3.3.1-2.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '2.ph2'
+baseos:rpm:libcap:2.25:7.ph2:photon:
+    repository: BaseOS
+    name: 'libcap'
+    version: '2.25'
+    baseos-style: rpm
+    baseos-source: 'libcap-2.25-7.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '7.ph2'
+baseos:rpm:libdb:5.3.28:1.ph2:photon:
+    repository: BaseOS
+    name: 'libdb'
+    version: '5.3.28'
+    baseos-style: rpm
+    baseos-source: 'libdb-5.3.28-1.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '1.ph2'
+baseos:rpm:libffi:3.2.1:5.ph2:photon:
+    repository: BaseOS
+    name: 'libffi'
+    version: '3.2.1'
+    baseos-style: rpm
+    baseos-source: 'libffi-3.2.1-5.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '5.ph2'
+baseos:rpm:libgcc:6.3.0:7.ph2:photon:
+    repository: BaseOS
+    name: 'libgcc'
+    version: '6.3.0'
+    baseos-style: rpm
+    baseos-source: 'gcc-6.3.0-7.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '7.ph2'
+baseos:rpm:libsolv:0.6.26:3.ph2:photon:
+    repository: BaseOS
+    name: 'libsolv'
+    version: '0.6.26'
+    baseos-style: rpm
+    baseos-source: 'libsolv-0.6.26-3.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '3.ph2'
+baseos:rpm:libssh2:1.8.0:1.ph2:photon:
+    repository: BaseOS
+    name: 'libssh2'
+    version: '1.8.0'
+    baseos-style: rpm
+    baseos-source: 'libssh2-1.8.0-1.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '1.ph2'
+baseos:rpm:mpfr:3.1.5:1.ph2:photon:
+    repository: BaseOS
+    name: 'mpfr'
+    version: '3.1.5'
+    baseos-style: rpm
+    baseos-source: 'mpfr-3.1.5-1.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '1.ph2'
+baseos:rpm:ncurses-libs:6.0:14.ph2:photon:
+    repository: BaseOS
+    name: 'ncurses-libs'
+    version: '6.0'
+    baseos-style: rpm
+    baseos-source: 'ncurses-6.0-14.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '14.ph2'
+baseos:rpm:ncurses:6.0:14.ph2:photon:
+    repository: BaseOS
+    name: 'ncurses'
+    version: '6.0'
+    baseos-style: rpm
+    baseos-source: 'ncurses-6.0-14.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '14.ph2'
+baseos:rpm:nspr:4.15:1.ph2:photon:
+    repository: BaseOS
+    name: 'nspr'
+    version: '4.15'
+    baseos-style: rpm
+    baseos-source: 'nspr-4.15-1.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '1.ph2'
+baseos:rpm:nss-libs:3.31.1:1.ph2:photon:
+    repository: BaseOS
+    name: 'nss-libs'
+    version: '3.31.1'
+    baseos-style: rpm
+    baseos-source: 'nss-3.31.1-1.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '1.ph2'
+baseos:rpm:openssl:1.0.2q:1.ph2:photon:
+    repository: BaseOS
+    name: 'openssl'
+    version: '1.0.2q'
+    baseos-style: rpm
+    baseos-source: 'openssl-1.0.2q-1.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '1.ph2'
+baseos:rpm:photon-release:2.0:2.ph2:photon:
+    repository: BaseOS
+    name: 'photon-release'
+    version: '2.0'
+    baseos-style: rpm
+    baseos-source: 'photon-release-2.0-2.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '2.ph2'
+baseos:rpm:photon-repos:2.0:2.ph2:photon:
+    repository: BaseOS
+    name: 'photon-repos'
+    version: '2.0'
+    baseos-style: rpm
+    baseos-source: 'photon-repos-2.0-2.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '2.ph2'
+baseos:rpm:pkg-config:0.29.2:1.ph2:photon:
+    repository: BaseOS
+    name: 'pkg-config'
+    version: '0.29.2'
+    baseos-style: rpm
+    baseos-source: 'pkg-config-0.29.2-1.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '1.ph2'
+baseos:rpm:popt:1.16:5.ph2:photon:
+    repository: BaseOS
+    name: 'popt'
+    version: '1.16'
+    baseos-style: rpm
+    baseos-source: 'popt-1.16-5.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '5.ph2'
+bbaseos:rpm:python-setuptools:36.0.1:1.ph2:photon:
+    repository: BaseOS
+    name: 'python-setuptools'
+    version: '36.0.1'
+    baseos-style: rpm
+    baseos-source: 'python-setuptools-36.0.1-1.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '1.ph2'
+baseos:rpm:python3-libs:3.6.5:3.ph2:photon:
+    repository: BaseOS
+    name: 'python3-libs'
+    version: '3.6.5'
+    baseos-style: rpm
+    baseos-source: 'python3-3.6.5-3.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '3.ph2'
+baseos:rpm:python3-pip:3.6.5:3.ph2:photon:
+    repository: BaseOS
+    name: 'python3-pip'
+    version: '3.6.5'
+    baseos-style: rpm
+    baseos-source: 'python3-3.6.5-3.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '3.ph2'
+baseos:rpm:python3-xml:3.6.5:3.ph2:photon:
+    repository: BaseOS
+    name: 'python3-xml'
+    version: '3.6.5'
+    baseos-style: rpm
+    baseos-source: 'python3-3.6.5-3.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '3.ph2'
+baseos:rpm:python3:3.6.5:3.ph2:photon:
+    repository: BaseOS
+    name: 'python3'
+    version: '3.6.5'
+    baseos-style: rpm
+    baseos-source: 'python3-3.6.5-3.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '3.ph2'
+baseos:rpm:readline:7.0:2.ph2:photon:
+    repository: BaseOS
+    name: 'readline'
+    version: '7.0'
+    baseos-style: rpm
+    baseos-source: 'readline-7.0-2.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '2.ph2'
+baseos:rpm:rpm-libs:4.13.0.2:1.ph2:photon:
+    repository: BaseOS
+    name: 'rpm-libs'
+    version: '4.13.0.2'
+    baseos-style: rpm
+    baseos-source: 'rpm-4.13.0.2-1.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '1.ph2'
+baseos:rpm:rpm:4.13.0.2:1.ph2:photon:
+    repository: BaseOS
+    name: 'rpm'
+    version: '4.13.0.2'
+    baseos-style: rpm
+    baseos-source: 'rpm-4.13.0.2-1.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '1.ph2'
+baseos:rpm:sqlite-libs:3.22.0:3.ph2:photon:
+    repository: BaseOS
+    name: 'sqlite-libs'
+    version: '3.22.0'
+    baseos-style: rpm
+    baseos-source: 'sqlite-3.22.0-3.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '3.ph2'
+baseos:rpm:tar:1.29:1.ph2:photon:
+    repository: BaseOS
+    name: 'tar'
+    version: '1.29'
+    baseos-style: rpm
+    baseos-source: 'tar-1.29-1.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '1.ph2'
+baseos:rpm:tdnf:1.2.3:6.ph2:photon:
+    repository: BaseOS
+    name: 'tdnf'
+    version: '1.2.3'
+    baseos-style: rpm
+    baseos-source: 'tdnf-1.2.3-6.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '6.ph2'
+baseos:rpm:toybox:0.7.3:6.ph2:photon:
+    repository: BaseOS
+    name: 'toybox'
+    version: '0.7.3'
+    baseos-style: rpm
+    baseos-source: 'toybox-0.7.3-6.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '6.ph2'
+baseos:rpm:xz-libs:5.2.3:2.ph2:photon:
+    repository: BaseOS
+    name: 'xz-libs'
+    version: '5.2.3'
+    baseos-style: rpm
+    baseos-source: 'xz-5.2.3-2.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '2.ph2'
+baseos:rpm:xz:5.2.3:2.ph2:photon:
+    repository: BaseOS
+    name: 'xz'
+    version: '5.2.3'
+    baseos-style: rpm
+    baseos-source: 'xz-5.2.3-2.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '2.ph2'
+baseos:rpm:zlib:1.2.11:1.ph2:photon:
+    repository: BaseOS
+    name: 'zlib'
+    version: '1.2.11'
+    baseos-style: rpm
+    baseos-source: 'zlib-1.2.11-1.ph2.src.rpm'
+    baseos-osname: 'photon'
+    baseos-release: '1.ph2'
