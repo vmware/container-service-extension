@@ -62,23 +62,23 @@ class PksCache(object):
         associated with this identifier. Details include datacenter name, cluster name and
         sub resource pool path for this provider vDC.
 
-        :param pvdc_id: UUID of the provider vDC
+        :param str pvdc_id: UUID of the provider vDC
         :return: PvdcResourcePoolPathInfo object
         """
-        return self.pvdc_table[pvdc_id]
+        return self.pvdc_table.get(pvdc_id)
 
 
     def get_pks_account_details(self, org_name, vc_name):
         """Returns an immutable PksInfo object which has details of PKS account associated
         with the given organization and vCenter name.
 
-        :param org_name: name of organization.
-        :param vc_name: name of associated vCenter.
+        :param str org_name: name of organization.
+        :param str vc_name: name of associated vCenter.
         :return: PksInfo object.
         """
         if len(self.org_pks_table) == 0:
             return self.pks_service_accounts_per_vc_info_table[vc_name]
-        return self.org_pks_table[(org_name, vc_name)]
+        return self.org_pks_table.get((org_name, vc_name))
 
 
     def __load_pks_accounts(self, pks_accounts):
