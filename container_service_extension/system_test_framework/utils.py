@@ -52,3 +52,10 @@ def get_default_template_config(config):
         'Default template not found in config file.'
 
     return template_config
+
+
+def delete_file(filepath):
+    try:
+        Path(filepath).unlink()
+    except FileNotFoundError:
+        pass
