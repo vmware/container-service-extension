@@ -121,7 +121,53 @@ def unregister_cse():
     env.unregister_cse()
 
 
-def test_0010_config_invalid_keys(config):
+def test_0010_cse_sample():
+    """Test that `cse sample` is a valid command.
+
+    Test that `cse sample` command along with every option is an actual
+    command. Does not test for validity of sample outputs.
+    """
+    result = env.CLI_RUNNER.invoke(cli, ['sample'], catch_exceptions=False)
+    assert result.exit_code == 0
+
+    output_filepath = 'dummy-output.yaml'
+    cmd = f'sample --output {output_filepath}'
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+    cmd = f'sample --pks-output {output_filepath}'
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+    testutils.delete_file(output_filepath)
+
+
+def test_0020_cse_version():
+    """Test that `cse version` is a valid command."""
+    result = env.CLI_RUNNER.invoke(cli, ['version'], catch_exceptions=False)
+    assert result.exit_code == 0
+
+
+def test_0030_cse_check(config):
+    """Test that `cse check` is a valid command.
+
+    Test that `cse check` command along with every option is an actual command.
+    Does not test for validity of config files or CSE installations.
+    """
+    cmd = f"check -c {env.ACTIVE_CONFIG_FILEPATH}"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+    cmd = f"check -c {env.ACTIVE_CONFIG_FILEPATH} -i"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+    cmd = f"check -c {env.ACTIVE_CONFIG_FILEPATH} -t dummy"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+
+def test_0040_config_invalid_keys(config):
     """Test that config files with invalid/extra keys don't pass validation."""
     bad_key_config1 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
     del bad_key_config1['amqp']
