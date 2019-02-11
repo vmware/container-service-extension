@@ -551,7 +551,7 @@ def get_ovdc_resource_pool(client, ovdc_name, org_name=None):
     return resource_pool
 
 
-def get_pvdc_id_by_name( name, vc_name_in_vcd):
+def get_pvdc_id_by_name(name, vc_name_in_vcd):
     """
     Retrieves the pvdc identifier based on the pvdc name and vcenter name.
 
@@ -580,7 +580,7 @@ def get_datacenter_cluster_rp_path(rp_path):
     Utility method that returns the data center name, cluster name and
     sub resource pool path from the vCenter path of a provider vDC.
 
-    :param rp_path: vCenter path of the provider vDC.
+    :param list rp_path: vCenter path of the provider vDC.
 
     :return: a list of data center name, cluster name and
     sub resource pool path.
@@ -588,10 +588,8 @@ def get_datacenter_cluster_rp_path(rp_path):
     fragments = rp_path[0].split("/")
     datacenter = fragments[0]
     cluster = fragments[1]
-    sub_rp_path = ""
-    for i in range(2, len(fragments)):
-        sub_rp_path += (fragments[i] + "/")
-    return [datacenter,cluster, sub_rp_path[:-1]]
+    sub_rp_path = '/'.join(fragments[2:])
+    return [datacenter,cluster, sub_rp_path]
 
 
 def get_data_file(filename, logger=None):
