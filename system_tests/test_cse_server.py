@@ -3,28 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 """
-CSE server tests.
-
-TODO() need to check that rights exist when CSE is registered and that rights
-don't exist when CSE is not registered. Need a pyvcloud function to check
-if a right exists without adding it. Also need functionality to remove CSE
-rights when CSE is unregistered.
-
-NOTES:
-- Edit 'base_config.yaml' for your own vCD instance.
-- These tests will use your public/private SSH keys (RSA)
-    - Required keys: '~/.ssh/id_rsa' and '~/.ssh/id_rsa.pub'
-    - Keys should not be password protected, or tests will fail.
-        To remove key password, use `ssh-keygen -p`.
-    - ssh-key help: https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/  # noqa
-- vCD entities related to CSE (vapps, catalog items) are cleaned up after
-    tests run, unless 'teardown_installation'=false in 'base_config.yaml'.
-- These tests are meant to run in sequence, but can run independently.
-- !!! These tests will fail on Windows !!! We generate temporary config
-    files and restrict its permissions due to the check that
-    cse install/check performs. This permissions check is incompatible
-    with Windows, and is a known issue.
-- This test module typically takes ~40 minutes to finish.
+CSE server tests to test validity and functionality of `cse` CLI commands.
 
 Tests these following commands:
 $ cse check --config cse_test_config.yaml (missing/invalid keys)
@@ -43,6 +22,29 @@ $ cse install --config cse_test_config.yaml
 $ cse check --config cse_test_config.yaml -i
 $ cse check --config cse_test_config.yaml -i (invalid templates)
 
+$ cse run --config cse_test_config.yaml
+$ cse run --config cse_test_config.yaml --skip-check
+
+NOTE:
+- Edit 'base_config.yaml' for your own vCD instance.
+- These tests will use your public/private SSH keys (RSA)
+    - Required keys: '~/.ssh/id_rsa' and '~/.ssh/id_rsa.pub'
+    - Keys should not be password protected, or tests will fail.
+        To remove key password, use `ssh-keygen -p`.
+    - ssh-key help: https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/  # noqa
+- vCD entities related to CSE (vapps, catalog items) are cleaned up after
+    tests run, unless 'teardown_installation'=false in 'base_config.yaml'.
+- These tests are meant to run in sequence, but can run independently.
+- !!! These tests will fail on Windows !!! We generate temporary config
+    files and restrict its permissions due to the check that
+    cse install/check performs. This permissions check is incompatible
+    with Windows, and is a known issue.
+- This test module typically takes ~40 minutes to finish.
+
+TODO() need to check that rights exist when CSE is registered and that rights
+don't exist when CSE is not registered. Need a pyvcloud function to check
+if a right exists without adding it. Also need functionality to remove CSE
+rights when CSE is unregistered.
 """
 
 import re
@@ -428,20 +430,28 @@ def test_0090_cse_check_valid_installation(config):
         assert False, "cse check failed when it should have passed."
 
 
-def test_0100_cse_check_invalid_installation(config):
-    """Tests that `cse check` fails for an invalid installation.
+def test_0130_cse_run(config):
+    """Test `cse run` command.
 
-    command: cse check -c cse_test_config.yaml -i
-    expected: check fails
+    Run cse server as a subprocess with a timeout. If we
+    reach the timeout, then cse server was valid and running. Exiting the
+    process before then means that server run failed somehow.
+
+    commands:
+    $ cse run --config cse_test_config
+    $ cse run --config cse_test_config --skip-check
     """
-    for i, template_dict in enumerate(config['broker']['templates']):
-        config['broker']['templates'][i]['catalog_item'] = f"_bad{i}"
+    cmds = [
+        f"cse run -c {env.ACTIVE_CONFIG_FILEPATH}",
+        f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} -s"
+    ]
 
-    try:
-        check_cse_installation(config)
-        assert False, "cse check passed when it should have failed."
-    except EntityNotFoundException:
-        pass
+    for cmd in cmds:
+        try:
+            p = subprocess.run(cmd.split(), timeout=15)
+            assert False, f"`{cmd}` failed with returncode {p.returncode}"
+        except subprocess.TimeoutExpired:
+            pass
 
 
 def test_0110_cse_run():
