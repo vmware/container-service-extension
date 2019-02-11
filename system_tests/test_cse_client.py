@@ -3,19 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 """
-CSE client tests.
-
-TODO() include tests/fixtures to test command accessibility for various
-users/roles, test accessing cluster via kubectl, test nfs functionality,
-test pks functionality. vcd_org_admin() fixture should be replaced with
-a minimum rights user fixture.
-
-NOTES:
-- These tests will install CSE on vCD if CSE is not installed already.
-- Edit 'base_config.yaml' for your own vCD instance.
-- Clusters are deleted on test failure, unless 'teardown_clusters'=false in
-    'base_config.yaml'.
-- This test module typically takes ~20 minutes to finish per template.
+CSE client tests to test validity and functionality of `vcd cse` CLI commands.
 
 Tests these following commands:
 $ vcd cse version
@@ -35,6 +23,23 @@ $ vcd cse node create testcluster -n NETWORK -t photon-v2
 
 $ vcd cse cluster delete testcluster
 
+NOTE:
+- These tests will install CSE on vCD if CSE is not installed already.
+- Edit 'base_config.yaml' for your own vCD instance.
+- Clusters are deleted on test failure, unless 'teardown_clusters'=false in
+    'base_config.yaml'.
+- This test module typically takes ~20 minutes to finish per template.
+
+TODO()
+- tests/fixtures to test command accessibility for various
+    users/roles (vcd_org_admin() fixture should be replaced with
+    a minimum rights user fixture)
+- test accessing cluster via kubectl
+- test nfs functionality
+- test pks functionality
+- test that node rollback works correctly (node rollback is not implemented
+    yet due to a vcd-side bug, where a partially powered-on VM cannot be force
+    deleted)
 """
 
 import re
@@ -250,19 +255,6 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
                                        catch_exceptions=False)
         assert result.exit_code == 0
         check_node_list()
-
-        # test node rollback - does not need to be tested for every template
-        # TODO() add test for --disable-rollback flag when it's implemented
-        # vcd cse node create testcluster -n NETWORK -t PHOTON -c 1000
-        has_run = False
-        if not has_run:
-            cmd = f"cse node create {env.TEST_CLUSTER_NAME} -n " \
-                f"{config['broker']['network']} -t {template_name} -c 1000"
-            result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
-                                           catch_exceptions=False)
-            assert result.exit_code == 0
-            check_node_list()
-            has_run = True
 
         # vcd cse node create testcluster -n NETWORK -t PHOTON
         cmd = f"cse node create {env.TEST_CLUSTER_NAME} -n " \
