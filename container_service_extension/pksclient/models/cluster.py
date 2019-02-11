@@ -41,6 +41,7 @@ class Cluster(object):
         'uuid': 'str',
         'kubernetes_master_ips': 'list[str]',
         'network_profile_name': 'str',
+        'compute_profile_name': 'str',
         'parameters': 'ClusterParameters'
     }
 
@@ -53,10 +54,11 @@ class Cluster(object):
         'uuid': 'uuid',
         'kubernetes_master_ips': 'kubernetes_master_ips',
         'network_profile_name': 'network_profile_name',
+        'compute_profile_name': 'compute_profile_name',
         'parameters': 'parameters'
     }
 
-    def __init__(self, name=None, plan_name=None, last_action=None, last_action_state=None, last_action_description=None, uuid=None, kubernetes_master_ips=None, network_profile_name=None, parameters=None):  # noqa: E501
+    def __init__(self, name=None, plan_name=None, last_action=None, last_action_state=None, last_action_description=None, uuid=None, kubernetes_master_ips=None, network_profile_name=None, compute_profile_name=None, parameters=None):  # noqa: E501
         """Cluster - a model defined in Swagger"""  # noqa: E501
 
         self._name = None
@@ -67,6 +69,7 @@ class Cluster(object):
         self._uuid = None
         self._kubernetes_master_ips = None
         self._network_profile_name = None
+        self._compute_profile_name = None
         self._parameters = None
         self.discriminator = None
 
@@ -83,6 +86,8 @@ class Cluster(object):
             self.kubernetes_master_ips = kubernetes_master_ips
         if network_profile_name is not None:
             self.network_profile_name = network_profile_name
+        if compute_profile_name is not None:
+            self.compute_profile_name = compute_profile_name
         if parameters is not None:
             self.parameters = parameters
 
@@ -265,6 +270,27 @@ class Cluster(object):
         """
 
         self._network_profile_name = network_profile_name
+
+    @property
+    def compute_profile_name(self):
+        """Gets the compute_profile_name of this Cluster.  # noqa: E501
+
+
+        :return: The compute_profile_name of this Cluster.  # noqa: E501
+        :rtype: str
+        """
+        return self._compute_profile_name
+
+    @compute_profile_name.setter
+    def compute_profile_name(self, compute_profile_name):
+        """Sets the compute_profile_name of this Cluster.
+
+
+        :param compute_profile_name: The compute_profile_name of this Cluster.  # noqa: E501
+        :type: str
+        """
+
+        self._compute_profile_name = compute_profile_name
 
     @property
     def parameters(self):
