@@ -101,12 +101,25 @@ def cli(ctx):
 
 @cli.command(short_help='show version')
 @click.pass_context
-def version(ctx):
+@click.option(
+    '--local/--package',
+    'local',
+    envvar='CSE_USE_LOCAL_VERSION',
+    default=False,
+    hidden=True)
+def version(ctx, local):
     """Show CSE version."""
-    ver_obj = Service.version()
-    ver_str = '%s, %s, version %s' % (ver_obj['product'],
-                                      ver_obj['description'],
-                                      ver_obj['version'])
+    if local:
+        try:
+            from container_service_extension.version import __version__
+            ver_obj = __version__
+        except ImportError:
+            ver_obj = {}
+    else:
+        ver_obj = Service.version()
+
+    ver_str = '%s, %s, version %s, build %s' % (
+        ver_obj['product'], ver_obj['description'], ver_obj['version'], ver_obj['build'])
     stdout(ver_obj, ctx, ver_str)
 
 
