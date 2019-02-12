@@ -13,14 +13,15 @@ $ vcd cse template list
 $ vcd cse cluster create -n NETWORK -N 1 -t photon-v2 -c 1000
 $ vcd cse cluster create -n NETWORK -N 1 -t photon-v2 -c 1000
     --disable-rollback
+
 $ vcd cse cluster create testcluster -n NETWORK -N 1 -t photon-v2
 $ vcd cse cluster info testcluster
-
+$ vcd cse cluster config testcluster
+$ vcd cse cluster list
 $ vcd cse node list testcluster
 $ vcd cse node info testcluster TESTNODE
 $ vcd cse node delete testcluster TESTNODE
 $ vcd cse node create testcluster -n NETWORK -t photon-v2
-
 $ vcd cse cluster delete testcluster
 
 NOTE:
@@ -40,6 +41,9 @@ TODO()
 - test that node rollback works correctly (node rollback is not implemented
     yet due to a vcd-side bug, where a partially powered-on VM cannot be force
     deleted)
+- test `vcd cse system` commands
+- test `vcd cse cluster config testcluster --save` option (currently does
+    not work)
 """
 
 import re
