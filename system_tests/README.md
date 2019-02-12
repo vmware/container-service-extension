@@ -53,7 +53,7 @@ Options for **'test'** section:
 
 ---
 
-## Writing Tests with Pytest
+## Writing Tests with Pytest and Click
 
 Before writing a test, first check **conftest.py** for any 'autouse=True' fixtures. Then check
 the module itself for any 'autouse=True' fixtures. When writing a test, any fixtures
@@ -97,9 +97,34 @@ Common keyword arguments for @pytest.fixture()
 
 - Fixtures specific to a test module should be defined in the module directly.
 
+### Click's CLIRunner
+
+## Example
+
+```python
+import container_service_extension.system_test_framework.environment as env
+from container_service_extension.cse import cli
+from vcd_cli.vcd import vcd
+
+# test command: `cse sample --output myconfig.yaml`
+cmd = 'sample --output myconfig.yaml'
+result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+# catch_exceptions=False tell Click not to swallow exceptions, so we can inspect if something went wrong
+assert result.exit_code == 0, f"Command [{cmd}] failed."
+
+# test command: `vcd cse template list`
+cmd = 'cse template list'
+result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+assert result.exit_code == 0, f"Command[{cmd}] failed."
+```
+
+These small tests using Click's `CLIRunner` and `invoke` function only validate command structure.
+These assert statements will pass because the commands themselves are valid, even if an error is thrown during the command execution.
+
 ---
 
 ### Helpful links
 
 - Usage and Invocations: <https://docs.pytest.org/en/latest/usage.html>
 - Fixtures: <https://docs.pytest.org/en/latest/fixture.html>
+- Click Testing: <http://click.palletsprojects.com/en/7.x/testing/>
