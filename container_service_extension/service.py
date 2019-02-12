@@ -194,7 +194,9 @@ class Service(object, metaclass=Singleton):
         signal.signal(signal.SIGINT, signal_handler)
         click.secho(message)
         LOGGER.info(message)
-        self.pks_cache = PksCache(self.config['pks_config']['orgs'], self.config['pks_config']['pks_accounts'], self.config['pks_config']['pvdcs'])
+        self.pks_cache = PksCache(self.config.get('pks_config').get('orgs'),
+                                  self.config.get('pks_config').get('pks_accounts'),
+                                  self.config.get('pks_config').get('pvdcs'))
         amqp = self.config['amqp']
         num_consumers = self.config['service']['listeners']
 
