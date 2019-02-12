@@ -12,15 +12,12 @@ $ cse check --config cse_test_config.yaml -i (cse not installed yet)
 
 $ cse install --config cse_test_config.yaml --template photon-v2
     --ext skip --ssh-key ~/.ssh/id_rsa.pub --no-capture
-
 $ cse install --config cse_test_config.yaml --template photon-v2
-
 $ cse install --config cse_test_config.yaml --ssh-key ~/.ssh/id_rsa.pub
     --update --no-capture
-
 $ cse install --config cse_test_config.yaml
+
 $ cse check --config cse_test_config.yaml -i
-$ cse check --config cse_test_config.yaml -i (invalid templates)
 
 $ cse run --config cse_test_config.yaml
 $ cse run --config cse_test_config.yaml --skip-check
