@@ -32,7 +32,7 @@ class PksCache(object):
         super().__setattr__("pvdcs", pvdcs)
         pks_info_table = self.__load_pks_accounts(pks_accounts)
         pvdc_table = self.__load_pvdc_info(pvdcs)
-        if orgs[0]['name'] == 'None':
+        if orgs is not None and orgs[0]['name'] == 'None':
             pks_service_accounts_per_vc_info_table = \
                 self.__load_pks_service_accounts_per_vc(orgs, pks_info_table)
             super().__setattr__("pks_service_accounts_per_vc_info_table",
