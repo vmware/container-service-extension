@@ -253,19 +253,23 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
         assert result.exit_code == 0
         assert env.vapp_exists(env.TEST_CLUSTER_NAME), \
             "Cluster doesn't exist when it should."
-
-        # vcd cse cluster info testcluster
-        cmd = f"cse cluster info {env.TEST_CLUSTER_NAME}"
-        result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
-                                       catch_exceptions=False)
-        assert result.exit_code == 0
-
-        # vcd cse node info testcluster TESTNODE
         nodes = check_node_list()
-        cmd = f"cse node info {env.TEST_CLUSTER_NAME} {nodes[0]}"
-        result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
-                                       catch_exceptions=False)
-        assert result.exit_code == 0
+
+        # `cluster config`, `cluster info`, `cluster list`, `node info`
+        # only need to run once
+        has_run = False
+        if not has_run:
+            cmds = [
+                f"cse cluster config {env.TEST_CLUSTER_NAME}",
+                f"cse cluster info {env.TEST_CLUSTER_NAME}",
+                f"cse cluster list",
+                f"cse node info {env.TEST_CLUSTER_NAME} {nodes[0]}"
+            ]
+            for cmd in cmds:
+                result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
+                                               catch_exceptions=False)
+                assert result.exit_code == 0
+            has_run = True
 
         # vcd cse node delete testcluster TESTNODE
         cmd = f"cse node delete {env.TEST_CLUSTER_NAME} {nodes[0]}"
