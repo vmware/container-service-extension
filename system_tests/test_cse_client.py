@@ -156,6 +156,21 @@ def test_0020_vcd_cse_system_info(vcd_org_admin):
     assert result.exit_code == 0
 
 
+def test_x_vcd_cse_system_enable():
+    # TODO()
+    pass
+
+
+def test_x_vcd_cse_system_disable():
+    # TODO()
+    pass
+
+
+def test_x_vcd_cse_system_stop():
+    # TODO()
+    pass
+
+
 def test_0030_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
                                               delete_test_cluster):
     """Test that --disable-rollback option works during cluster creation.
