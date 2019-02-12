@@ -16,7 +16,7 @@ from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 import requests
 
-from container_service_extension.PksCache import PksCache
+from container_service_extension.pks_cache import PksCache
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.consumer import MessageConsumer
