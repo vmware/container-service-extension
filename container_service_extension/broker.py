@@ -599,7 +599,8 @@ class DefaultBroker(AbstractBroker, threading.Thread):
             raise CseServerError('Cluster \'%s\' not found' % cluster_name)
         vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
         template = self.get_template(name=clusters[0]['template'])
-        result['body'] = get_cluster_config(self.config, vapp,
+        server_config = get_server_runtime_config()
+        result['body'] = get_cluster_config(server_config, vapp,
                                             template['admin_password'])
         result['status_code'] = OK
         return result
@@ -862,7 +863,8 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         vapp = VApp(self.tenant_client, href=self.cluster['vapp_href'])
         template = self.get_template()
         try:
-            delete_nodes_from_cluster(self.config, vapp, template,
+            server_config = get_server_runtime_config()
+            delete_nodes_from_cluster(server_config, vapp, template,
                                       node_list, force=True)
         except Exception:
             LOGGER.warning("Couldn't delete node {node_list} from cluster:"
