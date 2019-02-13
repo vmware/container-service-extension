@@ -16,7 +16,9 @@ from cachetools import LRUCache
 import click
 from lxml import objectify
 from pyvcloud.vcd.api_extension import APIExtension
-from pyvcloud.vcd.client import BasicLoginCredentials, QueryResultFormat, ResourceType
+from pyvcloud.vcd.client import BasicLoginCredentials
+from pyvcloud.vcd.client import QueryResultFormat
+from pyvcloud.vcd.client import ResourceType
 
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -505,6 +507,7 @@ def get_org(client, org_name=None):
         org = Org(client, resource=client.get_org_by_name(org_name))
     return org
 
+
 def get_vdc(client, vdc_name, org=None, org_name=None,
             is_admin_operation=False):
     """Get the specified VDC object.
@@ -563,15 +566,15 @@ def get_pvdc_id_by_name(name, vc_name_in_vcd):
     :rtype: str
     """
     client = get_vcd_sys_admin_client()
-    query = client.get_typed_query(
-            ResourceType.PROVIDER_VDC.value,
-            query_result_format=QueryResultFormat.RECORDS,
-            equality_filter=('name', name))
-    for pvdc_record  in list(query.execute()):
-        if pvdc_record.get('vcName') == vc_name_in_vcd:
-            href = pvdc_record.get('href')
-            pvdc_id = href.split("/")[-1]
-            return pvdc_id
+    query = client.get_typed_query(ResourceType.PROVIDER_VDC.value,
+                                   query_result_format=QueryResultFormat
+                                   .RECORDS,
+                                   qfilter=f'vcName=={vc_name_in_vcd}',
+                                   equality_filter=('name', name))
+    for pvdc_record in list(query.execute()):
+        href = pvdc_record.get('href')
+        pvdc_id = href.split("/")[-1]
+        return pvdc_id
     return None
 
 
@@ -589,7 +592,7 @@ def get_datacenter_cluster_rp_path(rp_path):
     datacenter = fragments[0]
     cluster = fragments[1]
     sub_rp_path = '/'.join(fragments[2:])
-    return [datacenter,cluster, sub_rp_path]
+    return [datacenter, cluster, sub_rp_path]
 
 
 def get_data_file(filename, logger=None):

@@ -51,7 +51,7 @@ class PksCache(object):
         """Overridden method to customize the meaning of attribute access.
         Called when an attribute assignment is attempted.
         """
-        msg = f"{self.__class__} has no attribute {key}"
+        msg = f"Attributes of {self.__class__} cannot be updated."
 
         raise AttributeError(msg)
 
