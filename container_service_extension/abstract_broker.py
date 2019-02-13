@@ -91,7 +91,7 @@ class AbstractBroker(abc.ABC):
 
     @abc.abstractmethod
     def list_clusters(self):
-        """List clusters.
+        """Get the list of clusters.
 
         :return: response object
 
