@@ -3,6 +3,7 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import traceback
 
 import click
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -17,6 +18,7 @@ from container_service_extension.configure_cse import generate_sample_config
 from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.configure_cse import install_cse
 from container_service_extension.exceptions import AmqpConnectionError
+from container_service_extension.questions import cse_interview
 from container_service_extension.service import Service
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -189,6 +191,34 @@ def check(ctx, config, check_install, template):
         check_cse_installation(config_dict, check_template=template)
     except EntityNotFoundException:
         click.secho("CSE installation is invalid", fg='red')
+
+
+@cli.command(short_help="Runs an interview to configure the extension.")
+@click.pass_context
+@click.option(
+    '-c',
+    '--config',
+    'config',
+    type=click.Path(exists=True),
+    metavar='<config-file>',
+    envvar='CSE_CONFIG',
+    default='/var/config.yaml',
+    help='Config file to use.')
+@click.option(
+    '-d',
+    '--detailed',
+    'detailed',
+    is_flag=True,
+    required=False,
+    default=False,
+    help='Checks that CSE is installed on vCD according to the config file')
+def interview(ctx, config, detailed):
+    """Interview for CSE configuration."""
+    try:
+        cse_interview(config, detailed)
+    except Exception as ex:
+        click.secho(f"Error performing interview. {str(ex)}", fg='red')
+        traceback.print_exc()
 
 
 @cli.command(short_help='install CSE on vCD')
