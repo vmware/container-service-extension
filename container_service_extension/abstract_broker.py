@@ -16,3 +16,85 @@ class AbstractBroker(abc.ABC):
             data.
         """
         pass
+
+    @abc.abstractmethod
+    def create_cluster(self, *args, **kwargs):
+        """Create cluster.
+
+        :return: response object
+
+        :rtype: dict
+        """
+        pass
+
+    @abc.abstractmethod
+    def create_nodes(self, *args, **kwargs):
+        """Create nodes from the cluster.
+
+        :return: response object
+
+        :rtype: dict
+        """
+        pass
+
+    @abc.abstractmethod
+    def delete_cluster(self, *args, **kwargs):
+        """Delete the given cluster.
+
+        :return: response object
+
+        :rtype: dict
+        """
+        pass
+
+    @abc.abstractmethod
+    def delete_nodes(self, *args, **kwargs):
+        """Create nodes from the cluster.
+
+        :return: response object
+
+        :rtype: dict
+        """
+        pass
+
+    @abc.abstractmethod
+    def get_cluster_config(self, name):
+        """Get the configuration of cluster.
+
+        :return: response object
+
+        :rtype: dict
+
+        """
+        pass
+
+    @abc.abstractmethod
+    def get_cluster_info(self, name):
+        """Get the information about the cluster.
+
+        :return: response object
+
+        :rtype: dict
+
+        """
+
+    @abc.abstractmethod
+    def get_node_info(self, cluster_name, node_name):
+        """Get information of node in the given cluster.
+
+        :return: response object
+
+        :rtype: dict
+
+        """
+        pass
+
+    @abc.abstractmethod
+    def list_clusters(self):
+        """List clusters.
+
+        :return: response object
+
+        :rtype: dict
+        """
+        pass
