@@ -239,9 +239,6 @@ class PKSBroker(AbstractBroker):
         result['status_code'] = ACCEPTED
         return result
 
-    def get_tenant_client_session(self):
-        raise NotImplementedError('get_tenant_client_session')
-
     def create_nodes(self):
         self.cluster_name = self.body['name']
         return self.resize_cluster(self.cluster_name, self.body['node_count'])
