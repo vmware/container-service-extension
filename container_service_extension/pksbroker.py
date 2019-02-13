@@ -6,6 +6,7 @@
 import json
 
 from container_service_extension.abstract_broker import AbstractBroker
+from container_service_extension.exceptions import CseServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pksclient.api.cluster_api import ClusterApi
 from container_service_extension.pksclient.api.profile_api import ProfileApi
@@ -37,7 +38,9 @@ class PKSBroker(AbstractBroker):
         :param ovdc_cache: ovdc cache (subject to change) is used to
         initialize PKS broker.
         """
-
+        super().__init__(headers, request_body)
+        self.headers = headers
+        self.body = request_body
         self.username = ovdc_cache['username']
         self.secret = ovdc_cache['secret']
         self.pks_host_uri = \
@@ -243,7 +246,6 @@ class PKSBroker(AbstractBroker):
         result['status_code'] = ACCEPTED
         return result
 
-
     @exception_handler
     def create_compute_profile(self, cp_name, az_name, description, cpi,
                                datacenter_name, cluster_name, ovdc_rp_name):
@@ -383,3 +385,12 @@ class PKSBroker(AbstractBroker):
 
         return result
 
+    def __getattr__(self, name):
+        """Handle unknown operations.
+
+        Example: This broker does
+        not support individual node operations.
+        """
+        def unsupported_method(*args):
+            raise CseServerError(f"Unsupported operation {name}")
+        return unsupported_method
