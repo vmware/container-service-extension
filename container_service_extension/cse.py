@@ -140,14 +140,6 @@ def sample(ctx, output, pks_output):
     default='config.yaml',
     help='Config file to use.')
 @click.option(
-    '--pks-config',
-    'pks_config',
-    type=click.Path(exists=True),
-    metavar='<pks-config-file>',
-    envvar='CSE_PKS_CONFIG',
-    default='pks.yaml',
-    help='PKS Config file to use.')
-@click.option(
     '-i',
     '--check-install',
     'check_install',
@@ -165,10 +157,10 @@ def sample(ctx, output, pks_output):
     help="If '--check-install' flag is set, validate specified template. "
          "Default value of '*' means that all templates in config file"
          " will be validated.")
-def check(ctx, config, pks_config, check_install, template):
+def check(ctx, config, check_install, template):
     """Validate CSE configuration."""
     try:
-        config_dict = get_validated_config(config, pks_config=pks_config)
+        config_dict = get_validated_config(config)
     except (KeyError, ValueError, Exception):
         # TODO() replace Exception with specific (see validate_amqp_config)
         click.secho(f"Config file '{config}' is invalid", fg='red')
