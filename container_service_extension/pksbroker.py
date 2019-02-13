@@ -20,6 +20,8 @@ from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import exception_handler
 from container_service_extension.utils import OK
 
+import json
+
 
 class PKSBroker(object):
     """PKSBroker makes API calls to PKS server.
@@ -34,11 +36,11 @@ class PKSBroker(object):
         initialize PKS broker.
         """
         # TODO(ovdc_cache) Below fields to be populated from ovdc_cache
-        self.host = 'pkshost.local'
+        self.host = 'api.pks.local'
         self.port = 9021
-        self.username = 'username'
-        self.secret = 'secret'
-        self.proxy = 'proxy'
+        self.username = 'admin'
+        self.secret = 'g7EUKcHE6JSeC_DS_SqGSW8A5c-ObuQe'
+        self.proxy = '10.161.57.62'
         self.pks_host_uri = f'https://{self.host}:{self.port}/v1'
         self.uaac_port = 8443
         self.uaac_uri = f'https://{self.host}:{self.uaac_port}'
@@ -234,3 +236,69 @@ class PKSBroker(object):
 
         result['status_code'] = ACCEPTED
         return result
+
+    def create_compute_profile(self, cp_name, az_name, description, cpi,
+                               datacenter_name, cluster_name, ovdc_rp_name):
+        """
+        Create a PKS compute profile that maps to a given oVdc in vCD
+
+        :param cp_name:
+        :param az_name:
+        :param description:
+        :param cpi:
+        :param datacenter_name:
+        :param cluster_name:
+        :param ovdc_rp_name:
+        :return:
+        """
+        profile_api = ProfileApi(api_client=self.pks_client)
+
+        resource_pool = {
+            'resource_pool' : ovdc_rp_name
+        }
+
+        cloud_properties = {
+            'datacenters' : [
+                {
+                    'name': datacenter_name,
+                    'clusters': [
+                        {
+                            cluster_name: resource_pool
+                        }
+                    ]
+                }
+            ]
+        }
+
+        az_params = {
+            'azs': [
+                {
+                    'name': az_name,
+                    'cpi': cpi,
+                    'cloud_properties': cloud_properties
+                }
+
+            ]
+        }
+
+        cp_params_json_str = json.dumps(az_params)
+        print(cp_params_json_str)
+        cp_request = ComputeProfileRequest(name=cp_name,
+                                           description=description,
+                                           parameters=cp_params_json_str)
+        result = profile_api.add_compute_profile(body=cp_request)
+        return result
+
+    def get_compute_profile(self, name):
+        profile_api = ProfileApi(api_client=self.pks_client)
+        cp = profile_api.get_compute_profile(profile_name=name)
+        return cp
+
+p = PKSBroker(ovdc_cache=None)
+#print(p.get_compute_profile(name='sahiCP'))
+#print(p.list_clusters())
+#print(p.get_cluster_info('sahi-cluster'))
+print(p.create_compute_profile(cp_name='latest_cp',az_name='ovdc_az',
+                               description='test', cpi='068303d86bb7deac007c',
+                               datacenter_name='kubo-dc', cluster_name='kubo-az-1',
+                               ovdc_rp_name='kubos'))
