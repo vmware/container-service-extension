@@ -453,14 +453,14 @@ def validate_vcd_and_vcs_config(vcd_dict, vcs):
             try:
                 vsphere_url = urlparse(vcenter.Url.text)
                 v = VSphere(vsphere_url.hostname, vc['username'],
-                        vc['password'], vsphere_url.port)
+                            vc['password'], vsphere_url.port)
                 v.connect()
                 click.secho(f"Connected to vCenter Server '{vc['name']}' as "
-                        f"'{vc['username']}' ({vsphere_url.hostname}:"
-                        f"{vsphere_url.port})", fg='green')
+                            f"'{vc['username']}' ({vsphere_url.hostname}:"
+                            f"{vsphere_url.port})", fg='green')
             except Exception as e:
-                click.secho(f"Error connecting to vSphere '{vc['name']}': " + str(e.msg),
-                            fg='red', err=True)
+                click.secho(f"Error connecting to vSphere '{vc['name']}': "
+                            f"{str(e.msg)}", fg='red', err=True)
                 raise
     finally:
         if client is not None:
