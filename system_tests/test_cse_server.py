@@ -96,13 +96,18 @@ def delete_installation_entities():
 
 @pytest.fixture
 def blank_cust_scripts():
-    """Fixture to ensure that the customization scripts are empty.
+    """Fixture to ensure that customization scripts are blank
 
-    Usage: add the parameter 'blank_cust_scripts' to the test function.
+    Usage: add the parameter 'blank_cust_scripts' to the test function. Use
+    this fixture if the test outcome does not rely on running the
+    customization scripts. Useful for making installation tests run faster.
+
+    Setup tasks:
+    - Blank out customization scripts
     """
     env.blank_customizaton_scripts()
     yield
-    env.blank_customizaton_scripts()
+    env.prepare_customization_scripts()
 
 
 @pytest.fixture
@@ -340,7 +345,7 @@ def test_0090_install_temp_vapp_already_exists(config, blank_cust_scripts,
         'vApp does not exist when it should (cleanup: false).'
 
 
-def test_0100_install_update(config, blank_cust_scripts, unregister_cse):
+def test_0100_install_update(config, unregister_cse):
     """Tests installation option: '--update'.
 
     Tests that installation:
@@ -355,7 +360,6 @@ def test_0100_install_update(config, blank_cust_scripts, unregister_cse):
     expected: cse registered, ubuntu/photon ovas exist, temp vapps exist,
         templates exist.
     """
-    env.prepare_customization_scripts()
     result = env.CLI_RUNNER.invoke(cli,
                                    ['install',
                                     '--config', env.ACTIVE_CONFIG_FILEPATH,
