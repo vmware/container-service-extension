@@ -237,6 +237,7 @@ class PKSBroker(object):
         result['status_code'] = ACCEPTED
         return result
 
+    @exception_handler
     def create_compute_profile(self, cp_name, az_name, description, cpi,
                                datacenter_name, cluster_name, ovdc_rp_name):
         """Create a PKS compute profile that maps to a given oVdc in vCD.
@@ -298,6 +299,7 @@ class PKSBroker(object):
                      f'{cp_name} for ovdc {ovdc_rp_name}')
         return result
 
+    @exception_handler
     def get_compute_profile(self, name):
         """Get the details of compute profile.
 
@@ -323,6 +325,7 @@ class PKSBroker(object):
         result['body'] = compute_profile.to_dict()
         return result
 
+    @exception_handler
     def list_compute_profiles(self):
         """Get the list of compute profiles.
 
