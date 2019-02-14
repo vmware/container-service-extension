@@ -244,6 +244,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
 
     # tests for cluster operations
     for template_name in template_names:
+        print(f'\nTesting cluster operations for template: {template_name}\n')
         # vcd cse cluster create testcluster -n NETWORK -N 1 -t PHOTON
         cmd = f"cse cluster create {env.TEST_CLUSTER_NAME} -n " \
               f"{config['broker']['network']} -N 1 -t {template_name}"
@@ -254,6 +255,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
         assert env.vapp_exists(env.TEST_CLUSTER_NAME), \
             "Cluster doesn't exist when it should."
         nodes = check_node_list()
+        print(f"Command [{cmd}] successful")
 
         # `cluster config`, `cluster info`, `cluster list`, `node info`
         # only need to run once
@@ -278,6 +280,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
                                        catch_exceptions=False)
         assert result.exit_code == 0
         check_node_list()
+        print(f"Command [{cmd}] successful")
 
         # vcd cse node create testcluster -n NETWORK -t PHOTON
         cmd = f"cse node create {env.TEST_CLUSTER_NAME} -n " \
@@ -287,6 +290,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
                                        catch_exceptions=False)
         assert result.exit_code == 0
         check_node_list()
+        print(f"Command [{cmd}] successful")
 
         # vcd cse cluster delete testcluster
         cmd = f"cse cluster delete {env.TEST_CLUSTER_NAME}"
@@ -296,3 +300,4 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
         assert not env.vapp_exists(env.TEST_CLUSTER_NAME), \
             "Cluster exists when it should not"
         num_nodes = 0
+        print(f"Command [{cmd}] successful")

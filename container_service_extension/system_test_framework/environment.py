@@ -188,14 +188,14 @@ def prepare_customization_scripts():
 
     :raises FileNotFoundError: if script files cannot be found.
     """
-    scripts_filepaths = {
+    static_to_active_scripts = {
         f"{SCRIPTS_DIR}/{STATIC_PHOTON_CUST_SCRIPT}":
             f"{SCRIPTS_DIR}/{ACTIVE_PHOTON_CUST_SCRIPT}",
         f"{SCRIPTS_DIR}/{STATIC_UBUNTU_CUST_SCRIPT}":
             f"{SCRIPTS_DIR}/{ACTIVE_UBUNTU_CUST_SCRIPT}",
     }
 
-    for src, dst in scripts_filepaths.items():
+    for src, dst in static_to_active_scripts.items():
         Path(dst).write_text(Path(src).read_text())
 
 
