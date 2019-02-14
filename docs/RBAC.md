@@ -50,7 +50,7 @@ the above mentioned right to vCloud Director. The right belongs to the hidden
 visibility of it.
 
 Cloud Administrator turns on the role based access control for CSE
-- sets the 'enable_authorization' flag to 'true' under 'service' section of the
+- sets the 'enforce_authorization' flag to 'true' under 'service' section of the
   configuration file
 - restarts the CSE server
 
