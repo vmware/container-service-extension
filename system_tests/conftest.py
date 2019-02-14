@@ -27,8 +27,10 @@ def environment():
     - logout client
     """
     env.init_environment()
+    env.prepare_customization_scripts()
     yield
     env.cleanup_environment()
+    env.prepare_customization_scripts()
 
 
 @pytest.fixture
