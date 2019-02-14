@@ -349,3 +349,25 @@ class PKSBroker(object):
 
         result['body'] = list_of_cp_dicts
         return result
+
+    @exception_handler
+    def delete_compute_profile(self, name):
+        """Delete the compute profile with a given name.
+
+        :param str name: Name of the compute profile
+        :return: None
+        """
+        result = dict()
+        result['body'] = []
+        result['status_code'] = OK
+        profile_api = ProfileApi(api_client=self.pks_client)
+
+        LOGGER.debug(f'Sending request to PKS:{self.host} to delete the '
+                     f'compute profile: {name}')
+
+        profile_api.delete_compute_profile(profile_name=name)
+
+        LOGGER.debug(f'Received response from PKS: {self.host} that it '
+                     f'deleted the compute profile: {name}')
+
+        return result
