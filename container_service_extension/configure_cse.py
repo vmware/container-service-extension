@@ -68,7 +68,8 @@ INSTRUCTIONS_FOR_PKS_CONFIG_FILE = '''# Config file for PKS enabled CSE Server t
 #          admins need to ensure that PKS accounts are correctly mapped to
 #          their respective organization in the 'orgs' section of this
 #          config file.
-#   2. orgs: [OPTIONAL SECTION for admins who chose 1a above]
+#       c. Currently we mandate each PKS service account in the system to have a unique name.
+#   2. orgs: [OPTIONAL SECTION for admins who chose 1a above.]
 #       a. If cloud admin chooses to define PKS service account per
 #          organization per vCenter, include the organization and respective
 #          pks_account names in this section, else should be left blank with empty values.
@@ -136,7 +137,6 @@ SAMPLE_VCS_CONFIG = {
 }
 
 SAMPLE_PKS_CONFIG_FILE_LOCATION = {
-    # Path to pks config file location
     'pks_config': None
 }
 
@@ -327,7 +327,6 @@ def get_validated_config(config_file_name):
     with open(config_file_name) as config_file:
         config = yaml.safe_load(config_file)
     pks_config = config.get('pks_config')
-    # Basic validation of Configs
     click.secho(f"Validating config file '{config_file_name}'", fg='yellow')
     if 'pks_config' in config:
         del config['pks_config']
@@ -340,7 +339,6 @@ def get_validated_config(config_file_name):
                                SAMPLE_SERVICE_CONFIG['service'],
                                location="config file 'service' section")
     click.secho(f"Config file '{config_file_name}' is valid", fg='green')
-    # Validation of optional configs if present
     if isinstance(pks_config, str):
         check_file_permissions(pks_config)
         with open(pks_config) as f:
