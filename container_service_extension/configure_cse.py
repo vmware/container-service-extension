@@ -24,7 +24,6 @@ import yaml
 
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.exceptions import AmqpError
-
 from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
@@ -36,7 +35,6 @@ from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY, CSE_PKS_DEPLOY_RIGHT_CATEGORY, \
     CSE_PKS_DEPLOY_RIGHT_DESCRIPTION, CSE_PKS_DEPLOY_RIGHT_NAME, \
     CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE  # noqa
-
 from container_service_extension.utils import catalog_exists
 from container_service_extension.utils import catalog_item_exists
 from container_service_extension.utils import check_file_permissions
@@ -59,7 +57,7 @@ from container_service_extension.utils import wait_until_tools_ready
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = 'vmxnet3'
 TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
 
-INSTRUCTIONS_FOR_PKS_CONFIG_FILE = '''#Config file for PKS enabled CSE Server to be filled by the administrator.
+INSTRUCTIONS_FOR_PKS_CONFIG_FILE = '''#Config file for PKS enabled CSE Server to be filled by the administrator. # noqa: E501
 #This config file has the following three sections:
 #   1. pks_accounts:
 #       a. Cloud Admins can specify PKS service account for every (PKS managed) vCenter in vCD
@@ -70,6 +68,7 @@ INSTRUCTIONS_FOR_PKS_CONFIG_FILE = '''#Config file for PKS enabled CSE Server to
 #          admins need to ensure that PKS accounts are correctly mapped to
 #          their respective organization in the 'orgs' section of this
 #          config file.
+#       c. Currently we mandate each PKS service account in the system to have a unique name.
 #   2. orgs: [OPTIONAL SECTION for admins who chose 1a above.]
 #       a. If cloud admin chooses to define PKS service account per
 #          organization per vCenter, include the organization and respective
@@ -85,11 +84,11 @@ INSTRUCTIONS_FOR_PKS_CONFIG_FILE = '''#Config file for PKS enabled CSE Server to
 #For more information, please refer to CSE documentation page :
 #               https://vmware.github.io/container-service-extension/INSTALLATION.html\n'''
 
-NOTE_FOR_PKS_KEY_IN_CONFIG_FILE = '''#Filling out this key for regular CSE set up is optional and should be left as is.
-#Only for CSE set up enabled for PKS container provider, this value needs to point to a valid PKS config file name. 
+NOTE_FOR_PKS_KEY_IN_CONFIG_FILE = '''#Filling out this key for regular CSE set up is optional and should be left as is. # noqa: E501
+#Only for CSE set up enabled for PKS container provider, this value needs to point to a valid PKS config file name.
 '''
-PKS_CONFIG_NOTE = '''#[OPTIONAL] PKS CONFIGS
-#These configs are required only for customers with PKS enabled CSE. Regular CSE users with 
+PKS_CONFIG_NOTE = '''#[OPTIONAL] PKS CONFIGS # noqa: E501
+#These configs are required only for customers with PKS enabled CSE. Regular CSE users with
 # no PKS container provider do not need these configs to be filled out in a separate yaml file.
 '''
 
@@ -135,7 +134,6 @@ SAMPLE_VCS_CONFIG = {
 }
 
 SAMPLE_PKS_CONFIG_FILE_LOCATION = {
-    #Path to pks config file location
     'pks_config': None
 }
 
@@ -147,49 +145,49 @@ SAMPLE_PKS_CONFIG = {
         'name': 'Org2',
         'pks_accounts': ['Org2ServiceAccount']
     }],
-    'pks_accounts' : [{
-        'name' : 'Org1ServiceAccount1',
-        'vc' : 'vc1',
-        'host' : 'https://deadend-12345.eng.vmware.com',
-        'port' : '9021',
-        'uaac' : {
-            'port' : '8443',
-            'secret' : 'secret',
-            'username' : 'org1Admin'
+    'pks_accounts': [{
+        'name': 'Org1ServiceAccount1',
+        'vc': 'vc1',
+        'host': 'https://deadend-12345.eng.vmware.com',
+        'port': '9021',
+        'uaac': {
+            'port': '8443',
+            'secret': 'secret',
+            'username': 'org1Admin'
         }
-    },{
-        'name' : 'Org1ServiceAccount2',
-        'vc' : 'vc2',
-        'host' : 'https://deadend-12345.eng.vmware.com',
-        'port' : '9021',
-        'uaac' : {
-            'port' : '8443',
-            'secret' : 'secret',
-            'username' : 'org1Admin'
+    }, {
+        'name': 'Org1ServiceAccount2',
+        'vc': 'vc2',
+        'host': 'https://deadend-12345.eng.vmware.com',
+        'port': '9021',
+        'uaac': {
+            'port': '8443',
+            'secret': 'secret',
+            'username': 'org1Admin'
         }
-    },{
-        'name' : 'Org2ServiceAccount',
-        'vc' : 'vc1',
-        'host' : 'https://deadend-12345.eng.vmware.com',
-        'port' : '9021',
-        'uaac' : {
-            'port' : '8443',
-            'secret' : 'secret',
-            'username' : 'org2Admin'
+    }, {
+        'name': 'Org2ServiceAccount',
+        'vc': 'vc1',
+        'host': 'https://deadend-12345.eng.vmware.com',
+        'port': '9021',
+        'uaac': {
+            'port': '8443',
+            'secret': 'secret',
+            'username': 'org2Admin'
         }
     }],
-    'pvdcs':[{
-        'name' : 'pvdc1',
-        'vc' : 'vc1',
-        'rp_paths': ['datacenter1/cluster1/rp1']
-    },{
-        'name' : 'pvdc2',
+    'pvdcs': [{
+        'name': 'pvdc1',
         'vc': 'vc1',
-        'rp_paths' : ['HA_datacenter/HA_cluster1/gold_rp/sub-rp']
-    },{
-        'name' : 'pvdc3',
-        'vc' : 'vc2',
-        'rp_paths' : ['datacenter/cluster1/rp1/sub-rp1/sub-rp2']
+        'rp_paths': ['datacenter1/cluster1/rp1']
+    }, {
+        'name': 'pvdc2',
+        'vc': 'vc1',
+        'rp_paths': ['HA_datacenter/HA_cluster1/gold_rp/sub-rp']
+    }, {
+        'name': 'pvdc3',
+        'vc': 'vc2',
+        'rp_paths': ['datacenter/cluster1/rp1/sub-rp1/sub-rp2']
     }]
 }
 
@@ -248,8 +246,11 @@ SAMPLE_CONFIG = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
                  **SAMPLE_VCS_CONFIG, **SAMPLE_SERVICE_CONFIG,
                  **SAMPLE_BROKER_CONFIG}
 
+
 def generate_sample_config(output=None, pks_output=None):
-    """Generates sample configs for cse. If config file names are
+    """Return sample configs for cse.
+
+    Generates sample configs for cse. If config file names are
     provided, configs are dumped into respective files.
 
     :param str output: name of the config file to dump the CSE configs.
@@ -273,9 +274,9 @@ def generate_sample_config(output=None, pks_output=None):
                                     default_flow_style=False) + '\n'
     sample_config += NOTE_FOR_PKS_KEY_IN_CONFIG_FILE
     sample_config += yaml.safe_dump(SAMPLE_PKS_CONFIG_FILE_LOCATION,
-                                        default_flow_style=False) + '\n'
-    sample_pks_config = yaml.safe_dump(
-            SAMPLE_PKS_CONFIG, default_flow_style=False) + '\n'
+                                    default_flow_style=False) + '\n'
+    sample_pks_config = yaml.safe_dump(SAMPLE_PKS_CONFIG,
+                                       default_flow_style=False) + '\n'
     if output is not None:
         with open(output, 'w') as f:
             f.write(sample_config)
@@ -291,12 +292,12 @@ def generate_sample_config(output=None, pks_output=None):
             click.secho(f"PKS config file '{pks_output}' is "
                         f"generated.", fg='green')
         return
-    return sample_config.strip() + '\n\n' + PKS_CONFIG_NOTE + \
-           '\n' + sample_pks_config.strip()
+    return sample_config.strip() + '\n\n' + PKS_CONFIG_NOTE + '\n' + \
+           sample_pks_config.strip()
 
 
 def get_validated_config(config_file_name):
-    """Gets the config file as a dictionary and checks for validity.
+    """Return the config file as a dictionary and checks for validity.
 
     Ensures that all properties exist and all values are the expected type.
     Checks that AMQP connection is available, and vCD/VCs are valid.
@@ -318,12 +319,11 @@ def get_validated_config(config_file_name):
     with open(config_file_name) as config_file:
         config = yaml.safe_load(config_file)
     pks_config = config.get('pks_config')
-    #Basic validation of Configs
     click.secho(f"Validating config file '{config_file_name}'", fg='yellow')
     if 'pks_config' in config:
         del config['pks_config']
     check_keys_and_value_types(config, SAMPLE_CONFIG,
-                                   location='config file')
+                               location='config file')
     validate_amqp_config(config['amqp'])
     validate_vcd_and_vcs_config(config['vcd'], config['vcs'])
     validate_broker_config(config['broker'])
@@ -331,7 +331,6 @@ def get_validated_config(config_file_name):
                                SAMPLE_SERVICE_CONFIG['service'],
                                location="config file 'service' section")
     click.secho(f"Config file '{config_file_name}' is valid", fg='green')
-    #Validation of optional configs if present
     if isinstance(pks_config, str):
         check_file_permissions(pks_config)
         with open(pks_config) as f:
