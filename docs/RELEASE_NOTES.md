@@ -36,6 +36,7 @@ Action required (by Admins and Users)
 **Known Issues:**
 
 * CSE installation fails on vCD 9.0 with MissingLinkException. No known fix yet.
+
 ---
 
 ## CSE 1.2.6
