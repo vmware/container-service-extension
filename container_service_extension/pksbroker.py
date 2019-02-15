@@ -88,7 +88,7 @@ class PKSBroker(object):
 
         :rtype: list
         """
-        result = dict()
+        result = {}
         result['body'] = []
         result['status_code'] = OK
         cluster_api = ClusterApi(api_client=self.pks_client)
@@ -135,7 +135,7 @@ class PKSBroker(object):
         :rtype: dict
         """
         # TODO() Invalidate cluster names containing '-' character.
-        result = dict()
+        result = {}
         result['body'] = []
         cluster_api = ClusterApi(api_client=self.pks_client)
         cluster_params = ClusterParameters(
@@ -169,7 +169,7 @@ class PKSBroker(object):
 
         :rtype: dict
         """
-        result = dict()
+        result = {}
         result['body'] = []
         result['status_code'] = OK
         cluster_api = ClusterApi(api_client=self.pks_client)
@@ -198,7 +198,7 @@ class PKSBroker(object):
 
         :rtype: dict
         """
-        result = dict()
+        result = {}
         result['body'] = []
         cluster_api = ClusterApi(api_client=self.pks_client)
 
@@ -224,7 +224,7 @@ class PKSBroker(object):
 
         :rtype: dict
         """
-        result = dict()
+        result = {}
         result['body'] = []
         cluster_api = ClusterApi(api_client=self.pks_client)
 
@@ -259,7 +259,7 @@ class PKSBroker(object):
 
         :rtype: dict
         """
-        result = dict()
+        result = {}
         result['body'] = []
         result['status_code'] = OK
         profile_api = ProfileApi(api_client=self.pks_client)
@@ -315,7 +315,7 @@ class PKSBroker(object):
 
         :rtype: dict
         """
-        result = dict()
+        result = {}
         result['body'] = []
         result['status_code'] = OK
         profile_api = ProfileApi(api_client=self.pks_client)
@@ -340,7 +340,7 @@ class PKSBroker(object):
 
         :rtype: dict
         """
-        result = dict()
+        result = {}
         result['body'] = []
         result['status_code'] = OK
         profile_api = ProfileApi(api_client=self.pks_client)
@@ -366,7 +366,7 @@ class PKSBroker(object):
 
         :rtype: dict
         """
-        result = dict()
+        result = {}
         result['body'] = []
         result['status_code'] = OK
         profile_api = ProfileApi(api_client=self.pks_client)
