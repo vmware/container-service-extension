@@ -130,7 +130,7 @@ class PKSBroker(object):
         :param str network_profile: Name of the network profile
         :param str compute_profile: Name of the compute profile
 
-        :return: Details of the cluster.
+        :return: Details of the cluster
 
         :rtype: dict
         """
@@ -193,7 +193,10 @@ class PKSBroker(object):
         """Delete the cluster with a given name in PKS environment.
 
         :param str name: Name of the cluster
-        :return: None
+
+        :return: result
+
+        :rtype: dict
         """
         result = dict()
         result['body'] = []
@@ -217,7 +220,9 @@ class PKSBroker(object):
         :param str name: Name of the cluster
         :param int num_worker_nodes: New size of the worker nodes
         (should be greater than the current number).
-        :return: None
+        :return: result
+
+        :rtype: dict
         """
         result = dict()
         result['body'] = []
@@ -244,13 +249,15 @@ class PKSBroker(object):
 
         :param str cp_name: Name of the compute profile
         :param str az_name: Name of the PKS availability zone to be defined
-        :param description: Description of the compute profile
-        :param cpi: unique identifier provided by BOSH
-        :param datacenter_name: Name of the datacenter
-        :param cluster_name: Name of the cluster
-        :param ovdc_rp_name: Name of the oVdc resource pool
+        :param str description: Description of the compute profile
+        :param str cpi: Unique identifier provided by BOSH
+        :param str datacenter_name: Name of the datacenter
+        :param str cluster_name: Name of the cluster
+        :param str ovdc_rp_name: Name of the oVdc resource pool
 
-        :return: None
+        :return: result
+
+        :rtype: dict
         """
         result = dict()
         result['body'] = []
@@ -304,7 +311,7 @@ class PKSBroker(object):
         """Get the details of compute profile.
 
         :param str name: Name of the compute profile
-        :return: Details of the compute profile
+        :return: Details of the compute profile as body of the result
 
         :rtype: dict
         """
@@ -329,7 +336,7 @@ class PKSBroker(object):
     def list_compute_profiles(self):
         """Get the list of compute profiles.
 
-        :return: List of compute profile details.
+        :return: List of compute profile details as body of the result
 
         :rtype: dict
         """
@@ -355,7 +362,9 @@ class PKSBroker(object):
         """Delete the compute profile with a given name.
 
         :param str name: Name of the compute profile
-        :return: None
+        :return: result
+
+        :rtype: dict
         """
         result = dict()
         result['body'] = []
