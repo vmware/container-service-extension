@@ -17,6 +17,9 @@ import click
 from lxml import objectify
 from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
+from pyvcloud.vcd.client import QueryResultFormat
+from pyvcloud.vcd.client import ResourceType
+
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
@@ -33,7 +36,6 @@ from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.server_constants import CSE_SERVICE_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
-
 
 cache = LRUCache(maxsize=1024)
 SYSTEM_ORG_NAME = "System"
@@ -550,6 +552,47 @@ def get_ovdc_resource_pool(client, ovdc_name, org_name=None):
     ovdc_id = ovdc.resource.get('id').split(':')[-1]
     resource_pool = f"{ovdc.name} ({ovdc_id})"
     return resource_pool
+
+
+def get_pvdc_id_by_name(name, vc_name_in_vcd):
+    """
+    Retrieves the pvdc identifier based on the pvdc name and vcenter name.
+
+    :param str name: name of the pvdc.
+    :param str vc_name_in_vcd: name of the vcenter in vcd.
+
+    :return: UUID of the pvdc in vcd.
+
+    :rtype: str
+    """
+    client = get_vcd_sys_admin_client()
+    query = client.get_typed_query(ResourceType.PROVIDER_VDC.value,
+                                   query_result_format=QueryResultFormat
+                                   .RECORDS,
+                                   qfilter=f'vcName=={vc_name_in_vcd}',
+                                   equality_filter=('name', name))
+    for pvdc_record in list(query.execute()):
+        href = pvdc_record.get('href')
+        pvdc_id = href.split("/")[-1]
+        return pvdc_id
+    return None
+
+
+def get_datacenter_cluster_rp_path(rp_path):
+    """
+    Utility method that returns the data center name, cluster name and
+    sub resource pool path from the vCenter path of a provider vDC.
+
+    :param list rp_path: vCenter path of the provider vDC.
+
+    :return: a list of data center name, cluster name and
+    sub resource pool path.
+    """
+    fragments = rp_path[0].split("/")
+    datacenter = fragments[0]
+    cluster = fragments[1]
+    sub_rp_path = '/'.join(fragments[2:])
+    return [datacenter, cluster, sub_rp_path]
 
 
 def get_data_file(filename, logger=None):

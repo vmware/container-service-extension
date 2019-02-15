@@ -16,6 +16,7 @@ from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 import requests
 
+from container_service_extension.pks_cache import PksCache
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.consumer import MessageConsumer
@@ -62,6 +63,7 @@ class Service(object, metaclass=Singleton):
         self.consumers = []
         self.threads = []
         self.should_stop = False
+        self.pks_cache = None
 
     def get_service_config(self):
         return self.config
@@ -192,7 +194,10 @@ class Service(object, metaclass=Singleton):
         signal.signal(signal.SIGINT, signal_handler)
         click.secho(message)
         LOGGER.info(message)
-
+        if self.config.get('pks_config'):
+            self.pks_cache = PksCache(self.config.get('pks_config').get('orgs'),
+                                    self.config.get('pks_config').get('pks_accounts'),
+                                    self.config.get('pks_config').get('pvdcs'))
         amqp = self.config['amqp']
         num_consumers = self.config['service']['listeners']
 
