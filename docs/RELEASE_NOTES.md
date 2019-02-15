@@ -5,6 +5,33 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 1.2.7
+
+Release Date: 2019-02-15
+
+Supported vCD versions: 9.1, 9.5
+
+| Template OS        | Docker                 | Kubernetes | Pod Network |
+|--------------------|------------------------|------------|-------------|
+| Photon OS 2.0 GA   | 17.06.0-9 (17.06.0-ce) | 1.10.11    | Weave 2.3.0 |
+| Ubuntu 16.04.4 LTS | 18.06.2-ce             | 1.10.11    | Weave 2.3.0 |
+
+Changes
+
+- Photon vApp template now uses Docker 17.06.0-9 (from default 17.06.0-? version used by PhotonOS)
+- Ubuntu vApp template now uses Docker 18.06.2-ce (from 18.03.0)
+
+New Features
+
+- Included some preliminary interfaces for future PKS integration (setting metadata on org VDCs, as well as generating sample PKS config)
+
+Bug Fixes
+
+- Fix CVE-2019-5736 (runc vulnerability) for Ubuntu and Photon vApp templates
+- Fixed a regression where `cluster config` command threw an error
+
+---
+
 ## CSE 1.2.6
 
 Release Date : 2019-02-04
@@ -17,16 +44,21 @@ Supported vCD versions: 9.1, 9.5
 | Ubuntu 16.04.4 LTS | 18.03.0-ce | 1.10.11    | Weave 2.3.0 |
 
 **New Feature:**
+
 * Role based access control for deployment of kubernetes cluster
 * Improved logging and error messages.
 
 **Bug Fixes:**
+
 * Changed default AMQP exchange to cse-ext. CSE will no longer use or update vCD's global exchange settings.
 * A user can delete a partially deployed cluster which resulted from a failed cluster deployment operation.
 
 **Known Issues:**
+
 * CSE installation fails on vCD 9.0 with MissingLinkException.
-    * No known fix yet.
+* No known fix yet.
+
+---
 
 ## CSE 1.2.5
 
@@ -42,9 +74,11 @@ Supported vCD versions: 9.0, 9.1, 9.5
 | Ubuntu 16.04.4 LTS | 18.03.0-ce | 1.10.11    | Weave 2.3.0 |
 
 **Bug Fixes:**
+
 - Updated Kubernetes packages and docker images to address CVE-2018-1002105 for both Ubuntu and Photon OS templates.
 
 **Systems patching:**
+
 * Action required (by Admins and Users)
 
 * Cloud Admin:
