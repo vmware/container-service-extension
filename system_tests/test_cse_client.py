@@ -91,7 +91,7 @@ def cse_server():
     cmd = f"cse run -c {env.ACTIVE_CONFIG_FILEPATH}"
     p = subprocess.Popen(cmd.split(), stdout=subprocess.DEVNULL,
                          stderr=subprocess.STDOUT)
-    time.sleep(10)  # server takes a little time to set itself up
+    time.sleep(env.WAIT_INTERVAL)  # server takes a little time to set up
 
     yield
 
@@ -184,7 +184,7 @@ def test_0030_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
           f"{config['broker']['network']} -N 1 -c 1000"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0
-    time.sleep(10)  # wait for vApp to be deleted
+    time.sleep(env.WAIT_INTERVAL)  # wait for vApp to be deleted
     assert not env.vapp_exists(env.TEST_CLUSTER_NAME), \
         "Cluster exists when it should not."
 

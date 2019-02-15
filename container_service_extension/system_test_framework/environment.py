@@ -69,6 +69,8 @@ ORG_HREF = None
 VDC_HREF = None
 CATALOG_NAME = None
 
+WAIT_INTERVAL = 10
+
 
 def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     """Set up module variables according to config dict.
