@@ -20,12 +20,19 @@ EOF
 chmod 0644 /etc/systemd/system/iptables-ports.service
 systemctl enable iptables-ports.service
 systemctl start iptables-ports.service
-systemctl enable docker
-systemctl start docker
-while [ `systemctl is-active docker` != 'active' ]; do echo 'waiting for docker'; sleep 5; done
+
+# update repo info (needed for docker update)
+tdnf makecache -q
 
 echo 'installing kuberentes'
 tdnf install -yq wget kubernetes-1.10.11-1.ph2 kubernetes-kubeadm-1.10.11-1.ph2
+
+echo 'install docker'
+tdnf install -yq wget docker-17.06.0-9.ph2
+
+systemctl enable docker
+systemctl start docker
+while [ `systemctl is-active docker` != 'active' ]; do echo 'waiting for docker'; sleep 5; done
 
 echo 'downloading container images'
 docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.10.11
