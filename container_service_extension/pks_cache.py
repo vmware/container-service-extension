@@ -37,22 +37,23 @@ class PksCache(object):
         super().__setattr__("pvdcs", pvdcs)
         pks_info_table = self._construct_pks_accounts()
         pvdc_table = self._construct_pvdc_info()
+        super().__setattr__("pvdc_table", pvdc_table)
+        super().__setattr__("pks_info_table", pks_info_table)
         if orgs is not None and orgs[0]['name'] == 'None':
             pks_service_accounts_per_vc_info_table = \
-                self._construct_pks_service_accounts_per_vc(pks_info_table)
+                self._construct_pks_service_accounts_per_vc()
             super().__setattr__("pks_service_accounts_per_vc_info_table",
                                 pks_service_accounts_per_vc_info_table)
             super().__setattr__(
                 "pks_service_accounts_per_org_per_vc_info_table", {})
         else:
             pks_service_accounts_per_org_per_vc_info_table = self.\
-                _construct_pks_service_accounts_per_org_per_vc(pks_info_table)
+                _construct_pks_service_accounts_per_org_per_vc()
             super().__setattr__(
                 "pks_service_accounts_per_org_per_vc_info_table",
                 pks_service_accounts_per_org_per_vc_info_table)
             super().__setattr__("pks_service_accounts_per_vc_info_table", {})
-        super().__setattr__("pvdc_table", pvdc_table)
-        super().__setattr__("pks_info_table", pks_info_table)
+
 
     def __setattr__(self, key, value):
         """Overridden method to customize the meaning of attribute access.
@@ -126,15 +127,13 @@ class PksCache(object):
 
         return pks
 
-    def _construct_pks_service_accounts_per_vc(self, pks_accounts):
+    def _construct_pks_service_accounts_per_vc(self):
         """Construct a dict to access PKS account information per vc.
 
         This dict provides PKS account information (account,
         name, host, port, uaac and vc name) per vCenter based on the
         associated vCenter name.
 
-        :param dict pks_accounts: dict of pks account name(key) and PKS
-        information(value) in CSE PKS config.
         :return: dict of PKS information where key is the vCenter name and
         value is PksInfo object.
 
@@ -142,19 +141,17 @@ class PksCache(object):
         """
         if self.orgs[0]['name'] == 'None':
             pks_service_accounts_per_vc_info_table = {}
-            for account in pks_accounts.values():
+            for account in self.pks_info_table.values():
                 pks_service_accounts_per_vc_info_table[account.vc] = account
             return pks_service_accounts_per_vc_info_table
 
-    def _construct_pks_service_accounts_per_org_per_vc(self, pks_accounts):
+    def _construct_pks_service_accounts_per_org_per_vc(self):
         """Construct a dict to access PKS account information per org per vc.
 
         This dict provides PKS account information (account name, host,
         port, uaac and vc name) associated with each organization per vCenter
         based on the organization name and associated vCenter name.
 
-        :param dict pks_accounts: dict of pks account name(key) and PKS
-        information(value) in CSE PKS config.
         :return: dict of PKS information where key is a tuple of org name
         and vc name and value is PksInfo object.
 
@@ -164,7 +161,7 @@ class PksCache(object):
         for org in self.orgs:
             org_name = org['name']
             for account_name in org['pks_accounts']:
-                associated_pks_account = pks_accounts[account_name]
+                associated_pks_account = self.pks_info_table[account_name]
                 org_pks_association[(org_name, associated_pks_account.vc)] = \
                     associated_pks_account
             return org_pks_association

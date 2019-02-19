@@ -2,6 +2,8 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import json
+
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pksclient.api.cluster_api import ClusterApi
 from container_service_extension.pksclient.api.profile_api import ProfileApi
@@ -128,7 +130,7 @@ class PKSBroker(object):
         :param str network_profile: Name of the network profile
         :param str compute_profile: Name of the compute profile
 
-        :return: Details of the cluster.
+        :return: Details of the cluster
 
         :rtype: dict
         """
@@ -191,7 +193,10 @@ class PKSBroker(object):
         """Delete the cluster with a given name in PKS environment.
 
         :param str name: Name of the cluster
-        :return: None
+
+        :return: result
+
+        :rtype: dict
         """
         result = {}
         result['body'] = []
@@ -215,7 +220,9 @@ class PKSBroker(object):
         :param str name: Name of the cluster
         :param int num_worker_nodes: New size of the worker nodes
         (should be greater than the current number).
-        :return: None
+        :return: result
+
+        :rtype: dict
         """
         result = {}
         result['body'] = []
@@ -233,4 +240,143 @@ class PKSBroker(object):
                      f'cluster: {name}')
 
         result['status_code'] = ACCEPTED
+        return result
+
+    @exception_handler
+    def create_compute_profile(self, cp_name, az_name, description, cpi,
+                               datacenter_name, cluster_name, ovdc_rp_name):
+        """Create a PKS compute profile that maps to a given oVdc in vCD.
+
+        :param str cp_name: Name of the compute profile
+        :param str az_name: Name of the PKS availability zone to be defined
+        :param str description: Description of the compute profile
+        :param str cpi: Unique identifier provided by BOSH
+        :param str datacenter_name: Name of the datacenter
+        :param str cluster_name: Name of the cluster
+        :param str ovdc_rp_name: Name of the oVdc resource pool
+
+        :return: result
+
+        :rtype: dict
+        """
+        result = {}
+        result['body'] = []
+        result['status_code'] = OK
+        profile_api = ProfileApi(api_client=self.pks_client)
+
+        resource_pool = {
+            'resource_pool': ovdc_rp_name
+        }
+
+        cloud_properties = {
+            'datacenters': [
+                {
+                    'name': datacenter_name,
+                    'clusters': [
+                        {
+                            cluster_name: resource_pool
+                        }
+                    ]
+                }
+            ]
+        }
+
+        az_params = {
+            'azs': [
+                {
+                    'name': az_name,
+                    'cpi': cpi,
+                    'cloud_properties': cloud_properties
+                }
+
+            ]
+        }
+
+        cp_params_json_str = json.dumps(az_params)
+        cp_request = ComputeProfileRequest(name=cp_name,
+                                           description=description,
+                                           parameters=cp_params_json_str)
+
+        LOGGER.debug(f'Sending request to PKS:{self.host} to create the '
+                     f'compute profile: {cp_name} for ovdc {ovdc_rp_name}')
+
+        profile_api.add_compute_profile(body=cp_request)
+
+        LOGGER.debug(f'PKS: {self.host} created the compute profile: '
+                     f'{cp_name} for ovdc {ovdc_rp_name}')
+        return result
+
+    @exception_handler
+    def get_compute_profile(self, name):
+        """Get the details of compute profile.
+
+        :param str name: Name of the compute profile
+        :return: Details of the compute profile as body of the result
+
+        :rtype: dict
+        """
+        result = {}
+        result['body'] = []
+        result['status_code'] = OK
+        profile_api = ProfileApi(api_client=self.pks_client)
+
+        LOGGER.debug(f'Sending request to PKS:{self.host} to get the '
+                     f'compute profile: {name} ')
+
+        compute_profile = profile_api.get_compute_profile(profile_name=name)
+
+        LOGGER.debug(f'Received response from PKS: {self.host} on '
+                     f'compute-profile: {name} with details: '
+                     f'{compute_profile.to_dict()}')
+
+        result['body'] = compute_profile.to_dict()
+        return result
+
+    @exception_handler
+    def list_compute_profiles(self):
+        """Get the list of compute profiles.
+
+        :return: List of compute profile details as body of the result
+
+        :rtype: dict
+        """
+        result = {}
+        result['body'] = []
+        result['status_code'] = OK
+        profile_api = ProfileApi(api_client=self.pks_client)
+
+        LOGGER.debug(f'Sending request to PKS:{self.host} to get the '
+                     f'list of compute profiles')
+
+        cp_list = profile_api.list_compute_profiles()
+        list_of_cp_dicts = [cp.to_dict() for cp in cp_list]
+
+        LOGGER.debug(f'Received response from PKS: {self.host} on '
+                     f'list of compute profiles: {list_of_cp_dicts}')
+
+        result['body'] = list_of_cp_dicts
+        return result
+
+    @exception_handler
+    def delete_compute_profile(self, name):
+        """Delete the compute profile with a given name.
+
+        :param str name: Name of the compute profile
+        :return: result
+
+        :rtype: dict
+        """
+        result = {}
+        result['body'] = []
+        result['status_code'] = OK
+        profile_api = ProfileApi(api_client=self.pks_client)
+
+        LOGGER.debug(f'Sending request to PKS:{self.host} to delete the '
+                     f'compute profile: {name}')
+
+        profile_api.delete_compute_profile(profile_name=name)
+
+        LOGGER.debug(f'Received response from PKS: {self.host} that it '
+                     f'deleted the compute profile: {name}')
+
         return result
