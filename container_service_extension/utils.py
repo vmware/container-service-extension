@@ -104,6 +104,11 @@ def get_vcd_sys_admin_client():
     return Service().get_sys_admin_client()
 
 
+def get_pks_cache():
+    from container_service_extension.service import Service
+    return Service().get_pks_cache()
+
+
 def error_to_json(error):
     """Convert the given python exception object to a dictionary.
 
@@ -767,7 +772,7 @@ def is_cse_registered(client):
 
 
 def exception_handler(func):
-    """Decorator to trap exceptions and process them.
+    """Decorate to trap exceptions and process them.
 
     If there are any exceptions, a dictionary containing the status code, body
         and stacktrace will be returned.
