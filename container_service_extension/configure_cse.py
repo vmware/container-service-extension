@@ -352,16 +352,16 @@ def get_validated_config(config_file_name):
         pks_proxies = dict()
         if 'pks_accounts' in pks:
             for i, account in enumerate(pks['pks_accounts']):
-                if 'pks_proxy_ip' in account:
-                    pks_proxies[account['name']] = account['pks_proxy_ip']
-                    del pks['pks_accounts'][i]['pks_proxy_ip']
+                if 'proxy' in account:
+                    pks_proxies[account['name']] = account['proxy']
+                    del pks['pks_accounts'][i]['proxy']
         click.secho(f"Validating PKS config file '{pks_config}'", fg='yellow')
         check_keys_and_value_types(pks, SAMPLE_PKS_CONFIG,
                                    location='PKS config file')
         click.secho(f"PKS Config file '{pks_config}' is valid", fg='green')
         for i, account_name in enumerate(pks_proxies):
             if pks['pks_accounts'][i]['name'] == account_name:
-                pks['pks_accounts'][i]['pks_proxy_ip'] = \
+                pks['pks_accounts'][i]['proxy'] = \
                     pks_proxies[account_name]
         config['pks_config'] = pks
     else:

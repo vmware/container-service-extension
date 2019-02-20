@@ -115,14 +115,14 @@ class PksCache(object):
             uaac = Uaac(account['uaac']['port'],
                         account['uaac']['secret'],
                         account['uaac']['username'])
-            pks_proxy_ip = None \
-                if 'pks_proxy_ip' not in account else account['pks_proxy_ip']
+            pks_proxy = None \
+                if 'proxy' not in account else account['proxy']
             pks_info = PksInfo(account['name'],
                                account['host'],
                                account['port'],
                                uaac,
                                account['vc'],
-                               pks_proxy_ip)
+                               pks_proxy)
             pks_account_name = account['name']
             pks[pks_account_name] = pks_info
 
@@ -193,18 +193,18 @@ class PksCache(object):
 
 
 class PksInfo(namedtuple("PksInfo", 'name, host, port, uaac, vc, '
-                                    'pks_proxy_ip')):
+                                    'proxy')):
     """Immutable class representing PKS account information."""
 
     def __str__(self):
         return "class:{c}, name: {name}, host: {host}, port : {port}," \
-               "uaac : {uaac}, vc : {vc}, pks_proxy_ip : {pks_proxy_ip}"\
+               "uaac : {uaac}, vc : {vc}, proxy : {proxy}"\
             .format(c=PksInfo.__name__,
                     name=self.name,
                     host=self.host,
                     port=self.port,
                     uaac=self.uaac,
-                    vc=self.vc, pks_proxy_ip=self.pks_proxy_ip)
+                    vc=self.vc, proxy=self.proxy)
 
 
 class PvdcResourcePoolPathInfo(namedtuple("PvdcResourcePoolPathInfo",
