@@ -68,6 +68,9 @@ class Service(object, metaclass=Singleton):
     def get_service_config(self):
         return self.config
 
+    def get_pks_cache(self):
+        return self.pks_cache
+
     def get_sys_admin_client(self):
         if self.config is not None:
             if not self.config['vcd']['verify']:

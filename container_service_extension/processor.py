@@ -6,6 +6,8 @@ import base64
 import json
 import sys
 import traceback
+from urllib import parse
+
 
 from pkg_resources import resource_string
 import yaml
@@ -91,7 +93,10 @@ class ServiceProcessor(object):
 
         if body['method'] == 'GET':
             if ovdc_info_request:
-                on_the_fly_request_body = {'ovdc_id': ovdc_id}
+                query_param_dict = dict(parse.parse_qsl(body['queryString']))
+                on_the_fly_request_body = \
+                    {'ovdc_id': ovdc_id,
+                     'org_name': query_param_dict['org_name']}
                 broker = get_new_broker(body['headers'],
                                         on_the_fly_request_body)
                 reply = broker.ovdc_info_for_kubernetes()
