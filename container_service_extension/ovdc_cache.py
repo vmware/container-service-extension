@@ -14,46 +14,9 @@ from container_service_extension.utils import get_pks_cache
 from container_service_extension.utils import get_vdc
 
 
-class PvdcCacheStub(object):
-
-    def __init__(self):
-        """Construct, initialize pvdc and pks cache.
-
-        Always returns the scanned data. This is a thrown away class
-        after actual PvdcCache is implemented
-
-        """
-        self.pvdc_cache = dict()
-        self.pks_cache = dict()
-        self._initialize_pvdc_cache()
-        self._initialize_pks_cache()
-
-    def get_pvdc_info(self, pvdc_id):
-        return self.pvdc_cache['pvdc_id']
-
-    def get_pks_info(self, org_name, vc_name):
-        return self.pks_cache['org1']['vc1']
-
-    def _initialize_pvdc_cache(self):
-        self.pvdc_cache['pvdc_id'] = dict()
-        self.pvdc_cache['pvdc_id']['name'] = 'pvdc1'
-        self.pvdc_cache['pvdc_id']['vc'] = 'vc1'
-        self.pvdc_cache['pvdc_id']['rp_path'] = ['dc1/c1/rp1', 'dc1/c1/rp2']
-
-    def _initialize_pks_cache(self):
-        self.pks1 = dict()
-        self.pks1['host'] = '10.161.148.112'
-        self.pks1['port'] = '9021'
-        self.pks1['username'] = 'cokeSvcAccount'
-        self.pks1['secret'] = 'GhujkdfRl2dEvj1_hH9wEQxDUkxO1Lcjm3'
-        self.pks1['uaac_port'] = '8443'
-        self.pks_cache['org1'] = dict()
-        self.pks_cache['org1']['vc1'] = self.pks1
-
-
 class OvdcCache(object):
 
-    __ovdc_metadata_keys = ['name', 'datacenter', 'cluster', 'vc', 'rp_path',
+    __ovdc_metadata_keys = ['name', 'datacenter', 'cluster', 'vc',
                             'host', 'port',
                             'uaac_port', 'pks_plans',
                             'pks_compute_profile_name', 'container_provider']
@@ -65,8 +28,7 @@ class OvdcCache(object):
             to make REST calls to vCD.
         """
         self.client = client
-        self.pvdc_cache = PvdcCacheStub()
-        self.pvdc_cache_actual = get_pks_cache()
+        self.pvdc_cache = get_pks_cache()
 
     def get_ovdc_container_provider_metadata(self, ovdc_name,
                                              ovdc_id=None, org_name=None):
@@ -106,11 +68,9 @@ class OvdcCache(object):
             # copy the credentials from pvdc cache
             pvdc_element = ovdc.resource.ProviderVdcReference
             pvdc_id = pvdc_element.get('id')
-            pvdc_info = self.pvdc_cache_actual.get_pvdc_info(pvdc_id)
-            pks_info = self.pvdc_cache_actual.get_pks_account_details(
+            pvdc_info = self.pvdc_cache.get_pvdc_info(pvdc_id)
+            pks_info = self.pvdc_cache.get_pks_account_details(
                 org_name, pvdc_info.vc)
-            LOGGER.debug(f" pvdc info from  pkscache->{pvdc_info}")
-            LOGGER.debug(f" pks info from pkscache->{pks_info}")
             metadata['pks_plans'] = metadata['pks_plans'].split(',')
             metadata['username'] = pks_info.uaac.username
             metadata['secret'] = pks_info.uaac.secret
@@ -155,17 +115,15 @@ class OvdcCache(object):
             org_name = org.resource.get('name')
             pvdc_element = ovdc.resource.ProviderVdcReference
             pvdc_id = pvdc_element.get('id')
-            pvdc_info = self.pvdc_cache_actual.get_pvdc_info(pvdc_id)
-            pks_info = self.pvdc_cache_actual.get_pks_account_details(
+            pvdc_info = self.pvdc_cache.get_pvdc_info(pvdc_id)
+            pks_info = self.pvdc_cache.get_pks_account_details(
                 org_name, pvdc_info.vc)
-            LOGGER.debug(f'From Actual Cache{pvdc_info}')
 
             # construct ovdc metadata
             metadata['name'] = pvdc_info.name
             metadata['vc'] = pvdc_info.vc
             metadata['datacenter'] = pvdc_info.datacenter
             metadata['cluster'] = pvdc_info.cluster
-            metadata['rp_path'] = f"{pvdc_info.rp_path}/{resource_pool}"
             metadata['host'] = pks_info.host
             metadata['port'] = pks_info.port
             metadata['uaac_port'] = pks_info.uaac.port
