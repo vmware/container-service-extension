@@ -33,7 +33,7 @@ def get_new_broker(headers, request_body):
         LOGGER.debug(f"ovdc metadata for {ovdc_name}-{org_name}=>{metadata}")
         if metadata.get('container_provider') == 'pks':
             return PKSBroker(headers, request_body,
-                             ovdc_cache=ovdc_cache)
+                             ovdc_cache=metadata)
         else:
             return DefaultBroker(headers, request_body)
     else:

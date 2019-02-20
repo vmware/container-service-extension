@@ -99,7 +99,7 @@ class Ovdc(object):
         ovdc = get_vdc(self.client, ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.resource.get('id'))
-        uri = f'{self._uri}/ovdc/{ovdc_id}/info'
+        uri = f'{self._uri}/ovdc/{ovdc_id}/info?org_name={org_name}'
 
         response = self.client._do_request_prim(
             method,
