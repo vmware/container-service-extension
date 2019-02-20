@@ -36,15 +36,13 @@ class PKSBroker(object):
         initialize PKS broker.
         """
         # TODO(ovdc_cache) Below fields to be populated from ovdc_cache
-        self.host = 'pkshost.local'
-        self.port = 9021
-        self.username = 'username'
-        self.secret = 'secret'
-        self.proxy = 'proxy'
-        self.pks_host_uri = f'https://{self.host}:{self.port}/v1'
-        self.uaac_port = 8443
-        self.uaac_uri = f'https://{self.host}:{self.uaac_port}'
-        self.proxy_uri = f'http://{self.proxy}:80'
+        self.username = ovdc_cache['username']
+        self.secret = ovdc_cache['secret']
+        self.pks_host_uri = \
+            f"https://{ovdc_cache['host']}:{ovdc_cache['port']}/v1"
+        self.uaac_uri = \
+            f"https://{ovdc_cache['host']}:{ovdc_cache['uaac_port']}"
+        self.proxy_uri = f"http://{ovdc_cache['proxy']}:80"
         self.verify = False  # TODO(pks.yaml) pks_config['pks']['verify']
         self.pks_client = self._get_pks_client()
 
@@ -67,6 +65,7 @@ class PKSBroker(object):
         pks_config.access_token = token
         pks_config.username = self.username
         pks_config.verify_ssl = self.verify
+
         return pks_config
 
     def _get_pks_client(self):
