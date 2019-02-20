@@ -10,7 +10,6 @@ import uuid
 
 import click
 import pkg_resources
-from pyvcloud.vcd.client import _WellKnownEndpoint
 from pyvcloud.vcd.client import TaskStatus
 from pyvcloud.vcd.client import VCLOUD_STATUS_MAP
 from pyvcloud.vcd.org import Org
@@ -46,14 +45,12 @@ from container_service_extension.ovdc_cache import OvdcCache
 from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_NAME
 from container_service_extension.utils import ACCEPTED
-from container_service_extension.utils import connect_vcd_user_via_token
 from container_service_extension.utils import ERROR_DESCRIPTION
 from container_service_extension.utils import ERROR_MESSAGE
 from container_service_extension.utils import ERROR_STACKTRACE
 from container_service_extension.utils import error_to_json
 from container_service_extension.utils import exception_handler
 from container_service_extension.utils import get_server_runtime_config
-from container_service_extension.utils import get_vcd_sys_admin_client
 from container_service_extension.utils import OK
 
 OP_CREATE_CLUSTER = 'create_cluster'
@@ -128,6 +125,7 @@ def task_callback(task):
 
 class DefaultBroker(AbstractBroker, threading.Thread):
     def __init__(self, headers, request_body):
+        super().__init__(headers, request_body)
         threading.Thread.__init__(self)
         self.headers = headers
         self.body = request_body
@@ -144,35 +142,6 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         self.cluster_name = None
         self.cluster_id = None
         self.daemon = False
-
-    def get_tenant_client_session(self):
-        if self.client_session is None:
-            self._connect_tenant()
-        return self.client_session
-
-    def _connect_tenant(self):
-        server_config = get_server_runtime_config()
-        host = server_config['vcd']['host']
-        verify = server_config['vcd']['verify']
-        self.tenant_client, self.client_session = connect_vcd_user_via_token(
-            vcd_uri=host,
-            headers=self.headers,
-            verify_ssl_certs=verify)
-        self.tenant_info = {
-            'user_name': self.client_session.get('user'),
-            'user_id': self.client_session.get('userId'),
-            'org_name': self.client_session.get('org'),
-            'org_href': self.tenant_client._get_wk_endpoint(
-                _WellKnownEndpoint.LOGGED_IN_ORG)
-        }
-
-    def _connect_sys_admin(self):
-        self.sys_admin_client = get_vcd_sys_admin_client()
-
-    def _disconnect_sys_admin(self):
-        if self.sys_admin_client is not None:
-            self.sys_admin_client.logout()
-            self.sys_admin_client = None
 
     def _to_message(self, e):
         if hasattr(e, 'message'):
@@ -892,3 +861,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         vdc = VDC(self.tenant_client, href=self.cluster['vdc_href'])
         vdc.delete_vapp(self.cluster['name'], force=True)
         LOGGER.info(f"Successfully deleted cluster: {self.cluster_name}")
+
+    # TODO() as part of vcd cse cluster resize implementation
+    def resize_cluster(self):
+        raise NotImplementedError('resize cluster')

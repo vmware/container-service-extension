@@ -51,7 +51,7 @@ class ApiClient(object):
     PRIMITIVE_TYPES = (float, bool, bytes, six.text_type) + six.integer_types
     NATIVE_TYPES_MAPPING = {
         'int': int,
-        'long': int if six.PY3 else long,  # noqa: F821
+        'long': int,  # noqa: F821
         'float': float,
         'str': str,
         'bool': bool,
@@ -274,7 +274,7 @@ class ApiClient(object):
     def call_api(self, resource_path, method,
                  path_params=None, query_params=None, header_params=None,
                  body=None, post_params=None, files=None,
-                 response_type=None, auth_settings=None, async=None,
+                 response_type=None, auth_settings=None, is_async=None,
                  _return_http_data_only=None, collection_formats=None,
                  _preload_content=True, _request_timeout=None):
         """Makes the HTTP request (synchronous) and returns deserialized data.
@@ -313,7 +313,7 @@ class ApiClient(object):
             If parameter async is False or missing,
             then the method will return the response directly.
         """
-        if not async:
+        if not is_async:
             return self.__call_api(resource_path, method,
                                    path_params, query_params, header_params,
                                    body, post_params, files,
