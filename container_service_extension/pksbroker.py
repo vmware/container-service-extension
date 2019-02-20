@@ -35,7 +35,6 @@ class PKSBroker(object):
         :param ovdc_cache: ovdc cache (subject to change) is used to
         initialize PKS broker.
         """
-        # TODO(ovdc_cache) Below fields to be populated from ovdc_cache
         self.username = ovdc_cache['username']
         self.secret = ovdc_cache['secret']
         self.pks_host_uri = \
