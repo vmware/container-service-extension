@@ -279,13 +279,14 @@ def test_0080_install_no_capture(config, blank_cust_scripts, unregister_cse):
                                    ['install',
                                     '--config', env.ACTIVE_CONFIG_FILEPATH,
                                     '--ssh-key', env.SSH_KEY_FILEPATH,
-                                    '--template', env.PHOTON_TEMPLATE_NAME,
+                                    '--template', template_config['name'],
                                     '--no-capture'],
                                    catch_exceptions=False)
     assert result.exit_code == 0
 
     # check that cse was registered correctly
-    env.check_cse_registration(config['routing_key'], config['exchange'])
+    env.check_cse_registration(config['amqp']['routing_key'],
+                               config['amqp']['exchange'])
 
     # check that source ova file exists in catalog
     assert env.catalog_item_exists(template_config['source_ova_name']), \
@@ -324,12 +325,13 @@ def test_0090_install_temp_vapp_already_exists(config, blank_cust_scripts,
     result = env.CLI_RUNNER.invoke(cli,
                                    ['install',
                                     '--config', env.ACTIVE_CONFIG_FILEPATH,
-                                    '--template', env.PHOTON_TEMPLATE_NAME],
+                                    '--template', template_config['name']],
                                    catch_exceptions=False)
     assert result.exit_code == 0
 
     # check that cse was registered correctly
-    env.check_cse_registration(config['routing_key'], config['exchange'])
+    env.check_cse_registration(config['amqp']['routing_key'],
+                               config['amqp']['exchange'])
 
     # check that vapp template exists in catalog
     assert env.catalog_item_exists(template_config['catalog_item']), \
@@ -366,7 +368,8 @@ def test_0100_install_update(config, unregister_cse):
     vdc = VDC(env.CLIENT, href=env.VDC_HREF)
 
     # check that cse was registered correctly
-    env.check_cse_registration(config['routing_key'], config['exchange'])
+    env.check_cse_registration(config['amqp']['routing_key'],
+                               config['amqp']['exchange'])
 
     # ssh into vms to check for installed software
     ssh_client = paramiko.SSHClient()
@@ -429,7 +432,8 @@ def test_0110_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
     assert result.exit_code == 0
 
     # check that cse was registered correctly
-    env.check_cse_registration(config['routing_key'], config['exchange'])
+    env.check_cse_registration(config['amqp']['routing_key'],
+                               config['amqp']['exchange'])
 
     for template_config in config['broker']['templates']:
         # check that vapp templates exists
