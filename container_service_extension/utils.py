@@ -17,10 +17,9 @@ import click
 from lxml import objectify
 from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
+from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.client import ResourceType
-
-from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
@@ -103,6 +102,11 @@ def get_server_runtime_config():
 def get_vcd_sys_admin_client():
     from container_service_extension.service import Service
     return Service().get_sys_admin_client()
+
+
+def get_pks_cache():
+    from container_service_extension.service import Service
+    return Service().get_pks_cache()
 
 
 def error_to_json(error):
@@ -555,8 +559,7 @@ def get_ovdc_resource_pool(client, ovdc_name, org_name=None):
 
 
 def get_pvdc_id_by_name(name, vc_name_in_vcd):
-    """
-    Retrieves the pvdc identifier based on the pvdc name and vcenter name.
+    """Retrieve the pvdc identifier based on the pvdc name and vcenter name.
 
     :param str name: name of the pvdc.
     :param str vc_name_in_vcd: name of the vcenter in vcd.
@@ -579,8 +582,9 @@ def get_pvdc_id_by_name(name, vc_name_in_vcd):
 
 
 def get_datacenter_cluster_rp_path(rp_path):
-    """
-    Utility method that returns the data center name, cluster name and
+    """Return the following info.
+
+    data center name, cluster name and
     sub resource pool path from the vCenter path of a provider vDC.
 
     :param list rp_path: vCenter path of the provider vDC.
@@ -786,7 +790,7 @@ def is_cse_registered(client):
 
 
 def exception_handler(func):
-    """Decorator to trap exceptions and process them.
+    """Decorate to trap exceptions and process them.
 
     If there are any exceptions, a dictionary containing the status code, body
         and stacktrace will be returned.
