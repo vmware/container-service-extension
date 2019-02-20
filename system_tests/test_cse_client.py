@@ -56,6 +56,7 @@ from vcd_cli.vcd import vcd
 from container_service_extension.cse import cli
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
+import container_service_extension.utils as utils
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -96,7 +97,10 @@ def cse_server():
     yield
 
     # terminate cse server subprocess
-    p.terminate()
+    try:
+        p.terminate()
+    except OSError:
+        pass
 
 
 @pytest.fixture
@@ -107,12 +111,40 @@ def vcd_org_admin():
 
     vCD instance must have an org admin user in the specified org with
     username and password identical to those described in config['vcd'].
+
+    Do not use this fixture with 'vcd_org_admin' fixture, as a user cannot
+    be logged in as both sys admin and org admin.
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     result = env.CLI_RUNNER.invoke(vcd,
                                    ['login',
                                     config['vcd']['host'],
                                     config['broker']['org'],
+                                    config['vcd']['username'],
+                                    '-iwp', config['vcd']['password']],
+                                   catch_exceptions=False)
+    assert result.exit_code == 0
+
+    yield
+
+    result = env.CLI_RUNNER.invoke(vcd, ['logout'])
+    assert result.exit_code == 0
+
+
+@pytest.fixture
+def vcd_sys_admin():
+    """Fixture to ensure that we are logged in to vcd-cli as sys admin.
+
+    Usage: add the parameter 'vcd_sys_admin' to the test function.
+
+    Do not use this fixture with 'vcd_org_admin' fixture, as a user cannot
+    be logged in as both sys admin and org admin.
+    """
+    config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
+    result = env.CLI_RUNNER.invoke(vcd,
+                                   ['login',
+                                    config['vcd']['host'],
+                                    utils.SYSTEM_ORG_NAME,
                                     config['vcd']['username'],
                                     '-iwp', config['vcd']['password']],
                                    catch_exceptions=False)
@@ -154,21 +186,6 @@ def test_0020_vcd_cse_system_info(vcd_org_admin):
     result = env.CLI_RUNNER.invoke(vcd, ['cse', 'system', 'info'],
                                    catch_exceptions=False)
     assert result.exit_code == 0
-
-
-def test_x_vcd_cse_system_enable():
-    # TODO()
-    pass
-
-
-def test_x_vcd_cse_system_disable():
-    # TODO()
-    pass
-
-
-def test_x_vcd_cse_system_stop():
-    # TODO()
-    pass
 
 
 def test_0030_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
@@ -301,3 +318,46 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
             "Cluster exists when it should not"
         num_nodes = 0
         print(f"Command [{cmd}] successful")
+
+
+def test_0050_vcd_cse_system_enable_disable(config, vcd_sys_admin,
+                                            delete_test_cluster):
+    """Test `vcd cse system disable` and `vcd cse system enable`.
+
+    Test that on disabling CSE, cluster deployments are no longer allowed, and
+    on enabling CSE, cluster deployments are allowed again.
+
+    These 2 commands are combined into 1 test to avoid modifying the state of
+    CSE server during testing. (To avoid cases such as running the system
+    disable test, and then running the cluster operations test, which would
+    fail due to CSE server being disabled).
+    """
+    cmd = 'cse system disable'
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+    cmd = f"cse cluster create {env.TEST_CLUSTER_NAME} -n " \
+          f"{config['broker']['network']} -N 1"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    assert not env.vapp_exists(env.TEST_CLUSTER_NAME), \
+        "Cluster exists when it should not."
+
+    cmd = 'cse system enable'
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+    cmd = f"cse cluster create {env.TEST_CLUSTER_NAME} -n " \
+          f"{config['broker']['network']} -N 1 -c 1000 --disable-rollback"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    assert env.vapp_exists(env.TEST_CLUSTER_NAME), \
+        "Cluster doesn't exist when it should."
+
+
+def test_vcd_cse_system_stop(vcd_sys_admin):
+    """Test `vcd cse system stop -y`."""
+    cmd = 'cse system stop'
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), input='y',
+                                   catch_exceptions=False)
+    assert result.exit_code == 0
