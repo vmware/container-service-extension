@@ -515,6 +515,31 @@ this command to work.
 ```sh
 vcd system extension create cse cse cse vcdext '/api/cse, /api/cse/.*, /api/cse/.*/.*'
 ```
+
+### Sharing CSE catalog with non organization administrator users
+
+CSE installation creates a catalog to store all the VM templates that are later 
+used to deploy Kubernetes clusters. This catalog is by default shared with all 
+organization administrators. However if users who are not organization 
+administrator want to access this catalog (cluster creation requires access to 
+this catalog), the catalog needs to be explicitly shared with such users by 
+System administrators. The following commands can be run by a System 
+administrator to do so,
+
+```sh
+# login as system administrator
+vcd login vcd.serviceprovider.com system administrator --password passw0rd -w -i
+
+# switch over to the organization holding the catalog viz. cse-org
+vcd org use cse-org
+
+# share the catalog viz. cse-cat with the non org admin users in the org holding the catalog
+vcd catalog acl add cse-cat 'org:cse-org:ReadOnly'
+
+# share the catalog cse-cat to a second organization viz. test-org
+vcd catalog acl add cse-cat 'org:test-org:ReadOnly'
+```
+
 ---
 <a name="serveroperation"></a>
 ## Server Operation
