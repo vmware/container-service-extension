@@ -617,8 +617,7 @@ def check_cse_installation(config, check_template='*'):
 
 
 def install_cse(ctx, config_file_name='config.yaml', template_name='*',
-                update=False, no_capture=False, ssh_key=None,
-                ext_install='prompt'):
+                update=False, no_capture=False, ssh_key=None):
     """Handle logistics for CSE installation.
 
     Handles decision making for configuring AMQP exchange/settings,
@@ -633,9 +632,6 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
     :param bool no_capture: if True, temporary vApp will not be captured or
         destroyed, so the user can ssh into and debug the VM.
     :param str ssh_key: public ssh key to place into template vApp(s).
-    :param str ext_install: 'prompt' asks the user if CSE should be registered
-        to vCD. 'skip' does not register CSE to vCD. 'config' registers CSE
-        to vCD without asking the user.
 
     :raises AmqpError: if AMQP exchange could not be created.
     """
@@ -669,23 +665,19 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
                              amqp['vhost'], amqp['ssl'], amqp['username'],
                              amqp['password'])
 
-        # register cse as extension to vCD
-        if should_register_cse(client, routing_key=amqp['routing_key'],
-                               exchange=amqp['exchange'],
-                               ext_install=ext_install):
-            register_cse(client, amqp['routing_key'], amqp['exchange'])
+        # register or update cse on vCD
+        register_cse(client, amqp['routing_key'], amqp['exchange'])
 
         # register rights to vCD
         # TODO() should also remove rights when unregistering CSE
-        if is_cse_registered(client):
-            register_right(client, right_name=CSE_NATIVE_DEPLOY_RIGHT_NAME,
-                           description=CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,
-                           category=CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,
-                           bundle_key=CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY)
-            register_right(client, right_name=CSE_PKS_DEPLOY_RIGHT_NAME,
-                           description=CSE_PKS_DEPLOY_RIGHT_DESCRIPTION,
-                           category=CSE_PKS_DEPLOY_RIGHT_CATEGORY,
-                           bundle_key=CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY)
+        register_right(client, right_name=CSE_NATIVE_DEPLOY_RIGHT_NAME,
+                       description=CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,
+                       category=CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,
+                       bundle_key=CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY)
+        register_right(client, right_name=CSE_PKS_DEPLOY_RIGHT_NAME,
+                       description=CSE_PKS_DEPLOY_RIGHT_DESCRIPTION,
+                       category=CSE_PKS_DEPLOY_RIGHT_CATEGORY,
+                       bundle_key=CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY)
 
         # set up cse catalog
         org = get_org(client, org_name=config['broker']['org'])
@@ -789,7 +781,6 @@ def create_template(ctx, client, config, template_config, update=False,
     except EntityNotFoundException:
         temp_vapp_exists = False
 
-    # flag is used to hide previous try/except error if an error occurs below
     if not temp_vapp_exists:
         if catalog_item_exists(org, catalog_name, ova_name):
             msg = f"Found ova file '{ova_name}' in catalog '{catalog_name}'"
@@ -1094,79 +1085,6 @@ def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
     msg = f"AMQP exchange '{exchange_name}' is ready"
     click.secho(msg, fg='green')
     LOGGER.info(msg)
-
-
-def should_register_cse(client, routing_key, exchange, ext_install='prompt'):
-    """Decides if CSE installation should register CSE to vCD.
-
-    Returns False if @ext_install='skip' or if user declines
-    registration/update. Will print relevant information about CSE on vCD
-    if it is already registered.
-
-    :param pyvcloud.vcd.client.Client client:
-    :param str routing_key: routing_key to use for CSE
-    :param str exchange: exchange to use for CSE
-    :param str ext_install: 'skip' skips registration,
-        'config' allows registration without prompting user,
-        'prompt' asks user before registration.
-
-    :return: boolean that signals whether we should register CSE to vCD.
-
-    :rtype: bool
-    """
-    ext_config = {
-        'routingKey': routing_key,
-        'exchange': exchange
-    }
-
-    ext = APIExtension(client)
-    cse_info = None
-    try:
-        cse_info = ext.get_extension_info(CSE_SERVICE_NAME,
-                                          namespace=CSE_SERVICE_NAMESPACE)
-    except MissingRecordException:
-        pass
-
-    if cse_info is None:
-        msg = 'Register CSE to vCD?'
-        if ext_install == 'skip' \
-                or (ext_install == 'prompt' and not click.confirm(msg)):
-            msg = 'CSE is not registered to vCD. Skipping API extension ' \
-                  'registration'
-            click.secho(msg, fg='yellow')
-            LOGGER.warning(msg)
-            return False
-        return True
-
-    # cse is already registered to vCD, but settings might be off
-    diff_settings = [p for p, v in ext_config.items() if cse_info[p] != v]
-    if diff_settings:
-        msg = 'CSE on vCD has different settings than config file' \
-              '\n\nCurrent CSE settings on vCD:'
-        for setting in diff_settings:
-            msg += f"\n{setting}: {cse_info[setting]}"
-
-        msg += '\n\nCurrent config file settings:'
-        for setting in diff_settings:
-            msg += f"\n{setting}: {ext_config[setting]}"
-        click.echo(msg)
-        LOGGER.info(msg)
-
-        msg = '\nUpdate CSE on vCD to match config file settings?'
-        if ext_install == 'skip' \
-                or (ext_install == 'prompt' and not click.confirm(msg)):
-            msg = 'Skipping CSE registration to vCD. CSE on vCD has ' \
-                  'different settings than config file'
-            click.secho(msg, fg='yellow')
-            LOGGER.warning(msg)
-            return False
-        return True
-
-    # cse is already registered to vCD, and the settings match with config file
-    msg = 'CSE is registered to vCD and has same settings as config file'
-    click.secho(msg, fg='green')
-    LOGGER.info(msg)
-    return False
 
 
 def register_cse(client, routing_key, exchange):
