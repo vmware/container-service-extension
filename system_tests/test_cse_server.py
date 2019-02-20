@@ -96,7 +96,7 @@ def delete_installation_entities():
 
 @pytest.fixture
 def blank_cust_scripts():
-    """Fixture to ensure that customization scripts are blank
+    """Fixture to ensure that customization scripts are blank.
 
     Usage: add the parameter 'blank_cust_scripts' to the test function. Use
     this fixture if the test outcome does not rely on running the
@@ -433,9 +433,10 @@ def test_0110_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
     command: cse install --config cse_test_config.yaml
     expected: temp vapps are deleted
     """
+    # set cleanup to true in config file
     for template_config in config['broker']['templates']:
-        assert template_config['cleanup'], \
-            "'cleanup' key in template config should be True"
+        template_config['cleanup'] = True
+    testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
 
     result = env.CLI_RUNNER.invoke(cli,
                                    ['install',
