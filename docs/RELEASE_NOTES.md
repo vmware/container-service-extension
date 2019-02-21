@@ -53,6 +53,7 @@ Supported vCD versions: 9.1, 9.5
 **New Feature:**
 
 * Role based access control for deployment of kubernetes cluster
+  * New config file key `enforce_authorization` under `service` section. Please refer to [config file documentation](CSE_ADMIN.md#configfile)
 * Improved logging and error messages.
 
 **Bug Fixes:**
