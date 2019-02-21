@@ -113,7 +113,7 @@ SAMPLE_VCD_CONFIG = {
         'port': 443,
         'username': 'administrator',
         'password': 'my_secret_password',
-        'api_version': '29.0',
+        'api_version': '31.0',
         'verify': False,
         'log': True
     }
@@ -243,10 +243,10 @@ SAMPLE_TEMPLATE_UBUNTU_16_04 = {
 SAMPLE_BROKER_CONFIG = {
     'broker': {
         'type': 'default',
-        'org': 'Admin',
-        'vdc': 'Catalog',
+        'org': 'myorg',
+        'vdc': 'myorgvdc',
         'catalog': 'cse',
-        'network': 'admin_network',
+        'network': 'mynetwork',
         'ip_allocation_mode': 'pool',
         'storage_profile': '*',
         'default_template': SAMPLE_TEMPLATE_PHOTON_V2['name'],

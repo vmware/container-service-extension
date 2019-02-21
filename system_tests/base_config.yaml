@@ -1,9 +1,20 @@
-# Valid config file, cleanup=True for templates
+# Valid config file
 # Fill in fields marked with '???'
-# developer_mode_aware: True does not remove CSE entities or unregister CSE after tests
 
 test:
-  developer_mode: true
+  teardown_installation: true # Affects test_cse_server.py.
+                               # if true, delete all installation entities (even on test failure).
+                               # if false, do not delete installation entities (even on test success).
+                               # if this key is omitted, defaults to true.
+  teardown_clusters: true # Affects test_cse_client.py.
+                           # if true, delete test cluster (env.TEST_CLUSTER_NAME) on test failure.
+                           # if false, do not delete test cluster on test failure.
+                           # if this key is omitted, defaults to true.
+                           # successful client tests will not leave clusters up.
+  test_all_templates: false # Affects test_cse_client.py.
+                            # if true, tests cluster deployment on all templates found.
+                            # if false, tests cluster deployment only for first template found.
+                            # if this key is omitted, defaults to false.
 
 amqp:
   exchange: test-exchange # cse exclusive exchange used by amqp server

@@ -2,8 +2,11 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+
 import json
 
+from container_service_extension.abstract_broker import AbstractBroker
+from container_service_extension.exceptions import CseServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pksclient.api.cluster_api import ClusterApi
 from container_service_extension.pksclient.api.profile_api import ProfileApi
@@ -23,18 +26,21 @@ from container_service_extension.utils import exception_handler
 from container_service_extension.utils import OK
 
 
-class PKSBroker(object):
+class PKSBroker(AbstractBroker):
     """PKSBroker makes API calls to PKS server.
 
     It performs CRUD operations on Kubernetes clusters.
     """
 
-    def __init__(self, ovdc_cache=None):
+    def __init__(self, headers, request_body, ovdc_cache=None):
         """Initialize PKS broker.
 
         :param ovdc_cache: ovdc cache (subject to change) is used to
         initialize PKS broker.
         """
+        super().__init__(headers, request_body)
+        self.headers = headers
+        self.body = request_body
         self.username = ovdc_cache['username']
         self.secret = ovdc_cache['secret']
         self.pks_host_uri = \
@@ -378,3 +384,13 @@ class PKSBroker(object):
                      f'deleted the compute profile: {name}')
 
         return result
+
+    def __getattr__(self, name):
+        """Handle unknown operations.
+
+        Example: This broker does
+        not support individual node operations.
+        """
+        def unsupported_method(*args):
+            raise CseServerError(f"Unsupported operation {name}")
+        return unsupported_method
