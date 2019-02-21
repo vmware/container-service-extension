@@ -16,9 +16,9 @@ from container_service_extension.utils import get_vdc
 
 class OvdcCache(object):
 
-    __ovdc_metadata_keys = ['name', 'datacenter', 'cluster', 'vc',
+    __ovdc_metadata_keys = ['name', 'datacenter', 'cluster', 'vc', 'cpi',
                             'host', 'port',
-                            'uaac_port', 'pks_plans',
+                            'uaac_port', 'proxy', 'pks_plans',
                             'pks_compute_profile_name', 'container_provider']
 
     def __init__(self, client):
@@ -108,9 +108,6 @@ class OvdcCache(object):
             self._remove_metadata(ovdc, self.__ovdc_metadata_keys)
             metadata['container_provider'] = container_provider or ''
         else:
-            # Get resource pool
-            resource_pool = f"{ovdc.name} ({ovdc_id})"
-
             # Get pvdc and pks information from pvdc cache
             org_name = org.resource.get('name')
             pvdc_element = ovdc.resource.ProviderVdcReference
@@ -124,8 +121,10 @@ class OvdcCache(object):
             metadata['vc'] = pvdc_info.vc
             metadata['datacenter'] = pvdc_info.datacenter
             metadata['cluster'] = pvdc_info.cluster
+            metadata['cpi'] = pvdc_info.cpi
             metadata['host'] = pks_info.host
             metadata['port'] = pks_info.port
+            metadata['proxy'] = pks_info.proxy
             metadata['uaac_port'] = pks_info.uaac.port
             metadata['pks_plans'] = pks_plans or ''
             metadata['container_provider'] = container_provider
