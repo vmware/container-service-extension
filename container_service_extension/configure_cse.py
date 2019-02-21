@@ -68,7 +68,7 @@ INSTRUCTIONS_FOR_PKS_CONFIG_FILE = '''# Config file for PKS enabled CSE Server t
 #          admins need to ensure that PKS accounts are correctly mapped to
 #          their respective organization in the 'orgs' section of this
 #          config file.
-#       c. Currently we mandate each PKS service account in the system to have a unique name.
+#       P.S: Currently, we mandate each PKS service account in the system to have a unique account name.
 #   2. orgs: [OPTIONAL SECTION for admins who chose 1a above.]
 #       a. If cloud admin chooses to define PKS service account per
 #          organization per vCenter, include the organization and respective
@@ -190,17 +190,23 @@ SAMPLE_PKS_CONFIG = {
         {
             'name': 'pvdc1',
             'vc': 'vc1',
-            'rp_paths': ['datacenter1/cluster1/rp1']
+            'datacenter': 'datacenter1',
+            'cluster': 'cluster1',
+            'cpi': 'cpi1'
         },
         {
             'name': 'pvdc2',
-            'vc': 'vc1',
-            'rp_paths': ['HA_datacenter/HA_cluster1/gold_rp/sub-rp']
+            'vc': 'vc2',
+            'datacenter': 'HA_datacenter',
+            'cluster': 'HA_cluster1',
+            'cpi': 'cpi2'
         },
         {
             'name': 'pvdc3',
-            'vc': 'vc2',
-            'rp_paths': ['datacenter/cluster1/rp1/sub-rp1/sub-rp2']
+            'vc': 'vc1',
+            'datacenter': 'datacenter1',
+            'cluster': 'cluster1',
+            'cpi': 'cpi1'
         }
     ]
 }
@@ -343,10 +349,20 @@ def get_validated_config(config_file_name):
         check_file_permissions(pks_config)
         with open(pks_config) as f:
             pks = yaml.safe_load(f)
+        pks_proxies = dict()
+        if 'pks_accounts' in pks:
+            for i, account in enumerate(pks['pks_accounts']):
+                if 'proxy' in account:
+                    pks_proxies[account['name']] = account['proxy']
+                    del pks['pks_accounts'][i]['proxy']
         click.secho(f"Validating PKS config file '{pks_config}'", fg='yellow')
         check_keys_and_value_types(pks, SAMPLE_PKS_CONFIG,
                                    location='PKS config file')
         click.secho(f"PKS Config file '{pks_config}' is valid", fg='green')
+        for i, account_name in enumerate(pks_proxies):
+            if pks['pks_accounts'][i]['name'] == account_name:
+                pks['pks_accounts'][i]['proxy'] = \
+                    pks_proxies[account_name]
         config['pks_config'] = pks
     else:
         config['pks_config'] = None

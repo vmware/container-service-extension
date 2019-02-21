@@ -6,7 +6,6 @@
 
 from collections import namedtuple
 
-from container_service_extension.utils import get_datacenter_cluster_rp_path
 from container_service_extension.utils import get_pvdc_id_by_name
 
 
@@ -53,7 +52,6 @@ class PksCache(object):
                 "pks_service_accounts_per_org_per_vc_info_table",
                 pks_service_accounts_per_org_per_vc_info_table)
             super().__setattr__("pks_service_accounts_per_vc_info_table", {})
-
 
     def __setattr__(self, key, value):
         """Overridden method to customize the meaning of attribute access.
@@ -117,11 +115,14 @@ class PksCache(object):
             uaac = Uaac(account['uaac']['port'],
                         account['uaac']['secret'],
                         account['uaac']['username'])
+            pks_proxy = None \
+                if 'proxy' not in account else account['proxy']
             pks_info = PksInfo(account['name'],
                                account['host'],
                                account['port'],
                                uaac,
-                               account['vc'])
+                               account['vc'],
+                               pks_proxy)
             pks_account_name = account['name']
             pks[pks_account_name] = pks_info
 
@@ -181,44 +182,43 @@ class PksCache(object):
         pvdc_table = {}
         for pvdc in self.pvdcs:
             pvdc_id = get_pvdc_id_by_name(pvdc['name'], pvdc['vc'])
-            datacenter, cluster, rp = \
-                get_datacenter_cluster_rp_path(pvdc['rp_paths'])
+            datacenter, cluster = pvdc['datacenter'], pvdc['cluster']
+            cpi = pvdc['cpi']
             pvdc_rp_info = PvdcResourcePoolPathInfo(pvdc['name'],
                                                     pvdc['vc'],
-                                                    datacenter, cluster, rp)
+                                                    datacenter, cluster, cpi)
             pvdc_table[str(pvdc_id)] = pvdc_rp_info
 
         return pvdc_table
 
 
-class PksInfo(namedtuple("PksInfo", 'name, host, port, uaac, vc')):
+class PksInfo(namedtuple("PksInfo", 'name, host, port, uaac, vc, '
+                                    'proxy')):
     """Immutable class representing PKS account information."""
 
     def __str__(self):
         return "class:{c}, name: {name}, host: {host}, port : {port}," \
-               " uaac : {uaac}, vc : {vc}".format(c=PksInfo.__name__,
-                                                  name=self.name,
-                                                  host=self.host,
-                                                  port=self.port,
-                                                  uaac=self.uaac,
-                                                  vc=self.vc)
+               "uaac : {uaac}, vc : {vc}, proxy : {proxy}"\
+            .format(c=PksInfo.__name__,
+                    name=self.name,
+                    host=self.host,
+                    port=self.port,
+                    uaac=self.uaac,
+                    vc=self.vc, proxy=self.proxy)
 
 
 class PvdcResourcePoolPathInfo(namedtuple("PvdcResourcePoolPathInfo",
                                           'name, vc, datacenter, cluster,'
-                                          ' rp_path')):
+                                          ' cpi')):
     """Immutable class representing Provider vDC related info for PKS setup."""
 
     def __str__(self):
         return "class:{c}, name : {name}, vc : {vc}," \
                " datacenter: {datacenter}, cluster : {cluster}," \
-               " rp_path : {rp_path}".format(c=PvdcResourcePoolPathInfo
-                                             .__name__,
-                                             name=self.name,
-                                             vc=self.vc,
-                                             datacenter=self.datacenter,
-                                             cluster=self.cluster,
-                                             rp_path=self.rp_path)
+               " cpi : {cpi}".format(c=PvdcResourcePoolPathInfo.__name__,
+                                     name=self.name, vc=self.vc,
+                                     datacenter=self.datacenter,
+                                     cluster=self.cluster, cpi=self.cpi)
 
 
 class Uaac(namedtuple("Uaac", 'port, secret, username')):
