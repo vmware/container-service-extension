@@ -5,6 +5,7 @@ title: Overview
 # CSE Server Management
 
 <a name="overview"></a>
+
 ## Overview
 
 This page contains procedures to install and manage Container Service
@@ -24,6 +25,7 @@ documentation](https://vmware.github.io/vcd-cli/) if necessary to get familiar w
 operations against vCD.
 
 <a name="compatibility"></a>
+
 ## CSE Server Versions
 
 CSE servers run the Python container-service-extension (CSE) package
@@ -39,6 +41,7 @@ using the highest available CSE version.
 ---
 
 <a name="prerequisites"></a>
+
 ## vCD Prerequisites
 
 There are several important requirements that must be fulfilled to install
@@ -56,7 +59,8 @@ suitable org + VDC + user from scratch.
 ### Create an Org
 
 Use the UI or vcd-cli to create an org for CSE use.
-```
+
+```sh
 vcd org create --enabled cse_org_1 'Org for CSE work'
 ```
 
@@ -64,7 +68,8 @@ vcd org create --enabled cse_org_1 'Org for CSE work'
 
 Next create a VDC that has an org VDC network that can route network traffic
 from VMs to the Internet. Here are sample vcd-cli commands.
-```
+
+```sh
 # Switch to org and create VDC under it.
 vcd org use cse_org_1
 vcd vdc create cse_vdc_1 --provider-vdc=vc1-TestbedCluster-21:14:12 \
@@ -96,7 +101,7 @@ upgrading.
 **NOTE:** The privilege set does not appear to be correct at this time.
 We recommend using a vCD admin account for the time being.  See [Issue 139](https://github.com/vmware/container-service-extension/issues/139).
 
-```
+```sh
 # Create a role.
 vcd role create --org System CSE 'CSE Administrator'
 # Add required rights to role.
@@ -182,12 +187,14 @@ vcd role add-right --org System CSE \
 
 You can now create a CSE admin user with the CSE role as follows
 
-```
+```sh
 vcd user create --enabled cse_admin 't0pS3cret!' CSE
 ```
 
 <a name="configfile"></a>
+
 ## Server Config File
+
 The CSE server is controlled by a yaml configuration file that must
 be filled out prior to installation.  You can generate a skeleton
 file as follows.
@@ -199,7 +206,7 @@ cse sample > config.yaml
 Edit this file to add values from your vCloud Director installation. The
 following example shows a file with sample values filled out.
 
-```
+```yaml
 # Sample CSE configuration file.
 amqp:
   exchange: cse-exchange
@@ -304,10 +311,12 @@ Other properties may be left as is or edited to match site conventions.
 For more information on AMQP settings, see the [vCD API documention on AMQP](https://code.vmware.com/apis/442/vcloud#/doc/doc/types/AmqpSettingsType.html).
 
 ### `vcs` Section
+
 Properties in this section supply credentials necessary for the following operations:
-- Guest Operation Program Execution
-- Guest Operation Modifications
-- Guest Operation Queries
+
+* Guest Operation Program Execution
+* Guest Operation Modifications
+* Guest Operation Queries
 
 Each `vc` under the `vcs` section has the following properties:
 
@@ -319,8 +328,12 @@ Each `vc` under the `vcs` section has the following properties:
 
 ### `service` Section
 
-The service section specifies the number of threads to run in the CSE
-server process.
+The service section contains properties that define CSE server behavior.
+
+| Property              | Value                                                                                                                                 |
+|-----------------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| listeners             | Number of threads that CSE server should use                                                                                          |
+| enforce_authorization | If True, CSE server will use role-based access control, where users without the correct CSE right will not be able to deploy clusters (Added in CSE 1.2.6) |
 
 ### `broker` Section
 
@@ -361,7 +374,9 @@ Each `template` in the `templates` property has the following properties:
 ---
 
 <a name="vmtemplates"></a>
+
 ## VM Templates
+
 `CSE` supports multiple VM templates to create Kubernetes clusters
 from. Templates may vary in guest OS or software versions, and must
 have a unique name. One template must be defined as the default
@@ -395,6 +410,7 @@ is not registered to. Templates can be generated in multiple vCD
 instances in parallel.
 
 To update a template rerun the `cse install` command as follows:
+
 ```sh
 cse install -c config.yaml --template photon-v2 --update --amqp skip --ext skip
 ```
@@ -406,9 +422,11 @@ vcd-cli command like the following:
 ```sh
 vcd catalog info cse photon-custom-hw11-2.0-304b817-k8s
 ```
+
 ---
 
 <a name="serversetup"></a>
+
 ## Server Setup
 
 ### Installing CSE Server
@@ -428,7 +446,7 @@ in [Software Installation](/INSTALLATION.html).  Once this is done
 you can invoke server setup using the `cse install` command.  The
 example below shows a typical command.
 
-```
+```sh
 cse install -c config.yaml --ssh-key=$HOME/.ssh/id_rsa.pub \
  --ext config --amqp config
 ```
@@ -436,7 +454,6 @@ cse install -c config.yaml --ssh-key=$HOME/.ssh/id_rsa.pub \
 The following diagram illustrates installation steps visually.
 
 ![cse-install](img/cse-install-2.png)
-
 
 The `cse install` command supports the following options:
 
@@ -450,6 +467,7 @@ The `cse install` command supports the following options:
 | \--ext        | -e    | prompt OR skip OR config | **prompt**: ask before registering CSE<br>**skip**: do not register CSE<br>**config**: register CSE without asking for confirmation                        | prompt                                        |
 
 To monitor the vApp customization process, you can ssh into the temporary vApp. In the temporary vApp, the output of the customization script is captured in `/tmp/FILENAME.out` as well as `/tmp/FILENAME.err`:
+
 ```sh
 # print out file contents as it's being written to
 tail -f /tmp/FILENAME.out
@@ -459,17 +477,20 @@ tail -f /tmp/FILENAME.err
 The temporary vApp guest OS does not allow root ssh access via password for security reasons (use `--ssh-key` option to provide a public key).
 
 To inspect the temporary vApp after customization, use the `--no-capture` option (also requires the `--ssh-key` option):
+
 ```sh
 cse install -c config.yaml --no-capture --ssh-key ~/.ssh/id_rsa.pub
 ```
 
 ### Validate CSE Installation
+
 You can validate that CSE is installed correctly using `cse check`.  Use
 this command to check the configuration at any time.
 
 ```sh
 cse check --config config.yaml --check-install
 ```
+
 The `cse check` command supports the following options:
 
 | Option          | Short | Argument(s)         | Description                                                           | Default                                                 |
@@ -501,6 +522,7 @@ the steps shown below.
 
 Configure the API extension timeout (seconds) on the vCloud
 Director cell:
+
 ```sh
 cd /opt/vmware/vcloud-director/bin
 ./cell-management-tool manage-config -n extensibility.timeout -l
@@ -512,18 +534,49 @@ cd /opt/vmware/vcloud-director/bin
 If you need to re-register the CSE API extension for any reason, use the
 command shown below.  You may need to delete the extension first for
 this command to work.
+
 ```sh
 vcd system extension create cse cse cse vcdext '/api/cse, /api/cse/.*, /api/cse/.*/.*'
 ```
+
+### Sharing CSE catalog with non organization administrator users
+
+CSE installation creates a catalog to store all the VM templates that are later 
+used to deploy Kubernetes clusters. This catalog is by default shared with all 
+organization administrators. However if users who are not organization 
+administrator want to access this catalog (cluster creation requires access to 
+this catalog), the catalog needs to be explicitly shared with such users by 
+System administrators. The following commands can be run by a System 
+administrator to do so,
+
+```sh
+# login as system administrator
+vcd login vcd.serviceprovider.com system administrator --password passw0rd -w -i
+
+# switch over to the organization holding the catalog viz. cse-org
+vcd org use cse-org
+
+# share the catalog viz. cse-cat with the non org admin users in the org holding the catalog
+vcd catalog acl add cse-cat 'org:cse-org:ReadOnly'
+
+# share the catalog cse-cat to a second organization viz. test-org
+vcd catalog acl add cse-cat 'org:test-org:ReadOnly'
+```
+
 ---
+
 <a name="serveroperation"></a>
+
 ## Server Operation
+
 The CSE Server uses threads to process requests. The number of AMQP
 listener threads can be configured in the config file using the `listeners`
 property in the `service` section.  The default value is 5.
 
 ### Running CSE Server Manually
+
 To start the manually run the command shown below.
+
 ```sh
 # Run server in foreground.
 cse run --config config.yaml
@@ -531,6 +584,7 @@ cse run --config config.yaml
 # Run server in background
 nohup cse run --config config.yaml > nohup.out 2>&1 &
 ```
+
 Server output log can be found in `cse.log`
 
 ### Running CSE Server as a Service
@@ -538,8 +592,7 @@ Server output log can be found in `cse.log`
 A sample `systemd` unit is provided by CSE. Here are instructions for
 installaion.
 
-1. Copy file `cse.service` from CSE installation location and move it to
-`/etc/systemd/system/cse.service`.  
+1. Copy file `cse.service` from CSE installation location and move it to `/etc/systemd/system/cse.service`.  
 
 2. Copy `cse.sh` to /home/vmware.
 
@@ -595,7 +648,7 @@ Error: CSE service is disabled. Contact the System Administrator.
 To keep the service running after logout on Photon OS, check
 `/etc/systemd/logind.conf` and set `KillUserProcesses` to `no`
 
-```
+```sh
 [Login]
 KillUserProcesses=no
 ```
@@ -625,15 +678,16 @@ a search command using cluster vApp metadata:
 ```bash
 vcd search adminvapp -f 'metadata:cse.cluster.id!=STRING:'
 ```
+
 ---
 
 <a name="serverupgrade"></a>
-## Server Upgrade and Removal
-When upgrading CSE versions, re-register the extension:
-```sh
-# remove previous registration of CSE
-vcd system extension delete cse
 
+## Server Upgrade and Removal
+
+When upgrading CSE versions, re-register the extension:
+
+```sh
 # run cse installation again
 cse install --config config.yaml
 ```
@@ -642,38 +696,38 @@ cse install --config config.yaml
 
 1. Gracefully stop CSE Server.
 2. Reinstall `container-service-extension` from PyPI:
-```bash
-pip3 install --user --upgrade container-service-extension
-```
+   * `pip3 install --user --upgrade container-service-extension`
 3. Check the release notes at the end of this document for version compatibility.
-4. Review the configuration file for any new options introduced or deprecated in the new version.
-5. If the previously generated templates are no longer supported by the new version, delete the templates and re-generate new ones.
+4. Review the configuration file for any new options introduced or deprecated in the new version. `cse sample` command can be used to generate a new sample config file as well.
+5. If the previously generated templates are no longer supported by the new version, delete the templates and re-generate new ones
+   * `cse install -c myconfig.yaml --update`
 6. If running CSE as a service, start the new version of the service with `systemctl start cse`.
 
 ### Uninstalling CSE Server
 
 1. Gracefully stop CSE Server
-2. As System Administrator, unregister CSE from vCD:
-```sh
-vcd system extension delete cse
-```
-3. Review vCD AMQP settings. May not require any modifications
-```shell
-vcd system amqp info
-```
-4. (Optional) Delete VM templates and the CSE catalog from vCD.
+1. As System Administrator, unregister CSE from vCD:
+   * `vcd system extension delete cse`
+1. Review vCD AMQP settings. May not require any modifications
+   * `vcd system amqp info`
+1. (Optional) Delete VM templates and the CSE catalog from vCD.
 
 ---
+
 <a name="commandssysadmin"></a>
+
 ## Useful Commands
+
 `cse ...` commands are used by system administrators to:
-- Install CSE Server
-- Create/update templates
-- Run CSE Server manually
+
+* Install CSE Server
+* Create/update templates
+* Run CSE Server manually
 
 `vcd cse ...` commands are used by system administrators to:
-- Monitor status of CSE Server and clusters
-- Operate CSE as a service
+
+* Monitor status of CSE Server and clusters
+* Operate CSE as a service
 
 The following show useful sample commands.
 

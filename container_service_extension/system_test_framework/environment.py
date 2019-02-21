@@ -51,15 +51,16 @@ STATIC_PHOTON_CUST_SCRIPT = 'CUST-PHOTON.sh'
 STATIC_UBUNTU_CUST_SCRIPT = 'CUST-UBUNTU.sh'
 ACTIVE_PHOTON_CUST_SCRIPT = 'cust-photon-v2.sh'
 ACTIVE_UBUNTU_CUST_SCRIPT = 'cust-ubuntu-16.04.sh'
-
-PHOTON_TEMPLATE_NAME = 'photon-v2'
 SCRIPTS_DIR = 'scripts'
+
 SSH_KEY_FILEPATH = str(Path.home() / '.ssh' / 'id_rsa.pub')
 CLI_RUNNER = CliRunner()
+TEST_CLUSTER_NAME = 'testcluster'
 
-# if True, then the person testing would like to keep all artifacts that
-# were made during testing.
-DEV_MODE = False
+# config file 'test' section flags
+TEARDOWN_INSTALLATION = None
+TEARDOWN_CLUSTERS = None
+TEST_ALL_TEMPLATES = None
 
 AMQP_USERNAME = None
 AMQP_PASSWORD = None
@@ -68,6 +69,8 @@ ORG_HREF = None
 VDC_HREF = None
 CATALOG_NAME = None
 
+WAIT_INTERVAL = 10
+
 
 def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     """Set up module variables according to config dict.
@@ -75,7 +78,8 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     :param str config_filepath:
     """
     global AMQP_USERNAME, AMQP_PASSWORD, CLIENT, ORG_HREF, VDC_HREF, \
-        CATALOG_NAME, DEV_MODE
+        CATALOG_NAME, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
+        TEST_ALL_TEMPLATES
 
     config = testutils.yaml_to_dict(config_filepath)
     CLIENT = Client(config['vcd']['host'],
@@ -94,10 +98,11 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     AMQP_USERNAME = config['amqp']['username']
     AMQP_PASSWORD = config['amqp']['password']
 
-    try:
-        DEV_MODE = config['test']['developer_mode']
-    except KeyError:
-        pass
+    test_config = config.get('test')
+    if test_config is not None:
+        TEARDOWN_INSTALLATION = test_config.get('teardown_installation', True)
+        TEARDOWN_CLUSTERS = test_config.get('teardown_clusters', True)
+        TEST_ALL_TEMPLATES = test_config.get('test_all_templates', False)
 
 
 def cleanup_environment():
@@ -185,14 +190,14 @@ def prepare_customization_scripts():
 
     :raises FileNotFoundError: if script files cannot be found.
     """
-    scripts_filepaths = {
+    static_to_active_scripts = {
         f"{SCRIPTS_DIR}/{STATIC_PHOTON_CUST_SCRIPT}":
             f"{SCRIPTS_DIR}/{ACTIVE_PHOTON_CUST_SCRIPT}",
         f"{SCRIPTS_DIR}/{STATIC_UBUNTU_CUST_SCRIPT}":
             f"{SCRIPTS_DIR}/{ACTIVE_UBUNTU_CUST_SCRIPT}",
     }
 
-    for src, dst in scripts_filepaths.items():
+    for src, dst in static_to_active_scripts.items():
         Path(dst).write_text(Path(src).read_text())
 
 
