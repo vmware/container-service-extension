@@ -98,6 +98,24 @@ class PksCache(object):
         return self.pks_service_accounts_per_org_per_vc_info_table.get(
             (org_name, vc_name))
 
+    def get_all_pks_accounts_for_org(self, org_name):
+        """Return all pks accounts associated with this org.
+
+        Each PksInfo object has details of PKS account associated with
+        the given organization.
+
+        :param str org_name: name of organization.
+        :return: list of PksInfo object.
+
+        :rtype: list
+        """
+        pks_account_names = [org['pks_accounts'] for org
+                             in self.orgs if org['name'] == org_name]
+        pks_accounts = [self.pks_info_table[account_name] for name
+                        in pks_account_names for account_name in
+                        self.pks_info_table]
+        return pks_accounts
+
     def _construct_pks_accounts(self):
         """Construct a dict to access PKS account information.
 
