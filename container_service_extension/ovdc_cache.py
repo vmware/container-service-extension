@@ -124,7 +124,10 @@ class OvdcCache(object):
             metadata['cpi'] = pvdc_info.cpi
             metadata['host'] = pks_info.host
             metadata['port'] = pks_info.port
-            metadata['proxy'] = pks_info.proxy
+            if hasattr(pks_info, 'proxy') and pks_info.proxy is not None:
+                metadata['proxy'] = pks_info.proxy
+            else:
+                metadata['proxy'] = ''
             metadata['uaac_port'] = pks_info.uaac.port
             metadata['pks_plans'] = pks_plans or ''
             metadata['container_provider'] = container_provider
