@@ -28,15 +28,19 @@ class OvdcCache(object):
             to make REST calls to vCD.
         """
         self.client = client
-        self.pvdc_cache = get_pks_cache()
+        self.pks_cache = get_pks_cache()
 
     def get_ovdc_container_provider_metadata(self, ovdc_name,
-                                             ovdc_id=None, org_name=None):
+                                             ovdc_id=None, org_name=None,
+                                             credentials_required=False):
         """Get metadata of given ovdc, pertaining to the container provider.
 
         :param str ovdc_name: name of the ovdc
+        :param str ovdc_id: UUID of ovdc
         :param str org_name: specific org to use if @org is not given.
             If None, uses currently logged-in org from @client.
+        :param bool credentials_required: Decides if output metadata
+        should include credentials or not.
 
         :return: metadata of the ovdc
 
@@ -68,12 +72,13 @@ class OvdcCache(object):
             # copy the credentials from pvdc cache
             pvdc_element = ovdc.resource.ProviderVdcReference
             pvdc_id = pvdc_element.get('id')
-            pvdc_info = self.pvdc_cache.get_pvdc_info(pvdc_id)
-            pks_info = self.pvdc_cache.get_pks_account_details(
-                org_name, pvdc_info.vc)
+            pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
             metadata['pks_plans'] = metadata['pks_plans'].split(',')
-            metadata['username'] = pks_info.uaac.username
-            metadata['secret'] = pks_info.uaac.secret
+            if credentials_required:
+                pks_info = self.pks_cache.get_pks_account_details(
+                    org_name, pvdc_info.vc)
+                metadata['username'] = pks_info.uaac.username
+                metadata['secret'] = pks_info.uaac.secret
         else:
             metadata = {'container_provider': container_provider}
 
@@ -112,8 +117,8 @@ class OvdcCache(object):
             org_name = org.resource.get('name')
             pvdc_element = ovdc.resource.ProviderVdcReference
             pvdc_id = pvdc_element.get('id')
-            pvdc_info = self.pvdc_cache.get_pvdc_info(pvdc_id)
-            pks_info = self.pvdc_cache.get_pks_account_details(
+            pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
+            pks_info = self.pks_cache.get_pks_account_details(
                 org_name, pvdc_info.vc)
 
             # construct ovdc metadata
