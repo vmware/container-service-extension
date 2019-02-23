@@ -47,7 +47,9 @@ class PKSBroker(AbstractBroker):
             f"https://{ovdc_cache['host']}:{ovdc_cache['port']}/v1"
         self.uaac_uri = \
             f"https://{ovdc_cache['host']}:{ovdc_cache['uaac_port']}"
-        self.proxy_uri = f"http://{ovdc_cache['proxy']}:80"
+        self.proxy_uri = None
+        if ovdc_cache.get('proxy') is not None:
+            self.proxy_uri = f"http://{ovdc_cache['proxy']}:80"
         self.verify = False  # TODO(pks.yaml) pks_config['pks']['verify']
         self.pks_client = self._get_pks_client()
 

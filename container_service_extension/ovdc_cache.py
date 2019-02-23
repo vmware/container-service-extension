@@ -10,50 +10,15 @@ from pyvcloud.vcd.vdc import VDC
 
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.utils import get_org
+from container_service_extension.utils import get_pks_cache
 from container_service_extension.utils import get_vdc
-
-
-class PvdcCacheStub(object):
-
-    def __init__(self):
-        """Construct, initialize pvdc and pks cache.
-
-        Always returns the scanned data. This is a thrown away class
-        after actual PvdcCache is implemented
-
-        """
-        self.pvdc_cache = dict()
-        self.pks_cache = dict()
-        self._initialize_pvdc_cache()
-        self._initialize_pks_cache()
-
-    def get_pvdc_info(self, pvdc_id):
-        return self.pvdc_cache['pvdc_id']
-
-    def get_pks_info(self, org_name, vc_name):
-        return self.pks_cache['org1']['vc1']
-
-    def _initialize_pvdc_cache(self):
-        self.pvdc_cache['pvdc_id'] = dict()
-        self.pvdc_cache['pvdc_id']['name'] = 'pvdc1'
-        self.pvdc_cache['pvdc_id']['vc'] = 'vc1'
-        self.pvdc_cache['pvdc_id']['rp_path'] = ['dc1/c1/rp1', 'dc1/c1/rp2']
-
-    def _initialize_pks_cache(self):
-        self.pks1 = dict()
-        self.pks1['host'] = '10.161.148.112'
-        self.pks1['port'] = '9021'
-        self.pks1['username'] = 'cokeSvcAccount'
-        self.pks1['secret'] = 'GhujkdfRl2dEvj1_hH9wEQxDUkxO1Lcjm3'
-        self.pks1['uaac_port'] = '8443'
-        self.pks_cache['org1'] = dict()
-        self.pks_cache['org1']['vc1'] = self.pks1
 
 
 class OvdcCache(object):
 
-    __ovdc_metadata_keys = ['name', 'vc', 'rp_path', 'host', 'port',
-                            'uaac_port', 'pks_plans',
+    __ovdc_metadata_keys = ['name', 'datacenter', 'cluster', 'vc', 'cpi',
+                            'host', 'port',
+                            'uaac_port', 'proxy', 'pks_plans',
                             'pks_compute_profile_name', 'container_provider']
 
     def __init__(self, client):
@@ -63,15 +28,19 @@ class OvdcCache(object):
             to make REST calls to vCD.
         """
         self.client = client
-        self.pvdc_cache = PvdcCacheStub()
+        self.pks_cache = get_pks_cache()
 
     def get_ovdc_container_provider_metadata(self, ovdc_name,
-                                             ovdc_id=None, org_name=None):
+                                             ovdc_id=None, org_name=None,
+                                             credentials_required=False):
         """Get metadata of given ovdc, pertaining to the container provider.
 
         :param str ovdc_name: name of the ovdc
+        :param str ovdc_id: UUID of ovdc
         :param str org_name: specific org to use if @org is not given.
             If None, uses currently logged-in org from @client.
+        :param bool credentials_required: Decides if output metadata
+        should include credentials or not.
 
         :return: metadata of the ovdc
 
@@ -99,16 +68,17 @@ class OvdcCache(object):
             # Filter out container provider metadata into a dict
             metadata = {metadata_key: all_metadata[metadata_key]
                         for metadata_key in self.__ovdc_metadata_keys}
+
+            # copy the credentials from pvdc cache
             pvdc_element = ovdc.resource.ProviderVdcReference
             pvdc_id = pvdc_element.get('id')
-            pvdc_info = self.pvdc_cache.get_pvdc_info(pvdc_id)
-            pks_info = self.pvdc_cache.get_pks_info(ovdc.name, pvdc_info['vc'])
-
-            # Get ovdc metadata from vcd; copy the credentials from pvdc cache
-            metadata['rp_path'] = metadata['rp_path'].split(',')
+            pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
             metadata['pks_plans'] = metadata['pks_plans'].split(',')
-            metadata['username'] = pks_info['username']
-            metadata['secret'] = pks_info['secret']
+            if credentials_required:
+                pks_info = self.pks_cache.get_pks_account_details(
+                    org_name, pvdc_info.vc)
+                metadata['username'] = pks_info.uaac.username
+                metadata['secret'] = pks_info.uaac.secret
         else:
             metadata = {'container_provider': container_provider}
 
@@ -143,25 +113,27 @@ class OvdcCache(object):
             self._remove_metadata(ovdc, self.__ovdc_metadata_keys)
             metadata['container_provider'] = container_provider or ''
         else:
-            # Get resource pool
-            resource_pool = f"{ovdc.name} ({ovdc_id})"
-
             # Get pvdc and pks information from pvdc cache
             org_name = org.resource.get('name')
             pvdc_element = ovdc.resource.ProviderVdcReference
             pvdc_id = pvdc_element.get('id')
-            pvdc_info = self.pvdc_cache.get_pvdc_info(pvdc_id)
-            pks_info = self.pvdc_cache.get_pks_info(org_name, pvdc_info['vc'])
+            pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
+            pks_info = self.pks_cache.get_pks_account_details(
+                org_name, pvdc_info.vc)
 
             # construct ovdc metadata
-            metadata['name'] = pvdc_info['name']
-            metadata['vc'] = pvdc_info['vc']
-            metadata['rp_path'] = ','.join(
-                f'{rp_path}/{resource_pool}' for rp_path in
-                pvdc_info['rp_path'])
-            metadata['host'] = pks_info['host']
-            metadata['port'] = pks_info['port']
-            metadata['uaac_port'] = pks_info['uaac_port']
+            metadata['name'] = pvdc_info.name
+            metadata['vc'] = pvdc_info.vc
+            metadata['datacenter'] = pvdc_info.datacenter
+            metadata['cluster'] = pvdc_info.cluster
+            metadata['cpi'] = pvdc_info.cpi
+            metadata['host'] = pks_info.host
+            metadata['port'] = pks_info.port
+            if hasattr(pks_info, 'proxy') and pks_info.proxy is not None:
+                metadata['proxy'] = pks_info.proxy
+            else:
+                metadata['proxy'] = ''
+            metadata['uaac_port'] = pks_info.uaac.port
             metadata['pks_plans'] = pks_plans or ''
             metadata['container_provider'] = container_provider
             pks_compute_profile_name = f"{org_name}-{ovdc_name}-{ovdc_id}"
