@@ -198,7 +198,6 @@ class Service(object, metaclass=Singleton):
             self.pks_cache = PksCache(self.config.get('pks_config').get('orgs'),
                                     self.config.get('pks_config').get('pks_accounts'),
                                     self.config.get('pks_config').get('pvdcs'))
-        print(self.pks_cache.get_all_pks_accounts_for_org('Org1'))
         amqp = self.config['amqp']
         num_consumers = self.config['service']['listeners']
 
