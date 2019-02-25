@@ -29,11 +29,11 @@ def get_new_broker(headers, request_body):
         admin_client = utils.get_vcd_sys_admin_client()
         ovdc_cache = OvdcCache(admin_client)
         metadata = ovdc_cache.get_ovdc_container_provider_metadata(
-            ovdc_name=ovdc_name, org_name=org_name)
+            ovdc_name=ovdc_name, org_name=org_name, credentials_required=True)
         LOGGER.debug(f"ovdc metadata for {ovdc_name}-{org_name}=>{metadata}")
         if metadata.get('container_provider') == 'pks':
             return PKSBroker(headers, request_body,
-                             ovdc_cache=ovdc_cache)
+                             ovdc_cache=metadata)
         else:
             return DefaultBroker(headers, request_body)
     else:
