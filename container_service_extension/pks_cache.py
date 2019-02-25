@@ -109,11 +109,11 @@ class PksCache(object):
 
         :rtype: list
         """
-        pks_account_names = [org['pks_accounts'] for org
-                             in self.orgs if org['name'] == org_name]
-        pks_accounts = [self.pks_info_table[account_name] for name
-                        in pks_account_names for account_name in
-                        self.pks_info_table]
+        pks_account_names_for_org = {}
+        for org in self.orgs:
+            if org['name'] == org_name:
+                pks_account_names_for_org = org['pks_accounts']
+        pks_accounts = [self.pks_info_table[name] for name in pks_account_names_for_org]
         return pks_accounts
 
     def _construct_pks_accounts(self):
