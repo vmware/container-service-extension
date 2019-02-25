@@ -109,7 +109,7 @@ class PksCache(object):
 
         :rtype: list
         """
-        pks_account_names_for_org = {}
+        pks_account_names_for_org = []
         for org in self.orgs:
             if org['name'] == org_name:
                 pks_account_names_for_org = org['pks_accounts']
