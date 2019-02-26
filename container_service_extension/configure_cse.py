@@ -324,18 +324,28 @@ def get_validated_config(config_file_name):
 
     :rtype: dict
 
-    :raises KeyError: if config file has missing properties.
-    :raises ValueError: if the value type for a config file property
+    :raises KeyError: if config file has missing or extra properties.
+    :raises TypeError: if the value type for a config file property
         is incorrect.
-    :raises AmqpConnectionError: if AMQP connection failed.
+    :raises container_service_extension.exceptions.AmqpConnectionError: if
+        AMQP connection failed (host, password, port, username,
+        vhost is invalid).
+    :raises pyvcloud.vcd.exceptions.NotAcceptableException: if 'vcd'
+        'api_version' is unsupported.
+    :raises requests.exceptions.ConnectionError: if 'vcd' 'host' is invalid.
+    :raises pyvcloud.vcd.exceptions.VcdException: if 'vcd' 'username' or
+        'password' is invalid.
+    :raises pyVmomi.vim.fault.InvalidLogin: if 'vcs' 'username' or 'password'
+        is invalid.
     """
     check_file_permissions(config_file_name)
     with open(config_file_name) as config_file:
         config = yaml.safe_load(config_file)
     pks_config = config.get('pks_config')
     click.secho(f"Validating config file '{config_file_name}'", fg='yellow')
-    check_keys_and_value_types(config, SAMPLE_CONFIG,
-                               location='config file')
+    if 'pks_config' in config:
+        del config['pks_config']
+    check_keys_and_value_types(config, SAMPLE_CONFIG, location='config file')
     validate_amqp_config(config['amqp'])
     validate_vcd_and_vcs_config(config['vcd'], config['vcs'])
     validate_broker_config(config['broker'])
@@ -367,7 +377,7 @@ def validate_amqp_config(amqp_dict):
     :param dict amqp_dict: 'amqp' section of config file as a dict.
 
     :raises KeyError: if @amqp_dict has missing or extra properties.
-    :raises ValueError: if the value type for an @amqp_dict property
+    :raises TypeError: if the value type for an @amqp_dict property
         is incorrect.
     :raises AmqpConnectionError: if AMQP connection failed.
     """
@@ -406,8 +416,9 @@ def validate_vcd_and_vcs_config(vcd_dict, vcs):
 
     :raises KeyError: if @vcd_dict or a vc in @vcs has missing or
         extra properties.
-    :raises: ValueError: if the value type for a @vcd_dict or vc property
-        is incorrect, or if vCD has a VC that is not listed in the config file.
+    :raises TypeError: if the value type for a @vcd_dict or vc property
+        is incorrect.
+    :raises ValueError: if vCD has a VC that is not listed in the config file.
     """
     check_keys_and_value_types(vcd_dict, SAMPLE_VCD_CONFIG['vcd'],
                                location="config file 'vcd' section")
@@ -440,7 +451,7 @@ def validate_vcd_and_vcs_config(vcd_dict, vcs):
         for index, vc in enumerate(vcs, 1):
             check_keys_and_value_types(vc, SAMPLE_VCS_CONFIG['vcs'][0],
                                        location=f"config file 'vcs' section,"
-                                                f" "f"vc #{index}")
+                                                f" vc #{index}")
 
         # Check that all registered VCs in vCD are listed in config file
         platform = Platform(client)
@@ -475,9 +486,10 @@ def validate_broker_config(broker_dict):
     :param dict broker_dict: 'broker' section of config file as a dict.
 
     :raises KeyError: if @broker_dict has missing or extra properties.
-    :raises ValueError: if the value type for a @broker_dict property is
-        incorrect, or if 'default_template' has a value not listed in the
-        'templates' property.
+    :raises TypeError: if the value type for a @broker_dict property is
+        incorrect.
+    :raises ValueError: if 'default_template' value is not found in listed
+        'templates, or if 'ip_allocation_mode' is not 'dhcp' or 'pool'
     """
     check_keys_and_value_types(broker_dict, SAMPLE_BROKER_CONFIG['broker'],
                                location="config file 'broker' section")
