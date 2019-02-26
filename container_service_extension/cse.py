@@ -216,15 +216,7 @@ def check(ctx, config, check_install, template):
     type=click.File('r'),
     help='SSH public key to connect to the guest OS on the VM'
 )
-@click.option(
-    '-e',
-    '--ext',
-    'ext_install',
-    default='prompt',
-    type=click.Choice(['prompt', 'skip', 'config']),
-    help='API Extension configuration')
-def install(ctx, config, template, update, no_capture, ssh_key_file,
-            ext_install):
+def install(ctx, config, template, update, no_capture, ssh_key_file):
     """Install CSE on vCloud Director."""
     if no_capture and ssh_key_file is None:
         click.echo('Must provide ssh-key file (using --ssh-key OR -k) if '
@@ -235,8 +227,7 @@ def install(ctx, config, template, update, no_capture, ssh_key_file,
         if ssh_key_file is not None:
             ssh_key = ssh_key_file.read()
         install_cse(ctx, config_file_name=config, template_name=template,
-                    update=update, no_capture=no_capture, ssh_key=ssh_key,
-                    ext_install=ext_install)
+                    update=update, no_capture=no_capture, ssh_key=ssh_key)
 
 
 @cli.command(short_help='run service')
