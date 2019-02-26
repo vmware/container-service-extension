@@ -412,7 +412,7 @@ instances in parallel.
 To update a template rerun the `cse install` command as follows:
 
 ```sh
-cse install -c config.yaml --template photon-v2 --update --amqp skip --ext skip
+cse install -c config.yaml --template photon-v2 --update
 ```
 
 Updating a template increases `versionNumber` of the corresponding
@@ -446,9 +446,8 @@ in [Software Installation](/INSTALLATION.html).  Once this is done
 you can invoke server setup using the `cse install` command.  The
 example below shows a typical command.
 
-```sh
-cse install -c config.yaml --ssh-key=$HOME/.ssh/id_rsa.pub \
- --ext config --amqp config
+```bash
+cse install -c config.yaml --ssh-key ~/.ssh/id_rsa.pub
 ```
 
 The following diagram illustrates installation steps visually.
