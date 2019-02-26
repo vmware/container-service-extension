@@ -501,11 +501,20 @@ def validate_broker_config(broker_dict):
                                             "template section")
         if template['name'] == broker_dict['default_template']:
             default_exists = True
-
     if not default_exists:
         msg = f"Default template '{broker_dict['default_template']}' not " \
               f"found in listed templates"
-        click.secho(msg, fg='red')
+        # click.secho(msg, fg='red')
+        raise ValueError(msg)
+
+    valid_ip_allocation_modes = [
+        'dhcp',
+        'pool'
+    ]
+    if broker_dict['ip_allocation_mode'] not in valid_ip_allocation_modes:
+        msg = f"IP allocation mode is '{broker_dict['ip_allocation_mode']}' " \
+              f"when it should be either 'dhcp' or 'pool'"
+        # click.secho(msg, fg='red')
         raise ValueError(msg)
 
 
@@ -638,6 +647,9 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
 
     Handles decision making for configuring AMQP exchange/settings,
     extension registration, catalog setup, and template creation.
+
+    Note: check container_service_extension.cse.install_cse for all
+    exceptions that can be raised.
 
     :param click.core.Context ctx:
     :param str config_file_name: config file name.
