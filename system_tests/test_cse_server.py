@@ -232,7 +232,7 @@ def test_0050_config_invalid_value_types(config):
             get_validated_config(env.ACTIVE_CONFIG_FILEPATH)
             assert False, f"{env.ACTIVE_CONFIG_FILEPATH} passed validation " \
                           f"when it should not have"
-        except ValueError:
+        except TypeError:
             pass
 
 
@@ -240,7 +240,7 @@ def test_0060_config_valid(config):
     """Test that configs with valid keys and value types pass validation."""
     try:
         get_validated_config(env.ACTIVE_CONFIG_FILEPATH)
-    except (KeyError, ValueError):
+    except (KeyError, TypeError, ValueError):
         assert False, f"{env.ACTIVE_CONFIG_FILEPATH} did not pass validation" \
                       f" when it should have"
 

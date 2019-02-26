@@ -246,7 +246,7 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary'):
         can be more descriptive.
 
     :raises KeyError: if @dikt has missing or invalid keys
-    :raises ValueError: if the value of a property in @dikt does not match with
+    :raises TypeError: if the value of a property in @dikt does not match with
         the value of the same property in @ref_dict
     """
     ref_keys = set(ref_dict.keys())
@@ -273,7 +273,7 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary'):
     if missing_keys or invalid_keys:
         raise KeyError(f"Missing and/or invalid key in {location}")
     if bad_value:
-        raise ValueError(f"Incorrect type for property value(s) in {location}")
+        raise TypeError(f"Incorrect type for property value(s) in {location}")
 
 
 def check_python_version():
