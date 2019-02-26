@@ -811,9 +811,6 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                 self.body.get('ovdc_name', None),
                 ovdc_id=self.body.get('ovdc_id', None),
                 org_name=self.body.get('org_name', None))
-            # remove username, secret from sending to client
-            metadata.pop('username', None)
-            metadata.pop('secret', None)
             result = dict()
             result['status_code'] = OK
             result['body'] = metadata

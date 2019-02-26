@@ -27,7 +27,7 @@ Action required (by Admins and Users)
 * Cloud Admin:
     * Update CSE to 1.2.7
     * Update the templates
-    * Command for updating template -> cse install -c config.yaml --template template-name --update --amqp skip --ext skip
+    * Command for updating template -> cse install -c config.yaml --template template-name --update --ext skip
 
 * Tenant Users:
     * Delete clusters that were created with older templates. Recreate clusters with new templates

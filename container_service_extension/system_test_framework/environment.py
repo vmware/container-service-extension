@@ -255,3 +255,13 @@ def is_cse_registration_valid(routing_key, exchange):
         return False
 
     return True
+
+
+def check_cse_registration(routing_key, exchange):
+    cse_is_registered = is_cse_registered()
+    assert cse_is_registered, \
+        'CSE is not registered as an extension when it should be.'
+    if cse_is_registered:
+        assert is_cse_registration_valid(routing_key, exchange), \
+            'CSE is registered as an extension, but the extension settings ' \
+            'on vCD are not the same as config settings.'

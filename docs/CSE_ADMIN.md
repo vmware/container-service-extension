@@ -412,7 +412,7 @@ instances in parallel.
 To update a template rerun the `cse install` command as follows:
 
 ```sh
-cse install -c config.yaml --template photon-v2 --update --amqp skip --ext skip
+cse install -c config.yaml --template photon-v2 --update
 ```
 
 Updating a template increases `versionNumber` of the corresponding
@@ -446,9 +446,8 @@ in [Software Installation](/INSTALLATION.html).  Once this is done
 you can invoke server setup using the `cse install` command.  The
 example below shows a typical command.
 
-```sh
-cse install -c config.yaml --ssh-key=$HOME/.ssh/id_rsa.pub \
- --ext config --amqp config
+```bash
+cse install -c config.yaml --ssh-key ~/.ssh/id_rsa.pub
 ```
 
 The following diagram illustrates installation steps visually.
@@ -464,7 +463,6 @@ The `cse install` command supports the following options:
 | \--update     | -u    | n/a                      | Recreate templates during installation                                                                                                                     | False                                         |
 | \--no-capture | -n    | n/a                      | Don't capture the temporary vApp as a template   (Leaves it standing for debugging purposes)                                                               | False                                         |
 | \--ssh-key    | -k    | path/to/ssh-key.pub      | ssh-key file to use for vm access   (root password ssh access is disabled for security reasons)                                                            | None                                          |
-| \--ext        | -e    | prompt OR skip OR config | **prompt**: ask before registering CSE<br>**skip**: do not register CSE<br>**config**: register CSE without asking for confirmation                        | prompt                                        |
 
 To monitor the vApp customization process, you can ssh into the temporary vApp. In the temporary vApp, the output of the customization script is captured in `/tmp/FILENAME.out` as well as `/tmp/FILENAME.err`:
 
