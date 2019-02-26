@@ -120,18 +120,15 @@ class PKSBroker(AbstractBroker):
         return result
 
     @exception_handler
-    def create_cluster(self, name, plan,
-                       external_host_name='cluster.pks.local',
-                       network_profile=None,
+    def create_cluster(self, name, plan, external_host_name,
                        compute_profile=None):
         """Create cluster in PKS environment.
 
         :param str name: Name of the cluster
-        :param str plan: PKS plan. It should be one of {Plan 1, Plan 2, Plan 3}
+        :param str plan: PKS plan. It should be one of the three plans
         that PKS supports.
         :param str external_host_name: User-preferred external hostname
          of the K8 cluster
-        :param str network_profile: Name of the network profile
         :param str compute_profile: Name of the compute profile
 
         :return: Details of the cluster
@@ -143,11 +140,10 @@ class PKSBroker(AbstractBroker):
         result['body'] = []
         cluster_api = ClusterApi(api_client=self.pks_client)
         cluster_params = ClusterParameters(
-            kubernetes_master_host=external_host_name,
-            nsxt_network_profile=network_profile,
-            compute_profile=compute_profile)
+            kubernetes_master_host=external_host_name)
         cluster_request = ClusterRequest(name=name, plan_name=plan,
-                                         parameters=cluster_params)
+                                         parameters=cluster_params,
+                                         compute_profile_name=compute_profile)
 
         LOGGER.debug(f'Sending request to PKS: {self.host} to create cluster'
                      f' of name: {name}')
@@ -394,3 +390,4 @@ class PKSBroker(AbstractBroker):
         def unsupported_method(*args):
             raise CseServerError(f"Unsupported operation {name}")
         return unsupported_method
+
