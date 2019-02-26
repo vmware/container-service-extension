@@ -11,7 +11,8 @@ $ cse check --config cse_test_config.yaml (incorrect value types)
 $ cse check --config cse_test_config.yaml -i (cse not installed yet)
 
 $ cse install --config cse_test_config.yaml --template photon-v2
-    --ext skip --ssh-key ~/.ssh/id_rsa.pub --no-capture
+    --ssh-key ~/.ssh/id_rsa.pub --no-capture
+
 $ cse install --config cse_test_config.yaml --template photon-v2
 $ cse install --config cse_test_config.yaml --ssh-key ~/.ssh/id_rsa.pub
     --update --no-capture
@@ -257,20 +258,19 @@ def test_0070_check_invalid_installation(config):
 def test_0080_install_no_capture(config, blank_cust_scripts, unregister_cse):
     """Test install.
 
-    Installation options: '--config', '--template', '--ext skip',
-        '--ssh-key', '--no-capture'.
+    Installation options: '--config', '--template', '--ssh-key',
+        '--no-capture'.
 
     Tests that installation:
     - downloads/uploads ova file,
     - creates photon temp vapp,
-    - skips cse registration,
     - skips temp vapp capture.
 
     command: cse install --config cse_test_config.yaml --template photon-v2
-        --ext skip --ssh-key ~/.ssh/id_rsa.pub --no-capture
+        --ssh-key ~/.ssh/id_rsa.pub --no-capture
     required files: ~/.ssh/id_rsa.pub, cse_test_config.yaml,
         photon-v2 init, photon-v2 cust (blank)
-    expected: cse not registered, catalog exists, photon-v2 ova exists,
+    expected: cse registered, catalog exists, photon-v2 ova exists,
         temp vapp does not exist, template does not exist.
     """
     template_config = testutils.get_default_template_config(config)
@@ -280,14 +280,13 @@ def test_0080_install_no_capture(config, blank_cust_scripts, unregister_cse):
                                     '--config', env.ACTIVE_CONFIG_FILEPATH,
                                     '--ssh-key', env.SSH_KEY_FILEPATH,
                                     '--template', template_config['name'],
-                                    '--ext', 'skip',
                                     '--no-capture'],
                                    catch_exceptions=False)
     assert result.exit_code == 0
 
-    # check that cse was not registered
-    assert not env.is_cse_registered(), \
-        'CSE is registered as an extension when it should not be.'
+    # check that cse was registered correctly
+    env.check_cse_registration(config['amqp']['routing_key'],
+                               config['amqp']['exchange'])
 
     # check that source ova file exists in catalog
     assert env.catalog_item_exists(template_config['source_ova_name']), \
@@ -307,7 +306,6 @@ def test_0090_install_temp_vapp_already_exists(config, blank_cust_scripts,
     """Test installation when temp vapp already exists.
 
     Tests that installation:
-    - skips cse registration (answering no to prompt),
     - captures temp vapp as template correctly,
     - does not delete temp_vapp when config file 'cleanup' property is false.
 
@@ -324,17 +322,16 @@ def test_0090_install_temp_vapp_already_exists(config, blank_cust_scripts,
 
     testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
 
-    res = env.CLI_RUNNER.invoke(cli,
-                                ['install',
-                                 '--config', env.ACTIVE_CONFIG_FILEPATH,
-                                 '--template', template_config['name']],
-                                input='N',
-                                catch_exceptions=False)
-    assert res.exit_code == 0
+    result = env.CLI_RUNNER.invoke(cli,
+                                   ['install',
+                                    '--config', env.ACTIVE_CONFIG_FILEPATH,
+                                    '--template', template_config['name']],
+                                   catch_exceptions=False)
+    assert result.exit_code == 0
 
-    # check that cse was not registered
-    assert not env.is_cse_registered(), \
-        'CSE is registered as an extension when it should not be.'
+    # check that cse was registered correctly
+    env.check_cse_registration(config['amqp']['routing_key'],
+                               config['amqp']['exchange'])
 
     # check that vapp template exists in catalog
     assert env.catalog_item_exists(template_config['catalog_item']), \
@@ -349,7 +346,6 @@ def test_0100_install_update(config, unregister_cse):
     """Tests installation option: '--update'.
 
     Tests that installation:
-    - registers cse (when answering yes to prompt),
     - creates all templates correctly,
     - customizes temp vapps correctly.
 
@@ -366,21 +362,14 @@ def test_0100_install_update(config, unregister_cse):
                                     '--ssh-key', env.SSH_KEY_FILEPATH,
                                     '--update',
                                     '--no-capture'],
-                                   input='y',
                                    catch_exceptions=False)
     assert result.exit_code == 0
 
     vdc = VDC(env.CLIENT, href=env.VDC_HREF)
 
     # check that cse was registered correctly
-    is_cse_registered = env.is_cse_registered()
-    assert is_cse_registered, \
-        'CSE is not registered as an extension when it should be.'
-    if is_cse_registered:
-        assert env.is_cse_registration_valid(config['amqp']['routing_key'],
-                                             config['amqp']['exchange']), \
-            'CSE is registered as an extension, but the extension settings ' \
-            'on vCD are not the same as config settings.'
+    env.check_cse_registration(config['amqp']['routing_key'],
+                               config['amqp']['exchange'])
 
     # ssh into vms to check for installed software
     ssh_client = paramiko.SSHClient()
@@ -428,8 +417,6 @@ def test_0100_install_update(config, unregister_cse):
 def test_0110_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
     """Tests that installation deletes temp vapps when 'cleanup' is True.
 
-    Also tests that '--ext config' registers cse.
-
     command: cse install --config cse_test_config.yaml
     expected: temp vapps are deleted
     """
@@ -440,20 +427,13 @@ def test_0110_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
 
     result = env.CLI_RUNNER.invoke(cli,
                                    ['install',
-                                    '--config', env.ACTIVE_CONFIG_FILEPATH,
-                                    '--ext', 'config'],
+                                    '--config', env.ACTIVE_CONFIG_FILEPATH],
                                    catch_exceptions=False)
     assert result.exit_code == 0
 
     # check that cse was registered correctly
-    is_cse_registered = env.is_cse_registered()
-    assert is_cse_registered, \
-        'CSE is not registered as an extension when it should be.'
-    if is_cse_registered:
-        assert env.is_cse_registration_valid(config['amqp']['routing_key'],
-                                             config['amqp']['exchange']), \
-            'CSE is registered as an extension, but the extension settings ' \
-            'on vCD are not the same as config settings.'
+    env.check_cse_registration(config['amqp']['routing_key'],
+                               config['amqp']['exchange'])
 
     for template_config in config['broker']['templates']:
         # check that vapp templates exists
