@@ -11,11 +11,7 @@ from container_service_extension.utils import get_server_runtime_config
 from container_service_extension.utils import get_vcd_sys_admin_client
 
 
-class AbstractBroker(abc.ABC):
-
-    def __init__(self, headers, request_body):
-        self.headers = headers
-        self.request_body = request_body
+class Broker(abc.ABC):
 
     @abc.abstractmethod
     def create_cluster(self):
@@ -25,7 +21,7 @@ class AbstractBroker(abc.ABC):
 
         :rtype: dict
         """
-        pass
+    pass
 
     @abc.abstractmethod
     def delete_cluster(self):
@@ -67,6 +63,15 @@ class AbstractBroker(abc.ABC):
         :rtype: dict
         """
         pass
+
+
+class AbstractBroker(Broker):
+
+    def __init__(self, headers, request_body):
+        self.headers = headers
+        self.request_body = request_body
+        self.client_session = None
+        self.tenant_client = None
 
     def get_tenant_client_session(self):
         """Return <Session> XML object of a logged in vCD user.

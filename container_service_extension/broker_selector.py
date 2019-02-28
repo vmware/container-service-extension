@@ -7,6 +7,7 @@ from container_service_extension.broker import DefaultBroker
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.ovdc_cache import OvdcCache
 from container_service_extension.pksbroker import PKSBroker
+from container_service_extension.pksbroker import PKSBrokerAdapter
 
 
 def get_new_broker(headers, request_body):
@@ -32,8 +33,8 @@ def get_new_broker(headers, request_body):
             ovdc_name=ovdc_name, org_name=org_name, credentials_required=True)
         LOGGER.debug(f"ovdc metadata for {ovdc_name}-{org_name}=>{metadata}")
         if metadata.get('container_provider') == 'pks':
-            return PKSBroker(headers, request_body,
-                             ovdc_cache=metadata)
+            return PKSBrokerAdapter(PKSBroker(headers, request_body,
+                             ovdc_cache=metadata))
         else:
             return DefaultBroker(headers, request_body)
     else:

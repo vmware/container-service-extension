@@ -2,10 +2,12 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-
 import json
 
+from pyvcloud.vcd.utils import extract_id
+
 from container_service_extension.abstract_broker import AbstractBroker
+from container_service_extension.abstract_broker import Broker
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pksclient.api.cluster_api import ClusterApi
@@ -26,6 +28,99 @@ from container_service_extension.utils import exception_handler
 from container_service_extension.utils import OK
 
 
+class PKSBrokerAdapter(Broker):
+    """Adapt PKSBroker.
+
+    Accepts CRUD operation on PKS clusters. Makes the cluster name unique
+    based on the user that is logged in before delegating the cluster
+    operation to PKSBroker.
+
+    Also, does filtering after the CRUD operation is completed by PKSBroker.
+
+    """
+
+    def __init__(self, pks_broker):
+        self.pks_broker = pks_broker
+        self.session = pks_broker.get_tenant_client_session()
+        self.uid = extract_id(self.session.get('userId'))
+
+    def create_cluster(self):
+        """Create cluster.
+
+        :return: response object
+
+        :rtype: dict
+        """
+        cluster_name = self._append_user_id(self.pks_broker.body['name'])
+        LOGGER.debug(f"uid={self.uid};cluster_name={cluster_name}")
+        return self.pks_broker.create_cluster(cluster_name)
+
+    def delete_cluster(self):
+        """Delete the given cluster.
+
+        :return: response object
+
+        :rtype: dict
+        """
+        cluster_name = self._append_user_id(self.pks_broker.body['name'])
+        return self.pks_broker.delete_cluster(cluster_name)
+
+    def get_cluster_info(self, name):
+        """Get the information about the cluster.
+
+        :param str name: Name of the cluster
+
+        :return: response object
+
+        :rtype: dict
+
+        """
+        cluster_name = self._append_user_id(name)
+        result = self.pks_broker.get_cluster_info(cluster_name)
+        result['body']['name'] = self._truncate_user_id(result['body']['name'])
+        return result
+
+    def list_clusters(self):
+        """Get the list of clusters.
+
+        :return: response object
+
+        :rtype: dict
+
+        """
+        result = self.pks_broker.list_clusters()
+        cluster_list = result['body']
+        filtered_list = []
+        for entry in cluster_list:
+            cluster_name = entry['name']
+            if cluster_name.endswith(f'-{self.uid}'):
+                entry.update({'name': self._truncate_user_id(cluster_name)})
+                filtered_list.append(entry)
+        result['body'] = filtered_list
+        return result
+
+    def resize_cluster(self, name, num_of_nodes):
+        """Scale the cluster.
+
+        :param str name: Name of the cluster
+
+        :return: response object
+
+        :rtype: dict
+        """
+        cluster_name = self._append_user_id(name)
+        return self.pks_broker.resize_cluster(cluster_name, num_of_nodes)
+
+    def _append_user_id(self, name):
+        return f'{name}-{self.uid}'
+
+    def _truncate_user_id(self, name):
+        return name.split(f'-{self.uid}')[0]
+
+    def __getattr__(self, attr):
+        return getattr(self.pks_broker, attr)
+
+
 class PKSBroker(AbstractBroker):
     """PKSBroker makes API calls to PKS server.
 
@@ -43,6 +138,7 @@ class PKSBroker(AbstractBroker):
         self.body = request_body
         self.username = ovdc_cache['username']
         self.secret = ovdc_cache['secret']
+        self.plan_list = ovdc_cache['pks_plans']
         self.pks_host_uri = \
             f"https://{ovdc_cache['host']}:{ovdc_cache['port']}/v1"
         self.uaac_uri = \
@@ -122,8 +218,8 @@ class PKSBroker(AbstractBroker):
         return result
 
     @exception_handler
-    def create_cluster(self, name, plan,
-                       external_host_name='cluster.pks.local',
+    def create_cluster(self, name, plan=None,
+                       external_host_name='cluster.pks.local-4',
                        network_profile=None,
                        compute_profile=None):
         """Create cluster in PKS environment.
@@ -143,6 +239,10 @@ class PKSBroker(AbstractBroker):
         # TODO() Invalidate cluster names containing '-' character.
         result = {}
         result['body'] = []
+        # Choose the first plan in the list
+        # TODO() Needs revisit on how the list of plans work
+        if plan is None:
+            plan = self.plan_list[0]
         cluster_api = ClusterApi(api_client=self.pks_client)
         cluster_params = ClusterParameters(
             kubernetes_master_host=external_host_name,
