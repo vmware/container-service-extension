@@ -77,8 +77,7 @@ class OvdcCache(object):
             if credentials_required:
                 pks_info = self.pks_cache.get_pks_account_details(
                     org_name, pvdc_info.vc)
-                metadata['username'] = pks_info.uaac.username
-                metadata['secret'] = pks_info.uaac.secret
+                metadata.update(pks_info.credentials._asdict())
         else:
             metadata = {'container_provider': container_provider}
 
@@ -121,28 +120,28 @@ class OvdcCache(object):
             pks_info = self.pks_cache.get_pks_account_details(
                 org_name, pvdc_info.vc)
 
-            # construct ovdc metadata
-            metadata['name'] = pvdc_info.name
-            metadata['vc'] = pvdc_info.vc
-            metadata['datacenter'] = pvdc_info.datacenter
-            metadata['cluster'] = pvdc_info.cluster
-            metadata['cpi'] = pvdc_info.cpi
-            metadata['host'] = pks_info.host
-            metadata['port'] = pks_info.port
-            if hasattr(pks_info, 'proxy') and pks_info.proxy is not None:
-                metadata['proxy'] = pks_info.proxy
-            else:
-                metadata['proxy'] = ''
-            metadata['uaac_port'] = pks_info.uaac.port
-            metadata['pks_plans'] = pks_plans or ''
             metadata['container_provider'] = container_provider
             pks_compute_profile_name = f"{org_name}-{ovdc_name}-{ovdc_id}"
-            metadata['pks_compute_profile_name'] = pks_compute_profile_name
+            self._construct_pks_context(pks_info, pvdc_info,
+                                        pks_compute_profile_name, pks_plans,
+                                        False)
 
         # set ovdc metadata into Vcd
         LOGGER.debug(f"Setting below metadata on ovdc {ovdc_name}:{metadata}")
         return ovdc.set_multiple_metadata(metadata, MetadataDomain.SYSTEM,
                                           MetadataVisibility.PRIVATE)
+
+    def _construct_pks_context(self, pks_info, pvdc_info=None,
+                               pks_compute_profile_name=None, pks_plans = '',
+                               credentials_required=False):
+        pks_ctx = pks_info._asdict()
+        credentials = pks_ctx.pop('credentials')
+        if credentials_required == True:
+            pks_ctx.update(credentials._asdict())
+        pks_ctx.update(pvdc_info._asdict())
+        pks_ctx['pks_compute_profile_name'] = pks_compute_profile_name
+        pks_ctx['pks_plans'] = pks_plans
+        return pks_ctx
 
     def _remove_metadata(self, ovdc, keys=[]):
         metadata = utils.metadata_to_dict(ovdc.get_all_metadata())

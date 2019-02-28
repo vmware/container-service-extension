@@ -130,15 +130,14 @@ class PksCache(object):
         """
         pks = dict()
         for account in self.pks_accounts:
-            uaac = Uaac(account['uaac']['port'],
-                        account['uaac']['secret'],
-                        account['uaac']['username'])
+            credentials = Credentials(account['uaac']['username'],
+                                      account['uaac']['secret'])
             pks_proxy = None \
                 if 'proxy' not in account else account['proxy']
             pks_info = PksInfo(account['name'],
                                account['host'],
                                account['port'],
-                               uaac,
+                               account['uaac']['port'],
                                account['vc'],
                                pks_proxy)
             pks_account_name = account['name']
@@ -150,7 +149,7 @@ class PksCache(object):
         """Construct a dict to access PKS account information per vc.
 
         This dict provides PKS account information (account,
-        name, host, port, uaac and vc name) per vCenter based on the
+        name, host, port, uaac_port, credentials and vc name) per vCenter based on the
         associated vCenter name.
 
         :return: dict of PKS information where key is the vCenter name and
@@ -168,7 +167,7 @@ class PksCache(object):
         """Construct a dict to access PKS account information per org per vc.
 
         This dict provides PKS account information (account name, host,
-        port, uaac and vc name) associated with each organization per vCenter
+        port, uaac_port, credentials and vc name) associated with each organization per vCenter
         based on the organization name and associated vCenter name.
 
         :return: dict of PKS information where key is a tuple of org name
@@ -210,39 +209,52 @@ class PksCache(object):
         return pvdc_table
 
 
-class PksInfo(namedtuple("PksInfo", 'name, host, port, uaac, vc, '
-                                    'proxy')):
+class PksInfo(namedtuple("PksInfo", 'name, host, port, uaac_port, credentials,'
+                                    ' vc, proxy')):
     """Immutable class representing PKS account information."""
 
     def __str__(self):
-        return "class:{c}, name: {name}, host: {host}, port : {port}," \
-               "uaac : {uaac}, vc : {vc}, proxy : {proxy}"\
+        return "class:{c}, name: {name}, host: {host}, port : {port}, " \
+               "uaac_port : {uaac_port}, credentials : {credentials}, " \
+               "vc : {vc}, proxy : {proxy}"\
             .format(c=PksInfo.__name__,
                     name=self.name,
                     host=self.host,
                     port=self.port,
-                    uaac=self.uaac,
+                    uaac_port=self.uaac_port,
+                    credentials=self.credentials,
                     vc=self.vc, proxy=self.proxy)
 
 
 class PvdcResourcePoolPathInfo(namedtuple("PvdcResourcePoolPathInfo",
-                                          'name, vc, datacenter, cluster,'
+                                          'pvdc_name, vc, datacenter, cluster,'
                                           ' cpi')):
     """Immutable class representing Provider vDC related info for PKS setup."""
 
     def __str__(self):
-        return "class:{c}, name : {name}, vc : {vc}," \
+        return "class:{c}, pvdc_name : {name}, vc : {vc}," \
                " datacenter: {datacenter}, cluster : {cluster}," \
                " cpi : {cpi}".format(c=PvdcResourcePoolPathInfo.__name__,
-                                     name=self.name, vc=self.vc,
+                                     name=self.pvdc_name, vc=self.vc,
                                      datacenter=self.datacenter,
                                      cluster=self.cluster, cpi=self.cpi)
 
 
-class Uaac(namedtuple("Uaac", 'port, secret, username')):
-    """Immutable class representing info on UAAC from PKS configuration."""
+class Credentials(namedtuple("Credentials", 'username, secret')):
+    """Immutable class representing info on Credentials from PKS configuration."""
 
     def __str__(self):
-        return "class:{c}, port : {port}, secret : {secret}, username : " \
-               "{username}".format(c=Uaac.__name__, port=self.port,
-                                   secret=self.secret, username=self.username)
+        return "class:{c}, username : {username}, secret : {secret}, "\
+            .format(c=Credentials.__name__, username=self.username,
+                    secret=self.secret)
+
+credentials = Credentials('admin','secret')
+fields = PksInfo._fields
+pks_info = PksInfo('pepsi', 'api.pks.local', '9021','8443', credentials, 'vc','')
+cred_dict = pks_info.credentials._asdict()
+print(cred_dict)
+# print(pks_info)
+# pks_dict = pks_info._asdict()
+# credentials_dict=pks_dict.pop('credentials')
+# pks_dict.update(credentials_dict._asdict())
+# print(pks_dict)
