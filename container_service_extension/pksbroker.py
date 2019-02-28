@@ -393,3 +393,21 @@ class PKSBroker(AbstractBroker):
             raise CseServerError(f"Unsupported operation {name}")
         return unsupported_method
 
+ovdc_cache = {}
+ovdc_cache['host'] = 'api.pks.local'
+ovdc_cache['username'] = 'admin'
+ovdc_cache['secret'] = 'tk3l3_-gLD452c5mkEma6BdUh7RUaRCz'
+#ovdc_cache['proxy'] = '10.161.188.86'
+ovdc_cache['port'] = 9021
+ovdc_cache['uaac_port'] = 8443
+p = PKSBroker(headers=None, request_body=None, ovdc_cache=ovdc_cache)
+#print(p.get_compute_profile(name='latest_cp'))
+#print(p.list_compute_profiles())
+print(p.list_clusters())
+#print(p.get_cluster_info('sahi-cluster'))
+# print(p.create_compute_profile(cp_name='ovdc',az_name='ovdc_az',
+#                                description='test', cpi='6968bd637eb00d41193f',
+#                                datacenter_name='kubo-dc', cluster_name='kubo-az-1',
+#                                ovdc_rp_name='ovdc-uuid'))
+
+#p.create_cluster(name='my-cluster1', plan='Plan 1', compute_profile='ovdc', external_host_name='mycluster1.pks.local')
