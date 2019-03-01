@@ -220,10 +220,10 @@ class PksCache(object):
             pvdc_id = get_pvdc_id_by_name(pvdc['name'], pvdc['vc'])
             datacenter, cluster = pvdc['datacenter'], pvdc['cluster']
             cpi = pvdc['cpi']
-            pvdc_rp_info = PvdcInfo(pvdc['name'],
+            pvdc_info = PvdcInfo(pvdc['name'],
                                     pvdc['vc'],
                                     datacenter, cluster, cpi)
-            pvdc_table[str(pvdc_id)] = pvdc_rp_info
+            pvdc_table[str(pvdc_id)] = pvdc_info
 
         return pvdc_table
 
