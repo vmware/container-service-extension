@@ -8,6 +8,8 @@ from collections import namedtuple
 
 from container_service_extension.utils import get_pvdc_id_by_name
 
+PKS_PLANS = 'pks_plans'
+PKS_COMPUTE_PROFILE = 'pks_compute_profile_name'
 
 class PksCache(object):
     """Immutable in-memory cache for CSE PKS.
@@ -113,8 +115,24 @@ class PksCache(object):
         for org in self.orgs:
             if org['name'] == org_name:
                 pks_account_names_for_org = org['pks_accounts']
-        pks_accounts = [self.pks_info_table[name] for name in pks_account_names_for_org]
+        pks_accounts = [self.pks_info_table[name]
+                        for name in pks_account_names_for_org]
         return pks_accounts
+
+    def get_pks_keys(self):
+        """ Get relevant PKS keys
+
+        :return: Set of pks keys
+
+        :rtype: set
+        """
+        keys = set(PksInfo._fields)
+        keys.remove('credentials')
+        [keys.add(field) for field in PvdcInfo._fields]
+        keys.add(PKS_PLANS)
+        keys.add(PKS_COMPUTE_PROFILE)
+        return keys
+
 
     def _construct_pks_accounts(self):
         """Construct a dict to access PKS account information.
@@ -132,12 +150,13 @@ class PksCache(object):
         for account in self.pks_accounts:
             credentials = Credentials(account['uaac']['username'],
                                       account['uaac']['secret'])
-            pks_proxy = None \
+            pks_proxy = '' \
                 if 'proxy' not in account else account['proxy']
             pks_info = PksInfo(account['name'],
                                account['host'],
                                account['port'],
                                account['uaac']['port'],
+                               credentials,
                                account['vc'],
                                pks_proxy)
             pks_account_name = account['name']
@@ -201,16 +220,16 @@ class PksCache(object):
             pvdc_id = get_pvdc_id_by_name(pvdc['name'], pvdc['vc'])
             datacenter, cluster = pvdc['datacenter'], pvdc['cluster']
             cpi = pvdc['cpi']
-            pvdc_rp_info = PvdcResourcePoolPathInfo(pvdc['name'],
-                                                    pvdc['vc'],
-                                                    datacenter, cluster, cpi)
+            pvdc_rp_info = PvdcInfo(pvdc['name'],
+                                    pvdc['vc'],
+                                    datacenter, cluster, cpi)
             pvdc_table[str(pvdc_id)] = pvdc_rp_info
 
         return pvdc_table
 
 
-class PksInfo(namedtuple("PksInfo", 'name, host, port, uaac_port, credentials,'
-                                    ' vc, proxy')):
+class PksInfo(namedtuple("PksInfo", 'account_name, host, port, uaac_port, '
+                                    'credentials, vc, proxy')):
     """Immutable class representing PKS account information."""
 
     def __str__(self):
@@ -218,7 +237,7 @@ class PksInfo(namedtuple("PksInfo", 'name, host, port, uaac_port, credentials,'
                "uaac_port : {uaac_port}, credentials : {credentials}, " \
                "vc : {vc}, proxy : {proxy}"\
             .format(c=PksInfo.__name__,
-                    name=self.name,
+                    name=self.account_name,
                     host=self.host,
                     port=self.port,
                     uaac_port=self.uaac_port,
@@ -226,7 +245,7 @@ class PksInfo(namedtuple("PksInfo", 'name, host, port, uaac_port, credentials,'
                     vc=self.vc, proxy=self.proxy)
 
 
-class PvdcResourcePoolPathInfo(namedtuple("PvdcResourcePoolPathInfo",
+class PvdcInfo(namedtuple("PvdcResourcePoolPathInfo",
                                           'pvdc_name, vc, datacenter, cluster,'
                                           ' cpi')):
     """Immutable class representing Provider vDC related info for PKS setup."""
@@ -234,7 +253,7 @@ class PvdcResourcePoolPathInfo(namedtuple("PvdcResourcePoolPathInfo",
     def __str__(self):
         return "class:{c}, pvdc_name : {name}, vc : {vc}," \
                " datacenter: {datacenter}, cluster : {cluster}," \
-               " cpi : {cpi}".format(c=PvdcResourcePoolPathInfo.__name__,
+               " cpi : {cpi}".format(c=PvdcInfo.__name__,
                                      name=self.pvdc_name, vc=self.vc,
                                      datacenter=self.datacenter,
                                      cluster=self.cluster, cpi=self.cpi)
@@ -247,14 +266,3 @@ class Credentials(namedtuple("Credentials", 'username, secret')):
         return "class:{c}, username : {username}, secret : {secret}, "\
             .format(c=Credentials.__name__, username=self.username,
                     secret=self.secret)
-
-credentials = Credentials('admin','secret')
-fields = PksInfo._fields
-pks_info = PksInfo('pepsi', 'api.pks.local', '9021','8443', credentials, 'vc','')
-cred_dict = pks_info.credentials._asdict()
-print(cred_dict)
-# print(pks_info)
-# pks_dict = pks_info._asdict()
-# credentials_dict=pks_dict.pop('credentials')
-# pks_dict.update(credentials_dict._asdict())
-# print(pks_dict)
