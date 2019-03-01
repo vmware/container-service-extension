@@ -228,7 +228,7 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         result['body'] = clusters
         return result
 
-    @exception_handler
+    #@exception_handler
     def get_cluster_info(self, name):
         """Get the info of the cluster.
 

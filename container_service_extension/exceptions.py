@@ -20,6 +20,10 @@ class ClusterAlreadyExistsError(CseServerError):
     """Raised when creating a cluster that already exists."""
 
 
+class ClusterNotFoundError(CseServerError):
+    """Raised when cluster is not found in the environment"""
+
+
 class ClusterJoiningError(ClusterOperationError):
     """Raised when any error happens while cluster join operation."""
 

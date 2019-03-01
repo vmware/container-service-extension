@@ -2,12 +2,15 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension import utils
+from container_service_extension.utils import exception_handler
+from container_service_extension.utils import get_server_runtime_config
+from container_service_extension.utils import connect_vcd_user_via_token
+from container_service_extension.utils import get_vcd_sys_admin_client
 from container_service_extension.broker import DefaultBroker
+from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.ovdc_cache import OvdcCache
 from container_service_extension.pksbroker import PKSBroker
-from container_service_extension.utils import get_pks_cache
 
 from enum import Enum, unique
 
@@ -24,37 +27,54 @@ class Broker_manager(object):
     def __init__(self, headers, body):
         self.headers = headers
         self.body = body
-        self.pks_cache = get_pks_cache()
 
+
+    @exception_handler
     def invoke(self, op, on_the_fly_request_body=None):
+        print('invoke invoked')
+        from container_service_extension.service import Service
+        self.pks_cache = Service().get_pks_cache()
 
         request_body = self.body
         if on_the_fly_request_body:
             request_body = on_the_fly_request_body
 
         if op == Operation.GET_CLUSTER:
+            print('inside if Get cluster ')
             ovdc_name = request_body.get('vdc') if request_body else None
             cluster_name = request_body['cluster_name']
             if ovdc_name:
+                print('Inside ovdc If block : ovdc in the body')
                 broker = self.get_new_broker(request_body)
                 broker.get_cluster_info(cluster_name)
             else:
+                print('Else block: scanner')
                 vcd_broker = DefaultBroker(self.headers, request_body)
-                result = vcd_broker.get_cluster_info(cluster_name)
-                if len(result['body']) > 0:
+                try:
+                    result = vcd_broker.get_cluster_info(cluster_name)
                     return result
+                except Exception as err:
+                    print(err)
+                    pass
                 session = vcd_broker.get_tenant_client_session()
+                print('orgname:')
+                print(session.get('org'))
                 pks_acc_list = self.pks_cache.\
                     get_all_pks_accounts_for_org(org_name=session.get('org'))
+                print('pks_accounts_from_pks_cache:')
+                print(pks_acc_list)
                 for pks_account in pks_acc_list:
-                    return
-
-
-
-
-
-
-
+                    pks_ctx = OvdcCache.construct_pks_context(pks_account, credentials_required=True)
+                    print('pks_ctx:')
+                    print(pks_ctx)
+                    p = PKSBroker(self.headers, request_body, pks_ctx)
+                    try:
+                        result = p.get_cluster_info(cluster_name)
+                        return result
+                    except Exception as err:
+                        print(err)
+                        pass
+            raise ClusterNotFoundError(f'cluster {cluster_name} not found either in vCD or PKS')
 
     def get_new_broker(self, on_the_fly_request_body=None):
 
@@ -62,8 +82,8 @@ class Broker_manager(object):
         if on_the_fly_request_body:
             request_body = on_the_fly_request_body
 
-        config = utils.get_server_runtime_config()
-        tenant_client, session = utils.connect_vcd_user_via_token(
+        config = get_server_runtime_config()
+        tenant_client, session = connect_vcd_user_via_token(
             vcd_uri=config['vcd']['host'],
             headers=self.headers,
             verify_ssl_certs=config['vcd']['verify'])
@@ -77,7 +97,7 @@ class Broker_manager(object):
         Fall back to DefaultBroker for missing ovdc or org.
         """
         if ovdc_name and org_name:
-            admin_client = utils.get_vcd_sys_admin_client()
+            admin_client = get_vcd_sys_admin_client()
             ovdc_cache = OvdcCache(admin_client)
             metadata = ovdc_cache.get_ovdc_container_provider_metadata(
                 ovdc_name=ovdc_name, org_name=org_name,
@@ -95,5 +115,5 @@ class Broker_manager(object):
             # handling is required for missing ovdc or org.
             return DefaultBroker(self.headers, request_body)
 
-b = Broker_manager(None, None)
-b.invoke(Operation.GET_CLUSTER)
+# b = Broker_manager(None, None)
+# b.invoke(Operation.GET_CLUSTER)

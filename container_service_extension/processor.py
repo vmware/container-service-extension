@@ -10,7 +10,6 @@ import traceback
 from pkg_resources import resource_string
 import yaml
 
-from container_service_extension.broker_manager import Broker_manager
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.utils import get_server_runtime_config
@@ -89,7 +88,9 @@ class ServiceProcessor(object):
             raise CseServerError('CSE service is disabled. '
                                  'Contact the System Administrator.')
 
+        from container_service_extension.broker_manager import Broker_manager
         broker_manager = Broker_manager(body['headers'], request_body)
+        from container_service_extension.broker_manager import Operation
 
         if body['method'] == 'GET':
             if ovdc_info_request:
@@ -121,9 +122,11 @@ class ServiceProcessor(object):
                 result['status_code'] = 200
                 reply = result
             elif cluster_info_request:
-                broker = broker_manager.get_new_broker()
+                print('cluster-info')
                 on_the_fly_request_body = {'cluster_name': cluster_name}
-                reply = broker.get_cluster_info(cluster_name)
+                reply = broker_manager.invoke(Operation.GET_CLUSTER, on_the_fly_request_body)
+                # broker = broker_manager.get_new_broker()
+                # reply = broker.get_cluster_info(cluster_name)
             elif node_info_request:
                 broker = broker_manager.get_new_broker()
                 reply = broker.get_node_info(cluster_name, node_name)
@@ -133,6 +136,7 @@ class ServiceProcessor(object):
                 result['status_code'] = OK
                 reply = result
             elif cluster_name is None:
+                print('list clusters)')
                 broker = broker_manager.get_new_broker()
                 reply = broker.list_clusters()
         elif body['method'] == 'POST':
