@@ -85,3 +85,12 @@ class VcdResponseError(Exception):
 
     def __str__(self):
         return self.error_message
+
+
+class PksServerError(CseServerError):
+    """Raised when error is received from PKS"""
+
+
+class PksConnectionError(PksServerError):
+    """Raised when connection establishment to PKS fails"""
+

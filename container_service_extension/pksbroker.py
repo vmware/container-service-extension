@@ -7,6 +7,7 @@ import json
 
 from container_service_extension.abstract_broker import AbstractBroker
 from container_service_extension.exceptions import CseServerError
+from container_service_extension.exceptions import PksConnectionError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pksclient.api.cluster_api import ClusterApi
 from container_service_extension.pksclient.api.profile_api import ProfileApi
@@ -47,9 +48,8 @@ class PKSBroker(AbstractBroker):
             f"https://{ovdc_cache['host']}:{ovdc_cache['port']}/v1"
         self.uaac_uri = \
             f"https://{ovdc_cache['host']}:{ovdc_cache['uaac_port']}"
-        self.proxy_uri = None
-        if ovdc_cache.get('proxy') is not None:
-            self.proxy_uri = f"http://{ovdc_cache['proxy']}:80"
+        self.proxy_uri = f"http://{ovdc_cache['proxy']}:80" \
+            if ovdc_cache.get('proxy') else None
         self.verify = False  # TODO(pks.yaml) pks_config['pks']['verify']
         self.pks_client = self._get_pks_client()
 
@@ -63,9 +63,13 @@ class PKSBroker(AbstractBroker):
         :rtype:
         container_service_extension.pksclient.configuration.Configuration
         """
-        uaaClient = UaaClient(self.uaac_uri, self.username, self.secret,
-                              proxy_uri=self.proxy_uri)
-        token = uaaClient.getToken()
+        try:
+            uaaClient = UaaClient(self.uaac_uri, self.username, self.secret,
+                                  proxy_uri=self.proxy_uri)
+            token = uaaClient.getToken()
+        except Exception as err:
+            raise PksConnectionError(f'Connection establishment to PKS host'
+                                     f' {self.uaac_uri} failed: {err}')
         pks_config = Configuration()
         pks_config.proxy = self.proxy_uri
         pks_config.host = self.pks_host_uri

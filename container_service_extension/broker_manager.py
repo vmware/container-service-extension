@@ -64,7 +64,8 @@ class Broker_manager(object):
                 print('pks_accounts_from_pks_cache:')
                 print(pks_acc_list)
                 for pks_account in pks_acc_list:
-                    pks_ctx = OvdcCache.construct_pks_context(pks_account, credentials_required=True)
+                    pks_ctx = OvdcCache.construct_pks_context(
+                        pks_account, credentials_required=True)
                     print('pks_ctx:')
                     print(pks_ctx)
                     p = PKSBroker(self.headers, request_body, pks_ctx)
