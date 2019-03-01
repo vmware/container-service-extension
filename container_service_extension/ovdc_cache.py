@@ -51,9 +51,11 @@ class OvdcCache(object):
         credentials = pks_ctx.pop('credentials')
         if credentials_required == True:
             pks_ctx.update(credentials._asdict())
-        pks_ctx.update(pvdc_info._asdict())
-        pks_ctx[PKS_COMPUTE_PROFILE] = pks_compute_profile_name
-        pks_ctx[PKS_PLANS] = pks_plans
+        if pvdc_info is not None:
+            pks_ctx.update(pvdc_info._asdict())
+        pks_ctx[PKS_COMPUTE_PROFILE] = '' if pks_compute_profile_name is None \
+            else pks_compute_profile_name
+        pks_ctx[PKS_PLANS] = '' if pks_plans is None else pks_plans
         return pks_ctx
 
 
