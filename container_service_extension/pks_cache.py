@@ -245,9 +245,8 @@ class PksInfo(namedtuple("PksInfo", 'account_name, host, port, uaac_port, '
                     vc=self.vc, proxy=self.proxy)
 
 
-class PvdcInfo(namedtuple("PvdcResourcePoolPathInfo",
-                                          'pvdc_name, vc, datacenter, cluster,'
-                                          ' cpi')):
+class PvdcInfo(namedtuple("PvdcInfo",'pvdc_name, vc, datacenter,'
+                                     ' cluster, cpi')):
     """Immutable class representing Provider vDC related info for PKS setup."""
 
     def __str__(self):
