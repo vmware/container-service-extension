@@ -122,7 +122,6 @@ class ServiceProcessor(object):
                 result['status_code'] = 200
                 reply = result
             elif cluster_info_request:
-                print('cluster-info')
                 on_the_fly_request_body = {'cluster_name': cluster_name}
                 reply = broker_manager.invoke(Operation.GET_CLUSTER, on_the_fly_request_body)
                 # broker = broker_manager.get_new_broker()

@@ -33,23 +33,23 @@ class PKSBroker(AbstractBroker):
     It performs CRUD operations on Kubernetes clusters.
     """
 
-    def __init__(self, headers, request_body, ovdc_cache=None):
+    def __init__(self, headers, request_body, pks_ctx=None):
         """Initialize PKS broker.
 
-        :param ovdc_cache: ovdc cache (subject to change) is used to
+        :param pks_ctx: ovdc cache (subject to change) is used to
         initialize PKS broker.
         """
         super().__init__(headers, request_body)
         self.headers = headers
         self.body = request_body
-        self.username = ovdc_cache['username']
-        self.secret = ovdc_cache['secret']
+        self.username = pks_ctx['username']
+        self.secret = pks_ctx['secret']
         self.pks_host_uri = \
-            f"https://{ovdc_cache['host']}:{ovdc_cache['port']}/v1"
+            f"https://{pks_ctx['host']}:{pks_ctx['port']}/v1"
         self.uaac_uri = \
-            f"https://{ovdc_cache['host']}:{ovdc_cache['uaac_port']}"
-        self.proxy_uri = f"http://{ovdc_cache['proxy']}:80" \
-            if ovdc_cache.get('proxy') else None
+            f"https://{pks_ctx['host']}:{pks_ctx['uaac_port']}"
+        self.proxy_uri = f"http://{pks_ctx['proxy']}:80" \
+            if pks_ctx.get('proxy') else None
         self.verify = False  # TODO(pks.yaml) pks_config['pks']['verify']
         self.pks_client = self._get_pks_client()
 
@@ -166,7 +166,7 @@ class PKSBroker(AbstractBroker):
         result['status_code'] = ACCEPTED
         return result
 
-    @exception_handler
+    #@exception_handler
     def get_cluster_info(self, name):
         """Get the details of a cluster with a given name in PKS environment.
 
@@ -400,8 +400,8 @@ class PKSBroker(AbstractBroker):
 # ovdc_cache = {}
 # ovdc_cache['host'] = 'api.pks.local'
 # ovdc_cache['username'] = 'admin'
-# ovdc_cache['secret'] = 'tk3l3_-gLD452c5mkEma6BdUh7RUaRCz'
-# #ovdc_cache['proxy'] = '10.161.188.86'
+# ovdc_cache['secret'] = 'Kk2MszObSi_DnHsngQeVIzeAhoe11k2u'
+# ovdc_cache['proxy'] = '10.161.67.157'
 # ovdc_cache['port'] = 9021
 # ovdc_cache['uaac_port'] = 8443
 # p = PKSBroker(headers=None, request_body=None, ovdc_cache=ovdc_cache)

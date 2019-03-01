@@ -47,6 +47,7 @@ class PksCache(object):
                                 pks_service_accounts_per_vc_info_table)
             super().__setattr__(
                 "pks_service_accounts_per_org_per_vc_info_table", {})
+            super().__setattr__('org_level_svc_accounts', False)
         else:
             pks_service_accounts_per_org_per_vc_info_table = self.\
                 _construct_pks_service_accounts_per_org_per_vc()
@@ -54,6 +55,7 @@ class PksCache(object):
                 "pks_service_accounts_per_org_per_vc_info_table",
                 pks_service_accounts_per_org_per_vc_info_table)
             super().__setattr__("pks_service_accounts_per_vc_info_table", {})
+            super().__setattr__('org_level_svc_accounts', True)
 
     def __setattr__(self, key, value):
         """Overridden method to customize the meaning of attribute access.
@@ -72,6 +74,9 @@ class PksCache(object):
         msg = f"Attributes of {self.__class__} cannot be deleted"
 
         raise AttributeError(msg)
+
+    def are_svc_accounts_org_level(self):
+        return self.org_level_svc_accounts
 
     def get_pvdc_info(self, pvdc_id):
         """Return an immutable PvdcResourcePoolPathInfo object.
