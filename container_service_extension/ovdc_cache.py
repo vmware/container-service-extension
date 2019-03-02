@@ -53,7 +53,7 @@ class OvdcCache(object):
             pks_ctx.update(credentials._asdict())
         if pvdc_info is not None:
             pks_ctx.update(pvdc_info._asdict())
-        pks_ctx[PKS_COMPUTE_PROFILE] = '' if pks_compute_profile_name is None\
+        pks_ctx[PKS_COMPUTE_PROFILE] = '' if pks_compute_profile_name is None \
             else pks_compute_profile_name
         pks_ctx[PKS_PLANS] = '' if pks_plans is None else pks_plans
         return pks_ctx
@@ -146,6 +146,13 @@ class OvdcCache(object):
             org_name = org.resource.get('name')
             pvdc_element = ovdc.resource.ProviderVdcReference
             pvdc_id = pvdc_element.get('id')
+            # To support <= VCD 9.1 where no 'id' is present in pvdc
+            # element, it has to be extracted from href. Once VCD 9.1 support
+            # is discontinued, this code is not required.
+            if pvdc_id is None:
+                pvdc_href = pvdc_element.get('href')
+                pvdc_id = pvdc_href.split("/")[-1]
+
             pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
             pks_info = self.pks_cache.get_pks_account_details(
                 org_name, pvdc_info.vc)
