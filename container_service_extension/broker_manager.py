@@ -2,17 +2,22 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from container_service_extension.utils import connect_vcd_user_via_token
 from container_service_extension.utils import exception_handler
 from container_service_extension.utils import get_server_runtime_config
-from container_service_extension.utils import connect_vcd_user_via_token
 from container_service_extension.utils import get_vcd_sys_admin_client
+from container_service_extension.utils import get_vdc
 from container_service_extension.broker import DefaultBroker
 from container_service_extension.exceptions import ClusterNotFoundError
+from container_service_extension.exceptions import CseServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.ovdc_cache import OvdcCache
 from container_service_extension.pksbroker import PKSBroker
 
 from enum import Enum, unique
+
+from pyvcloud.vcd.org import Org
+
 
 @unique
 class Operation(Enum):
@@ -28,7 +33,12 @@ class Broker_manager(object):
         self.headers = headers
         self.body = body
         from container_service_extension.service import Service
+        config = get_server_runtime_config()
         self.pks_cache = Service().get_pks_cache()
+        self.client, self.session = connect_vcd_user_via_token(
+            vcd_uri=config['vcd']['host'],
+            headers=self.headers,
+            verify_ssl_certs=config['vcd']['verify'])
 
 
     @exception_handler
@@ -51,24 +61,9 @@ class Broker_manager(object):
                     return result
                 except Exception:
                     pass
-                config = get_server_runtime_config()
-                tenant_client, session = connect_vcd_user_via_token(
-                    vcd_uri=config['vcd']['host'],
-                    headers=self.headers,
-                    verify_ssl_certs=config['vcd']['verify'])
-                if tenant_client.is_sysadmin():
-                    LOGGER.debug(f'Skipping scanning PKS hosts;'
-                                 f' user need to log-in as Org user')
-                    raise Warning(f'User needs to log-in as Org user in '
-                                      f'order to scan relevant PKS hosts '
-                                      f'associated with the Org')
 
-                pks_acc_list = self.pks_cache.\
-                    get_all_pks_accounts_for_org(session.get('org'))
-                #TODO What if PKS svc accounts are per VC.
-                for pks_account in pks_acc_list:
-                    pks_ctx = OvdcCache.construct_pks_context(
-                        pks_account, credentials_required=True)
+                pks_ctx_list = self._get_all_pks_accounts_in_org()
+                for pks_ctx in pks_ctx_list:
                     p = PKSBroker(self.headers, request_body, pks_ctx)
                     try:
                         result = p.get_cluster_info(cluster_name)
@@ -91,8 +86,44 @@ class Broker_manager(object):
                 # TODO If org-level svc accounts are not present, we have only
                 #  svc accounts per vcenter, then scan thru all ovdcs in a given org to find a set of PKS svc account
 
+    def _get_all_pks_accounts_in_org(self):
 
+        if self.client.is_sysadmin():
+            pks_acc_list = self.pks_cache.get_all_pks_accounts_in_system()
+            pks_ctx_list = [OvdcCache.construct_pks_context(
+                pks_account, credentials_required=True)
+                for pks_account in pks_acc_list]
+            return pks_ctx_list
 
+        if self.pks_cache.are_svc_accounts_per_org_per_vc():
+            pks_acc_list = \
+                self.pks_cache.get_all_pks_accounts_per_org_per_vc_in_org\
+                    (self.session.get('org'))
+            pks_ctx_list = [OvdcCache.construct_pks_context
+                            (pks_account, credentials_required=True)
+                            for pks_account in pks_acc_list]
+        else:
+            pks_ctx_list = self._get_all_pks_accounts_per_vc_in_org()
+
+        return pks_ctx_list
+
+    def _get_all_pks_accounts_per_vc_in_org(self):
+
+        ovdc_cache = OvdcCache(get_vcd_sys_admin_client())
+        org_resource = self.client.get_org()
+        org = Org(self.client, resource=org_resource)
+        vdc_list = org.list_vdcs()
+
+        # Constructing dict with key='vc' ensures no duplicates in the result
+        pks_ctx_dict = {}
+        for vdc in vdc_list:
+            ctr_prov_ctx = ovdc_cache.get_ovdc_container_provider_metadata(
+                ovdc_name=vdc['name'], org_name=org.get_name(),
+                credentials_required=True)
+            if ctr_prov_ctx[OvdcCache.CONTAINER_PROVIDER] == 'pks':
+                pks_ctx_dict[ctr_prov_ctx['vc']]=ctr_prov_ctx
+
+        return pks_ctx_dict.values()
 
     def get_new_broker(self, on_the_fly_request_body=None):
 

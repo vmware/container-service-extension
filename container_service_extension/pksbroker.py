@@ -103,7 +103,7 @@ class PKSBroker(AbstractBroker):
         result['status_code'] = OK
         cluster_api = ClusterApi(api_client=self.pks_client)
 
-        LOGGER.debug(f'Sending request to PKS: {self.host} '
+        LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} '
                      f'to list all clusters')
 
         clusters = cluster_api.list_clusters()
@@ -119,8 +119,8 @@ class PKSBroker(AbstractBroker):
             }
             list_of_cluster_dicts.append(cluster_dict)
 
-        LOGGER.debug(f'Received response from PKS: {self.host} on the list of '
-                     f'clusters: {list_of_cluster_dicts}')
+        LOGGER.debug(f'Received response from PKS: {self.pks_host_uri} on the'
+                     f' list of clusters: {list_of_cluster_dicts}')
 
         result['body'] = list_of_cluster_dicts
         return result
@@ -151,15 +151,15 @@ class PKSBroker(AbstractBroker):
                                          parameters=cluster_params,
                                          compute_profile_name=compute_profile)
 
-        LOGGER.debug(f'Sending request to PKS: {self.host} to create cluster'
-                     f' of name: {name}')
+        LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to create '
+                     f'cluster of name: {name}')
 
         cluster = cluster_api.add_cluster(cluster_request)
         cluster_dict = cluster.to_dict()
         cluster_params_dict = cluster_dict.pop('parameters')
         cluster_dict.update(cluster_params_dict)
 
-        LOGGER.debug(f'PKS: {self.host} accepted the request to create'
+        LOGGER.debug(f'PKS: {self.pks_host_uri} accepted the request to create'
                      f' cluster: {name}')
 
         result['body'] = cluster_dict
@@ -180,16 +180,16 @@ class PKSBroker(AbstractBroker):
         result['status_code'] = OK
         cluster_api = ClusterApi(api_client=self.pks_client)
 
-        LOGGER.debug(f'Sending request to PKS: {self.host} to get details'
-                     f' of cluster with name: {name}')
+        LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to get '
+                     f'details of cluster with name: {name}')
 
         cluster = cluster_api.get_cluster(cluster_name=name)
         cluster_dict = cluster.to_dict()
         cluster_params_dict = cluster_dict.pop('parameters')
         cluster_dict.update(cluster_params_dict)
 
-        LOGGER.debug(f'Received response from PKS: {self.host} on cluster:'
-                     f' {name} with details: {cluster_dict}')
+        LOGGER.debug(f'Received response from PKS: {self.pks_host_uri} on '
+                     f'cluster: {name} with details: {cluster_dict}')
 
         result['body'] = cluster_dict
         return result
@@ -208,13 +208,13 @@ class PKSBroker(AbstractBroker):
         result['body'] = []
         cluster_api = ClusterApi(api_client=self.pks_client)
 
-        LOGGER.debug(f'Sending request to PKS: {self.host} to delete the '
-                     f'cluster with name: {name}')
+        LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to delete '
+                     f'the cluster with name: {name}')
 
         cluster_api.delete_cluster(cluster_name=name)
 
-        LOGGER.debug(f'PKS: {self.host} accepted the request to delete the '
-                     f'cluster: {name}')
+        LOGGER.debug(f'PKS: {self.pks_host_uri} accepted the request to delete'
+                     f' the cluster: {name}')
 
         result['status_code'] = ACCEPTED
         return result
@@ -234,16 +234,16 @@ class PKSBroker(AbstractBroker):
         result['body'] = []
         cluster_api = ClusterApi(api_client=self.pks_client)
 
-        LOGGER.debug(f'Sending request to PKS:{self.host} to resize the '
-                     f'cluster with name: {name} to '
+        LOGGER.debug(f'Sending request to PKS:{self.pks_host_uri} to resize '
+                     f'the cluster with name: {name} to '
                      f'{num_worker_nodes} worker nodes')
 
         resize_params = UpdateClusterParameters(
             kubernetes_worker_instances=num_worker_nodes)
         cluster_api.update_cluster(name, body=resize_params)
 
-        LOGGER.debug(f'PKS: {self.host} accepted the request to resize the '
-                     f'cluster: {name}')
+        LOGGER.debug(f'PKS: {self.pks_host_uri} accepted the request to resize'
+                     f' the cluster: {name}')
 
         result['status_code'] = ACCEPTED
         return result
@@ -303,12 +303,12 @@ class PKSBroker(AbstractBroker):
                                            description=description,
                                            parameters=cp_params_json_str)
 
-        LOGGER.debug(f'Sending request to PKS:{self.host} to create the '
-                     f'compute profile: {cp_name} for ovdc {ovdc_rp_name}')
+        LOGGER.debug(f'Sending request to PKS:{self.pks_host_uri} to create '
+                     f'the compute profile: {cp_name} for ovdc {ovdc_rp_name}')
 
         profile_api.add_compute_profile(body=cp_request)
 
-        LOGGER.debug(f'PKS: {self.host} created the compute profile: '
+        LOGGER.debug(f'PKS: {self.pks_host_uri} created the compute profile: '
                      f'{cp_name} for ovdc {ovdc_rp_name}')
         return result
 
@@ -326,12 +326,12 @@ class PKSBroker(AbstractBroker):
         result['status_code'] = OK
         profile_api = ProfileApi(api_client=self.pks_client)
 
-        LOGGER.debug(f'Sending request to PKS:{self.host} to get the '
+        LOGGER.debug(f'Sending request to PKS:{self.pks_host_uri} to get the '
                      f'compute profile: {name} ')
 
         compute_profile = profile_api.get_compute_profile(profile_name=name)
 
-        LOGGER.debug(f'Received response from PKS: {self.host} on '
+        LOGGER.debug(f'Received response from PKS: {self.pks_host_uri} on '
                      f'compute-profile: {name} with details: '
                      f'{compute_profile.to_dict()}')
 
@@ -351,13 +351,13 @@ class PKSBroker(AbstractBroker):
         result['status_code'] = OK
         profile_api = ProfileApi(api_client=self.pks_client)
 
-        LOGGER.debug(f'Sending request to PKS:{self.host} to get the '
+        LOGGER.debug(f'Sending request to PKS:{self.pks_host_uri} to get the '
                      f'list of compute profiles')
 
         cp_list = profile_api.list_compute_profiles()
         list_of_cp_dicts = [cp.to_dict() for cp in cp_list]
 
-        LOGGER.debug(f'Received response from PKS: {self.host} on '
+        LOGGER.debug(f'Received response from PKS: {self.pks_host_uri} on '
                      f'list of compute profiles: {list_of_cp_dicts}')
 
         result['body'] = list_of_cp_dicts
@@ -377,13 +377,13 @@ class PKSBroker(AbstractBroker):
         result['status_code'] = OK
         profile_api = ProfileApi(api_client=self.pks_client)
 
-        LOGGER.debug(f'Sending request to PKS:{self.host} to delete the '
-                     f'compute profile: {name}')
+        LOGGER.debug(f'Sending request to PKS:{self.pks_host_uri} to delete '
+                     f'the compute profile: {name}')
 
         profile_api.delete_compute_profile(profile_name=name)
 
-        LOGGER.debug(f'Received response from PKS: {self.host} that it '
-                     f'deleted the compute profile: {name}')
+        LOGGER.debug(f'Received response from PKS: {self.pks_host_uri} that'
+                     f' it deleted the compute profile: {name}')
 
         return result
 
@@ -404,11 +404,11 @@ class PKSBroker(AbstractBroker):
 # ovdc_cache['proxy'] = '10.161.67.157'
 # ovdc_cache['port'] = 9021
 # ovdc_cache['uaac_port'] = 8443
-# p = PKSBroker(headers=None, request_body=None, ovdc_cache=ovdc_cache)
+# p = PKSBroker(headers=None, request_body=None, pks_ctx=ovdc_cache)
 # #print(p.get_compute_profile(name='latest_cp'))
 # #print(p.list_compute_profiles())
-# print(p.list_clusters())
-# #print(p.get_cluster_info('sahi-cluster'))
+#print(p.list_clusters())
+#print(p.get_cluster_info('k8s2'))
 # # print(p.create_compute_profile(cp_name='ovdc',az_name='ovdc_az',
 # #                                description='test', cpi='6968bd637eb00d41193f',
 # #                                datacenter_name='kubo-dc', cluster_name='kubo-az-1',
