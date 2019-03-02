@@ -532,8 +532,12 @@ def get_vdc(client, vdc_name, org=None, org_name=None,
     """
     if org is None:
         org = get_org(client, org_name=org_name)
-    vdc = VDC(client, resource=org.get_vdc(vdc_name,
-              is_admin_operation=is_admin_operation))
+    resource = org.get_vdc(vdc_name, is_admin_operation=is_admin_operation)
+    # TODO() org.get_vdc() should throw exception if vdc not found in the org.
+    # This should be handled in pyvcloud. For now, it is handled here.
+    if resource is None:
+        raise EntityNotFoundException(f"VDC '{vdc_name}' not found")
+    vdc = VDC(client, resource=resource)
     return vdc
 
 
