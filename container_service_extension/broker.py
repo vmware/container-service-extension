@@ -123,7 +123,7 @@ def task_callback(task):
     click.secho(message)
 
 
-class DefaultBroker(AbstractBroker, threading.Thread):
+class VcdBroker(AbstractBroker, threading.Thread):
     def __init__(self, headers, request_body):
         super().__init__(headers, request_body)
         threading.Thread.__init__(self)
@@ -218,15 +218,20 @@ class DefaultBroker(AbstractBroker, threading.Thread):
         elif self.op == OP_DELETE_NODES:
             self.delete_nodes_thread()
 
-    @exception_handler
+    #@exception_handler
     def list_clusters(self):
-        result = {}
-        result['body'] = []
-        result['status_code'] = OK
         self._connect_tenant()
-        clusters = load_from_metadata(self.tenant_client)
-        result['body'] = clusters
-        return result
+        clusters = []
+        for c in load_from_metadata(self.tenant_client):
+            clusters.append({
+                'name': c['name'],
+                'IP master': c['leader_endpoint'],
+                'template': c['template'],
+                'VMs': c['number_of_vms'],
+                'vdc': c['vdc_name'],
+                'status': c['status']
+            })
+        return clusters
 
     #@exception_handler
     def get_cluster_info(self, name):
@@ -236,9 +241,9 @@ class DefaultBroker(AbstractBroker, threading.Thread):
 
         :return: (dict): Info of the cluster.
         """
-        result = {}
-        result['body'] = []
-        result['status_code'] = OK
+        # result = {}
+        # result['body'] = []
+        # result['status_code'] = OK
 
         self._connect_tenant()
         clusters = load_from_metadata(self.tenant_client, name=name)
@@ -263,8 +268,9 @@ class DefaultBroker(AbstractBroker, threading.Thread):
                 clusters[0].get('nodes').append(node_info)
             elif vm.get('name').startswith(TYPE_NFS):
                 clusters[0].get('nfs_nodes').append(node_info)
-        result['body'] = clusters[0]
-        return result
+        # result['body'] = clusters[0]
+        # return result
+        return clusters[0]
 
     @exception_handler
     def get_node_info(self, cluster_name, node_name):

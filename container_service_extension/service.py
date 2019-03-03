@@ -96,8 +96,8 @@ class Service(object, metaclass=Singleton):
     def active_requests_count(self):
         n = 0
         for t in threading.enumerate():
-            from container_service_extension.broker import DefaultBroker
-            if type(t) == DefaultBroker:
+            from container_service_extension.broker import VcdBroker
+            if type(t) == VcdBroker:
                 n += 1
         return n
 

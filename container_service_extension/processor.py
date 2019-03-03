@@ -136,8 +136,9 @@ class ServiceProcessor(object):
                 reply = result
             elif cluster_name is None:
                 print('list clusters)')
-                broker = broker_manager.get_new_broker()
-                reply = broker.list_clusters()
+                reply = broker_manager.invoke(Operation.LIST_CLUSTERS)
+                # broker = broker_manager.get_new_broker()
+                # reply = broker.list_clusters()
         elif body['method'] == 'POST':
             if cluster_name is None:
                 broker = broker_manager.get_new_broker()

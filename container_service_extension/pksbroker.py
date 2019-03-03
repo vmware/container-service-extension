@@ -90,7 +90,7 @@ class PKSBroker(AbstractBroker):
         self.pks_client = ApiClient(configuration=pks_config)
         return self.pks_client
 
-    @exception_handler
+    #@exception_handler
     def list_clusters(self):
         """Get list of clusters ((TODO)for a given vCD user) in PKS environment.
 
@@ -98,9 +98,6 @@ class PKSBroker(AbstractBroker):
 
         :rtype: list
         """
-        result = {}
-        result['body'] = []
-        result['status_code'] = OK
         cluster_api = ClusterApi(api_client=self.pks_client)
 
         LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} '
@@ -121,9 +118,7 @@ class PKSBroker(AbstractBroker):
 
         LOGGER.debug(f'Received response from PKS: {self.pks_host_uri} on the'
                      f' list of clusters: {list_of_cluster_dicts}')
-
-        result['body'] = list_of_cluster_dicts
-        return result
+        return list_of_cluster_dicts
 
     @exception_handler
     def create_cluster(self, name, plan, external_host_name,
@@ -175,9 +170,9 @@ class PKSBroker(AbstractBroker):
 
         :rtype: dict
         """
-        result = {}
-        result['body'] = []
-        result['status_code'] = OK
+        # result = {}
+        # result['body'] = []
+        # result['status_code'] = OK
         cluster_api = ClusterApi(api_client=self.pks_client)
 
         LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to get '
@@ -191,8 +186,9 @@ class PKSBroker(AbstractBroker):
         LOGGER.debug(f'Received response from PKS: {self.pks_host_uri} on '
                      f'cluster: {name} with details: {cluster_dict}')
 
-        result['body'] = cluster_dict
-        return result
+        # result['body'] = cluster_dict
+        # return result
+        return cluster_dict
 
     @exception_handler
     def delete_cluster(self, name):
