@@ -122,7 +122,6 @@ class PKSBroker(AbstractBroker):
                      f' list of clusters: {list_of_cluster_dicts}')
         return list_of_cluster_dicts
 
-    #@exception_handler
     def create_cluster(self, cluster_name, node_count, pks_plan, pks_ext_host,
                        compute_profile=None, **kwargs):
         """Create cluster in PKS environment.
@@ -138,6 +137,13 @@ class PKSBroker(AbstractBroker):
 
         :rtype: dict
         """
+        # TODO(ClusterParams) Create an inner class "ClusterParams"
+        #  in abstract_broker.py and have subclasses define and use it
+        #  as instance variable.
+        #  Method 'Create_cluster' in VcdBroker and PksBroker should take
+        #  ClusterParams either as a param (or)
+        #  read from instance variable (if needed only).
+
         # TODO() Invalidate cluster names containing '-' character.
         compute_profile = compute_profile \
             if compute_profile else self.compute_profile
@@ -160,7 +166,6 @@ class PKSBroker(AbstractBroker):
                      f' cluster: {cluster_name}')
         return cluster_dict
 
-    #@exception_handler
     def get_cluster_info(self, name):
         """Get the details of a cluster with a given name in PKS environment.
 
@@ -169,9 +174,6 @@ class PKSBroker(AbstractBroker):
 
         :rtype: dict
         """
-        # result = {}
-        # result['body'] = []
-        # result['status_code'] = OK
         cluster_api = ClusterApi(api_client=self.pks_client)
 
         LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to get '
@@ -185,34 +187,23 @@ class PKSBroker(AbstractBroker):
         LOGGER.debug(f'Received response from PKS: {self.pks_host_uri} on '
                      f'cluster: {name} with details: {cluster_dict}')
 
-        # result['body'] = cluster_dict
-        # return result
         return cluster_dict
 
-    #@exception_handler
     def delete_cluster(self, name):
         """Delete the cluster with a given name in PKS environment.
 
         :param str name: Name of the cluster
-
-        :return: result
-
-        :rtype: dict
         """
-        # result = {}
-        # result['body'] = []
         cluster_api = ClusterApi(api_client=self.pks_client)
 
         LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to delete '
                      f'the cluster with name: {name}')
 
-        #cluster_api.delete_cluster(cluster_name=name)
+        cluster_api.delete_cluster(cluster_name=name)
 
         LOGGER.debug(f'PKS: {self.pks_host_uri} accepted the request to delete'
                      f' the cluster: {name}')
-
-        #result['status_code'] = ACCEPTED
-        return {}
+        return
 
     @exception_handler
     def resize_cluster(self, name, num_worker_nodes):
@@ -221,12 +212,7 @@ class PKSBroker(AbstractBroker):
         :param str name: Name of the cluster
         :param int num_worker_nodes: New size of the worker nodes
         (should be greater than the current number).
-        :return: result
-
-        :rtype: dict
         """
-        result = {}
-        result['body'] = []
         cluster_api = ClusterApi(api_client=self.pks_client)
 
         LOGGER.debug(f'Sending request to PKS:{self.pks_host_uri} to resize '
@@ -239,9 +225,7 @@ class PKSBroker(AbstractBroker):
 
         LOGGER.debug(f'PKS: {self.pks_host_uri} accepted the request to resize'
                      f' the cluster: {name}')
-
-        result['status_code'] = ACCEPTED
-        return result
+        return
 
     @exception_handler
     def create_compute_profile(self, cp_name, az_name, description, cpi,
@@ -391,22 +375,3 @@ class PKSBroker(AbstractBroker):
         def unsupported_method(*args):
             raise CseServerError(f"Unsupported operation {name}")
         return unsupported_method
-
-# ovdc_cache = {}
-# ovdc_cache['host'] = 'api.pks.local'
-# ovdc_cache['username'] = 'admin'
-# ovdc_cache['secret'] = 'Kk2MszObSi_DnHsngQeVIzeAhoe11k2u'
-# ovdc_cache['proxy'] = '10.161.67.157'
-# ovdc_cache['port'] = 9021
-# ovdc_cache['uaac_port'] = 8443
-# p = PKSBroker(headers=None, request_body=None, pks_ctx=ovdc_cache)
-# # #print(p.get_compute_profile(name='latest_cp'))
-# # #print(p.list_compute_profiles())
-# print(p.list_clusters())
-#print(p.get_cluster_info('k8s2'))
-# # print(p.create_compute_profile(cp_name='ovdc',az_name='ovdc_az',
-# #                                description='test', cpi='6968bd637eb00d41193f',
-# #                                datacenter_name='kubo-dc', cluster_name='kubo-az-1',
-# #                                ovdc_rp_name='ovdc-uuid'))
-#
-# #p.create_cluster(name='my-cluster1', plan='Plan 1', compute_profile='ovdc', external_host_name='mycluster1.pks.local')

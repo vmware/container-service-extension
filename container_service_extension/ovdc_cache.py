@@ -77,7 +77,7 @@ class OvdcCache(object):
 
         :raises EntityNotFoundException: if the ovdc could not be found.
         """
-        # Get pvdc and pks information from pvdc cache
+        # Get pvdc and pks information from oVdc metadata
         if ovdc_id is None:
             ovdc = get_vdc(self.client, ovdc_name, org_name=org_name,
                            is_admin_operation=True)
@@ -99,7 +99,7 @@ class OvdcCache(object):
             metadata = {metadata_key: all_metadata[metadata_key]
                         for metadata_key in self.pks_cache.get_pks_keys()}
 
-            # copy the credentials from pvdc cache
+            # Get the credentials from PksCache
             pvdc_element = ovdc.resource.ProviderVdcReference
             pvdc_id = pvdc_element.get('id')
             pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
@@ -159,8 +159,9 @@ class OvdcCache(object):
             metadata[OvdcCache.CONTAINER_PROVIDER] = container_provider
             pks_compute_profile_name = f"{org_name}-{ovdc_name}-{ovdc_id}"
             pks_ctx = self.construct_pks_context(pks_info, pvdc_info,
-                                                 pks_compute_profile_name, pks_plans,
-                                                 False)
+                                                 pks_compute_profile_name,
+                                                 pks_plans,
+                                                 credentials_required=False)
             metadata.update(pks_ctx)
 
         # set ovdc metadata into Vcd

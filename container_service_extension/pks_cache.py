@@ -8,6 +8,7 @@ from collections import namedtuple
 
 from container_service_extension.utils import get_pvdc_id_by_name
 
+# Refer  to TODO(Constants) in broker_manager.py
 PKS_PLANS = 'pks_plans'
 PKS_COMPUTE_PROFILE = 'pks_compute_profile_name'
 
@@ -77,6 +78,12 @@ class PksCache(object):
         raise AttributeError(msg)
 
     def are_svc_accounts_per_org_per_vc(self):
+        """Return True if PKS service accounts specified are
+         for per org per vc, else False.
+         :return: is_svc_accounts_per_org_per_vc
+
+         :rtype: bool
+        """
         return self.is_svc_accounts_per_org_per_vc
 
     def get_pvdc_info(self, pvdc_id):
@@ -136,6 +143,7 @@ class PksCache(object):
         """
         return self.pks_info_table.values()
 
+    @staticmethod
     def get_pks_keys(self):
         """ Get relevant PKS keys
 

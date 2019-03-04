@@ -356,9 +356,17 @@ class VcdBroker(AbstractBroker, threading.Thread):
             exports.append(export)
         return exports
 
-    #@exception_handler
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
-    def create_cluster(self, cluster_name, vdc_name, node_count, storage_profile, **kwargs):
+    def create_cluster(self, cluster_name, vdc_name, node_count,
+                       storage_profile, network_name, template, **kwargs):
+
+        # TODO(ClusterParams) Create an inner class "ClusterParams"
+        #  in abstract_broker.py and have subclasses define and use it
+        #  as instance variable.
+        #  Method 'Create_cluster' in VcdBroker and PksBroker should take
+        #  ClusterParams either as a param (or)
+        #  read from instance variable (if needed only).
+
         LOGGER.debug('About to create cluster %s on %s with %s nodes, sp=%s',
                      cluster_name, vdc_name, node_count, storage_profile)
         response_body = {
