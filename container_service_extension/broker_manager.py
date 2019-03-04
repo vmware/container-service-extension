@@ -167,13 +167,13 @@ class BrokerManager(object):
             broker = self.get_broker_based_on_vdc(self.body)
             return broker.list_clusters()
         else:
-            common_cluster_properties = ('name', 'vdc_name', 'status')
+            common_cluster_properties = ('name', 'vdc', 'status')
             vcd_broker = VcdBroker(self.headers, self.body)
             vcd_clusters = []
             for cluster in vcd_broker.list_clusters():
                 vcd_cluster = {k: cluster.get(k, None) for k in
                                common_cluster_properties}
-                vcd_cluster[CONTAINER_PROVIDER] = 'vcd'
+                vcd_cluster[CONTAINER_PROVIDER] = CtrProvType.VCD.value
                 vcd_clusters.append(vcd_cluster)
 
             pks_clusters = []
@@ -183,7 +183,7 @@ class BrokerManager(object):
                 for cluster in pks_broker.list_clusters():
                     pks_cluster = {k: cluster.get(k, None) for k in
                                    common_cluster_properties}
-                    pks_cluster[CONTAINER_PROVIDER] = 'pks'
+                    pks_cluster[CONTAINER_PROVIDER] = CtrProvType.PKS.value
                     pks_clusters.append(pks_cluster)
             return vcd_clusters + pks_clusters
 
@@ -247,7 +247,7 @@ class BrokerManager(object):
                 self.ovdc_cache.get_ovdc_container_provider_metadata(
                     ovdc_name=vdc['name'], org_name=org.get_name(),
                     credentials_required=True)
-            if ctr_prov_ctx[CONTAINER_PROVIDER] == 'pks':
+            if ctr_prov_ctx[CONTAINER_PROVIDER] == CtrProvType.PKS.value:
                 pks_ctx_dict[ctr_prov_ctx['vc']]=ctr_prov_ctx
 
         return pks_ctx_dict.values()
@@ -281,7 +281,7 @@ class BrokerManager(object):
                 credentials_required=True)
             LOGGER.debug(
                 f"ovdc metadata for {ovdc_name}-{org_name}=>{ctr_prov_ctx}")
-            if ctr_prov_ctx.get('container_provider') == CtrProvType.PKS:
+            if ctr_prov_ctx.get('container_provider') == CtrProvType.PKS.value:
                 return PKSBroker(self.headers, self.body,
                                  pks_ctx=ctr_prov_ctx)
             else:

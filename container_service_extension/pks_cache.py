@@ -144,7 +144,7 @@ class PksCache(object):
         return self.pks_info_table.values()
 
     @staticmethod
-    def get_pks_keys(self):
+    def get_pks_keys():
         """ Get relevant PKS keys
 
         :return: Set of pks keys

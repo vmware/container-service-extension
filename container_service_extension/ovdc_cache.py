@@ -102,7 +102,7 @@ class OvdcCache(object):
                 all_metadata[CONTAINER_PROVIDER]
 
         ctr_prov_details = {}
-        if container_provider == CtrProvType.PKS:
+        if container_provider == CtrProvType.PKS.value:
             # Filter out container provider metadata into a dict
             metadata = {metadata_key: all_metadata[metadata_key]
                         for metadata_key in self.pks_cache.get_pks_keys()}
@@ -145,7 +145,7 @@ class OvdcCache(object):
         else:
             ovdc = self._get_vdc_by_id(ovdc_id)
 
-        if container_provider != CtrProvType.PKS:
+        if container_provider != CtrProvType.PKS.value:
             LOGGER.debug(f'Remove metadata for ovdc:{ovdc_name}')
             self._remove_metadata(ovdc, self.pks_cache.get_pks_keys())
             metadata[CONTAINER_PROVIDER] = container_provider or ''

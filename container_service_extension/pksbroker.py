@@ -92,7 +92,6 @@ class PKSBroker(AbstractBroker):
         self.pks_client = ApiClient(configuration=pks_config)
         return self.pks_client
 
-    #@exception_handler
     def list_clusters(self):
         """Get list of clusters ((TODO)for a given vCD user) in PKS environment.
 

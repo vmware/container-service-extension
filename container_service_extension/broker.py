@@ -218,7 +218,6 @@ class VcdBroker(AbstractBroker, threading.Thread):
         elif self.op == OP_DELETE_NODES:
             self.delete_nodes_thread()
 
-    #@exception_handler
     def list_clusters(self):
         self._connect_tenant()
         clusters = []
@@ -233,7 +232,6 @@ class VcdBroker(AbstractBroker, threading.Thread):
             })
         return clusters
 
-    #@exception_handler
     def get_cluster_info(self, name):
         """Get the info of the cluster.
 
@@ -516,7 +514,6 @@ class VcdBroker(AbstractBroker, threading.Thread):
         finally:
             self._disconnect_sys_admin()
 
-    #@exception_handler
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def delete_cluster(self, name):
         # result = {}

@@ -133,7 +133,6 @@ class ServiceProcessor(object):
                 result['status_code'] = OK
                 reply = result
             elif cluster_name is None:
-                print('list clusters)')
                 reply = broker_manager.invoke(Operation.LIST_CLUSTERS)
         elif body['method'] == 'POST':
             if cluster_name is None:
