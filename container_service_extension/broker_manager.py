@@ -31,7 +31,6 @@ from pyvcloud.vcd.org import Org
 #  4. As part of refactoring, avoid accessing HTTP request body directly
 #  from VcdBroker and PksBroker. We should try to limit processing request to
 #  processor.py and broker_manager.py.
-
 @unique
 class Operation(Enum):
     CREATE_CLUSTER = 'create cluster'

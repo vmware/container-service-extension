@@ -239,10 +239,6 @@ class VcdBroker(AbstractBroker, threading.Thread):
 
         :return: (dict): Info of the cluster.
         """
-        # result = {}
-        # result['body'] = []
-        # result['status_code'] = OK
-
         self._connect_tenant()
         clusters = load_from_metadata(self.tenant_client, name=name)
         if len(clusters) == 0:
@@ -266,8 +262,6 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 clusters[0].get('nodes').append(node_info)
             elif vm.get('name').startswith(TYPE_NFS):
                 clusters[0].get('nfs_nodes').append(node_info)
-        # result['body'] = clusters[0]
-        # return result
         return clusters[0]
 
     @exception_handler
@@ -516,8 +510,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
 
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def delete_cluster(self, name):
-        # result = {}
-        # result['body'] = {}
+
         LOGGER.debug(f"About to delete cluster with name: {name}")
 
         self.cluster_name = name
@@ -539,8 +532,6 @@ class VcdBroker(AbstractBroker, threading.Thread):
         response_body = {}
         response_body['cluster_name'] = self.cluster_name
         response_body['task_href'] = self.task_resource.get('href')
-        # result['body'] = response_body
-        # result['status_code'] = ACCEPTED
         return response_body
 
     def delete_cluster_thread(self):

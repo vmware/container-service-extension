@@ -17,6 +17,7 @@ from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE
 
 from enum import Enum, unique
 
+# TODO(Constants) Refer the TODO(Constants) in broker_manager.py
 @unique
 class CtrProvType(Enum):
     VCD = 'vcd'
