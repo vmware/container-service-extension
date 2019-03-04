@@ -95,13 +95,13 @@ class ServiceProcessor(object):
         if body['method'] == 'GET':
             if ovdc_info_request:
                 on_the_fly_request_body = {'ovdc_id': ovdc_id}
-                broker = broker_manager.get_new_broker(on_the_fly_request_body)
+                broker = broker_manager.get_broker_based_on_vdc(on_the_fly_request_body)
                 reply = broker.ovdc_info_for_kubernetes()
 
             elif spec_request:
                 reply = self.get_spec(tokens[3])
             elif config_request:
-                broker = broker_manager.get_new_broker()
+                broker = broker_manager.get_broker_based_on_vdc()
                 reply = broker.get_cluster_config(cluster_name)
             elif template_request:
                 result = {}
@@ -127,7 +127,7 @@ class ServiceProcessor(object):
                 # broker = broker_manager.get_new_broker()
                 # reply = broker.get_cluster_info(cluster_name)
             elif node_info_request:
-                broker = broker_manager.get_new_broker()
+                broker = broker_manager.get_broker_based_on_vdc()
                 reply = broker.get_node_info(cluster_name, node_name)
             elif system_request:
                 result = {}
@@ -141,26 +141,29 @@ class ServiceProcessor(object):
                 # reply = broker.list_clusters()
         elif body['method'] == 'POST':
             if cluster_name is None:
-                broker = broker_manager.get_new_broker()
-                reply = broker.create_cluster()
+                reply = broker_manager.invoke(Operation.CREATE_CLUSTER)
+                # broker = broker_manager.get_broker_based_on_vdc()
+                # reply = broker.create_cluster()
             else:
                 if node_request:
-                    broker = broker_manager.get_new_broker()
+                    broker = broker_manager.get_broker_based_on_vdc()
                     reply = broker.create_nodes()
         elif body['method'] == 'PUT':
             if ovdc_info_request:
-                broker = broker_manager.get_new_broker()
+                broker = broker_manager.get_broker_based_on_vdc()
                 reply = broker.enable_ovdc_for_kubernetes()
             elif system_request:
                 reply = service.update_status(body['headers'], request_body)
         elif body['method'] == 'DELETE':
             if node_request:
-                broker = broker_manager.get_new_broker()
+                broker = broker_manager.get_broker_based_on_vdc()
                 reply = broker.delete_nodes()
             else:
-                on_the_fly_request_body = {'name': cluster_name}
-                broker = broker_manager.get_new_broker(on_the_fly_request_body)
-                reply = broker.delete_cluster()
+                on_the_fly_request_body = {'cluster_name': cluster_name}
+                reply = broker_manager.invoke(Operation.DELETE_CLUSTER,
+                                              on_the_fly_request_body)
+                # broker = broker_manager.get_new_broker(on_the_fly_request_body)
+                # reply = broker.delete_cluster()
 
         LOGGER.debug('reply: %s' % str(reply))
         return reply

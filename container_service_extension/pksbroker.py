@@ -9,6 +9,7 @@ from container_service_extension.abstract_broker import AbstractBroker
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import PksConnectionError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE
 from container_service_extension.pksclient.api.cluster_api import ClusterApi
 from container_service_extension.pksclient.api.profile_api import ProfileApi
 from container_service_extension.pksclient.api_client import ApiClient
@@ -50,6 +51,7 @@ class PKSBroker(AbstractBroker):
             f"https://{pks_ctx['host']}:{pks_ctx['uaac_port']}"
         self.proxy_uri = f"http://{pks_ctx['proxy']}:80" \
             if pks_ctx.get('proxy') else None
+        self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE, None)
         self.verify = False  # TODO(pks.yaml) pks_config['pks']['verify']
         self.pks_client = self._get_pks_client()
 
@@ -120,12 +122,12 @@ class PKSBroker(AbstractBroker):
                      f' list of clusters: {list_of_cluster_dicts}')
         return list_of_cluster_dicts
 
-    @exception_handler
-    def create_cluster(self, name, plan, external_host_name,
-                       compute_profile=None):
+    #@exception_handler
+    def create_cluster(self, cluster_name, node_count, pks_plan, pks_ext_host,
+                       compute_profile=None, **kwargs):
         """Create cluster in PKS environment.
 
-        :param str name: Name of the cluster
+        :param str cluster_name: Name of the cluster
         :param str plan: PKS plan. It should be one of the three plans
         that PKS supports.
         :param str external_host_name: User-preferred external hostname
@@ -137,17 +139,17 @@ class PKSBroker(AbstractBroker):
         :rtype: dict
         """
         # TODO() Invalidate cluster names containing '-' character.
-        result = {}
-        result['body'] = []
+        compute_profile = compute_profile \
+            if compute_profile else self.compute_profile
         cluster_api = ClusterApi(api_client=self.pks_client)
         cluster_params = ClusterParameters(
-            kubernetes_master_host=external_host_name)
-        cluster_request = ClusterRequest(name=name, plan_name=plan,
+            kubernetes_master_host=pks_ext_host)
+        cluster_request = ClusterRequest(name=cluster_name, plan_name=pks_plan,
                                          parameters=cluster_params,
                                          compute_profile_name=compute_profile)
 
         LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to create '
-                     f'cluster of name: {name}')
+                     f'cluster of name: {cluster_name}')
 
         cluster = cluster_api.add_cluster(cluster_request)
         cluster_dict = cluster.to_dict()
@@ -155,11 +157,8 @@ class PKSBroker(AbstractBroker):
         cluster_dict.update(cluster_params_dict)
 
         LOGGER.debug(f'PKS: {self.pks_host_uri} accepted the request to create'
-                     f' cluster: {name}')
-
-        result['body'] = cluster_dict
-        result['status_code'] = ACCEPTED
-        return result
+                     f' cluster: {cluster_name}')
+        return cluster_dict
 
     #@exception_handler
     def get_cluster_info(self, name):
@@ -190,7 +189,7 @@ class PKSBroker(AbstractBroker):
         # return result
         return cluster_dict
 
-    @exception_handler
+    #@exception_handler
     def delete_cluster(self, name):
         """Delete the cluster with a given name in PKS environment.
 
@@ -200,20 +199,20 @@ class PKSBroker(AbstractBroker):
 
         :rtype: dict
         """
-        result = {}
-        result['body'] = []
+        # result = {}
+        # result['body'] = []
         cluster_api = ClusterApi(api_client=self.pks_client)
 
         LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to delete '
                      f'the cluster with name: {name}')
 
-        cluster_api.delete_cluster(cluster_name=name)
+        #cluster_api.delete_cluster(cluster_name=name)
 
         LOGGER.debug(f'PKS: {self.pks_host_uri} accepted the request to delete'
                      f' the cluster: {name}')
 
-        result['status_code'] = ACCEPTED
-        return result
+        #result['status_code'] = ACCEPTED
+        return {}
 
     @exception_handler
     def resize_cluster(self, name, num_worker_nodes):
@@ -401,9 +400,9 @@ class PKSBroker(AbstractBroker):
 # ovdc_cache['port'] = 9021
 # ovdc_cache['uaac_port'] = 8443
 # p = PKSBroker(headers=None, request_body=None, pks_ctx=ovdc_cache)
-# #print(p.get_compute_profile(name='latest_cp'))
-# #print(p.list_compute_profiles())
-#print(p.list_clusters())
+# # #print(p.get_compute_profile(name='latest_cp'))
+# # #print(p.list_compute_profiles())
+# print(p.list_clusters())
 #print(p.get_cluster_info('k8s2'))
 # # print(p.create_compute_profile(cp_name='ovdc',az_name='ovdc_az',
 # #                                description='test', cpi='6968bd637eb00d41193f',

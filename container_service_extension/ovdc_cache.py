@@ -156,7 +156,6 @@ class OvdcCache(object):
             pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
             pks_info = self.pks_cache.get_pks_account_details(
                 org_name, pvdc_info.vc)
-
             metadata[OvdcCache.CONTAINER_PROVIDER] = container_provider
             pks_compute_profile_name = f"{org_name}-{ovdc_name}-{ovdc_id}"
             pks_ctx = self.construct_pks_context(pks_info, pvdc_info,

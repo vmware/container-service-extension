@@ -356,19 +356,12 @@ class VcdBroker(AbstractBroker, threading.Thread):
             exports.append(export)
         return exports
 
-    @exception_handler
+    #@exception_handler
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
-    def create_cluster(self):
-        result = {}
-        result['body'] = {}
-
-        cluster_name = self.body['name']
-        vdc_name = self.body['vdc']
-        node_count = self.body['node_count']
+    def create_cluster(self, cluster_name, vdc_name, node_count, storage_profile, **kwargs):
         LOGGER.debug('About to create cluster %s on %s with %s nodes, sp=%s',
-                     cluster_name, vdc_name, node_count,
-                     self.body['storage_profile'])
-        result['body'] = {
+                     cluster_name, vdc_name, node_count, storage_profile)
+        response_body = {
             'message': 'can\'t create cluster \'%s\'' % cluster_name
         }
 
@@ -389,9 +382,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
         response_body['name'] = self.cluster_name
         response_body['cluster_id'] = self.cluster_id
         response_body['task_href'] = self.task_resource.get('href')
-        result['body'] = response_body
-        result['status_code'] = ACCEPTED
-        return result
+        return response_body
 
     @rollback
     def create_cluster_thread(self):
@@ -517,14 +508,14 @@ class VcdBroker(AbstractBroker, threading.Thread):
         finally:
             self._disconnect_sys_admin()
 
-    @exception_handler
+    #@exception_handler
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
-    def delete_cluster(self):
-        result = {}
-        result['body'] = {}
-        LOGGER.debug(f"About to delete cluster with name: {self.body['name']}")
+    def delete_cluster(self, name):
+        # result = {}
+        # result['body'] = {}
+        LOGGER.debug(f"About to delete cluster with name: {name}")
 
-        self.cluster_name = self.body['name']
+        self.cluster_name = name
         self._connect_tenant()
         self._connect_sys_admin()
         self.op = OP_DELETE_CLUSTER
@@ -543,9 +534,9 @@ class VcdBroker(AbstractBroker, threading.Thread):
         response_body = {}
         response_body['cluster_name'] = self.cluster_name
         response_body['task_href'] = self.task_resource.get('href')
-        result['body'] = response_body
-        result['status_code'] = ACCEPTED
-        return result
+        # result['body'] = response_body
+        # result['status_code'] = ACCEPTED
+        return response_body
 
     def delete_cluster_thread(self):
         LOGGER.debug('About to delete cluster with name: %s',
