@@ -88,8 +88,8 @@ class ServiceProcessor(object):
             raise CseServerError('CSE service is disabled. '
                                  'Contact the System Administrator.')
 
-        from container_service_extension.broker_manager import Broker_manager
-        broker_manager = Broker_manager(body['headers'], request_body)
+        from container_service_extension.broker_manager import BrokerManager
+        broker_manager = BrokerManager(body['headers'], request_body)
         from container_service_extension.broker_manager import Operation
 
         if body['method'] == 'GET':
