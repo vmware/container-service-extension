@@ -608,16 +608,10 @@ def ovdc_group(ctx):
 \b
     Note
        All sub-commands execute in the context of organization specified
-       via --org option; it defaults to current organization-in-use
-       if --org option is not specified.
+       via --org option.
 
 \b
     Examples
-        vcd cse ovdc enablek8s 'myOrgVdc' --container-provider pks
-        --pks-plans 'plan1,plan2'
-            Enable 'myOrgVdc' for k8s deployment on container-provider
-            PKS with plans 'plan1' and 'plan2'. If no --org-name is provided,
-            organization of the logged-in user is used to find 'myOrgVdc'.
 \b
         vcd cse ovdc enablek8s 'myOrgVdc' --container-provider pks
         --pks-plans 'plan1,plan2' --org 'myOrg'
@@ -630,10 +624,6 @@ def ovdc_group(ctx):
 \b
         vcd cse ovdc disablek8s 'myOrgVdc' --org 'myOrg'
             Disable 'myOrgVdc' that backs 'myOrg' for k8s deployment.
-\b
-        vcd cse ovdc disablek8s 'myOrgVdc'
-            Disable 'myOrgVdc' that backs organization of the logged-in user
-            for k8s deployment.
 \b
         vcd cse ovdc infok8s 'myOrgVdc' --org 'myOrg'
             Displays metadata information about 'myOrgVdc' that backs
@@ -665,7 +655,7 @@ def ovdc_group(ctx):
     '--org',
     'org_name',
     default=None,
-    required=False,
+    required=True,
     metavar='[org-name]',
     help="org name")
 def enablek8s(ctx, ovdc_name, container_provider, pks_plans, org_name):
@@ -698,7 +688,7 @@ def enablek8s(ctx, ovdc_name, container_provider, pks_plans, org_name):
     '--org',
     'org_name',
     default=None,
-    required=False,
+    required=True,
     metavar='[org-name]',
     help="org name")
 def disablek8s(ctx, ovdc_name, org_name):
@@ -724,7 +714,7 @@ def disablek8s(ctx, ovdc_name, org_name):
     '--org',
     'org_name',
     default=None,
-    required=False,
+    required=True,
     metavar='[org-name]',
     help="org name")
 def infok8s(ctx, ovdc_name, org_name):
