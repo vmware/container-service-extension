@@ -324,7 +324,7 @@ def get_validated_config(config_file_name):
 
     :rtype: dict
 
-    :raises KeyError: if config file has missing or extra properties.
+    :raises KeyError: if config file has missing properties.
     :raises ValueError: if the value type for a config file property
         is incorrect.
     :raises AmqpConnectionError: if AMQP connection failed.
@@ -334,8 +334,6 @@ def get_validated_config(config_file_name):
         config = yaml.safe_load(config_file)
     pks_config = config.get('pks_config')
     click.secho(f"Validating config file '{config_file_name}'", fg='yellow')
-    if 'pks_config' in config:
-        del config['pks_config']
     check_keys_and_value_types(config, SAMPLE_CONFIG,
                                location='config file')
     validate_amqp_config(config['amqp'])
@@ -345,24 +343,14 @@ def get_validated_config(config_file_name):
                                SAMPLE_SERVICE_CONFIG['service'],
                                location="config file 'service' section")
     click.secho(f"Config file '{config_file_name}' is valid", fg='green')
-    if isinstance(pks_config, str):
+    if pks_config is not None and isinstance(pks_config, str):
         check_file_permissions(pks_config)
         with open(pks_config) as f:
             pks = yaml.safe_load(f)
-        pks_proxies = dict()
-        if 'pks_accounts' in pks:
-            for i, account in enumerate(pks['pks_accounts']):
-                if 'proxy' in account:
-                    pks_proxies[account['name']] = account['proxy']
-                    del pks['pks_accounts'][i]['proxy']
         click.secho(f"Validating PKS config file '{pks_config}'", fg='yellow')
         check_keys_and_value_types(pks, SAMPLE_PKS_CONFIG,
                                    location='PKS config file')
         click.secho(f"PKS Config file '{pks_config}' is valid", fg='green')
-        for i, account_name in enumerate(pks_proxies):
-            if pks['pks_accounts'][i]['name'] == account_name:
-                pks['pks_accounts'][i]['proxy'] = \
-                    pks_proxies[account_name]
         config['pks_config'] = pks
     else:
         config['pks_config'] = None
