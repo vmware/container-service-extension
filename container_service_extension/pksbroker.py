@@ -144,6 +144,7 @@ class PKSBroker(AbstractBroker):
         #  read from instance variable (if needed only).
 
         # TODO() Invalidate cluster names containing '-' character.
+
         compute_profile = compute_profile \
             if compute_profile else self.compute_profile
         cluster_api = ClusterApi(api_client=self.pks_client)

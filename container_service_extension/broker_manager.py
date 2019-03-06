@@ -4,6 +4,7 @@
 
 from container_service_extension.broker import VcdBroker
 from container_service_extension.exceptions import ClusterNotFoundError
+from container_service_extension.exceptions import CseServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.ovdc_cache import CONTAINER_PROVIDER
 from container_service_extension.ovdc_cache import CtrProvType
@@ -122,31 +123,21 @@ class BrokerManager(object):
             choose the right broker (by identifying the container_provider
             (vcd|pks) defined for that ovdc) to do get_cluster operation.
         Else
-            Get a set of all (vCD/PKS)brokers in the org to do get_cluster op.
-            Return the first successful cluster found.
+            Invoke set of all (vCD/PKS)brokers in the org to find the cluster
+
+        Returns a tuple of (cluster and the broker instance used to find the
+        cluster)
         """
         is_ovdc_present_in_body = self.body.get('vdc') if self.body else None
         if is_ovdc_present_in_body:
+            print(f'inside _get_cluster_info, ovdc present: {cluster_name}')
             broker = self.get_broker_based_on_vdc(self.body)
             return broker.get_cluster_info(cluster_name), broker
         else:
-            vcd_broker = VcdBroker(self.headers, self.body)
-            try:
-                return vcd_broker.get_cluster_info(cluster_name), vcd_broker
-            except Exception as err:
-                LOGGER.debug(f"Get cluster info on {cluster_name} failed "
-                             f"on vCD with error: {err}")
-                pass
+            cluster, broker = self._find_cluster_in_org(cluster_name)
+            if cluster is not None:
+                return cluster, broker
 
-            pks_ctx_list = self._get_all_pks_accounts_in_org()
-            for pks_ctx in pks_ctx_list:
-                pksbroker = PKSBroker(self.headers, self.body, pks_ctx)
-                try:
-                    return pksbroker.get_cluster_info(cluster_name), pksbroker
-                except Exception as err:
-                    LOGGER.debug(f"Get cluster info on {cluster_name} failed "
-                                 f"on {pks_ctx['host']} with error: {err}")
-                    pass
         raise ClusterNotFoundError(f'cluster {cluster_name} not found '
                                    f'either in vCD or PKS')
 
@@ -157,7 +148,7 @@ class BrokerManager(object):
             choose the right broker (by identifying the container_provider
             (vcd|pks) defined for that ovdc) to do list_clusters op.
         Else
-            Get a set of all (vCD/PKS)brokers in the org to do list_clusters.
+            Invoke set of all (vCD/PKS)brokers in the org to do list_clusters.
             Post-process the result returned by each broker.
             Aggregate all the results into one.
         """
@@ -196,8 +187,43 @@ class BrokerManager(object):
         return broker.delete_cluster(cluster_name)
 
     def _create_cluster(self, **kwargs):
-        broker = self.get_broker_based_on_vdc()
-        return broker.create_cluster(**kwargs)
+        cluster_name = kwargs['cluster_name']
+        cluster = self._find_cluster_in_org(cluster_name)[0]
+        if cluster is None:
+            broker = self.get_broker_based_on_vdc()
+            return broker.create_cluster(**kwargs)
+        else:
+            raise CseServerError(f'Cluster with name: {cluster_name} '
+                                 f'already found')
+
+    def _find_cluster_in_org(self, cluster_name):
+        """Invoke set of all (vCD/PKS)brokers in the org to find the cluster.
+
+        If cluster found:
+            Return a tuple of (cluster and the broker instance used to find
+            the cluster)
+        Else:
+            (None, None) if cluster not found.
+        """
+        vcd_broker = VcdBroker(self.headers, self.body)
+        try:
+            return vcd_broker.get_cluster_info(cluster_name), vcd_broker
+        except Exception as err:
+            LOGGER.debug(f"Get cluster info on {cluster_name} failed "
+                         f"on vCD with error: {err}")
+            pass
+
+        pks_ctx_list = self._get_all_pks_accounts_in_org()
+        for pks_ctx in pks_ctx_list:
+            pksbroker = PKSBroker(self.headers, self.body, pks_ctx)
+            try:
+                return pksbroker.get_cluster_info(cluster_name), pksbroker
+            except Exception as err:
+                LOGGER.debug(f"Get cluster info on {cluster_name} failed "
+                             f"on {pks_ctx['host']} with error: {err}")
+                pass
+
+        return None, None
 
     def _get_all_pks_accounts_in_org(self):
         """Get a set of PKS accounts in a given Org or System.
