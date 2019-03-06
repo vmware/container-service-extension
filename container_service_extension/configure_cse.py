@@ -504,7 +504,6 @@ def validate_broker_config(broker_dict):
     if not default_exists:
         msg = f"Default template '{broker_dict['default_template']}' not " \
               f"found in listed templates"
-        # click.secho(msg, fg='red')
         raise ValueError(msg)
 
     valid_ip_allocation_modes = [
@@ -514,7 +513,6 @@ def validate_broker_config(broker_dict):
     if broker_dict['ip_allocation_mode'] not in valid_ip_allocation_modes:
         msg = f"IP allocation mode is '{broker_dict['ip_allocation_mode']}' " \
               f"when it should be either 'dhcp' or 'pool'"
-        # click.secho(msg, fg='red')
         raise ValueError(msg)
 
 
