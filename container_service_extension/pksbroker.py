@@ -147,8 +147,9 @@ class PKSBroker(AbstractBroker):
         compute_profile = compute_profile \
             if compute_profile else self.compute_profile
         cluster_api = ClusterApi(api_client=self.pks_client)
-        cluster_params = ClusterParameters(
-            kubernetes_master_host=pks_ext_host)
+        cluster_params = \
+            ClusterParameters(kubernetes_master_host=pks_ext_host,
+                              kubernetes_worker_instances=node_count)
         cluster_request = ClusterRequest(name=cluster_name, plan_name=pks_plan,
                                          parameters=cluster_params,
                                          compute_profile_name=compute_profile)
@@ -158,6 +159,7 @@ class PKSBroker(AbstractBroker):
 
         cluster = cluster_api.add_cluster(cluster_request)
         cluster_dict = cluster.to_dict()
+        # Flattening the dictionary
         cluster_params_dict = cluster_dict.pop('parameters')
         cluster_dict.update(cluster_params_dict)
 
