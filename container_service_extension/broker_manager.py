@@ -130,7 +130,6 @@ class BrokerManager(object):
         """
         is_ovdc_present_in_body = self.body.get('vdc') if self.body else None
         if is_ovdc_present_in_body:
-            print(f'inside _get_cluster_info, ovdc present: {cluster_name}')
             broker = self.get_broker_based_on_vdc(self.body)
             return broker.get_cluster_info(cluster_name), broker
         else:
