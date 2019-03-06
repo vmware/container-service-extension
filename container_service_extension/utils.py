@@ -250,7 +250,7 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary'):
     :param str location: where this check is taking place, so error messages
         can be more descriptive.
 
-    :raises KeyError: if @dikt has missing or invalid keys
+    :raises KeyError: if @dikt has missing keys
     :raises ValueError: if the value of a property in @dikt does not match with
         the value of the same property in @ref_dict
     """
@@ -258,13 +258,9 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary'):
     keys = set(dikt.keys())
 
     missing_keys = ref_keys - keys
-    invalid_keys = keys - ref_keys
 
     if missing_keys:
         click.secho(f"Missing keys in {location}: {missing_keys}", fg='red')
-    if invalid_keys:
-        click.secho(f"Invalid keys in {location}: {invalid_keys}", fg='red')
-
     bad_value = False
     for k in ref_keys:
         if k not in keys:
@@ -275,7 +271,7 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary'):
                         f"'{_type_to_string[value_type]}'", fg='red')
             bad_value = True
 
-    if missing_keys or invalid_keys:
+    if missing_keys:
         raise KeyError(f"Missing and/or invalid key in {location}")
     if bad_value:
         raise ValueError(f"Incorrect type for property value(s) in {location}")

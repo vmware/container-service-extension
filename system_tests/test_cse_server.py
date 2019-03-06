@@ -169,20 +169,17 @@ def test_0030_cse_check(config):
     assert result.exit_code == 0
 
 
-def test_0040_config_invalid_keys(config):
-    """Test that config files with invalid/extra keys don't pass validation."""
+def test_0040_config_missing_keys(config):
+    """Test that config files with missing keys don't pass validation."""
     bad_key_config1 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
     del bad_key_config1['amqp']
-    bad_key_config1['extra_section'] = True
 
     bad_key_config2 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
     del bad_key_config2['vcs'][0]['username']
-    bad_key_config2['vcs'][0]['extra_property'] = 'a'
 
     bad_key_config3 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
     del bad_key_config3['broker']['templates'][0]['mem']
     del bad_key_config3['broker']['templates'][0]['name']
-    bad_key_config3['broker']['templates'][0]['extra_property'] = 0
 
     configs = [
         bad_key_config1,
