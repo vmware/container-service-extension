@@ -6,12 +6,17 @@
 
 import click
 from pyvcloud.vcd.exceptions import EntityNotFoundException
+from pyvcloud.vcd.exceptions import NotAcceptableException
+from pyvcloud.vcd.exceptions import VcdException
+from pyVmomi import vim
+import requests
 from vcd_cli.utils import stdout
 
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.configure_cse import generate_sample_config
 from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.configure_cse import install_cse
+from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.service import Service
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -161,15 +166,30 @@ def check(ctx, config, check_install, template):
     """Validate CSE configuration."""
     try:
         config_dict = get_validated_config(config)
-    except (KeyError, ValueError, Exception):
-        # TODO() replace Exception with specific (see validate_amqp_config)
+    except (KeyError, TypeError):
         click.secho(f"Config file '{config}' is invalid", fg='red')
+    except (NotAcceptableException, ValueError) as err:
+        click.secho(str(err), fg='red')
+    except AmqpConnectionError as err:
+        click.secho(str(err), fg='red')
+        click.secho("check config file amqp section.", fg='red')
+    except requests.exceptions.ConnectionError:
+        click.secho("Cannot connect to vCD host (check config file vCD host).",
+                    fg='red')
+    except VcdException:
+        click.secho("vCD login failed (check config file vCD "
+                    "username/password).", fg='red')
+    except vim.fault.InvalidLogin:
+        click.secho("vCenter login failed (check config file vCenter "
+                    "username/password).", fg='red')
+
+    if not check_install:
         return
-    if check_install:
-        try:
-            check_cse_installation(config_dict, check_template=template)
-        except EntityNotFoundException:
-            click.secho("CSE installation is invalid", fg='red')
+
+    try:
+        check_cse_installation(config_dict, check_template=template)
+    except EntityNotFoundException:
+        click.secho("CSE installation is invalid", fg='red')
 
 
 @cli.command(short_help='install CSE on vCD')
@@ -222,12 +242,31 @@ def install(ctx, config, template, update, no_capture, ssh_key_file):
         click.echo('Must provide ssh-key file (using --ssh-key OR -k) if '
                    '--no-capture is True, or else temporary vm will '
                    'be inaccessible')
-    else:
-        ssh_key = None
-        if ssh_key_file is not None:
-            ssh_key = ssh_key_file.read()
+        return
+
+    ssh_key = None
+    if ssh_key_file is not None:
+        ssh_key = ssh_key_file.read()
+    try:
         install_cse(ctx, config_file_name=config, template_name=template,
                     update=update, no_capture=no_capture, ssh_key=ssh_key)
+    except (KeyError, TypeError):
+        click.secho(f"Config file '{config}' is invalid", fg='red')
+    except (EntityNotFoundException, NotAcceptableException,
+            ValueError) as err:
+        click.secho(str(err), fg='red')
+    except AmqpConnectionError as err:
+        click.secho(str(err), fg='red')
+        click.secho("check config file amqp section.", fg='red')
+    except requests.exceptions.ConnectionError:
+        click.secho("Cannot connect to vCD host (check config file vCD host).",
+                    fg='red')
+    except VcdException:
+        click.secho("vCD login failed (check config file vCD "
+                    "username/password).", fg='red')
+    except vim.fault.InvalidLogin:
+        click.secho("vCenter login failed (check config file vCenter "
+                    "username/password).", fg='red')
 
 
 @cli.command(short_help='run service')

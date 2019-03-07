@@ -4,3 +4,4 @@ pika >= 0.11.2
 pyvcloud >= 20.0.3
 vcd-cli >= 21.0.2
 vsphere-guest-run >= 0.0.7
+pyvmomi >= 6.7.0

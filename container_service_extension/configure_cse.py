@@ -498,12 +498,18 @@ def validate_broker_config(broker_dict):
                                             "template section")
         if template['name'] == broker_dict['default_template']:
             default_exists = True
-
     if not default_exists:
-        msg = f"Default template '{broker_dict['default_template']}' not " \
-              f"found in listed templates"
-        click.secho(msg, fg='red')
-        raise ValueError(msg)
+        raise ValueError(f"Default template '{broker_dict['default_template']}"
+                         f"' not found in listed templates")
+
+    valid_ip_allocation_modes = [
+        'dhcp',
+        'pool'
+    ]
+    if broker_dict['ip_allocation_mode'] not in valid_ip_allocation_modes:
+        raise ValueError(f"IP allocation mode is "
+                         f"'{broker_dict['ip_allocation_mode']}' when it "
+                         f"should be either 'dhcp' or 'pool'")
 
 
 def check_cse_installation(config, check_template='*'):
