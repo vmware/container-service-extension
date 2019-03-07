@@ -15,18 +15,9 @@ from container_service_extension.utils import get_vdc
 from container_service_extension.pks_cache import PKS_PLANS
 from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE
 
-from enum import Enum, unique
-
-# TODO(Constants) Refer the TODO(Constants) in broker_manager.py
-@unique
-class CtrProvType(Enum):
-    VCD = 'vcd'
-    PKS = 'pks'
-
-CONTAINER_PROVIDER = 'container_provider'
-
-
 class OvdcCache(object):
+
+    CONTAINER_PROVIDER = 'container_provider'
 
     def __init__(self, client):
         """Construct the cache for ovdc.
@@ -86,7 +77,7 @@ class OvdcCache(object):
 
         :raises EntityNotFoundException: if the ovdc could not be found.
         """
-        # Get pvdc and pks information from oVdc metadata
+        # Get pvdc and pks information from pvdc cache
         if ovdc_id is None:
             ovdc = get_vdc(self.client, ovdc_name, org_name=org_name,
                            is_admin_operation=True)
@@ -96,19 +87,19 @@ class OvdcCache(object):
 
         all_metadata = utils.metadata_to_dict(ovdc.get_all_metadata())
 
-        if CONTAINER_PROVIDER not in all_metadata:
+        if OvdcCache.CONTAINER_PROVIDER not in all_metadata:
             container_provider = None
         else:
             container_provider = \
-                all_metadata[CONTAINER_PROVIDER]
+                all_metadata[OvdcCache.CONTAINER_PROVIDER]
 
         ctr_prov_details = {}
-        if container_provider == CtrProvType.PKS.value:
+        if container_provider == 'pks':
             # Filter out container provider metadata into a dict
             metadata = {metadata_key: all_metadata[metadata_key]
                         for metadata_key in self.pks_cache.get_pks_keys()}
 
-            # Get the credentials from PksCache
+            # copy the credentials from pvdc cache
             pvdc_element = ovdc.resource.ProviderVdcReference
             pvdc_id = pvdc_element.get('id')
             pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
@@ -119,7 +110,7 @@ class OvdcCache(object):
                 metadata.update(pks_info.credentials._asdict())
             ctr_prov_details.update(metadata)
 
-        ctr_prov_details[CONTAINER_PROVIDER] = container_provider
+        ctr_prov_details[OvdcCache.CONTAINER_PROVIDER] = container_provider
         return ctr_prov_details
 
     def set_ovdc_container_provider_metadata(self, ovdc_name, ovdc_id=None,
@@ -146,10 +137,10 @@ class OvdcCache(object):
         else:
             ovdc = self._get_vdc_by_id(ovdc_id)
 
-        if container_provider != CtrProvType.PKS.value:
+        if container_provider != 'pks':
             LOGGER.debug(f'Remove metadata for ovdc:{ovdc_name}')
             self._remove_metadata(ovdc, self.pks_cache.get_pks_keys())
-            metadata[CONTAINER_PROVIDER] = container_provider or ''
+            metadata[OvdcCache.CONTAINER_PROVIDER] = container_provider or ''
         else:
             # Get pvdc and pks information from pks cache
             org_name = org.resource.get('name')
@@ -165,12 +156,12 @@ class OvdcCache(object):
             pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
             pks_info = self.pks_cache.get_pks_account_details(
                 org_name, pvdc_info.vc)
-            metadata[CONTAINER_PROVIDER] = container_provider
+
+            metadata[OvdcCache.CONTAINER_PROVIDER] = container_provider
             pks_compute_profile_name = f"{org_name}-{ovdc_name}-{ovdc_id}"
             pks_ctx = self.construct_pks_context(pks_info, pvdc_info,
-                                                 pks_compute_profile_name,
-                                                 pks_plans,
-                                                 credentials_required=False)
+                                                 pks_compute_profile_name, pks_plans,
+                                                 False)
             metadata.update(pks_ctx)
 
         # set ovdc metadata into Vcd

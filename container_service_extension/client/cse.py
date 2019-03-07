@@ -136,7 +136,18 @@ def list_clusters(ctx):
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        result = cluster.get_clusters()
+        result = []
+        clusters = cluster.get_clusters()
+        for c in clusters:
+            result.append({
+                'name': c['name'],
+                'IP master': c['leader_endpoint'],
+                'template': c['template'],
+                'VMs': c['number_of_vms'],
+                'vdc': c['vdc_name'],
+                'status': c['status']
+            })
+
         stdout(result, ctx, show_id=True)
     except Exception as e:
         stderr(e, ctx)

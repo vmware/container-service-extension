@@ -95,10 +95,9 @@ class Service(object, metaclass=Singleton):
 
     def active_requests_count(self):
         n = 0
-        # TODO(request_count) Add support for PksBroker - VCDA-938
         for t in threading.enumerate():
-            from container_service_extension.vcdbroker import VcdBroker
-            if type(t) == VcdBroker:
+            from container_service_extension.broker import DefaultBroker
+            if type(t) == DefaultBroker:
                 n += 1
         return n
 
