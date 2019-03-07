@@ -243,6 +243,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
         clusters = load_from_metadata(self.tenant_client, name=name)
         if len(clusters) == 0:
             raise CseServerError('Cluster \'%s\' not found.' % name)
+        cluster = clusters[0]
         vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
         vms = vapp.get_all_vms()
         for vm in vms:
@@ -257,12 +258,12 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 LOGGER.debug(
                     'cannot get ip address for node %s' % vm.get('name'))
             if vm.get('name').startswith(TYPE_MASTER):
-                clusters[0].get('master_nodes').append(node_info)
+                cluster.get('master_nodes').append(node_info)
             elif vm.get('name').startswith(TYPE_NODE):
-                clusters[0].get('nodes').append(node_info)
+                cluster.get('nodes').append(node_info)
             elif vm.get('name').startswith(TYPE_NFS):
-                clusters[0].get('nfs_nodes').append(node_info)
-        return clusters[0]
+                cluster.get('nfs_nodes').append(node_info)
+        return cluster
 
     @exception_handler
     def get_node_info(self, cluster_name, node_name):
@@ -361,9 +362,6 @@ class VcdBroker(AbstractBroker, threading.Thread):
 
         LOGGER.debug('About to create cluster %s on %s with %s nodes, sp=%s',
                      cluster_name, vdc_name, node_count, storage_profile)
-        response_body = {
-            'message': 'can\'t create cluster \'%s\'' % cluster_name
-        }
 
         if not self.is_valid_name(cluster_name):
             raise CseServerError(f"Invalid cluster name \'{cluster_name}\'")
@@ -378,11 +376,11 @@ class VcdBroker(AbstractBroker, threading.Thread):
                                                  self.cluster_id))
         self.daemon = True
         self.start()
-        response_body = {}
-        response_body['name'] = self.cluster_name
-        response_body['cluster_id'] = self.cluster_id
-        response_body['task_href'] = self.task_resource.get('href')
-        return response_body
+        result = {}
+        result['name'] = self.cluster_name
+        result['cluster_id'] = self.cluster_id
+        result['task_href'] = self.task_resource.get('href')
+        return result
 
     @rollback
     def create_cluster_thread(self):
@@ -529,10 +527,10 @@ class VcdBroker(AbstractBroker, threading.Thread):
                                                  self.cluster_id))
         self.daemon = True
         self.start()
-        response_body = {}
-        response_body['cluster_name'] = self.cluster_name
-        response_body['task_href'] = self.task_resource.get('href')
-        return response_body
+        result = {}
+        result['cluster_name'] = self.cluster_name
+        result['task_href'] = self.task_resource.get('href')
+        return result
 
     def delete_cluster_thread(self):
         LOGGER.debug('About to delete cluster with name: %s',

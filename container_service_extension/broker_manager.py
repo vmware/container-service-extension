@@ -1,8 +1,8 @@
 # container-service-extension
-# Copyright (c) 2017 VMware, Inc. All Rights Reserved.
+# Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.broker import VcdBroker
+from container_service_extension.vcdbroker import VcdBroker
 from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
@@ -45,8 +45,8 @@ class BrokerManager(object):
     def __init__(self, headers, body):
         self.headers = headers
         self.body = body
-        from container_service_extension.service import Service
         config = get_server_runtime_config()
+        from container_service_extension.service import Service
         self.pks_cache = Service().get_pks_cache()
         self.ovdc_cache = OvdcCache(get_vcd_sys_admin_client())
         self.vcd_client, self.session = connect_vcd_user_via_token(
