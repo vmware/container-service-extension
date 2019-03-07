@@ -8,6 +8,7 @@ from collections import namedtuple
 
 from container_service_extension.utils import get_pvdc_id_by_name
 
+# Refer  to TODO(Constants) in broker_manager.py
 PKS_PLANS = 'pks_plans'
 PKS_COMPUTE_PROFILE = 'pks_compute_profile_name'
 
@@ -20,6 +21,7 @@ class PksCache(object):
 
     __slots__ = ["orgs", "pks_accounts", "pvdcs",
                  "pvdc_table", "pks_info_table",
+                 "is_svc_accounts_per_org_per_vc",
                  "pks_service_accounts_per_org_per_vc_info_table",
                  "pks_service_accounts_per_vc_info_table"]
 
@@ -40,13 +42,14 @@ class PksCache(object):
         pvdc_table = self._construct_pvdc_info()
         super().__setattr__("pvdc_table", pvdc_table)
         super().__setattr__("pks_info_table", pks_info_table)
-        if orgs is not None and orgs[0]['name'] == 'None':
+        if orgs is not None and orgs[0]['name'] is None:
             pks_service_accounts_per_vc_info_table = \
                 self._construct_pks_service_accounts_per_vc()
             super().__setattr__("pks_service_accounts_per_vc_info_table",
                                 pks_service_accounts_per_vc_info_table)
             super().__setattr__(
                 "pks_service_accounts_per_org_per_vc_info_table", {})
+            super().__setattr__('is_svc_accounts_per_org_per_vc', False)
         else:
             pks_service_accounts_per_org_per_vc_info_table = self.\
                 _construct_pks_service_accounts_per_org_per_vc()
@@ -54,6 +57,7 @@ class PksCache(object):
                 "pks_service_accounts_per_org_per_vc_info_table",
                 pks_service_accounts_per_org_per_vc_info_table)
             super().__setattr__("pks_service_accounts_per_vc_info_table", {})
+            super().__setattr__("is_svc_accounts_per_org_per_vc", True)
 
     def __setattr__(self, key, value):
         """Overridden method to customize the meaning of attribute access.
@@ -73,6 +77,15 @@ class PksCache(object):
 
         raise AttributeError(msg)
 
+    def are_svc_accounts_per_org_per_vc(self):
+        """Return True if PKS service accounts specified are
+         for per org per vc, else False.
+         :return: is_svc_accounts_per_org_per_vc
+
+         :rtype: bool
+        """
+        return self.is_svc_accounts_per_org_per_vc
+
     def get_pvdc_info(self, pvdc_id):
         """Return an immutable PvdcResourcePoolPathInfo object.
 
@@ -81,7 +94,7 @@ class PksCache(object):
         name and sub resource pool path for this provider vDC.
 
         :param str pvdc_id: UUID of the provider vDC
-        :return: PvdcResourcePoolPathInfo object
+        :return: PvdcInfo object
         """
         return self.pvdc_table.get(pvdc_id)
 
@@ -100,8 +113,10 @@ class PksCache(object):
         return self.pks_service_accounts_per_org_per_vc_info_table.get(
             (org_name, vc_name))
 
-    def get_all_pks_accounts_for_org(self, org_name):
-        """Return all pks accounts associated with this org.
+    def get_all_pks_accounts_per_org_per_vc_in_org(self, org_name):
+        """Return all pks accounts associated with this org. This method
+        returns empty list if PKS service accounts specified are 'per vc'
+        but not 'per org per vc'
 
         Each PksInfo object has details of PKS account associated with
         the given organization.
@@ -119,7 +134,17 @@ class PksCache(object):
                         for name in pks_account_names_for_org]
         return pks_accounts
 
-    def get_pks_keys(self):
+    def get_all_pks_accounts_in_system(self):
+        """Return list of all PKS accounts in the entire system.
+
+        :return: list of PksInfo objects
+
+        :rtype: list
+        """
+        return self.pks_info_table.values()
+
+    @staticmethod
+    def get_pks_keys():
         """ Get relevant PKS keys
 
         :return: Set of pks keys
@@ -176,7 +201,7 @@ class PksCache(object):
 
         :rtype: dict
         """
-        if self.orgs[0]['name'] == 'None':
+        if self.orgs[0]['name'] is None:
             pks_service_accounts_per_vc_info_table = {}
             for account in self.pks_info_table.values():
                 pks_service_accounts_per_vc_info_table[account.vc] = account
