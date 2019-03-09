@@ -678,6 +678,8 @@ def enablek8s(ctx, ovdc_name, container_provider, pks_plans, org_name):
             client = ctx.obj['client']
             ovdc = Ovdc(client)
             if client.is_sysadmin():
+                if org_name is None:
+                    org_name = ctx.obj['profiles'].get('org_in_use')
                 result = ovdc.enable_ovdc_for_k8s(
                     ovdc_name,
                     container_provider=container_provider,
@@ -708,6 +710,8 @@ def disablek8s(ctx, ovdc_name, org_name):
         client = ctx.obj['client']
         if client.is_sysadmin():
             ovdc = Ovdc(client)
+            if org_name is None:
+                org_name = ctx.obj['profiles'].get('org_in_use')
             result = ovdc.disable_ovdc_for_k8s(ovdc_name, org_name=org_name)
             stdout(result, ctx)
         else:
@@ -734,6 +738,8 @@ def infok8s(ctx, ovdc_name, org_name):
         client = ctx.obj['client']
         if client.is_sysadmin():
             ovdc = Ovdc(client)
+            if org_name is None:
+                org_name = ctx.obj['profiles'].get('org_in_use')
             result = ovdc.info_ovdc_for_k8s(ovdc_name, org_name=org_name)
             stdout(result, ctx)
         else:
