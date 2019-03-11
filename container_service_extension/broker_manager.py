@@ -133,9 +133,10 @@ class BrokerManager(object):
         Returns a tuple of (cluster and the broker instance used to find the
         cluster)
         """
+
         if self.is_ovdc_present_in_request:
             broker = self.get_broker_based_on_vdc()
-            return broker.get_cluster_info(cluster_name), broker
+            return broker.get_cluster_info(cluster_name=cluster_name), broker
         else:
             cluster, broker = self._find_cluster_in_org(cluster_name)
             if cluster is not None:
@@ -181,12 +182,12 @@ class BrokerManager(object):
 
     def _resize_cluster(self, cluster_name, node_count):
         broker = self._get_cluster_info(cluster_name)[1]
-        return broker.resize_cluster(name=cluster_name,
+        return broker.resize_cluster(cluster_name=cluster_name,
                                      num_worker_nodes=node_count)
 
     def _delete_cluster(self, cluster_name):
         broker = self._get_cluster_info(cluster_name)[1]
-        return broker.delete_cluster(cluster_name)
+        return broker.delete_cluster(cluster_name=cluster_name)
 
     def _create_cluster(self, **kwargs):
         cluster_name = kwargs['cluster_name']
@@ -219,10 +220,11 @@ class BrokerManager(object):
         for pks_ctx in pks_ctx_list:
             pksbroker = PKSBroker(self.headers, self.body, pks_ctx)
             try:
-                return pksbroker.get_cluster_info(cluster_name), pksbroker
+                return pksbroker.get_cluster_info(cluster_name=cluster_name),\
+                       pksbroker
             except Exception as err:
                 LOGGER.debug(f"Get cluster info on {cluster_name} failed "
-                             f"on {pks_ctx['host']} with error: {err}")
+                             f"on {pks_ctx['host']} with error: {err}")pks_ctx
                 pass
 
         return None, None
