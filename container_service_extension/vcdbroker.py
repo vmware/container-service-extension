@@ -507,11 +507,11 @@ class VcdBroker(AbstractBroker, threading.Thread):
             self._disconnect_sys_admin()
 
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
-    def delete_cluster(self, name):
+    def delete_cluster(self, cluster_name):
 
-        LOGGER.debug(f"About to delete cluster with name: {name}")
+        LOGGER.debug(f"About to delete cluster with name: {cluster_name}")
 
-        self.cluster_name = name
+        self.cluster_name = cluster_name
         self._connect_tenant()
         self._connect_sys_admin()
         self.op = OP_DELETE_CLUSTER
