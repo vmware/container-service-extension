@@ -2,11 +2,12 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-
+import functools
 import json
 
+from pyvcloud.vcd.utils import extract_id
+
 from container_service_extension.abstract_broker import AbstractBroker
-from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import PksConnectionError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE
@@ -23,9 +24,73 @@ from container_service_extension.pksclient.models.compute_profile_request \
 from container_service_extension.pksclient.models.update_cluster_parameters\
     import UpdateClusterParameters
 from container_service_extension.uaaclient.uaaclient import UaaClient
-from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import exception_handler
 from container_service_extension.utils import OK
+
+
+def add_vcd_user_context(**decorator_args):
+    """Decorate to add unique user id to cluster name.
+
+    Process the response from PKS to filter the cluster names that belong to
+    the user. Customized to work for CRUD on pks k8s.
+
+    :param dict decorator_args: arguments that signify if custom processing
+    of results returned by decorated function.
+
+    :return: results from the decorated function after post processing
+    """
+    def decorator(pks_function):
+        @functools.wraps(pks_function)
+        def wrapper(*args, **kwargs):
+
+            def get_unique_id():
+                # Return user id associated with client-session
+                broker_instance = args[0]
+                session = broker_instance.get_tenant_client_session()
+                return extract_id(session.get('userId'))
+
+            def replace_unique_id(cluster_dict):
+                # Remove the user id associated with client-session
+                if type(cluster_dict) is not dict:
+                    return
+                # Process every value from the cluster information
+                for k, v in cluster_dict.items():
+                    if type(v) is str:
+                        cluster_dict.update({k: v.replace(unique_id, '')})
+
+            def has_unique_id(cluster_dict):
+                # Checks if any of the dict value has unique user id
+                # Return upon any first value that has user id
+                for val in cluster_dict.values():
+                    if unique_id in val:
+                        return True
+                return False
+
+            def pre_process_cluster_name(k):
+                # Append unique id to the key
+                if k in kwargs:
+                    kwargs[k] += unique_id
+
+            unique_id = get_unique_id()
+            # Process the cluster name which may come as 'cluster_name' or
+            # 'name'
+            pre_process_cluster_name('cluster_name')
+            pre_process_cluster_name('name')
+            result = pks_function(*args, **kwargs)
+
+            # Check decorator argument for any special post processing of
+            # result
+            if decorator_args.get('filter_list'):
+                filtered_list = [cluster_dict for cluster_dict in result
+                                 if has_unique_id(cluster_dict)]
+                for cluster_dict in filtered_list:
+                    replace_unique_id(cluster_dict)
+                return filtered_list
+
+            replace_unique_id(result)
+            return result
+        return wrapper
+    return decorator
 
 
 class PKSBroker(AbstractBroker):
@@ -54,6 +119,7 @@ class PKSBroker(AbstractBroker):
         self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE, None)
         self.verify = False  # TODO(pks.yaml) pks_config['pks']['verify']
         self.pks_client = self._get_pks_client()
+        self.client_session = None
 
     def _get_pks_config(self):
         """Connect to UAA server and construct PKS configuration.
@@ -92,6 +158,7 @@ class PKSBroker(AbstractBroker):
         self.pks_client = ApiClient(configuration=pks_config)
         return self.pks_client
 
+    @add_vcd_user_context(filter_list=True)
     def list_clusters(self):
         """Get list of clusters ((TODO)for a given vCD user) in PKS environment.
 
@@ -121,6 +188,7 @@ class PKSBroker(AbstractBroker):
                      f' list of clusters: {list_of_cluster_dicts}')
         return list_of_cluster_dicts
 
+    @add_vcd_user_context()
     def create_cluster(self, cluster_name, node_count, pks_plan, pks_ext_host,
                        compute_profile=None, **kwargs):
         """Create cluster in PKS environment.
@@ -168,6 +236,7 @@ class PKSBroker(AbstractBroker):
                      f' cluster: {cluster_name}')
         return cluster_dict
 
+    @add_vcd_user_context()
     def get_cluster_info(self, name):
         """Get the details of a cluster with a given name in PKS environment.
 
@@ -191,6 +260,7 @@ class PKSBroker(AbstractBroker):
 
         return cluster_dict
 
+    @add_vcd_user_context()
     def delete_cluster(self, name):
         """Delete the cluster with a given name in PKS environment.
 
@@ -208,6 +278,7 @@ class PKSBroker(AbstractBroker):
         return
 
     @exception_handler
+    @add_vcd_user_context()
     def resize_cluster(self, name, num_worker_nodes):
         """Resize the cluster of a given name to given number of worker nodes.
 
@@ -367,13 +438,3 @@ class PKSBroker(AbstractBroker):
                      f' it deleted the compute profile: {name}')
 
         return result
-
-    def __getattr__(self, name):
-        """Handle unknown operations.
-
-        Example: This broker does
-        not support individual node operations.
-        """
-        def unsupported_method(*args):
-            raise CseServerError(f"Unsupported operation {name}")
-        return unsupported_method
