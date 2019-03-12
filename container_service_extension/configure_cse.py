@@ -10,7 +10,6 @@ from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import FenceMode
-from pyvcloud.vcd.exceptions import BadRequestException
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
@@ -1159,7 +1158,7 @@ def register_right(client, right_name, description, category, bundle_key):
     org = Org(client, resource=client.get_org())
     try:
         right_name_in_vcd = f"{{{CSE_SERVICE_NAME}}}:{right_name}"
-        result = org.get_right_record(right_name_in_vcd)
+        org.get_right_record(right_name_in_vcd)
         msg = f"Right: {right_name} already exists in vCD"
         click.secho(msg, fg='green')
         LOGGER.debug(msg)
@@ -1179,7 +1178,9 @@ def register_right(client, right_name, description, category, bundle_key):
         click.secho(msg, fg='green')
         LOGGER.debug(msg)
         org.add_rights([right_name_in_vcd])
-    except EntityNotFoundException as e:
+    except EntityNotFoundException:
+        # registering a right via api extension end point auto assigns it to
+        # System org.
         ext.add_service_right(right_name, CSE_SERVICE_NAME,
                               CSE_SERVICE_NAMESPACE, description, category,
                               bundle_key)
