@@ -6,6 +6,7 @@ import base64
 import json
 import sys
 import traceback
+from urllib.parse import parse_qsl
 
 from pkg_resources import resource_string
 import yaml
@@ -77,10 +78,15 @@ class ServiceProcessor(object):
                         sys.getfilesystemencoding()))
             except Exception:
                 LOGGER.error(traceback.format_exc())
-                request_body = None
+                request_body = {}
         else:
-            request_body = None
+            request_body = {}
         LOGGER.debug('request body: %s' % json.dumps(request_body))
+
+        query_params = {}
+        if body['queryString']:
+            query_params = dict(parse_qsl(body['queryString']))
+        LOGGER.debug(f'Query params in the request: {query_params}')
 
         from container_service_extension.service import Service
         service = Service()
@@ -89,7 +95,8 @@ class ServiceProcessor(object):
                                  'Contact the System Administrator.')
 
         from container_service_extension.broker_manager import BrokerManager
-        broker_manager = BrokerManager(body['headers'], request_body)
+        broker_manager = BrokerManager(body['headers'], query_params,
+                                       request_body)
         from container_service_extension.broker_manager import Operation
 
         if body['method'] == 'GET':

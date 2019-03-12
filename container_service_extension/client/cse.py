@@ -146,19 +146,29 @@ def list_clusters(ctx):
 @click.pass_context
 @click.argument('name', required=True)
 @click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    help='Name of the virtual datacenter')
+@click.option(
     '-y',
     '--yes',
     is_flag=True,
     callback=abort_if_false,
     expose_value=False,
     prompt='Are you sure you want to delete the cluster?')
-def delete(ctx, name):
+def delete(ctx, name, vdc):
     """Delete a Kubernetes cluster."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        result = cluster.delete_cluster(name)
+        result = cluster.delete_cluster(name, vdc)
+        if len(result) == 0:
+            click.secho(f"Delete cluster operation has been initiated on "
+                        f"{name}, please check the status using 'vcd cse cluster info {name}'.")
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -286,13 +296,20 @@ def config(ctx, name, save):
 @cluster_group.command('info', short_help='get cluster info')
 @click.pass_context
 @click.argument('name', required=True)
-def cluster_info(ctx, name):
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    help='Name of the virtual datacenter')
+def cluster_info(ctx, name, vdc):
     """Display info about a Kubernetes cluster."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        cluster_info = cluster.get_cluster_info(name)
+        cluster_info = cluster.get_cluster_info(name, vdc)
         stdout(cluster_info, ctx, show_id=True)
     except Exception as e:
         stderr(e, ctx)

@@ -201,7 +201,7 @@ class PKSBroker(AbstractBroker):
         LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to delete '
                      f'the cluster with name: {name}')
 
-        cluster_api.delete_cluster(cluster_name=name)
+        #cluster_api.delete_cluster(cluster_name=name)
 
         LOGGER.debug(f'PKS: {self.pks_host_uri} accepted the request to delete'
                      f' the cluster: {name}')

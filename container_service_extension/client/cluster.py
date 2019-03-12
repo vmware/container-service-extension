@@ -43,7 +43,7 @@ class Cluster(object):
             auth=None)
         return process_response(response)
 
-    def get_cluster_info(self, name):
+    def get_cluster_info(self, name, vdc):
         method = 'GET'
         uri = '%s/%s/info' % (self._uri, name)
         response = self.client._do_request_prim(
@@ -53,7 +53,8 @@ class Cluster(object):
             contents=None,
             media_type=None,
             accept_type='application/*+json',
-            auth=None)
+            auth=None,
+            params={'vdc': vdc} if vdc else None)
         try:
             result = process_response(response)
         except VcdResponseError as e:
@@ -125,14 +126,15 @@ class Cluster(object):
             accept_type='application/*+json')
         return process_response(response)
 
-    def delete_cluster(self, cluster_name):
+    def delete_cluster(self, cluster_name, vdc):
         method = 'DELETE'
         uri = '%s/%s' % (self._uri, cluster_name)
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
-            accept_type='application/*+json')
+            accept_type='application/*+json',
+            params={'vdc': vdc} if vdc else None)
         try:
             result = process_response(response)
         except VcdResponseError as e:
