@@ -1159,10 +1159,26 @@ def register_right(client, right_name, description, category, bundle_key):
     org = Org(client, resource=client.get_org())
     try:
         right_name_in_vcd = f"{{{CSE_SERVICE_NAME}}}:{right_name}"
-        org.get_right_record(right_name_in_vcd)
+        result = org.get_right_record(right_name_in_vcd)
         msg = f"Right: {right_name} already exists in vCD"
         click.secho(msg, fg='green')
         LOGGER.debug(msg)
+        # Presence of the right in vCD is not guarantee that the right will be
+        # assigned to system org.
+        rights_in_system = org.list_rights_of_org()
+        for dikt in rights_in_system:
+            # TODO(): When localization support comes in, this check should be
+            # ditched for a better one.
+            if dikt['name'] == right_name_in_vcd:
+                msg = f"Right: {right_name} assigned to System organization."
+                click.secho(msg, fg='green')
+                LOGGER.debug(msg)
+                return
+        # since the right is not assigned to system org, we need to add it.
+        msg = f"Assigning Right: {right_name} to System organization."
+        click.secho(msg, fg='green')
+        LOGGER.debug(msg)
+        org.add_rights([right_name_in_vcd])
     except EntityNotFoundException as e:
         ext.add_service_right(right_name, CSE_SERVICE_NAME,
                               CSE_SERVICE_NAMESPACE, description, category,
