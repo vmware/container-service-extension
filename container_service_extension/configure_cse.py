@@ -1155,36 +1155,39 @@ def register_right(client, right_name, description, category, bundle_key):
         exists in vCD.
     """
     ext = APIExtension(client)
-    org = Org(client, resource=client.get_org())
+    # Since the client is a sys admin, org will hold a reference to System org
+    system_org = Org(client, resource=client.get_org())
     try:
         right_name_in_vcd = f"{{{CSE_SERVICE_NAME}}}:{right_name}"
-        org.get_right_record(right_name_in_vcd)
+        # TODO(): When org.get_right_record() is moved outside the org scope in
+        # pyvcloud, update the code below to adhere to the new method names.
+        system_org.get_right_record(right_name_in_vcd)
         msg = f"Right: {right_name} already exists in vCD"
         click.secho(msg, fg='green')
         LOGGER.debug(msg)
         # Presence of the right in vCD is not guarantee that the right will be
         # assigned to system org.
-        rights_in_system = org.list_rights_of_org()
+        rights_in_system = system_org.list_rights_of_org()
         for dikt in rights_in_system:
             # TODO(): When localization support comes in, this check should be
             # ditched for a better one.
             if dikt['name'] == right_name_in_vcd:
-                msg = f"Right: {right_name} assigned to System organization."
+                msg = f"Right: {right_name} already assigned to System " \
+                    f"organization."
                 click.secho(msg, fg='green')
                 LOGGER.debug(msg)
                 return
-        # since the right is not assigned to system org, we need to add it.
+        # Since the right is not assigned to system org, we need to add it.
         msg = f"Assigning Right: {right_name} to System organization."
         click.secho(msg, fg='green')
         LOGGER.debug(msg)
-        org.add_rights([right_name_in_vcd])
+        system_org.add_rights([right_name_in_vcd])
     except EntityNotFoundException:
-        # registering a right via api extension end point auto assigns it to
+        # Registering a right via api extension end point auto assigns it to
         # System org.
-        ext.add_service_right(right_name, CSE_SERVICE_NAME,
-                              CSE_SERVICE_NAMESPACE, description, category,
-                              bundle_key)
-
-        msg = f"Register {right_name} as a Right in vCD"
+        msg = f"Registering Right: {right_name} in vCD"
         click.secho(msg, fg='green')
         LOGGER.info(msg)
+        ext.add_service_right(
+            right_name, CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, description,
+            category, bundle_key)
