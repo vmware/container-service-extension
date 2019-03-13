@@ -2,6 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from pyvcloud.vcd.client import ApiVersion
 from pyvcloud.vcd import utils
 from pyvcloud.vcd.client import MetadataDomain
 from pyvcloud.vcd.client import MetadataVisibility
@@ -109,8 +110,7 @@ class OvdcCache(object):
                         for metadata_key in self.pks_cache.get_pks_keys()}
 
             # Get the credentials from PksCache
-            pvdc_element = ovdc.resource.ProviderVdcReference
-            pvdc_id = pvdc_element.get('id')
+            pvdc_id = self._get_pvdc_id(ovdc)
             pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
             metadata[PKS_PLANS] = metadata[PKS_PLANS].split(',')
             if credentials_required:
@@ -153,15 +153,7 @@ class OvdcCache(object):
         else:
             # Get pvdc and pks information from pks cache
             org_name = org.resource.get('name')
-            pvdc_element = ovdc.resource.ProviderVdcReference
-            pvdc_id = pvdc_element.get('id')
-            # To support <= VCD 9.1 where no 'id' is present in pvdc
-            # element, it has to be extracted from href. Once VCD 9.1 support
-            # is discontinued, this code is not required.
-            if pvdc_id is None:
-                pvdc_href = pvdc_element.get('href')
-                pvdc_id = pvdc_href.split("/")[-1]
-
+            pvdc_id = self._get_pvdc_id(ovdc)
             pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
             pks_info = self.pks_cache.get_pks_account_details(
                 org_name, pvdc_info.vc)
@@ -190,3 +182,17 @@ class OvdcCache(object):
         ovdc_href = f'{admin_href}vdc/{vdc_id}'
         resource = self.client.get_resource(ovdc_href)
         return VDC(self.client, resource=resource)
+
+    def _get_pvdc_id(self, ovdc):
+        pvdc_element = ovdc.resource.ProviderVdcReference
+        # To support <= VCD 9.1 where no 'id' is present in pvdc
+        # element, it has to be extracted from href. Once VCD 9.1 support
+        # is discontinued, this code is not required.
+        if self.client.get_api_version() < ApiVersion.VERSION_31.value:
+            pvdc_href = pvdc_element.get('href')
+            return pvdc_href.split("/")[-1]
+        else:
+            pvdc_id = pvdc_element.get('id')
+            return utils.extract_id(pvdc_id)
+
+
