@@ -2,26 +2,30 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from enum import Enum
+from enum import unique
+
 from pyvcloud.vcd import utils
+from pyvcloud.vcd.client import ApiVersion
 from pyvcloud.vcd.client import MetadataDomain
 from pyvcloud.vcd.client import MetadataVisibility
 from pyvcloud.vcd.vdc import VDC
 
 
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE
+from container_service_extension.pks_cache import PKS_PLANS
 from container_service_extension.utils import get_org
 from container_service_extension.utils import get_pks_cache
 from container_service_extension.utils import get_vdc
-from container_service_extension.pks_cache import PKS_PLANS
-from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE
 
-from enum import Enum, unique
 
 # TODO(Constants) Refer the TODO(Constants) in broker_manager.py
 @unique
 class CtrProvType(Enum):
     VCD = 'vcd'
     PKS = 'pks'
+
 
 CONTAINER_PROVIDER = 'container_provider'
 
@@ -39,9 +43,9 @@ class OvdcCache(object):
 
     @staticmethod
     def construct_pks_context(pks_info, pvdc_info=None,
-                              pks_compute_profile_name=None, pks_plans = '',
+                              pks_compute_profile_name=None, pks_plans='',
                               credentials_required=False):
-        """Construct PKS context dictionary
+        """Construct PKS context dictionary.
 
         :param container_service_extension.pks_cache.PksInfo pks_info:
         pks connection details
@@ -58,7 +62,7 @@ class OvdcCache(object):
         """
         pks_ctx = pks_info._asdict()
         credentials = pks_ctx.pop('credentials')
-        if credentials_required == True:
+        if credentials_required is True:
             pks_ctx.update(credentials._asdict())
         if pvdc_info is not None:
             pks_ctx.update(pvdc_info._asdict())
@@ -66,7 +70,6 @@ class OvdcCache(object):
             else pks_compute_profile_name
         pks_ctx[PKS_PLANS] = '' if pks_plans is None else pks_plans
         return pks_ctx
-
 
     def get_ovdc_container_provider_metadata(self, ovdc_name,
                                              ovdc_id=None, org_name=None,
@@ -109,8 +112,7 @@ class OvdcCache(object):
                         for metadata_key in self.pks_cache.get_pks_keys()}
 
             # Get the credentials from PksCache
-            pvdc_element = ovdc.resource.ProviderVdcReference
-            pvdc_id = pvdc_element.get('id')
+            pvdc_id = self._get_pvdc_id(ovdc)
             pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
             metadata[PKS_PLANS] = metadata[PKS_PLANS].split(',')
             if credentials_required:
@@ -153,15 +155,7 @@ class OvdcCache(object):
         else:
             # Get pvdc and pks information from pks cache
             org_name = org.resource.get('name')
-            pvdc_element = ovdc.resource.ProviderVdcReference
-            pvdc_id = pvdc_element.get('id')
-            # To support <= VCD 9.1 where no 'id' is present in pvdc
-            # element, it has to be extracted from href. Once VCD 9.1 support
-            # is discontinued, this code is not required.
-            if pvdc_id is None:
-                pvdc_href = pvdc_element.get('href')
-                pvdc_id = pvdc_href.split("/")[-1]
-
+            pvdc_id = self._get_pvdc_id(ovdc)
             pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
             pks_info = self.pks_cache.get_pks_account_details(
                 org_name, pvdc_info.vc)
@@ -190,3 +184,17 @@ class OvdcCache(object):
         ovdc_href = f'{admin_href}vdc/{vdc_id}'
         resource = self.client.get_resource(ovdc_href)
         return VDC(self.client, resource=resource)
+
+    def _get_pvdc_id(self, ovdc):
+        pvdc_element = ovdc.resource.ProviderVdcReference
+        # To support <= VCD 9.1 where no 'id' is present in pvdc
+        # element, it has to be extracted from href. Once VCD 9.1 support
+        # is discontinued, this code is not required.
+        if self.client.get_api_version() < ApiVersion.VERSION_31.value:
+            pvdc_href = pvdc_element.get('href')
+            return pvdc_href.split("/")[-1]
+        else:
+            pvdc_id = pvdc_element.get('id')
+            return utils.extract_id(pvdc_id)
+
+
