@@ -82,6 +82,9 @@ class BrokerManager(object):
         if on_the_fly_request_body:
             self.body.update(on_the_fly_request_body)
 
+        self.is_ovdc_present_in_request = self.body.get('vdc', None) or \
+                                          self.params.get('vdc', None)
+
         if op == Operation.GET_CLUSTER:
             result['body'] = \
                 self._get_cluster_info(self.body['cluster_name'])[0]
@@ -129,11 +132,7 @@ class BrokerManager(object):
         Returns a tuple of (cluster and the broker instance used to find the
         cluster)
         """
-        vdc = self.params.get('vdc', None)
-        print(f'vdc: {vdc}')
-        is_ovdc_present_in_request = self.body.get('vdc', None) or self.params.get('vdc', None)
-        if is_ovdc_present_in_request:
-            print('inside ovdc blcok')
+        if self.is_ovdc_present_in_request:
             broker = self.get_broker_based_on_vdc()
             return broker.get_cluster_info(cluster_name), broker
         else:
@@ -155,8 +154,7 @@ class BrokerManager(object):
             Post-process the result returned by each broker.
             Aggregate all the results into one.
         """
-        is_ovdc_present_in_request = self.body.get('vdc', None) or self.params.get('vdc', None)
-        if is_ovdc_present_in_request:
+        if self.is_ovdc_present_in_request:
             broker = self.get_broker_based_on_vdc()
             return broker.list_clusters()
         else:

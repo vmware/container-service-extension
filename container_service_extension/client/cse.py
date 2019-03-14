@@ -65,6 +65,11 @@ def cluster_group(ctx):
         vcd cse cluster delete mycluster --yes
             Attempts to delete cluster 'mycluster' without prompting.
 \b
+        vcd cse cluster delete mycluster -vdc myOvdc
+            Deletes cluster residing in vdc 'myOvdc'. Specifying optional
+            param --vdc lets CSE server to efficiently locate and
+            delete the cluster.
+\b
         vcd cse cluster create mycluster -n mynetwork
             Attempts to create a Kubernetes cluster named 'mycluster'
             with 2 worker nodes in the current VDC. This cluster will be
@@ -87,6 +92,11 @@ def cluster_group(ctx):
 \b
         vcd cse cluster info mycluster
             Display detailed information about cluster named 'mycluster'.
+\b
+        vcd cse cluster info mycluster --vdc myOvdc
+            Display detailed information on cluster 'mycluster', which is
+            residing in vdc 'myOvdc'. Specifying optional param --vdc
+            lets CSE server to efficiently locate the cluster.
     """
     pass
 
@@ -168,7 +178,8 @@ def delete(ctx, name, vdc):
         result = cluster.delete_cluster(name, vdc)
         if len(result) == 0:
             click.secho(f"Delete cluster operation has been initiated on "
-                        f"{name}, please check the status using 'vcd cse cluster info {name}'.")
+                        f"{name}, please check the status using"
+                        f" 'vcd cse cluster info {name}'.", fg='yellow')
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
