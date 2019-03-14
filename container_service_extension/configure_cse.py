@@ -10,7 +10,6 @@ from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import FenceMode
-from pyvcloud.vcd.exceptions import BadRequestException
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
@@ -24,7 +23,6 @@ import yaml
 
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.exceptions import AmqpError
-
 from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
@@ -36,7 +34,6 @@ from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY, CSE_PKS_DEPLOY_RIGHT_CATEGORY, \
     CSE_PKS_DEPLOY_RIGHT_DESCRIPTION, CSE_PKS_DEPLOY_RIGHT_NAME, \
     CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE  # noqa
-
 from container_service_extension.utils import catalog_exists
 from container_service_extension.utils import catalog_item_exists
 from container_service_extension.utils import check_file_permissions
@@ -48,7 +45,6 @@ from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_org
 from container_service_extension.utils import get_vdc
 from container_service_extension.utils import get_vsphere
-from container_service_extension.utils import is_cse_registered
 from container_service_extension.utils import SYSTEM_ORG_NAME
 from container_service_extension.utils import upload_ova_to_catalog
 from container_service_extension.utils import vgr_callback
@@ -59,8 +55,8 @@ from container_service_extension.utils import wait_until_tools_ready
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = 'vmxnet3'
 TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
 
-INSTRUCTIONS_FOR_PKS_CONFIG_FILE = '''#Config file for PKS enabled CSE Server to be filled by the administrator.
-#This config file has the following three sections:
+INSTRUCTIONS_FOR_PKS_CONFIG_FILE = '''# Config file for PKS enabled CSE Server to be filled by the administrator.
+# This config file has the following three sections:
 #   1. pks_accounts:
 #       a. Cloud Admins can specify PKS service account for every (PKS managed) vCenter in vCD
 #          i.e. a common PKS account per vCenter will be used for all the
@@ -70,28 +66,29 @@ INSTRUCTIONS_FOR_PKS_CONFIG_FILE = '''#Config file for PKS enabled CSE Server to
 #          admins need to ensure that PKS accounts are correctly mapped to
 #          their respective organization in the 'orgs' section of this
 #          config file.
+#       P.S: Currently, we mandate each PKS service account in the system to have a unique account name.
 #   2. orgs: [OPTIONAL SECTION for admins who chose 1a above.]
 #       a. If cloud admin chooses to define PKS service account per
 #          organization per vCenter, include the organization and respective
 #          pks_account names in this section, else should be left blank with empty values.
 #   3. pvdcs:
-#        a. List of Provider vDCs dedicated for PKS enabled CSE set up only\n
-#Each PKS service account needs to have the following information fields to be filled in:
+#       a. List of Provider vDCs dedicated for PKS enabled CSE set up only\n
+# Each PKS service account needs to have the following information fields to be filled in:
 #       1. PKS account name
 #       2. vCenter name in vCD for this PKS account
 #       3. PKS server host
 #       4. PKS server port
 #       5. PKS UAAC account information
-#For more information, please refer to CSE documentation page :
-#               https://vmware.github.io/container-service-extension/INSTALLATION.html\n'''
+# For more information, please refer to CSE documentation page:
+#       https://vmware.github.io/container-service-extension/INSTALLATION.html\n'''  # noqa
 
-NOTE_FOR_PKS_KEY_IN_CONFIG_FILE = '''#Filling out this key for regular CSE set up is optional and should be left as is.
-#Only for CSE set up enabled for PKS container provider, this value needs to point to a valid PKS config file name. 
-'''
-PKS_CONFIG_NOTE = '''#[OPTIONAL] PKS CONFIGS
-#These configs are required only for customers with PKS enabled CSE. Regular CSE users with 
+NOTE_FOR_PKS_KEY_IN_CONFIG_FILE = '''# Filling out this key for regular CSE set up is optional and should be left as is.
+# Only for CSE set up enabled for PKS container provider, this value needs to point to a valid PKS config file name.
+'''  # noqa
+PKS_CONFIG_NOTE = '''# [OPTIONAL] PKS CONFIGS
+# These configs are required only for customers with PKS enabled CSE. Regular CSE users with
 # no PKS container provider do not need these configs to be filled out in a separate yaml file.
-'''
+'''  # noqa
 
 SAMPLE_AMQP_CONFIG = {
     'amqp': {
@@ -114,83 +111,102 @@ SAMPLE_VCD_CONFIG = {
         'port': 443,
         'username': 'administrator',
         'password': 'my_secret_password',
-        'api_version': '29.0',
+        'api_version': '31.0',
         'verify': False,
         'log': True
     }
 }
 
 SAMPLE_VCS_CONFIG = {
-    'vcs': [{
-        'name': 'vc1',
-        'username': 'cse_user@vsphere.local',
-        'password': 'my_secret_password',
-        'verify': False
-    }, {
-        'name': 'vc2',
-        'username': 'cse_user@vsphere.local',
-        'password': 'my_secret_password',
-        'verify': False
-    }]
+    'vcs': [
+        {
+            'name': 'vc1',
+            'username': 'cse_user@vsphere.local',
+            'password': 'my_secret_password',
+            'verify': False
+        },
+        {
+            'name': 'vc2',
+            'username': 'cse_user@vsphere.local',
+            'password': 'my_secret_password',
+            'verify': False
+        }
+    ]
 }
 
 SAMPLE_PKS_CONFIG_FILE_LOCATION = {
-    #Path to pks config file location
-    'pks_config': 'None'
+    'pks_config': None
 }
 
 SAMPLE_PKS_CONFIG = {
-    'orgs': [{
-        'name': 'Org1',
-        'pks_accounts': ['Org1ServiceAccount1', 'Org1ServiceAccount2']
-    }, {
-        'name': 'Org2',
-        'pks_accounts': ['Org2ServiceAccount']
-    }],
-    'pks_accounts' : [{
-        'name' : 'Org1ServiceAccount1',
-        'vc' : 'vc1',
-        'host' : 'https://deadend-12345.eng.vmware.com',
-        'port' : '9021',
-        'uaac' : {
-            'port' : '8443',
-            'secret' : 'secret',
-            'username' : 'org1Admin'
+    'orgs': [
+        {
+            'name': 'Org1',
+            'pks_accounts': ['Org1ServiceAccount1', 'Org1ServiceAccount2']
+        },
+        {
+            'name': 'Org2',
+            'pks_accounts': ['Org2ServiceAccount']
         }
-    },{
-        'name' : 'Org1ServiceAccount2',
-        'vc' : 'vc2',
-        'host' : 'https://deadend-12345.eng.vmware.com',
-        'port' : '9021',
-        'uaac' : {
-            'port' : '8443',
-            'secret' : 'secret',
-            'username' : 'org1Admin'
+    ],
+    'pks_accounts': [
+        {
+            'name': 'Org1ServiceAccount1',
+            'vc': 'vc1',
+            'host': 'https://deadend-12345.eng.vmware.com',
+            'port': '9021',
+            'uaac': {
+                'port': '8443',
+                'secret': 'secret',
+                'username': 'org1Admin'
+            }
+        },
+        {
+            'name': 'Org1ServiceAccount2',
+            'vc': 'vc2',
+            'host': 'https://deadend-12345.eng.vmware.com',
+            'port': '9021',
+            'uaac': {
+                'port': '8443',
+                'secret': 'secret',
+                'username': 'org1Admin'
+            }
+        },
+        {
+            'name': 'Org2ServiceAccount',
+            'vc': 'vc1',
+            'host': 'https://deadend-12345.eng.vmware.com',
+            'port': '9021',
+            'uaac': {
+                'port': '8443',
+                'secret': 'secret',
+                'username': 'org2Admin'
+            }
         }
-    },{
-        'name' : 'Org2ServiceAccount',
-        'vc' : 'vc1',
-        'host' : 'https://deadend-12345.eng.vmware.com',
-        'port' : '9021',
-        'uaac' : {
-            'port' : '8443',
-            'secret' : 'secret',
-            'username' : 'org2Admin'
+    ],
+    'pvdcs': [
+        {
+            'name': 'pvdc1',
+            'vc': 'vc1',
+            'datacenter': 'datacenter1',
+            'cluster': 'cluster1',
+            'cpi': 'cpi1'
+        },
+        {
+            'name': 'pvdc2',
+            'vc': 'vc2',
+            'datacenter': 'HA_datacenter',
+            'cluster': 'HA_cluster1',
+            'cpi': 'cpi2'
+        },
+        {
+            'name': 'pvdc3',
+            'vc': 'vc1',
+            'datacenter': 'datacenter1',
+            'cluster': 'cluster1',
+            'cpi': 'cpi1'
         }
-    }],
-    'pvdcs':[{
-        'name' : 'pvdc1',
-        'vc' : 'vc1',
-        'rp_paths': ['datacenter1/cluster1/rp1']
-    },{
-        'name' : 'pvdc2',
-        'vc': 'vc1',
-        'rp_paths' : ['HA_datacenter/HA_cluster1/gold_rp/sub-rp']
-    },{
-        'name' : 'pvdc3',
-        'vc' : 'vc2',
-        'rp_paths' : ['datacenter/cluster1/rp1/sub-rp1/sub-rp2']
-    }]
+    ]
 }
 
 SAMPLE_SERVICE_CONFIG = {
@@ -231,10 +247,10 @@ SAMPLE_TEMPLATE_UBUNTU_16_04 = {
 SAMPLE_BROKER_CONFIG = {
     'broker': {
         'type': 'default',
-        'org': 'Admin',
-        'vdc': 'Catalog',
+        'org': 'myorg',
+        'vdc': 'myorgvdc',
         'catalog': 'cse',
-        'network': 'admin_network',
+        'network': 'mynetwork',
         'ip_allocation_mode': 'pool',
         'storage_profile': '*',
         'default_template': SAMPLE_TEMPLATE_PHOTON_V2['name'],
@@ -248,17 +264,11 @@ SAMPLE_CONFIG = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
                  **SAMPLE_VCS_CONFIG, **SAMPLE_SERVICE_CONFIG,
                  **SAMPLE_BROKER_CONFIG}
 
-# This allows us to compare top-level config keys and value types
-# for pks enabled customers
-SAMPLE_CONFIG_WITH_PKS = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
-                          **SAMPLE_VCS_CONFIG,
-                          **SAMPLE_PKS_CONFIG_FILE_LOCATION,
-                          **SAMPLE_SERVICE_CONFIG,
-                          **SAMPLE_BROKER_CONFIG}
-
 
 def generate_sample_config(output=None, pks_output=None):
-    """Generates sample configs for cse. If config file names are
+    """Generate sample configs for cse.
+
+    If config file names are
     provided, configs are dumped into respective files.
 
     :param str output: name of the config file to dump the CSE configs.
@@ -275,37 +285,31 @@ def generate_sample_config(output=None, pks_output=None):
                                     default_flow_style=False) + '\n'
     sample_config += yaml.safe_dump(SAMPLE_VCS_CONFIG,
                                     default_flow_style=False) + '\n'
-
     sample_config += yaml.safe_dump(SAMPLE_SERVICE_CONFIG,
                                     default_flow_style=False) + '\n'
     sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
                                     default_flow_style=False) + '\n'
     sample_config += NOTE_FOR_PKS_KEY_IN_CONFIG_FILE
     sample_config += yaml.safe_dump(SAMPLE_PKS_CONFIG_FILE_LOCATION,
-                                        default_flow_style=False) + '\n'
-    sample_pks_config = yaml.safe_dump(
-            SAMPLE_PKS_CONFIG, default_flow_style=False) + '\n'
+                                    default_flow_style=False) + '\n'
+    sample_pks_config = yaml.safe_dump(SAMPLE_PKS_CONFIG,
+                                       default_flow_style=False)
+
     if output is not None:
         with open(output, 'w') as f:
             f.write(sample_config)
-            click.secho(f"Config file '{output}' is generated.",
-                        fg='green')
-            if pks_output is None:
-                return
     if pks_output is not None:
-        sample_pks_config = yaml.safe_dump(
-            SAMPLE_PKS_CONFIG, default_flow_style=False) + '\n'
         with open(pks_output, 'w') as f:
-            f.write(f"{INSTRUCTIONS_FOR_PKS_CONFIG_FILE}\n{sample_pks_config}")
-            click.secho(f"PKS config file '{pks_output}' is "
-                        f"generated.", fg='green')
-        return
-    return sample_config.strip() + '\n\n' + PKS_CONFIG_NOTE + \
-           '\n' + sample_pks_config.strip()
+            pks_config_string = yaml.safe_dump(SAMPLE_PKS_CONFIG,
+                                               default_flow_style=False)
+            f.write(f"{INSTRUCTIONS_FOR_PKS_CONFIG_FILE}\n{pks_config_string}")
+
+    return sample_config.strip() + '\n\n' + PKS_CONFIG_NOTE + '\n' + \
+        sample_pks_config.strip()
 
 
-def get_validated_config(config_file_name, pks_config='pks.yaml'):
-    """Gets the config file as a dictionary and checks for validity.
+def get_validated_config(config_file_name):
+    """Get the config file as a dictionary and check for validity.
 
     Ensures that all properties exist and all values are the expected type.
     Checks that AMQP connection is available, and vCD/VCs are valid.
@@ -314,36 +318,30 @@ def get_validated_config(config_file_name, pks_config='pks.yaml'):
 
     :param str config_file_name: path to config file.
 
-    :param str pks_config_file_name: path to pks config file.
-
     :return: CSE config
 
     :rtype: dict
 
     :raises KeyError: if config file has missing or extra properties.
-    :raises ValueError: if the value type for a config file property
+    :raises TypeError: if the value type for a config file property
         is incorrect.
-    :raises AmqpConnectionError: if AMQP connection failed.
+    :raises container_service_extension.exceptions.AmqpConnectionError: if
+        AMQP connection failed (host, password, port, username,
+        vhost is invalid).
+    :raises pyvcloud.vcd.exceptions.NotAcceptableException: if 'vcd'
+        'api_version' is unsupported.
+    :raises requests.exceptions.ConnectionError: if 'vcd' 'host' is invalid.
+    :raises pyvcloud.vcd.exceptions.VcdException: if 'vcd' 'username' or
+        'password' is invalid.
+    :raises pyVmomi.vim.fault.InvalidLogin: if 'vcs' 'username' or 'password'
+        is invalid.
     """
     check_file_permissions(config_file_name)
     with open(config_file_name) as config_file:
         config = yaml.safe_load(config_file)
-
+    pks_config = config.get('pks_config')
     click.secho(f"Validating config file '{config_file_name}'", fg='yellow')
-    if 'pks_config' in config:
-        check_keys_and_value_types(config, SAMPLE_CONFIG_WITH_PKS,
-                                   location='config file')
-        check_file_permissions(pks_config)
-        with open(pks_config) as pks_config_file:
-            pks = yaml.safe_load(pks_config_file)
-        click.secho(f"Validating PKS config file '{pks_config}'", fg='yellow')
-        check_keys_and_value_types(pks, SAMPLE_PKS_CONFIG,
-                                   location='PKS config file')
-        click.secho(f"PKS Config file '{pks_config}' is valid", fg='green')
-        config['pks_config'] = pks
-    else:
-        check_keys_and_value_types(config, SAMPLE_CONFIG,
-                                   location='config file')
+    check_keys_and_value_types(config, SAMPLE_CONFIG, location='config file')
     validate_amqp_config(config['amqp'])
     validate_vcd_and_vcs_config(config['vcd'], config['vcs'])
     validate_broker_config(config['broker'])
@@ -351,6 +349,18 @@ def get_validated_config(config_file_name, pks_config='pks.yaml'):
                                SAMPLE_SERVICE_CONFIG['service'],
                                location="config file 'service' section")
     click.secho(f"Config file '{config_file_name}' is valid", fg='green')
+    if pks_config is not None and isinstance(pks_config, str):
+        check_file_permissions(pks_config)
+        with open(pks_config) as f:
+            pks = yaml.safe_load(f)
+        click.secho(f"Validating PKS config file '{pks_config}'", fg='yellow')
+        check_keys_and_value_types(pks, SAMPLE_PKS_CONFIG,
+                                   location='PKS config file')
+        click.secho(f"PKS Config file '{pks_config}' is valid", fg='green')
+        config['pks_config'] = pks
+    else:
+        config['pks_config'] = None
+
     return config
 
 
@@ -363,7 +373,7 @@ def validate_amqp_config(amqp_dict):
     :param dict amqp_dict: 'amqp' section of config file as a dict.
 
     :raises KeyError: if @amqp_dict has missing or extra properties.
-    :raises ValueError: if the value type for an @amqp_dict property
+    :raises TypeError: if the value type for an @amqp_dict property
         is incorrect.
     :raises AmqpConnectionError: if AMQP connection failed.
     """
@@ -402,8 +412,9 @@ def validate_vcd_and_vcs_config(vcd_dict, vcs):
 
     :raises KeyError: if @vcd_dict or a vc in @vcs has missing or
         extra properties.
-    :raises: ValueError: if the value type for a @vcd_dict or vc property
-        is incorrect, or if vCD has a VC that is not listed in the config file.
+    :raises TypeError: if the value type for a @vcd_dict or vc property
+        is incorrect.
+    :raises ValueError: if vCD has a VC that is not listed in the config file.
     """
     check_keys_and_value_types(vcd_dict, SAMPLE_VCD_CONFIG['vcd'],
                                location="config file 'vcd' section")
@@ -436,7 +447,7 @@ def validate_vcd_and_vcs_config(vcd_dict, vcs):
         for index, vc in enumerate(vcs, 1):
             check_keys_and_value_types(vc, SAMPLE_VCS_CONFIG['vcs'][0],
                                        location=f"config file 'vcs' section,"
-                                                f" "f"vc #{index}")
+                                                f" vc #{index}")
 
         # Check that all registered VCs in vCD are listed in config file
         platform = Platform(client)
@@ -471,9 +482,10 @@ def validate_broker_config(broker_dict):
     :param dict broker_dict: 'broker' section of config file as a dict.
 
     :raises KeyError: if @broker_dict has missing or extra properties.
-    :raises ValueError: if the value type for a @broker_dict property is
-        incorrect, or if 'default_template' has a value not listed in the
-        'templates' property.
+    :raises TypeError: if the value type for a @broker_dict property is
+        incorrect.
+    :raises ValueError: if 'default_template' value is not found in listed
+        'templates, or if 'ip_allocation_mode' is not 'dhcp' or 'pool'
     """
     check_keys_and_value_types(broker_dict, SAMPLE_BROKER_CONFIG['broker'],
                                location="config file 'broker' section")
@@ -485,12 +497,18 @@ def validate_broker_config(broker_dict):
                                             "template section")
         if template['name'] == broker_dict['default_template']:
             default_exists = True
-
     if not default_exists:
-        msg = f"Default template '{broker_dict['default_template']}' not " \
-              f"found in listed templates"
-        click.secho(msg, fg='red')
-        raise ValueError(msg)
+        raise ValueError(f"Default template '{broker_dict['default_template']}"
+                         f"' not found in listed templates")
+
+    valid_ip_allocation_modes = [
+        'dhcp',
+        'pool'
+    ]
+    if broker_dict['ip_allocation_mode'] not in valid_ip_allocation_modes:
+        raise ValueError(f"IP allocation mode is "
+                         f"'{broker_dict['ip_allocation_mode']}' when it "
+                         f"should be either 'dhcp' or 'pool'")
 
 
 def check_cse_installation(config, check_template='*'):
@@ -617,8 +635,7 @@ def check_cse_installation(config, check_template='*'):
 
 
 def install_cse(ctx, config_file_name='config.yaml', template_name='*',
-                update=False, no_capture=False, ssh_key=None,
-                ext_install='prompt'):
+                update=False, no_capture=False, ssh_key=None):
     """Handle logistics for CSE installation.
 
     Handles decision making for configuring AMQP exchange/settings,
@@ -633,9 +650,6 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
     :param bool no_capture: if True, temporary vApp will not be captured or
         destroyed, so the user can ssh into and debug the VM.
     :param str ssh_key: public ssh key to place into template vApp(s).
-    :param str ext_install: 'prompt' asks the user if CSE should be registered
-        to vCD. 'skip' does not register CSE to vCD. 'config' registers CSE
-        to vCD without asking the user.
 
     :raises AmqpError: if AMQP exchange could not be created.
     """
@@ -669,23 +683,19 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
                              amqp['vhost'], amqp['ssl'], amqp['username'],
                              amqp['password'])
 
-        # register cse as extension to vCD
-        if should_register_cse(client, routing_key=amqp['routing_key'],
-                               exchange=amqp['exchange'],
-                               ext_install=ext_install):
-            register_cse(client, amqp['routing_key'], amqp['exchange'])
+        # register or update cse on vCD
+        register_cse(client, amqp['routing_key'], amqp['exchange'])
 
         # register rights to vCD
         # TODO() should also remove rights when unregistering CSE
-        if is_cse_registered(client):
-            register_right(client, right_name=CSE_NATIVE_DEPLOY_RIGHT_NAME,
-                           description=CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,
-                           category=CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,
-                           bundle_key=CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY)
-            register_right(client, right_name=CSE_PKS_DEPLOY_RIGHT_NAME,
-                           description=CSE_PKS_DEPLOY_RIGHT_DESCRIPTION,
-                           category=CSE_PKS_DEPLOY_RIGHT_CATEGORY,
-                           bundle_key=CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY)
+        register_right(client, right_name=CSE_NATIVE_DEPLOY_RIGHT_NAME,
+                       description=CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,
+                       category=CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,
+                       bundle_key=CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY)
+        register_right(client, right_name=CSE_PKS_DEPLOY_RIGHT_NAME,
+                       description=CSE_PKS_DEPLOY_RIGHT_DESCRIPTION,
+                       category=CSE_PKS_DEPLOY_RIGHT_CATEGORY,
+                       bundle_key=CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY)
 
         # set up cse catalog
         org = get_org(client, org_name=config['broker']['org'])
@@ -789,7 +799,6 @@ def create_template(ctx, client, config, template_config, update=False,
     except EntityNotFoundException:
         temp_vapp_exists = False
 
-    # flag is used to hide previous try/except error if an error occurs below
     if not temp_vapp_exists:
         if catalog_item_exists(org, catalog_name, ova_name):
             msg = f"Found ova file '{ova_name}' in catalog '{catalog_name}'"
@@ -1096,79 +1105,6 @@ def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
     LOGGER.info(msg)
 
 
-def should_register_cse(client, routing_key, exchange, ext_install='prompt'):
-    """Decides if CSE installation should register CSE to vCD.
-
-    Returns False if @ext_install='skip' or if user declines
-    registration/update. Will print relevant information about CSE on vCD
-    if it is already registered.
-
-    :param pyvcloud.vcd.client.Client client:
-    :param str routing_key: routing_key to use for CSE
-    :param str exchange: exchange to use for CSE
-    :param str ext_install: 'skip' skips registration,
-        'config' allows registration without prompting user,
-        'prompt' asks user before registration.
-
-    :return: boolean that signals whether we should register CSE to vCD.
-
-    :rtype: bool
-    """
-    ext_config = {
-        'routingKey': routing_key,
-        'exchange': exchange
-    }
-
-    ext = APIExtension(client)
-    cse_info = None
-    try:
-        cse_info = ext.get_extension_info(CSE_SERVICE_NAME,
-                                          namespace=CSE_SERVICE_NAMESPACE)
-    except MissingRecordException:
-        pass
-
-    if cse_info is None:
-        msg = 'Register CSE to vCD?'
-        if ext_install == 'skip' \
-                or (ext_install == 'prompt' and not click.confirm(msg)):
-            msg = 'CSE is not registered to vCD. Skipping API extension ' \
-                  'registration'
-            click.secho(msg, fg='yellow')
-            LOGGER.warning(msg)
-            return False
-        return True
-
-    # cse is already registered to vCD, but settings might be off
-    diff_settings = [p for p, v in ext_config.items() if cse_info[p] != v]
-    if diff_settings:
-        msg = 'CSE on vCD has different settings than config file' \
-              '\n\nCurrent CSE settings on vCD:'
-        for setting in diff_settings:
-            msg += f"\n{setting}: {cse_info[setting]}"
-
-        msg += '\n\nCurrent config file settings:'
-        for setting in diff_settings:
-            msg += f"\n{setting}: {ext_config[setting]}"
-        click.echo(msg)
-        LOGGER.info(msg)
-
-        msg = '\nUpdate CSE on vCD to match config file settings?'
-        if ext_install == 'skip' \
-                or (ext_install == 'prompt' and not click.confirm(msg)):
-            msg = 'Skipping CSE registration to vCD. CSE on vCD has ' \
-                  'different settings than config file'
-            click.secho(msg, fg='yellow')
-            LOGGER.warning(msg)
-            return False
-        return True
-
-    # cse is already registered to vCD, and the settings match with config file
-    msg = 'CSE is registered to vCD and has same settings as config file'
-    click.secho(msg, fg='green')
-    LOGGER.info(msg)
-    return False
-
-
 def register_cse(client, routing_key, exchange):
     """Register or update CSE on vCD.
 
@@ -1219,21 +1155,39 @@ def register_right(client, right_name, description, category, bundle_key):
         exists in vCD.
     """
     ext = APIExtension(client)
+    # Since the client is a sys admin, org will hold a reference to System org
+    system_org = Org(client, resource=client.get_org())
     try:
-        ext.add_service_right(right_name, CSE_SERVICE_NAME,
-                              CSE_SERVICE_NAMESPACE, description, category,
-                              bundle_key)
-
-        msg = f"Register {right_name} as a Right in vCD"
+        right_name_in_vcd = f"{{{CSE_SERVICE_NAME}}}:{right_name}"
+        # TODO(): When org.get_right_record() is moved outside the org scope in
+        # pyvcloud, update the code below to adhere to the new method names.
+        system_org.get_right_record(right_name_in_vcd)
+        msg = f"Right: {right_name} already exists in vCD"
+        click.secho(msg, fg='green')
+        LOGGER.debug(msg)
+        # Presence of the right in vCD is not guarantee that the right will be
+        # assigned to system org.
+        rights_in_system = system_org.list_rights_of_org()
+        for dikt in rights_in_system:
+            # TODO(): When localization support comes in, this check should be
+            # ditched for a better one.
+            if dikt['name'] == right_name_in_vcd:
+                msg = f"Right: {right_name} already assigned to System " \
+                    f"organization."
+                click.secho(msg, fg='green')
+                LOGGER.debug(msg)
+                return
+        # Since the right is not assigned to system org, we need to add it.
+        msg = f"Assigning Right: {right_name} to System organization."
+        click.secho(msg, fg='green')
+        LOGGER.debug(msg)
+        system_org.add_rights([right_name_in_vcd])
+    except EntityNotFoundException:
+        # Registering a right via api extension end point auto assigns it to
+        # System org.
+        msg = f"Registering Right: {right_name} in vCD"
         click.secho(msg, fg='green')
         LOGGER.info(msg)
-    except BadRequestException as err:
-        # TODO() replace string matching logic to look for specific right
-        right_exists_msg = f'Right with name "{{{CSE_SERVICE_NAME}}}:' \
-                           f'{right_name}" already exists'
-        if right_exists_msg in str(err):
-            msg = f"Right: {right_name} already exists in vCD"
-            click.secho(msg, fg='green')
-            LOGGER.debug(msg)
-        else:
-            raise err
+        ext.add_service_right(
+            right_name, CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, description,
+            category, bundle_key)

@@ -1,13 +1,15 @@
 # container-service-extension
-# This file is a modified version of https://github.com/dattnguyen82/PyUaaClient/blob/master/PyUaaClient.py
+# This file is a modified version of https://github.com/dattnguyen82/
+# PyUaaClient/blob/master/PyUaaClient.py
 # The license agreement is still being worked on.
 
-import requests
-import json
 import base64
+import json
+
+import requests
 
 
-class UaaClient:
+class UaaClient(object):
 
     tokenService = '/oauth/token'
     baseUrl = ''
@@ -16,10 +18,11 @@ class UaaClient:
     payload = "grant_type=client_credentials"
     authString = ''
 
-    def __init__(self, baseUrl, clientId, clientSecret):
+    def __init__(self, baseUrl, clientId, clientSecret, proxy_uri=None):
         self.baseUrl = baseUrl
         self.clientId = clientId
         self.clientSecret = clientSecret
+        self.proxy_uri = proxy_uri
         auth = self.clientId + ':' + self.clientSecret
         self.authString = base64.b64encode(auth.encode())
         self.authString = b'Basic ' + self.authString
@@ -33,15 +36,18 @@ class UaaClient:
             'cache-control': "no-cache"
 
         }
-        http_proxy = f"http://10.161.148.112:80"
-        proxy_env = {
-            'http_proxy': http_proxy,
-            'https_proxy': http_proxy,
-            'http': http_proxy,
-            'https': http_proxy,
-        }
+        proxy_env={}
+        if self.proxy_uri is not None:
+            proxy_env = {
+                'http_proxy': self.proxy_uri,
+                'https_proxy': self.proxy_uri,
+                'http': self.proxy_uri,
+                'https': self.proxy_uri,
+            }
 
-        response = requests.request("POST", url, verify=False, data=self.payload, headers=headers, proxies=proxy_env)
+        response = requests.request("POST", url, verify=False,
+                                    data=self.payload, headers=headers,
+                                    proxies=proxy_env)
 
         access_token = json.loads(response.text)
 

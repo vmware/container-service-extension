@@ -4,6 +4,40 @@ title: Release Notes
 ---
 
 # Release Notes
+## CSE 1.2.7
+
+Release Date: 2019-02-15
+
+Supported vCD versions: 9.1, 9.5
+
+| Template OS        | Docker                 | Kubernetes | Pod Network |
+|--------------------|------------------------|------------|-------------|
+| Photon OS 2.0 GA   | 17.06.0-9 (17.06.0-ce) | 1.10.11    | Weave 2.3.0 |
+| Ubuntu 16.04.4 LTS | 18.06.2-ce             | 1.10.11    | Weave 2.3.0 |
+
+**Bug Fixes**
+
+- Updated Docker package to address CVE-2019-5736 for both Ubuntu and Photon OS templates.
+- `cluster config` command has been fixed (issue #225)
+
+**Systems Patching**
+
+Action required (by Admins and Users)
+
+* Cloud Admin:
+    * Update CSE to 1.2.7
+    * Update the templates
+    * Command for updating template -> cse install -c config.yaml --template template-name --update --ext skip
+
+* Tenant Users:
+    * Delete clusters that were created with older templates. Recreate clusters with new templates
+    * Alternatively, tenant-users can update docker version manually on existing clusters
+
+**Known Issues:**
+
+* CSE installation fails on vCD 9.0 with MissingLinkException. No known fix yet.
+
+---
 
 ## CSE 1.2.6
 
@@ -17,16 +51,22 @@ Supported vCD versions: 9.1, 9.5
 | Ubuntu 16.04.4 LTS | 18.03.0-ce | 1.10.11    | Weave 2.3.0 |
 
 **New Feature:**
+
 * Role based access control for deployment of kubernetes cluster
+  * New config file key `enforce_authorization` under `service` section. Please refer to [config file documentation](CSE_ADMIN.md#configfile)
 * Improved logging and error messages.
 
 **Bug Fixes:**
+
 * Changed default AMQP exchange to cse-ext. CSE will no longer use or update vCD's global exchange settings.
 * A user can delete a partially deployed cluster which resulted from a failed cluster deployment operation.
 
 **Known Issues:**
+
 * CSE installation fails on vCD 9.0 with MissingLinkException.
-    * No known fix yet.
+* No known fix yet.
+
+---
 
 ## CSE 1.2.5
 
@@ -42,9 +82,11 @@ Supported vCD versions: 9.0, 9.1, 9.5
 | Ubuntu 16.04.4 LTS | 18.03.0-ce | 1.10.11    | Weave 2.3.0 |
 
 **Bug Fixes:**
+
 - Updated Kubernetes packages and docker images to address CVE-2018-1002105 for both Ubuntu and Photon OS templates.
 
 **Systems patching:**
+
 * Action required (by Admins and Users)
 
 * Cloud Admin:

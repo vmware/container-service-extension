@@ -18,6 +18,8 @@ from lxml import objectify
 from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
+from pyvcloud.vcd.client import QueryResultFormat
+from pyvcloud.vcd.client import ResourceType
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
@@ -33,7 +35,6 @@ from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.server_constants import CSE_SERVICE_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
-
 
 cache = LRUCache(maxsize=1024)
 SYSTEM_ORG_NAME = "System"
@@ -101,6 +102,11 @@ def get_server_runtime_config():
 def get_vcd_sys_admin_client():
     from container_service_extension.service import Service
     return Service().get_sys_admin_client()
+
+
+def get_pks_cache():
+    from container_service_extension.service import Service
+    return Service().get_pks_cache()
 
 
 def error_to_json(error):
@@ -245,20 +251,16 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary'):
         can be more descriptive.
 
     :raises KeyError: if @dikt has missing or invalid keys
-    :raises ValueError: if the value of a property in @dikt does not match with
+    :raises TypeError: if the value of a property in @dikt does not match with
         the value of the same property in @ref_dict
     """
     ref_keys = set(ref_dict.keys())
     keys = set(dikt.keys())
 
     missing_keys = ref_keys - keys
-    invalid_keys = keys - ref_keys
 
     if missing_keys:
         click.secho(f"Missing keys in {location}: {missing_keys}", fg='red')
-    if invalid_keys:
-        click.secho(f"Invalid keys in {location}: {invalid_keys}", fg='red')
-
     bad_value = False
     for k in ref_keys:
         if k not in keys:
@@ -269,10 +271,10 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary'):
                         f"'{_type_to_string[value_type]}'", fg='red')
             bad_value = True
 
-    if missing_keys or invalid_keys:
+    if missing_keys:
         raise KeyError(f"Missing and/or invalid key in {location}")
     if bad_value:
-        raise ValueError(f"Incorrect type for property value(s) in {location}")
+        raise TypeError(f"Incorrect type for property value(s) in {location}")
 
 
 def check_python_version():
@@ -526,8 +528,12 @@ def get_vdc(client, vdc_name, org=None, org_name=None,
     """
     if org is None:
         org = get_org(client, org_name=org_name)
-    vdc = VDC(client, resource=org.get_vdc(vdc_name,
-              is_admin_operation=is_admin_operation))
+    resource = org.get_vdc(vdc_name, is_admin_operation=is_admin_operation)
+    # TODO() org.get_vdc() should throw exception if vdc not found in the org.
+    # This should be handled in pyvcloud. For now, it is handled here.
+    if resource is None:
+        raise EntityNotFoundException(f"VDC '{vdc_name}' not found")
+    vdc = VDC(client, resource=resource)
     return vdc
 
 
@@ -550,6 +556,29 @@ def get_ovdc_resource_pool(client, ovdc_name, org_name=None):
     ovdc_id = ovdc.resource.get('id').split(':')[-1]
     resource_pool = f"{ovdc.name} ({ovdc_id})"
     return resource_pool
+
+
+def get_pvdc_id_by_name(name, vc_name_in_vcd):
+    """Retrieve the pvdc identifier based on the pvdc name and vcenter name.
+
+    :param str name: name of the pvdc.
+    :param str vc_name_in_vcd: name of the vcenter in vcd.
+
+    :return: UUID of the pvdc in vcd.
+
+    :rtype: str
+    """
+    client = get_vcd_sys_admin_client()
+    query = client.get_typed_query(ResourceType.PROVIDER_VDC.value,
+                                   query_result_format=QueryResultFormat
+                                   .RECORDS,
+                                   qfilter=f'vcName=={vc_name_in_vcd}',
+                                   equality_filter=('name', name))
+    for pvdc_record in list(query.execute()):
+        href = pvdc_record.get('href')
+        pvdc_id = href.split("/")[-1]
+        return pvdc_id
+    return None
 
 
 def get_data_file(filename, logger=None):
@@ -743,7 +772,7 @@ def is_cse_registered(client):
 
 
 def exception_handler(func):
-    """Decorator to trap exceptions and process them.
+    """Decorate to trap exceptions and process them.
 
     If there are any exceptions, a dictionary containing the status code, body
         and stacktrace will be returned.

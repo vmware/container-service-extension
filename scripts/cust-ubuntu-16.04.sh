@@ -24,7 +24,7 @@ deb http://apt.kubernetes.io/ kubernetes-xenial main
 EOF
 add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 apt-get -q update
-apt-get -q install -y docker-ce=18.03.0~ce-0~ubuntu
+apt-get -q install -y docker-ce=18.06.2~ce~3-0~ubuntu
 apt-get -q install -y kubelet=1.10.11-00 kubeadm=1.10.11-00 kubectl=1.10.11-00 kubernetes-cni=0.6.0-00 --allow-unauthenticated
 apt-get -q autoremove -y
 systemctl restart docker

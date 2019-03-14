@@ -3,28 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 """
-CSE server tests.
-
-TODO() need to check that rights exist when CSE is registered and that rights
-don't exist when CSE is not registered. Need a pyvcloud function to check
-if a right exists without adding it. Also need functionality to remove CSE
-rights when CSE is unregistered.
-
-NOTES:
-    - Edit 'base_config.yaml' for your own vCD instance
-    - These tests will use your public/private SSH keys (RSA)
-        - Required keys: '~/.ssh/id_rsa' and '~/.ssh/id_rsa.pub'
-        - Keys should not be password protected, or tests will fail.
-            To remove key password, use `ssh-keygen -p`.
-        - ssh-key help: https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/  # noqa
-    - vCD entities related to CSE (vapps, catalog items) are cleaned up after
-        tests run, unless 'developer_mode'=True in 'base_config.yaml'.
-    - These tests are meant to run in sequence, but can run independently.
-    - !!! These tests will fail on Windows !!! We generate temporary config
-        files and restrict its permissions due to the check that
-        cse install/check performs. This permissions check is incompatible
-        with Windows, and is a known issue.
-    - This test module typically takes ~40 minutes to finish.
+CSE server tests to test validity and functionality of `cse` CLI commands.
 
 Tests these following commands:
 $ cse check --config cse_test_config.yaml (missing/invalid keys)
@@ -32,20 +11,42 @@ $ cse check --config cse_test_config.yaml (incorrect value types)
 $ cse check --config cse_test_config.yaml -i (cse not installed yet)
 
 $ cse install --config cse_test_config.yaml --template photon-v2
-    --ext skip --ssh-key ~/.ssh/id_rsa.pub --no-capture
+    --ssh-key ~/.ssh/id_rsa.pub --no-capture
 
 $ cse install --config cse_test_config.yaml --template photon-v2
-
 $ cse install --config cse_test_config.yaml --ssh-key ~/.ssh/id_rsa.pub
     --update --no-capture
-
 $ cse install --config cse_test_config.yaml
-$ cse check --config cse_test_config.yaml -i
-$ cse check --config cse_test_config.yaml -i (invalid templates)
 
+$ cse check --config cse_test_config.yaml -i
+
+$ cse run --config cse_test_config.yaml
+$ cse run --config cse_test_config.yaml --skip-check
+
+NOTE:
+- Edit 'base_config.yaml' for your own vCD instance.
+- These tests will use your public/private SSH keys (RSA)
+    - Required keys: '~/.ssh/id_rsa' and '~/.ssh/id_rsa.pub'
+    - Keys should not be password protected, or tests will fail.
+        To remove key password, use `ssh-keygen -p`.
+    - ssh-key help: https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/  # noqa
+- vCD entities related to CSE (vapps, catalog items) are cleaned up after
+    tests run, unless 'teardown_installation'=false in 'base_config.yaml'.
+- These tests are meant to run in sequence, but can run independently.
+- !!! These tests will fail on Windows !!! We generate temporary config
+    files and restrict its permissions due to the check that
+    cse install/check performs. This permissions check is incompatible
+    with Windows, and is a known issue.
+- This test module typically takes ~40 minutes to finish.
+
+TODO() need to check that rights exist when CSE is registered and that rights
+don't exist when CSE is not registered. Need a pyvcloud function to check
+if a right exists without adding it. Also need functionality to remove CSE
+rights when CSE is unregistered.
 """
 
 import re
+import subprocess
 
 import paramiko
 import pytest
@@ -65,9 +66,15 @@ import container_service_extension.utils as utils
 def delete_installation_entities():
     """Fixture to ensure that CSE entities do not exist in vCD.
 
-    This fixture executes automatically for test module setup and teardown
-    If 'developer_mode_aware' is enabled, then the teardown deletion will not
-    occur.
+    This fixture executes automatically for this module's setup and teardown.
+
+    Setup tasks:
+    - Delete source ova files, vapp templates, temp vapps, catalogs
+    - Unregister CSE from vCD
+
+    Teardown tasks (only if config key 'teardown_installation'=True):
+    - Delete source ova files, vapp templates, temp vapps, catalogs
+    - Unregister CSE from vCD
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     for template in config['broker']['templates']:
@@ -79,7 +86,7 @@ def delete_installation_entities():
 
     yield
 
-    if not env.DEV_MODE:
+    if env.TEARDOWN_INSTALLATION:
         for template in config['broker']['templates']:
             env.delete_catalog_item(template['source_ova_name'])
             env.delete_catalog_item(template['catalog_item'])
@@ -90,13 +97,18 @@ def delete_installation_entities():
 
 @pytest.fixture
 def blank_cust_scripts():
-    """Fixture to ensure that the customization scripts are empty.
+    """Fixture to ensure that customization scripts are blank.
 
-    Usage: add the parameter 'blank_cust_scripts' to the test function.
+    Usage: add the parameter 'blank_cust_scripts' to the test function. Use
+    this fixture if the test outcome does not rely on running the
+    customization scripts. Useful for making installation tests run faster.
+
+    Setup tasks:
+    - Blank out customization scripts
     """
     env.blank_customizaton_scripts()
     yield
-    env.blank_customizaton_scripts()
+    env.prepare_customization_scripts()
 
 
 @pytest.fixture
@@ -104,24 +116,70 @@ def unregister_cse():
     """Fixture to ensure that CSE is not registered to vCD.
 
     Usage: add the parameter 'unregister_cse' to the test function.
+
+    Note: we do not do teardown unregister_cse(), because the user may want
+    to preserve the state of vCD after tests run.
     """
     env.unregister_cse()
 
 
-def test_0010_config_invalid_keys(config):
-    """Test that config files with invalid/extra keys don't pass validation."""
+def test_0010_cse_sample():
+    """Test that `cse sample` is a valid command.
+
+    Test that `cse sample` command along with every option is an actual
+    command. Does not test for validity of sample outputs.
+    """
+    result = env.CLI_RUNNER.invoke(cli, ['sample'], catch_exceptions=False)
+    assert result.exit_code == 0
+
+    output_filepath = 'dummy-output.yaml'
+    cmd = f'sample --output {output_filepath}'
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+    cmd = f'sample --pks-output {output_filepath}'
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+    testutils.delete_file(output_filepath)
+
+
+def test_0020_cse_version():
+    """Test that `cse version` is a valid command."""
+    result = env.CLI_RUNNER.invoke(cli, ['version'], catch_exceptions=False)
+    assert result.exit_code == 0
+
+
+def test_0030_cse_check(config):
+    """Test that `cse check` is a valid command.
+
+    Test that `cse check` command along with every option is an actual command.
+    Does not test for validity of config files or CSE installations.
+    """
+    cmd = f"check -c {env.ACTIVE_CONFIG_FILEPATH}"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+    cmd = f"check -c {env.ACTIVE_CONFIG_FILEPATH} -i"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+    cmd = f"check -c {env.ACTIVE_CONFIG_FILEPATH} -t dummy"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+
+def test_0040_config_missing_keys(config):
+    """Test that config files with missing keys don't pass validation."""
     bad_key_config1 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
     del bad_key_config1['amqp']
-    bad_key_config1['extra_section'] = True
 
     bad_key_config2 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
     del bad_key_config2['vcs'][0]['username']
-    bad_key_config2['vcs'][0]['extra_property'] = 'a'
 
     bad_key_config3 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
     del bad_key_config3['broker']['templates'][0]['mem']
     del bad_key_config3['broker']['templates'][0]['name']
-    bad_key_config3['broker']['templates'][0]['extra_property'] = 0
 
     configs = [
         bad_key_config1,
@@ -139,7 +197,7 @@ def test_0010_config_invalid_keys(config):
             pass
 
 
-def test_0020_config_invalid_value_types(config):
+def test_0050_config_invalid_value_types(config):
     """Test that configs with invalid value types don't pass validation."""
     bad_values_config1 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
     bad_values_config1['vcd'] = True
@@ -172,21 +230,21 @@ def test_0020_config_invalid_value_types(config):
             get_validated_config(env.ACTIVE_CONFIG_FILEPATH)
             assert False, f"{env.ACTIVE_CONFIG_FILEPATH} passed validation " \
                           f"when it should not have"
-        except ValueError:
+        except TypeError:
             pass
 
 
-def test_0030_config_valid(config):
+def test_0060_config_valid(config):
     """Test that configs with valid keys and value types pass validation."""
     try:
         get_validated_config(env.ACTIVE_CONFIG_FILEPATH)
-    except (KeyError, ValueError):
+    except (KeyError, TypeError, ValueError):
         assert False, f"{env.ACTIVE_CONFIG_FILEPATH} did not pass validation" \
                       f" when it should have"
 
 
-def test_0040_check_invalid_installation(config):
-    """Test cse check against configs that are invalid/haven't been used."""
+def test_0070_check_invalid_installation(config):
+    """Test cse check against config that hasn't been used for installation."""
     try:
         check_cse_installation(config)
         assert False, "cse check passed when it should have failed."
@@ -194,46 +252,38 @@ def test_0040_check_invalid_installation(config):
         pass
 
 
-def test_0050_install_no_capture(config, blank_cust_scripts, unregister_cse):
+def test_0080_install_no_capture(config, blank_cust_scripts, unregister_cse):
     """Test install.
 
-    Installation options: '--config', '--template', '--ext skip',
-        '--ssh-key', '--no-capture'.
+    Installation options: '--config', '--template', '--ssh-key',
+        '--no-capture'.
 
     Tests that installation:
     - downloads/uploads ova file,
     - creates photon temp vapp,
-    - skips cse registration,
     - skips temp vapp capture.
 
     command: cse install --config cse_test_config.yaml --template photon-v2
-        --ext skip --ssh-key ~/.ssh/id_rsa.pub --no-capture
+        --ssh-key ~/.ssh/id_rsa.pub --no-capture
     required files: ~/.ssh/id_rsa.pub, cse_test_config.yaml,
         photon-v2 init, photon-v2 cust (blank)
-    expected: cse not registered, catalog exists, photon-v2 ova exists,
+    expected: cse registered, catalog exists, photon-v2 ova exists,
         temp vapp does not exist, template does not exist.
     """
-    template_config = None
-    for template_dict in config['broker']['templates']:
-        if template_dict['name'] == env.PHOTON_TEMPLATE_NAME:
-            template_config = template_dict
-            break
-    assert template_config is not None, \
-        'Target template not found in config file'
+    template_config = testutils.get_default_template_config(config)
 
     result = env.CLI_RUNNER.invoke(cli,
                                    ['install',
                                     '--config', env.ACTIVE_CONFIG_FILEPATH,
                                     '--ssh-key', env.SSH_KEY_FILEPATH,
-                                    '--template', env.PHOTON_TEMPLATE_NAME,
-                                    '--ext', 'skip',
+                                    '--template', template_config['name'],
                                     '--no-capture'],
                                    catch_exceptions=False)
     assert result.exit_code == 0
 
-    # check that cse was not registered
-    assert not env.is_cse_registered(), \
-        'CSE is registered as an extension when it should not be.'
+    # check that cse was registered correctly
+    env.check_cse_registration(config['amqp']['routing_key'],
+                               config['amqp']['exchange'])
 
     # check that source ova file exists in catalog
     assert env.catalog_item_exists(template_config['source_ova_name']), \
@@ -248,12 +298,11 @@ def test_0050_install_no_capture(config, blank_cust_scripts, unregister_cse):
         'vApp does not exist when it should (--no-capture).'
 
 
-def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
+def test_0090_install_temp_vapp_already_exists(config, blank_cust_scripts,
                                                unregister_cse):
     """Test installation when temp vapp already exists.
 
     Tests that installation:
-    - skips cse registration (answering no to prompt),
     - captures temp vapp as template correctly,
     - does not delete temp_vapp when config file 'cleanup' property is false.
 
@@ -262,29 +311,24 @@ def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
     required files: cse_test_config.yaml
     expected: cse not registered, photon-v2 template exists, temp-vapp exists
     """
-    template_config = None
     # set cleanup to false for this test
     for i, template_dict in enumerate(config['broker']['templates']):
         config['broker']['templates'][i]['cleanup'] = False
-        if template_dict['name'] == env.PHOTON_TEMPLATE_NAME:
-            template_config = template_dict
-            break
-    assert template_config is not None, \
-        'Target template not found in config file'
+
+    template_config = testutils.get_default_template_config(config)
 
     testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
 
-    res = env.CLI_RUNNER.invoke(cli,
-                                ['install',
-                                 '--config', env.ACTIVE_CONFIG_FILEPATH,
-                                 '--template', env.PHOTON_TEMPLATE_NAME],
-                                input='N\nN',
-                                catch_exceptions=False)
-    assert res.exit_code == 0
+    result = env.CLI_RUNNER.invoke(cli,
+                                   ['install',
+                                    '--config', env.ACTIVE_CONFIG_FILEPATH,
+                                    '--template', template_config['name']],
+                                   catch_exceptions=False)
+    assert result.exit_code == 0
 
-    # check that cse was not registered
-    assert not env.is_cse_registered(), \
-        'CSE is registered as an extension when it should not be.'
+    # check that cse was registered correctly
+    env.check_cse_registration(config['amqp']['routing_key'],
+                               config['amqp']['exchange'])
 
     # check that vapp template exists in catalog
     assert env.catalog_item_exists(template_config['catalog_item']), \
@@ -295,11 +339,10 @@ def test_0060_install_temp_vapp_already_exists(config, blank_cust_scripts,
         'vApp does not exist when it should (cleanup: false).'
 
 
-def test_0070_install_update(config, blank_cust_scripts, unregister_cse):
+def test_0100_install_update(config, unregister_cse):
     """Tests installation option: '--update'.
 
     Tests that installation:
-    - registers cse (when answering yes to prompt),
     - creates all templates correctly,
     - customizes temp vapps correctly.
 
@@ -310,28 +353,20 @@ def test_0070_install_update(config, blank_cust_scripts, unregister_cse):
     expected: cse registered, ubuntu/photon ovas exist, temp vapps exist,
         templates exist.
     """
-    env.prepare_customization_scripts()
     result = env.CLI_RUNNER.invoke(cli,
                                    ['install',
                                     '--config', env.ACTIVE_CONFIG_FILEPATH,
                                     '--ssh-key', env.SSH_KEY_FILEPATH,
                                     '--update',
                                     '--no-capture'],
-                                   input='y\ny',
                                    catch_exceptions=False)
     assert result.exit_code == 0
 
     vdc = VDC(env.CLIENT, href=env.VDC_HREF)
 
     # check that cse was registered correctly
-    is_cse_registered = env.is_cse_registered()
-    assert is_cse_registered, \
-        'CSE is not registered as an extension when it should be.'
-    if is_cse_registered:
-        assert env.is_cse_registration_valid(config['amqp']['routing_key'],
-                                             config['amqp']['exchange']), \
-            'CSE is registered as an extension, but the extension settings ' \
-            'on vCD are not the same as config settings.'
+    env.check_cse_registration(config['amqp']['routing_key'],
+                               config['amqp']['exchange'])
 
     # ssh into vms to check for installed software
     ssh_client = paramiko.SSHClient()
@@ -376,34 +411,26 @@ def test_0070_install_update(config, blank_cust_scripts, unregister_cse):
             ssh_client.close()
 
 
-def test_0080_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
+def test_0110_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
     """Tests that installation deletes temp vapps when 'cleanup' is True.
-
-    Also tests that '--ext config' registers cse.
 
     command: cse install --config cse_test_config.yaml
     expected: temp vapps are deleted
     """
+    # set cleanup to true in config file
     for template_config in config['broker']['templates']:
-        assert template_config['cleanup'], \
-            "'cleanup' key in template config should be True"
+        template_config['cleanup'] = True
+    testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
 
     result = env.CLI_RUNNER.invoke(cli,
                                    ['install',
-                                    '--config', env.ACTIVE_CONFIG_FILEPATH,
-                                    '--ext', 'config'],
+                                    '--config', env.ACTIVE_CONFIG_FILEPATH],
                                    catch_exceptions=False)
     assert result.exit_code == 0
 
     # check that cse was registered correctly
-    is_cse_registered = env.is_cse_registered()
-    assert is_cse_registered, \
-        'CSE is not registered as an extension when it should be.'
-    if is_cse_registered:
-        assert env.is_cse_registration_valid(config['amqp']['routing_key'],
-                                             config['amqp']['exchange']), \
-            'CSE is registered as an extension, but the extension settings ' \
-            'on vCD are not the same as config settings.'
+    env.check_cse_registration(config['amqp']['routing_key'],
+                               config['amqp']['exchange'])
 
     for template_config in config['broker']['templates']:
         # check that vapp templates exists
@@ -415,7 +442,7 @@ def test_0080_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
             'Temp vapp exists when it should not (cleanup: True).'
 
 
-def test_0090_cse_check_valid_installation(config):
+def test_0120_cse_check_valid_installation(config):
     """Tests that `cse check` passes for a valid installation.
 
     command: cse check -c cse_test_config.yaml -i
@@ -427,33 +454,25 @@ def test_0090_cse_check_valid_installation(config):
         assert False, "cse check failed when it should have passed."
 
 
-def test_0100_cse_check_invalid_installation(config):
-    """Tests that `cse check` fails for an invalid installation.
+def test_0130_cse_run(config):
+    """Test `cse run` command.
 
-    command: cse check -c cse_test_config.yaml -i
-    expected: check fails
+    Run cse server as a subprocess with a timeout. If we
+    reach the timeout, then cse server was valid and running. Exiting the
+    process before then means that server run failed somehow.
+
+    commands:
+    $ cse run --config cse_test_config
+    $ cse run --config cse_test_config --skip-check
     """
-    for i, template_dict in enumerate(config['broker']['templates']):
-        config['broker']['templates'][i]['catalog_item'] = f"_bad{i}"
+    cmds = [
+        f"cse run -c {env.ACTIVE_CONFIG_FILEPATH}",
+        f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} -s"
+    ]
 
-    try:
-        check_cse_installation(config)
-        assert False, "cse check passed when it should have failed."
-    except EntityNotFoundException:
-        pass
-
-
-def test_0110_cse_run():
-    pass
-
-
-def test_0120_cse_sample():
-    # TODO(): maybe add a check
-    result = env.CLI_RUNNER.invoke(cli, ['sample'], catch_exceptions=False)
-    assert result.exit_code == 0
-
-
-def test_0130_cse_version():
-    # TODO(): maybe add a check
-    result = env.CLI_RUNNER.invoke(cli, ['version'], catch_exceptions=False)
-    assert result.exit_code == 0
+    for cmd in cmds:
+        try:
+            p = subprocess.run(cmd.split(), timeout=15)
+            assert False, f"`{cmd}` failed with returncode {p.returncode}"
+        except subprocess.TimeoutExpired:
+            pass
