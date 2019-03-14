@@ -12,6 +12,7 @@ from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.configure_cse import generate_sample_config
 from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.configure_cse import install_cse
+from container_service_extension.version import __version__
 from container_service_extension.service import Service
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -96,12 +97,21 @@ def cli(ctx):
 
 @cli.command(short_help='show version')
 @click.pass_context
-def version(ctx):
+@click.option(
+    '--local/--package',
+    'local',
+    envvar='CSE_USE_LOCAL_VERSION',
+    default=False,
+    hidden=True)
+def version(ctx, local):
     """Show CSE version."""
-    ver_obj = Service.version()
-    ver_str = '%s, %s, version %s' % (ver_obj['product'],
-                                      ver_obj['description'],
-                                      ver_obj['version'])
+    if local:
+        ver_obj = __version__
+    else:
+        ver_obj = Service.version()
+
+    ver_str = '%s, %s, version %s' % (
+        ver_obj['product'], ver_obj['description'], ver_obj['version'])
     stdout(ver_obj, ctx, ver_str)
 
 
