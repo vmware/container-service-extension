@@ -148,7 +148,7 @@ class BrokerManager(object):
 
         If 'ovdc' is present in the body,
             choose the right broker (by identifying the container_provider
-            (vcd|pks) defined for that ovdc) to do list_clusters op.
+            (vcd|pks) defined for that ovdc) to do list_clusters operation.
         Else
             Invoke set of all (vCD/PKS)brokers in the org to do list_clusters.
             Post-process the result returned by each broker.

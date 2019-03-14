@@ -10,7 +10,6 @@ from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import FenceMode
-from pyvcloud.vcd.exceptions import BadRequestException
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
@@ -1156,21 +1155,39 @@ def register_right(client, right_name, description, category, bundle_key):
         exists in vCD.
     """
     ext = APIExtension(client)
+    # Since the client is a sys admin, org will hold a reference to System org
+    system_org = Org(client, resource=client.get_org())
     try:
-        ext.add_service_right(right_name, CSE_SERVICE_NAME,
-                              CSE_SERVICE_NAMESPACE, description, category,
-                              bundle_key)
-
-        msg = f"Register {right_name} as a Right in vCD"
+        right_name_in_vcd = f"{{{CSE_SERVICE_NAME}}}:{right_name}"
+        # TODO(): When org.get_right_record() is moved outside the org scope in
+        # pyvcloud, update the code below to adhere to the new method names.
+        system_org.get_right_record(right_name_in_vcd)
+        msg = f"Right: {right_name} already exists in vCD"
+        click.secho(msg, fg='green')
+        LOGGER.debug(msg)
+        # Presence of the right in vCD is not guarantee that the right will be
+        # assigned to system org.
+        rights_in_system = system_org.list_rights_of_org()
+        for dikt in rights_in_system:
+            # TODO(): When localization support comes in, this check should be
+            # ditched for a better one.
+            if dikt['name'] == right_name_in_vcd:
+                msg = f"Right: {right_name} already assigned to System " \
+                    f"organization."
+                click.secho(msg, fg='green')
+                LOGGER.debug(msg)
+                return
+        # Since the right is not assigned to system org, we need to add it.
+        msg = f"Assigning Right: {right_name} to System organization."
+        click.secho(msg, fg='green')
+        LOGGER.debug(msg)
+        system_org.add_rights([right_name_in_vcd])
+    except EntityNotFoundException:
+        # Registering a right via api extension end point auto assigns it to
+        # System org.
+        msg = f"Registering Right: {right_name} in vCD"
         click.secho(msg, fg='green')
         LOGGER.info(msg)
-    except BadRequestException as err:
-        # TODO() replace string matching logic to look for specific right
-        right_exists_msg = f'Right with name "{{{CSE_SERVICE_NAME}}}:' \
-                           f'{right_name}" already exists'
-        if right_exists_msg in str(err):
-            msg = f"Right: {right_name} already exists in vCD"
-            click.secho(msg, fg='green')
-            LOGGER.debug(msg)
-        else:
-            raise err
+        ext.add_service_right(
+            right_name, CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, description,
+            category, bundle_key)
