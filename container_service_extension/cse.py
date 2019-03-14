@@ -18,7 +18,6 @@ from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.configure_cse import install_cse
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.service import Service
-from container_service_extension.version import __version__
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -111,7 +110,7 @@ def cli(ctx):
 def version(ctx, local):
     """Show CSE version."""
     if local:
-        ver_obj = __version__
+        ver_obj = version.__version__
     else:
         ver_obj = Service.version()
 
