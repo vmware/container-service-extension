@@ -133,10 +133,11 @@ class Cluster(object):
                        node_count=1,
                        disable_rollback=True):
         method = 'PUT'
-        uri = f"{self.uri}/{cluster_name}"
+        uri = f"{self._uri}/{cluster_name}"
         data = {
             'name': cluster_name,
             'node_count': node_count,
+            'node_type': TYPE_NODE,
             'vdc': vdc,
             'network': network_name,
             'disable_rollback': disable_rollback

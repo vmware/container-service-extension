@@ -168,10 +168,10 @@ class PKSBroker(AbstractBroker):
                      f' cluster: {cluster_name}')
         return cluster_dict
 
-    def get_cluster_info(self, name):
-        """Get the details of a cluster with a given name in PKS environment.
+    def get_cluster_info(self, cluster_name):
+        """Get the details of a cluster with a given cluster_name in PKS environment.
 
-        :param str name: Name of the cluster
+        :param str cluster_name: Name of the cluster
         :return: Details of the cluster.
 
         :rtype: dict
@@ -179,53 +179,53 @@ class PKSBroker(AbstractBroker):
         cluster_api = ClusterApi(api_client=self.pks_client)
 
         LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to get '
-                     f'details of cluster with name: {name}')
+                     f'details of cluster with name: {cluster_name}')
 
-        cluster = cluster_api.get_cluster(cluster_name=name)
+        cluster = cluster_api.get_cluster(cluster_name=cluster_name)
         cluster_dict = cluster.to_dict()
         cluster_params_dict = cluster_dict.pop('parameters')
         cluster_dict.update(cluster_params_dict)
 
         LOGGER.debug(f'Received response from PKS: {self.pks_host_uri} on '
-                     f'cluster: {name} with details: {cluster_dict}')
+                     f'cluster: {cluster_name} with details: {cluster_dict}')
 
         return cluster_dict
 
-    def delete_cluster(self, name):
+    def delete_cluster(self, cluster_name):
         """Delete the cluster with a given name in PKS environment.
 
-        :param str name: Name of the cluster
+        :param str cluster_name: Name of the cluster
         """
         cluster_api = ClusterApi(api_client=self.pks_client)
 
         LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to delete '
-                     f'the cluster with name: {name}')
+                     f'the cluster with name: {cluster_name}')
 
-        cluster_api.delete_cluster(cluster_name=name)
+        cluster_api.delete_cluster(cluster_name=cluster_name)
 
         LOGGER.debug(f'PKS: {self.pks_host_uri} accepted the request to delete'
-                     f' the cluster: {name}')
+                     f' the cluster: {cluster_name}')
         return
 
     @exception_handler
-    def resize_cluster(self, name, num_worker_nodes, **kwargs):
+    def resize_cluster(self, cluster_name, node_count, **kwargs):
         """Resize the cluster of a given name to given number of worker nodes.
 
-        :param str name: Name of the cluster
-        :param int num_worker_nodes: New size of the worker nodes
+        :param str cluster_name: Name of the cluster
+        :param int node_count: New size of the worker nodes
         """
         cluster_api = ClusterApi(api_client=self.pks_client)
 
         LOGGER.debug(f'Sending request to PKS:{self.pks_host_uri} to resize '
-                     f'the cluster with name: {name} to '
-                     f'{num_worker_nodes} worker nodes')
+                     f'the cluster with name: {cluster_name} to '
+                     f'{node_count} worker nodes')
 
         resize_params = UpdateClusterParameters(
-            kubernetes_worker_instances=num_worker_nodes)
-        cluster_api.update_cluster(name, body=resize_params)
+            kubernetes_worker_instances=node_count)
+        cluster_api.update_cluster(cluster_name, body=resize_params)
 
         LOGGER.debug(f'PKS: {self.pks_host_uri} accepted the request to resize'
-                     f' the cluster: {name}')
+                     f' the cluster: {cluster_name}')
         return
 
     @exception_handler

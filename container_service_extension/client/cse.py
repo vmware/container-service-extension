@@ -282,7 +282,8 @@ def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
     except Exception as e:
         stderr(e, ctx)
 
-@cluster_group.command(short_help='create cluster')
+
+@cluster_group.command(short_help='resize cluster')
 @click.pass_context
 @click.argument('name', required=True)
 @click.option(
@@ -298,7 +299,7 @@ def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
     '--network',
     'network_name',
     default=None,
-    required=True,
+    required=False,
     help='Network name')
 @click.option(
     '--disable-rollback',

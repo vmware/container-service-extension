@@ -354,7 +354,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
     def create_cluster(self, cluster_name, vdc_name, node_count,
                        storage_profile, network_name, template, **kwargs):
 
-        # TODO(ClusterParams) Create an inner class "ClusterParams"
+        # TODO(ClusterSpec) Create an inner class "ClusterSpec"
         #  in abstract_broker.py and have subclasses define and use it
         #  as instance variable.
         #  Method 'Create_cluster' in VcdBroker and PksBroker should take
@@ -569,15 +569,20 @@ class VcdBroker(AbstractBroker, threading.Thread):
     @exception_handler
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def create_nodes(self):
+        # TODO(resize_cluster) Once this method is hooked to
+        #  broker_manager, modify self.resize_cluster() to return only
+        #  result['body'] not the entire response.
         result = {'body': {}}
         self.cluster_name = self.req_spec['name']
         LOGGER.debug(f"About to add {self.req_spec['node_count']} nodes to "
                      f"cluster {self.cluster_name} on VDC "
-                     f"{self.req_spec['vdc']}, "
-                     f"sp={self.req_spec['storage_profile']}")
+                     f"{self.req_spec['vdc']}")
         if self.req_spec['node_count'] < 1:
             raise CseServerError(f"Invalid node count: "
                                  f"{self.req_spec['node_count']}.")
+        if self.req_spec['network'] is None:
+            raise CseServerError(f'Network name is missing from the request.')
+
         self._connect_tenant()
         self._connect_sys_admin()
         clusters = load_from_metadata(
@@ -858,29 +863,35 @@ class VcdBroker(AbstractBroker, threading.Thread):
         LOGGER.info(f"Successfully deleted cluster: {self.cluster_name}")
 
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
-    def resize_cluster(self, cluster_name, num_worker_nodes,
-                       cluster_spec=None):
+    def resize_cluster(self, cluster_name, node_count,
+                       curr_cluster_info=None):
         """Resize the cluster of a given name to given number of worker nodes.
 
         :param str name: Name of the cluster
-        :param int num_worker_nodes: New size of the worker nodes
+        :param int node_count: New size of the worker nodes
         (should be greater than the current number).
-        :param dict cluster_spec: Current properties of the cluster
+        :param dict curr_cluster_info: Current properties of the cluster
 
-        :return result: Body of the response
-
+        :return response: response returned by create_nodes()
         :rtype: dict
         """
-        if cluster_spec:
-            curr_worker_count = len(cluster_spec['nodes'])
+        # TODO(resize_cluster) Once VcdBroker.create_nodes() is hooked to
+        #  broker_manager, modify this method to return only
+        #  response['body'] not the entire response.
+        if curr_cluster_info:
+            curr_worker_count = len(curr_cluster_info['nodes'])
         else:
             cluster = self.get_cluster_info(cluster_name=cluster_name)
             curr_worker_count = len(cluster['nodes'])
 
-        if curr_worker_count > num_worker_nodes:
+        if curr_worker_count > node_count:
             raise CseServerError(f"Automatic scale down is not supported for "
                                  f"vCD powered K8 clusters. Use "
                                  f"'vcd cse delete node' command.")
-        self.req_spec['node_count'] = num_worker_nodes-curr_worker_count
-        result = self.create_nodes()
-        return result['body']
+        elif curr_worker_count == node_count:
+            raise CseServerError(f"{cluster_name} is already at the size of "
+                                 f"{curr_worker_count}")
+
+        self.req_spec['node_count'] = node_count - curr_worker_count
+        response = self.create_nodes()
+        return response

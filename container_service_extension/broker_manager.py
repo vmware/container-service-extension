@@ -86,23 +86,30 @@ class BrokerManager(object):
                                           self.req_qparams.get('vdc', None)
 
         if op == Operation.GET_CLUSTER:
-            result['body'] = \
-                self._get_cluster_info(self.req_spec['cluster_name'])[0]
+            cluster_spec = {'cluster_name': self.req_spec.get('name', None)}
+            result['body'] = self._get_cluster_info(**cluster_spec)[0]
         elif op == Operation.LIST_CLUSTERS:
             result['body'] = self._list_clusters()
         elif op == Operation.DELETE_CLUSTER:
-            self._delete_cluster(self.req_spec['cluster_name'])
+            cluster_spec = {'cluster_name': self.req_spec.get('name', None)}
+            self._delete_cluster(**cluster_spec)
             result['status_code'] = ACCEPTED
         elif op == Operation.RESIZE_CLUSTER:
-            self._resize_cluster(self.req_spec['cluster_name'],
-                                 self.req_spec['node_count'])
-            result['status_code'] = ACCEPTED
+            # TODO(resize_cluster) Once VcdBroker.create_nodes() is hooked to
+            #  broker_manager, ensure vcdbroker.resize_cluster returns only
+            #  response body. Construct the remainder of the response here.
+            #  This cannot be done at the moment as @exception_handler cannot
+            #  be removed on create_nodes() as of today (Mar 15, 2019).
+            cluster_spec = {'cluster_name': self.req_spec.get('name', None),
+                            'node_count': self.req_spec.get('node_count', None)
+                            }
+            result = self._resize_cluster(**cluster_spec)
         elif op == Operation.CREATE_CLUSTER:
-            # TODO(ClusterParams) Create an inner class "ClusterParams"
+            # TODO(ClusterSpec) Create an inner class "ClusterSpec"
             #  in abstract_broker.py and have subclasses define and use it
             #  as instance variable.
             #  Method 'Create_cluster' in VcdBroker and PksBroker should take
-            #  ClusterParams either as a param (or)
+            #  ClusterSpec either as a param (or)
             #  read from instance variable (if needed only).
             cluster_spec = {'cluster_name': self.req_spec.get('name', None),
                             'vdc_name': self.req_spec.get('vdc', None),
@@ -121,7 +128,7 @@ class BrokerManager(object):
 
         return result
 
-    def _get_cluster_info(self, cluster_name):
+    def _get_cluster_info(self, **cluster_spec):
         """Logic of the method is as follows.
 
         If 'ovdc' is present in the body,
@@ -133,6 +140,7 @@ class BrokerManager(object):
         Returns a tuple of (cluster and the broker instance used to find the
         cluster)
         """
+        cluster_name = cluster_spec['cluster_name']
         if self.is_ovdc_present_in_request:
             broker = self.get_broker_based_on_vdc()
             return broker.get_cluster_info(cluster_name), broker
@@ -180,22 +188,21 @@ class BrokerManager(object):
                     pks_clusters.append(pks_cluster)
             return vcd_clusters + pks_clusters
 
-    def _resize_cluster(self, cluster_name, node_count):
-        cluster, broker = self._get_cluster_info(cluster_name)
-        return broker.resize_cluster(name=cluster_name,
-                                     num_worker_nodes=node_count,
-                                     cluster_spec=cluster)
+    def _resize_cluster(self, **cluster_spec):
+        cluster, broker = self._get_cluster_info(**cluster_spec)
+        return broker.resize_cluster(curr_cluster_info=cluster, **cluster_spec)
 
-    def _delete_cluster(self, cluster_name):
-        broker = self._get_cluster_info(cluster_name)[1]
+    def _delete_cluster(self, **cluster_spec):
+        cluster_name = cluster_spec['cluster_name']
+        broker = self._get_cluster_info(**cluster_spec)[1]
         return broker.delete_cluster(cluster_name)
 
-    def _create_cluster(self, **kwargs):
-        cluster_name = kwargs['cluster_name']
+    def _create_cluster(self, **cluster_spec):
+        cluster_name = cluster_spec['cluster_name']
         cluster = self._find_cluster_in_org(cluster_name)[0]
         if cluster is None:
             broker = self.get_broker_based_on_vdc()
-            return broker.create_cluster(**kwargs)
+            return broker.create_cluster(**cluster_spec)
         else:
             raise CseServerError(f'Cluster with name: {cluster_name} '
                                  f'already found')
