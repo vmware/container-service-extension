@@ -34,15 +34,15 @@ class PKSBroker(AbstractBroker):
     It performs CRUD operations on Kubernetes clusters.
     """
 
-    def __init__(self, headers, request_body, pks_ctx=None):
+    def __init__(self, request_headers, request_spec, pks_ctx=None):
         """Initialize PKS broker.
 
         :param pks_ctx: ovdc cache (subject to change) is used to
         initialize PKS broker.
         """
-        super().__init__(headers, request_body)
-        self.headers = headers
-        self.body = request_body
+        super().__init__(request_headers, request_spec)
+        self.req_headers = request_headers
+        self.req_spec = request_spec
         self.username = pks_ctx['username']
         self.secret = pks_ctx['secret']
         self.pks_host_uri = \
@@ -208,12 +208,11 @@ class PKSBroker(AbstractBroker):
         return
 
     @exception_handler
-    def resize_cluster(self, name, num_worker_nodes):
+    def resize_cluster(self, name, num_worker_nodes, **kwargs):
         """Resize the cluster of a given name to given number of worker nodes.
 
         :param str name: Name of the cluster
         :param int num_worker_nodes: New size of the worker nodes
-        (should be greater than the current number).
         """
         cluster_api = ClusterApi(api_client=self.pks_client)
 

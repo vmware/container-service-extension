@@ -6,6 +6,7 @@ import base64
 import json
 import sys
 import traceback
+from copy import deepcopy
 from urllib.parse import parse_qsl
 
 from pkg_resources import resource_string
@@ -95,8 +96,9 @@ class ServiceProcessor(object):
                                  'Contact the System Administrator.')
 
         from container_service_extension.broker_manager import BrokerManager
-        broker_manager = BrokerManager(body['headers'], query_params,
-                                       request_body)
+        broker_manager = BrokerManager(deepcopy(body['headers']),
+                                       deepcopy(query_params),
+                                       deepcopy(request_body))
         from container_service_extension.broker_manager import Operation
 
         if body['method'] == 'GET':

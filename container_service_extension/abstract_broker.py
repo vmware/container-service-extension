@@ -13,9 +13,9 @@ from container_service_extension.utils import get_vcd_sys_admin_client
 
 class AbstractBroker(abc.ABC):
 
-    def __init__(self, headers, request_body):
-        self.headers = headers
-        self.request_body = request_body
+    def __init__(self, request_headers, request_spec):
+        self.req_headers = request_headers
+        self.req_spec = request_spec
 
     @abc.abstractmethod
     def create_cluster(self):
@@ -86,7 +86,7 @@ class AbstractBroker(abc.ABC):
         verify = server_config['vcd']['verify']
         self.tenant_client, self.client_session = connect_vcd_user_via_token(
             vcd_uri=host,
-            headers=self.headers,
+            headers=self.req_headers,
             verify_ssl_certs=verify)
         self.tenant_info = {
             'user_name': self.client_session.get('user'),

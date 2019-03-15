@@ -42,17 +42,17 @@ class Operation(Enum):
 
 
 class BrokerManager(object):
-    def __init__(self, headers, params, body):
-        self.headers = headers
-        self.params = params
-        self.body = body
+    def __init__(self, request_headers, request_query_params, request_spec):
+        self.req_headers = request_headers
+        self.req_qparams = request_query_params
+        self.req_spec = request_spec
         config = get_server_runtime_config()
         from container_service_extension.service import Service
         self.pks_cache = Service().get_pks_cache()
         self.ovdc_cache = OvdcCache(get_vcd_sys_admin_client())
         self.vcd_client, self.session = connect_vcd_user_via_token(
             vcd_uri=config['vcd']['host'],
-            headers=self.headers,
+            headers=self.req_headers,
             verify_ssl_certs=config['vcd']['verify'])
 
 
@@ -80,22 +80,22 @@ class BrokerManager(object):
         result['status_code'] = OK
 
         if on_the_fly_request_body:
-            self.body.update(on_the_fly_request_body)
+            self.req_spec.update(on_the_fly_request_body)
 
-        self.is_ovdc_present_in_request = self.body.get('vdc', None) or \
-                                          self.params.get('vdc', None)
+        self.is_ovdc_present_in_request = self.req_spec.get('vdc', None) or \
+                                          self.req_qparams.get('vdc', None)
 
         if op == Operation.GET_CLUSTER:
             result['body'] = \
-                self._get_cluster_info(self.body['cluster_name'])[0]
+                self._get_cluster_info(self.req_spec['cluster_name'])[0]
         elif op == Operation.LIST_CLUSTERS:
             result['body'] = self._list_clusters()
         elif op == Operation.DELETE_CLUSTER:
-            self._delete_cluster(self.body['cluster_name'])
+            self._delete_cluster(self.req_spec['cluster_name'])
             result['status_code'] = ACCEPTED
         elif op == Operation.RESIZE_CLUSTER:
-            self._resize_cluster(self.body['cluster_name'],
-                                 self.body['node_count'])
+            self._resize_cluster(self.req_spec['cluster_name'],
+                                 self.req_spec['node_count'])
             result['status_code'] = ACCEPTED
         elif op == Operation.CREATE_CLUSTER:
             # TODO(ClusterParams) Create an inner class "ClusterParams"
@@ -104,18 +104,19 @@ class BrokerManager(object):
             #  Method 'Create_cluster' in VcdBroker and PksBroker should take
             #  ClusterParams either as a param (or)
             #  read from instance variable (if needed only).
-            cluster_params = {'cluster_name': self.body.get('name', None),
-                              'vdc_name': self.body.get('vdc', None),
-                              'node_count': self.body.get('node_count', None),
-                              'storage_profile': self.body.get(
-                                  'storage_profile', None),
-                              'network_name': self.body.get('network', None),
-                              'template': self.body.get('template', None),
-                              'pks_plan': self.body.get('pks_plan', None),
-                              'pks_ext_host': self.body.get('pks_ext_host',
-                                                            None)
-                              }
-            result['body'] = self._create_cluster(**cluster_params)
+            cluster_spec = {'cluster_name': self.req_spec.get('name', None),
+                            'vdc_name': self.req_spec.get('vdc', None),
+                            'node_count':
+                                self.req_spec.get('node_count', None),
+                            'storage_profile':
+                                self.req_spec.get('storage_profile', None),
+                            'network_name': self.req_spec.get('network', None),
+                            'template': self.req_spec.get('template', None),
+                            'pks_plan': self.req_spec.get('pks_plan', None),
+                            'pks_ext_host':
+                                self.req_spec.get('pks_ext_host', None)
+                            }
+            result['body'] = self._create_cluster(**cluster_spec)
             result['status_code'] = ACCEPTED
 
         return result
@@ -159,7 +160,7 @@ class BrokerManager(object):
             return broker.list_clusters()
         else:
             common_cluster_properties = ('name', 'vdc', 'status')
-            vcd_broker = VcdBroker(self.headers, self.body)
+            vcd_broker = VcdBroker(self.req_headers, self.req_spec)
             vcd_clusters = []
             for cluster in vcd_broker.list_clusters():
                 vcd_cluster = {k: cluster.get(k, None) for k in
@@ -170,7 +171,7 @@ class BrokerManager(object):
             pks_clusters = []
             pks_ctx_list = self._get_all_pks_accounts_in_org()
             for pks_ctx in pks_ctx_list:
-                pks_broker = PKSBroker(self.headers, self.body, pks_ctx)
+                pks_broker = PKSBroker(self.req_headers, self.req_spec, pks_ctx)
                 for cluster in pks_broker.list_clusters():
                     pks_cluster = {k: cluster.get(k, None) for k in
                                    common_cluster_properties}
@@ -179,9 +180,10 @@ class BrokerManager(object):
             return vcd_clusters + pks_clusters
 
     def _resize_cluster(self, cluster_name, node_count):
-        broker = self._get_cluster_info(cluster_name)[1]
+        cluster, broker = self._get_cluster_info(cluster_name)
         return broker.resize_cluster(name=cluster_name,
-                                     num_worker_nodes=node_count)
+                                     num_worker_nodes=node_count,
+                                     cluster_spec=cluster)
 
     def _delete_cluster(self, cluster_name):
         broker = self._get_cluster_info(cluster_name)[1]
@@ -206,7 +208,7 @@ class BrokerManager(object):
         Else:
             (None, None) if cluster not found.
         """
-        vcd_broker = VcdBroker(self.headers, self.body)
+        vcd_broker = VcdBroker(self.req_headers, self.req_spec)
         try:
             return vcd_broker.get_cluster_info(cluster_name), vcd_broker
         except Exception as err:
@@ -216,7 +218,7 @@ class BrokerManager(object):
 
         pks_ctx_list = self._get_all_pks_accounts_in_org()
         for pks_ctx in pks_ctx_list:
-            pksbroker = PKSBroker(self.headers, self.body, pks_ctx)
+            pksbroker = PKSBroker(self.req_headers, self.req_spec, pks_ctx)
             try:
                 return pksbroker.get_cluster_info(cluster_name), pksbroker
             except Exception as err:
@@ -289,9 +291,9 @@ class BrokerManager(object):
         """
 
         if on_the_fly_request_body:
-            self.body.update(on_the_fly_request_body)
+            self.req_spec.update(on_the_fly_request_body)
 
-        ovdc_name = self.body.get('vdc', None) or self.params.get('vdc', None)
+        ovdc_name = self.req_spec.get('vdc', None) or self.req_qparams.get('vdc', None)
         org_name = self.session.get('org')
         LOGGER.debug(f"org_name={org_name};vdc_name=\'{ovdc_name}\'")
 
@@ -308,12 +310,12 @@ class BrokerManager(object):
             LOGGER.debug(
                 f"ovdc metadata for {ovdc_name}-{org_name}=>{ctr_prov_ctx}")
             if ctr_prov_ctx.get('container_provider') == CtrProvType.PKS.value:
-                return PKSBroker(self.headers, self.body,
+                return PKSBroker(self.req_headers, self.req_spec,
                                  pks_ctx=ctr_prov_ctx)
             else:
-                return VcdBroker(self.headers, self.body)
+                return VcdBroker(self.req_headers, self.req_spec)
         else:
             # TODO() - This call should be based on a boolean flag
             # Specify flag in config file whether to have default
             # handling is required for missing ovdc or org.
-            return VcdBroker(self.headers, self.body)
+            return VcdBroker(self.req_headers, self.req_spec)
