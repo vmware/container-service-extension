@@ -2,8 +2,10 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from collections import namedtuple
 from enum import Enum
 from enum import unique
+from http import HTTPStatus
 
 from pyvcloud.vcd import utils
 from pyvcloud.vcd.client import ApiVersion
@@ -15,6 +17,8 @@ from pyvcloud.vcd.vdc import VDC
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE
 from container_service_extension.pks_cache import PKS_PLANS
+from container_service_extension.pksbroker import PKSBroker
+from container_service_extension.pksclient.rest import ApiException
 from container_service_extension.utils import get_org
 from container_service_extension.utils import get_pks_cache
 from container_service_extension.utils import get_vdc
@@ -153,6 +157,7 @@ class OvdcCache(object):
             self._remove_metadata(ovdc, self.pks_cache.get_pks_keys())
             metadata[CONTAINER_PROVIDER] = container_provider or ''
         else:
+
             # Get pvdc and pks information from pks cache
             org_name = org.resource.get('name')
             pvdc_id = self._get_pvdc_id(ovdc)
@@ -160,11 +165,29 @@ class OvdcCache(object):
             pks_info = self.pks_cache.get_pks_account_details(
                 org_name, pvdc_info.vc)
             metadata[CONTAINER_PROVIDER] = container_provider
-            pks_compute_profile_name = f"{org_name}-{ovdc_name}-{ovdc_id}"
+
+            # Compute profile creation
+            pks_compute_profile_name = f"cp-{ovdc_id}"
+            pks_compute_profile_description = f"{org_name}-{ovdc_name}" \
+                f"-{ovdc_id}"
+            pks_az_name = f"az-{ovdc_id}"
+            ovdc_rp_name = f"{ovdc.name} ({ovdc_id})"
+
             pks_ctx = self.construct_pks_context(pks_info, pvdc_info,
                                                  pks_compute_profile_name,
                                                  pks_plans,
-                                                 credentials_required=False)
+                                                 credentials_required=True)
+            compute_profile_params = PksComputeProfileParams(
+                pks_compute_profile_name, pks_az_name,
+                pks_compute_profile_description,
+                pks_ctx.get('cpi'),
+                pks_ctx.get('datacenter'),
+                pks_ctx.get('cluster'),
+                ovdc_rp_name).as_dict()
+
+            self._create_compute_profile(pks_ctx, compute_profile_params)
+            pks_ctx.pop('username')
+            pks_ctx.pop('secret')
             metadata.update(pks_ctx)
 
         # set ovdc metadata into Vcd
@@ -197,5 +220,37 @@ class OvdcCache(object):
         else:
             pvdc_id = pvdc_element.get('id')
             return utils.extract_id(pvdc_id)
+
+    def _create_compute_profile(self, pks_ctx, compute_profile_params):
+        try:
+            pksbroker = PKSBroker(None, None, pks_ctx)
+            pksbroker.create_compute_profile(**compute_profile_params)
+        except ApiException as ex:
+            # if profile already exists,continue metadata update
+            # Any other reason -> re-raise the exception
+            if ex.status == HTTPStatus.CONFLICT.value:
+                LOGGER.debug(f'{str(ex)}')
+            else:
+                raise ex
+
+
+class PksComputeProfileParams(namedtuple("PksComputeProfileParams",
+                                         'cp_name, az_name, description,'
+                                         'cpi,datacenter_name, '
+                                         'cluster_name, ovdc_rp_name')):
+    """Immutable class representing PKS ComputeProfile Parameters ."""
+
+    def __str__(self):
+        return f"class:{PksComputeProfileParams.__name__}," \
+            f" cp_name:{self.cp_name}, az_name:{self.az_name}, " \
+            f" description:{self.description}, cpi:{self.cpi}, " \
+            f" datacenter_name:{self.datacenter_name}, " \
+            f" cluster_name:{self.cluster_name}, " \
+            f" ovdc_rp_name:{self.ovdc_rp_name}"
+
+    def as_dict(self):
+        return dict(self._asdict())
+
+
 
 
