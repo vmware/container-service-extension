@@ -17,7 +17,9 @@ from container_service_extension.utils import get_vcd_sys_admin_client
 from container_service_extension.utils import OK
 from container_service_extension.utils import ACCEPTED
 
+from collections import namedtuple
 from enum import Enum, unique
+
 
 from pyvcloud.vcd.org import Org
 
@@ -39,6 +41,8 @@ class Operation(Enum):
     GET_CLUSTER = 'get cluster info'
     LIST_CLUSTERS = 'list clusters'
     RESIZE_CLUSTER = 'resize cluster'
+    ENABLE_OVDC = 'enable ovdc'
+    INFO_OVDC = 'info ovdc'
 
 
 class BrokerManager(object):
@@ -81,7 +85,15 @@ class BrokerManager(object):
         if on_the_fly_request_body:
             self.body = on_the_fly_request_body
 
-        if op == Operation.GET_CLUSTER:
+        if op == Operation.INFO_OVDC:
+            vcd_broker = VcdBroker(self.headers, self.body)
+            result = vcd_broker.ovdc_info_for_kubernetes()
+        elif op == Operation.ENABLE_OVDC:
+            if self.body[CONTAINER_PROVIDER] == CtrProvType.PKS.value:
+                self._create_compute_profile()
+            vcd_broker = VcdBroker(self.headers, self.body)
+            result = vcd_broker.enable_ovdc_for_kubernetes()
+        elif op == Operation.GET_CLUSTER:
             result['body'] = \
                 self._get_cluster_info(self.body['cluster_name'])[0]
         elif op == Operation.LIST_CLUSTERS:
@@ -315,3 +327,56 @@ class BrokerManager(object):
             # Specify flag in config file whether to have default
             # handling is required for missing ovdc or org.
             return VcdBroker(self.headers, self.body)
+
+    def _create_compute_profile(self):
+        ovdc_id = self.body.get('ovdc_id')
+        org_name = self.body.get('org_name')
+        ovdc_name = self.body.get('ovdc_name')
+        pks_plans=self.body['pks_plans']
+        ovdc = self.ovdc_cache.get_ovdc(ovdc_id=ovdc_id)
+        pvdc_id = self.ovdc_cache.get_pvdc_id(ovdc)
+        pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
+        pks_info = self.pks_cache.get_pks_account_details(
+            org_name, pvdc_info.vc)
+        # Compute profile creation
+        pks_compute_profile_name = self.\
+            ovdc_cache.get_compute_profile_name(ovdc_id)
+        pks_compute_profile_description = f"{org_name}--{ovdc_name}" \
+            f"--{ovdc_id}"
+        pks_az_name = f"az-{ovdc_id}"
+        ovdc_rp_name = f"{ovdc.name} ({ovdc_id})"
+        pks_ctx = OvdcCache.construct_pks_context(pks_info, pvdc_info,
+                                                  pks_compute_profile_name,
+                                                  pks_plans,
+                                                  credentials_required=True)
+        compute_profile_params = PksComputeProfileParams(
+            pks_compute_profile_name, pks_az_name,
+            pks_compute_profile_description,
+            pks_ctx.get('cpi'),
+            pks_ctx.get('datacenter'),
+            pks_ctx.get('cluster'),
+            ovdc_rp_name).to_dict()
+
+        LOGGER.debug(f'Creating PKS Compute Profile with name:'
+                     f'{pks_compute_profile_name}')
+
+        pksbroker = PKSBroker(self.headers, self.body, pks_ctx)
+        pksbroker.create_compute_profile(**compute_profile_params)
+
+
+class PksComputeProfileParams(namedtuple("PksComputeProfileParams",
+                                         'cp_name, az_name, description,'
+                                         'cpi,datacenter_name, '
+                                         'cluster_name, ovdc_rp_name')):
+    """Immutable class representing PKS ComputeProfile Parameters ."""
+
+    def __str__(self):
+        return f"class:{PksComputeProfileParams.__name__}," \
+            f" cp_name:{self.cp_name}, az_name:{self.az_name}, " \
+            f" description:{self.description}, cpi:{self.cpi}, " \
+            f" datacenter_name:{self.datacenter_name}, " \
+            f" cluster_name:{self.cluster_name}, " \
+            f" ovdc_rp_name:{self.ovdc_rp_name}"
+
+    def to_dict(self):
+        return dict(self._asdict())
