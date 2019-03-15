@@ -95,9 +95,7 @@ class ServiceProcessor(object):
         if body['method'] == 'GET':
             if ovdc_info_request:
                 on_the_fly_request_body = {'ovdc_id': ovdc_id}
-                broker = broker_manager.get_broker_based_on_vdc(on_the_fly_request_body)
-                reply = broker.ovdc_info_for_kubernetes()
-
+                reply = broker_manager.invoke(Operation.INFO_OVDC, on_the_fly_request_body)
             elif spec_request:
                 reply = self.get_spec(tokens[3])
             elif config_request:

@@ -39,6 +39,8 @@ class Operation(Enum):
     GET_CLUSTER = 'get cluster info'
     LIST_CLUSTERS = 'list clusters'
     RESIZE_CLUSTER = 'resize cluster'
+    ENABLE_OVDC = 'enable ovdc'
+    INFO_OVDC = 'info ovdc'
 
 
 class BrokerManager(object):
@@ -81,6 +83,9 @@ class BrokerManager(object):
         if on_the_fly_request_body:
             self.body = on_the_fly_request_body
 
+        if op == Operation.INFO_OVDC:
+            vcd_broker = VcdBroker(self.headers, self.body)
+            result = vcd_broker.ovdc_info_for_kubernetes()
         if op == Operation.GET_CLUSTER:
             result['body'] = \
                 self._get_cluster_info(self.body['cluster_name'])[0]
