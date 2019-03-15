@@ -857,6 +857,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
         vdc.delete_vapp(self.cluster['name'], force=True)
         LOGGER.info(f"Successfully deleted cluster: {self.cluster_name}")
 
+    @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def resize_cluster(self, cluster_name, num_worker_nodes,
                        cluster_spec=None):
         """Resize the cluster of a given name to given number of worker nodes.
@@ -866,6 +867,9 @@ class VcdBroker(AbstractBroker, threading.Thread):
         (should be greater than the current number).
         :param dict cluster_spec: Current properties of the cluster
 
+        :return result: Body of the response
+
+        :rtype: dict
         """
         if cluster_spec:
             curr_worker_count = len(cluster_spec['nodes'])
@@ -874,9 +878,9 @@ class VcdBroker(AbstractBroker, threading.Thread):
             curr_worker_count = len(cluster['nodes'])
 
         if curr_worker_count > num_worker_nodes:
-            raise CseServerError(f"Scale down is not supported via 'resize' "
-                                 f"operation. Use 'vcd cse delete node' "
-                                 f"command.")
+            raise CseServerError(f"Automatic scale down is not supported for "
+                                 f"vCD powered K8 clusters. Use "
+                                 f"'vcd cse delete node' command.")
         self.req_spec['node_count'] = num_worker_nodes-curr_worker_count
-        self.create_nodes()
-        raise NotImplementedError('resize cluster')
+        result = self.create_nodes()
+        return result['body']

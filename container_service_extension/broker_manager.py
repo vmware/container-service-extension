@@ -57,7 +57,7 @@ class BrokerManager(object):
 
 
     @exception_handler
-    def invoke(self, op, on_the_fly_request_body=None):
+    def invoke(self, op, on_the_fly_request_spec=None):
         """Invoke right broker(s) to perform the operation requested and do
         further (pre/post)processing on the request/result(s) if required.
 
@@ -69,7 +69,7 @@ class BrokerManager(object):
         4. Construct and return the HTTP response
 
         :param Operation op: Operation to be performed by one of the brokers.
-        :param dict on_the_fly_request_body: body constructed by processor.
+        :param dict on_the_fly_request_spec: body constructed by processor.
 
         :return result: HTTP response
 
@@ -79,8 +79,8 @@ class BrokerManager(object):
         result['body'] = []
         result['status_code'] = OK
 
-        if on_the_fly_request_body:
-            self.req_spec.update(on_the_fly_request_body)
+        if on_the_fly_request_spec:
+            self.req_spec.update(on_the_fly_request_spec)
 
         self.is_ovdc_present_in_request = self.req_spec.get('vdc', None) or \
                                           self.req_qparams.get('vdc', None)
@@ -171,7 +171,8 @@ class BrokerManager(object):
             pks_clusters = []
             pks_ctx_list = self._get_all_pks_accounts_in_org()
             for pks_ctx in pks_ctx_list:
-                pks_broker = PKSBroker(self.req_headers, self.req_spec, pks_ctx)
+                pks_broker = PKSBroker(self.req_headers, self.req_spec,
+                                       pks_ctx)
                 for cluster in pks_broker.list_clusters():
                     pks_cluster = {k: cluster.get(k, None) for k in
                                    common_cluster_properties}
@@ -280,20 +281,21 @@ class BrokerManager(object):
 
         return pks_ctx_dict.values()
 
-    def get_broker_based_on_vdc(self, on_the_fly_request_body=None):
+    def get_broker_based_on_vdc(self, on_the_fly_request_spec=None):
         """Gets the broker based on ovdc.
 
-        :param on_the_fly_request_body: New or modified HTTP request body by
+        :param on_the_fly_request_spec: New or modified HTTP request body by
         CSE {container_service_extension.processor.ServiceProcessor}
         :return: broker
 
         :rtype: container_service_extension.abstract_broker.AbstractBroker
         """
 
-        if on_the_fly_request_body:
-            self.req_spec.update(on_the_fly_request_body)
+        if on_the_fly_request_spec:
+            self.req_spec.update(on_the_fly_request_spec)
 
-        ovdc_name = self.req_spec.get('vdc', None) or self.req_qparams.get('vdc', None)
+        ovdc_name = self.req_spec.get('vdc', None) or \
+                    self.req_qparams.get('vdc', None)
         org_name = self.session.get('org')
         LOGGER.debug(f"org_name={org_name};vdc_name=\'{ovdc_name}\'")
 

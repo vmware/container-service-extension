@@ -282,6 +282,50 @@ def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
     except Exception as e:
         stderr(e, ctx)
 
+@cluster_group.command(short_help='create cluster')
+@click.pass_context
+@click.argument('name', required=True)
+@click.option(
+    '-N',
+    '--nodes',
+    'node_count',
+    required=False,
+    default=1,
+    type=click.INT,
+    help='New size of the cluster (or) new worker node count of the cluster')
+@click.option(
+    '-n',
+    '--network',
+    'network_name',
+    default=None,
+    required=True,
+    help='Network name')
+@click.option(
+    '--disable-rollback',
+    'disable_rollback',
+    is_flag=True,
+    required=False,
+    default=True,
+    help='Disable rollback for node')
+def resize(ctx, name, node_count, network_name, disable_rollback):
+    """Resize the cluster to specified worker node count.
+
+    Automatic scale down is not supported on vCD powered Kubernetes clusters.
+    Use 'vcd cse node delete' command to do so.
+    """
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        cluster = Cluster(client)
+        result = cluster.resize_cluster(
+            vdc=ctx.obj['profiles'].get('vdc_in_use'),
+            network_name=network_name,
+            cluster_name=name,
+            node_count=node_count,
+            disable_rollback=disable_rollback)
+        stdout(result, ctx)
+    except Exception as e:
+        stderr(e, ctx)
 
 @cluster_group.command(short_help='get cluster config')
 @click.pass_context
@@ -476,7 +520,6 @@ def create_node(ctx, name, node_count, cpu, memory, network_name,
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
-
 
 @node_group.command('list', short_help='list nodes')
 @click.pass_context
