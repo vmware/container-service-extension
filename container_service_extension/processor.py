@@ -105,9 +105,7 @@ class ServiceProcessor(object):
         if body['method'] == 'GET':
             if ovdc_info_request:
                 req_spec.update({'ovdc_id': ovdc_id})
-                broker = broker_manager.get_broker_based_on_vdc()
-                reply = broker.ovdc_info_for_kubernetes()
-
+                reply = broker_manager.invoke(Operation.INFO_OVDC)
             elif spec_request:
                 reply = self.get_spec(tokens[3])
             elif config_request:
@@ -153,8 +151,7 @@ class ServiceProcessor(object):
                     reply = broker.create_nodes()
         elif body['method'] == 'PUT':
             if ovdc_info_request:
-                broker = broker_manager.get_broker_based_on_vdc()
-                reply = broker.enable_ovdc_for_kubernetes()
+                reply = broker_manager.invoke(Operation.ENABLE_OVDC)
             elif system_request:
                 reply = service.update_status(req_headers, req_spec)
             else:

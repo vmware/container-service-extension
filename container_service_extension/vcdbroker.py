@@ -41,7 +41,6 @@ from container_service_extension.exceptions import NFSNodeCreationError
 from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import WorkerNodeCreationError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.ovdc_cache import OvdcCache
 from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_NAME
 from container_service_extension.utils import ACCEPTED
@@ -765,61 +764,6 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 stack_trace=stack_trace)
         finally:
             self._disconnect_sys_admin()
-
-    @exception_handler
-    def enable_ovdc_for_kubernetes(self):
-        """Enable ovdc for k8-cluster deployment on given container provider.
-
-        :return: result object
-
-        :rtype: dict
-
-        :raises CseServerError: if the user is not system administrator.
-        """
-        result = dict()
-        self._connect_tenant()
-        if self.tenant_client.is_sysadmin():
-            ovdc_cache = OvdcCache(self.tenant_client)
-            task = ovdc_cache.set_ovdc_container_provider_metadata(
-                self.req_spec['ovdc_name'],
-                ovdc_id=self.req_spec.get('ovdc_id', None),
-                container_provider=
-                self.req_spec.get('container_provider', None),
-                pks_plans=self.req_spec['pks_plans'],
-                org_name=self.req_spec.get('org_name', None))
-            response_body = dict()
-            response_body['ovdc_name'] = self.req_spec['ovdc_name']
-            response_body['task_href'] = task.get('href')
-            result['body'] = response_body
-            result['status_code'] = ACCEPTED
-            return result
-        else:
-            raise CseServerError("Unauthorized Operation")
-
-    @exception_handler
-    def ovdc_info_for_kubernetes(self):
-        """Info on ovdc for k8s deployment on the given container provider.
-
-        :return: result object
-
-        :rtype: dict
-
-        :raises CseServerError: if the user is not system administrator.
-        """
-        result = dict()
-        self._connect_tenant()
-        if self.tenant_client.is_sysadmin():
-            ovdc_cache = OvdcCache(self.tenant_client)
-            metadata = ovdc_cache.get_ovdc_container_provider_metadata(
-                self.req_spec.get('ovdc_name', None),
-                ovdc_id=self.req_spec.get('ovdc_id', None),
-                org_name=self.req_spec.get('org_name', None))
-            result = dict()
-            result['status_code'] = OK
-            result['body'] = metadata
-            return result
-        else:
-            raise CseServerError("Unauthorized Operation")
 
     def node_rollback(self, node_list):
         """Rollback for node creation failure.
