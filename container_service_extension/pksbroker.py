@@ -302,7 +302,7 @@ class PKSBroker(AbstractBroker):
                      f' the cluster: {cluster_name}')
         return
 
-    @exception_handler
+
     def create_compute_profile(self, cp_name, az_name, description, cpi,
                                datacenter_name, cluster_name, ovdc_rp_name):
         """Create a PKS compute profile that maps to a given oVdc in vCD.
