@@ -86,7 +86,6 @@ class ServiceProcessor(object):
         query_params = {}
         if body['queryString']:
             query_params = dict(parse_qsl(body['queryString']))
-        LOGGER.debug(f'Query params in the request: {query_params}')
 
         from container_service_extension.service import Service
         service = Service()

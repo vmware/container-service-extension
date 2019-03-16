@@ -176,6 +176,9 @@ def delete(ctx, name, vdc):
         client = ctx.obj['client']
         cluster = Cluster(client)
         result = cluster.delete_cluster(name, vdc)
+        # result is empty for delete cluster operation on PKS-managed clusters.
+        # In that specific case, below check helps to print out a meaningful
+        # message to users.
         if len(result) == 0:
             click.secho(f"Delete cluster operation has been initiated on "
                         f"{name}, please check the status using"
