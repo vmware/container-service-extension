@@ -889,8 +889,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
                                  f"vCD powered K8 clusters. Use "
                                  f"'vcd cse delete node' command.")
         elif curr_worker_count == node_count:
-            raise CseServerError(f"{cluster_name} is already at the size of "
-                                 f"{curr_worker_count}")
+            raise CseServerError(f"Cluster: {cluster_name} is already at the "
+                                 f"size of {curr_worker_count}.")
 
         self.req_spec['node_count'] = node_count - curr_worker_count
         response = self.create_nodes()
