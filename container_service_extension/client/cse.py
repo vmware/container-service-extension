@@ -65,6 +65,11 @@ def cluster_group(ctx):
         vcd cse cluster delete mycluster --yes
             Attempts to delete cluster 'mycluster' without prompting.
 \b
+        vcd cse cluster delete mycluster -vdc myOvdc
+            Deletes cluster residing in vdc 'myOvdc'. Specifying optional
+            param --vdc lets CSE server to efficiently locate and
+            delete the cluster.
+\b
         vcd cse cluster create mycluster -n mynetwork
             Attempts to create a Kubernetes cluster named 'mycluster'
             with 2 worker nodes in the current VDC. This cluster will be
@@ -87,6 +92,11 @@ def cluster_group(ctx):
 \b
         vcd cse cluster info mycluster
             Display detailed information about cluster named 'mycluster'.
+\b
+        vcd cse cluster info mycluster --vdc myOvdc
+            Display detailed information on cluster 'mycluster', which is
+            residing in vdc 'myOvdc'. Specifying optional param --vdc
+            lets CSE server to efficiently locate the cluster.
     """
     pass
 
@@ -146,19 +156,33 @@ def list_clusters(ctx):
 @click.pass_context
 @click.argument('name', required=True)
 @click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    help='Name of the virtual datacenter')
+@click.option(
     '-y',
     '--yes',
     is_flag=True,
     callback=abort_if_false,
     expose_value=False,
     prompt='Are you sure you want to delete the cluster?')
-def delete(ctx, name):
+def delete(ctx, name, vdc):
     """Delete a Kubernetes cluster."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        result = cluster.delete_cluster(name)
+        result = cluster.delete_cluster(name, vdc)
+        # result is empty for delete cluster operation on PKS-managed clusters.
+        # In that specific case, below check helps to print out a meaningful
+        # message to users.
+        if len(result) == 0:
+            click.secho(f"Delete cluster operation has been initiated on "
+                        f"{name}, please check the status using"
+                        f" 'vcd cse cluster info {name}'.", fg='yellow')
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -286,13 +310,20 @@ def config(ctx, name, save):
 @cluster_group.command('info', short_help='get cluster info')
 @click.pass_context
 @click.argument('name', required=True)
-def cluster_info(ctx, name):
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    help='Name of the virtual datacenter')
+def cluster_info(ctx, name, vdc):
     """Display info about a Kubernetes cluster."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        cluster_info = cluster.get_cluster_info(name)
+        cluster_info = cluster.get_cluster_info(name, vdc)
         stdout(cluster_info, ctx, show_id=True)
     except Exception as e:
         stderr(e, ctx)

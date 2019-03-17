@@ -42,13 +42,15 @@ class Operation(Enum):
 
 
 class BrokerManager(object):
-    def __init__(self, headers, body):
+    def __init__(self, headers, params, body):
         self.headers = headers
+        self.params = params
         self.body = body
         config = get_server_runtime_config()
         from container_service_extension.service import Service
         self.pks_cache = Service().get_pks_cache()
         self.ovdc_cache = OvdcCache(get_vcd_sys_admin_client())
+        self.is_ovdc_present_in_request = False
         self.vcd_client, self.session = connect_vcd_user_via_token(
             vcd_uri=config['vcd']['host'],
             headers=self.headers,
@@ -79,7 +81,10 @@ class BrokerManager(object):
         result['status_code'] = OK
 
         if on_the_fly_request_body:
-            self.body = on_the_fly_request_body
+            self.body.update(on_the_fly_request_body)
+
+        self.is_ovdc_present_in_request = self.body.get('vdc', None) or \
+                                          self.params.get('vdc', None)
 
         if op == Operation.GET_CLUSTER:
             result['body'] = \
@@ -128,9 +133,8 @@ class BrokerManager(object):
         Returns a tuple of (cluster and the broker instance used to find the
         cluster)
         """
-        is_ovdc_present_in_body = self.body.get('vdc') if self.body else None
-        if is_ovdc_present_in_body:
-            broker = self.get_broker_based_on_vdc(self.body)
+        if self.is_ovdc_present_in_request:
+            broker = self.get_broker_based_on_vdc()
             return broker.get_cluster_info(cluster_name), broker
         else:
             cluster, broker = self._find_cluster_in_org(cluster_name)
@@ -145,15 +149,14 @@ class BrokerManager(object):
 
         If 'ovdc' is present in the body,
             choose the right broker (by identifying the container_provider
-            (vcd|pks) defined for that ovdc) to do list_clusters op.
+            (vcd|pks) defined for that ovdc) to do list_clusters operation.
         Else
             Invoke set of all (vCD/PKS)brokers in the org to do list_clusters.
             Post-process the result returned by each broker.
             Aggregate all the results into one.
         """
-        is_ovdc_present_in_body = self.body.get('vdc') if self.body else None
-        if is_ovdc_present_in_body:
-            broker = self.get_broker_based_on_vdc(self.body)
+        if self.is_ovdc_present_in_request:
+            broker = self.get_broker_based_on_vdc()
             return broker.list_clusters()
         else:
             common_cluster_properties = ('name', 'vdc', 'status')
@@ -287,9 +290,9 @@ class BrokerManager(object):
         """
 
         if on_the_fly_request_body:
-            self.body = on_the_fly_request_body
+            self.body.update(on_the_fly_request_body)
 
-        ovdc_name = self.body.get('vdc') if self.body else None
+        ovdc_name = self.body.get('vdc', None) or self.params.get('vdc', None)
         org_name = self.session.get('org')
         LOGGER.debug(f"org_name={org_name};vdc_name=\'{ovdc_name}\'")
 
