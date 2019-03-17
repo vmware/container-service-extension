@@ -50,6 +50,7 @@ class BrokerManager(object):
         from container_service_extension.service import Service
         self.pks_cache = Service().get_pks_cache()
         self.ovdc_cache = OvdcCache(get_vcd_sys_admin_client())
+        self.is_ovdc_present_in_request = False
         self.vcd_client, self.session = connect_vcd_user_via_token(
             vcd_uri=config['vcd']['host'],
             headers=self.req_headers,
