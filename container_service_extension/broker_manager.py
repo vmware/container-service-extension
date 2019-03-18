@@ -174,8 +174,8 @@ class BrokerManager(object):
             for pks_ctx in pks_ctx_list:
                 pks_broker = PKSBroker(self.headers, self.body, pks_ctx)
                 for cluster in pks_broker.list_clusters():
-                    pks_cluster = {k: cluster.get(k, None) for k in
-                                   common_cluster_properties}
+                    pks_cluster = self._get_truncated_cluster_info(
+                        cluster, pks_broker, common_cluster_properties)
                     pks_cluster[CONTAINER_PROVIDER] = CtrProvType.PKS.value
                     pks_clusters.append(pks_cluster)
             return vcd_clusters + pks_clusters
@@ -280,6 +280,21 @@ class BrokerManager(object):
                 pks_ctx_dict[ctr_prov_ctx['vc']]=ctr_prov_ctx
 
         return pks_ctx_dict.values()
+
+    def _get_truncated_cluster_info(self, cluster, pks_broker,
+                                    cluster_property_keys):
+        pks_cluster = {k: cluster.get(k, None) for k in
+                       cluster_property_keys}
+        cluster_info = pks_broker. \
+            get_cluster_info(cluster_name=pks_cluster['name'])
+        # computer_profile_name has got vdc as last token
+        pks_cluster['vdc'] = cluster_info. \
+            get('compute_profile_name', '').split('--')[-1]
+        pks_cluster['status'] = cluster_info. \
+                                    get('last_action', '').lower() + ' ' + \
+                                pks_cluster.get('status', '').lower()
+        return pks_cluster
+
 
     def get_broker_based_on_vdc(self, on_the_fly_request_body=None):
         """Gets the broker based on ovdc.

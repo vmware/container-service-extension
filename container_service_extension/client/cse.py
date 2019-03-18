@@ -62,6 +62,9 @@ def cluster_group(ctx):
         vcd cse cluster list
             Displays clusters in vCD that are visible to your user status.
 \b
+        vcd cse cluster list -vdc myOvdc
+            Displays clusters residing in vdc 'myOvdc'.
+\b
         vcd cse cluster delete mycluster --yes
             Attempts to delete cluster 'mycluster' without prompting.
 \b
@@ -140,13 +143,20 @@ def list_templates(ctx):
 
 @cluster_group.command('list', short_help='list clusters')
 @click.pass_context
-def list_clusters(ctx):
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    help='Name of the virtual datacenter')
+def list_clusters(ctx, vdc):
     """Display list of Kubernetes clusters."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        result = cluster.get_clusters()
+        result = cluster.get_clusters(vdc)
         stdout(result, ctx, show_id=True)
     except Exception as e:
         stderr(e, ctx)
