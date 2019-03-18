@@ -90,14 +90,12 @@ class VcdResponseError(Exception):
 class PksServerError(CseServerError):
     """Raised when error is received from PKS"""
 
-    def __init__(self, status, reason, body):
+    def __init__(self, status, body):
         self.status = status
-        self.reason = reason
         self.body = body
 
     def __str__(self):
-        return f"PKS error\n status: {self.status}\n reason: {self.reason}\n" \
-            f" body: {self.body}"
+        return f"PKS error\n status: {self.status}\n body: {self.body}\n"
 
 
 class PksConnectionError(PksServerError):

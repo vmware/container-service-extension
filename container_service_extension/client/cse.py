@@ -62,14 +62,6 @@ def cluster_group(ctx):
         vcd cse cluster list
             Displays clusters in vCD that are visible to your user status.
 \b
-        vcd cse cluster delete mycluster --yes
-            Attempts to delete cluster 'mycluster' without prompting.
-\b
-        vcd cse cluster delete mycluster -vdc myOvdc
-            Deletes cluster residing in vdc 'myOvdc'. Specifying optional
-            param --vdc lets CSE server to efficiently locate and
-            delete the cluster.
-\b
         vcd cse cluster create mycluster -n mynetwork
             Attempts to create a Kubernetes cluster named 'mycluster'
             with 2 worker nodes in the current VDC. This cluster will be
@@ -87,6 +79,27 @@ def cluster_group(ctx):
             'mystorageprofile'. The public ssh key at '~/.ssh/id_rsa.pub' will
             be placed into all VMs for user accessibility.
 \b
+        vcd cse cluster resize mycluster -N 10 --network mynetwork
+            Attempts to resize the cluster size to 10 worker nodes. The Option
+             "--network" is mandatory if the cluster is vCD-powered and
+             it is optional if the cluster is PKS-powered.
+\b
+        vcd cse cluster resize mycluster -N 10 --vcd myovdc
+            Attempts to resize the cluster size to 10 worker nodes. Specifying
+             optional param --vdc forces CSE server to narrow down the search
+             range of locating the cluster to 'myOvdc' only (improves
+             turnaround time of the command).
+
+\b
+        vcd cse cluster delete mycluster --yes
+            Attempts to delete cluster 'mycluster' without prompting.
+\b
+        vcd cse cluster delete mycluster -vdc myOvdc
+            Deletes cluster residing in vdc 'myOvdc'. Specifying optional param
+             --vdc forces CSE server to narrow down the search range of
+             locating the cluster to 'myOvdc' only. (improves turnaround time
+             of the command).
+\b
         vcd cse cluster config mycluster
             Display configuration information about cluster named 'mycluster'.
 \b
@@ -96,7 +109,8 @@ def cluster_group(ctx):
         vcd cse cluster info mycluster --vdc myOvdc
             Display detailed information on cluster 'mycluster', which is
             residing in vdc 'myOvdc'. Specifying optional param --vdc
-            lets CSE server to efficiently locate the cluster.
+            forces CSE server to narrow down the search range of locating the
+            cluster to 'myOvdc' only. (improves turnaround time of the command)
     """
     pass
 
@@ -306,13 +320,20 @@ def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
     help='Network name (mandatory for vCD-powered clusters; '
          'optional for PKS-powered clusters')
 @click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    help='Name of the virtual datacenter')
+@click.option(
     '--disable-rollback',
     'disable_rollback',
     is_flag=True,
     required=False,
     default=True,
-    help='Disable rollback for node')
-def resize(ctx, name, node_count, network_name, disable_rollback):
+    help='Disable rollback for node (applicable only for vCD-powered clusters')
+def resize(ctx, name, node_count, network_name, vdc, disable_rollback):
     """Resize the cluster to specified worker node count.
 
     Automatic scale down is not supported on vCD powered Kubernetes clusters.
@@ -323,7 +344,7 @@ def resize(ctx, name, node_count, network_name, disable_rollback):
         client = ctx.obj['client']
         cluster = Cluster(client)
         result = cluster.resize_cluster(
-            vdc=ctx.obj['profiles'].get('vdc_in_use'),
+            vdc=ctx.obj['profiles'].get('vdc_in_use') if vdc is None else vdc,
             network_name=network_name,
             cluster_name=name,
             node_count=node_count,

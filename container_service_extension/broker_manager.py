@@ -42,6 +42,12 @@ class Operation(Enum):
 
 
 class BrokerManager(object):
+    """Manage calls to vCD and PKS brokers.
+
+    Handles:
+    Pre-processing of requests to brokers
+    Post-processing of results from brokers.
+    """
     def __init__(self, request_headers, request_query_params, request_spec):
         self.req_headers = request_headers
         self.req_qparams = request_query_params

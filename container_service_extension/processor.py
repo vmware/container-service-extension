@@ -93,6 +93,7 @@ class ServiceProcessor(object):
         if not system_request and not service.is_enabled:
             raise CseServerError('CSE service is disabled. '
                                  'Contact the System Administrator.')
+
         req_headers = deepcopy(body['headers'])
         req_query_params = deepcopy(query_params)
         req_spec = deepcopy(request_body)
