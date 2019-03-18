@@ -89,7 +89,6 @@ def cluster_group(ctx):
              optional param --vdc forces CSE server to narrow down the search
              range of locating the cluster to 'myOvdc' only (improves
              turnaround time of the command).
-
 \b
         vcd cse cluster delete mycluster --yes
             Attempts to delete cluster 'mycluster' without prompting.

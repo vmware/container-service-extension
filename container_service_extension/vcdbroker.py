@@ -508,11 +508,11 @@ class VcdBroker(AbstractBroker, threading.Thread):
             self._disconnect_sys_admin()
 
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
-    def delete_cluster(self, name):
+    def delete_cluster(self, cluster_name):
 
-        LOGGER.debug(f"About to delete cluster with name: {name}")
+        LOGGER.debug(f"About to delete cluster with name: {cluster_name}")
 
-        self.cluster_name = name
+        self.cluster_name = cluster_name
         self._connect_tenant()
         self._connect_sys_admin()
         self.op = OP_DELETE_CLUSTER
@@ -885,7 +885,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
 
         if curr_worker_count > node_count:
             raise CseServerError(f"Automatic scale down is not supported for "
-                                 f"vCD powered K8 clusters. Use "
+                                 f"vCD powered Kubernetes clusters. Use "
                                  f"'vcd cse delete node' command.")
         elif curr_worker_count == node_count:
             raise CseServerError(f"Cluster - {cluster_name} is already at the "
