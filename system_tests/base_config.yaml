@@ -64,9 +64,9 @@ broker:
     cpu: 2
     description: 'Ubuntu 16.04
 
-      Docker 18.03.0~ce
+      Docker 18.06.2~ce
 
-      Kubernetes 1.10.1
+      Kubernetes 1.10.11
 
       weave 2.3.0'
     mem: 2048
@@ -81,9 +81,9 @@ broker:
     cpu: 2
     description: 'PhotonOS v2
 
-      Docker 17.06.0-4
+      Docker 17.06.0-9
 
-      Kubernetes 1.9.1
+      Kubernetes 1.10.11
 
       weave 2.3.0'
     mem: 2048
