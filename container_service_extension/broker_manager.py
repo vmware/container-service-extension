@@ -176,6 +176,14 @@ class BrokerManager(object):
                 for cluster in pks_broker.list_clusters():
                     pks_cluster = {k: cluster.get(k, None) for k in
                                    common_cluster_properties}
+                    cluster_info = pks_broker.\
+                        get_cluster_info(cluster_name=pks_cluster['name'])
+                    # computer_profile_name has got vdc as last token
+                    pks_cluster['vdc'] = cluster_info.\
+                        get('compute_profile_name', '').split('--')[-1]
+                    pks_cluster['status'] = cluster_info.\
+                        get('last_action', '').lower() + ' ' + \
+                        pks_cluster.get('status', '').lower()
                     pks_cluster[CONTAINER_PROVIDER] = CtrProvType.PKS.value
                     pks_clusters.append(pks_cluster)
             return vcd_clusters + pks_clusters
