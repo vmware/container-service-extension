@@ -303,7 +303,8 @@ def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
     'network_name',
     default=None,
     required=False,
-    help='Network name')
+    help='Network name (mandatory for vCD-powered clusters; '
+         'optional for PKS-powered clusters')
 @click.option(
     '--disable-rollback',
     'disable_rollback',

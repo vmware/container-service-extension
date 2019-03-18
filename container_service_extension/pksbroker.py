@@ -8,6 +8,7 @@ import json
 from container_service_extension.abstract_broker import AbstractBroker
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import PksConnectionError
+from container_service_extension.exceptions import PksServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE
 from container_service_extension.pksclient.api.cluster_api import ClusterApi
@@ -103,8 +104,11 @@ class PKSBroker(AbstractBroker):
 
         LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} '
                      f'to list all clusters')
+        try:
+            clusters = cluster_api.list_clusters()
+        except Exception as err:
+            raise PksServerError(err.status, err.reason, err.body)
 
-        clusters = cluster_api.list_clusters()
         list_of_cluster_dicts = []
         for cluster in clusters:
             cluster_dict = {
@@ -157,8 +161,10 @@ class PKSBroker(AbstractBroker):
 
         LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to create '
                      f'cluster of name: {cluster_name}')
-
-        cluster = cluster_api.add_cluster(cluster_request)
+        try:
+            cluster = cluster_api.add_cluster(cluster_request)
+        except Exception as err:
+            raise PksServerError(err.status, err.reason, err.body)
         cluster_dict = cluster.to_dict()
         # Flattening the dictionary
         cluster_params_dict = cluster_dict.pop('parameters')
@@ -180,8 +186,10 @@ class PKSBroker(AbstractBroker):
 
         LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to get '
                      f'details of cluster with name: {cluster_name}')
-
-        cluster = cluster_api.get_cluster(cluster_name=cluster_name)
+        try:
+            cluster = cluster_api.get_cluster(cluster_name=cluster_name)
+        except Exception as err:
+            raise PksServerError(err.status, err.reason, err.body)
         cluster_dict = cluster.to_dict()
         cluster_params_dict = cluster_dict.pop('parameters')
         cluster_dict.update(cluster_params_dict)
@@ -200,8 +208,10 @@ class PKSBroker(AbstractBroker):
 
         LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to delete '
                      f'the cluster with name: {cluster_name}')
-
-        cluster_api.delete_cluster(cluster_name=cluster_name)
+        try:
+            cluster_api.delete_cluster(cluster_name=cluster_name)
+        except Exception as err:
+            raise PksServerError(err.status, err.reason, err.body)
 
         LOGGER.debug(f'PKS: {self.pks_host_uri} accepted the request to delete'
                      f' the cluster: {cluster_name}')
@@ -222,7 +232,10 @@ class PKSBroker(AbstractBroker):
 
         resize_params = UpdateClusterParameters(
             kubernetes_worker_instances=node_count)
-        cluster_api.update_cluster(cluster_name, body=resize_params)
+        try:
+            cluster_api.update_cluster(cluster_name, body=resize_params)
+        except Exception as err:
+            raise PksServerError(err.status, err.reason, err.body)
 
         LOGGER.debug(f'PKS: {self.pks_host_uri} accepted the request to resize'
                      f' the cluster: {cluster_name}')
@@ -285,8 +298,10 @@ class PKSBroker(AbstractBroker):
 
         LOGGER.debug(f'Sending request to PKS:{self.pks_host_uri} to create '
                      f'the compute profile: {cp_name} for ovdc {ovdc_rp_name}')
-
-        profile_api.add_compute_profile(body=cp_request)
+        try:
+            profile_api.add_compute_profile(body=cp_request)
+        except Exception as err:
+            raise PksServerError(err.status, err.reason, err.body)
 
         LOGGER.debug(f'PKS: {self.pks_host_uri} created the compute profile: '
                      f'{cp_name} for ovdc {ovdc_rp_name}')
@@ -309,7 +324,10 @@ class PKSBroker(AbstractBroker):
         LOGGER.debug(f'Sending request to PKS:{self.pks_host_uri} to get the '
                      f'compute profile: {name} ')
 
-        compute_profile = profile_api.get_compute_profile(profile_name=name)
+        try:
+            compute_profile = profile_api.get_compute_profile(profile_name=name)
+        except Exception as err:
+            raise PksServerError(err.status, err.reason, err.body)
 
         LOGGER.debug(f'Received response from PKS: {self.pks_host_uri} on '
                      f'compute-profile: {name} with details: '
@@ -333,10 +351,12 @@ class PKSBroker(AbstractBroker):
 
         LOGGER.debug(f'Sending request to PKS:{self.pks_host_uri} to get the '
                      f'list of compute profiles')
+        try:
+            cp_list = profile_api.list_compute_profiles()
+        except Exception as err:
+            raise PksServerError(err.status, err.reason, err.body)
 
-        cp_list = profile_api.list_compute_profiles()
         list_of_cp_dicts = [cp.to_dict() for cp in cp_list]
-
         LOGGER.debug(f'Received response from PKS: {self.pks_host_uri} on '
                      f'list of compute profiles: {list_of_cp_dicts}')
 
@@ -360,7 +380,10 @@ class PKSBroker(AbstractBroker):
         LOGGER.debug(f'Sending request to PKS:{self.pks_host_uri} to delete '
                      f'the compute profile: {name}')
 
-        profile_api.delete_compute_profile(profile_name=name)
+        try:
+            profile_api.delete_compute_profile(profile_name=name)
+        except Exception as err:
+            raise PksServerError(err.status, err.reason, err.body)
 
         LOGGER.debug(f'Received response from PKS: {self.pks_host_uri} that'
                      f' it deleted the compute profile: {name}')

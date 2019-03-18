@@ -87,12 +87,14 @@ class BrokerManager(object):
                                           self.req_qparams.get('vdc', None)
 
         if op == Operation.GET_CLUSTER:
-            cluster_spec = {'cluster_name': self.req_spec.get('name', None)}
+            cluster_spec = \
+                {'cluster_name': self.req_spec.get('cluster_name', None)}
             result['body'] = self._get_cluster_info(**cluster_spec)[0]
         elif op == Operation.LIST_CLUSTERS:
             result['body'] = self._list_clusters()
         elif op == Operation.DELETE_CLUSTER:
-            cluster_spec = {'cluster_name': self.req_spec.get('name', None)}
+            cluster_spec = \
+                {'cluster_name': self.req_spec.get('cluster_name', None)}
             self._delete_cluster(**cluster_spec)
             result['status_code'] = ACCEPTED
         elif op == Operation.RESIZE_CLUSTER:
@@ -101,9 +103,10 @@ class BrokerManager(object):
             #  response body. Construct the remainder of the response here.
             #  This cannot be done at the moment as @exception_handler cannot
             #  be removed on create_nodes() as of today (Mar 15, 2019).
-            cluster_spec = {'cluster_name': self.req_spec.get('name', None),
-                            'node_count': self.req_spec.get('node_count', None)
-                            }
+            cluster_spec = \
+                {'cluster_name': self.req_spec.get('cluster_name', None),
+                 'node_count': self.req_spec.get('node_count', None)
+                 }
             result = self._resize_cluster(**cluster_spec)
         elif op == Operation.CREATE_CLUSTER:
             # TODO(ClusterSpec) Create an inner class "ClusterSpec"
@@ -112,7 +115,8 @@ class BrokerManager(object):
             #  Method 'Create_cluster' in VcdBroker and PksBroker should take
             #  ClusterSpec either as a param (or)
             #  read from instance variable (if needed only).
-            cluster_spec = {'cluster_name': self.req_spec.get('name', None),
+            cluster_spec = {'cluster_name':
+                                self.req_spec.get('cluster_name', None),
                             'vdc_name': self.req_spec.get('vdc', None),
                             'node_count':
                                 self.req_spec.get('node_count', None),
@@ -290,7 +294,7 @@ class BrokerManager(object):
         return pks_ctx_dict.values()
 
     def get_broker_based_on_vdc(self, on_the_fly_request_spec=None):
-        """Gets the broker based on ovdc.
+        """Get the broker based on ovdc.
 
         :param on_the_fly_request_spec: New or modified HTTP request body by
         CSE {container_service_extension.processor.ServiceProcessor}
