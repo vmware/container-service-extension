@@ -2,6 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from collections import Iterable
 import functools
 import json
 
@@ -31,7 +32,7 @@ from container_service_extension.utils import OK
 
 def add_vcd_user_context(qualify_params=['cluster_name'],
                          filter_list_by_user_id=False):
-    """Qualify cluster's name with the user's id who owns it.
+    """Qualify the values of parameters passed in qualify_params with user_id.
 
     And subsequently strip the id off before serving the result back
     to client.
@@ -55,6 +56,10 @@ def add_vcd_user_context(qualify_params=['cluster_name'],
                 return extract_id(session.get('userId'))
 
             def strip_user_id(cluster_info):
+                # NOTE: Current implementation works only if the method
+                # argument is a dict item. Any change in the requirement needs
+                # this logic to be revisited
+
                 is_user_id_stripped = False
 
                 if type(cluster_info) is not dict:
@@ -79,7 +84,7 @@ def add_vcd_user_context(qualify_params=['cluster_name'],
             result = pks_function(*args, **kwargs)
 
             # Get updated result after filtering
-            if filter_list_by_user_id:
+            if filter_list_by_user_id and isinstance(result, Iterable):
                 filtered_list = [cluster_dict for cluster_dict in result
                                  if strip_user_id(cluster_dict)]
                 return filtered_list
