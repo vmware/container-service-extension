@@ -35,13 +35,16 @@ class PKSBroker(AbstractBroker):
     It performs CRUD operations on Kubernetes clusters.
     """
 
-    def __init__(self, request_headers, request_spec, pks_ctx=None):
+    def __init__(self, request_headers, request_spec, pks_ctx):
         """Initialize PKS broker.
 
         :param pks_ctx: ovdc cache (subject to change) is used to
         initialize PKS broker.
         """
         super().__init__(request_headers, request_spec)
+        if pks_ctx is None:
+            raise ValueError(f'PKS context is required to establish connection'
+                             f' to PKS')
         self.req_headers = request_headers
         self.req_spec = request_spec
         self.username = pks_ctx['username']
@@ -222,15 +225,16 @@ class PKSBroker(AbstractBroker):
                      f' the cluster: {cluster_name}')
         return
 
-    @exception_handler
     def resize_cluster(self, cluster_name, node_count, **kwargs):
         """Resize the cluster of a given name to given number of worker nodes.
 
         :param str cluster_name: Name of the cluster
         :param int node_count: New size of the worker nodes
         """
-        cluster_api = ClusterApi(api_client=self.pks_client)
+        result = {}
+        result['body'] = []
 
+        cluster_api = ClusterApi(api_client=self.pks_client)
         LOGGER.debug(f'Sending request to PKS:{self.pks_host_uri} to resize '
                      f'the cluster with name: {cluster_name} to '
                      f'{node_count} worker nodes')
@@ -246,7 +250,9 @@ class PKSBroker(AbstractBroker):
 
         LOGGER.debug(f'PKS: {self.pks_host_uri} accepted the request to resize'
                      f' the cluster: {cluster_name}')
-        return
+
+        result['status'] = ACCEPTED
+        return result
 
     @exception_handler
     def create_compute_profile(self, cp_name, az_name, description, cpi,

@@ -105,7 +105,7 @@ class BrokerManager(object):
             result['status_code'] = ACCEPTED
         elif op == Operation.RESIZE_CLUSTER:
             # TODO(resize_cluster) Once VcdBroker.create_nodes() is hooked to
-            #  broker_manager, ensure vcdbroker.resize_cluster returns only
+            #  broker_manager, ensure broker.resize_cluster returns only
             #  response body. Construct the remainder of the response here.
             #  This cannot be done at the moment as @exception_handler cannot
             #  be removed on create_nodes() as of today (Mar 15, 2019).
