@@ -93,7 +93,7 @@ ENV/
 # Rope project settings
 .ropeproject
 
-# Otehr IDE project settings
+# Other IDE project settings
 .idea/
 .vscode/
 

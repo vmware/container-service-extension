@@ -8,8 +8,7 @@
 #   BUILD_NUMBER:    8+ digit build number
 #   PRODUCT_BUILD_NUMBER:   Unique semantic version
 #   CHANGE_NUMBER:   SHA of the git changeset
-#   BRANCH_NAME:     git branch name
-#   BRANCH_NAME:     the current branch
+#   BRANCH_NAME:     the git branch name
 #   OFFICIALKEY:     will be "1" for offical builds
 #
 
