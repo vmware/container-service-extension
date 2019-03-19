@@ -224,7 +224,7 @@ class BrokerManager(object):
                        pksbroker
             except Exception as err:
                 LOGGER.debug(f"Get cluster info on {cluster_name} failed "
-                             f"on {pks_ctx['host']} with error: {err}")pks_ctx
+                             f"on {pks_ctx['host']} with error: {err}")
                 pass
 
         return None, None
