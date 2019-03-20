@@ -24,7 +24,7 @@ VERSION_FILE = container_service_extension/version.py
 
 .PHONY: version
 version:
-	echo "__version__ = {" >>${VERSION_FILE}
+	echo "__version__ = {" >${VERSION_FILE}
 	echo "'product': 'CSE'," >>${VERSION_FILE}
 	echo "'description': 'Container Service Extension for VMware vCloud Director'," >>${VERSION_FILE}
 	echo "'version': '${LONG_VERSION}'," >>${VERSION_FILE}

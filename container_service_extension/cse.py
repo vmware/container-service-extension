@@ -118,8 +118,12 @@ def version(ctx, local):
     else:
         ver_obj = Service.version()
 
-    ver_str = '%s, %s, version %s, build %s' % (
-        ver_obj['product'], ver_obj['description'], ver_obj['version'], ver_obj['build'])
+    ver_str = '%s, %s, version %s' % (
+        ver_obj['product'], ver_obj['description'], ver_obj['version'])
+
+    if 'build' in ver_obj:
+        ver_str += ', build %s' % ver_obj['build']
+
     stdout(ver_obj, ctx, ver_str)
 
 
