@@ -2,8 +2,11 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-
+from collections import Iterable
+import functools
 import json
+
+from pyvcloud.vcd.utils import extract_id
 
 from container_service_extension.abstract_broker import AbstractBroker
 from container_service_extension.exceptions import CseServerError
@@ -27,6 +30,71 @@ from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import exception_handler
 from container_service_extension.utils import OK
+
+
+def add_vcd_user_context(qualify_params=['cluster_name'],
+                         filter_list_by_user_id=False):
+    """Qualify the values of parameters passed in qualify_params with user_id.
+
+    And subsequently strip the id off before serving the result back
+    to client.
+
+    :param list qualify_params: params that need to be qualified with
+    user-id
+
+    :param bool filter_list_by_user_id: whether to filter the result list.
+
+    :return: results from the decorated function after post processing
+    """
+    def decorator(pks_function):
+        @functools.wraps(pks_function)
+        def wrapper(*args, **kwargs):
+
+            def get_user_id():
+                # Return user id associated with client-session
+                # arg[0] is represents 'self' which is instance of PKSBroker
+                broker_instance = args[0]
+                session = broker_instance.get_tenant_client_session()
+                return extract_id(session.get('userId'))
+
+            def strip_user_id(cluster_info):
+                # NOTE: Current implementation works only if the method
+                # argument is a dict item. Any change in the requirement needs
+                # this logic to be revisited
+
+                is_user_id_stripped = False
+
+                if type(cluster_info) is not dict:
+                    return is_user_id_stripped
+
+                # Process every value from the cluster information
+                # Return true if any stripping happened
+                for key, val in cluster_info.items():
+                    if type(val) is str and user_id in val:
+                        cluster_info.update(
+                            {key: val.replace(f'-{user_id}', '')})
+                        is_user_id_stripped = True
+
+                return is_user_id_stripped
+
+            user_id = get_user_id()
+
+            for param in qualify_params:
+                if kwargs.get(param) is not None:
+                    kwargs[param] += f'-{user_id}'
+
+            result = pks_function(*args, **kwargs)
+
+            # Get updated result after filtering
+            if filter_list_by_user_id and isinstance(result, Iterable):
+                filtered_list = [cluster_dict for cluster_dict in result
+                                 if strip_user_id(cluster_dict)]
+                return filtered_list
+
+            strip_user_id(result)
+            return result
+        return wrapper
+    return decorator
 
 
 class PKSBroker(AbstractBroker):
@@ -58,6 +126,7 @@ class PKSBroker(AbstractBroker):
         self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE, None)
         self.verify = False  # TODO(pks.yaml) pks_config['pks']['verify']
         self.pks_client = self._get_pks_client()
+        self.client_session = None
 
     def _get_pks_config(self):
         """Connect to UAA server and construct PKS configuration.
@@ -96,6 +165,7 @@ class PKSBroker(AbstractBroker):
         self.pks_client = ApiClient(configuration=pks_config)
         return self.pks_client
 
+    @add_vcd_user_context(filter_list_by_user_id=True)
     def list_clusters(self):
         """Get list of clusters in PKS environment.
 
@@ -129,6 +199,7 @@ class PKSBroker(AbstractBroker):
                      f' list of clusters: {list_of_cluster_dicts}')
         return list_of_cluster_dicts
 
+    @add_vcd_user_context(qualify_params=['cluster_name'])
     def create_cluster(self, cluster_name, node_count, pks_plan, pks_ext_host,
                        compute_profile=None, **kwargs):
         """Create cluster in PKS environment.
@@ -178,8 +249,9 @@ class PKSBroker(AbstractBroker):
                      f' cluster: {cluster_name}')
         return cluster_dict
 
+    @add_vcd_user_context(qualify_params=['cluster_name'])
     def get_cluster_info(self, cluster_name):
-        """Get the details of a cluster with a given cluster_name in PKS environment.
+        """Get the details of a cluster with a given name in PKS environment.
 
         :param str cluster_name: Name of the cluster
         :return: Details of the cluster.
@@ -205,6 +277,7 @@ class PKSBroker(AbstractBroker):
 
         return cluster_dict
 
+    @add_vcd_user_context(qualify_params=['cluster_name'])
     def delete_cluster(self, cluster_name):
         """Delete the cluster with a given name in PKS environment.
 
@@ -225,6 +298,8 @@ class PKSBroker(AbstractBroker):
                      f' the cluster: {cluster_name}')
         return
 
+    @exception_handler
+    @add_vcd_user_context(qualify_params=['cluster_name'])
     def resize_cluster(self, cluster_name, node_count, **kwargs):
         """Resize the cluster of a given name to given number of worker nodes.
 

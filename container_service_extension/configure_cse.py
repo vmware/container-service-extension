@@ -227,7 +227,7 @@ SAMPLE_TEMPLATE_PHOTON_V2 = {
     'cpu': 2,
     'mem': 2048,
     'admin_password': 'guest_os_admin_password',
-    'description': 'PhotonOS v2\nDocker 17.06.0-4\nKubernetes 1.9.1\nweave 2.3.0'  # noqa
+    'description': 'PhotonOS v2\nDocker 17.06.0-9\nKubernetes 1.10.11\nweave 2.3.0'  # noqa
 }
 
 SAMPLE_TEMPLATE_UBUNTU_16_04 = {
@@ -241,7 +241,7 @@ SAMPLE_TEMPLATE_UBUNTU_16_04 = {
     'cpu': 2,
     'mem': 2048,
     'admin_password': 'guest_os_admin_password',
-    'description': 'Ubuntu 16.04\nDocker 18.03.0~ce\nKubernetes 1.10.1\nweave 2.3.0'  # noqa
+    'description': 'Ubuntu 16.04\nDocker 18.06.2~ce\nKubernetes 1.10.11\nweave 2.3.0'  # noqa
 }
 
 SAMPLE_BROKER_CONFIG = {

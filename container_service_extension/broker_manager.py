@@ -154,7 +154,7 @@ class BrokerManager(object):
         cluster_name = cluster_spec['cluster_name']
         if self.is_ovdc_present_in_request:
             broker = self.get_broker_based_on_vdc()
-            return broker.get_cluster_info(cluster_name), broker
+            return broker.get_cluster_info(cluster_name=cluster_name), broker
         else:
             cluster, broker = self._find_cluster_in_org(cluster_name)
             if cluster is not None:
@@ -239,7 +239,8 @@ class BrokerManager(object):
         for pks_ctx in pks_ctx_list:
             pksbroker = PKSBroker(self.req_headers, self.req_spec, pks_ctx)
             try:
-                return pksbroker.get_cluster_info(cluster_name), pksbroker
+                return pksbroker.get_cluster_info(cluster_name=cluster_name),\
+                       pksbroker
             except Exception as err:
                 LOGGER.debug(f"Get cluster info on {cluster_name} failed "
                              f"on {pks_ctx['host']} with error: {err}")
