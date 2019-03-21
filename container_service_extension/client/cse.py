@@ -220,8 +220,10 @@ def delete(ctx, name, vdc):
     '--network',
     'network_name',
     default=None,
-    required=True,
-    help='Network name')
+    required=False,
+    help='Network name (Mandatory field to be '
+         'specified for vCD powered clusters. '
+         'Optional for PKS backed clusters)')
 @click.option(
     '-s',
     '--storage-profile',
@@ -259,8 +261,20 @@ def delete(ctx, name, vdc):
     required=False,
     default=True,
     help='Disable rollback for cluster')
+@click.option(
+    '--pks-external-hostname',
+    'pks_ext_host',
+    required=False,
+    default=None,
+    help='Address from which to access Kubernetes API for PKS.')
+@click.option(
+    '--pks-plan',
+    'pks_plan',
+    required=False,
+    default=None,
+    help='Preconfigured plans for PKS.')
 def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
-           ssh_key_file, template, enable_nfs, disable_rollback):
+           ssh_key_file, template, enable_nfs, disable_rollback, pks_ext_host, pks_plan):
     """Create a Kubernetes cluster."""
     try:
         restore_session(ctx, vdc_required=True)
@@ -280,7 +294,9 @@ def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
             ssh_key=ssh_key,
             template=template,
             enable_nfs=enable_nfs,
-            disable_rollback=disable_rollback)
+            disable_rollback=disable_rollback,
+            pks_ext_host=pks_ext_host,
+            pks_plan=pks_plan)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)

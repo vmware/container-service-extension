@@ -75,7 +75,9 @@ class Cluster(object):
                        ssh_key=None,
                        template=None,
                        enable_nfs=False,
-                       disable_rollback=True):
+                       disable_rollback=True,
+                       pks_ext_host=None,
+                       pks_plan=None):
         """Create a new Kubernetes cluster.
 
         :param vdc: (str): The name of the vdc in which the cluster will be
@@ -99,7 +101,9 @@ class Cluster(object):
         :param disable_rollback: (bool): Flag to control weather rollback
             should be performed or not in case of errors. True to rollback,
             False to not rollback
-
+        :param pks_ext_host: (str): Address from which to access
+            Kubernetes API for PKS.
+        :param pks_plan: (str): Preconfigured plans for PKS.
         :return: (json) A parsed json object describing the requested cluster.
         """
         method = 'POST'
@@ -115,7 +119,9 @@ class Cluster(object):
             'ssh_key': ssh_key,
             'template': template,
             'enable_nfs': enable_nfs,
-            'disable_rollback': disable_rollback
+            'disable_rollback': disable_rollback,
+            'pks_ext_host': pks_ext_host,
+            'pks_plan': pks_plan
         }
         response = self.client._do_request_prim(
             method,
