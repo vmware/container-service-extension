@@ -229,7 +229,6 @@ class BrokerManager(object):
         except Exception as err:
             LOGGER.debug(f"Get cluster info on {cluster_name} failed "
                          f"on vCD with error: {err}")
-            pass
 
         pks_ctx_list = self._get_all_pks_accounts_in_org()
         for pks_ctx in pks_ctx_list:
@@ -240,7 +239,6 @@ class BrokerManager(object):
             except Exception as err:
                 LOGGER.debug(f"Get cluster info on {cluster_name} failed "
                              f"on {pks_ctx['host']} with error: {err}")
-                pass
 
         return None, None
 
