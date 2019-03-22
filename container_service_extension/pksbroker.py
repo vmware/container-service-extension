@@ -6,6 +6,7 @@ from collections import Iterable
 import functools
 import json
 
+import yaml
 from pyvcloud.vcd.utils import extract_id
 
 from container_service_extension.abstract_broker import AbstractBroker
@@ -261,6 +262,28 @@ class PKSBroker(AbstractBroker):
                      f'cluster: {cluster_name} with details: {cluster_dict}')
 
         return cluster_dict
+
+    @exception_handler
+    def get_cluster_config(self, cluster_name):
+        """Get the configuration of the cluster with the given name in PKS.
+
+        :param str cluster_name: Name of the cluster
+        :return: Details of the cluster.
+
+        :rtype: dict
+        """
+        cluster_api = ClusterApi(api_client=self.pks_client)
+
+        LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to get '
+                         f'detailed configuration of cluster with '
+                     f'name: {cluster_name}')
+        config = cluster_api.create_user(cluster_name=cluster_name)
+
+        LOGGER.debug(f'Received response from PKS: {self.pks_host_uri} on '
+                     f'cluster: {cluster_name} with details: {config}')
+        cluster_config = yaml.safe_dump(config)
+        return cluster_config
+
 
     @add_vcd_user_context(qualify_params=['cluster_name'])
     def delete_cluster(self, cluster_name):

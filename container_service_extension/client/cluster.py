@@ -144,7 +144,7 @@ class Cluster(object):
                 raise e
         return result
 
-    def get_config(self, cluster_name):
+    def get_config(self, cluster_name, vdc):
         method = 'GET'
         uri = '%s/%s/config' % (self._uri, cluster_name)
         response = self.client._do_request_prim(
@@ -154,7 +154,8 @@ class Cluster(object):
             contents=None,
             media_type=None,
             accept_type='text/x-yaml',
-            auth=None)
+            auth=None,
+            params={'vdc': vdc} if vdc else None)
         if response.status_code == requests.codes.ok:
             return response.content.decode('utf-8').replace('\\n', '\n')[1:-1]
         try:

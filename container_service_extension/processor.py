@@ -107,8 +107,8 @@ class ServiceProcessor(object):
             elif spec_request:
                 reply = self.get_spec(tokens[3])
             elif config_request:
-                broker = broker_manager.get_broker_based_on_vdc()
-                reply = broker.get_cluster_config(cluster_name)
+                on_the_fly_request_body = {'cluster_name': cluster_name}
+                reply = broker_manager.invoke(Operation.GET_CLUSTER_CONFIG, on_the_fly_request_body)
             elif template_request:
                 result = {}
                 templates = []
