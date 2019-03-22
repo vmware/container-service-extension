@@ -30,7 +30,7 @@ class Cluster(object):
             auth=None)
         return process_response(response)
 
-    def get_clusters(self):
+    def get_clusters(self, vdc):
         method = 'GET'
         uri = self._uri
         response = self.client._do_request_prim(
@@ -40,7 +40,8 @@ class Cluster(object):
             contents=None,
             media_type=None,
             accept_type='application/*+json',
-            auth=None)
+            auth=None,
+            params={'vdc': vdc} if vdc else None)
         return process_response(response)
 
     def get_cluster_info(self, name, vdc):
