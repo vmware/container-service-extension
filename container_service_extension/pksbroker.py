@@ -6,6 +6,7 @@ from collections import Iterable
 import functools
 import json
 
+import yaml
 from pyvcloud.vcd.utils import extract_id
 
 from container_service_extension.abstract_broker import AbstractBroker
@@ -166,7 +167,7 @@ class PKSBroker(AbstractBroker):
         self.pks_client = ApiClient(configuration=pks_config)
         return self.pks_client
 
-    @add_vcd_user_context(filter_list_by_user_id=True)
+    # @add_vcd_user_context(filter_list_by_user_id=True)
     def list_clusters(self):
         """Get list of clusters in PKS environment.
 
@@ -200,7 +201,7 @@ class PKSBroker(AbstractBroker):
                      f' list of clusters: {list_of_cluster_dicts}')
         return list_of_cluster_dicts
 
-    @add_vcd_user_context(qualify_params=['cluster_name'])
+    # @add_vcd_user_context(qualify_params=['cluster_name'])
     def create_cluster(self, cluster_name, node_count, pks_plan, pks_ext_host,
                        compute_profile=None, **kwargs):
         """Create cluster in PKS environment.
@@ -250,7 +251,7 @@ class PKSBroker(AbstractBroker):
                      f' cluster: {cluster_name}')
         return cluster_dict
 
-    @add_vcd_user_context(qualify_params=['cluster_name'])
+    # @add_vcd_user_context(qualify_params=['cluster_name'])
     def get_cluster_info(self, cluster_name):
         """Get the details of a cluster with a given name in PKS environment.
 
@@ -278,7 +279,29 @@ class PKSBroker(AbstractBroker):
 
         return cluster_dict
 
-    @add_vcd_user_context(qualify_params=['cluster_name'])
+    @exception_handler
+    def get_cluster_config(self, cluster_name):
+        """Get the configuration of the cluster with the given name in PKS.
+
+        :param str cluster_name: Name of the cluster
+        :return: Details of the cluster.
+
+        :rtype: dict
+        """
+        cluster_api = ClusterApi(api_client=self.pks_client)
+
+        LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to get '
+                         f'detailed configuration of cluster with '
+                     f'name: {cluster_name}')
+        config = cluster_api.create_user(cluster_name=cluster_name)
+
+        LOGGER.debug(f'Received response from PKS: {self.pks_host_uri} on '
+                     f'cluster: {cluster_name} with details: {config}')
+        cluster_config = yaml.safe_dump(config)
+        return cluster_config
+
+
+    # @add_vcd_user_context(qualify_params=['cluster_name'])
     def delete_cluster(self, cluster_name):
         """Delete the cluster with a given name in PKS environment.
 
@@ -300,7 +323,7 @@ class PKSBroker(AbstractBroker):
         return
 
     @exception_handler
-    @add_vcd_user_context(qualify_params=['cluster_name'])
+    # @add_vcd_user_context(qualify_params=['cluster_name'])
     def resize_cluster(self, cluster_name, node_count, **kwargs):
         """Resize the cluster of a given name to given number of worker nodes.
 

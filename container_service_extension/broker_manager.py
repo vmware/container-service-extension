@@ -39,6 +39,7 @@ class Operation(Enum):
     GET_CLUSTER = 'get cluster info'
     LIST_CLUSTERS = 'list clusters'
     RESIZE_CLUSTER = 'resize cluster'
+    GET_CLUSTER_CONFIG = 'get cluster config'
 
 
 class BrokerManager(object):
@@ -110,6 +111,11 @@ class BrokerManager(object):
                  'node_count': self.req_spec.get('node_count', None)
                  }
             result = self._resize_cluster(**cluster_spec)
+        elif op == Operation.GET_CLUSTER_CONFIG:
+            cluster_spec = \
+                {'cluster_name': self.req_spec.get('cluster_name', None)}
+            result['body'] = \
+                self._get_cluster_config(**cluster_spec)
         elif op == Operation.CREATE_CLUSTER:
             # TODO(ClusterSpec) Create an inner class "ClusterSpec"
             #  in abstract_broker.py and have subclasses define and use it
@@ -155,6 +161,28 @@ class BrokerManager(object):
             cluster, broker = self._find_cluster_in_org(cluster_name)
             if cluster is not None:
                 return cluster, broker
+
+        raise ClusterNotFoundError(f'cluster {cluster_name} not found '
+                                   f'either in vCD or PKS')
+
+
+    def _get_cluster_config(self, **cluster_spec):
+        """Gets the cluster configuration.
+
+        :param str cluster_name: Name of cluster.
+
+        :return Cluster config as dict.
+
+        :rtype dict
+        """
+        cluster_name = cluster_spec['cluster_name']
+        if self.is_ovdc_present_in_request:
+            broker = self.get_broker_based_on_vdc()
+            return broker.get_cluster_config(cluster_name=cluster_name)
+        else:
+            cluster, broker = self._find_cluster_in_org(cluster_name)
+            if cluster is not None:
+                return broker.get_cluster_config(cluster_name=cluster['name'])
 
         raise ClusterNotFoundError(f'cluster {cluster_name} not found '
                                    f'either in vCD or PKS')

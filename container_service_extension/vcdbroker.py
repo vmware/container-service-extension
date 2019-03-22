@@ -550,9 +550,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
         finally:
             self._disconnect_sys_admin()
 
-    @exception_handler
     def get_cluster_config(self, cluster_name):
-        result = {}
         self._connect_tenant()
         clusters = load_from_metadata(
             self.tenant_client, name=cluster_name)
@@ -561,9 +559,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
         vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
         template = self.get_template(name=clusters[0]['template'])
         server_config = get_server_runtime_config()
-        result['body'] = get_cluster_config(server_config, vapp,
+        result = get_cluster_config(server_config, vapp,
                                             template['admin_password'])
-        result['status_code'] = OK
         return result
 
     @exception_handler

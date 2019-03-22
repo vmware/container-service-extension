@@ -117,6 +117,13 @@ def cluster_group(ctx):
 \b
         vcd cse cluster config mycluster
             Display configuration information about cluster named 'mycluster'.
+
+\b
+        vcd cse cluster config mycluster --vdc myVdc
+            Display configuration information about cluster named 'mycluster'.
+            Specifying optional param --vdc lets CSE server to efficiently
+            locate and retrieve the cluster configuration.
+
 \b
         vcd cse cluster info mycluster
             Display detailed information about cluster named 'mycluster'.
@@ -380,13 +387,20 @@ def resize(ctx, name, node_count, network_name, vdc, disable_rollback):
 @click.pass_context
 @click.argument('name', required=True)
 @click.option('-s', '--save', is_flag=True)
-def config(ctx, name, save):
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    help='Name of the virtual datacenter')
+def config(ctx, name, save, vdc):
     """Display cluster configuration info."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        cluster_config = cluster.get_config(name)
+        cluster_config = cluster.get_config(name, vdc)
         if os.name == 'nt':
             cluster_config = str.replace(cluster_config, '\n', '\r\n')
         if save:
