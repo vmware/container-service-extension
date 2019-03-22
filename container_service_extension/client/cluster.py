@@ -127,6 +127,31 @@ class Cluster(object):
             accept_type='application/*+json')
         return process_response(response)
 
+    def resize_cluster(self,
+                       vdc,
+                       network_name,
+                       cluster_name,
+                       node_count=1,
+                       disable_rollback=True):
+        method = 'PUT'
+        uri = f"{self._uri}/{cluster_name}"
+        data = {
+            'name': cluster_name,
+            'node_count': node_count,
+            'node_type': TYPE_NODE,
+            'vdc': vdc,
+            'network': network_name,
+            'disable_rollback': disable_rollback
+        }
+        response = self.client._do_request_prim(
+            method,
+            uri,
+            self.client._session,
+            contents=data,
+            media_type='application/json',
+            accept_type='application/json')
+        return process_response(response)
+
     def delete_cluster(self, cluster_name, vdc):
         method = 'DELETE'
         uri = '%s/%s' % (self._uri, cluster_name)
