@@ -253,6 +253,9 @@ class BrokerManager(object):
 
         :return:
         """
+        if self.pks_cache is None:
+            return []
+
         if self.vcd_client.is_sysadmin():
             pks_acc_list = self.pks_cache.get_all_pks_accounts_in_system()
             pks_ctx_list = [OvdcCache.construct_pks_context(
