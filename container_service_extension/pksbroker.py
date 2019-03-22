@@ -167,7 +167,7 @@ class PKSBroker(AbstractBroker):
         self.pks_client = ApiClient(configuration=pks_config)
         return self.pks_client
 
-    # @add_vcd_user_context(filter_list_by_user_id=True)
+    @add_vcd_user_context(filter_list_by_user_id=True)
     def list_clusters(self):
         """Get list of clusters in PKS environment.
 
@@ -201,7 +201,7 @@ class PKSBroker(AbstractBroker):
                      f' list of clusters: {list_of_cluster_dicts}')
         return list_of_cluster_dicts
 
-    # @add_vcd_user_context(qualify_params=['cluster_name'])
+    @add_vcd_user_context(qualify_params=['cluster_name'])
     def create_cluster(self, cluster_name, node_count, pks_plan, pks_ext_host,
                        compute_profile=None, **kwargs):
         """Create cluster in PKS environment.
@@ -251,7 +251,7 @@ class PKSBroker(AbstractBroker):
                      f' cluster: {cluster_name}')
         return cluster_dict
 
-    # @add_vcd_user_context(qualify_params=['cluster_name'])
+    @add_vcd_user_context(qualify_params=['cluster_name'])
     def get_cluster_info(self, cluster_name):
         """Get the details of a cluster with a given name in PKS environment.
 
@@ -301,7 +301,7 @@ class PKSBroker(AbstractBroker):
         return cluster_config
 
 
-    # @add_vcd_user_context(qualify_params=['cluster_name'])
+    @add_vcd_user_context(qualify_params=['cluster_name'])
     def delete_cluster(self, cluster_name):
         """Delete the cluster with a given name in PKS environment.
 
@@ -323,7 +323,7 @@ class PKSBroker(AbstractBroker):
         return
 
     @exception_handler
-    # @add_vcd_user_context(qualify_params=['cluster_name'])
+    @add_vcd_user_context(qualify_params=['cluster_name'])
     def resize_cluster(self, cluster_name, node_count, **kwargs):
         """Resize the cluster of a given name to given number of worker nodes.
 
