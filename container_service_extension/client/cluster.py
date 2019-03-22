@@ -147,8 +147,8 @@ class Cluster(object):
             uri,
             self.client._session,
             contents=data,
-            media_type=None,
-            accept_type='application/*+json')
+            media_type='application/json',
+            accept_type='application/json')
         return process_response(response)
 
     def delete_cluster(self, cluster_name, vdc):

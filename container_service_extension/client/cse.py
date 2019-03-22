@@ -90,6 +90,11 @@ def cluster_group(ctx):
              range of locating the cluster to 'myOvdc' only (improves
              turnaround time of the command).
 \b
+        vcd cse cluster resize mycluster -N 10 --disable-rollback
+            Attempts to resize the cluster size to 10 worker nodes. On any
+            failure of creation of nodes, it leaves the nodes as-is in an error
+            state for admins to troubleshoot.
+\b
         vcd cse cluster delete mycluster --yes
             Attempts to delete cluster 'mycluster' without prompting.
 \b
@@ -331,7 +336,8 @@ def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
     is_flag=True,
     required=False,
     default=True,
-    help='Disable rollback for node (applicable only for vCD-powered clusters')
+    help='Disable rollback for failed node creation '
+         '(applicable only for vCD-powered clusters')
 def resize(ctx, name, node_count, network_name, vdc, disable_rollback):
     """Resize the cluster to specified worker node count.
 

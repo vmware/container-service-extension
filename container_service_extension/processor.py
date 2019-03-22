@@ -104,9 +104,8 @@ class ServiceProcessor(object):
 
         if body['method'] == 'GET':
             if ovdc_info_request:
-                on_the_fly_request_spec = {'ovdc_id': ovdc_id}
-                broker = broker_manager.get_broker_based_on_vdc(
-                    on_the_fly_request_spec)
+                req_spec.update({'ovdc_id': ovdc_id})
+                broker = broker_manager.get_broker_based_on_vdc()
                 reply = broker.ovdc_info_for_kubernetes()
 
             elif spec_request:
@@ -133,9 +132,8 @@ class ServiceProcessor(object):
                 result['status_code'] = 200
                 reply = result
             elif cluster_info_request:
-                on_the_fly_request_spec = {'cluster_name': cluster_name}
-                reply = broker_manager.invoke(Operation.GET_CLUSTER,
-                                              on_the_fly_request_spec)
+                req_spec.update({'cluster_name': cluster_name})
+                reply = broker_manager.invoke(Operation.GET_CLUSTER)
             elif node_info_request:
                 broker = broker_manager.get_broker_based_on_vdc()
                 reply = broker.get_node_info(cluster_name, node_name)
@@ -160,17 +158,15 @@ class ServiceProcessor(object):
             elif system_request:
                 reply = service.update_status(req_headers, req_spec)
             else:
-                on_the_fly_request_spec = {'cluster_name': cluster_name}
-                reply = broker_manager.invoke(Operation.RESIZE_CLUSTER,
-                                              on_the_fly_request_spec)
+                req_spec.update({'cluster_name': cluster_name})
+                reply = broker_manager.invoke(Operation.RESIZE_CLUSTER)
         elif body['method'] == 'DELETE':
             if node_request:
                 broker = broker_manager.get_broker_based_on_vdc()
                 reply = broker.delete_nodes()
             else:
-                on_the_fly_request_spec = {'cluster_name': cluster_name}
-                reply = broker_manager.invoke(Operation.DELETE_CLUSTER,
-                                              on_the_fly_request_spec)
+                req_spec.update({'cluster_name': cluster_name})
+                reply = broker_manager.invoke(Operation.DELETE_CLUSTER)
 
         LOGGER.debug('reply: %s' % str(reply))
         return reply
