@@ -40,6 +40,7 @@ class Operation(Enum):
     GET_CLUSTER = 'get cluster info'
     LIST_CLUSTERS = 'list clusters'
     RESIZE_CLUSTER = 'resize cluster'
+    LIST_OVDCS = 'list ovdcs'
     ENABLE_OVDC = 'enable ovdc'
     INFO_OVDC = 'info ovdc'
 
@@ -150,8 +151,39 @@ class BrokerManager(object):
                             }
             result['body'] = self._create_cluster(**cluster_spec)
             result['status_code'] = ACCEPTED
+        elif op == Operation.LIST_OVDCS:
+            result['body'] = self._list_ovdcs()
 
         return result
+
+    def _list_ovdcs(self):
+        """Get list of ovdcs.
+
+        If client is sysadmin,
+            Gets all ovdcs of all organizations.
+        Else
+            Gets all ovdcs of the organization in context.
+        """
+        if self.vcd_client.is_sysadmin():
+            org_resource_list = self.vcd_client.get_org_list()
+        else:
+            org_resource_list= list(self.vcd_client.get_org())
+
+        ovdc_list = []
+        for org_resource in org_resource_list:
+            org = Org(self.vcd_client, resource=org_resource)
+            vdc_list = org.list_vdcs()
+            for vdc in vdc_list:
+                ctr_prov_ctx = \
+                    self.ovdc_cache.get_ovdc_container_provider_metadata(
+                        ovdc_name=vdc['name'], org_name=org.get_name(),
+                        credentials_required=False)
+                vdc_dict = {'org':org.get_name(),
+                            'name': vdc['name'],
+                            CONTAINER_PROVIDER:ctr_prov_ctx[CONTAINER_PROVIDER]
+                            }
+                ovdc_list.append(vdc_dict)
+        return ovdc_list
 
     def _get_cluster_info(self, **cluster_spec):
         """Logic of the method is as follows.
@@ -356,8 +388,11 @@ class BrokerManager(object):
             if ctr_prov_ctx.get('container_provider') == CtrProvType.PKS.value:
                 return PKSBroker(self.req_headers, self.req_spec,
                                  pks_ctx=ctr_prov_ctx)
-            else:
+            elif ctr_prov_ctx.get('container_provider') == CtrProvType.VCD.value:
                 return VcdBroker(self.req_headers, self.req_spec)
+            else:
+                raise CseServerError(f"Vdc '{ovdc_name}' is not enabled for Kubernetes "
+                                     f"cluster deployment")
         else:
             # TODO() - This call should be based on a boolean flag
             # Specify flag in config file whether to have default

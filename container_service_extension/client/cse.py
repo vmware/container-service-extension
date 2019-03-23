@@ -758,8 +758,25 @@ def ovdc_group(ctx):
         vcd cse ovdc infok8s 'myOrgVdc' --org 'myOrg'
             Displays metadata information about 'myOrgVdc' that backs
             organization 'myOrg' of the logged-in user for k8s deployment.
+\b
+        vcd cse ovdc list
+            Displays list of ovdcs in a given org. If executed by
+            System-administrator, it will display all ovdcs from all orgs.
     """
     pass
+
+@ovdc_group.command('list', short_help='list ovdcs')
+@click.pass_context
+def list(ctx):
+    """List ovdcs in a given Org or System"""
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        ovdc = Ovdc(client)
+        result = ovdc.list()
+        stdout(result, ctx)
+    except Exception as e:
+        stderr(e, ctx)
 
 
 @ovdc_group.command('enablek8s', short_help='enable ovdc for kubernetes')

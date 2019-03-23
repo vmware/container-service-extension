@@ -299,7 +299,6 @@ class PKSBroker(AbstractBroker):
                      f' the cluster: {cluster_name}')
         return
 
-    @exception_handler
     @add_vcd_user_context(qualify_params=['cluster_name'])
     def resize_cluster(self, cluster_name, node_count, **kwargs):
         """Resize the cluster of a given name to given number of worker nodes.
