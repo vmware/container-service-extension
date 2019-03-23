@@ -17,6 +17,7 @@ from container_service_extension.utils import get_vcd_sys_admin_client
 from container_service_extension.utils import OK
 from container_service_extension.utils import ACCEPTED
 
+from collections import namedtuple
 from enum import Enum, unique
 
 from pyvcloud.vcd.org import Org
@@ -39,6 +40,8 @@ class Operation(Enum):
     GET_CLUSTER = 'get cluster info'
     LIST_CLUSTERS = 'list clusters'
     RESIZE_CLUSTER = 'resize cluster'
+    ENABLE_OVDC = 'enable ovdc'
+    INFO_OVDC = 'info ovdc'
 
 
 class BrokerManager(object):
@@ -87,8 +90,23 @@ class BrokerManager(object):
 
         self.is_ovdc_present_in_request = self.req_spec.get('vdc', None) or \
                                           self.req_qparams.get('vdc', None)
-
-        if op == Operation.GET_CLUSTER:
+        if op == Operation.INFO_OVDC:
+            ovdc_id = self.req_spec.get('ovdc_id', None)
+            # TODO() Constructing response should be moved out of this layer
+            result['body'] = self.ovdc_cache. \
+                get_ovdc_container_provider_metadata(ovdc_id=ovdc_id)
+            result['status_code'] = OK
+        elif op == Operation.ENABLE_OVDC:
+            pks_ctx, ovdc = self._get_ovdc_params()
+            if self.req_spec[CONTAINER_PROVIDER] == CtrProvType.PKS.value:
+                self._create_pks_compute_profile(pks_ctx)
+            task = self.ovdc_cache. \
+                set_ovdc_container_provider_metadata \
+                (ovdc, pks_ctx, self.req_spec[CONTAINER_PROVIDER])
+            # TODO() Constructing response should be moved out of this layer
+            result['body'] = {'task_href': task.get('href')}
+            result['status_code'] = ACCEPTED
+        elif op == Operation.GET_CLUSTER:
             cluster_spec = \
                 {'cluster_name': self.req_spec.get('cluster_name', None)}
             result['body'] = self._get_cluster_info(**cluster_spec)[0]
@@ -345,3 +363,64 @@ class BrokerManager(object):
             # Specify flag in config file whether to have default
             # handling is required for missing ovdc or org.
             return VcdBroker(self.req_headers, self.req_spec)
+
+    def _get_ovdc_params(self):
+        ovdc_id = self.req_spec.get('ovdc_id')
+        org_name = self.req_spec.get('org_name')
+        pks_plans=self.req_spec['pks_plans']
+        ovdc = self.ovdc_cache.get_ovdc(ovdc_id=ovdc_id)
+        pvdc_id = self.ovdc_cache.get_pvdc_id(ovdc)
+        pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
+        pks_info = self.pks_cache.get_pks_account_details(
+            org_name, pvdc_info.vc)
+        pks_compute_profile_name = self. \
+            ovdc_cache.get_compute_profile_name(ovdc_id,
+                                                ovdc.resource.get('name'))
+        pks_context = OvdcCache.construct_pks_context(
+            pks_info, pvdc_info, pks_compute_profile_name,
+            pks_plans, credentials_required=True)
+        return pks_context, ovdc
+
+    def _create_pks_compute_profile(self, pks_ctx):
+        ovdc_id = self.req_spec.get('ovdc_id')
+        org_name = self.req_spec.get('org_name')
+        ovdc_name = self.req_spec.get('ovdc_name')
+        # Compute profile creation
+        pks_compute_profile_name = self.\
+            ovdc_cache.get_compute_profile_name(ovdc_id, ovdc_name)
+        pks_compute_profile_description = f"{org_name}--{ovdc_name}" \
+            f"--{ovdc_id}"
+        pks_az_name = f"az-{ovdc_id}"
+        ovdc_rp_name = f"{ovdc_name} ({ovdc_id})"
+
+        compute_profile_params = PksComputeProfileParams(
+            pks_compute_profile_name, pks_az_name,
+            pks_compute_profile_description,
+            pks_ctx.get('cpi'),
+            pks_ctx.get('datacenter'),
+            pks_ctx.get('cluster'),
+            ovdc_rp_name).to_dict()
+
+        LOGGER.debug(f'Creating PKS Compute Profile with name:'
+                     f'{pks_compute_profile_name}')
+
+        pksbroker = PKSBroker(self.req_headers, self.req_spec, pks_ctx)
+        pksbroker.create_compute_profile(**compute_profile_params)
+
+
+class PksComputeProfileParams(namedtuple("PksComputeProfileParams",
+                                         'cp_name, az_name, description,'
+                                         'cpi,datacenter_name, '
+                                         'cluster_name, ovdc_rp_name')):
+    """Construct PKS ComputeProfile Parameters ."""
+
+    def __str__(self):
+        return f"class:{PksComputeProfileParams.__name__}," \
+            f" cp_name:{self.cp_name}, az_name:{self.az_name}, " \
+            f" description:{self.description}, cpi:{self.cpi}, " \
+            f" datacenter_name:{self.datacenter_name}, " \
+            f" cluster_name:{self.cluster_name}, " \
+            f" ovdc_rp_name:{self.ovdc_rp_name}"
+
+    def to_dict(self):
+        return dict(self._asdict())
