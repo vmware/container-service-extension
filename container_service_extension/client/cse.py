@@ -283,13 +283,15 @@ def delete(ctx, name, vdc):
     'pks_ext_host',
     required=False,
     default=None,
-    help='Address from which to access Kubernetes API for PKS.')
+    help='Address from which to access Kubernetes API for PKS. '
+         'Required for deploying PKS clusters. Optional otherwise.')
 @click.option(
     '--pks-plan',
     'pks_plan',
     required=False,
     default=None,
-    help='Preconfigured PKS plans to use for deploying the cluster.')
+    help='Preconfigured PKS plans to use for deploying the cluster. '
+         'Required for deploying PKS clusters. Optional otherwise.')
 def create(ctx, name, vdc, node_count, cpu, memory, network_name, storage_profile,
            ssh_key_file, template, enable_nfs, disable_rollback,
            pks_ext_host, pks_plan):
