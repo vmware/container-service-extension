@@ -106,7 +106,7 @@ class Cluster(object):
         method = 'POST'
         uri = self._uri
         data = {
-            'name': name,
+            'cluster_name': name,
             'node_count': node_count,
             'vdc': vdc,
             'cpu': cpu,

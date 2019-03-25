@@ -136,7 +136,7 @@ class BrokerManager(object):
             #  ClusterSpec either as a param (or)
             #  read from instance variable (if needed only).
             cluster_spec = {'cluster_name':
-                                self.req_spec.get('name', None),
+                                self.req_spec.get('cluster_name', None),
                             'vdc_name': self.req_spec.get('vdc', None),
                             'node_count':
                                 self.req_spec.get('node_count', None),
