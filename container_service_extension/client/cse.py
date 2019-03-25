@@ -87,6 +87,16 @@ def cluster_group(ctx):
             'mystorageprofile'. The public ssh key at '~/.ssh/id_rsa.pub' will
             be placed into all VMs for user accessibility.
 \b
+        vcd cse cluster create mycluster --pks-external-hostname api.pks.local
+        --pks-plan 'myPlan'
+            Attempts to create a Kubernetes cluster named 'mycluster'
+            with 2 worker nodes in the current VDC in use backed by PKS.
+\b
+        vcd cse cluster create mycluster --pks-external-hostname api.pks.local
+        --pks-plan 'myPlan' --vdc 'myVdc'
+            Attempts to create a Kubernetes cluster named 'mycluster'
+            with 2 worker nodes in the given VDC backed by PKS.
+\b
         vcd cse cluster config mycluster
             Display configuration information about cluster named 'mycluster'.
 \b
@@ -192,6 +202,13 @@ def delete(ctx, name, vdc):
 @click.pass_context
 @click.argument('name', required=True)
 @click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    help='Name of the virtual datacenter')
+@click.option(
     '-N',
     '--nodes',
     'node_count',
@@ -272,8 +289,8 @@ def delete(ctx, name, vdc):
     'pks_plan',
     required=False,
     default=None,
-    help='Preconfigured plans for PKS.')
-def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
+    help='Preconfigured PKS plans to use for deploying the cluster.')
+def create(ctx, name, vdc, node_count, cpu, memory, network_name, storage_profile,
            ssh_key_file, template, enable_nfs, disable_rollback,
            pks_ext_host, pks_plan):
     """Create a Kubernetes cluster."""
@@ -282,10 +299,12 @@ def create(ctx, name, node_count, cpu, memory, network_name, storage_profile,
         client = ctx.obj['client']
         cluster = Cluster(client)
         ssh_key = None
+        vdc_to_use = vdc if vdc is not None \
+            else ctx.obj['profiles'].get('vdc_in_use')
         if ssh_key_file is not None:
             ssh_key = ssh_key_file.read()
         result = cluster.create_cluster(
-            ctx.obj['profiles'].get('vdc_in_use'),
+            vdc_to_use,
             network_name,
             name,
             node_count=node_count,

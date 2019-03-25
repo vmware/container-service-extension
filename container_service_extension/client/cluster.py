@@ -101,9 +101,9 @@ class Cluster(object):
         :param disable_rollback: (bool): Flag to control weather rollback
             should be performed or not in case of errors. True to rollback,
             False to not rollback
-        :param pks_ext_host: (str): Address from which to access
-            Kubernetes API for PKS.
-        :param pks_plan: (str): Preconfigured plans for PKS.
+        :param pks_ext_host: (str): Entry point to access Kubernetes API for PKS.
+        :param pks_plan: (str): Preconfigured PKS plans to use for deploying the
+        cluster.
 
         :return: (json) A parsed json object describing the requested cluster.
         """
