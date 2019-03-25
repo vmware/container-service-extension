@@ -279,14 +279,14 @@ class PKSBroker(AbstractBroker):
 
         return cluster_dict
 
-    @exception_handler
+
     def get_cluster_config(self, cluster_name):
         """Get the configuration of the cluster with the given name in PKS.
 
         :param str cluster_name: Name of the cluster
         :return: Details of the cluster.
 
-        :rtype: dict
+        :rtype: str
         """
         cluster_api = ClusterApi(api_client=self.pks_client)
 
@@ -297,7 +297,7 @@ class PKSBroker(AbstractBroker):
 
         LOGGER.debug(f'Received response from PKS: {self.pks_host_uri} on '
                      f'cluster: {cluster_name} with details: {config}')
-        cluster_config = yaml.safe_dump(config)
+        cluster_config = yaml.safe_dump(config, default_flow_style=False)
         return cluster_config
 
 

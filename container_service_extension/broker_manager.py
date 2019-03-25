@@ -173,7 +173,7 @@ class BrokerManager(object):
 
         :return Cluster config as dict.
 
-        :rtype dict
+        :rtype str
         """
         cluster_name = cluster_spec['cluster_name']
         if self.is_ovdc_present_in_request:
