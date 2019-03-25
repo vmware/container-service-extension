@@ -188,7 +188,7 @@ class BrokerManager(object):
 
         :param str cluster_name: Name of cluster.
 
-        :return Cluster config as dict.
+        :return Cluster config.
 
         :rtype str
         """
