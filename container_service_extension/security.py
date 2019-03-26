@@ -11,8 +11,8 @@ class RedactingFilter(logging.Filter):
 
     This filter looks for certain sensitive keys and if a match is found, the
     value will be redacted. The value are expected to be strings. If they are
-    dictionaries or iterables, resulting redaction will be partial. Generally
-    the values for the sesitive key will be plain strings.
+    dictionaries or iterables, resulting redaction will be partial. Normally
+    the value for a sesitive key will be a plain string.
     """
 
     _SENSITIVE_KEYS = ['authorization',
@@ -47,8 +47,10 @@ class RedactingFilter(logging.Filter):
         #   2. Look for 0 or 1 instance of '
         #   3. Look for a colon
         #   4. Look for 1 or more instances of space
-        #   5. Look for 0 or 1 instance of '
-        #   5. Put everything that is not ', space or } in a group,
+        #   5. Look for 0 or more instances of [ or { <-- looking for starting
+        #      token for a dict or list
+        #   6. Look for 0 or 1 instance of '
+        #   7. Put everything that is not ', space or } in a group,
         #      this group must be atleast of length 1.
         self._pattern = r"((" + pattern_key + r")'?:\s+[{\[]*'?)([^',}]+)"
 
@@ -96,7 +98,7 @@ class RedactingFilter(logging.Filter):
         if isinstance(obj, dict):
             result = {}
             for k in obj.keys():
-                if k in self._SENSITIVE_KEYS:
+                if str(k).lower() in self._SENSITIVE_KEYS:
                     result[k] = self._REDACTED_MSG
                 else:
                     result[k] = self.redact(obj[k])
