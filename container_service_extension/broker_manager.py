@@ -319,14 +319,10 @@ class BrokerManager(object):
                                     cluster_property_keys):
         pks_cluster = {k: cluster.get(k, None) for k in
                        cluster_property_keys}
-        cluster_info = pks_broker. \
-            get_cluster_info(cluster_name=pks_cluster['name'])
-        # computer_profile_name has got vdc as last token
-        pks_cluster['vdc'] = cluster_info. \
-            get('compute_profile_name', '').split('--')[-1]
-        pks_cluster['status'] = cluster_info. \
-                                    get('last_action', '').lower() + ' ' + \
-                                pks_cluster.get('status', '').lower()
+        pks_cluster['vdc'] = cluster. \
+            get('compute-profile-name', '').split('--')[-1]
+        pks_cluster['status'] = cluster.get('last-action', '').lower() + \
+                                    ' ' + pks_cluster.get('status', '').lower()
         return pks_cluster
 
     def get_broker_based_on_vdc(self):

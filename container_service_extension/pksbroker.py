@@ -192,7 +192,8 @@ class PKSBroker(AbstractBroker):
                 'uuid': cluster.uuid,
                 'status': cluster.last_action_state,
                 'last-action': cluster.last_action,
-                'k8_master_ips': cluster.kubernetes_master_ips
+                'k8_master_ips': cluster.kubernetes_master_ips,
+                'compute-profile-name': cluster.compute_profile_name
             }
             list_of_cluster_dicts.append(cluster_dict)
 
