@@ -117,13 +117,16 @@ def cluster_group(ctx):
 \b
         vcd cse cluster create mycluster --pks-external-hostname api.pks.local
         --pks-plan 'myPlan'
-            Attempts to create a Kubernetes cluster named 'mycluster'
-            with 2 worker nodes in the current VDC in use backed by PKS.
+            Attempts to create a Kubernetes cluster named 'mycluster' with
+            external host name as 'api.pks.local' and available PKS-plan 'myPlan
+            using the VDC in context explicitly dedicated for PKS cluster creation.
+
 \b
         vcd cse cluster create mycluster --pks-external-hostname api.pks.local
         --pks-plan 'myPlan' --vdc 'myVdc'
-            Attempts to create a Kubernetes cluster named 'mycluster'
-            with 2 worker nodes in the given VDC backed by PKS.
+            Attempts to create a Kubernetes cluster named 'mycluster' with
+            external host name as 'api.pks.local' and available PKS-plan 'myPlan
+            in the given VDC dedicated explicitly for PKS cluster creation.
 \b
         vcd cse cluster config mycluster
             Display configuration information about cluster named 'mycluster'.
