@@ -113,7 +113,7 @@ class RedactingFilter(logging.Filter):
 
 
 def _test_redaction_filter():
-    logger = logging.getLogger("a.b.c")
+    logger = logging.getLogger("random1.2.3")
     logger.addFilter(RedactingFilter())
     logger.setLevel(logging.DEBUG)
     logger.addHandler(logging.FileHandler('test.log'))

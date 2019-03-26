@@ -133,10 +133,11 @@ class OvdcCache(object):
         ovdc_name = ovdc.resource.get('name')
         metadata = {}
         if container_provider != CtrProvType.PKS.value:
-            LOGGER.debug(f"Remove metadata for ovdc:{ovdc_name}")
+            LOGGER.debug(f"Remove existing metadata for ovdc:{ovdc_name}")
             self._remove_metadata(ovdc, self.pks_cache.get_pks_keys())
             metadata[CONTAINER_PROVIDER] = container_provider or ''
-            LOGGER.debug(f'metadata for{container_provider}:{metadata}')
+            LOGGER.debug(f"Updated metadata for {container_provider}:"
+                         f"{metadata}")
         else:
             container_prov_data.pop('username')
             container_prov_data.pop('secret')
@@ -144,7 +145,7 @@ class OvdcCache(object):
             metadata.update(container_prov_data)
 
         # set ovdc metadata into Vcd
-        LOGGER.debug(f"Setting below metadata on ovdc {ovdc_name}:{metadata}")
+        LOGGER.debug(f"On ovdc:{ovdc_name}, setting metadata:{metadata}")
         return ovdc.set_multiple_metadata(metadata, MetadataDomain.SYSTEM,
                                           MetadataVisibility.PRIVATE)
 
@@ -185,9 +186,3 @@ class OvdcCache(object):
 
     def get_compute_profile_name(self, ovdc_id, ovdc_name):
         return f"cp--{ovdc_id}--{ovdc_name}"
-
-
-
-
-
-

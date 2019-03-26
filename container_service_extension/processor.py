@@ -3,10 +3,10 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import base64
+from copy import deepcopy
 import json
 import sys
 import traceback
-from copy import deepcopy
 from urllib.parse import parse_qsl
 
 from pkg_resources import resource_string
@@ -25,7 +25,7 @@ INTERNAL_SERVER_ERROR = 500
 
 class ServiceProcessor(object):
     def process_request(self, body):
-        LOGGER.debug('body: %s' % json.dumps(body))
+        LOGGER.debug(f"body: {json.dumps(body)}")
         reply = {}
         tokens = body['requestUri'].split('/')
         cluster_name = None
@@ -82,7 +82,7 @@ class ServiceProcessor(object):
                 request_body = {}
         else:
             request_body = {}
-        LOGGER.debug('request body: %s' % json.dumps(request_body))
+        LOGGER.debug(f"request body: {json.dumps(request_body)}")
 
         query_params = {}
         if body['queryString']:
@@ -165,7 +165,7 @@ class ServiceProcessor(object):
                 req_spec.update({'cluster_name': cluster_name})
                 reply = broker_manager.invoke(Operation.DELETE_CLUSTER)
 
-        LOGGER.debug('reply: %s' % str(reply))
+        LOGGER.debug(f"reply: {str(reply)}")
         return reply
 
     def get_spec(self, format):

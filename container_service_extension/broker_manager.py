@@ -2,7 +2,12 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.vcdbroker import VcdBroker
+from collections import namedtuple
+from enum import Enum
+from enum import unique
+
+from pyvcloud.vcd.org import Org
+
 from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
@@ -10,17 +15,13 @@ from container_service_extension.ovdc_cache import CONTAINER_PROVIDER
 from container_service_extension.ovdc_cache import CtrProvType
 from container_service_extension.ovdc_cache import OvdcCache
 from container_service_extension.pksbroker import PKSBroker
+from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import connect_vcd_user_via_token
 from container_service_extension.utils import exception_handler
 from container_service_extension.utils import get_server_runtime_config
 from container_service_extension.utils import get_vcd_sys_admin_client
 from container_service_extension.utils import OK
-from container_service_extension.utils import ACCEPTED
-
-from collections import namedtuple
-from enum import Enum, unique
-
-from pyvcloud.vcd.org import Org
+from container_service_extension.vcdbroker import VcdBroker
 
 # TODO(Constants)
 #  1. Scan and classify all broker-related constants in server code into
@@ -51,6 +52,7 @@ class BrokerManager(object):
     Pre-processing of requests to brokers
     Post-processing of results from brokers.
     """
+
     def __init__(self, request_headers, request_query_params, request_spec):
         self.req_headers = request_headers
         self.req_qparams = request_query_params
@@ -65,11 +67,11 @@ class BrokerManager(object):
             headers=self.req_headers,
             verify_ssl_certs=config['vcd']['verify'])
 
-
     @exception_handler
     def invoke(self, op):
-        """Invoke right broker(s) to perform the operation requested and do
-        further (pre/post)processing on the request/result(s) if required.
+        """Invoke right broker(s) to perform the operation requested.
+
+        Might result in further (pre/post)processing on the request/result(s).
 
         Depending on the operation requested, this method may do one or more
         of below mentioned points.
@@ -89,7 +91,7 @@ class BrokerManager(object):
         result['status_code'] = OK
 
         self.is_ovdc_present_in_request = self.req_spec.get('vdc', None) or \
-                                          self.req_qparams.get('vdc', None)
+            self.req_qparams.get('vdc', None)
         if op == Operation.INFO_OVDC:
             ovdc_id = self.req_spec.get('ovdc_id', None)
             # TODO() Constructing response should be moved out of this layer
@@ -101,8 +103,8 @@ class BrokerManager(object):
             if self.req_spec[CONTAINER_PROVIDER] == CtrProvType.PKS.value:
                 self._create_pks_compute_profile(pks_ctx)
             task = self.ovdc_cache. \
-                set_ovdc_container_provider_metadata \
-                (ovdc, pks_ctx, self.req_spec[CONTAINER_PROVIDER])
+                set_ovdc_container_provider_metadata(
+                    ovdc, pks_ctx, self.req_spec[CONTAINER_PROVIDER])
             # TODO() Constructing response should be moved out of this layer
             result['body'] = {'task_href': task.get('href')}
             result['status_code'] = ACCEPTED
@@ -135,19 +137,16 @@ class BrokerManager(object):
             #  Method 'Create_cluster' in VcdBroker and PksBroker should take
             #  ClusterSpec either as a param (or)
             #  read from instance variable (if needed only).
-            cluster_spec = {'cluster_name':
-                                self.req_spec.get('cluster_name', None),
-                            'vdc_name': self.req_spec.get('vdc', None),
-                            'node_count':
-                                self.req_spec.get('node_count', None),
-                            'storage_profile':
-                                self.req_spec.get('storage_profile', None),
-                            'network_name': self.req_spec.get('network', None),
-                            'template': self.req_spec.get('template', None),
-                            'pks_plan': self.req_spec.get('pks_plan', None),
-                            'pks_ext_host':
-                                self.req_spec.get('pks_ext_host', None)
-                            }
+            cluster_spec = {
+                'cluster_name': self.req_spec.get('cluster_name', None),
+                'vdc_name': self.req_spec.get('vdc', None),
+                'node_count': self.req_spec.get('node_count', None),
+                'storage_profile': self.req_spec.get('storage_profile', None),
+                'network_name': self.req_spec.get('network', None),
+                'template': self.req_spec.get('template', None),
+                'pks_plan': self.req_spec.get('pks_plan', None),
+                'pks_ext_host': self.req_spec.get('pks_ext_host', None)
+            }
             result['body'] = self._create_cluster(**cluster_spec)
             result['status_code'] = ACCEPTED
 
@@ -178,7 +177,7 @@ class BrokerManager(object):
                                    f'either in vCD or PKS')
 
     def _list_clusters(self):
-        """Logic of the method is as follows,
+        """Logic of the method is as follows.
 
         If 'ovdc' is present in the body,
             choose the right broker (by identifying the container_provider
@@ -253,7 +252,7 @@ class BrokerManager(object):
             pksbroker = PKSBroker(self.req_headers, self.req_spec, pks_ctx)
             try:
                 return pksbroker.get_cluster_info(cluster_name=cluster_name),\
-                       pksbroker
+                    pksbroker
             except Exception as err:
                 LOGGER.debug(f"Get cluster info on {cluster_name} failed "
                              f"on {pks_ctx['host']} with error: {err}")
@@ -283,8 +282,8 @@ class BrokerManager(object):
 
         if self.pks_cache.are_svc_accounts_per_org_per_vc():
             pks_acc_list = \
-                self.pks_cache.get_all_pks_accounts_per_org_per_vc_in_org\
-                    (self.session.get('org'))
+                self.pks_cache.get_all_pks_accounts_per_org_per_vc_in_org(
+                    self.session.get('org'))
             pks_ctx_list = [OvdcCache.construct_pks_context
                             (pks_account, credentials_required=True)
                             for pks_account in pks_acc_list]
@@ -294,16 +293,13 @@ class BrokerManager(object):
         return pks_ctx_list
 
     def _get_all_pks_accounts_per_vc_in_org(self):
-        """Get a set of PKS accounts in a given Org
-        based on 'vc' as a key.
-        """
-
+        """Get a set of PKS accounts in a given Org based on 'vc' as a key."""
         org_resource = self.vcd_client.get_org()
         org = Org(self.vcd_client, resource=org_resource)
         vdc_list = org.list_vdcs()
 
         # Constructing dict instead of list to avoid duplicates
-        # TODO figure out a way to add dicts to sets directly
+        # TODO() figure out a way to add dicts to sets directly
         pks_ctx_dict = {}
         for vdc in vdc_list:
             ctr_prov_ctx = \
@@ -311,7 +307,7 @@ class BrokerManager(object):
                     ovdc_name=vdc['name'], org_name=org.get_name(),
                     credentials_required=True)
             if ctr_prov_ctx[CONTAINER_PROVIDER] == CtrProvType.PKS.value:
-                pks_ctx_dict[ctr_prov_ctx['vc']]=ctr_prov_ctx
+                pks_ctx_dict[ctr_prov_ctx['vc']] = ctr_prov_ctx
 
         return pks_ctx_dict.values()
 
@@ -324,9 +320,9 @@ class BrokerManager(object):
         # computer_profile_name has got vdc as last token
         pks_cluster['vdc'] = cluster_info. \
             get('compute_profile_name', '').split('--')[-1]
-        pks_cluster['status'] = cluster_info. \
-                                    get('last_action', '').lower() + ' ' + \
-                                pks_cluster.get('status', '').lower()
+        pks_cluster['status'] = \
+            cluster_info.get('last_action', '').lower() + ' ' + \
+            pks_cluster.get('status', '').lower()
         return pks_cluster
 
     def get_broker_based_on_vdc(self):
@@ -337,7 +333,7 @@ class BrokerManager(object):
         :rtype: container_service_extension.abstract_broker.AbstractBroker
         """
         ovdc_name = self.req_spec.get('vdc', None) or \
-                    self.req_qparams.get('vdc', None)
+            self.req_qparams.get('vdc', None)
         org_name = self.session.get('org')
         LOGGER.debug(f"org_name={org_name};vdc_name=\'{ovdc_name}\'")
 
@@ -349,8 +345,8 @@ class BrokerManager(object):
         if ovdc_name and org_name:
             ctr_prov_ctx = \
                 self.ovdc_cache.get_ovdc_container_provider_metadata(
-                ovdc_name=ovdc_name, org_name=org_name,
-                credentials_required=True)
+                    ovdc_name=ovdc_name, org_name=org_name,
+                    credentials_required=True)
             LOGGER.debug(
                 f"ovdc metadata for {ovdc_name}-{org_name}=>{ctr_prov_ctx}")
             if ctr_prov_ctx.get('container_provider') == CtrProvType.PKS.value:
@@ -367,7 +363,7 @@ class BrokerManager(object):
     def _get_ovdc_params(self):
         ovdc_id = self.req_spec.get('ovdc_id')
         org_name = self.req_spec.get('org_name')
-        pks_plans=self.req_spec['pks_plans']
+        pks_plans = self.req_spec['pks_plans']
         ovdc = self.ovdc_cache.get_ovdc(ovdc_id=ovdc_id)
         pvdc_id = self.ovdc_cache.get_pvdc_id(ovdc)
         pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
@@ -401,8 +397,8 @@ class BrokerManager(object):
             pks_ctx.get('cluster'),
             ovdc_rp_name).to_dict()
 
-        LOGGER.debug(f'Creating PKS Compute Profile with name:'
-                     f'{pks_compute_profile_name}')
+        LOGGER.debug(f"Creating PKS Compute Profile with name:"
+                     f"{pks_compute_profile_name}")
 
         pksbroker = PKSBroker(self.req_headers, self.req_spec, pks_ctx)
         pksbroker.create_compute_profile(**compute_profile_params)

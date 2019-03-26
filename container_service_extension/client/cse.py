@@ -17,8 +17,6 @@ import yaml
 from container_service_extension.client.cluster import Cluster
 from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.system import System
-# TODO()
-# from container_service_extension.logger import configure_client_logger
 from container_service_extension.service import Service
 
 
@@ -33,8 +31,6 @@ def cse(ctx):
             Display CSE version. If CSE version is displayed, then vcd-cli has
             been properly configured to run CSE commands.
     """
-    # TODO() client logging is set up, but need to write log statements
-    # configure_client_logger()
 
 
 @cse.command(short_help='show version')
@@ -376,6 +372,7 @@ def resize(ctx, name, node_count, network_name, vdc, disable_rollback):
     except Exception as e:
         stderr(e, ctx)
 
+
 @cluster_group.command(short_help='get cluster config')
 @click.pass_context
 @click.argument('name', required=True)
@@ -569,6 +566,7 @@ def create_node(ctx, name, node_count, cpu, memory, network_name,
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
+
 
 @node_group.command('list', short_help='list nodes')
 @click.pass_context
