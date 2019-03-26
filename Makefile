@@ -12,7 +12,7 @@
 #   OFFICIALKEY:     will be "1" for offical builds
 #
 
-# Build target for go-build and default targer
+# Build target for go-build and default target
 .PHONY: container-service-extension
 container-service-extension: build
 
@@ -75,19 +75,19 @@ docker-run: build
 #
 
 .PHONY: check
-check: .server-checkstyle .client-checkstyle .tests-checkstyle
+check: .server-check-style .client-check-style .tests-check-style
 
-.server-checkstyle: container_service_extension/*.py
+.server-check-style: container_service_extension/*.py
 	yapf -i $+
 	flake8 $+
 	touch $@
 
-.client-checkstyle: container_service_extension/client/*.py
+.client-check-style: container_service_extension/client/*.py
 	yapf -i $+
 	flake8 $+
 	touch $@
 
-.tests-checkstyle: tests/*.py
+.tests-check-style: tests/*.py
 	yapf -i $+
 	flake8 $+
 	touch $@

@@ -109,13 +109,16 @@ def cli(ctx):
     hidden=True)
 def version(ctx, local):
     """Show CSE version."""
+
+    ver_obj = None
     if local:
         try:
             from container_service_extension.version import __version__
             ver_obj = __version__
         except ImportError:
-            ver_obj = {}
-    else:
+            pass
+
+    if ver_obj is None:
         ver_obj = Service.version()
 
     ver_str = '%s, %s, version %s' % (
