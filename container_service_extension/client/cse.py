@@ -62,6 +62,9 @@ def cluster_group(ctx):
         vcd cse cluster list
             Displays clusters in vCD that are visible to your user status.
 \b
+        vcd cse cluster list -vdc myOvdc
+            Displays clusters residing in vdc 'myOvdc'.
+\b
         vcd cse cluster delete mycluster --yes
             Attempts to delete cluster 'mycluster' without prompting.
 \b
@@ -87,6 +90,31 @@ def cluster_group(ctx):
             'mystorageprofile'. The public ssh key at '~/.ssh/id_rsa.pub' will
             be placed into all VMs for user accessibility.
 \b
+        vcd cse cluster resize mycluster -N 10 --network mynetwork
+            Attempts to resize the cluster size to 10 worker nodes. The Option
+             "--network" is mandatory if the cluster is vCD-powered and
+             it is optional if the cluster is PKS-powered.
+\b
+        vcd cse cluster resize mycluster -N 10 --vcd myovdc
+            Attempts to resize the cluster size to 10 worker nodes. Specifying
+             optional param --vdc forces CSE server to narrow down the search
+             range of locating the cluster to 'myOvdc' only (improves
+             turnaround time of the command).
+\b
+        vcd cse cluster resize mycluster -N 10 --disable-rollback
+            Attempts to resize the cluster size to 10 worker nodes. On any
+            failure of creation of nodes, it leaves the nodes as-is in an error
+            state for admins to troubleshoot.
+\b
+        vcd cse cluster delete mycluster --yes
+            Attempts to delete cluster 'mycluster' without prompting.
+\b
+        vcd cse cluster delete mycluster -vdc myOvdc
+            Deletes cluster residing in vdc 'myOvdc'. Specifying optional param
+             --vdc forces CSE server to narrow down the search range of
+             locating the cluster to 'myOvdc' only. (improves turnaround time
+             of the command).
+\b
         vcd cse cluster create mycluster --pks-external-hostname api.pks.local
         --pks-plan 'myPlan'
             Attempts to create a Kubernetes cluster named 'mycluster'
@@ -106,7 +134,8 @@ def cluster_group(ctx):
         vcd cse cluster info mycluster --vdc myOvdc
             Display detailed information on cluster 'mycluster', which is
             residing in vdc 'myOvdc'. Specifying optional param --vdc
-            lets CSE server to efficiently locate the cluster.
+            forces CSE server to narrow down the search range of locating the
+            cluster to 'myOvdc' only. (improves turnaround time of the command)
     """
     pass
 
@@ -150,13 +179,20 @@ def list_templates(ctx):
 
 @cluster_group.command('list', short_help='list clusters')
 @click.pass_context
-def list_clusters(ctx):
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    help='Name of the virtual datacenter')
+def list_clusters(ctx, vdc):
     """Display list of Kubernetes clusters."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        result = cluster.get_clusters()
+        result = cluster.get_clusters(vdc)
         stdout(result, ctx, show_id=True)
     except Exception as e:
         stderr(e, ctx)
@@ -323,6 +359,60 @@ def create(ctx, name, vdc, node_count, cpu, memory, network_name, storage_profil
     except Exception as e:
         stderr(e, ctx)
 
+
+@cluster_group.command(short_help='resize cluster')
+@click.pass_context
+@click.argument('name', required=True)
+@click.option(
+    '-N',
+    '--nodes',
+    'node_count',
+    required=False,
+    default=1,
+    type=click.INT,
+    help='New size of the cluster (or) new worker node count of the cluster')
+@click.option(
+    '-n',
+    '--network',
+    'network_name',
+    default=None,
+    required=False,
+    help='Network name (mandatory for vCD-powered clusters; '
+         'optional for PKS-powered clusters')
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    help='Name of the virtual datacenter')
+@click.option(
+    '--disable-rollback',
+    'disable_rollback',
+    is_flag=True,
+    required=False,
+    default=True,
+    help='Disable rollback for failed node creation '
+         '(applicable only for vCD-powered clusters')
+def resize(ctx, name, node_count, network_name, vdc, disable_rollback):
+    """Resize the cluster to specified worker node count.
+
+    Automatic scale down is not supported on vCD powered Kubernetes clusters.
+    Use 'vcd cse node delete' command to do so.
+    """
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        cluster = Cluster(client)
+        result = cluster.resize_cluster(
+            vdc=ctx.obj['profiles'].get('vdc_in_use') if vdc is None else vdc,
+            network_name=network_name,
+            cluster_name=name,
+            node_count=node_count,
+            disable_rollback=disable_rollback)
+        stdout(result, ctx)
+    except Exception as e:
+        stderr(e, ctx)
 
 @cluster_group.command(short_help='get cluster config')
 @click.pass_context
@@ -517,7 +607,6 @@ def create_node(ctx, name, node_count, cpu, memory, network_name,
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
-
 
 @node_group.command('list', short_help='list nodes')
 @click.pass_context
