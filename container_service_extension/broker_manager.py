@@ -337,11 +337,9 @@ class BrokerManager(object):
         org_name = self.session.get('org')
         LOGGER.debug(f"org_name={org_name};vdc_name=\'{ovdc_name}\'")
 
-        """
-        Get the ovdc metadata from the logged-in org and ovdc.
-        Create the right broker based on value of 'container_provider'.
-        Fall back to DefaultBroker for missing ovdc or org.
-        """
+        # Get the ovdc metadata from the logged-in org and ovdc.
+        # Create the right broker based on value of 'container_provider'.
+        # Fall back to DefaultBroker for missing ovdc or org.
         if ovdc_name and org_name:
             ctr_prov_ctx = \
                 self.ovdc_cache.get_ovdc_container_provider_metadata(

@@ -198,6 +198,18 @@ def _test_redaction_filter():
     msg = base_str + str(dikt1) + "," + str(dikt2)
     logger.debug(msg)
 
+    # Case 11 : Real world example
+    # note : the secret is invalid but has the correct format
+    msg = "ovdc metadata for cse-org-vdc-cse-org=>{'pks_plans': ['Plan 1'], " \
+        "'host': 'api.pks.local', 'account_name': 'cse-org-service-account', "\
+        "'uaac_port': '8443', 'cluster': 'kubo-az-1', 'datacenter': " \
+        "'kubo-dc', 'pks_compute_profile_name': 'cp--c1f22cc3-6238-40ec-925" \
+        "2-4162b7c5f1f8--cse-org-vdc', 'proxy': '10.161.67.157', 'port': " \
+        "'9021', 'vc': 'vc1', 'cpi': 'b0f29ab638499e84db21', 'pvdc_name': " \
+        "'vc1-TestbedCluster-20:37:43', 'username': 'admin', 'secret': " \
+        "'S2syTXN6T2JTaV9EbkhzbmdRZVZJemVBaG9lMTFrMnU=', " \
+        "'container_provider': 'pks'}"
+    logger.debug(msg)
 
 if __name__ == "__main__":
     _test_redaction_filter()
