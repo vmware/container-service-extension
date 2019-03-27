@@ -2,7 +2,12 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.vcdbroker import VcdBroker
+from collections import namedtuple
+from enum import Enum
+from enum import unique
+
+from pyvcloud.vcd.org import Org
+
 from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
@@ -10,17 +15,14 @@ from container_service_extension.ovdc_cache import CONTAINER_PROVIDER
 from container_service_extension.ovdc_cache import CtrProvType
 from container_service_extension.ovdc_cache import OvdcCache
 from container_service_extension.pksbroker import PKSBroker
+from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import connect_vcd_user_via_token
 from container_service_extension.utils import exception_handler
 from container_service_extension.utils import get_server_runtime_config
 from container_service_extension.utils import get_vcd_sys_admin_client
 from container_service_extension.utils import OK
-from container_service_extension.utils import ACCEPTED
+from container_service_extension.vcdbroker import VcdBroker
 
-from collections import namedtuple
-from enum import Enum, unique
-
-from pyvcloud.vcd.org import Org
 
 # TODO(Constants)
 #  1. Scan and classify all broker-related constants in server code into
@@ -52,6 +54,7 @@ class BrokerManager(object):
     Pre-processing of requests to brokers
     Post-processing of results from brokers.
     """
+
     def __init__(self, request_headers, request_query_params, request_spec):
         self.req_headers = request_headers
         self.req_qparams = request_query_params
@@ -66,11 +69,11 @@ class BrokerManager(object):
             headers=self.req_headers,
             verify_ssl_certs=config['vcd']['verify'])
 
-
     @exception_handler
     def invoke(self, op):
         """Invoke right broker(s) to perform the operation requested and do
         further (pre/post)processing on the request/result(s) if required.
+
 
         Depending on the operation requested, this method may do one or more
         of below mentioned points.
@@ -351,14 +354,10 @@ class BrokerManager(object):
                                     cluster_property_keys):
         pks_cluster = {k: cluster.get(k, None) for k in
                        cluster_property_keys}
-        cluster_info = pks_broker. \
-            get_cluster_info(cluster_name=pks_cluster['name'])
-        # computer_profile_name has got vdc as last token
-        pks_cluster['vdc'] = cluster_info. \
-            get('compute_profile_name', '').split('--')[-1]
-        pks_cluster['status'] = cluster_info. \
-                                    get('last_action', '').lower() + ' ' + \
-                                pks_cluster.get('status', '').lower()
+        pks_cluster['vdc'] = cluster. \
+            get('compute-profile-name', '').split('--')[-1]
+        pks_cluster['status'] = cluster.get('last-action', '').lower() + \
+                                    ' ' + pks_cluster.get('status', '').lower()
         return pks_cluster
 
     def get_broker_based_on_vdc(self):
