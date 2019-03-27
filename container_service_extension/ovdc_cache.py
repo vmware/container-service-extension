@@ -25,6 +25,7 @@ from container_service_extension.utils import get_vdc
 class CtrProvType(Enum):
     VCD = 'vcd'
     PKS = 'pks'
+    NONE = 'none'
 
 
 CONTAINER_PROVIDER = 'container_provider'
@@ -95,7 +96,7 @@ class OvdcCache(object):
         all_metadata = utils.metadata_to_dict(ovdc.get_all_metadata())
 
         if CONTAINER_PROVIDER not in all_metadata:
-            container_provider = None
+            container_provider = CtrProvType.NONE.value
         else:
             container_provider = \
                 all_metadata[CONTAINER_PROVIDER]

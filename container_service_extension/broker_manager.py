@@ -2,7 +2,12 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.vcdbroker import VcdBroker
+from collections import namedtuple
+from enum import Enum
+from enum import unique
+
+from pyvcloud.vcd.org import Org
+
 from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
@@ -10,17 +15,14 @@ from container_service_extension.ovdc_cache import CONTAINER_PROVIDER
 from container_service_extension.ovdc_cache import CtrProvType
 from container_service_extension.ovdc_cache import OvdcCache
 from container_service_extension.pksbroker import PKSBroker
+from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import connect_vcd_user_via_token
 from container_service_extension.utils import exception_handler
 from container_service_extension.utils import get_server_runtime_config
 from container_service_extension.utils import get_vcd_sys_admin_client
 from container_service_extension.utils import OK
-from container_service_extension.utils import ACCEPTED
+from container_service_extension.vcdbroker import VcdBroker
 
-from collections import namedtuple
-from enum import Enum, unique
-
-from pyvcloud.vcd.org import Org
 
 # TODO(Constants)
 #  1. Scan and classify all broker-related constants in server code into
@@ -40,6 +42,7 @@ class Operation(Enum):
     GET_CLUSTER = 'get cluster info'
     LIST_CLUSTERS = 'list clusters'
     RESIZE_CLUSTER = 'resize cluster'
+    LIST_OVDCS = 'list ovdcs'
     ENABLE_OVDC = 'enable ovdc'
     INFO_OVDC = 'info ovdc'
 
@@ -51,6 +54,7 @@ class BrokerManager(object):
     Pre-processing of requests to brokers
     Post-processing of results from brokers.
     """
+
     def __init__(self, request_headers, request_query_params, request_spec):
         self.req_headers = request_headers
         self.req_qparams = request_query_params
@@ -65,11 +69,11 @@ class BrokerManager(object):
             headers=self.req_headers,
             verify_ssl_certs=config['vcd']['verify'])
 
-
     @exception_handler
     def invoke(self, op):
         """Invoke right broker(s) to perform the operation requested and do
         further (pre/post)processing on the request/result(s) if required.
+
 
         Depending on the operation requested, this method may do one or more
         of below mentioned points.
@@ -150,8 +154,39 @@ class BrokerManager(object):
                             }
             result['body'] = self._create_cluster(**cluster_spec)
             result['status_code'] = ACCEPTED
+        elif op == Operation.LIST_OVDCS:
+            result['body'] = self._list_ovdcs()
 
         return result
+
+    def _list_ovdcs(self):
+        """Get list of ovdcs.
+
+        If client is sysadmin,
+            Gets all ovdcs of all organizations.
+        Else
+            Gets all ovdcs of the organization in context.
+        """
+        if self.vcd_client.is_sysadmin():
+            org_resource_list = self.vcd_client.get_org_list()
+        else:
+            org_resource_list= list(self.vcd_client.get_org())
+
+        ovdc_list = []
+        for org_resource in org_resource_list:
+            org = Org(self.vcd_client, resource=org_resource)
+            vdc_list = org.list_vdcs()
+            for vdc in vdc_list:
+                ctr_prov_ctx = \
+                    self.ovdc_cache.get_ovdc_container_provider_metadata(
+                        ovdc_name=vdc['name'], org_name=org.get_name(),
+                        credentials_required=False)
+                vdc_dict = {'org':org.get_name(),
+                            'name': vdc['name'],
+                            CONTAINER_PROVIDER:ctr_prov_ctx[CONTAINER_PROVIDER]
+                            }
+                ovdc_list.append(vdc_dict)
+        return ovdc_list
 
     def _get_cluster_info(self, **cluster_spec):
         """Logic of the method is as follows.
@@ -352,8 +387,11 @@ class BrokerManager(object):
             if ctr_prov_ctx.get('container_provider') == CtrProvType.PKS.value:
                 return PKSBroker(self.req_headers, self.req_spec,
                                  pks_ctx=ctr_prov_ctx)
-            else:
+            elif ctr_prov_ctx.get('container_provider') == CtrProvType.VCD.value:
                 return VcdBroker(self.req_headers, self.req_spec)
+            else:
+                raise CseServerError(f"Vdc '{ovdc_name}' is not enabled for Kubernetes "
+                                     f"cluster deployment")
         else:
             # TODO() - This call should be based on a boolean flag
             # Specify flag in config file whether to have default

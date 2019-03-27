@@ -13,6 +13,18 @@ class Ovdc(object):
         self.client = client
         self._uri = self.client.get_api_uri() + '/cse'
 
+    def list(self):
+        method = 'GET'
+        uri = f'{self._uri}/ovdc'
+        response = self.client._do_request_prim(
+            method,
+            uri,
+            self.client._session,
+            contents=None,
+            media_type=None,
+            accept_type='application/json')
+        return process_response(response)
+
     def enable_ovdc_for_k8s(self,
                             ovdc_name,
                             container_provider=None,
