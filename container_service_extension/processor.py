@@ -106,6 +106,8 @@ class ServiceProcessor(object):
             if ovdc_info_request:
                 req_spec.update({'ovdc_id': ovdc_id})
                 reply = broker_manager.invoke(Operation.INFO_OVDC)
+            elif ovdc_request:
+                reply = broker_manager.invoke(op=Operation.LIST_OVDCS)
             elif spec_request:
                 reply = self.get_spec(tokens[3])
             elif config_request:
