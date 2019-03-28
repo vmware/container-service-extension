@@ -291,13 +291,13 @@ class PKSBroker(AbstractBroker):
         """
         cluster_api = ClusterApi(api_client=self.pks_client)
 
-        LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to get'
-                     f' detailed configuration of cluster with name: '
-                     f'{cluster_name}')
+        LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to get"
+                     f" detailed configuration of cluster with name: "
+                     f"{cluster_name}")
         config = cluster_api.create_user(cluster_name=cluster_name)
 
-        LOGGER.debug(f'Received response from PKS: {self.pks_host_uri} on '
-                     f'cluster: {cluster_name} with details: {config}')
+        LOGGER.debug(f"Received response from PKS: {self.pks_host_uri} on "
+                     f"cluster: {cluster_name} with details: {config}")
         cluster_config = yaml.safe_dump(config, default_flow_style=False)
         return cluster_config
 
