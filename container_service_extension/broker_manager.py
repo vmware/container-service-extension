@@ -8,21 +8,20 @@ from enum import unique
 
 from pyvcloud.vcd.org import Org
 
-
-from container_service_extension.vcdbroker import VcdBroker
 from container_service_extension.exceptions import ClusterNotFoundError
+from container_service_extension.vcdbroker import VcdBroker
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.ovdc_cache import CONTAINER_PROVIDER
 from container_service_extension.ovdc_cache import CtrProvType
 from container_service_extension.ovdc_cache import OvdcCache
 from container_service_extension.pksbroker import PKSBroker
+from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import connect_vcd_user_via_token
 from container_service_extension.utils import exception_handler
 from container_service_extension.utils import get_server_runtime_config
 from container_service_extension.utils import get_vcd_sys_admin_client
 from container_service_extension.utils import OK
-from container_service_extension.utils import ACCEPTED
 
 
 # TODO(Constants)
@@ -68,7 +67,6 @@ class BrokerManager(object):
             vcd_uri=config['vcd']['host'],
             headers=self.req_headers,
             verify_ssl_certs=config['vcd']['verify'])
-
 
     @exception_handler
     def invoke(self, op):
@@ -185,7 +183,6 @@ class BrokerManager(object):
 
         raise ClusterNotFoundError(f'cluster {cluster_name} not found '
                                    f'either in vCD or PKS')
-
 
     def _get_cluster_config(self, **cluster_spec):
         """Gets the cluster configuration.
