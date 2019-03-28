@@ -5,6 +5,7 @@
 from collections import namedtuple
 from enum import Enum
 from enum import unique
+from http import HTTPStatus
 
 from pyvcloud.vcd.org import Org
 
@@ -466,7 +467,14 @@ class BrokerManager(object):
                      f"{pks_compute_profile_name}")
 
         pksbroker = PKSBroker(self.req_headers, self.req_spec, pks_ctx)
-        pksbroker.create_compute_profile(**compute_profile_params)
+        try:
+            pksbroker.create_compute_profile(**compute_profile_params)
+        except Exception as ex:
+            if ex.status == HTTPStatus.CONFLICT.value:
+                LOGGER.debug(f"Compute profile name {pks_compute_profile_name}"
+                             f" already exists\n{str(ex)}")
+            else:
+                raise ex
 
 
 class PksComputeProfileParams(namedtuple("PksComputeProfileParams",
