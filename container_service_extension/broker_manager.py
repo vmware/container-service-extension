@@ -2,6 +2,13 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from collections import namedtuple
+from enum import Enum
+from enum import unique
+
+from pyvcloud.vcd.org import Org
+
+
 from container_service_extension.vcdbroker import VcdBroker
 from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseServerError
@@ -17,9 +24,6 @@ from container_service_extension.utils import get_vcd_sys_admin_client
 from container_service_extension.utils import OK
 from container_service_extension.utils import ACCEPTED
 
-from enum import Enum, unique
-
-from pyvcloud.vcd.org import Org
 
 # TODO(Constants)
 #  1. Scan and classify all broker-related constants in server code into
@@ -413,7 +417,7 @@ class BrokerManager(object):
             ovdc_cache.get_compute_profile_name(ovdc_id, ovdc_name)
         pks_compute_profile_description = f"{org_name}--{ovdc_name}" \
             f"--{ovdc_id}"
-        pks_az_name = f"az-{ovdc_id}"
+        pks_az_name = f"az-{ovdc_name}"
         ovdc_rp_name = f"{ovdc_name} ({ovdc_id})"
 
         compute_profile_params = PksComputeProfileParams(

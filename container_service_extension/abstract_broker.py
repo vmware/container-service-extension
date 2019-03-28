@@ -52,7 +52,8 @@ class AbstractBroker(abc.ABC):
         """Get the configuration for the cluster.
 
         :param: str cluster_name: Name of the cluster.
-        :return: response object
+
+        :return: Configuration of cluster
 
         :rtype: dict
 

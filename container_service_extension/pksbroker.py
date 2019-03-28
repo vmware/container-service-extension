@@ -285,15 +285,15 @@ class PKSBroker(AbstractBroker):
         """Get the configuration of the cluster with the given name in PKS.
 
         :param str cluster_name: Name of the cluster
-        :return: Details of the cluster.
+        :return: Configuration of the cluster.
 
         :rtype: str
         """
         cluster_api = ClusterApi(api_client=self.pks_client)
 
-        LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to get '
-                         f'detailed configuration of cluster with '
-                     f'name: {cluster_name}')
+        LOGGER.debug(f'Sending request to PKS: {self.pks_host_uri} to get'
+                     f' detailed configuration of cluster with name: '
+                     f'{cluster_name}')
         config = cluster_api.create_user(cluster_name=cluster_name)
 
         LOGGER.debug(f'Received response from PKS: {self.pks_host_uri} on '
