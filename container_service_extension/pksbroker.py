@@ -7,6 +7,7 @@ import functools
 import json
 
 from pyvcloud.vcd.utils import extract_id
+import yaml
 
 from container_service_extension.abstract_broker import AbstractBroker
 from container_service_extension.exceptions import CseServerError
@@ -14,7 +15,6 @@ from container_service_extension.exceptions import PksConnectionError
 from container_service_extension.exceptions import PksServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE
-from container_service_extension.pksclient.rest import ApiException
 from container_service_extension.pksclient.api.cluster_api import ClusterApi
 from container_service_extension.pksclient.api.profile_api import ProfileApi
 from container_service_extension.pksclient.api_client import ApiClient
@@ -27,6 +27,7 @@ from container_service_extension.pksclient.models.compute_profile_request \
     import ComputeProfileRequest
 from container_service_extension.pksclient.models.update_cluster_parameters\
     import UpdateClusterParameters
+from container_service_extension.pksclient.rest import ApiException
 from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import exception_handler
@@ -278,6 +279,26 @@ class PKSBroker(AbstractBroker):
                      f'cluster: {cluster_name} with details: {cluster_dict}')
 
         return cluster_dict
+
+    def get_cluster_config(self, cluster_name):
+        """Get the configuration of the cluster with the given name in PKS.
+
+        :param str cluster_name: Name of the cluster
+        :return: Configuration of the cluster.
+
+        :rtype: str
+        """
+        cluster_api = ClusterApi(api_client=self.pks_client)
+
+        LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to get"
+                     f" detailed configuration of cluster with name: "
+                     f"{cluster_name}")
+        config = cluster_api.create_user(cluster_name=cluster_name)
+
+        LOGGER.debug(f"Received response from PKS: {self.pks_host_uri} on "
+                     f"cluster: {cluster_name} with details: {config}")
+        cluster_config = yaml.safe_dump(config, default_flow_style=False)
+        return cluster_config
 
     @add_vcd_user_context(qualify_params=['cluster_name'])
     def delete_cluster(self, cluster_name):
