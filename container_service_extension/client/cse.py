@@ -334,9 +334,17 @@ def delete(ctx, name, vdc):
     default=None,
     help='Preconfigured PKS plan to use for deploying the cluster. '
          'Required for deploying PKS clusters. Optional otherwise.')
+@click.option(
+    '-o',
+    '--org',
+    'org_name',
+    default=None,
+    required=False,
+    metavar='<org-name>',
+    help="org name - optional")
 def create(ctx, name, vdc, node_count, cpu, memory, network_name, storage_profile,
            ssh_key_file, template, enable_nfs, disable_rollback,
-           pks_ext_host, pks_plan):
+           pks_ext_host, pks_plan, org_name):
     """Create a Kubernetes cluster."""
     try:
         restore_session(ctx, vdc_required=True)
@@ -345,6 +353,8 @@ def create(ctx, name, vdc, node_count, cpu, memory, network_name, storage_profil
         ssh_key = None
         vdc_to_use = vdc if vdc is not None \
             else ctx.obj['profiles'].get('vdc_in_use')
+        if org_name is None:
+            org_name = ctx.obj['profiles'].get('org_in_use')
         if ssh_key_file is not None:
             ssh_key = ssh_key_file.read()
         result = cluster.create_cluster(
@@ -360,7 +370,8 @@ def create(ctx, name, vdc, node_count, cpu, memory, network_name, storage_profil
             enable_nfs=enable_nfs,
             disable_rollback=disable_rollback,
             pks_ext_host=pks_ext_host,
-            pks_plan=pks_plan)
+            pks_plan=pks_plan,
+            org=org_name)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)

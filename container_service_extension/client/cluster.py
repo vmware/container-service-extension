@@ -78,7 +78,8 @@ class Cluster(object):
                        enable_nfs=False,
                        disable_rollback=True,
                        pks_ext_host=None,
-                       pks_plan=None):
+                       pks_plan=None,
+                       org=None):
         """Create a new Kubernetes cluster.
 
         :param vdc: (str): The name of the vdc in which the cluster will be
@@ -106,6 +107,8 @@ class Cluster(object):
         API for PKS.
         :param pks_plan: (str): Preconfigured PKS plan to use for deploying the
         cluster.
+        :param org: (str): name of the organization in which the vdc to be
+        used for cluster creation.
 
         :return: (json) A parsed json object describing the requested cluster.
         """
@@ -124,7 +127,8 @@ class Cluster(object):
             'enable_nfs': enable_nfs,
             'disable_rollback': disable_rollback,
             'pks_ext_host': pks_ext_host,
-            'pks_plan': pks_plan
+            'pks_plan': pks_plan,
+            'org': org
         }
         response = self.client._do_request_prim(
             method,
