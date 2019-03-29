@@ -114,15 +114,25 @@ def cluster_group(ctx):
         vcd cse cluster create mycluster --pks-external-hostname api.pks.local
         --pks-plan 'myPlan'
             Attempts to create a Kubernetes cluster named 'mycluster' with
-            external host name as 'api.pks.local' and available PKS-plan 'myPlan
-            using the VDC in context explicitly dedicated for PKS cluster creation.
+            external host name as 'api.pks.local' and available PKS-plan
+            'myPlan' using the VDC in context explicitly dedicated for PKS
+            cluster creation.
 
 \b
         vcd cse cluster create mycluster --pks-external-hostname api.pks.local
         --pks-plan 'myPlan' --vdc 'myVdc'
             Attempts to create a Kubernetes cluster named 'mycluster' with
-            external host name as 'api.pks.local' and available PKS-plan 'myPlan
-            in the given VDC dedicated explicitly for PKS cluster creation.
+            external host name as 'api.pks.local' and available PKS-plan
+            'myPlan' in the given VDC dedicated explicitly for PKS cluster
+            creation.
+
+\b
+        vcd cse cluster create mycluster --pks-external-hostname api.pks.local
+        --pks-plan 'myPlan' --vdc 'myVdc' --org 'myOrg'
+            Attempts to create a Kubernetes cluster named 'mycluster' with
+            external host name as 'api.pks.local' and available PKS-plan
+            'myPlan' in the given VDC 'myVdc' found in the give org 'myOrg'.
+
 \b
         vcd cse cluster config mycluster
             Display configuration information about cluster named 'mycluster'.
@@ -334,17 +344,28 @@ def delete(ctx, name, vdc):
     default=None,
     help='Preconfigured PKS plan to use for deploying the cluster. '
          'Required for deploying PKS clusters. Optional otherwise.')
-def create(ctx, name, vdc, node_count, cpu, memory, network_name, storage_profile,
-           ssh_key_file, template, enable_nfs, disable_rollback,
-           pks_ext_host, pks_plan):
+@click.option(
+    '-o',
+    '--org',
+    'org_name',
+    default=None,
+    required=False,
+    metavar='<org-name>',
+    help='Name of the org in which the cluster is to be created. If not '
+         'specified, use the org-in-context')
+def create(ctx, name, vdc, node_count, cpu, memory, network_name,
+           storage_profile, ssh_key_file, template, enable_nfs,
+           disable_rollback, pks_ext_host, pks_plan, org_name):
     """Create a Kubernetes cluster."""
     try:
-        restore_session(ctx, vdc_required=True)
+        restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         ssh_key = None
         vdc_to_use = vdc if vdc is not None \
             else ctx.obj['profiles'].get('vdc_in_use')
+        if org_name is None:
+            org_name = ctx.obj['profiles'].get('org_in_use')
         if ssh_key_file is not None:
             ssh_key = ssh_key_file.read()
         result = cluster.create_cluster(
@@ -360,7 +381,8 @@ def create(ctx, name, vdc, node_count, cpu, memory, network_name, storage_profil
             enable_nfs=enable_nfs,
             disable_rollback=disable_rollback,
             pks_ext_host=pks_ext_host,
-            pks_plan=pks_plan)
+            pks_plan=pks_plan,
+            org=org_name)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -818,10 +840,11 @@ def ovdc_group(ctx):
     """
     pass
 
+
 @ovdc_group.command('list', short_help='list ovdcs')
 @click.pass_context
 def list(ctx):
-    """List ovdcs in a given Org or System"""
+    """List ovdcs in a given Org or System."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
