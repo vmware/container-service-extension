@@ -7,6 +7,8 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+from container_service_extension.security import RedactingFilter
+
 # max size for log files (8MB)
 _MAX_BYTES = 2**23
 _BACKUP_COUNT = 10
@@ -78,6 +80,7 @@ def setup_log_file_directory():
 def configure_install_logger():
     """Configure cse install logger if it is not configured."""
     setup_log_file_directory()
+    INSTALL_LOGGER.addFilter(RedactingFilter())
     INSTALL_LOGGER.setLevel(logging.DEBUG)
     file_handler = logging.FileHandler(INSTALL_LOG_FILEPATH)
     file_handler.setFormatter(DEBUG_LOG_FORMATTER)
@@ -98,6 +101,7 @@ def configure_client_logger():
                                              backupCount=_BACKUP_COUNT)
     debug_file_handler.setFormatter(DEBUG_LOG_FORMATTER)
 
+    CLIENT_LOGGER.addFilter(RedactingFilter())
     CLIENT_LOGGER.setLevel(logging.DEBUG)
     CLIENT_LOGGER.addHandler(info_file_handler)
     CLIENT_LOGGER.addHandler(debug_file_handler)
@@ -117,11 +121,13 @@ def configure_server_logger():
                                              backupCount=_BACKUP_COUNT)
     debug_file_handler.setFormatter(DEBUG_LOG_FORMATTER)
 
+    SERVER_LOGGER.addFilter(RedactingFilter())
     SERVER_LOGGER.setLevel(logging.DEBUG)
     SERVER_LOGGER.addHandler(info_file_handler)
     SERVER_LOGGER.addHandler(debug_file_handler)
 
     pika_logger = logging.getLogger('pika')
+    pika_logger.addFilter(RedactingFilter())
     pika_logger.setLevel(logging.WARNING)
     pika_logger.addHandler(info_file_handler)
     pika_logger.addHandler(debug_file_handler)

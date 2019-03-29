@@ -992,7 +992,7 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
         # unsure all errors execute_script_in_guest can result in
         # Docker TLS handshake timeout can occur when internet is slow
         click.secho("Failed VM customization. Check CSE install log", fg='red')
-        LOGGER.error(f"Failed VM customization with error: f{err}",
+        LOGGER.error(f"Failed VM customization with error: {err}",
                      exc_info=True)
         raise
 
@@ -1164,7 +1164,7 @@ def register_right(client, right_name, description, category, bundle_key):
         system_org.get_right_record(right_name_in_vcd)
         msg = f"Right: {right_name} already exists in vCD"
         click.secho(msg, fg='green')
-        LOGGER.debug(msg)
+        LOGGER.info(msg)
         # Presence of the right in vCD is not guarantee that the right will be
         # assigned to system org.
         rights_in_system = system_org.list_rights_of_org()
@@ -1175,12 +1175,12 @@ def register_right(client, right_name, description, category, bundle_key):
                 msg = f"Right: {right_name} already assigned to System " \
                     f"organization."
                 click.secho(msg, fg='green')
-                LOGGER.debug(msg)
+                LOGGER.info(msg)
                 return
         # Since the right is not assigned to system org, we need to add it.
         msg = f"Assigning Right: {right_name} to System organization."
         click.secho(msg, fg='green')
-        LOGGER.debug(msg)
+        LOGGER.info(msg)
         system_org.add_rights([right_name_in_vcd])
     except EntityNotFoundException:
         # Registering a right via api extension end point auto assigns it to

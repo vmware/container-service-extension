@@ -72,9 +72,9 @@ GATEWAY_TIMEOUT = 504
 
 def connect_vcd_user_via_token(vcd_uri, headers, verify_ssl_certs=True):
     if not verify_ssl_certs:
-        LOGGER.warning('InsecureRequestWarning: Unverified HTTPS request is '
-                       'being made. Adding certificate verification is '
-                       'strongly advised.')
+        LOGGER.warning("InsecureRequestWarning: Unverified HTTPS request is "
+                       "being made. Adding certificate verification is "
+                       "strongly advised.")
         requests.packages.urllib3.disable_warnings()
     token = headers.get('x-vcloud-authorization')
     accept_header = headers.get('Accept')

@@ -16,7 +16,6 @@ from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 import requests
 
-from container_service_extension.pks_cache import PksCache
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.consumer import MessageConsumer
@@ -25,6 +24,7 @@ from container_service_extension.logger import SERVER_DEBUG_LOG_FILEPATH
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_INFO_LOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.pks_cache import PksCache
 from container_service_extension.utils import connect_vcd_user_via_token
 from container_service_extension.utils import SYSTEM_ORG_NAME
 
@@ -46,10 +46,10 @@ def signal_handler(signal, frame):
 
 def consumer_thread(c):
     try:
-        LOGGER.info('About to start consumer_thread %s.', c)
+        LOGGER.info(f"About to start consumer_thread {c}.")
         c.run()
     except Exception:
-        click.echo('About to stop consumer_thread.')
+        click.echo("About to stop consumer_thread.")
         LOGGER.error(traceback.format_exc())
         c.stop()
 
@@ -74,9 +74,9 @@ class Service(object, metaclass=Singleton):
     def get_sys_admin_client(self):
         if self.config is not None:
             if not self.config['vcd']['verify']:
-                LOGGER.warning('InsecureRequestWarning: Unverified HTTPS '
-                               'request is being made. Adding certificate '
-                               'verification is strongly advised.')
+                LOGGER.warning("InsecureRequestWarning: Unverified HTTPS "
+                               "request is being made. Adding certificate "
+                               "verification is strongly advised.")
                 requests.packages.urllib3.disable_warnings()
             client = Client(
                 uri=self.config['vcd']['host'],
@@ -199,9 +199,10 @@ class Service(object, metaclass=Singleton):
         click.secho(message)
         LOGGER.info(message)
         if self.config.get('pks_config'):
-            self.pks_cache = PksCache(self.config.get('pks_config').get('orgs'),
-                                    self.config.get('pks_config').get('pks_accounts'),
-                                    self.config.get('pks_config').get('pvdcs'))
+            self.pks_cache = PksCache(
+                self.config.get('pks_config').get('orgs'),
+                self.config.get('pks_config').get('pks_accounts'),
+                self.config.get('pks_config').get('pvdcs'))
         amqp = self.config['amqp']
         num_consumers = self.config['service']['listeners']
 
@@ -215,7 +216,7 @@ class Service(object, metaclass=Singleton):
                 t = Thread(name=name, target=consumer_thread, args=(c, ))
                 t.daemon = True
                 t.start()
-                LOGGER.info('started thread %s', t.ident)
+                LOGGER.info("Started thread {t.ident}")
                 self.threads.append(t)
                 self.consumers.append(c)
                 time.sleep(0.25)
@@ -224,7 +225,7 @@ class Service(object, metaclass=Singleton):
             except Exception:
                 print(traceback.format_exc())
 
-        LOGGER.info('num of threads started: %s', len(self.threads))
+        LOGGER.info(f"Number of threads started: {len(self.threads)}")
 
         self.is_enabled = True
 
@@ -239,11 +240,11 @@ class Service(object, metaclass=Singleton):
                 click.secho(traceback.format_exc())
                 sys.exit(1)
 
-        LOGGER.info('stop detected')
-        LOGGER.info('closing connections...')
+        LOGGER.info("Stop detected")
+        LOGGER.info("Closing connections...")
         for c in self.consumers:
             try:
                 c.stop()
             except Exception:
                 pass
-        LOGGER.info('done')
+        LOGGER.info("Done")
