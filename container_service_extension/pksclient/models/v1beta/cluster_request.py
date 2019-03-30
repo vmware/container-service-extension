@@ -16,7 +16,7 @@ import re  # noqa: F401
 
 import six
 
-from container_service_extension.pksclient.models.cluster_parameters import ClusterParameters  # noqa: F401,E501
+from container_service_extension.pksclient.models.v1beta.cluster_parameters import ClusterParameters  # noqa: F401,E501
 
 
 class ClusterRequest(object):
