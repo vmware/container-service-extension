@@ -35,6 +35,7 @@ from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import exception_handler
 from container_service_extension.utils import OK
 
+# Delimiter to append with user id context
 USER_ID_SEPARATOR = "---"
 
 
@@ -150,7 +151,8 @@ class PKSBroker(AbstractBroker):
                 'status': cluster.last_action_state,
                 'last-action': cluster.last_action,
                 'k8_master_ips': cluster.kubernetes_master_ips,
-                'compute-profile-name': cluster.compute_profile_name
+                'compute-profile-name': cluster.compute_profile_name,
+                'worker_count': cluster.parameters.kubernetes_worker_instances
             }
             list_of_cluster_dicts.append(cluster_dict)
 
@@ -162,7 +164,6 @@ class PKSBroker(AbstractBroker):
     def create_cluster(self, **cluster_params):
         cluster_params['cluster_name'] = \
             self._append_user_id(cluster_params['cluster_name'])
-        LOGGER.debug(f"Creating cluster {cluster_params['cluster_name']}")
         created_cluster = self._create_cluster(**cluster_params)
         self._remove_user_id(created_cluster)
         return created_cluster
@@ -287,12 +288,10 @@ class PKSBroker(AbstractBroker):
         LOGGER.debug(f"Delete Cluster:{cluster_name}")
         if self.tenant_client.is_sysadmin():
             cluster = self.get_cluster_info(cluster_name)
-            LOGGER.debug(f"delete {cluster['name']} as admin")
             return self._delete_cluster(cluster['pks_cluster_name'])
 
         else:
             pks_cluster_name = self._append_user_id(cluster_name)
-            LOGGER.debug(f"delete {pks_cluster_name} as user")
             return self._delete_cluster(pks_cluster_name)
 
     def _delete_cluster(self, cluster_name):
@@ -323,12 +322,10 @@ class PKSBroker(AbstractBroker):
         if self.tenant_client.is_sysadmin():
             cluster = self.get_cluster_info(cluster_name)
             cluster_params['cluster_name'] = cluster['pks_cluster_name']
-            LOGGER.debug(f"Resizing {cluster_params} as admin")
             return self._resize_cluster(**cluster_params)
         else:
             pks_cluster_name = self._append_user_id(cluster_name)
             cluster_params['cluster_name'] = pks_cluster_name
-            LOGGER.debug(f"Resizing {cluster_params} as user")
             return self._resize_cluster(**cluster_params)
 
     def _resize_cluster(self, cluster_name, node_count, **kwargs):
