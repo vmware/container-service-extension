@@ -226,7 +226,7 @@ class PksCache(object):
                 associated_pks_account = self.pks_info_table[account_name]
                 org_pks_association[(org_name, associated_pks_account.vc)] = \
                     associated_pks_account
-            return org_pks_association
+        return org_pks_association
 
     def _construct_pvdc_info(self):
         """Construct a dict to access pvdc information.
