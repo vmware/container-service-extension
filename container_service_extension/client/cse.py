@@ -455,6 +455,10 @@ def resize(ctx, name, node_count, network_name, vdc, disable_rollback):
             node_count=node_count,
             vdc=ctx.obj['profiles'].get('vdc_in_use') if vdc is None else vdc,
             disable_rollback=disable_rollback)
+        if len(result) == 0:
+            click.secho(f"Resize cluster operation has been initiated on "
+                        f"{name}, please check the status using"
+                        f" 'vcd cse cluster info {name}'.", fg='yellow')
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
