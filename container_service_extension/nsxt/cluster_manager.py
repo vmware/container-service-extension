@@ -2,14 +2,15 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from constants import ALL_NODES_PODS_NSGROUP_NAME
-from constants import FIREWALL_ACTION
-from constants import INSERT_POLICY
-from constants import NCP_BOUNDARY_FIREWALL_SECTION_NAME
-from dfw_manager import DFWManager
-from nsgroup_manager import NSGroupManager
-
 from container_service_extension.logger import SERVER_NSXT_LOGGER as Logger
+from container_service_extension.nsxt.constants import \
+    ALL_NODES_PODS_NSGROUP_NAME
+from container_service_extension.nsxt.constants import FIREWALL_ACTION
+from container_service_extension.nsxt.constants import INSERT_POLICY
+from container_service_extension.nsxt.constants import \
+    NCP_BOUNDARY_FIREWALL_SECTION_NAME
+from container_service_extension.nsxt.dfw_manager import DFWManager
+from container_service_extension.nsxt.nsgroup_manager import NSGroupManager
 
 
 class ClusterManager(object):
@@ -30,6 +31,24 @@ class ClusterManager(object):
 
         self._create_firewall_rules_for_cluster(
             sec_id, n_id, p_id, np_id, anp_id)
+
+    def cleanup_cluster(self, cluster_name):
+        filewall_section_name = \
+            self._get_firewall_section_name_for_cluster(cluster_name)
+
+        nodes_nsgroup_name = self._get_nodes_nsgroup_name(cluster_name)
+        pods_nsgroup_name = self._get_pods_nsgroup_name(cluster_name)
+        nodes_pods_nsgroup_name = \
+            self._get_nodes_pods_nsgroup_name(cluster_name)
+
+        dfw_manager = DFWManager(self._nsxt_client)
+        nsgroup_manager = NSGroupManager(self._nsxt_client)
+
+        dfw_manager.delete_firewall_section(filewall_section_name,
+                                            cascade=True)
+        nsgroup_manager.delete_nsgroup(nodes_pods_nsgroup_name, force=True)
+        nsgroup_manager.delete_nsgroup(nodes_nsgroup_name, force=True)
+        nsgroup_manager.delete_nsgroup(pods_nsgroup_name, force=True)
 
     def _create_nsgroups_for_cluster(self, cluster_name, cluster_id):
         nodes_nsgroup = self._create_cluster_nodes_nsgroup(

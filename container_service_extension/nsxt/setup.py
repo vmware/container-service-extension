@@ -2,16 +2,17 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from constants import ALL_NODES_IP_SET_NAME
-from constants import ALL_NODES_PODS_NSGROUP_NAME
-from constants import ALL_PODS_IP_SET_NAME
-from constants import INSERT_POLICY
-from constants import NCP_BOUNDARY_FIREWALL_SECTION_NAME
-from dfw_manager import DFWManager
-from ipset_manager import IPSetManager
-from nsgroup_manager import NSGroupManager
-
 from container_service_extension.logger import SERVER_NSXT_LOGGER as Logger
+from container_service_extension.nsxt.constants import ALL_NODES_IP_SET_NAME
+from container_service_extension.nsxt.constants import \
+    ALL_NODES_PODS_NSGROUP_NAME
+from container_service_extension.nsxt.constants import ALL_PODS_IP_SET_NAME
+from container_service_extension.nsxt.constants import INSERT_POLICY
+from container_service_extension.nsxt.constants import \
+    NCP_BOUNDARY_FIREWALL_SECTION_NAME
+from container_service_extension.nsxt.dfw_manager import DFWManager
+from container_service_extension.nsxt.ipset_manager import IPSetManager
+from container_service_extension.nsxt.nsgroup_manager import NSGroupManager
 
 
 def setup_nsxt_constructs(nsxt_client,
