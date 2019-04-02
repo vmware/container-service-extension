@@ -303,7 +303,7 @@ def run(ctx, config, skip_check):
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
     except Exception as err:
-        click.secho("CSE Server failure. Please check the logs.", fg='red')
         click.secho(str(err), fg='red')
+        click.secho("CSE Server failure. Please check the logs.", fg='red')
 if __name__ == '__main__':
     cli()
