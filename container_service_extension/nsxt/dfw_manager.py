@@ -2,7 +2,10 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from constants import RequestMethodVerb
+from requests.exceptions import HTTPError
+
+from container_service_extension.logger import SERVER_NSXT_LOGGER as Logger
+from container_service_extension.nsxt.constants import RequestMethodVerb
 
 
 class DFWManager(object):
@@ -25,12 +28,24 @@ class DFWManager(object):
         if name is None and id is None:
             return None
 
+        if id is not None:
+            resource_url_fragment = f"firewall/sections/{id}"
+            try:
+                response = self._nsxt_client.do_request(
+                    method=RequestMethodVerb.GET,
+                    resource_url_fragment=resource_url_fragment)
+                return response
+            except HTTPError as err:
+                if err.code == 404:
+                    return None
+                else:
+                    raise
+
         fw_sections = self.list_firewall_sections()
         for fw_section in fw_sections:
-            if id is not None and fw_section['id'] == id:
+            if name is not None and fw_section['display_name'].lower() == name.lower():  # noqa
                 return fw_section
-            elif name is not None and fw_section['display_name'].lower() == name.lower():  # noqa
-                return fw_section
+
         return None
 
     def create_firewall_section(self,
@@ -66,6 +81,28 @@ class DFWManager(object):
             payload=data)
 
         return firewall_section
+
+    def delete_firewall_section(self, name=None, id=None, cascade=True):
+        if name is None and id is None:
+            return False
+
+        if id is None:
+            fws = self.get_firewall_section(name, id)
+            if fws:
+                id = fws['id']
+            else:
+                Logger.debug(
+                    f"DFW Section : {name} not found. Unable to delete.")
+                return False
+        resource_url_fragment = f"firewall/sections/{id}"
+        if cascade:
+            resource_url_fragment += "?cascade=true"
+
+        self._nsxt_client.do_request(
+            method=RequestMethodVerb.DELETE,
+            resource_url_fragment=resource_url_fragment)
+
+        return True
 
     def create_dfw_rule(self,
                         section_id,
