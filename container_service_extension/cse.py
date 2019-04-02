@@ -164,11 +164,11 @@ def sample(ctx, output, pks_output):
          " will be validated.")
 def check(ctx, config, check_install, template):
     """Validate CSE configuration."""
+    config_dict = None
     try:
         config_dict = get_validated_config(config)
-    except (KeyError, TypeError):
-        click.secho(f"Config file '{config}' is invalid", fg='red')
-    except (NotAcceptableException, ValueError) as err:
+    except (NotAcceptableException, VcdException, ValueError,
+            KeyError, TypeError) as err:
         click.secho(str(err), fg='red')
     except AmqpConnectionError as err:
         click.secho(str(err), fg='red')
@@ -176,14 +176,11 @@ def check(ctx, config, check_install, template):
     except requests.exceptions.ConnectionError:
         click.secho("Cannot connect to vCD host (check config file vCD host).",
                     fg='red')
-    except VcdException:
-        click.secho("vCD login failed (check config file vCD "
-                    "username/password).", fg='red')
     except vim.fault.InvalidLogin:
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
 
-    if not check_install:
+    if not check_install or config_dict is None:
         return
 
     try:
@@ -250,10 +247,8 @@ def install(ctx, config, template, update, no_capture, ssh_key_file):
     try:
         install_cse(ctx, config_file_name=config, template_name=template,
                     update=update, no_capture=no_capture, ssh_key=ssh_key)
-    except (KeyError, TypeError):
-        click.secho(f"Config file '{config}' is invalid", fg='red')
-    except (EntityNotFoundException, NotAcceptableException,
-            ValueError) as err:
+    except (EntityNotFoundException, NotAcceptableException, VcdException,
+            ValueError, KeyError, TypeError) as err:
         click.secho(str(err), fg='red')
     except AmqpConnectionError as err:
         click.secho(str(err), fg='red')
@@ -261,9 +256,6 @@ def install(ctx, config, template, update, no_capture, ssh_key_file):
     except requests.exceptions.ConnectionError:
         click.secho("Cannot connect to vCD host (check config file vCD host).",
                     fg='red')
-    except VcdException:
-        click.secho("vCD login failed (check config file vCD "
-                    "username/password).", fg='red')
     except vim.fault.InvalidLogin:
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
@@ -289,9 +281,29 @@ def install(ctx, config, template, update, no_capture, ssh_key_file):
     help='Skip check')
 def run(ctx, config, skip_check):
     """Run CSE service."""
-    service = Service(config, should_check_config=not skip_check)
-    service.run()
-
-
+    try:
+        service = Service(config, should_check_config=not skip_check)
+        service.run()
+    except (KeyError, TypeError):
+        click.secho(f"Config file '{config}' is invalid. Please "
+                    f"check the logs.", fg='red')
+    except (NotAcceptableException,
+            ValueError) as err:
+        click.secho(str(err), fg='red')
+    except AmqpConnectionError as err:
+        click.secho(str(err), fg='red')
+        click.secho("check config file amqp section.", fg='red')
+    except requests.exceptions.ConnectionError:
+        click.secho("Cannot connect to vCD host (check config file vCD host).",
+                    fg='red')
+    except VcdException:
+        click.secho("vCD login failed (check config file vCD "
+                    "username/password).", fg='red')
+    except vim.fault.InvalidLogin:
+        click.secho("vCenter login failed (check config file vCenter "
+                    "username/password).", fg='red')
+    except Exception as err:
+        click.secho(str(err), fg='red')
+        click.secho("CSE Server failure. Please check the logs.", fg='red')
 if __name__ == '__main__':
     cli()
