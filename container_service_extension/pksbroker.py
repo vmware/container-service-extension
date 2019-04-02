@@ -175,6 +175,16 @@ class PKSBroker(AbstractBroker):
 
     @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
     def create_cluster(self, **cluster_params):
+        """Create cluster in PKS environment.
+
+        :param dict cluster_params: named parameters necessary to create
+        cluster (cluster_name, node_count, pks_plan, pks_ext_host, compute-
+        profile_name)
+
+        :return: Details of the cluster
+
+        :rtype: dict
+        """
         cluster_params['cluster_name'] = \
             self._append_user_id(cluster_params['cluster_name'])
         created_cluster = self._create_cluster(**cluster_params)
@@ -233,6 +243,13 @@ class PKSBroker(AbstractBroker):
         return cluster_dict
 
     def get_cluster_info(self, cluster_name):
+        """Get the details of a cluster with a given name in PKS environment.
+
+        :param str cluster_name: Name of the cluster
+        :return: Details of the cluster.
+
+        :rtype: dict
+        """
         self.get_tenant_client_session()
         if self.tenant_client.is_sysadmin():
             filtered_cluster_list = \
@@ -299,6 +316,10 @@ class PKSBroker(AbstractBroker):
 
     @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
     def delete_cluster(self, cluster_name):
+        """Delete the cluster with a given name in PKS environment.
+
+        :param str cluster_name: Name of the cluster
+        """
         self.get_tenant_client_session()
         LOGGER.debug(f"Delete Cluster:{cluster_name}")
         if self.tenant_client.is_sysadmin():
@@ -336,6 +357,16 @@ class PKSBroker(AbstractBroker):
 
     @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
     def resize_cluster(self, **cluster_params):
+        """Resize the cluster of a given name to given number of worker nodes.
+
+        :param dict cluster_params: named parameters that are required to
+        resize cluster (cluster_name, node_count)
+
+        :return: response status
+
+        :rtype: dict
+
+        """
         self.get_tenant_client_session()
         cluster_name = cluster_params['cluster_name']
         LOGGER.debug(f"Resize Cluster:{cluster_name}")
