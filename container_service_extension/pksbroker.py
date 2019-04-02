@@ -10,6 +10,7 @@ from pyvcloud.vcd.utils import extract_id
 import yaml
 
 from container_service_extension.abstract_broker import AbstractBroker
+from container_service_extension.authorization import secure
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import PksConnectionError
 from container_service_extension.exceptions import PksServerError
@@ -28,6 +29,7 @@ from container_service_extension.pksclient.models.compute_profile_request \
 from container_service_extension.pksclient.models.update_cluster_parameters\
     import UpdateClusterParameters
 from container_service_extension.pksclient.rest import ApiException
+from container_service_extension.server_constants import CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import exception_handler
@@ -202,6 +204,7 @@ class PKSBroker(AbstractBroker):
                      f" list of clusters: {list_of_cluster_dicts}")
         return list_of_cluster_dicts
 
+    @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
     @add_vcd_user_context(qualify_params=['cluster_name'])
     def create_cluster(self, cluster_name, node_count, pks_plan, pks_ext_host,
                        compute_profile=None, **kwargs):
@@ -300,6 +303,7 @@ class PKSBroker(AbstractBroker):
         cluster_config = yaml.safe_dump(config, default_flow_style=False)
         return cluster_config
 
+    @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
     @add_vcd_user_context(qualify_params=['cluster_name'])
     def delete_cluster(self, cluster_name):
         """Delete the cluster with a given name in PKS environment.
@@ -321,6 +325,7 @@ class PKSBroker(AbstractBroker):
                      f" the cluster: {cluster_name}")
         return
 
+    @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
     @add_vcd_user_context(qualify_params=['cluster_name'])
     def resize_cluster(self, cluster_name, node_count, **kwargs):
         """Resize the cluster of a given name to given number of worker nodes.
