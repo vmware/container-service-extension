@@ -338,7 +338,7 @@ def get_validated_config(config_file_name):
     """
     check_file_permissions(config_file_name)
     with open(config_file_name) as config_file:
-        config = yaml.safe_load(config_file)
+        config = yaml.safe_load(config_file) or {}
     pks_config = config.get('pks_config')
     click.secho(f"Validating config file '{config_file_name}'", fg='yellow')
     check_keys_and_value_types(config, SAMPLE_CONFIG, location='config file')
@@ -352,10 +352,10 @@ def get_validated_config(config_file_name):
     if pks_config is not None and isinstance(pks_config, str):
         check_file_permissions(pks_config)
         with open(pks_config) as f:
-            pks = yaml.safe_load(f)
+            pks = yaml.safe_load(f) or {}
         click.secho(f"Validating PKS config file '{pks_config}'", fg='yellow')
         check_keys_and_value_types(pks, SAMPLE_PKS_CONFIG,
-                                   location='PKS config file')
+                                       location='PKS config file')
         click.secho(f"PKS Config file '{pks_config}' is valid", fg='green')
         config['pks_config'] = pks
     else:
