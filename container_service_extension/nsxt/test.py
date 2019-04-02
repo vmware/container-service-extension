@@ -8,8 +8,7 @@ import requests
 from setup import setup_nsxt_constructs
 
 from container_service_extension.logger import configure_server_logger
-from container_service_extension.logger import SERVER_NSXT_LOGGER as Logger
-from container_service_extension.logger import SERVER_LOGGER as Logger2
+
 
 NSXT_HOST = '192.168.111.143'
 NSXT_USERNAME = 'admin'
@@ -18,11 +17,11 @@ NSXT_PASSWORD = 'Admin!23Admin'
 HTTP_PROXY = 'http://10.160.113.17:80'
 HTTPS_PROXY = 'https://10.160.113.17:80'
 
-NODES_IP_BLOCK_IDS = [ \
-    'a0a12cfd-1c30-423e-8d73-74ae0861a036', \
+NODES_IP_BLOCK_IDS = [
+    'a0a12cfd-1c30-423e-8d73-74ae0861a036',
     'eec2cbb8-6549-4cca-add5-9a8a6c46f5fd']
-PODS_IP_BLOCK_IDS = [ \
-    '352a3610-76e4-4bed-88ea-fedf679182ab', \
+PODS_IP_BLOCK_IDS = [
+    '352a3610-76e4-4bed-88ea-fedf679182ab',
     '47fb537d-69f2-4f9e-8300-c140276f5566']
 NCP_BOUNDARY_FIREWALL_SECTION_ANCHOR_ID = \
     "38a86aea-8de0-4d7e-98d4-2551c9d3c6e7"
