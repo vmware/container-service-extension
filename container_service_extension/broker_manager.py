@@ -380,8 +380,9 @@ class BrokerManager(object):
                                     cluster_property_keys):
         pks_cluster = {k: cluster.get(k, None) for k in
                        cluster_property_keys}
-        pks_cluster['vdc'] = \
-            cluster.get('compute-profile-name', '').split('--')[-1]
+        compute_profile_name = cluster.get('compute-profile-name', '')
+        pks_cluster['vdc'] = compute_profile_name.split('--')[-1] \
+            if compute_profile_name is not None else ''
         pks_cluster['status'] = \
             cluster.get('last-action', '').lower() + ' ' + \
             pks_cluster.get('status', '').lower()
@@ -397,7 +398,7 @@ class BrokerManager(object):
         ovdc_name = self.req_spec.get('vdc', None) or \
             self.req_qparams.get('vdc', None)
         org_name = self.req_spec.get('org', None) or \
-            self.req_qparams.get('vdc', None) or \
+            self.req_qparams.get('org', None) or \
             self.session.get('org', None)
 
         LOGGER.debug(f"org_name={org_name};vdc_name=\'{ovdc_name}\'")
