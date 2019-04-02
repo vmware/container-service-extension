@@ -60,8 +60,9 @@ class NSXTClient(object):
             if self._log_body:
                 Logger.debug(f"Response body : {response.text}")
 
-        if response.status_code >= 300:
-            raise Exception(
-                "Request to NSXT failed. Please check the server logs")
+        response.raise_for_status()
 
-        return json.loads(response.text)
+        if response.text:
+            return json.loads(response.text)
+        else:
+            return None

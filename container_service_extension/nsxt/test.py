@@ -42,18 +42,20 @@ if __name__ == '__main__':
         log_headers=True,
         log_body=False)
 
-    setup_nsxt_constructs(
-        nsxt_client=nsxt_client,
-        nodes_ip_block_id=NODES_IP_BLOCK_IDS,
-        pods_ip_block_id=PODS_IP_BLOCK_IDS,
-        ncp_boundary_firewall_section_anchor_id=NCP_BOUNDARY_FIREWALL_SECTION_ANCHOR_ID)  # noqa
+    # setup_nsxt_constructs(
+    #    nsxt_client=nsxt_client,
+    #    nodes_ip_block_id=NODES_IP_BLOCK_IDS,
+    #    pods_ip_block_id=PODS_IP_BLOCK_IDS,
+    #    ncp_boundary_firewall_section_anchor_id=NCP_BOUNDARY_FIREWALL_SECTION_ANCHOR_ID)  # noqa
 
     cluster_manager = ClusterManager(nsxt_client)
 
     cluster_id = 'f44766e9-a330-4a4a-a86e-5773c21968cb'
     cluster_name = 'cluster1'
-    cluster_manager.isolate_cluster(cluster_name, cluster_id)
+    # cluster_manager.isolate_cluster(cluster_name, cluster_id)
+    cluster_manager.cleanup_cluster(cluster_name)
 
     cluster_id = '1c1d3ea4-c9e0-4b93-a8b1-0cb58b578048'
     cluster_name = 'cluster2'
-    cluster_manager.isolate_cluster(cluster_name, cluster_id)
+    # cluster_manager.isolate_cluster(cluster_name, cluster_id)
+    cluster_manager.cleanup_cluster(cluster_name)
