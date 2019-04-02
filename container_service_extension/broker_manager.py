@@ -174,7 +174,7 @@ class BrokerManager(object):
         if self.vcd_client.is_sysadmin():
             org_resource_list = self.vcd_client.get_org_list()
         else:
-            org_resource_list= list(self.vcd_client.get_org())
+            org_resource_list = list(self.vcd_client.get_org())
 
         ovdc_list = []
         for org_resource in org_resource_list:
@@ -185,10 +185,11 @@ class BrokerManager(object):
                     self.ovdc_cache.get_ovdc_container_provider_metadata(
                         ovdc_name=vdc['name'], org_name=org.get_name(),
                         credentials_required=False)
-                vdc_dict = {'org':org.get_name(),
-                            'name': vdc['name'],
-                            CONTAINER_PROVIDER:ctr_prov_ctx[CONTAINER_PROVIDER]
-                            }
+                vdc_dict = {
+                    'org': org.get_name(),
+                    'name': vdc['name'],
+                    CONTAINER_PROVIDER: ctr_prov_ctx[CONTAINER_PROVIDER]
+                }
                 ovdc_list.append(vdc_dict)
         return ovdc_list
 
@@ -217,7 +218,7 @@ class BrokerManager(object):
                                    f'either in vCD or PKS')
 
     def _get_cluster_config(self, **cluster_spec):
-        """Gets the cluster configuration.
+        """Get the cluster configuration.
 
         :param str cluster_name: Name of cluster.
 
@@ -280,7 +281,7 @@ class BrokerManager(object):
     def _delete_cluster(self, **cluster_spec):
         cluster_name = cluster_spec['cluster_name']
         broker = self._get_cluster_info(**cluster_spec)[1]
-        return broker.delete_cluster(cluster_name)
+        return broker.delete_cluster(cluster_name=cluster_name)
 
     def _create_cluster(self, **cluster_spec):
         cluster_name = cluster_spec['cluster_name']
@@ -392,7 +393,10 @@ class BrokerManager(object):
         """
         ovdc_name = self.req_spec.get('vdc', None) or \
             self.req_qparams.get('vdc', None)
-        org_name = self.session.get('org')
+        org_name = self.req_spec.get('org', None) or \
+            self.req_qparams.get('vdc', None) or \
+            self.session.get('org', None)
+
         LOGGER.debug(f"org_name={org_name};vdc_name=\'{ovdc_name}\'")
 
         # Get the ovdc metadata from the logged-in org and ovdc.
@@ -408,10 +412,12 @@ class BrokerManager(object):
             if ctr_prov_ctx.get('container_provider') == CtrProvType.PKS.value:
                 return PKSBroker(self.req_headers, self.req_spec,
                                  pks_ctx=ctr_prov_ctx)
-            elif ctr_prov_ctx.get('container_provider') == CtrProvType.VCD.value:
+            elif ctr_prov_ctx.get('container_provider') \
+                    == CtrProvType.VCD.value:
                 return VcdBroker(self.req_headers, self.req_spec)
             else:
-                raise CseServerError(f"Vdc '{ovdc_name}' is not enabled for Kubernetes "
+                raise CseServerError(f"Vdc '{ovdc_name}' "
+                                     f"is not enabled for Kubernetes "
                                      f"cluster deployment")
         else:
             # TODO() - This call should be based on a boolean flag
