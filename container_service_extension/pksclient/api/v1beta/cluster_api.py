@@ -18,7 +18,7 @@ import re  # noqa: F401
 # python 2 and python 3 compatibility library
 import six
 
-from container_service_extension.pksclient.api_client import ApiClient
+from container_service_extension.pksclient.client.v1beta.api_client import ApiClient
 
 
 class ClusterApi(object):

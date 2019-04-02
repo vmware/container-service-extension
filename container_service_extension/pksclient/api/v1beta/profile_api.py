@@ -18,7 +18,7 @@ import re  # noqa: F401
 # python 2 and python 3 compatibility library
 import six
 
-from container_service_extension.pksclient.api_client import ApiClient
+from container_service_extension.pksclient.client.v1beta.api_client import ApiClient
 
 
 class ProfileApi(object):
@@ -126,7 +126,7 @@ class ProfileApi(object):
             files=local_var_files,
             response_type=None,  # noqa: E501
             auth_settings=auth_settings,
-            is_async=params.get('async'),
+            async=params.get('async'),
             _return_http_data_only=params.get('_return_http_data_only'),
             _preload_content=params.get('_preload_content', True),
             _request_timeout=params.get('_request_timeout'),
@@ -219,7 +219,7 @@ class ProfileApi(object):
             files=local_var_files,
             response_type=None,  # noqa: E501
             auth_settings=auth_settings,
-            is_async=params.get('async'),
+            async=params.get('async'),
             _return_http_data_only=params.get('_return_http_data_only'),
             _preload_content=params.get('_preload_content', True),
             _request_timeout=params.get('_request_timeout'),
@@ -312,7 +312,7 @@ class ProfileApi(object):
             files=local_var_files,
             response_type='ComputeProfile',  # noqa: E501
             auth_settings=auth_settings,
-            is_async=params.get('async'),
+            async=params.get('async'),
             _return_http_data_only=params.get('_return_http_data_only'),
             _preload_content=params.get('_preload_content', True),
             _request_timeout=params.get('_request_timeout'),
@@ -397,7 +397,7 @@ class ProfileApi(object):
             files=local_var_files,
             response_type='list[ComputeProfile]',  # noqa: E501
             auth_settings=auth_settings,
-            is_async=params.get('async'),
+            async=params.get('async'),
             _return_http_data_only=params.get('_return_http_data_only'),
             _preload_content=params.get('_preload_content', True),
             _request_timeout=params.get('_request_timeout'),
