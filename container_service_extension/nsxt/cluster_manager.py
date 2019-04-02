@@ -139,8 +139,8 @@ class ClusterManager(object):
         return f"isolate_{cluster_name}"
 
     def _create_firewall_section_for_cluster(self,
-                                            cluster_name,
-                                            applied_to_nsgroup_id):
+                                             cluster_name,
+                                             applied_to_nsgroup_id):
         section_name = self._get_firewall_section_name_for_cluster(
             cluster_name)
         dwf_manager = DFWManager(self._nsxt_client)
@@ -165,11 +165,11 @@ class ClusterManager(object):
         return section
 
     def _create_firewall_rules_for_cluster(self,
-                                          section_id,
-                                          nodes_nsgroup_id,
-                                          pods_nsgroup_id,
-                                          nodes_pods_nsgroup_id,
-                                          all_nodes_pods_nsgroup_id):
+                                           section_id,
+                                           nodes_nsgroup_id,
+                                           pods_nsgroup_id,
+                                           nodes_pods_nsgroup_id,
+                                           all_nodes_pods_nsgroup_id):
         dfw_manager = DFWManager(self._nsxt_client)
         rule1_name = "Block pods to node communication"
         Logger.debug(f"Creating DFW rule : {rule1_name}")
