@@ -255,7 +255,6 @@ class PKSBroker(AbstractBroker):
                      f" cluster: {cluster_name}")
         return cluster_dict
 
-    @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
     @add_vcd_user_context(qualify_params=['cluster_name'])
     def get_cluster_info(self, cluster_name):
         """Get the details of a cluster with a given name in PKS environment.
@@ -284,7 +283,6 @@ class PKSBroker(AbstractBroker):
 
         return cluster_dict
 
-    @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
     def get_cluster_config(self, cluster_name):
         """Get the configuration of the cluster with the given name in PKS.
 
