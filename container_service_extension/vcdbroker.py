@@ -619,6 +619,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                     TaskStatus.SUCCESS,
                     message=f"Created {self.req_spec['node_count']} node(s) "
                             f"for {self.cluster_name}({self.cluster_id})")
+            elif self.req_spec['node_type'] == TYPE_NODE:
                 self.update_task(
                     TaskStatus.RUNNING,
                     message=f"Adding {self.req_spec['node_count']} node(s) to "
