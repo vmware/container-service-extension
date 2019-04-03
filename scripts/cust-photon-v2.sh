@@ -25,7 +25,7 @@ systemctl start iptables-ports.service
 tdnf makecache -q
 
 echo 'installing kuberentes'
-tdnf install -yq wget kubernetes-1.10.11-1.ph2 kubernetes-kubeadm-1.10.11-1.ph2
+tdnf install -yq wget kubernetes-1.12.7-1.ph2 kubernetes-kubeadm-1.12.7-1.ph2
 
 echo 'install docker'
 tdnf install -yq wget docker-17.06.0-9.ph2
@@ -35,10 +35,10 @@ systemctl start docker
 while [ `systemctl is-active docker` != 'active' ]; do echo 'waiting for docker'; sleep 5; done
 
 echo 'downloading container images'
-docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.10.11
-docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.10.11
-docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.10.11
-docker pull gcr.io/google_containers/kube-proxy-amd64:v1.10.11
+docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.12.7
+docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.12.7
+docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.12.7
+docker pull gcr.io/google_containers/kube-proxy-amd64:v1.12.7
 docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.7
 docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.7
 docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7
