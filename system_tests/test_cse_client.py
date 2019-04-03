@@ -27,6 +27,8 @@ $ vcd cse cluster delete testcluster
 NOTE:
 - These tests will install CSE on vCD if CSE is not installed already.
 - Edit 'base_config.yaml' for your own vCD instance.
+- Testers MUST have an org admin user in the org with the same credentials
+    as system administrator (system administrators cannot deploy clusters).
 - Clusters are deleted on test failure, unless 'teardown_clusters'=false in
     'base_config.yaml'.
 - This test module typically takes ~20 minutes to finish per template.
