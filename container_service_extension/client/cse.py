@@ -649,13 +649,20 @@ def create_node(ctx, name, node_count, cpu, memory, network_name,
 @node_group.command('list', short_help='list nodes')
 @click.pass_context
 @click.argument('name', required=True)
-def list_nodes(ctx, name):
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    help='Name of the virtual datacenter')
+def list_nodes(ctx, name, vdc):
     """Display nodes in a Kubernetes cluster."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        cluster_info = cluster.get_cluster_info(name)
+        cluster_info = cluster.get_cluster_info(name, vdc)
         all_nodes = cluster_info['master_nodes'] + cluster_info['nodes']
         stdout(all_nodes, ctx, show_id=True)
     except Exception as e:
