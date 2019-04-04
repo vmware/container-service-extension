@@ -132,7 +132,7 @@ class PKSBroker(AbstractBroker):
         self.proxy_uri = f"http://{pks_ctx['proxy']}:80" \
             if pks_ctx.get('proxy') else None
         self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE, None)
-        self.verify = False  # TODO(pks.yaml) pks_config['pks']['verify']
+        self.verify = pks_ctx.get('verify')
         self.pks_client = self._get_pks_client()
         self.client_session = None
 

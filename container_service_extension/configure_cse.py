@@ -215,7 +215,7 @@ SAMPLE_PKS_SERVERS_SECTION = {
             'clusters': ['pks-s1-az-1', 'pks-s1-az-2', 'pks-s1-az-3'],
             'cpi': 'cpi1',
             'nsxt': 'nsxt-server-1',
-            'vc': 'vc1'
+            'vc': 'vc1',
             'verify': True
         }, {
             'name': 'pks-server-2',
@@ -227,7 +227,7 @@ SAMPLE_PKS_SERVERS_SECTION = {
             'clusters': ['pks-s2-az-1', 'pks-s2-az-2', 'pks-s2-az-3'],
             'cpi': 'cpi2',
             'nsxt': 'nsxt-server-2',
-            'vc': 'vc2'
+            'vc': 'vc2',
             'verify': True
         }
     ]
@@ -295,20 +295,20 @@ SAMPLE_PKS_NSXT_SERVERS_SECTION = {
             'host': 'nsxt1.domain.local',
             'username': 'admin',
             'password': 'secret',
-            'proxy': 'proxy1.pks.local'
+            'proxy': 'proxy1.pks.local',
             'nodes_ip_block_ids': ['id1', 'id2'],
             'pods_ip_block_ids': ['id1', 'id2'],
-            'distributed_firewall_section_anchor_id': 'id'
+            'distributed_firewall_section_anchor_id': 'id',
             'verify': True
         }, {
             'name': 'nsxt-server-2',
             'host': 'nsxt2.domain.local',
             'username': 'admin',
             'password': 'secret',
-            'proxy': 'proxy2.pks.local'
+            'proxy': 'proxy2.pks.local',
             'nodes_ip_block_ids': ['id1', 'id2'],
             'pods_ip_block_ids': ['id1', 'id2'],
-            'distributed_firewall_section_anchor_id': 'id'
+            'distributed_firewall_section_anchor_id': 'id',
             'verify': True
         }
     ]

@@ -269,7 +269,7 @@ class PksCache(object):
             pks_info = PksAccountInfo(pks_account_name,
                                       pks_server['host'],
                                       pks_server['port'],
-                                      pks_server['verify']
+                                      pks_server['verify'],
                                       pks_server['uaac_port'],
                                       credentials,
                                       pks_server['vc'],
