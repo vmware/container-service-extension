@@ -407,12 +407,12 @@ def get_validated_config(config_file_name):
     pks_config_location = config.get('pks_config')
     click.secho(f"Validating config file '{config_file_name}'", fg='yellow')
     # This allows us to compare top-level config keys and value types
-    SAMPLE_CONFIG = {
+    sample_config = {
         **SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
         **SAMPLE_VCS_CONFIG, **SAMPLE_SERVICE_CONFIG,
         **SAMPLE_BROKER_CONFIG
     }
-    check_keys_and_value_types(config, SAMPLE_CONFIG, location='config file')
+    check_keys_and_value_types(config, sample_config, location='config file')
     validate_amqp_config(config['amqp'])
     validate_vcd_and_vcs_config(config['vcd'], config['vcs'])
     validate_broker_config(config['broker'])
@@ -427,6 +427,7 @@ def get_validated_config(config_file_name):
         click.secho(f"Validating PKS config file '{pks_config_location}'",
                     fg='yellow')
         validate_pks_config_structure(pks_config)
+        validate_pks_config_data_integrity(pks_config)
         click.secho(f"PKS Config file '{pks_config_location}' is valid",
                     fg='green')
         config['pks_config'] = pks_config
@@ -584,18 +585,56 @@ def validate_broker_config(broker_dict):
 
 
 def validate_pks_config_structure(pks_config):
-    required_keys = [
-        PKS_SERVERS_SECTION_KEY,
-        PKS_ACCOUNTS_SECTION_KEY,
-        PKS_PVDCS_SECTION_KEY,
-        PKS_NSXT_SERVERS_SECTION_KEY
-    ]
+    sample_config = {
+        **SAMPLE_PKS_SERVERS_SECTION, **SAMPLE_PKS_ACCOUNTS_SECTION,
+        **SAMPLE_PKS_ORGS_SECTION, **SAMPLE_PKS_PVDCS_SECTION,
+        **SAMPLE_PKS_NSXT_SERVERS_SECTION
+    }
+    check_keys_and_value_types(pks_config, sample_config,
+                               location='pks config file',
+                               excluded_keys=[PKS_ORGS_SECTION_KEY])
 
-    for required_key in required_keys:
-        if required_key not in pks_config.keys():
-            raise ValueError(f"Section : {required_key} missing from PKS "
-                             "configuration")
+    pks_servers = pks_config[PKS_SERVERS_SECTION_KEY]
+    for index, pks_server in enumerate(pks_servers, 1):
+        check_keys_and_value_types(
+            pks_server,
+            SAMPLE_PKS_SERVERS_SECTION[PKS_SERVERS_SECTION_KEY][0],
+            location=f"pks config file '{PKS_SERVERS_SECTION_KEY}' "
+                     f"section, pks server #{index}",
+            excluded_keys=['proxy'])
+    pks_accounts = pks_config[PKS_ACCOUNTS_SECTION_KEY]
+    for index, pks_account in enumerate(pks_accounts, 1):
+        check_keys_and_value_types(
+            pks_account,
+            SAMPLE_PKS_ACCOUNTS_SECTION[PKS_ACCOUNTS_SECTION_KEY][0],
+            location=f"pks config file '{PKS_ACCOUNTS_SECTION_KEY}' "
+                     f"section, pks account #{index}")
+    if PKS_ORGS_SECTION_KEY in pks_config.keys():
+        orgs = pks_config[PKS_ORGS_SECTION_KEY]
+        for index, org in enumerate(orgs, 1):
+            check_keys_and_value_types(
+                org,
+                SAMPLE_PKS_ORGS_SECTION[PKS_ORGS_SECTION_KEY][0],
+                location=f"pks config file '{PKS_ORGS_SECTION_KEY}' "
+                         f"section, org #{index}")
+    pvdcs = pks_config[PKS_PVDCS_SECTION_KEY]
+    for index, pvdc in enumerate(pvdcs, 1):
+        check_keys_and_value_types(
+            pvdc,
+            SAMPLE_PKS_PVDCS_SECTION[PKS_PVDCS_SECTION_KEY][0],
+            location=f"pks config file '{PKS_PVDCS_SECTION_KEY}' "
+                     f"section, pvdc #{index}")
+    nsxt_servers = pks_config[PKS_NSXT_SERVERS_SECTION_KEY]
+    for index, nsxt_server in enumerate(nsxt_servers, 1):
+        check_keys_and_value_types(
+            nsxt_server,
+            SAMPLE_PKS_NSXT_SERVERS_SECTION[PKS_NSXT_SERVERS_SECTION_KEY][0],
+            location=f"pks config file '{PKS_NSXT_SERVERS_SECTION_KEY}' "
+                     f"section, nsxt server #{index}",
+            excluded_keys=['proxy'])
 
+
+def validate_pks_config_data_integrity(pks_config):
     all_pks_servers = \
         [entry['name'] for entry in pks_config[PKS_SERVERS_SECTION_KEY]]
     all_pks_accounts = \

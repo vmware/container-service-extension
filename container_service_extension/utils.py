@@ -239,7 +239,8 @@ def get_sha256(filepath):
     return sha256.hexdigest()
 
 
-def check_keys_and_value_types(dikt, ref_dict, location='dictionary'):
+def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
+                               excluded_keys=[]):
     """Compare a dictionary with a reference dictionary.
 
     The method ensures that  all keys and value types are the same in the
@@ -249,6 +250,8 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary'):
     :param dict ref_dict: the dictionary to check against
     :param str location: where this check is taking place, so error messages
         can be more descriptive.
+    :param list excluded_keys: list of str, representing the list of key which
+        if missing won't raise an exception.
 
     :raises KeyError: if @dikt has missing or invalid keys
     :raises TypeError: if the value of a property in @dikt does not match with
@@ -257,7 +260,7 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary'):
     ref_keys = set(ref_dict.keys())
     keys = set(dikt.keys())
 
-    missing_keys = ref_keys - keys
+    missing_keys = ref_keys - keys - set(excluded_keys)
 
     if missing_keys:
         click.secho(f"Missing keys in {location}: {missing_keys}", fg='red')
