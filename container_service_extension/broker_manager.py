@@ -108,7 +108,9 @@ class BrokerManager(object):
                 self._create_pks_compute_profile(pks_ctx)
             task = self.ovdc_cache. \
                 set_ovdc_container_provider_metadata(
-                    ovdc, container_prov_data=pks_ctx, container_provider=self.req_spec[CONTAINER_PROVIDER])
+                    ovdc,
+                    container_prov_data=pks_ctx,
+                    container_provider=self.req_spec[CONTAINER_PROVIDER])
             # TODO() Constructing response should be moved out of this layer
             result['body'] = {'task_href': task.get('href')}
             result['status_code'] = ACCEPTED
