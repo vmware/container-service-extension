@@ -435,7 +435,7 @@ class BrokerManager(object):
         pks_context = None
         if self.req_spec[CONTAINER_PROVIDER] == CtrProvType.PKS.value:
             if self.pks_cache is None:
-                raise Exception('PKS config file does not exist')
+                raise CseServerError('PKS config file does not exist')
             pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
             pks_info = self.pks_cache.get_pks_account_details(
                 org_name, pvdc_info.vc)
