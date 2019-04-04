@@ -130,13 +130,13 @@ SAMPLE_VCS_CONFIG = {
             'name': 'vc1',
             'username': 'cse_user@vsphere.local',
             'password': 'my_secret_password',
-            'verify': False
+            'verify': True
         },
         {
             'name': 'vc2',
             'username': 'cse_user@vsphere.local',
             'password': 'my_secret_password',
-            'verify': False
+            'verify': True
         }
     ]
 }
@@ -216,6 +216,7 @@ SAMPLE_PKS_SERVERS_SECTION = {
             'cpi': 'cpi1',
             'nsxt': 'nsxt-server-1',
             'vc': 'vc1'
+            'verify': True
         }, {
             'name': 'pks-server-2',
             'host': 'pks-server-2.pks.local',
@@ -227,6 +228,7 @@ SAMPLE_PKS_SERVERS_SECTION = {
             'cpi': 'cpi2',
             'nsxt': 'nsxt-server-2',
             'vc': 'vc2'
+            'verify': True
         }
     ]
 }
@@ -293,17 +295,21 @@ SAMPLE_PKS_NSXT_SERVERS_SECTION = {
             'host': 'nsxt1.domain.local',
             'username': 'admin',
             'password': 'secret',
+            'proxy': 'proxy1.pks.local'
             'nodes_ip_block_ids': ['id1', 'id2'],
             'pods_ip_block_ids': ['id1', 'id2'],
             'distributed_firewall_section_anchor_id': 'id'
+            'verify': True
         }, {
             'name': 'nsxt-server-2',
             'host': 'nsxt2.domain.local',
             'username': 'admin',
             'password': 'secret',
+            'proxy': 'proxy2.pks.local'
             'nodes_ip_block_ids': ['id1', 'id2'],
             'pods_ip_block_ids': ['id1', 'id2'],
             'distributed_firewall_section_anchor_id': 'id'
+            'verify': True
         }
     ]
 }

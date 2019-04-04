@@ -158,9 +158,9 @@ class PksCache(object):
         if self.do_orgs_have_pks_service_account():
             return self.vc_org_to_pks_info_mapper.get((org_name, vc_name))
         else:
-            return self.vc_to_pks_info_mapper[vc_name]
+            return self.vc_to_pks_info_mapper.get(vc_name)
 
-    def get_all_pks_account_infos_for_org(self, org_name):
+    def get_all_pks_account_info_for_org(self, org_name):
         """Return all pks accounts associated with an org.
 
         This method returns an empty list if the system is configured to have
@@ -269,6 +269,7 @@ class PksCache(object):
             pks_info = PksAccountInfo(pks_account_name,
                                       pks_server['host'],
                                       pks_server['port'],
+                                      pks_server['verify']
                                       pks_server['uaac_port'],
                                       credentials,
                                       pks_server['vc'],
@@ -317,17 +318,18 @@ class PksCache(object):
 
 
 class PksAccountInfo(namedtuple("PksAccountInfo", "account_name, host, port, "
-                                "uaac_port, credentials, vc, proxy")):
+                                "verify, uaac_port, credentials, vc, proxy")):
     """Immutable class representing PKS account information."""
 
     def __str__(self):
-        return "class:{c}, name: {name}, host: {host}, port : {port}, " \
-               "uaac_port : {uaac_port}, credentials : {credentials}, " \
-               "vc : {vc}, proxy : {proxy}"\
+        return "class:{c}, name: {name}, host: {host}, port: {port}, " \
+               "verify: {verify}, uaac_port : {uaac_port}, "\
+               "credentials : {credentials}, vc : {vc}, proxy : {proxy}"\
             .format(c=PksAccountInfo.__name__,
                     name=self.account_name,
                     host=self.host,
                     port=self.port,
+                    verify=self.verify,
                     uaac_port=self.uaac_port,
                     credentials=self.credentials,
                     vc=self.vc, proxy=self.proxy)

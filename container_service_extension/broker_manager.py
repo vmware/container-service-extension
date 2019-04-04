@@ -353,7 +353,7 @@ class BrokerManager(object):
         org_name = self.session.get('org')
         if self.pks_cache.do_orgs_have_pks_service_account():
             pks_account_infos = \
-                self.pks_cache.get_all_pks_account_infos_for_org(org_name)
+                self.pks_cache.get_all_pks_account_info_for_org(org_name)
             pks_ctx_list = [OvdcCache.construct_pks_context
                             (pks_account_info, credentials_required=True)
                             for pks_account_info in pks_account_infos]
