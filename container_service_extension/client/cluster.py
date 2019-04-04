@@ -30,7 +30,7 @@ class Cluster(object):
             auth=None)
         return process_response(response)
 
-    def get_clusters(self, vdc):
+    def get_clusters(self, vdc=None):
         method = 'GET'
         uri = self._uri
         response = self.client._do_request_prim(
@@ -44,7 +44,7 @@ class Cluster(object):
             params={'vdc': vdc} if vdc else None)
         return process_response(response)
 
-    def get_cluster_info(self, name, vdc):
+    def get_cluster_info(self, name, vdc=None):
         method = 'GET'
         uri = '%s/%s/info' % (self._uri, name)
         response = self.client._do_request_prim(
@@ -140,10 +140,10 @@ class Cluster(object):
         return process_response(response)
 
     def resize_cluster(self,
-                       vdc,
                        network_name,
                        cluster_name,
                        node_count=1,
+                       vdc=None,
                        disable_rollback=True):
         method = 'PUT'
         uri = f"{self._uri}/{cluster_name}"
@@ -164,7 +164,7 @@ class Cluster(object):
             accept_type='application/json')
         return process_response(response)
 
-    def delete_cluster(self, cluster_name, vdc):
+    def delete_cluster(self, cluster_name, vdc=None):
         method = 'DELETE'
         uri = '%s/%s' % (self._uri, cluster_name)
         response = self.client._do_request_prim(
@@ -182,7 +182,7 @@ class Cluster(object):
                 raise e
         return result
 
-    def get_config(self, cluster_name, vdc):
+    def get_config(self, cluster_name, vdc=None):
         method = 'GET'
         uri = '%s/%s/config' % (self._uri, cluster_name)
         response = self.client._do_request_prim(

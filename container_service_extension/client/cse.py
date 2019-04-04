@@ -208,7 +208,7 @@ def list_clusters(ctx, vdc):
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        result = cluster.get_clusters(vdc)
+        result = cluster.get_clusters(vdc=vdc)
         stdout(result, ctx, show_id=True)
     except Exception as e:
         stderr(e, ctx)
@@ -434,10 +434,10 @@ def resize(ctx, name, node_count, network_name, vdc, disable_rollback):
         client = ctx.obj['client']
         cluster = Cluster(client)
         result = cluster.resize_cluster(
-            vdc=ctx.obj['profiles'].get('vdc_in_use') if vdc is None else vdc,
-            network_name=network_name,
-            cluster_name=name,
+            network_name,
+            name,
             node_count=node_count,
+            vdc=ctx.obj['profiles'].get('vdc_in_use') if vdc is None else vdc,
             disable_rollback=disable_rollback)
         stdout(result, ctx)
     except Exception as e:
@@ -461,7 +461,7 @@ def config(ctx, name, save, vdc):
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        cluster_config = cluster.get_config(name, vdc)
+        cluster_config = cluster.get_config(name, vdc=vdc)
         if os.name == 'nt':
             cluster_config = str.replace(cluster_config, '\n', '\r\n')
         if save:
@@ -488,7 +488,7 @@ def cluster_info(ctx, name, vdc):
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        cluster_info = cluster.get_cluster_info(name, vdc)
+        cluster_info = cluster.get_cluster_info(name, vdc=vdc)
         stdout(cluster_info, ctx, show_id=True)
     except Exception as e:
         stderr(e, ctx)
@@ -649,20 +649,13 @@ def create_node(ctx, name, node_count, cpu, memory, network_name,
 @node_group.command('list', short_help='list nodes')
 @click.pass_context
 @click.argument('name', required=True)
-@click.option(
-    '-v',
-    '--vdc',
-    'vdc',
-    required=False,
-    default=None,
-    help='Name of the virtual datacenter')
-def list_nodes(ctx, name, vdc):
+def list_nodes(ctx, name):
     """Display nodes in a Kubernetes cluster."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        cluster_info = cluster.get_cluster_info(name, vdc)
+        cluster_info = cluster.get_cluster_info(name)
         all_nodes = cluster_info['master_nodes'] + cluster_info['nodes']
         stdout(all_nodes, ctx, show_id=True)
     except Exception as e:
