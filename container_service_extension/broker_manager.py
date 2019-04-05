@@ -108,7 +108,9 @@ class BrokerManager(object):
                 self._create_pks_compute_profile(pks_ctx)
             task = self.ovdc_cache. \
                 set_ovdc_container_provider_metadata(
-                    ovdc, pks_ctx, self.req_spec[CONTAINER_PROVIDER])
+                    ovdc,
+                    container_prov_data=pks_ctx,
+                    container_provider=self.req_spec[CONTAINER_PROVIDER])
             # TODO() Constructing response should be moved out of this layer
             result['body'] = {'task_href': task.get('href')}
             result['status_code'] = ACCEPTED
@@ -121,7 +123,7 @@ class BrokerManager(object):
         elif op == Operation.DELETE_CLUSTER:
             cluster_spec = \
                 {'cluster_name': self.req_spec.get('cluster_name', None)}
-            self._delete_cluster(**cluster_spec)
+            result['body'] = self._delete_cluster(**cluster_spec)
             result['status_code'] = ACCEPTED
         elif op == Operation.RESIZE_CLUSTER:
             # TODO(resize_cluster) Once VcdBroker.create_nodes() is hooked to
@@ -431,15 +433,21 @@ class BrokerManager(object):
         pks_plans = self.req_spec['pks_plans']
         ovdc = self.ovdc_cache.get_ovdc(ovdc_id=ovdc_id)
         pvdc_id = self.ovdc_cache.get_pvdc_id(ovdc)
-        pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
-        pks_info = self.pks_cache.get_pks_account_details(
-            org_name, pvdc_info.vc)
-        pks_compute_profile_name = self. \
-            ovdc_cache.get_compute_profile_name(ovdc_id,
-                                                ovdc.resource.get('name'))
-        pks_context = OvdcCache.construct_pks_context(
-            pks_info, pvdc_info, pks_compute_profile_name,
-            pks_plans, credentials_required=True)
+
+        pks_context = None
+        if self.req_spec[CONTAINER_PROVIDER] == CtrProvType.PKS.value:
+            if self.pks_cache is None:
+                raise CseServerError('PKS config file does not exist')
+            pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
+            pks_info = self.pks_cache.get_pks_account_details(
+                org_name, pvdc_info.vc)
+            pks_compute_profile_name = self. \
+                ovdc_cache.get_compute_profile_name(ovdc_id,
+                                                    ovdc.resource.get('name'))
+            pks_context = OvdcCache.construct_pks_context(
+                pks_info, pvdc_info, pks_compute_profile_name,
+                pks_plans, credentials_required=True)
+
         return pks_context, ovdc
 
     def _create_pks_compute_profile(self, pks_ctx):
