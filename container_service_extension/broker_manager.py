@@ -136,7 +136,8 @@ class BrokerManager(object):
                 {'cluster_name': self.req_spec.get('cluster_name', None),
                  'node_count': self.req_spec.get('node_count', None)
                  }
-            result = self._resize_cluster(**cluster_spec)
+            result['body'] = self._resize_cluster(**cluster_spec)
+            result['status_code'] = ACCEPTED
         elif op == Operation.GET_CLUSTER_CONFIG:
             cluster_spec = \
                 {'cluster_name': self.req_spec.get('cluster_name', None)}
@@ -406,13 +407,11 @@ class BrokerManager(object):
 
         :rtype: container_service_extension.abstract_broker.AbstractBroker
         """
-
         ovdc_name = self.req_spec.get('vdc') or \
             self.req_qparams.get('vdc')
         org_name = self.req_spec.get('org') or \
             self.req_qparams.get('org') or \
             self.session.get('org')
-
 
         LOGGER.debug(f"org_name={org_name};vdc_name=\'{ovdc_name}\'")
 
