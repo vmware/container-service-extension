@@ -132,7 +132,16 @@ class PKSBroker(AbstractBroker):
         self.proxy_uri = f"http://{pks_ctx['proxy']}:80" \
             if pks_ctx.get('proxy') else None
         self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE, None)
-        self.verify = pks_ctx.get('verify')
+        # TODO() Add support in pyvcloud to send metadata values with their
+        # types intact.
+        verify_ssl_value_in_ctx = pks_ctx.get('verify')
+        if isinstance(verify_ssl_value_in_ctx, bool):
+            self.verify = verify_ssl_value_in_ctx
+        elif isinstance(verify_ssl_value_in_ctx, str):
+            self.verify = \
+                False if verify_ssl_value_in_ctx.lower() == 'false' else True
+        else:
+            self.verify = True
         self.pks_client = self._get_pks_client()
         self.client_session = None
 
