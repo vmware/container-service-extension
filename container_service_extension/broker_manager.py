@@ -346,7 +346,7 @@ class BrokerManager(object):
 
         if self.vcd_client.is_sysadmin():
             all_pks_account_info = \
-                self.pks_cache.get_all_pks_account_infos_in_system()
+                self.pks_cache.get_all_pks_account_info_in_system()
             pks_ctx_list = [OvdcCache.construct_pks_context(
                 pks_account_info, credentials_required=True)
                 for pks_account_info in all_pks_account_info]
@@ -453,7 +453,7 @@ class BrokerManager(object):
         pvdc_id = self.ovdc_cache.get_pvdc_id(ovdc)
 
         pks_context = None
-        if self.req_spec[CONTAINER_PROVIDER] == CtrProvType.PKS.value:
+        if self.req_spec[CONTAINER_PROVIDER_KEY] == CtrProvType.PKS.value:
             if self.pks_cache is None:
                 raise CseServerError('PKS config file does not exist')
             pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
