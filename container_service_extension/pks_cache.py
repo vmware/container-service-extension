@@ -307,7 +307,6 @@ class PksCache(object):
 
         :rtype: dict
         """
-
         vc_org_to_pks_info_mapper = {}
         for org_name, account_names in self.orgs_to_pks_account_mapper.items():
             for account_name in account_names:
