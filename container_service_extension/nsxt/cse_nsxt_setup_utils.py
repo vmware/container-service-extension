@@ -2,7 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.logger import SERVER_NSXT_LOGGER as Logger
+from container_service_extension.logger import SERVER_NSXT_LOGGER as LOGGER
 from container_service_extension.nsxt.constants import ALL_NODES_IP_SET_NAME
 from container_service_extension.nsxt.constants import \
     ALL_NODES_PODS_NSGROUP_NAME
@@ -34,21 +34,21 @@ def _create_ipset_for_node_pod_ip_blocks(nsxt_client,
 
     all_nodes_ip_set = ip_set_manager.get_ip_set(name=ALL_NODES_IP_SET_NAME)
     if all_nodes_ip_set is None:
-        Logger.debug(f"Creating IPSet : {ALL_NODES_IP_SET_NAME}")
+        LOGGER.debug(f"Creating IPSet : {ALL_NODES_IP_SET_NAME}")
         all_nodes_ip_set = ip_set_manager.create_ip_set_from_ip_block(
             ALL_NODES_IP_SET_NAME,
             nodes_ip_block_ids)
     else:
-        Logger.debug(f"IPSet : {ALL_NODES_IP_SET_NAME} already exists.")
+        LOGGER.debug(f"IPSet : {ALL_NODES_IP_SET_NAME} already exists.")
 
     all_pods_ip_set = ip_set_manager.get_ip_set(name=ALL_PODS_IP_SET_NAME)
     if all_pods_ip_set is None:
-        Logger.debug(f"Creating IPSet : {ALL_PODS_IP_SET_NAME}")
+        LOGGER.debug(f"Creating IPSet : {ALL_PODS_IP_SET_NAME}")
         all_pods_ip_set = ip_set_manager.create_ip_set_from_ip_block(
             ALL_PODS_IP_SET_NAME,
             pods_ip_block_ids)
     else:
-        Logger.debug(f"IPSet : {ALL_PODS_IP_SET_NAME} already exists.")
+        LOGGER.debug(f"IPSet : {ALL_PODS_IP_SET_NAME} already exists.")
 
 
 def _create_all_nodes_pods_nsgroup(nsxt_client):
@@ -61,12 +61,12 @@ def _create_all_nodes_pods_nsgroup(nsxt_client):
             name=ALL_NODES_IP_SET_NAME)['id']
         all_pods_ip_set_id = ip_set_manager.get_ip_set(
             name=ALL_PODS_IP_SET_NAME)['id']
-        Logger.debug(f"Creating NSGroup : {ALL_NODES_PODS_NSGROUP_NAME}")
+        LOGGER.debug(f"Creating NSGroup : {ALL_NODES_PODS_NSGROUP_NAME}")
         nsgroup = nsgroup_manager.create_nsgroup_from_ipsets(
             name=ALL_NODES_PODS_NSGROUP_NAME,
             ipset_ids=[all_nodes_ip_set_id, all_pods_ip_set_id])
     else:
-        Logger.debug(
+        LOGGER.debug(
             f"NSGroup : {ALL_NODES_PODS_NSGROUP_NAME} already exists.")
 
 
@@ -83,7 +83,7 @@ def _create_ncp_boundary_firewall_section(
         tag['tag'] = "top"
         tags = [tag]
 
-        Logger.debug(
+        LOGGER.debug(
             f"Creating DFW section : {NCP_BOUNDARY_FIREWALL_SECTION_NAME}")
         section = dfw_manager.create_firewall_section(
             name=NCP_BOUNDARY_FIREWALL_SECTION_NAME,
@@ -91,7 +91,7 @@ def _create_ncp_boundary_firewall_section(
             anchor_id=ncp_boundary_firewall_section_anchor_id,
             insert_policy=INSERT_POLICY.INSERT_BEFORE)
     else:
-        Logger.debug(f"DFW section : {NCP_BOUNDARY_FIREWALL_SECTION_NAME}"
+        LOGGER.debug(f"DFW section : {NCP_BOUNDARY_FIREWALL_SECTION_NAME}"
                      " already exists.")
 
     return section

@@ -2,10 +2,10 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from cluster_manager import ClusterManager
+from cluster_network_manager import ClusterNetworkManager
+from cse_nsxt_setup_utils import setup_nsxt_constructs
 from nsxt_client import NSXTClient
 import requests
-from setup import setup_nsxt_constructs
 
 from container_service_extension.logger import configure_server_logger
 
@@ -48,14 +48,14 @@ if __name__ == '__main__':
     #    pods_ip_block_id=PODS_IP_BLOCK_IDS,
     #    ncp_boundary_firewall_section_anchor_id=NCP_BOUNDARY_FIREWALL_SECTION_ANCHOR_ID)  # noqa
 
-    cluster_manager = ClusterManager(nsxt_client)
+    cluster_network_manager = ClusterNetworkManager(nsxt_client)
 
     cluster_id = 'f44766e9-a330-4a4a-a86e-5773c21968cb'
     cluster_name = 'cluster1'
-    # cluster_manager.isolate_cluster(cluster_name, cluster_id)
-    cluster_manager.cleanup_cluster(cluster_name)
+    # cluster_network_manager.isolate_cluster(cluster_name, cluster_id)
+    cluster_network_manager.cleanup_cluster(cluster_name)
 
     cluster_id = '1c1d3ea4-c9e0-4b93-a8b1-0cb58b578048'
     cluster_name = 'cluster2'
-    # cluster_manager.isolate_cluster(cluster_name, cluster_id)
-    cluster_manager.cleanup_cluster(cluster_name)
+    # cluster_network_manager.isolate_cluster(cluster_name, cluster_id)
+    cluster_network_manager.cleanup_cluster(cluster_name)

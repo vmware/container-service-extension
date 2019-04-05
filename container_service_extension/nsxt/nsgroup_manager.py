@@ -4,7 +4,7 @@
 
 from requests.exceptions import HTTPError
 
-from container_service_extension.logger import SERVER_NSXT_LOGGER as Logger
+from container_service_extension.logger import SERVER_NSXT_LOGGER as LOGGER
 from container_service_extension.nsxt.constants import RequestMethodVerb
 
 
@@ -24,10 +24,10 @@ class NSGroupManager(object):
         return nsgroups
 
     def get_nsgroup(self, name=None, id=None):
-        if id is None and name is None:
-            return None
+        if not id and not name:
+            return
 
-        if id is not None:
+        if id:
             resource_url_fragment = f"ns-groups/{id}"
             try:
                 response = self._nsxt_client.do_request(
@@ -35,26 +35,22 @@ class NSGroupManager(object):
                     resource_url_fragment=resource_url_fragment)
                 return response
             except HTTPError as err:
-                if err.code == 404:
-                    return None
-                else:
+                if err.code != 404:
                     raise
 
         nsgroups = self.list_nsgroups()
         for nsgroup in nsgroups:
-            if name is not None and nsgroup['display_name'] == name:
+            if nsgroup['display_name'].lower() == name.lower():
                 return nsgroup
-
-        return None
 
     def create_nsgroup(self, name, members=None, membership_criteria=None):
         resource_url_fragment = "ns-groups"
 
         data = {}
         data['display_name'] = name
-        if members is not None:
+        if members:
             data['members'] = members
-        if membership_criteria is not None:
+        if membership_criteria:
             data['membership_criteria'] = membership_criteria
 
         nodes_nsgroup = self._nsxt_client.do_request(
@@ -79,15 +75,15 @@ class NSGroupManager(object):
         return self.create_nsgroup(name, members=members)
 
     def delete_nsgroup(self, name=None, id=None, force=False):
-        if name is None and id is None:
+        if not name and not id:
             return False
 
-        if id is None:
+        if not id:
             nsgroup = self.get_nsgroup(name)
             if nsgroup:
                 id = nsgroup['id']
             else:
-                Logger.debug(f"NSGroup : {name} not found. Unable to delete.")
+                LOGGER.debug(f"NSGroup : {name} not found. Unable to delete.")
                 return False
         resource_url_fragment = f"ns-groups/{id}"
         if force:

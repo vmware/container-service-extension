@@ -7,7 +7,7 @@ import json
 import requests
 from requests.auth import HTTPBasicAuth
 
-from container_service_extension.logger import SERVER_NSXT_LOGGER as Logger
+from container_service_extension.logger import SERVER_NSXT_LOGGER as LOGGER
 
 
 class NSXTClient(object):
@@ -47,22 +47,21 @@ class NSXTClient(object):
             verify=self._verify_ssl)
 
         if self._log_requests:
-            Logger.debug(f"Request uri : {(method.value).upper()} {url}")
+            LOGGER.debug(f"Request uri : {(method.value).upper()} {url}")
             if self._log_headers:
-                Logger.debug(f"Request hedears : {response.request.headers}")
+                LOGGER.debug(f"Request hedears : {response.request.headers}")
             if self._log_body and payload is not None:
-                Logger.debug(f"Request body : {response.request.body}")
+                LOGGER.debug(f"Request body : {response.request.body}")
 
         if self._log_requests:
-            Logger.debug(f"Response status code: {response.status_code}")
+            LOGGER.debug(f"Response status code: {response.status_code}")
             if self._log_headers:
-                Logger.debug(f"Response hedears : {response.headers}")
+                LOGGER.debug(f"Response hedears : {response.headers}")
             if self._log_body:
-                Logger.debug(f"Response body : {response.text}")
+                LOGGER.debug(f"Response body : {response.text}")
 
         response.raise_for_status()
 
         if response.text:
             return json.loads(response.text)
-        else:
-            return None
+
