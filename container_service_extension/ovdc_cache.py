@@ -14,6 +14,7 @@ from pyvcloud.vcd.vdc import VDC
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE
 from container_service_extension.pks_cache import PKS_PLANS
+from container_service_extension.pks_cache import PksCache
 from container_service_extension.utils import get_org
 from container_service_extension.utils import get_pks_cache
 from container_service_extension.utils import get_vdc
@@ -108,7 +109,7 @@ class OvdcCache(object):
             ctr_prov_details = {
                 metadata_key:
                     all_metadata[metadata_key]
-                    for metadata_key in self.pks_cache.get_pks_keys()
+                    for metadata_key in PksCache.get_pks_keys()
             }
 
             # Get the credentials from PksCache
@@ -143,7 +144,7 @@ class OvdcCache(object):
         metadata = {}
         if container_provider != CtrProvType.PKS.value:
             LOGGER.debug(f"Remove existing metadata for ovdc:{ovdc_name}")
-            self._remove_metadata(ovdc, self.pks_cache.get_pks_keys())
+            self._remove_metadata(ovdc, PksCache.get_pks_keys())
             metadata[CONTAINER_PROVIDER_KEY] = container_provider or \
                 CtrProvType.NONE.value
             LOGGER.debug(f"Updated metadata for {container_provider}:"

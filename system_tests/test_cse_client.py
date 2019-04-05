@@ -27,6 +27,8 @@ $ vcd cse cluster delete testcluster
 NOTE:
 - These tests will install CSE on vCD if CSE is not installed already.
 - Edit 'base_config.yaml' for your own vCD instance.
+- Testers MUST have an org admin user in the org with the same credentials
+    as system administrator (system administrators cannot deploy clusters).
 - Clusters are deleted on test failure, unless 'teardown_clusters'=false in
     'base_config.yaml'.
 - This test module typically takes ~20 minutes to finish per template.
@@ -93,6 +95,21 @@ def cse_server():
     p = subprocess.Popen(cmd.split(), stdout=subprocess.DEVNULL,
                          stderr=subprocess.STDOUT)
     time.sleep(env.WAIT_INTERVAL)  # server takes a little time to set up
+
+    # enable kubernetes functionality on our ovdc
+    # by default, an ovdc cannot deploy kubernetes clusters
+    # TODO() this should be removed once this behavior is changed
+    cmd = f"login {config['vcd']['host']} {utils.SYSTEM_ORG_NAME} " \
+          f"{config['vcd']['username']} -iwp {config['vcd']['password']}"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    cmd = f"org use {config['broker']['org']}"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    cmd = f"cse ovdc enablek8s {config['broker']['vdc']} -c vcd"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    result = env.CLI_RUNNER.invoke(vcd, 'logout', catch_exceptions=False)
 
     yield
 
@@ -239,9 +256,11 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
         """
         node_pattern = r'(node-\S+)'
         node_list_cmd = f"cse node list {env.TEST_CLUSTER_NAME}"
+        print(f"Running command [vcd {node_list_cmd}]...", end='')
         node_list_result = env.CLI_RUNNER.invoke(vcd, node_list_cmd.split(),
                                                  catch_exceptions=False)
         assert node_list_result.exit_code == 0
+        print('SUCCESS')
         node_list = re.findall(node_pattern, node_list_result.output)
         assert len(node_list) == num_nodes, \
             f"Test cluster has {len(node_list)} nodes, when it should have " \
@@ -250,9 +269,12 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
 
     # vcd cse template list
     # retrieves template names to test cluster deployment against
+    cmd = 'cse template list'
+    print(f"Running command [vcd {cmd}]...", end='')
     result = env.CLI_RUNNER.invoke(vcd, ['cse', 'template', 'list'],
                                    catch_exceptions=False)
     assert result.exit_code == 0
+    print('SUCCESS')
     template_pattern = r'(True|False)\s*(\S*)'
     matches = re.findall(template_pattern, result.output)
     template_names = [match[1] for match in matches]
@@ -267,13 +289,14 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
         cmd = f"cse cluster create {env.TEST_CLUSTER_NAME} -n " \
               f"{config['broker']['network']} -N 1 -t {template_name}"
         num_nodes += 1
+        print(f"Running command [vcd {cmd}]...", end='')
         result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
                                        catch_exceptions=False)
         assert result.exit_code == 0
         assert env.vapp_exists(env.TEST_CLUSTER_NAME), \
             "Cluster doesn't exist when it should."
+        print(f"SUCCESS")
         nodes = check_node_list()
-        print(f"Command [{cmd}] successful")
 
         # `cluster config`, `cluster info`, `cluster list`, `node info`
         # only need to run once
@@ -285,39 +308,44 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
                 f"cse node info {env.TEST_CLUSTER_NAME} {nodes[0]}"
             ]
             for cmd in cmds:
+                print(f"Running command [vcd {cmd}]...", end='')
                 result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
                                                catch_exceptions=False)
                 assert result.exit_code == 0
+                print('SUCCESS')
             has_run = True
 
         # vcd cse node delete testcluster TESTNODE
         cmd = f"cse node delete {env.TEST_CLUSTER_NAME} {nodes[0]}"
         num_nodes -= 1
+        print(f"Running command [vcd {cmd}]...", end='')
         result = env.CLI_RUNNER.invoke(vcd, cmd.split(), input='y',
                                        catch_exceptions=False)
         assert result.exit_code == 0
+        print('SUCCESS')
         check_node_list()
-        print(f"Command [{cmd}] successful")
 
         # vcd cse node create testcluster -n NETWORK -t PHOTON
         cmd = f"cse node create {env.TEST_CLUSTER_NAME} -n " \
               f"{config['broker']['network']} -t {template_name}"
         num_nodes += 1
+        print(f"Running command [vcd {cmd}]...", end='')
         result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
                                        catch_exceptions=False)
         assert result.exit_code == 0
+        print('SUCCESS')
         check_node_list()
-        print(f"Command [{cmd}] successful")
 
         # vcd cse cluster delete testcluster
         cmd = f"cse cluster delete {env.TEST_CLUSTER_NAME}"
+        print(f"Running command [vcd {cmd}]...", end='')
         result = env.CLI_RUNNER.invoke(vcd, cmd.split(), input='y',
                                        catch_exceptions=False)
         assert result.exit_code == 0
         assert not env.vapp_exists(env.TEST_CLUSTER_NAME), \
             "Cluster exists when it should not"
         num_nodes = 0
-        print(f"Command [{cmd}] successful")
+        print('SUCCESS')
 
 
 class TestSystemToggle:
