@@ -37,6 +37,8 @@ from container_service_extension.utils import OK
 
 # Delimiter to append with user id context
 USER_ID_SEPARATOR = "---"
+# Properties that need to be excluded from cluster info
+EXCLUDE_KEYS = ['compute_profile']
 
 
 class PKSBroker(AbstractBroker):
@@ -174,9 +176,10 @@ class PKSBroker(AbstractBroker):
         """
         cluster_params['cluster_name'] = \
             self._append_user_id(cluster_params['cluster_name'])
-        created_cluster = self._create_cluster(**cluster_params)
-        self._remove_user_id(created_cluster)
-        return created_cluster
+        created_cluster_info = self._create_cluster(**cluster_params)
+        self._remove_user_id(created_cluster_info)
+        self._exclude_pks_properties(created_cluster_info)
+        return created_cluster_info
 
     def _create_cluster(self, cluster_name, node_count, pks_plan, pks_ext_host,
                         compute_profile=None, **kwargs):
@@ -287,6 +290,22 @@ class PKSBroker(AbstractBroker):
 
         :rtype: str
         """
+        self.get_tenant_client_session()
+        if self.tenant_client.is_sysadmin():
+            cluster = self.get_cluster_info(cluster_name)
+            return self._get_cluster_config(cluster['pks_cluster_name'])
+        else:
+            pks_cluster_name = self._append_user_id(cluster_name)
+            return self._get_cluster_config(pks_cluster_name)
+
+    def _get_cluster_config(self, cluster_name):
+        """Get the configuration of the cluster with the given name in PKS.
+
+        :param str cluster_name: Name of the cluster
+        :return: Configuration of the cluster.
+
+        :rtype: str
+        """
         cluster_api = ClusterApi(api_client=self.pks_client)
 
         LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to get"
@@ -308,8 +327,8 @@ class PKSBroker(AbstractBroker):
         self.get_tenant_client_session()
         LOGGER.debug(f"Delete Cluster:{cluster_name}")
         if self.tenant_client.is_sysadmin():
-            cluster = self.get_cluster_info(cluster_name)
-            return self._delete_cluster(cluster['pks_cluster_name'])
+            cluster_info = self.get_cluster_info(cluster_name)
+            return self._delete_cluster(cluster_info['pks_cluster_name'])
 
         else:
             pks_cluster_name = self._append_user_id(cluster_name)
@@ -320,6 +339,8 @@ class PKSBroker(AbstractBroker):
 
         :param str cluster_name: Name of the cluster
         """
+        result = {}
+
         cluster_api = ClusterApi(api_client=self.pks_client)
 
         LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to delete "
@@ -333,7 +354,10 @@ class PKSBroker(AbstractBroker):
 
         LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to delete"
                      f" the cluster: {cluster_name}")
-        return
+        result['cluster_name'] = cluster_name
+        result['task_status'] = 'in progress'
+        result['status_code'] = ACCEPTED
+        return result
 
     @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
     def resize_cluster(self, **cluster_params):
@@ -366,8 +390,6 @@ class PKSBroker(AbstractBroker):
         :param int node_count: New size of the worker nodes
         """
         result = {}
-        result['body'] = []
-
         cluster_api = ClusterApi(api_client=self.pks_client)
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to resize "
                      f"the cluster with name: {cluster_name} to "
@@ -385,6 +407,8 @@ class PKSBroker(AbstractBroker):
         LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to resize"
                      f" the cluster: {cluster_name}")
 
+        result['cluster_name'] = cluster_name
+        result['task_status'] = 'in progress'
         result['status_code'] = ACCEPTED
         return result
 
@@ -549,10 +573,10 @@ class PKSBroker(AbstractBroker):
         user_id = self._get_session_userid()
         return f"{name}{USER_ID_SEPARATOR}{user_id}"
 
-    def _remove_user_id(self, cluster):
-        cluster['pks_cluster_name'] = cluster['name']
-        name_info = cluster['name'].split(USER_ID_SEPARATOR)
-        cluster['name'] = name_info[0]
+    def _remove_user_id(self, cluster_info):
+        cluster_info['pks_cluster_name'] = cluster_info['name']
+        name_info = cluster_info['name'].split(USER_ID_SEPARATOR)
+        cluster_info['name'] = name_info[0]
 
     def _strip_user_id(self, cluster_info):
         # NOTE: Current implementation works only if the method
@@ -584,6 +608,10 @@ class PKSBroker(AbstractBroker):
         return [cluster for cluster in cluster_list
                 if cluster['name'] == cluster_name]
 
+    def _exclude_pks_properties(self, cluster_info):
+        for entry in EXCLUDE_KEYS:
+            cluster_info.pop(entry, None)
+
     def __getattr__(self, name):
         """Handle unknown operations.
 
@@ -593,3 +621,4 @@ class PKSBroker(AbstractBroker):
         def unsupported_method(*args):
             raise CseServerError(f"Unsupported operation {name}")
         return unsupported_method
+

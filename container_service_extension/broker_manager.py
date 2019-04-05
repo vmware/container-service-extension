@@ -136,7 +136,8 @@ class BrokerManager(object):
                 {'cluster_name': self.req_spec.get('cluster_name', None),
                  'node_count': self.req_spec.get('node_count', None)
                  }
-            result = self._resize_cluster(**cluster_spec)
+            result['body'] = self._resize_cluster(**cluster_spec)
+            result['status_code'] = ACCEPTED
         elif op == Operation.GET_CLUSTER_CONFIG:
             cluster_spec = \
                 {'cluster_name': self.req_spec.get('cluster_name', None)}
