@@ -114,6 +114,9 @@ class PKSBroker(AbstractBroker):
     It performs CRUD operations on Kubernetes clusters.
     """
 
+    VERSION_V1 = 'v1'
+    VERSION_V1BETA = 'v1beta1'
+
     def __init__(self, request_headers, request_spec, pks_ctx):
         """Initialize PKS broker.
 
@@ -137,11 +140,15 @@ class PKSBroker(AbstractBroker):
         self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE, None)
         self.verify = False  # TODO(pks.yaml) pks_config['pks']['verify']
         token = self._get_token()
-        self.api_client_v1 = self._get_pks_client(token, 'v1')
-        self.api_client_v1beta = self._get_pks_client(token, 'v1beta1')
+        self.client_v1 = self._get_pks_client(token, self.VERSION_V1)
+        self.client_v1beta = self._get_pks_client(token, self.VERSION_V1BETA)
         self.client_session = None
 
     def _get_token(self):
+        """Connect to UAA server, authenticate and get token.
+
+        :return: token
+        """
         try:
             uaaClient = UaaClient(self.uaac_uri, self.username, self.secret,
                                   proxy_uri=self.proxy_uri)
@@ -151,7 +158,7 @@ class PKSBroker(AbstractBroker):
                                      f' {self.uaac_uri} failed: {err}')
 
     def _get_pks_config(self, token, version):
-        """Connect to UAA server and construct PKS configuration.
+        """Construct PKS configuration.
 
         (PKS configuration is required to construct pksclient)
 
@@ -177,7 +184,7 @@ class PKSBroker(AbstractBroker):
         :rtype: ApiClient
         """
         pks_config = self._get_pks_config(token, version)
-        if version == 'v1':
+        if version == self.VERSION_V1:
             client = ApiClientV1(configuration=pks_config)
         else:
             client = ApiClientV1Beta(configuration=pks_config)
@@ -191,7 +198,7 @@ class PKSBroker(AbstractBroker):
 
         :rtype: list
         """
-        cluster_api = ClusterApiV1(api_client=self.api_client_v1)
+        cluster_api = ClusterApiV1(api_client=self.client_v1)
 
         LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} "
                      f"to list all clusters")
@@ -243,7 +250,7 @@ class PKSBroker(AbstractBroker):
 
         compute_profile = compute_profile \
             if compute_profile else self.compute_profile
-        cluster_api = ClusterApiV1Beta(api_client=self.api_client_v1beta)
+        cluster_api = ClusterApiV1Beta(api_client=self.client_v1beta)
         cluster_params = \
             ClusterParameters(kubernetes_master_host=pks_ext_host,
                               kubernetes_worker_instances=node_count)
@@ -277,7 +284,7 @@ class PKSBroker(AbstractBroker):
 
         :rtype: dict
         """
-        cluster_api = ClusterApiV1Beta(api_client=self.api_client_v1beta)
+        cluster_api = ClusterApiV1Beta(api_client=self.client_v1beta)
 
         LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to get "
                      f"details of cluster with name: {cluster_name}")
@@ -304,7 +311,7 @@ class PKSBroker(AbstractBroker):
 
         :rtype: str
         """
-        cluster_api = ClusterApiV1(api_client=self.api_client_v1)
+        cluster_api = ClusterApiV1(api_client=self.client_v1)
 
         LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to get"
                      f" detailed configuration of cluster with name: "
@@ -322,7 +329,7 @@ class PKSBroker(AbstractBroker):
 
         :param str cluster_name: Name of the cluster
         """
-        cluster_api = ClusterApiV1(api_client=self.api_client_v1)
+        cluster_api = ClusterApiV1(api_client=self.client_v1)
 
         LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to delete "
                      f"the cluster with name: {cluster_name}")
@@ -347,7 +354,7 @@ class PKSBroker(AbstractBroker):
         result = {}
         result['body'] = []
 
-        cluster_api = ClusterApiV1(api_client=self.api_client_v1)
+        cluster_api = ClusterApiV1(api_client=self.client_v1)
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to resize "
                      f"the cluster with name: {cluster_name} to "
                      f"{node_count} worker nodes")
@@ -386,7 +393,7 @@ class PKSBroker(AbstractBroker):
         result = {}
         result['body'] = []
         result['status_code'] = OK
-        profile_api = ProfileApi(api_client=self.api_client_v1beta)
+        profile_api = ProfileApi(api_client=self.client_v1beta)
 
         resource_pool = {
             'resource_pool': ovdc_rp_name
@@ -436,7 +443,7 @@ class PKSBroker(AbstractBroker):
         result = {}
         result['body'] = []
         result['status_code'] = OK
-        profile_api = ProfileApi(api_client=self.api_client_v1beta)
+        profile_api = ProfileApi(api_client=self.client_v1beta)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to get the "
                      f"compute profile: {cp_name}")
@@ -467,7 +474,7 @@ class PKSBroker(AbstractBroker):
         result = {}
         result['body'] = []
         result['status_code'] = OK
-        profile_api = ProfileApi(api_client=self.api_client_v1beta)
+        profile_api = ProfileApi(api_client=self.client_v1beta)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to get the "
                      f"list of compute profiles")
@@ -497,7 +504,7 @@ class PKSBroker(AbstractBroker):
         result = {}
         result['body'] = []
         result['status_code'] = OK
-        profile_api = ProfileApi(api_client=self.api_client_v1beta)
+        profile_api = ProfileApi(api_client=self.client_v1beta)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to delete "
                      f"the compute profile: {cp_name}")
