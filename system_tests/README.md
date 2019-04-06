@@ -34,7 +34,7 @@ $ pytest --disable-warnings -x -v -s test_cse_server.py > testlog
 
 Testers should fill out this config file with vCD instance details
 
-Options for **'test'** section:
+Testing options found in **'test'** section:
 
 | key                  | description                                                                                                                                                                                                                                         | value type | possible values | default value |
 |-----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|-----------------|---------------|
@@ -44,12 +44,14 @@ Options for **'test'** section:
 
 ## Notes
 
-- Client tests (**test_cse_client.py**) require an org admin user with the same username and password specified in the config file **vcd** section
+- Testing must be done while inside the **/system_tests** directory
+- Do not have instances of CSE server running while system tests are running
+- Client tests (**test_cse_client.py**) require an org admin user with the same username and password specified in the config file **vcd** section (due to a CSE limitation where sys admins cannot deploy clusters)
 - Server tests (**test_cse_server.py**) require you to have a public/private SSH key (RSA)
   - These keys should be at: `~/.ssh/id_rsa` and `~/.ssh/id_rsa.pub`
   - Keys must not be password protected (to remove key password, use `ssh-keygen -p`)
   - ssh-key help: <https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/>
-- More detailed information can be found in the module docstrings
+- Check module docstrings for more detailed information
 
 ---
 
