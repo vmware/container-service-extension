@@ -24,6 +24,10 @@ $ vcd cse node delete testcluster TESTNODE
 $ vcd cse node create testcluster -n NETWORK -t photon-v2
 $ vcd cse cluster delete testcluster
 
+$ vcd cse system disable
+$ vcd cse system enable
+$ vcd cse system stop
+
 NOTE:
 - These tests will install CSE on vCD if CSE is not installed already.
 - Edit 'base_config.yaml' for your own vCD instance.
@@ -43,7 +47,6 @@ TODO()
 - test that node rollback works correctly (node rollback is not implemented
     yet due to a vcd-side bug, where a partially powered-on VM cannot be force
     deleted)
-- test `vcd cse system` commands
 - test `vcd cse cluster config testcluster --save` option (currently does
     not work)
 """
@@ -216,17 +219,24 @@ def test_0030_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
     """
     cmd = f"cse cluster create {env.TEST_CLUSTER_NAME} -n " \
           f"{config['broker']['network']} -N 1 -c 1000"
+    print(f"\nRunning command [vcd {cmd}]...", end='')
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0
-    time.sleep(env.WAIT_INTERVAL)  # wait for vApp to be deleted
+    # wait for vApp to be deleted.
+    # As if vCD 9.7, this wait time had to be increased, but it's not clear why
+    # TODO() make cluster rollback synchronous, so this won't be an issue
+    time.sleep(env.WAIT_INTERVAL * 3)
     assert not env.vapp_exists(env.TEST_CLUSTER_NAME), \
         "Cluster exists when it should not."
+    print('SUCCESS')
 
     cmd += " --disable-rollback"
+    print(f"Running command [vcd {cmd}]...", end='')
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0
     assert env.vapp_exists(env.TEST_CLUSTER_NAME), \
         "Cluster does not exist when it should."
+    print('SUCCESS')
 
 
 def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
@@ -270,7 +280,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
     # vcd cse template list
     # retrieves template names to test cluster deployment against
     cmd = 'cse template list'
-    print(f"Running command [vcd {cmd}]...", end='')
+    print(f"\nRunning command [vcd {cmd}]...", end='')
     result = env.CLI_RUNNER.invoke(vcd, ['cse', 'template', 'list'],
                                    catch_exceptions=False)
     assert result.exit_code == 0
