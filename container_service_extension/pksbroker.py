@@ -340,7 +340,10 @@ class PKSBroker(AbstractBroker):
         # rules
         LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to delete"
                      f" the cluster: {cluster_name}")
-        return
+        result = {}
+        result['cluster_name'] = cluster_name
+        result['task_status'] = 'in progress'
+        return result
 
     @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
     @add_vcd_user_context(qualify_params=['cluster_name'])
@@ -370,7 +373,9 @@ class PKSBroker(AbstractBroker):
         LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to resize"
                      f" the cluster: {cluster_name}")
 
-        result['status'] = ACCEPTED
+        result['status_code'] = ACCEPTED
+        result['cluster_name'] = cluster_name
+        result['task_status'] = 'in progress'
         return result
 
     def create_compute_profile(self, cp_name, az_name, description, cpi,
