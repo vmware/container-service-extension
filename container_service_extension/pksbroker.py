@@ -374,8 +374,9 @@ class PKSBroker(AbstractBroker):
                      f" the cluster: {cluster_name}")
 
         result['status_code'] = ACCEPTED
-        result['cluster_name'] = cluster_name
-        result['task_status'] = 'in progress'
+        result['body'] = {
+            'cluster name': cluster_name, 'task_status': 'in progress'
+        }
         return result
 
     def create_compute_profile(self, cp_name, az_name, description, cpi,
