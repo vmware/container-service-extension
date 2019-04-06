@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import glob
 import os
 from pathlib import Path
 
@@ -47,11 +48,13 @@ environment.CLIENT but will not change the CLIENT that was imported.
 BASE_CONFIG_FILEPATH = 'base_config.yaml'
 ACTIVE_CONFIG_FILEPATH = 'cse_test_config.yaml'
 
-STATIC_PHOTON_CUST_SCRIPT = 'CUST-PHOTON.sh'
-STATIC_UBUNTU_CUST_SCRIPT = 'CUST-UBUNTU.sh'
-ACTIVE_PHOTON_CUST_SCRIPT = 'cust-photon-v2.sh'
-ACTIVE_UBUNTU_CUST_SCRIPT = 'cust-ubuntu-16.04.sh'
-SCRIPTS_DIR = 'scripts'
+# directories are relative to 'system_tests/'
+ACTIVE_SCRIPTS_DIR = 'scripts'
+STATIC_SCRIPTS_DIR = 'scripts/static'
+
+# used during tests that ssh into VMs to verify packages
+STATIC_PHOTON_CUST_SCRIPT = f'{STATIC_SCRIPTS_DIR}/cust-photon-v2.sh'
+STATIC_UBUNTU_CUST_SCRIPT = f'{STATIC_SCRIPTS_DIR}/cust-ubuntu-16.04.sh'
 
 SSH_KEY_FILEPATH = str(Path.home() / '.ssh' / 'id_rsa.pub')
 CLI_RUNNER = CliRunner()
@@ -183,18 +186,15 @@ def unregister_cse():
 
 
 def prepare_customization_scripts():
-    """Copy real customization scripts to the active customization scripts.
+    """Copy static customization scripts to active customization scripts.
 
-    Copy 'CUST-PHOTON.sh' to 'cust-photon-v2.sh'
-    Copy 'CUST-UBUNTU.sh' to 'cust-ubuntu-16.04.sh'
+    Copies files 'scripts/static/cust*' to respective files at 'scripts/'
 
     :raises FileNotFoundError: if script files cannot be found.
     """
+    files = [Path(f).name for f in glob.glob(f"{ACTIVE_SCRIPTS_DIR}/cust*")]
     static_to_active_scripts = {
-        f"{SCRIPTS_DIR}/{STATIC_PHOTON_CUST_SCRIPT}":
-            f"{SCRIPTS_DIR}/{ACTIVE_PHOTON_CUST_SCRIPT}",
-        f"{SCRIPTS_DIR}/{STATIC_UBUNTU_CUST_SCRIPT}":
-            f"{SCRIPTS_DIR}/{ACTIVE_UBUNTU_CUST_SCRIPT}",
+        f"{STATIC_SCRIPTS_DIR}/{f}": f"{ACTIVE_SCRIPTS_DIR}/{f}" for f in files
     }
 
     for src, dst in static_to_active_scripts.items():
@@ -202,16 +202,15 @@ def prepare_customization_scripts():
 
 
 def blank_customizaton_scripts():
-    """Blanks out 'cust-photon-v2.sh' and 'cust-ubuntu-16.04.sh'.
+    """Blanks out active customization scripts.
+
+    Blanks files 'scripts/cust*'
 
     :raises FileNotFoundError: if script files cannot be found.
     """
-    scripts_paths = [
-        Path(f"{SCRIPTS_DIR}/{ACTIVE_PHOTON_CUST_SCRIPT}"),
-        Path(f"{SCRIPTS_DIR}/{ACTIVE_UBUNTU_CUST_SCRIPT}")
-    ]
+    filepaths = [Path(f) for f in glob.glob(f"{ACTIVE_SCRIPTS_DIR}/cust*")]
 
-    for path in scripts_paths:
+    for path in filepaths:
         path.write_text('')
 
 

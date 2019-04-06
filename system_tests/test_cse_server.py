@@ -95,6 +95,23 @@ def delete_installation_entities():
         env.unregister_cse()
 
 
+@pytest.fixture(scope='module', autouse='true')
+def prepare_cust_scripts():
+    """Fixture to ensure that cust scripts are populated at test start.
+
+    This fixture executes automatically for this module's setup and teardown.
+
+    Setup tasks:
+    - Populate customization scripts
+
+    Teardown tasks:
+    - Populate customization scripts
+    """
+    env.prepare_customization_scripts()
+    yield
+    env.prepare_customization_scripts()
+
+
 @pytest.fixture
 def blank_cust_scripts():
     """Fixture to ensure that customization scripts are blank.
