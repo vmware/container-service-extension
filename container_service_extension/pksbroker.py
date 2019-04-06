@@ -4,7 +4,6 @@
 
 from collections import Iterable
 import functools
-import json
 
 from pyvcloud.vcd.utils import extract_id
 import yaml
@@ -15,22 +14,28 @@ from container_service_extension.exceptions import PksConnectionError
 from container_service_extension.exceptions import PksServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE
-from container_service_extension.pksclient.api.v1.cluster_api import ClusterApi as ClusterApiV1
-from container_service_extension.pksclient.api.v1beta.cluster_api import ClusterApi as ClusterApiV1Beta
-from container_service_extension.pksclient.api.v1beta.profile_api import ProfileApi
-from container_service_extension.pksclient.client.v1.api_client import ApiClient as ApiClientV1
-from container_service_extension.pksclient.client.v1beta.api_client import ApiClient as ApiClientV1Beta
+from container_service_extension.pksclient.api.v1.cluster_api \
+    import ClusterApi as ClusterApiV1
+from container_service_extension.pksclient.api.v1beta.cluster_api \
+    import ClusterApi as ClusterApiV1Beta
+from container_service_extension.pksclient.api.v1beta.profile_api \
+    import ProfileApi
+from container_service_extension.pksclient.client.v1.api_client \
+    import ApiClient as ApiClientV1
+from container_service_extension.pksclient.client.v1beta.api_client \
+    import ApiClient as ApiClientV1Beta
 from container_service_extension.pksclient.configuration import Configuration
+from container_service_extension.pksclient.models.v1.\
+    update_cluster_parameters import UpdateClusterParameters
+from container_service_extension.pksclient.models.v1beta.az import AZ
 from container_service_extension.pksclient.models.v1beta.cluster_parameters \
     import ClusterParameters
 from container_service_extension.pksclient.models.v1beta.cluster_request \
     import ClusterRequest
-from container_service_extension.pksclient.models.v1beta.compute_profile_request \
-    import ComputeProfileRequest
-from container_service_extension.pksclient.models.v1beta.compute_profile_parameters import ComputeProfileParameters
-from container_service_extension.pksclient.models.v1beta.az import AZ
-from container_service_extension.pksclient.models.v1.update_cluster_parameters \
-    import UpdateClusterParameters
+from container_service_extension.pksclient.models.v1beta.\
+    compute_profile_parameters import ComputeProfileParameters
+from container_service_extension.pksclient.models.v1beta.\
+    compute_profile_request import ComputeProfileRequest
 from container_service_extension.pksclient.rest import ApiException
 from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import ACCEPTED
@@ -169,7 +174,7 @@ class PKSBroker(AbstractBroker):
 
         :return: PKS client
 
-        :rtype: container_service_extension.pksclient.api_client.ApiClient
+        :rtype: ApiClient
         """
         pks_config = self._get_pks_config(token, version)
         if version == 'v1':
@@ -178,7 +183,7 @@ class PKSBroker(AbstractBroker):
             client = ApiClientV1Beta(configuration=pks_config)
         return client
 
-    #@add_vcd_user_context(filter_list_by_user_id=True)
+    @add_vcd_user_context(filter_list_by_user_id=True)
     def list_clusters(self):
         """Get list of clusters in PKS environment.
 
@@ -205,7 +210,7 @@ class PKSBroker(AbstractBroker):
                 'status': cluster.last_action_state,
                 'last-action': cluster.last_action,
                 'k8_master_ips': cluster.kubernetes_master_ips,
-                #'compute-profile-name': cluster.compute_profile_name
+                # 'compute-profile-name': cluster.compute_profile_name
             }
             list_of_cluster_dicts.append(cluster_dict)
 
@@ -213,7 +218,7 @@ class PKSBroker(AbstractBroker):
                      f" list of clusters: {list_of_cluster_dicts}")
         return list_of_cluster_dicts
 
-    #@add_vcd_user_context(qualify_params=['cluster_name'])
+    @add_vcd_user_context(qualify_params=['cluster_name'])
     def create_cluster(self, cluster_name, node_count, pks_plan, pks_ext_host,
                        compute_profile=None, **kwargs):
         """Create cluster in PKS environment.
@@ -263,7 +268,7 @@ class PKSBroker(AbstractBroker):
                      f" cluster: {cluster_name}")
         return cluster_dict
 
-    #@add_vcd_user_context(qualify_params=['cluster_name'])
+    @add_vcd_user_context(qualify_params=['cluster_name'])
     def get_cluster_info(self, cluster_name):
         """Get the details of a cluster with a given name in PKS environment.
 
@@ -332,7 +337,7 @@ class PKSBroker(AbstractBroker):
                      f" the cluster: {cluster_name}")
         return
 
-    #@add_vcd_user_context(qualify_params=['cluster_name'])
+    @add_vcd_user_context(qualify_params=['cluster_name'])
     def resize_cluster(self, cluster_name, node_count, **kwargs):
         """Resize the cluster of a given name to given number of worker nodes.
 
