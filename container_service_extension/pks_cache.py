@@ -21,7 +21,7 @@ class PksCache(object):
     """
 
     __slots__ = [
-        "orgs_have_pks_service_account",
+        "orgs_have_exclusive_pks_account",
         # mapping of org name -> names of all pks accounts assigned to the org
         "orgs_to_pks_account_mapper",
         # mapping of pks server name -> pks server details
@@ -84,11 +84,11 @@ class PksCache(object):
         vc_to_pks_info_mapper = {}
         vc_org_to_pks_info_mapper = {}
         if orgs:
-            super().__setattr__("orgs_have_pks_service_account", True)
+            super().__setattr__("orgs_have_exclusive_pks_account", True)
             vc_org_to_pks_info_mapper = \
                 self._construct_vc_org_to_pks_info_mapper()
         else:
-            super().__setattr__("orgs_have_pks_service_account", False)
+            super().__setattr__("orgs_have_exclusive_pks_account", False)
             vc_to_pks_info_mapper = \
                 self._construct_vc_to_pks_info_mapper()
 
@@ -114,15 +114,15 @@ class PksCache(object):
 
         raise AttributeError(msg)
 
-    def do_orgs_have_pks_service_account(self):
-        """Determine if each org has their own PKS service account or not.
+    def do_orgs_have_exclusive_pks_account(self):
+        """Determine if orgs has been setup with exclusive PKS account.
 
-        :return: True, if wach org is setup with their own PKS account else
-            False.
+        :return: True, if orgs in the setup have dedicated PKS accounts to
+            talk to the PKS server backing them else False.
 
         :rtype: bool
         """
-        return self.orgs_have_pks_service_account
+        return self.orgs_have_exclusive_pks_account
 
     def get_pvdc_info(self, pvdc_id):
         """Return an immutable PvdcInfo object.
@@ -155,17 +155,16 @@ class PksCache(object):
 
         :return: PksAccountInfo object.
         """
-        if self.do_orgs_have_pks_service_account():
+        if self.do_orgs_have_exclusive_pks_account():
             return self.vc_org_to_pks_info_mapper.get((org_name, vc_name))
         else:
             return self.vc_to_pks_info_mapper.get(vc_name)
 
-    def get_all_pks_account_info_for_org(self, org_name):
+    def get_exclusive_pks_accounts_info_for_org(self, org_name):
         """Return all pks accounts associated with an org.
 
-        This method returns an empty list if the system is configured to have
-        one PKS service account per VC instead of each org getting their own
-        PKS service account.
+        This method returns an empty list if the system is not configured to
+        have PKS accounts dedicated at per org basis.
 
         :param str org_name: name of organization, whose associated PKS
             accounts are to be fetched.

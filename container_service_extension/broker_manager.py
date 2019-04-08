@@ -197,16 +197,20 @@ class BrokerManager(object):
         return ovdc_list
 
     def _get_cluster_info(self, **cluster_spec):
-        """Logic of the method is as follows.
+        """Get cluster details directly from cloud provider.
 
-        If 'ovdc' is present in the body,
+        Logic of the method is as follows.
+
+        If 'ovdc' is present in the cluster spec,
             choose the right broker (by identifying the container_provider
             (vcd|pks) defined for that ovdc) to do get_cluster operation.
-        Else
-            Invoke set of all (vCD/PKS)brokers in the org to find the cluster
+        else
+            Invoke set of all (vCD/PKS) brokers in the org to find the cluster
 
-        Returns a tuple of (cluster and the broker instance used to find the
-        cluster)
+        :return: a tuple of cluster information as dictionary and the broker
+            instance used to find the cluster information.
+
+        :rtype: tuple
         """
         cluster_name = cluster_spec['cluster_name']
         if self.is_ovdc_present_in_request:
@@ -214,7 +218,7 @@ class BrokerManager(object):
             return broker.get_cluster_info(cluster_name=cluster_name), broker
         else:
             cluster, broker = self._find_cluster_in_org(cluster_name)
-            if cluster is not None:
+            if cluster:
                 return cluster, broker
 
         raise ClusterNotFoundError(f'cluster {cluster_name} not found '
@@ -225,9 +229,9 @@ class BrokerManager(object):
 
         :param str cluster_name: Name of cluster.
 
-        :return Cluster config.
+        :return: Cluster config.
 
-        :rtype str
+        :rtype: str
         """
         cluster_name = cluster_spec['cluster_name']
         if self.is_ovdc_present_in_request:
@@ -235,7 +239,7 @@ class BrokerManager(object):
             return broker.get_cluster_config(cluster_name=cluster_name)
         else:
             cluster, broker = self._find_cluster_in_org(cluster_name)
-            if cluster is not None:
+            if cluster:
                 return broker.get_cluster_config(cluster_name=cluster['name'])
 
         raise ClusterNotFoundError(f'cluster {cluster_name} not found '
@@ -283,13 +287,13 @@ class BrokerManager(object):
 
     def _delete_cluster(self, **cluster_spec):
         cluster_name = cluster_spec['cluster_name']
-        broker = self._get_cluster_info(**cluster_spec)[1]
+        _, broker = self._get_cluster_info(**cluster_spec)
         return broker.delete_cluster(cluster_name=cluster_name)
 
     def _create_cluster(self, **cluster_spec):
         cluster_name = cluster_spec['cluster_name']
         cluster = self._find_cluster_in_org(cluster_name)[0]
-        if cluster is None:
+        if not cluster:
             broker = self.get_broker_based_on_vdc()
             return broker.create_cluster(**cluster_spec)
         else:
@@ -341,7 +345,7 @@ class BrokerManager(object):
 
         :rtype: list
         """
-        if self.pks_cache is None:
+        if not self.pks_cache:
             return []
 
         if self.vcd_client.is_sysadmin():
@@ -353,9 +357,10 @@ class BrokerManager(object):
             return pks_ctx_list
 
         org_name = self.session.get('org')
-        if self.pks_cache.do_orgs_have_pks_service_account():
+        if self.pks_cache.do_orgs_have_exclusive_pks_account():
             pks_account_infos = \
-                self.pks_cache.get_all_pks_account_info_for_org(org_name)
+                self.pks_cache.get_exclusive_pks_accounts_info_for_org(
+                    org_name)
             pks_ctx_list = [OvdcCache.construct_pks_context
                             (pks_account_info, credentials_required=True)
                             for pks_account_info in pks_account_infos]
@@ -363,35 +368,23 @@ class BrokerManager(object):
             org_resource = self.vcd_client.get_org()
             org = Org(self.vcd_client, resource=org_resource)
             vdc_names = [vdc['name'] for vdc in org.list_vdcs()]
-            pks_ctx_list = self._create_pks_context_for_vdcs(
-                org_name, vdc_names)
+            # Constructing dict instead of list to avoid duplicates
+            # TODO() figure out a way to add pks contexts to a set directly
+            pks_ctx_dict = {}
+            for vdc_name in vdc_names:
+                # this is a full blown pks_account_info + pvdc_info +
+                # compute_profile_name dictionary
+                ctr_prov_ctx = \
+                    self.ovdc_cache.get_ovdc_container_provider_metadata(
+                        ovdc_name=vdc_name, org_name=org_name,
+                        credentials_required=True)
+                if ctr_prov_ctx[CONTAINER_PROVIDER_KEY] == \
+                        CtrProvType.PKS.value:
+                    pks_ctx_dict[ctr_prov_ctx['vc']] = ctr_prov_ctx
+
+            pks_ctx_list = list(pks_ctx_dict.values())
 
         return pks_ctx_list
-
-    def _create_pks_context_for_vdcs(self, org_name, vdc_names):
-        """Get PKS context for all accounts associated with vdcs in an org.
-
-        :param str org_name:
-        :param str vdc_names:
-
-        :returns: a list of dict, where each dict is PKS Context
-
-        :rtype: list
-        """
-        # Constructing dict instead of list to avoid duplicates
-        # TODO() figure out a way to add pks contexts to a set directly
-        pks_ctx_dict = {}
-        for vdc_name in vdc_names:
-            # this is a full blown pks_account_info + pvdc_info +
-            # compute_profile_name dictionary
-            ctr_prov_ctx = \
-                self.ovdc_cache.get_ovdc_container_provider_metadata(
-                    ovdc_name=vdc_name, org_name=org_name,
-                    credentials_required=True)
-            if ctr_prov_ctx[CONTAINER_PROVIDER_KEY] == CtrProvType.PKS.value:
-                pks_ctx_dict[ctr_prov_ctx['vc']] = ctr_prov_ctx
-
-        return list(pks_ctx_dict.values())
 
     def _get_truncated_cluster_info(self, cluster, pks_broker,
                                     cluster_property_keys):
@@ -454,7 +447,7 @@ class BrokerManager(object):
 
         pks_context = None
         if self.req_spec[CONTAINER_PROVIDER_KEY] == CtrProvType.PKS.value:
-            if self.pks_cache is None:
+            if not self.pks_cache:
                 raise CseServerError('PKS config file does not exist')
             pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
             pks_account_info = self.pks_cache.get_pks_account_info(
