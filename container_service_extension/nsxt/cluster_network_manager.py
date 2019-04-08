@@ -2,7 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.logger import SERVER_NSXT_LOGGER as Logger
+from container_service_extension.logger import SERVER_NSXT_LOGGER as LOGGER
 from container_service_extension.nsxt.constants import \
     ALL_NODES_PODS_NSGROUP_NAME
 from container_service_extension.nsxt.constants import FIREWALL_ACTION
@@ -13,7 +13,7 @@ from container_service_extension.nsxt.dfw_manager import DFWManager
 from container_service_extension.nsxt.nsgroup_manager import NSGroupManager
 
 
-class ClusterManager(object):
+class ClusterNetworkManager(object):
     """."""
 
     def __init__(self, nsxt_client):
@@ -51,7 +51,7 @@ class ClusterManager(object):
         nsgroup_manager.delete_nsgroup(pods_nsgroup_name, force=True)
 
     def _create_nsgroups_for_cluster(self, cluster_name, cluster_id):
-        nodes_nsgroup = self._create_cluster_nodes_nsgroup(
+        nodes_nsgroup = self._create_nsgroup_for_cluster_nodes(
             cluster_name, cluster_id)
         nodes_nsgroup_id = nodes_nsgroup['id']
 
@@ -74,11 +74,11 @@ class ClusterManager(object):
     def _get_nodes_pods_nsgroup_name(self, cluster_name):
         return f"{cluster_name}_nodes_pods"
 
-    def _create_cluster_nodes_nsgroup(self, cluster_name, cluster_id):
+    def _create_nsgroup_for_cluster_nodes(self, cluster_name, cluster_id):
         name = self._get_nodes_nsgroup_name(cluster_name)
         nsgroup_manager = NSGroupManager(self._nsxt_client)
         nodes_nsgroup = nsgroup_manager.get_nsgroup(name)
-        if nodes_nsgroup is None:
+        if not nodes_nsgroup:
             criteria = {}
             criteria['resource_type'] = "NSGroupComplexExpression"
 
@@ -95,11 +95,11 @@ class ClusterManager(object):
 
             criteria['expressions'] = [expression1, expression2]
 
-            Logger.debug(f"Creating NSGroup : {name}.")
+            LOGGER.debug(f"Creating NSGroup : {name}.")
             nodes_nsgroup = nsgroup_manager.create_nsgroup(
                 name, membership_criteria=[criteria])
         else:
-            Logger.debug(f"NSGroup : {name} already exists.")
+            LOGGER.debug(f"NSGroup : {name} already exists.")
 
         return nodes_nsgroup
 
@@ -107,18 +107,18 @@ class ClusterManager(object):
         name = self._get_pods_nsgroup_name(cluster_name)
         nsgroup_manager = NSGroupManager(self._nsxt_client)
         pods_nsgroup = nsgroup_manager.get_nsgroup(name)
-        if pods_nsgroup is None:
+        if not pods_nsgroup:
             criteria = {}
             criteria['resource_type'] = "NSGroupTagExpression"
             criteria['target_type'] = "LogicalPort"
             criteria['scope'] = "ncp/cluster"
             criteria['tag'] = str(cluster_id)
 
-            Logger.debug(f"Creating NSGroup : {name}.")
+            LOGGER.debug(f"Creating NSGroup : {name}.")
             pods_nsgroup = nsgroup_manager.create_nsgroup(
                 name, membership_criteria=[criteria])
         else:
-            Logger.debug(f"NSGroup : {name} already exists.")
+            LOGGER.debug(f"NSGroup : {name} already exists.")
 
         return pods_nsgroup
 
@@ -129,7 +129,7 @@ class ClusterManager(object):
         name = self._get_nodes_pods_nsgroup_name(cluster_name)
         nsgroup_manager = NSGroupManager(self._nsxt_client)
         nodes_pods_nsgroup = nsgroup_manager.get_nsgroup(name)
-        if nodes_pods_nsgroup is None:
+        if not nodes_pods_nsgroup:
             member1 = {}
             member1['resource_type'] = "NSGroupSimpleExpression"
             member1['target_type'] = "NSGroup"
@@ -146,11 +146,11 @@ class ClusterManager(object):
 
             members = [member1, member2]
 
-            Logger.debug(f"Creating NSGroup : {name}.")
+            LOGGER.debug(f"Creating NSGroup : {name}.")
             nodes_pods_nsgroup = nsgroup_manager.create_nsgroup(
                 name, members=members)
         else:
-            Logger.debug(f"NSGroup : {name} already exists.")
+            LOGGER.debug(f"NSGroup : {name} already exists.")
 
         return nodes_pods_nsgroup
 
@@ -164,7 +164,7 @@ class ClusterManager(object):
             cluster_name)
         dwf_manager = DFWManager(self._nsxt_client)
         section = dwf_manager.get_firewall_section(section_name)
-        if section is None:
+        if not section:
             target = {}
             target['target_type'] = "NSGroup"
             target['target_id'] = applied_to_nsgroup_id
@@ -172,14 +172,14 @@ class ClusterManager(object):
             anchor_section = dwf_manager.get_firewall_section(
                 NCP_BOUNDARY_FIREWALL_SECTION_NAME)
 
-            Logger.debug(f"Creating DFW section : {section_name}")
+            LOGGER.debug(f"Creating DFW section : {section_name}")
             section = dwf_manager.create_firewall_section(
                 name=section_name,
                 applied_tos=[target],
                 anchor_id=anchor_section['id'],
                 insert_policy=INSERT_POLICY.INSERT_AFTER)
         else:
-            Logger.debug(f"DFW section : {section_name} already exists.")
+            LOGGER.debug(f"DFW section : {section_name} already exists.")
 
         return section
 
@@ -191,7 +191,7 @@ class ClusterManager(object):
                                            all_nodes_pods_nsgroup_id):
         dfw_manager = DFWManager(self._nsxt_client)
         rule1_name = "Block pods to node communication"
-        Logger.debug(f"Creating DFW rule : {rule1_name}")
+        LOGGER.debug(f"Creating DFW rule : {rule1_name}")
         rule1 = dfw_manager.create_dfw_rule(
             section_id=section_id,
             rule_name=rule1_name,
@@ -200,7 +200,7 @@ class ClusterManager(object):
             action=FIREWALL_ACTION.DROP)
 
         rule2_name = "Allow cluster node-pod to cluster node-pod communication"
-        Logger.debug(f"Creating DFW rule : {rule2_name}")
+        LOGGER.debug(f"Creating DFW rule : {rule2_name}")
         rule2 = dfw_manager.create_dfw_rule(
             section_id=section_id,
             rule_name=rule2_name,
@@ -211,7 +211,7 @@ class ClusterManager(object):
             insert_policy=INSERT_POLICY.INSERT_AFTER)
 
         rule3_name = "Block cluster node-pod to all-node-pod communication"
-        Logger.debug(f"Creating DFW rule : {rule3_name}")
+        LOGGER.debug(f"Creating DFW rule : {rule3_name}")
         dfw_manager.create_dfw_rule(
             section_id=section_id,
             rule_name=rule3_name,

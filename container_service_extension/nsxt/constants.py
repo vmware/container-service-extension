@@ -32,4 +32,4 @@ class INSERT_POLICY(Enum):
 class FIREWALL_ACTION(Enum):
     ALLOW = "ALLOW"
     DROP = "DROP"
-    REHECT = "REJECT"
+    REJECT = "REJECT"
