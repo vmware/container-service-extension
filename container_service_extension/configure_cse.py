@@ -52,43 +52,50 @@ from container_service_extension.utils import wait_for_catalog_item_to_resolve
 from container_service_extension.utils import wait_until_tools_ready
 
 # used for creating temp vapp
-TEMP_VAPP_NETWORK_ADAPTER_TYPE = 'vmxnet3'
+TEMP_VAPP_NETWORK_ADAPTER_TYPE = "vmxnet3"
 TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
 
-INSTRUCTIONS_FOR_PKS_CONFIG_FILE = '''# Config file for PKS enabled CSE Server to be filled by the administrator.
-# This config file has the following three sections:
-#   1. pks_accounts:
-#       a. Cloud Admins can specify PKS service account for every (PKS managed) vCenter in vCD
-#          i.e. a common PKS account per vCenter will be used for all the
-#          organizations.
-#       b. Cloud Admin can choose to create separate PKS service
-#          account per organization per vCenter, if this option is chosen,
-#          admins need to ensure that PKS accounts are correctly mapped to
-#          their respective organization in the 'orgs' section of this
-#          config file.
-#       P.S: Currently, we mandate each PKS service account in the system to have a unique account name.
-#   2. orgs: [OPTIONAL SECTION for admins who chose 1a above.]
-#       a. If cloud admin chooses to define PKS service account per
-#          organization per vCenter, include the organization and respective
-#          pks_account names in this section, else should be left blank with empty values.
-#   3. pvdcs:
-#       a. List of Provider vDCs dedicated for PKS enabled CSE set up only\n
-# Each PKS service account needs to have the following information fields to be filled in:
-#       1. PKS account name
-#       2. vCenter name in vCD for this PKS account
-#       3. PKS server host
-#       4. PKS server port
-#       5. PKS UAAC account information
-# For more information, please refer to CSE documentation page:
-#       https://vmware.github.io/container-service-extension/INSTALLATION.html\n'''  # noqa
+INSTRUCTIONS_FOR_PKS_CONFIG_FILE = "\
+# Config file for PKS enabled CSE Server to be filled by the administrator.\n\
+# This config file has the following three sections:\n\
+#   1. pks_accounts:\n\
+#       a. Cloud Admins can specify PKS service account for every\n\
+#          (PKS managed) vCenter in vCD i.e. a common PKS account per\n\
+#          vCenter will be used for all the organizations.\n\
+#       b. Cloud Admin can choose to create separate PKS service\n\
+#          account per organization per vCenter, if this option is chosen,\n\
+#          admins need to ensure that PKS accounts are correctly mapped to\n\
+#          their respective organization in the 'orgs' section of this\n\
+#          config file.\n\
+#       P.S: Currently, we mandate each PKS service account in the system to\n\
+#       have a unique account name.\n\
+#   2. orgs: [OPTIONAL SECTION for admins who chose 1a above.]\n\
+#       a. If cloud admin chooses to define PKS service account per\n\
+#          organization per vCenter, include the organization and respective\n\
+#          pks_account names in this section, else should be left blank with\n\
+#          empty values.\n\
+#   3. pvdcs:\n\
+#       a. List of Provider vDCs dedicated for PKS enabled CSE set up only\n\
+# Each PKS service account needs to have the following information fields to\n\
+# be filled in: \n\
+#       1. PKS account name\n\
+#       2. vCenter name in vCD for this PKS account\n\
+#       3. PKS server host\n\
+#       4. PKS server port\n\
+#       5. PKS UAAC account information\n\
+# For more information, please refer to CSE documentation page:\n\
+# https://vmware.github.io/container-service-extension/INSTALLATION.html\n"
 
-NOTE_FOR_PKS_KEY_IN_CONFIG_FILE = '''# Filling out this key for regular CSE set up is optional and should be left as is.
-# Only for CSE set up enabled for PKS container provider, this value needs to point to a valid PKS config file name.
-'''  # noqa
-PKS_CONFIG_NOTE = '''# [OPTIONAL] PKS CONFIGS
-# These configs are required only for customers with PKS enabled CSE. Regular CSE users with
-# no PKS container provider do not need these configs to be filled out in a separate yaml file.
-'''  # noqa
+NOTE_FOR_PKS_KEY_IN_CONFIG_FILE = "\
+# Filling out this key for regular CSE set up is optional and should be left\n\
+# as is. Only for CSE set up enabled for PKS container provider, this value\n\
+# needs to point to a valid PKS config file name.\n"
+
+PKS_CONFIG_NOTE = "\
+# [OPTIONAL] PKS CONFIGS\n\
+# These configs are required only for customers with PKS enabled CSE.\n\
+# Regular CSE users with no PKS container provider do not need these configs\n\
+# to be filled out in a separate yaml file."
 
 SAMPLE_AMQP_CONFIG = {
     'amqp': {
@@ -112,7 +119,7 @@ SAMPLE_VCD_CONFIG = {
         'username': 'administrator',
         'password': 'my_secret_password',
         'api_version': '31.0',
-        'verify': False,
+        'verify': True,
         'log': True
     }
 }
@@ -123,88 +130,13 @@ SAMPLE_VCS_CONFIG = {
             'name': 'vc1',
             'username': 'cse_user@vsphere.local',
             'password': 'my_secret_password',
-            'verify': False
+            'verify': True
         },
         {
             'name': 'vc2',
             'username': 'cse_user@vsphere.local',
             'password': 'my_secret_password',
-            'verify': False
-        }
-    ]
-}
-
-SAMPLE_PKS_CONFIG_FILE_LOCATION = {
-    'pks_config': None
-}
-
-SAMPLE_PKS_CONFIG = {
-    'orgs': [
-        {
-            'name': 'Org1',
-            'pks_accounts': ['Org1ServiceAccount1', 'Org1ServiceAccount2']
-        },
-        {
-            'name': 'Org2',
-            'pks_accounts': ['Org2ServiceAccount']
-        }
-    ],
-    'pks_accounts': [
-        {
-            'name': 'Org1ServiceAccount1',
-            'vc': 'vc1',
-            'host': 'https://deadend-12345.eng.vmware.com',
-            'port': '9021',
-            'uaac': {
-                'port': '8443',
-                'secret': 'secret',
-                'username': 'org1Admin'
-            }
-        },
-        {
-            'name': 'Org1ServiceAccount2',
-            'vc': 'vc2',
-            'host': 'https://deadend-12345.eng.vmware.com',
-            'port': '9021',
-            'uaac': {
-                'port': '8443',
-                'secret': 'secret',
-                'username': 'org1Admin'
-            }
-        },
-        {
-            'name': 'Org2ServiceAccount',
-            'vc': 'vc1',
-            'host': 'https://deadend-12345.eng.vmware.com',
-            'port': '9021',
-            'uaac': {
-                'port': '8443',
-                'secret': 'secret',
-                'username': 'org2Admin'
-            }
-        }
-    ],
-    'pvdcs': [
-        {
-            'name': 'pvdc1',
-            'vc': 'vc1',
-            'datacenter': 'datacenter1',
-            'cluster': 'cluster1',
-            'cpi': 'cpi1'
-        },
-        {
-            'name': 'pvdc2',
-            'vc': 'vc2',
-            'datacenter': 'HA_datacenter',
-            'cluster': 'HA_cluster1',
-            'cpi': 'cpi2'
-        },
-        {
-            'name': 'pvdc3',
-            'vc': 'vc1',
-            'datacenter': 'datacenter1',
-            'cluster': 'cluster1',
-            'cpi': 'cpi1'
+            'verify': True
         }
     ]
 }
@@ -220,28 +152,34 @@ SAMPLE_TEMPLATE_PHOTON_V2 = {
     'name': 'photon-v2',
     'catalog_item': 'photon-custom-hw11-2.0-304b817-k8s',
     'source_ova_name': 'photon-custom-hw11-2.0-304b817.ova',
-    'source_ova': 'http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova',  # noqa
-    'sha256_ova': 'cb51e4b6d899c3588f961e73282709a0d054bb421787e140a1d80c24d4fd89e1',  # noqa
+    'source_ova': 'http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custo\
+m-hw11-2.0-304b817.ova',
+    'sha256_ova': 'cb51e4b6d899c3588f961e73282709a0d054bb421787e140a1d80c24d4f\
+d89e1',
     'temp_vapp': 'photon2-temp',
     'cleanup': True,
     'cpu': 2,
     'mem': 2048,
     'admin_password': 'guest_os_admin_password',
-    'description': 'PhotonOS v2\nDocker 17.06.0-9\nKubernetes 1.10.11\nweave 2.3.0'  # noqa
+    'description': 'PhotonOS v2\nDocker 17.06.0-9\nKubernetes 1.10.11\nweave \
+2.3.0'
 }
 
 SAMPLE_TEMPLATE_UBUNTU_16_04 = {
     'name': 'ubuntu-16.04',
     'catalog_item': 'ubuntu-16.04-server-cloudimg-amd64-k8s',
     'source_ova_name': 'ubuntu-16.04-server-cloudimg-amd64.ova',
-    'source_ova': 'https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova',  # noqa
-    'sha256_ova': '3c1bec8e2770af5b9b0462e20b7b24633666feedff43c099a6fb1330fcc869a9',  # noqa
+    'source_ova': 'https://cloud-images.ubuntu.com/releases/xenial/release-201\
+80418/ubuntu-16.04-server-cloudimg-amd64.ova',
+    'sha256_ova': '3c1bec8e2770af5b9b0462e20b7b24633666feedff43c099a6fb1330fcc\
+869a9',
     'temp_vapp': 'ubuntu1604-temp',
     'cleanup': True,
     'cpu': 2,
     'mem': 2048,
     'admin_password': 'guest_os_admin_password',
-    'description': 'Ubuntu 16.04\nDocker 18.06.2~ce\nKubernetes 1.10.11\nweave 2.3.0'  # noqa
+    'description': 'Ubuntu 16.04\nDocker 18.06.2~ce\nKubernetes 1.10.11\nweave\
+ 2.3.0'
 }
 
 SAMPLE_BROKER_CONFIG = {
@@ -259,10 +197,122 @@ SAMPLE_BROKER_CONFIG = {
     }
 }
 
-# This allows us to compare top-level config keys and value types
-SAMPLE_CONFIG = {**SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
-                 **SAMPLE_VCS_CONFIG, **SAMPLE_SERVICE_CONFIG,
-                 **SAMPLE_BROKER_CONFIG}
+PKS_CONFIG_FILE_LOCATION_SECTION_KEY = 'pks_config'
+SAMPLE_PKS_CONFIG_FILE_LOCATION = {
+    PKS_CONFIG_FILE_LOCATION_SECTION_KEY: None
+}
+
+PKS_SERVERS_SECTION_KEY = 'pks_servers'
+SAMPLE_PKS_SERVERS_SECTION = {
+    PKS_SERVERS_SECTION_KEY: [
+        {
+            'name': 'pks-server-1',
+            'host': 'pks-server-1.pks.local',
+            'port': '9021',
+            'uaac_port': '8443',
+            # 'proxy': 'proxy1.pks.local',
+            'datacenter': 'pks-s1-dc',
+            'clusters': ['pks-s1-az-1', 'pks-s1-az-2', 'pks-s1-az-3'],
+            'cpi': 'cpi1',
+            'vc': 'vc1',
+            'verify': True
+        }, {
+            'name': 'pks-server-2',
+            'host': 'pks-server-2.pks.local',
+            'port': '9021',
+            'uaac_port': '8443',
+            # 'proxy': 'proxy2.pks.local',
+            'datacenter': 'pks-s2-dc',
+            'clusters': ['pks-s2-az-1', 'pks-s2-az-2', 'pks-s2-az-3'],
+            'cpi': 'cpi2',
+            'vc': 'vc2',
+            'verify': True
+        }
+    ]
+}
+
+PKS_ACCOUNTS_SECTION_KEY = 'pks_accounts'
+SAMPLE_PKS_ACCOUNTS_SECTION = {
+    PKS_ACCOUNTS_SECTION_KEY: [
+        {
+            'name': 'Org1ServiceAccount1',
+            'pks_server': 'pks-server-1',
+            'secret': 'secret',
+            'username': 'org1Admin'
+        }, {
+            'name': 'Org1ServiceAccount2',
+            'pks_server': 'pks-server-2',
+            'secret': 'secret',
+            'username': 'org1Admin'
+        }, {
+            'name': 'Org2ServiceAccount',
+            'pks_server': 'pks-server-2',
+            'secret': 'secret',
+            'username': 'org2Admin'
+        }
+    ]
+}
+
+PKS_ORGS_SECTION_KEY = 'orgs'
+SAMPLE_PKS_ORGS_SECTION = {
+    PKS_ORGS_SECTION_KEY: [
+        {
+            'name': 'Org1',
+            'pks_accounts': ['Org1ServiceAccount1', 'Org1ServiceAccount2']
+        }, {
+            'name': 'Org2',
+            'pks_accounts': ['Org2ServiceAccount']
+        }
+    ]
+}
+
+PKS_PVDCS_SECTION_KEY = 'pvdcs'
+SAMPLE_PKS_PVDCS_SECTION = {
+    PKS_PVDCS_SECTION_KEY: [
+        {
+            'name': 'pvdc1',
+            'pks_server': 'pks-server-1',
+            'cluster': 'pks-s1-az-1',
+        }, {
+            'name': 'pvdc2',
+            'pks_server': 'pks-server-2',
+            'cluster': 'pks-s2-az-1'
+        }, {
+            'name': 'pvdc3',
+            'pks_server': 'pks-server-1',
+            'cluster': 'pks-s1-az-2'
+        }
+    ]
+}
+
+PKS_NSXT_SERVERS_SECTION_KEY = 'nsxt_servers'
+SAMPLE_PKS_NSXT_SERVERS_SECTION = {
+    PKS_NSXT_SERVERS_SECTION_KEY: [
+        {
+            'name': 'nsxt-server-1',
+            'host': 'nsxt1.domain.local',
+            'username': 'admin',
+            'password': 'secret',
+            'pks_server': 'pks-server-1',
+            # 'proxy': 'proxy1.pks.local',
+            'nodes_ip_block_ids': ['id1', 'id2'],
+            'pods_ip_block_ids': ['id1', 'id2'],
+            'distributed_firewall_section_anchor_id': 'id',
+            'verify': True
+        }, {
+            'name': 'nsxt-server-2',
+            'host': 'nsxt2.domain.local',
+            'username': 'admin',
+            'password': 'secret',
+            'pks_server': 'pks-server-2',
+            # 'proxy': 'proxy2.pks.local',
+            'nodes_ip_block_ids': ['id1', 'id2'],
+            'pods_ip_block_ids': ['id1', 'id2'],
+            'distributed_firewall_section_anchor_id': 'id',
+            'verify': True
+        }
+    ]
+}
 
 
 def generate_sample_config(output=None, pks_output=None):
@@ -289,22 +339,37 @@ def generate_sample_config(output=None, pks_output=None):
                                     default_flow_style=False) + '\n'
     sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
                                     default_flow_style=False) + '\n'
-    sample_config += NOTE_FOR_PKS_KEY_IN_CONFIG_FILE
-    sample_config += yaml.safe_dump(SAMPLE_PKS_CONFIG_FILE_LOCATION,
-                                    default_flow_style=False) + '\n'
-    sample_pks_config = yaml.safe_dump(SAMPLE_PKS_CONFIG,
-                                       default_flow_style=False)
+    sample_config += NOTE_FOR_PKS_KEY_IN_CONFIG_FILE + '\n'
 
-    if output is not None:
+    if pks_output:
+        pks_config_location_dict = {}
+        pks_config_location_dict[PKS_CONFIG_FILE_LOCATION_SECTION_KEY] = \
+            f"{pks_output}"
+        sample_config += yaml.safe_dump(pks_config_location_dict,
+                                        default_flow_style=False)
+    else:
+        sample_config += yaml.safe_dump(SAMPLE_PKS_CONFIG_FILE_LOCATION,
+                                        default_flow_style=False)
+
+    sample_pks_config = yaml.safe_dump(
+        SAMPLE_PKS_SERVERS_SECTION, default_flow_style=False) + '\n'
+    sample_pks_config += yaml.safe_dump(
+        SAMPLE_PKS_ACCOUNTS_SECTION, default_flow_style=False) + '\n'
+    sample_pks_config += yaml.safe_dump(
+        SAMPLE_PKS_ORGS_SECTION, default_flow_style=False) + '\n'
+    sample_pks_config += yaml.safe_dump(
+        SAMPLE_PKS_PVDCS_SECTION, default_flow_style=False) + '\n'
+    sample_pks_config += yaml.safe_dump(
+        SAMPLE_PKS_NSXT_SERVERS_SECTION, default_flow_style=False)
+
+    if output:
         with open(output, 'w') as f:
             f.write(sample_config)
-    if pks_output is not None:
+    if pks_output:
         with open(pks_output, 'w') as f:
-            pks_config_string = yaml.safe_dump(SAMPLE_PKS_CONFIG,
-                                               default_flow_style=False)
-            f.write(f"{INSTRUCTIONS_FOR_PKS_CONFIG_FILE}\n{pks_config_string}")
+            f.write(f"{INSTRUCTIONS_FOR_PKS_CONFIG_FILE}\n{sample_pks_config}")
 
-    return sample_config.strip() + '\n\n' + PKS_CONFIG_NOTE + '\n' + \
+    return sample_config.strip() + '\n\n' + PKS_CONFIG_NOTE + '\n\n' + \
         sample_pks_config.strip()
 
 
@@ -339,9 +404,15 @@ def get_validated_config(config_file_name):
     check_file_permissions(config_file_name)
     with open(config_file_name) as config_file:
         config = yaml.safe_load(config_file) or {}
-    pks_config = config.get('pks_config')
+    pks_config_location = config.get('pks_config')
     click.secho(f"Validating config file '{config_file_name}'", fg='yellow')
-    check_keys_and_value_types(config, SAMPLE_CONFIG, location='config file')
+    # This allows us to compare top-level config keys and value types
+    sample_config = {
+        **SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
+        **SAMPLE_VCS_CONFIG, **SAMPLE_SERVICE_CONFIG,
+        **SAMPLE_BROKER_CONFIG
+    }
+    check_keys_and_value_types(config, sample_config, location='config file')
     validate_amqp_config(config['amqp'])
     validate_vcd_and_vcs_config(config['vcd'], config['vcs'])
     validate_broker_config(config['broker'])
@@ -349,16 +420,17 @@ def get_validated_config(config_file_name):
                                SAMPLE_SERVICE_CONFIG['service'],
                                location="config file 'service' section")
     click.secho(f"Config file '{config_file_name}' is valid", fg='green')
-    if isinstance(pks_config, str):
-        check_file_permissions(pks_config)
-        with open(pks_config) as f:
-            pks = yaml.safe_load(f) or {}
-        click.secho(f"Validating PKS config file '{pks_config}'",
+    if isinstance(pks_config_location, str):
+        check_file_permissions(pks_config_location)
+        with open(pks_config_location) as f:
+            pks_config = yaml.safe_load(f) or {}
+        click.secho(f"Validating PKS config file '{pks_config_location}'",
                     fg='yellow')
-        check_keys_and_value_types(pks, SAMPLE_PKS_CONFIG,
-                                   location='PKS config file')
-        click.secho(f"PKS Config file '{pks_config}' is valid", fg='green')
-        config['pks_config'] = pks
+        validate_pks_config_structure(pks_config)
+        validate_pks_config_data_integrity(pks_config)
+        click.secho(f"PKS Config file '{pks_config_location}' is valid",
+                    fg='green')
+        config['pks_config'] = pks_config
     else:
         config['pks_config'] = None
 
@@ -510,6 +582,97 @@ def validate_broker_config(broker_dict):
         raise ValueError(f"IP allocation mode is "
                          f"'{broker_dict['ip_allocation_mode']}' when it "
                          f"should be either 'dhcp' or 'pool'")
+
+
+def validate_pks_config_structure(pks_config):
+    sample_config = {
+        **SAMPLE_PKS_SERVERS_SECTION, **SAMPLE_PKS_ACCOUNTS_SECTION,
+        **SAMPLE_PKS_ORGS_SECTION, **SAMPLE_PKS_PVDCS_SECTION,
+        **SAMPLE_PKS_NSXT_SERVERS_SECTION
+    }
+    check_keys_and_value_types(pks_config, sample_config,
+                               location='pks config file',
+                               excluded_keys=[PKS_ORGS_SECTION_KEY])
+
+    pks_servers = pks_config[PKS_SERVERS_SECTION_KEY]
+    for index, pks_server in enumerate(pks_servers, 1):
+        check_keys_and_value_types(
+            pks_server,
+            SAMPLE_PKS_SERVERS_SECTION[PKS_SERVERS_SECTION_KEY][0],
+            location=f"pks config file '{PKS_SERVERS_SECTION_KEY}' "
+                     f"section, pks server #{index}",
+            excluded_keys=['proxy'])
+    pks_accounts = pks_config[PKS_ACCOUNTS_SECTION_KEY]
+    for index, pks_account in enumerate(pks_accounts, 1):
+        check_keys_and_value_types(
+            pks_account,
+            SAMPLE_PKS_ACCOUNTS_SECTION[PKS_ACCOUNTS_SECTION_KEY][0],
+            location=f"pks config file '{PKS_ACCOUNTS_SECTION_KEY}' "
+                     f"section, pks account #{index}")
+    if PKS_ORGS_SECTION_KEY in pks_config.keys():
+        orgs = pks_config[PKS_ORGS_SECTION_KEY]
+        for index, org in enumerate(orgs, 1):
+            check_keys_and_value_types(
+                org,
+                SAMPLE_PKS_ORGS_SECTION[PKS_ORGS_SECTION_KEY][0],
+                location=f"pks config file '{PKS_ORGS_SECTION_KEY}' "
+                         f"section, org #{index}")
+    pvdcs = pks_config[PKS_PVDCS_SECTION_KEY]
+    for index, pvdc in enumerate(pvdcs, 1):
+        check_keys_and_value_types(
+            pvdc,
+            SAMPLE_PKS_PVDCS_SECTION[PKS_PVDCS_SECTION_KEY][0],
+            location=f"pks config file '{PKS_PVDCS_SECTION_KEY}' "
+                     f"section, pvdc #{index}")
+    nsxt_servers = pks_config[PKS_NSXT_SERVERS_SECTION_KEY]
+    for index, nsxt_server in enumerate(nsxt_servers, 1):
+        check_keys_and_value_types(
+            nsxt_server,
+            SAMPLE_PKS_NSXT_SERVERS_SECTION[PKS_NSXT_SERVERS_SECTION_KEY][0],
+            location=f"pks config file '{PKS_NSXT_SERVERS_SECTION_KEY}' "
+                     f"section, nsxt server #{index}",
+            excluded_keys=['proxy'])
+
+
+def validate_pks_config_data_integrity(pks_config):
+    all_pks_servers = \
+        [entry['name'] for entry in pks_config[PKS_SERVERS_SECTION_KEY]]
+    all_pks_accounts = \
+        [entry['name'] for entry in pks_config[PKS_ACCOUNTS_SECTION_KEY]]
+    all_nsxt_servers = \
+        [entry['name'] for entry in pks_config[PKS_NSXT_SERVERS_SECTION_KEY]]
+
+    for entry in pks_config[PKS_ACCOUNTS_SECTION_KEY]:
+        pks_server = entry.get('pks_server')
+        if pks_server not in all_pks_servers:
+            raise ValueError(f"Unknown PKS server : {pks_server} referrenced"
+                             f" by PKS account : {entry.get('name')} in "
+                             f"Section : {PKS_ACCOUNTS_SECTION_KEY}")
+
+    if PKS_ORGS_SECTION_KEY in pks_config.keys():
+        for entry in pks_config[PKS_ORGS_SECTION_KEY]:
+            referrenced_accounts = entry.get('pks_accounts')
+            if not referrenced_accounts:
+                continue
+            for account in referrenced_accounts:
+                if account not in all_pks_accounts:
+                    raise ValueError(f"Unknown PKS account : {account} referre"
+                                     f"nced by Org : {entry.get('name')} in S"
+                                     f"ection : {PKS_ORGS_SECTION_KEY}")
+
+    for entry in pks_config[PKS_PVDCS_SECTION_KEY]:
+        pks_server = entry.get('pks_server')
+        if pks_server not in all_pks_servers:
+            raise ValueError(f"Unknown PKS server : {pks_server} referrenced"
+                             f" by PVDC : {entry.get('name')} in Section : "
+                             f"{PKS_PVDCS_SECTION_KEY}")
+
+    for entry in pks_config[PKS_NSXT_SERVERS_SECTION_KEY]:
+        pks_server = entry.get('pks_server')
+        if pks_server not in all_pks_servers:
+            raise ValueError(f"Unknown PKS server : {pks_server} referrence"
+                             f"d by NSX-T server : {entry.get('name')} in "
+                             f"Section : {PKS_NSXT_SERVERS_SECTION_KEY}")
 
 
 def check_cse_installation(config, check_template='*'):

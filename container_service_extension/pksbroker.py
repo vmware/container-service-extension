@@ -29,7 +29,8 @@ from container_service_extension.pksclient.models.compute_profile_request \
 from container_service_extension.pksclient.models.update_cluster_parameters\
     import UpdateClusterParameters
 from container_service_extension.pksclient.rest import ApiException
-from container_service_extension.server_constants import CSE_PKS_DEPLOY_RIGHT_NAME
+from container_service_extension.server_constants import \
+    CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import exception_handler
@@ -56,7 +57,7 @@ def add_vcd_user_context(qualify_params=['cluster_name'],
 
             def get_user_id():
                 # Return user id associated with client-session
-                # arg[0] is represents 'self' which is instance of PKSBroker
+                # arg[0] represents 'self' which is instance of PKSBroker
                 broker_instance = args[0]
                 session = broker_instance.get_tenant_client_session()
                 return extract_id(session.get('userId'))
@@ -76,7 +77,7 @@ def add_vcd_user_context(qualify_params=['cluster_name'],
                 for key, val in cluster_info.items():
                     if type(val) is str and user_id in val:
                         cluster_info.update(
-                            {key: val.replace(f'-{user_id}', '')})
+                            {key: val.replace(f"-{user_id}", "")})
                         is_user_id_stripped = True
 
                 return is_user_id_stripped
@@ -85,7 +86,7 @@ def add_vcd_user_context(qualify_params=['cluster_name'],
 
             for param in qualify_params:
                 if kwargs.get(param) is not None:
-                    kwargs[param] += f'-{user_id}'
+                    kwargs[param] += f"-{user_id}"
 
             result = pks_function(*args, **kwargs)
 
@@ -110,13 +111,16 @@ class PKSBroker(AbstractBroker):
     def __init__(self, request_headers, request_spec, pks_ctx):
         """Initialize PKS broker.
 
-        :param pks_ctx: ovdc cache (subject to change) is used to
-        initialize PKS broker.
+        :param dict pks_ctx: A dictionary with which should atleast have the
+            following keys in it ['username', 'secret', 'host', 'port',
+            'uaac_port'], 'proxy' and 'pks_compute_profile_name' are optional
+            keys. Currently all callers of this method is using ovdc cache
+            (subject to change) to initialize PKS broker.
         """
         super().__init__(request_headers, request_spec)
-        if pks_ctx is None:
-            raise ValueError(f'PKS context is required to establish connection'
-                             f' to PKS')
+        if not pks_ctx:
+            raise ValueError(
+                "PKS context is required to establish connection to PKS")
         self.req_headers = request_headers
         self.req_spec = request_spec
         self.username = pks_ctx['username']
@@ -128,7 +132,16 @@ class PKSBroker(AbstractBroker):
         self.proxy_uri = f"http://{pks_ctx['proxy']}:80" \
             if pks_ctx.get('proxy') else None
         self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE, None)
-        self.verify = False  # TODO(pks.yaml) pks_config['pks']['verify']
+        # TODO() Add support in pyvcloud to send metadata values with their
+        # types intact.
+        verify_ssl_value_in_ctx = pks_ctx.get('verify')
+        if isinstance(verify_ssl_value_in_ctx, bool):
+            self.verify = verify_ssl_value_in_ctx
+        elif isinstance(verify_ssl_value_in_ctx, str):
+            self.verify = \
+                False if verify_ssl_value_in_ctx.lower() == 'false' else True
+        else:
+            self.verify = True
         self.pks_client = self._get_pks_client()
         self.client_session = None
 
@@ -147,8 +160,8 @@ class PKSBroker(AbstractBroker):
                                   proxy_uri=self.proxy_uri)
             token = uaaClient.getToken()
         except Exception as err:
-            raise PksConnectionError(f'Connection establishment to PKS host'
-                                     f' {self.uaac_uri} failed: {err}')
+            raise PksConnectionError(f"Connection establishment to PKS host"
+                                     f" {self.uaac_uri} failed: {err}")
         pks_config = Configuration()
         pks_config.proxy = self.proxy_uri
         pks_config.host = self.pks_host_uri
@@ -253,6 +266,8 @@ class PKSBroker(AbstractBroker):
 
         LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to create"
                      f" cluster: {cluster_name}")
+        # TODO() access self.pks_ctx to get hold of nsxt_info and create dfw
+        # rules
         return cluster_dict
 
     @add_vcd_user_context(qualify_params=['cluster_name'])
@@ -321,9 +336,14 @@ class PKSBroker(AbstractBroker):
                          f"error:\n {err}")
             raise PksServerError(err.status, err.body)
 
+        # TODO() access self.pks_ctx and get hold of nst_info to cleanup dfw
+        # rules
         LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to delete"
                      f" the cluster: {cluster_name}")
-        return
+        result = {}
+        result['cluster_name'] = cluster_name
+        result['task_status'] = 'in progress'
+        return result
 
     @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
     @add_vcd_user_context(qualify_params=['cluster_name'])
@@ -353,7 +373,10 @@ class PKSBroker(AbstractBroker):
         LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to resize"
                      f" the cluster: {cluster_name}")
 
-        result['status'] = ACCEPTED
+        result['status_code'] = ACCEPTED
+        result['body'] = {
+            'cluster name': cluster_name, 'task_status': 'in progress'
+        }
         return result
 
     def create_compute_profile(self, cp_name, az_name, description, cpi,

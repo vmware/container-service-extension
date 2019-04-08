@@ -11,7 +11,6 @@ from pyvcloud.vcd.client import MetadataDomain
 from pyvcloud.vcd.client import MetadataVisibility
 from pyvcloud.vcd.vdc import VDC
 
-
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE
 from container_service_extension.pks_cache import PKS_PLANS
@@ -29,7 +28,7 @@ class CtrProvType(Enum):
     NONE = 'none'
 
 
-CONTAINER_PROVIDER = 'container_provider'
+CONTAINER_PROVIDER_KEY = 'container_provider'
 
 
 class OvdcCache(object):
@@ -44,38 +43,40 @@ class OvdcCache(object):
         self.pks_cache = get_pks_cache()
 
     @staticmethod
-    def construct_pks_context(pks_info, pvdc_info=None,
+    def construct_pks_context(pks_account_info, pvdc_info=None, nsxt_info=None,
                               pks_compute_profile_name=None, pks_plans='',
                               credentials_required=False):
         """Construct PKS context dictionary.
 
-        :param container_service_extension.pks_cache.PksInfo pks_info:
-        pks connection details
+        :param container_service_extension.pks_cache.PksAccountInfo
+            pks_account_info: pks connection details
         :param container_service_extension.pks_cache.PvdcInfo pvdc_info:
-        pvdc details including datacenter and cluster.
+            pvdc details including datacenter and cluster.
         :param str pks_compute_profile_name: name of the compute profile
         :param str pks_plans: comma separated values for pks plans
         :param bool credentials_required: determines if credentials have to
-        be part of the resultant dictionary
+            be part of the resultant dictionary
 
-        :return: dict of pks context details
+        :return: pks context details
 
         :rtype: dict
         """
-        pks_ctx = pks_info._asdict()
+        pks_ctx = pks_account_info._asdict()
         credentials = pks_ctx.pop('credentials')
-        if credentials_required is True:
+        if credentials_required:
             pks_ctx.update(credentials._asdict())
-        if pvdc_info is not None:
+        if pvdc_info:
             pks_ctx.update(pvdc_info._asdict())
-        pks_ctx[PKS_COMPUTE_PROFILE] = '' if pks_compute_profile_name is None \
+        pks_ctx[PKS_COMPUTE_PROFILE] = '' if not pks_compute_profile_name \
             else pks_compute_profile_name
-        pks_ctx[PKS_PLANS] = '' if pks_plans is None else pks_plans
+        pks_ctx[PKS_PLANS] = '' if not pks_plans else pks_plans
+        pks_ctx['nsxt'] = nsxt_info
         return pks_ctx
 
     def get_ovdc_container_provider_metadata(self, ovdc_name=None,
                                              ovdc_id=None, org_name=None,
-                                             credentials_required=False):
+                                             credentials_required=False,
+                                             nsxt_info_required=False):
         """Get metadata of given ovdc, pertaining to the container provider.
 
         :param str ovdc_name: name of the ovdc
@@ -96,29 +97,36 @@ class OvdcCache(object):
 
         all_metadata = utils.metadata_to_dict(ovdc.get_all_metadata())
 
-        if CONTAINER_PROVIDER not in all_metadata:
+        if CONTAINER_PROVIDER_KEY not in all_metadata:
             container_provider = CtrProvType.NONE.value
         else:
             container_provider = \
-                all_metadata[CONTAINER_PROVIDER]
+                all_metadata[CONTAINER_PROVIDER_KEY]
 
         ctr_prov_details = {}
         if container_provider == CtrProvType.PKS.value:
             # Filter out container provider metadata into a dict
-            metadata = {metadata_key: all_metadata[metadata_key]
-                        for metadata_key in PksCache.get_pks_keys()}
+            ctr_prov_details = {
+                metadata_key:
+                    all_metadata[metadata_key]
+                    for metadata_key in PksCache.get_pks_keys()
+            }
 
             # Get the credentials from PksCache
             pvdc_id = self.get_pvdc_id(ovdc)
             pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
-            metadata[PKS_PLANS] = metadata[PKS_PLANS].split(',')
+            ctr_prov_details[PKS_PLANS] = \
+                ctr_prov_details[PKS_PLANS].split(',')
             if credentials_required:
-                pks_info = self.pks_cache.get_pks_account_details(
+                pks_info = self.pks_cache.get_pks_account_info(
                     org_name, pvdc_info.vc)
-                metadata.update(pks_info.credentials._asdict())
-            ctr_prov_details.update(metadata)
+                ctr_prov_details.update(pks_info.credentials._asdict())
+            if nsxt_info_required:
+                nsxt_info = self.pks_cache.get_nsxt_info(pvdc_info.vc)
+                ctr_prov_details['nsxt'] = nsxt_info
 
-        ctr_prov_details[CONTAINER_PROVIDER] = container_provider
+        ctr_prov_details[CONTAINER_PROVIDER_KEY] = container_provider
+
         return ctr_prov_details
 
     def set_ovdc_container_provider_metadata(self,
@@ -137,13 +145,15 @@ class OvdcCache(object):
         if container_provider != CtrProvType.PKS.value:
             LOGGER.debug(f"Remove existing metadata for ovdc:{ovdc_name}")
             self._remove_metadata(ovdc, PksCache.get_pks_keys())
-            metadata[CONTAINER_PROVIDER] = container_provider or ''
+            metadata[CONTAINER_PROVIDER_KEY] = container_provider or \
+                CtrProvType.NONE.value
             LOGGER.debug(f"Updated metadata for {container_provider}:"
                          f"{metadata}")
         else:
             container_prov_data.pop('username')
             container_prov_data.pop('secret')
-            metadata[CONTAINER_PROVIDER] = container_provider
+            container_prov_data.pop('nsxt')
+            metadata[CONTAINER_PROVIDER_KEY] = container_provider
             metadata.update(container_prov_data)
 
         # set ovdc metadata into Vcd
@@ -158,7 +168,6 @@ class OvdcCache(object):
                 ovdc.remove_metadata(k, domain=MetadataDomain.SYSTEM)
 
     def get_ovdc(self, ovdc_name=None, ovdc_id=None, org_name=None):
-
         if ovdc_id is None:
             org = get_org(self.client, org_name=org_name)
             return get_vdc(self.client, ovdc_name, org=org,
