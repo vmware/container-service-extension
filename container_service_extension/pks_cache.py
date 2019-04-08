@@ -61,16 +61,15 @@ class PksCache(object):
         super().__setattr__("orgs_to_pks_account_mapper",
                             orgs_to_pks_account_mapper)
 
-        nsxt_servers_table = {}
         pks_servers_table = {}
-        vc_to_nsxt_server_mapper = {}
-        for nsxt_server in nsxt_servers:
-            nsxt_servers_table[nsxt_server['name']] = nsxt_server
         for pks_server in pks_servers:
             pks_servers_table[pks_server['name']] = pks_server
-            vc_to_nsxt_server_mapper[pks_server['vc']] = \
-                nsxt_servers_table[pks_server['nsxt']]
         super().__setattr__("pks_servers_table", pks_servers_table)
+
+        vc_to_nsxt_server_mapper = {}
+        for nsxt_server in nsxt_servers:
+            pks_server = pks_servers_table[nsxt_server['pks_server']]
+            vc_to_nsxt_server_mapper[pks_server['vc']] = nsxt_server
         super().__setattr__("vc_to_nsxt_server_mapper",
                             vc_to_nsxt_server_mapper)
 

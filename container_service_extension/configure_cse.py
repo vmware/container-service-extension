@@ -214,7 +214,6 @@ SAMPLE_PKS_SERVERS_SECTION = {
             'datacenter': 'pks-s1-dc',
             'clusters': ['pks-s1-az-1', 'pks-s1-az-2', 'pks-s1-az-3'],
             'cpi': 'cpi1',
-            'nsxt': 'nsxt-server-1',
             'vc': 'vc1',
             'verify': True
         }, {
@@ -226,7 +225,6 @@ SAMPLE_PKS_SERVERS_SECTION = {
             'datacenter': 'pks-s2-dc',
             'clusters': ['pks-s2-az-1', 'pks-s2-az-2', 'pks-s2-az-3'],
             'cpi': 'cpi2',
-            'nsxt': 'nsxt-server-2',
             'vc': 'vc2',
             'verify': True
         }
@@ -295,6 +293,7 @@ SAMPLE_PKS_NSXT_SERVERS_SECTION = {
             'host': 'nsxt1.domain.local',
             'username': 'admin',
             'password': 'secret',
+            'pks_server': 'pks-server-1',
             # 'proxy': 'proxy1.pks.local',
             'nodes_ip_block_ids': ['id1', 'id2'],
             'pods_ip_block_ids': ['id1', 'id2'],
@@ -305,6 +304,7 @@ SAMPLE_PKS_NSXT_SERVERS_SECTION = {
             'host': 'nsxt2.domain.local',
             'username': 'admin',
             'password': 'secret',
+            'pks_server': 'pks-server-2',
             # 'proxy': 'proxy2.pks.local',
             'nodes_ip_block_ids': ['id1', 'id2'],
             'pods_ip_block_ids': ['id1', 'id2'],
@@ -642,13 +642,6 @@ def validate_pks_config_data_integrity(pks_config):
     all_nsxt_servers = \
         [entry['name'] for entry in pks_config[PKS_NSXT_SERVERS_SECTION_KEY]]
 
-    for entry in pks_config[PKS_SERVERS_SECTION_KEY]:
-        nsxt_server = entry.get('nsxt')
-        if nsxt_server not in all_nsxt_servers:
-            raise ValueError(f"Unknown NSX-T server : {nsxt_server} referrence"
-                             f"d by PKS server : {entry.get('name')} in "
-                             f"Section : {PKS_SERVERS_SECTION_KEY}")
-
     for entry in pks_config[PKS_ACCOUNTS_SECTION_KEY]:
         pks_server = entry.get('pks_server')
         if pks_server not in all_pks_servers:
@@ -673,6 +666,13 @@ def validate_pks_config_data_integrity(pks_config):
             raise ValueError(f"Unknown PKS server : {pks_server} referrenced"
                              f" by PVDC : {entry.get('name')} in Section : "
                              f"{PKS_PVDCS_SECTION_KEY}")
+
+    for entry in pks_config[PKS_NSXT_SERVERS_SECTION_KEY]:
+        pks_server = entry.get('pks_server')
+        if pks_server not in all_pks_servers:
+            raise ValueError(f"Unknown PKS server : {pks_server} referrence"
+                             f"d by NSX-T server : {entry.get('name')} in "
+                             f"Section : {PKS_NSXT_SERVERS_SECTION_KEY}")
 
 
 def check_cse_installation(config, check_template='*'):
