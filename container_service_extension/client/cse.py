@@ -202,13 +202,25 @@ def list_templates(ctx):
     required=False,
     default=None,
     help='Name of the virtual datacenter')
-def list_clusters(ctx, vdc):
+@click.option(
+    '-o',
+    '--org',
+    'org',
+    default=None,
+    required=False,
+    metavar='<org>',
+    help='Name of the org in from which the clusters to be listed. If not '
+         'specified, use the org-in-context. This flag is meant only for'
+         ' system administrators.')
+def list_clusters(ctx, vdc, org):
     """Display list of Kubernetes clusters."""
     try:
         restore_session(ctx)
+        if org is None:
+            org = ctx.obj['profiles'].get('org_in_use')
         client = ctx.obj['client']
         cluster = Cluster(client)
-        result = cluster.get_clusters(vdc=vdc)
+        result = cluster.get_clusters(vdc=vdc, org=org)
         stdout(result, ctx, show_id=True)
     except Exception as e:
         stderr(e, ctx)

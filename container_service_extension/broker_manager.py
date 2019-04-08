@@ -396,7 +396,7 @@ class BrokerManager(object):
         ovdc_name = self.req_spec.get('vdc', None) or \
             self.req_qparams.get('vdc', None)
         org_name = self.req_spec.get('org', None) or \
-            self.req_qparams.get('vdc', None) or \
+            self.req_qparams.get('org', None) or \
             self.session.get('org', None)
 
         LOGGER.debug(f"org_name={org_name};vdc_name=\'{ovdc_name}\'")
