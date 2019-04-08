@@ -33,10 +33,10 @@ class IPSetManager(object):
         return ip_sets
 
     def get_ip_set(self, name=None, id=None):
-        if name is None and id is None:
+        if not name and not id:
             return None
 
-        if id is not None:
+        if id:
             resource_url_fragment = f"ip-sets/{id}"
             try:
                 response = self._nsxt_client.do_request(
@@ -44,14 +44,12 @@ class IPSetManager(object):
                     resource_url_fragment=resource_url_fragment)
                 return response
             except HTTPError as err:
-                if err.code == 404:
-                    return None
-                else:
+                if err.code != 404:
                     raise
 
         ip_sets = self.list_ip_sets()
         for ip_set in ip_sets:
-            if name is not None and ip_set['display_name'] == name:
+            if ip_set['display_name'].lower() == name.lower():
                 return ip_set
 
         return None

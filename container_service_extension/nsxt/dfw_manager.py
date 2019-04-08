@@ -4,7 +4,7 @@
 
 from requests.exceptions import HTTPError
 
-from container_service_extension.logger import SERVER_NSXT_LOGGER as Logger
+from container_service_extension.logger import SERVER_NSXT_LOGGER as LOGGER
 from container_service_extension.nsxt.constants import RequestMethodVerb
 
 
@@ -25,10 +25,10 @@ class DFWManager(object):
         return firewall_sections
 
     def get_firewall_section(self, name=None, id=None):
-        if name is None and id is None:
+        if not name and not id:
             return None
 
-        if id is not None:
+        if id:
             resource_url_fragment = f"firewall/sections/{id}"
             try:
                 response = self._nsxt_client.do_request(
@@ -36,14 +36,12 @@ class DFWManager(object):
                     resource_url_fragment=resource_url_fragment)
                 return response
             except HTTPError as err:
-                if err.code == 404:
-                    return None
-                else:
+                if err.code != 404:
                     raise
 
         fw_sections = self.list_firewall_sections()
         for fw_section in fw_sections:
-            if name is not None and fw_section['display_name'].lower() == name.lower():  # noqa
+            if fw_section['display_name'].lower() == name.lower():
                 return fw_section
 
         return None
@@ -55,22 +53,22 @@ class DFWManager(object):
                                 anchor_id=None,
                                 insert_policy=None):
         resource_url_fragment = "firewall/sections"
-        if anchor_id is not None or insert_policy is not None:
+        if anchor_id or insert_policy:
             resource_url_fragment += "?"
-            if anchor_id is not None:
+            if anchor_id:
                 resource_url_fragment += f"id={anchor_id}"
-                if insert_policy is not None:
+                if insert_policy:
                     resource_url_fragment += "&"
-            if insert_policy is not None:
+            if insert_policy:
                 resource_url_fragment += f"operation={insert_policy.value}"
 
         data = {}
         data['resource_type'] = "FirewallSection"
         data['display_name'] = name
         data['section_type'] = "LAYER3"
-        if applied_tos is not None:
+        if applied_tos:
             data['applied_tos'] = applied_tos
-        if tags is not None:
+        if tags:
             data['tags'] = tags
         data['stateful'] = "true"
         data['enforced_on'] = "VIF"
@@ -83,15 +81,15 @@ class DFWManager(object):
         return firewall_section
 
     def delete_firewall_section(self, name=None, id=None, cascade=True):
-        if name is None and id is None:
+        if not name and not id:
             return False
 
-        if id is None:
+        if not id:
             fws = self.get_firewall_section(name, id)
             if fws:
                 id = fws['id']
             else:
-                Logger.debug(
+                LOGGER.debug(
                     f"DFW Section : {name} not found. Unable to delete.")
                 return False
         resource_url_fragment = f"firewall/sections/{id}"
@@ -113,13 +111,13 @@ class DFWManager(object):
                         anchor_rule_id=None,
                         insert_policy=None):
         resource_url_fragment = f"firewall/sections/{section_id}/rules"
-        if anchor_rule_id is not None or insert_policy is not None:
+        if anchor_rule_id or insert_policy:
             resource_url_fragment += "?"
-            if anchor_rule_id is not None:
+            if anchor_rule_id:
                 resource_url_fragment += f"id={anchor_rule_id}"
-                if insert_policy is not None:
+                if insert_policy:
                     resource_url_fragment += "&"
-            if insert_policy is not None:
+            if insert_policy:
                 resource_url_fragment += f"operation={insert_policy.value}"
 
         data = {}
