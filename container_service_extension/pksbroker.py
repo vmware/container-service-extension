@@ -14,6 +14,9 @@ from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import PksConnectionError
 from container_service_extension.exceptions import PksServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.nsxt.cluster_network_isolater import \
+    ClusterNetworkIsolater
+from container_service_extension.nsxt.nsxt_client import NSXTClient
 from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE
 from container_service_extension.pksclient.api.cluster_api import ClusterApi
 from container_service_extension.pksclient.api.profile_api import ProfileApi
@@ -32,6 +35,7 @@ from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import exception_handler
+from container_service_extension.utils import get_pks_cache
 from container_service_extension.utils import OK
 
 
@@ -71,7 +75,9 @@ class PKSBroker(AbstractBroker):
             f"https://{pks_ctx['host']}:{pks_ctx['uaac_port']}"
         self.proxy_uri = f"http://{pks_ctx['proxy']}:80" \
             if pks_ctx.get('proxy') else None
-        self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE, None)
+        self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE)
+        self.nsxt_server = \
+            get_pks_cache().vc_to_nsxt_server_mapper.get(pks_ctx.get('vc'))
         # TODO() Add support in pyvcloud to send metadata values with their
         # types intact.
         verify_ssl_value_in_ctx = pks_ctx.get('verify')
@@ -221,6 +227,10 @@ class PKSBroker(AbstractBroker):
         #  Method 'Create_cluster' in VcdBroker and PksBroker should take
         #  ClusterSpec either as a param (or)
         #  read from instance variable (if needed only).
+        if not self.nsxt_server:
+            raise CseServerError(
+                "NSX-T server details not found for PKS server selected for "
+                f"cluster : {cluster_name}. Aborting creaetion of cluster.")
 
         compute_profile = compute_profile \
             if compute_profile else self.compute_profile
@@ -247,8 +257,27 @@ class PKSBroker(AbstractBroker):
 
         LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to create"
                      f" cluster: {cluster_name}")
-        # TODO() access self.pks_ctx to get hold of nsxt_info and create dfw
-        # rules
+
+        # isolate cluster via NSX-T DFW
+        cluster_id = cluster_dict.get('uuid')
+        if cluster_id:
+            LOGGER.debug(f"Isolating network of cluster {cluster_name}.")
+            nsxt_client = NSXTClient(
+                host=self.nsxt_server.get('host'),
+                username=self.nsxt_server.get('username'),
+                password=self.nsxt_server.get('password'),
+                http_proxy=self.nsxt_server.get('proxy'),
+                https_proxy=self.nsxt_server.get('proxy'),
+                verify_ssl=self.nsxt_server.get('verify'),
+                log_requests=True,
+                log_headers=True,
+                log_body=True)
+
+            cluster_network_isolater = ClusterNetworkIsolater(nsxt_client)
+            cluster_network_isolater.isolate_cluster(cluster_name, cluster_id)
+        else:
+            LOGGER.error("Failed to isolate network of cluster "
+                         f"{cluster_name}. Cluster ID not found.")
         return cluster_dict
 
     def get_cluster_info(self, cluster_name):
@@ -382,12 +411,25 @@ class PKSBroker(AbstractBroker):
                          f"error:\n {err}")
             raise PksServerError(err.status, err.body)
 
-        # TODO() access self.pks_ctx and get hold of nst_info to cleanup dfw
-        # rules
         LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to delete"
                      f" the cluster: {cluster_name}")
 
-        result = {}
+        # remove cluster network isolation
+        LOGGER.debug(f"Removing network isolation of cluster {cluster_name}.")
+        nsxt_client = NSXTClient(
+            host=self.nsxt_server.get('host'),
+            username=self.nsxt_server.get('username'),
+            password=self.nsxt_server.get('password'),
+            http_proxy=self.nsxt_server.get('proxy'),
+            https_proxy=self.nsxt_server.get('proxy'),
+            verify_ssl=self.nsxt_server.get('verify'),
+            log_requests=True,
+            log_headers=True,
+            log_body=True)
+
+        cluster_network_isolater = ClusterNetworkIsolater(nsxt_client)
+        cluster_network_isolater.remove_cluster_isolation(cluster_name)
+
         result['cluster_name'] = cluster_name
         result['task_status'] = 'in progress'
         return result

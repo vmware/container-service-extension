@@ -8,7 +8,6 @@ import requests
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import RequestException
 
-from container_service_extension.logger import SERVER_NSXT_LOGGER as Logger
 from container_service_extension.nsxt.constants import RequestMethodVerb
 
 
@@ -22,6 +21,7 @@ class NSXTClient(object):
                  http_proxy=None,
                  https_proxy=None,
                  verify_ssl=True,
+                 logger_instance=None,
                  log_requests=False,
                  log_headers=False,
                  log_body=False):
@@ -37,6 +37,8 @@ class NSXTClient(object):
             the.NSX_T server. e.g. proxy.example.com:443
         :param bool verify_ssl: if True, verify SSL certificates of remote
             host, else ignore verification.
+        :param logging.Logger logger_instance: logger instance that will be
+            used to log the REST calls.
         :param bool log_requests: if True, log REST request and responses
             else don't.
         :param bool log_headers: if True, log REST request and response headers
@@ -52,12 +54,17 @@ class NSXTClient(object):
         if https_proxy:
             self._proxies['https'] = "https://" + https_proxy
         self._verify_ssl = verify_ssl
+        if logger_instance:
+            self.LOGGER = logger_instance
+        else:
+            from container_service_extension.logger import SERVER_NSXT_LOGGER
+            self.LOGGER = SERVER_NSXT_LOGGER
         self._log_requests = log_requests
         self._log_headers = log_headers
         self._log_body = log_body
 
     def test_connectivity(self):
-        """Test connectivity to theNSX-T server.
+        """Test connectivity to the NSX-T server.
 
         :return: True, if server is alive, else False
 
@@ -81,7 +88,7 @@ class NSXTClient(object):
         :param str resource_url_fragment: part of the url that idenfies just
             the resource (the host and the common /api/v1/ should be omitted).
             E.g .ns-group/{id}, /firewall/section/ etc.
-        :param str payload: JSON payload for the REST call.
+        :param dict payload: JSON payload for the REST call.
 
         :return: body of the response text (JSON) in form of a dictionary.
 
@@ -100,18 +107,19 @@ class NSXTClient(object):
             verify=self._verify_ssl)
 
         if self._log_requests:
-            Logger.debug(f"Request uri : {(method.value).upper()} {url}")
+            self.LOGGER.debug(f"Request uri : {(method.value).upper()} {url}")
             if self._log_headers:
-                Logger.debug(f"Request hedears : {response.request.headers}")
+                self.LOGGER.debug("Request hedears : "
+                                  f"{response.request.headers}")
             if self._log_body and payload is not None:
-                Logger.debug(f"Request body : {response.request.body}")
+                self.LOGGER.debug(f"Request body : {response.request.body}")
 
         if self._log_requests:
-            Logger.debug(f"Response status code: {response.status_code}")
+            self.LOGGER.debug(f"Response status code: {response.status_code}")
             if self._log_headers:
-                Logger.debug(f"Response hedears : {response.headers}")
+                self.LOGGER.debug(f"Response hedears : {response.headers}")
             if self._log_body:
-                Logger.debug(f"Response body : {response.text}")
+                self.LOGGER.debug(f"Response body : {response.text}")
 
         response.raise_for_status()
 

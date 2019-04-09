@@ -29,6 +29,8 @@ from container_service_extension.logger import INSTALL_LOG_FILEPATH
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import setup_log_file_directory
+from container_service_extension.nsxt.cse_nsxt_setup_utils import \
+    setup_nsxt_constructs
 from container_service_extension.nsxt.dfw_manager import DFWManager
 from container_service_extension.nsxt.ipset_manager import IPSetManager
 from container_service_extension.nsxt.nsxt_client import NSXTClient
@@ -689,7 +691,7 @@ def validate_pks_config_data_integrity(pks_config):
                              f"{nsxt_server.get('name')}")
 
         click.secho(f"Connected to NSX-T server ({nsxt_server.get('host')})",
-            fg='green')
+                    fg='green')
 
         ipset_manager = IPSetManager(nsxt_client)
         if nsxt_server.get('nodes_ip_block_ids'):
@@ -718,7 +720,8 @@ def validate_pks_config_data_integrity(pks_config):
                     f"NSX-T server : {nsxt_server.get('name')}.")
 
         dfw_manager = DFWManager(nsxt_client)
-        fw_section_id=nsxt_server.get('distributed_firewall_section_anchor_id')
+        fw_section_id = \
+            nsxt_server.get('distributed_firewall_section_anchor_id')
         section = dfw_manager.get_firewall_section(id=fw_section_id)
         if not section:
             raise ValueError(
@@ -922,6 +925,31 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
                 create_template(ctx, client, config, template, update=update,
                                 no_capture=no_capture, ssh_key=ssh_key,
                                 org=org)
+
+        # if it's a PKS setup, setup NSX-T constructs
+        if config.get('pks_config'):
+            nsxt_servers = config.get('pks_config')['nsxt_servers']
+            for nsxt_server in nsxt_servers:
+                msg = f"Configuring NSX-T server ({nsxt_server.get('name')})"
+                click.secho(msg, fg='green')
+                LOGGER.info(msg)
+                nsxt_client = NSXTClient(
+                    host=nsxt_server.get('host'),
+                    username=nsxt_server.get('username'),
+                    password=nsxt_server.get('password'),
+                    http_proxy=nsxt_server.get('proxy'),
+                    https_proxy=nsxt_server.get('proxy'),
+                    verify_ssl=nsxt_server.get('verify'),
+                    logger_instance=LOGGER,
+                    log_requests=True,
+                    log_headers=True,
+                    log_body=True)
+                setup_nsxt_constructs(
+                    nsxt_client=nsxt_client,
+                    nodes_ip_block_id=nsxt_server.get('nodes_ip_block_ids'),
+                    pods_ip_block_id=nsxt_server.get('pods_ip_block_ids'),
+                    ncp_boundary_firewall_section_anchor_id=nsxt_server.get('distributed_firewall_section_anchor_id'))  # noqa
+
     except Exception:
         click.secho("CSE Installation Error. Check CSE install logs", fg='red')
         LOGGER.error("CSE Installation Error", exc_info=True)
