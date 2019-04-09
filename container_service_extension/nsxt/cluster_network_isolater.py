@@ -5,6 +5,8 @@
 from container_service_extension.nsxt.constants import \
     ALL_NODES_PODS_NSGROUP_NAME
 from container_service_extension.nsxt.constants import FIREWALL_ACTION
+from container_service_extension.nsxt.constants import \
+    FIREWALL_EXCLUSION_NSGROUP_NAME
 from container_service_extension.nsxt.constants import INSERT_POLICY
 from container_service_extension.nsxt.constants import \
     NCP_BOUNDARY_FIREWALL_SECTION_NAME
@@ -40,9 +42,11 @@ class ClusterNetworkIsolater(object):
         nsgroup_manager = NSGroupManager(self._nsxt_client)
         anp_id = \
             nsgroup_manager.get_nsgroup(ALL_NODES_PODS_NSGROUP_NAME).get('id')
+        fwe_id = nsgroup_manager.get_nsgroup(FIREWALL_EXCLUSION_NSGROUP_NAME)\
+            .get('id')
 
         self._create_firewall_rules_for_cluster(
-            sec_id, n_id, p_id, np_id, anp_id)
+            sec_id, n_id, p_id, np_id, anp_id, fwe_id)
 
     def remove_cluster_isolation(self, cluster_name):
         """Revert isolatation of a PKS cluster's network.
@@ -261,7 +265,8 @@ class ClusterNetworkIsolater(object):
                                            nodes_nsgroup_id,
                                            pods_nsgroup_id,
                                            nodes_pods_nsgroup_id,
-                                           all_nodes_pods_nsgroup_id):
+                                           all_nodes_pods_nsgroup_id,
+                                           firewall_exclusion_nsgroup_id):
         """Create DFW Rules to isolate a cluster network.
 
         One rule to limit communication from pods to nodes.
@@ -307,3 +312,15 @@ class ClusterNetworkIsolater(object):
             action=FIREWALL_ACTION.DROP,
             anchor_rule_id=rule2['id'],
             insert_policy=INSERT_POLICY.INSERT_AFTER)
+
+        rule4_name = "Allow cluster node-pod to communicate with entities in" \
+                     " Firewall Exclusion list"
+        self._nsxt_client.LOGGER.debug(f"Creating DFW rule : {rule4_name}")
+        rule1 = dfw_manager.create_dfw_rule(
+            section_id=section_id,
+            rule_name=rule4_name,
+            source_nsgroup_id=nodes_pods_nsgroup_id,
+            dest_nsgroup_id=firewall_exclusion_nsgroup_id,
+            action=FIREWALL_ACTION.ALLOW,
+            anchor_rule_id=rule1['id'],
+            insert_policy=INSERT_POLICY.INSERT_BEFORE)
