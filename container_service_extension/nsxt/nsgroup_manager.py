@@ -4,12 +4,11 @@
 
 from requests.exceptions import HTTPError
 
-from container_service_extension.logger import SERVER_NSXT_LOGGER as LOGGER
 from container_service_extension.nsxt.constants import RequestMethodVerb
 
 
 class NSGroupManager(object):
-    """Manage Create, Retrieve, Delete operations on NSGroups."""
+    """Facilitate Create, Retrieve, Delete operations on NSGroups."""
 
     def __init__(self, nsxt_client):
         """Initialize a NSXGroupMnaager object.
@@ -149,7 +148,8 @@ class NSGroupManager(object):
             if nsgroup:
                 id = nsgroup['id']
             else:
-                LOGGER.debug(f"NSGroup : {name} not found. Unable to delete.")
+                self._nsxt_client.debug(f"NSGroup : {name} not found. Unable "
+                                        "to delete.")
                 return False
         resource_url_fragment = f"ns-groups/{id}"
         if force:

@@ -4,17 +4,30 @@
 
 from requests.exceptions import HTTPError
 
-from container_service_extension.logger import SERVER_NSXT_LOGGER as LOGGER
 from container_service_extension.nsxt.constants import RequestMethodVerb
 
 
 class DFWManager(object):
-    """."""
+    """Facilitate Create, Retrieve, Delete operations on DFW.
+
+    Works on Distributed Firewall Section and Rules.
+    """
 
     def __init__(self, nsxt_client):
+        """Initialize a DFWManager object.
+
+        :param NSXTCLient nsxt_client: client to make NSX-T REST requests.
+        """
         self._nsxt_client = nsxt_client
 
     def list_firewall_sections(self):
+        """List all Distributed Firewall Sections.
+
+        :return: All DFW sections in the system as a list of dictionaries,
+            where each dictionary represent a DFW Section.
+
+        :rtype: list
+        """
         resource_url_fragment = "firewall/sections"
 
         response = self._nsxt_client.do_request(
@@ -25,8 +38,24 @@ class DFWManager(object):
         return firewall_sections
 
     def get_firewall_section(self, name=None, id=None):
+        """Get information of a DFW Section identified by id or name.
+
+        Identification by id takes precedence. Will return None if no matching
+        DFW Section is found.
+
+        :param str name: name of the DFW Section whose details are to be
+            retrieved.
+        :param str id: id of the DFW Section whose details are to be retrieved.
+
+        :return: details of the DFW IPSet as a dictionary.
+
+        :rtype: dict
+
+        :raises HTTPError: If the underlying REST call fails with any status
+            code other than 404.
+        """
         if not name and not id:
-            return None
+            return
 
         if id:
             resource_url_fragment = f"firewall/sections/{id}"
@@ -46,7 +75,7 @@ class DFWManager(object):
             if fw_section['display_name'].lower() == name.lower():
                 return fw_section
 
-        return None
+        return
 
     def create_firewall_section(self,
                                 name,
@@ -54,6 +83,22 @@ class DFWManager(object):
                                 tags=None,
                                 anchor_id=None,
                                 insert_policy=None):
+        """Create a new DFW Section.
+
+        :param str name: name of the DFW Section to be created.
+        :param list applied_tos: list of dicr, where each dict represents an
+            individual target, normally are NSGroup.
+        :param list tags: list of dictionaries, where each dictionary contains
+            scope and tag key-value pairs.
+        :param str anchor_id: id of another DFW Section that will be used to
+            figure out the position of the newly created DFW Section.
+        :param constants.INSERT_POLICY insert_policy: the relative position of
+            the newly created DFW Section to the anchor section.
+
+        :return: details of the newly created DFW Section as a dictionary.
+
+        :rtype: dict
+        """
         resource_url_fragment = "firewall/sections"
         if anchor_id or insert_policy:
             resource_url_fragment += "?"
@@ -83,6 +128,20 @@ class DFWManager(object):
         return firewall_section
 
     def delete_firewall_section(self, name=None, id=None, cascade=True):
+        """Delete a DFW Section identified by id or name.
+
+        Identification by id takes precedence. Will return False if no matching
+        NSGroup is found.
+
+        :param str name: name of the DFW Section to be deleted..
+        :param str id: id of the DFW Section to be deleted.
+        :param bool cascade: if True, all rules in the section will be deleted
+            along with the section.
+
+        :return: True, if the delete operation is successful, else False.
+
+        :rtype: bool
+        """
         if not name and not id:
             return False
 
@@ -91,7 +150,7 @@ class DFWManager(object):
             if fws:
                 id = fws['id']
             else:
-                LOGGER.debug(
+                self._nsxt_client.LOGGER.debug(
                     f"DFW Section : {name} not found. Unable to delete.")
                 return False
         resource_url_fragment = f"firewall/sections/{id}"
@@ -112,6 +171,24 @@ class DFWManager(object):
                         action,
                         anchor_rule_id=None,
                         insert_policy=None):
+        """Create a new DFW Rule.
+
+        :param str section_id: id of the section where the new rule will be
+            added.
+        :param str rule_name: name of the new rule to be created.
+        :param str source_nsgroup_id: id of the source NSGroup.
+        :param str dest_nsgroup_id: id of the destination NSGroup.
+        :param constants.FIREWALL_ACTION action: action NSX-T should take once
+            a rule is matched.
+        :param str anchor_rule_id: id of another DFW Rule that will be used to
+            figure out the position of the newly created DFW Rule.
+        :param constants.INSERT_POLICY insert_policy: the relative position of
+            the newly created rule to the anchor rule.
+
+        :return: details of the newly created DFW Rule as a dictionary.
+
+        :rtype: dict
+        """
         resource_url_fragment = f"firewall/sections/{section_id}/rules"
         if anchor_rule_id or insert_policy:
             resource_url_fragment += "?"

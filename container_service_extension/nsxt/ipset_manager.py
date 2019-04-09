@@ -8,7 +8,7 @@ from container_service_extension.nsxt.constants import RequestMethodVerb
 
 
 class IPSetManager(object):
-    """Manage Create, Retrieve operations on IPSets."""
+    """Facilitate Create, Retrieve operations on IPSets."""
 
     def __init__(self, nsxt_client):
         """Initialize a IPSetManager object.
