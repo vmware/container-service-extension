@@ -17,6 +17,7 @@ from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.platform import Platform
 from pyvcloud.vcd.vapp import VApp
 import requests
+from requests.exceptions import HTTPError
 from vcd_cli.utils import stdout
 from vsphere_guest_run.vsphere import VSphere
 import yaml
@@ -28,6 +29,9 @@ from container_service_extension.logger import INSTALL_LOG_FILEPATH
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import setup_log_file_directory
+from container_service_extension.nsxt.dfw_manager import DFWManager
+from container_service_extension.nsxt.ipset_manager import IPSetManager
+from container_service_extension.nsxt.nsxt_client import NSXTClient
 from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY, CSE_NATIVE_DEPLOY_RIGHT_CATEGORY, \
     CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION, CSE_NATIVE_DEPLOY_RIGHT_NAME, \
@@ -210,7 +214,7 @@ SAMPLE_PKS_SERVERS_SECTION = {
             'host': 'pks-server-1.pks.local',
             'port': '9021',
             'uaac_port': '8443',
-            # 'proxy': 'proxy1.pks.local',
+            # 'proxy': 'proxy1.pks.local:80',
             'datacenter': 'pks-s1-dc',
             'clusters': ['pks-s1-az-1', 'pks-s1-az-2', 'pks-s1-az-3'],
             'cpi': 'cpi1',
@@ -221,7 +225,7 @@ SAMPLE_PKS_SERVERS_SECTION = {
             'host': 'pks-server-2.pks.local',
             'port': '9021',
             'uaac_port': '8443',
-            # 'proxy': 'proxy2.pks.local',
+            # 'proxy': 'proxy2.pks.local:80',
             'datacenter': 'pks-s2-dc',
             'clusters': ['pks-s2-az-1', 'pks-s2-az-2', 'pks-s2-az-3'],
             'cpi': 'cpi2',
@@ -294,7 +298,7 @@ SAMPLE_PKS_NSXT_SERVERS_SECTION = {
             'username': 'admin',
             'password': 'secret',
             'pks_server': 'pks-server-1',
-            # 'proxy': 'proxy1.pks.local',
+            # 'proxy': 'proxy1.pks.local:80',
             'nodes_ip_block_ids': ['id1', 'id2'],
             'pods_ip_block_ids': ['id1', 'id2'],
             'distributed_firewall_section_anchor_id': 'id',
@@ -305,7 +309,7 @@ SAMPLE_PKS_NSXT_SERVERS_SECTION = {
             'username': 'admin',
             'password': 'secret',
             'pks_server': 'pks-server-2',
-            # 'proxy': 'proxy2.pks.local',
+            # 'proxy': 'proxy2.pks.local:80',
             'nodes_ip_block_ids': ['id1', 'id2'],
             'pods_ip_block_ids': ['id1', 'id2'],
             'distributed_firewall_section_anchor_id': 'id',
@@ -639,40 +643,87 @@ def validate_pks_config_data_integrity(pks_config):
         [entry['name'] for entry in pks_config[PKS_SERVERS_SECTION_KEY]]
     all_pks_accounts = \
         [entry['name'] for entry in pks_config[PKS_ACCOUNTS_SECTION_KEY]]
-    all_nsxt_servers = \
-        [entry['name'] for entry in pks_config[PKS_NSXT_SERVERS_SECTION_KEY]]
 
-    for entry in pks_config[PKS_ACCOUNTS_SECTION_KEY]:
-        pks_server = entry.get('pks_server')
+    for pks_account in pks_config[PKS_ACCOUNTS_SECTION_KEY]:
+        pks_server = pks_account.get('pks_server')
         if pks_server not in all_pks_servers:
-            raise ValueError(f"Unknown PKS server : {pks_server} referrenced"
-                             f" by PKS account : {entry.get('name')} in "
+            raise ValueError(f"Unknown PKS server : {pks_server} referenced"
+                             f" by PKS account : {pks_account.get('name')} in "
                              f"Section : {PKS_ACCOUNTS_SECTION_KEY}")
 
     if PKS_ORGS_SECTION_KEY in pks_config.keys():
-        for entry in pks_config[PKS_ORGS_SECTION_KEY]:
-            referrenced_accounts = entry.get('pks_accounts')
-            if not referrenced_accounts:
+        for org in pks_config[PKS_ORGS_SECTION_KEY]:
+            referenced_accounts = org.get('pks_accounts')
+            if not referenced_accounts:
                 continue
-            for account in referrenced_accounts:
+            for account in referenced_accounts:
                 if account not in all_pks_accounts:
-                    raise ValueError(f"Unknown PKS account : {account} referre"
-                                     f"nced by Org : {entry.get('name')} in S"
-                                     f"ection : {PKS_ORGS_SECTION_KEY}")
+                    raise ValueError(f"Unknown PKS account : {account} refere"
+                                     f"nced by Org : {org.get('name')} in "
+                                     f"Section : {PKS_ORGS_SECTION_KEY}")
 
-    for entry in pks_config[PKS_PVDCS_SECTION_KEY]:
-        pks_server = entry.get('pks_server')
+    for pvdc in pks_config[PKS_PVDCS_SECTION_KEY]:
+        pks_server = pvdc.get('pks_server')
         if pks_server not in all_pks_servers:
-            raise ValueError(f"Unknown PKS server : {pks_server} referrenced"
-                             f" by PVDC : {entry.get('name')} in Section : "
+            raise ValueError(f"Unknown PKS server : {pks_server} referenced"
+                             f" by PVDC : {pvdc.get('name')} in Section : "
                              f"{PKS_PVDCS_SECTION_KEY}")
 
-    for entry in pks_config[PKS_NSXT_SERVERS_SECTION_KEY]:
-        pks_server = entry.get('pks_server')
+    for nsxt_server in pks_config[PKS_NSXT_SERVERS_SECTION_KEY]:
+        pks_server = nsxt_server.get('pks_server')
         if pks_server not in all_pks_servers:
-            raise ValueError(f"Unknown PKS server : {pks_server} referrence"
-                             f"d by NSX-T server : {entry.get('name')} in "
-                             f"Section : {PKS_NSXT_SERVERS_SECTION_KEY}")
+            raise ValueError(f"Unknown PKS server : {pks_server} reference"
+                             f"d by NSX-T server : {nsxt_server.get('name')} "
+                             f"in Section : {PKS_NSXT_SERVERS_SECTION_KEY}")
+
+        # Create a NSX-T client and verify connection
+        nsxt_client = NSXTClient(
+            host=nsxt_server.get('host'),
+            username=nsxt_server.get('username'),
+            password=nsxt_server.get('password'),
+            http_proxy=nsxt_server.get('proxy'),
+            https_proxy=nsxt_server.get('proxy'),
+            verify_ssl=nsxt_server.get('verify'))
+        if not nsxt_client.test_connectivity():
+            raise ValueError(f"Unable to connect to NSX-T server : "
+                             f"{nsxt_server.get('name')}")
+
+        click.secho(f"Connected to NSX-T server ({nsxt_server.get('host')})",
+            fg='green')
+
+        ipset_manager = IPSetManager(nsxt_client)
+        if nsxt_server.get('nodes_ip_block_ids'):
+            block_not_found = False
+            try:
+                for ip_block_id in nsxt_server.get('nodes_ip_block_ids'):
+                    if not ipset_manager.get_ip_block_by_id(ip_block_id):
+                        block_not_found = True
+            except HTTPError:
+                block_not_found = True
+            if block_not_found:
+                raise ValueError(
+                    f"Unknown Node IP Block : {ip_block_id} referenced by "
+                    f"NSX-T server : {nsxt_server.get('name')}.")
+        if nsxt_server.get('pods_ip_block_ids'):
+            try:
+                block_not_found = False
+                for ip_block_id in nsxt_server.get('pods_ip_block_ids'):
+                    if not ipset_manager.get_ip_block_by_id(ip_block_id):
+                        block_not_found = True
+            except HTTPError:
+                block_not_found = True
+            if block_not_found:
+                raise ValueError(
+                    f"Unknown Pod IP Block : {ip_block_id} referenced by "
+                    f"NSX-T server : {nsxt_server.get('name')}.")
+
+        dfw_manager = DFWManager(nsxt_client)
+        fw_section_id=nsxt_server.get('distributed_firewall_section_anchor_id')
+        section = dfw_manager.get_firewall_section(id=fw_section_id)
+        if not section:
+            raise ValueError(
+                f"Unknown Firewall section : {fw_section_id} referenced by "
+                f"NSX-T server : {nsxt_server.get('name')}.")
 
 
 def check_cse_installation(config, check_template='*'):

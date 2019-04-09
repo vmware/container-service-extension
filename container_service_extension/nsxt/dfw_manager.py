@@ -36,8 +36,10 @@ class DFWManager(object):
                     resource_url_fragment=resource_url_fragment)
                 return response
             except HTTPError as err:
-                if err.code != 404:
+                if err.response.status_code != 404:
                     raise
+                else:
+                    return
 
         fw_sections = self.list_firewall_sections()
         for fw_section in fw_sections:

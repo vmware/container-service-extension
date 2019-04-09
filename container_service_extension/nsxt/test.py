@@ -4,6 +4,8 @@
 
 import requests
 
+from constants import RequestMethodVerb
+
 from container_service_extension.logger import configure_server_logger
 from container_service_extension.nsxt.cluster_network_manager import \
     ClusterNetworkManager
@@ -15,8 +17,8 @@ NSXT_HOST = '192.168.111.29'
 NSXT_USERNAME = 'admin'
 NSXT_PASSWORD = 'Admin!23Admin'
 
-HTTP_PROXY = 'http://10.160.128.185:80'
-HTTPS_PROXY = 'https://10.160.128.185:80'
+HTTP_PROXY = '10.160.128.185:80'
+HTTPS_PROXY = '10.160.128.185:80'
 
 NODES_IP_BLOCK_IDS = [
     '489f58b1-a7fa-4241-a7ec-69490d853878',
@@ -43,11 +45,13 @@ if __name__ == '__main__':
         log_headers=True,
         log_body=False)
 
-    setup_nsxt_constructs(
-        nsxt_client=nsxt_client,
-        nodes_ip_block_id=NODES_IP_BLOCK_IDS,
-        pods_ip_block_id=PODS_IP_BLOCK_IDS,
-        ncp_boundary_firewall_section_anchor_id=NCP_BOUNDARY_FIREWALL_SECTION_ANCHOR_ID)  # noqa
+    print(nsxt_client.test_connectivity())
+
+    # setup_nsxt_constructs(
+    #    nsxt_client=nsxt_client,
+    #    nodes_ip_block_id=NODES_IP_BLOCK_IDS,
+    #    pods_ip_block_id=PODS_IP_BLOCK_IDS,
+    #    ncp_boundary_firewall_section_anchor_id=NCP_BOUNDARY_FIREWALL_SECTION_ANCHOR_ID)  # noqa
 
     cluster_network_manager = ClusterNetworkManager(nsxt_client)
 
