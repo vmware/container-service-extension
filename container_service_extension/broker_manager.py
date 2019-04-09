@@ -5,11 +5,13 @@
 from collections import namedtuple
 from enum import Enum
 from enum import unique
+from http import HTTPStatus
 
 from pyvcloud.vcd.org import Org
 
 from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseServerError
+from container_service_extension.exceptions import PksServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.ovdc_cache import CONTAINER_PROVIDER_KEY
 from container_service_extension.ovdc_cache import CtrProvType
@@ -135,7 +137,8 @@ class BrokerManager(object):
                 {'cluster_name': self.req_spec.get('cluster_name', None),
                  'node_count': self.req_spec.get('node_count', None)
                  }
-            result = self._resize_cluster(**cluster_spec)
+            result['body'] = self._resize_cluster(**cluster_spec)
+            result['status_code'] = ACCEPTED
         elif op == Operation.GET_CLUSTER_CONFIG:
             cluster_spec = \
                 {'cluster_name': self.req_spec.get('cluster_name', None)}
@@ -388,10 +391,14 @@ class BrokerManager(object):
 
     def _get_truncated_cluster_info(self, cluster, pks_broker,
                                     cluster_property_keys):
-        pks_cluster = {k: cluster.get(k, None) for k in
+        pks_cluster = {k: cluster.get(k) for k in
                        cluster_property_keys}
-        pks_cluster['vdc'] = \
-            cluster.get('compute-profile-name', '').split('--')[-1]
+        # Extract vdc name from compute-profile-name
+        # Example: vdc name in the below compute profile is: vdc-PKS1
+        # compute-profile: cp--f3272127-9b7f-4f90-8849-0ee70a28be56--vdc-PKS1
+        compute_profile_name = cluster.get('compute-profile-name', '')
+        pks_cluster['vdc'] = compute_profile_name.split('--')[-1] \
+            if compute_profile_name else ''
         pks_cluster['status'] = \
             cluster.get('last-action', '').lower() + ' ' + \
             pks_cluster.get('status', '').lower()
@@ -491,7 +498,14 @@ class BrokerManager(object):
                      f"{pks_compute_profile_name}")
 
         pksbroker = PKSBroker(self.req_headers, self.req_spec, pks_ctx)
-        pksbroker.create_compute_profile(**compute_profile_params)
+        try:
+            pksbroker.create_compute_profile(**compute_profile_params)
+        except PksServerError as ex:
+            if ex.status == HTTPStatus.CONFLICT.value:
+                LOGGER.debug(f"Compute profile name {pks_compute_profile_name}"
+                             f" already exists\n{str(ex)}")
+            else:
+                raise ex
 
 
 class PksComputeProfileParams(namedtuple("PksComputeProfileParams",
