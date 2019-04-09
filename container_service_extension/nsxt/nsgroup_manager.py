@@ -148,8 +148,8 @@ class NSGroupManager(object):
             if nsgroup:
                 id = nsgroup['id']
             else:
-                self._nsxt_client.debug(f"NSGroup : {name} not found. Unable "
-                                        "to delete.")
+                self._nsxt_client.LOGGER.debug(f"NSGroup : {name} not found. "
+                                               "Unable to delete.")
                 return False
         resource_url_fragment = f"ns-groups/{id}"
         if force:
