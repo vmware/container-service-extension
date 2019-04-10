@@ -95,7 +95,6 @@ class PKSBroker(AbstractBroker):
                 False if verify_ssl_value_in_ctx.lower() == 'false' else True
         else:
             self.verify = True
-        self.pks_client = self._get_pks_client()
         self.verify = False  # TODO(pks.yaml) pks_config['pks']['verify']
         token = self._get_token()
         self.client_v1 = self._get_pks_client(token, self.VERSION_V1)
