@@ -171,22 +171,20 @@ def list_templates(ctx):
 @click.option(
     '-o',
     '--org',
-    'org',
+    'org_name',
     default=None,
     required=False,
-    metavar='<org>',
-    help='Name of the org that will define the scope of the cluster'
-    'list operation, if omitted will default to the org in use.'
-    ' This flag is only meant for System administrators.')
-def list_clusters(ctx, vdc, org):
+    metavar='ORGNAME',
+    help="Org to use. Defaults to currently logged-in org")
+def list_clusters(ctx, vdc, org_name):
     """Display clusters in vCD that are visible to your user status."""
     try:
         restore_session(ctx)
-        if org is None:
-            org = ctx.obj['profiles'].get('org_in_use')
+        if org_name is None:
+            org_name = ctx.obj['profiles'].get('org_in_use')
         client = ctx.obj['client']
         cluster = Cluster(client)
-        result = cluster.get_clusters(vdc=vdc, org=org)
+        result = cluster.get_clusters(vdc=vdc, org=org_name)
         stdout(result, ctx, show_id=True)
     except Exception as e:
         stderr(e, ctx)
