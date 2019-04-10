@@ -27,15 +27,15 @@ class Ovdc(object):
 
     def enable_ovdc_for_k8s(self,
                             ovdc_name,
-                            container_provider=None,
-                            pks_plan=None,
+                            k8s_provider=None,
+                            pks_plans=None,
                             pks_cluster_domain=None,
                             org_name=None):
         """Enable ovdc for k8s for the given container provider.
 
         :param str ovdc_name: Name of the ovdc to be enabled
-        :param str container_provider: Name of the container provider
-        :param str pks_plan: pks plan
+        :param str k8s_provider: Name of the container provider
+        :param str pks_plans: pks plans separated by comma
         :param str pks_cluster_domain: Suffix of the domain name, which will be
          used to construct FQDN of the clusters.
         :param str org_name: Name of organization that belongs to ovdc_name
@@ -49,11 +49,21 @@ class Ovdc(object):
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.resource.get('id'))
         uri = f'{self._uri}/ovdc/{ovdc_id}/info'
+
+        # TODO() this is a temporary fix to hack in the name change
+        # Naming changes (vcd -> native) (pks -> enterprise-pks)
+        # More work needs to be done to fix how k8s_provider names are handled
+        # Suggestion: we should have an enum for k8s_provider
+        if k8s_provider == 'native':
+            k8s_provider = 'vcd'
+        if k8s_provider == 'enterprise-pks':
+            k8s_provider = 'pks'
+
         data = {
             'ovdc_id': ovdc_id,
             'ovdc_name': ovdc_name,
-            'container_provider': container_provider,
-            'pks_plans': pks_plan,
+            'container_provider': k8s_provider,
+            'pks_plans': pks_plans,
             'pks_cluster_domain': pks_cluster_domain,
             'org_name': org_name,
             'enable': True
