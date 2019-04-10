@@ -195,6 +195,10 @@ class PKSBroker(AbstractBroker):
                 'status': cluster.last_action_state,
                 'last-action': cluster.last_action,
                 'k8_master_ips': cluster.kubernetes_master_ips,
+                # TODO(list-clusters) PKS has removed the param
+                #  compute_profile_name from cluster object of v1 endpoint and
+                #  they have not added support for it in v1beta endpoint.
+                #  Fix will be coming soon.
                 # 'compute-profile-name': cluster.compute_profile_name,
                 'worker_count': cluster.parameters.kubernetes_worker_instances
             }
