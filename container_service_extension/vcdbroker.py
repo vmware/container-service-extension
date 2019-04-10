@@ -94,7 +94,7 @@ def rollback(func):
             try:
                 # arg[0] refers to the current instance of the broker thread
                 broker_instance = args[0]  # param self
-                if broker_instance.body[ROLLBACK_FLAG]:
+                if broker_instance.req_spec[ROLLBACK_FLAG]:
                     broker_instance.cluster_rollback()
             except Exception as err:
                 LOGGER.error(f"Failed to rollback cluster creation:{str(err)}")
@@ -102,7 +102,7 @@ def rollback(func):
             try:
                 broker_instance = args[0]
                 node_list = e.node_names
-                if broker_instance.body[ROLLBACK_FLAG]:
+                if broker_instance.req_spec[ROLLBACK_FLAG]:
                     broker_instance.node_rollback(node_list)
             except Exception as err:
                 LOGGER.error(f"Failed to rollback node creation:{str(err)}")
@@ -619,6 +619,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                     TaskStatus.SUCCESS,
                     message=f"Created {self.req_spec['node_count']} node(s) "
                             f"for {self.cluster_name}({self.cluster_id})")
+            elif self.req_spec['node_type'] == TYPE_NODE:
                 self.update_task(
                     TaskStatus.RUNNING,
                     message=f"Adding {self.req_spec['node_count']} node(s) to "
@@ -658,7 +659,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
         result = {'body': {}}
         self.cluster_name = self.req_spec['name']
         LOGGER.debug(f"About to delete nodes from cluster with name: "
-                     "{self.body['name']}")
+                     f"{self.req_spec['name']}")
 
         if len(self.req_spec['nodes']) < 1:
             raise CseServerError(f"Invalid list of nodes: "

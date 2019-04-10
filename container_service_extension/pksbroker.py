@@ -2,13 +2,14 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from collections import Iterable
-import functools
+from http import HTTPStatus
+import json
 
 from pyvcloud.vcd.utils import extract_id
 import yaml
 
 from container_service_extension.abstract_broker import AbstractBroker
+from container_service_extension.authorization import secure
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import PksConnectionError
 from container_service_extension.exceptions import PksServerError
@@ -37,75 +38,18 @@ from container_service_extension.pksclient.models.v1beta.\
 from container_service_extension.pksclient.models.v1beta.\
     compute_profile_request import ComputeProfileRequest
 from container_service_extension.pksclient.rest import ApiException
+from container_service_extension.server_constants import \
+    CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.uaaclient.uaaclient import UaaClient
-from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import exception_handler
 from container_service_extension.utils import OK
 
 
-def add_vcd_user_context(qualify_params=['cluster_name'],
-                         filter_list_by_user_id=False):
-    """Qualify the values of parameters passed in qualify_params with user_id.
-
-    And subsequently strip the id off before serving the result back
-    to client.
-
-    :param list qualify_params: params that need to be qualified with
-    user-id
-
-    :param bool filter_list_by_user_id: whether to filter the result list.
-
-    :return: results from the decorated function after post processing
-    """
-    def decorator(pks_function):
-        @functools.wraps(pks_function)
-        def wrapper(*args, **kwargs):
-
-            def get_user_id():
-                # Return user id associated with client-session
-                # arg[0] is represents 'self' which is instance of PKSBroker
-                broker_instance = args[0]
-                session = broker_instance.get_tenant_client_session()
-                return extract_id(session.get('userId'))
-
-            def strip_user_id(cluster_info):
-                # NOTE: Current implementation works only if the method
-                # argument is a dict item. Any change in the requirement needs
-                # this logic to be revisited
-
-                is_user_id_stripped = False
-
-                if type(cluster_info) is not dict:
-                    return is_user_id_stripped
-
-                # Process every value from the cluster information
-                # Return true if any stripping happened
-                for key, val in cluster_info.items():
-                    if type(val) is str and user_id in val:
-                        cluster_info.update(
-                            {key: val.replace(f'-{user_id}', '')})
-                        is_user_id_stripped = True
-
-                return is_user_id_stripped
-
-            user_id = get_user_id()
-
-            for param in qualify_params:
-                if kwargs.get(param) is not None:
-                    kwargs[param] += f'-{user_id}'
-
-            result = pks_function(*args, **kwargs)
-
-            # Get updated result after filtering
-            if filter_list_by_user_id and isinstance(result, Iterable):
-                filtered_list = [cluster_dict for cluster_dict in result
-                                 if strip_user_id(cluster_dict)]
-                return filtered_list
-
-            strip_user_id(result)
-            return result
-        return wrapper
-    return decorator
+# Delimiter to append with user id context
+USER_ID_SEPARATOR = "---"
+# Properties that need to be excluded from cluster info before sending
+# to the client for reasons: security, too big that runs thru lines
+EXCLUDE_KEYS = ['compute_profile']
 
 
 class PKSBroker(AbstractBroker):
@@ -120,13 +64,16 @@ class PKSBroker(AbstractBroker):
     def __init__(self, request_headers, request_spec, pks_ctx):
         """Initialize PKS broker.
 
-        :param pks_ctx: ovdc cache (subject to change) is used to
-        initialize PKS broker.
+        :param dict pks_ctx: A dictionary with which should atleast have the
+            following keys in it ['username', 'secret', 'host', 'port',
+            'uaac_port'], 'proxy' and 'pks_compute_profile_name' are optional
+            keys. Currently all callers of this method is using ovdc cache
+            (subject to change) to initialize PKS broker.
         """
         super().__init__(request_headers, request_spec)
-        if pks_ctx is None:
-            raise ValueError(f'PKS context is required to establish connection'
-                             f' to PKS')
+        if not pks_ctx:
+            raise ValueError(
+                "PKS context is required to establish connection to PKS")
         self.req_headers = request_headers
         self.req_spec = request_spec
         self.username = pks_ctx['username']
@@ -138,11 +85,23 @@ class PKSBroker(AbstractBroker):
         self.proxy_uri = f"http://{pks_ctx['proxy']}:80" \
             if pks_ctx.get('proxy') else None
         self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE, None)
+        # TODO() Add support in pyvcloud to send metadata values with their
+        # types intact.
+        verify_ssl_value_in_ctx = pks_ctx.get('verify')
+        if isinstance(verify_ssl_value_in_ctx, bool):
+            self.verify = verify_ssl_value_in_ctx
+        elif isinstance(verify_ssl_value_in_ctx, str):
+            self.verify = \
+                False if verify_ssl_value_in_ctx.lower() == 'false' else True
+        else:
+            self.verify = True
+        self.pks_client = self._get_pks_client()
         self.verify = False  # TODO(pks.yaml) pks_config['pks']['verify']
         token = self._get_token()
         self.client_v1 = self._get_pks_client(token, self.VERSION_V1)
         self.client_v1beta = self._get_pks_client(token, self.VERSION_V1BETA)
         self.client_session = None
+        self.get_tenant_client_session()
 
     def _get_token(self):
         """Connect to UAA server, authenticate and get token.
@@ -190,8 +149,27 @@ class PKSBroker(AbstractBroker):
             client = ApiClientV1Beta(configuration=pks_config)
         return client
 
-    @add_vcd_user_context(filter_list_by_user_id=True)
     def list_clusters(self):
+        """Get list of clusters in PKS environment.
+
+        System administrator gets all the clusters for the given service
+        account. Other users get only those clusters which they own.
+
+        :return: a list of cluster-dictionaries
+
+        :rtype: list
+        """
+        cluster_list = self._list_clusters()
+        if self.tenant_client.is_sysadmin():
+            for cluster in cluster_list:
+                self._restore_original_name(cluster)
+            return cluster_list
+        else:
+            user_cluster_list = [cluster_dict for cluster_dict in cluster_list
+                                 if self._is_user_cluster_owner(cluster_dict)]
+            return user_cluster_list
+
+    def _list_clusters(self):
         """Get list of clusters in PKS environment.
 
         :return: a list of cluster-dictionaries
@@ -217,7 +195,8 @@ class PKSBroker(AbstractBroker):
                 'status': cluster.last_action_state,
                 'last-action': cluster.last_action,
                 'k8_master_ips': cluster.kubernetes_master_ips,
-                # 'compute-profile-name': cluster.compute_profile_name
+                # 'compute-profile-name': cluster.compute_profile_name,
+                'worker_count': cluster.parameters.kubernetes_worker_instances
             }
             list_of_cluster_dicts.append(cluster_dict)
 
@@ -225,9 +204,30 @@ class PKSBroker(AbstractBroker):
                      f" list of clusters: {list_of_cluster_dicts}")
         return list_of_cluster_dicts
 
-    @add_vcd_user_context(qualify_params=['cluster_name'])
-    def create_cluster(self, cluster_name, node_count, pks_plan, pks_ext_host,
-                       compute_profile=None, **kwargs):
+    @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
+    def create_cluster(self, **cluster_spec):
+        """Create cluster in PKS environment.
+
+        To retain the user context, user-id of the logged-in user is appended
+        to the original cluster name before the actual cluster creation.
+
+        :param dict cluster_spec: named parameters necessary to create
+        cluster (cluster_name, node_count, pks_plan, pks_ext_host, compute-
+        profile_name)
+
+        :return: Details of the cluster
+
+        :rtype: dict
+        """
+        cluster_spec['cluster_name'] = \
+            self._append_user_id(cluster_spec['cluster_name'])
+        cluster_info = self._create_cluster(**cluster_spec)
+        self._restore_original_name(cluster_info)
+        self._exclude_pks_properties(cluster_info)
+        return cluster_info
+
+    def _create_cluster(self, cluster_name, node_count, pks_plan, pks_ext_host,
+                        compute_profile=None, **kwargs):
         """Create cluster in PKS environment.
 
         :param str cluster_name: Name of the cluster
@@ -273,10 +273,39 @@ class PKSBroker(AbstractBroker):
 
         LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to create"
                      f" cluster: {cluster_name}")
+        # TODO() access self.pks_ctx to get hold of nsxt_info and create dfw
+        # rules
         return cluster_dict
 
-    @add_vcd_user_context(qualify_params=['cluster_name'])
     def get_cluster_info(self, cluster_name):
+        """Get the details of a cluster with a given name in PKS environment.
+
+        System administrator gets the given cluster information regardless of
+        who is the owner of the cluster. Other users get info only on
+        the cluster they own.
+
+        :param str cluster_name: Name of the cluster
+        :return: Details of the cluster.
+
+        :rtype: dict
+        """
+        if self.tenant_client.is_sysadmin():
+            filtered_cluster_list = \
+                self._filter_list_by_cluster_name(self.list_clusters(),
+                                                  cluster_name)
+            LOGGER.debug(f"filtered Cluster List:{filtered_cluster_list}")
+            if len(filtered_cluster_list) > 0:
+                return filtered_cluster_list[0]
+            else:
+                raise PksServerError(HTTPStatus.NOT_FOUND,
+                                     f"cluster {cluster_name} not found")
+        else:
+            cluster_info = \
+                self._get_cluster_info(self._append_user_id(cluster_name))
+            self._restore_original_name(cluster_info)
+            return cluster_info
+
+    def _get_cluster_info(self, cluster_name):
         """Get the details of a cluster with a given name in PKS environment.
 
         :param str cluster_name: Name of the cluster
@@ -306,6 +335,25 @@ class PKSBroker(AbstractBroker):
     def get_cluster_config(self, cluster_name):
         """Get the configuration of the cluster with the given name in PKS.
 
+        System administrator gets the given cluster config regardless of
+        who is the owner of the cluster. Other users get config only on
+        the cluster they own.
+
+        :param str cluster_name: Name of the cluster
+        :return: Configuration of the cluster.
+
+        :rtype: str
+        """
+        if self.tenant_client.is_sysadmin():
+            cluster = self.get_cluster_info(cluster_name)
+            return self._get_cluster_config(cluster['pks_cluster_name'])
+        else:
+            pks_cluster_name = self._append_user_id(cluster_name)
+            return self._get_cluster_config(pks_cluster_name)
+
+    def _get_cluster_config(self, cluster_name):
+        """Get the configuration of the cluster with the given name in PKS.
+
         :param str cluster_name: Name of the cluster
         :return: Configuration of the cluster.
 
@@ -323,12 +371,32 @@ class PKSBroker(AbstractBroker):
         cluster_config = yaml.safe_dump(config, default_flow_style=False)
         return cluster_config
 
-    @add_vcd_user_context(qualify_params=['cluster_name'])
+    @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
     def delete_cluster(self, cluster_name):
+        """Delete the cluster with a given name in PKS environment.
+
+        System administrator can delete the given cluster regardless of
+        who is the owner of the cluster. Other users can only delete
+        the cluster they own.
+
+        :param str cluster_name: Name of the cluster
+        """
+        self.get_tenant_client_session()
+        if self.tenant_client.is_sysadmin():
+            cluster_info = self.get_cluster_info(cluster_name)
+            return self._delete_cluster(cluster_info['pks_cluster_name'])
+
+        else:
+            pks_cluster_name = self._append_user_id(cluster_name)
+            return self._delete_cluster(pks_cluster_name)
+
+    def _delete_cluster(self, cluster_name):
         """Delete the cluster with a given name in PKS environment.
 
         :param str cluster_name: Name of the cluster
         """
+        result = {}
+
         cluster_api = ClusterApiV1(api_client=self.client_v1)
 
         LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to delete "
@@ -340,20 +408,49 @@ class PKSBroker(AbstractBroker):
                          f"error:\n {err}")
             raise PksServerError(err.status, err.body)
 
+        # TODO() access self.pks_ctx and get hold of nst_info to cleanup dfw
+        # rules
         LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to delete"
                      f" the cluster: {cluster_name}")
-        return
 
-    @add_vcd_user_context(qualify_params=['cluster_name'])
-    def resize_cluster(self, cluster_name, node_count, **kwargs):
+        result = {}
+        result['cluster_name'] = cluster_name
+        result['task_status'] = 'in progress'
+        return result
+
+    @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
+    def resize_cluster(self, **cluster_spec):
+        """Resize the cluster of a given name to given number of worker nodes.
+
+        System administrator can resize the given cluster regardless of
+        who is the owner of the cluster. Other users can only resize
+        the cluster they own.
+
+        :param dict cluster_spec: named parameters that are required to
+        resize cluster (cluster_name, node_count)
+
+        :return: response status
+
+        :rtype: dict
+
+        """
+        cluster_name = cluster_spec['cluster_name']
+        if self.tenant_client.is_sysadmin():
+            cluster = self.get_cluster_info(cluster_name)
+            cluster_spec['cluster_name'] = cluster['pks_cluster_name']
+            return self._resize_cluster(**cluster_spec)
+        else:
+            pks_cluster_name = self._append_user_id(cluster_name)
+            cluster_spec['cluster_name'] = pks_cluster_name
+            return self._resize_cluster(**cluster_spec)
+
+    def _resize_cluster(self, cluster_name, node_count, **kwargs):
         """Resize the cluster of a given name to given number of worker nodes.
 
         :param str cluster_name: Name of the cluster
         :param int node_count: New size of the worker nodes
         """
         result = {}
-        result['body'] = []
-
         cluster_api = ClusterApiV1(api_client=self.client_v1)
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to resize "
                      f"the cluster with name: {cluster_name} to "
@@ -371,7 +468,9 @@ class PKSBroker(AbstractBroker):
         LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to resize"
                      f" the cluster: {cluster_name}")
 
-        result['status'] = ACCEPTED
+        result['cluster_name'] = cluster_name
+        result['task_status'] = 'in progress'
+
         return result
 
     def create_compute_profile(self, cp_name, az_name, description, cpi,
@@ -520,6 +619,46 @@ class PKSBroker(AbstractBroker):
                      f" it deleted the compute profile: {cp_name}")
 
         return result
+
+    def _append_user_id(self, name):
+        user_id = self._get_vcd_userid()
+        return f"{name}{USER_ID_SEPARATOR}{user_id}"
+
+    def _restore_original_name(self, cluster_info):
+        # From the given cluster information, transforms the
+        # PKS cluster name to its original name as named by the
+        # vCD user, and include that name in the cluster information
+
+        cluster_info['pks_cluster_name'] = cluster_info['name']
+        original_name_info = cluster_info['name'].split(USER_ID_SEPARATOR)
+        cluster_info['name'] = original_name_info[0]
+
+    def _is_user_cluster_owner(self, cluster_info):
+        # Returns True if the logged-in user is the owner of the given cluster.
+        # Also, restores the actual name of the cluster, if it is owned by
+        # the logged-in user and add it to the cluster information.
+
+        is_user_cluster_owner = False
+        user_id = self._get_vcd_userid()
+        if user_id in cluster_info['name']:
+            self._restore_original_name(cluster_info)
+            is_user_cluster_owner = True
+
+        return is_user_cluster_owner
+
+    def _get_vcd_userid(self):
+        return extract_id(self.client_session.get('userId'))
+
+    def _filter_list_by_cluster_name(self, cluster_list, cluster_name):
+        # Return those clusters which have the given cluster name
+        return [cluster for cluster in cluster_list
+                if cluster['name'] == cluster_name]
+
+    def _exclude_pks_properties(self, cluster_info):
+        # Remove selective properties from the given cluster
+        # information.
+        for entry in EXCLUDE_KEYS:
+            cluster_info.pop(entry, None)
 
     def __getattr__(self, name):
         """Handle unknown operations.

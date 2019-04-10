@@ -30,9 +30,14 @@ class Cluster(object):
             auth=None)
         return process_response(response)
 
-    def get_clusters(self, vdc):
+    def get_clusters(self, vdc=None, org=None):
         method = 'GET'
         uri = self._uri
+        params = {}
+        if vdc:
+            params['vdc'] = vdc
+        if org:
+            params['org'] = org
         response = self.client._do_request_prim(
             method,
             uri,
@@ -41,10 +46,10 @@ class Cluster(object):
             media_type=None,
             accept_type='application/*+json',
             auth=None,
-            params={'vdc': vdc} if vdc else None)
+            params=params)
         return process_response(response)
 
-    def get_cluster_info(self, name, vdc):
+    def get_cluster_info(self, name, vdc=None):
         method = 'GET'
         uri = '%s/%s/info' % (self._uri, name)
         response = self.client._do_request_prim(
@@ -78,7 +83,8 @@ class Cluster(object):
                        enable_nfs=False,
                        disable_rollback=True,
                        pks_ext_host=None,
-                       pks_plan=None):
+                       pks_plan=None,
+                       org=None):
         """Create a new Kubernetes cluster.
 
         :param vdc: (str): The name of the vdc in which the cluster will be
@@ -106,6 +112,8 @@ class Cluster(object):
         API for PKS.
         :param pks_plan: (str): Preconfigured PKS plan to use for deploying the
         cluster.
+        :param org: (str): name of the organization in which the vdc to be
+        used for cluster creation.
 
         :return: (json) A parsed json object describing the requested cluster.
         """
@@ -124,7 +132,8 @@ class Cluster(object):
             'enable_nfs': enable_nfs,
             'disable_rollback': disable_rollback,
             'pks_ext_host': pks_ext_host,
-            'pks_plan': pks_plan
+            'pks_plan': pks_plan,
+            'org': org
         }
         response = self.client._do_request_prim(
             method,
@@ -136,10 +145,10 @@ class Cluster(object):
         return process_response(response)
 
     def resize_cluster(self,
-                       vdc,
                        network_name,
                        cluster_name,
                        node_count=1,
+                       vdc=None,
                        disable_rollback=True):
         method = 'PUT'
         uri = f"{self._uri}/{cluster_name}"
@@ -160,7 +169,7 @@ class Cluster(object):
             accept_type='application/json')
         return process_response(response)
 
-    def delete_cluster(self, cluster_name, vdc):
+    def delete_cluster(self, cluster_name, vdc=None):
         method = 'DELETE'
         uri = '%s/%s' % (self._uri, cluster_name)
         response = self.client._do_request_prim(
@@ -178,7 +187,7 @@ class Cluster(object):
                 raise e
         return result
 
-    def get_config(self, cluster_name, vdc):
+    def get_config(self, cluster_name, vdc=None):
         method = 'GET'
         uri = '%s/%s/config' % (self._uri, cluster_name)
         response = self.client._do_request_prim(
