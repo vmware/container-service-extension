@@ -286,11 +286,8 @@ def run(ctx, config, skip_check):
     try:
         service = Service(config, should_check_config=not skip_check)
         service.run()
-    except (KeyError, TypeError):
-        click.secho(f"Config file '{config}' is invalid. Please "
-                    f"check the logs.", fg='red')
-    except (NotAcceptableException,
-            ValueError) as err:
+    except (NotAcceptableException, VcdException, ValueError, KeyError,
+            TypeError) as err:
         click.secho(str(err), fg='red')
     except AmqpConnectionError as err:
         click.secho(str(err), fg='red')
@@ -298,9 +295,6 @@ def run(ctx, config, skip_check):
     except requests.exceptions.ConnectionError:
         click.secho("Cannot connect to vCD host (check config file vCD host).",
                     fg='red')
-    except VcdException:
-        click.secho("vCD login failed (check config file vCD "
-                    "username/password).", fg='red')
     except vim.fault.InvalidLogin:
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
