@@ -15,18 +15,28 @@ from container_service_extension.exceptions import PksConnectionError
 from container_service_extension.exceptions import PksServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE
-from container_service_extension.pksclient.api.cluster_api import ClusterApi
-from container_service_extension.pksclient.api.profile_api import ProfileApi
-from container_service_extension.pksclient.api_client import ApiClient
+from container_service_extension.pksclient.api.v1.cluster_api \
+    import ClusterApi as ClusterApiV1
+from container_service_extension.pksclient.api.v1beta.cluster_api \
+    import ClusterApi as ClusterApiV1Beta
+from container_service_extension.pksclient.api.v1beta.profile_api \
+    import ProfileApi
+from container_service_extension.pksclient.client.v1.api_client \
+    import ApiClient as ApiClientV1
+from container_service_extension.pksclient.client.v1beta.api_client \
+    import ApiClient as ApiClientV1Beta
 from container_service_extension.pksclient.configuration import Configuration
-from container_service_extension.pksclient.models.cluster_parameters\
+from container_service_extension.pksclient.models.v1.\
+    update_cluster_parameters import UpdateClusterParameters
+from container_service_extension.pksclient.models.v1beta.az import AZ
+from container_service_extension.pksclient.models.v1beta.cluster_parameters \
     import ClusterParameters
-from container_service_extension.pksclient.models.cluster_request \
+from container_service_extension.pksclient.models.v1beta.cluster_request \
     import ClusterRequest
-from container_service_extension.pksclient.models.compute_profile_request \
-    import ComputeProfileRequest
-from container_service_extension.pksclient.models.update_cluster_parameters\
-    import UpdateClusterParameters
+from container_service_extension.pksclient.models.v1beta.\
+    compute_profile_parameters import ComputeProfileParameters
+from container_service_extension.pksclient.models.v1beta.\
+    compute_profile_request import ComputeProfileRequest
 from container_service_extension.pksclient.rest import ApiException
 from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
@@ -48,6 +58,9 @@ class PKSBroker(AbstractBroker):
     It performs CRUD operations on Kubernetes clusters.
     """
 
+    VERSION_V1 = 'v1'
+    VERSION_V1BETA = 'v1beta1'
+
     def __init__(self, request_headers, request_spec, pks_ctx):
         """Initialize PKS broker.
 
@@ -66,7 +79,7 @@ class PKSBroker(AbstractBroker):
         self.username = pks_ctx['username']
         self.secret = pks_ctx['secret']
         self.pks_host_uri = \
-            f"https://{pks_ctx['host']}:{pks_ctx['port']}/v1"
+            f"https://{pks_ctx['host']}:{pks_ctx['port']}"
         self.uaac_uri = \
             f"https://{pks_ctx['host']}:{pks_ctx['uaac_port']}"
         self.proxy_uri = f"http://{pks_ctx['proxy']}:80" \
@@ -82,12 +95,27 @@ class PKSBroker(AbstractBroker):
                 False if verify_ssl_value_in_ctx.lower() == 'false' else True
         else:
             self.verify = True
-        self.pks_client = self._get_pks_client()
+        token = self._get_token()
+        self.client_v1 = self._get_pks_client(token, self.VERSION_V1)
+        self.client_v1beta = self._get_pks_client(token, self.VERSION_V1BETA)
         self.client_session = None
         self.get_tenant_client_session()
 
-    def _get_pks_config(self):
-        """Connect to UAA server and construct PKS configuration.
+    def _get_token(self):
+        """Connect to UAA server, authenticate and get token.
+
+        :return: token
+        """
+        try:
+            uaaClient = UaaClient(self.uaac_uri, self.username, self.secret,
+                                  proxy_uri=self.proxy_uri)
+            return uaaClient.getToken()
+        except Exception as err:
+            raise PksConnectionError(f'Connection establishment to PKS host'
+                                     f' {self.uaac_uri} failed: {err}')
+
+    def _get_pks_config(self, token, version):
+        """Construct PKS configuration.
 
         (PKS configuration is required to construct pksclient)
 
@@ -96,32 +124,28 @@ class PKSBroker(AbstractBroker):
         :rtype:
         container_service_extension.pksclient.configuration.Configuration
         """
-        try:
-            uaaClient = UaaClient(self.uaac_uri, self.username, self.secret,
-                                  proxy_uri=self.proxy_uri)
-            token = uaaClient.getToken()
-        except Exception as err:
-            raise PksConnectionError(f"Connection establishment to PKS host"
-                                     f" {self.uaac_uri} failed: {err}")
         pks_config = Configuration()
         pks_config.proxy = self.proxy_uri
-        pks_config.host = self.pks_host_uri
+        pks_config.host = f"{self.pks_host_uri}/{version}"
         pks_config.access_token = token
         pks_config.username = self.username
         pks_config.verify_ssl = self.verify
 
         return pks_config
 
-    def _get_pks_client(self):
+    def _get_pks_client(self, token, version):
         """Get PKS client.
 
         :return: PKS client
 
-        :rtype: container_service_extension.pksclient.api_client.ApiClient
+        :rtype: ApiClient
         """
-        pks_config = self._get_pks_config()
-        self.pks_client = ApiClient(configuration=pks_config)
-        return self.pks_client
+        pks_config = self._get_pks_config(token, version)
+        if version == self.VERSION_V1:
+            client = ApiClientV1(configuration=pks_config)
+        else:
+            client = ApiClientV1Beta(configuration=pks_config)
+        return client
 
     def list_clusters(self):
         """Get list of clusters in PKS environment.
@@ -150,7 +174,7 @@ class PKSBroker(AbstractBroker):
 
         :rtype: list
         """
-        cluster_api = ClusterApi(api_client=self.pks_client)
+        cluster_api = ClusterApiV1(api_client=self.client_v1)
 
         LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} "
                      f"to list all clusters")
@@ -169,7 +193,11 @@ class PKSBroker(AbstractBroker):
                 'status': cluster.last_action_state,
                 'last-action': cluster.last_action,
                 'k8_master_ips': cluster.kubernetes_master_ips,
-                'compute-profile-name': cluster.compute_profile_name,
+                # TODO(list-clusters) PKS has removed the param
+                #  compute_profile_name from cluster object of v1 endpoint and
+                #  they have not added support for it in v1beta endpoint.
+                #  Fix will be coming soon.
+                # 'compute-profile-name': cluster.compute_profile_name,
                 'worker_count': cluster.parameters.kubernetes_worker_instances
             }
             list_of_cluster_dicts.append(cluster_dict)
@@ -224,7 +252,7 @@ class PKSBroker(AbstractBroker):
 
         compute_profile = compute_profile \
             if compute_profile else self.compute_profile
-        cluster_api = ClusterApi(api_client=self.pks_client)
+        cluster_api = ClusterApiV1Beta(api_client=self.client_v1beta)
         cluster_params = \
             ClusterParameters(kubernetes_master_host=pks_ext_host,
                               kubernetes_worker_instances=node_count)
@@ -287,7 +315,7 @@ class PKSBroker(AbstractBroker):
 
         :rtype: dict
         """
-        cluster_api = ClusterApi(api_client=self.pks_client)
+        cluster_api = ClusterApiV1Beta(api_client=self.client_v1beta)
 
         LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to get "
                      f"details of cluster with name: {cluster_name}")
@@ -333,7 +361,7 @@ class PKSBroker(AbstractBroker):
 
         :rtype: str
         """
-        cluster_api = ClusterApi(api_client=self.pks_client)
+        cluster_api = ClusterApiV1(api_client=self.client_v1)
 
         LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to get"
                      f" detailed configuration of cluster with name: "
@@ -371,7 +399,7 @@ class PKSBroker(AbstractBroker):
         """
         result = {}
 
-        cluster_api = ClusterApi(api_client=self.pks_client)
+        cluster_api = ClusterApiV1(api_client=self.client_v1)
 
         LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to delete "
                      f"the cluster with name: {cluster_name}")
@@ -425,7 +453,7 @@ class PKSBroker(AbstractBroker):
         :param int node_count: New size of the worker nodes
         """
         result = {}
-        cluster_api = ClusterApi(api_client=self.pks_client)
+        cluster_api = ClusterApiV1(api_client=self.client_v1)
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to resize "
                      f"the cluster with name: {cluster_name} to "
                      f"{node_count} worker nodes")
@@ -466,7 +494,7 @@ class PKSBroker(AbstractBroker):
         result = {}
         result['body'] = []
         result['status_code'] = OK
-        profile_api = ProfileApi(api_client=self.pks_client)
+        profile_api = ProfileApi(api_client=self.client_v1beta)
 
         resource_pool = {
             'resource_pool': ovdc_rp_name
@@ -485,21 +513,11 @@ class PKSBroker(AbstractBroker):
             ]
         }
 
-        az_params = {
-            'azs': [
-                {
-                    'name': az_name,
-                    'cpi': cpi,
-                    'cloud_properties': cloud_properties
-                }
-
-            ]
-        }
-
-        cp_params_json_str = json.dumps(az_params)
+        az = AZ(name=az_name, cpi=cpi, cloud_properties=cloud_properties)
+        cp_params = ComputeProfileParameters(azs=[az])
         cp_request = ComputeProfileRequest(name=cp_name,
                                            description=description,
-                                           parameters=cp_params_json_str)
+                                           parameters=cp_params)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to create "
                      f"the compute profile: {cp_name} for ovdc {ovdc_rp_name}")
@@ -526,7 +544,7 @@ class PKSBroker(AbstractBroker):
         result = {}
         result['body'] = []
         result['status_code'] = OK
-        profile_api = ProfileApi(api_client=self.pks_client)
+        profile_api = ProfileApi(api_client=self.client_v1beta)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to get the "
                      f"compute profile: {cp_name}")
@@ -557,7 +575,7 @@ class PKSBroker(AbstractBroker):
         result = {}
         result['body'] = []
         result['status_code'] = OK
-        profile_api = ProfileApi(api_client=self.pks_client)
+        profile_api = ProfileApi(api_client=self.client_v1beta)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to get the "
                      f"list of compute profiles")
@@ -587,7 +605,7 @@ class PKSBroker(AbstractBroker):
         result = {}
         result['body'] = []
         result['status_code'] = OK
-        profile_api = ProfileApi(api_client=self.pks_client)
+        profile_api = ProfileApi(api_client=self.client_v1beta)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to delete "
                      f"the compute profile: {cp_name}")

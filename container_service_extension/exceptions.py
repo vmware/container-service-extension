@@ -98,6 +98,6 @@ class PksServerError(CseServerError):
         return f"PKS error\n status: {self.status}\n body: {self.body}\n"
 
 
-class PksConnectionError(PksServerError):
+class PksConnectionError():
     """Raised when connection establishment to PKS fails"""
 

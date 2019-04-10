@@ -16,7 +16,7 @@ import re  # noqa: F401
 
 import six
 
-from container_service_extension.pksclient.models.cluster_parameters import ClusterParameters  # noqa: F401,E501
+from container_service_extension.pksclient.models.v1beta.cluster_parameters import ClusterParameters  # noqa: F401,E501
 
 
 class Cluster(object):
@@ -155,6 +155,12 @@ class Cluster(object):
         :param last_action: The last_action of this Cluster.  # noqa: E501
         :type: str
         """
+        allowed_values = ["CREATE", "UPDATE", "DELETE"]  # noqa: E501
+        if last_action not in allowed_values:
+            raise ValueError(
+                "Invalid value for `last_action` ({0}), must be one of {1}"  # noqa: E501
+                .format(last_action, allowed_values)
+            )
 
         self._last_action = last_action
 
