@@ -15,6 +15,10 @@
 
 from __future__ import absolute_import
 
+# Had to comment few of the imports below from the actual swagger-generated
+# code, as they have been moved to respective v1 and v1beta packages. Chose
+# not to delete them for any future reference.
+
 # import apis into sdk package
 # from container_service_extension.pksclient.api.v1beta.cluster_api import ClusterApi
 # from container_service_extension.pksclient.api.v1beta.profile_api import ProfileApi
