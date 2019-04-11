@@ -12,8 +12,8 @@ from pyvcloud.vcd.client import MetadataVisibility
 from pyvcloud.vcd.vdc import VDC
 
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE_KEY
 from container_service_extension.pks_cache import PKS_CLUSTER_DOMAIN_KEY
+from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE_KEY
 from container_service_extension.pks_cache import PKS_PLANS_KEY
 from container_service_extension.pks_cache import PksCache
 from container_service_extension.utils import get_org

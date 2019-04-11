@@ -36,6 +36,8 @@ class Ovdc(object):
         :param str ovdc_name: Name of the ovdc to be enabled
         :param str container_provider: Name of the container provider
         :param str pks_plan: pks plan
+        :param str pks_cluster_domain: Suffix of the domain name, which will be
+         used to construct FQDN of the clusters.
         :param str org_name: Name of organization that belongs to ovdc_name
 
         :return: response object

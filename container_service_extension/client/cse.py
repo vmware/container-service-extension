@@ -115,27 +115,25 @@ def cluster_group(ctx):
              locating the cluster to 'myOvdc' only. (improves turnaround time
              of the command).
 \b
-        vcd cse cluster create mycluster --pks-external-hostname api.pks.local
-        --pks-plan 'myPlan'
-            Attempts to create a Kubernetes cluster named 'mycluster' with
-            external host name as 'api.pks.local' and available PKS-plan
-            'myPlan' using the VDC in context explicitly dedicated for PKS
-            cluster creation.
+        vcd cse cluster create mycluster
+            If ovdc in context is dedicated for PKS deployments, it attempts to
+             create a Kubernetes cluster 'mycluster' with external host name as
+              'mycluster.<pks_cluster_domain set on ovdc>', using PKS-plan
+              associated with that ovdc.
 
 \b
-        vcd cse cluster create mycluster --pks-external-hostname api.pks.local
-        --pks-plan 'myPlan' --vdc 'myVdc'
+        vcd cse cluster create mycluster --vdc 'myVdc'
             Attempts to create a Kubernetes cluster named 'mycluster' with
-            external host name as 'api.pks.local' and available PKS-plan
-            'myPlan' in the given VDC dedicated explicitly for PKS cluster
-            creation.
+            external host name as 'mycluster.<pks_cluster_domain set on ovdc>',
+             using PKS-plan associated with given VDC dedicated explicitly for
+             PKS cluster creation.
 
 \b
-        vcd cse cluster create mycluster --pks-external-hostname api.pks.local
-        --pks-plan 'myPlan' --vdc 'myVdc' --org 'myOrg'
+        vcd cse cluster create mycluster --vdc 'myVdc' --org 'myOrg'
             Attempts to create a Kubernetes cluster named 'mycluster' with
-            external host name as 'api.pks.local' and available PKS-plan
-            'myPlan' in the given VDC 'myVdc' found in the give org 'myOrg'.
+            external host name as 'mycluster.<pks_cluster_domain set on ovdc>',
+             using PKS-plan associated with given VDC 'myVdc'
+             of the given org 'myOrg'.
 
 \b
         vcd cse cluster config mycluster
@@ -347,20 +345,6 @@ def delete(ctx, name, vdc):
     default=True,
     help='Disable rollback for cluster')
 @click.option(
-    '--pks-external-hostname',
-    'pks_ext_host',
-    required=False,
-    default=None,
-    help='Address from which to access Kubernetes API for PKS. '
-         'Required for deploying PKS clusters. Optional otherwise.')
-@click.option(
-    '--pks-plan',
-    'pks_plan',
-    required=False,
-    default=None,
-    help='Preconfigured PKS plan to use for deploying the cluster. '
-         'Required for deploying PKS clusters. Optional otherwise.')
-@click.option(
     '-o',
     '--org',
     'org_name',
@@ -397,8 +381,6 @@ def create(ctx, name, vdc, node_count, cpu, memory, network_name,
             template=template,
             enable_nfs=enable_nfs,
             disable_rollback=disable_rollback,
-            # pks_ext_host=pks_ext_host,
-            # pks_plan=pks_plan,
             org=org_name)
         stdout(result, ctx)
     except Exception as e:
@@ -826,15 +808,16 @@ def ovdc_group(ctx):
 \b
     Examples
         vcd cse ovdc enablek8s 'myOrgVdc' --container-provider pks
-        --pks-plans 'plan1,plan2'
+        --pks-plan 'plan1' --pks-cluster-domain 'org.com'
             Enable 'myOrgVdc' for k8s deployment on container-provider
-            PKS with plans 'plan1' and 'plan2'. If no --org-name is provided,
-            organization of the logged-in user is used to find 'myOrgVdc'.
+            PKS with plan 'plan1' with cluster domain 'org.com'.
+            If no --org-name is provided, organization of the logged-in user
+            is used to find 'myOrgVdc'.
 \b
         vcd cse ovdc enablek8s 'myOrgVdc' --container-provider pks
-        --pks-plans 'plan1,plan2' --org 'myOrg'
+        --pks-plan 'plan1' --pks-cluster-domain 'org.com' --org 'myOrg'
             Enable 'myOrgVdc' that backs organization 'myOrg', for k8s
-            deployment on PKS with plans:'plan1' and 'plan2'.
+            deployment on PKS with plan 'plan1'with cluster domain 'org.com'.
 \b
         vcd cse ovdc enablek8s 'myOrgVdc' --container-provider vcd
         --org 'myOrg'
@@ -895,8 +878,9 @@ def list(ctx):
     '--pks-cluster-domain',
     'pks_cluster_domain',
     required=False,
-    help="This is a required argument, if --container-provider"
-         " is set to 'pks'")
+    help="Suffix of the domain name, which will be used to construct FQDN of "
+         "clusters that get deployed in this ovdc. This is a required "
+         "argument, if --container-provider is set to 'pks'")
 @click.option(
     '-o',
     '--org',

@@ -192,7 +192,7 @@ class PKSBroker(AbstractBroker):
         list_of_cluster_dicts = []
         for cluster in clusters:
             # TODO Below is a temporary fix to retrieve compute_profile_name.
-            #  Expensive _get_cluster_info() must be removed once PKS team
+            #  Expensive _get_cluster_info() call must be removed once PKS team
             #  moves list_clusters to v1beta endpoint.
             v1_beta_cluster = self._get_cluster_info(cluster_name=cluster.name)
             # cluster_dict = {
@@ -274,10 +274,7 @@ class PKSBroker(AbstractBroker):
             LOGGER.debug(f"Creating cluster {cluster_name} in PKS failed with "
                          f"error:\n {err}")
             raise PksServerError(err.status, err.body)
-        except Exception as err:
-            LOGGER.debug(f"Creating cluster {cluster_name} in PKS failed with "
-                         f"error:\n {err}")
-            print(err)
+
         cluster_dict = cluster.to_dict()
         # Flattening the dictionary
         cluster_params_dict = cluster_dict.pop('parameters')

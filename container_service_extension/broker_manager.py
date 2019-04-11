@@ -160,8 +160,6 @@ class BrokerManager(object):
                 'storage_profile': self.req_spec.get('storage_profile', None),
                 'network_name': self.req_spec.get('network', None),
                 'template': self.req_spec.get('template', None),
-                # 'pks_plan': self.req_spec.get('pks_plan', None),
-                # 'pks_ext_host': self.req_spec.get('pks_ext_host', None)
             }
             result['body'] = self._create_cluster(**cluster_spec)
             result['status_code'] = ACCEPTED
@@ -303,7 +301,7 @@ class BrokerManager(object):
             if ctr_prov_ctx.get(
                 CONTAINER_PROVIDER_KEY) == CtrProvType.PKS.value:
                 cluster_spec['pks_plan'] = ctr_prov_ctx[PKS_PLANS_KEY][0]
-                cluster_spec['pks_ext_host'] = f"{cluster_spec['cluster_name']}." \
+                cluster_spec['pks_ext_host'] = f"{cluster_name}." \
                     f"{ctr_prov_ctx[PKS_CLUSTER_DOMAIN_KEY]}"
             broker = self.get_broker_based_on_vdc(vdc_metadata=ctr_prov_ctx)
             return broker.create_cluster(**cluster_spec)
