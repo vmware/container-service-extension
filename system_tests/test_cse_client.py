@@ -33,19 +33,20 @@ NOTE:
     'base_config.yaml'.
 - This test module typically takes ~20 minutes to finish per template.
 
-TODO()
-- tests/fixtures to test command accessibility for various
-    users/roles (vcd_org_admin() fixture should be replaced with
-    a minimum rights user fixture)
-- test accessing cluster via kubectl
-- test nfs functionality
-- test pks functionality
+TODO() by priority
+- test `vcd cse ovdc...` commands
+- test system administrator should be able to deploy cluster
+- test pks broker
 - test that node rollback works correctly (node rollback is not implemented
     yet due to a vcd-side bug, where a partially powered-on VM cannot be force
     deleted)
-- test `vcd cse system` commands
+- tests/fixtures to test command accessibility for various
+    users/roles (vcd_org_admin() fixture should be replaced with
+    a minimum rights user fixture)
 - test `vcd cse cluster config testcluster --save` option (currently does
     not work)
+- test nfs functionality
+- test accessing cluster via kubectl (may be unnecessary)
 """
 
 import re
@@ -224,7 +225,8 @@ def test_0030_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
           f"{config['broker']['network']} -N 1 -c 1000"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0
-    time.sleep(env.WAIT_INTERVAL)  # wait for vApp to be deleted
+    # TODO() make cluster rollback delete call blocking
+    time.sleep(env.WAIT_INTERVAL * 6)  # wait for vApp to be deleted
     assert not env.vapp_exists(env.TEST_CLUSTER_NAME), \
         "Cluster exists when it should not."
 
