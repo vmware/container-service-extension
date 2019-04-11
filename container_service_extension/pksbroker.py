@@ -37,7 +37,10 @@ from container_service_extension.pksclient.models.v1beta.\
     compute_profile_parameters import ComputeProfileParameters
 from container_service_extension.pksclient.models.v1beta.\
     compute_profile_request import ComputeProfileRequest
-from container_service_extension.pksclient.rest import ApiException
+from container_service_extension.pksclient.client.v1.rest\
+    import ApiException as v1Exception
+from container_service_extension.pksclient.client.v1beta.rest\
+    import ApiException as v1BetaException
 from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.uaaclient.uaaclient import UaaClient
@@ -180,7 +183,7 @@ class PKSBroker(AbstractBroker):
                      f"to list all clusters")
         try:
             clusters = cluster_api.list_clusters()
-        except ApiException as err:
+        except v1Exception as err:
             LOGGER.debug(f"Listing PKS clusters failed with error:\n {err}")
             raise PksServerError(err.status, err.body)
 
@@ -264,10 +267,14 @@ class PKSBroker(AbstractBroker):
                      f"cluster of name: {cluster_name}")
         try:
             cluster = cluster_api.add_cluster(cluster_request)
-        except ApiException as err:
+        except v1BetaException as err:
             LOGGER.debug(f"Creating cluster {cluster_name} in PKS failed with "
                          f"error:\n {err}")
             raise PksServerError(err.status, err.body)
+        except Exception as err:
+            LOGGER.debug(f"Creating cluster {cluster_name} in PKS failed with "
+                         f"error:\n {err}")
+            print(err)
         cluster_dict = cluster.to_dict()
         # Flattening the dictionary
         cluster_params_dict = cluster_dict.pop('parameters')
@@ -321,7 +328,7 @@ class PKSBroker(AbstractBroker):
                      f"details of cluster with name: {cluster_name}")
         try:
             cluster = cluster_api.get_cluster(cluster_name=cluster_name)
-        except ApiException as err:
+        except v1BetaException as err:
             LOGGER.debug(f"Getting cluster info on {cluster_name} failed with "
                          f"error:\n {err}")
             raise PksServerError(err.status, err.body)
@@ -405,7 +412,7 @@ class PKSBroker(AbstractBroker):
                      f"the cluster with name: {cluster_name}")
         try:
             cluster_api.delete_cluster(cluster_name=cluster_name)
-        except ApiException as err:
+        except v1Exception as err:
             LOGGER.debug(f"Deleting cluster {cluster_name} failed with "
                          f"error:\n {err}")
             raise PksServerError(err.status, err.body)
@@ -462,7 +469,7 @@ class PKSBroker(AbstractBroker):
             kubernetes_worker_instances=node_count)
         try:
             cluster_api.update_cluster(cluster_name, body=resize_params)
-        except ApiException as err:
+        except v1Exception as err:
             LOGGER.debug(f"Resizing cluster {cluster_name} failed with "
                          f"error:\n {err}")
             raise PksServerError(err.status, err.body)
@@ -523,7 +530,7 @@ class PKSBroker(AbstractBroker):
                      f"the compute profile: {cp_name} for ovdc {ovdc_rp_name}")
         try:
             profile_api.add_compute_profile(body=cp_request)
-        except ApiException as err:
+        except v1BetaException as err:
             LOGGER.debug(f"Creating compute-profile {cp_name} in PKS failed "
                          f"with error:\n {err}")
             raise PksServerError(err.status, err.body)
@@ -552,7 +559,7 @@ class PKSBroker(AbstractBroker):
         try:
             compute_profile = \
                 profile_api.get_compute_profile(profile_name=cp_name)
-        except ApiException as err:
+        except v1BetaException as err:
             LOGGER.debug(f"Creating compute-profile {cp_name} in PKS failed "
                          f"with error:\n {err}")
             raise PksServerError(err.status, err.body)
@@ -581,7 +588,7 @@ class PKSBroker(AbstractBroker):
                      f"list of compute profiles")
         try:
             cp_list = profile_api.list_compute_profiles()
-        except ApiException as err:
+        except v1BetaException as err:
             LOGGER.debug(f"Listing compute-profiles in PKS failed "
                          f"with error:\n {err}")
             raise PksServerError(err.status, err.body)
@@ -612,7 +619,7 @@ class PKSBroker(AbstractBroker):
 
         try:
             profile_api.delete_compute_profile(profile_name=cp_name)
-        except ApiException as err:
+        except v1BetaException as err:
             LOGGER.debug(f"Deleting compute-profile {cp_name} in PKS failed "
                          f"with error:\n {err}")
             raise PksServerError(err.status, err.body)
