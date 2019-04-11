@@ -46,7 +46,7 @@ def _create_ipset_for_node_pod_ip_blocks(nsxt_client,
     ip_set_manager = IPSetManager(nsxt_client)
 
     all_nodes_ip_set = ip_set_manager.get_ip_set(name=ALL_NODES_IP_SET_NAME)
-    if all_nodes_ip_set is None:
+    if not all_nodes_ip_set:
         nsxt_client.LOGGER.debug(f"Creating IPSet : {ALL_NODES_IP_SET_NAME}")
         all_nodes_ip_set = ip_set_manager.create_ip_set_from_ip_block(
             ALL_NODES_IP_SET_NAME,
@@ -56,7 +56,7 @@ def _create_ipset_for_node_pod_ip_blocks(nsxt_client,
                                  "exists.")
 
     all_pods_ip_set = ip_set_manager.get_ip_set(name=ALL_PODS_IP_SET_NAME)
-    if all_pods_ip_set is None:
+    if not all_pods_ip_set:
         nsxt_client.LOGGER.debug(f"Creating IPSet : {ALL_PODS_IP_SET_NAME}")
         all_pods_ip_set = ip_set_manager.create_ip_set_from_ip_block(
             ALL_PODS_IP_SET_NAME,
@@ -71,7 +71,7 @@ def _create_all_nodes_pods_nsgroup(nsxt_client):
     ip_set_manager = IPSetManager(nsxt_client)
 
     nsgroup = nsgroup_manager.get_nsgroup(name=ALL_NODES_PODS_NSGROUP_NAME)
-    if nsgroup is None:
+    if not nsgroup:
         all_nodes_ip_set_id = ip_set_manager.get_ip_set(
             name=ALL_NODES_IP_SET_NAME)['id']
         all_pods_ip_set_id = ip_set_manager.get_ip_set(
@@ -93,7 +93,7 @@ def _create_ncp_boundary_firewall_section(
 
     section = dfw_manager.get_firewall_section(
         name=NCP_BOUNDARY_FIREWALL_SECTION_NAME)
-    if section is None:
+    if not section:
         tag = {}
         tag['scope'] = "ncp/fw_sect_marker"
         tag['tag'] = "top"

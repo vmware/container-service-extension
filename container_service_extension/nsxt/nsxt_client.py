@@ -111,7 +111,7 @@ class NSXTClient(object):
             if self._log_headers:
                 self.LOGGER.debug("Request hedears : "
                                   f"{response.request.headers}")
-            if self._log_body and payload is not None:
+            if self._log_body and payload:
                 self.LOGGER.debug(f"Request body : {response.request.body}")
 
         if self._log_requests:
@@ -125,5 +125,3 @@ class NSXTClient(object):
 
         if response.text:
             return json.loads(response.text)
-        else:
-            return None
