@@ -817,7 +817,7 @@ def ovdc_group(ctx):
         vcd cse ovdc enablek8s 'myOrgVdc' --container-provider pks
         --pks-plan 'plan1' --pks-cluster-domain 'org.com' --org 'myOrg'
             Enable 'myOrgVdc' that backs organization 'myOrg', for k8s
-            deployment on PKS with plan 'plan1'with cluster domain 'org.com'.
+            deployment on PKS with plan 'plan1' with cluster domain 'org.com'.
 \b
         vcd cse ovdc enablek8s 'myOrgVdc' --container-provider vcd
         --org 'myOrg'
@@ -871,7 +871,8 @@ def list(ctx):
     '--pks-plan',
     'pks_plan',
     required=False,
-    help="This is a required argument, if --container-provider"
+    help="PKS plan to be used for all cluster deployments in the given ovdc."
+         "This is a required argument, if --container-provider"
          " is set to 'pks'")
 @click.option(
     '-d',
@@ -892,8 +893,9 @@ def list(ctx):
 def enablek8s(ctx, ovdc_name, container_provider,
               pks_plan, pks_cluster_domain, org_name):
     """Enable ovdc for k8s deployment on PKS or vCD."""
-    if 'pks' == container_provider and pks_plan is None:
-        click.echo("Must provide PKS plans using --pks-plan")
+    if 'pks' == container_provider and (pks_plan or pks_cluster_domain):
+        click.secho("One or both of the required params (--pks-plan,"
+                    " --pks-cluster-domain) are missing", fg='yellow')
     else:
         try:
             restore_session(ctx)
