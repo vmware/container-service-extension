@@ -2,6 +2,8 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from enum import Enum
+from enum import unique
 
 # CSE SERVICE
 # used for registering CSE to vCD as an api extension service.
@@ -20,3 +22,21 @@ CSE_PKS_DEPLOY_RIGHT_DESCRIPTION = 'Right necessary to deploy kubernetes ' \
     'cluster via vSphere apis in PKS'
 CSE_PKS_DEPLOY_RIGHT_CATEGORY = 'pksRight'
 CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY = 'pksBundleKey'
+
+
+# KUBERNETES PROVIDERS
+@unique
+class K8sProviders(str, Enum):
+    """Types of Kubernetes providers.
+
+    Having a str mixin allows us to do things like:
+    'native' == K8sProviders.NATIVE
+    f"Kubernetes provider is '{K8sProviders.NATIVE}'
+    """
+
+    NATIVE = 'native'
+    PKS = 'ent-pks'
+    NONE = 'none'
+
+
+K8S_PROVIDER_KEY = 'k8s_provider'

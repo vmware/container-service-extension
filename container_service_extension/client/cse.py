@@ -16,6 +16,7 @@ import yaml
 from container_service_extension.client.cluster import Cluster
 from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.system import System
+from container_service_extension.server_constants import K8sProviders
 from container_service_extension.service import Service
 
 
@@ -793,23 +794,23 @@ Currently supported Kubernetes-providers:
 
 - native (vCD)
 
-- enterprise-pks
+- ent-pks (Enterprise PKS)
 
 \b
 Examples
-    vcd cse ovdc enable-k8s ovdc1 --k8s-provider native
+    vcd cse ovdc enable ovdc1 --k8s-provider native
         Set 'ovdc1' Kubernetes provider to be native (vCD)
 \b
-    vcd cse ovdc enable-k8s ovdc2 --k8s-provider enterprise-pks \\
+    vcd cse ovdc enable ovdc2 --k8s-provider ent-pks \\
     --pks-plans 'plan1,plan2' ?
-        Set 'ovdc2' Kubernetes provider to be enterprise-pks.
+        Set 'ovdc2' Kubernetes provider to be ent-pks.
         Use pks plans 'plan1' and 'plan2' for 'ovdc2'.
 \b
-    vcd cse ovdc disable-k8s ovdc3
+    vcd cse ovdc disable ovdc3
         Set 'ovdc3' Kubernetes provider to be none,
         which disables Kubernetes cluster deployment on 'ovdc3'.
 \b
-    vcd cse ovdc info-k8s ovdc1
+    vcd cse ovdc info ovdc1
         Display detailed information about ovdc 'ovdc1'.
 \b
     vcd cse ovdc list
@@ -829,12 +830,12 @@ def list_ovdcs(ctx):
         client = ctx.obj['client']
         ovdc = Ovdc(client)
         result = ovdc.list()
-        stdout(result, ctx)
+        stdout(result, ctx, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
 
 
-@ovdc_group.command('enable-k8s',
+@ovdc_group.command('enable',
                     short_help='Set Kubernetes provider for an org VDC')
 @click.pass_context
 @click.argument('ovdc_name', required=True, metavar='OVDCNAME')
@@ -843,7 +844,7 @@ def list_ovdcs(ctx):
     '--k8s-provider',
     'k8s_provider',
     required=True,
-    type=click.Choice(['native', 'enterprise-pks']),
+    type=click.Choice([K8sProviders.NATIVE, K8sProviders.PKS]),
     help="Name of the Kubernetes provider")
 @click.option(
     '-p',
@@ -851,7 +852,7 @@ def list_ovdcs(ctx):
     'pks_plans',
     required=False,
     metavar='plan1,plan2',
-    help="PKS plans to use. (Required if --k8s-provider=enterprise-pks)")
+    help=f"PKS plans to use. (Required if --k8s-provider={K8sProviders.PKS})")
 @click.option(
     '-o',
     '--org',
@@ -860,10 +861,12 @@ def list_ovdcs(ctx):
     required=False,
     metavar='ORGNAME',
     help="Org to use. Defaults to currently logged-in org")
-def enablek8s(ctx, ovdc_name, k8s_provider, pks_plans, org_name):
+def ovdc_enable(ctx, ovdc_name, k8s_provider, pks_plans, org_name):
     """Set Kubernetes provider for an org VDC."""
-    if 'enterprise-pks' == k8s_provider and pks_plans is None:
+    if k8s_provider == K8sProviders.PKS and pks_plans is None:
         click.echo("Must provide PKS plans using --pks-plans")
+        return
+
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -883,7 +886,7 @@ def enablek8s(ctx, ovdc_name, k8s_provider, pks_plans, org_name):
         stderr(e, ctx)
 
 
-@ovdc_group.command('disable-k8s',
+@ovdc_group.command('disable',
                     short_help='Disable Kubernetes cluster deployment for '
                                'an org VDC')
 @click.pass_context
@@ -896,7 +899,7 @@ def enablek8s(ctx, ovdc_name, k8s_provider, pks_plans, org_name):
     required=False,
     metavar='ORGNAME',
     help="Org to use. Defaults to currently logged-in org")
-def disablek8s(ctx, ovdc_name, org_name):
+def ovdc_disable(ctx, ovdc_name, org_name):
     """Disable Kubernetes cluster deployment for an org VDC."""
     try:
         restore_session(ctx)
@@ -913,7 +916,7 @@ def disablek8s(ctx, ovdc_name, org_name):
         stderr(e, ctx)
 
 
-@ovdc_group.command('info-k8s',
+@ovdc_group.command('info',
                     short_help='Display information about Kubernetes provider '
                                'for an org VDC')
 @click.pass_context
@@ -926,7 +929,7 @@ def disablek8s(ctx, ovdc_name, org_name):
     required=False,
     metavar='ORGNAME',
     help="Org to use. Defaults to currently logged-in org")
-def infok8s(ctx, ovdc_name, org_name):
+def ovdc_info(ctx, ovdc_name, org_name):
     """Display information about Kubernetes provider for an org VDC."""
     try:
         restore_session(ctx)

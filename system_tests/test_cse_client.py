@@ -56,6 +56,7 @@ import pytest
 from vcd_cli.vcd import vcd
 
 from container_service_extension.cse import cli
+import container_service_extension.server_constants as constants
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
 import container_service_extension.utils as utils
@@ -106,10 +107,15 @@ def cse_server():
     cmd = f"org use {config['broker']['org']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0
-    cmd = f"cse ovdc enablek8s {config['broker']['vdc']} -c vcd"
+    cmd = f"vdc use {config['broker']['vdc']}"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    cmd = f"cse ovdc enable {config['broker']['vdc']} -k " \
+          f"{constants.K8sProviders.NATIVE}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0
     result = env.CLI_RUNNER.invoke(vcd, 'logout', catch_exceptions=False)
+    assert result.exit_code == 0
 
     yield
 
