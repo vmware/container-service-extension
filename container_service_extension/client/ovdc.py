@@ -4,6 +4,7 @@
 
 from pyvcloud.vcd import utils
 
+from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.utils import get_vdc
 from container_service_extension.utils import process_response
 
@@ -51,18 +52,18 @@ class Ovdc(object):
         uri = f'{self._uri}/ovdc/{ovdc_id}/info'
 
         # TODO() this is a temporary fix to hack in the name change
-        # Naming changes (vcd -> native) (pks -> enterprise-pks)
+        # Naming changes (vcd -> native) (pks -> ent-pks)
         # More work needs to be done to fix how k8s_provider names are handled
         # Suggestion: we should have an enum for k8s_provider
-        if k8s_provider == 'native':
-            k8s_provider = 'vcd'
-        if k8s_provider == 'enterprise-pks':
-            k8s_provider = 'pks'
+        # if k8s_provider == K8sProviders.NATIVE:
+        #     k8s_provider = 'vcd'
+        # if k8s_provider == K8sProviders.PKS:
+        #     k8s_provider = 'pks'
 
         data = {
             'ovdc_id': ovdc_id,
             'ovdc_name': ovdc_name,
-            'container_provider': k8s_provider,
+            K8S_PROVIDER_KEY: k8s_provider,
             'pks_plans': pks_plans,
             'pks_cluster_domain': pks_cluster_domain,
             'org_name': org_name,
@@ -96,7 +97,7 @@ class Ovdc(object):
         data = {
             'ovdc_id': ovdc_id,
             'ovdc_name': ovdc_name,
-            'container_provider': None,
+            K8S_PROVIDER_KEY: None,
             'pks_plans': None,
             'org_name': org_name,
             'disable': True

@@ -2,9 +2,6 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from enum import Enum
-from enum import unique
-
 from pyvcloud.vcd import utils
 from pyvcloud.vcd.client import ApiVersion
 from pyvcloud.vcd.client import MetadataDomain
@@ -16,20 +13,11 @@ from container_service_extension.pks_cache import PKS_CLUSTER_DOMAIN_KEY
 from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE_KEY
 from container_service_extension.pks_cache import PKS_PLANS_KEY
 from container_service_extension.pks_cache import PksCache
+from container_service_extension.server_constants import K8S_PROVIDER_KEY
+from container_service_extension.server_constants import K8sProviders
 from container_service_extension.utils import get_org
 from container_service_extension.utils import get_pks_cache
 from container_service_extension.utils import get_vdc
-
-
-# TODO(Constants) Refer the TODO(Constants) in broker_manager.py
-@unique
-class CtrProvType(Enum):
-    VCD = 'vcd'
-    PKS = 'pks'
-    NONE = 'none'
-
-
-CONTAINER_PROVIDER_KEY = 'container_provider'
 
 
 class OvdcCache(object):
@@ -101,14 +89,13 @@ class OvdcCache(object):
 
         all_metadata = utils.metadata_to_dict(ovdc.get_all_metadata())
 
-        if CONTAINER_PROVIDER_KEY not in all_metadata:
-            container_provider = CtrProvType.NONE.value
+        if K8S_PROVIDER_KEY not in all_metadata:
+            container_provider = K8sProviders.NONE
         else:
-            container_provider = \
-                all_metadata[CONTAINER_PROVIDER_KEY]
+            container_provider = all_metadata[K8S_PROVIDER_KEY]
 
         ctr_prov_details = {}
-        if container_provider == CtrProvType.PKS.value:
+        if container_provider == K8sProviders.PKS:
             # Filter out container provider metadata into a dict
             ctr_prov_details = {
                 metadata_key:
@@ -129,7 +116,7 @@ class OvdcCache(object):
                 nsxt_info = self.pks_cache.get_nsxt_info(pvdc_info.vc)
                 ctr_prov_details['nsxt'] = nsxt_info
 
-        ctr_prov_details[CONTAINER_PROVIDER_KEY] = container_provider
+        ctr_prov_details[K8S_PROVIDER_KEY] = container_provider
 
         return ctr_prov_details
 
@@ -146,18 +133,18 @@ class OvdcCache(object):
         """
         ovdc_name = ovdc.resource.get('name')
         metadata = {}
-        if container_provider != CtrProvType.PKS.value:
+        if container_provider != K8sProviders.PKS:
             LOGGER.debug(f"Remove existing metadata for ovdc:{ovdc_name}")
             self._remove_metadata(ovdc, PksCache.get_pks_keys())
-            metadata[CONTAINER_PROVIDER_KEY] = container_provider or \
-                CtrProvType.NONE.value
+            metadata[K8S_PROVIDER_KEY] = container_provider or \
+                K8sProviders.NONE
             LOGGER.debug(f"Updated metadata for {container_provider}:"
                          f"{metadata}")
         else:
             container_prov_data.pop('username')
             container_prov_data.pop('secret')
             container_prov_data.pop('nsxt')
-            metadata[CONTAINER_PROVIDER_KEY] = container_provider
+            metadata[K8S_PROVIDER_KEY] = container_provider
             metadata.update(container_prov_data)
 
         # set ovdc metadata into Vcd
