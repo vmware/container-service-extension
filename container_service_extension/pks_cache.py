@@ -9,8 +9,9 @@ from collections import namedtuple
 from container_service_extension.utils import get_pvdc_id_by_name
 
 # Refer  to TODO(Constants) in broker_manager.py
-PKS_PLANS = 'pks_plans'
-PKS_COMPUTE_PROFILE = 'pks_compute_profile_name'
+PKS_PLANS_KEY = 'pks_plans'
+PKS_CLUSTER_DOMAIN_KEY = 'pks_cluster_domain'
+PKS_COMPUTE_PROFILE_KEY = 'pks_compute_profile_name'
 
 
 class PksCache(object):
@@ -202,8 +203,9 @@ class PksCache(object):
         keys = set(PksAccountInfo._fields)
         keys.remove('credentials')
         [keys.add(field) for field in PvdcInfo._fields]
-        keys.add(PKS_PLANS)
-        keys.add(PKS_COMPUTE_PROFILE)
+        keys.add(PKS_PLANS_KEY)
+        keys.add(PKS_COMPUTE_PROFILE_KEY)
+        keys.add(PKS_CLUSTER_DOMAIN_KEY)
         return keys
 
     def _construct_pvdc_info_table(self, pvdcs):

@@ -397,8 +397,8 @@ def create(ctx, name, vdc, node_count, cpu, memory, network_name,
             template=template,
             enable_nfs=enable_nfs,
             disable_rollback=disable_rollback,
-            pks_ext_host=pks_ext_host,
-            pks_plan=pks_plan,
+            # pks_ext_host=pks_ext_host,
+            # pks_plan=pks_plan,
             org=org_name)
         stdout(result, ctx)
     except Exception as e:
@@ -885,8 +885,15 @@ def list(ctx):
          "argument is required")
 @click.option(
     '-p',
-    '--pks-plans',
-    'pks_plans',
+    '--pks-plan',
+    'pks_plan',
+    required=False,
+    help="This is a required argument, if --container-provider"
+         " is set to 'pks'")
+@click.option(
+    '-d',
+    '--pks-cluster-domain',
+    'pks_cluster_domain',
     required=False,
     help="This is a required argument, if --container-provider"
          " is set to 'pks'")
@@ -898,10 +905,11 @@ def list(ctx):
     required=False,
     metavar='[org-name]',
     help="org name")
-def enablek8s(ctx, ovdc_name, container_provider, pks_plans, org_name):
+def enablek8s(ctx, ovdc_name, container_provider,
+              pks_plan, pks_cluster_domain, org_name):
     """Enable ovdc for k8s deployment on PKS or vCD."""
-    if 'pks' == container_provider and pks_plans is None:
-        click.echo("Must provide PKS plans using --pks-plans")
+    if 'pks' == container_provider and pks_plan is None:
+        click.echo("Must provide PKS plans using --pks-plan")
     else:
         try:
             restore_session(ctx)
@@ -913,7 +921,8 @@ def enablek8s(ctx, ovdc_name, container_provider, pks_plans, org_name):
                 result = ovdc.enable_ovdc_for_k8s(
                     ovdc_name,
                     container_provider=container_provider,
-                    pks_plans=pks_plans,
+                    pks_plan=pks_plan,
+                    pks_cluster_domain=pks_cluster_domain,
                     org_name=org_name)
             else:
                 stderr("Unauthorized operation", ctx)

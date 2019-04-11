@@ -12,8 +12,9 @@ from pyvcloud.vcd.client import MetadataVisibility
 from pyvcloud.vcd.vdc import VDC
 
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE
-from container_service_extension.pks_cache import PKS_PLANS
+from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE_KEY
+from container_service_extension.pks_cache import PKS_CLUSTER_DOMAIN_KEY
+from container_service_extension.pks_cache import PKS_PLANS_KEY
 from container_service_extension.pks_cache import PksCache
 from container_service_extension.utils import get_org
 from container_service_extension.utils import get_pks_cache
@@ -45,6 +46,7 @@ class OvdcCache(object):
     @staticmethod
     def construct_pks_context(pks_account_info, pvdc_info=None, nsxt_info=None,
                               pks_compute_profile_name=None, pks_plans='',
+                              pks_cluster_domain='',
                               credentials_required=False):
         """Construct PKS context dictionary.
 
@@ -67,9 +69,11 @@ class OvdcCache(object):
             pks_ctx.update(credentials._asdict())
         if pvdc_info:
             pks_ctx.update(pvdc_info._asdict())
-        pks_ctx[PKS_COMPUTE_PROFILE] = '' if not pks_compute_profile_name \
+        pks_ctx[PKS_COMPUTE_PROFILE_KEY] = '' if not pks_compute_profile_name \
             else pks_compute_profile_name
-        pks_ctx[PKS_PLANS] = '' if not pks_plans else pks_plans
+        pks_ctx[PKS_PLANS_KEY] = '' if not pks_plans else pks_plans
+        pks_ctx[PKS_CLUSTER_DOMAIN_KEY] = '' if not pks_cluster_domain \
+            else pks_cluster_domain
         pks_ctx['nsxt'] = nsxt_info
         return pks_ctx
 
@@ -115,8 +119,8 @@ class OvdcCache(object):
             # Get the credentials from PksCache
             pvdc_id = self.get_pvdc_id(ovdc)
             pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
-            ctr_prov_details[PKS_PLANS] = \
-                ctr_prov_details[PKS_PLANS].split(',')
+            ctr_prov_details[PKS_PLANS_KEY] = \
+                ctr_prov_details[PKS_PLANS_KEY].split(',')
             if credentials_required:
                 pks_info = self.pks_cache.get_pks_account_info(
                     org_name, pvdc_info.vc)

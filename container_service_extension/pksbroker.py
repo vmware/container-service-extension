@@ -14,7 +14,8 @@ from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import PksConnectionError
 from container_service_extension.exceptions import PksServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE
+from container_service_extension.pks_cache import PKS_CLUSTER_DOMAIN_KEY
+from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE_KEY
 from container_service_extension.pksclient.api.v1.cluster_api \
     import ClusterApi as ClusterApiV1
 from container_service_extension.pksclient.api.v1beta.cluster_api \
@@ -87,7 +88,8 @@ class PKSBroker(AbstractBroker):
             f"https://{pks_ctx['host']}:{pks_ctx['uaac_port']}"
         self.proxy_uri = f"http://{pks_ctx['proxy']}:80" \
             if pks_ctx.get('proxy') else None
-        self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE, None)
+        self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE_KEY, None)
+        self.cluster_domain = pks_ctx.get(PKS_CLUSTER_DOMAIN_KEY, None)
         # TODO() Add support in pyvcloud to send metadata values with their
         # types intact.
         verify_ssl_value_in_ctx = pks_ctx.get('verify')

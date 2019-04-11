@@ -82,8 +82,8 @@ class Cluster(object):
                        template=None,
                        enable_nfs=False,
                        disable_rollback=True,
-                       pks_ext_host=None,
-                       pks_plan=None,
+                       # pks_ext_host=None,
+                       # pks_plan=None,
                        org=None):
         """Create a new Kubernetes cluster.
 
@@ -131,8 +131,8 @@ class Cluster(object):
             'template': template,
             'enable_nfs': enable_nfs,
             'disable_rollback': disable_rollback,
-            'pks_ext_host': pks_ext_host,
-            'pks_plan': pks_plan,
+            # 'pks_ext_host': pks_ext_host,
+            # 'pks_plan': pks_plan,
             'org': org
         }
         response = self.client._do_request_prim(

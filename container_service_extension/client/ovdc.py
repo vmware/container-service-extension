@@ -28,13 +28,14 @@ class Ovdc(object):
     def enable_ovdc_for_k8s(self,
                             ovdc_name,
                             container_provider=None,
-                            pks_plans=None,
+                            pks_plan=None,
+                            pks_cluster_domain=None,
                             org_name=None):
         """Enable ovdc for k8s for the given container provider.
 
         :param str ovdc_name: Name of the ovdc to be enabled
         :param str container_provider: Name of the container provider
-        :param str pks_plans: pks plans separated by comma
+        :param str pks_plan: pks plan
         :param str org_name: Name of organization that belongs to ovdc_name
 
         :return: response object
@@ -50,7 +51,8 @@ class Ovdc(object):
             'ovdc_id': ovdc_id,
             'ovdc_name': ovdc_name,
             'container_provider': container_provider,
-            'pks_plans': pks_plans,
+            'pks_plans': pks_plan,
+            'pks_cluster_domain':pks_cluster_domain,
             'org_name': org_name,
             'enable': True
         }
