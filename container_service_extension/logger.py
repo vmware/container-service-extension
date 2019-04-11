@@ -33,7 +33,7 @@ LOGS_DIR_NAME = 'cse-logs'
 
 
 def run_once(f):
-    """Decorator to ensure that a function is only run once."""
+    """Ensure that a function is only run once using this decorator."""
     def wrapper(*args, **kwargs):
         if not wrapper.has_run:
             wrapper.has_run = True
@@ -77,6 +77,7 @@ SERVER_DEBUG_WIRELOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-server-wire-debug.log"
 SERVER_NSXT_LOGGER_NAME = 'container_service_extension.server-nsxt'
 SERVER_NSXT_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-nsxt-debug.log"
 SERVER_NSXT_LOGGER = logging.getLogger(SERVER_NSXT_LOGGER_NAME)
+
 
 @run_once
 def setup_log_file_directory():
@@ -146,8 +147,6 @@ def configure_server_logger():
     SERVER_LOGGER.setLevel(logging.DEBUG)
     SERVER_LOGGER.addHandler(info_file_handler)
     SERVER_LOGGER.addHandler(debug_file_handler)
-
-
 
     pika_logger = logging.getLogger('pika')
     pika_logger.addFilter(RedactingFilter())

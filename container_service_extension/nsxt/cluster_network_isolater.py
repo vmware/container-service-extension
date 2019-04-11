@@ -5,8 +5,6 @@
 from container_service_extension.nsxt.constants import \
     ALL_NODES_PODS_NSGROUP_NAME
 from container_service_extension.nsxt.constants import FIREWALL_ACTION
-from container_service_extension.nsxt.constants import \
-    FIREWALL_EXCLUSION_NSGROUP_NAME
 from container_service_extension.nsxt.constants import INSERT_POLICY
 from container_service_extension.nsxt.constants import \
     NCP_BOUNDARY_FIREWALL_SECTION_NAME
@@ -296,8 +294,8 @@ class ClusterNetworkIsolater(object):
             source_nsgroup_id=nodes_pods_nsgroup_id,
             dest_nsgroup_id=nodes_pods_nsgroup_id,
             action=FIREWALL_ACTION.ALLOW,
-        #    anchor_rule_id=rule1['id'],
-        #    insert_policy=INSERT_POLICY.INSERT_AFTER
+            # anchor_rule_id=rule1['id'],
+            # insert_policy=INSERT_POLICY.INSERT_AFTER
         )
 
         rule3_name = "Block cluster node-pod to all-node-pod communication"
