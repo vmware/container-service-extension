@@ -303,7 +303,7 @@ class BrokerManager(object):
             if ctr_prov_ctx.get(
                 CONTAINER_PROVIDER_KEY) == CtrProvType.PKS.value:
                 cluster_spec['pks_plan'] = ctr_prov_ctx[PKS_PLANS_KEY][0]
-                cluster_spec['pks_ext_host'] = f"{cluster_spec['name']}." \
+                cluster_spec['pks_ext_host'] = f"{cluster_spec['cluster_name']}." \
                     f"{ctr_prov_ctx[PKS_CLUSTER_DOMAIN_KEY]}"
             broker = self.get_broker_based_on_vdc(vdc_metadata=ctr_prov_ctx)
             return broker.create_cluster(**cluster_spec)
@@ -404,12 +404,12 @@ class BrokerManager(object):
         # Extract vdc name from compute-profile-name
         # Example: vdc name in the below compute profile is: vdc-PKS1
         # compute-profile: cp--f3272127-9b7f-4f90-8849-0ee70a28be56--vdc-PKS1
-        compute_profile_name = cluster.get('compute-profile-name', '')
+        compute_profile_name = cluster.get('compute_profile_name', '')
         pks_cluster['vdc'] = compute_profile_name.split('--')[-1] \
             if compute_profile_name else ''
         pks_cluster['status'] = \
-            cluster.get('last-action', '').lower() + ' ' + \
-            pks_cluster.get('status', '').lower()
+            cluster.get('last_action', '').lower() + ' ' + \
+            cluster.get('last_action_state', '').lower()
         return pks_cluster
 
     def _get_ctr_ctx_from_ovdc_metadata(self, ovdc_name=None, org_name=None):

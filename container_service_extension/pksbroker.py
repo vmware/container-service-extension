@@ -89,7 +89,6 @@ class PKSBroker(AbstractBroker):
         self.proxy_uri = f"http://{pks_ctx['proxy']}:80" \
             if pks_ctx.get('proxy') else None
         self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE_KEY, None)
-        self.cluster_domain = pks_ctx.get(PKS_CLUSTER_DOMAIN_KEY, None)
         # TODO() Add support in pyvcloud to send metadata values with their
         # types intact.
         verify_ssl_value_in_ctx = pks_ctx.get('verify')
@@ -121,6 +120,7 @@ class PKSBroker(AbstractBroker):
 
     def _get_pks_config(self, token, version):
         """Construct PKS configuration.
+
 
         (PKS configuration is required to construct pksclient)
 
@@ -191,21 +191,22 @@ class PKSBroker(AbstractBroker):
 
         list_of_cluster_dicts = []
         for cluster in clusters:
-            cluster_dict = {
-                'name': cluster.name,
-                'plan-name': cluster.plan_name,
-                'uuid': cluster.uuid,
-                'status': cluster.last_action_state,
-                'last-action': cluster.last_action,
-                'k8_master_ips': cluster.kubernetes_master_ips,
-                # TODO(list-clusters) PKS has removed the param
-                #  compute_profile_name from cluster object of v1 endpoint and
-                #  they have not added support for it in v1beta endpoint.
-                #  Fix will be coming soon.
-                # 'compute-profile-name': cluster.compute_profile_name,
-                'worker_count': cluster.parameters.kubernetes_worker_instances
-            }
-            list_of_cluster_dicts.append(cluster_dict)
+            # TODO Below is a temporary fix to retrieve compute_profile_name.
+            #  Expensive _get_cluster_info() must be removed once PKS team
+            #  moves list_clusters to v1beta endpoint.
+            v1_beta_cluster = self._get_cluster_info(cluster_name=cluster.name)
+            # cluster_dict = {
+            #     'name': cluster.name,
+            #     'plan_name': cluster.plan_name,
+            #     'uuid': cluster.uuid,
+            #     'status': cluster.last_action_state,
+            #     'last_action': cluster.last_action,
+            #     'k8_master_ips': cluster.kubernetes_master_ips,
+            #     'compute_profile_name': cluster.compute_profile_name,
+            #     'worker_count': cluster.parameters.kubernetes_worker_instances
+            # }
+            #list_of_cluster_dicts.append(cluster_dict)
+            list_of_cluster_dicts.append(v1_beta_cluster)
 
         LOGGER.debug(f"Received response from PKS: {self.pks_host_uri} on the"
                      f" list of clusters: {list_of_cluster_dicts}")
