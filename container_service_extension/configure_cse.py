@@ -930,7 +930,8 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
         if config.get('pks_config'):
             nsxt_servers = config.get('pks_config')['nsxt_servers']
             for nsxt_server in nsxt_servers:
-                msg = f"Configuring NSX-T server ({nsxt_server.get('name')})"
+                msg = f"Configuring NSX-T server ({nsxt_server.get('name')})" \
+                      " for CSE. Please check install logs for details."
                 click.secho(msg, fg='green')
                 LOGGER.info(msg)
                 nsxt_client = NSXTClient(

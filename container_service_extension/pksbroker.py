@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from http import HTTPStatus
-import json
 
 from pyvcloud.vcd.utils import extract_id
 import yaml
@@ -90,7 +89,18 @@ class PKSBroker(AbstractBroker):
             if pks_ctx.get('proxy') else None
         self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE)
         self.nsxt_server = \
-            get_pks_cache().vc_to_nsxt_server_mapper.get(pks_ctx.get('vc'))
+            get_pks_cache().get_nsxt_info(pks_ctx.get('vc'))
+        if self.nsxt_server:
+            self.nsxt_client = NSXTClient(
+                host=self.nsxt_server.get('host'),
+                username=self.nsxt_server.get('username'),
+                password=self.nsxt_server.get('password'),
+                http_proxy=self.nsxt_server.get('proxy'),
+                https_proxy=self.nsxt_server.get('proxy'),
+                verify_ssl=self.nsxt_server.get('verify'),
+                log_requests=True,
+                log_headers=True,
+                log_body=True)
         # TODO() Add support in pyvcloud to send metadata values with their
         # types intact.
         verify_ssl_value_in_ctx = pks_ctx.get('verify')
@@ -238,6 +248,9 @@ class PKSBroker(AbstractBroker):
                         compute_profile=None, **kwargs):
         """Create cluster in PKS environment.
 
+        Creates Distributed Firewall rules in NSX-T to isolate the cluster
+        network from other clusters.
+
         :param str cluster_name: Name of the cluster
         :param str plan: PKS plan. It should be one of the three plans
         that PKS supports.
@@ -258,7 +271,7 @@ class PKSBroker(AbstractBroker):
         if not self.nsxt_server:
             raise CseServerError(
                 "NSX-T server details not found for PKS server selected for "
-                f"cluster : {cluster_name}. Aborting creaetion of cluster.")
+                f"cluster : {cluster_name}. Aborting creation of cluster.")
 
         compute_profile = compute_profile \
             if compute_profile else self.compute_profile
@@ -290,22 +303,12 @@ class PKSBroker(AbstractBroker):
         cluster_id = cluster_dict.get('uuid')
         if cluster_id:
             LOGGER.debug(f"Isolating network of cluster {cluster_name}.")
-            nsxt_client = NSXTClient(
-                host=self.nsxt_server.get('host'),
-                username=self.nsxt_server.get('username'),
-                password=self.nsxt_server.get('password'),
-                http_proxy=self.nsxt_server.get('proxy'),
-                https_proxy=self.nsxt_server.get('proxy'),
-                verify_ssl=self.nsxt_server.get('verify'),
-                log_requests=True,
-                log_headers=True,
-                log_body=True)
-
-            cluster_network_isolater = ClusterNetworkIsolater(nsxt_client)
+            cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client)
             cluster_network_isolater.isolate_cluster(cluster_name, cluster_id)
         else:
             LOGGER.error("Failed to isolate network of cluster "
                          f"{cluster_name}. Cluster ID not found.")
+
         return cluster_dict
 
     def get_cluster_info(self, cluster_name):
@@ -415,14 +418,16 @@ class PKSBroker(AbstractBroker):
         self.get_tenant_client_session()
         if self.tenant_client.is_sysadmin():
             cluster_info = self.get_cluster_info(cluster_name)
-            return self._delete_cluster(cluster_info['pks_cluster_name'])
-
+            pks_cluster_name = cluster_info['pks_cluster_name']
         else:
             pks_cluster_name = self._append_user_id(cluster_name)
-            return self._delete_cluster(pks_cluster_name)
+        return self._delete_cluster(pks_cluster_name)
 
     def _delete_cluster(self, cluster_name):
         """Delete the cluster with a given name in PKS environment.
+
+        Also deletes associated NSX-T Distributed Firewall rules that kept the
+        cluster network isolated from other clusters.
 
         :param str cluster_name: Name of the cluster
         """
@@ -444,18 +449,7 @@ class PKSBroker(AbstractBroker):
 
         # remove cluster network isolation
         LOGGER.debug(f"Removing network isolation of cluster {cluster_name}.")
-        nsxt_client = NSXTClient(
-            host=self.nsxt_server.get('host'),
-            username=self.nsxt_server.get('username'),
-            password=self.nsxt_server.get('password'),
-            http_proxy=self.nsxt_server.get('proxy'),
-            https_proxy=self.nsxt_server.get('proxy'),
-            verify_ssl=self.nsxt_server.get('verify'),
-            log_requests=True,
-            log_headers=True,
-            log_body=True)
-
-        cluster_network_isolater = ClusterNetworkIsolater(nsxt_client)
+        cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client)
         cluster_network_isolater.remove_cluster_isolation(cluster_name)
 
         result['cluster_name'] = cluster_name
