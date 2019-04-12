@@ -33,7 +33,7 @@ LOGS_DIR_NAME = 'cse-logs'
 
 
 def run_once(f):
-    """Decorator to ensure that a function is only run once."""
+    """Ensure that a function is only run once using this decorator."""
     def wrapper(*args, **kwargs):
         if not wrapper.has_run:
             wrapper.has_run = True
@@ -62,12 +62,21 @@ CLIENT_LOGGER = logging.getLogger(CLIENT_LOGGER_NAME)
 # cse server logs info level and debug level logs to:
 # cse-logs/cse-server-info.log
 # cse-logs/cse-server-debug.log
+# cse - vCD wire logs are logged to:
+# cse-logs/cse-server-wire-debug.log
+# cse - nsxt logs are logged to:
+# cse-logs/cse-nsxt-debug.log
 # .log files are always the most current, with .log.9 being the oldest
 SERVER_LOGGER_NAME = 'container_service_extension.server'
 SERVER_INFO_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-server-info.log"
 SERVER_DEBUG_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-server-debug.log"
-SERVER_DEBUG_WIRELOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-server-wire-debug.log"
 SERVER_LOGGER = logging.getLogger(SERVER_LOGGER_NAME)
+
+SERVER_DEBUG_WIRELOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-server-wire-debug.log"
+
+SERVER_NSXT_LOGGER_NAME = 'container_service_extension.server-nsxt'
+SERVER_NSXT_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-nsxt-debug.log"
+SERVER_NSXT_LOGGER = logging.getLogger(SERVER_NSXT_LOGGER_NAME)
 
 
 @run_once
@@ -111,14 +120,27 @@ def configure_client_logger():
 def configure_server_logger():
     """Configure cse server & pika loggers if they are not configured."""
     setup_log_file_directory()
+
+    nsxt_file_handler = RotatingFileHandler(SERVER_NSXT_LOG_FILEPATH,
+                                            maxBytes=_MAX_BYTES,
+                                            backupCount=_BACKUP_COUNT)
+    nsxt_file_handler.setLevel(logging.DEBUG)
+    nsxt_file_handler.setFormatter(DEBUG_LOG_FORMATTER)
+
+    SERVER_NSXT_LOGGER.setLevel(logging.DEBUG)
+    SERVER_NSXT_LOGGER.addFilter(RedactingFilter())
+    SERVER_NSXT_LOGGER.addHandler(nsxt_file_handler)
+
     info_file_handler = RotatingFileHandler(SERVER_INFO_LOG_FILEPATH,
                                             maxBytes=_MAX_BYTES,
                                             backupCount=_BACKUP_COUNT)
     info_file_handler.setLevel(logging.INFO)
     info_file_handler.setFormatter(INFO_LOG_FORMATTER)
+
     debug_file_handler = RotatingFileHandler(SERVER_DEBUG_LOG_FILEPATH,
                                              maxBytes=_MAX_BYTES,
                                              backupCount=_BACKUP_COUNT)
+    debug_file_handler.setLevel(logging.DEBUG)
     debug_file_handler.setFormatter(DEBUG_LOG_FORMATTER)
 
     SERVER_LOGGER.addFilter(RedactingFilter())

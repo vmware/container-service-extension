@@ -305,5 +305,7 @@ def run(ctx, config, skip_check):
     except Exception as err:
         click.secho(str(err), fg='red')
         click.secho("CSE Server failure. Please check the logs.", fg='red')
+
+
 if __name__ == '__main__':
     cli()

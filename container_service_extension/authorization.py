@@ -79,7 +79,7 @@ def _is_authorized(sys_admin_client, user_session, required_rights):
 
 
 def secure(required_rights=[]):
-    """Decorator to secure methods against unauthorized access.
+    """Secure methods against unauthorized access using this decorator.
 
     Is compatible with methods in classes that derive from abstract_broker.
 
