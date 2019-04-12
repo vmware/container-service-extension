@@ -95,7 +95,9 @@ class PksServerError(CseServerError):
         self.body = body
 
     def __str__(self):
-        return f"PKS error\n status: {self.status}\n body: {self.body}\n"
+        from container_service_extension.pksbroker import PKSBroker
+        return f"PKS error\n status: {self.status}\n body: " \
+            f" {PKSBroker.remove_traces_of_user_context(self.body)}\n"
 
 
 class PksConnectionError(PksServerError):
