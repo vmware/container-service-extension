@@ -56,12 +56,12 @@ words and cannot be used to name a cluster.
 \b
 Examples
     vcd cse cluster list
-        Display clusters in vCD that are visible to your user status.
+        Display clusters in vCD that are visible to the logged in user.
 \b
     vcd cse cluster list -vdc ovdc1
-        Display clusters residing in vdc 'ovdc1'.
+        Display clusters in vdc 'ovdc1'.
 \b
-    vcd cse cluster create mycluster -n mynetwork
+    vcd cse cluster create mycluster --network mynetwork
         Create a Kubernetes cluster named 'mycluster'.
         The cluster will have 2 worker nodes.
         The cluster will be connected to org VDC network 'mynetwork'.
@@ -78,25 +78,25 @@ Examples
         The cluster will have 1 worker node and 1 NFS node.
         The cluster will be connected to org VDC network 'mynetwork'.
         All VMs will use the template 'photon-v2'.
-        All VMs in the cluster will have 3 vCPUs on each node with 1024mb
-        of memory each.
+        Each VM in the cluster will have 3 vCPUs and 1024mb of memory.
         All VMs will use the storage profile 'mystorageprofile'.
         The public ssh key at '~/.ssh/id_rsa.pub' will be placed into all
         VMs for user accessibility.
-        On create failure, leaves cluster in error state for troubleshooting.
+        On create failure, cluster will be left cluster in error state for
+        troubleshooting.
         All of these options except for '--nodes' and '--vdc' are only
         applicable for clusters using native (vCD) Kubernetes provider.
 \b
     vcd cse cluster resize mycluster --network mynetwork
         Resize the cluster to have 1 worker node. On resize failure,
-        returns cluster to original state.
+        returns cluster to original size.
         '--network' is only applicable for clusters using
         native (vCD) Kubernetes provider.
         '--vdc' option can be used for faster command execution.
 \b
     vcd cse cluster resize mycluster -N 10 --disable-rollback
         Resize the cluster size to 10 worker nodes. On resize failure,
-        leaves cluster in error state for troubleshooting.
+        cluster will be left cluster in error state for troubleshooting.
 \b
     vcd cse cluster create mycluster --pks-external-hostname api.pks.local
     --pks-plan 'myPlan'
@@ -105,7 +105,7 @@ Examples
         context explicitly dedicated for PKS cluster creation.
 \b
     vcd cse cluster config mycluster > ~/.kube/config
-        Send cluster config details into '~/.kube/config' to manage cluster
+        Write cluster config details into '~/.kube/config' to manage cluster
         using kubectl.
         '--vdc' option can be used for faster command execution.
 \b
@@ -159,7 +159,7 @@ def list_templates(ctx):
 
 @cluster_group.command('list',
                        short_help='Display clusters in vCD that are visible '
-                                  'to your user status')
+                                  'to the logged in user')
 @click.pass_context
 @click.option(
     '-v',
@@ -167,7 +167,7 @@ def list_templates(ctx):
     'vdc',
     required=False,
     default=None,
-    metavar='VDCNAME',
+    metavar='VDC_NAME',
     help='Org VDC to use. Defaults to currently logged-in org VDC')
 @click.option(
     '-o',
@@ -175,10 +175,10 @@ def list_templates(ctx):
     'org_name',
     default=None,
     required=False,
-    metavar='ORGNAME',
+    metavar='ORG_NAME',
     help="Org to use. Defaults to currently logged-in org")
 def list_clusters(ctx, vdc, org_name):
-    """Display clusters in vCD that are visible to your user status."""
+    """Display clusters in vCD that are visible to the logged in user."""
     try:
         restore_session(ctx)
         if org_name is None:
@@ -203,7 +203,7 @@ def list_clusters(ctx, vdc, org_name):
     'vdc',
     required=False,
     default=None,
-    metavar='VDCNAME',
+    metavar='VDC_NAME',
     help='Org VDC to use. Defaults to currently logged-in org VDC')
 def delete(ctx, name, vdc):
     """Delete a Kubernetes cluster."""
@@ -233,7 +233,7 @@ def delete(ctx, name, vdc):
     'vdc',
     required=False,
     default=None,
-    metavar='VDCNAME',
+    metavar='VDC_NAME',
     help='Org VDC to use. Defaults to currently logged-in org VDC')
 @click.option(
     '-N',
@@ -315,7 +315,7 @@ def delete(ctx, name, vdc):
     'org_name',
     default=None,
     required=False,
-    metavar='ORGNAME',
+    metavar='ORG_NAME',
     help='Org to use. Defaults to currently logged-in org')
 def create(ctx, name, vdc, node_count, cpu, memory, network_name,
            storage_profile, ssh_key_file, template, enable_nfs,
@@ -376,7 +376,7 @@ def create(ctx, name, vdc, node_count, cpu, memory, network_name,
     'vdc',
     required=False,
     default=None,
-    metavar='VDCNAME',
+    metavar='VDC_NAME',
     help='Org VDC to use. Defaults to currently logged-in org VDC')
 @click.option(
     '--disable-rollback',
@@ -417,7 +417,7 @@ def resize(ctx, name, node_count, network_name, vdc, disable_rollback):
     'vdc',
     required=False,
     default=None,
-    metavar='VDCNAME',
+    metavar='VDC_NAME',
     help='Org VDC to use. Defaults to currently logged-in org VDC')
 def config(ctx, name, save, vdc):
     """Display cluster configuration."""
@@ -446,7 +446,7 @@ def config(ctx, name, save, vdc):
     'vdc',
     required=False,
     default=None,
-    metavar='VDCNAME',
+    metavar='VDC_NAME',
     help='Org VDC to use. Defaults to currently logged-in org VDC')
 def cluster_info(ctx, name, vdc):
     """Display info about a Kubernetes cluster."""
@@ -472,26 +472,24 @@ Kubernetes provider.
 
 \b
 Examples
-    vcd cse node create mycluster -n mynetwork
+    vcd cse node create mycluster --network mynetwork
         Add 1 node to vApp named 'mycluster' on vCD.
         The node will be connected to org VDC network 'mynetwork'.
         The VM will use the default template.
-        rollback?
 \b
-    vcd cse node create mycluster --nodes 2 --type nfsd -n mynetwork \\
+    vcd cse node create mycluster --nodes 2 --type nfsd --network mynetwork \\
     --template photon-v2 --cpu 3 --memory 1024 \\
     --storage-profile mystorageprofile --ssh-key ~/.ssh/id_rsa.pub \\
-    --disable-rollback?
         Add 2 nfsd nodes to vApp named 'mycluster' on vCD.
         The nodes will be connected to org VDC network 'mynetwork'.
         All VMs will use the template 'photon-v2'.
-        All VMs will have 3 vCPUs, each with 1024mb of memory.
+        Each VM will have 3 vCPUs and 1024mb of memory.
         All VMs will use the storage profile 'mystorageprofile'.
         The public ssh key at '~/.ssh/id_rsa.pub' will be placed into all
         VMs for user accessibility.
 \b
     vcd cse node list mycluster
-        Displays nodes in 'mycluster' that are visible to your user status.
+        Displays nodes in 'mycluster'.
 \b
     vcd cse node info mycluster node-xxxx
         Display detailed information about node 'node-xxxx' in cluster
@@ -810,17 +808,17 @@ Examples
         Display detailed information about ovdc 'ovdc1'.
 \b
     vcd cse ovdc list
-        Display ovdcs in vCD that are visible to your user status.
+        Display ovdcs in vCD that are visible to the logged in user.
     """
     pass
 
 
 @ovdc_group.command('list',
                     short_help='Display org VDCs in vCD that are visible '
-                               'to your user status')
+                               'to the logged in user')
 @click.pass_context
 def list_ovdcs(ctx):
-    """Display org VDCs in vCD that are visible to your user status."""
+    """Display org VDCs in vCD that are visible to the logged in user."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -834,7 +832,7 @@ def list_ovdcs(ctx):
 @ovdc_group.command('enable',
                     short_help='Set Kubernetes provider for an org VDC')
 @click.pass_context
-@click.argument('ovdc_name', required=True, metavar='OVDCNAME')
+@click.argument('ovdc_name', required=True, metavar='VDC_NAME')
 @click.option(
     '-k',
     '--k8s-provider',
@@ -863,7 +861,7 @@ def list_ovdcs(ctx):
     'org_name',
     default=None,
     required=False,
-    metavar='ORGNAME',
+    metavar='ORG_NAME',
     help="Org to use. Defaults to currently logged-in org")
 def ovdc_enable(ctx, ovdc_name, k8s_provider, pks_plans, pks_cluster_domain, org_name):
     """Set Kubernetes provider for an org VDC."""
@@ -897,14 +895,14 @@ def ovdc_enable(ctx, ovdc_name, k8s_provider, pks_plans, pks_cluster_domain, org
                     short_help='Disable Kubernetes cluster deployment for '
                                'an org VDC')
 @click.pass_context
-@click.argument('ovdc_name', required=True, metavar='OVDCNAME')
+@click.argument('ovdc_name', required=True, metavar='VDC_NAME')
 @click.option(
     '-o',
     '--org',
     'org_name',
     default=None,
     required=False,
-    metavar='ORGNAME',
+    metavar='ORG_NAME',
     help="Org to use. Defaults to currently logged-in org")
 def ovdc_disable(ctx, ovdc_name, org_name):
     """Disable Kubernetes cluster deployment for an org VDC."""
@@ -927,14 +925,14 @@ def ovdc_disable(ctx, ovdc_name, org_name):
                     short_help='Display information about Kubernetes provider '
                                'for an org VDC')
 @click.pass_context
-@click.argument('ovdc_name', required=True, metavar='OVDCNAME')
+@click.argument('ovdc_name', required=True, metavar='VDC_NAME')
 @click.option(
     '-o',
     '--org',
     'org_name',
     default=None,
     required=False,
-    metavar='ORGNAME',
+    metavar='ORG_NAME',
     help="Org to use. Defaults to currently logged-in org")
 def ovdc_info(ctx, ovdc_name, org_name):
     """Display information about Kubernetes provider for an org VDC."""

@@ -118,7 +118,7 @@ def version(ctx):
     'output',
     required=False,
     default=None,
-    metavar='<output-file-name>',
+    metavar='OUTPUT_FILE_NAME',
     help="Name of the config file to dump the CSE configs to.")
 @click.option(
     '-p',
@@ -126,7 +126,7 @@ def version(ctx):
     'pks_output',
     required=False,
     default=None,
-    metavar='<pks-output-file-name>',
+    metavar='OUTPUT_FILE_NAME',
     help="Name of the PKS config file to dump the PKS configs to.")
 def sample(ctx, output, pks_output):
     """Generate sample CSE configuration."""
@@ -142,7 +142,7 @@ def sample(ctx, output, pks_output):
     '--config',
     'config',
     type=click.Path(exists=True),
-    metavar='<config-file>',
+    metavar='CONFIG_FILE_NAME',
     envvar='CSE_CONFIG',
     default='config.yaml',
     help='Config file to use.')
@@ -160,7 +160,7 @@ def sample(ctx, output, pks_output):
     'template',
     required=False,
     default='*',
-    metavar='<template>',
+    metavar='TEMPLATE_NAME',
     help="If '--check-install' flag is set, validate specified template. "
          "Default value of '*' means that all templates in config file"
          " will be validated.")
@@ -198,7 +198,7 @@ def check(ctx, config, check_install, template):
     '--config',
     'config',
     type=click.Path(exists=True),
-    metavar='<config-file>',
+    metavar='CONFIG_FILE_NAME',
     envvar='CSE_CONFIG',
     default='config.yaml',
     help='Config file to use.')
@@ -208,7 +208,7 @@ def check(ctx, config, check_install, template):
     'template',
     required=False,
     default='*',
-    metavar='<template>',
+    metavar='TEMPLATE_NAME',
     help="Install only the specified template. Default value of '*' means that"
          " all templates in config file will be installed.")
 @click.option(
@@ -270,7 +270,7 @@ def install(ctx, config, template, update, no_capture, ssh_key_file):
     '--config',
     'config',
     type=click.Path(exists=True),
-    metavar='<config-file>',
+    metavar='CONFIG_FILE_NAME',
     envvar='CSE_CONFIG',
     default='config.yaml',
     help='Config file to use.')
