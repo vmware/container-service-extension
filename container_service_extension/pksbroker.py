@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from http import HTTPStatus
+import re
 
 from pyvcloud.vcd.utils import extract_id
 import yaml
@@ -167,7 +168,7 @@ class PKSBroker(AbstractBroker):
             client = ApiClientV1Beta(configuration=pks_config)
         return client
 
-    def list_clusters(self):
+    def list_clusters(self, **kwargs):
         """Get list of clusters in PKS environment.
 
         System administrator gets all the clusters for the given service
@@ -181,7 +182,6 @@ class PKSBroker(AbstractBroker):
         if self.tenant_client.is_sysadmin():
             for cluster in cluster_list:
                 self._restore_original_name(cluster)
-            return cluster_list
         else:
             user_cluster_list = [cluster_dict for cluster_dict in cluster_list
                                  if self._is_user_cluster_owner(cluster_dict)]
@@ -329,7 +329,7 @@ class PKSBroker(AbstractBroker):
 
         return cluster_dict
 
-    def get_cluster_info(self, cluster_name):
+    def get_cluster_info(self, cluster_name, **kwargs):
         """Get the details of a cluster with a given name in PKS environment.
 
         System administrator gets the given cluster information regardless of
@@ -343,11 +343,12 @@ class PKSBroker(AbstractBroker):
         """
         if self.tenant_client.is_sysadmin():
             filtered_cluster_list = \
-                self._filter_list_by_cluster_name(self.list_clusters(),
-                                                  cluster_name)
+                self._filter_list_by_cluster_name(
+                    self.list_clusters(is_pks_context_data_required=True),
+                    cluster_name)
             LOGGER.debug(f"filtered Cluster List:{filtered_cluster_list}")
             if len(filtered_cluster_list) > 0:
-                return filtered_cluster_list[0]
+                cluster_info = filtered_cluster_list[0]
             else:
                 raise PksServerError(HTTPStatus.NOT_FOUND,
                                      f"cluster {cluster_name} not found")
@@ -398,11 +399,14 @@ class PKSBroker(AbstractBroker):
         :rtype: str
         """
         if self.tenant_client.is_sysadmin():
-            cluster = self.get_cluster_info(cluster_name)
-            return self._get_cluster_config(cluster['pks_cluster_name'])
+            cluster = self.get_cluster_info(cluster_name,
+                                            is_pks_context_data_required=True)
+            config_info = self._get_cluster_config(cluster['pks_cluster_name'])
         else:
             pks_cluster_name = self._append_user_id(cluster_name)
-            return self._get_cluster_config(pks_cluster_name)
+            config_info = self._get_cluster_config(pks_cluster_name)
+
+        return self.remove_traces_of_user_context(config_info)
 
     def _get_cluster_config(self, cluster_name):
         """Get the configuration of the cluster with the given name in PKS.
@@ -436,11 +440,16 @@ class PKSBroker(AbstractBroker):
         """
         self.get_tenant_client_session()
         if self.tenant_client.is_sysadmin():
-            cluster_info = self.get_cluster_info(cluster_name)
-            pks_cluster_name = cluster_info['pks_cluster_name']
+            cluster_info = self.get_cluster_info(
+                cluster_name, is_pks_context_data_required=True)
+            result = self._delete_cluster(cluster_info['pks_cluster_name'])
+
         else:
             pks_cluster_name = self._append_user_id(cluster_name)
-        return self._delete_cluster(pks_cluster_name)
+            result = self._delete_cluster(pks_cluster_name)
+        self._restore_original_name(result)
+        self._exclude_pks_properties(result)
+        return result
 
     def _delete_cluster(self, cluster_name):
         """Delete the cluster with a given name in PKS environment.
@@ -478,7 +487,7 @@ class PKSBroker(AbstractBroker):
             # them and ignore.
             pass
 
-        result['cluster_name'] = cluster_name
+        result['name'] = cluster_name
         result['task_status'] = 'in progress'
         return result
 
@@ -500,13 +509,17 @@ class PKSBroker(AbstractBroker):
         """
         cluster_name = cluster_spec['cluster_name']
         if self.tenant_client.is_sysadmin():
-            cluster = self.get_cluster_info(cluster_name)
+            cluster = self.get_cluster_info(cluster_name,
+                                            is_pks_context_data_required=True)
             cluster_spec['cluster_name'] = cluster['pks_cluster_name']
-            return self._resize_cluster(**cluster_spec)
+            result = self._resize_cluster(**cluster_spec)
         else:
             pks_cluster_name = self._append_user_id(cluster_name)
             cluster_spec['cluster_name'] = pks_cluster_name
-            return self._resize_cluster(**cluster_spec)
+            result = self._resize_cluster(**cluster_spec)
+        self._restore_original_name(result)
+        self._exclude_pks_properties(result)
+        return result
 
     def _resize_cluster(self, cluster_name, node_count, **kwargs):
         """Resize the cluster of a given name to given number of worker nodes.
@@ -532,7 +545,7 @@ class PKSBroker(AbstractBroker):
         LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to resize"
                      f" the cluster: {cluster_name}")
 
-        result['cluster_name'] = cluster_name
+        result['name'] = cluster_name
         result['task_status'] = 'in progress'
 
         return result
@@ -723,6 +736,17 @@ class PKSBroker(AbstractBroker):
         # information.
         for entry in EXCLUDE_KEYS:
             cluster_info.pop(entry, None)
+
+    @staticmethod
+    def remove_traces_of_user_context(cluster_info):
+        """Remove traces of user-id pattern from the given string.
+
+        :param str cluster_info: text information that may have user context
+
+        :return: cluster info with user context removed
+        :rtype: str
+        """
+        return re.sub(rf"{USER_ID_SEPARATOR}\S+", '', cluster_info)
 
     def __getattr__(self, name):
         """Handle unknown operations.
