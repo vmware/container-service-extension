@@ -121,7 +121,6 @@ class PKSBroker(AbstractBroker):
     def _get_pks_config(self, token, version):
         """Construct PKS configuration.
 
-
         (PKS configuration is required to construct pksclient)
 
         :return: PKS configuration

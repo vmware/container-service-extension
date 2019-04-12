@@ -297,13 +297,13 @@ class BrokerManager(object):
         cluster_name = cluster_spec['cluster_name']
         cluster = self._find_cluster_in_org(cluster_name)[0]
         if not cluster:
-            ctr_prov_ctx = self._get_ctr_ctx_from_ovdc_metadata()
+            ctr_prov_ctx = self._get_ctr_prov_ctx_from_ovdc_metadata()
             if ctr_prov_ctx.get(
                 CONTAINER_PROVIDER_KEY) == CtrProvType.PKS.value:
                 cluster_spec['pks_plan'] = ctr_prov_ctx[PKS_PLANS_KEY][0]
                 cluster_spec['pks_ext_host'] = f"{cluster_name}." \
                     f"{ctr_prov_ctx[PKS_CLUSTER_DOMAIN_KEY]}"
-            broker = self.get_broker_based_on_vdc(vdc_metadata=ctr_prov_ctx)
+            broker = self._get_broker_based_on_ctr_prov_ctx(ctr_prov_ctx)
             return broker.create_cluster(**cluster_spec)
         else:
             raise CseServerError(f'Cluster with name: {cluster_name} '
@@ -410,13 +410,13 @@ class BrokerManager(object):
             cluster.get('last_action_state', '').lower()
         return pks_cluster
 
-    def _get_ctr_ctx_from_ovdc_metadata(self, ovdc_name=None, org_name=None):
+    def _get_ctr_prov_ctx_from_ovdc_metadata(self, ovdc_name=None, org_name=None):
 
-        ovdc_name = self.req_spec.get('vdc') or \
-                    self.req_qparams.get('vdc') or ovdc_name
-        org_name = self.req_spec.get('org') or \
+        ovdc_name = ovdc_name or self.req_spec.get('vdc') or \
+                    self.req_qparams.get('vdc')
+        org_name = org_name or self.req_spec.get('org') or \
                    self.req_qparams.get('org') or \
-                   self.session.get('org') or org_name
+                   self.session.get('org')
 
         if ovdc_name and org_name:
             ctr_prov_ctx = \
@@ -425,14 +425,7 @@ class BrokerManager(object):
                     credentials_required=True, nsxt_info_required=True)
             return ctr_prov_ctx
 
-    def get_broker_based_on_vdc(self, vdc_metadata=None):
-        """Get the broker based on ovdc.
-
-        :return: broker
-
-        :rtype: container_service_extension.abstract_broker.AbstractBroker
-        """
-        ctr_prov_ctx = vdc_metadata or self._get_ctr_ctx_from_ovdc_metadata()
+    def _get_broker_based_on_ctr_prov_ctx(self, ctr_prov_ctx):
 
         if ctr_prov_ctx and ctr_prov_ctx.get(
                 CONTAINER_PROVIDER_KEY) == CtrProvType.PKS.value:
@@ -443,6 +436,26 @@ class BrokerManager(object):
             # Specify flag in config file whether to have default
             # handling is required for missing ovdc or org.
             return VcdBroker(self.req_headers, self.req_spec)
+
+
+    def get_broker_based_on_vdc(self):
+        """Get the broker based on ovdc.
+
+        :return: broker
+
+        :rtype: container_service_extension.abstract_broker.AbstractBroker
+        """
+
+        ovdc_name = self.req_spec.get('vdc') or \
+                    self.req_qparams.get('vdc')
+        org_name = self.req_spec.get('org') or \
+                   self.req_qparams.get('org') or \
+                   self.session.get('org')
+
+        ctr_prov_ctx = self._get_ctr_prov_ctx_from_ovdc_metadata(
+            ovdc_name=ovdc_name, org_name=org_name)
+
+        return self._get_broker_based_on_ctr_prov_ctx(ctr_prov_ctx)
 
     def _get_ovdc_params(self):
         ovdc_id = self.req_spec.get('ovdc_id')
