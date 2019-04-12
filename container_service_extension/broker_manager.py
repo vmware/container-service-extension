@@ -458,9 +458,12 @@ class BrokerManager(object):
                 raise CseServerError('PKS config file does not exist')
             pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
             if not pvdc_info:
+                LOGGER.debug(f"pvdc '{pvdc_id}' is not backed "
+                             f"by PKS-managed-vSphere resources")
                 raise CseServerError(f"'{ovdc.resource.get('name')}' is not "
                                      f"eligible to provide resources for "
-                                     f"PKS clusters")
+                                     f"PKS clusters. Refer debug logs for more"
+                                     f" details.")
             pks_account_info = self.pks_cache.get_pks_account_info(
                 org_name, pvdc_info.vc)
             nsxt_info = self.pks_cache.get_nsxt_info(pvdc_info.vc)
