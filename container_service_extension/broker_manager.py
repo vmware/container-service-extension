@@ -457,6 +457,10 @@ class BrokerManager(object):
             if not self.pks_cache:
                 raise CseServerError('PKS config file does not exist')
             pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
+            if not pvdc_info:
+                raise CseServerError(f"'{ovdc.resource.get('name')}' is not "
+                                     f"eligible to provide resources for "
+                                     f"PKS clusters")
             pks_account_info = self.pks_cache.get_pks_account_info(
                 org_name, pvdc_info.vc)
             nsxt_info = self.pks_cache.get_nsxt_info(pvdc_info.vc)
