@@ -105,6 +105,12 @@ class ClusterNetworkIsolater(object):
     def _create_nsgroup_for_cluster_nodes(self, cluster_name, cluster_id):
         """Create NSGroup for all nodes in the cluster.
 
+        If NSGroup already exists, delete it and re-create it. Since this group
+        is based on cluster name, it possible that a previously deployed
+        cluster on deletion failed to cleanup it's NSGroups, we shouldn't
+        re-use that group rather create it afresh with the proper cluster
+        id tag based membership criteria.
+
         :param str cluster_name: name of the cluster whose network is being
             isolated.
         :param str cluster_id: id of the cluster whose network is being
@@ -118,33 +124,41 @@ class ClusterNetworkIsolater(object):
         name = self._get_nodes_nsgroup_name(cluster_name)
         nsgroup_manager = NSGroupManager(self._nsxt_client)
         nodes_nsgroup = nsgroup_manager.get_nsgroup(name)
-        if not nodes_nsgroup:
-            criteria = {}
-            criteria['resource_type'] = "NSGroupComplexExpression"
-
-            expression1 = {}
-            expression1['resource_type'] = "NSGroupTagExpression"
-            expression1['target_type'] = "LogicalSwitch"
-            expression1['scope'] = "pks/cluster"
-            expression1['tag'] = str(cluster_id)
-
-            expression2 = {}
-            expression2['resource_type'] = "NSGroupTagExpression"
-            expression2['target_type'] = "LogicalSwitch"
-            expression2['scope'] = "pks/floating_ip"
-
-            criteria['expressions'] = [expression1, expression2]
-
-            self._nsxt_client.LOGGER.debug(f"Creating NSGroup : {name}.")
-            nodes_nsgroup = nsgroup_manager.create_nsgroup(
-                name, membership_criteria=[criteria])
-        else:
+        if nodes_nsgroup:
             self._nsxt_client.LOGGER.debug(f"NSGroup : {name} already exists.")
+            nsgroup_manager.delete_nsgroup(name, force=True)
+            self._nsxt_client.LOGGER.debug(f"Deleted NSGroup : {name}.")
+
+        criteria = {}
+        criteria['resource_type'] = "NSGroupComplexExpression"
+
+        expression1 = {}
+        expression1['resource_type'] = "NSGroupTagExpression"
+        expression1['target_type'] = "LogicalSwitch"
+        expression1['scope'] = "pks/cluster"
+        expression1['tag'] = str(cluster_id)
+
+        expression2 = {}
+        expression2['resource_type'] = "NSGroupTagExpression"
+        expression2['target_type'] = "LogicalSwitch"
+        expression2['scope'] = "pks/floating_ip"
+
+        criteria['expressions'] = [expression1, expression2]
+
+        self._nsxt_client.LOGGER.debug(f"Creating NSGroup : {name}.")
+        nodes_nsgroup = nsgroup_manager.create_nsgroup(
+            name, membership_criteria=[criteria])
 
         return nodes_nsgroup
 
     def _create_nsgroup_for_cluster_pods(self, cluster_name, cluster_id):
         """Create NSGroup for all pods in a cluster.
+
+        If NSGroup already exists, delete it and re-create it. Since this group
+        is based on cluster name, it possible that a previously deployed
+        cluster on deletion failed to cleanup it's NSGroups, we shouldn't
+        re-use that group rather create it afresh with the proper cluster
+        id tag based membership criteria.
 
         :param str cluster_name: name of the cluster whose network is being
             isolated.
@@ -159,18 +173,20 @@ class ClusterNetworkIsolater(object):
         name = self._get_pods_nsgroup_name(cluster_name)
         nsgroup_manager = NSGroupManager(self._nsxt_client)
         pods_nsgroup = nsgroup_manager.get_nsgroup(name)
-        if not pods_nsgroup:
-            criteria = {}
-            criteria['resource_type'] = "NSGroupTagExpression"
-            criteria['target_type'] = "LogicalPort"
-            criteria['scope'] = "ncp/cluster"
-            criteria['tag'] = f"pks-{cluster_id}"
-
-            self._nsxt_client.LOGGER.debug(f"Creating NSGroup : {name}.")
-            pods_nsgroup = nsgroup_manager.create_nsgroup(
-                name, membership_criteria=[criteria])
-        else:
+        if pods_nsgroup:
             self._nsxt_client.LOGGER.debug(f"NSGroup : {name} already exists.")
+            nsgroup_manager.delete_nsgroup(name, force=True)
+            self._nsxt_client.LOGGER.debug(f"Deleted NSGroup : {name}.")
+
+        criteria = {}
+        criteria['resource_type'] = "NSGroupTagExpression"
+        criteria['target_type'] = "LogicalPort"
+        criteria['scope'] = "ncp/cluster"
+        criteria['tag'] = f"pks-{cluster_id}"
+
+        self._nsxt_client.LOGGER.debug(f"Creating NSGroup : {name}.")
+        pods_nsgroup = nsgroup_manager.create_nsgroup(
+            name, membership_criteria=[criteria])
 
         return pods_nsgroup
 
@@ -179,6 +195,12 @@ class ClusterNetworkIsolater(object):
                                                    nodes_nsgroup_id,
                                                    pods_nsgroup_id):
         """Create NSGroup for all nodes and pods in a cluster.
+
+        If NSGroup already exists, delete it and re-create it. Since this group
+        is based on cluster name, it possible that a previously deployed
+        cluster on deletion failed to cleanup it's NSGroups, we shouldn't
+        re-use that group rather create it afresh with the proper member
+        NSGroups ids.
 
         :param str cluster_name: name of the cluster whose network is being
             isolated.
@@ -193,28 +215,30 @@ class ClusterNetworkIsolater(object):
         name = self._get_nodes_pods_nsgroup_name(cluster_name)
         nsgroup_manager = NSGroupManager(self._nsxt_client)
         nodes_pods_nsgroup = nsgroup_manager.get_nsgroup(name)
-        if not nodes_pods_nsgroup:
-            member1 = {}
-            member1['resource_type'] = "NSGroupSimpleExpression"
-            member1['target_type'] = "NSGroup"
-            member1['target_property'] = "id"
-            member1['op'] = "EQUALS"
-            member1['value'] = nodes_nsgroup_id
-
-            member2 = {}
-            member2['resource_type'] = "NSGroupSimpleExpression"
-            member2['target_type'] = "NSGroup"
-            member2['target_property'] = "id"
-            member2['op'] = "EQUALS"
-            member2['value'] = pods_nsgroup_id
-
-            members = [member1, member2]
-
-            self._nsxt_client.LOGGER.debug(f"Creating NSGroup : {name}.")
-            nodes_pods_nsgroup = nsgroup_manager.create_nsgroup(
-                name, members=members)
-        else:
+        if nodes_pods_nsgroup:
             self._nsxt_client.LOGGER.debug(f"NSGroup : {name} already exists.")
+            nsgroup_manager.delete_nsgroup(name, force=True)
+            self._nsxt_client.LOGGER.debug(f"Deleted NSGroup : {name}.")
+
+        member1 = {}
+        member1['resource_type'] = "NSGroupSimpleExpression"
+        member1['target_type'] = "NSGroup"
+        member1['target_property'] = "id"
+        member1['op'] = "EQUALS"
+        member1['value'] = nodes_nsgroup_id
+
+        member2 = {}
+        member2['resource_type'] = "NSGroupSimpleExpression"
+        member2['target_type'] = "NSGroup"
+        member2['target_property'] = "id"
+        member2['op'] = "EQUALS"
+        member2['value'] = pods_nsgroup_id
+
+        members = [member1, member2]
+
+        self._nsxt_client.LOGGER.debug(f"Creating NSGroup : {name}.")
+        nodes_pods_nsgroup = nsgroup_manager.create_nsgroup(
+            name, members=members)
 
         return nodes_pods_nsgroup
 
@@ -226,6 +250,12 @@ class ClusterNetworkIsolater(object):
                                              applied_to_nsgroup_id):
         """Create DFW Section for the cluster.
 
+        If DFW Section already exists, delete it and re-create it. Since this
+        section is based on cluster name, it possible that a previously
+        deployed cluster on deletion failed to cleanup properly. We shouldn't
+        re-use such a section rather create it afresh with new rules pointing
+        to the correct NSGroups.
+
         :param str cluster_name: name of the cluster whose network is being
             isolated.
         :param str applied_to_nsgroup_id: id of the NSGroup on which the rules
@@ -233,26 +263,29 @@ class ClusterNetworkIsolater(object):
         """
         section_name = self._get_firewall_section_name_for_cluster(
             cluster_name)
-        dwf_manager = DFWManager(self._nsxt_client)
-        section = dwf_manager.get_firewall_section(section_name)
-        if not section:
-            target = {}
-            target['target_type'] = "NSGroup"
-            target['target_id'] = applied_to_nsgroup_id
-
-            anchor_section = dwf_manager.get_firewall_section(
-                NCP_BOUNDARY_FIREWALL_SECTION_NAME)
-
-            self._nsxt_client.LOGGER.debug("Creating DFW section : "
-                                           f"{section_name}")
-            section = dwf_manager.create_firewall_section(
-                name=section_name,
-                applied_tos=[target],
-                anchor_id=anchor_section['id'],
-                insert_policy=INSERT_POLICY.INSERT_AFTER)
-        else:
+        dfw_manager = DFWManager(self._nsxt_client)
+        section = dfw_manager.get_firewall_section(section_name)
+        if section:
             self._nsxt_client.LOGGER.debug(f"DFW section : {section_name} "
                                            "already exists.")
+            dfw_manager.delete_firewall_section(section_name, cascade=True)
+            self._nsxt_client.LOGGER.debug("Deleted DFW section : "
+                                           f"{section_name} ")
+
+        target = {}
+        target['target_type'] = "NSGroup"
+        target['target_id'] = applied_to_nsgroup_id
+
+        anchor_section = dfw_manager.get_firewall_section(
+            NCP_BOUNDARY_FIREWALL_SECTION_NAME)
+
+        self._nsxt_client.LOGGER.debug("Creating DFW section : "
+                                       f"{section_name}")
+        section = dfw_manager.create_firewall_section(
+            name=section_name,
+            applied_tos=[target],
+            anchor_id=anchor_section['id'],
+            insert_policy=INSERT_POLICY.INSERT_AFTER)
 
         return section
 

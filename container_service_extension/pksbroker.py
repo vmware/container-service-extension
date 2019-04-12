@@ -299,15 +299,23 @@ class PKSBroker(AbstractBroker):
         LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to create"
                      f" cluster: {cluster_name}")
 
+        # TODO() : Rollback cluster if any error is encountered in this section
         # isolate cluster via NSX-T DFW
-        cluster_id = cluster_dict.get('uuid')
-        if cluster_id:
-            LOGGER.debug(f"Isolating network of cluster {cluster_name}.")
-            cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client)
-            cluster_network_isolater.isolate_cluster(cluster_name, cluster_id)
-        else:
-            LOGGER.error("Failed to isolate network of cluster "
-                         f"{cluster_name}. Cluster ID not found.")
+        try:
+            cluster_id = cluster_dict.get('uuid')
+            if cluster_id:
+                LOGGER.debug(f"Isolating network of cluster {cluster_name}.")
+                cluster_network_isolater = ClusterNetworkIsolater(
+                    self.nsxt_client)
+                cluster_network_isolater.isolate_cluster(cluster_name,
+                                                         cluster_id)
+            else:
+                raise CseServerError("Failed to isolate network of cluster "
+                                     f"{cluster_name}. Cluster ID not found.")
+        except Exception as err:
+            raise CseServerError("Failed to isolate network of cluster "
+                                 f"{cluster_name} : Aborting creation of "
+                                 "cluster.") from err
 
         return cluster_dict
 
@@ -448,9 +456,16 @@ class PKSBroker(AbstractBroker):
                      f" the cluster: {cluster_name}")
 
         # remove cluster network isolation
-        LOGGER.debug(f"Removing network isolation of cluster {cluster_name}.")
-        cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client)
-        cluster_network_isolater.remove_cluster_isolation(cluster_name)
+        try:
+            LOGGER.debug("Removing network isolation of cluster "
+                         f"{cluster_name}.")
+            cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client)
+            cluster_network_isolater.remove_cluster_isolation(cluster_name)
+        except Exception:
+            # NSX-T oprations are idempotent so they should not cause erros
+            # if say NSGroup is missing. But for any other exception, simply
+            # them and ignore.
+            pass
 
         result['cluster_name'] = cluster_name
         result['task_status'] = 'in progress'
