@@ -893,7 +893,8 @@ def list(ctx):
 def enablek8s(ctx, ovdc_name, container_provider,
               pks_plan, pks_cluster_domain, org_name):
     """Enable ovdc for k8s deployment on PKS or vCD."""
-    if 'pks' == container_provider and (pks_plan or pks_cluster_domain):
+    if 'pks' == container_provider and\
+            (pks_plan is None or pks_cluster_domain is None):
         click.secho("One or both of the required params (--pks-plan,"
                     " --pks-cluster-domain) are missing", fg='yellow')
     else:

@@ -424,7 +424,6 @@ class BrokerManager(object):
                     ovdc_name=ovdc_name, org_name=org_name,
                     credentials_required=True, nsxt_info_required=True)
             return ctr_prov_ctx
-        return None
 
     def get_broker_based_on_vdc(self, vdc_metadata=None):
         """Get the broker based on ovdc.
@@ -433,9 +432,7 @@ class BrokerManager(object):
 
         :rtype: container_service_extension.abstract_broker.AbstractBroker
         """
-        ctr_prov_ctx = vdc_metadata
-        if not ctr_prov_ctx:
-            ctr_prov_ctx = self._get_ctr_ctx_from_ovdc_metadata()
+        ctr_prov_ctx = vdc_metadata or self._get_ctr_ctx_from_ovdc_metadata()
 
         if ctr_prov_ctx and ctr_prov_ctx.get(
                 CONTAINER_PROVIDER_KEY) == CtrProvType.PKS.value:
