@@ -211,5 +211,6 @@ def _test_redaction_filter():
         "'container_provider': 'pks'}"
     logger.debug(msg)
 
+
 if __name__ == "__main__":
     _test_redaction_filter()
