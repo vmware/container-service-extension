@@ -16,6 +16,8 @@ from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.ovdc_cache import CONTAINER_PROVIDER_KEY
 from container_service_extension.ovdc_cache import CtrProvType
 from container_service_extension.ovdc_cache import OvdcCache
+from container_service_extension.pks_cache import PKS_CLUSTER_DOMAIN_KEY
+from container_service_extension.pks_cache import PKS_PLANS_KEY
 from container_service_extension.pksbroker import PKSBroker
 from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import connect_vcd_user_via_token
@@ -158,8 +160,6 @@ class BrokerManager(object):
                 'storage_profile': self.req_spec.get('storage_profile', None),
                 'network_name': self.req_spec.get('network', None),
                 'template': self.req_spec.get('template', None),
-                'pks_plan': self.req_spec.get('pks_plan', None),
-                'pks_ext_host': self.req_spec.get('pks_ext_host', None)
             }
             result['body'] = self._create_cluster(**cluster_spec)
             result['status_code'] = ACCEPTED
@@ -297,7 +297,13 @@ class BrokerManager(object):
         cluster_name = cluster_spec['cluster_name']
         cluster = self._find_cluster_in_org(cluster_name)[0]
         if not cluster:
-            broker = self.get_broker_based_on_vdc()
+            ctr_prov_ctx = self._get_ctr_prov_ctx_from_ovdc_metadata()
+            if ctr_prov_ctx.get(
+                    CONTAINER_PROVIDER_KEY) == CtrProvType.PKS.value:
+                cluster_spec['pks_plan'] = ctr_prov_ctx[PKS_PLANS_KEY][0]
+                cluster_spec['pks_ext_host'] = f"{cluster_name}." \
+                    f"{ctr_prov_ctx[PKS_CLUSTER_DOMAIN_KEY]}"
+            broker = self._get_broker_based_on_ctr_prov_ctx(ctr_prov_ctx)
             return broker.create_cluster(**cluster_spec)
         else:
             raise CseServerError(f'Cluster with name: {cluster_name} '
@@ -396,13 +402,42 @@ class BrokerManager(object):
         # Extract vdc name from compute-profile-name
         # Example: vdc name in the below compute profile is: vdc-PKS1
         # compute-profile: cp--f3272127-9b7f-4f90-8849-0ee70a28be56--vdc-PKS1
-        compute_profile_name = cluster.get('compute-profile-name', '')
+        compute_profile_name = cluster.get('compute_profile_name', '')
         pks_cluster['vdc'] = compute_profile_name.split('--')[-1] \
             if compute_profile_name else ''
         pks_cluster['status'] = \
-            cluster.get('last-action', '').lower() + ' ' + \
-            pks_cluster.get('status', '').lower()
+            cluster.get('last_action', '').lower() + ' ' + \
+            cluster.get('last_action_state', '').lower()
         return pks_cluster
+
+    def _get_ctr_prov_ctx_from_ovdc_metadata(self, ovdc_name=None,
+                                             org_name=None):
+
+        ovdc_name = \
+            ovdc_name or self.req_spec.get('vdc') or \
+            self.req_qparams.get('vdc')
+        org_name = \
+            org_name or self.req_spec.get('org') or \
+            self.req_qparams.get('org') or self.session.get('org')
+
+        if ovdc_name and org_name:
+            ctr_prov_ctx = \
+                self.ovdc_cache.get_ovdc_container_provider_metadata(
+                    ovdc_name=ovdc_name, org_name=org_name,
+                    credentials_required=True, nsxt_info_required=True)
+            return ctr_prov_ctx
+
+    def _get_broker_based_on_ctr_prov_ctx(self, ctr_prov_ctx):
+
+        if ctr_prov_ctx and ctr_prov_ctx.get(
+                CONTAINER_PROVIDER_KEY) == CtrProvType.PKS.value:
+            return PKSBroker(self.req_headers, self.req_spec,
+                             pks_ctx=ctr_prov_ctx)
+        else:
+            # TODO() - This call should be based on a boolean flag
+            # Specify flag in config file whether to have default
+            # handling is required for missing ovdc or org.
+            return VcdBroker(self.req_headers, self.req_spec)
 
     def get_broker_based_on_vdc(self):
         """Get the broker based on ovdc.
@@ -411,44 +446,24 @@ class BrokerManager(object):
 
         :rtype: container_service_extension.abstract_broker.AbstractBroker
         """
-        ovdc_name = self.req_spec.get('vdc') or \
+        ovdc_name = \
+            self.req_spec.get('vdc') or \
             self.req_qparams.get('vdc')
-        org_name = self.req_spec.get('org') or \
+        org_name = \
+            self.req_spec.get('org') or \
             self.req_qparams.get('org') or \
             self.session.get('org')
 
-        LOGGER.debug(f"org_name={org_name};vdc_name=\'{ovdc_name}\'")
+        ctr_prov_ctx = self._get_ctr_prov_ctx_from_ovdc_metadata(
+            ovdc_name=ovdc_name, org_name=org_name)
 
-        # Get the ovdc metadata using org and ovdc.
-        # Create the right broker based on value of 'container_provider'.
-        # Fall back to DefaultBroker for missing ovdc or org.
-        if ovdc_name and org_name:
-            ctr_prov_ctx = \
-                self.ovdc_cache.get_ovdc_container_provider_metadata(
-                    ovdc_name=ovdc_name, org_name=org_name,
-                    credentials_required=True, nsxt_info_required=True)
-            LOGGER.debug(
-                f"ovdc metadata for {ovdc_name}-{org_name}=>{ctr_prov_ctx}")
-            if ctr_prov_ctx.get(CONTAINER_PROVIDER_KEY) == \
-                    CtrProvType.PKS.value:
-                return PKSBroker(self.req_headers, self.req_spec,
-                                 pks_ctx=ctr_prov_ctx)
-            elif ctr_prov_ctx.get(CONTAINER_PROVIDER_KEY) == \
-                    CtrProvType.VCD.value:
-                return VcdBroker(self.req_headers, self.req_spec)
-            else:
-                raise CseServerError(f"Vdc '{ovdc_name}' is not enabled for "
-                                     "Kubernetes cluster deployment")
-        else:
-            # TODO() - This call should be based on a boolean flag
-            # Specify flag in config file whether to have default
-            # handling is required for missing ovdc or org.
-            return VcdBroker(self.req_headers, self.req_spec)
+        return self._get_broker_based_on_ctr_prov_ctx(ctr_prov_ctx)
 
     def _get_ovdc_params(self):
         ovdc_id = self.req_spec.get('ovdc_id')
         org_name = self.req_spec.get('org_name')
         pks_plans = self.req_spec['pks_plans']
+        pks_cluster_domain = self.req_spec['pks_cluster_domain']
         ovdc = self.ovdc_cache.get_ovdc(ovdc_id=ovdc_id)
         pvdc_id = self.ovdc_cache.get_pvdc_id(ovdc)
 
@@ -477,6 +492,7 @@ class BrokerManager(object):
                 nsxt_info=nsxt_info,
                 pks_compute_profile_name=pks_compute_profile_name,
                 pks_plans=pks_plans,
+                pks_cluster_domain=pks_cluster_domain,
                 credentials_required=True)
 
         return pks_context, ovdc

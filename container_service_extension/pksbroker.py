@@ -16,7 +16,7 @@ from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.nsxt.cluster_network_isolater import \
     ClusterNetworkIsolater
 from container_service_extension.nsxt.nsxt_client import NSXTClient
-from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE
+from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE_KEY
 from container_service_extension.pksclient.api.v1.cluster_api \
     import ClusterApi as ClusterApiV1
 from container_service_extension.pksclient.api.v1beta.cluster_api \
@@ -25,8 +25,12 @@ from container_service_extension.pksclient.api.v1beta.profile_api \
     import ProfileApi
 from container_service_extension.pksclient.client.v1.api_client \
     import ApiClient as ApiClientV1
+from container_service_extension.pksclient.client.v1.rest\
+    import ApiException as v1Exception
 from container_service_extension.pksclient.client.v1beta.api_client \
     import ApiClient as ApiClientV1Beta
+from container_service_extension.pksclient.client.v1beta.rest\
+    import ApiException as v1BetaException
 from container_service_extension.pksclient.configuration import Configuration
 from container_service_extension.pksclient.models.v1.\
     update_cluster_parameters import UpdateClusterParameters
@@ -39,7 +43,6 @@ from container_service_extension.pksclient.models.v1beta.\
     compute_profile_parameters import ComputeProfileParameters
 from container_service_extension.pksclient.models.v1beta.\
     compute_profile_request import ComputeProfileRequest
-from container_service_extension.pksclient.rest import ApiException
 from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.uaaclient.uaaclient import UaaClient
@@ -87,7 +90,7 @@ class PKSBroker(AbstractBroker):
             f"https://{pks_ctx['host']}:{pks_ctx['uaac_port']}"
         self.proxy_uri = f"http://{pks_ctx['proxy']}:80" \
             if pks_ctx.get('proxy') else None
-        self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE)
+        self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE_KEY, None)
         self.nsxt_server = \
             get_pks_cache().get_nsxt_info(pks_ctx.get('vc'))
         if self.nsxt_server:
@@ -196,27 +199,29 @@ class PKSBroker(AbstractBroker):
                      f"to list all clusters")
         try:
             clusters = cluster_api.list_clusters()
-        except ApiException as err:
+        except v1Exception as err:
             LOGGER.debug(f"Listing PKS clusters failed with error:\n {err}")
             raise PksServerError(err.status, err.body)
 
         list_of_cluster_dicts = []
         for cluster in clusters:
-            cluster_dict = {
-                'name': cluster.name,
-                'plan-name': cluster.plan_name,
-                'uuid': cluster.uuid,
-                'status': cluster.last_action_state,
-                'last-action': cluster.last_action,
-                'k8_master_ips': cluster.kubernetes_master_ips,
-                # TODO(list-clusters) PKS has removed the param
-                #  compute_profile_name from cluster object of v1 endpoint and
-                #  they have not added support for it in v1beta endpoint.
-                #  Fix will be coming soon.
-                # 'compute-profile-name': cluster.compute_profile_name,
-                'worker_count': cluster.parameters.kubernetes_worker_instances
-            }
-            list_of_cluster_dicts.append(cluster_dict)
+            # TODO() Below is a temporary fix to retrieve compute_profile_name.
+            #  Expensive _get_cluster_info() call must be removed once PKS team
+            #  moves list_clusters to v1beta endpoint.
+            v1_beta_cluster = self._get_cluster_info(cluster_name=cluster.name)
+            # cluster_dict = {
+            #     'name': cluster.name,
+            #     'plan_name': cluster.plan_name,
+            #     'uuid': cluster.uuid,
+            #     'status': cluster.last_action_state,
+            #     'last_action': cluster.last_action,
+            #     'k8_master_ips': cluster.kubernetes_master_ips,
+            #     'compute_profile_name': cluster.compute_profile_name,
+            #     'worker_count':
+            #     cluster.parameters.kubernetes_worker_instances
+            # }
+            # list_of_cluster_dicts.append(cluster_dict)
+            list_of_cluster_dicts.append(v1_beta_cluster)
 
         LOGGER.debug(f"Received response from PKS: {self.pks_host_uri} on the"
                      f" list of clusters: {list_of_cluster_dicts}")
@@ -287,10 +292,11 @@ class PKSBroker(AbstractBroker):
                      f"cluster of name: {cluster_name}")
         try:
             cluster = cluster_api.add_cluster(cluster_request)
-        except ApiException as err:
+        except v1BetaException as err:
             LOGGER.debug(f"Creating cluster {cluster_name} in PKS failed with "
                          f"error:\n {err}")
             raise PksServerError(err.status, err.body)
+
         cluster_dict = cluster.to_dict()
         # Flattening the dictionary
         cluster_params_dict = cluster_dict.pop('parameters')
@@ -361,7 +367,7 @@ class PKSBroker(AbstractBroker):
                      f"details of cluster with name: {cluster_name}")
         try:
             cluster = cluster_api.get_cluster(cluster_name=cluster_name)
-        except ApiException as err:
+        except v1BetaException as err:
             LOGGER.debug(f"Getting cluster info on {cluster_name} failed with "
                          f"error:\n {err}")
             raise PksServerError(err.status, err.body)
@@ -447,7 +453,7 @@ class PKSBroker(AbstractBroker):
                      f"the cluster with name: {cluster_name}")
         try:
             cluster_api.delete_cluster(cluster_name=cluster_name)
-        except ApiException as err:
+        except v1Exception as err:
             LOGGER.debug(f"Deleting cluster {cluster_name} failed with "
                          f"error:\n {err}")
             raise PksServerError(err.status, err.body)
@@ -513,7 +519,7 @@ class PKSBroker(AbstractBroker):
             kubernetes_worker_instances=node_count)
         try:
             cluster_api.update_cluster(cluster_name, body=resize_params)
-        except ApiException as err:
+        except v1Exception as err:
             LOGGER.debug(f"Resizing cluster {cluster_name} failed with "
                          f"error:\n {err}")
             raise PksServerError(err.status, err.body)
@@ -574,7 +580,7 @@ class PKSBroker(AbstractBroker):
                      f"the compute profile: {cp_name} for ovdc {ovdc_rp_name}")
         try:
             profile_api.add_compute_profile(body=cp_request)
-        except ApiException as err:
+        except v1BetaException as err:
             LOGGER.debug(f"Creating compute-profile {cp_name} in PKS failed "
                          f"with error:\n {err}")
             raise PksServerError(err.status, err.body)
@@ -603,7 +609,7 @@ class PKSBroker(AbstractBroker):
         try:
             compute_profile = \
                 profile_api.get_compute_profile(profile_name=cp_name)
-        except ApiException as err:
+        except v1BetaException as err:
             LOGGER.debug(f"Creating compute-profile {cp_name} in PKS failed "
                          f"with error:\n {err}")
             raise PksServerError(err.status, err.body)
@@ -632,7 +638,7 @@ class PKSBroker(AbstractBroker):
                      f"list of compute profiles")
         try:
             cp_list = profile_api.list_compute_profiles()
-        except ApiException as err:
+        except v1BetaException as err:
             LOGGER.debug(f"Listing compute-profiles in PKS failed "
                          f"with error:\n {err}")
             raise PksServerError(err.status, err.body)
@@ -663,7 +669,7 @@ class PKSBroker(AbstractBroker):
 
         try:
             profile_api.delete_compute_profile(profile_name=cp_name)
-        except ApiException as err:
+        except v1BetaException as err:
             LOGGER.debug(f"Deleting compute-profile {cp_name} in PKS failed "
                          f"with error:\n {err}")
             raise PksServerError(err.status, err.body)

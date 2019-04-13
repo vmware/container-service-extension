@@ -28,6 +28,7 @@ from __future__ import absolute_import
 # import ApiClient
 from container_service_extension.pksclient.client.v1.api_client import ApiClient
 from container_service_extension.pksclient.client.v1.configuration import Configuration
+from container_service_extension.pksclient.client.v1.rest import ApiException
 # import models into sdk package
 # from container_service_extension.pksclient.models.v1.cluster import Cluster
 # from container_service_extension.pksclient.models.v1.cluster_parameters import ClusterParameters
