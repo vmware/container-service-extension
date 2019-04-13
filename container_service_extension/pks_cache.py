@@ -57,7 +57,7 @@ class PksCache(object):
         """
         orgs_to_pks_account_mapper = {}
         for org in orgs:
-                orgs_to_pks_account_mapper[org['name']] = org['pks_accounts']
+            orgs_to_pks_account_mapper[org['name']] = org['pks_accounts']
         super().__setattr__("orgs_to_pks_account_mapper",
                             orgs_to_pks_account_mapper)
 
