@@ -54,7 +54,7 @@ class Ovdc(object):
             'ovdc_name': ovdc_name,
             'container_provider': container_provider,
             'pks_plans': pks_plan,
-            'pks_cluster_domain':pks_cluster_domain,
+            'pks_cluster_domain': pks_cluster_domain,
             'org_name': org_name,
             'enable': True
         }

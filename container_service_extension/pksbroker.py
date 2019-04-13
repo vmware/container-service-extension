@@ -16,7 +16,6 @@ from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.nsxt.cluster_network_isolater import \
     ClusterNetworkIsolater
 from container_service_extension.nsxt.nsxt_client import NSXTClient
-from container_service_extension.pks_cache import PKS_CLUSTER_DOMAIN_KEY
 from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE_KEY
 from container_service_extension.pksclient.api.v1.cluster_api \
     import ClusterApi as ClusterApiV1
@@ -26,8 +25,12 @@ from container_service_extension.pksclient.api.v1beta.profile_api \
     import ProfileApi
 from container_service_extension.pksclient.client.v1.api_client \
     import ApiClient as ApiClientV1
+from container_service_extension.pksclient.client.v1.rest\
+    import ApiException as v1Exception
 from container_service_extension.pksclient.client.v1beta.api_client \
     import ApiClient as ApiClientV1Beta
+from container_service_extension.pksclient.client.v1beta.rest\
+    import ApiException as v1BetaException
 from container_service_extension.pksclient.configuration import Configuration
 from container_service_extension.pksclient.models.v1.\
     update_cluster_parameters import UpdateClusterParameters
@@ -40,10 +43,6 @@ from container_service_extension.pksclient.models.v1beta.\
     compute_profile_parameters import ComputeProfileParameters
 from container_service_extension.pksclient.models.v1beta.\
     compute_profile_request import ComputeProfileRequest
-from container_service_extension.pksclient.client.v1.rest\
-    import ApiException as v1Exception
-from container_service_extension.pksclient.client.v1beta.rest\
-    import ApiException as v1BetaException
 from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.uaaclient.uaaclient import UaaClient
@@ -206,7 +205,7 @@ class PKSBroker(AbstractBroker):
 
         list_of_cluster_dicts = []
         for cluster in clusters:
-            # TODO Below is a temporary fix to retrieve compute_profile_name.
+            # TODO() Below is a temporary fix to retrieve compute_profile_name.
             #  Expensive _get_cluster_info() call must be removed once PKS team
             #  moves list_clusters to v1beta endpoint.
             v1_beta_cluster = self._get_cluster_info(cluster_name=cluster.name)
@@ -218,9 +217,10 @@ class PKSBroker(AbstractBroker):
             #     'last_action': cluster.last_action,
             #     'k8_master_ips': cluster.kubernetes_master_ips,
             #     'compute_profile_name': cluster.compute_profile_name,
-            #     'worker_count': cluster.parameters.kubernetes_worker_instances
+            #     'worker_count':
+            #     cluster.parameters.kubernetes_worker_instances
             # }
-            #list_of_cluster_dicts.append(cluster_dict)
+            # list_of_cluster_dicts.append(cluster_dict)
             list_of_cluster_dicts.append(v1_beta_cluster)
 
         LOGGER.debug(f"Received response from PKS: {self.pks_host_uri} on the"
