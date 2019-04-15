@@ -66,7 +66,7 @@ class Ovdc(object):
             uri,
             self.client._session,
             contents=data,
-            media_type=None,
+            media_type='application/json',
             accept_type='application/*+json')
         return process_response(response)
 
@@ -99,7 +99,7 @@ class Ovdc(object):
             uri,
             self.client._session,
             contents=data,
-            media_type=None,
+            media_type='application/json',
             accept_type='application/*+json')
         return process_response(response)
 
