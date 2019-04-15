@@ -98,12 +98,6 @@ Examples
         Resize the cluster size to 10 worker nodes. On resize failure,
         cluster will be left cluster in error state for troubleshooting.
 \b
-    vcd cse cluster create mycluster --pks-external-hostname api.pks.local
-    --pks-plan 'myPlan'
-        Create a Kubernetes cluster named 'mycluster' with external host name
-        as 'api.pks.local' and available PKS-plan 'myPlan' using the VDC in
-        context explicitly dedicated for PKS cluster creation.
-\b
     vcd cse cluster config mycluster > ~/.kube/config
         Write cluster config details into '~/.kube/config' to manage cluster
         using kubectl.
@@ -780,25 +774,14 @@ Currently supported Kubernetes-providers:
 
 \b
 Examples
-        vcd cse ovdc enablek8s 'myOrgVdc' --container-provider pks
-        --pks-plan 'plan1' --pks-cluster-domain 'org.com'
-            Enable 'myOrgVdc' for k8s deployment on container-provider
-            PKS with plan 'plan1' with cluster domain 'org.com'.
-            If no --org-name is provided, organization of the logged-in user
-            is used to find 'myOrgVdc'.
-\b
-        vcd cse ovdc enablek8s 'myOrgVdc' --container-provider pks
-        --pks-plan 'plan1' --pks-cluster-domain 'org.com' --org 'myOrg'
-            Enable 'myOrgVdc' that backs organization 'myOrg', for k8s
-            deployment on PKS with plan 'plan1' with cluster domain 'org.com'.
-\b
     vcd cse ovdc enable ovdc1 --k8s-provider native
         Set 'ovdc1' Kubernetes provider to be native (vCD)
 \b
     vcd cse ovdc enable ovdc2 --k8s-provider ent-pks \\
-    --pks-plans 'plan1,plan2' ?
+    --pks-plan 'plan1' --pks-cluster-domain 'myorg.com'
         Set 'ovdc2' Kubernetes provider to be ent-pks.
-        Use pks plans 'plan1' and 'plan2' for 'ovdc2'.
+        Use pks plan 'plan1' for 'ovdc2'.
+        Set cluster domain to be 'myorg.com'
 \b
     vcd cse ovdc disable ovdc3
         Set 'ovdc3' Kubernetes provider to be none,
@@ -839,22 +822,23 @@ def list_ovdcs(ctx):
     'k8s_provider',
     required=True,
     type=click.Choice([K8sProviders.NATIVE, K8sProviders.PKS]),
-    help="Name of the Kubernetes provider")
+    help="Name of the Kubernetes provider to use for this org VDC")
 @click.option(
     '-p',
     '--pks-plan',
     'pks_plan',
     required=False,
-    metavar='plan1,plan2',
-    help=f"PKS plans to use. (Required if --k8s-provider={K8sProviders.PKS})")
+    metavar='PLAN_NAME',
+    help=f"PKS plan to use for all cluster deployments in this org VDC "
+         f"(Exclusive to --k8s-provider={K8sProviders.PKS}) (Required)")
 @click.option(
     '-d',
     '--pks-cluster-domain',
     'pks_cluster_domain',
     required=False,
-    help="Suffix of the domain name, which will be used to construct FQDN of "
-         "clusters that get deployed in this ovdc. This is a required "
-         "argument, if --container-provider is set to 'pks'")
+    help=f"Domain name suffix used to construct FQDN of deployed clusters "
+         f"in this org VDC "
+         f"(Exclusive to --k8s-provider={K8sProviders.PKS}) (Required)")
 @click.option(
     '-o',
     '--org',
@@ -863,10 +847,11 @@ def list_ovdcs(ctx):
     required=False,
     metavar='ORG_NAME',
     help="Org to use. Defaults to currently logged-in org")
-def ovdc_enable(ctx, ovdc_name, k8s_provider, pks_plans, pks_cluster_domain, org_name):
+def ovdc_enable(ctx, ovdc_name, k8s_provider, pks_plan, pks_cluster_domain,
+                org_name):
     """Set Kubernetes provider for an org VDC."""
     if k8s_provider == K8sProviders.PKS and \
-            (pks_plans is None or pks_cluster_domain is None):
+            (pks_plan is None or pks_cluster_domain is None):
         click.secho("One or both of the required params (--pks-plan,"
                     " --pks-cluster-domain) are missing", fg='yellow')
         return
@@ -881,7 +866,7 @@ def ovdc_enable(ctx, ovdc_name, k8s_provider, pks_plans, pks_cluster_domain, org
             result = ovdc.enable_ovdc_for_k8s(
                 ovdc_name,
                 k8s_provider=k8s_provider,
-                pks_plans=pks_plans,
+                pks_plan=pks_plan,
                 pks_cluster_domain=pks_cluster_domain,
                 org_name=org_name)
         else:
