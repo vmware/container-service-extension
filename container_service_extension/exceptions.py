@@ -21,7 +21,7 @@ class ClusterAlreadyExistsError(CseServerError):
 
 
 class ClusterNotFoundError(CseServerError):
-    """Raised when cluster is not found in the environment"""
+    """Raised when cluster is not found in the environment."""
 
 
 class ClusterJoiningError(ClusterOperationError):
@@ -88,7 +88,7 @@ class VcdResponseError(Exception):
 
 
 class PksServerError(CseServerError):
-    """Raised when error is received from PKS"""
+    """Raised when error is received from PKS."""
 
     def __init__(self, status, body=None):
         self.status = status
@@ -99,5 +99,4 @@ class PksServerError(CseServerError):
 
 
 class PksConnectionError(PksServerError):
-    """Raised when connection establishment to PKS fails"""
-
+    """Raised when connection establishment to PKS fails."""

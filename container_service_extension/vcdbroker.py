@@ -553,7 +553,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
         template = self.get_template(name=clusters[0]['template'])
         server_config = get_server_runtime_config()
         result = get_cluster_config(server_config, vapp,
-                                            template['admin_password'])
+                                    template['admin_password'])
         return result
 
     @exception_handler
