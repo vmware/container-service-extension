@@ -48,6 +48,7 @@ from container_service_extension.utils import create_and_share_catalog
 from container_service_extension.utils import download_file
 from container_service_extension.utils import EXCHANGE_TYPE
 from container_service_extension.utils import get_data_file
+from container_service_extension.utils import get_duplicate_items_in_list
 from container_service_extension.utils import get_org
 from container_service_extension.utils import get_vdc
 from container_service_extension.utils import get_vsphere
@@ -91,7 +92,8 @@ INSTRUCTIONS_FOR_PKS_CONFIG_FILE = "\
 #          the field 'name' of the corresponding PKS api server.\n\
 #   4. nsxt_servers:\n\
 #       a. Each entry in the list represents a NSX-T server that has been \n\
-#          alongside a PKS server to manage its networking.\n\
+#          alongside a PKS server to manage its networking. CSE needs these \n\
+#          details to enforce network isolation of clusters.\n\
 #       b. The field 'name' in each entry should be unique. The value of \n\
 #          the field has no bearing on the real world NSX-T server, it's \n\
 #          used to tie in various segments of the config file together.\n\
@@ -99,11 +101,9 @@ INSTRUCTIONS_FOR_PKS_CONFIG_FILE = "\
 #          which owns this account. It's value should be equal to value of \n\
 #          the field 'name' of the corresponding PKS api server.\n\
 #       d. The field 'distributed_firewall_section_anchor_id' should be \n\
-#          populated with id of a Distributed Firewall Section, above which \n\
-#          CSE will create an empty Section to guide NCP to create dynamic \n\
-#          Distributed Firewall rules. Normally it can be the id of the \n\
-#          section called 'Default Layer3 Section' which PKS creates on \n\
-#          installation.\n\
+#          populated with id of a Distributed Firewall Section e.g. it can \n\
+#          be the id of the section called 'Default Layer3 Section' which \n\
+#          PKS creates on installation.\n\
 # For more information, please refer to CSE documentation page:\n\
 # https://vmware.github.io/container-service-extension/INSTALLATION.html\n"
 
@@ -656,18 +656,6 @@ def validate_pks_config_structure(pks_config):
             excluded_keys=['proxy'])
 
 
-def _get_duplicate_in_list(data):
-    seen = set()
-    duplicates = set()
-    if data:
-        for x in data:
-            if x in seen:
-                duplicates.add(x)
-            else:
-                seen.add(x)
-    return list(duplicates)
-
-
 def validate_pks_config_data_integrity(pks_config):
     all_pks_servers = \
         [entry['name'] for entry in pks_config[PKS_SERVERS_SECTION_KEY]]
@@ -675,14 +663,14 @@ def validate_pks_config_data_integrity(pks_config):
         [entry['name'] for entry in pks_config[PKS_ACCOUNTS_SECTION_KEY]]
 
     # Check for duplicate pks api server names
-    duplicate_pks_server_names = _get_duplicate_in_list(all_pks_servers)
+    duplicate_pks_server_names = get_duplicate_items_in_list(all_pks_servers)
     if len(duplicate_pks_server_names) != 0:
         raise ValueError(
             f"Duplicate PKS api server(s) : {duplicate_pks_server_names} found"
             f" in Section : {PKS_SERVERS_SECTION_KEY}")
 
     # Check for duplicate pks account names
-    duplicate_pks_account_names = _get_duplicate_in_list(all_pks_accounts)
+    duplicate_pks_account_names = get_duplicate_items_in_list(all_pks_accounts)
     if len(duplicate_pks_account_names) != 0:
         raise ValueError(
             f"Duplicate PKS account(s) : {duplicate_pks_account_names} found"
