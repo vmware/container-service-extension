@@ -200,12 +200,13 @@ class Service(object, metaclass=Singleton):
         LOGGER.info(message)
 
         if self.config.get('pks_config'):
+            pks_config = self.config.get('pks_config')
             self.pks_cache = PksCache(
-                pks_servers=self.config.get('pks_config').get('pks_servers'),
-                pks_accounts=self.config.get('pks_config').get('pks_accounts'),
-                pvdcs=self.config.get('pks_config').get('pvdcs'),
-                orgs=self.config.get('pks_config').get('orgs'),
-                nsxt_servers=self.config.get('pks_config').get('nsxt_servers'))
+                pks_servers=pks_config.get('pks_api_servers', []),
+                pks_accounts=pks_config.get('pks_accounts', []),
+                pvdcs=pks_config.get('pvdcs', []),
+                orgs=pks_config.get('orgs', []),
+                nsxt_servers=pks_config.get('nsxt_servers', []))
 
         amqp = self.config['amqp']
         num_consumers = self.config['service']['listeners']

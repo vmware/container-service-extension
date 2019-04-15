@@ -2,6 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from http import HTTPStatus
 import json
 
 import requests
@@ -73,7 +74,8 @@ class NSXTClient(object):
         try:
             self.do_request(RequestMethodVerb.GET, "")
         except RequestException as err:
-            if err.response.status_code == 404:
+            if err.response is not None and \
+                    (err.response.status_code == HTTPStatus.NOT_FOUND):
                 return True
             else:
                 return False

@@ -220,6 +220,27 @@ def bool_to_msg(value):
     return 'fail'
 
 
+def get_duplicate_items_in_list(items):
+    """Find duplicate entries in a list.
+
+    :param list items: list of items with possible duplicates.
+
+    :return: the items that occur more than once in niput list. Each duplicated
+        item will be mentioned only once in the returned list.
+
+    :rtype: list
+    """
+    seen = set()
+    duplicates = set()
+    if items:
+        for item in items:
+            if item in seen:
+                duplicates.add(item)
+            else:
+                seen.add(item)
+    return list(duplicates)
+
+
 def get_sha256(filepath):
     """Get sha256 hash of file as a string.
 

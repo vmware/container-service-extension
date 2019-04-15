@@ -69,7 +69,7 @@ class PksCache(object):
 
         vc_to_nsxt_server_mapper = {}
         for nsxt_server in nsxt_servers:
-            pks_server = pks_servers_table[nsxt_server['pks_server']]
+            pks_server = pks_servers_table[nsxt_server['pks_api_server']]
             vc_to_nsxt_server_mapper[pks_server['vc']] = nsxt_server
         super().__setattr__("vc_to_nsxt_server_mapper",
                             vc_to_nsxt_server_mapper)
@@ -224,7 +224,7 @@ class PksCache(object):
         for pvdc in pvdcs:
             pvdc_name = pvdc['name']
             cluster = pvdc['cluster']
-            pks_server_name = pvdc['pks_server']
+            pks_server_name = pvdc['pks_api_server']
 
             pks_server = self.pks_servers_table.get(pks_server_name)
             vc = pks_server['vc']
@@ -260,7 +260,7 @@ class PksCache(object):
             credentials = Credentials(pks_account['username'],
                                       pks_account['secret'])
 
-            pks_server_name = pks_account['pks_server']
+            pks_server_name = pks_account['pks_api_server']
             pks_server = self.pks_servers_table.get(pks_server_name)
 
             pks_proxy = '' \

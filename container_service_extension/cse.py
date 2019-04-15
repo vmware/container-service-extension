@@ -113,6 +113,7 @@ def version(ctx):
 @cli.command('sample', short_help='generate sample configuration')
 @click.pass_context
 @click.option(
+    '-o',
     '--output',
     'output',
     required=False,
@@ -120,6 +121,7 @@ def version(ctx):
     metavar='<output-file-name>',
     help="Name of the config file to dump the CSE configs to.")
 @click.option(
+    '-p',
     '--pks-output',
     'pks_output',
     required=False,
