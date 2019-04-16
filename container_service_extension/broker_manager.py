@@ -460,13 +460,13 @@ class BrokerManager(object):
     def _get_ovdc_params(self):
         ovdc_id = self.req_spec.get('ovdc_id')
         org_name = self.req_spec.get('org_name')
-        pks_plans = self.req_spec['pks_plans']
-        pks_cluster_domain = self.req_spec['pks_cluster_domain']
         ovdc = self.ovdc_cache.get_ovdc(ovdc_id=ovdc_id)
         pvdc_id = self.ovdc_cache.get_pvdc_id(ovdc)
 
         pks_context = None
         if self.req_spec[K8S_PROVIDER_KEY] == K8sProviders.PKS:
+            pks_plans = self.req_spec['pks_plans']
+            pks_cluster_domain = self.req_spec['pks_cluster_domain']
             if not self.pks_cache:
                 raise CseServerError('PKS config file does not exist')
             pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)
