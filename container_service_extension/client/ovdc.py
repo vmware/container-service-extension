@@ -5,6 +5,7 @@
 from pyvcloud.vcd import utils
 
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
+from container_service_extension.server_constants import K8sProviders
 from container_service_extension.utils import get_vdc
 from container_service_extension.utils import process_response
 
@@ -88,7 +89,7 @@ class Ovdc(object):
         data = {
             'ovdc_id': ovdc_id,
             'ovdc_name': ovdc_name,
-            K8S_PROVIDER_KEY: None,
+            K8S_PROVIDER_KEY: K8sProviders.NONE,
             'pks_plans': None,
             'org_name': org_name,
             'disable': True
