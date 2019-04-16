@@ -94,6 +94,7 @@ class Ovdc(object):
             'ovdc_name': ovdc_name,
             K8S_PROVIDER_KEY: K8sProviders.NONE,
             'pks_plans': None,
+            'pks_cluster_domain': None,
             'org_name': org_name,
             'disable': True
         }
