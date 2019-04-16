@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Role Based Access Control
+title: Enterprise-PKS enablement
 ---
 
 # Enterprise-PKS enablement
@@ -12,16 +12,16 @@ CSE 2.0 begins to support K8 cluster deployment not only on vCD (native) but als
 ### Logical view of CSE
 ![logical-view-cse](img/ent-pks/01-Logical-view-CSE.png)
 ### Logical view of vCD datacenters
-![logical-view-vcd](img/ent-pks/02-Logical-view-vCD.png)
-### End-to-end communication flow between CSE and K8-Providers
+![logical-view-vcd](img/ent-pks/02-Logical-view-VCD.png)
+### Communication flow between CSE and K8-Providers
 ![communication-flow](img/ent-pks/03-Communication-flow.png)
-<a name="assumptions"></a>
-## Assumptions
-<a name="recommendations"></a>
-## Recommendations
 <a name="persona based workflows"></a>
 ## Persona based workflows
 ### Service-provider (Cloud admin)
 ### Tenant-user
+<a name="assumptions"></a>
+## Assumptions
+<a name="recommendations"></a>
+## Recommendations
 <a name="faq"></a>
 ## FAQ
