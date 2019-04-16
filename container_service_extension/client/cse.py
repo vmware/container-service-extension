@@ -792,21 +792,35 @@ Examples
 \b
     vcd cse ovdc list
         Display ovdcs in vCD that are visible to the logged in user.
+        vcd cse ovdc list
+\b
+        vcd cse ovdc list --pks-plans
+            Displays list of ovdcs in a given org along with available PKS
+            plans if any. If executed by System-administrator, it will
+            display all ovdcs from all orgs.
     """
     pass
-
 
 @ovdc_group.command('list',
                     short_help='Display org VDCs in vCD that are visible '
                                'to the logged in user')
+@click.option(
+        '-p',
+        '--pks-plans',
+        'pks_plans',
+        required=False,
+        is_flag=True,
+        default=False,
+        help="This option acts as a flag to get the list"
+             " of available PKS plans for the ovdcs.")
 @click.pass_context
-def list_ovdcs(ctx):
+def list_ovdcs(ctx, pks_plans):
     """Display org VDCs in vCD that are visible to the logged in user."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
         ovdc = Ovdc(client)
-        result = ovdc.list()
+        result = ovdc.list(pks_plans_info_needed=pks_plans)
         stdout(result, ctx, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
@@ -932,5 +946,42 @@ def ovdc_info(ctx, ovdc_name, org_name):
             stdout(result, ctx)
         else:
             stderr("Unauthorized operation", ctx)
+    except Exception as e:
+        stderr(e, ctx)
+
+
+@ovdc_group.group('pks-plans', short_help='Gets list of available PKS plans '
+                    'for the given ovdc or get details of a PKS plan.',
+           options_metavar='[options]')
+@click.pass_context
+def plans_group(ctx):
+    """Get available PKS Plan information for ovdcs in the system.
+
+\b
+    Note
+       This command is intended for use by the system administrator or org admin
+       to get relevant PKS plan information, before using the plans for enabling
+       an ovdc for container deployment on PKS.
+
+\b
+    Examples
+\b
+        vcd cse ovdc pks-plan list
+            Displays list of ovdcs and the available PKS Plans. If executed by
+            System-administrator, it will display all ovdcs from all orgs.
+    """
+    pass
+
+
+@plans_group.command(short_help='list pks plans')
+@click.pass_context
+def list(ctx):
+    """List of available PKS Plans for a system."""
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        ovdc = Ovdc(client)
+        result = ovdc.list_pks_plans()
+        stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)

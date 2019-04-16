@@ -40,6 +40,7 @@ class ServiceProcessor(object):
         ovdc_request = False
         ovdc_id = None
         ovdc_info_request = False
+        pks_plan_request = False
 
         if len(tokens) > 3:
             if tokens[3] in ['swagger', 'swagger.json', 'swagger.yaml']:
@@ -63,7 +64,11 @@ class ServiceProcessor(object):
                 elif tokens[4] != '':
                     node_name = tokens[4]
             elif ovdc_request:
-                ovdc_id = tokens[4]
+                if tokens[4] == 'pks-plans':
+                    pks_plan_request = True
+                    ovdc_request = False
+                else:
+                    ovdc_id = tokens[4]
 
         if len(tokens) > 5:
             if node_name is not None:
@@ -108,6 +113,8 @@ class ServiceProcessor(object):
                 reply = broker_manager.invoke(Operation.INFO_OVDC)
             elif ovdc_request:
                 reply = broker_manager.invoke(op=Operation.LIST_OVDCS)
+            elif pks_plan_request:
+                reply = broker_manager.invoke(op=Operation.GET_PLANS)
             elif spec_request:
                 reply = self.get_spec(tokens[3])
             elif config_request:

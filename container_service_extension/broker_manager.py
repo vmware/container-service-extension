@@ -51,6 +51,7 @@ class Operation(Enum):
     ENABLE_OVDC = 'enable ovdc'
     INFO_OVDC = 'info ovdc'
     GET_CLUSTER_CONFIG = 'get cluster config'
+    GET_PLANS = 'get pks plans'
 
 
 class BrokerManager(object):
@@ -164,11 +165,16 @@ class BrokerManager(object):
             result['body'] = self._create_cluster(**cluster_spec)
             result['status_code'] = ACCEPTED
         elif op == Operation.LIST_OVDCS:
-            result['body'] = self._list_ovdcs()
+            pks_plans_info_needed = self.req_spec.get('pks_plans_info_needed',
+                                                      False)
+            result['body'] = self._list_ovdcs(
+                pks_plans_info_needed=pks_plans_info_needed)
+        elif op == Operation.GET_PLANS:
+            result['body'] = self._list_plans()
 
         return result
 
-    def _list_ovdcs(self):
+    def _list_ovdcs(self, pks_plans_info_needed):
         """Get list of ovdcs.
 
         If client is sysadmin,
@@ -190,11 +196,23 @@ class BrokerManager(object):
                     self.ovdc_cache.get_ovdc_container_provider_metadata(
                         ovdc_name=vdc['name'], org_name=org.get_name(),
                         credentials_required=False)
-                vdc_dict = {
-                    'name': vdc['name'],
-                    'org': org.get_name(),
-                    K8S_PROVIDER_KEY: ctr_prov_ctx[K8S_PROVIDER_KEY]
-                }
+                if pks_plans_info_needed:
+                    pks_plans, pks_server = self.\
+                        _get_pks_plans_and_server_for_vdc(vdc,
+                                                          org_resource,
+                                                          ctr_prov_ctx)
+                    vdc_dict = {
+                        'org': org.get_name(),
+                        'name': vdc['name'],
+                        K8S_PROVIDER_KEY: ctr_prov_ctx[K8S_PROVIDER_KEY],
+                        'available pks plans': pks_plans
+                    }
+                else:
+                    vdc_dict = {
+                        'name': vdc['name'],
+                        'org': org.get_name(),
+                        K8S_PROVIDER_KEY: ctr_prov_ctx[K8S_PROVIDER_KEY]
+                    }
                 ovdc_list.append(vdc_dict)
         return ovdc_list
 
@@ -527,6 +545,85 @@ class BrokerManager(object):
                              f" already exists\n{str(ex)}")
             else:
                 raise ex
+
+    def _list_plans(self):
+        """Gets the available PKS plans and associated PKS server information
+        for vdcs in the system.
+
+        Available only for org admin and sys admin.
+
+        :return: List of available PKS plan information.
+
+        :rtype: list
+        """
+        if self.vcd_client.is_sysadmin():
+            org_resource_list = self.vcd_client.get_org_list()
+        else:
+            org_resource_list = list(self.vcd_client.get_org())
+
+        ovdc_list = []
+        for org_resource in org_resource_list:
+            org = Org(self.vcd_client, resource=org_resource)
+            vdc_list = org.list_vdcs()
+            for vdc in vdc_list:
+                ctr_prov_ctx = \
+                    self.ovdc_cache.get_ovdc_container_provider_metadata(
+                        ovdc_name=vdc['name'], org_name=org.get_name(),
+                        credentials_required=False)
+                pks_plans, pks_server = self._get_pks_plans_and_server_for_vdc(
+                                        vdc,
+                                        org_resource,
+                                        ctr_prov_ctx)
+                vdc_dict = {
+                    'org': org.get_name(),
+                    'vdc_name': vdc['name'],
+                    'pks_server': pks_server,
+                    'available pks plans': pks_plans
+                }
+                ovdc_list.append(vdc_dict)
+        return ovdc_list
+
+    def _get_pks_plans_and_server_for_vdc(self,
+                                          vdc,
+                                          org_resource,
+                                          ctr_prov_ctx):
+        pks_server_plans_map = dict()
+        pks_vc_plans_map = dict()
+        pks_ctx_list = self._create_pks_context_for_all_accounts_in_org()
+
+        for pks_ctx in pks_ctx_list:
+            if (pks_ctx['host'] + '-' + pks_ctx['vc']) in pks_server_plans_map:
+                continue
+            pks_broker = PKSBroker(self.req_headers, self.req_spec,
+                                   pks_ctx)
+            plans = pks_broker.list_plans()
+            plan_names = [plan.to_dict().get('name') for plan in plans]
+            pks_server_plans_map[pks_ctx['host'] + '-' + pks_ctx['vc']] = \
+                plan_names
+            pks_vc_plans_map[pks_ctx['vc']] = [plan_names, pks_ctx['host']]
+
+        pks_server = ''
+        pks_plans = []
+        vc_backing_vdc = self.ovdc_cache.get_ovdc(
+                                ovdc_name=vdc['name'],
+                                org_name=org_resource.get('name')) \
+                                .resource.ComputeProviderScope \
+            if ctr_prov_ctx[K8S_PROVIDER_KEY] != K8sProviders.PKS.value else ''
+
+        if ctr_prov_ctx.get('host') is not None:
+            pks_server = ctr_prov_ctx.get('host')
+
+        key = ctr_prov_ctx['host'] + '-' + ctr_prov_ctx['vc'] \
+            if ctr_prov_ctx[K8S_PROVIDER_KEY] == K8sProviders.PKS.value else ''
+        if pks_server_plans_map.get(key) is not None:
+            pks_plans = pks_server_plans_map.get(key)
+        else:
+            pks_plan_and_server_info = pks_vc_plans_map.get(vc_backing_vdc, [])
+            if len(pks_plan_and_server_info) > 0:
+                pks_plans = pks_plan_and_server_info[0]
+                pks_server = pks_plan_and_server_info[1]
+
+        return pks_plans, pks_server
 
 
 class PksComputeProfileParams(namedtuple("PksComputeProfileParams",
