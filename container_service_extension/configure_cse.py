@@ -199,7 +199,7 @@ SAMPLE_TEMPLATE_UBUNTU_16_04 = {
     'cpu': 2,
     'mem': 2048,
     'admin_password': 'guest_os_admin_password',
-    'description': 'Ubuntu 16.04\nDocker 18.06.2~ce\nKubernetes 1.10.11\nweave\
+    'description': 'Ubuntu 16.04\nDocker 18.06.3~ce\nKubernetes 1.13.5\nweave\
  2.3.0'
 }
 
