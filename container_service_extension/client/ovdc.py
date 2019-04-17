@@ -15,14 +15,17 @@ class Ovdc(object):
         self.client = client
         self._uri = self.client.get_api_uri() + '/cse'
 
-    def list(self):
+    def list(self, pks_plans_info_needed):
         method = 'GET'
         uri = f'{self._uri}/ovdc'
+        data = {
+            'pks_plans_info_needed': pks_plans_info_needed,
+        }
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
-            contents=None,
+            contents=data,
             media_type=None,
             accept_type='application/json')
         return process_response(response)
@@ -128,4 +131,25 @@ class Ovdc(object):
             contents=None,
             media_type=None,
             accept_type='application/*+json')
+        return process_response(response)
+
+    def list_pks_plans(self):
+        """Get available PKS plans (if any) in the vCD system.
+
+        :return: response object
+
+        :rtype: list
+        """
+        method = 'GET'
+        uri = f'{self._uri}/ovdc/pks-plans'
+        params = {}
+        response = self.client._do_request_prim(
+            method,
+            uri,
+            self.client._session,
+            contents=None,
+            media_type=None,
+            accept_type='application/*+json',
+            auth=None,
+            params=params)
         return process_response(response)

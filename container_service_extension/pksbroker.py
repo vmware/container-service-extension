@@ -17,6 +17,7 @@ from container_service_extension.nsxt.cluster_network_isolater import \
     ClusterNetworkIsolater
 from container_service_extension.nsxt.nsxt_client import NSXTClient
 from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE_KEY
+from container_service_extension.pksclient.api.v1 import PlansApi
 from container_service_extension.pksclient.api.v1.cluster_api \
     import ClusterApi as ClusterApiV1
 from container_service_extension.pksclient.api.v1beta.cluster_api \
@@ -165,6 +166,17 @@ class PKSBroker(AbstractBroker):
         else:
             client = ApiClientV1Beta(configuration=pks_config)
         return client
+
+
+    def list_plans(self):
+        """Get list of available PKS plans in the system.
+
+        :return: a list of pks-plans if available.
+
+        :rtype: list
+        """
+        plan_api = PlansApi(api_client=self.client_v1)
+        return plan_api.list_plans()
 
     def list_clusters(self):
         """Get list of clusters in PKS environment.
