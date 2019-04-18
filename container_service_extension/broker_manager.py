@@ -223,8 +223,8 @@ class BrokerManager(object):
             if cluster:
                 return cluster, broker
 
-        raise ClusterNotFoundError(f'cluster {cluster_name} not found '
-                                   f'either in vCD or PKS')
+        raise ClusterNotFoundError(f"Cluster {cluster_name} not found "
+                                   f"either in vCD or PKS")
 
     def _get_cluster_config(self, **cluster_spec):
         """Get the cluster configuration.
@@ -244,8 +244,8 @@ class BrokerManager(object):
             if cluster:
                 return broker.get_cluster_config(cluster_name=cluster['name'])
 
-        raise ClusterNotFoundError(f'cluster {cluster_name} not found '
-                                   f'either in vCD or PKS')
+        raise ClusterNotFoundError(f"Cluster {cluster_name} not found "
+                                   f"either in vCD or PKS")
 
     def _list_clusters(self):
         """Logic of the method is as follows.
@@ -305,8 +305,8 @@ class BrokerManager(object):
             broker = self._get_broker_based_on_ctr_prov_ctx(ctr_prov_ctx)
             return broker.create_cluster(**cluster_spec)
         else:
-            raise CseServerError(f'Cluster with name: {cluster_name} '
-                                 f'already found')
+            raise CseServerError(f"Cluster with name: {cluster_name} "
+                                 f"already found")
 
     def _find_cluster_in_org(self, cluster_name):
         """Invoke set of all (vCD/PKS)brokers in the org to find the cluster.
@@ -410,7 +410,6 @@ class BrokerManager(object):
 
     def _get_ctr_prov_ctx_from_ovdc_metadata(self, ovdc_name=None,
                                              org_name=None):
-
         ovdc_name = \
             ovdc_name or self.req_spec.get('vdc') or \
             self.req_qparams.get('vdc')
@@ -426,16 +425,24 @@ class BrokerManager(object):
             return ctr_prov_ctx
 
     def _get_broker_based_on_ctr_prov_ctx(self, ctr_prov_ctx):
+        # If system is equipped with PKS, use the metadata on ovdc to determine
+        # the correct broker, otherwise fallback to vCD for cluster deployment.
+        # However if the system is enabled for PKS and has no metadata on odvc
+        # or isn't enabled for container deployment raise appropriate
+        # exception.
+        if self.pks_cache:
+            if ctr_prov_ctx:
+                if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProviders.PKS:
+                    return PKSBroker(self.req_headers, self.req_spec,
+                                     pks_ctx=ctr_prov_ctx)
+                elif ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProviders.NATIVE:
+                    return VcdBroker(self.req_headers, self.req_spec)
 
-        if ctr_prov_ctx \
-                and ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProviders.PKS:
-            return PKSBroker(self.req_headers, self.req_spec,
-                             pks_ctx=ctr_prov_ctx)
         else:
-            # TODO() - This call should be based on a boolean flag
-            # Specify flag in config file whether to have default
-            # handling is required for missing ovdc or org.
             return VcdBroker(self.req_headers, self.req_spec)
+
+        raise CseServerError("Org VDC is not enabled for Kubernetes cluster "
+                             "deployment")
 
     def get_broker_based_on_vdc(self):
         """Get the broker based on ovdc.
