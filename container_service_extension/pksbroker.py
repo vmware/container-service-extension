@@ -56,8 +56,12 @@ from container_service_extension.utils import OK
 USER_ID_SEPARATOR = "---"
 # Properties that need to be excluded from cluster info before sending
 # to the client for reasons: security, too big that runs thru lines
-EXCLUDE_KEYS = ['authorization_mode', 'compute_profile', 'uuid', 'plan_name',
+EXCLUDE_KEYS = ['authorization_mode', 'compute_profile', 'pks_cluster_name',
+                'uuid', 'plan_name', 'compute_profile_name',
                 'network_profile_name', 'nsxt_network_profile']
+
+# TODO() Filtering of cluster results should be processed in
+#  different layer.
 
 
 class PKSBroker(AbstractBroker):
@@ -183,11 +187,17 @@ class PKSBroker(AbstractBroker):
             for cluster in cluster_list:
                 self._restore_original_name(cluster)
         else:
-            user_cluster_list = [cluster_dict for cluster_dict in cluster_list
-                                 if self._is_user_cluster_owner(cluster_dict)]
-            for cluster in user_cluster_list:
-                self._exclude_pks_properties(cluster)
-            return user_cluster_list
+            cluster_list = [cluster_dict for cluster_dict in cluster_list
+                            if self._is_user_cluster_owner(cluster_dict)]
+
+            """ 'is_pks_context_data_required' is a flag that is used to restrict
+            access to user context and other secured information on pks cluster
+            information.
+            """
+            if not kwargs.get('is_pks_context_data_required'):
+                for cluster in cluster_list:
+                    self._filter_pks_properties(cluster)
+        return cluster_list
 
     def _list_clusters(self):
         """Get list of clusters in PKS environment.
@@ -249,8 +259,7 @@ class PKSBroker(AbstractBroker):
             self._append_user_id(cluster_spec['cluster_name'])
         cluster_info = self._create_cluster(**cluster_spec)
         self._restore_original_name(cluster_info)
-        if not self.tenant_client.is_sysadmin():
-            self._exclude_pks_properties(cluster_info)
+        self._filter_pks_properties(cluster_info)
         return cluster_info
 
     def _create_cluster(self, cluster_name, node_count, pks_plan, pks_ext_host,
@@ -356,8 +365,9 @@ class PKSBroker(AbstractBroker):
             cluster_info = \
                 self._get_cluster_info(self._append_user_id(cluster_name))
             self._restore_original_name(cluster_info)
-            self._exclude_pks_properties(cluster_info)
-            return cluster_info
+            if not kwargs.get('is_pks_context_data_required'):
+                self._filter_pks_properties(cluster_info)
+        return cluster_info
 
     def _get_cluster_info(self, cluster_name):
         """Get the details of a cluster with a given name in PKS environment.
@@ -406,7 +416,7 @@ class PKSBroker(AbstractBroker):
             pks_cluster_name = self._append_user_id(cluster_name)
             config_info = self._get_cluster_config(pks_cluster_name)
 
-        return self.remove_traces_of_user_context(config_info)
+        return self.filter_traces_of_user_context(config_info)
 
     def _get_cluster_config(self, cluster_name):
         """Get the configuration of the cluster with the given name in PKS.
@@ -448,7 +458,7 @@ class PKSBroker(AbstractBroker):
             pks_cluster_name = self._append_user_id(cluster_name)
             result = self._delete_cluster(pks_cluster_name)
         self._restore_original_name(result)
-        self._exclude_pks_properties(result)
+        self._filter_pks_properties(result)
         return result
 
     def _delete_cluster(self, cluster_name):
@@ -518,7 +528,7 @@ class PKSBroker(AbstractBroker):
             cluster_spec['cluster_name'] = pks_cluster_name
             result = self._resize_cluster(**cluster_spec)
         self._restore_original_name(result)
-        self._exclude_pks_properties(result)
+        self._filter_pks_properties(result)
         return result
 
     def _resize_cluster(self, cluster_name, node_count, **kwargs):
@@ -726,19 +736,22 @@ class PKSBroker(AbstractBroker):
     def _get_vcd_userid(self):
         return extract_id(self.client_session.get('userId'))
 
+    # TODO() Should be moved to filtering layer
     def _filter_list_by_cluster_name(self, cluster_list, cluster_name):
         # Return those clusters which have the given cluster name
         return [cluster for cluster in cluster_list
                 if cluster['name'] == cluster_name]
 
-    def _exclude_pks_properties(self, cluster_info):
+    # TODO() Should be moved to filtering layer
+    def _filter_pks_properties(self, cluster_info):
         # Remove selective properties from the given cluster
         # information.
         for entry in EXCLUDE_KEYS:
             cluster_info.pop(entry, None)
 
+    # TODO() Should be moved to filtering layer
     @staticmethod
-    def remove_traces_of_user_context(cluster_info):
+    def filter_traces_of_user_context(cluster_info):
         """Remove traces of user-id pattern from the given string.
 
         :param str cluster_info: text information that may have user context
