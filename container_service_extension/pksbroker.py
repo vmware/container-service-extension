@@ -56,7 +56,8 @@ from container_service_extension.utils import OK
 USER_ID_SEPARATOR = "---"
 # Properties that need to be excluded from cluster info before sending
 # to the client for reasons: security, too big that runs thru lines
-EXCLUDE_KEYS = ['compute_profile', 'pks_cluster_name']
+EXCLUDE_KEYS = ['compute_profile', 'pks_cluster_name', 'uuid', 'plan_name',
+                'compute_profile_name']
 
 
 class PKSBroker(AbstractBroker):
@@ -185,13 +186,13 @@ class PKSBroker(AbstractBroker):
             cluster_list = [cluster_dict for cluster_dict in cluster_list
                             if self._is_user_cluster_owner(cluster_dict)]
 
-        """ 'is_pks_context_data_required' is a flag that is used to restrict
-        access to user context and other secured information on pks cluster
-        information.
-        """
-        if not kwargs.get('is_pks_context_data_required'):
-            for cluster in cluster_list:
-                self._exclude_pks_properties(cluster)
+            """ 'is_pks_context_data_required' is a flag that is used to restrict
+            access to user context and other secured information on pks cluster
+            information.
+            """
+            if not kwargs.get('is_pks_context_data_required'):
+                for cluster in cluster_list:
+                    self._exclude_pks_properties(cluster)
         return cluster_list
 
     def _list_clusters(self):
@@ -360,8 +361,8 @@ class PKSBroker(AbstractBroker):
             cluster_info = \
                 self._get_cluster_info(self._append_user_id(cluster_name))
             self._restore_original_name(cluster_info)
-        if not kwargs.get('is_pks_context_data_required'):
-            self._exclude_pks_properties(cluster_info)
+            if not kwargs.get('is_pks_context_data_required'):
+                self._exclude_pks_properties(cluster_info)
         return cluster_info
 
     def _get_cluster_info(self, cluster_name):
