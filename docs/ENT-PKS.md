@@ -64,11 +64,20 @@ Below architectural and time-line views depict infrastructure set-up and tenant
 ### Cloud-provider
 #### Tenant on-boarding
 
-##### Granting rights to Tenants
+##### Granting rights to Tenants and Users
 
 * vcd right add "{cse}:CSE NATIVE DEPLOY RIGHT" -o tenant1
 * vcd right add "{cse}:CSE NATIVE DEPLOY RIGHT" -o tenant2
 * vcd right add "{cse}:PKS DEPLOY RIGHT" -o tenant1
+
+* vcd role add-right "Native K8 Author" "{cse}:CSE NATIVE DEPLOY RIGHT"
+* vcd role add-right "PKS K8 Author" "{cse}:PKS DEPLOY RIGHT"
+* vcd role add-right "Omni K8 Author" "{cse}:CSE NATIVE DEPLOY RIGHT"
+* vcd role add-right "Omni K8 Author" "{cse}:PKS DEPLOY RIGHT"
+
+* vcd user create 'native-user' 'password' 'Native K8 Author'
+* vcd user create 'pks-user' 'password' 'PKS K8 Author'
+* vcd user create 'power-user' 'password' 'Omni K8 Author'
 
 ##### Enabling ovdc(s) for a particular K8-provider
 
@@ -77,15 +86,26 @@ Below architectural and time-line views depict infrastructure set-up and tenant
 * vcd cse ovdc enable ovdc2 -o tenant1 -k ent-pks --pks-plan "gold" --pks-cluster-domain "tenant1.com"
 * vcd cse ovdc enable ovdc1 -o tenant2 -k native
 
-#### Cluster management
-
-### Tenant-user
+### Tenant/Admin operations
+* vcd cse cluster list
+* vcd cse cluster create
+* vcd cse cluster info
+* vcd cse cluster resize
+* vcd cse cluster delete
 
 <a name="assumptions"></a>
 ## Assumptions
+* Fresh Ent-PKS (vSphere & NSX-T) setup. PKS instances should not have any prior K8 deployments.
+* CSE, vCD and Ent-PKS instances in the same management network.
+* PKS service accounts with minimum required privileges for CRUD on clusters.
 
 <a name="recommendations"></a>
 ## Recommendations
+* Dedicated provider-vdc(s) for PKS K8 deployments.
+* Dedicated org-vdc(s) for PKS K8 deployments.
+
+<a name="known issues"></a>
+## Known issues
 
 <a name="faq"></a>
 ## FAQ
