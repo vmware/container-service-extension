@@ -83,6 +83,16 @@
     sublink: overview
   - name: Architecture
     sublink: architecture
+  - name: Persona based commands
+    sublink: persona-based-workflows
+  - name: Assumptions
+    sublink: assumptions
+  - name: Recommendations
+    sublink: recommendations
+  - name: Known issues
+    sublink: known-issues
+  - name: FAQ
+    sublink: faq
 - name: "Troubleshooting"
   link: TROUBLESHOOTING.html
 - name: "Known Issues"

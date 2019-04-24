@@ -6,7 +6,7 @@ title: Enterprise-PKS enablement
 # Enterprise-PKS enablement
 <a name="overview"></a>
 ## Overview
-CSE 2.0 begins to orchestrate K8 cluster deployment not only on vCD (native) but 
+CSE 2.0 orchestrates K8 cluster deployment not only on vCD (native) but 
 also on Enterprise-PKS servers.  
 * Facilitates co-existence of vCD(native) and PKS clusters with in the same tenant boundaries.
 * Enforces tenant isolation among PKS-deployed K8 clusters.
@@ -52,19 +52,21 @@ Below architectural and time-line views depict infrastructure set-up and tenant
 
 #### Architectural view
 ![provider-setup](img/ent-pks/03-provider-setup-1.png)
-#### Time-line view
+#### Timeline view
 ![provider-setup](img/ent-pks/04-provider-setup-2.png)
 
 <a name="tenant-workflow"></a>
 ### Tenant workflow of create-cluster operation
 ![tenant-workflow](img/ent-pks/05-tenant-flow.png)
 
-<a name="persona based workflows"></a>
+<a name="persona-based-workflows"></a>
 ## Persona based commands
 ### Cloud-provider
 #### Tenant on-boarding
 
 ##### Granting rights to Tenants and Users
+
+Below steps of granting rights is required only if [RBAC feature](/RBAC.html) is turned on.
 
 * vcd right add "{cse}:CSE NATIVE DEPLOY RIGHT" -o tenant1
 * vcd right add "{cse}:CSE NATIVE DEPLOY RIGHT" -o tenant2
@@ -104,8 +106,41 @@ Below architectural and time-line views depict infrastructure set-up and tenant
 * Dedicated provider-vdc(s) for PKS K8 deployments.
 * Dedicated org-vdc(s) for PKS K8 deployments.
 
-<a name="known issues"></a>
+<a name="known-issues"></a>
 ## Known issues
+
+* "node info" on native K8 clusters may not work as expected. 
+* "create cluster" on native ovdc(s) may not work as expected if executed by sysadmin.
+* "cluster info" and "cluster list" may not work as expected for PKS clusters 
+on which "resize" operation has been previously executed - PKS bug.
+
+Fixes will be coming soon for the above.
 
 <a name="faq"></a>
 ## FAQ
+
+* Are Ent-PKS clusters visible in vCD UI?
+    * Not yet. Ent-PKS clusters can only be managed via CSE-CLI as of today.
+* Do Ent-PKS clusters adhere to their parent ovdc compute settings?
+    * Yes. Both native and Ent-Pks clusters' combined usage is accounted towards 
+    reaching compute-limits of a given ovdc resource-pool.
+* Are Ent-PKS clusters isolated at network layer?
+    * Yes. Tenant-1 clusters cannot reach Tenant-2 clusters via Node IP addresses.
+* Do Ent-PKS clusters adhere to its parent ovdc storage limits?
+    * Not yet. As of today, ovdc storage limits apply only for native K8 clusters.
+* Can native K8 clusters be deployed in ovdc(s) dedicated for Ent-PKS?
+    * Not yet.
+* Can tenant get a dedicated storage for their Ent-PKS clusters?
+    * Not yet. Support for this will be added as soon as Ent-PKS supports the 
+    concept of storage-profiles. 
+* Why is response-time of commands relatively slower sometimes?
+    * [RBAC feature](/RBAC.html) turned on will have some performance effect.
+    * Presence of Ent-PKS instances in the system will have significant impact 
+    on performance, as it involves invocation of multiple external API calls 
+    and post-processing of data.
+    * Sys-admin commands may be even slower given CSE has to scan entire system 
+    to generate results.
+    * Performance-optimization will be coming soon.
+* How to fix CSE time-out errors?
+    * By increasing the vCD extension timeout to a higher value.
+    * Refer to "Setting the API Extension Timeout" in [here](/CSE_ADMIN.html)
