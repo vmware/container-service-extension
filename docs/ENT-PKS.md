@@ -57,7 +57,7 @@ Below architectural and time-line views depict infrastructure set-up and tenant
 
 <a name="tenant-workflow"></a>
 ### Tenant workflow of create-cluster operation
-![tenant-workflow](img/ent-pks/05-tenant-create-cluster-flow.png)
+![tenant-workflow](img/ent-pks/05-tenant-flow.png)
 
 <a name="persona based workflows"></a>
 ## Persona based commands
