@@ -66,7 +66,7 @@ Below architectural and time-line views depict infrastructure set-up and tenant
 
 **Granting rights to Tenants and Users:**
 
-Below steps of granting rights is required only if [RBAC feature](/RBAC.html) is turned on.
+Below steps of granting rights are required only if [RBAC feature](/RBAC.html) is turned on.
 
 ```sh
 * vcd right add "{cse}:CSE NATIVE DEPLOY RIGHT" -o tenant1
@@ -140,13 +140,13 @@ Fixes will be coming soon for the above.
 * Can tenant get a dedicated storage for their Ent-PKS clusters?
     * Not yet. Support for this will be added as soon as Ent-PKS supports the 
     concept of storage-profiles. 
-* Why is response-time of commands relatively slower sometimes?
+* Why is response-time of commands slower sometimes?
     * [RBAC feature](/RBAC.html) turned on will have some performance effect.
-    * Presence of Ent-PKS instances in the system will have significant impact 
-    on performance, as it involves invocation of multiple external API calls 
+    * Presence of Ent-PKS instances in the system will have some performance 
+    impact, as it involves invocation of multiple external API calls 
     and post-processing of data.
-    * Sys-admin commands may be even slower given CSE has to scan entire system 
-    to generate results.
+    * cluster-management commands by *sys-admin* may be even slower given CSE 
+    has to scan entire system to generate results.
     * Performance-optimization will be coming soon.
 * How to fix CSE time-out errors?
     * By increasing the vCD extension timeout to a higher value.
