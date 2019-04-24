@@ -64,37 +64,44 @@ Below architectural and time-line views depict infrastructure set-up and tenant
 ### Cloud-provider
 #### Tenant on-boarding
 
-##### Granting rights to Tenants and Users
+**Granting rights to Tenants and Users:**
 
 Below steps of granting rights is required only if [RBAC feature](/RBAC.html) is turned on.
 
+```sh
 * vcd right add "{cse}:CSE NATIVE DEPLOY RIGHT" -o tenant1
 * vcd right add "{cse}:CSE NATIVE DEPLOY RIGHT" -o tenant2
 * vcd right add "{cse}:PKS DEPLOY RIGHT" -o tenant1
-
+```
+```sh
 * vcd role add-right "Native K8 Author" "{cse}:CSE NATIVE DEPLOY RIGHT"
 * vcd role add-right "PKS K8 Author" "{cse}:PKS DEPLOY RIGHT"
 * vcd role add-right "Omni K8 Author" "{cse}:CSE NATIVE DEPLOY RIGHT"
 * vcd role add-right "Omni K8 Author" "{cse}:PKS DEPLOY RIGHT"
-
+```
+```sh
 * vcd user create 'native-user' 'password' 'Native K8 Author'
 * vcd user create 'pks-user' 'password' 'PKS K8 Author'
 * vcd user create 'power-user' 'password' 'Omni K8 Author'
+```
 
-##### Enabling ovdc(s) for a particular K8-provider
+**Enabling ovdc(s) for a particular K8-provider:**
 
+```sh
 * vcd cse ovdc list
 * vcd cse ovdc enable ovdc1 -o tenant1 -k native
 * vcd cse ovdc enable ovdc2 -o tenant1 -k ent-pks --pks-plan "gold" --pks-cluster-domain "tenant1.com"
 * vcd cse ovdc enable ovdc1 -o tenant2 -k native
+```
 
 ### Tenant/Admin operations
+```sh
 * vcd cse cluster list
 * vcd cse cluster create
 * vcd cse cluster info
 * vcd cse cluster resize
 * vcd cse cluster delete
-
+```
 <a name="assumptions"></a>
 ## Assumptions
 * Fresh Ent-PKS (vSphere & NSX-T) setup. PKS instances should not have any prior K8 deployments.
