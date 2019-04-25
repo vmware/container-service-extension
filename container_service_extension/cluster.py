@@ -69,6 +69,7 @@ def load_from_metadata(client, name=None, cluster_id=None):
             'vapp_href': f'{client._uri}/vApp/vapp-{vapp_id}',
             'vdc_name': record.get('vdcName'),
             'vdc_href': f'{client._uri}/vdc/{vdc_id}',
+            'vdc_id': vdc_id,
             'leader_endpoint': '',
             'master_nodes': [],
             'nodes': [],
