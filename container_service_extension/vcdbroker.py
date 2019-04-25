@@ -52,6 +52,8 @@ from container_service_extension.utils import exception_handler
 from container_service_extension.utils import get_server_runtime_config
 from container_service_extension.utils import OK
 
+from container_service_extension.pyvcloud_utils import get_org_by_vdc_href
+
 OP_CREATE_CLUSTER = 'create_cluster'
 OP_DELETE_CLUSTER = 'delete_cluster'
 OP_CREATE_NODES = 'create_nodes'
@@ -228,7 +230,9 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 'template': c['template'],
                 'VMs': c['number_of_vms'],
                 'vdc': c['vdc_name'],
-                'status': c['status']
+                'status': c['status'],
+                'vdc_id': c['vdc_id'],
+                'org_name': get_org_by_vdc_href(c['vdc_id'], c['vdc_name'])
             })
         return clusters
 
