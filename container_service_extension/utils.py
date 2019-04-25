@@ -18,12 +18,16 @@ from lxml import objectify
 from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
+from pyvcloud.vcd.client import EntityType
+from pyvcloud.vcd.client import find_link
 from pyvcloud.vcd.client import QueryResultFormat
+from pyvcloud.vcd.client import RelationType
 from pyvcloud.vcd.client import ResourceType
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.platform import Platform
+from pyvcloud.vcd.utils import get_admin_href
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
@@ -604,6 +608,28 @@ def get_pvdc_id_by_name(name, vc_name_in_vcd):
         return pvdc_id
     return None
 
+def get_org_by_vdc_href(vdc_id, ovdc_to_org_map, vdc_name):
+    """ Get org_name from ovdc_id
+
+    :param vdc_id:
+    :param ovdc_to_org_map: contains mapping of vdc_name to org_name
+    :param vdc_name:
+    :return: org_name
+    """
+    if vdc_name in ovdc_to_org_map:
+        ret = ovdc_to_org_map.get(vdc_name)
+    else:
+        client = get_vcd_sys_admin_client()
+        vdc_href = str(client._uri) + '/vdc/' + str(vdc_id)
+        resource = client.get_resource(get_admin_href(vdc_href))
+        vdc_obj = VDC(client, resource=resource)
+        link = find_link(vdc_obj.resource, RelationType.UP, \
+                         EntityType.ADMIN_ORG.value)
+        org = Org(client, href=link.href)
+        # Add teh entry to the map to be used next time the same ovdc is requested
+        ovdc_to_org_map[vdc_name] = org.get_name()
+        ret = org.get_name()
+    return ret
 
 def get_data_file(filename, logger=None):
     """Retrieve CSE script file content as a string.

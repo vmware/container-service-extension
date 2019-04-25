@@ -25,6 +25,7 @@ from container_service_extension.utils import exception_handler
 from container_service_extension.utils import get_pks_cache
 from container_service_extension.utils import get_server_runtime_config
 from container_service_extension.utils import get_vcd_sys_admin_client
+from container_service_extension.utils import get_org_by_vdc_href
 from container_service_extension.utils import OK
 from container_service_extension.vcdbroker import VcdBroker
 
@@ -262,13 +263,17 @@ class BrokerManager(object):
             broker = self.get_broker_based_on_vdc()
             return broker.list_clusters()
         else:
-            common_cluster_properties = ('name', 'vdc', 'status')
+            common_cluster_properties = ('name', 'vdc', 'status', 'vdc_id')
             vcd_broker = VcdBroker(self.req_headers, self.req_spec)
             vcd_clusters = []
+            ovdc_to_org_map = {}
             for cluster in vcd_broker.list_clusters():
                 vcd_cluster = {k: cluster.get(k, None) for k in
                                common_cluster_properties}
                 vcd_cluster[K8S_PROVIDER_KEY] = K8sProviders.NATIVE
+                org_name = get_org_by_vdc_href(vcd_cluster['vdc_id'], ovdc_to_org_map, vcd_cluster['vdc'])
+                vcd_cluster['org'] = org_name
+                del vcd_cluster['vdc_id']
                 vcd_clusters.append(vcd_cluster)
 
             pks_clusters = []
@@ -280,6 +285,10 @@ class BrokerManager(object):
                     pks_cluster = self._get_truncated_cluster_info(
                         cluster, pks_broker, common_cluster_properties)
                     pks_cluster[K8S_PROVIDER_KEY] = K8sProviders.PKS
+                    if pks_cluster['vdc_id']:
+                        org_name = get_org_by_vdc_href(pks_cluster['vdc_id'], ovdc_to_org_map, pks_cluster['vdc'])
+                        pks_cluster['org'] = org_name
+                    del pks_cluster['vdc_id']
                     pks_clusters.append(pks_cluster)
             return vcd_clusters + pks_clusters
 
@@ -401,6 +410,8 @@ class BrokerManager(object):
         # Example: vdc name in the below compute profile is: vdc-PKS1
         # compute-profile: cp--f3272127-9b7f-4f90-8849-0ee70a28be56--vdc-PKS1
         compute_profile_name = cluster.get('compute_profile_name', '')
+        pks_cluster['vdc_id'] = compute_profile_name.split('--')[1] \
+            if compute_profile_name else ''
         pks_cluster['vdc'] = compute_profile_name.split('--')[-1] \
             if compute_profile_name else ''
         pks_cluster['status'] = \

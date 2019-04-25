@@ -228,7 +228,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 'template': c['template'],
                 'VMs': c['number_of_vms'],
                 'vdc': c['vdc_name'],
-                'status': c['status']
+                'status': c['status'],
+                'vdc_id': c['vdc_id']
             })
         return clusters
 
