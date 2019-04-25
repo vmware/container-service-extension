@@ -30,9 +30,9 @@ the restricted operations.
 | cluster resize | Native(vCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
 | node create | Native(vCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
 | node delete | Native(vCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
-| cluster create | PKS Enterprise | {cse}:PKS DEPLOY RIGHT | CSE 2.0.0 |
-| cluster delete | PKS Enterprise | {cse}:PKS DEPLOY RIGHT | CSE 2.0.0 |
-| cluster resize | PKS Enterprise | {cse}:PKS DEPLOY RIGHT | CSE 2.0.0 |
+| cluster create | Enterprise PKS | {cse}:PKS DEPLOY RIGHT | CSE 2.0.0b1 |
+| cluster delete | Enterprise PKS | {cse}:PKS DEPLOY RIGHT | CSE 2.0.0b1 |
+| cluster resize | Enterprise PKS | {cse}:PKS DEPLOY RIGHT | CSE 2.0.0b1 |
 
 Note: Role Based Access Control feature is turned off by default.
 
@@ -90,4 +90,4 @@ There is no action required on tenant users.
 * If my administrator does not grant me the new right, will I lose access to my
   previously deployed clusters?
     * You will still be able to access previously deployed clusters. You will
-      not however be able to modify them.
+      not, however, be able to modify them.
