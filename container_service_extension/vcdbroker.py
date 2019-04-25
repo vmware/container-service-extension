@@ -41,6 +41,7 @@ from container_service_extension.exceptions import NFSNodeCreationError
 from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import WorkerNodeCreationError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.pyvcloud_utils import get_org_name_of_ovdc
 from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_NAME
 from container_service_extension.utils import ACCEPTED
@@ -51,6 +52,7 @@ from container_service_extension.utils import error_to_json
 from container_service_extension.utils import exception_handler
 from container_service_extension.utils import get_server_runtime_config
 from container_service_extension.utils import OK
+
 
 OP_CREATE_CLUSTER = 'create_cluster'
 OP_DELETE_CLUSTER = 'delete_cluster'
@@ -228,7 +230,9 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 'template': c['template'],
                 'VMs': c['number_of_vms'],
                 'vdc': c['vdc_name'],
-                'status': c['status']
+                'status': c['status'],
+                'vdc_id': c['vdc_id'],
+                'org_name': get_org_name_of_ovdc(c['vdc_id'])
             })
         return clusters
 

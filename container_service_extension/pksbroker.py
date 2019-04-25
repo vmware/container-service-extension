@@ -43,6 +43,7 @@ from container_service_extension.pksclient.models.v1beta.\
     compute_profile_parameters import ComputeProfileParameters
 from container_service_extension.pksclient.models.v1beta.\
     compute_profile_request import ComputeProfileRequest
+from container_service_extension.pyvcloud_utils import get_org_name_of_ovdc
 from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.uaaclient.uaaclient import UaaClient
@@ -733,3 +734,23 @@ class PKSBroker(AbstractBroker):
         def unsupported_method(*args):
             raise CseServerError(f"Unsupported operation {name}")
         return unsupported_method
+
+    @staticmethod
+    def get_cluster_info_from_compute_profile(cluster, cluster_property_keys):
+        pks_cluster = {k: cluster.get(k) for k in
+                       cluster_property_keys}
+        # Extract vdc name from compute-profile-name
+        # Example: vdc name in the below compute profile is: vdc-PKS1
+        # compute-profile: cp--f3272127-9b7f-4f90-8849-0ee70a28be56--vdc-PKS1
+        compute_profile_name = cluster.get('compute_profile_name', '')
+        pks_cluster['vdc_id'] = compute_profile_name.split('--')[1] \
+            if compute_profile_name else ''
+        pks_cluster['vdc'] = compute_profile_name.split('--')[-1] \
+            if compute_profile_name else ''
+        pks_cluster['status'] = \
+            cluster.get('last_action', '').lower() + ' ' + \
+            cluster.get('last_action_state', '').lower()
+        if pks_cluster['vdc_id']:
+            pks_cluster['org_name'] = \
+                get_org_name_of_ovdc(pks_cluster['vdc_id'])
+        return pks_cluster
