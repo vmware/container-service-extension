@@ -604,7 +604,6 @@ def get_pvdc_id_by_name(name, vc_name_in_vcd):
         return pvdc_id
     return None
 
-
 def get_data_file(filename, logger=None):
     """Retrieve CSE script file content as a string.
 

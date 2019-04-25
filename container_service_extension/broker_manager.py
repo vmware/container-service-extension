@@ -262,7 +262,7 @@ class BrokerManager(object):
             broker = self.get_broker_based_on_vdc()
             return broker.list_clusters()
         else:
-            common_cluster_properties = ('name', 'vdc', 'status')
+            common_cluster_properties = ('name', 'vdc', 'status', 'org_name')
             vcd_broker = VcdBroker(self.req_headers, self.req_spec)
             vcd_clusters = []
             for cluster in vcd_broker.list_clusters():
@@ -277,8 +277,7 @@ class BrokerManager(object):
                 pks_broker = PKSBroker(self.req_headers, self.req_spec,
                                        pks_ctx)
                 for cluster in pks_broker.list_clusters():
-                    pks_cluster = self._get_truncated_cluster_info(
-                        cluster, pks_broker, common_cluster_properties)
+                    pks_cluster = PKSBroker.get_truncated_cluster_info(cluster, common_cluster_properties)
                     pks_cluster[K8S_PROVIDER_KEY] = K8sProviders.PKS
                     pks_clusters.append(pks_cluster)
             return vcd_clusters + pks_clusters
@@ -392,21 +391,6 @@ class BrokerManager(object):
             pks_ctx_list = list(pks_ctx_dict.values())
 
         return pks_ctx_list
-
-    def _get_truncated_cluster_info(self, cluster, pks_broker,
-                                    cluster_property_keys):
-        pks_cluster = {k: cluster.get(k) for k in
-                       cluster_property_keys}
-        # Extract vdc name from compute-profile-name
-        # Example: vdc name in the below compute profile is: vdc-PKS1
-        # compute-profile: cp--f3272127-9b7f-4f90-8849-0ee70a28be56--vdc-PKS1
-        compute_profile_name = cluster.get('compute_profile_name', '')
-        pks_cluster['vdc'] = compute_profile_name.split('--')[-1] \
-            if compute_profile_name else ''
-        pks_cluster['status'] = \
-            cluster.get('last_action', '').lower() + ' ' + \
-            cluster.get('last_action_state', '').lower()
-        return pks_cluster
 
     def _get_ctr_prov_ctx_from_ovdc_metadata(self, ovdc_name=None,
                                              org_name=None):
