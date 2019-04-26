@@ -1,6 +1,6 @@
-container-service-extension 1.2.0 GA
+container-service-extension 2.0 Beta
 
-Copyright (c) 2018 VMware, Inc. All Rights Reserved.
+Copyright (c) 2018-2019 VMware, Inc. All Rights Reserved.
 
 This product is licensed to you under the BSD-2 license (the "License").  You may not use this product except in compliance with the BSD-2 License.
 
