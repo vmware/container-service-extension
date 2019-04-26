@@ -1,6 +1,74 @@
 CHANGES
 =======
 
+* Include compute-profile-name as part of cluster information (#316)
+* exclude admin only cluster information for tenant users (#312)
+* [VCDA-981] Updated logic to determine fallback broker to preserve CSE behavior on upgrade (#310)
+* Update ubuntu 16.04 description and system test template (#305)
+* Fixing disable ovdc operation. (#306)
+* [VCDA-975] Beautify CLI documentation (#296)
+* [VCDA-976] Refactor pks.yaml to get rid of optional orgs section from sample. (#303)
+* [VCDA-977] Redesign create-cluster, enablek8s, list-clusters; Fix broken exception handling from new pks bits. (#301)
+* [VCDA-895] Isolate PKS cluster via NSX-T DFW rules (#289)
+* Add debug log (#302)
+* Fix broken ovdc-enable command when enabling for unqualified ovdc (#299)
+* Async keyword renamed; unsupported long data type merged to int type (#300)
+* Missed this file as part of my previous submit (update pks bits) (#298)
+* Update PKS client package with new version of PKS (#297)
+* [VCDA-955] Handle admin use cases when retaining vcd user context in pks (#288)
+* [VCDA-965] List clusters as sysadmin fails if org name is not passed
+* [VCDA-949, VCDA-963, VCDA-980] Refactor pks yaml to introduce NSXT params (#292)
+* Fix bugs (#291)
+* VCDA-876: Add rbac/authorization aspect to PKS broker (#287)
+* org-name optional argument provided;use org-in-use if no org-name provided (#285)
+* VCDA-968 - 'cse run' fails when 'pks\_config' is set to an empty 'pks.… (#286)
+* [VCDA-903] Upgrade kubernetes templates from v1.10.11 to v1.13.5 (#276)
+* [VCDA-906] Redact sensitive information in CSE logs (#283)
+* VCDA-937: Enhance Cluster config command to accomodate PKS config command. (#280)
+* VCDA-933: Enhance create cluster command (#278)
+* [VCDA-931] Implementation of ovdc list command (#281)
+* [VCDA-869] Enhance Cluster List - Optimization  (#282)
+* [VCDA-930] Create-compute-profile-while-enabling-ovdc
+* vCDA-927: Resize cluster command; Exception handling of PksBroker; Refactoring (#275)
+* Option to include ovdc name as part of cluster list (#279)
+* [VCDA-877] Vcd-User-Context-In-Pks-Cluster-Management (#269)
+* Update Docker and Kubernetes version descriptions (#254)
+* VCDA-934: Enhance Cluster Info and Delete commands to take optional param 'vdc' (#272)
+* Extract pvdc-id correctly among different vcd-api versions (#271)
+* [VCDA-946] Updated logic to check for presence of PKS/CSE right in vCD/System org. (#267)
+* [VCDA-930] Set default org name for ovdc metadata operations for k8s (#265)
+* [VCDA-896] Beautify vCD setup/config file errors during installation (#256)
+* VCDA-916: Broker manager to handle CRUD operations on vCD and PKS (#262)
+* VCDA-913: Revisit config validation checks to relax checks for additional keys (#263)
+* VCDA-921: Add new methods to ovdc\_cache and pks\_cache; some refactoring. (#260)
+* Fix enablek8s failure on VCD-9.1 (#259)
+* [VCDA-893] Remove '--ext-install' option from CSE installation (#251)
+* VCDA-917: Add another method in pks\_cache to get PKS information per org (#255)
+* [VCDA-872] Replace pks-cache-stub with actual implementation (#249)
+* VCDA-902 : Implementation of CPI id, developer-mode, removal of rp-paths (#252)
+* Add documentation for 'enforce\_authorization' and config file update procedure (#244)
+* Fix bad sample values (#245)
+* [VCDA-794] Add client tests (#220)
+* [VCDA-875] Broker instance selection based on container-provider (#233)
+* [VCDA-873] Hook up ovdcCache to PKS broker (#250)
+* Added documentation for sharing catalog with non org admin users. (#235)
+* [VCDA-879] Add CRUD methods on PKS compute profiles (#234)
+* VCDA-867: PKS Cache Implementation for Pvdc and PKS information from configs (#221)
+* Fix formatting in release notes (#239)
+
+1.2.7
+-----
+
+* Add release notes for 1.2.7 (#238)
+* Fix CVE-2019-5736 (runc vulnerability) for Ubuntu and Photon vApp templates (#237)
+* Fix 'cse sample' bug if user had click<7.0 (#236)
+* Fix cluster config command and node rollback (#227)
+* [VCDA-854] Enable/Disable ovdc command implementation (#216)
+* Fixing bug with \`cse check\` commands and get\_validated\_config (#226)
+* VCD-878: New PKS Bits (#223)
+* VCDA-849: Update cse sample and check commands to accomodate new pks config (#203)
+* Updated Authors and Changelog
+
 1.2.6
 -----
 
