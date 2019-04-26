@@ -56,8 +56,7 @@ USER_ID_SEPARATOR = "---"
 # Properties that need to be excluded from cluster info before sending
 # to the client for reasons: security, too big that runs thru lines
 EXCLUDE_KEYS = ['authorization_mode', 'compute_profile', 'uuid', 'plan_name',
-                'compute_profile_name', 'network_profile_name',
-                'nsxt_network_profile']
+                'network_profile_name', 'nsxt_network_profile']
 
 
 class PKSBroker(AbstractBroker):
