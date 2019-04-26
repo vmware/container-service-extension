@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+2.0.0b1
+-------
+
+* Update Changelog and AUTHOR
+* Update legal documents for CSE 2.0 Beta (#317)
 * Include compute-profile-name as part of cluster information (#316)
 * exclude admin only cluster information for tenant users (#312)
 * [VCDA-981] Updated logic to determine fallback broker to preserve CSE behavior on upgrade (#310)
