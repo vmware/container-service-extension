@@ -6,25 +6,26 @@ title: Enterprise-PKS enablement
 # Enterprise-PKS enablement
 <a name="overview"></a>
 ## Overview
-CSE 2.0 orchestrates K8 cluster deployment not only on vCD (native) but 
-also on Enterprise-PKS servers.  
-* Facilitates co-existence of vCD(native) and PKS clusters with in the same tenant boundaries.
-* Enforces tenant isolation among PKS-deployed K8 clusters.
-* Provides flexibility for admins to enable/disable a given vdc of tenant with a 
+CSE 2.0 enables orchestration of K8 cluster deployment on [Enterprise PKS](https://cloud.vmware.com/vmware-enterprise-pks). 
+It facilitates co-existence of vCD(native) and PKS clusters with in the same 
+tenant boundaries, while ensuring tenant isolation among Enterprise PKS deployed K8 clusters.
+It also provides flexibility for admins to enable/disable a given vdc of tenant with a 
 particular K8-provider (native | ent-pks | none).
 
-This page talks in detail about CSE-PKS architecture, infrastructure set-up, 
+![conceptual-view-cse](img/ent-pks/01-conceptual.png)
+
+This page talks in detail about CSE 2.0 architecture with Enterprise PKS, infrastructure set-up, 
 configuration steps and tenant commands among others.
 
 <a name="architecture"></a>
 ## Architecture
+Below diagram depicts holistic view of infrastructure set-up, 
+Ent-PKS on-boarding and tenant on-boarding. In other words, it illustrates physical 
+view of the infrastructure and logical-view of PKS and tenant on-boarding in vCD. 
+![provider-setup](img/ent-pks/03-provider-setup-1.png)
 
-<a name="conceptual-view"></a>
-### Conceptual view
-![conceptual-view-cse](img/ent-pks/01-conceptual.png)
 <a name="communication-view"></a>
-
-### Communication flow between CSE, VCD and PKS
+## CSE, vCD, Enterprise PKS Component Illustration
 Below diagram outlines the communication flow between various components involved 
 for a create-cluster operation. Communication path in pink color illustrates 
 work-flow of native K8 deployments and the path in blue illustrates work-flow of
@@ -34,35 +35,35 @@ box in grey color in detail.
 ![communication-flow](img/ent-pks/02-communication-flow.png)
 
 <a name="infra-view"></a>
-### Infrastructure set-up and Tenant on-boarding
+## Infrastructure set-up and configuration 
+### Enterprise PKS on-boarding 
 
-Below architectural and time-line views depict infrastructure set-up and tenant
- on-boarding. Cloud-provider has to essentially do below steps before 
- users can begin to create PKS-K8-deployments.
+Below timeline diagram depicts infrastructure set-up and tenant
+ on-boarding. Cloud-provider has to do below steps before on-boarding tenants.
  1. Set up one or more PKS-vSphere-NSX-T instances.
- 2. On-board PKS instances in vCD by creating corresponding provider-vdc(s).
+ 2. On-board PKS instance in vCD
+    * Attach corresponding vSphere in vCD 
+    * Create provider-vdc(s) from underlying resources of vSphere.
  3. Install and configure CSE with vCD and PKS details. Start CSE server.
     * "CSE install" command prepares NSX-T(s) of PKS instances for tenant isolation.
- 4. Tenant on-boarding 
-    * Create ovdc(s) in vCD
-    * Grant K8 deployment rights to chosen tenants and tenant-users. Refer 
-    [RBAC feature](/RBAC.html) for more details
-    * Enable ovdc(s) with a chosen K8-provider (native|ent-pks|none).
- 
+    
+### Tenant on-boarding 
+1. Create ovdc(s) in vCD
+2. Grant K8 deployment rights to chosen tenants and tenant-users. Refer 
+[RBAC feature](/RBAC.html) for more details
+3. Enable ovdc(s) with a chosen K8-provider (native|ent-pks|none).
 
-#### Architectural view
-![provider-setup](img/ent-pks/03-provider-setup-1.png)
-#### Timeline view
+Below diagram illustrates the order of steps to be performed to reach the 
+[architectural view](#architecture) presented above. 
 ![provider-setup](img/ent-pks/04-provider-setup-2.png)
 
 <a name="tenant-workflow"></a>
-### Tenant workflow of create-cluster operation
+## Tenant workflow of create-cluster operation
 ![tenant-workflow](img/ent-pks/05-tenant-flow.png)
 
-<a name="persona-based-workflows"></a>
-## Persona based commands
-### Cloud-provider
-#### Tenant on-boarding
+<a name="cse-commands"></a>
+## CSE commands
+### Tenant on-boarding commands (Admin only)
 
 **Granting rights to Tenants and Users:**
 
@@ -94,7 +95,7 @@ Below steps of granting rights are required only if [RBAC feature](/RBAC.html) i
 * vcd cse ovdc enable ovdc1 -o tenant2 -k native
 ```
 
-### Tenant/Admin operations
+### Cluster management commands
 ```sh
 * vcd cse cluster list
 * vcd cse cluster create
