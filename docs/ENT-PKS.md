@@ -6,23 +6,73 @@ title: Enterprise-PKS enablement
 # Enterprise-PKS enablement
 <a name="overview"></a>
 ## Overview
-CSE 2.0 enables orchestration of K8 cluster deployment on [Enterprise PKS](https://cloud.vmware.com/vmware-enterprise-pks). 
-It facilitates co-existence of vCD(native) and PKS clusters with in the same 
-tenant boundaries, while ensuring tenant isolation among PKS K8 clusters.
-It also provides flexibility for admins to enable/disable a given vdc of tenant with a 
-particular K8-provider (native | ent-pks | none).
+CSE 2.0 enables orchestration of K8 cluster deployments on VMware Enterprise PKS. 
+At the same time, it maintains the CSE 1.x feature set of Native K8 cluster deployments
+ directly on VMware vCloud Director. As a result, the capabilities of CSE 2.0 allow 
+ tenants to leverage both K8 Providers, Native and Enterprise PKS, for seamless K8 
+ cluster deployments while ensuring clusters' isolation between tenants. 
+ It also offers great flexibility to administrators to onboard tenants on K8 Provider(s)
+  of their choice, be it Native and/or Enterprise PKS.
 
 ![conceptual-view-cse](img/ent-pks/01-conceptual.png)
 
-This page talks in detail about CSE 2.0 architecture with Enterprise PKS, infrastructure set-up, 
-configuration steps and tenant commands among others.
+This page talks in detail about CSE 2.0 architecture with Enterprise PKS, 
+the infrastructure set-up, configuration steps, as well as, key command line 
+interfaces for K8 deployments.
 
 <a name="architecture"></a>
 ## Architecture
-Below diagram depicts holistic view of infrastructure set-up, 
-Ent-PKS on-boarding and tenant on-boarding. It illustrates physical 
-view of the infrastructure and logical-view of PKS and tenant on-boarding in vCD. 
+CSE 2.0 architecture comprises of Enterprise PKS Infrastructure stack, vCloud Director Infrastructure stack, and CSE 2.0 modules. The Enterprise PKS Infrastructure stack is necessary only if there is an intention to leverage it for K8 cluster deployments. The diagram below illustrates a physical view of the complete infrastructure, as well as, its logical mapping in to vCloud Director hierarchy, for ease of understanding. 
+
+Legend:
+* Green - Depicts vSphere infrastructure managed by vCloud Director, just as CSE 1.x, without any of Enterprise PKS.
+* Blue - Depicts the Enterprise PKS infrastructure stack managed and available for use in vCloud Director for K8 cluster deployments. It also illustrates multi-tenancy for K8 cluster deployments on single Enterprise PKS infrastructure.
+* Purple - Depicts a single tenant dedicated Enterprise PKS infrastructure stack managed and available for use in vCloud Director for K8 cluster deployments. It also illustrates the use-case of a tenant leveraging multiple instances of Enterprise PKS infrastructure stack, say, to segregate K8s cluster workloads.
+* K8-prov - This label depicts the K8 Provider that is enabled on a given tenant's Organization VDC in vCloud Director.
+
 ![provider-setup](img/ent-pks/03-provider-setup-1.png)
+
+<a name="infra-view"></a>
+## Infrastructure set-up and configuration 
+
+### Before you begin
+
+1. Ensure fresh installation of Enterprise PKS infrastructure stack. 
+Also, ensure there are no prior K8 cluster deployments on this stack.
+2. Ensure CSE, vCloud Director infrastructure stack, and Enterprise PKS 
+infrastructure stack are all in the same management network, without proxy in between.
+
+### Enterprise PKS on-boarding 
+
+Below timeline diagram depicts infrastructure set-up and tenant
+ on-boarding. Cloud-provider has to do below steps before on-boarding tenants.
+ 1. Set up one or more Enterprise PKS-vSphere-NSX-T instances.
+ 2. Create [Enterprise PKS service accounts]((#faq)) per each Enterprise PKS instance.
+ 2. On-board Enterprise PKS instance(s) in vCD
+    * Attach Enterprise PKS' corresponding vSphere in vCD through vCD UI.
+    * Create provider-vdc(s) in vCD from underlying resources of newly attached Enterprise PKS' vSphere(s).
+    Ensure these pvdc(s) are dedicated for Enterprise PKS K8 deployments only.
+ 3. Install, configure and start CSE 
+    * Use `cse config` command to generate `config.yaml` and `pks.yaml` template files.
+    * Configure `config.yaml` with vCD and K8 template details.
+    * Configure `pks.yaml` with Enterprise PKS details. This file is necessary only 
+    if there is an intention to leverage Enterprise PKS for K8 deployments. 
+    * Run `CSE install` command. It prepares NSX-T(s) of Enterprise PKS instances for tenant isolation. 
+    Ensure this command is run for on-boarding of new Enterprise PKS instances at later point of time.
+    * Start the CSE service. 
+    
+ <a name="tenant-onboarding"></a>   
+### Tenant on-boarding
+1. Create ovdc(s) in tenant organization from newly created provider-vdc(s) above via vCD UI.
+2. Use these [CSE commands](#cse-commands) to grant K8 deployment rights to chosen tenants and tenant-users. Refer 
+[RBAC feature](/RBAC.html) for more details
+3. Use [CSE command](#cse-commands) to enable organiation vdc(s) with a chosen K8-provider (native|ent-pks).
+
+Below diagram illustrates a time sequence view of setting up the infrastructure for CSE 2.0,
+ followed by the on boarding of tenants. The expected steps are executed by Cloud providers 
+ or administrators.
+
+![provider-setup](img/ent-pks/04-provider-setup-2.png)
 
 <a name="communication-view"></a>
 ## CSE, vCD, Enterprise PKS Component Illustration
@@ -34,37 +84,13 @@ Refer [tenant-workflow](#tenant-workflow) to understand the below decision
 box in grey color in detail.
 ![communication-flow](img/ent-pks/02-communication-flow.png)
 
-<a name="infra-view"></a>
-## Infrastructure set-up and configuration 
-### Enterprise PKS on-boarding 
-
-Below timeline diagram depicts infrastructure set-up and tenant
- on-boarding. Cloud-provider has to do below steps before on-boarding tenants.
- 1. Set up one or more PKS-vSphere-NSX-T instances.
- 2. On-board PKS instance in vCD
-    * Attach corresponding vSphere in vCD 
-    * Create provider-vdc(s) from underlying resources of vSphere.
- 3. Install and configure CSE with vCD and PKS details. Start CSE server.
-    * "CSE install" command prepares NSX-T(s) of PKS instances for tenant isolation.
-    
-### Tenant on-boarding 
-1. Create ovdc(s) in vCD
-2. Grant K8 deployment rights to chosen tenants and tenant-users. Refer 
-[RBAC feature](/RBAC.html) for more details
-3. Enable ovdc(s) with a chosen K8-provider (native|ent-pks|none).
-
-Below diagram illustrates the order of steps to be performed to reach the desired
-[architectural set up](#architecture) as presented in the above diagram.
-
-![provider-setup](img/ent-pks/04-provider-setup-2.png)
-
 <a name="tenant-workflow"></a>
 ## Tenant workflow of create-cluster operation
 ![tenant-workflow](img/ent-pks/05-tenant-flow.png)
 
 <a name="cse-commands"></a>
 ## CSE commands
-### Tenant on-boarding commands (Admin only)
+### Administrator commands to on board a tenant
 
 **Granting rights to Tenants and Users:**
 
@@ -104,16 +130,6 @@ Below steps of granting rights are required only if [RBAC feature](/RBAC.html) i
 * vcd cse cluster resize
 * vcd cse cluster delete
 ```
-<a name="assumptions"></a>
-## Assumptions
-* Fresh Ent-PKS (vSphere & NSX-T) setup. PKS instances should not have any prior K8 deployments.
-* CSE, vCD and Ent-PKS instances in the same management network.
-* PKS service accounts with minimum required privileges for CRUD on clusters.
-
-<a name="recommendations"></a>
-## Recommendations
-* Dedicated provider-vdc(s) for PKS K8 deployments.
-* Dedicated org-vdc(s) for PKS K8 deployments.
 
 <a name="known-issues"></a>
 ## Known issues
@@ -128,8 +144,20 @@ Fixes will be coming soon for the above.
 <a name="faq"></a>
 ## FAQ
 
+* How to create PKS service account?
+    * Refer [UAA Client](https://docs.pivotal.io/runtimes/pks/1-3/manage-users.html#uaa-client)
+    to grant PKS access to a client.
+    * Define your own `client_id` and `client_secret`. The scope should be 
+    `uaa.none` and the `authorized_grant_types` should be `client_credentials`
+    * Example to create client using UAA CLI: `uaac client add test --name test 
+    --scope uaa.none 
+    --authorized_grant_types client_credentials 
+    --authorities clients.read,clients.write,clients.secret,scim.read,scim.write,pks.clusters.manage`
+    * Log in to PKS: `pks login -a https://${PKS_UAA_URL}:9021  -k --client-name test --client-secret xx`
+    * Input credentials in pks.yaml 
 * Are Ent-PKS clusters visible in vCD UI?
     * Not yet. Ent-PKS clusters can only be managed via CSE-CLI as of today.
+* Does running `cse install` command a necessary step for every  
 * Do Ent-PKS clusters adhere to their parent ovdc compute settings?
     * Yes. Both native and Ent-Pks clusters' combined usage is accounted towards 
     reaching compute-limits of a given ovdc resource-pool.
@@ -153,3 +181,12 @@ Fixes will be coming soon for the above.
 * How to fix CSE time-out errors?
     * By increasing the vCD extension timeout to a higher value.
     * Refer to "Setting the API Extension Timeout" in [here](/CSE_ADMIN.html)
+
+
+## Compatibility matrix
+|.      | vCD       |Enterprise PKS| NSX-T | 
+|:------|:----------|:-------------|:------|
+|CSE 2.0| 9.5, 9.7  | 1.4          | 2.3   | 
+
+
+
