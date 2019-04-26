@@ -8,7 +8,7 @@ title: Enterprise-PKS enablement
 ## Overview
 CSE 2.0 enables orchestration of K8 cluster deployment on [Enterprise PKS](https://cloud.vmware.com/vmware-enterprise-pks). 
 It facilitates co-existence of vCD(native) and PKS clusters with in the same 
-tenant boundaries, while ensuring tenant isolation among Enterprise PKS deployed K8 clusters.
+tenant boundaries, while ensuring tenant isolation among PKS K8 clusters.
 It also provides flexibility for admins to enable/disable a given vdc of tenant with a 
 particular K8-provider (native | ent-pks | none).
 
@@ -20,7 +20,7 @@ configuration steps and tenant commands among others.
 <a name="architecture"></a>
 ## Architecture
 Below diagram depicts holistic view of infrastructure set-up, 
-Ent-PKS on-boarding and tenant on-boarding. In other words, it illustrates physical 
+Ent-PKS on-boarding and tenant on-boarding. It illustrates physical 
 view of the infrastructure and logical-view of PKS and tenant on-boarding in vCD. 
 ![provider-setup](img/ent-pks/03-provider-setup-1.png)
 
