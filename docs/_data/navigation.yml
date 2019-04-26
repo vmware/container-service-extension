@@ -83,8 +83,14 @@
     sublink: overview
   - name: Architecture
     sublink: architecture
-  - name: Persona based commands
-    sublink: persona-based-workflows
+  - name: CSE, vCD, Enterprise PKS Component Illustration
+    sublink: communication-view
+  - name: Infrastructure set-up and configuration
+    sublink: infra-view
+  - name: Tenant workflow of create-cluster operation
+    sublink: tenant-workflow
+  - name: CSE commands
+    sublink: cse-commands
   - name: Assumptions
     sublink: assumptions
   - name: Recommendations

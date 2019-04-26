@@ -55,6 +55,7 @@ Below timeline diagram depicts infrastructure set-up and tenant
 
 Below diagram illustrates the order of steps to be performed to reach the 
 [architectural view](#architecture) presented above. 
+
 ![provider-setup](img/ent-pks/04-provider-setup-2.png)
 
 <a name="tenant-workflow"></a>
