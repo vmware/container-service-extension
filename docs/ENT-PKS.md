@@ -53,8 +53,8 @@ Below timeline diagram depicts infrastructure set-up and tenant
 [RBAC feature](/RBAC.html) for more details
 3. Enable ovdc(s) with a chosen K8-provider (native|ent-pks|none).
 
-Below diagram illustrates the order of steps to be performed to reach the 
-[architectural view](#architecture) presented above. 
+Below diagram illustrates the order of steps to be performed to reach the desired
+[architectural set up](#architecture) as presented in the above diagram.
 
 ![provider-setup](img/ent-pks/04-provider-setup-2.png)
 
