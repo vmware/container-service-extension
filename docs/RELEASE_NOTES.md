@@ -30,9 +30,9 @@ Note: `pip install container-service-extension` install previous official
 - [Enterprise PKS enablement](/ENT-PKS.html)
 - Below is the compatibility matrix of CSE 2.0 Beta with Enterprise PKS components.
 
-|.           | vCD       |Enterprise PKS| NSX-T | 
-|------------|-----------|--------------|-------|
-|CSE 2.0 Beta| 9.5, 9.7  | 1.4          | 2.3   | 
+|.               | vCD       |Enterprise PKS| NSX-T | 
+|----------------|-----------|--------------|-------|
+|**CSE 2.0 Beta**| 9.5, 9.7  | 1.4          | 2.3   | 
 
 
 ## CSE 1.2.7
