@@ -4,6 +4,37 @@ title: Release Notes
 ---
 
 # Release Notes
+
+## CSE 2.0 Beta (2.0.0.0b1)
+
+**This version is meant to be used for fresh installations of CSE only**
+
+Release Date: 2019-04-26
+
+Supported vCD versions: 9.5, 9.7
+
+| Template OS        | Docker                 | Kubernetes | Pod Network |
+|--------------------|------------------------|------------|-------------|
+| Photon OS 2.0 GA   | 17.06.0-9 (17.06.0-ce) | 1.10.11    | Weave 2.3.0 |
+| Ubuntu 16.04.4 LTS | 18.06.3-ce             | 1.13.5     | Weave 2.3.0 |
+
+**Installation of binaries**
+- `pip install container-service-extension==2.0.0.0b1` (or)
+- `pip install container-service-extension --pre`
+
+Note: `pip install container-service-extension` install previous official
+ version of CSE - 1.2.7. Specify the above mentioned exact version to install 
+ CSE 2.0 beta.
+
+**What is new?**
+- [Enterprise PKS enablement](/ENT-PKS.html)
+- Below is the compatibility matrix of CSE 2.0 Beta with Enterprise PKS components.
+
+|.           | vCD       |Enterprise PKS| NSX-T | 
+|------------|-----------|--------------|-------|
+|CSE 2.0 Beta| 9.5, 9.7  | 1.4          | 2.3   | 
+
+
 ## CSE 1.2.7
 
 Release Date: 2019-02-15

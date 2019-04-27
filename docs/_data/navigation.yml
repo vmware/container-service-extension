@@ -83,22 +83,20 @@
     sublink: overview
   - name: Architecture
     sublink: architecture
-  - name: CSE, vCD, Enterprise PKS Component Illustration
-    sublink: communication-view
   - name: Infrastructure set-up and configuration
     sublink: infra-view
+  - name: CSE, vCD, Enterprise PKS Component Illustration
+    sublink: communication-view
   - name: Tenant workflow of create-cluster operation
     sublink: tenant-workflow
   - name: CSE commands
     sublink: cse-commands
-  - name: Assumptions
-    sublink: assumptions
-  - name: Recommendations
-    sublink: recommendations
   - name: Known issues
     sublink: known-issues
   - name: FAQ
     sublink: faq
+  - name: Compatibility matrix
+    sublink: compatibility-matrix
 - name: "Troubleshooting"
   link: TROUBLESHOOTING.html
 - name: "Known Issues"

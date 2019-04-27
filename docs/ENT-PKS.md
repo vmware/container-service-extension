@@ -53,6 +53,7 @@ Below timeline diagram depicts infrastructure set-up and tenant
     * Create provider-vdc(s) in vCD from underlying resources of newly attached Enterprise PKS' vSphere(s).
     Ensure these pvdc(s) are dedicated for Enterprise PKS K8 deployments only.
  3. Install, configure and start CSE 
+    * Download [CSE 2.0](/RELEASE_NOTES.html) binaries
     * Use `cse config` command to generate `config.yaml` and `pks.yaml` template files.
     * Configure `config.yaml` with vCD and K8 template details.
     * Configure `pks.yaml` with Enterprise PKS details. This file is necessary only 
@@ -76,16 +77,24 @@ Below diagram illustrates a time sequence view of setting up the infrastructure 
 
 <a name="communication-view"></a>
 ## CSE, vCD, Enterprise PKS Component Illustration
-Below diagram outlines the communication flow between various components involved 
-for a create-cluster operation. Communication path in pink color illustrates 
-work-flow of native K8 deployments and the path in blue illustrates work-flow of
-PKS K8 deployments.
+Below diagram outlines the communication flow between components for the tenant's 
+workflow to create a new K8 cluster.
+
+Legend: 
+* The path depicted in pink signifies the workflow of K8 cluster deployments on Native K8 Provider Solution in CSE 2.0.
+* The path depicted in blue signifies the workflow of K8 cluster deployments on Enterprise K8 Provider Solution in CSE 2.0.
+
 Refer [tenant-workflow](#tenant-workflow) to understand the below decision 
 box in grey color in detail.
 ![communication-flow](img/ent-pks/02-communication-flow.png)
 
 <a name="tenant-workflow"></a>
 ## Tenant workflow of create-cluster operation
+
+To understand the creation of new K8 cluster workflow in detail, review below flow chart in its entirety. 
+In this illustration, user from  tenant "Pepsi" attempts to create a new K8 cluster
+ in organization VDC "ovdc-1", and based on the administrator's enablement for "ovdc-1", 
+ the course of action can alter.
 ![tenant-workflow](img/ent-pks/05-tenant-flow.png)
 
 <a name="cse-commands"></a>
@@ -134,17 +143,19 @@ Below steps of granting rights are required only if [RBAC feature](/RBAC.html) i
 <a name="known-issues"></a>
 ## Known issues
 
-* "node info" on native K8 clusters may not work as expected. 
-* "create cluster" on native ovdc(s) may not work as expected if executed by sysadmin.
-* "cluster info" and "cluster list" may not work as expected for PKS clusters 
-on which "resize" operation has been previously executed - PKS bug.
+* Command `vcd cse node info` on native K8 clusters is broken when 
+Enterprise PKS is part of CSE set-up
+* Command `vcd cse create cluster` on native ovdc(s) when executed by sys-admin is broken.
+* Once `vcd cse cluster resize` is run on Enterprise PKS based clusters, commands 
+`vcd cse cluster info` and `vcd cse cluster list` on those resized clusters will begin to display 
+incomplete results. This is an issue from Enterprise PKS.
 
 Fixes will be coming soon for the above.
 
 <a name="faq"></a>
 ## FAQ
 
-* How to create PKS service account?
+* How to create an Enterprise PKS service account?
     * Refer [UAA Client](https://docs.pivotal.io/runtimes/pks/1-3/manage-users.html#uaa-client)
     to grant PKS access to a client.
     * Define your own `client_id` and `client_secret`. The scope should be 
@@ -155,34 +166,30 @@ Fixes will be coming soon for the above.
     --authorities clients.read,clients.write,clients.secret,scim.read,scim.write,pks.clusters.manage`
     * Log in to PKS: `pks login -a https://${PKS_UAA_URL}:9021  -k --client-name test --client-secret xx`
     * Input credentials in pks.yaml 
-* Are Ent-PKS clusters visible in vCD UI?
-    * Not yet. Ent-PKS clusters can only be managed via CSE-CLI as of today.
-* Does running `cse install` command a necessary step for every  
-* Do Ent-PKS clusters adhere to their parent ovdc compute settings?
-    * Yes. Both native and Ent-Pks clusters' combined usage is accounted towards 
-    reaching compute-limits of a given ovdc resource-pool.
-* Are Ent-PKS clusters isolated at network layer?
+* Are Enterprise PKS based clusters visible in vCD UI?
+    * This functionality is not available yet.
+     Enterprise PKS based clusters can only be managed via CSE-CLI as of today.
+* Do Enterprise PKS based clusters adhere to their parent organization-vdc compute settings?
+    * Yes. Both native and Enterprise PkS clusters' combined usage is accounted towards 
+    reaching compute-limits of a given organization-vdc resource-pool.
+* Are Enterprise PKS clusters isolated at network layer?
     * Yes. Tenant-1 clusters cannot reach Tenant-2 clusters via Node IP addresses.
-* Do Ent-PKS clusters adhere to its parent ovdc storage limits?
-    * Not yet. As of today, ovdc storage limits apply only for native K8 clusters.
-* Can native K8 clusters be deployed in ovdc(s) dedicated for Ent-PKS?
-    * Not yet.
-* Can tenant get a dedicated storage for their Ent-PKS clusters?
-    * Not yet. Support for this will be added as soon as Ent-PKS supports the 
-    concept of storage-profiles. 
+* Do Enterprise PKS based clusters adhere to its parent organization-vdc storage limits?
+    * This functionality is not available yet. As of today, organization-vdc storage limits apply 
+    only for native K8 clusters.
+* Can native K8 clusters be deployed in organization-vdc(s) dedicated for Ent-PKS?
+    * This functionality is not available yet.
+* Can tenant get a dedicated storage for their Enterprise PKS based clusters?
+    * This functionality is not available yet.
 * Why is response-time of commands slower sometimes?
-    * [RBAC feature](/RBAC.html) turned on will have some performance effect.
-    * Presence of Ent-PKS instances in the system will have some performance 
-    impact, as it involves invocation of multiple external API calls 
-    and post-processing of data.
-    * cluster-management commands by *sys-admin* may be even slower given CSE 
-    has to scan entire system to generate results.
-    * Performance-optimization will be coming soon.
-* How to fix CSE time-out errors?
-    * By increasing the vCD extension timeout to a higher value.
-    * Refer to "Setting the API Extension Timeout" in [here](/CSE_ADMIN.html)
+    * The response times for commands can be slow due to variety of reasons. 
+    For example - RBAC feature is known to impose some slowness in the system. 
+    Enterprise PKS based K8 cluster deployments have some performance implications. 
+    The performance optimizations will be coming in near future
+* If there are Extension time out errors while executing commands, how can they be remediated?
+    * Increase the vCD extension timeout to a higher value. Refer to "Setting the API Extension Timeout" in [here](/CSE_ADMIN.html)
 
-
+<a name="compatibility-matrix"></a>
 ## Compatibility matrix
 |.      | vCD       |Enterprise PKS| NSX-T | 
 |:------|:----------|:-------------|:------|
