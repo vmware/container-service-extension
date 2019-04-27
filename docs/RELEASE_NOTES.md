@@ -26,9 +26,11 @@ Note: `pip install container-service-extension` install previous official
  version of CSE - 1.2.7. Specify the above mentioned exact version to install 
  CSE 2.0 beta.
 
-**What is new?**
+**New Features**
 - [Enterprise PKS enablement](/ENT-PKS.html)
-- Below is the compatibility matrix of CSE 2.0 Beta with Enterprise PKS components.
+- [Role based access control](/RBAC.html)
+
+**Compatibility matrix**
 
 |.               | vCD       |Enterprise PKS| NSX-T | 
 |----------------|-----------|--------------|-------|
