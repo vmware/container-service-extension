@@ -22,7 +22,7 @@ Supported vCD versions: 9.5, 9.7
 - `pip install container-service-extension==2.0.0.0b1` (or)
 - `pip install container-service-extension --pre`
 
-Note: `pip install container-service-extension` install previous official
+Note: `pip install container-service-extension` installs previous official
  version of CSE - 1.2.7. Specify the above mentioned exact version to install 
  CSE 2.0 beta.
 
