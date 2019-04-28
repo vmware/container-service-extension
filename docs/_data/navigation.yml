@@ -76,6 +76,27 @@
     sublink: enablement
   - name: FAQ
     sublink: faq
+-name: "Enterprise-PKS enablement"
+  link: pks.html
+  subtoc:
+  - name: Overview
+    sublink: overview
+  - name: Architecture
+    sublink: architecture
+  - name: Infrastructure set-up and configuration
+    sublink: infra-view
+  - name: CSE, vCD, Enterprise PKS Component Illustration
+    sublink: communication-view
+  - name: Tenant workflow of create-cluster operation
+    sublink: tenant-workflow
+  - name: CSE commands
+    sublink: cse-commands
+  - name: Known issues
+    sublink: known-issues
+  - name: FAQ
+    sublink: faq
+  - name: Compatibility matrix
+    sublink: compatibility-matrix
 - name: "Troubleshooting"
   link: TROUBLESHOOTING.html
 - name: "Known Issues"
