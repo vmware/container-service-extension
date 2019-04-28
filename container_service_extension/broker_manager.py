@@ -13,12 +13,12 @@ from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import PksServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.ovdc_cache import CONTAINER_PROVIDER_KEY
-from container_service_extension.ovdc_cache import CtrProvType
 from container_service_extension.ovdc_cache import OvdcCache
 from container_service_extension.pks_cache import PKS_CLUSTER_DOMAIN_KEY
 from container_service_extension.pks_cache import PKS_PLANS_KEY
 from container_service_extension.pksbroker import PKSBroker
+from container_service_extension.server_constants import K8S_PROVIDER_KEY
+from container_service_extension.server_constants import K8sProviders
 from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import connect_vcd_user_via_token
 from container_service_extension.utils import exception_handler
@@ -108,13 +108,13 @@ class BrokerManager(object):
             result['status_code'] = OK
         elif op == Operation.ENABLE_OVDC:
             pks_ctx, ovdc = self._get_ovdc_params()
-            if self.req_spec[CONTAINER_PROVIDER_KEY] == CtrProvType.PKS.value:
+            if self.req_spec[K8S_PROVIDER_KEY] == K8sProviders.PKS:
                 self._create_pks_compute_profile(pks_ctx)
             task = self.ovdc_cache. \
                 set_ovdc_container_provider_metadata(
                     ovdc,
                     container_prov_data=pks_ctx,
-                    container_provider=self.req_spec[CONTAINER_PROVIDER_KEY])
+                    container_provider=self.req_spec[K8S_PROVIDER_KEY])
             # TODO() Constructing response should be moved out of this layer
             result['body'] = {'task_href': task.get('href')}
             result['status_code'] = ACCEPTED
@@ -191,10 +191,9 @@ class BrokerManager(object):
                         ovdc_name=vdc['name'], org_name=org.get_name(),
                         credentials_required=False)
                 vdc_dict = {
-                    'org': org.get_name(),
                     'name': vdc['name'],
-                    CONTAINER_PROVIDER_KEY:
-                        ctr_prov_ctx[CONTAINER_PROVIDER_KEY]
+                    'org': org.get_name(),
+                    K8S_PROVIDER_KEY: ctr_prov_ctx[K8S_PROVIDER_KEY]
                 }
                 ovdc_list.append(vdc_dict)
         return ovdc_list
@@ -224,8 +223,8 @@ class BrokerManager(object):
             if cluster:
                 return cluster, broker
 
-        raise ClusterNotFoundError(f'cluster {cluster_name} not found '
-                                   f'either in vCD or PKS')
+        raise ClusterNotFoundError(f"Cluster {cluster_name} not found "
+                                   f"either in vCD or PKS")
 
     def _get_cluster_config(self, **cluster_spec):
         """Get the cluster configuration.
@@ -245,8 +244,8 @@ class BrokerManager(object):
             if cluster:
                 return broker.get_cluster_config(cluster_name=cluster['name'])
 
-        raise ClusterNotFoundError(f'cluster {cluster_name} not found '
-                                   f'either in vCD or PKS')
+        raise ClusterNotFoundError(f"Cluster {cluster_name} not found "
+                                   f"either in vCD or PKS")
 
     def _list_clusters(self):
         """Logic of the method is as follows.
@@ -269,7 +268,7 @@ class BrokerManager(object):
             for cluster in vcd_broker.list_clusters():
                 vcd_cluster = {k: cluster.get(k, None) for k in
                                common_cluster_properties}
-                vcd_cluster[CONTAINER_PROVIDER_KEY] = CtrProvType.VCD.value
+                vcd_cluster[K8S_PROVIDER_KEY] = K8sProviders.NATIVE
                 vcd_clusters.append(vcd_cluster)
 
             pks_clusters = []
@@ -280,7 +279,7 @@ class BrokerManager(object):
                 for cluster in pks_broker.list_clusters():
                     pks_cluster = self._get_truncated_cluster_info(
                         cluster, pks_broker, common_cluster_properties)
-                    pks_cluster[CONTAINER_PROVIDER_KEY] = CtrProvType.PKS.value
+                    pks_cluster[K8S_PROVIDER_KEY] = K8sProviders.PKS
                     pks_clusters.append(pks_cluster)
             return vcd_clusters + pks_clusters
 
@@ -299,15 +298,15 @@ class BrokerManager(object):
         if not cluster:
             ctr_prov_ctx = self._get_ctr_prov_ctx_from_ovdc_metadata()
             if ctr_prov_ctx.get(
-                    CONTAINER_PROVIDER_KEY) == CtrProvType.PKS.value:
+                    K8S_PROVIDER_KEY) == K8sProviders.PKS:
                 cluster_spec['pks_plan'] = ctr_prov_ctx[PKS_PLANS_KEY][0]
                 cluster_spec['pks_ext_host'] = f"{cluster_name}." \
                     f"{ctr_prov_ctx[PKS_CLUSTER_DOMAIN_KEY]}"
             broker = self._get_broker_based_on_ctr_prov_ctx(ctr_prov_ctx)
             return broker.create_cluster(**cluster_spec)
         else:
-            raise CseServerError(f'Cluster with name: {cluster_name} '
-                                 f'already found')
+            raise CseServerError(f"Cluster with name: {cluster_name} "
+                                 f"already found")
 
     def _find_cluster_in_org(self, cluster_name):
         """Invoke set of all (vCD/PKS)brokers in the org to find the cluster.
@@ -387,8 +386,7 @@ class BrokerManager(object):
                     self.ovdc_cache.get_ovdc_container_provider_metadata(
                         ovdc_name=vdc_name, org_name=org_name,
                         credentials_required=True)
-                if ctr_prov_ctx[CONTAINER_PROVIDER_KEY] == \
-                        CtrProvType.PKS.value:
+                if ctr_prov_ctx[K8S_PROVIDER_KEY] == K8sProviders.PKS:
                     pks_ctx_dict[ctr_prov_ctx['vc']] = ctr_prov_ctx
 
             pks_ctx_list = list(pks_ctx_dict.values())
@@ -412,7 +410,6 @@ class BrokerManager(object):
 
     def _get_ctr_prov_ctx_from_ovdc_metadata(self, ovdc_name=None,
                                              org_name=None):
-
         ovdc_name = \
             ovdc_name or self.req_spec.get('vdc') or \
             self.req_qparams.get('vdc')
@@ -428,16 +425,24 @@ class BrokerManager(object):
             return ctr_prov_ctx
 
     def _get_broker_based_on_ctr_prov_ctx(self, ctr_prov_ctx):
+        # If system is equipped with PKS, use the metadata on ovdc to determine
+        # the correct broker, otherwise fallback to vCD for cluster deployment.
+        # However if the system is enabled for PKS and has no metadata on odvc
+        # or isn't enabled for container deployment raise appropriate
+        # exception.
+        if self.pks_cache:
+            if ctr_prov_ctx:
+                if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProviders.PKS:
+                    return PKSBroker(self.req_headers, self.req_spec,
+                                     pks_ctx=ctr_prov_ctx)
+                elif ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProviders.NATIVE:
+                    return VcdBroker(self.req_headers, self.req_spec)
 
-        if ctr_prov_ctx and ctr_prov_ctx.get(
-                CONTAINER_PROVIDER_KEY) == CtrProvType.PKS.value:
-            return PKSBroker(self.req_headers, self.req_spec,
-                             pks_ctx=ctr_prov_ctx)
         else:
-            # TODO() - This call should be based on a boolean flag
-            # Specify flag in config file whether to have default
-            # handling is required for missing ovdc or org.
             return VcdBroker(self.req_headers, self.req_spec)
+
+        raise CseServerError("Org VDC is not enabled for Kubernetes cluster "
+                             "deployment")
 
     def get_broker_based_on_vdc(self):
         """Get the broker based on ovdc.
@@ -468,7 +473,7 @@ class BrokerManager(object):
         pvdc_id = self.ovdc_cache.get_pvdc_id(ovdc)
 
         pks_context = None
-        if self.req_spec[CONTAINER_PROVIDER_KEY] == CtrProvType.PKS.value:
+        if self.req_spec[K8S_PROVIDER_KEY] == K8sProviders.PKS:
             if not self.pks_cache:
                 raise CseServerError('PKS config file does not exist')
             pvdc_info = self.pks_cache.get_pvdc_info(pvdc_id)

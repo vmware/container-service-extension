@@ -64,9 +64,9 @@ broker:
     cpu: 2
     description: 'Ubuntu 16.04
 
-      Docker 18.06.2~ce
+      Docker 18.06.3~ce
 
-      Kubernetes 1.10.11
+      Kubernetes 1.13.5
 
       weave 2.3.0'
     mem: 2048

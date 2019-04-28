@@ -55,7 +55,8 @@ from container_service_extension.utils import OK
 USER_ID_SEPARATOR = "---"
 # Properties that need to be excluded from cluster info before sending
 # to the client for reasons: security, too big that runs thru lines
-EXCLUDE_KEYS = ['compute_profile']
+EXCLUDE_KEYS = ['authorization_mode', 'compute_profile', 'uuid', 'plan_name',
+                'network_profile_name', 'nsxt_network_profile']
 
 
 class PKSBroker(AbstractBroker):
@@ -184,6 +185,8 @@ class PKSBroker(AbstractBroker):
         else:
             user_cluster_list = [cluster_dict for cluster_dict in cluster_list
                                  if self._is_user_cluster_owner(cluster_dict)]
+            for cluster in user_cluster_list:
+                self._exclude_pks_properties(cluster)
             return user_cluster_list
 
     def _list_clusters(self):
@@ -246,7 +249,8 @@ class PKSBroker(AbstractBroker):
             self._append_user_id(cluster_spec['cluster_name'])
         cluster_info = self._create_cluster(**cluster_spec)
         self._restore_original_name(cluster_info)
-        self._exclude_pks_properties(cluster_info)
+        if not self.tenant_client.is_sysadmin():
+            self._exclude_pks_properties(cluster_info)
         return cluster_info
 
     def _create_cluster(self, cluster_name, node_count, pks_plan, pks_ext_host,
@@ -351,6 +355,7 @@ class PKSBroker(AbstractBroker):
             cluster_info = \
                 self._get_cluster_info(self._append_user_id(cluster_name))
             self._restore_original_name(cluster_info)
+            self._exclude_pks_properties(cluster_info)
             return cluster_info
 
     def _get_cluster_info(self, cluster_name):

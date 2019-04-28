@@ -48,6 +48,7 @@ from container_service_extension.utils import create_and_share_catalog
 from container_service_extension.utils import download_file
 from container_service_extension.utils import EXCHANGE_TYPE
 from container_service_extension.utils import get_data_file
+from container_service_extension.utils import get_duplicate_items_in_list
 from container_service_extension.utils import get_org
 from container_service_extension.utils import get_vdc
 from container_service_extension.utils import get_vsphere
@@ -62,33 +63,47 @@ TEMP_VAPP_NETWORK_ADAPTER_TYPE = "vmxnet3"
 TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
 
 INSTRUCTIONS_FOR_PKS_CONFIG_FILE = "\
-# Config file for PKS enabled CSE Server to be filled by the administrator.\n\
-# This config file has the following three sections:\n\
-#   1. pks_accounts:\n\
-#       a. Cloud Admins can specify PKS service account for every\n\
-#          (PKS managed) vCenter in vCD i.e. a common PKS account per\n\
-#          vCenter will be used for all the organizations.\n\
-#       b. Cloud Admin can choose to create separate PKS service\n\
-#          account per organization per vCenter, if this option is chosen,\n\
-#          admins need to ensure that PKS accounts are correctly mapped to\n\
-#          their respective organization in the 'orgs' section of this\n\
-#          config file.\n\
-#       P.S: Currently, we mandate each PKS service account in the system to\n\
-#       have a unique account name.\n\
-#   2. orgs: [OPTIONAL SECTION for admins who chose 1a above.]\n\
-#       a. If cloud admin chooses to define PKS service account per\n\
-#          organization per vCenter, include the organization and respective\n\
-#          pks_account names in this section, else should be left blank with\n\
-#          empty values.\n\
+# Config file for PKS enabled CSE Server to be filled by administrators.\n\
+# This config file has the following four sections:\n\
+#   1. pks_api_servers:\n\
+#       a. Each entry in the list represents a PKS api server that is part \n\
+#          of the deployment.\n\
+#       b. The field 'name' in each entry should be unique. The value of \n\
+#          the field has no bearing on the real world PKS api server, it's \n\
+#          used to tie in various segments of the config file together.\n\
+#       c. The field 'vc' represents the name with which the PKS vCenter \n\
+#          is registered in vCD.\n\
+#   2. pks_accounts:\n\
+#       a. Each entry in the list represents a PKS account that can be used \n\
+#          talk to a certain PKS api server.\n\
+#       b. The field 'name' in each entry should be unique. The value of \n\
+#          the field has no bearing on the real world PKS accounts, it's \n\
+#          used to tie in various segments of the config file together.\n\
+#       c. The field 'pks_api_server' is a reference to the PKS api server \n\
+#          which owns this account. It's value should be equal to value of \n\
+#          the field 'name' of the corresponding PKS api server.\n\
 #   3. pvdcs:\n\
-#       a. List of Provider vDCs dedicated for PKS enabled CSE set up only\n\
-# Each PKS service account needs to have the following information fields to\n\
-# be filled in: \n\
-#       1. PKS account name\n\
-#       2. vCenter name in vCD for this PKS account\n\
-#       3. PKS server host\n\
-#       4. PKS server port\n\
-#       5. PKS UAAC account information\n\
+#       a. Each entry in the list represents a Provider VDC in vCD that is \n\
+#          backed by a cluster of the PKS managed vCenter server.\n\
+#       b. The field 'name' in each entry should be the name of the \n\
+#          Provider VDC as it appears in vCD.\n\
+#       c. The field 'pks_api_server' is a reference to the PKS api server \n\
+#          which owns this account. It's value should be equal to value of \n\
+#          the field 'name' of the corresponding PKS api server.\n\
+#   4. nsxt_servers:\n\
+#       a. Each entry in the list represents a NSX-T server that has been \n\
+#          alongside a PKS server to manage its networking. CSE needs these \n\
+#          details to enforce network isolation of clusters.\n\
+#       b. The field 'name' in each entry should be unique. The value of \n\
+#          the field has no bearing on the real world NSX-T server, it's \n\
+#          used to tie in various segments of the config file together.\n\
+#       c. The field 'pks_api_server' is a reference to the PKS api server \n\
+#          which owns this account. It's value should be equal to value of \n\
+#          the field 'name' of the corresponding PKS api server.\n\
+#       d. The field 'distributed_firewall_section_anchor_id' should be \n\
+#          populated with id of a Distributed Firewall Section e.g. it can \n\
+#          be the id of the section called 'Default Layer3 Section' which \n\
+#          PKS creates on installation.\n\
 # For more information, please refer to CSE documentation page:\n\
 # https://vmware.github.io/container-service-extension/INSTALLATION.html\n"
 
@@ -100,8 +115,8 @@ NOTE_FOR_PKS_KEY_IN_CONFIG_FILE = "\
 PKS_CONFIG_NOTE = "\
 # [OPTIONAL] PKS CONFIGS\n\
 # These configs are required only for customers with PKS enabled CSE.\n\
-# Regular CSE users with no PKS container provider do not need these configs\n\
-# to be filled out in a separate yaml file."
+# Regular CSE users, with no PKS container provider in their system, do not \n\
+# need these configs to be filled out in a separate yaml file."
 
 SAMPLE_AMQP_CONFIG = {
     'amqp': {
@@ -184,7 +199,7 @@ SAMPLE_TEMPLATE_UBUNTU_16_04 = {
     'cpu': 2,
     'mem': 2048,
     'admin_password': 'guest_os_admin_password',
-    'description': 'Ubuntu 16.04\nDocker 18.06.2~ce\nKubernetes 1.10.11\nweave\
+    'description': 'Ubuntu 16.04\nDocker 18.06.3~ce\nKubernetes 1.13.5\nweave\
  2.3.0'
 }
 
@@ -208,12 +223,12 @@ SAMPLE_PKS_CONFIG_FILE_LOCATION = {
     PKS_CONFIG_FILE_LOCATION_SECTION_KEY: None
 }
 
-PKS_SERVERS_SECTION_KEY = 'pks_servers'
+PKS_SERVERS_SECTION_KEY = 'pks_api_servers'
 SAMPLE_PKS_SERVERS_SECTION = {
     PKS_SERVERS_SECTION_KEY: [
         {
-            'name': 'pks-server-1',
-            'host': 'pks-server-1.pks.local',
+            'name': 'pks-api-server-1',
+            'host': 'pks-api-server-1.pks.local',
             'port': '9021',
             'uaac_port': '8443',
             # 'proxy': 'proxy1.pks.local:80',
@@ -223,8 +238,8 @@ SAMPLE_PKS_SERVERS_SECTION = {
             'vc': 'vc1',
             'verify': True
         }, {
-            'name': 'pks-server-2',
-            'host': 'pks-server-2.pks.local',
+            'name': 'pks-api-server-2',
+            'host': 'pks-api-server-2.pks.local',
             'port': '9021',
             'uaac_port': '8443',
             # 'proxy': 'proxy2.pks.local:80',
@@ -242,17 +257,17 @@ SAMPLE_PKS_ACCOUNTS_SECTION = {
     PKS_ACCOUNTS_SECTION_KEY: [
         {
             'name': 'Org1ServiceAccount1',
-            'pks_server': 'pks-server-1',
+            'pks_api_server': 'pks-api-server-1',
             'secret': 'secret',
             'username': 'org1Admin'
         }, {
             'name': 'Org1ServiceAccount2',
-            'pks_server': 'pks-server-2',
+            'pks_api_server': 'pks-api-server-2',
             'secret': 'secret',
             'username': 'org1Admin'
         }, {
             'name': 'Org2ServiceAccount',
-            'pks_server': 'pks-server-2',
+            'pks_api_server': 'pks-api-server-2',
             'secret': 'secret',
             'username': 'org2Admin'
         }
@@ -277,15 +292,15 @@ SAMPLE_PKS_PVDCS_SECTION = {
     PKS_PVDCS_SECTION_KEY: [
         {
             'name': 'pvdc1',
-            'pks_server': 'pks-server-1',
+            'pks_api_server': 'pks-api-server-1',
             'cluster': 'pks-s1-az-1',
         }, {
             'name': 'pvdc2',
-            'pks_server': 'pks-server-2',
+            'pks_api_server': 'pks-api-server-2',
             'cluster': 'pks-s2-az-1'
         }, {
             'name': 'pvdc3',
-            'pks_server': 'pks-server-1',
+            'pks_api_server': 'pks-api-server-1',
             'cluster': 'pks-s1-az-2'
         }
     ]
@@ -299,7 +314,7 @@ SAMPLE_PKS_NSXT_SERVERS_SECTION = {
             'host': 'nsxt1.domain.local',
             'username': 'admin',
             'password': 'secret',
-            'pks_server': 'pks-server-1',
+            'pks_api_server': 'pks-api-server-1',
             # 'proxy': 'proxy1.pks.local:80',
             'nodes_ip_block_ids': ['id1', 'id2'],
             'pods_ip_block_ids': ['id1', 'id2'],
@@ -310,7 +325,7 @@ SAMPLE_PKS_NSXT_SERVERS_SECTION = {
             'host': 'nsxt2.domain.local',
             'username': 'admin',
             'password': 'secret',
-            'pks_server': 'pks-server-2',
+            'pks_api_server': 'pks-api-server-2',
             # 'proxy': 'proxy2.pks.local:80',
             'nodes_ip_block_ids': ['id1', 'id2'],
             'pods_ip_block_ids': ['id1', 'id2'],
@@ -361,8 +376,9 @@ def generate_sample_config(output=None, pks_output=None):
         SAMPLE_PKS_SERVERS_SECTION, default_flow_style=False) + '\n'
     sample_pks_config += yaml.safe_dump(
         SAMPLE_PKS_ACCOUNTS_SECTION, default_flow_style=False) + '\n'
-    sample_pks_config += yaml.safe_dump(
-        SAMPLE_PKS_ORGS_SECTION, default_flow_style=False) + '\n'
+    # Org - PKS account mapping section will be supressed for CSE 2.0 alpha
+    # sample_pks_config += yaml.safe_dump(
+    #    SAMPLE_PKS_ORGS_SECTION, default_flow_style=False) + '\n'
     sample_pks_config += yaml.safe_dump(
         SAMPLE_PKS_PVDCS_SECTION, default_flow_style=False) + '\n'
     sample_pks_config += yaml.safe_dump(
@@ -646,13 +662,30 @@ def validate_pks_config_data_integrity(pks_config):
     all_pks_accounts = \
         [entry['name'] for entry in pks_config[PKS_ACCOUNTS_SECTION_KEY]]
 
-    for pks_account in pks_config[PKS_ACCOUNTS_SECTION_KEY]:
-        pks_server = pks_account.get('pks_server')
-        if pks_server not in all_pks_servers:
-            raise ValueError(f"Unknown PKS server : {pks_server} referenced"
-                             f" by PKS account : {pks_account.get('name')} in "
-                             f"Section : {PKS_ACCOUNTS_SECTION_KEY}")
+    # Check for duplicate pks api server names
+    duplicate_pks_server_names = get_duplicate_items_in_list(all_pks_servers)
+    if len(duplicate_pks_server_names) != 0:
+        raise ValueError(
+            f"Duplicate PKS api server(s) : {duplicate_pks_server_names} found"
+            f" in Section : {PKS_SERVERS_SECTION_KEY}")
 
+    # Check for duplicate pks account names
+    duplicate_pks_account_names = get_duplicate_items_in_list(all_pks_accounts)
+    if len(duplicate_pks_account_names) != 0:
+        raise ValueError(
+            f"Duplicate PKS account(s) : {duplicate_pks_account_names} found"
+            f" in Section : {PKS_ACCOUNTS_SECTION_KEY}")
+
+    # Check validity of all PKS api servers referenced in PKS accounts section
+    for pks_account in pks_config[PKS_ACCOUNTS_SECTION_KEY]:
+        pks_server_name = pks_account.get('pks_api_server')
+        if pks_server_name not in all_pks_servers:
+            raise ValueError(
+                f"Unknown PKS api server : {pks_server_name} referenced by "
+                f"PKS account : {pks_account.get('name')} in Section : "
+                f"{PKS_ACCOUNTS_SECTION_KEY}")
+
+    # Check validity of all PKS accounts referenced in Orgs section
     if PKS_ORGS_SECTION_KEY in pks_config.keys():
         for org in pks_config[PKS_ORGS_SECTION_KEY]:
             referenced_accounts = org.get('pks_accounts')
@@ -664,19 +697,22 @@ def validate_pks_config_data_integrity(pks_config):
                                      f"nced by Org : {org.get('name')} in "
                                      f"Section : {PKS_ORGS_SECTION_KEY}")
 
+    # Check validity of all PKS api servers referenced in PVDC section
     for pvdc in pks_config[PKS_PVDCS_SECTION_KEY]:
-        pks_server = pvdc.get('pks_server')
-        if pks_server not in all_pks_servers:
-            raise ValueError(f"Unknown PKS server : {pks_server} referenced"
-                             f" by PVDC : {pvdc.get('name')} in Section : "
-                             f"{PKS_PVDCS_SECTION_KEY}")
+        pks_server_name = pvdc.get('pks_api_server')
+        if pks_server_name not in all_pks_servers:
+            raise ValueError(f"Unknown PKS api server : {pks_server_name} "
+                             f"referenced by PVDC : {pvdc.get('name')} in "
+                             f"Section : {PKS_PVDCS_SECTION_KEY}")
 
+    # Check validity of all PKS api servers referenced in NSX-T section
     for nsxt_server in pks_config[PKS_NSXT_SERVERS_SECTION_KEY]:
-        pks_server = nsxt_server.get('pks_server')
-        if pks_server not in all_pks_servers:
-            raise ValueError(f"Unknown PKS server : {pks_server} reference"
-                             f"d by NSX-T server : {nsxt_server.get('name')} "
-                             f"in Section : {PKS_NSXT_SERVERS_SECTION_KEY}")
+        pks_server_name = nsxt_server.get('pks_api_server')
+        if pks_server_name not in all_pks_servers:
+            raise ValueError(
+                f"Unknown PKS api server : {pks_server_name} referenced by "
+                f"NSX-T server : {nsxt_server.get('name')} in Section : "
+                f"{PKS_NSXT_SERVERS_SECTION_KEY}")
 
         # Create a NSX-T client and verify connection
         nsxt_client = NSXTClient(
@@ -687,8 +723,9 @@ def validate_pks_config_data_integrity(pks_config):
             https_proxy=nsxt_server.get('proxy'),
             verify_ssl=nsxt_server.get('verify'))
         if not nsxt_client.test_connectivity():
-            raise ValueError(f"Unable to connect to NSX-T server : "
-                             f"{nsxt_server.get('name')}")
+            raise ValueError(
+                "Unable to connect to NSX-T server : "
+                f"{nsxt_server.get('name')} ({nsxt_server.get('host')})")
 
         click.secho(f"Connected to NSX-T server ({nsxt_server.get('host')})",
                     fg='green')
