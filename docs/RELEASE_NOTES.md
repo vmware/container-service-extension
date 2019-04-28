@@ -32,9 +32,9 @@ Note: `pip install container-service-extension` installs previous official
 
 **Compatibility matrix**
 
-|.               | vCD       |Enterprise PKS| NSX-T | 
+|CSE             | vCD       |Enterprise PKS| NSX-T | 
 |----------------|-----------|--------------|-------|
-|**CSE 2.0 Beta**| 9.5, 9.7  | 1.4          | 2.3   | 
+|2.0 Beta        | 9.5, 9.7  | 1.4          | 2.3   | 
 
 
 ## CSE 1.2.7
