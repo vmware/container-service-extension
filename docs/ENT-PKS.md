@@ -53,7 +53,7 @@ Below timeline diagram depicts infrastructure set-up and tenant
     * Create provider-vdc(s) in vCD from underlying resources of newly attached Enterprise PKS' vSphere(s).
     Ensure these pvdc(s) are dedicated for Enterprise PKS K8 deployments only.
  3. Install, configure and start CSE 
-    * Follow instructions to install CSE 2.0 beta [here](/container-service-extension/RELEASE_NOTES.html) binaries
+    * Follow instructions to install CSE 2.0 beta [here](/container-service-extension/RELEASE_NOTES.html)
     * Use `cse config` command to generate `config.yaml` and `pks.yaml` template files.
     * Configure `config.yaml` with vCD and K8 template details.
     * Configure `pks.yaml` with Enterprise PKS details. This file is necessary only 
@@ -187,7 +187,7 @@ Fixes will be coming soon for the above.
     Enterprise PKS based K8 cluster deployments have some performance implications. 
     The performance optimizations will be coming in near future
 * If there are Extension time out errors while executing commands, how can they be remediated?
-    * Increase the vCD extension timeout to a higher value. Refer "Setting the API Extension Timeout" in [here](/container-service-extension/CSE_ADMIN.html/#extension-timeout)
+    * Increase the vCD extension timeout to a higher value. Refer [Setting the API Extension Timeout](/container-service-extension/CSE_ADMIN.html#extension-timeout)
 
 <a name="compatibility-matrix"></a>
 ## Compatibility matrix
