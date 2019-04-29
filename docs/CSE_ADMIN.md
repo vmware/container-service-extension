@@ -510,7 +510,7 @@ vcd system extension list
 # get details of CSE extension
 vcd system extension info cse
 ```
-
+<a name="extension-timeout"></a>
 ### Setting the API Extension Timeout
 
 The API extension timeout is the number of seconds that vCD waits for
