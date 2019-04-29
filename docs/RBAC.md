@@ -8,26 +8,31 @@ title: Role Based Access Control
 ## Overview
 
 Till CSE 1.2.5, any authenticated vCloud Director user is able to leverage CSE
-for Kubernetes Cluster deployments. There are no mechanics in CSE Service to 
-restrict its usage. This page describes the new role based access
-control (RBAC) mechanism through which administrators can administer
-restrictive usage of CSE. It also explains the functioning of RBAC along with
-desired behaviors.
+for Kubernetes Cluster deployments. There are no mechanics in CSE Service to
+restrict its usage. This page describes the new role based access control
+(RBAC) mechanism through which administrators can administer restrictive
+usage of CSE. It also explains the functioning of RBAC along with desired
+behaviors.
+
 
 <a name="capability"></a>
 ## Capability
 
-CSE 1.2.6 has the capability to restrict access to certain deployment
+CSE 1.2.6 and above has the capability to restrict access to certain deployment
 operations. To perform these operations, a user must have a certain right in
 their assigned role. The following table lays out the right requirement for all
 the restricted operations.
 
-| Operation      |  Right                        |
-|:---------------|:------------------------------|
-| cluster create | {cse}:CSE NATIVE DEPLOY RIGHT |
-| cluster delete | {cse}:CSE NATIVE DEPLOY RIGHT |
-| node create    | {cse}:CSE NATIVE DEPLOY RIGHT |
-| node delete    | {cse}:CSE NATIVE DEPLOY RIGHT |
+| Operation |  Container Provider | Right | Introduced in |
+|:----------|:--------------------|:------|:--------------|
+| cluster create | Native(vCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
+| cluster delete | Native(vCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
+| cluster resize | Native(vCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
+| node create | Native(vCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
+| node delete | Native(vCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
+| cluster create | Enterprise PKS | {cse}:PKS DEPLOY RIGHT | CSE 2.0.0b1 |
+| cluster delete | Enterprise PKS | {cse}:PKS DEPLOY RIGHT | CSE 2.0.0b1 |
+| cluster resize | Enterprise PKS | {cse}:PKS DEPLOY RIGHT | CSE 2.0.0b1 |
 
 Note: Role Based Access Control feature is turned off by default.
 
@@ -44,14 +49,14 @@ displayed on the client console.
 <a name="enablement"></a>
 ## Enablement
 
-When CSE v1.2.6 is installed (or upgraded from v1.2.5 and below), CSE registers
-the above mentioned right to vCloud Director. The right belongs to the hidden
-'System' organization in vCloud Director and the Cloud administrator has the
-visibility of it.
+When CSE v1.2.6 and above is installed (or upgraded from v1.2.5 and below), CSE
+registers the above mentioned rights to vCloud Director. The rights are
+automatically granted to the hidden 'System' organization in vCloud Director
+and are visible to the Cloud administrator.
 
 Cloud Administrator turns on the role based access control for CSE
-- sets the 'enforce_authorization' flag to 'true' under 'service' section of the
-  configuration file
+- sets the 'enforce_authorization' flag to 'true' under 'service' section of
+  the configuration file
 - restarts the CSE server
 
 Cloud administrator propagates the new right to Tenants, in order to grant
@@ -85,4 +90,4 @@ There is no action required on tenant users.
 * If my administrator does not grant me the new right, will I lose access to my
   previously deployed clusters?
     * You will still be able to access previously deployed clusters. You will
-      not be able to modify them.
+      not, however, be able to modify them.
