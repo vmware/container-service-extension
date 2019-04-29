@@ -53,7 +53,7 @@ Below timeline diagram depicts infrastructure set-up and tenant
     * Create provider-vdc(s) in vCD from underlying resources of newly attached Enterprise PKS' vSphere(s).
     Ensure these pvdc(s) are dedicated for Enterprise PKS K8 deployments only.
  3. Install, configure and start CSE 
-    * Download [CSE 2.0](/container-service-extension/RELEASE_NOTES.html) binaries
+    * Follow instructions to install CSE 2.0 beta [here](/container-service-extension/RELEASE_NOTES.html) binaries
     * Use `cse config` command to generate `config.yaml` and `pks.yaml` template files.
     * Configure `config.yaml` with vCD and K8 template details.
     * Configure `pks.yaml` with Enterprise PKS details. This file is necessary only 
