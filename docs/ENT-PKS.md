@@ -187,7 +187,7 @@ Fixes will be coming soon for the above.
     Enterprise PKS based K8 cluster deployments have some performance implications. 
     The performance optimizations will be coming in near future
 * If there are Extension time out errors while executing commands, how can they be remediated?
-    * Increase the vCD extension timeout to a higher value. Refer to "Setting the API Extension Timeout" in [here](/container-service-extension/CSE_ADMIN.html/#extension-timeout)
+    * Increase the vCD extension timeout to a higher value. Refer "Setting the API Extension Timeout" in [here](/container-service-extension/CSE_ADMIN.html/#extension-timeout)
 
 <a name="compatibility-matrix"></a>
 ## Compatibility matrix
