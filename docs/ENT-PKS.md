@@ -1,9 +1,9 @@
 ---
 layout: default
-title: Enterprise-PKS enablement
+title: Enterprise PKS enablement
 ---
 
-# Enterprise-PKS enablement
+# Enterprise PKS enablement
 <a name="overview"></a>
 ## Overview
 CSE 2.0 enables orchestration of K8 cluster deployments on VMware Enterprise PKS. 
@@ -47,13 +47,13 @@ infrastructure stack are all in the same management network, without proxy in be
 Below timeline diagram depicts infrastructure set-up and tenant
  on-boarding. Cloud-provider has to do below steps before on-boarding tenants.
  1. Set up one or more Enterprise PKS-vSphere-NSX-T instances.
- 2. Create [Enterprise PKS service accounts]((#faq)) per each Enterprise PKS instance.
+ 2. Create [Enterprise PKS service accounts](#faq) per each Enterprise PKS instance.
  2. On-board Enterprise PKS instance(s) in vCD
     * Attach Enterprise PKS' corresponding vSphere in vCD through vCD UI.
     * Create provider-vdc(s) in vCD from underlying resources of newly attached Enterprise PKS' vSphere(s).
     Ensure these pvdc(s) are dedicated for Enterprise PKS K8 deployments only.
  3. Install, configure and start CSE 
-    * Download [CSE 2.0](/RELEASE_NOTES.html) binaries
+    * Download [CSE 2.0](/container-service-extension/RELEASE_NOTES.html) binaries
     * Use `cse config` command to generate `config.yaml` and `pks.yaml` template files.
     * Configure `config.yaml` with vCD and K8 template details.
     * Configure `pks.yaml` with Enterprise PKS details. This file is necessary only 
@@ -66,8 +66,8 @@ Below timeline diagram depicts infrastructure set-up and tenant
 ### Tenant on-boarding
 1. Create ovdc(s) in tenant organization from newly created provider-vdc(s) above via vCD UI.
 2. Use these [CSE commands](#cse-commands) to grant K8 deployment rights to chosen tenants and tenant-users. Refer 
-[RBAC feature](/RBAC.html) for more details
-3. Use [CSE command](#cse-commands) to enable organiation vdc(s) with a chosen K8-provider (native|ent-pks).
+[RBAC feature](/container-service-extension/RBAC.html) for more details
+3. Use [CSE command](#cse-commands) to enable organiation vdc(s) with a chosen K8-provider (native (or) ent-pks).
 
 Below diagram illustrates a time sequence view of setting up the infrastructure for CSE 2.0,
  followed by the on boarding of tenants. The expected steps are executed by Cloud providers 
@@ -103,7 +103,7 @@ In this illustration, user from  tenant "Pepsi" attempts to create a new K8 clus
 
 **Granting rights to Tenants and Users:**
 
-Below steps of granting rights are required only if [RBAC feature](/RBAC.html) is turned on.
+Below steps of granting rights are required only if [RBAC feature](/container-service-extension/RBAC.html) is turned on.
 
 ```sh
 * vcd right add "{cse}:CSE NATIVE DEPLOY RIGHT" -o tenant1
@@ -191,6 +191,7 @@ Fixes will be coming soon for the above.
 
 <a name="compatibility-matrix"></a>
 ## Compatibility matrix
+
 |CSE      | vCD       |Enterprise PKS| NSX-T | 
 |---------|-----------|--------------|-------|
 |2.0 Beta | 9.5, 9.7  | 1.4          | 2.3   | 
