@@ -191,9 +191,9 @@ Fixes will be coming soon for the above.
 
 <a name="compatibility-matrix"></a>
 ## Compatibility matrix
-|CSE          | vCD       |Enterprise PKS| NSX-T | 
-|:----------|:----------|:-------------|:------|
-|CSE 2.0 Beta| 9.5, 9.7  | 1.4          | 2.3   | 
+|CSE      | vCD       |Enterprise PKS| NSX-T | 
+|---------|-----------|--------------|-------|
+|2.0 Beta | 9.5, 9.7  | 1.4          | 2.3   | 
 
 
 
