@@ -303,8 +303,9 @@ class BrokerManager(object):
                 # Get all cluster information to get vdc name from
                 # compute-profile-name
                 for cluster in pks_broker.list_clusters(is_admin_request=True):
-                    pks_cluster = PKSBroker.generate_cluster_subset_with_given_keys(
-                        cluster, common_cluster_properties)
+                    pks_cluster = PKSBroker.\
+                        generate_cluster_subset_with_given_keys(
+                            cluster, common_cluster_properties)
                     pks_cluster[K8S_PROVIDER_KEY] = K8sProviders.PKS
                     pks_clusters.append(pks_cluster)
             return vcd_clusters + pks_clusters
@@ -320,7 +321,8 @@ class BrokerManager(object):
 
     def _create_cluster(self, **cluster_spec):
         cluster_name = cluster_spec['cluster_name']
-        cluster = self._find_cluster_in_org(cluster_name)[0]
+        cluster = self._find_cluster_in_org(
+            cluster_name, is_admin_search=True)[0]
         if not cluster:
             ctr_prov_ctx = self._get_ctr_prov_ctx_from_ovdc_metadata()
             if ctr_prov_ctx.get(
@@ -334,7 +336,7 @@ class BrokerManager(object):
             raise CseServerError(f"Cluster with name: {cluster_name} "
                                  f"already found")
 
-    def _find_cluster_in_org(self, cluster_name):
+    def _find_cluster_in_org(self, cluster_name, **kwargs):
         """Invoke set of all (vCD/PKS)brokers in the org to find the cluster.
 
         If cluster found:
@@ -354,8 +356,8 @@ class BrokerManager(object):
         for pks_ctx in pks_ctx_list:
             pksbroker = PKSBroker(self.req_headers, self.req_spec, pks_ctx)
             try:
-                return pksbroker.get_cluster_info(cluster_name=cluster_name),\
-                    pksbroker
+                return pksbroker.get_cluster_info(cluster_name=cluster_name,
+                                                  **kwargs), pksbroker
             except Exception as err:
                 LOGGER.debug(f"Get cluster info on {cluster_name} failed "
                              f"on {pks_ctx['host']} with error: {err}")
@@ -576,6 +578,7 @@ class BrokerManager(object):
             plan_names = [plan.get('name') for plan in plans]
             pks_vc_plans_map[pks_ctx['vc']] = [plan_names, pks_ctx['host']]
         return pks_vc_plans_map
+
 
 class PksComputeProfileParams(namedtuple("PksComputeProfileParams",
                                          'cp_name, az_name, description,'

@@ -51,6 +51,7 @@ from container_service_extension.server_constants import \
 from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import exception_handler
 from container_service_extension.utils import get_pks_cache
+from container_service_extension.utils import is_org_admin
 from container_service_extension.utils import OK
 
 
@@ -174,7 +175,6 @@ class PKSBroker(AbstractBroker):
             client = ApiClientV1Beta(configuration=pks_config)
         return client
 
-
     def list_plans(self):
         """Get list of available PKS plans in the system.
 
@@ -206,9 +206,15 @@ class PKSBroker(AbstractBroker):
         :rtype: list
         """
         cluster_list = self._list_clusters()
-        if self.tenant_client.is_sysadmin():
+        if self.tenant_client.is_sysadmin() or kwargs.get('is_admin_search'):
             for cluster in cluster_list:
                 self._restore_original_name(cluster)
+        elif is_org_admin(self.client_session):
+            for cluster in cluster_list:
+                self._restore_original_name(cluster)
+            cluster_list = [cluster_dict for cluster_dict in cluster_list
+                            if self._does_cluster_belong_to_org(
+                                cluster_dict, self.client_session.get('org'))]
         else:
             cluster_list = [cluster_dict for cluster_dict in cluster_list
                             if self._is_user_cluster_owner(cluster_dict)]
@@ -373,11 +379,13 @@ class PKSBroker(AbstractBroker):
 
         :rtype: dict
         """
-        if self.tenant_client.is_sysadmin():
+        if self.tenant_client.is_sysadmin() \
+                or is_org_admin(self.client_session) \
+                or kwargs.get('is_admin_search'):
+            cluster_list = self.list_clusters(
+                is_admin_search=kwargs.get('is_admin_search'))
             filtered_cluster_list = \
-                self._filter_list_by_cluster_name(
-                    self.list_clusters(is_admin_request=True),
-                    cluster_name)
+                self._filter_list_by_cluster_name(cluster_list, cluster_name)
             LOGGER.debug(f"filtered Cluster List:{filtered_cluster_list}")
             # TODO() Sys admin may encounter multiple clusters with the same
             #  name; in that case choosing the first one could be wrong.
@@ -434,9 +442,9 @@ class PKSBroker(AbstractBroker):
 
         :rtype: str
         """
-        if self.tenant_client.is_sysadmin():
-            cluster = self.get_cluster_info(cluster_name,
-                                            is_admin_request=True)
+        if self.tenant_client.is_sysadmin() or \
+                is_org_admin(self.client_session):
+            cluster = self.get_cluster_info(cluster_name)
             config_info = self._get_cluster_config(cluster['pks_cluster_name'])
         else:
             pks_cluster_name = self._append_user_id(cluster_name)
@@ -476,9 +484,9 @@ class PKSBroker(AbstractBroker):
         """
         self.get_tenant_client_session()
 
-        if self.tenant_client.is_sysadmin():
-            cluster_info = self.get_cluster_info(
-                cluster_name, is_admin_request=True)
+        if self.tenant_client.is_sysadmin() \
+                or is_org_admin(self.client_session):
+            cluster_info = self.get_cluster_info(cluster_name)
             pks_cluster_name = cluster_info['pks_cluster_name']
         else:
             pks_cluster_name = self._append_user_id(cluster_name)
@@ -546,9 +554,9 @@ class PKSBroker(AbstractBroker):
         """
         cluster_name = cluster_spec['cluster_name']
 
-        if self.tenant_client.is_sysadmin():
-            cluster = self.get_cluster_info(cluster_name,
-                                            is_admin_request=True)
+        if self.tenant_client.is_sysadmin() \
+                or is_org_admin(self.client_session):
+            cluster = self.get_cluster_info(cluster_name)
             cluster_spec['cluster_name'] = cluster['pks_cluster_name']
         else:
             pks_cluster_name = self._append_user_id(cluster_name)
@@ -764,6 +772,21 @@ class PKSBroker(AbstractBroker):
     def _get_vcd_userid(self):
         return extract_id(self.client_session.get('userId'))
 
+    def _does_cluster_belong_to_org(self, cluster_info, org_name):
+        # Returns True if the cluster belongs to the given org
+        # False case include missing compute profile name of the cluster
+
+        compute_profile_name = cluster_info.get('compute_profile_name')
+        if compute_profile_name is None:
+            LOGGER.debug(f"compute-profile-name of {cluster_info.get('name')}"
+                         f" is not found")
+            return False
+        vdc_id = compute_profile_name.split('--')[1]
+        LOGGER.debug(f"org-name of {vdc_id} is {get_org_name_of_ovdc(vdc_id)}")
+        if org_name == get_org_name_of_ovdc(vdc_id):
+            return True
+        return False
+
     # TODO() Should be moved to filtering layer
     def _filter_list_by_cluster_name(self, cluster_list, cluster_name):
         # Return those clusters which have the given cluster name
@@ -800,7 +823,8 @@ class PKSBroker(AbstractBroker):
         return unsupported_method
 
     @staticmethod
-    def generate_cluster_subset_with_given_keys(cluster, cluster_property_keys):
+    def generate_cluster_subset_with_given_keys(cluster,
+                                                cluster_property_keys):
         pks_cluster = {k: cluster.get(k) for k in
                        cluster_property_keys}
         # Extract vdc name from compute-profile-name
