@@ -11,8 +11,8 @@ from pyvcloud.vcd.org import Org
 
 from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterNotFoundError
-from container_service_extension.exceptions import UnauthorizaedActionError
 from container_service_extension.exceptions import CseServerError
+from container_service_extension.exceptions import UnauthorizaedActionError
 from container_service_extension.exceptions import PksServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.ovdc_cache import OvdcCache
@@ -321,7 +321,8 @@ class BrokerManager(object):
 
     def _create_cluster(self, **cluster_spec):
         cluster_name = cluster_spec['cluster_name']
-        cluster, _ = self._find_cluster_in_org(cluster_name)
+        cluster, _ = self._find_cluster_in_org(cluster_name,
+                                               is_admin_search=True)
 
         if not cluster:
             ctr_prov_ctx = self._get_ctr_prov_ctx_from_ovdc_metadata()
@@ -336,7 +337,7 @@ class BrokerManager(object):
             raise ClusterAlreadyExistsError(
                 f"Cluster {cluster_name} already exists.")
 
-    def _find_cluster_in_org(self, cluster_name):
+    def _find_cluster_in_org(self, cluster_name, **kwargs):
         """Invoke set of all (vCD/PKS)brokers in the org to find the cluster.
 
         If cluster found:
@@ -356,8 +357,8 @@ class BrokerManager(object):
         for pks_ctx in pks_ctx_list:
             pksbroker = PKSBroker(self.req_headers, self.req_spec, pks_ctx)
             try:
-                return pksbroker.get_cluster_info(cluster_name=cluster_name),\
-                    pksbroker
+                return pksbroker.get_cluster_info(cluster_name=cluster_name,
+                                                  **kwargs), pksbroker
             except PksServerError as err:
                 LOGGER.debug(f"Get cluster info on {cluster_name} failed "
                              f"on {pks_ctx['host']} with error: {err}")

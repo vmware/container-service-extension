@@ -69,6 +69,9 @@ UNAUTHORIZED = 401
 INTERNAL_SERVER_ERROR = 500
 GATEWAY_TIMEOUT = 504
 
+org_admin_rights = ['General: Administrator Control',
+                    'General: Administrator View']
+
 
 def connect_vcd_user_via_token(vcd_uri, headers, verify_ssl_certs=True):
     if not verify_ssl_certs:
@@ -603,6 +606,13 @@ def get_pvdc_id_by_name(name, vc_name_in_vcd):
         pvdc_id = href.split("/")[-1]
         return pvdc_id
     return None
+
+
+def is_org_admin(user_session):
+    from container_service_extension import authorization
+    user_rights = authorization._get_user_rights(get_vcd_sys_admin_client(),
+                                                 user_session)
+    return all(right in user_rights for right in org_admin_rights)
 
 
 def get_data_file(filename, logger=None):
