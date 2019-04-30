@@ -189,6 +189,8 @@ class DFWManager(object):
 
         :rtype: dict
         """
+        section = self.get_firewall_section(id=section_id)
+
         resource_url_fragment = f"firewall/sections/{section_id}/rules"
         if anchor_rule_id or insert_policy:
             resource_url_fragment += "?"
@@ -207,6 +209,7 @@ class DFWManager(object):
         data['disabled'] = "false"
         data['direction'] = "IN_OUT"
         data['action'] = action.value
+        data['_revision'] = section['_revision']
 
         source = {}
         source['target_type'] = "NSGroup"
