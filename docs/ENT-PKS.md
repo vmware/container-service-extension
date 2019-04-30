@@ -144,7 +144,7 @@ Below steps of granting rights are required only if [RBAC feature](/container-se
 ## Known issues
 
 * When attaching an NSX-T-backed vCenter (such as Enterprise PKS vCenter) to a 
-MicrosoftSQL-backed vCD, the vCenter can fail to connect. Refer this 
+MicrosoftSQL-backed vCD, the vCenter can fail to connect. Refer to this 
 [work around](https://docs.vmware.com/en/vCloud-Director/9.7/rn/vmware-vcloud-director-for-service-providers-97-release-notes.html)
 * Command `vcd cse node info` on native K8 clusters is broken when 
 Enterprise PKS is part of CSE set-up
