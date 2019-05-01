@@ -8,7 +8,11 @@ from container_service_extension.nsxt.constants import \
 from container_service_extension.nsxt.constants import ALL_PODS_IP_SET_NAME
 from container_service_extension.nsxt.constants import INSERT_POLICY
 from container_service_extension.nsxt.constants import \
+    NCP_BOUNDARY_BOTTOM_FIREWALL_SECTION_NAME
+from container_service_extension.nsxt.constants import \
     NCP_BOUNDARY_FIREWALL_SECTION_NAME
+from container_service_extension.nsxt.constants import \
+    NCP_BOUNDARY_TOP_FIREWALL_SECTION_NAME
 from container_service_extension.nsxt.dfw_manager import DFWManager
 from container_service_extension.nsxt.ipset_manager import IPSetManager
 from container_service_extension.nsxt.nsgroup_manager import NSGroupManager
@@ -36,8 +40,15 @@ def setup_nsxt_constructs(nsxt_client,
 
     _create_all_nodes_pods_nsgroup(nsxt_client)
 
+    dfw_manager = DFWManager(nsxt_client)
+    dfw_manager.delete_firewall_section(
+        name=NCP_BOUNDARY_FIREWALL_SECTION_NAME)
     _create_ncp_boundary_firewall_section(
-        nsxt_client, ncp_boundary_firewall_section_anchor_id)
+        nsxt_client, ncp_boundary_firewall_section_anchor_id,
+        NCP_BOUNDARY_TOP_FIREWALL_SECTION_NAME, "top")
+    _create_ncp_boundary_firewall_section(
+        nsxt_client, ncp_boundary_firewall_section_anchor_id,
+        NCP_BOUNDARY_BOTTOM_FIREWALL_SECTION_NAME, "bottom")
 
 
 def _create_ipset_for_node_pod_ip_blocks(nsxt_client,
@@ -88,27 +99,27 @@ def _create_all_nodes_pods_nsgroup(nsxt_client):
 
 def _create_ncp_boundary_firewall_section(
         nsxt_client,
-        ncp_boundary_firewall_section_anchor_id):
+        anchor_id,
+        firewall_section_name,
+        tag_value):
     dfw_manager = DFWManager(nsxt_client)
 
-    section = dfw_manager.get_firewall_section(
-        name=NCP_BOUNDARY_FIREWALL_SECTION_NAME)
+    section = dfw_manager.get_firewall_section(name=firewall_section_name)
     if not section:
         tag = {}
         tag['scope'] = "ncp/fw_sect_marker"
-        tag['tag'] = "top"
+        tag['tag'] = tag_value
         tags = [tag]
 
         nsxt_client.LOGGER.debug(
-            f"Creating DFW section : {NCP_BOUNDARY_FIREWALL_SECTION_NAME}")
+            f"Creating DFW section : {firewall_section_name}")
         section = dfw_manager.create_firewall_section(
-            name=NCP_BOUNDARY_FIREWALL_SECTION_NAME,
+            name=firewall_section_name,
             tags=tags,
-            anchor_id=ncp_boundary_firewall_section_anchor_id,
+            anchor_id=anchor_id,
             insert_policy=INSERT_POLICY.INSERT_BEFORE)
     else:
-        nsxt_client.LOGGER.debug("DFW section : "
-                                 f"{NCP_BOUNDARY_FIREWALL_SECTION_NAME}"
-                                 " already exists.")
+        nsxt_client.LOGGER.debug(f"DFW section : {firewall_section_name} "
+                                 "already exists.")
 
     return section

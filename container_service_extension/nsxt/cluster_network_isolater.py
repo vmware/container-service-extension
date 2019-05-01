@@ -7,7 +7,7 @@ from container_service_extension.nsxt.constants import \
 from container_service_extension.nsxt.constants import FIREWALL_ACTION
 from container_service_extension.nsxt.constants import INSERT_POLICY
 from container_service_extension.nsxt.constants import \
-    NCP_BOUNDARY_FIREWALL_SECTION_NAME
+    NCP_BOUNDARY_BOTTOM_FIREWALL_SECTION_NAME
 from container_service_extension.nsxt.dfw_manager import DFWManager
 from container_service_extension.nsxt.nsgroup_manager import NSGroupManager
 
@@ -277,7 +277,7 @@ class ClusterNetworkIsolater(object):
         target['target_id'] = applied_to_nsgroup_id
 
         anchor_section = dfw_manager.get_firewall_section(
-            NCP_BOUNDARY_FIREWALL_SECTION_NAME)
+            NCP_BOUNDARY_BOTTOM_FIREWALL_SECTION_NAME)
 
         self._nsxt_client.LOGGER.debug("Creating DFW section : "
                                        f"{section_name}")
