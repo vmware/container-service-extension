@@ -259,7 +259,8 @@ class PKSBroker(AbstractBroker):
             self._append_user_id(cluster_spec['cluster_name'])
         cluster_info = self._create_cluster(**cluster_spec)
         self._restore_original_name(cluster_info)
-        self._filter_pks_properties(cluster_info)
+        if not self.tenant_client.is_sysadmin():
+            self._filter_pks_properties(cluster_info)
         return cluster_info
 
     def _create_cluster(self, cluster_name, node_count, pks_plan, pks_ext_host,

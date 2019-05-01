@@ -99,7 +99,7 @@ class PksServerError(CseServerError):
         #  processing aka filtering layer
         from container_service_extension.pksbroker import PKSBroker
         return f"PKS error\n status: {self.status}\n body: " \
-            f" {PKSBroker.remove_traces_of_user_context(self.body)}\n"
+            f" {PKSBroker.filter_traces_of_user_context(self.body)}\n"
 
 
 class PksConnectionError(PksServerError):
