@@ -164,11 +164,14 @@ class BrokerManager(object):
             result['body'] = self._create_cluster(**cluster_spec)
             result['status_code'] = ACCEPTED
         elif op == Operation.LIST_OVDCS:
-            result['body'] = self._list_ovdcs()
+            pks_plans_required = self.req_spec.get('pks_plans_required',
+                                                      False)
+            result['body'] = self._list_ovdcs(
+                pks_plans_required=pks_plans_required)
 
         return result
 
-    def _list_ovdcs(self):
+    def _list_ovdcs(self, pks_plans_required=False):
         """Get list of ovdcs.
 
         If client is sysadmin,
@@ -182,6 +185,9 @@ class BrokerManager(object):
             org_resource_list = list(self.vcd_client.get_org())
 
         ovdc_list = []
+        pks_vc_plans_map = {}
+        if pks_plans_required:
+            pks_vc_plans_map = self._construct_pks_vc_plans_map()
         for org_resource in org_resource_list:
             org = Org(self.vcd_client, resource=org_resource)
             vdc_list = org.list_vdcs()
@@ -190,11 +196,24 @@ class BrokerManager(object):
                     self.ovdc_cache.get_ovdc_container_provider_metadata(
                         ovdc_name=vdc['name'], org_name=org.get_name(),
                         credentials_required=False)
-                vdc_dict = {
-                    'name': vdc['name'],
-                    'org': org.get_name(),
-                    K8S_PROVIDER_KEY: ctr_prov_ctx[K8S_PROVIDER_KEY]
-                }
+                if pks_plans_required:
+                    pks_plans, pks_server = self.\
+                        _get_pks_plans_and_server_for_vdc(vdc,
+                                                          org_resource,
+                                                          ctr_prov_ctx,
+                                                          pks_vc_plans_map)
+                    vdc_dict = {
+                        'org': org.get_name(),
+                        'name': vdc['name'],
+                        'pks_api_server' : pks_server,
+                        'available pks plans': pks_plans
+                    }
+                else:
+                    vdc_dict = {
+                        'name': vdc['name'],
+                        'org': org.get_name(),
+                        K8S_PROVIDER_KEY: ctr_prov_ctx[K8S_PROVIDER_KEY]
+                    }
                 ovdc_list.append(vdc_dict)
         return ovdc_list
 
@@ -534,6 +553,38 @@ class BrokerManager(object):
                              f" already exists\n{str(ex)}")
             else:
                 raise ex
+
+    def _get_pks_plans_and_server_for_vdc(self,
+                                          vdc,
+                                          org_resource,
+                                          ctr_prov_ctx,
+                                          pks_vc_plans_map):
+        pks_server = ''
+        pks_plans = []
+        vc_backing_vdc = self.ovdc_cache.get_ovdc(
+                                ovdc_name=vdc['name'],
+                                org_name=org_resource.get('name')) \
+                                .resource.ComputeProviderScope \
+            if ctr_prov_ctx[K8S_PROVIDER_KEY] != K8sProviders.PKS else ''
+
+        pks_plan_and_server_info = pks_vc_plans_map.get(vc_backing_vdc, [])
+        if len(pks_plan_and_server_info) > 0:
+            pks_plans = pks_plan_and_server_info[0]
+            pks_server = pks_plan_and_server_info[1]
+        return pks_plans, pks_server
+
+    def _construct_pks_vc_plans_map(self):
+        pks_vc_plans_map = {}
+        pks_ctx_list = self._create_pks_context_for_all_accounts_in_org()
+
+        for pks_ctx in pks_ctx_list:
+            if pks_ctx['vc'] in pks_vc_plans_map:
+                continue
+            pks_broker = PKSBroker(self.req_headers, self.req_spec,
+                                   pks_ctx)
+            plans = pks_broker.list_plans()
+            plan_names = [plan.to_dict().get('name') for plan in plans]
+            pks_vc_plans_map[pks_ctx['vc']] = [plan_names, pks_ctx['host']]
 
 
 class PksComputeProfileParams(namedtuple("PksComputeProfileParams",

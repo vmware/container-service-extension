@@ -792,21 +792,35 @@ Examples
 \b
     vcd cse ovdc list
         Display ovdcs in vCD that are visible to the logged in user.
+        vcd cse ovdc list
+\b
+        vcd cse ovdc list --pks-plans
+            Displays list of ovdcs in a given org along with available PKS
+            plans if any. If executed by System-administrator, it will
+            display all ovdcs from all orgs.
     """
     pass
-
 
 @ovdc_group.command('list',
                     short_help='Display org VDCs in vCD that are visible '
                                'to the logged in user')
+@click.option(
+        '-p',
+        '--pks-plans',
+        'pks_plans',
+        required=False,
+        is_flag=True,
+        default=False,
+        help="This option acts as a flag to get the list"
+             " of available PKS plans for the ovdcs.")
 @click.pass_context
-def list_ovdcs(ctx):
+def list_ovdcs(ctx, pks_plans):
     """Display org VDCs in vCD that are visible to the logged in user."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
         ovdc = Ovdc(client)
-        result = ovdc.list()
+        result = ovdc.list(pks_plans_required=pks_plans)
         stdout(result, ctx, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
