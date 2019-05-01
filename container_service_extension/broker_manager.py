@@ -278,8 +278,7 @@ class BrokerManager(object):
                                        pks_ctx)
                 # Get all cluster information to get vdc name from
                 # compute-profile-name
-                for cluster in pks_broker.list_clusters(
-                        is_pks_context_data_required=True):
+                for cluster in pks_broker.list_clusters(is_admin_request=True):
                     pks_cluster = self._get_truncated_cluster_info(
                         cluster, pks_broker, common_cluster_properties)
                     pks_cluster[K8S_PROVIDER_KEY] = K8sProviders.PKS

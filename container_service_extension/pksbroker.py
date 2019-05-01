@@ -190,11 +190,10 @@ class PKSBroker(AbstractBroker):
             cluster_list = [cluster_dict for cluster_dict in cluster_list
                             if self._is_user_cluster_owner(cluster_dict)]
 
-            """ 'is_pks_context_data_required' is a flag that is used to restrict
-            access to user context and other secured information on pks cluster
-            information.
-            """
-            if not kwargs.get('is_pks_context_data_required'):
+            # 'is_admin_request' is a flag that is used to restrict access to
+            # user context and other secured information on pks cluster
+            # information.
+            if not kwargs.get('is_admin_request'):
                 for cluster in cluster_list:
                     self._filter_pks_properties(cluster)
         return cluster_list
@@ -259,7 +258,8 @@ class PKSBroker(AbstractBroker):
             self._append_user_id(cluster_spec['cluster_name'])
         cluster_info = self._create_cluster(**cluster_spec)
         self._restore_original_name(cluster_info)
-        self._filter_pks_properties(cluster_info)
+        if not self.tenant_client.is_sysadmin():
+            self._filter_pks_properties(cluster_info)
         return cluster_info
 
     def _create_cluster(self, cluster_name, node_count, pks_plan, pks_ext_host,
@@ -353,9 +353,12 @@ class PKSBroker(AbstractBroker):
         if self.tenant_client.is_sysadmin():
             filtered_cluster_list = \
                 self._filter_list_by_cluster_name(
-                    self.list_clusters(is_pks_context_data_required=True),
+                    self.list_clusters(is_admin_request=True),
                     cluster_name)
             LOGGER.debug(f"filtered Cluster List:{filtered_cluster_list}")
+            # TODO() Sys admin may encounter multiple clusters with the same
+            #  name; in that case choosing the first one could be wrong.
+            #  Needs revisit
             if len(filtered_cluster_list) > 0:
                 cluster_info = filtered_cluster_list[0]
             else:
@@ -365,7 +368,7 @@ class PKSBroker(AbstractBroker):
             cluster_info = \
                 self._get_cluster_info(self._append_user_id(cluster_name))
             self._restore_original_name(cluster_info)
-            if not kwargs.get('is_pks_context_data_required'):
+            if not kwargs.get('is_admin_request'):
                 self._filter_pks_properties(cluster_info)
         return cluster_info
 
@@ -410,7 +413,7 @@ class PKSBroker(AbstractBroker):
         """
         if self.tenant_client.is_sysadmin():
             cluster = self.get_cluster_info(cluster_name,
-                                            is_pks_context_data_required=True)
+                                            is_admin_request=True)
             config_info = self._get_cluster_config(cluster['pks_cluster_name'])
         else:
             pks_cluster_name = self._append_user_id(cluster_name)
@@ -449,14 +452,15 @@ class PKSBroker(AbstractBroker):
         :param str cluster_name: Name of the cluster
         """
         self.get_tenant_client_session()
+
         if self.tenant_client.is_sysadmin():
             cluster_info = self.get_cluster_info(
-                cluster_name, is_pks_context_data_required=True)
-            result = self._delete_cluster(cluster_info['pks_cluster_name'])
-
+                cluster_name, is_admin_request=True)
+            pks_cluster_name = cluster_info['pks_cluster_name']
         else:
             pks_cluster_name = self._append_user_id(cluster_name)
-            result = self._delete_cluster(pks_cluster_name)
+
+        result = self._delete_cluster(pks_cluster_name)
         self._restore_original_name(result)
         self._filter_pks_properties(result)
         return result
@@ -518,15 +522,16 @@ class PKSBroker(AbstractBroker):
 
         """
         cluster_name = cluster_spec['cluster_name']
+        
         if self.tenant_client.is_sysadmin():
             cluster = self.get_cluster_info(cluster_name,
-                                            is_pks_context_data_required=True)
+                                            is_admin_request=True)
             cluster_spec['cluster_name'] = cluster['pks_cluster_name']
-            result = self._resize_cluster(**cluster_spec)
         else:
             pks_cluster_name = self._append_user_id(cluster_name)
             cluster_spec['cluster_name'] = pks_cluster_name
-            result = self._resize_cluster(**cluster_spec)
+
+        result = self._resize_cluster(**cluster_spec)
         self._restore_original_name(result)
         self._filter_pks_properties(result)
         return result
