@@ -27,6 +27,7 @@ Note: `pip install container-service-extension` installs previous official
  CSE 2.0 beta.
 
 **New Features**
+
 - [Enterprise PKS enablement](/container-service-extension/ENT-PKS.html)
 - [Role based access control](/container-service-extension/RBAC.html)
 
