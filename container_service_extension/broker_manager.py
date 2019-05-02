@@ -200,7 +200,7 @@ class BrokerManager(object):
                     pks_plans, pks_server = self.\
                         _get_pks_plans_and_server_for_vdc(vdc,
                                                           org_resource,
-                                                          ctr_prov_ctx,
+                                                          ctr_prov_ctx[K8S_PROVIDER_KEY],
                                                           pks_vc_plans_map)
                     vdc_dict = {
                         'org': org.get_name(),
@@ -557,15 +557,16 @@ class BrokerManager(object):
     def _get_pks_plans_and_server_for_vdc(self,
                                           vdc,
                                           org_resource,
-                                          ctr_prov_ctx,
+                                          k8provider,
                                           pks_vc_plans_map):
         pks_server = ''
         pks_plans = []
-        vc_backing_vdc = self.ovdc_cache.get_ovdc(
+        vc_backing_vdc =  ''
+        if k8provider != K8sProviders.PKS:
+            vc_backing_vdc = self.ovdc_cache.get_ovdc(
                                 ovdc_name=vdc['name'],
                                 org_name=org_resource.get('name')) \
-                                .resource.ComputeProviderScope \
-            if ctr_prov_ctx[K8S_PROVIDER_KEY] != K8sProviders.PKS else ''
+                                .resource.ComputeProviderScope
 
         pks_plan_and_server_info = pks_vc_plans_map.get(vc_backing_vdc, [])
         if len(pks_plan_and_server_info) > 0:
@@ -585,7 +586,7 @@ class BrokerManager(object):
             plans = pks_broker.list_plans()
             plan_names = [plan.to_dict().get('name') for plan in plans]
             pks_vc_plans_map[pks_ctx['vc']] = [plan_names, pks_ctx['host']]
-
+        return pks_vc_plans_map
 
 class PksComputeProfileParams(namedtuple("PksComputeProfileParams",
                                          'cp_name, az_name, description,'
