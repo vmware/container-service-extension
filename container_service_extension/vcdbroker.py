@@ -385,12 +385,14 @@ class VcdBroker(AbstractBroker, threading.Thread):
     def create_cluster_thread(self):
         network_name = self.req_spec['network']
         try:
-            clusters = load_from_metadata(
-                self.tenant_client, name=self.cluster_name)
+            clusters = load_from_metadata(self.tenant_client,
+                                          name=self.cluster_name)
             if len(clusters) != 0:
                 raise ClusterAlreadyExistsError(f"Cluster {self.cluster_name} "
                                                 "already exists.")
-            org_resource = self.tenant_client.get_org()
+
+            org_resource = \
+                self.tenant_client.get_org_by_name(self.req_spec['org'])
             org = Org(self.tenant_client, resource=org_resource)
             vdc_resource = org.get_vdc(self.req_spec['vdc'])
             vdc = VDC(self.tenant_client, resource=vdc_resource)
