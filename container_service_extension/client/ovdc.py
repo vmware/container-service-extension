@@ -15,17 +15,17 @@ class Ovdc(object):
         self.client = client
         self._uri = self.client.get_api_uri() + '/cse'
 
-    def list(self, pks_plans_required):
+    def list(self, list_pks_plans=False):
         method = 'GET'
         uri = f'{self._uri}/ovdc'
-        data = {
-            'pks_plans_required': pks_plans_required,
+        contents = {
+            'list_pks_plans': list_pks_plans,
         }
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
-            contents=data,
+            contents=contents,
             media_type=None,
             accept_type='application/json')
         return process_response(response)

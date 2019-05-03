@@ -184,7 +184,10 @@ class PKSBroker(AbstractBroker):
         except v1Exception as err:
             LOGGER.debug(f"Listing PKS plans failed with error:\n {err}")
             raise PksServerError(err.status, err.body)
-        return plans
+        pks_plans_list = []
+        for plan in plans:
+            pks_plans_list.append(plan.to_dict())
+        return pks_plans_list
 
     def list_clusters(self):
         """Get list of clusters in PKS environment.
