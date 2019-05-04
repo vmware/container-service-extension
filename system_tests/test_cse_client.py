@@ -149,6 +149,11 @@ def vcd_org_admin():
                                    catch_exceptions=False)
     assert result.exit_code == 0
 
+    # ovdc context may be nondeterministic when there's multiple ovdcs
+    cmd = f"vdc use {config['broker']['vdc']}"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
     yield
 
     result = env.CLI_RUNNER.invoke(vcd, ['logout'])
