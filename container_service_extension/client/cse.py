@@ -319,15 +319,17 @@ def create(ctx, name, vdc, node_count, cpu, memory, network_name,
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        ssh_key = None
-        vdc_to_use = vdc if vdc is not None \
-            else ctx.obj['profiles'].get('vdc_in_use')
+
+        if vdc is None:
+            vdc = ctx.obj['profiles'].get('vdc_in_use')
         if org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
+        ssh_key = None
         if ssh_key_file is not None:
             ssh_key = ssh_key_file.read()
+
         result = cluster.create_cluster(
-            vdc_to_use,
+            vdc,
             network_name,
             name,
             node_count=node_count,
