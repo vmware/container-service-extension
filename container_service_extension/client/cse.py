@@ -811,7 +811,8 @@ Examples
         required=False,
         is_flag=True,
         default=False,
-        help="Display available PKS plans used by the Org VDC.")
+        help="Display available PKS plans if Org vDC is backed by "
+             "Enterprise PKS infrastructure.")
 @click.pass_context
 def list_ovdcs(ctx, list_pks_plans):
     """Display org VDCs in vCD that are visible to the logged in user."""
