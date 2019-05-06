@@ -373,7 +373,7 @@ def create(ctx, name, vdc, node_count, cpu, memory, network_name,
     required=False,
     default=None,
     metavar='VDC_NAME',
-    help='Org VDC to use. Defaults to currently logged-in org VDC')
+    help='Org VDC to use.')
 @click.option(
     '--disable-rollback',
     'disable_rollback',
@@ -396,7 +396,7 @@ def resize(ctx, name, node_count, network_name, vdc, disable_rollback):
             network_name,
             name,
             node_count=node_count,
-            vdc=ctx.obj['profiles'].get('vdc_in_use') if vdc is None else vdc,
+            vdc=vdc,
             disable_rollback=disable_rollback)
         stdout(result, ctx)
     except Exception as e:
