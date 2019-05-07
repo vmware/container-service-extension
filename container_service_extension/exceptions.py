@@ -75,6 +75,9 @@ class AmqpError(Exception):
 class AmqpConnectionError(AmqpError):
     """Raised when amqp connection is not open."""
 
+class UnauthorizaedActionError(CseServerError):
+    """Raised when an action is attempted by an unauthorized user."""
+
 
 class VcdResponseError(Exception):
     """Base class for all vcd response related Exceptions."""
