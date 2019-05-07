@@ -6,13 +6,13 @@ from pyvcloud.vcd import utils
 from pyvcloud.vcd.client import ApiVersion
 from pyvcloud.vcd.client import MetadataDomain
 from pyvcloud.vcd.client import MetadataVisibility
-from pyvcloud.vcd.vdc import VDC
 
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PKS_CLUSTER_DOMAIN_KEY
 from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE_KEY
 from container_service_extension.pks_cache import PKS_PLANS_KEY
 from container_service_extension.pks_cache import PksCache
+from container_service_extension.pyvcloud_utils import get_vdc_by_id
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
 from container_service_extension.utils import get_org
@@ -164,14 +164,7 @@ class OvdcCache(object):
             return get_vdc(self.client, ovdc_name, org=org,
                            is_admin_operation=True)
         else:
-            return self.get_vdc_by_id(ovdc_id)
-
-    def get_vdc_by_id(self, vdc_id):
-        LOGGER.debug(f"Getting vdc by id:{vdc_id}")
-        admin_href = self.client.get_admin().get('href')
-        ovdc_href = f'{admin_href}vdc/{vdc_id}'
-        resource = self.client.get_resource(ovdc_href)
-        return VDC(self.client, resource=resource)
+            return get_vdc_by_id(self.client, ovdc_id)
 
     def get_pvdc_id(self, ovdc):
         pvdc_element = ovdc.resource.ProviderVdcReference
