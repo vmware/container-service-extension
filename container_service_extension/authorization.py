@@ -16,7 +16,7 @@ from container_service_extension.utils import get_server_runtime_config
 from container_service_extension.utils import get_vcd_sys_admin_client
 
 
-def _get_user_rights(sys_admin_client, user_session):
+def get_user_rights(sys_admin_client, user_session):
     """Return rights associated with the role of an user.
 
     :param pyvcloud.vcd.client.Client sys_admin_client: the sys admin cilent
@@ -62,7 +62,7 @@ def _is_authorized(sys_admin_client, user_session, required_rights):
     if required_rights is None or len(required_rights) == 0:
         return True
 
-    user_rights = _get_user_rights(sys_admin_client, user_session)
+    user_rights = get_user_rights(sys_admin_client, user_session)
 
     missing_rights = []
     for right in required_rights:

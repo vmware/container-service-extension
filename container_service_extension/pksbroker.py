@@ -795,7 +795,7 @@ class PKSBroker(AbstractBroker):
 
     def _does_cluster_belong_to_org(self, cluster_info, org_name):
         # Returns True if the cluster belongs to the given org
-        # False case include missing compute profile name of the cluster
+        # Else False (this also includes missing compute profile name)
 
         compute_profile_name = cluster_info.get('compute_profile_name')
         if compute_profile_name is None:
@@ -803,7 +803,6 @@ class PKSBroker(AbstractBroker):
                          f" is not found")
             return False
         vdc_id = compute_profile_name.split('--')[1]
-        LOGGER.debug(f"org-name of {vdc_id} is {get_org_name_of_ovdc(vdc_id)}")
         if org_name == get_org_name_of_ovdc(vdc_id):
             return True
         return False
