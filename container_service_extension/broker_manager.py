@@ -9,7 +9,8 @@ from http import HTTPStatus
 
 from pyvcloud.vcd.org import Org
 
-from container_service_extension.exceptions import ClusterNotFoundError, UnauthorizaedActionError
+from container_service_extension.exceptions import ClusterNotFoundError
+from container_service_extension.exceptions import UnauthorizaedActionError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import PksServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
@@ -191,7 +192,8 @@ class BrokerManager(object):
                 vc_to_pks_plans_map = self._construct_vc_to_pks_map()
             else:
                 raise UnauthorizaedActionError(
-                    'Operation Denied. Plans available only for System Administrator.')
+                    'Operation Denied. Plans available only for '
+                    'System Administrator.')
         for org_resource in org_resource_list:
             org = Org(self.vcd_client, resource=org_resource)
             vdc_list = org.list_vdcs()
