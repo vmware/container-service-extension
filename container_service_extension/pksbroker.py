@@ -47,12 +47,14 @@ from container_service_extension.pksclient.models.v1beta.\
 from container_service_extension.pksclient.models.v1beta.\
     compute_profile_request import ComputeProfileRequest
 from container_service_extension.pyvcloud_utils import get_org_name_of_ovdc
+from container_service_extension.pyvcloud_utils import is_org_admin
 from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import exception_handler
+from container_service_extension.utils \
+    import extract_vdc_id_from_pks_compute_profile_name
 from container_service_extension.utils import get_pks_cache
-from container_service_extension.utils import is_org_admin
 from container_service_extension.utils import OK
 
 
@@ -207,10 +209,11 @@ class PKSBroker(AbstractBroker):
         :rtype: list
         """
         cluster_list = self._list_clusters()
-        if self.tenant_client.is_sysadmin() or kwargs.get('is_admin_search'):
+        if self.tenant_client.is_sysadmin():
             for cluster in cluster_list:
                 self._restore_original_name(cluster)
-        elif is_org_admin(self.client_session):
+        elif is_org_admin(self.client_session) or \
+                kwargs.get('is_admin_search'):
             for cluster in cluster_list:
                 self._restore_original_name(cluster)
             cluster_list = [cluster_dict for cluster_dict in cluster_list
@@ -795,18 +798,16 @@ class PKSBroker(AbstractBroker):
 
     def _does_cluster_belong_to_org(self, cluster_info, org_name):
         # Returns True if the cluster belongs to the given org
-        # False case include missing compute profile name of the cluster
+        # Else False (this also includes missing compute profile name)
 
         compute_profile_name = cluster_info.get('compute_profile_name')
         if compute_profile_name is None:
             LOGGER.debug(f"compute-profile-name of {cluster_info.get('name')}"
                          f" is not found")
             return False
-        vdc_id = compute_profile_name.split('--')[1]
-        LOGGER.debug(f"org-name of {vdc_id} is {get_org_name_of_ovdc(vdc_id)}")
-        if org_name == get_org_name_of_ovdc(vdc_id):
-            return True
-        return False
+        vdc_id = extract_vdc_id_from_pks_compute_profile_name(
+            compute_profile_name)
+        return org_name == get_org_name_of_ovdc(vdc_id)
 
     # TODO() Should be moved to filtering layer
     def _filter_list_by_cluster_name(self, cluster_list, cluster_name):
