@@ -15,6 +15,10 @@ from container_service_extension.nsxt.nsgroup_manager import NSGroupManager
 class ClusterNetworkIsolater(object):
     """Facilitate network isolation of PKS clusters."""
 
+    RULE1_NAME = "Block pods to node communication"
+    RULE2_NAME = "Allow cluster node-pod to cluster node-pod communication"
+    RULE3_NAME = "Block cluster node-pod to all-node-pod communication"
+
     def __init__(self, nsxt_client):
         """Initialize a ClusterNetworkIsolater object.
 
@@ -43,6 +47,34 @@ class ClusterNetworkIsolater(object):
 
         self._create_firewall_rules_for_cluster(
             sec_id, n_id, p_id, np_id, anp_id)
+
+    def is_cluster_isolated(self, cluster_name):
+        """."""
+        # check for the presence of the firewall section
+        firewall_section_name = \
+            self._get_firewall_section_name_for_cluster(cluster_name)
+        dfw_manager = DFWManager(self._nsxt_client)
+        firewall_section = dfw_manager.get_firewall_section(
+            name=firewall_section_name)
+
+        if not firewall_section:
+            return False
+
+        rules = dfw_manager.get_all_rules_in_section(
+            section_id=firewall_section['id'])
+
+        # check for presence of the isolation DFW rules
+        if len(rules) != 2:
+            return False
+
+        found_rule_names = set([
+            rules[0]['display_name'],
+            rules[1]['display_name']])
+        if self.RULE2_NAME not in found_rule_names or \
+                self.RULE3_NAME not in found_rule_names:
+            return False
+
+        return True
 
     def remove_cluster_isolation(self, cluster_name):
         """Revert isolatation of a PKS cluster's network.
@@ -310,20 +342,20 @@ class ClusterNetworkIsolater(object):
         :param str all_nodes_pods_nsgroup_id:
         """
         dfw_manager = DFWManager(self._nsxt_client)
-        # rule1_name = "Block pods to node communication"
-        # self._nsxt_client.LOGGER.debug(f"Creating DFW rule : {rule1_name}")
+        # self._nsxt_client.LOGGER.debug(
+        # f"Creating DFW rule : {self.RULE1_NAME}")
         # rule1 = dfw_manager.create_dfw_rule(
         #    section_id=section_id,
-        #    rule_name=rule1_name,
+        #    rule_name=self.RULE1_NAME,
         #    source_nsgroup_id=pods_nsgroup_id,
         #    dest_nsgroup_id=nodes_nsgroup_id,
         #    action=FIREWALL_ACTION.DROP)
 
-        rule2_name = "Allow cluster node-pod to cluster node-pod communication"
-        self._nsxt_client.LOGGER.debug(f"Creating DFW rule : {rule2_name}")
+        self._nsxt_client.LOGGER.debug(
+            f"Creating DFW rule : {self.RULE2_NAME}")
         rule2 = dfw_manager.create_dfw_rule(
             section_id=section_id,
-            rule_name=rule2_name,
+            rule_name=self.RULE2_NAME,
             source_nsgroup_id=nodes_pods_nsgroup_id,
             dest_nsgroup_id=nodes_pods_nsgroup_id,
             action=FIREWALL_ACTION.ALLOW,
@@ -331,11 +363,11 @@ class ClusterNetworkIsolater(object):
             # insert_policy=INSERT_POLICY.INSERT_AFTER
         )
 
-        rule3_name = "Block cluster node-pod to all-node-pod communication"
-        self._nsxt_client.LOGGER.debug(f"Creating DFW rule : {rule3_name}")
+        self._nsxt_client.LOGGER.debug(
+            f"Creating DFW rule : {self.RULE3_NAME}")
         dfw_manager.create_dfw_rule(
             section_id=section_id,
-            rule_name=rule3_name,
+            rule_name=self.RULE3_NAME,
             source_nsgroup_id=nodes_pods_nsgroup_id,
             dest_nsgroup_id=all_nodes_pods_nsgroup_id,
             action=FIREWALL_ACTION.DROP,

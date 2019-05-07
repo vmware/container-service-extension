@@ -9,6 +9,7 @@ from http import HTTPStatus
 
 from pyvcloud.vcd.org import Org
 
+from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import PksServerError
@@ -164,8 +165,7 @@ class BrokerManager(object):
             result['body'] = self._create_cluster(**cluster_spec)
             result['status_code'] = ACCEPTED
         elif op == Operation.LIST_OVDCS:
-            list_pks_plans = self.req_spec.get('list_pks_plans',
-                                                      False)
+            list_pks_plans = self.req_spec.get('list_pks_plans', False)
             result['body'] = self._list_ovdcs(
                 list_pks_plans=list_pks_plans)
 
@@ -204,7 +204,7 @@ class BrokerManager(object):
                     vdc_dict = {
                         'org': org.get_name(),
                         'name': vdc['name'],
-                        'pks_api_server' : pks_server,
+                        'pks_api_server': pks_server,
                         'available pks plans': pks_plans
                     }
                 else:
@@ -297,8 +297,9 @@ class BrokerManager(object):
                 # Get all cluster information to get vdc name from
                 # compute-profile-name
                 for cluster in pks_broker.list_clusters(is_admin_request=True):
-                    pks_cluster = PKSBroker.generate_cluster_subset_with_given_keys(
-                        cluster, common_cluster_properties)
+                    pks_cluster = \
+                        PKSBroker.generate_cluster_subset_with_given_keys(
+                            cluster, common_cluster_properties)
                     pks_cluster[K8S_PROVIDER_KEY] = K8sProviders.PKS
                     pks_clusters.append(pks_cluster)
             return vcd_clusters + pks_clusters
@@ -314,7 +315,8 @@ class BrokerManager(object):
 
     def _create_cluster(self, **cluster_spec):
         cluster_name = cluster_spec['cluster_name']
-        cluster = self._find_cluster_in_org(cluster_name)[0]
+        cluster, _ = self._find_cluster_in_org(cluster_name)
+
         if not cluster:
             ctr_prov_ctx = self._get_ctr_prov_ctx_from_ovdc_metadata()
             if ctr_prov_ctx.get(
@@ -325,8 +327,8 @@ class BrokerManager(object):
             broker = self._get_broker_based_on_ctr_prov_ctx(ctr_prov_ctx)
             return broker.create_cluster(**cluster_spec)
         else:
-            raise CseServerError(f"Cluster with name: {cluster_name} "
-                                 f"already found")
+            raise ClusterAlreadyExistsError(
+                f"Cluster {cluster_name} already exists.")
 
     def _find_cluster_in_org(self, cluster_name):
         """Invoke set of all (vCD/PKS)brokers in the org to find the cluster.
@@ -350,7 +352,7 @@ class BrokerManager(object):
             try:
                 return pksbroker.get_cluster_info(cluster_name=cluster_name),\
                     pksbroker
-            except Exception as err:
+            except PksServerError as err:
                 LOGGER.debug(f"Get cluster info on {cluster_name} failed "
                              f"on {pks_ctx['host']} with error: {err}")
 
@@ -547,9 +549,8 @@ class BrokerManager(object):
         pks_server = ''
         pks_plans = []
         vc_backing_vdc = self.ovdc_cache.get_ovdc(
-                                ovdc_name=vdc['name'],
-                                org_name=org_resource.get('name')) \
-                                .resource.ComputeProviderScope
+            ovdc_name=vdc['name'],
+            org_name=org_resource.get('name')).resource.ComputeProviderScope
 
         pks_plan_and_server_info = vc_to_pks_plans_map.get(vc_backing_vdc, [])
         if len(pks_plan_and_server_info) > 0:
@@ -570,6 +571,7 @@ class BrokerManager(object):
             plan_names = [plan.get('name') for plan in plans]
             pks_vc_plans_map[pks_ctx['vc']] = [plan_names, pks_ctx['host']]
         return pks_vc_plans_map
+
 
 class PksComputeProfileParams(namedtuple("PksComputeProfileParams",
                                          'cp_name, az_name, description,'

@@ -163,6 +163,25 @@ class DFWManager(object):
 
         return True
 
+    def get_all_rules_in_section(self, section_id):
+        """."""
+        if not section_id:
+            return
+
+        resource_url_fragment = f"firewall/sections/{section_id}/rules"
+        try:
+            response = self._nsxt_client.do_request(
+                method=RequestMethodVerb.GET,
+                resource_url_fragment=resource_url_fragment)
+        except HTTPError as err:
+            if err.response.status_code != 404:
+                raise
+            else:
+                return
+
+        rules = response['results']
+        return rules
+
     def create_dfw_rule(self,
                         section_id,
                         rule_name,

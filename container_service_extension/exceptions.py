@@ -32,6 +32,10 @@ class ClusterInitializationError(ClusterOperationError):
     """Raised when any error happens while cluster initialization."""
 
 
+class ClusterNetworkIsolationError(ClusterOperationError):
+    """Raised when any error happens while isolating cluster network."""
+
+
 class NodeOperationError(ClusterOperationError):
     """Base class for all node operation related exceptions."""
 
