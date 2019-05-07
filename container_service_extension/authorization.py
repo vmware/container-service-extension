@@ -4,45 +4,12 @@
 
 import functools
 
-from pyvcloud.vcd.client import EntityType
-from pyvcloud.vcd.client import find_link
-from pyvcloud.vcd.client import RelationType
-from pyvcloud.vcd.org import Org
-from pyvcloud.vcd.role import Role
 
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.pyvcloud_utils import get_user_rights
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
 from container_service_extension.utils import get_server_runtime_config
 from container_service_extension.utils import get_vcd_sys_admin_client
-
-
-def _get_user_rights(sys_admin_client, user_session):
-    """Return rights associated with the role of an user.
-
-    :param pyvcloud.vcd.client.Client sys_admin_client: the sys admin cilent
-        that will be used to query vCD about the rights and roles of the
-        concerned user.
-    :param lxml.objectify.ObjectifiedElement user_session:
-
-    :return: the list of rights contained in the role of the user
-        (corresponding to the user_session).
-
-    :rtype: list of str
-    """
-    user_org_link = find_link(resource=user_session,
-                              rel=RelationType.DOWN,
-                              media_type=EntityType.ORG.value)
-    user_org_href = user_org_link.href
-    org = Org(sys_admin_client, href=user_org_href)
-    user_role_name = user_session.get('roles')
-    role = Role(sys_admin_client,
-                resource=org.get_role_resource(user_role_name))
-
-    user_rights = []
-    user_rights_as_list_of_dict = role.list_rights()
-    for right_dict in user_rights_as_list_of_dict:
-        user_rights.append(right_dict.get('name'))
-    return user_rights
 
 
 def _is_authorized(sys_admin_client, user_session, required_rights):
@@ -62,7 +29,7 @@ def _is_authorized(sys_admin_client, user_session, required_rights):
     if required_rights is None or len(required_rights) == 0:
         return True
 
-    user_rights = _get_user_rights(sys_admin_client, user_session)
+    user_rights = get_user_rights(sys_admin_client, user_session)
 
     missing_rights = []
     for right in required_rights:
