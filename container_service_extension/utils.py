@@ -609,9 +609,16 @@ def get_pvdc_id_by_name(name, vc_name_in_vcd):
 
 
 def is_org_admin(user_session):
+    """Return if the logged-in user is an org-admin.
+
+    :param lxml.objectify.ObjectifiedElement user_session:
+
+    :return True or False
+    :rtype: bool
+    """
     from container_service_extension import authorization
-    user_rights = authorization._get_user_rights(get_vcd_sys_admin_client(),
-                                                 user_session)
+    user_rights = authorization.get_user_rights(get_vcd_sys_admin_client(),
+                                                user_session)
     return all(right in user_rights for right in org_admin_rights)
 
 

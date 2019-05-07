@@ -321,6 +321,9 @@ class BrokerManager(object):
 
     def _create_cluster(self, **cluster_spec):
         cluster_name = cluster_spec['cluster_name']
+        # To prevent cluster creation with duplicate cluster-name by tenant
+        # users, 'is_admin_search' flag is used to do search for cluster name
+        # with no user-context
         cluster = self._find_cluster_in_org(
             cluster_name, is_admin_search=True)[0]
         if not cluster:
