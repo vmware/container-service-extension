@@ -12,8 +12,8 @@ from pyvcloud.vcd.org import Org
 from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseServerError
-from container_service_extension.exceptions import UnauthorizaedActionError
 from container_service_extension.exceptions import PksServerError
+from container_service_extension.exceptions import UnauthorizedActionError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.ovdc_cache import OvdcCache
 from container_service_extension.pks_cache import PKS_CLUSTER_DOMAIN_KEY
@@ -23,6 +23,8 @@ from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
 from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import connect_vcd_user_via_token
+from container_service_extension.utils \
+    import create_pks_compute_profile_name_from_vdc_id
 from container_service_extension.utils import exception_handler
 from container_service_extension.utils import get_pks_cache
 from container_service_extension.utils import get_server_runtime_config
@@ -191,7 +193,7 @@ class BrokerManager(object):
             if self.vcd_client.is_sysadmin():
                 vc_to_pks_plans_map = self._construct_vc_to_pks_map()
             else:
-                raise UnauthorizaedActionError(
+                raise UnauthorizedActionError(
                     'Operation Denied. Plans available only for '
                     'System Administrator.')
         for org_resource in org_resource_list:
@@ -321,9 +323,11 @@ class BrokerManager(object):
 
     def _create_cluster(self, **cluster_spec):
         cluster_name = cluster_spec['cluster_name']
+        # To prevent cluster creation with duplicate cluster-name by tenant
+        # users, 'is_admin_search' flag is used to do search for cluster name
+        # with no user-context
         cluster, _ = self._find_cluster_in_org(cluster_name,
                                                is_admin_search=True)
-
         if not cluster:
             ctr_prov_ctx = self._get_ctr_prov_ctx_from_ovdc_metadata()
             if ctr_prov_ctx.get(
@@ -337,7 +341,7 @@ class BrokerManager(object):
             raise ClusterAlreadyExistsError(
                 f"Cluster {cluster_name} already exists.")
 
-    def _find_cluster_in_org(self, cluster_name, **kwargs):
+    def _find_cluster_in_org(self, cluster_name, is_admin_search=False):
         """Invoke set of all (vCD/PKS)brokers in the org to find the cluster.
 
         If cluster found:
@@ -357,8 +361,9 @@ class BrokerManager(object):
         for pks_ctx in pks_ctx_list:
             pksbroker = PKSBroker(self.req_headers, self.req_spec, pks_ctx)
             try:
-                return pksbroker.get_cluster_info(cluster_name=cluster_name,
-                                                  **kwargs), pksbroker
+                return pksbroker.get_cluster_info(
+                    cluster_name=cluster_name,
+                    is_admin_search=is_admin_search), pksbroker
             except PksServerError as err:
                 LOGGER.debug(f"Get cluster info on {cluster_name} failed "
                              f"on {pks_ctx['host']} with error: {err}")
@@ -521,8 +526,8 @@ class BrokerManager(object):
         org_name = self.req_spec.get('org_name')
         ovdc_name = self.req_spec.get('ovdc_name')
         # Compute profile creation
-        pks_compute_profile_name = self.\
-            ovdc_cache.get_compute_profile_name(ovdc_id, ovdc_name)
+        pks_compute_profile_name = \
+            create_pks_compute_profile_name_from_vdc_id(ovdc_id)
         pks_compute_profile_description = f"{org_name}--{ovdc_name}" \
             f"--{ovdc_id}"
         pks_az_name = f"az-{ovdc_name}"
