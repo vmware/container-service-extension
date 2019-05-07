@@ -774,7 +774,7 @@ class PKSBroker(AbstractBroker):
 
     def _does_cluster_belong_to_org(self, cluster_info, org_name):
         # Returns True if the cluster belongs to the given org
-        # False case include missing compute profile name of the cluster
+        # Else False (this also includes missing compute profile name)
 
         compute_profile_name = cluster_info.get('compute_profile_name')
         if compute_profile_name is None:
