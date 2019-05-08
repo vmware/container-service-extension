@@ -288,7 +288,8 @@ class PKSBroker(AbstractBroker):
 
         cluster_info = self._create_cluster(**cluster_spec)
 
-        self._isolate_cluster(qualified_cluster_name, cluster_info.get('uuid'))
+        self._isolate_cluster(cluster_name, qualified_cluster_name,
+                              cluster_info.get('uuid'))
 
         self._restore_original_name(cluster_info)
         if not self.tenant_client.is_sysadmin():
@@ -423,17 +424,16 @@ class PKSBroker(AbstractBroker):
 
         :rtype: str
         """
-        self._check_cluster_isolation(cluster_name)
-
         if self.tenant_client.is_sysadmin():
             cluster_info = self.get_cluster_info(cluster_name,
                                                  is_admin_request=True)
-            config_info = self._get_cluster_config(
-                cluster_info['pks_cluster_name'])
+            qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
-            config_info = self._get_cluster_config(
-                self._append_user_id(cluster_name))
+            qualified_cluster_name = self._append_user_id(cluster_name)
 
+        self._check_cluster_isolation(cluster_name, qualified_cluster_name)
+
+        config_info = self._get_cluster_config(qualified_cluster_name)
         return self.filter_traces_of_user_context(config_info)
 
     def _get_cluster_config(self, cluster_name):
@@ -471,23 +471,24 @@ class PKSBroker(AbstractBroker):
         if self.tenant_client.is_sysadmin():
             cluster_info = self.get_cluster_info(
                 cluster_name, is_admin_request=True)
-            pks_cluster_name = cluster_info['pks_cluster_name']
+            qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
-            pks_cluster_name = self._append_user_id(cluster_name)
+            qualified_cluster_name = self._append_user_id(cluster_name)
 
-        result = self._delete_cluster(pks_cluster_name)
+        result = self._delete_cluster(qualified_cluster_name)
 
         # remove cluster network isolation
+        LOGGER.debug(f"Removing network isolation of cluster {cluster_name}.")
         try:
-            LOGGER.debug("Removing network isolation of cluster "
-                         f"{cluster_name}.")
             cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client)
-            cluster_network_isolater.remove_cluster_isolation(pks_cluster_name)
-        except Exception:
+            cluster_network_isolater.remove_cluster_isolation(
+                qualified_cluster_name)
+        except Exception as err:
             # NSX-T oprations are idempotent so they should not cause erros
             # if say NSGroup is missing. But for any other exception, simply
             # catch them and ignore.
-            pass
+            LOGGER.debug(f"Error {err} occured while deleting cluster "
+                         f"isolation rules for cluster {cluster_name}")
 
         self._restore_original_name(result)
         self._filter_pks_properties(result)
@@ -538,16 +539,17 @@ class PKSBroker(AbstractBroker):
 
         """
         cluster_name = cluster_spec['cluster_name']
-        self._check_cluster_isolation(cluster_name)
 
         if self.tenant_client.is_sysadmin():
-            cluster = self.get_cluster_info(cluster_name,
-                                            is_admin_request=True)
-            cluster_spec['cluster_name'] = cluster['pks_cluster_name']
+            cluster_info = self.get_cluster_info(cluster_name,
+                                                 is_admin_request=True)
+            qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
-            pks_cluster_name = self._append_user_id(cluster_name)
-            cluster_spec['cluster_name'] = pks_cluster_name
+            qualified_cluster_name = self._append_user_id(cluster_name)
 
+        self._check_cluster_isolation(cluster_name, qualified_cluster_name)
+
+        cluster_spec['cluster_name'] = qualified_cluster_name
         result = self._resize_cluster(**cluster_spec)
         self._restore_original_name(result)
         self._filter_pks_properties(result)
@@ -582,27 +584,28 @@ class PKSBroker(AbstractBroker):
 
         return result
 
-    def _check_cluster_isolation(self, cluster_name):
-        qualified_cluster_name = self._append_user_id(cluster_name)
-        cluster_network_isolater = ClusterNetworkIsolater(
-            self.nsxt_client)
+    def _check_cluster_isolation(self, cluster_name, qualified_cluster_name):
+        cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client)
         if not cluster_network_isolater.is_cluster_isolated(
-                cluster_name=qualified_cluster_name):
+                qualified_cluster_name):
             raise ClusterNetworkIsolationError(
                 f"Cluster '{cluster_name}' is in an unusable state. Please "
                 "delete it and redeploy.")
 
-    def _isolate_cluster(self, cluster_name, cluster_id):
+    def _isolate_cluster(self, cluster_name, qualified_cluster_name,
+                         cluster_id):
+        if not cluster_id:
+            raise ValueError(
+                f"Invalid cluster_id for cluster : '{cluster_name}'")
+
+        LOGGER.debug(f"Isolating network of cluster {cluster_name}.")
         try:
-            if not cluster_id:
-                raise ValueError(
-                    f"Invalid cluster_id for cluster : '{cluster_name}'")
-            LOGGER.debug(f"Isolating network of cluster {cluster_name}.")
             cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client)
-            cluster_network_isolater.isolate_cluster(cluster_name, cluster_id)
+            cluster_network_isolater.isolate_cluster(qualified_cluster_name,
+                                                     cluster_id)
         except Exception as err:
             raise ClusterNetworkIsolationError(
-                f"Cluster : '{cluster_name}' is in an unstable state. Failed "
+                f"Cluster : '{cluster_name}' is in an unusable state. Failed "
                 "to isolate cluster network") from err
 
     def create_compute_profile(self, cp_name, az_name, description, cpi,

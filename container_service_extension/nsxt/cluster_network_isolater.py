@@ -63,7 +63,11 @@ class ClusterNetworkIsolater(object):
         rules = dfw_manager.get_all_rules_in_section(
             section_id=firewall_section['id'])
 
-        # check for presence of the isolation DFW rules
+        # Check for presence of the isolation DFW rules.
+        # The checks are overly rigid, because we don't want any tampering with
+        # the network isolation rules created by CSE on NSX-T. If the number of
+        # rules are changed in future, this piece of logic should be updated
+        # accordingly.
         if len(rules) != 2:
             return False
 
