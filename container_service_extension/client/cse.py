@@ -3,15 +3,12 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import os
-from os.path import expanduser
-from os.path import join
 
 import click
 from vcd_cli.utils import restore_session
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
 from vcd_cli.vcd import vcd
-import yaml
 
 from container_service_extension.client.cluster import Cluster
 from container_service_extension.client.ovdc import Ovdc
@@ -20,10 +17,10 @@ from container_service_extension.server_constants import K8sProviders
 from container_service_extension.service import Service
 
 
-@vcd.group(short_help='Manage kubernetes clusters')
+@vcd.group(short_help='Manage Kubernetes clusters')
 @click.pass_context
 def cse(ctx):
-    """Manage Kubernetes clusters in vCloud Director.
+    """Manage Kubernetes clusters.
 
 \b
 Examples
@@ -162,7 +159,7 @@ def list_templates(ctx):
     required=False,
     default=None,
     metavar='VDC_NAME',
-    help='Org VDC to use. Defaults to currently logged-in org VDC')
+    help='Filter list to show clusters from a specific org VDC.')
 @click.option(
     '-o',
     '--org',
@@ -170,7 +167,7 @@ def list_templates(ctx):
     default=None,
     required=False,
     metavar='ORG_NAME',
-    help="Org to use. Defaults to currently logged-in org")
+    help="Filter list to show clusters from a specific org.")
 def list_clusters(ctx, vdc, org_name):
     """Display clusters in vCD that are visible to the logged in user."""
     try:
@@ -198,7 +195,7 @@ def list_clusters(ctx, vdc, org_name):
     required=False,
     default=None,
     metavar='VDC_NAME',
-    help='Org VDC to use. Defaults to currently logged-in org VDC')
+    help='Org VDC to use.')
 def delete(ctx, name, vdc):
     """Delete a Kubernetes cluster."""
     try:
@@ -410,7 +407,6 @@ def resize(ctx, name, node_count, network_name, vdc, disable_rollback):
 @cluster_group.command('config', short_help='Display cluster configuration')
 @click.pass_context
 @click.argument('name', required=True)
-@click.option('-s', '--save', is_flag=True)
 @click.option(
     '-v',
     '--vdc',
@@ -418,9 +414,12 @@ def resize(ctx, name, node_count, network_name, vdc, disable_rollback):
     required=False,
     default=None,
     metavar='VDC_NAME',
-    help='Org VDC to use. Defaults to currently logged-in org VDC')
-def config(ctx, name, save, vdc):
-    """Display cluster configuration."""
+    help='Org VDC to use.')
+def config(ctx, name, vdc):
+    """Display cluster configuration.
+
+    To write to a file: `vcd cse cluster config mycluster > ~/.kube/config`
+    """
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -428,8 +427,6 @@ def config(ctx, name, save, vdc):
         cluster_config = cluster.get_config(name, vdc=vdc)
         if os.name == 'nt':
             cluster_config = str.replace(cluster_config, '\n', '\r\n')
-        if save:
-            save_config(ctx)
         else:
             click.secho(cluster_config)
     except Exception as e:
@@ -447,7 +444,7 @@ def config(ctx, name, save, vdc):
     required=False,
     default=None,
     metavar='VDC_NAME',
-    help='Org VDC to use. Defaults to currently logged-in org VDC')
+    help='Org VDC to use.')
 def cluster_info(ctx, name, vdc):
     """Display info about a Kubernetes cluster."""
     try:
@@ -663,28 +660,6 @@ def delete_nodes(ctx, name, node_names, force):
         stderr(e, ctx)
 
 
-def save_config(ctx):
-    try:
-        f = join(expanduser('~'), '.kube/config')
-        stream = open(f, 'r')
-        docs = yaml.safe_load_all(stream)
-        for doc in docs:
-            for k, v in doc.items():
-                if k == 'contexts':
-                    for c in v:
-                        print(c['name'])
-                        print('  cluster: %s' % c['context']['cluster'])
-                        print('  user:    %s' % c['context']['user'])
-                elif k == 'clusters':
-                    for cluster in v:
-                        print(cluster['name'], cluster['cluster']['server'])
-                elif k == 'users':
-                    for user in v:
-                        print(user['name'], user['user'])
-    except Exception as e:
-        stderr(e, ctx)
-
-
 @cse.group('system', short_help='Manage CSE service (system daemon)')
 @click.pass_context
 def system_group(ctx):
@@ -812,14 +787,14 @@ Examples
                     short_help='Display org VDCs in vCD that are visible '
                                'to the logged in user')
 @click.option(
-        '-p',
-        '--pks-plans',
-        'list_pks_plans',
-        required=False,
-        is_flag=True,
-        default=False,
-        help="Display available PKS plans if Org vDC is backed by "
-             "Enterprise PKS infrastructure.")
+    '-p',
+    '--pks-plans',
+    'list_pks_plans',
+    required=False,
+    is_flag=True,
+    default=False,
+    help="Display available PKS plans if org vDC is backed by "
+         "Enterprise PKS infrastructure.")
 @click.pass_context
 def list_ovdcs(ctx, list_pks_plans):
     """Display org VDCs in vCD that are visible to the logged in user."""
