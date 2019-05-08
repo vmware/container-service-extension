@@ -10,6 +10,7 @@ import yaml
 
 from container_service_extension.abstract_broker import AbstractBroker
 from container_service_extension.authorization import secure
+from container_service_extension.exceptions import ClusterNetworkIsolationError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import PksConnectionError
 from container_service_extension.exceptions import PksServerError
@@ -174,7 +175,6 @@ class PKSBroker(AbstractBroker):
             client = ApiClientV1Beta(configuration=pks_config)
         return client
 
-
     def list_plans(self):
         """Get list of available PKS plans in the system.
 
@@ -277,12 +277,24 @@ class PKSBroker(AbstractBroker):
 
         :rtype: dict
         """
-        cluster_spec['cluster_name'] = \
-            self._append_user_id(cluster_spec['cluster_name'])
+        cluster_name = cluster_spec['cluster_name']
+        qualified_cluster_name = self._append_user_id(cluster_name)
+        cluster_spec['cluster_name'] = qualified_cluster_name
+
+        if not self.nsxt_server:
+            raise CseServerError(
+                "NSX-T server details not found for PKS server selected for "
+                f"cluster : {cluster_name}. Aborting creation of cluster.")
+
         cluster_info = self._create_cluster(**cluster_spec)
+
+        self._isolate_cluster(cluster_name, qualified_cluster_name,
+                              cluster_info.get('uuid'))
+
         self._restore_original_name(cluster_info)
         if not self.tenant_client.is_sysadmin():
             self._filter_pks_properties(cluster_info)
+
         return cluster_info
 
     def _create_cluster(self, cluster_name, node_count, pks_plan, pks_ext_host,
@@ -309,11 +321,6 @@ class PKSBroker(AbstractBroker):
         #  Method 'Create_cluster' in VcdBroker and PksBroker should take
         #  ClusterSpec either as a param (or)
         #  read from instance variable (if needed only).
-        if not self.nsxt_server:
-            raise CseServerError(
-                "NSX-T server details not found for PKS server selected for "
-                f"cluster : {cluster_name}. Aborting creation of cluster.")
-
         compute_profile = compute_profile \
             if compute_profile else self.compute_profile
         cluster_api = ClusterApiV1Beta(api_client=self.client_v1beta)
@@ -340,24 +347,6 @@ class PKSBroker(AbstractBroker):
 
         LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to create"
                      f" cluster: {cluster_name}")
-
-        # TODO() : Rollback cluster if any error is encountered in this section
-        # isolate cluster via NSX-T DFW
-        try:
-            cluster_id = cluster_dict.get('uuid')
-            if cluster_id:
-                LOGGER.debug(f"Isolating network of cluster {cluster_name}.")
-                cluster_network_isolater = ClusterNetworkIsolater(
-                    self.nsxt_client)
-                cluster_network_isolater.isolate_cluster(cluster_name,
-                                                         cluster_id)
-            else:
-                raise CseServerError("Failed to isolate network of cluster "
-                                     f"{cluster_name}. Cluster ID not found.")
-        except Exception as err:
-            raise CseServerError("Failed to isolate network of cluster "
-                                 f"{cluster_name} : Aborting creation of "
-                                 "cluster.") from err
 
         return cluster_dict
 
@@ -393,6 +382,7 @@ class PKSBroker(AbstractBroker):
             self._restore_original_name(cluster_info)
             if not kwargs.get('is_admin_request'):
                 self._filter_pks_properties(cluster_info)
+
         return cluster_info
 
     def _get_cluster_info(self, cluster_name):
@@ -435,13 +425,15 @@ class PKSBroker(AbstractBroker):
         :rtype: str
         """
         if self.tenant_client.is_sysadmin():
-            cluster = self.get_cluster_info(cluster_name,
-                                            is_admin_request=True)
-            config_info = self._get_cluster_config(cluster['pks_cluster_name'])
+            cluster_info = self.get_cluster_info(cluster_name,
+                                                 is_admin_request=True)
+            qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
-            pks_cluster_name = self._append_user_id(cluster_name)
-            config_info = self._get_cluster_config(pks_cluster_name)
+            qualified_cluster_name = self._append_user_id(cluster_name)
 
+        self._check_cluster_isolation(cluster_name, qualified_cluster_name)
+
+        config_info = self._get_cluster_config(qualified_cluster_name)
         return self.filter_traces_of_user_context(config_info)
 
     def _get_cluster_config(self, cluster_name):
@@ -479,11 +471,25 @@ class PKSBroker(AbstractBroker):
         if self.tenant_client.is_sysadmin():
             cluster_info = self.get_cluster_info(
                 cluster_name, is_admin_request=True)
-            pks_cluster_name = cluster_info['pks_cluster_name']
+            qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
-            pks_cluster_name = self._append_user_id(cluster_name)
+            qualified_cluster_name = self._append_user_id(cluster_name)
 
-        result = self._delete_cluster(pks_cluster_name)
+        result = self._delete_cluster(qualified_cluster_name)
+
+        # remove cluster network isolation
+        LOGGER.debug(f"Removing network isolation of cluster {cluster_name}.")
+        try:
+            cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client)
+            cluster_network_isolater.remove_cluster_isolation(
+                qualified_cluster_name)
+        except Exception as err:
+            # NSX-T oprations are idempotent so they should not cause erros
+            # if say NSGroup is missing. But for any other exception, simply
+            # catch them and ignore.
+            LOGGER.debug(f"Error {err} occured while deleting cluster "
+                         f"isolation rules for cluster {cluster_name}")
+
         self._restore_original_name(result)
         self._filter_pks_properties(result)
         return result
@@ -512,18 +518,6 @@ class PKSBroker(AbstractBroker):
         LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to delete"
                      f" the cluster: {cluster_name}")
 
-        # remove cluster network isolation
-        try:
-            LOGGER.debug("Removing network isolation of cluster "
-                         f"{cluster_name}.")
-            cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client)
-            cluster_network_isolater.remove_cluster_isolation(cluster_name)
-        except Exception:
-            # NSX-T oprations are idempotent so they should not cause erros
-            # if say NSGroup is missing. But for any other exception, simply
-            # them and ignore.
-            pass
-
         result['name'] = cluster_name
         result['task_status'] = 'in progress'
         return result
@@ -547,13 +541,15 @@ class PKSBroker(AbstractBroker):
         cluster_name = cluster_spec['cluster_name']
 
         if self.tenant_client.is_sysadmin():
-            cluster = self.get_cluster_info(cluster_name,
-                                            is_admin_request=True)
-            cluster_spec['cluster_name'] = cluster['pks_cluster_name']
+            cluster_info = self.get_cluster_info(cluster_name,
+                                                 is_admin_request=True)
+            qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
-            pks_cluster_name = self._append_user_id(cluster_name)
-            cluster_spec['cluster_name'] = pks_cluster_name
+            qualified_cluster_name = self._append_user_id(cluster_name)
 
+        self._check_cluster_isolation(cluster_name, qualified_cluster_name)
+
+        cluster_spec['cluster_name'] = qualified_cluster_name
         result = self._resize_cluster(**cluster_spec)
         self._restore_original_name(result)
         self._filter_pks_properties(result)
@@ -587,6 +583,30 @@ class PKSBroker(AbstractBroker):
         result['task_status'] = 'in progress'
 
         return result
+
+    def _check_cluster_isolation(self, cluster_name, qualified_cluster_name):
+        cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client)
+        if not cluster_network_isolater.is_cluster_isolated(
+                qualified_cluster_name):
+            raise ClusterNetworkIsolationError(
+                f"Cluster '{cluster_name}' is in an unusable state. Please "
+                "delete it and redeploy.")
+
+    def _isolate_cluster(self, cluster_name, qualified_cluster_name,
+                         cluster_id):
+        if not cluster_id:
+            raise ValueError(
+                f"Invalid cluster_id for cluster : '{cluster_name}'")
+
+        LOGGER.debug(f"Isolating network of cluster {cluster_name}.")
+        try:
+            cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client)
+            cluster_network_isolater.isolate_cluster(qualified_cluster_name,
+                                                     cluster_id)
+        except Exception as err:
+            raise ClusterNetworkIsolationError(
+                f"Cluster : '{cluster_name}' is in an unusable state. Failed "
+                "to isolate cluster network") from err
 
     def create_compute_profile(self, cp_name, az_name, description, cpi,
                                datacenter_name, cluster_name, ovdc_rp_name):
@@ -800,7 +820,8 @@ class PKSBroker(AbstractBroker):
         return unsupported_method
 
     @staticmethod
-    def generate_cluster_subset_with_given_keys(cluster, cluster_property_keys):
+    def generate_cluster_subset_with_given_keys(cluster,
+                                                cluster_property_keys):
         pks_cluster = {k: cluster.get(k) for k in
                        cluster_property_keys}
         # Extract vdc name from compute-profile-name
