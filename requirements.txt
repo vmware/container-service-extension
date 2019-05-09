@@ -1,7 +1,16 @@
+requests >= 2.21
+Click >= 7.0
+PyYAML >= 3.13
+six >= 1.12.0
+pbr >= 5.1.2
 cachetools >= 2.0.1
+certifi >= 2018.11.29
 humanfriendly >= 4.8
 pika >= 0.11.2, < 1.0.0
+prompt_toolkit >= 2.0.9
 pyvcloud >= 20.1.0
+pyvmomi >= 6.7.0
 vcd-cli >= 21.1.0
 vsphere-guest-run >= 0.0.7
-pyvmomi >= 6.7.0
+
+
