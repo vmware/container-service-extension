@@ -605,6 +605,33 @@ def get_pvdc_id_by_name(name, vc_name_in_vcd):
     return None
 
 
+def extract_vdc_id_from_pks_compute_profile_name(compute_profile_name):
+    """Extract the vdc identifier from pks compute profile name.
+
+    :param str compute_profile_name: name of the pks compute profile
+
+    :return: UUID of the vdc in vcd.
+
+    :rtype: str
+    """
+    return compute_profile_name.split('--')[1]
+
+
+def create_pks_compute_profile_name_from_vdc_id(vdc_id):
+    """Construct pks compute profile name.
+
+    :param str vdc_id: UUID of the vdc in vcd
+
+    :return: pks compute profile name
+
+    :rtype: str
+    """
+    from container_service_extension.pyvcloud_utils import get_vdc_by_id
+    client = get_vcd_sys_admin_client()
+    vdc = get_vdc_by_id(client, vdc_id)
+    return f"cp--{vdc_id}--{vdc.name}"
+
+
 def get_data_file(filename, logger=None):
     """Retrieve CSE script file content as a string.
 
