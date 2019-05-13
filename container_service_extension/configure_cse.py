@@ -34,12 +34,17 @@ from container_service_extension.nsxt.cse_nsxt_setup_utils import \
 from container_service_extension.nsxt.dfw_manager import DFWManager
 from container_service_extension.nsxt.ipset_manager import IPSetManager
 from container_service_extension.nsxt.nsxt_client import NSXTClient
+from container_service_extension.pks_cache import Credentials
+from container_service_extension.pksclient.client.v1.api_client \
+    import ApiClient as ApiClientV1
+from container_service_extension.pksclient.configuration import Configuration
 from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY, CSE_NATIVE_DEPLOY_RIGHT_CATEGORY, \
     CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION, CSE_NATIVE_DEPLOY_RIGHT_NAME, \
     CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY, CSE_PKS_DEPLOY_RIGHT_CATEGORY, \
     CSE_PKS_DEPLOY_RIGHT_DESCRIPTION, CSE_PKS_DEPLOY_RIGHT_NAME, \
     CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE  # noqa
+from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import catalog_exists
 from container_service_extension.utils import catalog_item_exists
 from container_service_extension.utils import check_file_permissions
@@ -61,6 +66,8 @@ from container_service_extension.utils import wait_until_tools_ready
 # used for creating temp vapp
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = "vmxnet3"
 TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
+
+VERSION_V1 = 'v1'
 
 INSTRUCTIONS_FOR_PKS_CONFIG_FILE = "\
 # Config file for PKS enabled CSE Server to be filled by administrators.\n\
@@ -662,6 +669,15 @@ def validate_pks_config_data_integrity(pks_config):
     all_pks_accounts = \
         [entry['name'] for entry in pks_config[PKS_ACCOUNTS_SECTION_KEY]]
 
+    # Create a cache with pks_account to Credentials mapping
+    pks_account_info_table = {}
+    for pks_account in pks_config[PKS_ACCOUNTS_SECTION_KEY]:
+        pks_account_name = pks_account['pks_api_server']
+        credentials = Credentials(pks_account['username'],
+                                  pks_account['secret'])
+
+        pks_account_info_table[pks_account_name] = credentials
+
     # Check for duplicate pks api server names
     duplicate_pks_server_names = get_duplicate_items_in_list(all_pks_servers)
     if len(duplicate_pks_server_names) != 0:
@@ -704,6 +720,43 @@ def validate_pks_config_data_integrity(pks_config):
             raise ValueError(f"Unknown PKS api server : {pks_server_name} "
                              f"referenced by PVDC : {pvdc.get('name')} in "
                              f"Section : {PKS_PVDCS_SECTION_KEY}")
+
+    '''Check validity of all PKS api servers referenced in the
+        pks_api_servers section'''
+    for pks_server in pks_config[PKS_SERVERS_SECTION_KEY]:
+        if pks_account_info_table.get(pks_server.get('name')):
+            pks_account = pks_account_info_table.get(pks_server.get('name'))
+            pks_configuration = Configuration()
+            pks_configuration.proxy = f"http://{pks_server['proxy']}:80" \
+                if pks_server.get('proxy') else None
+            pks_configuration.host = \
+                f"https://{pks_server['host']}:{pks_server['port']}/" \
+                f"{VERSION_V1}"
+            pks_configuration.access_token = None
+            pks_configuration.username = pks_account.username
+            pks_configuration.verify_ssl = pks_server['verify']
+            pks_configuration.secret = pks_account.secret
+            pks_configuration.uaac_uri = \
+                f"https://{pks_server['host']}:{pks_server['uaac_port']}"
+
+            uaaClient = UaaClient(pks_configuration.uaac_uri,
+                                  pks_configuration.username,
+                                  pks_configuration.secret,
+                                  proxy_uri=pks_configuration.proxy)
+            token = uaaClient.getToken()
+
+            if not token:
+                raise ValueError(
+                    "Unable to connect to PKS server : "
+                    f"{pks_server.get('name')} ({pks_server.get('host')})")
+
+            pks_configuration.token = token
+            client = ApiClientV1(configuration=pks_configuration)
+
+            if client:
+                click.secho(f"Connected to PKS server ("
+                            f"{pks_server.get('name')})",
+                            fg='green')
 
     # Check validity of all PKS api servers referenced in NSX-T section
     for nsxt_server in pks_config[PKS_NSXT_SERVERS_SECTION_KEY]:
