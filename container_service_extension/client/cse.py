@@ -327,21 +327,23 @@ def create(ctx, name, vdc, node_count, cpu, memory, network_name,
         ssh_key = None
         if ssh_key_file is not None:
             ssh_key = ssh_key_file.read()
-
-        result = cluster.create_cluster(
-            vdc,
-            network_name,
-            name,
-            node_count=node_count,
-            cpu=cpu,
-            memory=memory,
-            storage_profile=storage_profile,
-            ssh_key=ssh_key,
-            template=template,
-            enable_nfs=enable_nfs,
-            disable_rollback=disable_rollback,
-            org=org_name)
-        stdout(result, ctx)
+        if vdc:
+            result = cluster.create_cluster(
+                vdc,
+                network_name,
+                name,
+                node_count=node_count,
+                cpu=cpu,
+                memory=memory,
+                storage_profile=storage_profile,
+                ssh_key=ssh_key,
+                template=template,
+                enable_nfs=enable_nfs,
+                disable_rollback=disable_rollback,
+                org=org_name)
+            stdout(result, ctx)
+        else:
+            stderr("Invalid VDC", ctx)
     except Exception as e:
         stderr(e, ctx)
 
