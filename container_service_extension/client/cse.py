@@ -322,6 +322,10 @@ def create(ctx, name, vdc, node_count, cpu, memory, network_name,
 
         if vdc is None:
             vdc = ctx.obj['profiles'].get('vdc_in_use')
+            if not vdc:
+                stderr("Virtual datacenter context is not set. "
+                       "Use either command 'vcd vdc use' or option "
+                       "'--vdc' to set the vdc context.", ctx)
         if org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
         ssh_key = None
