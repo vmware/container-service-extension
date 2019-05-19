@@ -3,6 +3,7 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import sys
 
 import click
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -136,6 +137,8 @@ def sample(ctx, output, pks_output):
         check_python_version()
     except Exception as err:
         click.secho(str(err), fg='red')
+        sys.exit(0)
+
     click.secho(generate_sample_config(output=output,
                                        pks_output=pks_output))
 
@@ -176,6 +179,7 @@ def check(ctx, config, check_install, template):
         check_python_version()
     except Exception as err:
         click.secho(str(err), fg='red')
+        sys.exit(0)
 
     config_dict = None
     try:
@@ -252,6 +256,7 @@ def install(ctx, config, template, update, no_capture, ssh_key_file):
         check_python_version()
     except Exception as err:
         click.secho(str(err), fg='red')
+        sys.exit(0)
 
     if no_capture and ssh_key_file is None:
         click.echo('Must provide ssh-key file (using --ssh-key OR -k) if '
@@ -303,6 +308,7 @@ def run(ctx, config, skip_check):
         check_python_version()
     except Exception as err:
         click.secho(str(err), fg='red')
+        sys.exit(0)
 
     try:
         service = Service(config, should_check_config=not skip_check)
