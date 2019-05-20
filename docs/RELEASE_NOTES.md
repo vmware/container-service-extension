@@ -9,7 +9,7 @@ title: Release Notes
 
 Release Date: 2019-05-24
 
-Supported vCD versions: 9.1, 9.5, 9.7
+Supported vCD versions: 9.0, 9.1, 9.5, 9.7
 
 | Template OS        | Docker                 | Kubernetes | Pod Network |
 |--------------------|------------------------|------------|-------------|
@@ -20,7 +20,7 @@ Supported vCD versions: 9.1, 9.5, 9.7
 
 - [Enterprise PKS enablement](/container-service-extension/ENT-PKS.html) - CSE now supports new K8 provider 
  Enterprise PKS in addition to Native vCD as K8 provider.
-- [Role based access control](/container-service-extension/RBAC.html) - Enabling this feature lets users granted
+- [Role based access control](/container-service-extension/RBAC.html) - Enabling this feature allows users granted
 with specific K8 rights only to deploy K8 clusters.
 
 **Compatibility matrix**
