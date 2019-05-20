@@ -695,8 +695,8 @@ CSE installation creates a catalog to store all the VM templates that are later
 used to deploy Kubernetes clusters. This catalog is by default shared with all 
 organization administrators. However if users who are not organization 
 administrator want to access this catalog (cluster creation requires access to 
-this catalog), the catalog needs to be explicitly shared with such users by 
-System administrators. The following commands can be run by a System 
+this catalog), the catalog needs to be explicitly shared with each individual 
+organization by System administrators. The following commands can be run by a System 
 administrator to do so,
 
 ```sh
