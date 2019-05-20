@@ -209,73 +209,58 @@ following example shows a file with sample values filled out.
 ```yaml
 # Sample CSE configuration file.
 amqp:
-  exchange: cse-exchange
-  host: bos1-vcd-sp-static-202-42.eng.vmware.com
-  password: amqp_password
+  exchange: cse-ext
+  host: amqp.vmware.com
+  password: guest
   port: 5672
-  prefix: cse-prefix-vcd
-  routing_key: cse-routing-key
+  prefix: vcd
+  routing_key: cse
   ssl: false
   ssl_accept_all: false
-  username: amqp_user
+  username: guest
   vhost: /
 
 vcd:
   api_version: '31.0'
-  host: 10.150.201.243
+  host: vcd.vmware.com
   log: true
-  password: vc_admin_password
+  password: my_secret_password
   port: 443
   username: administrator
-  verify: false
+  verify: true
 
 vcs:
-- name: vcenter1
-  password: vc_admin_password
-  username: administrator@vsphere.local
-  verify: false
+- name: vc1
+  password: my_secret_password
+  username: cse_user@vsphere.local
+  verify: true
+- name: vc2
+  password: my_secret_password
+  username: cse_user@vsphere.local
+  verify: true
 
 service:
+  enforce_authorization: false
   listeners: 5
 
 broker:
-  catalog: cse-cat # public shared catalog within org where the template will be published
-  cse_msg_dir: /tmp/cse # not used
-  default_template: ubuntu-16.04 # name of the default template to use if none is specified
-  ip_allocation_mode: pool # dhcp or pool
-  network: Outside # org network within @vdc that will be used during the install process to build the template
-                          # Should have outbound access to the public internet
-                          # CSE appliance doesn't need to be connected to this network
-  org: cse_org_1 # vCD org that contains the shared catalog where the master templates will be stored
-  storage_profile: '*' # name of the storage profile to use when creating the temporary vApp used to build the template
+  catalog: cse
+  cse_msg_dir: /tmp/cse
+  default_template: photon-v2
+  ip_allocation_mode: pool
+  network: mynetwork
+  org: myorg
+  storage_profile: '*'
   templates:
-  - admin_password: guest_os_admin_password
-    catalog_item: ubuntu-16.04-server-cloudimg-amd64-k8s
-    # Clean marked false to work around https://github.com/vmware/container-service-extension/issues/170
-    cleanup: false
-    cpu: 2
-    description: 'Ubuntu 16.04
-
-      Docker 18.03.0~ce
-
-      Kubernetes 1.10.1
-
-      weave 2.3.0'
-    mem: 2048
-    name: ubuntu-16.04
-    sha256_ova: 3c1bec8e2770af5b9b0462e20b7b24633666feedff43c099a6fb1330fcc869a9
-    source_ova: https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova
-    source_ova_name: ubuntu-16.04-server-cloudimg-amd64.ova
-    temp_vapp: ubuntu1604-temp
   - admin_password: guest_os_admin_password
     catalog_item: photon-custom-hw11-2.0-304b817-k8s
     cleanup: true
     cpu: 2
     description: 'PhotonOS v2
 
-      Docker 17.06.0-4
+      Docker 17.06.0-9
 
-      Kubernetes 1.9.1
+      Kubernetes 1.10.11
 
       weave 2.3.0'
     mem: 2048
@@ -284,8 +269,32 @@ broker:
     source_ova: http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova
     source_ova_name: photon-custom-hw11-2.0-304b817.ova
     temp_vapp: photon2-temp
+  - admin_password: guest_os_admin_password
+    catalog_item: ubuntu-16.04-server-cloudimg-amd64-k8s
+    cleanup: true
+    cpu: 2
+    description: 'Ubuntu 16.04
+
+      Docker 18.06.3~ce
+
+      Kubernetes 1.13.5
+
+      weave 2.3.0'
+    mem: 2048
+    name: ubuntu-16.04
+    sha256_ova: 3c1bec8e2770af5b9b0462e20b7b24633666feedff43c099a6fb1330fcc869a9
+    source_ova: https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova
+    source_ova_name: ubuntu-16.04-server-cloudimg-amd64.ova
+    temp_vapp: ubuntu1604-temp
   type: default
-  vdc: cse_vdc_1 # VDC within @org that will be used during the install process to build the template
+  vdc: myorgvdc
+
+# Filling out this key for regular CSE set up is optional and should be left
+# as is. Only for CSE set up enabled for Enterprise PKS container provider, this value
+# needs to point to a valid PKS config file name.
+
+pks_config: null
+
 ```
 
 The config file has 5 sections: `amqp`, `vcd`, `vcs`, `service`,
@@ -371,7 +380,150 @@ Each `template` in the `templates` property has the following properties:
 | cpu             | Number of virtual CPUs to be allocated for each VM |
 | mem             | Memory in MB to be allocated for each VM |
 
----
+<a name="pksconfig"></a>
+### `pks_config` property
+
+Filling out this key for regular CSE set up is optional and should be left
+as is. Only for CSE set up enabled for [Enterprise PKS](/container-service-extension/ENT-PKS.html) 
+container provider, this value needs to point to absolute path of valid Enterprise PKS config file. Refer [Enterprise PKS enablement](/container-service-extension/ENT-PKS.html) for more details.
+
+Enabling Enterprise PKS as a K8 provider changes the default behavior of CSE as described below
+(Presence of valid value for `pks_config` property gives an indication to CSE that 
+Enterprise PKS is enabled (in addition to Native vCD) as a K8 provider in the system).
+
+- CSE mandates a given `ovdc` to be enabled for either Native or Enterprise PKS as a backing K8 provider.
+Admins can do this using `vcd cse ovdc enable` command. This step is mandatory for ovdc(s) with 
+pre-existing native K8 clusters as well. In other words, if an ovdc is not enabled for either of the supported
+K8 providers, users will not be able to do any further K8 deployments in that ovdc.
+- In the absence of value for `pks_config` key, there will not be any change in CSE's default behavior i.e.,
+any ovdc is open for native K8 cluster deployments.
+
+#### Enterprise PKS Config file
+```yaml
+# Config file for PKS enabled CSE Server to be filled by administrators.
+# This config file has the following four sections:
+#   1. pks_api_servers:
+#       a. Each entry in the list represents a PKS api server that is part 
+#          of the deployment.
+#       b. The field 'name' in each entry should be unique. The value of 
+#          the field has no bearing on the real world PKS api server, it's 
+#          used to tie in various segments of the config file together.
+#       c. The field 'vc' represents the name with which the PKS vCenter 
+#          is registered in vCD.
+#   2. pks_accounts:
+#       a. Each entry in the list represents a PKS account that can be used 
+#          talk to a certain PKS api server.
+#       b. The field 'name' in each entry should be unique. The value of 
+#          the field has no bearing on the real world PKS accounts, it's 
+#          used to tie in various segments of the config file together.
+#       c. The field 'pks_api_server' is a reference to the PKS api server 
+#          which owns this account. It's value should be equal to value of 
+#          the field 'name' of the corresponding PKS api server.
+#   3. pvdcs:
+#       a. Each entry in the list represents a Provider VDC in vCD that is 
+#          backed by a cluster of the PKS managed vCenter server.
+#       b. The field 'name' in each entry should be the name of the 
+#          Provider VDC as it appears in vCD.
+#       c. The field 'pks_api_server' is a reference to the PKS api server 
+#          which owns this account. It's value should be equal to value of 
+#          the field 'name' of the corresponding PKS api server.
+#   4. nsxt_servers:
+#       a. Each entry in the list represents a NSX-T server that has been 
+#          alongside a PKS server to manage its networking. CSE needs these 
+#          details to enforce network isolation of clusters.
+#       b. The field 'name' in each entry should be unique. The value of 
+#          the field has no bearing on the real world NSX-T server, it's 
+#          used to tie in various segments of the config file together.
+#       c. The field 'pks_api_server' is a reference to the PKS api server 
+#          which owns this account. It's value should be equal to value of 
+#          the field 'name' of the corresponding PKS api server.
+#       d. The field 'distributed_firewall_section_anchor_id' should be 
+#          populated with id of a Distributed Firewall Section e.g. it can 
+#          be the id of the section called 'Default Layer3 Section' which 
+#          PKS creates on installation.
+# For more information, please refer to CSE documentation page:
+# https://vmware.github.io/container-service-extension/INSTALLATION.html
+
+pks_api_servers:
+- clusters:
+  - pks-s1-az-1
+  - pks-s1-az-2
+  - pks-s1-az-3
+  cpi: cpi1
+  datacenter: pks-s1-dc
+  host: pks-api-server-1.pks.local
+  name: pks-api-server-1
+  port: '9021'
+  uaac_port: '8443'
+  vc: vc1
+  verify: true
+- clusters:
+  - pks-s2-az-1
+  - pks-s2-az-2
+  - pks-s2-az-3
+  cpi: cpi2
+  datacenter: pks-s2-dc
+  host: pks-api-server-2.pks.local
+  name: pks-api-server-2
+  port: '9021'
+  uaac_port: '8443'
+  vc: vc2
+  verify: true
+
+pks_accounts:
+- name: Org1ServiceAccount1
+  pks_api_server: pks-api-server-1
+  secret: secret
+  username: org1Admin
+- name: Org1ServiceAccount2
+  pks_api_server: pks-api-server-2
+  secret: secret
+  username: org1Admin
+- name: Org2ServiceAccount
+  pks_api_server: pks-api-server-2
+  secret: secret
+  username: org2Admin
+
+pvdcs:
+- cluster: pks-s1-az-1
+  name: pvdc1
+  pks_api_server: pks-api-server-1
+- cluster: pks-s2-az-1
+  name: pvdc2
+  pks_api_server: pks-api-server-2
+- cluster: pks-s1-az-2
+  name: pvdc3
+  pks_api_server: pks-api-server-1
+
+nsxt_servers:
+- distributed_firewall_section_anchor_id: id
+  host: nsxt1.domain.local
+  name: nsxt-server-1
+  nodes_ip_block_ids:
+  - id1
+  - id2
+  password: secret
+  pks_api_server: pks-api-server-1
+  pods_ip_block_ids:
+  - id1
+  - id2
+  username: admin
+  verify: true
+- distributed_firewall_section_anchor_id: id
+  host: nsxt2.domain.local
+  name: nsxt-server-2
+  nodes_ip_block_ids:
+  - id1
+  - id2
+  password: secret
+  pks_api_server: pks-api-server-2
+  pods_ip_block_ids:
+  - id1
+  - id2
+  username: admin
+  verify: true
+
+```
 
 <a name="vmtemplates"></a>
 
@@ -726,6 +878,8 @@ cse install --config config.yaml
 
 * Monitor status of CSE Server and clusters
 * Operate CSE as a service
+* Enable a given organization vdc for either Native or Enterprise PKS deployments.
+This command is necessary only when more than one K8 provider exists in the system
 
 The following show useful sample commands.
 
@@ -747,4 +901,7 @@ vcd org use ORGNAME
 
 # Let VDCNAME be active vdc for this session.
 vcd vdc use VDCNAME
+
+# Enable organization vdc for a particular K8 provider (Native/Enterprise PKS)
+vcd cse ovdc enable VDCNAME --k8s-provider [native|ent-pks]
 ```

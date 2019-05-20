@@ -5,6 +5,45 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 2.0.0
+
+Release Date: 2019-05-24
+
+Supported vCD versions: 9.1, 9.5, 9.7
+
+| Template OS        | Docker                 | Kubernetes | Pod Network |
+|--------------------|------------------------|------------|-------------|
+| Photon OS 2.0 GA   | 17.06.0-9 (17.06.0-ce) | 1.10.11    | Weave 2.3.0 |
+| Ubuntu 16.04.4 LTS | 18.06.3-ce             | 1.13.5     | Weave 2.3.0 |
+
+**New Features**
+
+- [Enterprise PKS enablement](/container-service-extension/ENT-PKS.html) - CSE now supports new K8 provider 
+ Enterprise PKS in addition to Native vCD as K8 provider.
+- [Role based access control](/container-service-extension/RBAC.html) - Enabling this feature lets users granted
+with specific K8 rights only to deploy K8 clusters.
+
+**Compatibility matrix**
+
+|CSE      | vCD       |Enterprise PKS| NSX-T | 
+|---------|-----------|--------------|-------|
+|2.0.0    | 9.5, 9.7  | 1.4          | 2.3   | 
+|2.0.0    | 9.5, 9.7  | 1.4          | 2.4   | 
+|2.0.0    | 9.0, 9.1  | Not supported| Not supported| 
+
+**Notes to System Administrator**
+
+When more than one K8 provider exists in the system, system administrator is required to 
+perform an extra step of enabling organization vdc(s) with a desired K8 provider 
+(Native/Enterprise PKS). 
+
+To be specific, 
+- If Enterprise PKS is not in the set up, users are allowed to deploy K8 clusters in any organization vdc. 
+- If Enterprise PKS is present in the CSE set up, users are allowed to deploy K8 clusters only in those
+organization vdc(s) enabled either for Native (or) Enterprise PKS.
+
+Click [here](/container-service-extension/CSE_ADMIN.html#pksconfig) for more details.
+
 ## CSE 2.0 Beta (2.0.0.0b1)
 
 **This version is meant to be used for fresh installations of CSE only**

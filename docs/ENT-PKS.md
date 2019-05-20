@@ -57,7 +57,9 @@ Below timeline diagram depicts infrastructure set-up and tenant
     * Use `cse config` command to generate `config.yaml` and `pks.yaml` template files.
     * Configure `config.yaml` with vCD and K8 template details.
     * Configure `pks.yaml` with Enterprise PKS details. This file is necessary only 
-    if there is an intention to leverage Enterprise PKS for K8 deployments. 
+    if there is an intention to leverage Enterprise PKS for K8 deployments. Refer [pks_config key](/container-service-extension/CSE_ADMIN.html#pksconfig) 
+    in `config.yaml` for more details on how to fill in `pks.yaml` and how it's presence changes the 
+    CSE's default behavior on user's ability to deploy (Native/Enterprise PKS) K8 clusters in any given organization vdc.
     * Run `CSE install` command. It prepares NSX-T(s) of Enterprise PKS instances for tenant isolation. 
     Ensure this command is run for on-boarding of new Enterprise PKS instances at later point of time.
     * Start the CSE service. 
@@ -148,7 +150,6 @@ MicrosoftSQL-backed vCD, the vCenter can fail to connect. Refer to this
 [work around](https://docs.vmware.com/en/vCloud-Director/9.7/rn/vmware-vcloud-director-for-service-providers-97-release-notes.html)
 * Command `vcd cse node info` on native K8 clusters is broken when 
 Enterprise PKS is part of CSE set-up
-* Command `vcd cse create cluster` on native ovdc(s) when executed by sys-admin is broken.
 * Once `vcd cse cluster resize` is run on Enterprise PKS based clusters, commands 
 `vcd cse cluster info` and `vcd cse cluster list` on those resized clusters will begin to display 
 incomplete results. This is an issue from Enterprise PKS.
