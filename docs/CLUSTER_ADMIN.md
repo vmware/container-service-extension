@@ -36,6 +36,7 @@ and nodes:
 |:--------------------------------------------------|:--------------------------------------------|
 | `vcd cse template list`                           | List available templates to create clusters |
 | `vcd cse cluster create CLUSTER_NAME`           | Create a new Kubernetes cluster             |
+| `vcd cse cluster resize CLUSTER_NAME`           | Resize a new Kubernetes cluster             |
 | `vcd cse cluster create CLUSTER_NAME --enable-nfs`| Create a new Kubernetes cluster with NFS PV support.|
 | `vcd cse cluster list`                            | List created clusters.                      |
 | `vcd cse cluster delete CLUSTER_NAME`           | Delete a Kubernetes cluster.                |
@@ -113,6 +114,10 @@ client.logout()
 # add 1 nfsd node to a cluster with 4GB of ram and 4 CPUs each, from the photon-v2 template
 # and using the specified storage profile
 > vcd cse node create mycluster --nodes 1 --type nfsd --network intranet --ssh-key ~/.ssh/id_rsa.pub --memory 4096 --cpu 4 --template photon-v2 --storage-profile Development
+
+# resize the cluster to have 8 worker node. On resize failure, returns cluster to original size.
+# '--network' is only applicable for clusters using native (vCD) Kubernetes provider.
+> vcd cse cluster resize mycluster --network mynetwork --nodes 8     
 
 # info on a given node. If the node is of type nfsd, it displays info about Exports.
 > vcd cse node info mycluster nfsd-dj3s
