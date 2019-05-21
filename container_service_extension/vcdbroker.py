@@ -364,6 +364,10 @@ class VcdBroker(AbstractBroker, threading.Thread):
         #  ClusterParams either as a param (or)
         #  read from instance variable (if needed only).
 
+        if not network_name:
+            raise CseServerError(f"Cluster cannot be created. Please provide"
+                             f" a valid value for org vDC network param.")
+
         LOGGER.debug(f"About to create cluster {cluster_name} on {vdc_name} "
                      f"with {node_count} nodes, sp={storage_profile}")
 
