@@ -8,10 +8,13 @@ title: Known Issues
 ## General Problems
 
 ### Unintended behavior for commands when run by System administrator
-- When CRUD commands are run by system administrator, filtering options `--vdc` and `--org` may 
-not work as expected. It may result in either error message (or) inaccurate output.
-This issue manifests only when run by system administrator.
-
+- When CRUD commands on clusters are run by system administrator, filtering 
+options `--vdc` and `--org` may not work as expected. It may result in either 
+error message (or) inaccurate output. This issue manifests only when run by 
+system administrator.
+- When there are clusters present with the same name across multiple 
+organizations, system-administrator may not see expected results on get, 
+resize, delete operations on those clusters.
 
 ### Renaming of Enterprise PKS enabled organization vdc(s) causes K8 deployment failures.
 - Once a given organization vdc is enabled for [Enterprise PKS](/container-service-extension/ENT-PKS.html), 

@@ -387,15 +387,18 @@ Filling out this key for regular CSE set up is optional and should be left
 as is. Only for CSE set up enabled for [Enterprise PKS](/container-service-extension/ENT-PKS.html) 
 container provider, this value needs to point to absolute path of valid Enterprise PKS config file. Refer [Enterprise PKS enablement](/container-service-extension/ENT-PKS.html) for more details.
 
-Enabling Enterprise PKS as a K8 provider changes the default behavior of CSE as described below
-(Presence of valid value for `pks_config` property gives an indication to CSE that 
-Enterprise PKS is enabled (in addition to Native vCD) as a K8 provider in the system).
+Enabling Enterprise PKS as a K8 provider changes the default behavior of CSE as described below.
+Presence of valid value for `pks_config` property gives an indication to CSE that 
+Enterprise PKS is enabled (in addition to Native vCD) as a K8 provider in the system.
 
-- CSE mandates a given `ovdc` to be enabled for either Native or Enterprise PKS as a backing K8 provider.
+- CSE begins to mandate any given `ovdc` to be enabled for either Native or Enterprise PKS as a backing K8 provider.
 Admins can do this using `vcd cse ovdc enable` command. This step is mandatory for ovdc(s) with 
-pre-existing native K8 clusters as well. In other words, if an ovdc is not enabled for either of the supported
+pre-existing native K8 clusters as well i.e., if CSE is upgraded from 1.2.x to 2.0 and `pks_config` 
+is set, then it becomes mandatory to enable those ovdc(s) with pre-existing native K8 clusters.
+- In other words, If `pks_config`  value is present and if an ovdc is not enabled for either of the supported
 K8 providers, users will not be able to do any further K8 deployments in that ovdc.
-- In the absence of value for `pks_config` key, there will not be any change in CSE's default behavior i.e.,
+
+In the absence of value for `pks_config` key, there will not be any change in CSE's default behavior i.e.,
 any ovdc is open for native K8 cluster deployments.
 
 #### Enterprise PKS Config file
@@ -410,6 +413,8 @@ any ovdc is open for native K8 cluster deployments.
 #          used to tie in various segments of the config file together.
 #       c. The field 'vc' represents the name with which the PKS vCenter 
 #          is registered in vCD.
+#       d. The field 'cpi' needs to be retrieved by executing "bosh cpi-config"
+#          on Enterprise PKS set up.
 #   2. pks_accounts:
 #       a. Each entry in the list represents a PKS account that can be used 
 #          talk to a certain PKS api server.

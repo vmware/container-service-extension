@@ -16,20 +16,21 @@ Supported vCD versions: 9.0, 9.1, 9.5, 9.7
 | Photon OS 2.0 GA   | 17.06.0-9 (17.06.0-ce) | 1.10.11    | Weave 2.3.0 |
 | Ubuntu 16.04.4 LTS | 18.06.3-ce             | 1.13.5     | Weave 2.3.0 |
 
-**New Features**
+**New Updates**
 
-- [Enterprise PKS enablement](/container-service-extension/ENT-PKS.html) - CSE now supports new K8 provider 
- Enterprise PKS in addition to Native vCD as K8 provider.
-- [Role based access control](/container-service-extension/RBAC.html) - Enabling this feature allows users granted
-with specific K8 rights only to deploy K8 clusters.
+- [Enterprise PKS enablement](/container-service-extension/ENT-PKS.html) - CSE 
+now supports new K8 provider Enterprise PKS in addition to Native vCD as K8 provider.
+- [Role based access control](/container-service-extension/RBAC.html) - Enabling
+ this feature allows users granted with specific K8 rights only to deploy K8 clusters.
+- Python version has to be >= 3.7.3. This change has been made in order to address 
+[CVE-2019-9636](https://nvd.nist.gov/vuln/detail/CVE-2019-9636)
 
-**Compatibility matrix**
+**Enterprise PKS Compatibility matrix**
 
-|CSE      | vCD       |Enterprise PKS| NSX-T | 
-|---------|-----------|--------------|-------|
-|2.0.0    | 9.5, 9.7  | 1.4          | 2.3   | 
-|2.0.0    | 9.5, 9.7  | 1.4          | 2.4   | 
-|2.0.0    | 9.0, 9.1  | Not supported| Not supported| 
+|CSE      | Supported vCD Versions |Enterprise PKS| NSX-T | 
+|---------|------------------------|--------------|-------|
+|2.0.0    | 9.5, 9.7               | 1.4          | 2.3   | 
+|2.0.0    | 9.5, 9.7               | 1.4          | 2.4   | 
 
 **Notes to System Administrator**
 

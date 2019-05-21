@@ -152,7 +152,7 @@ MicrosoftSQL-backed vCD, the vCenter can fail to connect. Refer to this
 Enterprise PKS is part of CSE set-up
 * Once `vcd cse cluster resize` is run on Enterprise PKS based clusters, commands 
 `vcd cse cluster info` and `vcd cse cluster list` on those resized clusters will begin to display 
-incomplete results. This is an issue from Enterprise PKS.
+incomplete results. 
 
 Fixes will be coming soon for the above.
 

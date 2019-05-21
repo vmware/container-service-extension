@@ -73,6 +73,8 @@ INSTRUCTIONS_FOR_PKS_CONFIG_FILE = "\
 #          used to tie in various segments of the config file together.\n\
 #       c. The field 'vc' represents the name with which the PKS vCenter \n\
 #          is registered in vCD.\n\
+#       d. The field 'cpi' needs to be retrieved by executing \n\
+#          'bosh cpi-config' on Enterprise PKS set up. \n\
 #   2. pks_accounts:\n\
 #       a. Each entry in the list represents a PKS account that can be used \n\
 #          talk to a certain PKS api server.\n\
