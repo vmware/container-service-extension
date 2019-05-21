@@ -9,7 +9,7 @@ title: Release Notes
 
 Release Date: 2019-05-24
 
-Supported vCD versions: 9.1, 9.5, 9.7
+Supported vCD versions: 9.1, 9.5, 9.7.
 
 **Native vCD Templates**
 

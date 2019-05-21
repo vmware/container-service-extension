@@ -3,6 +3,7 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import sys
 
 import click
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -18,6 +19,8 @@ from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.configure_cse import install_cse
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.service import Service
+from container_service_extension.utils import check_python_version
+
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -130,6 +133,12 @@ def version(ctx):
     help="Name of the PKS config file to dump the PKS configs to.")
 def sample(ctx, output, pks_output):
     """Generate sample CSE configuration."""
+    try:
+        check_python_version()
+    except Exception as err:
+        click.secho(str(err), fg='red')
+        sys.exit(0)
+
     click.secho(generate_sample_config(output=output,
                                        pks_output=pks_output))
 
@@ -166,6 +175,12 @@ def sample(ctx, output, pks_output):
          " will be validated.")
 def check(ctx, config, check_install, template):
     """Validate CSE configuration."""
+    try:
+        check_python_version()
+    except Exception as err:
+        click.secho(str(err), fg='red')
+        sys.exit(0)
+
     config_dict = None
     try:
         config_dict = get_validated_config(config)
@@ -237,6 +252,12 @@ def check(ctx, config, check_install, template):
 )
 def install(ctx, config, template, update, no_capture, ssh_key_file):
     """Install CSE on vCloud Director."""
+    try:
+        check_python_version()
+    except Exception as err:
+        click.secho(str(err), fg='red')
+        sys.exit(0)
+
     if no_capture and ssh_key_file is None:
         click.echo('Must provide ssh-key file (using --ssh-key OR -k) if '
                    '--no-capture is True, or else temporary vm will '
@@ -283,6 +304,12 @@ def install(ctx, config, template, update, no_capture, ssh_key_file):
     help='Skip check')
 def run(ctx, config, skip_check):
     """Run CSE service."""
+    try:
+        check_python_version()
+    except Exception as err:
+        click.secho(str(err), fg='red')
+        sys.exit(0)
+
     try:
         service = Service(config, should_check_config=not skip_check)
         service.run()
