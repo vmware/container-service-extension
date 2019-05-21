@@ -11,6 +11,11 @@ Release Date: 2019-05-24
 
 Supported vCD versions: 9.0, 9.1, 9.5, 9.7
 
+
+**Native vCD Templates**
+
+Native vCD templates need to be updated to avail below versions of K8 distributions.
+
 | Template OS        | Docker                 | Kubernetes | Pod Network |
 |--------------------|------------------------|------------|-------------|
 | Photon OS 2.0 GA   | 17.06.0-9 (17.06.0-ce) | 1.10.11    | Weave 2.3.0 |
