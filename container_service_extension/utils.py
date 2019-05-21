@@ -306,12 +306,10 @@ def check_python_version():
 
     :raises Exception: if user's Python version < 3.6.
     """
-    major = sys.version_info.major
-    minor = sys.version_info.minor
-    click.echo(f"Required Python version: >= 3.6\nInstalled Python version: "
-               f"{major}.{minor}.{sys.version_info.micro}")
-    if major < 3 or (major == 3 and minor < 6):
-        raise Exception("Python version should be 3.6 or greater")
+    click.echo("Required Python version: >= 3.7.3\n"
+               f"Installed Python version: {sys.version}")
+    if sys.version_info < (3, 7, 3):
+        raise Exception("Python version should be 3.7.3 or greater")
 
 
 def check_file_permissions(filename):
