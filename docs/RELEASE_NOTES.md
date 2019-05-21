@@ -9,8 +9,7 @@ title: Release Notes
 
 Release Date: 2019-05-24
 
-Supported vCD versions: 9.0, 9.1, 9.5, 9.7
-
+Supported vCD versions: 9.1, 9.5, 9.7
 
 **Native vCD Templates**
 
@@ -18,7 +17,7 @@ Native vCD templates need to be updated to avail below versions of K8 distributi
 
 | Template OS        | Docker                 | Kubernetes | Pod Network |
 |--------------------|------------------------|------------|-------------|
-| Photon OS 2.0 GA   | 17.06.0-9 (17.06.0-ce) | 1.10.11    | Weave 2.3.0 |
+| Photon OS 2.0 GA   | 17.06.0-9 (17.06.0-ce) | 1.12.7     | Weave 2.3.0 |
 | Ubuntu 16.04.4 LTS | 18.06.3-ce             | 1.13.5     | Weave 2.3.0 |
 
 **New Updates**
@@ -49,6 +48,23 @@ To be specific,
 organization vdc(s) enabled either for Native (or) Enterprise PKS.
 
 Click [here](/container-service-extension/CSE_ADMIN.html#pksconfig) for more details.
+
+**vCD Native templates patching**
+
+Action required (by Admins and Users)
+
+* Cloud Admin:
+    * Update CSE to 2.0.0
+    * Update the templates
+    * Command for updating template -> cse install -c config.yaml --template template-name --update --ext skip
+
+* Tenant Users:
+    * Delete clusters that were created with older templates. Recreate clusters with new templates
+    * Alternatively, tenant-users can update docker version manually on existing clusters
+
+**Known Issues:**
+
+* CSE installation fails on vCD 9.0 with MissingLinkException. No known fix yet.
 
 ## CSE 2.0 Beta (2.0.0.0b1)
 
