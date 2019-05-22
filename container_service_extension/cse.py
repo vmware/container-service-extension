@@ -102,10 +102,10 @@ def cli(ctx):
         return
 
 
-@cli.command(short_help='show version')
+@cli.command(short_help='Display CSE version')
 @click.pass_context
 def version(ctx):
-    """Show CSE version."""
+    """Display CSE version."""
     ver_obj = Service.version()
     ver_str = '%s, %s, version %s' % (ver_obj['product'],
                                       ver_obj['description'],
@@ -113,7 +113,7 @@ def version(ctx):
     stdout(ver_obj, ctx, ver_str)
 
 
-@cli.command('sample', short_help='generate sample configuration')
+@cli.command('sample', short_help='Generate sample CSE config')
 @click.pass_context
 @click.option(
     '-o',
@@ -122,7 +122,7 @@ def version(ctx):
     required=False,
     default=None,
     metavar='OUTPUT_FILE_NAME',
-    help="Name of the config file to dump the CSE configs to.")
+    help="Filepath to write CSE config file to.")
 @click.option(
     '-p',
     '--pks-output',
@@ -130,9 +130,9 @@ def version(ctx):
     required=False,
     default=None,
     metavar='OUTPUT_FILE_NAME',
-    help="Name of the PKS config file to dump the PKS configs to.")
+    help="Filepath to write PKS config file to.")
 def sample(ctx, output, pks_output):
-    """Generate sample CSE configuration."""
+    """Display sample CSE config file contents."""
     try:
         check_python_version()
     except Exception as err:
@@ -143,8 +143,8 @@ def sample(ctx, output, pks_output):
                                        pks_output=pks_output))
 
 
-@cli.command(short_help="Checks that config file is valid. Can also check that"
-                        " CSE is installed according to config file.")
+@cli.command(short_help="Checks that CSE config file is valid (Can also check "
+                        "that CSE is installed according to config file)")
 @click.pass_context
 @click.option(
     '-c',
@@ -154,7 +154,7 @@ def sample(ctx, output, pks_output):
     metavar='CONFIG_FILE_NAME',
     envvar='CSE_CONFIG',
     default='config.yaml',
-    help='Config file to use.')
+    help='Config file to use')
 @click.option(
     '-i',
     '--check-install',
@@ -170,11 +170,11 @@ def sample(ctx, output, pks_output):
     required=False,
     default='*',
     metavar='TEMPLATE_NAME',
-    help="If '--check-install' flag is set, validate specified template. "
-         "Default value of '*' means that all templates in config file"
-         " will be validated.")
+    help="If '--check-install' flag is used, validate specified k8s template. "
+         "Default value of '*' means that all k8s templates in config file"
+         " will be validated")
 def check(ctx, config, check_install, template):
-    """Validate CSE configuration."""
+    """Validate CSE config file."""
     try:
         check_python_version()
     except Exception as err:
@@ -206,7 +206,7 @@ def check(ctx, config, check_install, template):
         click.secho("CSE installation is invalid", fg='red')
 
 
-@cli.command(short_help='install CSE on vCD')
+@cli.command(short_help='Install CSE on vCD')
 @click.pass_context
 @click.option(
     '-c',
@@ -216,7 +216,7 @@ def check(ctx, config, check_install, template):
     metavar='CONFIG_FILE_NAME',
     envvar='CSE_CONFIG',
     default='config.yaml',
-    help='Config file to use.')
+    help='Config file to use')
 @click.option(
     '-t',
     '--template',
@@ -224,15 +224,15 @@ def check(ctx, config, check_install, template):
     required=False,
     default='*',
     metavar='TEMPLATE_NAME',
-    help="Install only the specified template. Default value of '*' means that"
-         " all templates in config file will be installed.")
+    help="Create only the specified k8s template. Default value of '*' "
+         "means that all templates in config file will be created.")
 @click.option(
     '-u',
     '--update',
     is_flag=True,
     default=False,
     required=False,
-    help='Update template')
+    help='Recreate CSE native k8s templates on vCD if they already exist')
 @click.option(
     '-n',
     '--no-capture',
@@ -240,7 +240,7 @@ def check(ctx, config, check_install, template):
     required=False,
     default=False,
     help='Do not capture the temporary vApp as a catalog template. --ssh-key '
-         'option is required if this is enabled')
+         'option is required if this flag is used')
 @click.option(
     '-k',
     '--ssh-key',
@@ -248,7 +248,7 @@ def check(ctx, config, check_install, template):
     required=False,
     default=None,
     type=click.File('r'),
-    help='SSH public key to connect to the guest OS on the VM'
+    help='SSH public key to connect to the guest OS on the VM.'
 )
 def install(ctx, config, template, update, no_capture, ssh_key_file):
     """Install CSE on vCloud Director."""
@@ -284,7 +284,7 @@ def install(ctx, config, template, update, no_capture, ssh_key_file):
                     "username/password).", fg='red')
 
 
-@cli.command(short_help='run service')
+@cli.command(short_help='Run CSE service')
 @click.pass_context
 @click.option(
     '-c',
@@ -294,14 +294,14 @@ def install(ctx, config, template, update, no_capture, ssh_key_file):
     metavar='CONFIG_FILE_NAME',
     envvar='CSE_CONFIG',
     default='config.yaml',
-    help='Config file to use.')
+    help='Config file to use')
 @click.option(
     '-s',
     '--skip-check',
     is_flag=True,
     default=False,
     required=False,
-    help='Skip check')
+    help='Skip CSE installation checks')
 def run(ctx, config, skip_check):
     """Run CSE service."""
     try:
