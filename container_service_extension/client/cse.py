@@ -159,7 +159,7 @@ def list_templates(ctx):
     required=False,
     default=None,
     metavar='VDC_NAME',
-    help='Filter list to show clusters from a specific org VDC.')
+    help='Filter list to show clusters from a specific org VDC')
 @click.option(
     '-o',
     '--org',
@@ -167,7 +167,7 @@ def list_templates(ctx):
     default=None,
     required=False,
     metavar='ORG_NAME',
-    help="Filter list to show clusters from a specific org.")
+    help="Filter list to show clusters from a specific org")
 def list_clusters(ctx, vdc, org_name):
     """Display clusters in vCD that are visible to the logged in user."""
     try:
@@ -195,7 +195,7 @@ def list_clusters(ctx, vdc, org_name):
     required=False,
     default=None,
     metavar='VDC_NAME',
-    help='Org VDC to use.')
+    help='Restrict cluster search to specified org VDC')
 def delete(ctx, name, vdc):
     """Delete a Kubernetes cluster."""
     try:
@@ -374,7 +374,7 @@ def create(ctx, name, vdc, node_count, cpu, memory, network_name,
     required=False,
     default=None,
     metavar='VDC_NAME',
-    help='Org VDC to use.')
+    help='Restrict cluster search to specified org VDC')
 @click.option(
     '--disable-rollback',
     'disable_rollback',
@@ -414,7 +414,7 @@ def resize(ctx, name, node_count, network_name, vdc, disable_rollback):
     required=False,
     default=None,
     metavar='VDC_NAME',
-    help='Org VDC to use.')
+    help='Restrict cluster search to specified org VDC')
 def config(ctx, name, vdc):
     """Display cluster configuration.
 
@@ -444,7 +444,7 @@ def config(ctx, name, vdc):
     required=False,
     default=None,
     metavar='VDC_NAME',
-    help='Org VDC to use.')
+    help='Restrict cluster search to specified org VDC')
 def cluster_info(ctx, name, vdc):
     """Display info about a Kubernetes cluster."""
     try:
@@ -793,8 +793,8 @@ Examples
     required=False,
     is_flag=True,
     default=False,
-    help="Display available PKS plans if org vDC is backed by "
-         "Enterprise PKS infrastructure.")
+    help="Display available PKS plans if org VDC is backed by "
+         "Enterprise PKS infrastructure")
 @click.pass_context
 def list_ovdcs(ctx, list_pks_plans):
     """Display org VDCs in vCD that are visible to the logged in user."""
