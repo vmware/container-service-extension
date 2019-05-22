@@ -153,6 +153,8 @@ Enterprise PKS is part of CSE set-up
 * Once `vcd cse cluster resize` is run on Enterprise PKS based clusters, commands 
 `vcd cse cluster info` and `vcd cse cluster list` on those resized clusters will begin to display 
 incomplete results. 
+* Once a given organization vdc is enabled for Enterprise PKS](/container-service-extension/ENT-PKS.html, 
+renaming that organization vdc in vCD will cause further K8 cluster deployment failures in that organization vdc.
 
 Fixes will be coming soon for the above.
 

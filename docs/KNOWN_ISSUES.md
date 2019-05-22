@@ -16,11 +16,6 @@ system administrator.
 organizations, system-administrator may not see expected results on get, 
 resize, delete operations on those clusters.
 
-### Renaming of Enterprise PKS enabled organization vdc(s) causes K8 deployment failures.
-- Once a given organization vdc is enabled for [Enterprise PKS](/container-service-extension/ENT-PKS.html), 
-renaming that organization vdc in vCD will cause further K8 cluster deployment failures in that organization vdc.
-- This issue exists only with Enterprise PKS enabled organization vdc(s) only.
-
 ### Failures during template creation or installation
 - One of the template-creation scripts may have exited with an error
 - One of the scripts may be hung waiting for a response
