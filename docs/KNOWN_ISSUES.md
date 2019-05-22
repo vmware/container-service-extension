@@ -36,9 +36,6 @@ When CSE installation is aborted for any reason, ensure temporary vApp is delete
 - pyvcloud 19.3.0
 - vcd_cli 20.3.0
 
-### CSE 1.2.x is incompatible with vCD 9.0
-- CSE installation fails with MissingLinkException
-
 <a name="nfs"></a>
 ## NFS Limitations
 
@@ -66,4 +63,19 @@ avert this problem if the need arises.
     - Read more about this approach here
         - http://www.debianadmin.com/howto-use-ssh-local-and-remote-port-forwarding.html
         - https://gist.github.com/proudlygeek/5721498
+        
+<a name="ent-pks"></a>
+## Enterprise PKS Limitations
+
+* When attaching an NSX-T-backed vCenter (such as Enterprise PKS vCenter) to a 
+MicrosoftSQL-backed vCD, the vCenter can fail to connect. Refer to this 
+[work around](https://docs.vmware.com/en/vCloud-Director/9.7/rn/vmware-vcloud-director-for-service-providers-97-release-notes.html)
+* Command `vcd cse node info` on native K8 clusters is broken when 
+Enterprise PKS is part of CSE set-up
+* Once `vcd cse cluster resize` is run on Enterprise PKS based clusters, commands 
+`vcd cse cluster info` and `vcd cse cluster list` on those resized clusters will begin to display 
+incomplete results. 
+* Once a given organization vdc is enabled for Enterprise PKS, 
+renaming that organization vdc in vCD will cause further K8 cluster deployment 
+failures in that organization vdc.
 
