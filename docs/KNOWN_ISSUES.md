@@ -10,16 +10,9 @@ title: Known Issues
 ### Unintended behavior for commands when run by System administrator
 - When CRUD commands on clusters are run by system administrator, filtering 
 options `--vdc` and `--org` may not work as expected. It may result in either 
-error message (or) inaccurate output. This issue manifests only when run by 
-system administrator.
-- When there are clusters present with the same name across multiple 
-organizations, system-administrator may not see expected results on get, 
-resize, delete operations on those clusters.
-
-### Renaming of Enterprise PKS enabled organization vdc(s) causes K8 deployment failures.
-- Once a given organization vdc is enabled for [Enterprise PKS](/container-service-extension/ENT-PKS.html), 
-renaming that organization vdc in vCD will cause further K8 cluster deployment failures in that organization vdc.
-- This issue exists only with Enterprise PKS enabled organization vdc(s) only.
+error message (or) inaccurate output depending on the command.
+- Clusters with duplicate names across organizations is not a supported use-case. 
+It can lead to unintentional outcomes
 
 ### Failures during template creation or installation
 - One of the template-creation scripts may have exited with an error
@@ -41,7 +34,7 @@ When CSE installation is aborted for any reason, ensure temporary vApp is delete
 - pyvcloud 19.3.0
 - vcd_cli 20.3.0
 
-### CSE 1.2.x is incompatible with vCD 9.0
+### CSE 1.2.6 and up are incompatible with vCD 9.0
 - CSE installation fails with MissingLinkException
 
 <a name="nfs"></a>
@@ -71,4 +64,19 @@ avert this problem if the need arises.
     - Read more about this approach here
         - http://www.debianadmin.com/howto-use-ssh-local-and-remote-port-forwarding.html
         - https://gist.github.com/proudlygeek/5721498
+        
+<a name="ent-pks"></a>
+## Enterprise PKS Limitations
+
+* When attaching an NSX-T-backed vCenter (such as Enterprise PKS vCenter) to a 
+MicrosoftSQL-backed vCD, the vCenter can fail to connect. Refer to this 
+[work around](https://docs.vmware.com/en/vCloud-Director/9.7/rn/vmware-vcloud-director-for-service-providers-97-release-notes.html)
+* Command `vcd cse node info` on native K8 clusters is broken when 
+Enterprise PKS is part of CSE set-up
+* Once `vcd cse cluster resize` is run on Enterprise PKS based clusters, commands 
+`vcd cse cluster info` and `vcd cse cluster list` on those resized clusters will begin to display 
+incomplete results. 
+* Once a given organization vdc is enabled for Enterprise PKS, 
+renaming that organization vdc in vCD will cause further K8 cluster deployment 
+failures in that organization vdc.
 

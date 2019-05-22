@@ -62,10 +62,6 @@ Action required (by Admins and Users)
     * Delete clusters that were created with older templates. Recreate clusters with new templates
     * Alternatively, tenant-users can update docker version manually on existing clusters
 
-**Known Issues:**
-
-* CSE installation fails on vCD 9.0 with MissingLinkException. No known fix yet.
-
 ## CSE 2.0 Beta (2.0.0.0b1)
 
 **This version is meant to be used for fresh installations of CSE only**
