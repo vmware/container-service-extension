@@ -154,7 +154,7 @@ def sample(ctx, output, pks_output):
     metavar='CONFIG_FILE_NAME',
     envvar='CSE_CONFIG',
     default='config.yaml',
-    help='Config file to use.')
+    help='Config file to use')
 @click.option(
     '-i',
     '--check-install',
@@ -170,9 +170,9 @@ def sample(ctx, output, pks_output):
     required=False,
     default='*',
     metavar='TEMPLATE_NAME',
-    help="If '--check-install' flag is set, validate specified k8s template. "
+    help="If '--check-install' flag is used, validate specified k8s template. "
          "Default value of '*' means that all k8s templates in config file"
-         " will be validated.")
+         " will be validated")
 def check(ctx, config, check_install, template):
     """Validate CSE config file."""
     try:
@@ -216,7 +216,7 @@ def check(ctx, config, check_install, template):
     metavar='CONFIG_FILE_NAME',
     envvar='CSE_CONFIG',
     default='config.yaml',
-    help='Config file to use.')
+    help='Config file to use')
 @click.option(
     '-t',
     '--template',
@@ -232,7 +232,7 @@ def check(ctx, config, check_install, template):
     is_flag=True,
     default=False,
     required=False,
-    help='Recreate CSE native k8s templates on vCD if they already exist.')
+    help='Recreate CSE native k8s templates on vCD if they already exist')
 @click.option(
     '-n',
     '--no-capture',
@@ -240,7 +240,7 @@ def check(ctx, config, check_install, template):
     required=False,
     default=False,
     help='Do not capture the temporary vApp as a catalog template. --ssh-key '
-         'option is required if this is enabled')
+         'option is required if this flag is used')
 @click.option(
     '-k',
     '--ssh-key',
@@ -248,7 +248,7 @@ def check(ctx, config, check_install, template):
     required=False,
     default=None,
     type=click.File('r'),
-    help='SSH public key to connect to the guest OS on the VM'
+    help='SSH public key to connect to the guest OS on the VM.'
 )
 def install(ctx, config, template, update, no_capture, ssh_key_file):
     """Install CSE on vCloud Director."""
@@ -294,14 +294,14 @@ def install(ctx, config, template, update, no_capture, ssh_key_file):
     metavar='CONFIG_FILE_NAME',
     envvar='CSE_CONFIG',
     default='config.yaml',
-    help='Config file to use.')
+    help='Config file to use')
 @click.option(
     '-s',
     '--skip-check',
     is_flag=True,
     default=False,
     required=False,
-    help='Skip CSE installation checks.')
+    help='Skip CSE installation checks')
 def run(ctx, config, skip_check):
     """Run CSE service."""
     try:
