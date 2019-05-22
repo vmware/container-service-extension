@@ -184,7 +184,7 @@ d89e1',
     'cpu': 2,
     'mem': 2048,
     'admin_password': 'guest_os_admin_password',
-    'description': 'PhotonOS v2\nDocker 17.06.0-9\nKubernetes 1.10.11\nweave \
+    'description': 'PhotonOS v2\nDocker 17.06.0-9\nKubernetes 1.12.7\nweave \
 2.3.0'
 }
 
