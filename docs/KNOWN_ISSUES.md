@@ -10,11 +10,9 @@ title: Known Issues
 ### Unintended behavior for commands when run by System administrator
 - When CRUD commands on clusters are run by system administrator, filtering 
 options `--vdc` and `--org` may not work as expected. It may result in either 
-error message (or) inaccurate output. This issue manifests only when run by 
-system administrator.
-- When there are clusters present with the same name across multiple 
-organizations, system-administrator may not see expected results on get, 
-resize, delete operations on those clusters.
+error message (or) inaccurate output depending on the command.
+- Clusters with duplicate names across organizations is not a supported use-case. 
+It can lead to unintentional outcomes
 
 ### Failures during template creation or installation
 - One of the template-creation scripts may have exited with an error
@@ -35,6 +33,9 @@ When CSE installation is aborted for any reason, ensure temporary vApp is delete
 ### CSE v1.1.x compatibility with vCD 8.20 requires the following package versions
 - pyvcloud 19.3.0
 - vcd_cli 20.3.0
+
+### CSE 1.2.6 and up are incompatible with vCD 9.0
+- CSE installation fails with MissingLinkException
 
 <a name="nfs"></a>
 ## NFS Limitations
