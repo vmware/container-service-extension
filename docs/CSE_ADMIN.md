@@ -260,7 +260,7 @@ broker:
 
       Docker 17.06.0-9
 
-      Kubernetes 1.10.11
+      Kubernetes 1.12.7
 
       weave 2.3.0'
     mem: 2048
