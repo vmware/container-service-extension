@@ -73,6 +73,9 @@ MicrosoftSQL-backed vCD, the vCenter can fail to connect. Refer to this
 [work around](https://docs.vmware.com/en/vCloud-Director/9.7/rn/vmware-vcloud-director-for-service-providers-97-release-notes.html)
 * Command `vcd cse node info` on native K8 clusters is broken when 
 Enterprise PKS is part of CSE set-up
+* Once `vcd cse cluster resize` is run on Enterprise PKS based clusters, 
+organization administrator's attempts to view and perform CRUD operations on those 
+clusters will begin to fail with errors.
 * Once `vcd cse cluster resize` is run on Enterprise PKS based clusters, commands 
 `vcd cse cluster info` and `vcd cse cluster list` on those resized clusters will begin to display 
 incomplete results. 
