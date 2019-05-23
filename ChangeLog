@@ -1,6 +1,37 @@
 CHANGES
 =======
 
+* Documentation updates to CSE2.0 (#346)
+* [VCDA-1016] Update CLI help strings (#336)
+* CSE 2.0 documentation updates (#345)
+* Fix Photon OS Kubernetes version (#344)
+* Documentation updates for CSE 2.0 (#340)
+* VCDA-1033: Proper message for missing network name error in cluster creation command (#343)
+* [VCDA-1029] Updated OSL file for GA release. (#341)
+* [VCDA-1036] Address CVE-2019-9636 (#339)
+* [VCDA-1032] System admin create cluster show appropriate error message (#338)
+* [VCDA-960] org admin support for pks crud operations (#335)
+* [VCDA-1005] Restrict access to clusters with failed network isolation (#334)
+* Avail plans to only sys admins and removing the org vdc in use to be passed as a param for vdc to resize clusters. (#332)
+* [VCDA-1006] Update org source to request spec in create\_cluster\_thread (#330)
+* [VCDA-974] List clusters needs to have org column (#331)
+* VCDA-974-list-clusters-needs-to-have-org-column (#315)
+* VCDA-897: Implementation of PKS plans command in CSE (#329)
+* [VCDA-966] Remove vcd user id from console output and exceptions (#304)
+* [Doc] Fix broken links in Release Notes (#328)
+* [VCDA-924] Upgrade Photon OS 2.0 from kubernetes v1.10.11 to v1.12.7 (#290)
+* [VCDA-989] Fix inter-operability of CSE with NSX-T 2.4 (#326)
+* [Doc] Added vCD-Enterprise PKS vCenter connection as a known issue and the workaround. (#327)
+* [Doc] Fixing web links in Enterprise PKS enablement (#324)
+* [Doc] Fix weblinks in Enterprise PKS enablement (#323)
+* [Doc] Cosmetic edits on Enterprise PKS enablement
+* [Doc] Fixing web links in Enterprise PKS enablement (#321)
+* [VCDA-990] Update RBAC doc page with PKS operation rights. (#313)
+* [Doc] Fixing comptibility matrix of Enterprise PKS enablement (#320)
+* Documentation fix (#319)
+* Documentation for Enterprise PKS enablement (#318)
+* Update Changelog with 2.0.0.0b1
+
 2.0.0b1
 -------
 
