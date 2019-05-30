@@ -209,18 +209,23 @@ class PKSBroker(AbstractBroker):
         :rtype: list
         """
         cluster_list = self._list_clusters()
+
+        # Required for all personae
+        for cluster in cluster_list:
+            self._restore_original_name(cluster)
+
+        # Complete list of clusters for sysadmin
         if self.tenant_client.is_sysadmin():
-            for cluster in cluster_list:
-                self._restore_original_name(cluster)
-        elif is_org_admin(self.client_session) or \
+            return cluster_list
+
+        # Filter the list for org admin and others.
+        if is_org_admin(self.client_session) or \
                 kwargs.get('is_org_admin_search'):
-            for cluster in cluster_list:
-                self._restore_original_name(cluster)
             # TODO() - Service accounts for exclusive org does not
             #  require the following filtering.
             cluster_list = [cluster_dict for cluster_dict in cluster_list
-                            if self._does_cluster_belong_to_org(
-                                cluster_dict, self.client_session.get('org'))]
+                            if self._is_cluster_visible_to_org_admin(
+                                cluster_dict)]
         else:
             cluster_list = [cluster_dict for cluster_dict in cluster_list
                             if self._is_user_cluster_owner(cluster_dict)]
@@ -782,6 +787,13 @@ class PKSBroker(AbstractBroker):
         original_name_info = cluster_info['name'].split(USER_ID_SEPARATOR)
         cluster_info['name'] = original_name_info[0]
 
+    def _is_cluster_visible_to_org_admin(self, cluster_info):
+        # Filter if org-admin is the cluster owner.
+        # Else filter if the cluster belong to the org-admin's organization.
+        return self._is_user_cluster_owner(cluster_info) or\
+            self._does_cluster_belong_to_org(cluster_info,
+                                             self.client_session.get('org'))
+
     def _is_user_cluster_owner(self, cluster_info):
         # Returns True if the logged-in user is the owner of the given cluster.
         # Also, restores the actual name of the cluster, if it is owned by
@@ -789,8 +801,7 @@ class PKSBroker(AbstractBroker):
 
         is_user_cluster_owner = False
         user_id = self._get_vcd_userid()
-        if user_id in cluster_info['name']:
-            self._restore_original_name(cluster_info)
+        if user_id in cluster_info['pks_cluster_name']:
             is_user_cluster_owner = True
 
         return is_user_cluster_owner
