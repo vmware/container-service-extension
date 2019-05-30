@@ -510,7 +510,8 @@ def node_info(ctx, cluster_name, node_name):
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        node_info = cluster.get_node_info(cluster_name, node_name)
+        vdc = ctx.obj['profiles'].get('vdc_in_use')
+        node_info = cluster.get_node_info(cluster_name, node_name, vdc)
         stdout(node_info, ctx, show_id=True)
     except Exception as e:
         stderr(e, ctx)
