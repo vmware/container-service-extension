@@ -135,8 +135,9 @@ class ServiceProcessor(object):
                 req_spec.update({'cluster_name': cluster_name})
                 reply = broker_manager.invoke(Operation.GET_CLUSTER)
             elif node_info_request:
-                broker = broker_manager.get_broker_based_on_vdc()
-                reply = broker.get_node_info(cluster_name, node_name)
+                req_spec.update({'cluster_name': cluster_name})
+                req_spec.update({'node_name': node_name})
+                reply = broker_manager.invoke(Operation.GET_NODE_INFO)
             elif system_request:
                 result = {}
                 result['body'] = service.info(req_headers)
