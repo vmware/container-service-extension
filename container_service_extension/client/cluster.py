@@ -205,9 +205,10 @@ class Cluster(object):
             else:
                 raise e
 
-    def get_node_info(self, cluster_name, node_name):
+    def get_node_info(self, cluster_name, node_name, org=None, vdc=None):
         method = 'GET'
         uri = '%s/%s/%s/info' % (self._uri, cluster_name, node_name)
+        params = {'vdc': vdc, 'org': org}
         response = self.client._do_request_prim(
             method,
             uri,
@@ -215,7 +216,8 @@ class Cluster(object):
             contents=None,
             media_type=None,
             accept_type='application/*+json',
-            auth=None)
+            auth=None,
+            params=params)
         try:
             result = process_response(response)
         except VcdResponseError as e:

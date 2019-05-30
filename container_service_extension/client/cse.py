@@ -504,13 +504,34 @@ Examples
 @click.pass_context
 @click.argument('cluster_name', required=True)
 @click.argument('node_name', required=True)
-def node_info(ctx, cluster_name, node_name):
+@click.option(
+    '-o',
+    '--org',
+    'org_name',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help='Org to use. Defaults to currently logged-in org only for '
+         'non sys-admin')
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    metavar='VDC_NAME',
+    help='Org VDC to use.')
+def node_info(ctx, cluster_name, node_name, org_name, vdc):
     """Display info about a node in a native Kubernetes provider cluster."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        node_info = cluster.get_node_info(cluster_name, node_name)
+
+        if org_name is None and not client.is_sysadmin():
+            org_name = ctx.obj['profiles'].get('org_in_use')
+        node_info = cluster.get_node_info(cluster_name, node_name,
+                                          org_name, vdc)
         stdout(node_info, ctx, show_id=True)
     except Exception as e:
         stderr(e, ctx)
