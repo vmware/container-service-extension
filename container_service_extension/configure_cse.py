@@ -66,7 +66,6 @@ from container_service_extension.utils import wait_until_tools_ready
 # used for creating temp vapp
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = "vmxnet3"
 TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
-
 VERSION_V1 = 'v1'
 
 INSTRUCTIONS_FOR_PKS_CONFIG_FILE = "\
@@ -724,39 +723,38 @@ def validate_pks_config_data_integrity(pks_config):
     '''Check validity of all PKS api servers referenced in the
         pks_api_servers section'''
     for pks_server in pks_config[PKS_SERVERS_SECTION_KEY]:
-        if pks_account_info_table.get(pks_server.get('name')):
-            pks_account = pks_account_info_table.get(pks_server.get('name'))
-            pks_configuration = Configuration()
-            pks_configuration.proxy = f"http://{pks_server['proxy']}:80" \
-                if pks_server.get('proxy') else None
-            pks_configuration.host = \
-                f"https://{pks_server['host']}:{pks_server['port']}/" \
-                f"{VERSION_V1}"
-            pks_configuration.access_token = None
-            pks_configuration.username = pks_account.username
-            pks_configuration.verify_ssl = pks_server['verify']
-            pks_configuration.secret = pks_account.secret
-            pks_configuration.uaac_uri = \
-                f"https://{pks_server['host']}:{pks_server['uaac_port']}"
+        pks_account = pks_account_info_table.get(pks_server.get('name'))
+        pks_configuration = Configuration()
+        pks_configuration.proxy = f"http://{pks_server['proxy']}:80" \
+            if pks_server.get('proxy') else None
+        pks_configuration.host = \
+            f"https://{pks_server['host']}:{pks_server['port']}/" \
+            f"{VERSION_V1}"
+        pks_configuration.access_token = None
+        pks_configuration.username = pks_account.username
+        pks_configuration.verify_ssl = pks_server['verify']
+        pks_configuration.secret = pks_account.secret
+        pks_configuration.uaac_uri = \
+            f"https://{pks_server['host']}:{pks_server['uaac_port']}"
 
-            uaaClient = UaaClient(pks_configuration.uaac_uri,
-                                  pks_configuration.username,
-                                  pks_configuration.secret,
-                                  proxy_uri=pks_configuration.proxy)
-            token = uaaClient.getToken()
+        uaaClient = UaaClient(pks_configuration.uaac_uri,
+                              pks_configuration.username,
+                              pks_configuration.secret,
+                              proxy_uri=pks_configuration.proxy)
+        token = uaaClient.getToken()
 
-            if not token:
-                raise ValueError(
-                    "Unable to connect to PKS server : "
-                    f"{pks_server.get('name')} ({pks_server.get('host')})")
+        if not token:
+            raise ValueError(
+                "Unable to connect to PKS server : "
+                f"{pks_server.get('name')} ({pks_server.get('host')})")
 
-            pks_configuration.token = token
-            client = ApiClientV1(configuration=pks_configuration)
+        pks_configuration.token = token
+        client = ApiClientV1(configuration=pks_configuration)
 
-            if client:
-                click.secho(f"Connected to PKS server ("
-                            f"{pks_server.get('name')})",
-                            fg='green')
+        if client:
+            click.secho(f"Connected to PKS server ("
+                        f"{pks_server.get('name')} ({pks_server.get('host')})",
+                        fg='green')
 
     # Check validity of all PKS api servers referenced in NSX-T section
     for nsxt_server in pks_config[PKS_NSXT_SERVERS_SECTION_KEY]:
