@@ -54,8 +54,11 @@ from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import exception_handler
 from container_service_extension.utils \
     import extract_vdc_id_from_pks_compute_profile_name
+from container_service_extension.utils \
+    import extract_vdc_name_from_pks_compute_profile_name
 from container_service_extension.utils import get_pks_cache
 from container_service_extension.utils import OK
+from container_service_extension.utils import SYSTEM_ORG_NAME
 
 
 # Delimiter to append with user id context
@@ -214,29 +217,7 @@ class PKSBroker(AbstractBroker):
         for cluster in cluster_list:
             self._restore_original_name(cluster)
 
-        # Complete list of clusters for sysadmin
-        if self.tenant_client.is_sysadmin():
-            return cluster_list
-
-        # Filter the list for org admin and others.
-        if is_org_admin(self.client_session) or \
-                kwargs.get('is_org_admin_search'):
-            # TODO() - Service accounts for exclusive org does not
-            #  require the following filtering.
-            cluster_list = [cluster_dict for cluster_dict in cluster_list
-                            if self._is_cluster_visible_to_org_admin(
-                                cluster_dict)]
-        else:
-            cluster_list = [cluster_dict for cluster_dict in cluster_list
-                            if self._is_user_cluster_owner(cluster_dict)]
-
-            # 'is_admin_request' is a flag that is used to restrict access to
-            # user context and other secured information on pks cluster
-            # information.
-            if not kwargs.get('is_admin_request'):
-                for cluster in cluster_list:
-                    self._filter_pks_properties(cluster)
-        return cluster_list
+        return self._filter_clusters(cluster_list, **kwargs)
 
     def _list_clusters(self):
         """Get list of clusters in PKS environment.
@@ -774,6 +755,56 @@ class PKSBroker(AbstractBroker):
 
         return result
 
+    def _filter_clusters(self, cluster_list, **kwargs):
+        """Filter the cluster list based on vdc, org by personae.
+
+        Apply the filters in the following order of priority and return the
+        result once the specific-persona-only filter is applied.
+
+        1. Filter clusters based on vdc for all personae.
+        2. Filter clusters based on org only for sysadmin.
+        3. Filter clusters for org admin based on visibility.
+        4. Filter clusters for tenant users based on ownership only.
+
+        :param list cluster_list: list of clusters
+        :return: filtered list of clusters
+
+        :rtype: list
+        TODO() These filters should be moved to either broker layer or
+        delegated to dedicated filter class say: PksClusterFilter.
+        """
+        # Apply vdc filter, if provided to all personae.
+        if self.req_spec.get('vdc'):
+            cluster_list = self._apply_vdc_filter(cluster_list,
+                                                  self.req_spec.get('vdc'))
+
+        # Apply org filter, if provided, for sys admin.
+        if self.tenant_client.is_sysadmin():
+            org_name = self.req_spec.get('org')
+            if org_name and org_name.lower() != SYSTEM_ORG_NAME.lower():
+                cluster_list = self._apply_org_filter(cluster_list, org_name)
+            return cluster_list
+
+        # Filter the cluster list for org admin and others.
+        if is_org_admin(self.client_session) or \
+                kwargs.get('is_org_admin_search'):
+            # TODO() - Service accounts for exclusive org does not
+            #  require the following filtering.
+            cluster_list = [cluster_dict for cluster_dict in cluster_list
+                            if self._is_cluster_visible_to_org_admin(
+                                cluster_dict)]
+        else:
+            cluster_list = [cluster_dict for cluster_dict in cluster_list
+                            if self._is_user_cluster_owner(cluster_dict)]
+
+            # 'is_admin_request' is a flag that is used to restrict access to
+            # user context and other secured information on pks cluster
+            # information.
+            if not kwargs.get('is_admin_request'):
+                for cluster in cluster_list:
+                    self._filter_pks_properties(cluster)
+        return cluster_list
+
     def _append_user_id(self, name):
         user_id = self._get_vcd_userid()
         return f"{name}{USER_ID_SEPARATOR}{user_id}"
@@ -821,6 +852,30 @@ class PKSBroker(AbstractBroker):
         vdc_id = extract_vdc_id_from_pks_compute_profile_name(
             compute_profile_name)
         return org_name == get_org_name_of_ovdc(vdc_id)
+
+    def _apply_vdc_filter(self, cluster_list, vdc_name):
+        cluster_list = [cluster_dict for cluster_dict in cluster_list
+                        if self._does_cluster_belong_to_vdc
+                        (cluster_dict, vdc_name)]
+        return cluster_list
+
+    def _apply_org_filter(self, cluster_list, org_name):
+        cluster_list = [cluster_dict for cluster_dict in cluster_list
+                        if self._does_cluster_belong_to_org
+                        (cluster_dict, org_name)]
+        return cluster_list
+
+    def _does_cluster_belong_to_vdc(self, cluster_info, vdc_name):
+        # Returns True if the cluster backed by given vdc
+        # Else False (this also includes missing compute profile name)
+        compute_profile_name = cluster_info.get('compute_profile_name')
+        if compute_profile_name is None:
+            LOGGER.debug(f"compute-profile-name of {cluster_info.get('name')}"
+                         f" is not found")
+            return False
+        vdc_of_cluster = extract_vdc_name_from_pks_compute_profile_name(
+            compute_profile_name)
+        return vdc_of_cluster == vdc_name
 
     # TODO() Should be moved to filtering layer
     def _filter_list_by_cluster_name(self, cluster_list, cluster_name):
