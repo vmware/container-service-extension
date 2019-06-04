@@ -77,6 +77,9 @@ class BrokerManager(object):
             vcd_uri=config['vcd']['host'],
             headers=self.req_headers,
             verify_ssl_certs=config['vcd']['verify'])
+        self.req_spec.update((param, val)
+                             for param, val in request_query_params.items()
+                             if val is not None)
 
     @exception_handler
     def invoke(self, op):
@@ -102,8 +105,7 @@ class BrokerManager(object):
         result['body'] = []
         result['status_code'] = OK
 
-        self.is_ovdc_present_in_request = self.req_spec.get('vdc') or \
-            self.req_qparams.get('vdc')
+        self.is_ovdc_present_in_request = self.req_spec.get('vdc')
         if op == Operation.INFO_OVDC:
             ovdc_id = self.req_spec.get('ovdc_id')
             # TODO() Constructing response should be moved out of this layer
@@ -435,11 +437,9 @@ class BrokerManager(object):
     def _get_ctr_prov_ctx_from_ovdc_metadata(self, ovdc_name=None,
                                              org_name=None):
         ovdc_name = \
-            ovdc_name or self.req_spec.get('vdc') or \
-            self.req_qparams.get('vdc')
+            ovdc_name or self.req_spec.get('vdc')
         org_name = \
-            org_name or self.req_spec.get('org') or \
-            self.req_qparams.get('org') or self.session.get('org')
+            org_name or self.req_spec.get('org') or self.session.get('org')
 
         if ovdc_name and org_name:
             ctr_prov_ctx = \
@@ -475,13 +475,8 @@ class BrokerManager(object):
 
         :rtype: container_service_extension.abstract_broker.AbstractBroker
         """
-        ovdc_name = \
-            self.req_spec.get('vdc') or \
-            self.req_qparams.get('vdc')
-        org_name = \
-            self.req_spec.get('org') or \
-            self.req_qparams.get('org') or \
-            self.session.get('org')
+        ovdc_name = self.req_spec.get('vdc')
+        org_name = self.req_spec.get('org') or self.session.get('org')
 
         ctr_prov_ctx = self._get_ctr_prov_ctx_from_ovdc_metadata(
             ovdc_name=ovdc_name, org_name=org_name)

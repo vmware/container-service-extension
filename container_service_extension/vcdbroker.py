@@ -223,7 +223,9 @@ class VcdBroker(AbstractBroker, threading.Thread):
     def list_clusters(self):
         self._connect_tenant()
         clusters = []
-        for c in load_from_metadata(self.tenant_client):
+        for c in load_from_metadata(self.tenant_client,
+                                    org_name=self.req_spec.get('org'),
+                                    vdc_name=self.req_spec.get('vdc')):
             clusters.append({
                 'name': c['name'],
                 'IP master': c['leader_endpoint'],
