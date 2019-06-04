@@ -13,9 +13,10 @@ from container_service_extension.utils import get_vcd_sys_admin_client
 
 class AbstractBroker(abc.ABC):
 
-    def __init__(self, request_headers, request_spec):
+    def __init__(self, request_headers, request_spec, req_qparams):
         self.req_headers = request_headers
         self.req_spec = request_spec
+        self.req_qparams = req_qparams
 
     @abc.abstractmethod
     def create_cluster(self):

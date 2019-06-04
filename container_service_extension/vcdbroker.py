@@ -125,11 +125,12 @@ def task_callback(task):
 
 
 class VcdBroker(AbstractBroker, threading.Thread):
-    def __init__(self, request_headers, request_spec):
-        super().__init__(request_headers, request_spec)
+    def __init__(self, request_headers, request_spec, req_qparams):
+        super().__init__(request_headers, request_spec, req_qparams)
         threading.Thread.__init__(self)
         self.req_headers = request_headers
         self.req_spec = request_spec
+        self.req_qparams = req_qparams
 
         self.tenant_client = None
         self.client_session = None
@@ -223,7 +224,9 @@ class VcdBroker(AbstractBroker, threading.Thread):
     def list_clusters(self):
         self._connect_tenant()
         clusters = []
-        for c in load_from_metadata(self.tenant_client):
+        for c in load_from_metadata(self.tenant_client,
+                                    org_name=self.req_qparams.get('org'),
+                                    vdc_name=self.req_qparams.get('vdc')):
             clusters.append({
                 'name': c['name'],
                 'IP master': c['leader_endpoint'],

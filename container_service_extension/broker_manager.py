@@ -289,7 +289,8 @@ class BrokerManager(object):
             return broker.list_clusters()
         else:
             common_cluster_properties = ('name', 'vdc', 'status', 'org_name')
-            vcd_broker = VcdBroker(self.req_headers, self.req_spec)
+            vcd_broker = VcdBroker(self.req_headers, self.req_spec,
+                                   self.req_qparams)
             vcd_clusters = []
             for cluster in vcd_broker.list_clusters():
                 vcd_cluster = {k: cluster.get(k, None) for k in
@@ -301,7 +302,7 @@ class BrokerManager(object):
             pks_ctx_list = self._create_pks_context_for_all_accounts_in_org()
             for pks_ctx in pks_ctx_list:
                 pks_broker = PKSBroker(self.req_headers, self.req_spec,
-                                       pks_ctx)
+                                       self.req_qparams, pks_ctx)
                 # Get all cluster information to get vdc name from
                 # compute-profile-name
                 for cluster in pks_broker.list_clusters(is_admin_request=True):
@@ -355,7 +356,8 @@ class BrokerManager(object):
         Else:
             (None, None) if cluster not found.
         """
-        vcd_broker = VcdBroker(self.req_headers, self.req_spec)
+        vcd_broker = VcdBroker(self.req_headers, self.req_spec,
+                               self.req_qparams)
         try:
             return vcd_broker.get_cluster_info(cluster_name), vcd_broker
         except Exception as err:
@@ -364,7 +366,8 @@ class BrokerManager(object):
 
         pks_ctx_list = self._create_pks_context_for_all_accounts_in_org()
         for pks_ctx in pks_ctx_list:
-            pksbroker = PKSBroker(self.req_headers, self.req_spec, pks_ctx)
+            pksbroker = PKSBroker(self.req_headers, self.req_spec,
+                                  self.req_qparams, pks_ctx)
             try:
                 return pksbroker.get_cluster_info(
                     cluster_name=cluster_name,
@@ -458,12 +461,13 @@ class BrokerManager(object):
             if ctr_prov_ctx:
                 if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProviders.PKS:
                     return PKSBroker(self.req_headers, self.req_spec,
-                                     pks_ctx=ctr_prov_ctx)
+                                     self.req_qparams, pks_ctx=ctr_prov_ctx)
                 elif ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProviders.NATIVE:
-                    return VcdBroker(self.req_headers, self.req_spec)
+                    return VcdBroker(self.req_headers, self.req_spec,
+                                     self.req_qparams)
 
         else:
-            return VcdBroker(self.req_headers, self.req_spec)
+            return VcdBroker(self.req_headers, self.req_spec, self.req_qparams)
 
         raise CseServerError("Org VDC is not enabled for Kubernetes cluster "
                              "deployment")
@@ -548,7 +552,8 @@ class BrokerManager(object):
         LOGGER.debug(f"Creating PKS Compute Profile with name:"
                      f"{pks_compute_profile_name}")
 
-        pksbroker = PKSBroker(self.req_headers, self.req_spec, pks_ctx)
+        pksbroker = PKSBroker(self.req_headers, self.req_spec,
+                              self.req_qparams, pks_ctx)
         try:
             pksbroker.create_compute_profile(**compute_profile_params)
         except PksServerError as ex:
@@ -582,7 +587,7 @@ class BrokerManager(object):
             if pks_ctx['vc'] in pks_vc_plans_map:
                 continue
             pks_broker = PKSBroker(self.req_headers, self.req_spec,
-                                   pks_ctx)
+                                   self.req_qparams, pks_ctx)
             plans = pks_broker.list_plans()
             plan_names = [plan.get('name') for plan in plans]
             pks_vc_plans_map[pks_ctx['vc']] = [plan_names, pks_ctx['host']]
