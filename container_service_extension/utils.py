@@ -554,7 +554,8 @@ def get_vdc(client, vdc_name, org=None, org_name=None,
     # TODO() org.get_vdc() should throw exception if vdc not found in the org.
     # This should be handled in pyvcloud. For now, it is handled here.
     if resource is None:
-        raise EntityNotFoundException(f"VDC '{vdc_name}' not found")
+        raise EntityNotFoundException(f"VDC '{vdc_name}' not found"
+                                      f" in ORG '{org.resource.get('name')}'")
     vdc = VDC(client, resource=resource)
     return vdc
 
@@ -601,6 +602,18 @@ def get_pvdc_id_by_name(name, vc_name_in_vcd):
         pvdc_id = href.split("/")[-1]
         return pvdc_id
     return None
+
+
+def extract_vdc_name_from_pks_compute_profile_name(compute_profile_name):
+    """Extract the vdc name from pks compute profile name.
+
+    :param str compute_profile_name: name of the pks compute profile
+
+    :return: name of the vdc in vcd.
+
+    :rtype: str
+    """
+    return compute_profile_name.split('--')[2]
 
 
 def extract_vdc_id_from_pks_compute_profile_name(compute_profile_name):
