@@ -196,13 +196,23 @@ def list_clusters(ctx, vdc, org_name):
     default=None,
     metavar='VDC_NAME',
     help='Restrict cluster search to specified org VDC')
-def delete(ctx, name, vdc):
+@click.option(
+    '-o',
+    '--org',
+    'org',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help='Restrict cluster search to specified org')
+def delete(ctx, name, vdc, org):
     """Delete a Kubernetes cluster."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        result = cluster.delete_cluster(name, vdc)
+        if not client.is_sysadmin() and org is None:
+            org = ctx.obj['profiles'].get('org_in_use')
+        result = cluster.delete_cluster(name, org, vdc)
         # result is empty for delete cluster operation on PKS-managed clusters.
         # In that specific case, below check helps to print out a meaningful
         # message to users.
