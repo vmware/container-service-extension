@@ -11,7 +11,9 @@ from pyvcloud.vcd.org import Org
 
 from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterNotFoundError
+from container_service_extension.exceptions import CseDuplicateClusterError
 from container_service_extension.exceptions import CseServerError
+from container_service_extension.exceptions import PksDuplicateClusterError
 from container_service_extension.exceptions import PksServerError
 from container_service_extension.exceptions import UnauthorizedActionError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
@@ -360,6 +362,10 @@ class BrokerManager(object):
         vcd_broker = VcdBroker(self.req_headers, self.req_spec)
         try:
             return vcd_broker.get_cluster_info(cluster_name), vcd_broker
+        except CseDuplicateClusterError as err:
+            LOGGER.debug(f"Get cluster info on {cluster_name}"
+                         f"on vCD failed with error: {err}")
+            raise err
         except Exception as err:
             LOGGER.debug(f"Get cluster info on {cluster_name} failed "
                          f"on vCD with error: {err}")
@@ -371,10 +377,13 @@ class BrokerManager(object):
                 return pksbroker.get_cluster_info(
                     cluster_name=cluster_name,
                     is_org_admin_search=is_org_admin_search), pksbroker
+            except PksDuplicateClusterError as err:
+                LOGGER.debug(f"Get cluster info on {cluster_name}"
+                             f"on PKS failed with error: {err}")
+                raise err
             except PksServerError as err:
                 LOGGER.debug(f"Get cluster info on {cluster_name} failed "
                              f"on {pks_ctx['host']} with error: {err}")
-
         return None, None
 
     def _create_pks_context_for_all_accounts_in_org(self):
