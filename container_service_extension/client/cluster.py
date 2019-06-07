@@ -165,7 +165,7 @@ class Cluster(object):
             accept_type='application/json')
         return process_response(response)
 
-    def delete_cluster(self, cluster_name, vdc=None):
+    def delete_cluster(self, cluster_name, org=None, vdc=None):
         method = 'DELETE'
         uri = '%s/%s' % (self._uri, cluster_name)
         response = self.client._do_request_prim(
@@ -173,7 +173,7 @@ class Cluster(object):
             uri,
             self.client._session,
             accept_type='application/*+json',
-            params={'vdc': vdc} if vdc else None)
+            params={'org': org, 'vdc': vdc})
         try:
             result = process_response(response)
         except VcdResponseError as e:

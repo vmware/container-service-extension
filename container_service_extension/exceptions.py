@@ -36,6 +36,10 @@ class ClusterNetworkIsolationError(ClusterOperationError):
     """Raised when any error happens while isolating cluster network."""
 
 
+class CseDuplicateClusterError(CseServerError):
+    """Raised when multiple vCD clusters of same name detected."""
+
+
 class NodeOperationError(ClusterOperationError):
     """Base class for all node operation related exceptions."""
 
@@ -112,3 +116,7 @@ class PksServerError(CseServerError):
 
 class PksConnectionError(PksServerError):
     """Raised when connection establishment to PKS fails."""
+
+
+class PksDuplicateClusterError(PksServerError):
+    """Raised when multiple PKS clusters of same name detected."""

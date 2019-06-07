@@ -35,6 +35,7 @@ from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterInitializationError
 from container_service_extension.exceptions import ClusterJoiningError
 from container_service_extension.exceptions import ClusterOperationError
+from container_service_extension.exceptions import CseDuplicateClusterError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import MasterNodeCreationError
 from container_service_extension.exceptions import NFSNodeCreationError
@@ -247,6 +248,9 @@ class VcdBroker(AbstractBroker, threading.Thread):
         """
         self._connect_tenant()
         clusters = load_from_metadata(self.tenant_client, name=cluster_name)
+        if len(clusters) > 1:
+            raise CseDuplicateClusterError(f"Multiple clusters of name"
+                                           f" '{cluster_name}' detected.")
         if len(clusters) == 0:
             raise CseServerError(f"Cluster '{cluster_name}' not found.")
         cluster = clusters[0]
@@ -368,7 +372,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
 
         if not network_name:
             raise CseServerError(f"Cluster cannot be created. Please provide"
-                             f" a valid value for org vDC network param.")
+                                 f" a valid value for org vDC network param.")
 
         LOGGER.debug(f"About to create cluster {cluster_name} on {vdc_name} "
                      f"with {node_count} nodes, sp={storage_profile}")
@@ -523,7 +527,12 @@ class VcdBroker(AbstractBroker, threading.Thread):
         self._connect_sys_admin()
         self.op = OP_DELETE_CLUSTER
         clusters = load_from_metadata(
-            self.tenant_client, name=self.cluster_name)
+            self.tenant_client, name=self.cluster_name,
+            org_name=self.req_spec.get('org'),
+            vdc_name=self.req_spec.get('vdc'))
+        if len(clusters) > 1:
+            raise CseServerError(f"Multiple clusters of name"
+                                 f" '{self.cluster_name}' detected. ")
         if len(clusters) != 1:
             raise CseServerError(f"Cluster {self.cluster_name} not found.")
         self.cluster = clusters[0]
