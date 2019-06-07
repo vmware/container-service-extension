@@ -521,7 +521,12 @@ class VcdBroker(AbstractBroker, threading.Thread):
         self._connect_sys_admin()
         self.op = OP_DELETE_CLUSTER
         clusters = load_from_metadata(
-            self.tenant_client, name=self.cluster_name)
+            self.tenant_client, name=self.cluster_name,
+            org_name=self.req_spec.get('org'),
+            vdc_name=self.req_spec.get('vdc'))
+        if len(clusters) > 1:
+            raise CseServerError(f"Multiple clusters of name"
+                                 f" '{self.cluster_name}' detected. ")
         if len(clusters) != 1:
             raise CseServerError(f"Cluster {self.cluster_name} not found.")
         self.cluster = clusters[0]
