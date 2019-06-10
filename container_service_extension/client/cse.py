@@ -408,6 +408,14 @@ def resize(ctx, name, node_count, network_name, vdc, disable_rollback):
 @click.pass_context
 @click.argument('name', required=True)
 @click.option(
+    '-o',
+    '--org',
+    'org',
+    required=False,
+    default=None,
+    metavar='ORG_NAME',
+    help='Restrict cluster search to specified org')
+@click.option(
     '-v',
     '--vdc',
     'vdc',
@@ -415,7 +423,7 @@ def resize(ctx, name, node_count, network_name, vdc, disable_rollback):
     default=None,
     metavar='VDC_NAME',
     help='Restrict cluster search to specified org VDC')
-def config(ctx, name, vdc):
+def config(ctx, name, vdc, org):
     """Display cluster configuration.
 
     To write to a file: `vcd cse cluster config mycluster > ~/.kube/my_config`
@@ -424,7 +432,7 @@ def config(ctx, name, vdc):
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        cluster_config = cluster.get_config(name, vdc=vdc)
+        cluster_config = cluster.get_config(name, vdc=vdc, org=org)
         if os.name == 'nt':
             cluster_config = str.replace(cluster_config, '\n', '\r\n')
 
