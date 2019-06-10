@@ -8,6 +8,7 @@ import string
 import time
 
 from pyvcloud.vcd.client import QueryResultFormat
+from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
 
@@ -18,7 +19,7 @@ from container_service_extension.exceptions import DeleteNodeError
 from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import ScriptExecutionError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.utils import get_data_file
+from container_service_extension.utils import get_data_file, SYSTEM_ORG_NAME
 from container_service_extension.utils import get_vsphere
 
 TYPE_MASTER = 'mstr'
@@ -40,16 +41,26 @@ def wait_until_tools_ready(vm):
             time.sleep(1)
 
 
-def load_from_metadata(client, name=None, cluster_id=None):
+def load_from_metadata(client, name=None, cluster_id=None, org_name=None,
+                       vdc_name=None):
     if cluster_id is None:
         query_filter = 'metadata:cse.cluster.id==STRING:*'
     else:
         query_filter = f'metadata:cse.cluster.id==STRING:{cluster_id}'
     if name is not None:
         query_filter += f';name=={name}'
+    if vdc_name is not None:
+        query_filter += f";vdcName=={vdc_name}"
     resource_type = 'vApp'
     if client.is_sysadmin():
         resource_type = 'adminVApp'
+        if org_name is not None and \
+                org_name.lower() != SYSTEM_ORG_NAME.lower():
+            org_resource = \
+                client.get_org_by_name(org_name)
+            org = Org(client, resource=org_resource)
+            query_filter += f";org=={org.resource.get('id')}"
+
     q = client.get_typed_query(
         resource_type,
         query_result_format=QueryResultFormat.ID_RECORDS,
