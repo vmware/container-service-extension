@@ -19,8 +19,9 @@ from container_service_extension.exceptions import DeleteNodeError
 from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import ScriptExecutionError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.utils import get_data_file, SYSTEM_ORG_NAME
+from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_vsphere
+from container_service_extension.utils import SYSTEM_ORG_NAME
 
 TYPE_MASTER = 'mstr'
 TYPE_NODE = 'node'

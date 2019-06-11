@@ -51,13 +51,14 @@ from container_service_extension.pyvcloud_utils import is_org_admin
 from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.uaaclient.uaaclient import UaaClient
-from container_service_extension.utils import exception_handler, SYSTEM_ORG_NAME
+from container_service_extension.utils import exception_handler
 from container_service_extension.utils \
     import extract_vdc_id_from_pks_compute_profile_name
 from container_service_extension.utils \
     import extract_vdc_name_from_pks_compute_profile_name
 from container_service_extension.utils import get_pks_cache
 from container_service_extension.utils import OK
+from container_service_extension.utils import SYSTEM_ORG_NAME
 
 
 # Delimiter to append with user id context
@@ -218,8 +219,8 @@ class PKSBroker(AbstractBroker):
 
         # Apply vdc filter if --vdc option provided
         if self.req_spec.get('vdc'):
-            cluster_list = self._apply_vdc_filter(cluster_list,
-                                                    self.req_spec.get('vdc'))
+            cluster_list = self._apply_vdc_filter(
+                cluster_list, self.req_spec.get('vdc'))
 
         # All clusters for sysadmin with any optional --org filter applied
         if self.tenant_client.is_sysadmin():
@@ -862,8 +863,8 @@ class PKSBroker(AbstractBroker):
         # Else False (this also includes missing compute profile name)
         compute_profile_name = cluster_info.get('compute_profile_name')
         if compute_profile_name is None:
-            LOGGER.debug(f"compute-profile-name of {cluster_info.get('name')}"
-                            f" is not found")
+            LOGGER.debug(f"compute-profile-name of "
+                         f"{cluster_info.get('name')} is not found")
             return False
         vdc_of_cluster = extract_vdc_name_from_pks_compute_profile_name(
             compute_profile_name)
