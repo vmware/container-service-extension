@@ -47,12 +47,14 @@ infrastructure stack are all in the same management network, without proxy in be
 Below timeline diagram depicts infrastructure set-up and tenant
  on-boarding. Cloud-provider has to do below steps before on-boarding tenants.
  1. Set up one or more Enterprise PKS-vSphere-NSX-T instances.
- 2. Create [Enterprise PKS service accounts](#faq) per each Enterprise PKS instance.
- 2. On-board Enterprise PKS instance(s) in vCD
+ 2. Ensure [OpenID Connect](https://openid.net/connect/) feature is disabled on
+  each Enterprise-PKS instance. Refer [FAQ](#faq) for more details.
+ 3. Create [Enterprise PKS service accounts](#faq) per each Enterprise PKS instance.
+ 4. On-board Enterprise PKS instance(s) in vCD
     * Attach Enterprise PKS' corresponding vSphere in vCD through vCD UI.
     * Create provider-vdc(s) in vCD from underlying resources of newly attached Enterprise PKS' vSphere(s).
     Ensure these pvdc(s) are dedicated for Enterprise PKS K8 deployments only.
- 3. Install, configure and start CSE 
+ 5. Install, configure and start CSE 
     * Follow instructions to install CSE 2.0 beta [here](/container-service-extension/RELEASE_NOTES.html)
     * Use `cse config` command to generate `config.yaml` and `pks.yaml` template files.
     * Configure `config.yaml` with vCD and K8 template details.
@@ -66,7 +68,8 @@ Below timeline diagram depicts infrastructure set-up and tenant
     
  <a name="tenant-onboarding"></a>   
 ### Tenant on-boarding
-1. Create ovdc(s) in tenant organization from newly created provider-vdc(s) above via vCD UI.
+1. Create ovdc(s) in tenant organization from newly created provider-vdc(s) above via vCD UI. 
+Do not choose Pay-as-you-go model for ovdc(s). Refer [FAQ](#faq) for more details.
 2. Use these [CSE commands](#cse-commands) to grant K8 deployment rights to chosen tenants and tenant-users. Refer 
 [RBAC feature](/container-service-extension/RBAC.html) for more details
 3. Use [CSE command](#cse-commands) to enable organiation vdc(s) with a chosen K8-provider (native (or) ent-pks).
@@ -156,6 +159,15 @@ Below steps of granting rights are required only if [RBAC feature](/container-se
     --authorities clients.read,clients.write,clients.secret,scim.read,scim.write,pks.clusters.manage`
     * Log in to PKS: `pks login -a https://${PKS_UAA_URL}:9021  -k --client-name test --client-secret xx`
     * Input credentials in pks.yaml 
+* Why OpenID connect feature needs to remain disabled in Enterprise PKS?
+    * This authentication mechanism by default applies to all clusters in Enterprise PKS. 
+    That means, once enabled it inherently breaks multi-tenancy model CSE is trying establish.
+* Why should you avoid Pay-as-you-go models for those organizational vdc(s) 
+powered by Enterprise PKS?
+    * With Pay-as-you-go- model, vCD does not auto-set any upper limits for compute
+     on vSphere resource-pools. And as CSE heavily relies on vSphere to account for 
+     compute resource usage, it completely breaks the CSE mechanism of accounting 
+     for compute resource usage of tenants.
 * Are Enterprise PKS based clusters visible in vCD UI?
     * This functionality is not available yet.
      Enterprise PKS based clusters can only be managed via CSE-CLI as of today.
