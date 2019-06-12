@@ -160,14 +160,12 @@ Below steps of granting rights are required only if [RBAC feature](/container-se
     * Log in to PKS: `pks login -a https://${PKS_UAA_URL}:9021  -k --client-name test --client-secret xx`
     * Input credentials in pks.yaml 
 * Why OpenID connect feature needs to remain disabled in Enterprise PKS?
-    * This authentication mechanism by default applies to all clusters in Enterprise PKS. 
-    That means, once enabled it inherently breaks multi-tenancy model CSE is trying establish.
-* Why should you avoid Pay-as-you-go models for those organizational vdc(s) 
-powered by Enterprise PKS?
-    * With Pay-as-you-go- model, vCD does not auto-set any upper limits for compute
-     on vSphere resource-pools. And as CSE heavily relies on vSphere to account for 
-     compute resource usage, it completely breaks the CSE mechanism of accounting 
-     for compute resource usage of tenants.
+    * OpenID Connect based authentication of VMware Enterprise PKS is a global 
+    configuration for all tenants. Its enablement misaligns with multi-tenant 
+    model of Container Services Extension.
+* What allocation models are supported for organizational vdc(s) powered by Enterprise PKS?
+    * Allocation model and reservation models only. Pay-as-you-go is unsupported.
+     Elasticity with other models is also not supported.
 * Are Enterprise PKS based clusters visible in vCD UI?
     * This functionality is not available yet.
      Enterprise PKS based clusters can only be managed via CSE-CLI as of today.
