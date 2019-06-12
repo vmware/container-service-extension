@@ -432,6 +432,8 @@ def config(ctx, name, vdc, org):
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
+        if not client.is_sysadmin() and org is None:
+            org = ctx.obj['profiles'].get('org_in_use')
         cluster_config = cluster.get_config(name, vdc=vdc, org=org)
         if os.name == 'nt':
             cluster_config = str.replace(cluster_config, '\n', '\r\n')
