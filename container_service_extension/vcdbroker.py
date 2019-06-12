@@ -367,8 +367,9 @@ class VcdBroker(AbstractBroker, threading.Thread):
         #  read from instance variable (if needed only).
 
         if not network_name:
-            raise CseServerError(f"Cluster cannot be created. Please provide"
-                             f" a valid value for org vDC network param.")
+            raise CseServerError(f"Cluster cannot be created. "
+                                 f"Please provide a valid value for org "
+                                 f"vDC network param.")
 
         LOGGER.debug(f"About to create cluster {cluster_name} on {vdc_name} "
                      f"with {node_count} nodes, sp={storage_profile}")
@@ -558,7 +559,10 @@ class VcdBroker(AbstractBroker, threading.Thread):
     def get_cluster_config(self, cluster_name):
         self._connect_tenant()
         clusters = load_from_metadata(
-            self.tenant_client, name=cluster_name)
+            self.tenant_client,
+            name=cluster_name,
+            org_name=self.req_spec.get('org'),
+            vdc_name=self.req_spec.get('vdc'))
         if len(clusters) != 1:
             raise CseServerError(f"Cluster '{cluster_name}' not found")
         vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
