@@ -49,7 +49,7 @@ class Cluster(object):
             params=params)
         return process_response(response)
 
-    def get_cluster_info(self, name, vdc=None):
+    def get_cluster_info(self, name, org=None, vdc=None):
         method = 'GET'
         uri = '%s/%s/info' % (self._uri, name)
         response = self.client._do_request_prim(
@@ -60,7 +60,7 @@ class Cluster(object):
             media_type=None,
             accept_type='application/*+json',
             auth=None,
-            params={'vdc': vdc} if vdc else None)
+            params={'org': org, 'vdc': vdc})
         try:
             result = process_response(response)
         except VcdResponseError as e:

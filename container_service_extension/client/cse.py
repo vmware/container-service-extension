@@ -465,13 +465,23 @@ def config(ctx, name, vdc, org):
     default=None,
     metavar='VDC_NAME',
     help='Restrict cluster search to specified org VDC')
-def cluster_info(ctx, name, vdc):
+@click.option(
+    '-o',
+    '--org',
+    'org',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help='Restrict cluster search to specified org')
+def cluster_info(ctx, name, org, vdc):
     """Display info about a Kubernetes cluster."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        cluster_info = cluster.get_cluster_info(name, vdc=vdc)
+        if not client.is_sysadmin() and org is None:
+            org = ctx.obj['profiles'].get('org_in_use')
+        cluster_info = cluster.get_cluster_info(name, org=org, vdc=vdc)
         stdout(cluster_info, ctx, show_id=True)
     except Exception as e:
         stderr(e, ctx)
