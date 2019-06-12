@@ -13,6 +13,7 @@ from container_service_extension.authorization import secure
 from container_service_extension.exceptions import ClusterNetworkIsolationError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import PksConnectionError
+from container_service_extension.exceptions import PksDuplicateClusterError
 from container_service_extension.exceptions import PksServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.nsxt.cluster_network_isolater import \
@@ -368,14 +369,14 @@ class PKSBroker(AbstractBroker):
             filtered_cluster_list = \
                 self._filter_list_by_cluster_name(cluster_list, cluster_name)
             LOGGER.debug(f"filtered Cluster List:{filtered_cluster_list}")
-            # TODO() Sys admin may encounter multiple clusters with the same
-            #  name; in that case choosing the first one could be wrong.
-            #  Needs revisit
-            if len(filtered_cluster_list) > 0:
-                cluster_info = filtered_cluster_list[0]
-            else:
+            if len(filtered_cluster_list) > 1:
+                raise PksDuplicateClusterError(HTTPStatus.BAD_REQUEST,
+                                               f"Multiple clusters of name"
+                                               f" '{cluster_name}' exist")
+            if len(filtered_cluster_list) <= 0:
                 raise PksServerError(HTTPStatus.NOT_FOUND,
                                      f"cluster {cluster_name} not found")
+            cluster_info = filtered_cluster_list[0]
         else:
             cluster_info = \
                 self._get_cluster_info(self._append_user_id(cluster_name))
