@@ -150,8 +150,7 @@ class ServiceProcessor(object):
                 reply = broker_manager.invoke(Operation.CREATE_CLUSTER)
             else:
                 if node_request:
-                    broker = broker_manager.get_broker_based_on_vdc()
-                    reply = broker.create_nodes()
+                    reply = broker_manager.invoke(Operation.CREATE_NODE)
         elif body['method'] == 'PUT':
             if ovdc_info_request:
                 reply = broker_manager.invoke(Operation.ENABLE_OVDC)
@@ -162,8 +161,7 @@ class ServiceProcessor(object):
                 reply = broker_manager.invoke(Operation.RESIZE_CLUSTER)
         elif body['method'] == 'DELETE':
             if node_request:
-                broker = broker_manager.get_broker_based_on_vdc()
-                reply = broker.delete_nodes()
+                reply = broker_manager.invoke(Operation.DELETE_NODE)
             else:
                 req_spec.update({'cluster_name': cluster_name})
                 reply = broker_manager.invoke(Operation.DELETE_CLUSTER)

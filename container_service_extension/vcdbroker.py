@@ -45,7 +45,6 @@ from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pyvcloud_utils import get_org_name_of_ovdc
 from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_NAME
-from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import ERROR_DESCRIPTION
 from container_service_extension.utils import ERROR_MESSAGE
 from container_service_extension.utils import ERROR_STACKTRACE
@@ -585,13 +584,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
                                     template['admin_password'])
         return result
 
-    @exception_handler
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def create_nodes(self):
-        # TODO(resize_cluster) Once this method is hooked to
-        #  broker_manager, modify self.resize_cluster() to return only
-        #  result['body'] not the entire response.
-        result = {'body': {}}
         self.cluster_name = self.req_spec['name']
         LOGGER.debug(f"About to add {self.req_spec['node_count']} nodes to "
                      f"cluster {self.cluster_name} on VDC "
@@ -605,9 +599,15 @@ class VcdBroker(AbstractBroker, threading.Thread):
         self._connect_tenant()
         self._connect_sys_admin()
         clusters = load_from_metadata(
-            self.tenant_client, name=self.cluster_name)
-        if len(clusters) != 1:
+            self.tenant_client, name=self.cluster_name,
+            org_name=self.req_spec.get('org'),
+            vdc_name=self.req_spec.get('vdc'))
+        if len(clusters) <= 0:
             raise CseServerError(f"Cluster '{self.cluster_name}' not found.")
+
+        if len(clusters) > 1:
+            raise CseDuplicateClusterError(f"Multiple clusters of name "
+                                           f"'{self.cluster_name}' detected.")
         self.cluster = clusters[0]
         self.op = OP_CREATE_NODES
         self.cluster_id = self.cluster['cluster_id']
@@ -617,11 +617,9 @@ class VcdBroker(AbstractBroker, threading.Thread):
                     "{self.cluster_name}({self.cluster_id})")
         self.daemon = True
         self.start()
-        response_body = {}
-        response_body['cluster_name'] = self.cluster_name
-        response_body['task_href'] = self.task_resource.get('href')
-        result['body'] = response_body
-        result['status_code'] = ACCEPTED
+        result = {}
+        result['cluster_name'] = self.cluster_name
+        result['task_href'] = self.task_resource.get('href')
         return result
 
     @rollback
@@ -682,7 +680,6 @@ class VcdBroker(AbstractBroker, threading.Thread):
         finally:
             self._disconnect_sys_admin()
 
-    @exception_handler
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def delete_nodes(self):
         result = {'body': {}}
@@ -699,9 +696,15 @@ class VcdBroker(AbstractBroker, threading.Thread):
         self._connect_tenant()
         self._connect_sys_admin()
         clusters = load_from_metadata(
-            self.tenant_client, name=self.cluster_name)
-        if len(clusters) != 1:
+            self.tenant_client, name=self.cluster_name,
+            org_name=self.req_spec.get('org'),
+            vdc_name=self.req_spec.get('vdc'))
+        if len(clusters) <= 0:
             raise CseServerError(f"Cluster '{self.cluster_name}' not found.")
+
+        if len(clusters) > 1:
+            raise CseDuplicateClusterError(f"Multiple clusters of name "
+                                           f"'{self.cluster_name}' detected.")
         self.cluster = clusters[0]
         self.op = OP_DELETE_NODES
         self.cluster_id = self.cluster['cluster_id']
@@ -711,11 +714,9 @@ class VcdBroker(AbstractBroker, threading.Thread):
             f"cluster {self.cluster_name}({self.cluster_id})")
         self.daemon = True
         self.start()
-        response_body = {}
-        response_body['cluster_name'] = self.cluster_name
-        response_body['task_href'] = self.task_resource.get('href')
-        result['body'] = response_body
-        result['status_code'] = ACCEPTED
+        result = {}
+        result['cluster_name'] = self.cluster_name
+        result['task_href'] = self.task_resource.get('href')
         return result
 
     def delete_nodes_thread(self):
@@ -823,9 +824,6 @@ class VcdBroker(AbstractBroker, threading.Thread):
         :return response: response returned by create_nodes()
         :rtype: dict
         """
-        # TODO(resize_cluster) Once VcdBroker.create_nodes() is hooked to
-        #  broker_manager, modify this method to return only
-        #  response['body'] not the entire response.
         if curr_cluster_info:
             curr_worker_count = len(curr_cluster_info['nodes'])
         else:

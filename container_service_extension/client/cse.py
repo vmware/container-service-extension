@@ -386,6 +386,14 @@ def create(ctx, name, vdc, node_count, cpu, memory, network_name,
     metavar='VDC_NAME',
     help='Restrict cluster search to specified org VDC')
 @click.option(
+    '-o',
+    '--org',
+    'org',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help='Restrict cluster search to specified org')
+@click.option(
     '--disable-rollback',
     'disable_rollback',
     is_flag=True,
@@ -393,7 +401,7 @@ def create(ctx, name, vdc, node_count, cpu, memory, network_name,
     default=True,
     help='Disable rollback on failed node creation '
          '(Exclusive to native Kubernetes provider)')
-def resize(ctx, name, node_count, network_name, vdc, disable_rollback):
+def resize(ctx, name, node_count, network_name, org, vdc, disable_rollback):
     """Resize the cluster to contain the specified number of worker nodes.
 
     Clusters that use native Kubernetes provider can not be sized down
@@ -402,11 +410,14 @@ def resize(ctx, name, node_count, network_name, vdc, disable_rollback):
     try:
         restore_session(ctx)
         client = ctx.obj['client']
+        if not client.is_sysadmin() and org is None:
+            org = ctx.obj['profiles'].get('org_in_use')
         cluster = Cluster(client)
         result = cluster.resize_cluster(
             network_name,
             name,
             node_count=node_count,
+            org=org,
             vdc=vdc,
             disable_rollback=disable_rollback)
         stdout(result, ctx)
@@ -639,22 +650,41 @@ def node_info(ctx, cluster_name, node_name, org_name, vdc):
     required=False,
     default=True,
     help='Disable rollback for node')
-def create_node(ctx, name, node_count, cpu, memory, network_name,
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    metavar='VDC_NAME',
+    help='Restrict cluster search to specified org VDC')
+@click.option(
+    '-o',
+    '--org',
+    'org',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help='Restrict cluster search to specified org')
+def create_node(ctx, name, node_count, org, vdc, cpu, memory, network_name,
                 storage_profile, ssh_key_file, template, node_type,
                 disable_rollback):
     """Add node(s) to a cluster that uses native Kubernetes provider."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
+        if org is None and not client.is_sysadmin():
+            org = ctx.obj['profiles'].get('org_in_use')
         cluster = Cluster(client)
         ssh_key = None
         if ssh_key_file is not None:
             ssh_key = ssh_key_file.read()
         result = cluster.add_node(
-            ctx.obj['profiles'].get('vdc_in_use'),
             network_name,
             name,
             node_count=node_count,
+            org=org,
+            vdc=vdc,
             cpu=cpu,
             memory=memory,
             storage_profile=storage_profile,
@@ -672,13 +702,32 @@ def create_node(ctx, name, node_count, cpu, memory, network_name,
                                'with native Kubernetes provider')
 @click.pass_context
 @click.argument('name', required=True)
-def list_nodes(ctx, name):
+@click.option(
+    '-o',
+    '--org',
+    'org',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help='Org to use. Defaults to currently logged-in org only for '
+         'non sys-admin')
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    metavar='VDC_NAME',
+    help='Org VDC to use.')
+def list_nodes(ctx, name, org, vdc):
     """Display nodes of a cluster that uses native Kubernetes provider."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
+        if org is None and not client.is_sysadmin():
+            org = ctx.obj['profiles'].get('org_in_use')
         cluster = Cluster(client)
-        cluster_info = cluster.get_cluster_info(name)
+        cluster_info = cluster.get_cluster_info(name, org=org, vdc=vdc)
         all_nodes = cluster_info['master_nodes'] + cluster_info['nodes']
         stdout(all_nodes, ctx, show_id=True)
     except Exception as e:
@@ -698,14 +747,32 @@ def list_nodes(ctx, name):
     '--force',
     is_flag=True,
     help='Force delete node VM(s)')
-def delete_nodes(ctx, name, node_names, force):
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    metavar='VDC_NAME',
+    help='Restrict cluster search to specified org VDC')
+@click.option(
+    '-o',
+    '--org',
+    'org',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help='Restrict cluster search to specified org')
+def delete_nodes(ctx, name, node_names, org, vdc, force):
     """Delete node(s) in a cluster that uses native Kubernetes provider."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
+        if not client.is_sysadmin() and org is None:
+            org = ctx.obj['profiles'].get('org_in_use')
         cluster = Cluster(client)
-        result = cluster.delete_nodes(ctx.obj['profiles'].get('vdc_in_use'),
-                                      name, node_names, force)
+        result = cluster.delete_nodes(name, node_names, org=org, vdc=vdc,
+                                      force=force)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
