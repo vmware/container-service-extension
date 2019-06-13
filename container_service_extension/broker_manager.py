@@ -57,6 +57,7 @@ class Operation(Enum):
     ENABLE_OVDC = 'enable ovdc'
     INFO_OVDC = 'info ovdc'
     GET_CLUSTER_CONFIG = 'get cluster config'
+    GET_NODE_INFO = 'get node info'
 
 
 class BrokerManager(object):
@@ -175,6 +176,11 @@ class BrokerManager(object):
             list_pks_plans = self.req_spec.get('list_pks_plans', False)
             result['body'] = self._list_ovdcs(
                 list_pks_plans=list_pks_plans)
+        elif op == Operation.GET_NODE_INFO:
+            node_spec = \
+                {'cluster_name': self.req_spec.get('cluster_name', None),
+                 'node_name': self.req_spec.get('node_name', None)}
+            result['body'] = self._get_node_info(**node_spec)[0]
 
         return result
 
@@ -254,6 +260,38 @@ class BrokerManager(object):
                 return cluster, broker
 
         raise ClusterNotFoundError(f"Cluster {cluster_name} not found "
+                                   f"either in vCD or PKS")
+
+    def _get_node_info(self, **node_spec):
+        """Get node details directly from cloud provider.
+
+        Logic of the method is as follows.
+
+        If 'ovdc' is present in the cluster spec,
+            choose the right broker (by identifying the container_provider
+            (vcd|pks) defined for that ovdc) to do get_node operation.
+        else
+            Invoke set of all (vCD/PKS) brokers in the org to find the cluster
+            and then do get_node operation
+
+        :return: a tuple of node information as dictionary and the broker
+            instance used to find the cluster information.
+
+        :rtype: tuple
+        """
+        cluster_name = node_spec['cluster_name']
+        node_name = node_spec['node_name']
+        if self.is_ovdc_present_in_request:
+            broker = self.get_broker_based_on_vdc()
+            return broker.get_node_info(cluster_name, node_name), broker
+        else:
+            vcd_broker = VcdBroker(self.req_headers, self.req_spec)
+            cluster = vcd_broker.get_cluster_info(cluster_name)
+            if cluster:
+                return vcd_broker.get_node_info(cluster_name, node_name), vcd_broker
+
+        raise ClusterNotFoundError(f"Cluster {cluster_name} with "
+                                   f"Node {node_name} not found "
                                    f"either in vCD or PKS")
 
     def _get_cluster_config(self, **cluster_spec):
