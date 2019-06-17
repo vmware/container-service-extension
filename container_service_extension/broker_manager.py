@@ -58,6 +58,8 @@ class Operation(Enum):
     INFO_OVDC = 'info ovdc'
     GET_CLUSTER_CONFIG = 'get cluster config'
     GET_NODE_INFO = 'get node info'
+    CREATE_NODE = 'create node'
+    DELETE_NODE = 'delete node'
 
 
 class BrokerManager(object):
@@ -181,7 +183,16 @@ class BrokerManager(object):
                 {'cluster_name': self.req_spec.get('cluster_name', None),
                  'node_name': self.req_spec.get('node_name', None)}
             result['body'] = self._get_node_info(**node_spec)[0]
-
+        elif op == Operation.CREATE_NODE:
+            # Currently node create is a vCD only operation.
+            broker = VcdBroker(self.req_headers, self.req_spec)
+            result['body'] = broker.create_nodes()
+            result['status_code'] = ACCEPTED
+        elif op == Operation.DELETE_NODE:
+            # Currently node delete is a vCD only operation.
+            broker = VcdBroker(self.req_headers, self.req_spec)
+            result['body'] = broker.delete_nodes()
+            result['status_code'] = ACCEPTED
         return result
 
     def _list_ovdcs(self, list_pks_plans=False):
@@ -288,7 +299,8 @@ class BrokerManager(object):
             vcd_broker = VcdBroker(self.req_headers, self.req_spec)
             cluster = vcd_broker.get_cluster_info(cluster_name)
             if cluster:
-                return vcd_broker.get_node_info(cluster_name, node_name), vcd_broker
+                return vcd_broker.get_node_info(
+                    cluster_name, node_name), vcd_broker
 
         raise ClusterNotFoundError(f"Cluster {cluster_name} with "
                                    f"Node {node_name} not found "

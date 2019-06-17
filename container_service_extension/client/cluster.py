@@ -144,6 +144,7 @@ class Cluster(object):
                        network_name,
                        cluster_name,
                        node_count=1,
+                       org=None,
                        vdc=None,
                        disable_rollback=True):
         method = 'PUT'
@@ -152,6 +153,7 @@ class Cluster(object):
             'name': cluster_name,
             'node_count': node_count,
             'node_type': TYPE_NODE,
+            'org': org,
             'vdc': vdc,
             'network': network_name,
             'disable_rollback': disable_rollback
@@ -231,10 +233,11 @@ class Cluster(object):
         return result
 
     def add_node(self,
-                 vdc,
                  network_name,
                  name,
                  node_count=1,
+                 org=None,
+                 vdc=None,
                  cpu=None,
                  memory=None,
                  storage_profile=None,
@@ -244,6 +247,7 @@ class Cluster(object):
                  disable_rollback=True):
         """Add nodes to a Kubernetes cluster.
 
+        :param org: (str): The name of the org that contains the cluster
         :param vdc: (str): The name of the vdc that contains the cluster
         :param network_name: (str): The name of the network to which the
             node VMs will connect to
@@ -270,6 +274,7 @@ class Cluster(object):
         data = {
             'name': name,
             'node_count': node_count,
+            'org': org,
             'vdc': vdc,
             'cpu': cpu,
             'memory': memory,
@@ -289,9 +294,10 @@ class Cluster(object):
             accept_type='application/*+json')
         return process_response(response)
 
-    def delete_nodes(self, vdc, name, nodes, force=False):
+    def delete_nodes(self, name, nodes, org=None, vdc=None, force=False):
         """Delete nodes from a Kubernetes cluster.
 
+        :param org: (str): Name of the organization that contains the cluster
         :param vdc: (str): The name of the vdc that contains the cluster
         :param name: (str): The name of the cluster
         :param nodes: (list(str)): The list of nodes to delete
@@ -301,7 +307,8 @@ class Cluster(object):
         """
         method = 'DELETE'
         uri = '%s/%s/node' % (self._uri, name)
-        data = {'name': name, 'vdc': vdc, 'nodes': nodes, 'force': force}
+        data = {'name': name, 'org': org, 'vdc': vdc, 'nodes': nodes,
+                'force': force}
         response = self.client._do_request_prim(
             method,
             uri,
