@@ -162,6 +162,7 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
                 'vapp': source_vapp.resource,
                 'target_vm_name': name,
                 'hostname': name,
+                'password_auto': True,
                 'network': body['network'],
                 'ip_allocation_mode': 'pool'
             }
@@ -193,12 +194,12 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
                 vm = VM(client, resource=vm_resource)
                 task = vm.power_on()
                 client.get_task_monitor().wait_for_status(task)
-        password = source_vapp.get_admin_password(source_vm)
         vapp.reload()
+        password = vapp.get_admin_password(spec['target_vm_name'])
         for spec in specs:
             vm_resource = vapp.get_vm(spec['target_vm_name'])
-            command = '/bin/echo "root:{password}" | chpasswd'.format(
-                password=template['admin_password'])
+            command = \
+                f"/bin/echo \"root:{template['admin_password']}\" | chpasswd"
             nodes = [vm_resource]
             execute_script_in_nodes(
                 config,
