@@ -24,19 +24,19 @@ deb http://apt.kubernetes.io/ kubernetes-xenial main
 EOF
 add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 apt-get -q update
-apt-get -q install -y docker-ce=18.06.2~ce~3-0~ubuntu
-apt-get -q install -y kubelet=1.10.11-00 kubeadm=1.10.11-00 kubectl=1.10.11-00 kubernetes-cni=0.6.0-00 --allow-unauthenticated
+apt-get -q install -y docker-ce=18.06.3~ce~3-0~ubuntu
+apt-get -q install -y kubelet=1.13.5-00 kubeadm=1.13.5-00 kubectl=1.13.5-00 kubernetes-cni=0.7.5-00 --allow-unauthenticated
 apt-get -q autoremove -y
 systemctl restart docker
 while [ `systemctl is-active docker` != 'active' ]; do echo 'waiting for docker'; sleep 5; done
 
 echo 'downloading container images'
-docker pull k8s.gcr.io/kube-apiserver-amd64:v1.10.11
-docker pull k8s.gcr.io/kube-controller-manager-amd64:v1.10.11
-docker pull k8s.gcr.io/kube-proxy-amd64:v1.10.11
-docker pull k8s.gcr.io/kube-scheduler-amd64:v1.10.11
+docker pull k8s.gcr.io/kube-apiserver-amd64:v1.13.5
+docker pull k8s.gcr.io/kube-controller-manager-amd64:v1.13.5
+docker pull k8s.gcr.io/kube-proxy-amd64:v1.13.5
+docker pull k8s.gcr.io/kube-scheduler-amd64:v1.13.5
 
-docker pull k8s.gcr.io/etcd-amd64:3.1.12
+docker pull k8s.gcr.io/etcd-amd64:3.2.24
 docker pull k8s.gcr.io/pause-amd64:3.1
 
 docker pull k8s.gcr.io/k8s-dns-dnsmasq-nanny-amd64:1.14.8
@@ -63,7 +63,7 @@ echo 'upgrading the system'
 # apt-mark hold open-vm-tools
 
 ### this line results in a grub update that presents a selection menu,
-### which hangs and results in failed customization. 
+### which hangs and results in failed customization.
 ### This is a temporary change that will be fixed soon
 # apt-get -q dist-upgrade -y
 # apt-get -q autoremove -y
@@ -72,3 +72,4 @@ echo -n > /etc/machine-id
 sync
 sync
 echo 'customization completed'
+

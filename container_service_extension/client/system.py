@@ -31,7 +31,7 @@ class System(object):
             uri,
             self.client._session,
             contents={'stopped': True},
-            media_type=None,
+            media_type='application/json',
             accept_type='application/*+json',
             auth=None)
         return process_response(response)
@@ -44,7 +44,7 @@ class System(object):
             uri,
             self.client._session,
             contents={'enabled': enabled},
-            media_type=None,
+            media_type='application/json',
             accept_type='application/*+json',
             auth=None)
         return process_response(response)

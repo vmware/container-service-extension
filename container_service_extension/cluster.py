@@ -8,6 +8,7 @@ import string
 import time
 
 from pyvcloud.vcd.client import QueryResultFormat
+from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
 
@@ -20,6 +21,7 @@ from container_service_extension.exceptions import ScriptExecutionError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_vsphere
+from container_service_extension.utils import SYSTEM_ORG_NAME
 
 TYPE_MASTER = 'mstr'
 TYPE_NODE = 'node'
@@ -31,27 +33,38 @@ def wait_until_tools_ready(vm):
         try:
             status = vm.guest.toolsRunningStatus
             if 'guestToolsRunning' == status:
-                LOGGER.debug('vm tools %s are ready' % vm)
+                LOGGER.debug(f"vm tools {vm} are ready")
                 return
-            LOGGER.debug('waiting for vm tools %s to be ready (%s)' % (vm,
-                                                                       status))
+            LOGGER.debug(f"waiting for vm tools {vm} to be ready ({status})")
             time.sleep(1)
         except Exception:
-            LOGGER.debug('waiting for vm tools %s to be ready (%s)* ' %
-                         (vm, status))
+            LOGGER.debug(f"waiting for vm tools {vm} to be ready ({status})* ")
             time.sleep(1)
 
 
-def load_from_metadata(client, name=None, cluster_id=None):
+def load_from_metadata(client, name=None, cluster_id=None,
+                       org_name=None, vdc_name=None):
+
     if cluster_id is None:
         query_filter = 'metadata:cse.cluster.id==STRING:*'
     else:
         query_filter = f'metadata:cse.cluster.id==STRING:{cluster_id}'
     if name is not None:
         query_filter += f';name=={name}'
+
+    if vdc_name is not None:
+        query_filter += f";vdcName=={vdc_name}"
+
     resource_type = 'vApp'
     if client.is_sysadmin():
         resource_type = 'adminVApp'
+        if org_name is not None and \
+                org_name.lower() != SYSTEM_ORG_NAME.lower():
+            org_resource = \
+                client.get_org_by_name(org_name)
+            org = Org(client, resource=org_resource)
+            query_filter += f";org=={org.resource.get('id')}"
+
     q = client.get_typed_query(
         resource_type,
         query_result_format=QueryResultFormat.ID_RECORDS,
@@ -71,6 +84,7 @@ def load_from_metadata(client, name=None, cluster_id=None):
             'vapp_href': f'{client._uri}/vApp/vapp-{vapp_id}',
             'vdc_name': record.get('vdcName'),
             'vdc_href': f'{client._uri}/vdc/{vdc_id}',
+            'vdc_id': vdc_id,
             'leader_endpoint': '',
             'master_nodes': [],
             'nodes': [],
@@ -195,8 +209,8 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
                 check_tools=True,
                 wait=False)
             if node_type == TYPE_NFS:
-                LOGGER.debug('Enabling NFS server on %s' %
-                             spec['target_vm_name'])
+                LOGGER.debug(
+                    f"enabling NFS server on {spec['target_vm_name']}")
                 script = get_data_file('nfsd-%s.sh' % template['name'])
                 exec_results = execute_script_in_nodes(
                     config, vapp,
@@ -222,15 +236,15 @@ def get_nodes(vapp, node_type):
 
 
 def wait_for_tools_ready_callback(message, exception=None):
-    LOGGER.debug('waiting for guest tools, status: %s' % message)
+    LOGGER.debug(f"waiting for guest tools, status: {message}")
     if exception is not None:
-        LOGGER.error('exception: %s' % str(exception))
+        LOGGER.error(f"exception: {str(exception)}")
 
 
 def wait_for_guest_execution_callback(message, exception=None):
     LOGGER.debug(message)
     if exception is not None:
-        LOGGER.error('exception: %s' % str(exception))
+        LOGGER.error(f"exception: {str(exception)}")
 
 
 def get_init_info(config, vapp, password):
@@ -246,7 +260,7 @@ ip route get 1 | awk '{print $NF;exit}'
 
 
 def get_master_ip(config, vapp, template):
-    LOGGER.debug('getting master IP for vapp: %s' % vapp.resource.get('name'))
+    LOGGER.debug(f"getting master IP for vapp: {vapp.resource.get('name')}")
     script = \
 """#!/usr/bin/env bash
 ip route get 1 | awk '{print $NF;exit}'
@@ -260,8 +274,8 @@ ip route get 1 | awk '{print $NF;exit}'
         nodes,
         check_tools=False)
     master_ip = result[0][1].content.decode().split()[0]
-    LOGGER.debug('getting master IP for vapp: %s, ip: %s' %
-                 (vapp.resource.get('name'), master_ip))
+    LOGGER.debug(f"getting master IP for vapp: {vapp.resource.get('name')}, "
+                 f"ip: {master_ip}")
     return master_ip
 
 
@@ -326,9 +340,9 @@ uname -a
             if result[0] == 0:
                 ready = True
                 break
-            raise Exception('script returned %s' % result[0])
+            raise Exception(f"script returned {result[0]}")
         except Exception:
-            LOGGER.info('VM is not ready to execute scripts, yet')
+            LOGGER.info("VM is not ready to execute scripts, yet")
             time.sleep(2)
     if not ready:
         raise CseServerError('VM is not ready to execute scripts')
@@ -348,19 +362,19 @@ def execute_script_in_nodes(config,
             debug_script = p.sub(':***\"', script)
         else:
             debug_script = script
-        LOGGER.debug('will try to execute script on %s:\n%s' %
-                     (node.get('name'), debug_script))
+        LOGGER.debug(f"will try to execute script on {node.get('name')}:\n"
+                     f"{debug_script}")
         vs = get_vsphere(config, vapp, node.get('name'))
         vs.connect()
         moid = vapp.get_vm_moid(node.get('name'))
         vm = vs.get_vm_by_moid(moid)
         if check_tools:
-            LOGGER.debug('waiting for tools on %s' % node.get('name'))
+            LOGGER.debug(f"waiting for tools on {node.get('name')}")
             vs.wait_until_tools_ready(
                 vm, sleep=5, callback=wait_for_tools_ready_callback)
             wait_until_ready_to_exec(vs, vm, password)
-        LOGGER.debug('about to execute script on %s (vm=%s), wait=%s' %
-                     (node.get('name'), vm, wait))
+        LOGGER.debug(f"about to execute script on {node.get('name')} (vm={vm})"
+                     f", wait={wait}")
         if wait:
             result = vs.execute_script_in_guest(
                 vm,
@@ -402,7 +416,7 @@ def get_file_from_nodes(config,
                         check_tools=True):
     all_results = []
     for node in nodes:
-        LOGGER.debug('getting file from node %s' % node.get('name'))
+        LOGGER.debug(f"getting file from node {node.get('name')}")
         vs = get_vsphere(config, vapp, node.get('name'))
         vs.connect()
         moid = vapp.get_vm_moid(node.get('name'))

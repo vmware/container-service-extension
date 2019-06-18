@@ -30,9 +30,14 @@ class Cluster(object):
             auth=None)
         return process_response(response)
 
-    def get_clusters(self):
+    def get_clusters(self, vdc=None, org=None):
         method = 'GET'
         uri = self._uri
+        params = {}
+        if vdc:
+            params['vdc'] = vdc
+        if org:
+            params['org'] = org
         response = self.client._do_request_prim(
             method,
             uri,
@@ -40,10 +45,11 @@ class Cluster(object):
             contents=None,
             media_type=None,
             accept_type='application/*+json',
-            auth=None)
+            auth=None,
+            params=params)
         return process_response(response)
 
-    def get_cluster_info(self, name, vdc):
+    def get_cluster_info(self, name, org=None, vdc=None):
         method = 'GET'
         uri = '%s/%s/info' % (self._uri, name)
         response = self.client._do_request_prim(
@@ -54,7 +60,7 @@ class Cluster(object):
             media_type=None,
             accept_type='application/*+json',
             auth=None,
-            params={'vdc': vdc} if vdc else None)
+            params={'org': org, 'vdc': vdc})
         try:
             result = process_response(response)
         except VcdResponseError as e:
@@ -75,7 +81,8 @@ class Cluster(object):
                        ssh_key=None,
                        template=None,
                        enable_nfs=False,
-                       disable_rollback=True):
+                       disable_rollback=True,
+                       org=None):
         """Create a new Kubernetes cluster.
 
         :param vdc: (str): The name of the vdc in which the cluster will be
@@ -99,13 +106,19 @@ class Cluster(object):
         :param disable_rollback: (bool): Flag to control weather rollback
             should be performed or not in case of errors. True to rollback,
             False to not rollback
+        :param pks_ext_host: (str): Address from which to access the Kubernetes
+        API for PKS.
+        :param pks_plan: (str): Preconfigured PKS plan to use for deploying the
+        cluster.
+        :param org: (str): name of the organization in which the vdc to be
+        used for cluster creation.
 
         :return: (json) A parsed json object describing the requested cluster.
         """
         method = 'POST'
         uri = self._uri
         data = {
-            'name': name,
+            'cluster_name': name,
             'node_count': node_count,
             'vdc': vdc,
             'cpu': cpu,
@@ -115,6 +128,34 @@ class Cluster(object):
             'ssh_key': ssh_key,
             'template': template,
             'enable_nfs': enable_nfs,
+            'disable_rollback': disable_rollback,
+            'org': org
+        }
+        response = self.client._do_request_prim(
+            method,
+            uri,
+            self.client._session,
+            contents=data,
+            media_type='application/json',
+            accept_type='application/*+json')
+        return process_response(response)
+
+    def resize_cluster(self,
+                       network_name,
+                       cluster_name,
+                       node_count=1,
+                       org=None,
+                       vdc=None,
+                       disable_rollback=True):
+        method = 'PUT'
+        uri = f"{self._uri}/{cluster_name}"
+        data = {
+            'name': cluster_name,
+            'node_count': node_count,
+            'node_type': TYPE_NODE,
+            'org': org,
+            'vdc': vdc,
+            'network': network_name,
             'disable_rollback': disable_rollback
         }
         response = self.client._do_request_prim(
@@ -122,11 +163,11 @@ class Cluster(object):
             uri,
             self.client._session,
             contents=data,
-            media_type=None,
-            accept_type='application/*+json')
+            media_type='application/json',
+            accept_type='application/json')
         return process_response(response)
 
-    def delete_cluster(self, cluster_name, vdc):
+    def delete_cluster(self, cluster_name, org=None, vdc=None):
         method = 'DELETE'
         uri = '%s/%s' % (self._uri, cluster_name)
         response = self.client._do_request_prim(
@@ -134,7 +175,7 @@ class Cluster(object):
             uri,
             self.client._session,
             accept_type='application/*+json',
-            params={'vdc': vdc} if vdc else None)
+            params={'org': org, 'vdc': vdc})
         try:
             result = process_response(response)
         except VcdResponseError as e:
@@ -144,9 +185,12 @@ class Cluster(object):
                 raise e
         return result
 
-    def get_config(self, cluster_name):
+    def get_config(self, cluster_name, vdc=None, org=None):
         method = 'GET'
         uri = '%s/%s/config' % (self._uri, cluster_name)
+        queryparams = dict()
+        queryparams['vdc'] = vdc if vdc else None
+        queryparams['org'] = org if org else None
         response = self.client._do_request_prim(
             method,
             uri,
@@ -154,7 +198,8 @@ class Cluster(object):
             contents=None,
             media_type=None,
             accept_type='text/x-yaml',
-            auth=None)
+            auth=None,
+            params=queryparams)
         if response.status_code == requests.codes.ok:
             return response.content.decode('utf-8').replace('\\n', '\n')[1:-1]
         try:
@@ -165,9 +210,10 @@ class Cluster(object):
             else:
                 raise e
 
-    def get_node_info(self, cluster_name, node_name):
+    def get_node_info(self, cluster_name, node_name, org=None, vdc=None):
         method = 'GET'
         uri = '%s/%s/%s/info' % (self._uri, cluster_name, node_name)
+        params = {'vdc': vdc, 'org': org}
         response = self.client._do_request_prim(
             method,
             uri,
@@ -175,7 +221,8 @@ class Cluster(object):
             contents=None,
             media_type=None,
             accept_type='application/*+json',
-            auth=None)
+            auth=None,
+            params=params)
         try:
             result = process_response(response)
         except VcdResponseError as e:
@@ -186,10 +233,11 @@ class Cluster(object):
         return result
 
     def add_node(self,
-                 vdc,
                  network_name,
                  name,
                  node_count=1,
+                 org=None,
+                 vdc=None,
                  cpu=None,
                  memory=None,
                  storage_profile=None,
@@ -199,6 +247,7 @@ class Cluster(object):
                  disable_rollback=True):
         """Add nodes to a Kubernetes cluster.
 
+        :param org: (str): The name of the org that contains the cluster
         :param vdc: (str): The name of the vdc that contains the cluster
         :param network_name: (str): The name of the network to which the
             node VMs will connect to
@@ -225,6 +274,7 @@ class Cluster(object):
         data = {
             'name': name,
             'node_count': node_count,
+            'org': org,
             'vdc': vdc,
             'cpu': cpu,
             'memory': memory,
@@ -240,13 +290,14 @@ class Cluster(object):
             uri,
             self.client._session,
             contents=data,
-            media_type=None,
+            media_type='application/json',
             accept_type='application/*+json')
         return process_response(response)
 
-    def delete_nodes(self, vdc, name, nodes, force=False):
+    def delete_nodes(self, name, nodes, org=None, vdc=None, force=False):
         """Delete nodes from a Kubernetes cluster.
 
+        :param org: (str): Name of the organization that contains the cluster
         :param vdc: (str): The name of the vdc that contains the cluster
         :param name: (str): The name of the cluster
         :param nodes: (list(str)): The list of nodes to delete
@@ -256,7 +307,8 @@ class Cluster(object):
         """
         method = 'DELETE'
         uri = '%s/%s/node' % (self._uri, name)
-        data = {'name': name, 'vdc': vdc, 'nodes': nodes, 'force': force}
+        data = {'name': name, 'org': org, 'vdc': vdc, 'nodes': nodes,
+                'force': force}
         response = self.client._do_request_prim(
             method,
             uri,

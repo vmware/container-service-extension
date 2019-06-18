@@ -3,6 +3,7 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import sys
 
 import click
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -18,6 +19,8 @@ from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.configure_cse import install_cse
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.service import Service
+from container_service_extension.utils import check_python_version
+
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -99,7 +102,7 @@ def cli(ctx):
         return
 
 
-@cli.command(short_help='show version')
+@cli.command(short_help='Display CSE version')
 @click.pass_context
 @click.option(
     '--local/--package',
@@ -130,40 +133,48 @@ def version(ctx, local):
     stdout(ver_obj, ctx, ver_str)
 
 
-@cli.command('sample', short_help='generate sample configuration')
+@cli.command('sample', short_help='Generate sample CSE config')
 @click.pass_context
 @click.option(
+    '-o',
     '--output',
     'output',
     required=False,
     default=None,
-    metavar='<output-file-name>',
-    help="Name of the config file to dump the CSE configs to.")
+    metavar='OUTPUT_FILE_NAME',
+    help="Filepath to write CSE config file to.")
 @click.option(
+    '-p',
     '--pks-output',
     'pks_output',
     required=False,
     default=None,
-    metavar='<pks-output-file-name>',
-    help="Name of the PKS config file to dump the PKS configs to.")
+    metavar='OUTPUT_FILE_NAME',
+    help="Filepath to write PKS config file to.")
 def sample(ctx, output, pks_output):
-    """Generate sample CSE configuration."""
+    """Display sample CSE config file contents."""
+    try:
+        check_python_version()
+    except Exception as err:
+        click.secho(str(err), fg='red')
+        sys.exit(0)
+
     click.secho(generate_sample_config(output=output,
                                        pks_output=pks_output))
 
 
-@cli.command(short_help="Checks that config file is valid. Can also check that"
-                        " CSE is installed according to config file.")
+@cli.command(short_help="Checks that CSE config file is valid (Can also check "
+                        "that CSE is installed according to config file)")
 @click.pass_context
 @click.option(
     '-c',
     '--config',
     'config',
     type=click.Path(exists=True),
-    metavar='<config-file>',
+    metavar='CONFIG_FILE_NAME',
     envvar='CSE_CONFIG',
     default='config.yaml',
-    help='Config file to use.')
+    help='Config file to use')
 @click.option(
     '-i',
     '--check-install',
@@ -178,17 +189,23 @@ def sample(ctx, output, pks_output):
     'template',
     required=False,
     default='*',
-    metavar='<template>',
-    help="If '--check-install' flag is set, validate specified template. "
-         "Default value of '*' means that all templates in config file"
-         " will be validated.")
+    metavar='TEMPLATE_NAME',
+    help="If '--check-install' flag is used, validate specified k8s template. "
+         "Default value of '*' means that all k8s templates in config file"
+         " will be validated")
 def check(ctx, config, check_install, template):
-    """Validate CSE configuration."""
+    """Validate CSE config file."""
+    try:
+        check_python_version()
+    except Exception as err:
+        click.secho(str(err), fg='red')
+        sys.exit(0)
+
+    config_dict = None
     try:
         config_dict = get_validated_config(config)
-    except (KeyError, TypeError):
-        click.secho(f"Config file '{config}' is invalid", fg='red')
-    except (NotAcceptableException, ValueError) as err:
+    except (NotAcceptableException, VcdException, ValueError,
+            KeyError, TypeError) as err:
         click.secho(str(err), fg='red')
     except AmqpConnectionError as err:
         click.secho(str(err), fg='red')
@@ -196,14 +213,11 @@ def check(ctx, config, check_install, template):
     except requests.exceptions.ConnectionError:
         click.secho("Cannot connect to vCD host (check config file vCD host).",
                     fg='red')
-    except VcdException:
-        click.secho("vCD login failed (check config file vCD "
-                    "username/password).", fg='red')
     except vim.fault.InvalidLogin:
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
 
-    if not check_install:
+    if not check_install or config_dict is None:
         return
 
     try:
@@ -212,33 +226,33 @@ def check(ctx, config, check_install, template):
         click.secho("CSE installation is invalid", fg='red')
 
 
-@cli.command(short_help='install CSE on vCD')
+@cli.command(short_help='Install CSE on vCD')
 @click.pass_context
 @click.option(
     '-c',
     '--config',
     'config',
     type=click.Path(exists=True),
-    metavar='<config-file>',
+    metavar='CONFIG_FILE_NAME',
     envvar='CSE_CONFIG',
     default='config.yaml',
-    help='Config file to use.')
+    help='Config file to use')
 @click.option(
     '-t',
     '--template',
     'template',
     required=False,
     default='*',
-    metavar='<template>',
-    help="Install only the specified template. Default value of '*' means that"
-         " all templates in config file will be installed.")
+    metavar='TEMPLATE_NAME',
+    help="Create only the specified k8s template. Default value of '*' "
+         "means that all templates in config file will be created.")
 @click.option(
     '-u',
     '--update',
     is_flag=True,
     default=False,
     required=False,
-    help='Update template')
+    help='Recreate CSE native k8s templates on vCD if they already exist')
 @click.option(
     '-n',
     '--no-capture',
@@ -246,7 +260,7 @@ def check(ctx, config, check_install, template):
     required=False,
     default=False,
     help='Do not capture the temporary vApp as a catalog template. --ssh-key '
-         'option is required if this is enabled')
+         'option is required if this flag is used')
 @click.option(
     '-k',
     '--ssh-key',
@@ -254,10 +268,16 @@ def check(ctx, config, check_install, template):
     required=False,
     default=None,
     type=click.File('r'),
-    help='SSH public key to connect to the guest OS on the VM'
+    help='SSH public key to connect to the guest OS on the VM.'
 )
 def install(ctx, config, template, update, no_capture, ssh_key_file):
     """Install CSE on vCloud Director."""
+    try:
+        check_python_version()
+    except Exception as err:
+        click.secho(str(err), fg='red')
+        sys.exit(0)
+
     if no_capture and ssh_key_file is None:
         click.echo('Must provide ssh-key file (using --ssh-key OR -k) if '
                    '--no-capture is True, or else temporary vm will '
@@ -270,10 +290,8 @@ def install(ctx, config, template, update, no_capture, ssh_key_file):
     try:
         install_cse(ctx, config_file_name=config, template_name=template,
                     update=update, no_capture=no_capture, ssh_key=ssh_key)
-    except (KeyError, TypeError):
-        click.secho(f"Config file '{config}' is invalid", fg='red')
-    except (EntityNotFoundException, NotAcceptableException,
-            ValueError) as err:
+    except (EntityNotFoundException, NotAcceptableException, VcdException,
+            ValueError, KeyError, TypeError) as err:
         click.secho(str(err), fg='red')
     except AmqpConnectionError as err:
         click.secho(str(err), fg='red')
@@ -281,36 +299,55 @@ def install(ctx, config, template, update, no_capture, ssh_key_file):
     except requests.exceptions.ConnectionError:
         click.secho("Cannot connect to vCD host (check config file vCD host).",
                     fg='red')
-    except VcdException:
-        click.secho("vCD login failed (check config file vCD "
-                    "username/password).", fg='red')
     except vim.fault.InvalidLogin:
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
 
 
-@cli.command(short_help='run service')
+@cli.command(short_help='Run CSE service')
 @click.pass_context
 @click.option(
     '-c',
     '--config',
     'config',
     type=click.Path(exists=True),
-    metavar='<config-file>',
+    metavar='CONFIG_FILE_NAME',
     envvar='CSE_CONFIG',
     default='config.yaml',
-    help='Config file to use.')
+    help='Config file to use')
 @click.option(
     '-s',
     '--skip-check',
     is_flag=True,
     default=False,
     required=False,
-    help='Skip check')
+    help='Skip CSE installation checks')
 def run(ctx, config, skip_check):
     """Run CSE service."""
-    service = Service(config, should_check_config=not skip_check)
-    service.run()
+    try:
+        check_python_version()
+    except Exception as err:
+        click.secho(str(err), fg='red')
+        sys.exit(0)
+
+    try:
+        service = Service(config, should_check_config=not skip_check)
+        service.run()
+    except (NotAcceptableException, VcdException, ValueError, KeyError,
+            TypeError) as err:
+        click.secho(str(err), fg='red')
+    except AmqpConnectionError as err:
+        click.secho(str(err), fg='red')
+        click.secho("check config file amqp section.", fg='red')
+    except requests.exceptions.ConnectionError:
+        click.secho("Cannot connect to vCD host (check config file vCD host).",
+                    fg='red')
+    except vim.fault.InvalidLogin:
+        click.secho("vCenter login failed (check config file vCenter "
+                    "username/password).", fg='red')
+    except Exception as err:
+        click.secho(str(err), fg='red')
+        click.secho("CSE Server failure. Please check the logs.", fg='red')
 
 
 if __name__ == '__main__':

@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import base64
+from copy import deepcopy
 import json
 import sys
 import traceback
@@ -24,7 +25,7 @@ INTERNAL_SERVER_ERROR = 500
 
 class ServiceProcessor(object):
     def process_request(self, body):
-        LOGGER.debug('body: %s' % json.dumps(body))
+        LOGGER.debug(f"body: {json.dumps(body)}")
         reply = {}
         tokens = body['requestUri'].split('/')
         cluster_name = None
@@ -81,7 +82,7 @@ class ServiceProcessor(object):
                 request_body = {}
         else:
             request_body = {}
-        LOGGER.debug('request body: %s' % json.dumps(request_body))
+        LOGGER.debug(f"request body: {json.dumps(request_body)}")
 
         query_params = {}
         if body['queryString']:
@@ -93,22 +94,25 @@ class ServiceProcessor(object):
             raise CseServerError('CSE service is disabled. '
                                  'Contact the System Administrator.')
 
+        req_headers = deepcopy(body['headers'])
+        req_query_params = deepcopy(query_params)
+        req_spec = deepcopy(request_body)
+
         from container_service_extension.broker_manager import BrokerManager
-        broker_manager = BrokerManager(body['headers'], query_params,
-                                       request_body)
+        broker_manager = BrokerManager(req_headers, req_query_params, req_spec)
         from container_service_extension.broker_manager import Operation
 
         if body['method'] == 'GET':
             if ovdc_info_request:
-                on_the_fly_request_body = {'ovdc_id': ovdc_id}
-                broker = broker_manager.get_broker_based_on_vdc(on_the_fly_request_body)
-                reply = broker.ovdc_info_for_kubernetes()
-
+                req_spec.update({'ovdc_id': ovdc_id})
+                reply = broker_manager.invoke(Operation.INFO_OVDC)
+            elif ovdc_request:
+                reply = broker_manager.invoke(op=Operation.LIST_OVDCS)
             elif spec_request:
                 reply = self.get_spec(tokens[3])
             elif config_request:
-                broker = broker_manager.get_broker_based_on_vdc()
-                reply = broker.get_cluster_config(cluster_name)
+                req_spec.update({'cluster_name': cluster_name})
+                reply = broker_manager.invoke(Operation.GET_CLUSTER_CONFIG)
             elif template_request:
                 result = {}
                 templates = []
@@ -128,14 +132,15 @@ class ServiceProcessor(object):
                 result['status_code'] = 200
                 reply = result
             elif cluster_info_request:
-                on_the_fly_request_body = {'cluster_name': cluster_name}
-                reply = broker_manager.invoke(Operation.GET_CLUSTER, on_the_fly_request_body)
+                req_spec.update({'cluster_name': cluster_name})
+                reply = broker_manager.invoke(Operation.GET_CLUSTER)
             elif node_info_request:
-                broker = broker_manager.get_broker_based_on_vdc()
-                reply = broker.get_node_info(cluster_name, node_name)
+                req_spec.update({'cluster_name': cluster_name})
+                req_spec.update({'node_name': node_name})
+                reply = broker_manager.invoke(Operation.GET_NODE_INFO)
             elif system_request:
                 result = {}
-                result['body'] = service.info(body['headers'])
+                result['body'] = service.info(req_headers)
                 result['status_code'] = OK
                 reply = result
             elif cluster_name is None:
@@ -145,24 +150,23 @@ class ServiceProcessor(object):
                 reply = broker_manager.invoke(Operation.CREATE_CLUSTER)
             else:
                 if node_request:
-                    broker = broker_manager.get_broker_based_on_vdc()
-                    reply = broker.create_nodes()
+                    reply = broker_manager.invoke(Operation.CREATE_NODE)
         elif body['method'] == 'PUT':
             if ovdc_info_request:
-                broker = broker_manager.get_broker_based_on_vdc()
-                reply = broker.enable_ovdc_for_kubernetes()
+                reply = broker_manager.invoke(Operation.ENABLE_OVDC)
             elif system_request:
-                reply = service.update_status(body['headers'], request_body)
+                reply = service.update_status(req_headers, req_spec)
+            else:
+                req_spec.update({'cluster_name': cluster_name})
+                reply = broker_manager.invoke(Operation.RESIZE_CLUSTER)
         elif body['method'] == 'DELETE':
             if node_request:
-                broker = broker_manager.get_broker_based_on_vdc()
-                reply = broker.delete_nodes()
+                reply = broker_manager.invoke(Operation.DELETE_NODE)
             else:
-                on_the_fly_request_body = {'cluster_name': cluster_name}
-                reply = broker_manager.invoke(Operation.DELETE_CLUSTER,
-                                              on_the_fly_request_body)
+                req_spec.update({'cluster_name': cluster_name})
+                reply = broker_manager.invoke(Operation.DELETE_CLUSTER)
 
-        LOGGER.debug('reply: %s' % str(reply))
+        LOGGER.debug(f"reply: {str(reply)}")
         return reply
 
     def get_spec(self, format):

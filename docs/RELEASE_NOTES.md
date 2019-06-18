@@ -4,6 +4,97 @@ title: Release Notes
 ---
 
 # Release Notes
+
+## CSE 2.0.0
+
+Release Date: 2019-05-24
+
+Supported vCD versions: 9.1, 9.5, 9.7.
+
+**Native vCD Templates**
+
+Native vCD templates need to be updated to avail below versions of K8 distributions.
+
+| Template OS        | Docker                 | Kubernetes | Pod Network |
+|--------------------|------------------------|------------|-------------|
+| Photon OS 2.0 GA   | 17.06.0-9 (17.06.0-ce) | 1.12.7     | Weave 2.3.0 |
+| Ubuntu 16.04.4 LTS | 18.06.3-ce             | 1.13.5     | Weave 2.3.0 |
+
+**New Updates**
+
+- [Enterprise PKS enablement](/container-service-extension/ENT-PKS.html) - CSE 
+now supports new K8 provider Enterprise PKS in addition to Native vCD as K8 provider.
+- [Role based access control](/container-service-extension/RBAC.html) - Enabling
+ this feature allows users granted with specific K8 rights only to deploy K8 clusters.
+- Python version has to be >= 3.7.3. This change has been made in order to address 
+[CVE-2019-9636](https://nvd.nist.gov/vuln/detail/CVE-2019-9636)
+
+**Enterprise PKS Compatibility matrix**
+
+|CSE      | Supported vCD Versions |Enterprise PKS| NSX-T | 
+|---------|------------------------|--------------|-------|
+|2.0.0    | 9.5, 9.7               | 1.4          | 2.3   | 
+|2.0.0    | 9.5, 9.7               | 1.4          | 2.4   | 
+
+**Notes to System Administrator**
+
+When more than one K8 provider exists in the system, system administrator is required to 
+perform an extra step of enabling organization vdc(s) with a desired K8 provider 
+(Native/Enterprise PKS). 
+
+To be specific, 
+- If Enterprise PKS is not in the set up, users are allowed to deploy K8 clusters in any organization vdc. 
+- If Enterprise PKS is present in the CSE set up, users are allowed to deploy K8 clusters only in those
+organization vdc(s) enabled either for Native (or) Enterprise PKS.
+
+Click [here](/container-service-extension/CSE_ADMIN.html#pksconfig) for more details.
+
+**vCD Native templates patching**
+
+Action required (by Admins and Users)
+
+* Cloud Admin:
+    * Update CSE to 2.0.0
+    * Update the templates
+    * Command for updating template -> cse install -c config.yaml --template template-name --update --ext skip
+
+* Tenant Users:
+    * Delete clusters that were created with older templates. Recreate clusters with new templates
+    * Alternatively, tenant-users can update docker version manually on existing clusters
+
+## CSE 2.0 Beta (2.0.0.0b1)
+
+**This version is meant to be used for fresh installations of CSE only**
+
+Release Date: 2019-04-26
+
+Supported vCD versions: 9.5, 9.7
+
+| Template OS        | Docker                 | Kubernetes | Pod Network |
+|--------------------|------------------------|------------|-------------|
+| Photon OS 2.0 GA   | 17.06.0-9 (17.06.0-ce) | 1.10.11    | Weave 2.3.0 |
+| Ubuntu 16.04.4 LTS | 18.06.3-ce             | 1.13.5     | Weave 2.3.0 |
+
+**Installation of binaries**
+- `pip install container-service-extension==2.0.0.0b1` (or)
+- `pip install container-service-extension --pre`
+
+Note: `pip install container-service-extension` installs previous official
+ version of CSE - 1.2.7. Specify the above mentioned exact version to install 
+ CSE 2.0 beta.
+
+**New Features**
+
+- [Enterprise PKS enablement](/container-service-extension/ENT-PKS.html)
+- [Role based access control](/container-service-extension/RBAC.html)
+
+**Compatibility matrix**
+
+|CSE      | vCD       |Enterprise PKS| NSX-T | 
+|---------|-----------|--------------|-------|
+|2.0 Beta | 9.5, 9.7  | 1.4          | 2.3   | 
+
+
 ## CSE 1.2.7
 
 Release Date: 2019-02-15

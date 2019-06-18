@@ -21,7 +21,7 @@ class ClusterAlreadyExistsError(CseServerError):
 
 
 class ClusterNotFoundError(CseServerError):
-    """Raised when cluster is not found in the environment"""
+    """Raised when cluster is not found in the environment."""
 
 
 class ClusterJoiningError(ClusterOperationError):
@@ -30,6 +30,14 @@ class ClusterJoiningError(ClusterOperationError):
 
 class ClusterInitializationError(ClusterOperationError):
     """Raised when any error happens while cluster initialization."""
+
+
+class ClusterNetworkIsolationError(ClusterOperationError):
+    """Raised when any error happens while isolating cluster network."""
+
+
+class CseDuplicateClusterError(CseServerError):
+    """Raised when multiple vCD clusters of same name detected."""
 
 
 class NodeOperationError(ClusterOperationError):
@@ -76,6 +84,10 @@ class AmqpConnectionError(AmqpError):
     """Raised when amqp connection is not open."""
 
 
+class UnauthorizedActionError(CseServerError):
+    """Raised when an action is attempted by an unauthorized user."""
+
+
 class VcdResponseError(Exception):
     """Base class for all vcd response related Exceptions."""
 
@@ -88,9 +100,23 @@ class VcdResponseError(Exception):
 
 
 class PksServerError(CseServerError):
-    """Raised when error is received from PKS"""
+    """Raised when error is received from PKS."""
+
+    def __init__(self, status, body=None):
+        self.status = status
+        self.body = body
+
+    def __str__(self):
+        # TODO() Removing user context should be moved to PksServer response
+        #  processing aka filtering layer
+        from container_service_extension.pksbroker import PKSBroker
+        return f"PKS error\n status: {self.status}\n body: " \
+            f" {PKSBroker.filter_traces_of_user_context(self.body)}\n"
 
 
 class PksConnectionError(PksServerError):
-    """Raised when connection establishment to PKS fails"""
+    """Raised when connection establishment to PKS fails."""
 
+
+class PksDuplicateClusterError(PksServerError):
+    """Raised when multiple PKS clusters of same name detected."""

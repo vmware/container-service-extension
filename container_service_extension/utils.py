@@ -72,9 +72,9 @@ GATEWAY_TIMEOUT = 504
 
 def connect_vcd_user_via_token(vcd_uri, headers, verify_ssl_certs=True):
     if not verify_ssl_certs:
-        LOGGER.warning('InsecureRequestWarning: Unverified HTTPS request is '
-                       'being made. Adding certificate verification is '
-                       'strongly advised.')
+        LOGGER.warning("InsecureRequestWarning: Unverified HTTPS request is "
+                       "being made. Adding certificate verification is "
+                       "strongly advised.")
         requests.packages.urllib3.disable_warnings()
     token = headers.get('x-vcloud-authorization')
     accept_header = headers.get('Accept')
@@ -220,6 +220,27 @@ def bool_to_msg(value):
     return 'fail'
 
 
+def get_duplicate_items_in_list(items):
+    """Find duplicate entries in a list.
+
+    :param list items: list of items with possible duplicates.
+
+    :return: the items that occur more than once in niput list. Each duplicated
+        item will be mentioned only once in the returned list.
+
+    :rtype: list
+    """
+    seen = set()
+    duplicates = set()
+    if items:
+        for item in items:
+            if item in seen:
+                duplicates.add(item)
+            else:
+                seen.add(item)
+    return list(duplicates)
+
+
 def get_sha256(filepath):
     """Get sha256 hash of file as a string.
 
@@ -239,7 +260,8 @@ def get_sha256(filepath):
     return sha256.hexdigest()
 
 
-def check_keys_and_value_types(dikt, ref_dict, location='dictionary'):
+def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
+                               excluded_keys=[]):
     """Compare a dictionary with a reference dictionary.
 
     The method ensures that  all keys and value types are the same in the
@@ -249,6 +271,8 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary'):
     :param dict ref_dict: the dictionary to check against
     :param str location: where this check is taking place, so error messages
         can be more descriptive.
+    :param list excluded_keys: list of str, representing the list of key which
+        if missing won't raise an exception.
 
     :raises KeyError: if @dikt has missing or invalid keys
     :raises TypeError: if the value of a property in @dikt does not match with
@@ -257,7 +281,7 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary'):
     ref_keys = set(ref_dict.keys())
     keys = set(dikt.keys())
 
-    missing_keys = ref_keys - keys
+    missing_keys = ref_keys - keys - set(excluded_keys)
 
     if missing_keys:
         click.secho(f"Missing keys in {location}: {missing_keys}", fg='red')
@@ -282,12 +306,10 @@ def check_python_version():
 
     :raises Exception: if user's Python version < 3.6.
     """
-    major = sys.version_info.major
-    minor = sys.version_info.minor
-    click.echo(f"Required Python version: >= 3.6\nInstalled Python version: "
-               f"{major}.{minor}.{sys.version_info.micro}")
-    if major < 3 or (major == 3 and minor < 6):
-        raise Exception("Python version should be 3.6 or greater")
+    click.echo("Required Python version: >= 3.7.3\n"
+               f"Installed Python version: {sys.version}")
+    if sys.version_info < (3, 7, 3):
+        raise Exception("Python version should be 3.7.3 or greater")
 
 
 def check_file_permissions(filename):
@@ -532,7 +554,8 @@ def get_vdc(client, vdc_name, org=None, org_name=None,
     # TODO() org.get_vdc() should throw exception if vdc not found in the org.
     # This should be handled in pyvcloud. For now, it is handled here.
     if resource is None:
-        raise EntityNotFoundException(f"VDC '{vdc_name}' not found")
+        raise EntityNotFoundException(f"VDC '{vdc_name}' not found"
+                                      f" in ORG '{org.resource.get('name')}'")
     vdc = VDC(client, resource=resource)
     return vdc
 
@@ -579,6 +602,45 @@ def get_pvdc_id_by_name(name, vc_name_in_vcd):
         pvdc_id = href.split("/")[-1]
         return pvdc_id
     return None
+
+
+def extract_vdc_name_from_pks_compute_profile_name(compute_profile_name):
+    """Extract the vdc name from pks compute profile name.
+
+    :param str compute_profile_name: name of the pks compute profile
+
+    :return: name of the vdc in vcd.
+
+    :rtype: str
+    """
+    return compute_profile_name.split('--')[2]
+
+
+def extract_vdc_id_from_pks_compute_profile_name(compute_profile_name):
+    """Extract the vdc identifier from pks compute profile name.
+
+    :param str compute_profile_name: name of the pks compute profile
+
+    :return: UUID of the vdc in vcd.
+
+    :rtype: str
+    """
+    return compute_profile_name.split('--')[1]
+
+
+def create_pks_compute_profile_name_from_vdc_id(vdc_id):
+    """Construct pks compute profile name.
+
+    :param str vdc_id: UUID of the vdc in vcd
+
+    :return: pks compute profile name
+
+    :rtype: str
+    """
+    from container_service_extension.pyvcloud_utils import get_vdc_by_id
+    client = get_vcd_sys_admin_client()
+    vdc = get_vdc_by_id(client, vdc_id)
+    return f"cp--{vdc_id}--{vdc.name}"
 
 
 def get_data_file(filename, logger=None):

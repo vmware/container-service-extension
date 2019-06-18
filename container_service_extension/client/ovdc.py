@@ -4,6 +4,8 @@
 
 from pyvcloud.vcd import utils
 
+from container_service_extension.server_constants import K8S_PROVIDER_KEY
+from container_service_extension.server_constants import K8sProviders
 from container_service_extension.utils import get_vdc
 from container_service_extension.utils import process_response
 
@@ -13,16 +15,34 @@ class Ovdc(object):
         self.client = client
         self._uri = self.client.get_api_uri() + '/cse'
 
+    def list(self, list_pks_plans=False):
+        method = 'GET'
+        uri = f'{self._uri}/ovdc'
+        contents = {
+            'list_pks_plans': list_pks_plans,
+        }
+        response = self.client._do_request_prim(
+            method,
+            uri,
+            self.client._session,
+            contents=contents,
+            media_type=None,
+            accept_type='application/json')
+        return process_response(response)
+
     def enable_ovdc_for_k8s(self,
                             ovdc_name,
-                            container_provider=None,
-                            pks_plans=None,
+                            k8s_provider=None,
+                            pks_plan=None,
+                            pks_cluster_domain=None,
                             org_name=None):
         """Enable ovdc for k8s for the given container provider.
 
         :param str ovdc_name: Name of the ovdc to be enabled
-        :param str container_provider: Name of the container provider
-        :param str pks_plans: pks plans separated by comma
+        :param str k8s_provider: Name of the container provider
+        :param str pks_plan: PKS plan
+        :param str pks_cluster_domain: Suffix of the domain name, which will be
+         used to construct FQDN of the clusters.
         :param str org_name: Name of organization that belongs to ovdc_name
 
         :return: response object
@@ -34,11 +54,13 @@ class Ovdc(object):
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.resource.get('id'))
         uri = f'{self._uri}/ovdc/{ovdc_id}/info'
+
         data = {
             'ovdc_id': ovdc_id,
             'ovdc_name': ovdc_name,
-            'container_provider': container_provider,
-            'pks_plans': pks_plans,
+            K8S_PROVIDER_KEY: k8s_provider,
+            'pks_plans': pks_plan,
+            'pks_cluster_domain': pks_cluster_domain,
             'org_name': org_name,
             'enable': True
         }
@@ -48,7 +70,7 @@ class Ovdc(object):
             uri,
             self.client._session,
             contents=data,
-            media_type=None,
+            media_type='application/json',
             accept_type='application/*+json')
         return process_response(response)
 
@@ -70,8 +92,9 @@ class Ovdc(object):
         data = {
             'ovdc_id': ovdc_id,
             'ovdc_name': ovdc_name,
-            'container_provider': None,
+            K8S_PROVIDER_KEY: K8sProviders.NONE,
             'pks_plans': None,
+            'pks_cluster_domain': None,
             'org_name': org_name,
             'disable': True
         }
@@ -81,7 +104,7 @@ class Ovdc(object):
             uri,
             self.client._session,
             contents=data,
-            media_type=None,
+            media_type='application/json',
             accept_type='application/*+json')
         return process_response(response)
 

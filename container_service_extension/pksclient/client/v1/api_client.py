@@ -23,9 +23,9 @@ import tempfile
 import six
 from six.moves.urllib.parse import quote
 
-from container_service_extension.pksclient.configuration import Configuration
-import container_service_extension.pksclient.models
-from container_service_extension.pksclient import rest
+from container_service_extension.pksclient.client.v1.configuration import Configuration
+import container_service_extension.pksclient.models.v1
+from container_service_extension.pksclient.client.v1 import rest
 
 
 class ApiClient(object):
@@ -258,7 +258,7 @@ class ApiClient(object):
             if klass in self.NATIVE_TYPES_MAPPING:
                 klass = self.NATIVE_TYPES_MAPPING[klass]
             else:
-                klass = getattr(container_service_extension.pksclient.models, klass)
+                klass = getattr(container_service_extension.pksclient.models.v1, klass)
 
         if klass in self.PRIMITIVE_TYPES:
             return self.__deserialize_primitive(data, klass)
