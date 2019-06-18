@@ -49,9 +49,7 @@ from container_service_extension.utils import ERROR_DESCRIPTION
 from container_service_extension.utils import ERROR_MESSAGE
 from container_service_extension.utils import ERROR_STACKTRACE
 from container_service_extension.utils import error_to_json
-from container_service_extension.utils import exception_handler
 from container_service_extension.utils import get_server_runtime_config
-from container_service_extension.utils import OK
 
 
 OP_CREATE_CLUSTER = 'create_cluster'
@@ -276,7 +274,6 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 cluster.get('nfs_nodes').append(node_info)
         return cluster
 
-    @exception_handler
     def get_node_info(self, cluster_name, node_name):
         """Get the info of a given node in the cluster.
 
@@ -285,9 +282,6 @@ class VcdBroker(AbstractBroker, threading.Thread):
 
         :return: (dict): Info of the node.
         """
-        result = {}
-        result['body'] = []
-        result['status_code'] = OK
         self._connect_tenant()
         clusters = load_from_metadata(self.tenant_client,
                                       name=cluster_name,
@@ -332,8 +326,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
         if node_info is None:
             raise CseServerError(f"Node '{node_name}' not found in cluster "
                                  f"'{cluster_name}'")
-        result['body'] = node_info
-        return result
+        return node_info
 
     def _get_nfs_exports(self, ip, vapp, node):
         """Get the exports from remote NFS server (helper method).

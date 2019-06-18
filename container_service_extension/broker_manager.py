@@ -183,6 +183,7 @@ class BrokerManager(object):
                 {'cluster_name': self.req_spec.get('cluster_name', None),
                  'node_name': self.req_spec.get('node_name', None)}
             result['body'] = self._get_node_info(**node_spec)[0]
+            result['status_code'] = OK
         elif op == Operation.CREATE_NODE:
             # Currently node create is a vCD only operation.
             broker = VcdBroker(self.req_headers, self.req_spec)
