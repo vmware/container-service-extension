@@ -29,6 +29,7 @@ from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
 import requests
 from vsphere_guest_run.vsphere import VSphere
+import yaml
 
 from container_service_extension.exceptions import VcdResponseError
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
@@ -831,6 +832,18 @@ def is_cse_registered(client):
         return True
     except MissingRecordException:
         return False
+
+
+def yaml_file_to_dict(file_name):
+    """Get information from the given yaml file.
+
+    :param str file_name: full path of the yaml file
+    :return: data from the config file
+
+    :rtype: dict
+    """
+    with open(file_name) as yaml_file:
+        return yaml.safe_load(yaml_file) or {}
 
 
 def exception_handler(func):
