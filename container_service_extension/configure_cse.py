@@ -52,6 +52,7 @@ from container_service_extension.utils import check_keys_and_value_types
 from container_service_extension.utils import create_and_share_catalog
 from container_service_extension.utils import download_file
 from container_service_extension.utils import EXCHANGE_TYPE
+from container_service_extension.utils import get_config
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_duplicate_items_in_list
 from container_service_extension.utils import get_org
@@ -114,6 +115,12 @@ INSTRUCTIONS_FOR_PKS_CONFIG_FILE = "\
 #          PKS creates on installation.\n\
 # For more information, please refer to CSE documentation page:\n\
 # https://vmware.github.io/container-service-extension/INSTALLATION.html\n"
+
+
+NOTE_FOR_TEMPLATE_CONFIG_KEY_IN_CONFIG_FILE = "\
+# Filling out 'local_template_config' key in broker section is mandatory.\n\
+# This value needs to be a valid config file name with templates\n\
+# information.\n"
 
 NOTE_FOR_PKS_KEY_IN_CONFIG_FILE = "\
 # Filling out this key for regular CSE set up is optional and should be left\n\
@@ -221,9 +228,14 @@ SAMPLE_BROKER_CONFIG = {
         'ip_allocation_mode': 'pool',
         'storage_profile': '*',
         'default_template': SAMPLE_TEMPLATE_PHOTON_V2['name'],
-        'templates': [SAMPLE_TEMPLATE_PHOTON_V2, SAMPLE_TEMPLATE_UBUNTU_16_04],
+        'local_template_config': '',
         'cse_msg_dir': '/tmp/cse'
     }
+}
+
+CSE_TEMPLATE_CONFIG_FILE_LOCATION_KEY = 'local_template_config'
+CSE_TEMPLATE_CONFIG_FILE_LOCATION = {
+    CSE_TEMPLATE_CONFIG_FILE_LOCATION_KEY: ''
 }
 
 PKS_CONFIG_FILE_LOCATION_SECTION_KEY = 'pks_config'
@@ -358,8 +370,9 @@ def generate_sample_config(output=None, pks_output=None):
 
     :rtype: dict
     """
-    sample_config = yaml.safe_dump(SAMPLE_AMQP_CONFIG,
-                                   default_flow_style=False) + '\n'
+    sample_config = NOTE_FOR_TEMPLATE_CONFIG_KEY_IN_CONFIG_FILE + '\n'
+    sample_config += yaml.safe_dump(SAMPLE_AMQP_CONFIG,
+                                    default_flow_style=False) + '\n'
     sample_config += yaml.safe_dump(SAMPLE_VCD_CONFIG,
                                     default_flow_style=False) + '\n'
     sample_config += yaml.safe_dump(SAMPLE_VCS_CONFIG,
@@ -432,8 +445,7 @@ def get_validated_config(config_file_name):
         is invalid.
     """
     check_file_permissions(config_file_name)
-    with open(config_file_name) as config_file:
-        config = yaml.safe_load(config_file) or {}
+    config = get_config(config_file_name)
     pks_config_location = config.get('pks_config')
     click.secho(f"Validating config file '{config_file_name}'", fg='yellow')
     # This allows us to compare top-level config keys and value types
@@ -452,8 +464,7 @@ def get_validated_config(config_file_name):
     click.secho(f"Config file '{config_file_name}' is valid", fg='green')
     if isinstance(pks_config_location, str):
         check_file_permissions(pks_config_location)
-        with open(pks_config_location) as f:
-            pks_config = yaml.safe_load(f) or {}
+        pks_config = get_config(pks_config_location)
         click.secho(f"Validating PKS config file '{pks_config_location}'",
                     fg='yellow')
         validate_pks_config_structure(pks_config)
@@ -594,6 +605,10 @@ def validate_broker_config(broker_dict):
                                location="config file 'broker' section")
 
     default_exists = False
+    template_config_dict = get_config(
+        broker_dict[CSE_TEMPLATE_CONFIG_FILE_LOCATION_KEY])
+    broker_dict['templates'] = template_config_dict['templates']
+
     for template in broker_dict['templates']:
         check_keys_and_value_types(template, SAMPLE_TEMPLATE_PHOTON_V2,
                                    location="config file broker "
@@ -915,7 +930,9 @@ def check_cse_installation(config, check_template='*'):
         if catalog_exists(org, catalog_name):
             click.secho(f"Found catalog '{catalog_name}'", fg='green')
             # check that templates exist in vCD
-            for template in config['broker']['templates']:
+            template_config_dict = get_config(
+                config['broker'][CSE_TEMPLATE_CONFIG_FILE_LOCATION_KEY])
+            for template in template_config_dict['templates']:
                 if check_template != '*' \
                         and check_template != template['name']:
                     continue
