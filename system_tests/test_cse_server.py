@@ -129,25 +129,39 @@ def test_0010_cse_sample():
     Test that `cse sample` command along with every option is an actual
     command. Does not test for validity of sample outputs.
     """
-    result = env.CLI_RUNNER.invoke(cli, ['sample'], catch_exceptions=False)
-    assert result.exit_code == 0
+    cmd = "sample"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0, f"\nCommand: [cse {cmd}]" \
+                                  f"\nExit Code: [{result.exit_code}]" \
+                                  f"\nOutput Start===" \
+                                  f"\n{result.output}===Output End"
 
     output_filepath = 'dummy-output.yaml'
     cmd = f'sample --output {output_filepath}'
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0
+    assert result.exit_code == 0, f"\nCommand: [cse sample]" \
+                                  f"\nExit Code: [{result.exit_code}]" \
+                                  f"\nOutput Start===" \
+                                  f"\n{result.output}===Output End"
 
     cmd = f'sample --pks-output {output_filepath}'
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0
+    assert result.exit_code == 0, f"\nCommand: [cse sample]" \
+                                  f"\nExit Code: [{result.exit_code}]" \
+                                  f"\nOutput Start===" \
+                                  f"\n{result.output}===Output End"
 
     testutils.delete_file(output_filepath)
 
 
 def test_0020_cse_version():
     """Test that `cse version` is a valid command."""
-    result = env.CLI_RUNNER.invoke(cli, ['version'], catch_exceptions=False)
-    assert result.exit_code == 0
+    cmd = "version"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0, f"\nCommand: [cse {cmd}]" \
+                                  f"\nExit Code: [{result.exit_code}]" \
+                                  f"\nOutput Start===" \
+                                  f"\n{result.output}===Output End"
 
 
 def test_0030_cse_check(config):
@@ -158,15 +172,24 @@ def test_0030_cse_check(config):
     """
     cmd = f"check -c {env.ACTIVE_CONFIG_FILEPATH}"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0
+    assert result.exit_code == 0, f"\nCommand: [cse {cmd}]" \
+                                  f"\nExit Code: [{result.exit_code}]" \
+                                  f"\nOutput Start===" \
+                                  f"\n{result.output}===Output End"
 
     cmd = f"check -c {env.ACTIVE_CONFIG_FILEPATH} -i"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0
+    assert result.exit_code == 0, f"\nCommand: [cse {cmd}]" \
+                                  f"\nExit Code: [{result.exit_code}]" \
+                                  f"\nOutput Start===" \
+                                  f"\n{result.output}===Output End"
 
     cmd = f"check -c {env.ACTIVE_CONFIG_FILEPATH} -t dummy"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0
+    assert result.exit_code == 0, f"\nCommand: [cse {cmd}]" \
+                                  f"\nExit Code: [{result.exit_code}]" \
+                                  f"\nOutput Start===" \
+                                  f"\n{result.output}===Output End"
 
 
 def test_0040_config_missing_keys(config):
@@ -272,14 +295,14 @@ def test_0080_install_no_capture(config, blank_cust_scripts, unregister_cse):
     """
     template_config = testutils.get_default_template_config(config)
 
-    result = env.CLI_RUNNER.invoke(cli,
-                                   ['install',
-                                    '--config', env.ACTIVE_CONFIG_FILEPATH,
-                                    '--ssh-key', env.SSH_KEY_FILEPATH,
-                                    '--template', template_config['name'],
-                                    '--no-capture'],
-                                   catch_exceptions=False)
-    assert result.exit_code == 0
+    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
+          f"{env.SSH_KEY_FILEPATH} --template {template_config['name']} " \
+          f"--no-capture"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0, f"\nCommand: [cse {cmd}]" \
+                                  f"\nExit Code: [{result.exit_code}]" \
+                                  f"\nOutput Start===" \
+                                  f"\n{result.output}===Output End"
 
     # check that cse was registered correctly
     env.check_cse_registration(config['amqp']['routing_key'],
@@ -319,12 +342,13 @@ def test_0090_install_temp_vapp_already_exists(config, blank_cust_scripts,
 
     testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
 
-    result = env.CLI_RUNNER.invoke(cli,
-                                   ['install',
-                                    '--config', env.ACTIVE_CONFIG_FILEPATH,
-                                    '--template', template_config['name']],
-                                   catch_exceptions=False)
-    assert result.exit_code == 0
+    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
+          f"{env.SSH_KEY_FILEPATH} --template {template_config['name']}"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0, f"\nCommand: [cse {cmd}]" \
+                                  f"\nExit Code: [{result.exit_code}]" \
+                                  f"\nOutput Start===" \
+                                  f"\n{result.output}===Output End"
 
     # check that cse was registered correctly
     env.check_cse_registration(config['amqp']['routing_key'],
@@ -353,14 +377,13 @@ def test_0100_install_update(config, unregister_cse):
     expected: cse registered, ubuntu/photon ovas exist, temp vapps exist,
         templates exist.
     """
-    result = env.CLI_RUNNER.invoke(cli,
-                                   ['install',
-                                    '--config', env.ACTIVE_CONFIG_FILEPATH,
-                                    '--ssh-key', env.SSH_KEY_FILEPATH,
-                                    '--update',
-                                    '--no-capture'],
-                                   catch_exceptions=False)
-    assert result.exit_code == 0
+    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
+          f"{env.SSH_KEY_FILEPATH} --update --no-capture"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0, f"\nCommand: [cse {cmd}]" \
+                                  f"\nExit Code: [{result.exit_code}]" \
+                                  f"\nOutput Start===" \
+                                  f"\n{result.output}===Output End"
 
     vdc = VDC(env.CLIENT, href=env.VDC_HREF)
 
@@ -422,11 +445,13 @@ def test_0110_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
         template_config['cleanup'] = True
     testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
 
-    result = env.CLI_RUNNER.invoke(cli,
-                                   ['install',
-                                    '--config', env.ACTIVE_CONFIG_FILEPATH],
-                                   catch_exceptions=False)
-    assert result.exit_code == 0
+    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} " \
+          f"--ssh-key {env.SSH_KEY_FILEPATH}"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0, f"\nCommand: [cse {cmd}]" \
+                                  f"\nExit Code: [{result.exit_code}]" \
+                                  f"\nOutput Start===" \
+                                  f"\n{result.output}===Output End"
 
     # check that cse was registered correctly
     env.check_cse_registration(config['amqp']['routing_key'],
