@@ -131,10 +131,9 @@ def test_0010_cse_sample():
     """
     cmd = "sample"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0, f"\nCommand: [cse {cmd}]" \
-                                  f"\nExit Code: [{result.exit_code}]" \
-                                  f"\nOutput Start===" \
-                                  f"\n{result.output}===Output End"
+    assert result.exit_code == 0,\
+        testutils.format_command_info(f"cse {cmd}", result.exit_code,
+                                      result.output)
 
     output_filepath = 'dummy-output.yaml'
     cmd = f'sample --output {output_filepath}'
@@ -158,10 +157,9 @@ def test_0020_cse_version():
     """Test that `cse version` is a valid command."""
     cmd = "version"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0, f"\nCommand: [cse {cmd}]" \
-                                  f"\nExit Code: [{result.exit_code}]" \
-                                  f"\nOutput Start===" \
-                                  f"\n{result.output}===Output End"
+    assert result.exit_code == 0,\
+        testutils.format_command_info(f"cse {cmd}", result.exit_code,
+                                      result.output)
 
 
 def test_0030_cse_check(config):
@@ -172,24 +170,21 @@ def test_0030_cse_check(config):
     """
     cmd = f"check -c {env.ACTIVE_CONFIG_FILEPATH}"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0, f"\nCommand: [cse {cmd}]" \
-                                  f"\nExit Code: [{result.exit_code}]" \
-                                  f"\nOutput Start===" \
-                                  f"\n{result.output}===Output End"
+    assert result.exit_code == 0,\
+        testutils.format_command_info(f"cse {cmd}", result.exit_code,
+                                      result.output)
 
     cmd = f"check -c {env.ACTIVE_CONFIG_FILEPATH} -i"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0, f"\nCommand: [cse {cmd}]" \
-                                  f"\nExit Code: [{result.exit_code}]" \
-                                  f"\nOutput Start===" \
-                                  f"\n{result.output}===Output End"
+    assert result.exit_code == 0,\
+        testutils.format_command_info(f"cse {cmd}", result.exit_code,
+                                      result.output)
 
     cmd = f"check -c {env.ACTIVE_CONFIG_FILEPATH} -t dummy"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0, f"\nCommand: [cse {cmd}]" \
-                                  f"\nExit Code: [{result.exit_code}]" \
-                                  f"\nOutput Start===" \
-                                  f"\n{result.output}===Output End"
+    assert result.exit_code == 0,\
+        testutils.format_command_info(f"cse {cmd}", result.exit_code,
+                                      result.output)
 
 
 def test_0040_config_missing_keys(config):
@@ -299,10 +294,9 @@ def test_0080_install_no_capture(config, blank_cust_scripts, unregister_cse):
           f"{env.SSH_KEY_FILEPATH} --template {template_config['name']} " \
           f"--no-capture"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0, f"\nCommand: [cse {cmd}]" \
-                                  f"\nExit Code: [{result.exit_code}]" \
-                                  f"\nOutput Start===" \
-                                  f"\n{result.output}===Output End"
+    assert result.exit_code == 0,\
+        testutils.format_command_info(f"cse {cmd}", result.exit_code,
+                                      result.output)
 
     # check that cse was registered correctly
     env.check_cse_registration(config['amqp']['routing_key'],
@@ -345,10 +339,9 @@ def test_0090_install_temp_vapp_already_exists(config, blank_cust_scripts,
     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
           f"{env.SSH_KEY_FILEPATH} --template {template_config['name']}"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0, f"\nCommand: [cse {cmd}]" \
-                                  f"\nExit Code: [{result.exit_code}]" \
-                                  f"\nOutput Start===" \
-                                  f"\n{result.output}===Output End"
+    assert result.exit_code == 0,\
+        testutils.format_command_info(f"cse {cmd}", result.exit_code,
+                                      result.output)
 
     # check that cse was registered correctly
     env.check_cse_registration(config['amqp']['routing_key'],
@@ -380,10 +373,9 @@ def test_0100_install_update(config, unregister_cse):
     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
           f"{env.SSH_KEY_FILEPATH} --update --no-capture"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0, f"\nCommand: [cse {cmd}]" \
-                                  f"\nExit Code: [{result.exit_code}]" \
-                                  f"\nOutput Start===" \
-                                  f"\n{result.output}===Output End"
+    assert result.exit_code == 0,\
+        testutils.format_command_info(f"cse {cmd}", result.exit_code,
+                                      result.output)
 
     vdc = VDC(env.CLIENT, href=env.VDC_HREF)
 
@@ -448,10 +440,9 @@ def test_0110_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} " \
           f"--ssh-key {env.SSH_KEY_FILEPATH}"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0, f"\nCommand: [cse {cmd}]" \
-                                  f"\nExit Code: [{result.exit_code}]" \
-                                  f"\nOutput Start===" \
-                                  f"\n{result.output}===Output End"
+    assert result.exit_code == 0,\
+        testutils.format_command_info(f"cse {cmd}", result.exit_code,
+                                      result.output)
 
     # check that cse was registered correctly
     env.check_cse_registration(config['amqp']['routing_key'],
