@@ -29,6 +29,7 @@ from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
 import requests
 from vsphere_guest_run.vsphere import VSphere
+import yaml
 
 from container_service_extension.exceptions import VcdResponseError
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
@@ -831,6 +832,19 @@ def is_cse_registered(client):
         return True
     except MissingRecordException:
         return False
+
+
+def get_template_config(broker_dict):
+    """Get templates information from template configuration file.
+
+    :param dict broker_dict: broker section from server config
+    :return: templates section from template config file
+
+    :rtype: dict
+    """
+    template_config_location = broker_dict['template_config']
+    with open(template_config_location) as template_config_file:
+        return yaml.safe_load(template_config_file) or {}
 
 
 def exception_handler(func):

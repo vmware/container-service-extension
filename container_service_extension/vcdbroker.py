@@ -50,6 +50,7 @@ from container_service_extension.utils import ERROR_MESSAGE
 from container_service_extension.utils import ERROR_STACKTRACE
 from container_service_extension.utils import error_to_json
 from container_service_extension.utils import get_server_runtime_config
+from container_service_extension.utils import get_template_config
 
 
 OP_CREATE_CLUSTER = 'create_cluster'
@@ -202,7 +203,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 name = self.req_spec['template']
             else:
                 name = server_config['broker']['default_template']
-        for template in server_config['broker']['templates']:
+        template_config_dict = get_template_config(server_config['broker'])
+        for template in template_config_dict['templates']:
             if template['name'] == name:
                 return template
         raise Exception(f"Template {name} not found.")
@@ -343,7 +345,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
         # TODO(right template) find a right way to retrieve
         # the template from which nfs node was created.
         server_config = get_server_runtime_config()
-        template = server_config['broker']['templates'][0]
+        template_dict = get_template_config(server_config['broker'])
+        template = template_dict['templates'][0]
         script = f"#!/usr/bin/env bash\nshowmount -e {ip}"
         result = execute_script_in_nodes(
             server_config, vapp, template['admin_password'],

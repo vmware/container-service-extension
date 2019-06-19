@@ -55,6 +55,7 @@ from container_service_extension.utils import EXCHANGE_TYPE
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_duplicate_items_in_list
 from container_service_extension.utils import get_org
+from container_service_extension.utils import get_template_config
 from container_service_extension.utils import get_vdc
 from container_service_extension.utils import get_vsphere
 from container_service_extension.utils import SYSTEM_ORG_NAME
@@ -114,6 +115,12 @@ INSTRUCTIONS_FOR_PKS_CONFIG_FILE = "\
 #          PKS creates on installation.\n\
 # For more information, please refer to CSE documentation page:\n\
 # https://vmware.github.io/container-service-extension/INSTALLATION.html\n"
+
+
+NOTE_FOR_TEMPLATE_CONFIG_KEY_IN_CONFIG_FILE = "\
+# Filling out 'template_config' key in broker section is mandatory.\n\
+# This value needs to be a valid config file name with templates\n\
+# information.\n"
 
 NOTE_FOR_PKS_KEY_IN_CONFIG_FILE = "\
 # Filling out this key for regular CSE set up is optional and should be left\n\
@@ -221,9 +228,14 @@ SAMPLE_BROKER_CONFIG = {
         'ip_allocation_mode': 'pool',
         'storage_profile': '*',
         'default_template': SAMPLE_TEMPLATE_PHOTON_V2['name'],
-        'templates': [SAMPLE_TEMPLATE_PHOTON_V2, SAMPLE_TEMPLATE_UBUNTU_16_04],
+        'template_config': '',
         'cse_msg_dir': '/tmp/cse'
     }
+}
+
+CSE_TEMPLATE_CONFIG_FILE_LOCATION_KEY = 'template_config'
+CSE_TEMPLATE_CONFIG_FILE_LOCATION = {
+    CSE_TEMPLATE_CONFIG_FILE_LOCATION_KEY: ''
 }
 
 PKS_CONFIG_FILE_LOCATION_SECTION_KEY = 'pks_config'
@@ -358,8 +370,9 @@ def generate_sample_config(output=None, pks_output=None):
 
     :rtype: dict
     """
-    sample_config = yaml.safe_dump(SAMPLE_AMQP_CONFIG,
-                                   default_flow_style=False) + '\n'
+    sample_config = NOTE_FOR_TEMPLATE_CONFIG_KEY_IN_CONFIG_FILE + '\n'
+    sample_config += yaml.safe_dump(SAMPLE_AMQP_CONFIG,
+                                    default_flow_style=False) + '\n'
     sample_config += yaml.safe_dump(SAMPLE_VCD_CONFIG,
                                     default_flow_style=False) + '\n'
     sample_config += yaml.safe_dump(SAMPLE_VCS_CONFIG,
@@ -594,7 +607,9 @@ def validate_broker_config(broker_dict):
                                location="config file 'broker' section")
 
     default_exists = False
-    for template in broker_dict['templates']:
+    template_config_dict = get_template_config(broker_dict)
+
+    for template in template_config_dict['templates']:
         check_keys_and_value_types(template, SAMPLE_TEMPLATE_PHOTON_V2,
                                    location="config file broker "
                                             "template section")
@@ -915,7 +930,8 @@ def check_cse_installation(config, check_template='*'):
         if catalog_exists(org, catalog_name):
             click.secho(f"Found catalog '{catalog_name}'", fg='green')
             # check that templates exist in vCD
-            for template in config['broker']['templates']:
+            template_config_dict = get_template_config(config['broker'])
+            for template in template_config_dict['templates']:
                 if check_template != '*' \
                         and check_template != template['name']:
                     continue
@@ -1010,7 +1026,8 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
         create_and_share_catalog(org, config['broker']['catalog'],
                                  catalog_desc='CSE templates')
         # create, customize, capture VM templates
-        for template in config['broker']['templates']:
+        template_config_dict = get_template_config(config['broker'])
+        for template in template_config_dict['templates']:
             if template_name == '*' or template['name'] == template_name:
                 create_template(ctx, client, config, template, update=update,
                                 no_capture=no_capture, ssh_key=ssh_key,
