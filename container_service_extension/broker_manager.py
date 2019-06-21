@@ -3,8 +3,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from collections import namedtuple
-from enum import Enum
-from enum import unique
 from http import HTTPStatus
 
 from pyvcloud.vcd.org import Org
@@ -21,9 +19,9 @@ from container_service_extension.ovdc_cache import OvdcCache
 from container_service_extension.pks_cache import PKS_CLUSTER_DOMAIN_KEY
 from container_service_extension.pks_cache import PKS_PLANS_KEY
 from container_service_extension.pksbroker import PKSBroker
+from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
-from container_service_extension.utils import ACCEPTED
 from container_service_extension.utils import connect_vcd_user_via_token
 from container_service_extension.utils \
     import create_pks_compute_profile_name_from_vdc_id
@@ -31,7 +29,6 @@ from container_service_extension.utils import exception_handler
 from container_service_extension.utils import get_pks_cache
 from container_service_extension.utils import get_server_runtime_config
 from container_service_extension.utils import get_vcd_sys_admin_client
-from container_service_extension.utils import OK
 from container_service_extension.vcdbroker import VcdBroker
 
 
@@ -46,21 +43,6 @@ from container_service_extension.vcdbroker import VcdBroker
 #  4. As part of refactoring, avoid accessing HTTP request body directly
 #  from VcdBroker and PksBroker. We should try to limit processing request to
 #  processor.py and broker_manager.py.
-@unique
-class Operation(Enum):
-    CREATE_CLUSTER = 'create cluster'
-    DELETE_CLUSTER = 'delete cluster'
-    GET_CLUSTER = 'get cluster info'
-    LIST_CLUSTERS = 'list clusters'
-    RESIZE_CLUSTER = 'resize cluster'
-    LIST_OVDCS = 'list ovdcs'
-    ENABLE_OVDC = 'enable ovdc'
-    INFO_OVDC = 'info ovdc'
-    GET_CLUSTER_CONFIG = 'get cluster config'
-    GET_NODE_INFO = 'get node info'
-    CREATE_NODE = 'create node'
-    DELETE_NODE = 'delete node'
-
 
 class BrokerManager(object):
     """Manage calls to vCD and PKS brokers.
@@ -70,20 +52,15 @@ class BrokerManager(object):
     Post-processing of results from brokers.
     """
 
-    def __init__(self, request_headers, request_query_params, request_spec):
-        self.req_headers = request_headers
+    def __init__(self, tenant_auth_token, request_spec):
+        self.tenant_auth_token = tenant_auth_token
         self.req_spec = request_spec
         self.pks_cache = get_pks_cache()
         self.ovdc_cache = OvdcCache(get_vcd_sys_admin_client())
         self.is_ovdc_present_in_request = False
         config = get_server_runtime_config()
         self.vcd_client, self.session = connect_vcd_user_via_token(
-            vcd_uri=config['vcd']['host'],
-            headers=self.req_headers,
-            verify_ssl_certs=config['vcd']['verify'])
-        self.req_spec.update((param, val)
-                             for param, val in request_query_params.items()
-                             if val is not None)
+            vcd_uri=config['vcd']['host'], tenant_auth_token=tenant_auth_token)
 
     @exception_handler
     def invoke(self, op):
@@ -99,64 +76,24 @@ class BrokerManager(object):
         3. Scan through available brokers to aggregate (or) filter results.
         4. Construct and return the HTTP response
 
-        :param Operation op: Operation to be performed by one of the brokers.
+        :param CseOperation op: Operation to be performed by one of the
+            brokers.
 
-        :return result: HTTP response
+        :return result: result of the operation.
 
         :rtype: dict
         """
         result = {}
         result['body'] = []
-        result['status_code'] = OK
-
+        result['status_code'] = HTTPStatus.OK.value
         self.is_ovdc_present_in_request = self.req_spec.get('vdc')
-        if op == Operation.INFO_OVDC:
-            ovdc_id = self.req_spec.get('ovdc_id')
-            # TODO() Constructing response should be moved out of this layer
-            result['body'] = self.ovdc_cache. \
-                get_ovdc_container_provider_metadata(ovdc_id=ovdc_id)
-            result['status_code'] = OK
-        elif op == Operation.ENABLE_OVDC:
-            pks_ctx, ovdc = self._get_ovdc_params()
-            if self.req_spec[K8S_PROVIDER_KEY] == K8sProviders.PKS:
-                self._create_pks_compute_profile(pks_ctx)
-            task = self.ovdc_cache. \
-                set_ovdc_container_provider_metadata(
-                    ovdc,
-                    container_prov_data=pks_ctx,
-                    container_provider=self.req_spec[K8S_PROVIDER_KEY])
-            # TODO() Constructing response should be moved out of this layer
-            result['body'] = {'task_href': task.get('href')}
-            result['status_code'] = ACCEPTED
-        elif op == Operation.GET_CLUSTER:
-            cluster_spec = \
-                {'cluster_name': self.req_spec.get('cluster_name', None)}
-            result['body'] = self._get_cluster_info(**cluster_spec)[0]
-        elif op == Operation.LIST_CLUSTERS:
-            result['body'] = self._list_clusters()
-        elif op == Operation.DELETE_CLUSTER:
-            cluster_spec = \
-                {'cluster_name': self.req_spec.get('cluster_name', None)}
-            result['body'] = self._delete_cluster(**cluster_spec)
-            result['status_code'] = ACCEPTED
-        elif op == Operation.RESIZE_CLUSTER:
-            # TODO(resize_cluster) Once VcdBroker.create_nodes() is hooked to
-            #  broker_manager, ensure broker.resize_cluster returns only
-            #  response body. Construct the remainder of the response here.
-            #  This cannot be done at the moment as @exception_handler cannot
-            #  be removed on create_nodes() as of today (Mar 15, 2019).
-            cluster_spec = \
-                {'cluster_name': self.req_spec.get('cluster_name', None),
-                 'node_count': self.req_spec.get('node_count', None)
-                 }
-            result['body'] = self._resize_cluster(**cluster_spec)
-            result['status_code'] = ACCEPTED
-        elif op == Operation.GET_CLUSTER_CONFIG:
+
+        if op == CseOperation.CLUSTER_CONFIG:
             cluster_spec = \
                 {'cluster_name': self.req_spec.get('cluster_name', None)}
             result['body'] = \
                 self._get_cluster_config(**cluster_spec)
-        elif op == Operation.CREATE_CLUSTER:
+        elif op == CseOperation.CLUSTER_CREATE:
             # TODO(ClusterSpec) Create an inner class "ClusterSpec"
             #  in abstract_broker.py and have subclasses define and use it
             #  as instance variable.
@@ -172,27 +109,66 @@ class BrokerManager(object):
                 'template': self.req_spec.get('template', None),
             }
             result['body'] = self._create_cluster(**cluster_spec)
-            result['status_code'] = ACCEPTED
-        elif op == Operation.LIST_OVDCS:
-            list_pks_plans = self.req_spec.get('list_pks_plans', False)
-            result['body'] = self._list_ovdcs(
-                list_pks_plans=list_pks_plans)
-        elif op == Operation.GET_NODE_INFO:
-            node_spec = \
+            result['status_code'] = HTTPStatus.ACCEPTED.value
+        elif op == CseOperation.CLUSTER_DELETE:
+            cluster_spec = \
+                {'cluster_name': self.req_spec.get('cluster_name', None)}
+            result['body'] = self._delete_cluster(**cluster_spec)
+            result['status_code'] = HTTPStatus.ACCEPTED.value
+        elif op == CseOperation.CLUSTER_INFO:
+            cluster_spec = \
+                {'cluster_name': self.req_spec.get('cluster_name', None)}
+            result['body'] = self._get_cluster_info(**cluster_spec)[0]
+        elif op == CseOperation.CLUSTER_LIST:
+            result['body'] = self._list_clusters()
+        elif op == CseOperation.CLUSTER_RESIZE:
+            # TODO(resize_cluster) Once VcdBroker.create_nodes() is hooked to
+            #  broker_manager, ensure broker.resize_cluster returns only
+            #  response body. Construct the remainder of the response here.
+            #  This cannot be done at the moment as @exception_handler cannot
+            #  be removed on create_nodes() as of today (Mar 15, 2019).
+            cluster_spec = \
                 {'cluster_name': self.req_spec.get('cluster_name', None),
-                 'node_name': self.req_spec.get('node_name', None)}
-            result['body'] = self._get_node_info(**node_spec)[0]
-            result['status_code'] = OK
-        elif op == Operation.CREATE_NODE:
+                 'node_count': self.req_spec.get('node_count', None)
+                 }
+            result['body'] = self._resize_cluster(**cluster_spec)
+            result['status_code'] = HTTPStatus.ACCEPTED.value
+        elif op == CseOperation.NODE_CREATE:
             # Currently node create is a vCD only operation.
-            broker = VcdBroker(self.req_headers, self.req_spec)
+            broker = VcdBroker(self.tenant_auth_token, self.req_spec)
             result['body'] = broker.create_nodes()
-            result['status_code'] = ACCEPTED
-        elif op == Operation.DELETE_NODE:
+            result['status_code'] = HTTPStatus.ACCEPTED.value
+        elif op == CseOperation.NODE_DELETE:
             # Currently node delete is a vCD only operation.
-            broker = VcdBroker(self.req_headers, self.req_spec)
+            broker = VcdBroker(self.tenant_auth_token, self.req_spec)
             result['body'] = broker.delete_nodes()
-            result['status_code'] = ACCEPTED
+            result['status_code'] = HTTPStatus.ACCEPTED.value
+        elif op == CseOperation.NODE_INFO:
+            node_spec = \
+                {'cluster_name': self.req_spec.get('cluster_name'),
+                 'node_name': self.req_spec.get('node_name')}
+            result['body'] = self._get_node_info(**node_spec)[0]
+        elif op == CseOperation.OVDC_ENABLE_DISABLE:
+            pks_ctx, ovdc = self._get_ovdc_params()
+            if self.req_spec[K8S_PROVIDER_KEY] == K8sProviders.PKS:
+                self._create_pks_compute_profile(pks_ctx)
+            task = self.ovdc_cache. \
+                set_ovdc_container_provider_metadata(
+                    ovdc,
+                    container_prov_data=pks_ctx,
+                    container_provider=self.req_spec[K8S_PROVIDER_KEY])
+            # TODO() Constructing response should be moved out of this layer
+            result['body'] = {'task_href': task.get('href')}
+            result['status_code'] = HTTPStatus.ACCEPTED.value
+        elif op == CseOperation.OVDC_INFO:
+            ovdc_id = self.req_spec.get('ovdc_id')
+            # TODO() Constructing response should be moved out of this layer
+            result['body'] = self.ovdc_cache. \
+                get_ovdc_container_provider_metadata(ovdc_id=ovdc_id)
+        elif op == CseOperation.OVDC_LIST:
+            list_pks_plans = self.req_spec.get('list_pks_plans', False)
+            result['body'] = self._list_ovdcs(list_pks_plans=list_pks_plans)
+
         return result
 
     def _list_ovdcs(self, list_pks_plans=False):
@@ -296,7 +272,7 @@ class BrokerManager(object):
             broker = self.get_broker_based_on_vdc()
             return broker.get_node_info(cluster_name, node_name), broker
         else:
-            vcd_broker = VcdBroker(self.req_headers, self.req_spec)
+            vcd_broker = VcdBroker(self.tenant_auth_token, self.req_spec)
             cluster = vcd_broker.get_cluster_info(cluster_name)
             if cluster:
                 return vcd_broker.get_node_info(
@@ -343,7 +319,7 @@ class BrokerManager(object):
             return broker.list_clusters()
         else:
             common_cluster_properties = ('name', 'vdc', 'status', 'org_name')
-            vcd_broker = VcdBroker(self.req_headers, self.req_spec)
+            vcd_broker = VcdBroker(self.tenant_auth_token, self.req_spec)
             vcd_clusters = []
             for cluster in vcd_broker.list_clusters():
                 vcd_cluster = {k: cluster.get(k, None) for k in
@@ -354,7 +330,7 @@ class BrokerManager(object):
             pks_clusters = []
             pks_ctx_list = self._create_pks_context_for_all_accounts_in_org()
             for pks_ctx in pks_ctx_list:
-                pks_broker = PKSBroker(self.req_headers, self.req_spec,
+                pks_broker = PKSBroker(self.tenant_auth_token, self.req_spec,
                                        pks_ctx)
                 # Get all cluster information to get vdc name from
                 # compute-profile-name
@@ -409,7 +385,7 @@ class BrokerManager(object):
         Else:
             (None, None) if cluster not found.
         """
-        vcd_broker = VcdBroker(self.req_headers, self.req_spec)
+        vcd_broker = VcdBroker(self.tenant_auth_token, self.req_spec)
         try:
             return vcd_broker.get_cluster_info(cluster_name), vcd_broker
         except CseDuplicateClusterError as err:
@@ -422,7 +398,8 @@ class BrokerManager(object):
 
         pks_ctx_list = self._create_pks_context_for_all_accounts_in_org()
         for pks_ctx in pks_ctx_list:
-            pksbroker = PKSBroker(self.req_headers, self.req_spec, pks_ctx)
+            pksbroker = PKSBroker(self.tenant_auth_token, self.req_spec,
+                                  pks_ctx)
             try:
                 return pksbroker.get_cluster_info(
                     cluster_name=cluster_name,
@@ -516,13 +493,13 @@ class BrokerManager(object):
         if self.pks_cache:
             if ctr_prov_ctx:
                 if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProviders.PKS:
-                    return PKSBroker(self.req_headers, self.req_spec,
+                    return PKSBroker(self.tenant_auth_token, self.req_spec,
                                      pks_ctx=ctr_prov_ctx)
                 elif ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProviders.NATIVE:
-                    return VcdBroker(self.req_headers, self.req_spec)
+                    return VcdBroker(self.tenant_auth_token, self.req_spec)
 
         else:
-            return VcdBroker(self.req_headers, self.req_spec)
+            return VcdBroker(self.tenant_auth_token, self.req_spec)
 
         raise CseServerError("Org VDC is not enabled for Kubernetes cluster "
                              "deployment")
@@ -602,7 +579,7 @@ class BrokerManager(object):
         LOGGER.debug(f"Creating PKS Compute Profile with name:"
                      f"{pks_compute_profile_name}")
 
-        pksbroker = PKSBroker(self.req_headers, self.req_spec, pks_ctx)
+        pksbroker = PKSBroker(self.tenant_auth_token, self.req_spec, pks_ctx)
         try:
             pksbroker.create_compute_profile(**compute_profile_params)
         except PksServerError as ex:
@@ -635,7 +612,7 @@ class BrokerManager(object):
         for pks_ctx in pks_ctx_list:
             if pks_ctx['vc'] in pks_vc_plans_map:
                 continue
-            pks_broker = PKSBroker(self.req_headers, self.req_spec,
+            pks_broker = PKSBroker(self.tenant_auth_token, self.req_spec,
                                    pks_ctx)
             plans = pks_broker.list_plans()
             plan_names = [plan.get('name') for plan in plans]

@@ -111,11 +111,10 @@ class Service(object, metaclass=Singleton):
             else:
                 return 'Disabled'
 
-    def info(self, headers):
+    def info(self, tenant_auth_token):
         tenant_client, session = connect_vcd_user_via_token(
             vcd_uri=self.config['vcd']['host'],
-            headers=headers,
-            verify_ssl_certs=self.config['vcd']['verify'])
+            tenant_auth_token=tenant_auth_token)
         result = Service.version()
         if tenant_client.is_sysadmin():
             result['consumer_threads'] = len(self.threads)
@@ -139,11 +138,10 @@ class Service(object, metaclass=Singleton):
         }
         return ver_obj
 
-    def update_status(self, headers, body):
+    def update_status(self, tenant_auth_token, body):
         tenant_client, session = connect_vcd_user_via_token(
             vcd_uri=self.config['vcd']['host'],
-            headers=headers,
-            verify_ssl_certs=self.config['vcd']['verify'])
+            tenant_auth_token=tenant_auth_token)
 
         reply = {}
         if tenant_client.is_sysadmin():

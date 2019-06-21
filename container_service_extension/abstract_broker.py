@@ -13,8 +13,8 @@ from container_service_extension.utils import get_vcd_sys_admin_client
 
 class AbstractBroker(abc.ABC):
 
-    def __init__(self, request_headers, request_spec):
-        self.req_headers = request_headers
+    def __init__(self, tenant_auth_token, request_spec):
+        self.tenant_auth_token = tenant_auth_token
         self.req_spec = request_spec
 
     @abc.abstractmethod
@@ -95,11 +95,9 @@ class AbstractBroker(abc.ABC):
     def _connect_tenant(self):
         server_config = get_server_runtime_config()
         host = server_config['vcd']['host']
-        verify = server_config['vcd']['verify']
         self.tenant_client, self.client_session = connect_vcd_user_via_token(
             vcd_uri=host,
-            headers=self.req_headers,
-            verify_ssl_certs=verify)
+            tenant_auth_token=self.tenant_auth_token)
         self.tenant_info = {
             'user_name': self.client_session.get('user'),
             'user_id': self.client_session.get('userId'),
