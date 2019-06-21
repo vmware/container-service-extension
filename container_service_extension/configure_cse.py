@@ -55,9 +55,12 @@ from container_service_extension.utils import EXCHANGE_TYPE
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_duplicate_items_in_list
 from container_service_extension.utils import get_org
+from container_service_extension.utils import get_script_file_name
 from container_service_extension.utils import get_vdc
 from container_service_extension.utils import get_vsphere
 from container_service_extension.utils import SYSTEM_ORG_NAME
+from container_service_extension.utils import TYPE_CUST
+from container_service_extension.utils import TYPE_INIT
 from container_service_extension.utils import upload_ova_to_catalog
 from container_service_extension.utils import vgr_callback
 from container_service_extension.utils import wait_for_catalog_item_to_resolve
@@ -1199,8 +1202,8 @@ def _create_temp_vapp(ctx, client, vdc, config, template_config, ssh_key):
     :raises Exception: if VM customization fails.
     """
     vapp_name = template_config['temp_vapp']
-    init_script = get_data_file(f"init-{template_config['name']}.sh",
-                                logger=LOGGER)
+    init_script = get_data_file(get_script_file_name(
+        template_config['name'], TYPE_INIT), logger=LOGGER)
     if ssh_key is not None:
         init_script += \
             f"""
@@ -1219,8 +1222,8 @@ def _create_temp_vapp(ctx, client, vdc, config, template_config, ssh_key):
     msg = f"Customizing vApp '{vapp_name}'"
     click.secho(msg, fg='yellow')
     LOGGER.info(msg)
-    cust_script = get_data_file(f"cust-{template_config['name']}.sh",
-                                logger=LOGGER)
+    cust_script = get_data_file(get_script_file_name(
+        template_config['name'], TYPE_CUST), logger=LOGGER)
     ova_name = template_config['source_ova_name']
     is_photon = True if 'photon' in ova_name else False
     _customize_vm(ctx, config, vapp, vapp.name, cust_script,

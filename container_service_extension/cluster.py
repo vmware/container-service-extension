@@ -20,12 +20,12 @@ from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import ScriptExecutionError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.utils import get_data_file
+from container_service_extension.utils import get_script_file_name
 from container_service_extension.utils import get_vsphere
 from container_service_extension.utils import SYSTEM_ORG_NAME
-
-TYPE_MASTER = 'mstr'
-TYPE_NODE = 'node'
-TYPE_NFS = 'nfsd'
+from container_service_extension.utils import TYPE_MASTER
+from container_service_extension.utils import TYPE_NFS
+from container_service_extension.utils import TYPE_NODE
 
 
 def wait_until_tools_ready(vm):
@@ -212,7 +212,8 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
             if node_type == TYPE_NFS:
                 LOGGER.debug(
                     f"enabling NFS server on {spec['target_vm_name']}")
-                script = get_data_file('nfsd-%s.sh' % template['name'])
+                script = get_data_file(
+                    get_script_file_name(template['name'], TYPE_NFS))
                 exec_results = execute_script_in_nodes(
                     config, vapp,
                     template['admin_password'],
@@ -291,7 +292,8 @@ def get_cluster_config(config, vapp, password):
 
 
 def init_cluster(config, vapp, template):
-    script = get_data_file('mstr-%s.sh' % template['name'])
+    script = get_data_file(
+        get_script_file_name(template['name'], TYPE_MASTER))
     nodes = get_nodes(vapp, TYPE_MASTER)
     result = execute_script_in_nodes(config, vapp, template['admin_password'],
                                      script, nodes)
@@ -302,7 +304,8 @@ def init_cluster(config, vapp, template):
 
 def join_cluster(config, vapp, template, target_nodes=None):
     init_info = get_init_info(config, vapp, template['admin_password'])
-    tmp_script = get_data_file('node-%s.sh' % template['name'])
+    tmp_script = get_data_file(
+        get_script_file_name(template['name'], TYPE_NODE))
     script = tmp_script.format(token=init_info[0], ip=init_info[1])
     if target_nodes is None:
         nodes = get_nodes(vapp, TYPE_NODE)

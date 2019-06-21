@@ -68,6 +68,11 @@ ACCEPTED = 202
 UNAUTHORIZED = 401
 INTERNAL_SERVER_ERROR = 500
 GATEWAY_TIMEOUT = 504
+TYPE_MASTER = 'mstr'
+TYPE_NODE = 'node'
+TYPE_NFS = 'nfsd'
+TYPE_INIT = 'init'
+TYPE_CUST = 'cust'
 
 
 def connect_vcd_user_via_token(vcd_uri, headers, verify_ssl_certs=True):
@@ -831,6 +836,14 @@ def is_cse_registered(client):
         return True
     except MissingRecordException:
         return False
+
+
+def get_template_folder_name(template_name):
+    return template_name.split('-')[0]
+
+
+def get_script_file_name(template_name, script_type):
+    return f"{get_template_folder_name(template_name)}/{script_type}.sh"
 
 
 def exception_handler(func):
