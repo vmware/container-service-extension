@@ -41,6 +41,44 @@ def version(ctx):
     stdout(ver_obj, ctx, ver_str)
 
 
+@cse.group(short_help='Manage native Kubernetes provider templates')
+@click.pass_context
+def template(ctx):
+    """Manage native Kubernetes provider templates.
+
+\b
+Examples
+    vcd cse template list
+        Display templates that can be used by native Kubernetes provider.
+    """
+    pass
+
+
+@template.command('list',
+                  short_help='List native Kubernetes provider templates')
+@click.pass_context
+def list_templates(ctx):
+    """Display templates that can be used by native Kubernetes provider."""
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        cluster = Cluster(client)
+        result = []
+        templates = cluster.get_templates()
+        for t in templates:
+            result.append({
+                'name': t['name'],
+                'description': t['description'],
+                'catalog': t['catalog'],
+                'catalog_item': t['catalog_item'],
+                'is_default': t['is_default'],
+            })
+        stdout(result, ctx, show_id=True)
+    except Exception as e:
+        stderr(e, ctx)
+
+
+
 @cse.group('cluster', short_help='Manage Kubernetes clusters')
 @click.pass_context
 def cluster_group(ctx):
@@ -111,43 +149,6 @@ Examples
     pass
 
 
-@cse.group(short_help='Manage native Kubernetes provider templates')
-@click.pass_context
-def template(ctx):
-    """Manage native Kubernetes provider templates.
-
-\b
-Examples
-    vcd cse template list
-        Display templates that can be used by native Kubernetes provider.
-    """
-    pass
-
-
-@template.command('list',
-                  short_help='List native Kubernetes provider templates')
-@click.pass_context
-def list_templates(ctx):
-    """Display templates that can be used by native Kubernetes provider."""
-    try:
-        restore_session(ctx)
-        client = ctx.obj['client']
-        cluster = Cluster(client)
-        result = []
-        templates = cluster.get_templates()
-        for t in templates:
-            result.append({
-                'name': t['name'],
-                'description': t['description'],
-                'catalog': t['catalog'],
-                'catalog_item': t['catalog_item'],
-                'is_default': t['is_default'],
-            })
-        stdout(result, ctx, show_id=True)
-    except Exception as e:
-        stderr(e, ctx)
-
-
 @cluster_group.command('list',
                        short_help='Display clusters in vCD that are visible '
                                   'to the logged in user')
@@ -204,7 +205,7 @@ def list_clusters(ctx, vdc, org_name):
     required=False,
     metavar='ORG_NAME',
     help='Restrict cluster search to specified org')
-def delete(ctx, name, vdc, org):
+def cluster_delete(ctx, name, vdc, org):
     """Delete a Kubernetes cluster."""
     try:
         restore_session(ctx)
@@ -225,7 +226,7 @@ def delete(ctx, name, vdc, org):
         stderr(e, ctx)
 
 
-@cluster_group.command(short_help='Create a Kubernetes cluster')
+@cluster_group.command('create', short_help='Create a Kubernetes cluster')
 @click.pass_context
 @click.argument('name', required=True)
 @click.option(
@@ -318,7 +319,7 @@ def delete(ctx, name, vdc, org):
     required=False,
     metavar='ORG_NAME',
     help='Org to use. Defaults to currently logged-in org')
-def create(ctx, name, vdc, node_count, cpu, memory, network_name,
+def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
            storage_profile, ssh_key_file, template, enable_nfs,
            disable_rollback, org_name):
     """Create a Kubernetes cluster."""
@@ -401,7 +402,7 @@ def create(ctx, name, vdc, node_count, cpu, memory, network_name,
     default=True,
     help='Disable rollback on failed node creation '
          '(Exclusive to native Kubernetes provider)')
-def resize(ctx, name, node_count, network_name, org, vdc, disable_rollback):
+def cluster_resize(ctx, name, node_count, network_name, org, vdc, disable_rollback):
     """Resize the cluster to contain the specified number of worker nodes.
 
     Clusters that use native Kubernetes provider can not be sized down
@@ -444,7 +445,7 @@ def resize(ctx, name, node_count, network_name, org, vdc, disable_rollback):
     default=None,
     metavar='VDC_NAME',
     help='Restrict cluster search to specified org VDC')
-def config(ctx, name, vdc, org):
+def cluster_config(ctx, name, vdc, org):
     """Display cluster configuration.
 
     To write to a file: `vcd cse cluster config mycluster > ~/.kube/my_config`
@@ -455,7 +456,7 @@ def config(ctx, name, vdc, org):
         cluster = Cluster(client)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
-        cluster_config = cluster.get_config(name, vdc=vdc, org=org)
+        cluster_config = cluster.get_cluster_config(name, vdc=vdc, org=org)
         if os.name == 'nt':
             cluster_config = str.replace(cluster_config, '\n', '\r\n')
 
@@ -582,7 +583,7 @@ def node_info(ctx, cluster_name, node_name, org_name, vdc):
                     short_help='Add node(s) to a cluster that was created '
                                'with native Kubernetes provider')
 @click.pass_context
-@click.argument('name', required=True)
+@click.argument('cluster_name', required=True)
 @click.option(
     '-N',
     '--nodes',
@@ -666,9 +667,9 @@ def node_info(ctx, cluster_name, node_name, org_name, vdc):
     required=False,
     metavar='ORG_NAME',
     help='Restrict cluster search to specified org')
-def create_node(ctx, name, node_count, org, vdc, cpu, memory, network_name,
-                storage_profile, ssh_key_file, template, node_type,
-                disable_rollback):
+def create_node(ctx, cluster_name, node_count, org, vdc, cpu, memory,
+                network_name, storage_profile, ssh_key_file, template,
+                node_type, disable_rollback):
     """Add node(s) to a cluster that uses native Kubernetes provider."""
     try:
         restore_session(ctx)
@@ -681,7 +682,7 @@ def create_node(ctx, name, node_count, org, vdc, cpu, memory, network_name,
             ssh_key = ssh_key_file.read()
         result = cluster.add_node(
             network_name,
-            name,
+            cluster_name,
             node_count=node_count,
             org=org,
             vdc=vdc,
@@ -802,7 +803,7 @@ Examples
 
 @system_group.command('info', short_help='Display info about CSE')
 @click.pass_context
-def info(ctx):
+def system_info(ctx):
     """Display info about CSE."""
     try:
         restore_session(ctx)
@@ -920,7 +921,7 @@ def list_ovdcs(ctx, list_pks_plans):
         restore_session(ctx)
         client = ctx.obj['client']
         ovdc = Ovdc(client)
-        result = ovdc.list(list_pks_plans=list_pks_plans)
+        result = ovdc.list_ovdc_for_k8s(list_pks_plans=list_pks_plans)
         stdout(result, ctx, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
