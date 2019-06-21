@@ -83,7 +83,7 @@ class PKSBroker(AbstractBroker):
     VERSION_V1 = 'v1'
     VERSION_V1BETA = 'v1beta1'
 
-    def __init__(self, request_headers, request_spec, pks_ctx):
+    def __init__(self, tenant_auth_token, request_spec, pks_ctx):
         """Initialize PKS broker.
 
         :param dict pks_ctx: A dictionary with which should atleast have the
@@ -92,11 +92,11 @@ class PKSBroker(AbstractBroker):
             keys. Currently all callers of this method is using ovdc cache
             (subject to change) to initialize PKS broker.
         """
-        super().__init__(request_headers, request_spec)
+        super().__init__(tenant_auth_token, request_spec)
         if not pks_ctx:
             raise ValueError(
                 "PKS context is required to establish connection to PKS")
-        self.req_headers = request_headers
+        self.tenant_auth_token = tenant_auth_token
         self.req_spec = request_spec
         self.username = pks_ctx['username']
         self.secret = pks_ctx['secret']

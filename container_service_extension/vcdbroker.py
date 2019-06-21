@@ -123,10 +123,9 @@ def task_callback(task):
 
 
 class VcdBroker(AbstractBroker, threading.Thread):
-    def __init__(self, request_headers, request_spec):
-        super().__init__(request_headers, request_spec)
+    def __init__(self, tenant_auth_token, request_spec):
+        super().__init__(tenant_auth_token, request_spec)
         threading.Thread.__init__(self)
-        self.req_headers = request_headers
         self.req_spec = request_spec
 
         self.tenant_client = None

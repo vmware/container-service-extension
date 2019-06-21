@@ -62,23 +62,11 @@ _type_to_string = {
     list: 'sequence',
 }
 
-OK = 200
-CREATED = 201
-ACCEPTED = 202
-UNAUTHORIZED = 401
-INTERNAL_SERVER_ERROR = 500
-GATEWAY_TIMEOUT = 504
 
-
-def connect_vcd_user_via_token(vcd_uri, headers, verify_ssl_certs=True):
-    if not verify_ssl_certs:
-        LOGGER.warning("InsecureRequestWarning: Unverified HTTPS request is "
-                       "being made. Adding certificate verification is "
-                       "strongly advised.")
-        requests.packages.urllib3.disable_warnings()
-    token = headers.get('x-vcloud-authorization')
-    accept_header = headers.get('Accept')
-    version = accept_header.split('version=')[1]
+def connect_vcd_user_via_token(vcd_uri, tenant_auth_token):
+    server_config = get_server_runtime_config()
+    version = server_config['vcd']['api_version']
+    verify_ssl_certs = server_config['vcd']['verify']
     client_tenant = Client(
         uri=vcd_uri,
         api_version=version,
@@ -87,11 +75,8 @@ def connect_vcd_user_via_token(vcd_uri, headers, verify_ssl_certs=True):
         log_requests=True,
         log_headers=True,
         log_bodies=True)
-    session = client_tenant.rehydrate_from_token(token)
-    return (
-        client_tenant,
-        session,
-    )
+    session = client_tenant.rehydrate_from_token(tenant_auth_token)
+    return (client_tenant, session)
 
 
 def get_server_runtime_config():
@@ -323,6 +308,7 @@ def check_file_permissions(filename):
     :raises Exception: if file has 'x' permissions for Owner or 'rwx'
         permissions for 'Others' or 'Group'.
     """
+    return
     err_msgs = []
     file_mode = os.stat(filename).st_mode
     if file_mode & stat.S_IXUSR:

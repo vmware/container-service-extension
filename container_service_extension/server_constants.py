@@ -25,6 +25,8 @@ CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY = 'pksBundleKey'
 
 
 # KUBERNETES PROVIDERS
+K8S_PROVIDER_KEY = 'k8s_provider'
+
 @unique
 class K8sProviders(str, Enum):
     """Types of Kubernetes providers.
@@ -39,4 +41,25 @@ class K8sProviders(str, Enum):
     NONE = 'none'
 
 
-K8S_PROVIDER_KEY = 'k8s_provider'
+# CSE requests
+@unique
+class CseOperation(Enum):
+    CLUSTER_CREATE = 'create cluster'
+    CLUSTER_CONFIG = 'get config of cluster'
+    CLUSTER_DELETE = 'delete cluster'
+    CLUSTER_INFO = 'get info of cluster'
+    CLUSTER_LIST = 'list clusters'
+    CLUSTER_RESIZE = 'resize cluster'
+    NODE_CREATE = 'create node'
+    NODE_DELETE = 'delete node'
+    NODE_INFO = 'get info of node'
+    OVDC_ENABLE_DISABLE = 'enable or disable ovdc for k8s'
+    OVDC_INFO = 'get info of ovdc'
+    OVDC_LIST = 'list ovdcs'
+    SYSTEM_INFO = 'get info of system'
+    SYSTEM_UPDATE = 'update system status'
+    TEMPLATE_LIST = 'list all templates'
+    # Error Operations
+    BAD_REQUEST = '400 : Bad Request'
+    NOT_FOUND = '404 : Not Found'
+    NOT_ACCEPTABLE = '406 : Not Acceptable'
