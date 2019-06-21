@@ -1,4 +1,4 @@
-# container-service-extension
+# conta iner-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
@@ -17,7 +17,9 @@ from container_service_extension.utils import get_server_runtime_config
 
 
 class ServiceProcessor(object):
-    """Following are the valid api endpoints.
+    """Process incoming REST request.
+
+    Following are the valid api endpoints.
 
     GET /cse/cluster?org={org name}&vdc={vdc name}
     POST /cse/cluster
@@ -40,7 +42,20 @@ class ServiceProcessor(object):
     GET /cse/template
     """ ## noqa
 
-    def _parse_request_url(self, url, method):
+    def _parse_request_url(self, method, url):
+        """Determine the operation that the REST request represent.
+
+        Additionally parse the url for data that might be needed while
+        processing the request.
+
+        :param str url: Incoming REST request url.
+        :param str method: HTTP method of the REST request.
+
+        :return: the type of operation the incoming REST request corresponds
+            to, plus associated parsed data from the url.
+
+        :rtype: dict
+        """
         is_cluster_request = False
         is_node_request = False
         is_ovdc_request = False
@@ -145,7 +160,7 @@ class ServiceProcessor(object):
 
         # parse url
         request_url_parse_result = self._parse_request_url(
-            url=body['requestUri'], method=body['method'])
+            method=body['method'], url=body['requestUri'])
 
         # raise error for invalid request
         if request_url_parse_result['operation'] == CseOperation.BAD_REQUEST:
@@ -158,6 +173,14 @@ class ServiceProcessor(object):
                 CseOperation.NOT_ACCEPTABLE:
             reply['status_code'] = HTTPStatus.NOT_ACCEPTABLE.value
             return reply
+
+        # check for disabled server
+        if request_url_parse_result['operation'] not in \
+                (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE):
+            from container_service_extension.service import Service
+            if not Service().is_enabled:
+                raise CseServerError('CSE service is disabled. Contact the '
+                                     'System Administrator.')
 
         # parse query params
         query_params = {}
@@ -176,14 +199,6 @@ class ServiceProcessor(object):
                 request_body = {}
         else:
             request_body = {}
-
-        # check for disabled server
-        if request_url_parse_result['operation'] not in \
-                (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE):
-            from container_service_extension.service import Service
-            if not Service().is_enabled:
-                raise CseServerError('CSE service is disabled. Contact the '
-                                     'System Administrator.')
 
         # compose request spec for further processing
         tenant_auth_token = body['headers']['x-vcloud-authorization']
