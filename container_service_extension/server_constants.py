@@ -27,6 +27,7 @@ CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY = 'pksBundleKey'
 # KUBERNETES PROVIDERS
 K8S_PROVIDER_KEY = 'k8s_provider'
 
+
 @unique
 class K8sProviders(str, Enum):
     """Types of Kubernetes providers.

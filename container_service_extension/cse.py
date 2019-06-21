@@ -190,7 +190,7 @@ def check(ctx, config, check_install, template):
     except AmqpConnectionError as err:
         click.secho(str(err), fg='red')
         click.secho("check config file amqp section.", fg='red')
-    except requests.exceptions.ConnectionError as err:
+    except requests.exceptions.ConnectionError:
         # TODO() - connection error can be thrown while connecting to other
         # servers too.
         click.secho("Cannot connect to vCD host (check config file vCD host).",
