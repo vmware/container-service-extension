@@ -58,7 +58,6 @@ from container_service_extension.utils \
 from container_service_extension.utils \
     import extract_vdc_name_from_pks_compute_profile_name
 from container_service_extension.utils import get_pks_cache
-from container_service_extension.utils import OK
 from container_service_extension.utils import SYSTEM_ORG_NAME
 
 
@@ -627,7 +626,7 @@ class PKSBroker(AbstractBroker):
         """
         result = {}
         result['body'] = []
-        result['status_code'] = OK
+        result['status_code'] = HTTPStatus.OK.value
         profile_api = ProfileApi(api_client=self.client_v1beta)
 
         resource_pool = {
@@ -677,7 +676,7 @@ class PKSBroker(AbstractBroker):
         """
         result = {}
         result['body'] = []
-        result['status_code'] = OK
+        result['status_code'] = HTTPStatus.OK.value
         profile_api = ProfileApi(api_client=self.client_v1beta)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to get the "
@@ -708,7 +707,7 @@ class PKSBroker(AbstractBroker):
         """
         result = {}
         result['body'] = []
-        result['status_code'] = OK
+        result['status_code'] = HTTPStatus.OK.value
         profile_api = ProfileApi(api_client=self.client_v1beta)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to get the "
