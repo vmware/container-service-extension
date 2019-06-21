@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from collections import namedtuple
-from http import HTTPStatus
 
 from pyvcloud.vcd.org import Org
+import requests
 
 from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterNotFoundError
@@ -85,7 +85,7 @@ class BrokerManager(object):
         """
         result = {}
         result['body'] = []
-        result['status_code'] = HTTPStatus.OK.value
+        result['status_code'] = requests.codes.ok
         self.is_ovdc_present_in_request = self.req_spec.get('vdc')
 
         if op == CseOperation.CLUSTER_CONFIG:
@@ -109,12 +109,12 @@ class BrokerManager(object):
                 'template': self.req_spec.get('template', None),
             }
             result['body'] = self._create_cluster(**cluster_spec)
-            result['status_code'] = HTTPStatus.ACCEPTED.value
+            result['status_code'] = requests.codes.accepted
         elif op == CseOperation.CLUSTER_DELETE:
             cluster_spec = \
                 {'cluster_name': self.req_spec.get('cluster_name', None)}
             result['body'] = self._delete_cluster(**cluster_spec)
-            result['status_code'] = HTTPStatus.ACCEPTED.value
+            result['status_code'] = requests.codes.accepted
         elif op == CseOperation.CLUSTER_INFO:
             cluster_spec = \
                 {'cluster_name': self.req_spec.get('cluster_name', None)}
@@ -132,17 +132,17 @@ class BrokerManager(object):
                  'node_count': self.req_spec.get('node_count', None)
                  }
             result['body'] = self._resize_cluster(**cluster_spec)
-            result['status_code'] = HTTPStatus.ACCEPTED.value
+            result['status_code'] = requests.codes.accepted
         elif op == CseOperation.NODE_CREATE:
             # Currently node create is a vCD only operation.
             broker = VcdBroker(self.tenant_auth_token, self.req_spec)
             result['body'] = broker.create_nodes()
-            result['status_code'] = HTTPStatus.ACCEPTED.value
+            result['status_code'] = requests.codes.accepted
         elif op == CseOperation.NODE_DELETE:
             # Currently node delete is a vCD only operation.
             broker = VcdBroker(self.tenant_auth_token, self.req_spec)
             result['body'] = broker.delete_nodes()
-            result['status_code'] = HTTPStatus.ACCEPTED.value
+            result['status_code'] = requests.codes.accepted
         elif op == CseOperation.NODE_INFO:
             node_spec = \
                 {'cluster_name': self.req_spec.get('cluster_name'),
@@ -159,7 +159,7 @@ class BrokerManager(object):
                     container_provider=self.req_spec[K8S_PROVIDER_KEY])
             # TODO() Constructing response should be moved out of this layer
             result['body'] = {'task_href': task.get('href')}
-            result['status_code'] = HTTPStatus.ACCEPTED.value
+            result['status_code'] = requests.codes.accepted
         elif op == CseOperation.OVDC_INFO:
             ovdc_id = self.req_spec.get('ovdc_id')
             # TODO() Constructing response should be moved out of this layer
@@ -583,7 +583,7 @@ class BrokerManager(object):
         try:
             pksbroker.create_compute_profile(**compute_profile_params)
         except PksServerError as ex:
-            if ex.status == HTTPStatus.CONFLICT.value:
+            if ex.status == requests.codes.conflict:
                 LOGGER.debug(f"Compute profile name {pks_compute_profile_name}"
                              f" already exists\n{str(ex)}")
             else:

@@ -2,10 +2,10 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from http import HTTPStatus
 import re
 
 from pyvcloud.vcd.utils import extract_id
+import requests
 import yaml
 
 from container_service_extension.abstract_broker import AbstractBroker
@@ -369,11 +369,11 @@ class PKSBroker(AbstractBroker):
                 self._filter_list_by_cluster_name(cluster_list, cluster_name)
             LOGGER.debug(f"filtered Cluster List:{filtered_cluster_list}")
             if len(filtered_cluster_list) > 1:
-                raise PksDuplicateClusterError(HTTPStatus.BAD_REQUEST,
+                raise PksDuplicateClusterError(requests.codes.bad_request,
                                                f"Multiple clusters of name"
                                                f" '{cluster_name}' exist")
             if len(filtered_cluster_list) <= 0:
-                raise PksServerError(HTTPStatus.NOT_FOUND,
+                raise PksServerError(requests.codes.not_found,
                                      f"cluster {cluster_name} not found")
             cluster_info = filtered_cluster_list[0]
         else:
@@ -626,7 +626,7 @@ class PKSBroker(AbstractBroker):
         """
         result = {}
         result['body'] = []
-        result['status_code'] = HTTPStatus.OK.value
+        result['status_code'] = requests.codes.ok
         profile_api = ProfileApi(api_client=self.client_v1beta)
 
         resource_pool = {
@@ -676,7 +676,7 @@ class PKSBroker(AbstractBroker):
         """
         result = {}
         result['body'] = []
-        result['status_code'] = HTTPStatus.OK.value
+        result['status_code'] = requests.codes.ok
         profile_api = ProfileApi(api_client=self.client_v1beta)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to get the "
@@ -707,7 +707,7 @@ class PKSBroker(AbstractBroker):
         """
         result = {}
         result['body'] = []
-        result['status_code'] = HTTPStatus.OK.value
+        result['status_code'] = requests.codes.ok
         profile_api = ProfileApi(api_client=self.client_v1beta)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to get the "
@@ -737,7 +737,7 @@ class PKSBroker(AbstractBroker):
         """
         result = {}
         result['body'] = []
-        result['status_code'] = OK
+        result['status_code'] = requests.codes.ok
         profile_api = ProfileApi(api_client=self.client_v1beta)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to delete "

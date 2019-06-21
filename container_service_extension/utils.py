@@ -176,12 +176,12 @@ def response_to_exception(response):
 
     :raises: VcdResponseError
     """
-    if response.status_code == GATEWAY_TIMEOUT:
+    if response.status_code == requests.codes.gateway_timeout:
         message = 'An error has occurred.'
         if response.content is not None and len(response.content) > 0:
             obj = objectify.fromstring(response.content)
             message = obj.get(ERROR_MESSAGE)
-    elif response.status_code == UNAUTHORIZED:
+    elif response.status_code == requests.codes.unauthorized:
         message = 'Session has expired or user not logged in. Please re-login.'
         if response.content is not None and len(response.content) > 0:
             obj = objectify.fromstring(response.content)
@@ -840,7 +840,7 @@ def exception_handler(func):
         try:
             result = func(*args, **kwargs)
         except Exception as err:
-            result['status_code'] = INTERNAL_SERVER_ERROR
+            result['status_code'] = requests.codes.internal_server_error
             result['body'] = error_to_json(err)
             LOGGER.error(traceback.format_exc())
         return result

@@ -4,11 +4,12 @@
 
 import base64
 from copy import deepcopy
-from http import HTTPStatus
 import json
 import sys
 import traceback
 from urllib.parse import parse_qsl
+
+import requests
 
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
@@ -164,14 +165,14 @@ class ServiceProcessor(object):
 
         # raise error for invalid request
         if request_url_parse_result['operation'] == CseOperation.BAD_REQUEST:
-            reply['status_code'] = HTTPStatus.BAD_REQUEST.value
+            reply['status_code'] = requests.codes.bad_request
             return reply
         elif request_url_parse_result['operation'] == CseOperation.NOT_FOUND:
-            reply['status_code'] = HTTPStatus.NOT_FOUND.value
+            reply['status_code'] = requests.codes.not_found
             return reply
         elif request_url_parse_result['operation'] == \
                 CseOperation.NOT_ACCEPTABLE:
-            reply['status_code'] = HTTPStatus.NOT_ACCEPTABLE.value
+            reply['status_code'] = requests.codes.not_acceptable
             return reply
 
         # check for disabled server
@@ -225,7 +226,7 @@ class ServiceProcessor(object):
         if operation == CseOperation.SYSTEM_INFO:
             from container_service_extension.service import Service
             reply['body'] = Service().info(tenant_auth_token)
-            reply['status_code'] = HTTPStatus.OK.value
+            reply['status_code'] = requests.codes.ok
         elif operation == CseOperation.SYSTEM_UPDATE:
             from container_service_extension.service import Service
             reply = Service().update_status(tenant_auth_token, req_spec)
@@ -244,7 +245,7 @@ class ServiceProcessor(object):
                     'description': t['description']
                 })
             reply['body'] = templates
-            reply['status_code'] = HTTPStatus.OK.value
+            reply['status_code'] = requests.codes.ok
         else:
             from container_service_extension.broker_manager import \
                 BrokerManager
