@@ -833,6 +833,10 @@ def is_cse_registered(client):
         return False
 
 
+def get_script_file_name(template_name, script_type):
+    return f"{template_name}/{script_type}.sh"
+
+
 def exception_handler(func):
     """Decorate to trap exceptions and process them.
 

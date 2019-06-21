@@ -24,6 +24,23 @@ CSE_PKS_DEPLOY_RIGHT_CATEGORY = 'pksRight'
 CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY = 'pksBundleKey'
 
 
+@unique
+class NodeType(str, Enum):
+    """Types of node in CSE."""
+
+    MASTER = 'mstr'
+    WORKER = 'node'
+    NFS = 'nfsd'
+
+
+@unique
+class ScriptType(str, Enum):
+    """Types of script for vApp template customizations in CSE."""
+
+    INIT = 'init'
+    CUST = 'cust'
+
+
 # KUBERNETES PROVIDERS
 @unique
 class K8sProviders(str, Enum):

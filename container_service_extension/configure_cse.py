@@ -44,6 +44,7 @@ from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY, CSE_PKS_DEPLOY_RIGHT_CATEGORY, \
     CSE_PKS_DEPLOY_RIGHT_DESCRIPTION, CSE_PKS_DEPLOY_RIGHT_NAME, \
     CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE  # noqa
+from container_service_extension.server_constants import ScriptType
 from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import catalog_exists
 from container_service_extension.utils import catalog_item_exists
@@ -55,6 +56,7 @@ from container_service_extension.utils import EXCHANGE_TYPE
 from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_duplicate_items_in_list
 from container_service_extension.utils import get_org
+from container_service_extension.utils import get_script_file_name
 from container_service_extension.utils import get_vdc
 from container_service_extension.utils import get_vsphere
 from container_service_extension.utils import SYSTEM_ORG_NAME
@@ -1199,8 +1201,8 @@ def _create_temp_vapp(ctx, client, vdc, config, template_config, ssh_key):
     :raises Exception: if VM customization fails.
     """
     vapp_name = template_config['temp_vapp']
-    init_script = get_data_file(f"init-{template_config['name']}.sh",
-                                logger=LOGGER)
+    init_script = get_data_file(get_script_file_name(
+        template_config['name'], ScriptType.INIT), logger=LOGGER)
     if ssh_key is not None:
         init_script += \
             f"""
@@ -1219,8 +1221,8 @@ def _create_temp_vapp(ctx, client, vdc, config, template_config, ssh_key):
     msg = f"Customizing vApp '{vapp_name}'"
     click.secho(msg, fg='yellow')
     LOGGER.info(msg)
-    cust_script = get_data_file(f"cust-{template_config['name']}.sh",
-                                logger=LOGGER)
+    cust_script = get_data_file(get_script_file_name(
+        template_config['name'], ScriptType.CUST), logger=LOGGER)
     ova_name = template_config['source_ova_name']
     is_photon = True if 'photon' in ova_name else False
     _customize_vm(ctx, config, vapp, vapp.name, cust_script,

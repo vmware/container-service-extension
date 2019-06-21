@@ -19,13 +19,11 @@ from container_service_extension.exceptions import DeleteNodeError
 from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import ScriptExecutionError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.server_constants import NodeType
 from container_service_extension.utils import get_data_file
+from container_service_extension.utils import get_script_file_name
 from container_service_extension.utils import get_vsphere
 from container_service_extension.utils import SYSTEM_ORG_NAME
-
-TYPE_MASTER = 'mstr'
-TYPE_NODE = 'node'
-TYPE_NFS = 'nfsd'
 
 
 def wait_until_tools_ready(vm):
@@ -149,10 +147,7 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
         for n in range(qty):
             name = None
             while True:
-                name = '%s-%s' % (
-                    node_type,
-                    ''.join(random.choices(
-                        string.ascii_lowercase + string.digits, k=4)))
+                name = f"{node_type}-{''.join(random.choices(string.ascii_lowercase + string.digits, k=4))}"  # noqa
                 try:
                     vapp.get_vm(name)
                 except Exception:
@@ -209,10 +204,12 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
                 nodes,
                 check_tools=True,
                 wait=False)
-            if node_type == TYPE_NFS:
+            if node_type == NodeType.NFS:
                 LOGGER.debug(
                     f"enabling NFS server on {spec['target_vm_name']}")
-                script = get_data_file('nfsd-%s.sh' % template['name'])
+                script = get_data_file(
+                    get_script_file_name(template['name'],
+                                         NodeType.NFS))
                 exec_results = execute_script_in_nodes(
                     config, vapp,
                     template['admin_password'],
@@ -254,7 +251,7 @@ def get_init_info(config, vapp, password):
 kubeadm token create
 ip route get 1 | awk '{print $NF;exit}'
 """ # NOQA
-    nodes = get_nodes(vapp, TYPE_MASTER)
+    nodes = get_nodes(vapp, NodeType.MASTER)
     result = execute_script_in_nodes(
         config, vapp, password, script, nodes, check_tools=False)
     return result[0][1].content.decode().split()
@@ -266,7 +263,7 @@ def get_master_ip(config, vapp, template):
 """#!/usr/bin/env bash
 ip route get 1 | awk '{print $NF;exit}'
 """ # NOQA
-    nodes = get_nodes(vapp, TYPE_MASTER)
+    nodes = get_nodes(vapp, NodeType.MASTER)
     result = execute_script_in_nodes(
         config,
         vapp,
@@ -282,7 +279,7 @@ ip route get 1 | awk '{print $NF;exit}'
 
 def get_cluster_config(config, vapp, password):
     file_name = '/root/.kube/config'
-    nodes = get_nodes(vapp, TYPE_MASTER)
+    nodes = get_nodes(vapp, NodeType.MASTER)
     result = get_file_from_nodes(
         config, vapp, password, file_name, nodes, check_tools=False)
     if len(result) == 0 or result[0].status_code != 200:
@@ -291,8 +288,9 @@ def get_cluster_config(config, vapp, password):
 
 
 def init_cluster(config, vapp, template):
-    script = get_data_file('mstr-%s.sh' % template['name'])
-    nodes = get_nodes(vapp, TYPE_MASTER)
+    script = get_data_file(
+        get_script_file_name(template['name'], NodeType.MASTER))
+    nodes = get_nodes(vapp, NodeType.MASTER)
     result = execute_script_in_nodes(config, vapp, template['admin_password'],
                                      script, nodes)
     if result[0][0] != 0:
@@ -302,10 +300,11 @@ def init_cluster(config, vapp, template):
 
 def join_cluster(config, vapp, template, target_nodes=None):
     init_info = get_init_info(config, vapp, template['admin_password'])
-    tmp_script = get_data_file('node-%s.sh' % template['name'])
+    tmp_script = get_data_file(
+        get_script_file_name(template['name'], NodeType.WORKER))
     script = tmp_script.format(token=init_info[0], ip=init_info[1])
     if target_nodes is None:
-        nodes = get_nodes(vapp, TYPE_NODE)
+        nodes = get_nodes(vapp, NodeType.WORKER)
     else:
         nodes = []
         for node in vapp.get_all_vms():
@@ -437,7 +436,7 @@ def delete_nodes_from_cluster(config, vapp, template, nodes, force=False):
         script += ' %s' % node
     script += '\n'
     password = template['admin_password']
-    master_nodes = get_nodes(vapp, TYPE_MASTER)
+    master_nodes = get_nodes(vapp, NodeType.MASTER)
     result = execute_script_in_nodes(
         config, vapp, password, script, master_nodes, check_tools=False)
     if result[0][0] != 0:

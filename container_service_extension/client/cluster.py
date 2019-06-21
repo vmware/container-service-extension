@@ -4,9 +4,9 @@
 
 import requests
 
-from container_service_extension.cluster import TYPE_NODE
 from container_service_extension.exceptions import CseClientError
 from container_service_extension.exceptions import VcdResponseError
+from container_service_extension.server_constants import NodeType
 from container_service_extension.utils import ERROR_UNKNOWN
 from container_service_extension.utils import process_response
 from container_service_extension.utils import response_to_exception
@@ -152,7 +152,7 @@ class Cluster(object):
         data = {
             'name': cluster_name,
             'node_count': node_count,
-            'node_type': TYPE_NODE,
+            'node_type': NodeType.WORKER,
             'org': org,
             'vdc': vdc,
             'network': network_name,
@@ -243,7 +243,7 @@ class Cluster(object):
                  storage_profile=None,
                  ssh_key=None,
                  template=None,
-                 node_type=TYPE_NODE,
+                 node_type=NodeType.WORKER,
                  disable_rollback=True):
         """Add nodes to a Kubernetes cluster.
 
