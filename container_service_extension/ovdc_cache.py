@@ -178,4 +178,3 @@ class OvdcCache(object):
         else:
             pvdc_id = pvdc_element.get('id')
             return utils.extract_id(pvdc_id)
-

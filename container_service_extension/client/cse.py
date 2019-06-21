@@ -78,7 +78,6 @@ def list_templates(ctx):
         stderr(e, ctx)
 
 
-
 @cse.group('cluster', short_help='Manage Kubernetes clusters')
 @click.pass_context
 def cluster_group(ctx):
@@ -320,8 +319,8 @@ def cluster_delete(ctx, name, vdc, org):
     metavar='ORG_NAME',
     help='Org to use. Defaults to currently logged-in org')
 def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
-           storage_profile, ssh_key_file, template, enable_nfs,
-           disable_rollback, org_name):
+                   storage_profile, ssh_key_file, template, enable_nfs,
+                   disable_rollback, org_name):
     """Create a Kubernetes cluster."""
     try:
         restore_session(ctx)
@@ -402,7 +401,8 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
     default=True,
     help='Disable rollback on failed node creation '
          '(Exclusive to native Kubernetes provider)')
-def cluster_resize(ctx, name, node_count, network_name, org, vdc, disable_rollback):
+def cluster_resize(ctx, name, node_count, network_name, org, vdc,
+                   disable_rollback):
     """Resize the cluster to contain the specified number of worker nodes.
 
     Clusters that use native Kubernetes provider can not be sized down
