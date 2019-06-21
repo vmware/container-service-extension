@@ -28,9 +28,6 @@ from container_service_extension.cluster import get_master_ip
 from container_service_extension.cluster import init_cluster
 from container_service_extension.cluster import join_cluster
 from container_service_extension.cluster import load_from_metadata
-from container_service_extension.cluster import TYPE_MASTER
-from container_service_extension.cluster import TYPE_NFS
-from container_service_extension.cluster import TYPE_NODE
 from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterInitializationError
 from container_service_extension.exceptions import ClusterJoiningError
@@ -50,6 +47,7 @@ from container_service_extension.utils import ERROR_MESSAGE
 from container_service_extension.utils import ERROR_STACKTRACE
 from container_service_extension.utils import error_to_json
 from container_service_extension.utils import get_server_runtime_config
+from container_service_extension.utils import NodeType
 
 
 OP_CREATE_CLUSTER = 'create_cluster'
@@ -266,11 +264,11 @@ class VcdBroker(AbstractBroker, threading.Thread):
             except Exception:
                 LOGGER.debug(f"Unable to get ip address of node "
                              f"{vm.get('name')}")
-            if vm.get('name').startswith(TYPE_MASTER):
+            if vm.get('name').startswith(NodeType.MASTER):
                 cluster.get('master_nodes').append(node_info)
-            elif vm.get('name').startswith(TYPE_NODE):
+            elif vm.get('name').startswith(NodeType.NODE):
                 cluster.get('nodes').append(node_info)
-            elif vm.get('name').startswith(TYPE_NFS):
+            elif vm.get('name').startswith(NodeType.NFS):
                 cluster.get('nfs_nodes').append(node_info)
         return cluster
 
@@ -313,11 +311,11 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 except Exception:
                     LOGGER.debug(f"Unable to get ip address of node "
                                  f"{vm.get('name')}")
-                if vm.get('name').startswith(TYPE_MASTER):
+                if vm.get('name').startswith(NodeType.MASTER):
                     node_info['node_type'] = 'master'
-                elif vm.get('name').startswith(TYPE_NODE):
+                elif vm.get('name').startswith(NodeType.NODE):
                     node_info['node_type'] = 'node'
-                elif vm.get('name').startswith(TYPE_NFS):
+                elif vm.get('name').startswith(NodeType.NFS):
                     node_info['node_type'] = 'nfsd'
                     exports = self._get_nfs_exports(node_info['ipAddress'],
                                                     vapp,
@@ -441,7 +439,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
 
             server_config = get_server_runtime_config()
             try:
-                add_nodes(1, template, TYPE_MASTER, server_config,
+                add_nodes(1, template, NodeType.MASTER, server_config,
                           self.tenant_client, org, vdc, vapp, self.req_spec)
             except Exception as e:
                 raise MasterNodeCreationError(
@@ -463,7 +461,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
                     message=f"Creating {self.req_spec['node_count']} node(s) "
                             f"for {self.cluster_name}({self.cluster_id})")
                 try:
-                    add_nodes(self.req_spec['node_count'], template, TYPE_NODE,
+                    add_nodes(self.req_spec['node_count'], template,
+                              NodeType.NODE,
                               server_config, self.tenant_client, org, vdc,
                               vapp, self.req_spec)
                 except Exception as e:
@@ -482,7 +481,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                     message=f"Creating NFS node for {self.cluster_name}"
                             f"({self.cluster_id})")
                 try:
-                    add_nodes(1, template, TYPE_NFS,
+                    add_nodes(1, template, NodeType.NFS,
                               server_config, self.tenant_client, org, vdc,
                               vapp, self.req_spec)
                 except Exception as e:
@@ -634,12 +633,12 @@ class VcdBroker(AbstractBroker, threading.Thread):
                                   self.req_spec['node_type'],
                                   server_config, self.tenant_client,
                                   org, vdc, vapp, self.req_spec)
-            if self.req_spec['node_type'] == TYPE_NFS:
+            if self.req_spec['node_type'] == NodeType.NFS:
                 self.update_task(
                     TaskStatus.SUCCESS,
                     message=f"Created {self.req_spec['node_count']} node(s) "
                             f"for {self.cluster_name}({self.cluster_id})")
-            elif self.req_spec['node_type'] == TYPE_NODE:
+            elif self.req_spec['node_type'] == NodeType.NODE:
                 self.update_task(
                     TaskStatus.RUNNING,
                     message=f"Adding {self.req_spec['node_count']} node(s) to "
@@ -684,7 +683,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
             raise CseServerError(f"Invalid list of nodes: "
                                  f"{self.req_spec['nodes']}.")
         for node in self.req_spec['nodes']:
-            if node.startswith(TYPE_MASTER):
+            if node.startswith(NodeType.MASTER):
                 raise CseServerError(f"Can't delete a master node: '{node}'.")
         self._connect_tenant()
         self._connect_sys_admin()

@@ -2,6 +2,8 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from enum import Enum
+from enum import unique
 import functools
 import hashlib
 import json
@@ -68,6 +70,23 @@ ACCEPTED = 202
 UNAUTHORIZED = 401
 INTERNAL_SERVER_ERROR = 500
 GATEWAY_TIMEOUT = 504
+
+
+@unique
+class NodeType(str, Enum):
+    """Types of node in CSE."""
+
+    MASTER = 'mstr'
+    NODE = 'node'
+    NFS = 'nfsd'
+
+
+@unique
+class ScriptType(str, Enum):
+    """Types of script for vApp template customizations in CSE."""
+
+    INIT = 'init'
+    CUST = 'cust'
 
 
 def connect_vcd_user_via_token(vcd_uri, headers, verify_ssl_certs=True):
@@ -831,6 +850,10 @@ def is_cse_registered(client):
         return True
     except MissingRecordException:
         return False
+
+
+def get_script_file_name(template_name, script_type):
+    return f"{template_name}/{script_type}.sh"
 
 
 def exception_handler(func):
