@@ -150,11 +150,11 @@ class Service(object, metaclass=Singleton):
                     reply['body'] = {
                         'message': 'Cannot enable while being stopped.'
                     }
-                    reply['status_code'] = 500
+                    reply['status_code'] = requests.codes.internal_server_error
                 else:
                     self.is_enabled = body['enabled']
                     reply['body'] = {'message': 'Updated'}
-                    reply['status_code'] = 200
+                    reply['status_code'] = requests.codes.ok
             elif 'stopped' in body:
                 if self.is_enabled:
                     reply['body'] = {
@@ -162,7 +162,7 @@ class Service(object, metaclass=Singleton):
                         'Cannot stop CSE while is enabled.'
                         ' Disable the service first.'
                     }
-                    reply['status_code'] = 500
+                    reply['status_code'] = requests.codes.internal_server_error
                 else:
                     message = 'CSE graceful shutdown started.'
                     n = self.active_requests_count()
@@ -170,14 +170,14 @@ class Service(object, metaclass=Singleton):
                         message += ' CSE will finish processing %s requests.' \
                             % n
                     reply['body'] = {'message': message}
-                    reply['status_code'] = 200
+                    reply['status_code'] = requests.codes.ok
                     self.should_stop = True
             else:
                 reply['body'] = {'message': 'Unknown status'}
-                reply['status_code'] = 500
+                reply['status_code'] = requests.codes.internal_server_error
         else:
             reply['body'] = {'message': 'Unauthorized'}
-            reply['status_code'] = 401
+            reply['status_code'] = requests.codes.unauthorized
         return reply
 
     def run(self):
