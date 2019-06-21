@@ -72,7 +72,6 @@ class BrokerManager(object):
 
     def __init__(self, request_headers, request_query_params, request_spec):
         self.req_headers = request_headers
-        self.req_qparams = request_query_params
         self.req_spec = request_spec
         self.pks_cache = get_pks_cache()
         self.ovdc_cache = OvdcCache(get_vcd_sys_admin_client())

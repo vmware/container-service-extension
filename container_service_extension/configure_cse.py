@@ -450,7 +450,7 @@ def get_validated_config(config_file_name):
                                SAMPLE_SERVICE_CONFIG['service'],
                                location="config file 'service' section")
     click.secho(f"Config file '{config_file_name}' is valid", fg='green')
-    if isinstance(pks_config_location, str):
+    if isinstance(pks_config_location, str) and pks_config_location:
         check_file_permissions(pks_config_location)
         with open(pks_config_location) as f:
             pks_config = yaml.safe_load(f) or {}

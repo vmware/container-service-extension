@@ -15,19 +15,15 @@ class Ovdc(object):
         self.client = client
         self._uri = self.client.get_api_uri() + '/cse'
 
-    def list(self, list_pks_plans=False):
+    def list_ovdc_for_k8s(self, list_pks_plans=False):
         method = 'GET'
         uri = f'{self._uri}/ovdc'
-        contents = {
-            'list_pks_plans': list_pks_plans,
-        }
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
-            contents=contents,
-            media_type=None,
-            accept_type='application/json')
+            accept_type='application/json',
+            params={'list_pks_plans': list_pks_plans})
         return process_response(response)
 
     def enable_ovdc_for_k8s(self,
@@ -53,7 +49,7 @@ class Ovdc(object):
         ovdc = get_vdc(self.client, ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.resource.get('id'))
-        uri = f'{self._uri}/ovdc/{ovdc_id}/info'
+        uri = f'{self._uri}/ovdc/{ovdc_id}'
 
         data = {
             'ovdc_id': ovdc_id,
@@ -71,7 +67,7 @@ class Ovdc(object):
             self.client._session,
             contents=data,
             media_type='application/json',
-            accept_type='application/*+json')
+            accept_type='application/json')
         return process_response(response)
 
     def disable_ovdc_for_k8s(self, ovdc_name, org_name=None):
@@ -88,7 +84,7 @@ class Ovdc(object):
         ovdc = get_vdc(self.client, ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.resource.get('id'))
-        uri = f'{self._uri}/ovdc/{ovdc_id}/info'
+        uri = f'{self._uri}/ovdc/{ovdc_id}'
         data = {
             'ovdc_id': ovdc_id,
             'ovdc_name': ovdc_name,
@@ -105,7 +101,7 @@ class Ovdc(object):
             self.client._session,
             contents=data,
             media_type='application/json',
-            accept_type='application/*+json')
+            accept_type='application/json')
         return process_response(response)
 
     def info_ovdc_for_k8s(self, ovdc_name, org_name=None):
@@ -122,13 +118,11 @@ class Ovdc(object):
         ovdc = get_vdc(self.client, ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.resource.get('id'))
-        uri = f'{self._uri}/ovdc/{ovdc_id}/info'
+        uri = f'{self._uri}/ovdc/{ovdc_id}'
 
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
-            contents=None,
-            media_type=None,
-            accept_type='application/*+json')
+            accept_type='application/json')
         return process_response(response)
