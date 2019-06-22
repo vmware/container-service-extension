@@ -466,8 +466,6 @@ class PKSBroker(AbstractBroker):
 
         :param str cluster_name: Name of the cluster
         """
-        self.get_tenant_client_session()
-
         if self.tenant_client.is_sysadmin() \
                 or is_org_admin(self.client_session):
             cluster_info = self.get_cluster_info(cluster_name)

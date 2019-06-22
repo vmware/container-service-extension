@@ -63,8 +63,9 @@ _type_to_string = {
 }
 
 
-def connect_vcd_user_via_token(vcd_uri, tenant_auth_token):
+def connect_vcd_user_via_token(tenant_auth_token):
     server_config = get_server_runtime_config()
+    vcd_uri = server_config['vcd']['host']
     version = server_config['vcd']['api_version']
     verify_ssl_certs = server_config['vcd']['verify']
     client_tenant = Client(

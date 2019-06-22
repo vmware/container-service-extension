@@ -16,6 +16,8 @@ class AbstractBroker(abc.ABC):
     def __init__(self, tenant_auth_token, request_spec):
         self.tenant_auth_token = tenant_auth_token
         self.req_spec = request_spec
+        self.client_session = None
+        self.tenant_info = None
 
     @abc.abstractmethod
     def create_cluster(self):
@@ -93,10 +95,7 @@ class AbstractBroker(abc.ABC):
         return self.client_session
 
     def _connect_tenant(self):
-        server_config = get_server_runtime_config()
-        host = server_config['vcd']['host']
         self.tenant_client, self.client_session = connect_vcd_user_via_token(
-            vcd_uri=host,
             tenant_auth_token=self.tenant_auth_token)
         self.tenant_info = {
             'user_name': self.client_session.get('user'),
@@ -105,11 +104,3 @@ class AbstractBroker(abc.ABC):
             'org_href': self.tenant_client._get_wk_endpoint(
                 _WellKnownEndpoint.LOGGED_IN_ORG)
         }
-
-    def _connect_sys_admin(self):
-        self.sys_admin_client = get_vcd_sys_admin_client()
-
-    def _disconnect_sys_admin(self):
-        if self.sys_admin_client is not None:
-            self.sys_admin_client.logout()
-            self.sys_admin_client = None
