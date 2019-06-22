@@ -112,8 +112,7 @@ class Service(object, metaclass=Singleton):
                 return 'Disabled'
 
     def info(self, tenant_auth_token):
-        tenant_client, session = connect_vcd_user_via_token(
-            vcd_uri=self.config['vcd']['host'],
+        tenant_client, _ = connect_vcd_user_via_token(
             tenant_auth_token=tenant_auth_token)
         result = Service.version()
         if tenant_client.is_sysadmin():
@@ -140,7 +139,6 @@ class Service(object, metaclass=Singleton):
 
     def update_status(self, tenant_auth_token, body):
         tenant_client, session = connect_vcd_user_via_token(
-            vcd_uri=self.config['vcd']['host'],
             tenant_auth_token=tenant_auth_token)
 
         reply = {}

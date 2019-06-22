@@ -17,18 +17,15 @@ from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
 from container_service_extension.utils import get_org
 from container_service_extension.utils import get_pks_cache
+from container_service_extension.utils import get_vcd_sys_admin_client
 from container_service_extension.utils import get_vdc
 
 
 class OvdcCache(object):
 
-    def __init__(self, client):
-        """Construct the cache for ovdc.
-
-        :param pyvcloud.vcd.client.Client client:the client that will be used
-            to make REST calls to vCD.
-        """
-        self.client = client
+    def __init__(self):
+        """Construct the cache for ovdc."""
+        self.client = get_vcd_sys_admin_client()
         self.pks_cache = get_pks_cache()
 
     @staticmethod

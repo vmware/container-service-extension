@@ -11,8 +11,10 @@ from urllib.parse import parse_qsl
 
 import requests
 
+from container_service_extension.broker_manager import BrokerManager
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.ovdc_manager import OvdcManager
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.utils import get_server_runtime_config
 
@@ -246,9 +248,13 @@ class ServiceProcessor(object):
                 })
             reply['body'] = templates
             reply['status_code'] = requests.codes.ok
+        elif operation in (CseOperation.OVDC_ENABLE_DISABLE,
+                           CseOperation.OVDC_INFO, CseOperation.OVDC_LIST):
+            ovdc_manager = OvdcManager(tenant_auth_token, req_spec)
+            reply = ovdc_manager.invoke(op=operation)
         else:
-            from container_service_extension.broker_manager import \
-                BrokerManager
+            # from container_service_extension.broker_manager import \
+            #     BrokerManager
             broker_manager = BrokerManager(tenant_auth_token, req_spec)
             reply = broker_manager.invoke(op=operation)
 

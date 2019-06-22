@@ -160,6 +160,7 @@ class MessageConsumer(object):
                reply_body == '[]' and \
                'message' in result:
                 reply_body = '{"message": "%s"}' % result['message']
+        # TODO() : Catch exceptions to determine response code
         except Exception as e:
             reply_body = '{"message": "%s"}' % str(e)
             status_code = requests.codes.internal_server_error
@@ -168,23 +169,20 @@ class MessageConsumer(object):
 
         if properties.reply_to is not None:
             reply_msg = {
-                'id':
-                body_json['id'],
+                'id': body_json['id'],
                 'headers': {
                     'Content-Type': body_json['headers']['Accept'],
                     'Content-Length': len(reply_body)
                 },
-                'statusCode':
-                status_code,
+                'statusCode': status_code,
                 'body':
                 base64.b64encode(reply_body.encode()).decode(self.fsencoding),
-                'request':
-                False
+                'request': False
             }
             LOGGER.debug(f"reply: {json.dumps(reply_body)}")
             reply_properties = pika.BasicProperties(
                 correlation_id=properties.correlation_id)
-            result = self._channel.basic_publish(
+            self._channel.basic_publish(
                 exchange=properties.headers['replyToExchange'],
                 routing_key=properties.reply_to,
                 body=json.dumps(reply_msg),
