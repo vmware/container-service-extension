@@ -26,10 +26,13 @@ from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vdc import VDC
 from vcd_cli.vcd import vcd
 
+import container_service_extension.install_utils as install_utils
+import container_service_extension.python_utils as python_utils
 from container_service_extension.server_constants import CSE_SERVICE_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
+from container_service_extension.server_constants import SYSTEM_ORG_NAME
 import container_service_extension.system_test_framework.utils as testutils
-import container_service_extension.utils as utils
+
 """
 This module manages environment state during CSE system tests.
 These variables persist through all test cases and do not change.
@@ -94,12 +97,12 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
                     api_version=config['vcd']['api_version'],
                     verify_ssl_certs=config['vcd']['verify'])
     credentials = BasicLoginCredentials(config['vcd']['username'],
-                                        utils.SYSTEM_ORG_NAME,
+                                        SYSTEM_ORG_NAME,
                                         config['vcd']['password'])
     CLIENT.set_credentials(credentials)
 
-    org = utils.get_org(CLIENT, org_name=config['broker']['org'])
-    vdc = utils.get_vdc(CLIENT, config['broker']['vdc'], org=org)
+    org = python_utils.get_org(CLIENT, org_name=config['broker']['org'])
+    vdc = python_utils.get_vdc(CLIENT, config['broker']['vdc'], org=org)
     ORG_HREF = org.href
     VDC_HREF = vdc.href
     CATALOG_NAME = config['broker']['catalog']
@@ -176,8 +179,8 @@ def delete_catalog_item(item_name):
     org = Org(CLIENT, href=ORG_HREF)
     try:
         org.delete_catalog_item(CATALOG_NAME, item_name)
-        utils.wait_for_catalog_item_to_resolve(CLIENT, CATALOG_NAME, item_name,
-                                               org=org)
+        install_utils.wait_for_catalog_item_to_resolve(CLIENT, CATALOG_NAME,
+                                                       item_name, org=org)
         org.reload()
     except EntityNotFoundException:
         pass

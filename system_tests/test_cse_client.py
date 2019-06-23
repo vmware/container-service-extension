@@ -60,7 +60,6 @@ from container_service_extension.cse import cli
 import container_service_extension.server_constants as constants
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
-import container_service_extension.utils as utils
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -103,7 +102,7 @@ def cse_server():
     # enable kubernetes functionality on our ovdc
     # by default, an ovdc cannot deploy kubernetes clusters
     # TODO() this should be removed once this behavior is changed
-    cmd = f"login {config['vcd']['host']} {utils.SYSTEM_ORG_NAME} " \
+    cmd = f"login {config['vcd']['host']} {constants.SYSTEM_ORG_NAME} " \
           f"{config['vcd']['username']} -iwp {config['vcd']['password']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
@@ -451,7 +450,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
         print('SUCCESS')
 
 
-class TestSystemToggle:
+class TestSystemToggle(object):
     """Test `vcd cse system ...` commands.
 
     Test that on disabling CSE, cluster deployments are no longer allowed, and
