@@ -13,7 +13,7 @@ import requests
 
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.processor import ServiceProcessor
-from container_service_extension.utils import EXCHANGE_TYPE
+from container_service_extension.server_constants import EXCHANGE_TYPE
 
 
 class MessageConsumer(object):

@@ -51,14 +51,10 @@ from container_service_extension.pyvcloud_utils import get_org_name_of_ovdc
 from container_service_extension.pyvcloud_utils import is_org_admin
 from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
+from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import exception_handler
-from container_service_extension.utils \
-    import extract_vdc_id_from_pks_compute_profile_name
-from container_service_extension.utils \
-    import extract_vdc_name_from_pks_compute_profile_name
 from container_service_extension.utils import get_pks_cache
-from container_service_extension.utils import SYSTEM_ORG_NAME
 
 
 # Delimiter to append with user id context
@@ -838,6 +834,28 @@ class PKSBroker(AbstractBroker):
     def _get_vcd_userid(self):
         return extract_id(self.client_session.get('userId'))
 
+    def _extract_vdc_name_from_pks_compute_profile_name(compute_profile_name):
+        """Extract the vdc name from pks compute profile name.
+
+        :param str compute_profile_name: name of the pks compute profile
+
+        :return: name of the vdc in vcd.
+
+        :rtype: str
+        """
+        return compute_profile_name.split('--')[2]
+
+    def _extract_vdc_id_from_pks_compute_profile_name(compute_profile_name):
+        """Extract the vdc identifier from pks compute profile name.
+
+        :param str compute_profile_name: name of the pks compute profile
+
+        :return: UUID of the vdc in vcd.
+
+        :rtype: str
+        """
+        return compute_profile_name.split('--')[1]
+
     def _does_cluster_belong_to_org(self, cluster_info, org_name):
         # Returns True if the cluster belongs to the given org
         # Else False (this also includes missing compute profile name)
@@ -847,7 +865,7 @@ class PKSBroker(AbstractBroker):
             LOGGER.debug(f"compute-profile-name of {cluster_info.get('name')}"
                          f" is not found")
             return False
-        vdc_id = extract_vdc_id_from_pks_compute_profile_name(
+        vdc_id = self._extract_vdc_id_from_pks_compute_profile_name(
             compute_profile_name)
         return org_name == get_org_name_of_ovdc(vdc_id)
 
@@ -871,7 +889,7 @@ class PKSBroker(AbstractBroker):
             LOGGER.debug(f"compute-profile-name of {cluster_info.get('name')}"
                          f" is not found")
             return False
-        vdc_of_cluster = extract_vdc_name_from_pks_compute_profile_name(
+        vdc_of_cluster = self._extract_vdc_name_from_pks_compute_profile_name(
             compute_profile_name)
         return vdc_of_cluster == vdc_name
 

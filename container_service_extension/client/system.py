@@ -2,7 +2,9 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.utils import process_response
+from container_service_extension.client.response_processor \
+    import process_response
+from container_service_extension.shared_constants import SERVER_ACTION_KEY
 
 
 class System(object):
@@ -20,26 +22,14 @@ class System(object):
             accept_type='application/json')
         return process_response(response)
 
-    def stop(self):
+    def update_service_status(self, action):
         method = 'PUT'
         uri = f"{self._uri}/system"
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
-            contents={'stopped': True},
-            media_type='application/json',
-            accept_type='application/json')
-        return process_response(response)
-
-    def enable_service(self, enabled=True):
-        method = 'PUT'
-        uri = f"{self._uri}/system"
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            contents={'enabled': enabled},
+            contents={SERVER_ACTION_KEY: action},
             media_type='application/json',
             accept_type='application/json')
         return process_response(response)

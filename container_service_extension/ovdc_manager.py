@@ -13,11 +13,10 @@ from container_service_extension.exceptions import UnauthorizedActionError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.ovdc_cache import OvdcCache
 from container_service_extension.pksbroker import PKSBroker
+from container_service_extension.pyvcloud_utils import get_sys_admin_client
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
-from container_service_extension.utils \
-    import create_pks_compute_profile_name_from_vdc_id
 from container_service_extension.utils import exception_handler
 from container_service_extension.utils import get_pks_cache
 
@@ -92,7 +91,7 @@ class OvdcManager(object):
             nsxt_info = self.pks_cache.get_nsxt_info(pvdc_info.vc)
 
             pks_compute_profile_name = \
-                create_pks_compute_profile_name_from_vdc_id(ovdc_id)
+                self._create_pks_compute_profile_name_from_vdc_id(ovdc_id)
             pks_context = OvdcCache.construct_pks_context(
                 pks_account_info=pks_account_info,
                 pvdc_info=pvdc_info,
@@ -110,7 +109,7 @@ class OvdcManager(object):
         ovdc_name = self.req_spec.get('ovdc_name')
         # Compute profile creation
         pks_compute_profile_name = \
-            create_pks_compute_profile_name_from_vdc_id(ovdc_id)
+            self._create_pks_compute_profile_name_from_vdc_id(ovdc_id)
         pks_compute_profile_description = f"{org_name}--{ovdc_name}" \
             f"--{ovdc_id}"
         pks_az_name = f"az-{ovdc_name}"
@@ -136,6 +135,20 @@ class OvdcManager(object):
                              f" already exists\n{str(ex)}")
             else:
                 raise ex
+
+    def _create_pks_compute_profile_name_from_vdc_id(vdc_id):
+        """Construct pks compute profile name.
+
+        :param str vdc_id: UUID of the vdc in vcd
+
+        :return: pks compute profile name
+
+        :rtype: str
+        """
+        from container_service_extension.pyvcloud_utils import get_vdc_by_id
+        client = get_sys_admin_client()
+        vdc = get_vdc_by_id(client, vdc_id)
+        return f"cp--{vdc_id}--{vdc.name}"
 
     def _list_ovdcs(self, list_pks_plans=False):
         """Get list of ovdcs.
