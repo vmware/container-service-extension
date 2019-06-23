@@ -205,6 +205,7 @@ class Cluster(object):
         try:
             result = process_response(response)
         except VcdResponseError as e:
+            # ToDo() This is horrible! Fix it.
             if e.error_message == ERROR_UNKNOWN:
                 raise CseClientError("Invalid cluster/node name")
             else:

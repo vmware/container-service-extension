@@ -96,7 +96,7 @@ class VcdResponseError(Exception):
         self.error_message = error_message
 
     def __str__(self):
-        return self.error_message
+        return str(self.error_message)
 
 
 class PksServerError(CseServerError):
