@@ -4,12 +4,14 @@
 
 import requests
 
+from container_service_extension.client.response_processor import \
+    process_response
+from container_service_extension.client.response_processor import \
+    response_to_exception
 from container_service_extension.cluster import TYPE_NODE
 from container_service_extension.exceptions import CseClientError
 from container_service_extension.exceptions import VcdResponseError
-from container_service_extension.utils import ERROR_UNKNOWN
-from container_service_extension.utils import process_response
-from container_service_extension.utils import response_to_exception
+from container_service_extension.shared_constants import ERROR_UNKNOWN
 
 
 class Cluster(object):

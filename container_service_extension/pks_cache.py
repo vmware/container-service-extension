@@ -6,7 +6,7 @@
 
 from collections import namedtuple
 
-from container_service_extension.utils import get_pvdc_id_by_name
+from container_service_extension.pyvcloud_utils import get_pvdc_id_by_name
 
 # Refer  to TODO(Constants) in broker_manager.py
 PKS_PLANS_KEY = 'pks_plans'

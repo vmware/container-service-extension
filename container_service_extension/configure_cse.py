@@ -24,6 +24,18 @@ import yaml
 
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.exceptions import AmqpError
+from container_service_extension.install_utils import catalog_exists
+from container_service_extension.install_utils import catalog_item_exists
+from container_service_extension.install_utils import check_file_permissions
+from container_service_extension.install_utils import create_and_share_catalog
+from container_service_extension.install_utils import download_file
+from container_service_extension.install_utils import get_data_file
+from container_service_extension.install_utils import get_vsphere
+from container_service_extension.install_utils import upload_ova_to_catalog
+from container_service_extension.install_utils import vgr_callback
+from container_service_extension.install_utils \
+    import wait_for_catalog_item_to_resolve
+from container_service_extension.install_utils import wait_until_tools_ready
 from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
@@ -38,30 +50,18 @@ from container_service_extension.pks_cache import Credentials
 from container_service_extension.pksclient.client.v1.api_client \
     import ApiClient as ApiClientV1
 from container_service_extension.pksclient.configuration import Configuration
+from container_service_extension.pyvcloud_utils import get_org
+from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY, CSE_NATIVE_DEPLOY_RIGHT_CATEGORY, \
     CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION, CSE_NATIVE_DEPLOY_RIGHT_NAME, \
     CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY, CSE_PKS_DEPLOY_RIGHT_CATEGORY, \
     CSE_PKS_DEPLOY_RIGHT_DESCRIPTION, CSE_PKS_DEPLOY_RIGHT_NAME, \
-    CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE  # noqa
+    CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, EXCHANGE_TYPE, \
+    SYSTEM_ORG_NAME   # noqa
 from container_service_extension.uaaclient.uaaclient import UaaClient
-from container_service_extension.utils import catalog_exists
-from container_service_extension.utils import catalog_item_exists
-from container_service_extension.utils import check_file_permissions
 from container_service_extension.utils import check_keys_and_value_types
-from container_service_extension.utils import create_and_share_catalog
-from container_service_extension.utils import download_file
-from container_service_extension.utils import EXCHANGE_TYPE
-from container_service_extension.utils import get_data_file
 from container_service_extension.utils import get_duplicate_items_in_list
-from container_service_extension.utils import get_org
-from container_service_extension.utils import get_vdc
-from container_service_extension.utils import get_vsphere
-from container_service_extension.utils import SYSTEM_ORG_NAME
-from container_service_extension.utils import upload_ova_to_catalog
-from container_service_extension.utils import vgr_callback
-from container_service_extension.utils import wait_for_catalog_item_to_resolve
-from container_service_extension.utils import wait_until_tools_ready
 
 # used for creating temp vapp
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = "vmxnet3"

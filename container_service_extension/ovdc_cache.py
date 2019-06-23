@@ -12,20 +12,20 @@ from container_service_extension.pks_cache import PKS_CLUSTER_DOMAIN_KEY
 from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE_KEY
 from container_service_extension.pks_cache import PKS_PLANS_KEY
 from container_service_extension.pks_cache import PksCache
+from container_service_extension.pyvcloud_utils import get_org
+from container_service_extension.pyvcloud_utils import get_sys_admin_client
+from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.pyvcloud_utils import get_vdc_by_id
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
-from container_service_extension.utils import get_org
 from container_service_extension.utils import get_pks_cache
-from container_service_extension.utils import get_vcd_sys_admin_client
-from container_service_extension.utils import get_vdc
 
 
 class OvdcCache(object):
 
     def __init__(self):
         """Construct the cache for ovdc."""
-        self.client = get_vcd_sys_admin_client()
+        self.client = get_sys_admin_client()
         self.pks_cache = get_pks_cache()
 
     @staticmethod

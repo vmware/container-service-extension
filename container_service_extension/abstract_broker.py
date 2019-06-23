@@ -6,9 +6,8 @@ import abc
 
 from pyvcloud.vcd.client import _WellKnownEndpoint
 
-from container_service_extension.utils import connect_vcd_user_via_token
-from container_service_extension.utils import get_server_runtime_config
-from container_service_extension.utils import get_vcd_sys_admin_client
+from container_service_extension.pyvcloud_utils import \
+    connect_vcd_user_via_token
 
 
 class AbstractBroker(abc.ABC):

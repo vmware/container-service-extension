@@ -8,7 +8,6 @@ import threading
 import traceback
 import uuid
 
-import click
 import pkg_resources
 from pyvcloud.vcd.client import TaskStatus
 from pyvcloud.vcd.client import VCLOUD_STATUS_MAP
@@ -43,6 +42,7 @@ from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import WorkerNodeCreationError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pyvcloud_utils import get_org_name_of_ovdc
+from container_service_extension.pyvcloud_utils import get_sys_admin_client
 from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_NAME
 from container_service_extension.utils import ERROR_DESCRIPTION
@@ -120,7 +120,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
         self.daemon = False
 
     def _connect_sys_admin(self):
-        self.sys_admin_client = get_vcd_sys_admin_client()
+        self.sys_admin_client = get_sys_admin_client()
 
     def _disconnect_sys_admin(self):
         if self.sys_admin_client is not None:
@@ -128,10 +128,10 @@ class VcdBroker(AbstractBroker, threading.Thread):
             self.sys_admin_client = None
 
     def _update_task(self,
-                    status,
-                    message=None,
-                    error_message=None,
-                    stack_trace=''):
+                     status,
+                     message=None,
+                     error_message=None,
+                     stack_trace=''):
         if not self.tenant_client.is_sysadmin():
             stack_trace = ''
 

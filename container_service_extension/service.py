@@ -2,6 +2,8 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from enum import Enum
+from enum import unique
 import platform
 import signal
 import sys
@@ -12,8 +14,6 @@ import traceback
 
 import click
 import pkg_resources
-from pyvcloud.vcd.client import BasicLoginCredentials
-from pyvcloud.vcd.client import Client
 import requests
 
 from container_service_extension.configure_cse import check_cse_installation
@@ -21,12 +21,15 @@ from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.consumer import MessageConsumer
 from container_service_extension.logger import configure_server_logger
 from container_service_extension.logger import SERVER_DEBUG_LOG_FILEPATH
-from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_INFO_LOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PksCache
-from container_service_extension.utils import connect_vcd_user_via_token
-from container_service_extension.utils import SYSTEM_ORG_NAME
+from container_service_extension.pyvcloud_utils import \
+    connect_vcd_user_via_token
+from container_service_extension.shared_constants import SERVER_ACTION_KEY
+from container_service_extension.shared_constants import SERVER_DISABLE_ACTION
+from container_service_extension.shared_constants import SERVER_ENABLE_ACTION
+from container_service_extension.shared_constants import SERVER_STOP_ACTION
 
 
 class Singleton(type):
@@ -54,44 +57,29 @@ def consumer_thread(c):
         c.stop()
 
 
+@unique
+class ServerState(Enum):
+    RUNNING = 'Running'
+    DISABLED = 'Disabled'
+    STOPPING = 'Shutting down'
+    STOPPED = 'Stopped'
+
+
 class Service(object, metaclass=Singleton):
     def __init__(self, config_file, should_check_config=True):
         self.config_file = config_file
         self.config = None
         self.should_check_config = should_check_config
-        self.is_enabled = False
         self.consumers = []
         self.threads = []
-        self.should_stop = False
         self.pks_cache = None
+        self.state = ServerState.STOPPED
 
     def get_service_config(self):
         return self.config
 
     def get_pks_cache(self):
         return self.pks_cache
-
-    def get_sys_admin_client(self):
-        if self.config is not None:
-            if not self.config['vcd']['verify']:
-                LOGGER.warning("InsecureRequestWarning: Unverified HTTPS "
-                               "request is being made. Adding certificate "
-                               "verification is strongly advised.")
-                requests.packages.urllib3.disable_warnings()
-            client = Client(
-                uri=self.config['vcd']['host'],
-                api_version=self.config['vcd']['api_version'],
-                verify_ssl_certs=self.config['vcd']['verify'],
-                log_file=SERVER_DEBUG_WIRELOG_FILEPATH,
-                log_requests=True,
-                log_headers=True,
-                log_bodies=True)
-            credentials = BasicLoginCredentials(self.config['vcd']['username'],
-                                                SYSTEM_ORG_NAME,
-                                                self.config['vcd']['password'])
-            client.set_credentials(credentials)
-            return client
-        return None
 
     def active_requests_count(self):
         n = 0
@@ -103,13 +91,7 @@ class Service(object, metaclass=Singleton):
         return n
 
     def get_status(self):
-        if self.is_enabled:
-            return 'Running'
-        else:
-            if self.should_stop:
-                return 'Shutting down'
-            else:
-                return 'Disabled'
+        return self.state.value
 
     def info(self, tenant_auth_token):
         tenant_client, _ = connect_vcd_user_via_token(
@@ -137,45 +119,60 @@ class Service(object, metaclass=Singleton):
         }
         return ver_obj
 
-    def update_status(self, tenant_auth_token, body):
-        tenant_client, session = connect_vcd_user_via_token(
+    def update_status(self, tenant_auth_token, req_spec):
+        tenant_client, _ = connect_vcd_user_via_token(
             tenant_auth_token=tenant_auth_token)
-
         reply = {}
-        if tenant_client.is_sysadmin():
-            if 'enabled' in body:
-                if body['enabled'] and self.should_stop:
-                    reply['body'] = {
-                        'message': 'Cannot enable while being stopped.'
-                    }
-                    reply['status_code'] = requests.codes.internal_server_error
-                else:
-                    self.is_enabled = body['enabled']
-                    reply['body'] = {'message': 'Updated'}
-                    reply['status_code'] = requests.codes.ok
-            elif 'stopped' in body:
-                if self.is_enabled:
-                    reply['body'] = {
-                        'message':
-                        'Cannot stop CSE while is enabled.'
-                        ' Disable the service first.'
-                    }
-                    reply['status_code'] = requests.codes.internal_server_error
-                else:
-                    message = 'CSE graceful shutdown started.'
-                    n = self.active_requests_count()
-                    if n > 0:
-                        message += ' CSE will finish processing %s requests.' \
-                            % n
-                    reply['body'] = {'message': message}
-                    reply['status_code'] = requests.codes.ok
-                    self.should_stop = True
-            else:
-                reply['body'] = {'message': 'Unknown status'}
-                reply['status_code'] = requests.codes.internal_server_error
-        else:
-            reply['body'] = {'message': 'Unauthorized'}
+
+        if not tenant_client.is_sysadmin():
+            reply['body'] = {'message': 'Unauthorized to update CSE'}
             reply['status_code'] = requests.codes.unauthorized
+            return
+
+        action = req_spec.get(SERVER_ACTION_KEY, 'Unknown request')
+        message = 'Bad Request'
+        status_code = requests.codes.bad_request
+
+        if self.state == ServerState.RUNNING:
+            if action == SERVER_ENABLE_ACTION:
+                message = 'CSE is already enabled and running.'
+                status_code = requests.codes.bad_request
+            elif action == SERVER_DISABLE_ACTION:
+                self.state = ServerState.DISABLED
+                message = 'CSE has been disabled.'
+                status_code = requests.codes.ok
+            elif action == SERVER_STOP_ACTION:
+                message = 'Cannot stop CSE while it is enabled. '\
+                          'Disable the service first'
+                status_code = requests.codes.bad_request
+        elif self.state == ServerState.DISABLED:
+            if action == SERVER_ENABLE_ACTION:
+                self.state = ServerState.RUNNING
+                message = 'CSE has been enabled and is running.'
+                status_code = requests.ok
+            elif action == SERVER_DISABLE_ACTION:
+                message = 'CSE is already disabled.'
+                status_code = requests.codes.bad_request
+            elif action == 'stop':
+                message = 'CSE graceful shutdown started.'
+                n = self.active_requests_count()
+                if n > 0:
+                    message += f" CSE will finish processing {n} requests."
+                status_code = requests.codes.ok
+                self.state = ServerState.STOPPING
+        elif self.state == ServerState.STOPPING:
+            if action == SERVER_ENABLE_ACTION:
+                message = 'Cannot enable CSE while it is being stopped.'
+                status_code = requests.codes.bad_request
+            elif action == SERVER_DISABLE_ACTION:
+                message = 'Cannot disable CSE while it is being stopped.'
+                status_code = requests.codes.bad_request
+            elif action == SERVER_STOP_ACTION:
+                message = 'CSE graceful shutdown is in progress.'
+                status_code = requests.codes.ok
+
+        reply['body'] = message
+        reply['status_code'] = status_code
         return reply
 
     def run(self):
@@ -227,12 +224,13 @@ class Service(object, metaclass=Singleton):
 
         LOGGER.info(f"Number of threads started: {len(self.threads)}")
 
-        self.is_enabled = True
+        self.state = ServerState.RUNNING
 
         while True:
             try:
                 time.sleep(1)
-                if self.should_stop and self.active_requests_count() == 0:
+                if self.state == ServerState.STOPPING and \
+                        self.active_requests_count() == 0:
                     break
             except KeyboardInterrupt:
                 break
@@ -247,4 +245,6 @@ class Service(object, metaclass=Singleton):
                 c.stop()
             except Exception:
                 pass
+
+        self.state = ServerState.STOPPED
         LOGGER.info("Done")

@@ -6,10 +6,10 @@ import functools
 
 
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.pyvcloud_utils import get_sys_admin_client
 from container_service_extension.pyvcloud_utils import get_user_rights
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
 from container_service_extension.utils import get_server_runtime_config
-from container_service_extension.utils import get_vcd_sys_admin_client
 
 
 def _is_authorized(sys_admin_client, user_session, required_rights):
@@ -65,7 +65,7 @@ def secure(required_rights=[]):
                 is_authorized = True
                 server_config = get_server_runtime_config()
                 if server_config['service']['enforce_authorization']:
-                    sys_admin_client = get_vcd_sys_admin_client()
+                    sys_admin_client = get_sys_admin_client()
                     broker_instance = args[0]  # self
                     user_session = broker_instance.get_tenant_client_session()
                     is_authorized = _is_authorized(sys_admin_client,

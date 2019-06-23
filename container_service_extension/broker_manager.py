@@ -16,10 +16,11 @@ from container_service_extension.ovdc_cache import OvdcCache
 from container_service_extension.pks_cache import PKS_CLUSTER_DOMAIN_KEY
 from container_service_extension.pks_cache import PKS_PLANS_KEY
 from container_service_extension.pksbroker import PKSBroker
+from container_service_extension.pyvcloud_utils \
+    import connect_vcd_user_via_token
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
-from container_service_extension.utils import connect_vcd_user_via_token
 from container_service_extension.utils import exception_handler
 from container_service_extension.utils import get_pks_cache
 from container_service_extension.vcdbroker import VcdBroker

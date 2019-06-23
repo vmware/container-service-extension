@@ -5,10 +5,14 @@
 from enum import Enum
 from enum import unique
 
+
 # CSE SERVICE
 # used for registering CSE to vCD as an api extension service.
 CSE_SERVICE_NAME = 'cse'
 CSE_SERVICE_NAMESPACE = 'cse'
+# used to set up and start AMQP exchange
+EXCHANGE_TYPE = 'direct'
+SYSTEM_ORG_NAME = 'System'
 
 # DEPLOY RIGHTS
 # used by authorization framework to weed out unauthorized calls.

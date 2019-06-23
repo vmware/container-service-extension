@@ -15,6 +15,9 @@ from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.system import System
 from container_service_extension.server_constants import K8sProviders
 from container_service_extension.service import Service
+from container_service_extension.shared_constants import SERVER_DISABLE_ACTION
+from container_service_extension.shared_constants import SERVER_ENABLE_ACTION
+from container_service_extension.shared_constants import SERVER_STOP_ACTION
 
 
 @vcd.group(short_help='Manage Kubernetes clusters')
@@ -824,7 +827,7 @@ def stop_service(ctx):
         restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
-        result = system.stop()
+        result = system.update_service_status(action=SERVER_STOP_ACTION)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -838,7 +841,7 @@ def enable_service(ctx):
         restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
-        result = system.enable_service()
+        result = system.update_service_status(action=SERVER_ENABLE_ACTION)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -852,7 +855,7 @@ def disable_service(ctx):
         restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
-        result = system.enable_service(False)
+        result = system.update_service_status(action=SERVER_DISABLE_ACTION)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)

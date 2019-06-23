@@ -4,10 +4,11 @@
 
 from pyvcloud.vcd import utils
 
+from container_service_extension.client.response_processor import \
+    process_response
+from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
-from container_service_extension.utils import get_vdc
-from container_service_extension.utils import process_response
 
 
 class Ovdc(object):
