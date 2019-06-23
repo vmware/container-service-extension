@@ -174,7 +174,7 @@ class Service(object, metaclass=Singleton):
                 message = 'CSE graceful shutdown is in progress.'
                 status_code = requests.codes.ok
 
-        reply['body'] = {'message' : message}
+        reply['body'] = {'message': message}
         reply['status_code'] = status_code
         return reply
 

@@ -182,7 +182,7 @@ class ServiceProcessor(object):
             from container_service_extension.service import Service
             if not Service().is_running():
                 reply['status_code'] = requests.codes.bad_request
-                reply['body'] = {'message' : 'CSE service is disabled. ' \
+                reply['body'] = {'message': 'CSE service is disabled. '
                                  'Contact the System Administrator.'}
                 return reply
 

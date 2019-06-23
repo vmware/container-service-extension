@@ -168,7 +168,7 @@ class Cluster(object):
         try:
             result = process_response(response)
         except VcdResponseError as e:
-            if e.error_message == ERROR_UNKNOWN:
+            if e.error_message == UNKNOWN_ERROR_MESSAGE:
                 raise CseClientError("Invalid cluster/node name")
             else:
                 raise e
@@ -188,7 +188,7 @@ class Cluster(object):
         try:
             response_to_exception(response)
         except VcdResponseError as e:
-            if e.error_message == ERROR_UNKNOWN:
+            if e.error_message == UNKNOWN_ERROR_MESSAGE:
                 raise CseClientError("Invalid cluster name")
             else:
                 raise e
@@ -206,7 +206,7 @@ class Cluster(object):
             result = process_response(response)
         except VcdResponseError as e:
             # ToDo() This is horrible! Fix it.
-            if e.error_message == ERROR_UNKNOWN:
+            if e.error_message == UNKNOWN_ERROR_MESSAGE:
                 raise CseClientError("Invalid cluster/node name")
             else:
                 raise e

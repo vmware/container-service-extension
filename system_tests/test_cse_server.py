@@ -57,9 +57,9 @@ from pyvcloud.vcd.vdc import VDC
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.cse import cli
+import container_service_extension.install_utils as install_utils
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
-import container_service_extension.utils as utils
 
 
 @pytest.fixture(scope='module', autouse='true')
@@ -389,7 +389,8 @@ def test_0100_install_update(config, unregister_cse):
             ssh_client.connect(ip, username='root')
             # run different commands depending on OS
             if 'photon' in temp_vapp_name:
-                script = utils.get_data_file(env.STATIC_PHOTON_CUST_SCRIPT)
+                script = \
+                    install_utils.get_data_file(env.STATIC_PHOTON_CUST_SCRIPT)
                 pattern = r'(kubernetes\S*)'
                 packages = re.findall(pattern, script)
                 stdin, stdout, stderr = ssh_client.exec_command("rpm -qa")
@@ -398,8 +399,10 @@ def test_0100_install_update(config, unregister_cse):
                     assert package in installed, \
                         f"{package} not found in Photon VM"
             elif 'ubuntu' in temp_vapp_name:
-                script = utils.get_data_file(env.STATIC_UBUNTU_CUST_SCRIPT)
-                pattern = r'((kubernetes|docker\S*|kubelet|kubeadm|kubectl)\S*=\S*)'  # noqa
+                script = \
+                    install_utils.get_data_file(env.STATIC_UBUNTU_CUST_SCRIPT)
+                pattern = \
+                    r'((kubernetes|docker\S*|kubelet|kubeadm|kubectl)\S*=\S*)'
                 packages = [tup[0] for tup in re.findall(pattern, script)]
                 cmd = "dpkg -l | grep '^ii' | awk '{print $2\"=\"$3}'"
                 stdin, stdout, stderr = ssh_client.exec_command(cmd)
