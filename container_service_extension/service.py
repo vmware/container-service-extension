@@ -73,7 +73,7 @@ class Service(object, metaclass=Singleton):
         self.consumers = []
         self.threads = []
         self.pks_cache = None
-        self.state = ServerState.STOPPED
+        self._state = ServerState.STOPPED
 
     def get_service_config(self):
         return self.config
@@ -91,7 +91,10 @@ class Service(object, metaclass=Singleton):
         return n
 
     def get_status(self):
-        return self.state.value
+        return self._state.value
+
+    def is_running(self):
+        return self._state == ServerState.RUNNING
 
     def info(self, tenant_auth_token):
         tenant_client, _ = connect_vcd_user_via_token(
@@ -129,25 +132,25 @@ class Service(object, metaclass=Singleton):
             reply['status_code'] = requests.codes.unauthorized
             return
 
-        action = req_spec.get(SERVER_ACTION_KEY, 'Unknown request')
+        action = req_spec.get(SERVER_ACTION_KEY)
         message = 'Bad Request'
         status_code = requests.codes.bad_request
 
-        if self.state == ServerState.RUNNING:
+        if self._state == ServerState.RUNNING:
             if action == SERVER_ENABLE_ACTION:
                 message = 'CSE is already enabled and running.'
                 status_code = requests.codes.bad_request
             elif action == SERVER_DISABLE_ACTION:
-                self.state = ServerState.DISABLED
+                self._state = ServerState.DISABLED
                 message = 'CSE has been disabled.'
                 status_code = requests.codes.ok
             elif action == SERVER_STOP_ACTION:
                 message = 'Cannot stop CSE while it is enabled. '\
                           'Disable the service first'
                 status_code = requests.codes.bad_request
-        elif self.state == ServerState.DISABLED:
+        elif self._state == ServerState.DISABLED:
             if action == SERVER_ENABLE_ACTION:
-                self.state = ServerState.RUNNING
+                self._state = ServerState.RUNNING
                 message = 'CSE has been enabled and is running.'
                 status_code = requests.ok
             elif action == SERVER_DISABLE_ACTION:
@@ -159,8 +162,8 @@ class Service(object, metaclass=Singleton):
                 if n > 0:
                     message += f" CSE will finish processing {n} requests."
                 status_code = requests.codes.ok
-                self.state = ServerState.STOPPING
-        elif self.state == ServerState.STOPPING:
+                self._state = ServerState.STOPPING
+        elif self._state == ServerState.STOPPING:
             if action == SERVER_ENABLE_ACTION:
                 message = 'Cannot enable CSE while it is being stopped.'
                 status_code = requests.codes.bad_request
@@ -224,12 +227,12 @@ class Service(object, metaclass=Singleton):
 
         LOGGER.info(f"Number of threads started: {len(self.threads)}")
 
-        self.state = ServerState.RUNNING
+        self._state = ServerState.RUNNING
 
         while True:
             try:
                 time.sleep(1)
-                if self.state == ServerState.STOPPING and \
+                if self._state == ServerState.STOPPING and \
                         self.active_requests_count() == 0:
                     break
             except KeyboardInterrupt:
@@ -246,5 +249,5 @@ class Service(object, metaclass=Singleton):
             except Exception:
                 pass
 
-        self.state = ServerState.STOPPED
+        self._state = ServerState.STOPPED
         LOGGER.info("Done")

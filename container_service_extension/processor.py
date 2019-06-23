@@ -1,4 +1,4 @@
-# conta iner-service-extension
+# container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
@@ -181,7 +181,7 @@ class ServiceProcessor(object):
         if request_url_parse_result['operation'] not in \
                 (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE):
             from container_service_extension.service import Service
-            if not Service().is_enabled:
+            if not Service().is_running():
                 raise CseServerError('CSE service is disabled. Contact the '
                                      'System Administrator.')
 

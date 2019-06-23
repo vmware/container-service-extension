@@ -3,10 +3,12 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 
-ERROR_DESCRIPTION = "description"
-ERROR_MESSAGE = "message"
-ERROR_REASON = "reason"
-ERROR_STACKTRACE = "stacktrace"
+ERROR_DESCRIPTION_KEY = "description"
+ERROR_MESSAGE_KEY = "message"
+ERROR_REASON_KEY = "reason"
+ERROR_STACKTRACE_KEY = "stacktrace"
+UNKNOWN_ERROR_MESSAGE = "Unknown error. Please contact your system " \
+                        "administrator"
 
 SERVER_ACTION_KEY = 'action'
 SERVER_DISABLE_ACTION = 'disable'
