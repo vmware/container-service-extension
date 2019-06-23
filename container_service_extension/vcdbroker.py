@@ -68,7 +68,7 @@ MAX_HOST_NAME_LENGTH = 25
 ROLLBACK_FLAG = 'disable_rollback'
 
 
-def supports_rollback(func):
+def rollback_on_failure(func):
     """Decorate to rollback on cluster and node creation failures.
 
     :param func: reference to the original function that is decorated
@@ -428,7 +428,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
         result['task_href'] = self.task_resource.get('href')
         return result
 
-    @supports_rollback
+    @rollback_on_failure
     def create_cluster_thread(self):
         network_name = self.req_spec['network']
         try:
@@ -638,7 +638,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
         result['task_href'] = self.task_resource.get('href')
         return result
 
-    @supports_rollback
+    @rollback_on_failure
     def create_nodes_thread(self):
         LOGGER.debug(f"About to add nodes to cluster with name: "
                      f"{self.cluster_name}")
