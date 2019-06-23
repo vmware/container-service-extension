@@ -12,6 +12,8 @@ from urllib.parse import parse_qsl
 import requests
 
 from container_service_extension.broker_manager import BrokerManager
+from container_service_extension.exception_handler import handle_exception
+from container_service_extension.exceptions import CseRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.ovdc_manager import OvdcManager
 from container_service_extension.server_constants import CseOperation
@@ -64,7 +66,6 @@ class ServiceProcessor(object):
         is_system_request = False
         is_template_request = False
         result = {}
-        result['operation'] = CseOperation.NOT_FOUND
 
         tokens = url.split('/')
         if len(tokens) > 3:
@@ -86,7 +87,9 @@ class ServiceProcessor(object):
                 elif method == 'POST':
                     result['operation'] = CseOperation.CLUSTER_CREATE
                 else:
-                    result['operation'] = CseOperation.NOT_ACCEPTABLE
+                    raise CseRequestError(
+                        status=requests.codes.method_not_allowed,
+                        error_message="Method not allowed")
             elif len(tokens) == 5:
                 if method == 'GET':
                     result['operation'] = CseOperation.CLUSTER_INFO
@@ -98,14 +101,18 @@ class ServiceProcessor(object):
                     result['operation'] = CseOperation.CLUSTER_DELETE
                     result['cluster_name'] = tokens[4]
                 else:
-                    result['operation'] = CseOperation.NOT_ACCEPTABLE
+                    raise CseRequestError(
+                        status=requests.codes.method_not_allowed,
+                        error_message="Method not allowed")
             elif len(tokens) == 6:
                 if method == 'GET':
                     if tokens[5] == 'config':
                         result['operation'] = CseOperation.CLUSTER_CONFIG
                         result['cluster_name'] = tokens[4]
                 else:
-                    result['operation'] = CseOperation.NOT_ACCEPTABLE
+                    raise CseRequestError(
+                        status=requests.codes.method_not_allowed,
+                        error_message="Method not allowed")
 
         if is_node_request:
             if len(tokens) == 4:
@@ -114,20 +121,26 @@ class ServiceProcessor(object):
                 elif method == 'DELETE':
                     result['operation'] = CseOperation.NODE_DELETE
                 else:
-                    result['operation'] = CseOperation.NOT_ACCEPTABLE
+                    raise CseRequestError(
+                        status=requests.codes.method_not_allowed,
+                        error_message="Method not allowed")
             elif len(tokens) == 5:
                 if method == 'GET':
                     result['operation'] = CseOperation.NODE_INFO
                     result['node_name'] = tokens[4]
                 else:
-                    result['operation'] = CseOperation.NOT_ACCEPTABLE
+                    raise CseRequestError(
+                        status=requests.codes.method_not_allowed,
+                        error_message="Method not allowed")
 
         if is_ovdc_request:
             if len(tokens) == 4:
                 if method == 'GET':
                     result['operation'] = CseOperation.OVDC_LIST
                 else:
-                    result['operation'] = CseOperation.NOT_ACCEPTABLE
+                    raise CseRequestError(
+                        status=requests.codes.method_not_allowed,
+                        error_message="Method not allowed")
             elif len(tokens) == 5:
                 if method == 'GET':
                     result['operation'] = CseOperation.OVDC_INFO
@@ -136,7 +149,9 @@ class ServiceProcessor(object):
                     result['operation'] = CseOperation.OVDC_ENABLE_DISABLE
                     result['ovdc_id'] = tokens[4]
                 else:
-                    result['operation'] = CseOperation.NOT_ACCEPTABLE
+                    raise CseRequestError(
+                        status=requests.codes.method_not_allowed,
+                        error_message="Method not allowed")
 
         if is_system_request:
             if len(tokens) == 4:
@@ -145,17 +160,26 @@ class ServiceProcessor(object):
                 elif method == 'PUT':
                     result['operation'] = CseOperation.SYSTEM_UPDATE
                 else:
-                    result['operation'] = CseOperation.NOT_ACCEPTABLE
+                    raise CseRequestError(
+                        status=requests.codes.method_not_allowed,
+                        error_message="Method not allowed")
 
         if is_template_request:
             if len(tokens) == 4:
                 if method == 'GET':
                     result['operation'] = CseOperation.TEMPLATE_LIST
                 else:
-                    result['operation'] = CseOperation.NOT_ACCEPTABLE
+                    raise CseRequestError(
+                        status=requests.codes.method_not_allowed,
+                        error_message="Method not allowed")
 
+        if not result.get('operation'):
+            raise CseRequestError(
+                status=requests.codes.not_found,
+                error_message="Invalid Url. Not found.")
         return result
 
+    @handle_exception
     def process_request(self, body):
         LOGGER.debug(f"body: {json.dumps(body)}")
         reply = {}
@@ -164,27 +188,16 @@ class ServiceProcessor(object):
         request_url_parse_result = self._parse_request_url(
             method=body['method'], url=body['requestUri'])
 
-        # raise error for invalid request
-        if request_url_parse_result['operation'] == CseOperation.BAD_REQUEST:
-            reply['status_code'] = requests.codes.bad_request
-            return reply
-        elif request_url_parse_result['operation'] == CseOperation.NOT_FOUND:
-            reply['status_code'] = requests.codes.not_found
-            return reply
-        elif request_url_parse_result['operation'] == \
-                CseOperation.NOT_ACCEPTABLE:
-            reply['status_code'] = requests.codes.not_acceptable
-            return reply
-
         # check for disabled server
-        if request_url_parse_result['operation'] not in \
-                (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE):
+        operation = request_url_parse_result['operation']
+        if operation not in (CseOperation.SYSTEM_INFO,
+                             CseOperation.SYSTEM_UPDATE):
             from container_service_extension.service import Service
             if not Service().is_running():
-                reply['status_code'] = requests.codes.bad_request
-                reply['body'] = {'message': 'CSE service is disabled. '
-                                 'Contact the System Administrator.'}
-                return reply
+                raise CseRequestError(
+                    status=requests.codes.bad_request,
+                    error_message='CSE service is disabled. Contact the'
+                                  ' System Administrator.')
 
         # parse query params
         query_params = {}
@@ -210,7 +223,6 @@ class ServiceProcessor(object):
         for key, val in query_params.items():
             req_spec[key] = val
 
-        operation = request_url_parse_result.get('operation')
         # update request spec with operation specific data in the url
         if operation in \
                 (CseOperation.CLUSTER_CONFIG, CseOperation.CLUSTER_DELETE,
@@ -226,13 +238,15 @@ class ServiceProcessor(object):
                 {'ovdc_id': request_url_parse_result.get('ovdc_id')})
 
         # process the request
+        reply['status_code'] = operation.ideal_response_code
         if operation == CseOperation.SYSTEM_INFO:
             from container_service_extension.service import Service
             reply['body'] = Service().info(tenant_auth_token)
-            reply['status_code'] = requests.codes.ok
         elif operation == CseOperation.SYSTEM_UPDATE:
             from container_service_extension.service import Service
-            reply = Service().update_status(tenant_auth_token, req_spec)
+            reply['body'] = {
+                'message':
+                Service().update_status(tenant_auth_token, req_spec)}
         elif operation == CseOperation.TEMPLATE_LIST:
             templates = []
             server_config = get_server_runtime_config()
@@ -248,16 +262,13 @@ class ServiceProcessor(object):
                     'description': t['description']
                 })
             reply['body'] = templates
-            reply['status_code'] = requests.codes.ok
         elif operation in (CseOperation.OVDC_ENABLE_DISABLE,
                            CseOperation.OVDC_INFO, CseOperation.OVDC_LIST):
             ovdc_manager = OvdcManager(tenant_auth_token, req_spec)
-            reply = ovdc_manager.invoke(op=operation)
+            reply['body'] = ovdc_manager.invoke(op=operation)
         else:
-            # from container_service_extension.broker_manager import \
-            #     BrokerManager
             broker_manager = BrokerManager(tenant_auth_token, req_spec)
-            reply = broker_manager.invoke(op=operation)
+            reply['body'] = broker_manager.invoke(op=operation)
 
         LOGGER.debug(f"reply: {str(reply)}")
         return reply

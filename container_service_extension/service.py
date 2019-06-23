@@ -19,6 +19,7 @@ import requests
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.consumer import MessageConsumer
+from container_service_extension.exceptions import CseRequestError
 from container_service_extension.logger import configure_server_logger
 from container_service_extension.logger import SERVER_DEBUG_LOG_FILEPATH
 from container_service_extension.logger import SERVER_INFO_LOG_FILEPATH
@@ -125,58 +126,54 @@ class Service(object, metaclass=Singleton):
     def update_status(self, tenant_auth_token, req_spec):
         tenant_client, _ = connect_vcd_user_via_token(
             tenant_auth_token=tenant_auth_token)
-        reply = {}
 
         if not tenant_client.is_sysadmin():
-            reply['body'] = {'message': 'Unauthorized to update CSE'}
-            reply['status_code'] = requests.codes.unauthorized
-            return
+            raise CseRequestError(status_code=requests.codes.unauthorized,
+                                  error_message='Unauthorized to update CSE')
 
         action = req_spec.get(SERVER_ACTION_KEY)
-        message = 'Bad Request'
-        status_code = requests.codes.bad_request
-
         if self._state == ServerState.RUNNING:
             if action == SERVER_ENABLE_ACTION:
-                message = 'CSE is already enabled and running.'
-                status_code = requests.codes.bad_request
+                raise CseRequestError(
+                    status_code=requests.codes.bad_request,
+                    error_message='CSE is already enabled and running.')
             elif action == SERVER_DISABLE_ACTION:
                 self._state = ServerState.DISABLED
                 message = 'CSE has been disabled.'
-                status_code = requests.codes.ok
             elif action == SERVER_STOP_ACTION:
-                message = 'Cannot stop CSE while it is enabled. '\
-                          'Disable the service first'
-                status_code = requests.codes.bad_request
+                raise CseRequestError(
+                    status_code=requests.codes.bad_request,
+                    error_message='Cannot stop CSE while it is enabled. '
+                                  'Disable the service first')
         elif self._state == ServerState.DISABLED:
             if action == SERVER_ENABLE_ACTION:
                 self._state = ServerState.RUNNING
                 message = 'CSE has been enabled and is running.'
-                status_code = requests.codes.ok
             elif action == SERVER_DISABLE_ACTION:
-                message = 'CSE is already disabled.'
-                status_code = requests.codes.bad_request
+                raise CseRequestError(
+                    status_code=requests.codes.bad_request,
+                    error_message='CSE is already disabled.')
             elif action == 'stop':
                 message = 'CSE graceful shutdown started.'
                 n = self.active_requests_count()
                 if n > 0:
                     message += f" CSE will finish processing {n} requests."
-                status_code = requests.codes.ok
                 self._state = ServerState.STOPPING
         elif self._state == ServerState.STOPPING:
             if action == SERVER_ENABLE_ACTION:
-                message = 'Cannot enable CSE while it is being stopped.'
-                status_code = requests.codes.bad_request
+                raise CseRequestError(
+                    status_code=requests.codes.bad_request,
+                    error_message='Cannot enable CSE while it is being'
+                                  'stopped.')
             elif action == SERVER_DISABLE_ACTION:
-                message = 'Cannot disable CSE while it is being stopped.'
-                status_code = requests.codes.bad_request
+                raise CseRequestError(
+                    status_code=requests.codes.bad_request,
+                    error_message='Cannot disable CSE while it is being'
+                                  ' stopped.')
             elif action == SERVER_STOP_ACTION:
                 message = 'CSE graceful shutdown is in progress.'
-                status_code = requests.codes.ok
 
-        reply['body'] = {'message': message}
-        reply['status_code'] = status_code
-        return reply
+        return message
 
     def run(self):
         self.config = get_validated_config(self.config_file)

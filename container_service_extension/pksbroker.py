@@ -53,7 +53,6 @@ from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.uaaclient.uaaclient import UaaClient
-from container_service_extension.utils import exception_handler
 from container_service_extension.utils import get_pks_cache
 
 
@@ -141,7 +140,8 @@ class PKSBroker(AbstractBroker):
                                   proxy_uri=self.proxy_uri)
             return uaaClient.getToken()
         except Exception as err:
-            raise PksConnectionError(f'Connection establishment to PKS host'
+            raise PksConnectionError(requests.code.bad_gateway,
+                                     f'Connection establishment to PKS host'
                                      f' {self.uaac_uri} failed: {err}')
 
     def _get_pks_config(self, token, version):
@@ -365,12 +365,12 @@ class PKSBroker(AbstractBroker):
                 self._filter_list_by_cluster_name(cluster_list, cluster_name)
             LOGGER.debug(f"filtered Cluster List:{filtered_cluster_list}")
             if len(filtered_cluster_list) > 1:
-                raise PksDuplicateClusterError(requests.codes.bad_request,
-                                               f"Multiple clusters of name"
-                                               f" '{cluster_name}' exist")
-            if len(filtered_cluster_list) <= 0:
+                raise PksDuplicateClusterError(
+                    requests.codes.bad_request,
+                    f"Multiple clusters with name '{cluster_name}' exists.")
+            if len(filtered_cluster_list) == 0:
                 raise PksServerError(requests.codes.not_found,
-                                     f"cluster {cluster_name} not found")
+                                     f"cluster {cluster_name} not found.")
             cluster_info = filtered_cluster_list[0]
         else:
             cluster_info = \
@@ -659,7 +659,6 @@ class PKSBroker(AbstractBroker):
                      f"{cp_name} for ovdc {ovdc_rp_name}")
         return result
 
-    @exception_handler
     def get_compute_profile(self, cp_name):
         """Get the details of compute profile.
 
@@ -691,7 +690,6 @@ class PKSBroker(AbstractBroker):
         result['body'] = compute_profile.to_dict()
         return result
 
-    @exception_handler
     def list_compute_profiles(self):
         """Get the list of compute profiles.
 
@@ -720,7 +718,6 @@ class PKSBroker(AbstractBroker):
         result['body'] = list_of_cp_dicts
         return result
 
-    @exception_handler
     def delete_compute_profile(self, cp_name):
         """Delete the compute profile with a given name.
 

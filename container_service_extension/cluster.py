@@ -15,6 +15,7 @@ import requests
 
 from container_service_extension.exceptions import ClusterInitializationError
 from container_service_extension.exceptions import ClusterJoiningError
+from container_service_extension.exceptions import ClusterOperationError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import DeleteNodeError
 from container_service_extension.exceptions import NodeCreationError
@@ -287,7 +288,7 @@ def get_cluster_config(config, vapp, password):
     result = get_file_from_nodes(
         config, vapp, password, file_name, nodes, check_tools=False)
     if len(result) == 0 or result[0].status_code != requests.codes.ok:
-        raise Exception('Couldn\'t get cluster configuration')
+        raise ClusterOperationError('Couldn\'t get cluster configuration')
     return result[0].content.decode()
 
 

@@ -14,10 +14,10 @@ from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.ovdc_cache import OvdcCache
 from container_service_extension.pksbroker import PKSBroker
 from container_service_extension.pyvcloud_utils import get_sys_admin_client
+from container_service_extension.pyvcloud_utils import get_vdc_by_id
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
-from container_service_extension.utils import exception_handler
 from container_service_extension.utils import get_pks_cache
 
 
@@ -28,7 +28,6 @@ class OvdcManager(object):
         self.ovdc_cache = OvdcCache()
         self.pks_cache = get_pks_cache()
 
-    @exception_handler
     def invoke(self, op):
         """Handle ovdc related operations.
 
@@ -40,7 +39,6 @@ class OvdcManager(object):
         """
         result = {}
         result['body'] = []
-        result['status_code'] = requests.codes.ok
         self.is_ovdc_present_in_request = self.req_spec.get('vdc')
 
         if op == CseOperation.OVDC_ENABLE_DISABLE:
@@ -54,7 +52,6 @@ class OvdcManager(object):
                     container_provider=self.req_spec[K8S_PROVIDER_KEY])
             # TODO() Constructing response should be moved out of this layer
             result['body'] = {'task_href': task.get('href')}
-            result['status_code'] = requests.codes.accepted
         elif op == CseOperation.OVDC_INFO:
             ovdc_id = self.req_spec.get('ovdc_id')
             # TODO() Constructing response should be moved out of this layer
@@ -136,7 +133,7 @@ class OvdcManager(object):
             else:
                 raise ex
 
-    def _create_pks_compute_profile_name_from_vdc_id(vdc_id):
+    def _create_pks_compute_profile_name_from_vdc_id(self, vdc_id):
         """Construct pks compute profile name.
 
         :param str vdc_id: UUID of the vdc in vcd
@@ -145,7 +142,6 @@ class OvdcManager(object):
 
         :rtype: str
         """
-        from container_service_extension.pyvcloud_utils import get_vdc_by_id
         client = get_sys_admin_client()
         vdc = get_vdc_by_id(client, vdc_id)
         return f"cp--{vdc_id}--{vdc.name}"

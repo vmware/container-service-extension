@@ -5,6 +5,8 @@
 from enum import Enum
 from enum import unique
 
+import requests
+
 
 # CSE SERVICE
 # used for registering CSE to vCD as an api extension service.
@@ -49,22 +51,27 @@ class K8sProviders(str, Enum):
 # CSE requests
 @unique
 class CseOperation(Enum):
-    CLUSTER_CREATE = 'create cluster'
-    CLUSTER_CONFIG = 'get config of cluster'
-    CLUSTER_DELETE = 'delete cluster'
-    CLUSTER_INFO = 'get info of cluster'
-    CLUSTER_LIST = 'list clusters'
-    CLUSTER_RESIZE = 'resize cluster'
-    NODE_CREATE = 'create node'
-    NODE_DELETE = 'delete node'
-    NODE_INFO = 'get info of node'
-    OVDC_ENABLE_DISABLE = 'enable or disable ovdc for k8s'
-    OVDC_INFO = 'get info of ovdc'
-    OVDC_LIST = 'list ovdcs'
-    SYSTEM_INFO = 'get info of system'
-    SYSTEM_UPDATE = 'update system status'
-    TEMPLATE_LIST = 'list all templates'
-    # Error Operations
-    BAD_REQUEST = '400 : Bad Request'
-    NOT_FOUND = '404 : Not Found'
-    NOT_ACCEPTABLE = '406 : Not Acceptable'
+    def __init__(self, description, ideal_response_code=requests.codes.ok):
+        self._description = description
+        self._ideal_response_code = ideal_response_code
+
+    @property
+    def ideal_response_code(self):
+        return int(self._ideal_response_code)
+
+    CLUSTER_CONFIG = ('get config of cluster')
+    CLUSTER_CREATE = ('create cluster', requests.codes.accepted)
+    CLUSTER_DELETE = ('delete cluster', requests.codes.accepted)
+    CLUSTER_INFO = ('get info of cluster')
+    CLUSTER_LIST = ('list clusters')
+    CLUSTER_RESIZE = ('resize cluster', requests.codes.accepted)
+    NODE_CREATE = ('create node', requests.codes.accepted)
+    NODE_DELETE = ('delete node', requests.codes.accepted)
+    NODE_INFO = ('get info of node')
+    OVDC_ENABLE_DISABLE = \
+        ('enable or disable ovdc for k8s', requests.codes.accepted)
+    OVDC_INFO = ('get info of ovdc')
+    OVDC_LIST = ('list ovdcs')
+    SYSTEM_INFO = ('get info of system')
+    SYSTEM_UPDATE = ('update system status')
+    TEMPLATE_LIST = ('list all templates')
