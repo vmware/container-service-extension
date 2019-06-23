@@ -11,7 +11,7 @@ from container_service_extension.client.response_processor import \
 from container_service_extension.cluster import TYPE_NODE
 from container_service_extension.exceptions import CseClientError
 from container_service_extension.exceptions import VcdResponseError
-from container_service_extension.shared_constants import ERROR_UNKNOWN
+from container_service_extension.shared_constants import UNKNOWN_ERROR_MESSAGE
 
 
 class Cluster(object):
@@ -52,7 +52,8 @@ class Cluster(object):
         try:
             result = process_response(response)
         except VcdResponseError as e:
-            if e.error_message == ERROR_UNKNOWN:
+            # ToDo() This is horrible! Fix it.
+            if e.error_message == UNKNOWN_ERROR_MESSAGE:
                 raise CseClientError("Invalid cluster name")
             else:
                 raise e

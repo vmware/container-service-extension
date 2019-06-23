@@ -45,9 +45,9 @@ from container_service_extension.pyvcloud_utils import get_org_name_of_ovdc
 from container_service_extension.pyvcloud_utils import get_sys_admin_client
 from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_NAME
-from container_service_extension.utils import ERROR_DESCRIPTION
-from container_service_extension.utils import ERROR_MESSAGE
-from container_service_extension.utils import ERROR_STACKTRACE
+from container_service_extension.shared_constants import ERROR_DESCRIPTION_KEY
+from container_service_extension.shared_constants import ERROR_MESSAGE_KEY
+from container_service_extension.shared_constants import ERROR_STACKTRACE_KEY
 from container_service_extension.utils import error_to_json
 from container_service_extension.utils import get_server_runtime_config
 
@@ -534,19 +534,22 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 ClusterInitializationError, ClusterOperationError) as e:
             LOGGER.error(traceback.format_exc())
             error_obj = error_to_json(e)
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            stack_trace = \
+                ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY])
             self._update_task(
                 TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION],
+                error_message=error_obj[ERROR_MESSAGE_KEY]
+                [ERROR_DESCRIPTION_KEY],
                 stack_trace=stack_trace)
             raise e
         except Exception as e:
             LOGGER.error(traceback.format_exc())
             error_obj = error_to_json(e)
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            stack_trace = \
+                ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY])
             self._update_task(
                 TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION],
+                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY],  # noqa
                 stack_trace=stack_trace)
         finally:
             self._disconnect_sys_admin()
@@ -676,19 +679,21 @@ class VcdBroker(AbstractBroker, threading.Thread):
         except NodeCreationError as e:
             error_obj = error_to_json(e)
             LOGGER.error(traceback.format_exc())
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            stack_trace = \
+                ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY])
             self._update_task(
                 TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION],
+                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY],  # noqa
                 stack_trace=stack_trace)
             raise
         except Exception as e:
             error_obj = error_to_json(e)
             LOGGER.error(traceback.format_exc())
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            stack_trace = \
+                ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY])
             self._update_task(
                 TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION],
+                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY],  # noqa
                 stack_trace=stack_trace)
         finally:
             self._disconnect_sys_admin()
@@ -776,10 +781,11 @@ class VcdBroker(AbstractBroker, threading.Thread):
         except Exception as e:
             LOGGER.error(traceback.format_exc())
             error_obj = error_to_json(e)
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
+            stack_trace = \
+                ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY])
             self._update_task(
                 TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION],
+                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY],  # noqa
                 stack_trace=stack_trace)
         finally:
             self._disconnect_sys_admin()

@@ -18,7 +18,7 @@ import requests
 
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.server_constanst import SYSTEM_ORG_NAME
+from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.utils import get_server_runtime_config
 
 # Cache to keep ovdc_id to org_name mapping for vcd cse cluster list

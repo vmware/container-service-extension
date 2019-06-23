@@ -8,11 +8,11 @@ from lxml import objectify
 import requests
 
 from container_service_extension.exceptions import VcdResponseError
-from container_service_extension.shared_constants import ERROR_MESSAGE
-from container_service_extension.shared_constants import ERROR_REASON
+from container_service_extension.shared_constants import ERROR_MESSAGE_KEY
+from container_service_extension.shared_constants import ERROR_REASON_KEY
+from container_service_extension.shared_constants import UNKNOWN_ERROR_MESSAGE
 
 
-UNKNOWN_ERROR_MESSAGE = "unknown error"
 
 
 def process_response(response):
@@ -78,19 +78,19 @@ def response_to_exception(response):
         message = 'An error has occurred.'
         if response.content is not None and len(response.content) > 0:
             obj = objectify.fromstring(response.content)
-            message = obj.get(ERROR_MESSAGE)
+            message = obj.get(ERROR_MESSAGE_KEY)
     elif response.status_code == requests.codes.unauthorized:
         message = 'Session has expired or user not logged in. Please re-login.'
         if response.content is not None and len(response.content) > 0:
             obj = objectify.fromstring(response.content)
-            message = obj.get(ERROR_MESSAGE)
+            message = obj.get(ERROR_MESSAGE_KEY)
     else:
         content = deserialize_response_content(response)
-        if ERROR_MESSAGE in content:
-            if ERROR_REASON in content[ERROR_MESSAGE]:
-                message = content[ERROR_MESSAGE][ERROR_REASON]
+        if ERROR_MESSAGE_KEY in content:
+            if ERROR_REASON_KEY in content[ERROR_MESSAGE_KEY]:
+                message = content[ERROR_MESSAGE_KEY][ERROR_REASON_KEY]
             else:
-                message = content[ERROR_MESSAGE]
+                message = content[ERROR_MESSAGE_KEY]
         else:
             message = UNKNOWN_ERROR_MESSAGE
 

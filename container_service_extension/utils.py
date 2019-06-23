@@ -11,10 +11,10 @@ import click
 import requests
 
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.shared_constants import ERROR_DESCRIPTION
-from container_service_extension.shared_constants import ERROR_MESSAGE
-from container_service_extension.shared_constants import ERROR_REASON
-from container_service_extension.shared_constants import ERROR_STACKTRACE
+from container_service_extension.shared_constants import ERROR_DESCRIPTION_KEY
+from container_service_extension.shared_constants import ERROR_MESSAGE_KEY
+from container_service_extension.shared_constants import ERROR_REASON_KEY
+from container_service_extension.shared_constants import ERROR_STACKTRACE_KEY
 
 # chunk size in bytes for file reading
 BUF_SIZE = 65536
@@ -51,10 +51,10 @@ def error_to_json(error):
         error_string = str(error)
         reasons = error_string.split(',')
         return {
-            ERROR_MESSAGE: {
-                ERROR_REASON: reasons[0],
-                ERROR_DESCRIPTION: error_string,
-                ERROR_STACKTRACE: traceback.format_exception(
+            ERROR_MESSAGE_KEY: {
+                ERROR_REASON_KEY: reasons[0],
+                ERROR_DESCRIPTION_KEY: error_string,
+                ERROR_STACKTRACE_KEY: traceback.format_exception(
                     error.__class__, error, error.__traceback__)
             }
         }
