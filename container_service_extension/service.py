@@ -152,7 +152,7 @@ class Service(object, metaclass=Singleton):
             if action == SERVER_ENABLE_ACTION:
                 self._state = ServerState.RUNNING
                 message = 'CSE has been enabled and is running.'
-                status_code = requests.ok
+                status_code = requests.codes.ok
             elif action == SERVER_DISABLE_ACTION:
                 message = 'CSE is already disabled.'
                 status_code = requests.codes.bad_request
@@ -174,7 +174,7 @@ class Service(object, metaclass=Singleton):
                 message = 'CSE graceful shutdown is in progress.'
                 status_code = requests.codes.ok
 
-        reply['body'] = message
+        reply['body'] = {'message' : message}
         reply['status_code'] = status_code
         return reply
 

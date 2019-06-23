@@ -12,7 +12,6 @@ from urllib.parse import parse_qsl
 import requests
 
 from container_service_extension.broker_manager import BrokerManager
-from container_service_extension.exceptions import CseServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.ovdc_manager import OvdcManager
 from container_service_extension.server_constants import CseOperation
@@ -182,8 +181,10 @@ class ServiceProcessor(object):
                 (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE):
             from container_service_extension.service import Service
             if not Service().is_running():
-                raise CseServerError('CSE service is disabled. Contact the '
-                                     'System Administrator.')
+                reply['status_code'] = requests.codes.bad_request
+                reply['body'] = {'message' : 'CSE service is disabled. ' \
+                                 'Contact the System Administrator.'}
+                return reply
 
         # parse query params
         query_params = {}
