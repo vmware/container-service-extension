@@ -30,15 +30,18 @@ from container_service_extension.cluster import load_from_metadata
 from container_service_extension.cluster import TYPE_MASTER
 from container_service_extension.cluster import TYPE_NFS
 from container_service_extension.cluster import TYPE_NODE
+from container_service_extension.exception_handler import error_to_json
 from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterInitializationError
 from container_service_extension.exceptions import ClusterJoiningError
+from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import ClusterOperationError
 from container_service_extension.exceptions import CseDuplicateClusterError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import MasterNodeCreationError
 from container_service_extension.exceptions import NFSNodeCreationError
 from container_service_extension.exceptions import NodeCreationError
+from container_service_extension.exceptions import NodeNotFoundError
 from container_service_extension.exceptions import WorkerNodeCreationError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pyvcloud_utils import get_org_name_of_ovdc
@@ -48,7 +51,6 @@ from container_service_extension.server_constants import \
 from container_service_extension.shared_constants import ERROR_DESCRIPTION_KEY
 from container_service_extension.shared_constants import ERROR_MESSAGE_KEY
 from container_service_extension.shared_constants import ERROR_STACKTRACE_KEY
-from container_service_extension.utils import error_to_json
 from container_service_extension.utils import get_server_runtime_config
 
 
@@ -298,7 +300,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
             raise CseDuplicateClusterError(f"Multiple clusters of name"
                                            f" '{cluster_name}' detected.")
         if len(clusters) == 0:
-            raise CseServerError(f"Cluster '{cluster_name}' not found.")
+            raise ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")
+
         cluster = clusters[0]
         vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
         vms = vapp.get_all_vms()
@@ -334,8 +337,12 @@ class VcdBroker(AbstractBroker, threading.Thread):
                                       name=cluster_name,
                                       org_name=self.req_spec.get('org'),
                                       vdc_name=self.req_spec.get('vdc'))
+        if len(clusters) > 1:
+            raise CseDuplicateClusterError(f"Multiple clusters of name"
+                                           f" '{cluster_name}' detected.")
         if len(clusters) == 0:
-            raise CseServerError(f"Cluster \'{cluster_name}\' not found.")
+            raise ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")
+
         vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
         vms = vapp.get_all_vms()
         node_info = None
@@ -371,8 +378,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
                                                     vm)
                     node_info['exports'] = exports
         if node_info is None:
-            raise CseServerError(f"Node '{node_name}' not found in cluster "
-                                 f"'{cluster_name}'")
+            raise NodeNotFoundError(f"Node '{node_name}' not found in "
+                                    f"cluster '{cluster_name}'")
         return node_info
 
     def get_cluster_config(self, cluster_name):
@@ -382,8 +389,12 @@ class VcdBroker(AbstractBroker, threading.Thread):
             name=cluster_name,
             org_name=self.req_spec.get('org'),
             vdc_name=self.req_spec.get('vdc'))
-        if len(clusters) != 1:
-            raise CseServerError(f"Cluster '{cluster_name}' not found")
+        if len(clusters) > 1:
+            raise CseDuplicateClusterError(f"Multiple clusters of name"
+                                           f" '{cluster_name}' detected.")
+        if len(clusters) == 0:
+            raise ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")
+
         vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
         template = self._get_template(name=clusters[0]['template'])
         server_config = get_server_runtime_config()
@@ -567,10 +578,11 @@ class VcdBroker(AbstractBroker, threading.Thread):
             org_name=self.req_spec.get('org'),
             vdc_name=self.req_spec.get('vdc'))
         if len(clusters) > 1:
-            raise CseDuplicateClusterError(f"Multiple clusters of name"
-                                           f" '{self.cluster_name}' detected.")
+            raise CseDuplicateClusterError(
+                f"Multiple clusters of name '{self.cluster_name}' detected.")
         if len(clusters) != 1:
-            raise CseServerError(f"Cluster {self.cluster_name} not found.")
+            raise ClusterNotFoundError(
+                f"Cluster {self.cluster_name} not found.")
         self.cluster = clusters[0]
         self.cluster_id = self.cluster['cluster_id']
         self._update_task(
@@ -618,12 +630,14 @@ class VcdBroker(AbstractBroker, threading.Thread):
             self.tenant_client, name=self.cluster_name,
             org_name=self.req_spec.get('org'),
             vdc_name=self.req_spec.get('vdc'))
-        if len(clusters) <= 0:
-            raise CseServerError(f"Cluster '{self.cluster_name}' not found.")
 
         if len(clusters) > 1:
             raise CseDuplicateClusterError(f"Multiple clusters of name "
                                            f"'{self.cluster_name}' detected.")
+        if len(clusters) == 0:
+            raise ClusterNotFoundError(
+                f"Cluster '{self.cluster_name}' not found.")
+
         self.cluster = clusters[0]
         self.op = OP_CREATE_NODES
         self.cluster_id = self.cluster['cluster_id']

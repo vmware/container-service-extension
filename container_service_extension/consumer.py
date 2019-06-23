@@ -156,11 +156,6 @@ class MessageConsumer(object):
             result = self.service_processor.process_request(body_json)
             status_code = result['status_code']
             reply_body = json.dumps(result['body'])
-            if status_code == requests.codes.internal_server_error and \
-               reply_body == '[]' and \
-               'message' in result:
-                reply_body = '{"message": "%s"}' % result['message']
-        # TODO() : Catch exceptions to determine response code
         except Exception as e:
             reply_body = '{"message": "%s"}' % str(e)
             status_code = requests.codes.internal_server_error

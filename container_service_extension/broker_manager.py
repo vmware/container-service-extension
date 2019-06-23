@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from pyvcloud.vcd.org import Org
-import requests
 
 from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterNotFoundError
@@ -21,7 +20,6 @@ from container_service_extension.pyvcloud_utils \
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
-from container_service_extension.utils import exception_handler
 from container_service_extension.utils import get_pks_cache
 from container_service_extension.vcdbroker import VcdBroker
 
@@ -55,7 +53,6 @@ class BrokerManager(object):
         self.vcd_client, self.session = connect_vcd_user_via_token(
             tenant_auth_token=tenant_auth_token)
 
-    @exception_handler
     def invoke(self, op):
         """Invoke right broker(s) to perform the operation requested.
 
@@ -77,15 +74,12 @@ class BrokerManager(object):
         :rtype: dict
         """
         result = {}
-        result['body'] = []
-        result['status_code'] = requests.codes.ok
         self.is_ovdc_present_in_request = self.req_spec.get('vdc')
 
         if op == CseOperation.CLUSTER_CONFIG:
             cluster_spec = \
                 {'cluster_name': self.req_spec.get('cluster_name', None)}
-            result['body'] = \
-                self._get_cluster_config(**cluster_spec)
+            result = self._get_cluster_config(**cluster_spec)
         elif op == CseOperation.CLUSTER_CREATE:
             # TODO(ClusterSpec) Create an inner class "ClusterSpec"
             #  in abstract_broker.py and have subclasses define and use it
@@ -101,46 +95,36 @@ class BrokerManager(object):
                 'network_name': self.req_spec.get('network', None),
                 'template': self.req_spec.get('template', None),
             }
-            result['body'] = self._create_cluster(**cluster_spec)
-            result['status_code'] = requests.codes.accepted
+            result = self._create_cluster(**cluster_spec)
         elif op == CseOperation.CLUSTER_DELETE:
             cluster_spec = \
                 {'cluster_name': self.req_spec.get('cluster_name', None)}
-            result['body'] = self._delete_cluster(**cluster_spec)
-            result['status_code'] = requests.codes.accepted
+            result = self._delete_cluster(**cluster_spec)
         elif op == CseOperation.CLUSTER_INFO:
             cluster_spec = \
                 {'cluster_name': self.req_spec.get('cluster_name', None)}
-            result['body'] = self._get_cluster_info(**cluster_spec)[0]
+            result = self._get_cluster_info(**cluster_spec)[0]
         elif op == CseOperation.CLUSTER_LIST:
-            result['body'] = self._list_clusters()
+            result = self._list_clusters()
         elif op == CseOperation.CLUSTER_RESIZE:
-            # TODO(resize_cluster) Once VcdBroker.create_nodes() is hooked to
-            #  broker_manager, ensure broker.resize_cluster returns only
-            #  response body. Construct the remainder of the response here.
-            #  This cannot be done at the moment as @exception_handler cannot
-            #  be removed on create_nodes() as of today (Mar 15, 2019).
-            cluster_spec = \
-                {'cluster_name': self.req_spec.get('cluster_name', None),
-                 'node_count': self.req_spec.get('node_count', None)
-                 }
-            result['body'] = self._resize_cluster(**cluster_spec)
-            result['status_code'] = requests.codes.accepted
+            cluster_spec = {
+                'cluster_name': self.req_spec.get('cluster_name', None),
+                'node_count': self.req_spec.get('node_count', None)
+            }
+            result = self._resize_cluster(**cluster_spec)
         elif op == CseOperation.NODE_CREATE:
             # Currently node create is a vCD only operation.
             broker = VcdBroker(self.tenant_auth_token, self.req_spec)
-            result['body'] = broker.create_nodes()
-            result['status_code'] = requests.codes.accepted
+            result = broker.create_nodes()
         elif op == CseOperation.NODE_DELETE:
             # Currently node delete is a vCD only operation.
             broker = VcdBroker(self.tenant_auth_token, self.req_spec)
-            result['body'] = broker.delete_nodes()
-            result['status_code'] = requests.codes.accepted
+            result = broker.delete_nodes()
         elif op == CseOperation.NODE_INFO:
             node_spec = \
                 {'cluster_name': self.req_spec.get('cluster_name'),
                  'node_name': self.req_spec.get('node_name')}
-            result['body'] = self._get_node_info(**node_spec)[0]
+            result = self._get_node_info(**node_spec)[0]
 
         return result
 

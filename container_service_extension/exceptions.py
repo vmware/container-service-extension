@@ -1,15 +1,27 @@
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# container-service-extension
+# Copyright (c) 2019 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
 
 from pyvcloud.vcd.exceptions import VcdException
+
+
+class CseClientError(Exception):
+    """Raised for any client side error."""
 
 
 class CseServerError(VcdException):
     """Base class for cse server side operation related exceptions."""
 
 
-class CseClientError(Exception):
-    """Raised for any client side error."""
+class CseRequestError(CseServerError):
+    """Base class for all REST request errors."""
+
+    def __init__(self, status_code, error_message=None):
+        self.status_code = int(status_code)
+        self._error_message = str(error_message)
+
+    def __str__(self):
+        return self._error_message
 
 
 class ClusterOperationError(CseServerError):
@@ -38,6 +50,10 @@ class ClusterNetworkIsolationError(ClusterOperationError):
 
 class CseDuplicateClusterError(CseServerError):
     """Raised when multiple vCD clusters of same name detected."""
+
+
+class NodeNotFoundError(CseServerError):
+    """Raised when a node is not found in the environment."""
 
 
 class NodeOperationError(ClusterOperationError):

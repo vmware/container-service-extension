@@ -2,19 +2,11 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import functools
 import hashlib
 import sys
-import traceback
 
 import click
-import requests
 
-from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.shared_constants import ERROR_DESCRIPTION_KEY
-from container_service_extension.shared_constants import ERROR_MESSAGE_KEY
-from container_service_extension.shared_constants import ERROR_REASON_KEY
-from container_service_extension.shared_constants import ERROR_STACKTRACE_KEY
 
 # chunk size in bytes for file reading
 BUF_SIZE = 65536
@@ -36,29 +28,6 @@ def get_server_runtime_config():
 def get_pks_cache():
     from container_service_extension.service import Service
     return Service().get_pks_cache()
-
-
-def error_to_json(error):
-    """Convert the given python exception object to a dictionary.
-
-    :param error: Exception object.
-
-    :return: dictionary with error reason, error description and stacktrace
-
-    :rtype: dict
-    """
-    if error:
-        error_string = str(error)
-        reasons = error_string.split(',')
-        return {
-            ERROR_MESSAGE_KEY: {
-                ERROR_REASON_KEY: reasons[0],
-                ERROR_DESCRIPTION_KEY: error_string,
-                ERROR_STACKTRACE_KEY: traceback.format_exception(
-                    error.__class__, error, error.__traceback__)
-            }
-        }
-    return dict()
 
 
 def get_duplicate_items_in_list(items):
@@ -151,31 +120,3 @@ def check_python_version():
                f"Installed Python version: {sys.version}")
     if sys.version_info < (3, 7, 3):
         raise Exception("Python version should be 3.7.3 or greater")
-
-
-def exception_handler(func):
-    """Decorate to trap exceptions and process them.
-
-    If there are any exceptions, a dictionary containing the status code, body
-        and stacktrace will be returned.
-
-    This decorator should be applied only on those functions that constructs
-    the final HTTP responses and also needs exception handler as additional
-    behaviour.
-
-    :param method func: decorated function
-
-    :return: reference to the function that executes the decorated function
-        and traps exceptions raised by it.
-    """
-    @functools.wraps(func)
-    def exception_handler_wrapper(*args, **kwargs):
-        result = {}
-        try:
-            result = func(*args, **kwargs)
-        except Exception as err:
-            result['status_code'] = requests.codes.internal_server_error
-            result['body'] = error_to_json(err)
-            LOGGER.error(traceback.format_exc())
-        return result
-    return exception_handler_wrapper
