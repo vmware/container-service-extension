@@ -14,6 +14,7 @@
 # limitations under the License.
 import os
 from pathlib import Path
+import shutil
 
 from click.testing import CliRunner
 from pyvcloud.vcd.api_extension import APIExtension
@@ -47,10 +48,8 @@ environment.CLIENT but will not change the CLIENT that was imported.
 BASE_CONFIG_FILEPATH = 'base_config.yaml'
 ACTIVE_CONFIG_FILEPATH = 'cse_test_config.yaml'
 
-STATIC_PHOTON_CUST_SCRIPT = 'CUST-PHOTON.sh'
-STATIC_UBUNTU_CUST_SCRIPT = 'CUST-UBUNTU.sh'
-ACTIVE_PHOTON_CUST_SCRIPT = 'cust-photon-v2.sh'
-ACTIVE_UBUNTU_CUST_SCRIPT = 'cust-ubuntu-16.04.sh'
+PHOTON_CUST_SCRIPT_NAME = 'cust-photon-v2.sh'
+UBUNTU_CUST_SCRIPT_NAME = 'cust-ubuntu-16.04.sh'
 SCRIPTS_DIR = 'scripts'
 
 SSH_KEY_FILEPATH = str(Path.home() / '.ssh' / 'id_rsa.pub')
@@ -182,37 +181,24 @@ def unregister_cse():
         pass
 
 
-def prepare_customization_scripts():
-    """Copy real customization scripts to the active customization scripts.
+def delete_cust_scripts():
+    """Delete directory 'system_tests/scripts' if it exists."""
+    try:
+        shutil.rmtree('scripts')
+    except FileNotFoundError:
+        pass
 
-    Copy 'CUST-PHOTON.sh' to 'cust-photon-v2.sh'
-    Copy 'CUST-UBUNTU.sh' to 'cust-ubuntu-16.04.sh'
 
-    :raises FileNotFoundError: if script files cannot be found.
+def create_empty_cust_scripts():
+    """Create empty customization scripts.
+
+    Creates:
+        - system_tests/scripts/cust-ubuntu-16.04.sh
+        - system_tests/scripts/cust-photon-v2.sh
     """
-    static_to_active_scripts = {
-        f"{SCRIPTS_DIR}/{STATIC_PHOTON_CUST_SCRIPT}":
-            f"{SCRIPTS_DIR}/{ACTIVE_PHOTON_CUST_SCRIPT}",
-        f"{SCRIPTS_DIR}/{STATIC_UBUNTU_CUST_SCRIPT}":
-            f"{SCRIPTS_DIR}/{ACTIVE_UBUNTU_CUST_SCRIPT}",
-    }
-
-    for src, dst in static_to_active_scripts.items():
-        Path(dst).write_text(Path(src).read_text())
-
-
-def blank_customizaton_scripts():
-    """Blanks out 'cust-photon-v2.sh' and 'cust-ubuntu-16.04.sh'.
-
-    :raises FileNotFoundError: if script files cannot be found.
-    """
-    scripts_paths = [
-        Path(f"{SCRIPTS_DIR}/{ACTIVE_PHOTON_CUST_SCRIPT}"),
-        Path(f"{SCRIPTS_DIR}/{ACTIVE_UBUNTU_CUST_SCRIPT}")
-    ]
-
-    for path in scripts_paths:
-        path.write_text('')
+    Path('scripts').mkdir(exist_ok=True)
+    Path('scripts/cust-ubuntu-16.04.sh').write_text()
+    Path('scripts/cust-photon-v2').write_text()
 
 
 def catalog_item_exists(catalog_item, catalog_name=None):
