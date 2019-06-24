@@ -6,7 +6,8 @@ from pyvcloud.vcd.org import Org
 
 from container_service_extension.exceptions import UnauthorizedActionError
 from container_service_extension.ovdc_manager import create_pks_compute_profile
-from container_service_extension.ovdc_manager import get_ovdc_params
+from container_service_extension.ovdc_manager import \
+    construct_ctr_prov_ctx_from_pks_cache
 from container_service_extension.ovdc_manager import OvdcManager
 from container_service_extension.pksbroker import PKSBroker
 from container_service_extension.pksbroker_manager import PksBrokerManager
@@ -16,14 +17,13 @@ from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
-
+from container_service_extension.utils import is_pks_enabled
+from container_service_extension.utils import str2bool
 
 class OvdcRequestHandler(object):
     def __init__(self, tenant_auth_token, request_spec):
         self.tenant_auth_token = tenant_auth_token
         self.req_spec = request_spec
-        self.vcd_client, self.session = connect_vcd_user_via_token(
-            tenant_auth_token=tenant_auth_token)
 
     def invoke(self, op):
         """Handle ovdc related operations.
@@ -37,26 +37,39 @@ class OvdcRequestHandler(object):
         result = {}
 
         if op == CseOperation.OVDC_ENABLE_DISABLE:
-            pks_ctx, ovdc = get_ovdc_params(self.vcd_client, self.req_spec)
-            if self.req_spec[K8S_PROVIDER_KEY] == K8sProviders.PKS:
-                create_pks_compute_profile(
-                    pks_ctx, self.tenant_auth_token, self.req_spec)
+            ovdc_id = self.req_spec.get('ovdc_id')
+            org_name = self.req_spec.get('org_name')
+            pks_plans = self.req_spec.get('pks_plans')
+            pks_cluster_domain = self.req_spec.get('pks_cluster_domain')
+            container_provider = self.req_spec[K8S_PROVIDER_KEY]
+
+            ctr_prov_ctx = construct_ctr_prov_ctx_from_pks_cache(
+                ovdc_id=ovdc_id, org_name=org_name,
+                pks_plans=pks_plans, pks_cluster_domain=pks_cluster_domain,
+                container_provider=container_provider)
+
+            if container_provider == K8sProviders.PKS:
+                if is_pks_enabled():
+                    create_pks_compute_profile(
+                        ctr_prov_ctx, self.tenant_auth_token, self.req_spec)
+
             task = OvdcManager().set_ovdc_container_provider_metadata(
-                ovdc,
-                container_prov_data=pks_ctx,
-                container_provider=self.req_spec[K8S_PROVIDER_KEY])
+                ovdc_id=ovdc_id,
+                container_prov_data=ctr_prov_ctx,
+                container_provider=container_provider)
+
             result = {'task_href': task.get('href')}
         elif op == CseOperation.OVDC_INFO:
             ovdc_id = self.req_spec.get('ovdc_id')
             result = OvdcManager().get_ovdc_container_provider_metadata(
                 ovdc_id=ovdc_id)
         elif op == CseOperation.OVDC_LIST:
-            list_pks_plans = self.req_spec.get('list_pks_plans', False)
+            list_pks_plans = str2bool(self.req_spec.get('list_pks_plans'))
             result = self._list_ovdcs(list_pks_plans=list_pks_plans)
 
         return result
 
-    def _list_ovdcs(self, list_pks_plans=False):
+    def _list_ovdcs(self, list_pks_plans):
         """Get list of ovdcs.
 
         If client is sysadmin,
@@ -64,22 +77,23 @@ class OvdcRequestHandler(object):
         Else
             Gets all ovdcs of the organization in context.
         """
-        if self.vcd_client.is_sysadmin():
-            org_resource_list = self.vcd_client.get_org_list()
+        client,_ = connect_vcd_user_via_token(tenant_auth_token)
+        if client.is_sysadmin():
+            org_resource_list = client.get_org_list()
         else:
-            org_resource_list = list(self.vcd_client.get_org())
+            org_resource_list = list(client.get_org())
 
         ovdc_list = []
         vc_to_pks_plans_map = {}
-        if list_pks_plans:
-            if self.vcd_client.is_sysadmin():
+        if is_pks_enabled() and list_pks_plans:
+            if client.is_sysadmin():
                 vc_to_pks_plans_map = self._construct_vc_to_pks_map()
             else:
                 raise UnauthorizedActionError(
                     'Operation Denied. Plans available only for '
                     'System Administrator.')
         for org_resource in org_resource_list:
-            org = Org(self.vcd_client, resource=org_resource)
+            org = Org(client, resource=org_resource)
             vdc_list = org.list_vdcs()
             for vdc_sparse in vdc_list:
                 ctr_prov_ctx = \
@@ -91,9 +105,10 @@ class OvdcRequestHandler(object):
                     'org': org.get_name(),
                     K8S_PROVIDER_KEY: ctr_prov_ctx[K8S_PROVIDER_KEY]
                 }
-                if list_pks_plans:
+                if is_pks_enabled() and list_pks_plans:
                     pks_plans, pks_server = self.\
-                        _get_pks_plans_and_server_for_vdc(vdc_sparse,
+                        _get_pks_plans_and_server_for_vdc(client,
+                                                          vdc_sparse,
                                                           org_resource,
                                                           vc_to_pks_plans_map)
                     vdc_dict['pks_api_server'] = pks_server
@@ -102,14 +117,15 @@ class OvdcRequestHandler(object):
         return ovdc_list
 
     def _get_pks_plans_and_server_for_vdc(self,
+                                          client,
                                           vdc_sparse,
                                           org_resource,
                                           vc_to_pks_plans_map):
         pks_server = ''
         pks_plans = []
-        vdc = get_vdc(self.vcd_client, vdc_name=vdc_sparse['name'],
+        vdc = get_vdc(client, vdc_name=vdc_sparse['name'],
                       org_name=org_resource.get('name'))
-        vc_backing_vdc = vdc.resource.ComputeProviderScope
+        vc_backing_vdc = vdc.get_resource().ComputeProviderScope
 
         pks_plan_and_server_info = vc_to_pks_plans_map.get(vc_backing_vdc, [])
         if len(pks_plan_and_server_info) > 0:

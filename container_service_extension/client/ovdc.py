@@ -47,9 +47,9 @@ class Ovdc(object):
         :rtype: dict
         """
         method = 'PUT'
-        ovdc = get_vdc(self.client, ovdc_name, org_name=org_name,
+        ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
-        ovdc_id = utils.extract_id(ovdc.resource.get('id'))
+        ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
         uri = f'{self._uri}/ovdc/{ovdc_id}'
 
         data = {
@@ -82,9 +82,9 @@ class Ovdc(object):
         :rtype: dict
         """
         method = 'PUT'
-        ovdc = get_vdc(self.client, ovdc_name, org_name=org_name,
+        ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
-        ovdc_id = utils.extract_id(ovdc.resource.get('id'))
+        ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
         uri = f'{self._uri}/ovdc/{ovdc_id}'
         data = {
             'ovdc_id': ovdc_id,
@@ -116,9 +116,9 @@ class Ovdc(object):
         :rtype: dict
         """
         method = 'GET'
-        ovdc = get_vdc(self.client, ovdc_name, org_name=org_name,
+        ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
-        ovdc_id = utils.extract_id(ovdc.resource.get('id'))
+        ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
         uri = f'{self._uri}/ovdc/{ovdc_id}'
 
         response = self.client._do_request_prim(
