@@ -6,6 +6,8 @@ from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.ovdc_manager import OvdcManager
+from container_service_extension.ovdc_manager import \
+    construct_ctr_prov_ctx_from_ovdc_metadata
 from container_service_extension.pks_cache import PKS_CLUSTER_DOMAIN_KEY
 from container_service_extension.pks_cache import PKS_PLANS_KEY
 from container_service_extension.pksbroker import PKSBroker
@@ -16,6 +18,7 @@ from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
 from container_service_extension.utils import get_pks_cache
+from container_service_extension.utils import is_pks_enabled
 from container_service_extension.vcdbroker import VcdBroker
 from container_service_extension.vcdbroker_manager import VcdBrokerManager
 
@@ -44,7 +47,6 @@ class BrokerManager(object):
         self.tenant_auth_token = tenant_auth_token
         self.req_spec = request_spec
         self.pks_cache = get_pks_cache()
-        self.is_pks_enabled = bool(self.pks_cache)
         self.vcdbroker_manager = VcdBrokerManager(
             tenant_auth_token, request_spec)
         self.pksbroker_manager = PksBrokerManager(
@@ -99,18 +101,18 @@ class BrokerManager(object):
             result = self._create_cluster(**cluster_spec)
         elif op == CseOperation.CLUSTER_DELETE:
             cluster_spec = \
-                {'cluster_name': self.req_spec.get('cluster_name', None)}
+                {'cluster_name': self.req_spec.get('cluster_name')}
             result = self._delete_cluster(**cluster_spec)
         elif op == CseOperation.CLUSTER_INFO:
             cluster_spec = \
-                {'cluster_name': self.req_spec.get('cluster_name', None)}
+                {'cluster_name': self.req_spec.get('cluster_name')}
             result = self._get_cluster_info(**cluster_spec)[0]
         elif op == CseOperation.CLUSTER_LIST:
             result = self._list_clusters()
         elif op == CseOperation.CLUSTER_RESIZE:
             cluster_spec = {
-                'cluster_name': self.req_spec.get('cluster_name', None),
-                'node_count': self.req_spec.get('node_count', None)
+                'cluster_name': self.req_spec.get('cluster_name'),
+                'node_count': self.req_spec.get('node_count')
             }
             result = self._resize_cluster(**cluster_spec)
         elif op == CseOperation.NODE_CREATE:
@@ -153,7 +155,7 @@ class BrokerManager(object):
         cluster, _ = self._find_cluster_in_org(cluster_name,
                                                is_org_admin_search=True)
         if not cluster:
-            ctr_prov_ctx = self._get_ctr_prov_ctx_from_ovdc_metadata(
+            ctr_prov_ctx = construct_ctr_prov_ctx_from_ovdc_metadata(
                 ovdc_name=vdc_name, org_name=org_name)
             if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProviders.PKS:
                 cluster_spec['pks_plan'] = ctr_prov_ctx[PKS_PLANS_KEY][0]
@@ -232,19 +234,13 @@ class BrokerManager(object):
 
         return cluster, broker
 
-    def _get_ctr_prov_ctx_from_ovdc_metadata(self, ovdc_name, org_name):
-        ctr_prov_ctx = OvdcManager().get_ovdc_container_provider_metadata(
-            ovdc_name=ovdc_name, org_name=org_name,
-            credentials_required=True, nsxt_info_required=True)
-        return ctr_prov_ctx
-
     def _get_broker_based_on_ctr_prov_ctx(self, ctr_prov_ctx):
         # If system is equipped with PKS, use the metadata on ovdc to determine
         # the correct broker, otherwise fallback to vCD for cluster deployment.
         # However if the system is enabled for PKS and has no metadata on odvc
         # or isn't enabled for container deployment raise appropriate
         # exception.
-        if self.is_pks_enabled:
+        if is_pks_enabled():
             if ctr_prov_ctx:
                 if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProviders.PKS:
                     return PKSBroker(self.tenant_auth_token, self.req_spec,
@@ -268,7 +264,7 @@ class BrokerManager(object):
         ovdc_name = self.req_spec.get('vdc')
         org_name = self.req_spec.get('org')
 
-        ctr_prov_ctx = self._get_ctr_prov_ctx_from_ovdc_metadata(
+        ctr_prov_ctx = construct_ctr_prov_ctx_from_ovdc_metadata(
             ovdc_name=ovdc_name, org_name=org_name)
 
         return self._get_broker_based_on_ctr_prov_ctx(ctr_prov_ctx)

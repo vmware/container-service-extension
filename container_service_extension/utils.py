@@ -30,6 +30,11 @@ def get_pks_cache():
     return Service().get_pks_cache()
 
 
+def is_pks_enabled():
+    from container_service_extension.service import Service
+    return Service().is_pks_enabled()
+
+
 def get_duplicate_items_in_list(items):
     """Find duplicate entries in a list.
 
@@ -120,3 +125,16 @@ def check_python_version():
                f"Installed Python version: {sys.version}")
     if sys.version_info < (3, 7, 3):
         raise Exception("Python version should be 3.7.3 or greater")
+
+def str2bool(val):
+    """Convert string boolean values to bool.
+
+    The conversion is case insensitive.
+
+    :param val: input string
+
+    :return: True if val is 'true' otherwise False
+    """
+    if val:
+        return str(val).lower() == 'true'
+    return False

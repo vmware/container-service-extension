@@ -23,6 +23,7 @@ from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
 from container_service_extension.utils import get_pks_cache
+from container_service_extension.utils import is_pks_enabled
 
 
 def construct_pks_context(pks_account_info, pvdc_info=None, nsxt_info=None,
@@ -59,43 +60,55 @@ def construct_pks_context(pks_account_info, pvdc_info=None, nsxt_info=None,
     return pks_ctx
 
 
-def get_ovdc_params(client, req_spec):
-    ovdc_id = req_spec.get('ovdc_id')
-    org_name = req_spec.get('org_name')
-    pks_plans = req_spec['pks_plans']
-    pks_cluster_domain = req_spec['pks_cluster_domain']
-    ovdc = get_vdc(client=client, ovdc_id=ovdc_id)
-    pvdc_id = get_pvdc_id(ovdc)
+def construct_ctr_prov_ctx_from_ovdc_metadata(ovdc_name, org_name):
+    ctr_prov_ctx = OvdcManager().get_ovdc_container_provider_metadata(
+        ovdc_name=ovdc_name, org_name=org_name,
+        credentials_required=True, nsxt_info_required=True)
+    return ctr_prov_ctx
 
-    pks_context = None
-    if req_spec[K8S_PROVIDER_KEY] == K8sProviders.PKS:
-        pks_cache = get_pks_cache()
-        if not pks_cache:
-            raise CseServerError('CSE is not configured to work with PKS.')
-        pvdc_info = pks_cache.get_pvdc_info(pvdc_id)
-        if not pvdc_info:
-            LOGGER.debug(f"pvdc '{pvdc_id}' is not backed "
-                         f"by PKS-managed-vSphere resources")
-            raise CseServerError(f"'{ovdc.resource.get('name')}' is not "
-                                 f"eligible to provide resources for "
-                                 f"PKS clusters. Refer debug logs for more"
-                                 f" details.")
-        pks_account_info = pks_cache.get_pks_account_info(
-            org_name, pvdc_info.vc)
-        nsxt_info = pks_cache.get_nsxt_info(pvdc_info.vc)
 
-        pks_compute_profile_name = \
-            _construct_pks_compute_profile_name(ovdc_id)
-        pks_context = construct_pks_context(
-            pks_account_info=pks_account_info,
-            pvdc_info=pvdc_info,
-            nsxt_info=nsxt_info,
-            pks_compute_profile_name=pks_compute_profile_name,
-            pks_plans=pks_plans,
-            pks_cluster_domain=pks_cluster_domain,
-            credentials_required=True)
+def construct_ctr_prov_ctx_from_pks_cache(ovdc_id, org_name, pks_plans,
+                                          pks_cluster_domain,
+                                          container_provider):
+    client = None
+    try:
+        ctr_prov_context = {}
+        ctr_prov_context[K8S_PROVIDER_KEY] = container_provider
+        if container_provider == K8sProviders.PKS:
+            if not is_pks_enabled():
+                raise CseServerError('CSE is not configured to work with PKS.')
 
-    return pks_context, ovdc
+            client = get_sys_admin_client()
+            ovdc = get_vdc(client=client, vdc_id=ovdc_id,
+                           is_admin_operation=True)
+            pks_cache = get_pks_cache()
+            pvdc_id = get_pvdc_id(ovdc)
+            pvdc_info = pks_cache.get_pvdc_info(pvdc_id)
+            if not pvdc_info:
+                LOGGER.debug(f"pvdc '{pvdc_id}' is not backed "
+                             f"by PKS-managed-vSphere resources")
+                raise CseServerError(f"'{ovdc.get_resource().get('name')}' is "
+                                     "not eligible to provide resources for "
+                                     "PKS clusters. Refer to debug logs for "
+                                     "more details.")
+            pks_account_info = pks_cache.get_pks_account_info(
+                org_name, pvdc_info.vc)
+            nsxt_info = pks_cache.get_nsxt_info(pvdc_info.vc)
+
+            pks_compute_profile_name = \
+                _construct_pks_compute_profile_name(ovdc_id)
+            ctr_prov_context = construct_pks_context(
+                pks_account_info=pks_account_info,
+                pvdc_info=pvdc_info,
+                nsxt_info=nsxt_info,
+                pks_compute_profile_name=pks_compute_profile_name,
+                pks_plans=pks_plans,
+                pks_cluster_domain=pks_cluster_domain,
+                credentials_required=True)
+        return ctr_prov_context
+    finally:
+        if client:
+            client.logout()
 
 
 def _construct_pks_compute_profile_name(vdc_id):
@@ -217,7 +230,7 @@ class OvdcManager(object):
                 client.logout()
 
     def set_ovdc_container_provider_metadata(self,
-                                             ovdc,
+                                             ovdc_id,
                                              container_prov_data=None,
                                              container_provider=None):
         """Set the container provider metadata of given ovdc.
@@ -227,28 +240,37 @@ class OvdcManager(object):
         :param str container_provider: name of container provider for which
             the ovdc is being enabled to deploy k8 clusters on.
         """
-        ovdc_name = ovdc.resource.get('name')
-        metadata = {}
-        if container_provider != K8sProviders.PKS:
-            LOGGER.debug(f"Remove existing metadata for ovdc:{ovdc_name}")
-            self._remove_metadata(ovdc, PksCache.get_pks_keys())
+        client = None
+        try:
+            client = get_sys_admin_client()
+            ovdc = get_vdc(client, vdc_id=ovdc_id)
+            ovdc_name = ovdc.get_resource().get('name')
+
+            metadata = {}
             metadata[K8S_PROVIDER_KEY] = container_provider or \
-                K8sProviders.NONE
-            LOGGER.debug(f"Updated metadata for {container_provider}:"
-                         f"{metadata}")
-        else:
-            container_prov_data.pop('username')
-            container_prov_data.pop('secret')
-            container_prov_data.pop('nsxt')
-            metadata[K8S_PROVIDER_KEY] = container_provider
-            metadata.update(container_prov_data)
+                    K8sProviders.NONE
 
-        # set ovdc metadata into Vcd
-        LOGGER.debug(f"On ovdc:{ovdc_name}, setting metadata:{metadata}")
-        return ovdc.set_multiple_metadata(metadata, MetadataDomain.SYSTEM,
-                                          MetadataVisibility.PRIVATE)
+            if container_provider != K8sProviders.PKS:
+                LOGGER.debug(f"Remove existing metadata for ovdc:{ovdc_name}")
+                self._remove_metadata_from_ovdc(ovdc, PksCache.get_pks_keys())
+                
+                LOGGER.debug(f"Updated metadata for {container_provider}:"
+                             f"{metadata}")
+            else:
+                container_prov_data.pop('username')
+                container_prov_data.pop('secret')
+                container_prov_data.pop('nsxt')
+                metadata.update(container_prov_data)
 
-    def _remove_metadata(self, ovdc, keys=[]):
+            # set ovdc metadata into Vcd
+            LOGGER.debug(f"On ovdc:{ovdc_name}, setting metadata:{metadata}")
+            return ovdc.set_multiple_metadata(metadata, MetadataDomain.SYSTEM,
+                                              MetadataVisibility.PRIVATE)
+        finally:
+            if client:
+                client.logout()
+
+    def _remove_metadata_from_ovdc(self, ovdc, keys=[]):
         metadata = metadata_to_dict(ovdc.get_all_metadata())
         for k in keys:
             if k in metadata:

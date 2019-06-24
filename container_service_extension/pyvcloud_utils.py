@@ -81,7 +81,7 @@ def get_org(client, org_name=None):
 
     :raises EntityNotFoundException: if the org could not be found.
     """
-    if org_name is None:
+    if not org_name:
         org_sparse_resource = client.get_org()
         org = Org(client, href=org_sparse_resource.get('href'))
     else:
@@ -92,6 +92,10 @@ def get_org(client, org_name=None):
 def get_vdc(client, vdc_id=None, vdc_name=None, org=None, org_name=None,
             is_admin_operation=False):
     """Get the specified VDC object.
+
+    Atleast one of vdc_id or vdc_name must be specified. If org or org_name
+    both are not specified, the currently logged in user's org will be used to
+    look for the vdc.
 
     :param pyvcloud.vcd.client.Client client:
     :param str vdc_id: id of the vdc
@@ -120,17 +124,17 @@ def get_vdc(client, vdc_id=None, vdc_name=None, org=None, org_name=None,
 
     resource = None
     if vdc_name:
-        if org is None:
+        if not org:
             org = get_org(client, org_name=org_name)
         resource = org.get_vdc(vdc_name, is_admin_operation=is_admin_operation)
 
     # TODO() org.get_vdc() should throw exception if vdc not found in the org.
     # This should be handled in pyvcloud. For now, it is handled here.
     if resource is None:
-        raise EntityNotFoundException(f"VDC '{vdc_name}' not found"
-                                      f" in ORG '{org.resource.get('name')}'")
-    vdc = VDC(client, resource=resource)
-    return vdc
+        raise EntityNotFoundException(
+            f"VDC '{vdc_name}' not found in ORG "
+            f"'{org.get_resource().get('name')}'")
+    return VDC(client, resource=resource)
 
 
 def get_org_name_from_ovdc_id(vdc_id):
@@ -153,7 +157,7 @@ def get_org_name_from_ovdc_id(vdc_id):
             vdc_href = f"{client._uri}/vdc/{vdc_id}"
             vdc_resource = client.get_resource(get_admin_href(vdc_href))
             vdc_obj = VDC(client, resource=vdc_resource)
-            link = find_link(vdc_obj.resource, RelationType.UP,
+            link = find_link(vdc_obj.get_resource(), RelationType.UP,
                              EntityType.ADMIN_ORG.value)
             org = Org(client, href=link.href)
             OVDC_TO_ORG_MAP[vdc_id] = org.get_name()
@@ -216,7 +220,8 @@ def is_org_admin(user_session):
 def get_pvdc_id(ovdc):
     """Get id of pvdc backing an ovdc.
 
-    :param pyvcloud.vcd.VDC ovdc:
+    :param pyvcloud.vcd.VDC ovdc: This ovdc object has to be created with a
+        sys admin client.
 
     :return: pvdc id
 
@@ -225,7 +230,7 @@ def get_pvdc_id(ovdc):
     client = None
     try:
         client = get_sys_admin_client()
-        pvdc_element = ovdc.resource.ProviderVdcReference
+        pvdc_element = ovdc.get_resource().ProviderVdcReference
         # To support <= VCD 9.1 where no 'id' is present in pvdc
         # element, it has to be extracted from href. Once VCD 9.1 support
         # is discontinued, this code is not required.

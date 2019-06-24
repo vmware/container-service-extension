@@ -82,6 +82,9 @@ class Service(object, metaclass=Singleton):
     def get_pks_cache(self):
         return self.pks_cache
 
+    def is_pks_enabled(self):
+        return bool(self.pks_cache)
+
     def active_requests_count(self):
         n = 0
         # TODO(request_count) Add support for PksBroker - VCDA-938
