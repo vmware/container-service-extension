@@ -5,20 +5,21 @@
 from pyvcloud.vcd.org import Org
 
 from container_service_extension.exceptions import UnauthorizedActionError
-from container_service_extension.ovdc_manager import create_pks_compute_profile
 from container_service_extension.ovdc_manager import \
     construct_ctr_prov_ctx_from_pks_cache
+from container_service_extension.ovdc_manager import create_pks_compute_profile
 from container_service_extension.ovdc_manager import OvdcManager
 from container_service_extension.pksbroker import PKSBroker
 from container_service_extension.pksbroker_manager import PksBrokerManager
-from container_service_extension.pyvcloud_utils \
-    import connect_vcd_user_via_token
+from container_service_extension.pyvcloud_utils import \
+    connect_vcd_user_via_token
 from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
 from container_service_extension.utils import is_pks_enabled
 from container_service_extension.utils import str2bool
+
 
 class OvdcRequestHandler(object):
     def __init__(self, tenant_auth_token, request_spec):
@@ -77,7 +78,7 @@ class OvdcRequestHandler(object):
         Else
             Gets all ovdcs of the organization in context.
         """
-        client,_ = connect_vcd_user_via_token(tenant_auth_token)
+        client, _ = connect_vcd_user_via_token(self.tenant_auth_token)
         if client.is_sysadmin():
             org_resource_list = client.get_org_list()
         else:

@@ -5,7 +5,6 @@
 from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseServerError
-from container_service_extension.ovdc_manager import OvdcManager
 from container_service_extension.ovdc_manager import \
     construct_ctr_prov_ctx_from_ovdc_metadata
 from container_service_extension.pks_cache import PKS_CLUSTER_DOMAIN_KEY
