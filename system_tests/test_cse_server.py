@@ -97,18 +97,23 @@ def delete_installation_entities():
 
 @pytest.fixture
 def blank_cust_scripts():
-    """Fixture to ensure that customization scripts are blank.
+    """Fixture to use blank customization scripts for a test.
 
     Usage: add the parameter 'blank_cust_scripts' to the test function. Use
     this fixture if the test outcome does not rely on running the
-    customization scripts. Useful for making installation tests run faster.
+    customization scripts. vApp customization is a bottleneck for installation,
+    so this is useful to run installation tests faster.
 
     Setup tasks:
-    - Blank out customization scripts
+    - Create empty file 'system_tests/scripts/cust-ubuntu-16.04.sh
+    - Create empty file 'system_tests/scripts/cust-photon-v2.sh
+
+    Teardown tasks:
+    - Delete directory 'system_tests/scripts'
     """
-    env.blank_customizaton_scripts()
+    env.create_empty_cust_scripts()
     yield
-    env.prepare_customization_scripts()
+    env.delete_cust_scripts()
 
 
 @pytest.fixture
@@ -389,7 +394,7 @@ def test_0100_install_update(config, unregister_cse):
             ssh_client.connect(ip, username='root')
             # run different commands depending on OS
             if 'photon' in temp_vapp_name:
-                script = utils.get_data_file(env.STATIC_PHOTON_CUST_SCRIPT)
+                script = utils.get_data_file(env.PHOTON_CUST_SCRIPT_NAME)
                 pattern = r'(kubernetes\S*)'
                 packages = re.findall(pattern, script)
                 stdin, stdout, stderr = ssh_client.exec_command("rpm -qa")
@@ -398,7 +403,7 @@ def test_0100_install_update(config, unregister_cse):
                     assert package in installed, \
                         f"{package} not found in Photon VM"
             elif 'ubuntu' in temp_vapp_name:
-                script = utils.get_data_file(env.STATIC_UBUNTU_CUST_SCRIPT)
+                script = utils.get_data_file(env.UBUNTU_CUST_SCRIPT_NAME)
                 pattern = r'((kubernetes|docker\S*|kubelet|kubeadm|kubectl)\S*=\S*)'  # noqa
                 packages = [tup[0] for tup in re.findall(pattern, script)]
                 cmd = "dpkg -l | grep '^ii' | awk '{print $2\"=\"$3}'"
