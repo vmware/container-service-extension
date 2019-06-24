@@ -248,12 +248,12 @@ class OvdcManager(object):
 
             metadata = {}
             metadata[K8S_PROVIDER_KEY] = container_provider or \
-                    K8sProviders.NONE
+                K8sProviders.NONE
 
             if container_provider != K8sProviders.PKS:
                 LOGGER.debug(f"Remove existing metadata for ovdc:{ovdc_name}")
                 self._remove_metadata_from_ovdc(ovdc, PksCache.get_pks_keys())
-                
+
                 LOGGER.debug(f"Updated metadata for {container_provider}:"
                              f"{metadata}")
             else:

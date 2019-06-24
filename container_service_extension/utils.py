@@ -126,6 +126,7 @@ def check_python_version():
     if sys.version_info < (3, 7, 3):
         raise Exception("Python version should be 3.7.3 or greater")
 
+
 def str2bool(val):
     """Convert string boolean values to bool.
 
