@@ -22,15 +22,16 @@ def environment():
 
     Setup tasks:
     - initialize variables (org/vdc href, client, amqp settings)
+    - delete directory 'system_tests/scripts' (if it exists)
 
     Teardown tasks:
     - logout client
     """
     env.init_environment()
-    env.prepare_customization_scripts()
+    env.delete_cust_scripts()
     yield
     env.cleanup_environment()
-    env.prepare_customization_scripts()
+    env.delete_cust_scripts()
 
 
 @pytest.fixture
