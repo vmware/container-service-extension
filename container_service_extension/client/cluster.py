@@ -9,9 +9,6 @@ from container_service_extension.client.response_processor import \
 from container_service_extension.client.response_processor import \
     response_to_exception
 from container_service_extension.cluster import TYPE_NODE
-from container_service_extension.exceptions import CseClientError
-from container_service_extension.exceptions import VcdResponseError
-from container_service_extension.shared_constants import UNKNOWN_ERROR_MESSAGE
 
 
 class Cluster(object):
@@ -49,15 +46,7 @@ class Cluster(object):
             self.client._session,
             accept_type='application/json',
             params={'org': org, 'vdc': vdc})
-        try:
-            result = process_response(response)
-        except VcdResponseError as e:
-            # ToDo() This is horrible! Fix it.
-            if e.error_message == UNKNOWN_ERROR_MESSAGE:
-                raise CseClientError("Invalid cluster name")
-            else:
-                raise e
-        return result
+        return process_response(response)
 
     def create_cluster(self,
                        vdc,
@@ -165,18 +154,11 @@ class Cluster(object):
             self.client._session,
             accept_type='application/json',
             params={'org': org, 'vdc': vdc})
-        try:
-            result = process_response(response)
-        except VcdResponseError as e:
-            if e.error_message == UNKNOWN_ERROR_MESSAGE:
-                raise CseClientError("Invalid cluster/node name")
-            else:
-                raise e
-        return result
+        return process_response(response)
 
     def get_cluster_config(self, cluster_name, org=None, vdc=None):
         method = 'GET'
-        uri = f"{self._uri}/cluster/{cluster_name}"
+        uri = f"{self._uri}/cluster/{cluster_name}/config"
         response = self.client._do_request_prim(
             method,
             uri,
@@ -185,13 +167,8 @@ class Cluster(object):
             params={'org': org, 'vdc': vdc})
         if response.status_code == requests.codes.ok:
             return response.content.decode('utf-8').replace('\\n', '\n')[1:-1]
-        try:
+        else:
             response_to_exception(response)
-        except VcdResponseError as e:
-            if e.error_message == UNKNOWN_ERROR_MESSAGE:
-                raise CseClientError("Invalid cluster name")
-            else:
-                raise e
 
     def get_node_info(self, cluster_name, node_name, org=None, vdc=None):
         method = 'GET'
@@ -202,15 +179,7 @@ class Cluster(object):
             self.client._session,
             accept_type='application/json',
             params={'org': org, 'vdc': vdc, 'cluster_name': cluster_name})
-        try:
-            result = process_response(response)
-        except VcdResponseError as e:
-            # ToDo() This is horrible! Fix it.
-            if e.error_message == UNKNOWN_ERROR_MESSAGE:
-                raise CseClientError("Invalid cluster/node name")
-            else:
-                raise e
-        return result
+        return process_response(response)
 
     def add_node(self,
                  network_name,

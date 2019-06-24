@@ -85,18 +85,15 @@ def response_to_exception(response):
                         response_dict[ERROR_MESSAGE_KEY][ERROR_REASON_KEY]
                 else:
                     message = str(response_dict[ERROR_MESSAGE_KEY])
-    else:
+    elif 'xml' in response.headers['Content-Type']:
         if response.status_code == requests.codes.gateway_timeout:
-            message = 'An error has occurred.'
-            if response.content is not None and len(response.content) > 0:
-                obj = objectify.fromstring(response.content)
-                message = obj.get(ERROR_MESSAGE_KEY)
+            message = 'Unable to communicate with CSE.'
         elif response.status_code == requests.codes.unauthorized:
             message = 'Session has expired or user not logged in. Please '\
                       're-login.'
-            if response.content is not None and len(response.content) > 0:
-                obj = objectify.fromstring(response.content)
-                message = obj.get(ERROR_MESSAGE_KEY)
+        elif response.content is not None and len(response.content) > 0:
+            obj = objectify.fromstring(response.content)
+            message = obj.get(ERROR_MESSAGE_KEY)
 
     if not message:
         message = UNKNOWN_ERROR_MESSAGE

@@ -44,7 +44,8 @@ from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import NodeNotFoundError
 from container_service_extension.exceptions import WorkerNodeCreationError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.pyvcloud_utils import get_org_name_of_ovdc
+from container_service_extension.pyvcloud_utils import \
+    get_org_name_from_ovdc_id
 from container_service_extension.pyvcloud_utils import get_sys_admin_client
 from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_NAME
@@ -281,7 +282,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 'vdc': c['vdc_name'],
                 'status': c['status'],
                 'vdc_id': c['vdc_id'],
-                'org_name': get_org_name_of_ovdc(c['vdc_id'])
+                'org_name': get_org_name_from_ovdc_id(c['vdc_id'])
             })
         return clusters
 
@@ -614,7 +615,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
 
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def create_nodes(self):
-        self.cluster_name = self.req_spec['name']
+        self.cluster_name = self.req_spec['cluster_name']
         LOGGER.debug(f"About to add {self.req_spec['node_count']} nodes to "
                      f"cluster {self.cluster_name} on VDC "
                      f"{self.req_spec['vdc']}")
@@ -715,9 +716,9 @@ class VcdBroker(AbstractBroker, threading.Thread):
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def delete_nodes(self):
         result = {'body': {}}
-        self.cluster_name = self.req_spec['name']
+        self.cluster_name = self.req_spec['cluster_name']
         LOGGER.debug(f"About to delete nodes from cluster with name: "
-                     f"{self.req_spec['name']}")
+                     f"{self.req_spec['cluster_name']}")
 
         if len(self.req_spec['nodes']) < 1:
             raise CseServerError(f"Invalid list of nodes: "

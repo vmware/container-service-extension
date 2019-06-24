@@ -4,7 +4,8 @@
 
 from collections import namedtuple
 
-from container_service_extension.pyvcloud_utils import get_pvdc_id_by_name
+from container_service_extension.pyvcloud_utils import \
+    get_pvdc_id_from_pvdc_name
 
 # Refer  to TODO(Constants) in broker_manager.py
 PKS_PLANS_KEY = 'pks_plans'
@@ -231,7 +232,7 @@ class PksCache(object):
 
             pvdc_info = PvdcInfo(pvdc_name, vc, datacenter, cluster, cpi)
 
-            pvdc_id = get_pvdc_id_by_name(pvdc_name, vc)
+            pvdc_id = get_pvdc_id_from_pvdc_name(pvdc_name, vc)
             pvdc_info_table[str(pvdc_id)] = pvdc_info
 
         return pvdc_info_table
