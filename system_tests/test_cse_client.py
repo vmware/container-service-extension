@@ -91,7 +91,7 @@ def cse_server():
                                    input='y',
                                    catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info(f"cse {install_cmd}", result.exit_code,
+        testutils.format_command_info('cse', install_cmd, result.exit_code,
                                       result.output)
 
     # start cse server as subprocess
@@ -107,27 +107,27 @@ def cse_server():
           f"{config['vcd']['username']} -iwp {config['vcd']['password']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+        testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
     cmd = f"org use {config['broker']['org']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+        testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
     cmd = f"vdc use {config['broker']['vdc']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+        testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
     cmd = f"cse ovdc enable {config['broker']['vdc']} -k " \
           f"{constants.K8sProviders.NATIVE}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+        testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
     result = env.CLI_RUNNER.invoke(vcd, 'logout', catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+        testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
 
     yield
@@ -156,21 +156,21 @@ def vcd_org_admin():
           f"{config['vcd']['username']} -iwp {config['vcd']['password']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+        testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
 
     # ovdc context may be nondeterministic when there's multiple ovdcs
     cmd = f"vdc use {config['broker']['vdc']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+        testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
 
     yield
 
     result = env.CLI_RUNNER.invoke(vcd, ['logout'])
     assert result.exit_code == 0,\
-        testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+        testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
 
 
@@ -188,14 +188,14 @@ def vcd_sys_admin():
           f"{config['vcd']['username']} -iwp {config['vcd']['password']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+        testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
 
     yield
 
     result = env.CLI_RUNNER.invoke(vcd, ['logout'])
     assert result.exit_code == 0,\
-        testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+        testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
 
 
@@ -222,7 +222,7 @@ def test_0010_vcd_cse_version(vcd_org_admin):
     cmd = "cse version"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+        testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
 
 
@@ -231,7 +231,7 @@ def test_0020_vcd_cse_system_info(vcd_org_admin):
     cmd = "cse system info"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+        testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
 
 
@@ -248,7 +248,7 @@ def test_0030_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
           f"{config['broker']['network']} -N 1 -c 1000"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+        testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
     # TODO() make cluster rollback delete call blocking
     time.sleep(env.WAIT_INTERVAL * 6)  # wait for vApp to be deleted
@@ -258,7 +258,7 @@ def test_0030_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
     cmd += " --disable-rollback"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+        testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
     assert env.vapp_exists(env.TEST_CLUSTER_NAME), \
         "Cluster does not exist when it should."
@@ -294,7 +294,10 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
         print(f"Running command [vcd {node_list_cmd}]...", end='')
         node_list_result = env.CLI_RUNNER.invoke(vcd, node_list_cmd.split(),
                                                  catch_exceptions=False)
-        assert node_list_result.exit_code == 0
+        assert node_list_result.exit_code == 0, \
+            testutils.format_command_info('vcd', node_list_cmd,
+                                          node_list_result.exit_code,
+                                          node_list_result.output)
         print('SUCCESS')
         node_list = re.findall(node_pattern, node_list_result.output)
         assert len(node_list) == num_nodes, \
@@ -309,7 +312,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
     result = env.CLI_RUNNER.invoke(vcd, ['cse', 'template', 'list'],
                                    catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+        testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
     print('SUCCESS')
 
@@ -331,7 +334,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
         result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
                                        catch_exceptions=False)
         assert result.exit_code == 0,\
-            testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+            testutils.format_command_info('vcd', cmd, result.exit_code,
                                           result.output)
         assert env.vapp_exists(env.TEST_CLUSTER_NAME), \
             "Cluster doesn't exist when it should."
@@ -352,7 +355,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
                 result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
                                                catch_exceptions=False)
                 assert result.exit_code == 0, \
-                    testutils.format_command_info(f"vcd {cmd}",
+                    testutils.format_command_info('vcd', cmd,
                                                   result.exit_code,
                                                   result.output)
                 print('SUCCESS')
@@ -365,7 +368,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
         result = env.CLI_RUNNER.invoke(vcd, cmd.split(), input='y',
                                        catch_exceptions=False)
         assert result.exit_code == 0,\
-            testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+            testutils.format_command_info('vcd', cmd, result.exit_code,
                                           result.output)
         print('SUCCESS')
         check_node_list()
@@ -378,7 +381,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
         result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
                                        catch_exceptions=False)
         assert result.exit_code == 0,\
-            testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+            testutils.format_command_info('vcd', cmd, result.exit_code,
                                           result.output)
         print('SUCCESS')
         check_node_list()
@@ -389,7 +392,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
         result = env.CLI_RUNNER.invoke(vcd, cmd.split(), input='y',
                                        catch_exceptions=False)
         assert result.exit_code == 0,\
-            testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+            testutils.format_command_info('vcd', cmd, result.exit_code,
                                           result.output)
         assert not env.vapp_exists(env.TEST_CLUSTER_NAME), \
             "Cluster exists when it should not"
@@ -415,7 +418,7 @@ class TestSystemToggle:
         result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
                                        catch_exceptions=False)
         assert result.exit_code == 0,\
-            testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+            testutils.format_command_info('vcd', cmd, result.exit_code,
                                           result.output)
 
     def test_0020_cluster_create_disabled(self, config, vcd_org_admin,
@@ -425,7 +428,7 @@ class TestSystemToggle:
         result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
                                        catch_exceptions=False)
         assert result.exit_code == 2,\
-            testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+            testutils.format_command_info('vcd', cmd, result.exit_code,
                                           result.output)
         assert not env.vapp_exists(env.TEST_CLUSTER_NAME), \
             "Cluster exists when it should not."
@@ -435,7 +438,7 @@ class TestSystemToggle:
         result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
                                        catch_exceptions=False)
         assert result.exit_code == 0,\
-            testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+            testutils.format_command_info('vcd', cmd, result.exit_code,
                                           result.output)
 
     def test_0040_cluster_create_enabled(self, config, vcd_org_admin,
@@ -445,7 +448,7 @@ class TestSystemToggle:
         result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
                                        catch_exceptions=False)
         assert result.exit_code == 0,\
-            testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+            testutils.format_command_info('vcd', cmd, result.exit_code,
                                           result.output)
         assert env.vapp_exists(env.TEST_CLUSTER_NAME), \
             "Cluster doesn't exist when it should."
@@ -460,12 +463,12 @@ def test_9999_vcd_cse_system_stop(vcd_sys_admin):
     cmd = 'cse system disable'
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+        testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
 
     cmd = 'cse system stop'
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), input='y',
                                    catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info(f"vcd {cmd}", result.exit_code,
+        testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)

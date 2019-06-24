@@ -61,6 +61,6 @@ def delete_file(filepath):
         pass
 
 
-def format_command_info(cmd, exit_code, output):
-    return f"\nCommand: [{cmd}]\nExit Code: [{exit_code}]" \
+def format_command_info(cmd_root, cmd, exit_code, output):
+    return f"\nCommand: [{cmd_root} {cmd}]\nExit Code: [{exit_code}]" \
            f"\nOutput Start===\n{output}===Output End"
