@@ -2,6 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from pyvcloud.vcd.client import ApiVersion
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import EntityType
@@ -12,6 +13,7 @@ from pyvcloud.vcd.client import ResourceType
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.role import Role
+from pyvcloud.vcd.utils import extract_id
 from pyvcloud.vcd.utils import get_admin_href
 from pyvcloud.vcd.vdc import VDC
 import requests
@@ -46,26 +48,24 @@ def connect_vcd_user_via_token(tenant_auth_token):
 
 def get_sys_admin_client():
     server_config = get_server_runtime_config()
-    if server_config is not None:
-        if not server_config['vcd']['verify']:
-            LOGGER.warning("InsecureRequestWarning: Unverified HTTPS "
-                           "request is being made. Adding certificate "
-                           "verification is strongly advised.")
-            requests.packages.urllib3.disable_warnings()
-        client = Client(
-            uri=server_config['vcd']['host'],
-            api_version=server_config['vcd']['api_version'],
-            verify_ssl_certs=server_config['vcd']['verify'],
-            log_file=SERVER_DEBUG_WIRELOG_FILEPATH,
-            log_requests=True,
-            log_headers=True,
-            log_bodies=True)
-        credentials = BasicLoginCredentials(server_config['vcd']['username'],
-                                            SYSTEM_ORG_NAME,
-                                            server_config['vcd']['password'])
-        client.set_credentials(credentials)
-        return client
-    return None
+    if not server_config['vcd']['verify']:
+        LOGGER.warning("InsecureRequestWarning: Unverified HTTPS "
+                       "request is being made. Adding certificate "
+                       "verification is strongly advised.")
+        requests.packages.urllib3.disable_warnings()
+    client = Client(
+        uri=server_config['vcd']['host'],
+        api_version=server_config['vcd']['api_version'],
+        verify_ssl_certs=server_config['vcd']['verify'],
+        log_file=SERVER_DEBUG_WIRELOG_FILEPATH,
+        log_requests=True,
+        log_headers=True,
+        log_bodies=True)
+    credentials = BasicLoginCredentials(server_config['vcd']['username'],
+                                        SYSTEM_ORG_NAME,
+                                        server_config['vcd']['password'])
+    client.set_credentials(credentials)
+    return client
 
 
 def get_org(client, org_name=None):
@@ -89,12 +89,13 @@ def get_org(client, org_name=None):
     return org
 
 
-def get_vdc(client, vdc_name, org=None, org_name=None,
+def get_vdc(client, vdc_id=None, vdc_name=None, org=None, org_name=None,
             is_admin_operation=False):
     """Get the specified VDC object.
 
     :param pyvcloud.vcd.client.Client client:
-    :param str vdc_name:
+    :param str vdc_id: id of the vdc
+    :param str vdc_name: name of the vdc
     :param pyvcloud.vcd.org.Org org: specific org to use.
     :param str org_name: specific org to use if @org is not given.
         If None, uses currently logged-in org from @client.
@@ -107,9 +108,22 @@ def get_vdc(client, vdc_name, org=None, org_name=None,
 
     :raises EntityNotFoundException: if the vdc could not be found.
     """
-    if org is None:
-        org = get_org(client, org_name=org_name)
-    resource = org.get_vdc(vdc_name, is_admin_operation=is_admin_operation)
+    if vdc_id:
+        base_url = client.get_api_uri()
+        # add a trailing slash if missing
+        if base_url[-1] != '/':
+            base_url += '/'
+        if is_admin_operation:
+            base_url = get_admin_href(base_url)
+        vdc_href = f'{base_url}vdc/{vdc_id}'
+        return VDC(client, href=vdc_href)
+
+    resource = None
+    if vdc_name:
+        if org is None:
+            org = get_org(client, org_name=org_name)
+        resource = org.get_vdc(vdc_name, is_admin_operation=is_admin_operation)
+
     # TODO() org.get_vdc() should throw exception if vdc not found in the org.
     # This should be handled in pyvcloud. For now, it is handled here.
     if resource is None:
@@ -119,28 +133,35 @@ def get_vdc(client, vdc_name, org=None, org_name=None,
     return vdc
 
 
-def get_org_name_of_ovdc(vdc_id):
+def get_org_name_from_ovdc_id(vdc_id):
     """Get org_name from vdc_id using OVDC_TO_ORG_MAP.
 
     Update OVDC_TO_ORG_MAP for new {org_name:vdc_id} pair
 
     :param vdc_id: unique ovdc id
+
     :return: org_name
+
+    :rtype: str
     """
     if vdc_id in OVDC_TO_ORG_MAP:
         org_name = OVDC_TO_ORG_MAP.get(vdc_id)
     else:
-        client = get_sys_admin_client()
-        vdc_href = f"{client._uri}/vdc/{vdc_id}"
-        vdc_resource = client.get_resource(get_admin_href(vdc_href))
-        vdc_obj = VDC(client, resource=vdc_resource)
-        link = find_link(vdc_obj.resource, RelationType.UP,
-                         EntityType.ADMIN_ORG.value)
-        org = Org(client, href=link.href)
-        '''Add the entry to the map to be used next time the \
-        same ovdc is requested'''
-        OVDC_TO_ORG_MAP[vdc_id] = org.get_name()
-        org_name = org.get_name()
+        client = None
+        try:
+            client = get_sys_admin_client()
+            vdc_href = f"{client._uri}/vdc/{vdc_id}"
+            vdc_resource = client.get_resource(get_admin_href(vdc_href))
+            vdc_obj = VDC(client, resource=vdc_resource)
+            link = find_link(vdc_obj.resource, RelationType.UP,
+                             EntityType.ADMIN_ORG.value)
+            org = Org(client, href=link.href)
+            OVDC_TO_ORG_MAP[vdc_id] = org.get_name()
+            org_name = org.get_name()
+        finally:
+            if client:
+                client.logout
+
     return org_name
 
 
@@ -174,37 +195,54 @@ def get_user_rights(sys_admin_client, user_session):
 
 
 def is_org_admin(user_session):
-    """Return if the logged-in user is an org-admin.
+    """Deduce if the logged-in user is an org-admin or not.
 
     :param lxml.objectify.ObjectifiedElement user_session:
 
-    :return True or False
+    :return True if the user is an Org Admin else False
+
     :rtype: bool
     """
-    user_rights = get_user_rights(get_sys_admin_client(), user_session)
+    client = None
+    try:
+        client = get_sys_admin_client()
+        user_rights = get_user_rights(client, user_session)
+    finally:
+        if client:
+            client.logout()
     return all(right in user_rights for right in ORG_ADMIN_RIGHTS)
 
 
-def get_vdc_by_id(sys_admin_client, vdc_id):
-    """Return VDC object for the given vdc_id.
+def get_pvdc_id(ovdc):
+    """Get id of pvdc backing an ovdc.
 
-    :param pyvcloud.vcd.client.Client sys_admin_client: the sys admin cilent
-        that will be used to query vCD
+    :param pyvcloud.vcd.VDC ovdc:
 
-    :param str vdc_id: UUID of the vdc
+    :return: pvdc id
 
-    :return VDC object
-    :rtype: pyvcloud.vcd.vdc.VDC
+    :rtype: str
     """
-    LOGGER.debug(f"Getting vdc by id:{vdc_id}")
-    admin_href = sys_admin_client.get_admin().get('href')
-    ovdc_href = f'{admin_href}vdc/{vdc_id}'
-    resource = sys_admin_client.get_resource(ovdc_href)
-    return VDC(sys_admin_client, resource=resource)
+    client = None
+    try:
+        client = get_sys_admin_client()
+        pvdc_element = ovdc.resource.ProviderVdcReference
+        # To support <= VCD 9.1 where no 'id' is present in pvdc
+        # element, it has to be extracted from href. Once VCD 9.1 support
+        # is discontinued, this code is not required.
+        if float(client.get_api_version()) < \
+                float(ApiVersion.VERSION_31.value):
+            pvdc_href = pvdc_element.get('href')
+            return pvdc_href.split("/")[-1]
+        else:
+            pvdc_id = pvdc_element.get('id')
+            return extract_id(pvdc_id)
+    finally:
+        if client:
+            client.logout()
 
 
-def get_pvdc_id_by_name(name, vc_name_in_vcd):
-    """Retrieve the pvdc identifier based on the pvdc name and vcenter name.
+def get_pvdc_id_from_pvdc_name(name, vc_name_in_vcd):
+    """Retrieve the pvdc id based on the pvdc name and vcenter name.
 
     :param str name: name of the pvdc.
     :param str vc_name_in_vcd: name of the vcenter in vcd.
@@ -213,14 +251,19 @@ def get_pvdc_id_by_name(name, vc_name_in_vcd):
 
     :rtype: str
     """
-    client = get_sys_admin_client()
-    query = client.get_typed_query(ResourceType.PROVIDER_VDC.value,
-                                   query_result_format=QueryResultFormat
-                                   .RECORDS,
-                                   qfilter=f'vcName=={vc_name_in_vcd}',
-                                   equality_filter=('name', name))
-    for pvdc_record in list(query.execute()):
-        href = pvdc_record.get('href')
-        pvdc_id = href.split("/")[-1]
-        return pvdc_id
+    client = None
+    try:
+        client = get_sys_admin_client()
+        query = client.get_typed_query(
+            ResourceType.PROVIDER_VDC.value,
+            query_result_format=QueryResultFormat.RECORDS,
+            qfilter=f'vcName=={vc_name_in_vcd}',
+            equality_filter=('name', name))
+        for pvdc_record in list(query.execute()):
+            href = pvdc_record.get('href')
+            pvdc_id = href.split("/")[-1]
+            return pvdc_id
+    finally:
+        if client:
+            client.logout()
     return None

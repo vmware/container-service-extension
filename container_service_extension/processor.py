@@ -15,7 +15,7 @@ from container_service_extension.broker_manager import BrokerManager
 from container_service_extension.exception_handler import handle_exception
 from container_service_extension.exceptions import CseRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.ovdc_manager import OvdcManager
+from container_service_extension.ovdc_request_handler import OvdcRequestHandler
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.utils import get_server_runtime_config
 
@@ -195,7 +195,7 @@ class ServiceProcessor(object):
             from container_service_extension.service import Service
             if not Service().is_running():
                 raise CseRequestError(
-                    status=requests.codes.bad_request,
+                    status_code=requests.codes.bad_request,
                     error_message='CSE service is disabled. Contact the'
                                   ' System Administrator.')
 
@@ -264,8 +264,9 @@ class ServiceProcessor(object):
             reply['body'] = templates
         elif operation in (CseOperation.OVDC_ENABLE_DISABLE,
                            CseOperation.OVDC_INFO, CseOperation.OVDC_LIST):
-            ovdc_manager = OvdcManager(tenant_auth_token, req_spec)
-            reply['body'] = ovdc_manager.invoke(op=operation)
+            ovdc_request_handler = \
+                OvdcRequestHandler(tenant_auth_token, req_spec)
+            reply['body'] = ovdc_request_handler.invoke(op=operation)
         else:
             broker_manager = BrokerManager(tenant_auth_token, req_spec)
             reply['body'] = broker_manager.invoke(op=operation)

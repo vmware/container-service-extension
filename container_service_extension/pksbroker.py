@@ -47,7 +47,8 @@ from container_service_extension.pksclient.models.v1beta.\
     compute_profile_parameters import ComputeProfileParameters
 from container_service_extension.pksclient.models.v1beta.\
     compute_profile_request import ComputeProfileRequest
-from container_service_extension.pyvcloud_utils import get_org_name_of_ovdc
+from container_service_extension.pyvcloud_utils import \
+    get_org_name_from_ovdc_id
 from container_service_extension.pyvcloud_utils import is_org_admin
 from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
@@ -864,7 +865,7 @@ class PKSBroker(AbstractBroker):
             return False
         vdc_id = self._extract_vdc_id_from_pks_compute_profile_name(
             compute_profile_name)
-        return org_name == get_org_name_of_ovdc(vdc_id)
+        return org_name == get_org_name_from_ovdc_id(vdc_id)
 
     def _apply_vdc_filter(self, cluster_list, vdc_name):
         cluster_list = [cluster_dict for cluster_dict in cluster_list
@@ -942,6 +943,5 @@ class PKSBroker(AbstractBroker):
             cluster.get('last_action', '').lower() + ' ' + \
             cluster.get('last_action_state', '').lower()
         if vdc_id:
-            pks_cluster['org_name'] = \
-                get_org_name_of_ovdc(vdc_id)
+            pks_cluster['org_name'] = get_org_name_from_ovdc_id(vdc_id)
         return pks_cluster

@@ -1,0 +1,135 @@
+# container-service-extension
+# Copyright (c) 2019 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
+from pyvcloud.vcd.org import Org
+
+from container_service_extension.exceptions import UnauthorizedActionError
+from container_service_extension.ovdc_manager import create_pks_compute_profile
+from container_service_extension.ovdc_manager import get_ovdc_params
+from container_service_extension.ovdc_manager import OvdcManager
+from container_service_extension.pksbroker import PKSBroker
+from container_service_extension.pksbroker_manager import PksBrokerManager
+from container_service_extension.pyvcloud_utils \
+    import connect_vcd_user_via_token
+from container_service_extension.pyvcloud_utils import get_vdc
+from container_service_extension.server_constants import CseOperation
+from container_service_extension.server_constants import K8S_PROVIDER_KEY
+from container_service_extension.server_constants import K8sProviders
+
+
+class OvdcRequestHandler(object):
+    def __init__(self, tenant_auth_token, request_spec):
+        self.tenant_auth_token = tenant_auth_token
+        self.req_spec = request_spec
+        self.vcd_client, self.session = connect_vcd_user_via_token(
+            tenant_auth_token=tenant_auth_token)
+
+    def invoke(self, op):
+        """Handle ovdc related operations.
+
+        :param CseOperation op: Operation to be performed on the ovdc.
+
+        :return result: result of the operation.
+
+        :rtype: dict
+        """
+        result = {}
+
+        if op == CseOperation.OVDC_ENABLE_DISABLE:
+            pks_ctx, ovdc = get_ovdc_params(self.vcd_client, self.req_spec)
+            if self.req_spec[K8S_PROVIDER_KEY] == K8sProviders.PKS:
+                create_pks_compute_profile(
+                    pks_ctx, self.tenant_auth_token, self.req_spec)
+            task = OvdcManager().set_ovdc_container_provider_metadata(
+                ovdc,
+                container_prov_data=pks_ctx,
+                container_provider=self.req_spec[K8S_PROVIDER_KEY])
+            result = {'task_href': task.get('href')}
+        elif op == CseOperation.OVDC_INFO:
+            ovdc_id = self.req_spec.get('ovdc_id')
+            result = OvdcManager().get_ovdc_container_provider_metadata(
+                ovdc_id=ovdc_id)
+        elif op == CseOperation.OVDC_LIST:
+            list_pks_plans = self.req_spec.get('list_pks_plans', False)
+            result = self._list_ovdcs(list_pks_plans=list_pks_plans)
+
+        return result
+
+    def _list_ovdcs(self, list_pks_plans=False):
+        """Get list of ovdcs.
+
+        If client is sysadmin,
+            Gets all ovdcs of all organizations.
+        Else
+            Gets all ovdcs of the organization in context.
+        """
+        if self.vcd_client.is_sysadmin():
+            org_resource_list = self.vcd_client.get_org_list()
+        else:
+            org_resource_list = list(self.vcd_client.get_org())
+
+        ovdc_list = []
+        vc_to_pks_plans_map = {}
+        if list_pks_plans:
+            if self.vcd_client.is_sysadmin():
+                vc_to_pks_plans_map = self._construct_vc_to_pks_map()
+            else:
+                raise UnauthorizedActionError(
+                    'Operation Denied. Plans available only for '
+                    'System Administrator.')
+        for org_resource in org_resource_list:
+            org = Org(self.vcd_client, resource=org_resource)
+            vdc_list = org.list_vdcs()
+            for vdc_sparse in vdc_list:
+                ctr_prov_ctx = \
+                    OvdcManager().get_ovdc_container_provider_metadata(
+                        ovdc_name=vdc_sparse['name'], org_name=org.get_name(),
+                        credentials_required=False)
+                vdc_dict = {
+                    'name': vdc_sparse['name'],
+                    'org': org.get_name(),
+                    K8S_PROVIDER_KEY: ctr_prov_ctx[K8S_PROVIDER_KEY]
+                }
+                if list_pks_plans:
+                    pks_plans, pks_server = self.\
+                        _get_pks_plans_and_server_for_vdc(vdc_sparse,
+                                                          org_resource,
+                                                          vc_to_pks_plans_map)
+                    vdc_dict['pks_api_server'] = pks_server
+                    vdc_dict['available pks plans'] = pks_plans
+                ovdc_list.append(vdc_dict)
+        return ovdc_list
+
+    def _get_pks_plans_and_server_for_vdc(self,
+                                          vdc_sparse,
+                                          org_resource,
+                                          vc_to_pks_plans_map):
+        pks_server = ''
+        pks_plans = []
+        vdc = get_vdc(self.vcd_client, vdc_name=vdc_sparse['name'],
+                      org_name=org_resource.get('name'))
+        vc_backing_vdc = vdc.resource.ComputeProviderScope
+
+        pks_plan_and_server_info = vc_to_pks_plans_map.get(vc_backing_vdc, [])
+        if len(pks_plan_and_server_info) > 0:
+            pks_plans = pks_plan_and_server_info[0]
+            pks_server = pks_plan_and_server_info[1]
+        return pks_plans, pks_server
+
+    def _construct_vc_to_pks_map(self):
+        pks_vc_plans_map = {}
+        pksbroker_manager = PksBrokerManager(
+            self.tenant_auth_token, self.req_spec)
+        pks_ctx_list = \
+            pksbroker_manager.create_pks_context_for_all_accounts_in_org()
+
+        for pks_ctx in pks_ctx_list:
+            if pks_ctx['vc'] in pks_vc_plans_map:
+                continue
+            pks_broker = PKSBroker(self.tenant_auth_token, self.req_spec,
+                                   pks_ctx)
+            plans = pks_broker.list_plans()
+            plan_names = [plan.get('name') for plan in plans]
+            pks_vc_plans_map[pks_ctx['vc']] = [plan_names, pks_ctx['host']]
+        return pks_vc_plans_map
