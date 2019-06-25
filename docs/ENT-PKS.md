@@ -56,7 +56,7 @@ Below timeline diagram depicts infrastructure set-up and tenant
     Ensure these pvdc(s) are dedicated for Enterprise PKS K8 deployments only.
  5. Install, configure and start CSE 
     * Follow instructions to install CSE 2.0 beta [here](/container-service-extension/RELEASE_NOTES.html)
-    * Use `cse config` command to generate `config.yaml` and `pks.yaml` template files.
+    * Use `cse sample` command to generate `config.yaml` and `pks.yaml` template files.
     * Configure `config.yaml` with vCD and K8 template details.
     * Configure `pks.yaml` with Enterprise PKS details. This file is necessary only 
     if there is an intention to leverage Enterprise PKS for K8 deployments. Refer [pks_config key](/container-service-extension/CSE_ADMIN.html#pksconfig) 
