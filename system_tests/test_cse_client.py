@@ -128,25 +128,53 @@ def cse_server():
 
 
 @pytest.fixture
+def vcd_sys_admin():
+    """Fixture to ensure that we are logged in to vcd-cli as sys admin.
+
+    Usage: add the parameter 'vcd_sys_admin' to the test function.
+
+    User will have the credentials specified in
+    'system_tests/base_config.yaml'
+
+    Do not use this fixture with the other vcd_role fixtures, as only one
+    user can be logged in at a time.
+    """
+    config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
+    cmd = f"login {config['vcd']['host']} system " \
+          f"{config['vcd']['username']} -iwp {config['vcd']['password']}"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+    cmd = f"org use {config['broker']['org']}"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    # ovdc context may be nondeterministic when there's multiple ovdcs
+    cmd = f"vdc use {config['broker']['vdc']}"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+    yield
+
+    result = env.CLI_RUNNER.invoke(vcd, ['logout'])
+    assert result.exit_code == 0
+
+
+@pytest.fixture
 def vcd_org_admin():
     """Fixture to ensure that we are logged in to vcd-cli as org admin.
 
     Usage: add the parameter 'vcd_org_admin' to the test function.
 
-    vCD instance must have an org admin user in the specified org with
-    username and password identical to those described in config['vcd'].
+    User will have the credentials specified in
+    'system_test_framework/environment.py'
 
-    Do not use this fixture with 'vcd_org_admin' fixture, as a user cannot
-    be logged in as both sys admin and org admin.
+    Do not use this fixture with the other vcd_role fixtures, as only one
+    user can be logged in at a time.
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
-    result = env.CLI_RUNNER.invoke(vcd,
-                                   ['login',
-                                    config['vcd']['host'],
-                                    config['broker']['org'],
-                                    config['vcd']['username'],
-                                    '-iwp', config['vcd']['password']],
-                                   catch_exceptions=False)
+    cmd = f"login {config['vcd']['host']} {config['broker']['org']} " \
+          f"{env.ORG_ADMIN_NAME} -iwp {env.ORG_ADMIN_PASSWORD}"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0
 
     # ovdc context may be nondeterministic when there's multiple ovdcs
@@ -161,22 +189,26 @@ def vcd_org_admin():
 
 
 @pytest.fixture
-def vcd_sys_admin():
-    """Fixture to ensure that we are logged in to vcd-cli as sys admin.
+def vcd_vapp_author():
+    """Fixture to ensure that we are logged in to vcd-cli as vapp author.
 
-    Usage: add the parameter 'vcd_sys_admin' to the test function.
+    Usage: add the parameter 'vcd_vapp_author' to the test function.
 
-    Do not use this fixture with 'vcd_org_admin' fixture, as a user cannot
-    be logged in as both sys admin and org admin.
+    User will have the credentials specified in
+    'system_test_framework/environment.py'
+
+    Do not use this fixture with the other vcd_role fixtures, as only one
+    user can be logged in at a time.
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
-    result = env.CLI_RUNNER.invoke(vcd,
-                                   ['login',
-                                    config['vcd']['host'],
-                                    utils.SYSTEM_ORG_NAME,
-                                    config['vcd']['username'],
-                                    '-iwp', config['vcd']['password']],
-                                   catch_exceptions=False)
+    cmd = f"login {config['vcd']['host']} {config['broker']['org']} " \
+          f"{env.VAPP_AUTHOR_NAME} -iwp {env.VAPP_AUTHOR_PASSWORD}"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+    # ovdc context may be nondeterministic when there's multiple ovdcs
+    cmd = f"vdc use {config['broker']['vdc']}"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0
 
     yield
