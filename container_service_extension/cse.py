@@ -190,11 +190,8 @@ def check(ctx, config, check_install, template):
     except AmqpConnectionError as err:
         click.secho(str(err), fg='red')
         click.secho("check config file amqp section.", fg='red')
-    except requests.exceptions.ConnectionError:
-        # TODO() - connection error can be thrown while connecting to other
-        # servers too.
-        click.secho("Cannot connect to vCD host (check config file vCD host).",
-                    fg='red')
+    except requests.exceptions.ConnectionError as err:
+        click.secho(f"Cannot connect to {err.request.url}.", fg='red')
     except vim.fault.InvalidLogin:
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
@@ -251,6 +248,7 @@ def check(ctx, config, check_install, template):
     default=None,
     type=click.File('r'),
     help='SSH public key to connect to the guest OS on the VM.')
+)
 def install(ctx, config, template, update, no_capture, ssh_key_file):
     """Install CSE on vCloud Director."""
     try:
@@ -277,9 +275,8 @@ def install(ctx, config, template, update, no_capture, ssh_key_file):
     except AmqpConnectionError as err:
         click.secho(str(err), fg='red')
         click.secho("check config file amqp section.", fg='red')
-    except requests.exceptions.ConnectionError:
-        click.secho("Cannot connect to vCD host (check config file vCD host).",
-                    fg='red')
+    except requests.exceptions.ConnectionError as err:
+        click.secho(f"Cannot connect to {err.request.url}.", fg='red')
     except vim.fault.InvalidLogin:
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
@@ -320,9 +317,8 @@ def run(ctx, config, skip_check):
     except AmqpConnectionError as err:
         click.secho(str(err), fg='red')
         click.secho("check config file amqp section.", fg='red')
-    except requests.exceptions.ConnectionError:
-        click.secho("Cannot connect to vCD host (check config file vCD host).",
-                    fg='red')
+    except requests.exceptions.ConnectionError as err:
+        click.secho(f"Cannot connect to {err.request.url}.", fg='red')
     except vim.fault.InvalidLogin:
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
