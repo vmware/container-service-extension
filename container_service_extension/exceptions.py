@@ -134,5 +134,9 @@ class PksConnectionError(PksServerError):
     """Raised when connection establishment to PKS fails."""
 
 
+class PksClusterNotFoundError(PksServerError):
+    """Raised if PKS cluster search fails because the cluster doesn't exist."""
+
+
 class PksDuplicateClusterError(PksServerError):
     """Raised when multiple PKS clusters of same name detected."""

@@ -87,10 +87,9 @@ def construct_ctr_prov_ctx_from_pks_cache(ovdc_id, org_name, pks_plans,
             if not pvdc_info:
                 LOGGER.debug(f"pvdc '{pvdc_id}' is not backed "
                              f"by PKS-managed-vSphere resources")
-                raise CseServerError(f"'{ovdc.get_resource().get('name')}' is "
-                                     "not eligible to provide resources for "
-                                     "PKS clusters. Refer to debug logs for "
-                                     "more details.")
+                raise CseServerError(f"VDC '{ovdc.get_resource().get('name')}'"
+                                     " is not eligible to provide resources"
+                                     " for PKS clusters.")
             pks_account_info = pks_cache.get_pks_account_info(
                 org_name, pvdc_info.vc)
             nsxt_info = pks_cache.get_nsxt_info(pvdc_info.vc)
@@ -123,7 +122,7 @@ def _construct_pks_compute_profile_name(vdc_id):
     client = None
     try:
         client = get_sys_admin_client()
-        vdc = get_vdc(clinet=client, vdc_id=vdc_id)
+        vdc = get_vdc(client=client, vdc_id=vdc_id)
         return f"cp--{vdc_id}--{vdc.name}"
     finally:
         if client:

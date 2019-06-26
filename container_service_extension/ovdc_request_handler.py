@@ -45,8 +45,8 @@ class OvdcRequestHandler(object):
             container_provider = self.req_spec[K8S_PROVIDER_KEY]
 
             ctr_prov_ctx = construct_ctr_prov_ctx_from_pks_cache(
-                ovdc_id=ovdc_id, org_name=org_name,
-                pks_plans=pks_plans, pks_cluster_domain=pks_cluster_domain,
+                ovdc_id=ovdc_id, org_name=org_name, pks_plans=pks_plans,
+                pks_cluster_domain=pks_cluster_domain,
                 container_provider=container_provider)
 
             if container_provider == K8sProviders.PKS:

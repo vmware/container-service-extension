@@ -4,9 +4,11 @@
 
 from pyvcloud.vcd.org import Org
 
+from container_service_extension.exceptions import PksClusterNotFoundError
 from container_service_extension.exceptions import PksDuplicateClusterError
 from container_service_extension.exceptions import PksServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.ovdc_manager import construct_pks_context
 from container_service_extension.ovdc_manager import OvdcManager
 from container_service_extension.pksbroker import PKSBroker
 from container_service_extension.pyvcloud_utils \
@@ -24,7 +26,7 @@ class PksBrokerManager(object):
         self.vcd_client, self.session = connect_vcd_user_via_token(
             tenant_auth_token=tenant_auth_token)
 
-    def list_clusters(self, common_cluster_properties):
+    def list_clusters(self):
         pks_clusters = []
         pks_ctx_list = self.create_pks_context_for_all_accounts_in_org()
         for pks_ctx in pks_ctx_list:
@@ -34,8 +36,7 @@ class PksBrokerManager(object):
             # compute-profile-name
             for cluster in pks_broker.list_clusters(is_admin_request=True):
                 pks_cluster = \
-                    PKSBroker.generate_cluster_subset_with_given_keys(
-                        cluster, common_cluster_properties)
+                    pks_broker.generate_cluster_subset_with_given_keys(cluster)
                 pks_cluster[K8S_PROVIDER_KEY] = K8sProviders.PKS
                 pks_clusters.append(pks_cluster)
         return pks_clusters
@@ -62,6 +63,13 @@ class PksBrokerManager(object):
                 return pksbroker.get_cluster_info(
                     cluster_name=cluster_name,
                     is_org_admin_search=is_org_admin_search), pksbroker
+            except PksClusterNotFoundError as err:
+                # If a cluster is not found, then broker_manager will
+                # decide if it wants to raise an error or ignore it if was it
+                # just scanning the broker to check if it can handle the
+                # cluster request or not.
+                LOGGER.debug(f"Get cluster info on {cluster_name}"
+                             f"on PKS failed with error: {err}")
             except PksDuplicateClusterError as err:
                 LOGGER.debug(f"Get cluster info on {cluster_name}"
                              f"on PKS failed with error: {err}")
@@ -94,7 +102,7 @@ class PksBrokerManager(object):
         if self.vcd_client.is_sysadmin():
             all_pks_account_info = \
                 self.pks_cache.get_all_pks_account_info_in_system()
-            pks_ctx_list = [OvdcManager.construct_pks_context(
+            pks_ctx_list = [construct_pks_context(
                 pks_account_info, credentials_required=True)
                 for pks_account_info in all_pks_account_info]
             return pks_ctx_list
@@ -105,7 +113,7 @@ class PksBrokerManager(object):
             pks_account_infos = \
                 self.pks_cache.get_exclusive_pks_accounts_info_for_org(
                     org_name)
-            pks_ctx_list = [OvdcManager.construct_pks_context
+            pks_ctx_list = [construct_pks_context
                             (pks_account_info, credentials_required=True)
                             for pks_account_info in pks_account_infos]
         else:
@@ -117,10 +125,8 @@ class PksBrokerManager(object):
             for vdc_name in vdc_names:
                 # this is a full blown pks_account_info + pvdc_info +
                 # compute_profile_name dictionary
-                ovdc_manager = OvdcManager(self.tenant_auth_token,
-                                           self.req_spec)
                 ctr_prov_ctx = \
-                    ovdc_manager.get_ovdc_container_provider_metadata(
+                    OvdcManager().get_ovdc_container_provider_metadata(
                         ovdc_name=vdc_name, org_name=org_name,
                         credentials_required=True)
                 if ctr_prov_ctx[K8S_PROVIDER_KEY] == K8sProviders.PKS:

@@ -27,14 +27,18 @@ class Ovdc(object):
             params={'list_pks_plans': list_pks_plans})
         return process_response(response)
 
-    def enable_ovdc_for_k8s(self,
-                            ovdc_name,
-                            k8s_provider=None,
-                            pks_plan=None,
-                            pks_cluster_domain=None,
-                            org_name=None):
-        """Enable ovdc for k8s for the given container provider.
+    def enable_disable_ovdc_for_k8s(self,
+                                    enable,
+                                    ovdc_name,
+                                    org_name=None,
+                                    container_provider=None,
+                                    pks_plan=None,
+                                    pks_cluster_domain=None):
+        """Enable/Disable ovdc for k8s for the given container provider.
 
+        :param bool enable: If set to True will enable the vdc for the
+            paricular container_provider else if set to False, K8 support on
+            the vdc will be disabled.
         :param str ovdc_name: Name of the ovdc to be enabled
         :param str k8s_provider: Name of the container provider
         :param str pks_plan: PKS plan
@@ -52,48 +56,18 @@ class Ovdc(object):
         ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
         uri = f'{self._uri}/ovdc/{ovdc_id}'
 
+        if not enable:
+            container_provider = K8sProviders.NONE
+            pks_plan = None
+            pks_cluster_domain = None
+
         data = {
             'ovdc_id': ovdc_id,
             'ovdc_name': ovdc_name,
-            K8S_PROVIDER_KEY: k8s_provider,
+            'org_name': org_name,
+            K8S_PROVIDER_KEY: container_provider,
             'pks_plans': pks_plan,
             'pks_cluster_domain': pks_cluster_domain,
-            'org_name': org_name,
-            'enable': True
-        }
-
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            contents=data,
-            media_type='application/json',
-            accept_type='application/json')
-        return process_response(response)
-
-    def disable_ovdc_for_k8s(self, ovdc_name, org_name=None):
-        """Disable ovdc for k8s for the given container provider.
-
-        :param str ovdc_name: Name of the ovdc to be enabled
-        :param str org_name: Name of organization that belongs to ovdc_name
-
-        :return: response object
-
-        :rtype: dict
-        """
-        method = 'PUT'
-        ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
-                       is_admin_operation=True)
-        ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
-        uri = f'{self._uri}/ovdc/{ovdc_id}'
-        data = {
-            'ovdc_id': ovdc_id,
-            'ovdc_name': ovdc_name,
-            K8S_PROVIDER_KEY: K8sProviders.NONE,
-            'pks_plans': None,
-            'pks_cluster_domain': None,
-            'org_name': org_name,
-            'disable': True
         }
 
         response = self.client._do_request_prim(
