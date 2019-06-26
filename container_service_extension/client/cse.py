@@ -1062,5 +1062,4 @@ def ovdc_info(ctx, ovdc_name, org_name):
         else:
             stderr("Insufficient permission to perform operation..", ctx)
     except Exception as e:
-        print(str(e))
         stderr(e, ctx)
