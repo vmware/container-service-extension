@@ -59,3 +59,8 @@ def delete_file(filepath):
         Path(filepath).unlink()
     except FileNotFoundError:
         pass
+
+
+def format_command_info(cmd_root, cmd, exit_code, output):
+    return f"\nCommand: [{cmd_root} {cmd}]\nExit Code: [{exit_code}]" \
+           f"\nOutput Start===\n{output}===Output End"
