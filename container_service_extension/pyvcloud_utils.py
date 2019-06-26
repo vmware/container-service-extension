@@ -120,7 +120,9 @@ def get_vdc(client, vdc_id=None, vdc_name=None, org=None, org_name=None,
         if is_admin_operation:
             base_url = get_admin_href(base_url)
         vdc_href = f'{base_url}vdc/{vdc_id}'
-        return VDC(client, href=vdc_href)
+        vdc = VDC(client, href=vdc_href)
+        vdc.reload()
+        return vdc
 
     resource = None
     if vdc_name:
@@ -133,7 +135,7 @@ def get_vdc(client, vdc_id=None, vdc_name=None, org=None, org_name=None,
     if resource is None:
         raise EntityNotFoundException(
             f"VDC '{vdc_name}' not found in ORG "
-            f"'{org.get_resource().get('name')}'")
+            f"'{org.get_name()}'")
     return VDC(client, resource=resource)
 
 

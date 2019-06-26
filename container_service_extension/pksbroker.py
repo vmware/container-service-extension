@@ -832,8 +832,13 @@ class PKSBroker(AbstractBroker):
     def _get_vcd_userid(self):
         return extract_id(self.client_session.get('userId'))
 
-    def _extract_vdc_name_from_pks_compute_profile_name(compute_profile_name):
+    def _extract_vdc_name_from_pks_compute_profile_name(
+            self, compute_profile_name):
         """Extract the vdc name from pks compute profile name.
+
+        compute-profile:
+            cp--f3272127-9b7f-4f90-8849-0ee70a28be56--vdc----PKS1
+        Example: vdc name in the below compute profile is: vdc----PKS1
 
         :param str compute_profile_name: name of the pks compute profile
 
@@ -841,10 +846,20 @@ class PKSBroker(AbstractBroker):
 
         :rtype: str
         """
-        return compute_profile_name.split('--')[2]
+        tokens = compute_profile_name.split('--')
+        if len(tokens) > 2:
+            vdc_name = '--'.join(tokens[2:])
+        else:
+            vdc_name = ''
+        return vdc_name
 
-    def _extract_vdc_id_from_pks_compute_profile_name(compute_profile_name):
+    def _extract_vdc_id_from_pks_compute_profile_name(
+            self, compute_profile_name):
         """Extract the vdc identifier from pks compute profile name.
+
+        compute-profile:
+            cp--f3272127-9b7f-4f90-8849-0ee70a28be56--vdc----PKS1
+        Example: vdc id will be : f3272127-9b7f-4f90-8849-0ee70a28be56
 
         :param str compute_profile_name: name of the pks compute profile
 
@@ -926,22 +941,17 @@ class PKSBroker(AbstractBroker):
             raise CseServerError(f"Unsupported operation {name}")
         return unsupported_method
 
-    @staticmethod
-    def generate_cluster_subset_with_given_keys(cluster,
-                                                cluster_property_keys):
-        pks_cluster = {k: cluster.get(k) for k in
-                       cluster_property_keys}
-        # Extract vdc name from compute-profile-name
-        # Example: vdc name in the below compute profile is: vdc-PKS1
-        # compute-profile: cp--f3272127-9b7f-4f90-8849-0ee70a28be56--vdc-PKS1
+    def generate_cluster_subset_with_given_keys(self, cluster):
+        pks_cluster = cluster
         compute_profile_name = cluster.get('compute_profile_name', '')
-        vdc_id = compute_profile_name.split('--')[1] \
-            if compute_profile_name else ''
-        pks_cluster['vdc'] = compute_profile_name.split('--')[-1] \
-            if compute_profile_name else ''
+        if compute_profile_name:
+            vdc_id = self._extract_vdc_id_from_pks_compute_profile_name(compute_profile_name)  # noqa
+            pks_cluster['org_name'] = get_org_name_from_ovdc_id(vdc_id)
+            pks_cluster['vdc'] = self._extract_vdc_name_from_pks_compute_profile_name(compute_profile_name)  # noqa
+        else:
+            vdc_id = ''
+            pks_cluster['vdc'] = ''
         pks_cluster['status'] = \
             cluster.get('last_action', '').lower() + ' ' + \
             cluster.get('last_action_state', '').lower()
-        if vdc_id:
-            pks_cluster['org_name'] = get_org_name_from_ovdc_id(vdc_id)
         return pks_cluster

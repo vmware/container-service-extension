@@ -65,7 +65,6 @@ class BrokerManager(object):
         1. Extract and construct the relevant params for the operation.
         2. Choose right broker to perform the operation/method requested.
         3. Scan through available brokers to aggregate (or) filter results.
-        4. Construct and return the HTTP response
 
         :param CseOperation op: Operation to be performed by one of the
             brokers.
@@ -209,16 +208,21 @@ class BrokerManager(object):
             Post-process the result returned by each broker.
             Aggregate all the results into one.
         """
-        if self.is_ovdc_present_in_request:
-            broker = self._get_broker_based_on_vdc()
-            return broker.list_clusters()
-        else:
-            common_cluster_properties = ('name', 'vdc', 'status', 'org_name')
-            vcd_clusters = \
-                self.vcdbroker_manager.list_clusters(common_cluster_properties)
-            pks_clusters = \
-                self.pksbroker_manager.list_clusters(common_cluster_properties)
-            return vcd_clusters + pks_clusters
+        vcd_clusters_info = \
+            self.vcdbroker_manager.list_clusters()
+        pks_clusters_info = \
+            self.pksbroker_manager.list_clusters()
+        all_cluster_infos = vcd_clusters_info + pks_clusters_info
+
+        common_cluster_properties = \
+            ('name', 'vdc', 'status', 'org_name', K8S_PROVIDER_KEY)
+        result = []
+        for cluster_info in all_cluster_infos:
+            filtered_cluster_info = {
+                k: cluster_info.get(k) for k in common_cluster_properties}
+            result.append(filtered_cluster_info)
+
+        return result
 
     def _resize_cluster(self, **cluster_spec):
         cluster, broker = self._get_cluster_info(**cluster_spec)

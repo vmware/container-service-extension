@@ -13,6 +13,8 @@ from vcd_cli.vcd import vcd
 from container_service_extension.client.cluster import Cluster
 from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.system import System
+from container_service_extension.exceptions import CseClientError
+from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
 from container_service_extension.service import Service
 from container_service_extension.shared_constants import SERVER_DISABLE_ACTION
@@ -175,10 +177,10 @@ def list_clusters(ctx, vdc, org_name):
     """Display clusters in vCD that are visible to the logged in user."""
     try:
         restore_session(ctx)
-        if org_name is None:
-            org_name = ctx.obj['profiles'].get('org_in_use')
         client = ctx.obj['client']
         cluster = Cluster(client)
+        if not client.is_sysadmin() and org_name is None:
+            org_name = ctx.obj['profiles'].get('org_in_use')
         result = cluster.get_clusters(vdc=vdc, org=org_name)
         stdout(result, ctx, show_id=True)
     except Exception as e:
@@ -732,6 +734,9 @@ def list_nodes(ctx, name, org, vdc):
             org = ctx.obj['profiles'].get('org_in_use')
         cluster = Cluster(client)
         cluster_info = cluster.get_cluster_info(name, org=org, vdc=vdc)
+        if cluster_info.get(K8S_PROVIDER_KEY) != K8sProviders.NATIVE:
+            raise CseClientError('Node commands are not supported by non '
+                                 'native clusters.')
         all_nodes = cluster_info['master_nodes'] + cluster_info['nodes']
         stdout(all_nodes, ctx, show_id=True)
     except Exception as e:
@@ -937,7 +942,7 @@ def list_ovdcs(ctx, list_pks_plans):
 @click.option(
     '-k',
     '--k8s-provider',
-    'k8s_provider',
+    'container_provider',
     required=True,
     type=click.Choice([K8sProviders.NATIVE, K8sProviders.PKS]),
     help="Name of the Kubernetes provider to use for this org VDC")
@@ -966,10 +971,10 @@ def list_ovdcs(ctx, list_pks_plans):
     metavar='ORG_NAME',
     help="Use the specified org to look for the org vdc. Defaults to current "
          "org in use.")
-def ovdc_enable(ctx, ovdc_name, k8s_provider, pks_plan, pks_cluster_domain,
-                org_name):
+def ovdc_enable(ctx, ovdc_name, container_provider, pks_plan,
+                pks_cluster_domain, org_name):
     """Set Kubernetes provider for an org VDC."""
-    if k8s_provider == K8sProviders.PKS and \
+    if container_provider == K8sProviders.PKS and \
             (pks_plan is None or pks_cluster_domain is None):
         click.secho("One or both of the required params (--pks-plan,"
                     " --pks-cluster-domain) are missing", fg='yellow')
@@ -982,12 +987,13 @@ def ovdc_enable(ctx, ovdc_name, k8s_provider, pks_plan, pks_cluster_domain,
             ovdc = Ovdc(client)
             if org_name is None:
                 org_name = ctx.obj['profiles'].get('org_in_use')
-            result = ovdc.enable_ovdc_for_k8s(
-                ovdc_name,
-                k8s_provider=k8s_provider,
+            result = ovdc.enable_disable_ovdc_for_k8s(
+                enable=True,
+                ovdc_name=ovdc_name,
+                org_name=org_name,
+                container_provider=container_provider,
                 pks_plan=pks_plan,
-                pks_cluster_domain=pks_cluster_domain,
-                org_name=org_name)
+                pks_cluster_domain=pks_cluster_domain)
             stdout(result, ctx)
         else:
             stderr("Insufficient permission to perform operation.", ctx)
@@ -1018,7 +1024,9 @@ def ovdc_disable(ctx, ovdc_name, org_name):
             ovdc = Ovdc(client)
             if org_name is None:
                 org_name = ctx.obj['profiles'].get('org_in_use')
-            result = ovdc.disable_ovdc_for_k8s(ovdc_name, org_name=org_name)
+            result = ovdc.enable_disable_ovdc_for_k8s(enable=False,
+                                                      ovdc_name=ovdc_name,
+                                                      org_name=org_name)
             stdout(result, ctx)
         else:
             stderr("Insufficient permission to perform operation.", ctx)
@@ -1054,4 +1062,5 @@ def ovdc_info(ctx, ovdc_name, org_name):
         else:
             stderr("Insufficient permission to perform operation..", ctx)
     except Exception as e:
+        print(str(e))
         stderr(e, ctx)

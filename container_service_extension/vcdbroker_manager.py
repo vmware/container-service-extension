@@ -2,6 +2,7 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseDuplicateClusterError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
@@ -14,14 +15,12 @@ class VcdBrokerManager(object):
         self.tenant_auth_token = tenant_auth_token
         self.req_spec = request_spec
 
-    def list_clusters(self, common_cluster_properties):
+    def list_clusters(self):
         vcd_broker = VcdBroker(self.tenant_auth_token, self.req_spec)
         vcd_clusters = []
         for cluster in vcd_broker.list_clusters():
-            vcd_cluster = {k: cluster.get(k) for k in
-                           common_cluster_properties}
-            vcd_cluster[K8S_PROVIDER_KEY] = K8sProviders.NATIVE
-            vcd_clusters.append(vcd_cluster)
+            cluster[K8S_PROVIDER_KEY] = K8sProviders.NATIVE
+            vcd_clusters.append(cluster)
         return vcd_clusters
 
     def find_cluster_in_org(self, cluster_name, is_org_admin_search=False):
@@ -40,6 +39,13 @@ class VcdBrokerManager(object):
         vcd_broker = VcdBroker(self.tenant_auth_token, self.req_spec)
         try:
             return vcd_broker.get_cluster_info(cluster_name), vcd_broker
+        except ClusterNotFoundError as err:
+            # If a cluster is not found, then broker_manager will
+            # decide if it wants to raise an error or ignore it if was it just
+            # scanning the broker to check if it can handle the cluster request
+            # or not.
+            LOGGER.debug(f"Get cluster info on {cluster_name}"
+                         f"on vCD failed with error: {err}")
         except CseDuplicateClusterError as err:
             LOGGER.debug(f"Get cluster info on {cluster_name}"
                          f"on vCD failed with error: {err}")
