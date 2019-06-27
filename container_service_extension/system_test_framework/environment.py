@@ -14,6 +14,7 @@
 # limitations under the License.
 import os
 from pathlib import Path
+import shutil
 
 from click.testing import CliRunner
 from pyvcloud.vcd.api_extension import APIExtension
@@ -23,6 +24,7 @@ from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vdc import VDC
+from vcd_cli.vcd import vcd
 
 from container_service_extension.server_constants import CSE_SERVICE_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
@@ -47,15 +49,21 @@ environment.CLIENT but will not change the CLIENT that was imported.
 BASE_CONFIG_FILEPATH = 'base_config.yaml'
 ACTIVE_CONFIG_FILEPATH = 'cse_test_config.yaml'
 
-STATIC_PHOTON_CUST_SCRIPT = 'CUST-PHOTON.sh'
-STATIC_UBUNTU_CUST_SCRIPT = 'CUST-UBUNTU.sh'
-ACTIVE_PHOTON_CUST_SCRIPT = 'cust-photon-v2.sh'
-ACTIVE_UBUNTU_CUST_SCRIPT = 'cust-ubuntu-16.04.sh'
+PHOTON_CUST_SCRIPT_NAME = 'cust-photon-v2.sh'
+UBUNTU_CUST_SCRIPT_NAME = 'cust-ubuntu-16.04.sh'
 SCRIPTS_DIR = 'scripts'
 
 SSH_KEY_FILEPATH = str(Path.home() / '.ssh' / 'id_rsa.pub')
 CLI_RUNNER = CliRunner()
 TEST_CLUSTER_NAME = 'testcluster'
+
+# required user info
+ORG_ADMIN_NAME = 'orgadmin'
+ORG_ADMIN_PASSWORD = 'password'
+ORG_ADMIN_ROLE_NAME = 'Organization Administrator'
+VAPP_AUTHOR_NAME = 'vappauthor'
+VAPP_AUTHOR_PASSWORD = 'password'
+VAPP_AUTHOR_ROLE_NAME = 'vApp Author'
 
 # config file 'test' section flags
 TEARDOWN_INSTALLATION = None
@@ -138,6 +146,32 @@ def teardown_active_config():
         pass
 
 
+def create_user(username, password, role):
+    config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
+    cmd = f"login {config['vcd']['host']} {utils.SYSTEM_ORG_NAME} " \
+          f"{config['vcd']['username']} -iwp {config['vcd']['password']}"
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    cmd = f"org use {config['broker']['org']}"
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+    # cannot use cmd.split() here because the role name
+    # "Organization Administrator" gets split into 2 arguments
+    result = CLI_RUNNER.invoke(vcd,
+                               ['user', 'create', username, password, role,
+                                '--enabled'],
+                               catch_exceptions=False)
+    # no assert here because if the user exists, the exit code will be 2
+
+    # user can already exist but be disabled
+    cmd = f"user update {username} --enable"
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0,\
+        testutils.format_command_info('vcd', cmd, result.exit_code,
+                                      result.output)
+
+
 def delete_catalog_item(item_name):
     org = Org(CLIENT, href=ORG_HREF)
     try:
@@ -182,37 +216,24 @@ def unregister_cse():
         pass
 
 
-def prepare_customization_scripts():
-    """Copy real customization scripts to the active customization scripts.
+def delete_cust_scripts():
+    """Delete directory 'system_tests/scripts' if it exists."""
+    try:
+        shutil.rmtree('scripts')
+    except FileNotFoundError:
+        pass
 
-    Copy 'CUST-PHOTON.sh' to 'cust-photon-v2.sh'
-    Copy 'CUST-UBUNTU.sh' to 'cust-ubuntu-16.04.sh'
 
-    :raises FileNotFoundError: if script files cannot be found.
+def create_empty_cust_scripts():
+    """Create empty customization scripts.
+
+    Creates:
+        - system_tests/scripts/cust-ubuntu-16.04.sh
+        - system_tests/scripts/cust-photon-v2.sh
     """
-    static_to_active_scripts = {
-        f"{SCRIPTS_DIR}/{STATIC_PHOTON_CUST_SCRIPT}":
-            f"{SCRIPTS_DIR}/{ACTIVE_PHOTON_CUST_SCRIPT}",
-        f"{SCRIPTS_DIR}/{STATIC_UBUNTU_CUST_SCRIPT}":
-            f"{SCRIPTS_DIR}/{ACTIVE_UBUNTU_CUST_SCRIPT}",
-    }
-
-    for src, dst in static_to_active_scripts.items():
-        Path(dst).write_text(Path(src).read_text())
-
-
-def blank_customizaton_scripts():
-    """Blanks out 'cust-photon-v2.sh' and 'cust-ubuntu-16.04.sh'.
-
-    :raises FileNotFoundError: if script files cannot be found.
-    """
-    scripts_paths = [
-        Path(f"{SCRIPTS_DIR}/{ACTIVE_PHOTON_CUST_SCRIPT}"),
-        Path(f"{SCRIPTS_DIR}/{ACTIVE_UBUNTU_CUST_SCRIPT}")
-    ]
-
-    for path in scripts_paths:
-        path.write_text('')
+    Path('scripts').mkdir(exist_ok=True)
+    Path(f'scripts/{UBUNTU_CUST_SCRIPT_NAME}').write_text('')
+    Path(f'scripts/{PHOTON_CUST_SCRIPT_NAME}').write_text('')
 
 
 def catalog_item_exists(catalog_item, catalog_name=None):

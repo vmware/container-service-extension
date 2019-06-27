@@ -22,15 +22,34 @@ def environment():
 
     Setup tasks:
     - initialize variables (org/vdc href, client, amqp settings)
+    - delete directory 'system_tests/scripts' (if it exists)
 
     Teardown tasks:
     - logout client
     """
     env.init_environment()
-    env.prepare_customization_scripts()
+    env.delete_cust_scripts()
     yield
     env.cleanup_environment()
-    env.prepare_customization_scripts()
+    env.delete_cust_scripts()
+
+
+@pytest.fixture(scope='session', autouse=True)
+def vcd_users():
+    """Fixture to setup required users if they do not exist already.
+
+    This fixture executes automatically for test session setup and teardown.
+    User credentials are in 'system_test_framework/environment.py'
+
+    Setup tasks:
+    - create Organization Administrator if it doesn't exist
+    - create vApp Author if it doesn't exist
+    """
+    env.create_user(env.ORG_ADMIN_NAME, env.ORG_ADMIN_PASSWORD,
+                    env.ORG_ADMIN_ROLE_NAME)
+    env.create_user(env.VAPP_AUTHOR_NAME, env.VAPP_AUTHOR_PASSWORD,
+                    env.VAPP_AUTHOR_ROLE_NAME)
+    yield
 
 
 @pytest.fixture

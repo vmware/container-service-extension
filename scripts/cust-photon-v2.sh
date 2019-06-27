@@ -28,7 +28,7 @@ echo 'installing kuberentes'
 tdnf install -yq wget kubernetes-1.12.7-1.ph2 kubernetes-kubeadm-1.12.7-1.ph2
 
 echo 'install docker'
-tdnf install -yq wget docker-17.06.0-9.ph2
+tdnf install -yq wget docker-18.06.2-3.ph2
 
 systemctl enable docker
 systemctl start docker
