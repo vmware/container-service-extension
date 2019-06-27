@@ -67,3 +67,7 @@ echo -n > /etc/machine-id
 sync
 sync
 echo 'customization completed'
+
+tdnf update python3 -y
+tdnf update linux-esx -y
+tdnf update openssh -y

@@ -57,18 +57,14 @@ apt-get -q install -y nfs-common nfs-kernel-server
 systemctl stop nfs-kernel-server.service
 systemctl disable nfs-kernel-server.service
 
-
 ### common
 echo 'upgrading the system'
-# apt-mark hold open-vm-tools
-
-### this line results in a grub update that presents a selection menu,
-### which hangs and results in failed customization. 
-### This is a temporary change that will be fixed soon
-# apt-get -q dist-upgrade -y
-# apt-get -q autoremove -y
+apt-mark hold open-vm-tools
+apt-get update
+apt-get -y -q -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade
 
 echo -n > /etc/machine-id
 sync
 sync
 echo 'customization completed'
+
