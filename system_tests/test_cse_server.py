@@ -407,7 +407,8 @@ def test_0100_install_update(config, unregister_cse):
             ssh_client.connect(ip, username='root')
             # run different commands depending on OS
             if 'photon' in temp_vapp_name:
-                script = utils.get_data_file(env.PHOTON_CUST_SCRIPT_NAME)
+                script = \
+                    install_utils.get_data_file(env.PHOTON_CUST_SCRIPT_NAME)
                 pattern = r'(kubernetes\S*)'
                 packages = re.findall(pattern, script)
                 stdin, stdout, stderr = ssh_client.exec_command("rpm -qa")
@@ -416,7 +417,8 @@ def test_0100_install_update(config, unregister_cse):
                     assert package in installed, \
                         f"{package} not found in Photon VM"
             elif 'ubuntu' in temp_vapp_name:
-                script = utils.get_data_file(env.UBUNTU_CUST_SCRIPT_NAME)
+                script = \
+                    install_utils.get_data_file(env.UBUNTU_CUST_SCRIPT_NAME)
                 pattern = r'((kubernetes|docker\S*|kubelet|kubeadm|kubectl)\S*=\S*)'  # noqa
                 packages = [tup[0] for tup in re.findall(pattern, script)]
                 cmd = "dpkg -l | grep '^ii' | awk '{print $2\"=\"$3}'"
