@@ -18,7 +18,7 @@ class Ovdc(object):
 
     def list_ovdc_for_k8s(self, list_pks_plans=False):
         method = 'GET'
-        uri = f'{self._uri}/ovdc'
+        uri = f'{self._uri}/ovdcs'
         response = self.client._do_request_prim(
             method,
             uri,
@@ -27,13 +27,13 @@ class Ovdc(object):
             params={'list_pks_plans': list_pks_plans})
         return process_response(response)
 
-    def enable_disable_ovdc_for_k8s(self,
-                                    enable,
-                                    ovdc_name,
-                                    org_name=None,
-                                    container_provider=None,
-                                    pks_plan=None,
-                                    pks_cluster_domain=None):
+    def update_ovdc_for_k8s(self,
+                            enable,
+                            ovdc_name,
+                            org_name=None,
+                            container_provider=None,
+                            pks_plan=None,
+                            pks_cluster_domain=None):
         """Enable/Disable ovdc for k8s for the given container provider.
 
         :param bool enable: If set to True will enable the vdc for the

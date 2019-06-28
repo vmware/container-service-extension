@@ -11,8 +11,6 @@ from container_service_extension.pks_cache import PKS_CLUSTER_DOMAIN_KEY
 from container_service_extension.pks_cache import PKS_PLANS_KEY
 from container_service_extension.pksbroker import PKSBroker
 from container_service_extension.pksbroker_manager import PksBrokerManager
-from container_service_extension.pyvcloud_utils \
-    import connect_vcd_user_via_token
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
@@ -51,8 +49,6 @@ class BrokerManager(object):
         self.pksbroker_manager = PksBrokerManager(
             tenant_auth_token, request_spec)
         self.is_ovdc_present_in_request = False
-        self.vcd_client, self.session = connect_vcd_user_via_token(
-            tenant_auth_token=tenant_auth_token)
 
     def invoke(self, op):
         """Invoke right broker(s) to perform the operation requested.
@@ -74,7 +70,7 @@ class BrokerManager(object):
         :rtype: dict
         """
         result = {}
-        self.is_ovdc_present_in_request = self.req_spec.get('vdc')
+        self.is_ovdc_present_in_request = bool(self.req_spec.get('vdc'))
 
         if op == CseOperation.CLUSTER_CONFIG:
             cluster_spec = \

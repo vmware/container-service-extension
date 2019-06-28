@@ -127,7 +127,7 @@ def check_python_version():
         raise Exception("Python version should be 3.7.3 or greater")
 
 
-def str2bool(val):
+def str_to_bool(val):
     """Convert string boolean values to bool.
 
     The conversion is case insensitive.

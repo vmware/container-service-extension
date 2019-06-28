@@ -18,7 +18,7 @@ class Cluster(object):
 
     def get_templates(self):
         method = 'GET'
-        uri = f"{self._uri}/template"
+        uri = f"{self._uri}/templates"
         response = self.client._do_request_prim(
             method,
             uri,
@@ -28,7 +28,7 @@ class Cluster(object):
 
     def get_clusters(self, vdc=None, org=None):
         method = 'GET'
-        uri = f"{self._uri}/cluster"
+        uri = f"{self._uri}/clusters"
         response = self.client._do_request_prim(
             method,
             uri,
@@ -94,7 +94,7 @@ class Cluster(object):
         :return: (json) A parsed json object describing the requested cluster.
         """
         method = 'POST'
-        uri = f"{self._uri}/cluster"
+        uri = f"{self._uri}/clusters"
         data = {
             'cluster_name': name,
             'node_count': node_count,
@@ -219,7 +219,7 @@ class Cluster(object):
         :return: (json) A parsed json object describing the requested cluster.
         """
         method = 'POST'
-        uri = f'{self._uri}/node'
+        uri = f'{self._uri}/nodes'
         data = {
             'cluster_name': cluster_name,
             'node_count': node_count,
@@ -256,7 +256,7 @@ class Cluster(object):
             operation.
         """
         method = 'DELETE'
-        uri = f"{self._uri}/node"
+        uri = f"{self._uri}/nodes"
         data = {'cluster_name': cluster_name, 'org': org, 'vdc': vdc,
                 'nodes': nodes, 'force': force}
         response = self.client._do_request_prim(

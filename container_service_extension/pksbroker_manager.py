@@ -108,7 +108,7 @@ class PksBrokerManager(object):
             return pks_ctx_list
 
         org_resource = self.vcd_client.get_org()
-        org_name = org_resource.get('org_name')
+        org_name = org_resource.get('name')
         if self.pks_cache.do_orgs_have_exclusive_pks_account():
             pks_account_infos = \
                 self.pks_cache.get_exclusive_pks_accounts_info_for_org(

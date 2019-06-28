@@ -18,7 +18,7 @@ from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
 from container_service_extension.utils import is_pks_enabled
-from container_service_extension.utils import str2bool
+from container_service_extension.utils import str_to_bool
 
 
 class OvdcRequestHandler(object):
@@ -65,7 +65,7 @@ class OvdcRequestHandler(object):
             result = OvdcManager().get_ovdc_container_provider_metadata(
                 ovdc_id=ovdc_id)
         elif op == CseOperation.OVDC_LIST:
-            list_pks_plans = str2bool(self.req_spec.get('list_pks_plans'))
+            list_pks_plans = str_to_bool(self.req_spec.get('list_pks_plans'))
             result = self._list_ovdcs(list_pks_plans=list_pks_plans)
 
         return result

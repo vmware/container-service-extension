@@ -969,8 +969,8 @@ def list_ovdcs(ctx, list_pks_plans):
     default=None,
     required=False,
     metavar='ORG_NAME',
-    help="Use the specified org to look for the org vdc. Defaults to current "
-         "org in use.")
+    help="Use the specified org to look for the org VDC. Defaults to current "
+         "org in use")
 def ovdc_enable(ctx, ovdc_name, container_provider, pks_plan,
                 pks_cluster_domain, org_name):
     """Set Kubernetes provider for an org VDC."""
@@ -987,7 +987,7 @@ def ovdc_enable(ctx, ovdc_name, container_provider, pks_plan,
             ovdc = Ovdc(client)
             if org_name is None:
                 org_name = ctx.obj['profiles'].get('org_in_use')
-            result = ovdc.enable_disable_ovdc_for_k8s(
+            result = ovdc.update_ovdc_for_k8s(
                 enable=True,
                 ovdc_name=ovdc_name,
                 org_name=org_name,
@@ -1013,8 +1013,8 @@ def ovdc_enable(ctx, ovdc_name, container_provider, pks_plan,
     default=None,
     required=False,
     metavar='ORG_NAME',
-    help="Use the specified org to look for the org vdc. Defaults to current "
-         "org in use.")
+    help="Use the specified org to look for the org VDC. Defaults to current "
+         "org in use")
 def ovdc_disable(ctx, ovdc_name, org_name):
     """Disable Kubernetes cluster deployment for an org VDC."""
     try:
@@ -1024,9 +1024,8 @@ def ovdc_disable(ctx, ovdc_name, org_name):
             ovdc = Ovdc(client)
             if org_name is None:
                 org_name = ctx.obj['profiles'].get('org_in_use')
-            result = ovdc.enable_disable_ovdc_for_k8s(enable=False,
-                                                      ovdc_name=ovdc_name,
-                                                      org_name=org_name)
+            result = ovdc.update_ovdc_for_k8s(
+                enable=False, ovdc_name=ovdc_name, org_name=org_name)
             stdout(result, ctx)
         else:
             stderr("Insufficient permission to perform operation.", ctx)
@@ -1046,8 +1045,8 @@ def ovdc_disable(ctx, ovdc_name, org_name):
     default=None,
     required=False,
     metavar='ORG_NAME',
-    help="Use the specified org to look for the org vdc. Defaults to current "
-         "org in use.")
+    help="Use the specified org to look for the org VDC. Defaults to current"
+         "org in use")
 def ovdc_info(ctx, ovdc_name, org_name):
     """Display information about Kubernetes provider for an org VDC."""
     try:
@@ -1060,6 +1059,6 @@ def ovdc_info(ctx, ovdc_name, org_name):
             result = ovdc.info_ovdc_for_k8s(ovdc_name, org_name=org_name)
             stdout(result, ctx)
         else:
-            stderr("Insufficient permission to perform operation..", ctx)
+            stderr("Insufficient permission to perform operation", ctx)
     except Exception as e:
         stderr(e, ctx)

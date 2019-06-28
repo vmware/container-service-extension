@@ -25,18 +25,18 @@ class ServiceProcessor(object):
 
     Following are the valid api endpoints.
 
-    GET /cse/cluster?org={org name}&vdc={vdc name}
-    POST /cse/cluster
+    GET /cse/clusters?org={org name}&vdc={vdc name}
+    POST /cse/clusters
     GET /cse/cluster/{cluster name}?org={org name}&vdc={vdc name}
     PUT /cse/cluster/{cluster name}?org={org name}&vdc={vdc name}
     DELETE /cse/cluster/{cluster name}?org={org name}&vdc={vdc name}
     GET /cse/cluster/{cluster name}/config?org={org name}&vdc={vdc name}
 
-    POST /cse/node
-    DELETE /cse/node
+    POST /cse/nodes
+    DELETE /cse/nodes
     GET /cse/node/{node name}?cluster_name={cluster name}&org={org name}&vdc={vdc name}
 
-    GET /cse/ovdc
+    GET /cse/ovdcs
     GET /cse/ovdc/{ovdc id}
     PUT /cse/ovdc/{ovdc id}
 
@@ -69,15 +69,15 @@ class ServiceProcessor(object):
 
         tokens = url.split('/')
         if len(tokens) > 3:
-            if tokens[3] == 'cluster':
+            if tokens[3] in ('cluster', 'clusters'):
                 is_cluster_request = True
-            elif tokens[3] == 'node':
+            elif tokens[3] in ('node', 'nodes'):
                 is_node_request = True
-            elif tokens[3] == 'ovdc':
+            elif tokens[3] in('ovdc', 'ovdcs'):
                 is_ovdc_request = True
             elif tokens[3] == 'system':
                 is_system_request = True
-            elif tokens[3] == 'template':
+            elif tokens[3] == 'templates':
                 is_template_request = True
 
         if is_cluster_request:
