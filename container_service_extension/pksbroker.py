@@ -52,6 +52,8 @@ from container_service_extension.pyvcloud_utils import \
 from container_service_extension.pyvcloud_utils import is_org_admin
 from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
+from container_service_extension.server_constants import K8S_PROVIDER_KEY
+from container_service_extension.server_constants import K8sProviders
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import get_pks_cache
@@ -237,6 +239,7 @@ class PKSBroker(AbstractBroker):
             #  Expensive _get_cluster_info() call must be removed once PKS team
             #  moves list_clusters to v1beta endpoint.
             v1_beta_cluster = self._get_cluster_info(cluster_name=cluster.name)
+            v1_beta_cluster[K8S_PROVIDER_KEY] = K8sProviders.PKS
             # cluster_dict = {
             #     'name': cluster.name,
             #     'plan_name': cluster.plan_name,
@@ -399,6 +402,7 @@ class PKSBroker(AbstractBroker):
                          f"error:\n {err}")
             raise PksServerError(err.status, err.body)
         cluster_dict = cluster.to_dict()
+        cluster_dict[K8S_PROVIDER_KEY] = K8sProviders.PKS
         cluster_params_dict = cluster_dict.pop('parameters')
         cluster_dict.update(cluster_params_dict)
 

@@ -53,6 +53,7 @@ import re
 import subprocess
 import time
 
+import psutil
 import pytest
 from vcd_cli.vcd import vcd
 
@@ -95,8 +96,7 @@ def cse_server():
 
     # start cse server as subprocess
     cmd = f"cse run -c {env.ACTIVE_CONFIG_FILEPATH}"
-    p = subprocess.Popen(cmd.split(), stdout=subprocess.DEVNULL,
-                         stderr=subprocess.STDOUT)
+    p = subprocess.Popen(cmd.split(), shell=True)
     time.sleep(env.WAIT_INTERVAL)  # server takes a little time to set up
 
     # enable kubernetes functionality on our ovdc
@@ -133,7 +133,12 @@ def cse_server():
 
     # terminate cse server subprocess
     try:
-        p.terminate()
+        # p.terminate()
+        parent_pid = p.pid
+        parent = psutil.Process(parent_pid)
+        for child in parent.children(recursive=True):  # or parent.children() for recursive=False
+            child.kill()
+        parent.kill()
     except OSError:
         pass
 

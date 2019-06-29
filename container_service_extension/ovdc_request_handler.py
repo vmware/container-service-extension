@@ -4,6 +4,7 @@
 
 from pyvcloud.vcd.org import Org
 
+from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import UnauthorizedActionError
 from container_service_extension.ovdc_manager import \
     construct_ctr_prov_ctx_from_pks_cache
@@ -53,6 +54,9 @@ class OvdcRequestHandler(object):
                 if is_pks_enabled():
                     create_pks_compute_profile(
                         ctr_prov_ctx, self.tenant_auth_token, self.req_spec)
+                else:
+                    raise CseServerError(
+                        'CSE is not configured to work with PKS.')
 
             task = OvdcManager().set_ovdc_container_provider_metadata(
                 ovdc_id=ovdc_id,

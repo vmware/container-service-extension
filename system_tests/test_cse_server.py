@@ -493,7 +493,7 @@ def test_0130_cse_run(config):
 
     for cmd in cmds:
         try:
-            p = subprocess.run(cmd.split(), timeout=15)
+            p = subprocess.run(cmd.split(), shell=True, timeout=15)
             assert False, f"`{cmd}` failed with returncode {p.returncode}"
         except subprocess.TimeoutExpired:
             pass

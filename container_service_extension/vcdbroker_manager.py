@@ -5,8 +5,6 @@
 from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseDuplicateClusterError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.server_constants import K8S_PROVIDER_KEY
-from container_service_extension.server_constants import K8sProviders
 from container_service_extension.vcdbroker import VcdBroker
 
 
@@ -19,7 +17,6 @@ class VcdBrokerManager(object):
         vcd_broker = VcdBroker(self.tenant_auth_token, self.req_spec)
         vcd_clusters = []
         for cluster in vcd_broker.list_clusters():
-            cluster[K8S_PROVIDER_KEY] = K8sProviders.NATIVE
             vcd_clusters.append(cluster)
         return vcd_clusters
 

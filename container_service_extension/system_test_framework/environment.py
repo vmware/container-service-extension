@@ -27,7 +27,7 @@ from pyvcloud.vcd.vdc import VDC
 from vcd_cli.vcd import vcd
 
 import container_service_extension.install_utils as install_utils
-import container_service_extension.python_utils as python_utils
+import container_service_extension.pyvcloud_utils as pyvcloud_utils
 from container_service_extension.server_constants import CSE_SERVICE_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
@@ -101,8 +101,9 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
                                         config['vcd']['password'])
     CLIENT.set_credentials(credentials)
 
-    org = python_utils.get_org(CLIENT, org_name=config['broker']['org'])
-    vdc = python_utils.get_vdc(CLIENT, config['broker']['vdc'], org=org)
+    org = pyvcloud_utils.get_org(CLIENT, org_name=config['broker']['org'])
+    vdc = pyvcloud_utils.get_vdc(
+        CLIENT, vdc_name=config['broker']['vdc'], org=org)
     ORG_HREF = org.href
     VDC_HREF = vdc.href
     CATALOG_NAME = config['broker']['catalog']
@@ -151,7 +152,7 @@ def teardown_active_config():
 
 def create_user(username, password, role):
     config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
-    cmd = f"login {config['vcd']['host']} {utils.SYSTEM_ORG_NAME} " \
+    cmd = f"login {config['vcd']['host']} {SYSTEM_ORG_NAME} " \
           f"{config['vcd']['username']} -iwp {config['vcd']['password']}"
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0

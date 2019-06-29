@@ -1071,7 +1071,7 @@ def create_template(ctx, client, config, template_config, update=False,
     if org is None:
         org = get_org(client, org_name=config['broker']['org'])
     if vdc is None:
-        vdc = get_vdc(client, config['broker']['vdc'], org=org)
+        vdc = get_vdc(client, vdc_name=config['broker']['vdc'], org=org)
     ctx.obj = {'client': client}
     catalog_name = config['broker']['catalog']
     template_name = template_config['catalog_item']

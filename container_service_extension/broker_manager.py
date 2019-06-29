@@ -206,8 +206,10 @@ class BrokerManager(object):
         """
         vcd_clusters_info = \
             self.vcdbroker_manager.list_clusters()
-        pks_clusters_info = \
-            self.pksbroker_manager.list_clusters()
+        pks_clusters_info = []
+        if is_pks_enabled():
+            pks_clusters_info = \
+                self.pksbroker_manager.list_clusters()
         all_cluster_infos = vcd_clusters_info + pks_clusters_info
 
         common_cluster_properties = \
@@ -227,7 +229,7 @@ class BrokerManager(object):
     def _find_cluster_in_org(self, cluster_name, is_org_admin_search=False):
         cluster, broker = self.vcdbroker_manager.find_cluster_in_org(
             cluster_name, is_org_admin_search)
-        if not cluster:
+        if not cluster and is_pks_enabled():
             cluster, broker = self.pksbroker_manager.find_cluster_in_org(
                 cluster_name, is_org_admin_search)
 

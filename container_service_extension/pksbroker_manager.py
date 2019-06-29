@@ -37,7 +37,6 @@ class PksBrokerManager(object):
             for cluster in pks_broker.list_clusters(is_admin_request=True):
                 pks_cluster = \
                     pks_broker.generate_cluster_subset_with_given_keys(cluster)
-                pks_cluster[K8S_PROVIDER_KEY] = K8sProviders.PKS
                 pks_clusters.append(pks_cluster)
         return pks_clusters
 
