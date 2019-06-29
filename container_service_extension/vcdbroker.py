@@ -8,7 +8,6 @@ import threading
 import traceback
 import uuid
 
-import click
 import pkg_resources
 from pyvcloud.vcd.client import TaskStatus
 from pyvcloud.vcd.client import VCLOUD_STATUS_MAP
@@ -31,24 +30,30 @@ from container_service_extension.cluster import load_from_metadata
 from container_service_extension.cluster import TYPE_MASTER
 from container_service_extension.cluster import TYPE_NFS
 from container_service_extension.cluster import TYPE_NODE
+from container_service_extension.exception_handler import error_to_json
 from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterInitializationError
 from container_service_extension.exceptions import ClusterJoiningError
+from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import ClusterOperationError
 from container_service_extension.exceptions import CseDuplicateClusterError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import MasterNodeCreationError
 from container_service_extension.exceptions import NFSNodeCreationError
 from container_service_extension.exceptions import NodeCreationError
+from container_service_extension.exceptions import NodeNotFoundError
 from container_service_extension.exceptions import WorkerNodeCreationError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.pyvcloud_utils import get_org_name_of_ovdc
+from container_service_extension.pyvcloud_utils import \
+    get_org_name_from_ovdc_id
+from container_service_extension.pyvcloud_utils import get_sys_admin_client
 from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_NAME
-from container_service_extension.utils import ERROR_DESCRIPTION
-from container_service_extension.utils import ERROR_MESSAGE
-from container_service_extension.utils import ERROR_STACKTRACE
-from container_service_extension.utils import error_to_json
+from container_service_extension.server_constants import K8S_PROVIDER_KEY
+from container_service_extension.server_constants import K8sProviders
+from container_service_extension.shared_constants import ERROR_DESCRIPTION_KEY
+from container_service_extension.shared_constants import ERROR_MESSAGE_KEY
+from container_service_extension.shared_constants import ERROR_STACKTRACE_KEY
 from container_service_extension.utils import get_server_runtime_config
 
 
@@ -68,16 +73,7 @@ MAX_HOST_NAME_LENGTH = 25
 ROLLBACK_FLAG = 'disable_rollback'
 
 
-def spinning_cursor():
-    while True:
-        for cursor in '|/-\\':
-            yield cursor
-
-
-spinner = spinning_cursor()
-
-
-def rollback(func):
+def rollback_on_failure(func):
     """Decorate to rollback on cluster and node creation failures.
 
     :param func: reference to the original function that is decorated
@@ -109,24 +105,10 @@ def rollback(func):
     return wrapper
 
 
-def task_callback(task):
-    message = f"\x1b[2K\r{task.get('operationName')}: " \
-              f"{task.get('operation')}, status: {task.get('status')}"
-    if hasattr(task, 'Progress'):
-        message += f", progress: {task.Progress}%"
-    if task.get('status').lower() in [
-            TaskStatus.QUEUED.value, TaskStatus.PENDING.value,
-            TaskStatus.PRE_RUNNING.value, TaskStatus.RUNNING.value
-    ]:
-        message += f" {spinner.next()} "
-    click.secho(message)
-
-
 class VcdBroker(AbstractBroker, threading.Thread):
-    def __init__(self, request_headers, request_spec):
-        super().__init__(request_headers, request_spec)
+    def __init__(self, tenant_auth_token, request_spec):
+        super().__init__(tenant_auth_token, request_spec)
         threading.Thread.__init__(self)
-        self.req_headers = request_headers
         self.req_spec = request_spec
 
         self.tenant_client = None
@@ -142,17 +124,19 @@ class VcdBroker(AbstractBroker, threading.Thread):
         self.cluster_id = None
         self.daemon = False
 
-    def _to_message(self, e):
-        if hasattr(e, 'message'):
-            return {'message': e.message}
-        else:
-            return {'message': str(e)}
+    def _connect_sys_admin(self):
+        self.sys_admin_client = get_sys_admin_client()
 
-    def update_task(self,
-                    status,
-                    message=None,
-                    error_message=None,
-                    stack_trace=''):
+    def _disconnect_sys_admin(self):
+        if self.sys_admin_client is not None:
+            self.sys_admin_client.logout()
+            self.sys_admin_client = None
+
+    def _update_task(self,
+                     status,
+                     message=None,
+                     error_message=None,
+                     stack_trace=''):
         if not self.tenant_client.is_sysadmin():
             stack_trace = ''
 
@@ -185,7 +169,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
             stack_trace=stack_trace
         )
 
-    def is_valid_name(self, name):
+    def _is_valid_name(self, name):
         """Validate that the cluster name against the pattern."""
         if len(name) > MAX_HOST_NAME_LENGTH:
             return False
@@ -194,7 +178,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
         allowed = re.compile(r"(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
         return all(allowed.match(x) for x in name.split("."))
 
-    def get_template(self, name=None):
+    def _get_template(self, name=None):
         server_config = get_server_runtime_config()
         if name is None:
             if 'template' in self.req_spec and \
@@ -206,6 +190,74 @@ class VcdBroker(AbstractBroker, threading.Thread):
             if template['name'] == name:
                 return template
         raise Exception(f"Template {name} not found.")
+
+    def _get_nfs_exports(self, ip, vapp, node):
+        """Get the exports from remote NFS server (helper method).
+
+        :param ip: (str): IP address of the NFS server
+        :param vapp: (pyvcloud.vcd.vapp.VApp): The vApp or cluster
+         to which node belongs
+        :param node: (str): IP address of the NFS server
+        :param node: (`lxml.objectify.StringElement`) object
+        representing the vm resource.
+
+        :return: (List): List of exports
+        """
+        # TODO(right template) find a right way to retrieve
+        # the template from which nfs node was created.
+        server_config = get_server_runtime_config()
+        template = server_config['broker']['templates'][0]
+        script = f"#!/usr/bin/env bash\nshowmount -e {ip}"
+        result = execute_script_in_nodes(
+            server_config, vapp, template['admin_password'],
+            script, nodes=[node], check_tools=False)
+        lines = result[0][1].content.decode().split('\n')
+        exports = []
+        for index in range(1, len(lines) - 1):
+            export = lines[index].strip().split()[0]
+            exports.append(export)
+        return exports
+
+    def node_rollback(self, node_list):
+        """Rollback for node creation failure.
+
+        :param list node_list: faulty nodes to be deleted
+        """
+        LOGGER.info(f"About to rollback nodes from cluster with name: "
+                    "{self.cluster_name}")
+        LOGGER.info(f"Node list to be deleted:{node_list}")
+        vapp = VApp(self.tenant_client, href=self.cluster['vapp_href'])
+        template = self._get_template()
+        try:
+            server_config = get_server_runtime_config()
+            delete_nodes_from_cluster(server_config, vapp, template,
+                                      node_list, force=True)
+        except Exception:
+            LOGGER.warning("Couldn't delete node {node_list} from cluster:"
+                           "{self.cluster_name}")
+        for vm_name in node_list:
+            vm = VM(self.tenant_client, resource=vapp.get_vm(vm_name))
+            try:
+                vm.undeploy()
+            except Exception:
+                LOGGER.warning(f"Couldn't undeploy VM {vm_name}")
+        vapp.delete_vms(node_list)
+        LOGGER.info(f"Successfully deleted nodes: {node_list}")
+
+    def cluster_rollback(self):
+        """Rollback for cluster creation failure."""
+        LOGGER.info(f"About to rollback cluster with name: "
+                    "{self.cluster_name}")
+        self._connect_tenant()
+        clusters = load_from_metadata(
+            self.tenant_client, name=self.cluster_name)
+        if len(clusters) != 1:
+            LOGGER.debug(f"Cluster {self.cluster_name} not found.")
+            return
+        self.cluster = clusters[0]
+        vdc = VDC(self.tenant_client, href=self.cluster['vdc_href'])
+        vdc.delete_vapp(self.cluster['name'], force=True)
+        LOGGER.info(f"Successfully deleted cluster: {self.cluster_name}")
 
     def run(self):
         LOGGER.debug(f"Thread started for operation={self.op}")
@@ -232,7 +284,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 'vdc': c['vdc_name'],
                 'status': c['status'],
                 'vdc_id': c['vdc_id'],
-                'org_name': get_org_name_of_ovdc(c['vdc_id'])
+                'org_name': get_org_name_from_ovdc_id(c['vdc_id']),
+                K8S_PROVIDER_KEY: K8sProviders.NATIVE
             })
         return clusters
 
@@ -251,8 +304,10 @@ class VcdBroker(AbstractBroker, threading.Thread):
             raise CseDuplicateClusterError(f"Multiple clusters of name"
                                            f" '{cluster_name}' detected.")
         if len(clusters) == 0:
-            raise CseServerError(f"Cluster '{cluster_name}' not found.")
+            raise ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")
+
         cluster = clusters[0]
+        cluster[K8S_PROVIDER_KEY] = K8sProviders.NATIVE
         vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
         vms = vapp.get_all_vms()
         for vm in vms:
@@ -287,8 +342,12 @@ class VcdBroker(AbstractBroker, threading.Thread):
                                       name=cluster_name,
                                       org_name=self.req_spec.get('org'),
                                       vdc_name=self.req_spec.get('vdc'))
+        if len(clusters) > 1:
+            raise CseDuplicateClusterError(f"Multiple clusters of name"
+                                           f" '{cluster_name}' detected.")
         if len(clusters) == 0:
-            raise CseServerError(f"Cluster \'{cluster_name}\' not found.")
+            raise ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")
+
         vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
         vms = vapp.get_all_vms()
         node_info = None
@@ -324,36 +383,29 @@ class VcdBroker(AbstractBroker, threading.Thread):
                                                     vm)
                     node_info['exports'] = exports
         if node_info is None:
-            raise CseServerError(f"Node '{node_name}' not found in cluster "
-                                 f"'{cluster_name}'")
+            raise NodeNotFoundError(f"Node '{node_name}' not found in "
+                                    f"cluster '{cluster_name}'")
         return node_info
 
-    def _get_nfs_exports(self, ip, vapp, node):
-        """Get the exports from remote NFS server (helper method).
+    def get_cluster_config(self, cluster_name):
+        self._connect_tenant()
+        clusters = load_from_metadata(
+            self.tenant_client,
+            name=cluster_name,
+            org_name=self.req_spec.get('org'),
+            vdc_name=self.req_spec.get('vdc'))
+        if len(clusters) > 1:
+            raise CseDuplicateClusterError(f"Multiple clusters of name"
+                                           f" '{cluster_name}' detected.")
+        if len(clusters) == 0:
+            raise ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")
 
-        :param ip: (str): IP address of the NFS server
-        :param vapp: (pyvcloud.vcd.vapp.VApp): The vApp or cluster
-         to which node belongs
-        :param node: (str): IP address of the NFS server
-        :param node: (`lxml.objectify.StringElement`) object
-        representing the vm resource.
-
-        :return: (List): List of exports
-        """
-        # TODO(right template) find a right way to retrieve
-        # the template from which nfs node was created.
+        vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
+        template = self._get_template(name=clusters[0]['template'])
         server_config = get_server_runtime_config()
-        template = server_config['broker']['templates'][0]
-        script = f"#!/usr/bin/env bash\nshowmount -e {ip}"
-        result = execute_script_in_nodes(
-            server_config, vapp, template['admin_password'],
-            script, nodes=[node], check_tools=False)
-        lines = result[0][1].content.decode().split('\n')
-        exports = []
-        for index in range(1, len(lines) - 1):
-            export = lines[index].strip().split()[0]
-            exports.append(export)
-        return exports
+        result = get_cluster_config(server_config, vapp,
+                                    template['admin_password'])
+        return result
 
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def create_cluster(self, cluster_name, vdc_name, node_count,
@@ -374,14 +426,14 @@ class VcdBroker(AbstractBroker, threading.Thread):
         LOGGER.debug(f"About to create cluster {cluster_name} on {vdc_name} "
                      f"with {node_count} nodes, sp={storage_profile}")
 
-        if not self.is_valid_name(cluster_name):
+        if not self._is_valid_name(cluster_name):
             raise CseServerError(f"Invalid cluster name '{cluster_name}'")
         self._connect_tenant()
         self._connect_sys_admin()
         self.cluster_name = cluster_name
         self.cluster_id = str(uuid.uuid4())
         self.op = OP_CREATE_CLUSTER
-        self.update_task(
+        self._update_task(
             TaskStatus.RUNNING,
             message=f"Creating cluster {cluster_name}({self.cluster_id})")
         self.daemon = True
@@ -392,7 +444,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
         result['task_href'] = self.task_resource.get('href')
         return result
 
-    @rollback
+    @rollback_on_failure
     def create_cluster_thread(self):
         network_name = self.req_spec['network']
         try:
@@ -407,8 +459,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
             org = Org(self.tenant_client, resource=org_resource)
             vdc_resource = org.get_vdc(self.req_spec['vdc'])
             vdc = VDC(self.tenant_client, resource=vdc_resource)
-            template = self.get_template()
-            self.update_task(
+            template = self._get_template()
+            self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Creating cluster vApp {self.cluster_name}"
                         f"({self.cluster_id})")
@@ -433,7 +485,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
             for k, v in tags.items():
                 task = vapp.set_metadata('GENERAL', 'READWRITE', k, v)
                 self.tenant_client.get_task_monitor().wait_for_status(task)
-            self.update_task(
+            self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Creating master node for {self.cluster_name}"
                         f"({self.cluster_id})")
@@ -447,7 +499,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 raise MasterNodeCreationError(
                     "Error while adding master node:", str(e))
 
-            self.update_task(
+            self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Initializing cluster {self.cluster_name}"
                         f"({self.cluster_id})")
@@ -458,7 +510,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                                      master_ip)
             self.tenant_client.get_task_monitor().wait_for_status(task)
             if self.req_spec['node_count'] > 0:
-                self.update_task(
+                self._update_task(
                     TaskStatus.RUNNING,
                     message=f"Creating {self.req_spec['node_count']} node(s) "
                             f"for {self.cluster_name}({self.cluster_id})")
@@ -470,14 +522,14 @@ class VcdBroker(AbstractBroker, threading.Thread):
                     raise WorkerNodeCreationError(
                         "Error while creating worker node:", str(e))
 
-                self.update_task(
+                self._update_task(
                     TaskStatus.RUNNING,
                     message=f"Adding {self.req_spec['node_count']} node(s) to "
                             f"{self.cluster_name}({self.cluster_id})")
                 vapp.reload()
                 join_cluster(server_config, vapp, template)
             if self.req_spec['enable_nfs']:
-                self.update_task(
+                self._update_task(
                     TaskStatus.RUNNING,
                     message=f"Creating NFS node for {self.cluster_name}"
                             f"({self.cluster_id})")
@@ -489,7 +541,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                     raise NFSNodeCreationError(
                         "Error while creating NFS node:", str(e))
 
-            self.update_task(
+            self._update_task(
                 TaskStatus.SUCCESS,
                 message=f"Created cluster {self.cluster_name}"
                         f"({self.cluster_id})")
@@ -498,19 +550,22 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 ClusterInitializationError, ClusterOperationError) as e:
             LOGGER.error(traceback.format_exc())
             error_obj = error_to_json(e)
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
-            self.update_task(
+            stack_trace = \
+                ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY])
+            self._update_task(
                 TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION],
+                error_message=error_obj[ERROR_MESSAGE_KEY]
+                [ERROR_DESCRIPTION_KEY],
                 stack_trace=stack_trace)
             raise e
         except Exception as e:
             LOGGER.error(traceback.format_exc())
             error_obj = error_to_json(e)
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
-            self.update_task(
+            stack_trace = \
+                ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY])
+            self._update_task(
                 TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION],
+                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY],  # noqa
                 stack_trace=stack_trace)
         finally:
             self._disconnect_sys_admin()
@@ -528,13 +583,14 @@ class VcdBroker(AbstractBroker, threading.Thread):
             org_name=self.req_spec.get('org'),
             vdc_name=self.req_spec.get('vdc'))
         if len(clusters) > 1:
-            raise CseDuplicateClusterError(f"Multiple clusters of name"
-                                           f" '{self.cluster_name}' detected.")
+            raise CseDuplicateClusterError(
+                f"Multiple clusters of name '{self.cluster_name}' detected.")
         if len(clusters) != 1:
-            raise CseServerError(f"Cluster {self.cluster_name} not found.")
+            raise ClusterNotFoundError(
+                f"Cluster {self.cluster_name} not found.")
         self.cluster = clusters[0]
         self.cluster_id = self.cluster['cluster_id']
-        self.update_task(
+        self._update_task(
             TaskStatus.RUNNING,
             message=f"Deleting cluster {self.cluster_name}"
                     f"({self.cluster_id})")
@@ -551,35 +607,19 @@ class VcdBroker(AbstractBroker, threading.Thread):
             vdc = VDC(self.tenant_client, href=self.cluster['vdc_href'])
             task = vdc.delete_vapp(self.cluster['name'], force=True)
             self.tenant_client.get_task_monitor().wait_for_status(task)
-            self.update_task(
+            self._update_task(
                 TaskStatus.SUCCESS,
                 message=f"Deleted cluster {self.cluster_name}"
                         f"({self.cluster_id})")
         except Exception as e:
             LOGGER.error(traceback.format_exc())
-            self.update_task(TaskStatus.ERROR, error_message=str(e))
+            self._update_task(TaskStatus.ERROR, error_message=str(e))
         finally:
             self._disconnect_sys_admin()
 
-    def get_cluster_config(self, cluster_name):
-        self._connect_tenant()
-        clusters = load_from_metadata(
-            self.tenant_client,
-            name=cluster_name,
-            org_name=self.req_spec.get('org'),
-            vdc_name=self.req_spec.get('vdc'))
-        if len(clusters) != 1:
-            raise CseServerError(f"Cluster '{cluster_name}' not found")
-        vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
-        template = self.get_template(name=clusters[0]['template'])
-        server_config = get_server_runtime_config()
-        result = get_cluster_config(server_config, vapp,
-                                    template['admin_password'])
-        return result
-
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def create_nodes(self):
-        self.cluster_name = self.req_spec['name']
+        self.cluster_name = self.req_spec['cluster_name']
         LOGGER.debug(f"About to add {self.req_spec['node_count']} nodes to "
                      f"cluster {self.cluster_name} on VDC "
                      f"{self.req_spec['vdc']}")
@@ -595,16 +635,18 @@ class VcdBroker(AbstractBroker, threading.Thread):
             self.tenant_client, name=self.cluster_name,
             org_name=self.req_spec.get('org'),
             vdc_name=self.req_spec.get('vdc'))
-        if len(clusters) <= 0:
-            raise CseServerError(f"Cluster '{self.cluster_name}' not found.")
 
         if len(clusters) > 1:
             raise CseDuplicateClusterError(f"Multiple clusters of name "
                                            f"'{self.cluster_name}' detected.")
+        if len(clusters) == 0:
+            raise ClusterNotFoundError(
+                f"Cluster '{self.cluster_name}' not found.")
+
         self.cluster = clusters[0]
         self.op = OP_CREATE_NODES
         self.cluster_id = self.cluster['cluster_id']
-        self.update_task(
+        self._update_task(
             TaskStatus.RUNNING,
             message=f"Adding {self.req_spec['node_count']} node(s) to cluster "
                     "{self.cluster_name}({self.cluster_id})")
@@ -615,7 +657,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
         result['task_href'] = self.task_resource.get('href')
         return result
 
-    @rollback
+    @rollback_on_failure
     def create_nodes_thread(self):
         LOGGER.debug(f"About to add nodes to cluster with name: "
                      f"{self.cluster_name}")
@@ -625,8 +667,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
             org = Org(self.tenant_client, resource=org_resource)
             vdc = VDC(self.tenant_client, href=self.cluster['vdc_href'])
             vapp = VApp(self.tenant_client, href=self.cluster['vapp_href'])
-            template = self.get_template()
-            self.update_task(
+            template = self._get_template()
+            self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Creating {self.req_spec['node_count']} node(s) for "
                         f"{self.cluster_name}({self.cluster_id})")
@@ -635,12 +677,12 @@ class VcdBroker(AbstractBroker, threading.Thread):
                                   server_config, self.tenant_client,
                                   org, vdc, vapp, self.req_spec)
             if self.req_spec['node_type'] == TYPE_NFS:
-                self.update_task(
+                self._update_task(
                     TaskStatus.SUCCESS,
                     message=f"Created {self.req_spec['node_count']} node(s) "
                             f"for {self.cluster_name}({self.cluster_id})")
             elif self.req_spec['node_type'] == TYPE_NODE:
-                self.update_task(
+                self._update_task(
                     TaskStatus.RUNNING,
                     message=f"Adding {self.req_spec['node_count']} node(s) to "
                             f"cluster {self.cluster_name}({self.cluster_id})")
@@ -649,26 +691,28 @@ class VcdBroker(AbstractBroker, threading.Thread):
                     target_nodes.append(spec['target_vm_name'])
                 vapp.reload()
                 join_cluster(server_config, vapp, template, target_nodes)
-                self.update_task(
+                self._update_task(
                     TaskStatus.SUCCESS,
                     message=f"Added {self.req_spec['node_count']} node(s) to "
                             f"cluster {self.cluster_name}({self.cluster_id})")
         except NodeCreationError as e:
             error_obj = error_to_json(e)
             LOGGER.error(traceback.format_exc())
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
-            self.update_task(
+            stack_trace = \
+                ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY])
+            self._update_task(
                 TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION],
+                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY],  # noqa
                 stack_trace=stack_trace)
             raise
         except Exception as e:
             error_obj = error_to_json(e)
             LOGGER.error(traceback.format_exc())
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
-            self.update_task(
+            stack_trace = \
+                ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY])
+            self._update_task(
                 TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION],
+                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY],  # noqa
                 stack_trace=stack_trace)
         finally:
             self._disconnect_sys_admin()
@@ -676,9 +720,9 @@ class VcdBroker(AbstractBroker, threading.Thread):
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def delete_nodes(self):
         result = {'body': {}}
-        self.cluster_name = self.req_spec['name']
+        self.cluster_name = self.req_spec['cluster_name']
         LOGGER.debug(f"About to delete nodes from cluster with name: "
-                     f"{self.req_spec['name']}")
+                     f"{self.req_spec['cluster_name']}")
 
         if len(self.req_spec['nodes']) < 1:
             raise CseServerError(f"Invalid list of nodes: "
@@ -701,7 +745,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
         self.cluster = clusters[0]
         self.op = OP_DELETE_NODES
         self.cluster_id = self.cluster['cluster_id']
-        self.update_task(
+        self._update_task(
             TaskStatus.RUNNING,
             message=f"Deleting {len(self.req_spec['nodes'])} node(s) from "
             f"cluster {self.cluster_name}({self.cluster_id})")
@@ -717,8 +761,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
                      f"{self.cluster_name}")
         try:
             vapp = VApp(self.tenant_client, href=self.cluster['vapp_href'])
-            template = self.get_template()
-            self.update_task(
+            template = self._get_template()
+            self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Deleting {len(self.req_spec['nodes'])} node(s) from "
                         f"{self.cluster_name}({self.cluster_id})")
@@ -732,7 +776,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
             except Exception:
                 LOGGER.error(f"Couldn't delete node {self.req_spec['nodes']} "
                              f"from cluster:{self.cluster_name}")
-            self.update_task(
+            self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Undeploying {len(self.req_spec['nodes'])} node(s) "
                         f"for {self.cluster_name}({self.cluster_id})")
@@ -743,67 +787,27 @@ class VcdBroker(AbstractBroker, threading.Thread):
                     self.tenant_client.get_task_monitor().wait_for_status(task)
                 except Exception:
                     LOGGER.warning(f"Couldn't undeploy VM {vm_name}")
-            self.update_task(
+            self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Deleting {len(self.req_spec['nodes'])} VM(s) for "
                         f"{self.cluster_name}({self.cluster_id})")
             task = vapp.delete_vms(self.req_spec['nodes'])
             self.tenant_client.get_task_monitor().wait_for_status(task)
-            self.update_task(
+            self._update_task(
                 TaskStatus.SUCCESS,
                 message=f"Deleted {len(self.req_spec['nodes'])} node(s) to "
                         f"cluster {self.cluster_name}({self.cluster_id})")
         except Exception as e:
             LOGGER.error(traceback.format_exc())
             error_obj = error_to_json(e)
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE][ERROR_STACKTRACE])
-            self.update_task(
+            stack_trace = \
+                ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY])
+            self._update_task(
                 TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE][ERROR_DESCRIPTION],
+                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY],  # noqa
                 stack_trace=stack_trace)
         finally:
             self._disconnect_sys_admin()
-
-    def node_rollback(self, node_list):
-        """Rollback for node creation failure.
-
-        :param list node_list: faulty nodes to be deleted
-        """
-        LOGGER.info(f"About to rollback nodes from cluster with name: "
-                    "{self.cluster_name}")
-        LOGGER.info(f"Node list to be deleted:{node_list}")
-        vapp = VApp(self.tenant_client, href=self.cluster['vapp_href'])
-        template = self.get_template()
-        try:
-            server_config = get_server_runtime_config()
-            delete_nodes_from_cluster(server_config, vapp, template,
-                                      node_list, force=True)
-        except Exception:
-            LOGGER.warning("Couldn't delete node {node_list} from cluster:"
-                           "{self.cluster_name}")
-        for vm_name in node_list:
-            vm = VM(self.tenant_client, resource=vapp.get_vm(vm_name))
-            try:
-                vm.undeploy()
-            except Exception:
-                LOGGER.warning(f"Couldn't undeploy VM {vm_name}")
-        vapp.delete_vms(node_list)
-        LOGGER.info(f"Successfully deleted nodes: {node_list}")
-
-    def cluster_rollback(self):
-        """Rollback for cluster creation failure."""
-        LOGGER.info(f"About to rollback cluster with name: "
-                    "{self.cluster_name}")
-        self._connect_tenant()
-        clusters = load_from_metadata(
-            self.tenant_client, name=self.cluster_name)
-        if len(clusters) != 1:
-            LOGGER.debug(f"Cluster {self.cluster_name} not found.")
-            return
-        self.cluster = clusters[0]
-        vdc = VDC(self.tenant_client, href=self.cluster['vdc_href'])
-        vdc.delete_vapp(self.cluster['name'], force=True)
-        LOGGER.info(f"Successfully deleted cluster: {self.cluster_name}")
 
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def resize_cluster(self, cluster_name, node_count, curr_cluster_info=None):

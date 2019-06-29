@@ -9,180 +9,267 @@ import sys
 import traceback
 from urllib.parse import parse_qsl
 
-from pkg_resources import resource_string
-import yaml
+import requests
 
-from container_service_extension.exceptions import CseServerError
+from container_service_extension.broker_manager import BrokerManager
+from container_service_extension.exception_handler import handle_exception
+from container_service_extension.exceptions import CseRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.ovdc_request_handler import OvdcRequestHandler
+from container_service_extension.server_constants import CseOperation
 from container_service_extension.utils import get_server_runtime_config
-
-OK = 200
-CREATED = 201
-ACCEPTED = 202
-UNAUTHORIZED = 401
-INTERNAL_SERVER_ERROR = 500
 
 
 class ServiceProcessor(object):
+    """Process incoming REST request.
+
+    Following are the valid api endpoints.
+
+    GET /cse/clusters?org={org name}&vdc={vdc name}
+    POST /cse/clusters
+    GET /cse/cluster/{cluster name}?org={org name}&vdc={vdc name}
+    PUT /cse/cluster/{cluster name}?org={org name}&vdc={vdc name}
+    DELETE /cse/cluster/{cluster name}?org={org name}&vdc={vdc name}
+    GET /cse/cluster/{cluster name}/config?org={org name}&vdc={vdc name}
+
+    POST /cse/nodes
+    DELETE /cse/nodes
+    GET /cse/node/{node name}?cluster_name={cluster name}&org={org name}&vdc={vdc name}
+
+    GET /cse/ovdcs
+    GET /cse/ovdc/{ovdc id}
+    PUT /cse/ovdc/{ovdc id}
+
+    GET /cse/system
+    PUT /cse/system
+
+    GET /cse/template
+    """ ## noqa
+
+    def _parse_request_url(self, method, url):
+        """Determine the operation that the REST request represent.
+
+        Additionally parse the url for data that might be needed while
+        processing the request.
+
+        :param str url: Incoming REST request url.
+        :param str method: HTTP method of the REST request.
+
+        :return: the type of operation the incoming REST request corresponds
+            to, plus associated parsed data from the url.
+
+        :rtype: dict
+        """
+        is_cluster_request = False
+        is_node_request = False
+        is_ovdc_request = False
+        is_system_request = False
+        is_template_request = False
+        result = {}
+
+        tokens = url.split('/')
+        if len(tokens) > 3:
+            if tokens[3] in ('cluster', 'clusters'):
+                is_cluster_request = True
+            elif tokens[3] in ('node', 'nodes'):
+                is_node_request = True
+            elif tokens[3] in('ovdc', 'ovdcs'):
+                is_ovdc_request = True
+            elif tokens[3] == 'system':
+                is_system_request = True
+            elif tokens[3] == 'templates':
+                is_template_request = True
+
+        if is_cluster_request:
+            if len(tokens) == 4:
+                if method == 'GET':
+                    result['operation'] = CseOperation.CLUSTER_LIST
+                elif method == 'POST':
+                    result['operation'] = CseOperation.CLUSTER_CREATE
+                else:
+                    raise CseRequestError(
+                        status=requests.codes.method_not_allowed,
+                        error_message="Method not allowed")
+            elif len(tokens) == 5:
+                if method == 'GET':
+                    result['operation'] = CseOperation.CLUSTER_INFO
+                    result['cluster_name'] = tokens[4]
+                elif method == 'PUT':
+                    result['operation'] = CseOperation.CLUSTER_RESIZE
+                    result['cluster_name'] = tokens[4]
+                elif method == 'DELETE':
+                    result['operation'] = CseOperation.CLUSTER_DELETE
+                    result['cluster_name'] = tokens[4]
+                else:
+                    raise CseRequestError(
+                        status=requests.codes.method_not_allowed,
+                        error_message="Method not allowed")
+            elif len(tokens) == 6:
+                if method == 'GET':
+                    if tokens[5] == 'config':
+                        result['operation'] = CseOperation.CLUSTER_CONFIG
+                        result['cluster_name'] = tokens[4]
+                else:
+                    raise CseRequestError(
+                        status=requests.codes.method_not_allowed,
+                        error_message="Method not allowed")
+
+        if is_node_request:
+            if len(tokens) == 4:
+                if method == 'POST':
+                    result['operation'] = CseOperation.NODE_CREATE
+                elif method == 'DELETE':
+                    result['operation'] = CseOperation.NODE_DELETE
+                else:
+                    raise CseRequestError(
+                        status=requests.codes.method_not_allowed,
+                        error_message="Method not allowed")
+            elif len(tokens) == 5:
+                if method == 'GET':
+                    result['operation'] = CseOperation.NODE_INFO
+                    result['node_name'] = tokens[4]
+                else:
+                    raise CseRequestError(
+                        status=requests.codes.method_not_allowed,
+                        error_message="Method not allowed")
+
+        if is_ovdc_request:
+            if len(tokens) == 4:
+                if method == 'GET':
+                    result['operation'] = CseOperation.OVDC_LIST
+                else:
+                    raise CseRequestError(
+                        status=requests.codes.method_not_allowed,
+                        error_message="Method not allowed")
+            elif len(tokens) == 5:
+                if method == 'GET':
+                    result['operation'] = CseOperation.OVDC_INFO
+                    result['ovdc_id'] = tokens[4]
+                elif method == 'PUT':
+                    result['operation'] = CseOperation.OVDC_ENABLE_DISABLE
+                    result['ovdc_id'] = tokens[4]
+                else:
+                    raise CseRequestError(
+                        status=requests.codes.method_not_allowed,
+                        error_message="Method not allowed")
+
+        if is_system_request:
+            if len(tokens) == 4:
+                if method == 'GET':
+                    result['operation'] = CseOperation.SYSTEM_INFO
+                elif method == 'PUT':
+                    result['operation'] = CseOperation.SYSTEM_UPDATE
+                else:
+                    raise CseRequestError(
+                        status=requests.codes.method_not_allowed,
+                        error_message="Method not allowed")
+
+        if is_template_request:
+            if len(tokens) == 4:
+                if method == 'GET':
+                    result['operation'] = CseOperation.TEMPLATE_LIST
+                else:
+                    raise CseRequestError(
+                        status=requests.codes.method_not_allowed,
+                        error_message="Method not allowed")
+
+        if not result.get('operation'):
+            raise CseRequestError(
+                status=requests.codes.not_found,
+                error_message="Invalid Url. Not found.")
+        return result
+
+    @handle_exception
     def process_request(self, body):
         LOGGER.debug(f"body: {json.dumps(body)}")
         reply = {}
-        tokens = body['requestUri'].split('/')
-        cluster_name = None
-        node_name = None
-        spec_request = False
-        config_request = False
-        template_request = False
-        node_request = False
-        cluster_info_request = False
-        node_info_request = False
-        system_request = False
-        ovdc_request = False
-        ovdc_id = None
-        ovdc_info_request = False
 
-        if len(tokens) > 3:
-            if tokens[3] in ['swagger', 'swagger.json', 'swagger.yaml']:
-                spec_request = True
-            elif tokens[3] == 'template':
-                template_request = True
-            elif tokens[3] == 'system':
-                system_request = True
-            elif tokens[3] == 'ovdc':
-                ovdc_request = True
-            elif tokens[3] != '':
-                cluster_name = tokens[3]
-        if len(tokens) > 4:
-            if cluster_name is not None:
-                if tokens[4] == 'config':
-                    config_request = True
-                elif tokens[4] == 'info':
-                    cluster_info_request = True
-                elif tokens[4] == 'node':
-                    node_request = True
-                elif tokens[4] != '':
-                    node_name = tokens[4]
-            elif ovdc_request:
-                ovdc_id = tokens[4]
+        # parse url
+        request_url_parse_result = self._parse_request_url(
+            method=body['method'], url=body['requestUri'])
 
-        if len(tokens) > 5:
-            if node_name is not None:
-                if tokens[5] == 'info':
-                    node_info_request = True
-            elif ovdc_request:
-                if tokens[5] == 'info':
-                    ovdc_info_request = True
+        # check for disabled server
+        operation = request_url_parse_result['operation']
+        if operation not in (CseOperation.SYSTEM_INFO,
+                             CseOperation.SYSTEM_UPDATE):
+            from container_service_extension.service import Service
+            if not Service().is_running():
+                raise CseRequestError(
+                    status_code=requests.codes.bad_request,
+                    error_message='CSE service is disabled. Contact the'
+                                  ' System Administrator.')
+
+        # parse query params
+        query_params = {}
+        if body['queryString']:
+            query_params = dict(parse_qsl(body['queryString']))
+
+        # parse body
         if len(body['body']) > 0:
             try:
                 request_body = json.loads(
-                    base64.b64decode(body['body']).decode(
-                        sys.getfilesystemencoding()))
+                    base64.b64decode(
+                        body['body']).decode(sys.getfilesystemencoding()))
+                LOGGER.debug(f"request body: {json.dumps(request_body)}")
             except Exception:
                 LOGGER.error(traceback.format_exc())
                 request_body = {}
         else:
             request_body = {}
-        LOGGER.debug(f"request body: {json.dumps(request_body)}")
 
-        query_params = {}
-        if body['queryString']:
-            query_params = dict(parse_qsl(body['queryString']))
-
-        from container_service_extension.service import Service
-        service = Service()
-        if not system_request and not service.is_enabled:
-            raise CseServerError('CSE service is disabled. '
-                                 'Contact the System Administrator.')
-
-        req_headers = deepcopy(body['headers'])
-        req_query_params = deepcopy(query_params)
+        # compose request spec for further processing
+        tenant_auth_token = body['headers']['x-vcloud-authorization']
         req_spec = deepcopy(request_body)
+        for key, val in query_params.items():
+            req_spec[key] = val
 
-        from container_service_extension.broker_manager import BrokerManager
-        broker_manager = BrokerManager(req_headers, req_query_params, req_spec)
-        from container_service_extension.broker_manager import Operation
+        # update request spec with operation specific data in the url
+        if operation in \
+                (CseOperation.CLUSTER_CONFIG, CseOperation.CLUSTER_DELETE,
+                 CseOperation.CLUSTER_INFO, CseOperation.CLUSTER_RESIZE):
+            req_spec.update(
+                {'cluster_name': request_url_parse_result.get('cluster_name')})
+        elif operation == CseOperation.NODE_INFO:
+            req_spec.update(
+                {'node_name': request_url_parse_result.get('node_name')})
+        elif operation in \
+                (CseOperation.OVDC_ENABLE_DISABLE, CseOperation.OVDC_INFO):
+            req_spec.update(
+                {'ovdc_id': request_url_parse_result.get('ovdc_id')})
 
-        if body['method'] == 'GET':
-            if ovdc_info_request:
-                req_spec.update({'ovdc_id': ovdc_id})
-                reply = broker_manager.invoke(Operation.INFO_OVDC)
-            elif ovdc_request:
-                reply = broker_manager.invoke(op=Operation.LIST_OVDCS)
-            elif spec_request:
-                reply = self.get_spec(tokens[3])
-            elif config_request:
-                req_spec.update({'cluster_name': cluster_name})
-                reply = broker_manager.invoke(Operation.GET_CLUSTER_CONFIG)
-            elif template_request:
-                result = {}
-                templates = []
-                server_config = get_server_runtime_config()
-                default_template_name = \
-                    server_config['broker']['default_template']
-                for t in server_config['broker']['templates']:
-                    is_default = t['name'] == default_template_name
-                    templates.append({
-                        'name': t['name'],
-                        'is_default': is_default,
-                        'catalog': server_config['broker']['catalog'],
-                        'catalog_item': t['catalog_item'],
-                        'description': t['description']
-                    })
-                result['body'] = templates
-                result['status_code'] = 200
-                reply = result
-            elif cluster_info_request:
-                req_spec.update({'cluster_name': cluster_name})
-                reply = broker_manager.invoke(Operation.GET_CLUSTER)
-            elif node_info_request:
-                req_spec.update({'cluster_name': cluster_name})
-                req_spec.update({'node_name': node_name})
-                reply = broker_manager.invoke(Operation.GET_NODE_INFO)
-            elif system_request:
-                result = {}
-                result['body'] = service.info(req_headers)
-                result['status_code'] = OK
-                reply = result
-            elif cluster_name is None:
-                reply = broker_manager.invoke(Operation.LIST_CLUSTERS)
-        elif body['method'] == 'POST':
-            if cluster_name is None:
-                reply = broker_manager.invoke(Operation.CREATE_CLUSTER)
-            else:
-                if node_request:
-                    reply = broker_manager.invoke(Operation.CREATE_NODE)
-        elif body['method'] == 'PUT':
-            if ovdc_info_request:
-                reply = broker_manager.invoke(Operation.ENABLE_OVDC)
-            elif system_request:
-                reply = service.update_status(req_headers, req_spec)
-            else:
-                req_spec.update({'cluster_name': cluster_name})
-                reply = broker_manager.invoke(Operation.RESIZE_CLUSTER)
-        elif body['method'] == 'DELETE':
-            if node_request:
-                reply = broker_manager.invoke(Operation.DELETE_NODE)
-            else:
-                req_spec.update({'cluster_name': cluster_name})
-                reply = broker_manager.invoke(Operation.DELETE_CLUSTER)
+        # process the request
+        reply['status_code'] = operation.ideal_response_code
+        if operation == CseOperation.SYSTEM_INFO:
+            from container_service_extension.service import Service
+            reply['body'] = Service().info(tenant_auth_token)
+        elif operation == CseOperation.SYSTEM_UPDATE:
+            from container_service_extension.service import Service
+            reply['body'] = {
+                'message':
+                Service().update_status(tenant_auth_token, req_spec)}
+        elif operation == CseOperation.TEMPLATE_LIST:
+            templates = []
+            server_config = get_server_runtime_config()
+            default_template_name = \
+                server_config['broker']['default_template']
+            for t in server_config['broker']['templates']:
+                is_default = t['name'] == default_template_name
+                templates.append({
+                    'name': t['name'],
+                    'is_default': is_default,
+                    'catalog': server_config['broker']['catalog'],
+                    'catalog_item': t['catalog_item'],
+                    'description': t['description']
+                })
+            reply['body'] = templates
+        elif operation in (CseOperation.OVDC_ENABLE_DISABLE,
+                           CseOperation.OVDC_INFO, CseOperation.OVDC_LIST):
+            ovdc_request_handler = \
+                OvdcRequestHandler(tenant_auth_token, req_spec)
+            reply['body'] = ovdc_request_handler.invoke(op=operation)
+        else:
+            broker_manager = BrokerManager(tenant_auth_token, req_spec)
+            reply['body'] = broker_manager.invoke(op=operation)
 
         LOGGER.debug(f"reply: {str(reply)}")
         return reply
-
-    def get_spec(self, format):
-        result = {}
-        try:
-            file_name = resource_string('container_service_extension',
-                                        'swagger/swagger.yaml')
-            if format == 'swagger.yaml':
-                result['body'] = file_name
-            else:
-                spec = yaml.safe_load(file_name)
-                result['body'] = json.loads(json.dumps(spec))
-            result['status_code'] = OK
-        except Exception:
-            LOGGER.error(traceback.format_exc())
-            result['body'] = []
-            result['status_code'] = INTERNAL_SERVER_ERROR
-            result['message'] = 'spec file not found: check installation.'
-        return result

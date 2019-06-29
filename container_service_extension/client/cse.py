@@ -13,8 +13,13 @@ from vcd_cli.vcd import vcd
 from container_service_extension.client.cluster import Cluster
 from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.system import System
+from container_service_extension.exceptions import CseClientError
+from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
 from container_service_extension.service import Service
+from container_service_extension.shared_constants import SERVER_DISABLE_ACTION
+from container_service_extension.shared_constants import SERVER_ENABLE_ACTION
+from container_service_extension.shared_constants import SERVER_STOP_ACTION
 
 
 @vcd.group(short_help='Manage Kubernetes clusters')
@@ -39,6 +44,43 @@ def version(ctx):
                                       ver_obj['description'],
                                       ver_obj['version'])
     stdout(ver_obj, ctx, ver_str)
+
+
+@cse.group(short_help='Manage native Kubernetes provider templates')
+@click.pass_context
+def template(ctx):
+    """Manage native Kubernetes provider templates.
+
+\b
+Examples
+    vcd cse template list
+        Display templates that can be used by native Kubernetes provider.
+    """
+    pass
+
+
+@template.command('list',
+                  short_help='List native Kubernetes provider templates')
+@click.pass_context
+def list_templates(ctx):
+    """Display templates that can be used by native Kubernetes provider."""
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        cluster = Cluster(client)
+        result = []
+        templates = cluster.get_templates()
+        for t in templates:
+            result.append({
+                'name': t['name'],
+                'description': t['description'],
+                'catalog': t['catalog'],
+                'catalog_item': t['catalog_item'],
+                'is_default': t['is_default'],
+            })
+        stdout(result, ctx, show_id=True)
+    except Exception as e:
+        stderr(e, ctx)
 
 
 @cse.group('cluster', short_help='Manage Kubernetes clusters')
@@ -111,43 +153,6 @@ Examples
     pass
 
 
-@cse.group(short_help='Manage native Kubernetes provider templates')
-@click.pass_context
-def template(ctx):
-    """Manage native Kubernetes provider templates.
-
-\b
-Examples
-    vcd cse template list
-        Display templates that can be used by native Kubernetes provider.
-    """
-    pass
-
-
-@template.command('list',
-                  short_help='List native Kubernetes provider templates')
-@click.pass_context
-def list_templates(ctx):
-    """Display templates that can be used by native Kubernetes provider."""
-    try:
-        restore_session(ctx)
-        client = ctx.obj['client']
-        cluster = Cluster(client)
-        result = []
-        templates = cluster.get_templates()
-        for t in templates:
-            result.append({
-                'name': t['name'],
-                'description': t['description'],
-                'catalog': t['catalog'],
-                'catalog_item': t['catalog_item'],
-                'is_default': t['is_default'],
-            })
-        stdout(result, ctx, show_id=True)
-    except Exception as e:
-        stderr(e, ctx)
-
-
 @cluster_group.command('list',
                        short_help='Display clusters in vCD that are visible '
                                   'to the logged in user')
@@ -172,10 +177,10 @@ def list_clusters(ctx, vdc, org_name):
     """Display clusters in vCD that are visible to the logged in user."""
     try:
         restore_session(ctx)
-        if org_name is None:
-            org_name = ctx.obj['profiles'].get('org_in_use')
         client = ctx.obj['client']
         cluster = Cluster(client)
+        if not client.is_sysadmin() and org_name is None:
+            org_name = ctx.obj['profiles'].get('org_in_use')
         result = cluster.get_clusters(vdc=vdc, org=org_name)
         stdout(result, ctx, show_id=True)
     except Exception as e:
@@ -204,7 +209,7 @@ def list_clusters(ctx, vdc, org_name):
     required=False,
     metavar='ORG_NAME',
     help='Restrict cluster search to specified org')
-def delete(ctx, name, vdc, org):
+def cluster_delete(ctx, name, vdc, org):
     """Delete a Kubernetes cluster."""
     try:
         restore_session(ctx)
@@ -225,7 +230,7 @@ def delete(ctx, name, vdc, org):
         stderr(e, ctx)
 
 
-@cluster_group.command(short_help='Create a Kubernetes cluster')
+@cluster_group.command('create', short_help='Create a Kubernetes cluster')
 @click.pass_context
 @click.argument('name', required=True)
 @click.option(
@@ -318,9 +323,9 @@ def delete(ctx, name, vdc, org):
     required=False,
     metavar='ORG_NAME',
     help='Org to use. Defaults to currently logged-in org')
-def create(ctx, name, vdc, node_count, cpu, memory, network_name,
-           storage_profile, ssh_key_file, template, enable_nfs,
-           disable_rollback, org_name):
+def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
+                   storage_profile, ssh_key_file, template, enable_nfs,
+                   disable_rollback, org_name):
     """Create a Kubernetes cluster."""
     try:
         restore_session(ctx)
@@ -401,7 +406,8 @@ def create(ctx, name, vdc, node_count, cpu, memory, network_name,
     default=True,
     help='Disable rollback on failed node creation '
          '(Exclusive to native Kubernetes provider)')
-def resize(ctx, name, node_count, network_name, org, vdc, disable_rollback):
+def cluster_resize(ctx, name, node_count, network_name, org, vdc,
+                   disable_rollback):
     """Resize the cluster to contain the specified number of worker nodes.
 
     Clusters that use native Kubernetes provider can not be sized down
@@ -444,7 +450,7 @@ def resize(ctx, name, node_count, network_name, org, vdc, disable_rollback):
     default=None,
     metavar='VDC_NAME',
     help='Restrict cluster search to specified org VDC')
-def config(ctx, name, vdc, org):
+def cluster_config(ctx, name, vdc, org):
     """Display cluster configuration.
 
     To write to a file: `vcd cse cluster config mycluster > ~/.kube/my_config`
@@ -455,7 +461,7 @@ def config(ctx, name, vdc, org):
         cluster = Cluster(client)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
-        cluster_config = cluster.get_config(name, vdc=vdc, org=org)
+        cluster_config = cluster.get_cluster_config(name, vdc=vdc, org=org)
         if os.name == 'nt':
             cluster_config = str.replace(cluster_config, '\n', '\r\n')
 
@@ -582,7 +588,7 @@ def node_info(ctx, cluster_name, node_name, org_name, vdc):
                     short_help='Add node(s) to a cluster that was created '
                                'with native Kubernetes provider')
 @click.pass_context
-@click.argument('name', required=True)
+@click.argument('cluster_name', required=True)
 @click.option(
     '-N',
     '--nodes',
@@ -666,9 +672,9 @@ def node_info(ctx, cluster_name, node_name, org_name, vdc):
     required=False,
     metavar='ORG_NAME',
     help='Restrict cluster search to specified org')
-def create_node(ctx, name, node_count, org, vdc, cpu, memory, network_name,
-                storage_profile, ssh_key_file, template, node_type,
-                disable_rollback):
+def create_node(ctx, cluster_name, node_count, org, vdc, cpu, memory,
+                network_name, storage_profile, ssh_key_file, template,
+                node_type, disable_rollback):
     """Add node(s) to a cluster that uses native Kubernetes provider."""
     try:
         restore_session(ctx)
@@ -681,7 +687,7 @@ def create_node(ctx, name, node_count, org, vdc, cpu, memory, network_name,
             ssh_key = ssh_key_file.read()
         result = cluster.add_node(
             network_name,
-            name,
+            cluster_name,
             node_count=node_count,
             org=org,
             vdc=vdc,
@@ -728,6 +734,9 @@ def list_nodes(ctx, name, org, vdc):
             org = ctx.obj['profiles'].get('org_in_use')
         cluster = Cluster(client)
         cluster_info = cluster.get_cluster_info(name, org=org, vdc=vdc)
+        if cluster_info.get(K8S_PROVIDER_KEY) != K8sProviders.NATIVE:
+            raise CseClientError('Node commands are not supported by non '
+                                 'native clusters.')
         all_nodes = cluster_info['master_nodes'] + cluster_info['nodes']
         stdout(all_nodes, ctx, show_id=True)
     except Exception as e:
@@ -802,7 +811,7 @@ Examples
 
 @system_group.command('info', short_help='Display info about CSE')
 @click.pass_context
-def info(ctx):
+def system_info(ctx):
     """Display info about CSE."""
     try:
         restore_session(ctx)
@@ -823,7 +832,7 @@ def stop_service(ctx):
         restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
-        result = system.stop()
+        result = system.update_service_status(action=SERVER_STOP_ACTION)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -837,7 +846,7 @@ def enable_service(ctx):
         restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
-        result = system.enable_service()
+        result = system.update_service_status(action=SERVER_ENABLE_ACTION)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -851,7 +860,7 @@ def disable_service(ctx):
         restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
-        result = system.enable_service(False)
+        result = system.update_service_status(action=SERVER_DISABLE_ACTION)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -920,7 +929,7 @@ def list_ovdcs(ctx, list_pks_plans):
         restore_session(ctx)
         client = ctx.obj['client']
         ovdc = Ovdc(client)
-        result = ovdc.list(list_pks_plans=list_pks_plans)
+        result = ovdc.list_ovdc_for_k8s(list_pks_plans=list_pks_plans)
         stdout(result, ctx, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
@@ -933,7 +942,7 @@ def list_ovdcs(ctx, list_pks_plans):
 @click.option(
     '-k',
     '--k8s-provider',
-    'k8s_provider',
+    'container_provider',
     required=True,
     type=click.Choice([K8sProviders.NATIVE, K8sProviders.PKS]),
     help="Name of the Kubernetes provider to use for this org VDC")
@@ -960,11 +969,12 @@ def list_ovdcs(ctx, list_pks_plans):
     default=None,
     required=False,
     metavar='ORG_NAME',
-    help="Org to use. Defaults to currently logged-in org")
-def ovdc_enable(ctx, ovdc_name, k8s_provider, pks_plan, pks_cluster_domain,
-                org_name):
+    help="Use the specified org to look for the org VDC. Defaults to current "
+         "org in use")
+def ovdc_enable(ctx, ovdc_name, container_provider, pks_plan,
+                pks_cluster_domain, org_name):
     """Set Kubernetes provider for an org VDC."""
-    if k8s_provider == K8sProviders.PKS and \
+    if container_provider == K8sProviders.PKS and \
             (pks_plan is None or pks_cluster_domain is None):
         click.secho("One or both of the required params (--pks-plan,"
                     " --pks-cluster-domain) are missing", fg='yellow')
@@ -973,19 +983,20 @@ def ovdc_enable(ctx, ovdc_name, k8s_provider, pks_plan, pks_cluster_domain,
     try:
         restore_session(ctx)
         client = ctx.obj['client']
-        ovdc = Ovdc(client)
         if client.is_sysadmin():
+            ovdc = Ovdc(client)
             if org_name is None:
                 org_name = ctx.obj['profiles'].get('org_in_use')
-            result = ovdc.enable_ovdc_for_k8s(
-                ovdc_name,
-                k8s_provider=k8s_provider,
+            result = ovdc.update_ovdc_for_k8s(
+                enable=True,
+                ovdc_name=ovdc_name,
+                org_name=org_name,
+                container_provider=container_provider,
                 pks_plan=pks_plan,
-                pks_cluster_domain=pks_cluster_domain,
-                org_name=org_name)
+                pks_cluster_domain=pks_cluster_domain)
+            stdout(result, ctx)
         else:
-            stderr("Unauthorized operation", ctx)
-        stdout(result, ctx)
+            stderr("Insufficient permission to perform operation.", ctx)
     except Exception as e:
         stderr(e, ctx)
 
@@ -1002,7 +1013,8 @@ def ovdc_enable(ctx, ovdc_name, k8s_provider, pks_plan, pks_cluster_domain,
     default=None,
     required=False,
     metavar='ORG_NAME',
-    help="Org to use. Defaults to currently logged-in org")
+    help="Use the specified org to look for the org VDC. Defaults to current "
+         "org in use")
 def ovdc_disable(ctx, ovdc_name, org_name):
     """Disable Kubernetes cluster deployment for an org VDC."""
     try:
@@ -1012,10 +1024,11 @@ def ovdc_disable(ctx, ovdc_name, org_name):
             ovdc = Ovdc(client)
             if org_name is None:
                 org_name = ctx.obj['profiles'].get('org_in_use')
-            result = ovdc.disable_ovdc_for_k8s(ovdc_name, org_name=org_name)
+            result = ovdc.update_ovdc_for_k8s(
+                enable=False, ovdc_name=ovdc_name, org_name=org_name)
             stdout(result, ctx)
         else:
-            stderr("Unauthorized operation", ctx)
+            stderr("Insufficient permission to perform operation.", ctx)
     except Exception as e:
         stderr(e, ctx)
 
@@ -1032,7 +1045,8 @@ def ovdc_disable(ctx, ovdc_name, org_name):
     default=None,
     required=False,
     metavar='ORG_NAME',
-    help="Org to use. Defaults to currently logged-in org")
+    help="Use the specified org to look for the org VDC. Defaults to current"
+         "org in use")
 def ovdc_info(ctx, ovdc_name, org_name):
     """Display information about Kubernetes provider for an org VDC."""
     try:
@@ -1045,6 +1059,6 @@ def ovdc_info(ctx, ovdc_name, org_name):
             result = ovdc.info_ovdc_for_k8s(ovdc_name, org_name=org_name)
             stdout(result, ctx)
         else:
-            stderr("Unauthorized operation", ctx)
+            stderr("Insufficient permission to perform operation", ctx)
     except Exception as e:
         stderr(e, ctx)

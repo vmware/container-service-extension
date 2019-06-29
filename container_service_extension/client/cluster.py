@@ -4,12 +4,11 @@
 
 import requests
 
+from container_service_extension.client.response_processor import \
+    process_response
+from container_service_extension.client.response_processor import \
+    response_to_exception
 from container_service_extension.cluster import TYPE_NODE
-from container_service_extension.exceptions import CseClientError
-from container_service_extension.exceptions import VcdResponseError
-from container_service_extension.utils import ERROR_UNKNOWN
-from container_service_extension.utils import process_response
-from container_service_extension.utils import response_to_exception
 
 
 class Cluster(object):
@@ -19,56 +18,35 @@ class Cluster(object):
 
     def get_templates(self):
         method = 'GET'
-        uri = '%s/template' % (self._uri)
+        uri = f"{self._uri}/templates"
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
-            contents=None,
-            media_type=None,
-            accept_type='application/*+json',
-            auth=None)
+            accept_type='application/json')
         return process_response(response)
 
     def get_clusters(self, vdc=None, org=None):
         method = 'GET'
-        uri = self._uri
-        params = {}
-        if vdc:
-            params['vdc'] = vdc
-        if org:
-            params['org'] = org
+        uri = f"{self._uri}/clusters"
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
-            contents=None,
-            media_type=None,
-            accept_type='application/*+json',
-            auth=None,
-            params=params)
+            accept_type='application/json',
+            params={'org': org, 'vdc': vdc})
         return process_response(response)
 
     def get_cluster_info(self, name, org=None, vdc=None):
         method = 'GET'
-        uri = '%s/%s/info' % (self._uri, name)
+        uri = f'{self._uri}/cluster/{name}'
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
-            contents=None,
-            media_type=None,
-            accept_type='application/*+json',
-            auth=None,
+            accept_type='application/json',
             params={'org': org, 'vdc': vdc})
-        try:
-            result = process_response(response)
-        except VcdResponseError as e:
-            if e.error_message == ERROR_UNKNOWN:
-                raise CseClientError("Invalid cluster name")
-            else:
-                raise e
-        return result
+        return process_response(response)
 
     def create_cluster(self,
                        vdc,
@@ -116,7 +94,7 @@ class Cluster(object):
         :return: (json) A parsed json object describing the requested cluster.
         """
         method = 'POST'
-        uri = self._uri
+        uri = f"{self._uri}/clusters"
         data = {
             'cluster_name': name,
             'node_count': node_count,
@@ -137,18 +115,18 @@ class Cluster(object):
             self.client._session,
             contents=data,
             media_type='application/json',
-            accept_type='application/*+json')
+            accept_type='application/json')
         return process_response(response)
 
     def resize_cluster(self,
                        network_name,
                        cluster_name,
-                       node_count=1,
+                       node_count,
                        org=None,
                        vdc=None,
                        disable_rollback=True):
         method = 'PUT'
-        uri = f"{self._uri}/{cluster_name}"
+        uri = f"{self._uri}/cluster/{cluster_name}"
         data = {
             'name': cluster_name,
             'node_count': node_count,
@@ -169,72 +147,43 @@ class Cluster(object):
 
     def delete_cluster(self, cluster_name, org=None, vdc=None):
         method = 'DELETE'
-        uri = '%s/%s' % (self._uri, cluster_name)
+        uri = f"{self._uri}/cluster/{cluster_name}"
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
-            accept_type='application/*+json',
+            accept_type='application/json',
             params={'org': org, 'vdc': vdc})
-        try:
-            result = process_response(response)
-        except VcdResponseError as e:
-            if e.error_message == ERROR_UNKNOWN:
-                raise CseClientError("Invalid cluster/node name")
-            else:
-                raise e
-        return result
+        return process_response(response)
 
-    def get_config(self, cluster_name, vdc=None, org=None):
+    def get_cluster_config(self, cluster_name, org=None, vdc=None):
         method = 'GET'
-        uri = '%s/%s/config' % (self._uri, cluster_name)
-        queryparams = dict()
-        queryparams['vdc'] = vdc if vdc else None
-        queryparams['org'] = org if org else None
+        uri = f"{self._uri}/cluster/{cluster_name}/config"
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
-            contents=None,
-            media_type=None,
             accept_type='text/x-yaml',
-            auth=None,
-            params=queryparams)
+            params={'org': org, 'vdc': vdc})
         if response.status_code == requests.codes.ok:
             return response.content.decode('utf-8').replace('\\n', '\n')[1:-1]
-        try:
+        else:
             response_to_exception(response)
-        except VcdResponseError as e:
-            if e.error_message == ERROR_UNKNOWN:
-                raise CseClientError("Invalid cluster name")
-            else:
-                raise e
 
     def get_node_info(self, cluster_name, node_name, org=None, vdc=None):
         method = 'GET'
-        uri = '%s/%s/%s/info' % (self._uri, cluster_name, node_name)
-        params = {'vdc': vdc, 'org': org}
+        uri = f"{self._uri}/node/{node_name}"
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
-            contents=None,
-            media_type=None,
-            accept_type='application/*+json',
-            auth=None,
-            params=params)
-        try:
-            result = process_response(response)
-        except VcdResponseError as e:
-            if e.error_message == ERROR_UNKNOWN:
-                raise CseClientError("Invalid cluster/node name")
-            else:
-                raise e
-        return result
+            accept_type='application/json',
+            params={'org': org, 'vdc': vdc, 'cluster_name': cluster_name})
+        return process_response(response)
 
     def add_node(self,
                  network_name,
-                 name,
+                 cluster_name,
                  node_count=1,
                  org=None,
                  vdc=None,
@@ -251,7 +200,7 @@ class Cluster(object):
         :param vdc: (str): The name of the vdc that contains the cluster
         :param network_name: (str): The name of the network to which the
             node VMs will connect to
-        :param name: (str): The name of the cluster
+        :param cluster_name: (str): The name of the cluster
         :param node_count: (str): The number of nodes
         :param cpu: (str): The number of virtual cpus on each of the
             new nodes in the cluster
@@ -270,9 +219,9 @@ class Cluster(object):
         :return: (json) A parsed json object describing the requested cluster.
         """
         method = 'POST'
-        uri = '%s/%s/node' % (self._uri, name)
+        uri = f'{self._uri}/nodes'
         data = {
-            'name': name,
+            'cluster_name': cluster_name,
             'node_count': node_count,
             'org': org,
             'vdc': vdc,
@@ -291,10 +240,11 @@ class Cluster(object):
             self.client._session,
             contents=data,
             media_type='application/json',
-            accept_type='application/*+json')
+            accept_type='application/json')
         return process_response(response)
 
-    def delete_nodes(self, name, nodes, org=None, vdc=None, force=False):
+    def delete_nodes(self, cluster_name, nodes, org=None, vdc=None,
+                     force=False):
         """Delete nodes from a Kubernetes cluster.
 
         :param org: (str): Name of the organization that contains the cluster
@@ -306,14 +256,14 @@ class Cluster(object):
             operation.
         """
         method = 'DELETE'
-        uri = '%s/%s/node' % (self._uri, name)
-        data = {'name': name, 'org': org, 'vdc': vdc, 'nodes': nodes,
-                'force': force}
+        uri = f"{self._uri}/nodes"
+        data = {'cluster_name': cluster_name, 'org': org, 'vdc': vdc,
+                'nodes': nodes, 'force': force}
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
             contents=data,
-            media_type=None,
-            accept_type='application/*+json')
+            media_type='application/json',
+            accept_type='application/json')
         return process_response(response)

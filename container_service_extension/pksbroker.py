@@ -2,10 +2,10 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from http import HTTPStatus
 import re
 
 from pyvcloud.vcd.utils import extract_id
+import requests
 import yaml
 
 from container_service_extension.abstract_broker import AbstractBroker
@@ -47,19 +47,16 @@ from container_service_extension.pksclient.models.v1beta.\
     compute_profile_parameters import ComputeProfileParameters
 from container_service_extension.pksclient.models.v1beta.\
     compute_profile_request import ComputeProfileRequest
-from container_service_extension.pyvcloud_utils import get_org_name_of_ovdc
+from container_service_extension.pyvcloud_utils import \
+    get_org_name_from_ovdc_id
 from container_service_extension.pyvcloud_utils import is_org_admin
 from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
+from container_service_extension.server_constants import K8S_PROVIDER_KEY
+from container_service_extension.server_constants import K8sProviders
+from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.uaaclient.uaaclient import UaaClient
-from container_service_extension.utils import exception_handler
-from container_service_extension.utils \
-    import extract_vdc_id_from_pks_compute_profile_name
-from container_service_extension.utils \
-    import extract_vdc_name_from_pks_compute_profile_name
 from container_service_extension.utils import get_pks_cache
-from container_service_extension.utils import OK
-from container_service_extension.utils import SYSTEM_ORG_NAME
 
 
 # Delimiter to append with user id context
@@ -83,7 +80,7 @@ class PKSBroker(AbstractBroker):
     VERSION_V1 = 'v1'
     VERSION_V1BETA = 'v1beta1'
 
-    def __init__(self, request_headers, request_spec, pks_ctx):
+    def __init__(self, tenant_auth_token, request_spec, pks_ctx):
         """Initialize PKS broker.
 
         :param dict pks_ctx: A dictionary with which should atleast have the
@@ -92,12 +89,10 @@ class PKSBroker(AbstractBroker):
             keys. Currently all callers of this method is using ovdc cache
             (subject to change) to initialize PKS broker.
         """
-        super().__init__(request_headers, request_spec)
+        super().__init__(tenant_auth_token, request_spec)
         if not pks_ctx:
             raise ValueError(
                 "PKS context is required to establish connection to PKS")
-        self.req_headers = request_headers
-        self.req_spec = request_spec
         self.username = pks_ctx['username']
         self.secret = pks_ctx['secret']
         self.pks_host_uri = \
@@ -146,7 +141,8 @@ class PKSBroker(AbstractBroker):
                                   proxy_uri=self.proxy_uri)
             return uaaClient.getToken()
         except Exception as err:
-            raise PksConnectionError(f'Connection establishment to PKS host'
+            raise PksConnectionError(requests.code.bad_gateway,
+                                     f'Connection establishment to PKS host'
                                      f' {self.uaac_uri} failed: {err}')
 
     def _get_pks_config(self, token, version):
@@ -243,6 +239,7 @@ class PKSBroker(AbstractBroker):
             #  Expensive _get_cluster_info() call must be removed once PKS team
             #  moves list_clusters to v1beta endpoint.
             v1_beta_cluster = self._get_cluster_info(cluster_name=cluster.name)
+            v1_beta_cluster[K8S_PROVIDER_KEY] = K8sProviders.PKS
             # cluster_dict = {
             #     'name': cluster.name,
             #     'plan_name': cluster.plan_name,
@@ -370,12 +367,12 @@ class PKSBroker(AbstractBroker):
                 self._filter_list_by_cluster_name(cluster_list, cluster_name)
             LOGGER.debug(f"filtered Cluster List:{filtered_cluster_list}")
             if len(filtered_cluster_list) > 1:
-                raise PksDuplicateClusterError(HTTPStatus.BAD_REQUEST,
-                                               f"Multiple clusters of name"
-                                               f" '{cluster_name}' exist")
-            if len(filtered_cluster_list) <= 0:
-                raise PksServerError(HTTPStatus.NOT_FOUND,
-                                     f"cluster {cluster_name} not found")
+                raise PksDuplicateClusterError(
+                    requests.codes.bad_request,
+                    f"Multiple clusters with name '{cluster_name}' exists.")
+            if len(filtered_cluster_list) == 0:
+                raise PksServerError(requests.codes.not_found,
+                                     f"cluster {cluster_name} not found.")
             cluster_info = filtered_cluster_list[0]
         else:
             cluster_info = \
@@ -405,6 +402,7 @@ class PKSBroker(AbstractBroker):
                          f"error:\n {err}")
             raise PksServerError(err.status, err.body)
         cluster_dict = cluster.to_dict()
+        cluster_dict[K8S_PROVIDER_KEY] = K8sProviders.PKS
         cluster_params_dict = cluster_dict.pop('parameters')
         cluster_dict.update(cluster_params_dict)
 
@@ -467,8 +465,6 @@ class PKSBroker(AbstractBroker):
 
         :param str cluster_name: Name of the cluster
         """
-        self.get_tenant_client_session()
-
         if self.tenant_client.is_sysadmin() \
                 or is_org_admin(self.client_session):
             cluster_info = self.get_cluster_info(cluster_name)
@@ -627,7 +623,7 @@ class PKSBroker(AbstractBroker):
         """
         result = {}
         result['body'] = []
-        result['status_code'] = OK
+        result['status_code'] = requests.codes.ok
         profile_api = ProfileApi(api_client=self.client_v1beta)
 
         resource_pool = {
@@ -666,7 +662,6 @@ class PKSBroker(AbstractBroker):
                      f"{cp_name} for ovdc {ovdc_rp_name}")
         return result
 
-    @exception_handler
     def get_compute_profile(self, cp_name):
         """Get the details of compute profile.
 
@@ -677,7 +672,7 @@ class PKSBroker(AbstractBroker):
         """
         result = {}
         result['body'] = []
-        result['status_code'] = OK
+        result['status_code'] = requests.codes.ok
         profile_api = ProfileApi(api_client=self.client_v1beta)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to get the "
@@ -698,7 +693,6 @@ class PKSBroker(AbstractBroker):
         result['body'] = compute_profile.to_dict()
         return result
 
-    @exception_handler
     def list_compute_profiles(self):
         """Get the list of compute profiles.
 
@@ -708,7 +702,7 @@ class PKSBroker(AbstractBroker):
         """
         result = {}
         result['body'] = []
-        result['status_code'] = OK
+        result['status_code'] = requests.codes.ok
         profile_api = ProfileApi(api_client=self.client_v1beta)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to get the "
@@ -727,7 +721,6 @@ class PKSBroker(AbstractBroker):
         result['body'] = list_of_cp_dicts
         return result
 
-    @exception_handler
     def delete_compute_profile(self, cp_name):
         """Delete the compute profile with a given name.
 
@@ -738,7 +731,7 @@ class PKSBroker(AbstractBroker):
         """
         result = {}
         result['body'] = []
-        result['status_code'] = OK
+        result['status_code'] = requests.codes.ok
         profile_api = ProfileApi(api_client=self.client_v1beta)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to delete "
@@ -841,6 +834,43 @@ class PKSBroker(AbstractBroker):
     def _get_vcd_userid(self):
         return extract_id(self.client_session.get('userId'))
 
+    def _extract_vdc_name_from_pks_compute_profile_name(
+            self, compute_profile_name):
+        """Extract the vdc name from pks compute profile name.
+
+        compute-profile:
+            cp--f3272127-9b7f-4f90-8849-0ee70a28be56--vdc----PKS1
+        Example: vdc name in the below compute profile is: vdc----PKS1
+
+        :param str compute_profile_name: name of the pks compute profile
+
+        :return: name of the vdc in vcd.
+
+        :rtype: str
+        """
+        tokens = compute_profile_name.split('--')
+        if len(tokens) > 2:
+            vdc_name = '--'.join(tokens[2:])
+        else:
+            vdc_name = ''
+        return vdc_name
+
+    def _extract_vdc_id_from_pks_compute_profile_name(
+            self, compute_profile_name):
+        """Extract the vdc identifier from pks compute profile name.
+
+        compute-profile:
+            cp--f3272127-9b7f-4f90-8849-0ee70a28be56--vdc----PKS1
+        Example: vdc id will be : f3272127-9b7f-4f90-8849-0ee70a28be56
+
+        :param str compute_profile_name: name of the pks compute profile
+
+        :return: UUID of the vdc in vcd.
+
+        :rtype: str
+        """
+        return compute_profile_name.split('--')[1]
+
     def _does_cluster_belong_to_org(self, cluster_info, org_name):
         # Returns True if the cluster belongs to the given org
         # Else False (this also includes missing compute profile name)
@@ -850,9 +880,9 @@ class PKSBroker(AbstractBroker):
             LOGGER.debug(f"compute-profile-name of {cluster_info.get('name')}"
                          f" is not found")
             return False
-        vdc_id = extract_vdc_id_from_pks_compute_profile_name(
+        vdc_id = self._extract_vdc_id_from_pks_compute_profile_name(
             compute_profile_name)
-        return org_name == get_org_name_of_ovdc(vdc_id)
+        return org_name == get_org_name_from_ovdc_id(vdc_id)
 
     def _apply_vdc_filter(self, cluster_list, vdc_name):
         cluster_list = [cluster_dict for cluster_dict in cluster_list
@@ -874,7 +904,7 @@ class PKSBroker(AbstractBroker):
             LOGGER.debug(f"compute-profile-name of {cluster_info.get('name')}"
                          f" is not found")
             return False
-        vdc_of_cluster = extract_vdc_name_from_pks_compute_profile_name(
+        vdc_of_cluster = self._extract_vdc_name_from_pks_compute_profile_name(
             compute_profile_name)
         return vdc_of_cluster == vdc_name
 
@@ -913,23 +943,17 @@ class PKSBroker(AbstractBroker):
             raise CseServerError(f"Unsupported operation {name}")
         return unsupported_method
 
-    @staticmethod
-    def generate_cluster_subset_with_given_keys(cluster,
-                                                cluster_property_keys):
-        pks_cluster = {k: cluster.get(k) for k in
-                       cluster_property_keys}
-        # Extract vdc name from compute-profile-name
-        # Example: vdc name in the below compute profile is: vdc-PKS1
-        # compute-profile: cp--f3272127-9b7f-4f90-8849-0ee70a28be56--vdc-PKS1
+    def generate_cluster_subset_with_given_keys(self, cluster):
+        pks_cluster = cluster
         compute_profile_name = cluster.get('compute_profile_name', '')
-        vdc_id = compute_profile_name.split('--')[1] \
-            if compute_profile_name else ''
-        pks_cluster['vdc'] = compute_profile_name.split('--')[-1] \
-            if compute_profile_name else ''
+        if compute_profile_name:
+            vdc_id = self._extract_vdc_id_from_pks_compute_profile_name(compute_profile_name)  # noqa
+            pks_cluster['org_name'] = get_org_name_from_ovdc_id(vdc_id)
+            pks_cluster['vdc'] = self._extract_vdc_name_from_pks_compute_profile_name(compute_profile_name)  # noqa
+        else:
+            vdc_id = ''
+            pks_cluster['vdc'] = ''
         pks_cluster['status'] = \
             cluster.get('last_action', '').lower() + ' ' + \
             cluster.get('last_action_state', '').lower()
-        if vdc_id:
-            pks_cluster['org_name'] = \
-                get_org_name_of_ovdc(vdc_id)
         return pks_cluster

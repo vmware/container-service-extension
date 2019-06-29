@@ -11,17 +11,19 @@ from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
+import requests
 
 from container_service_extension.exceptions import ClusterInitializationError
 from container_service_extension.exceptions import ClusterJoiningError
+from container_service_extension.exceptions import ClusterOperationError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import DeleteNodeError
 from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import ScriptExecutionError
+from container_service_extension.install_utils import get_data_file
+from container_service_extension.install_utils import get_vsphere
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.utils import get_data_file
-from container_service_extension.utils import get_vsphere
-from container_service_extension.utils import SYSTEM_ORG_NAME
+from container_service_extension.server_constants import SYSTEM_ORG_NAME
 
 TYPE_MASTER = 'mstr'
 TYPE_NODE = 'node'
@@ -285,8 +287,8 @@ def get_cluster_config(config, vapp, password):
     nodes = get_nodes(vapp, TYPE_MASTER)
     result = get_file_from_nodes(
         config, vapp, password, file_name, nodes, check_tools=False)
-    if len(result) == 0 or result[0].status_code != 200:
-        raise Exception('Couldn\'t get cluster configuration')
+    if len(result) == 0 or result[0].status_code != requests.codes.ok:
+        raise ClusterOperationError('Couldn\'t get cluster configuration')
     return result[0].content.decode()
 
 

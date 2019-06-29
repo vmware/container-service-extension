@@ -9,10 +9,11 @@ import threading
 import traceback
 
 import pika
+import requests
 
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.processor import ServiceProcessor
-from container_service_extension.utils import EXCHANGE_TYPE
+from container_service_extension.server_constants import EXCHANGE_TYPE
 
 
 class MessageConsumer(object):
@@ -155,35 +156,28 @@ class MessageConsumer(object):
             result = self.service_processor.process_request(body_json)
             status_code = result['status_code']
             reply_body = json.dumps(result['body'])
-            if status_code == 500 and \
-               reply_body == '[]' and \
-               'message' in result:
-                reply_body = '{"message": "%s"}' % result['message']
         except Exception as e:
             reply_body = '{"message": "%s"}' % str(e)
-            status_code = 500
+            status_code = requests.codes.internal_server_error
             tb = traceback.format_exc()
             LOGGER.error(tb)
 
         if properties.reply_to is not None:
             reply_msg = {
-                'id':
-                body_json['id'],
+                'id': body_json['id'],
                 'headers': {
                     'Content-Type': body_json['headers']['Accept'],
                     'Content-Length': len(reply_body)
                 },
-                'statusCode':
-                status_code,
+                'statusCode': status_code,
                 'body':
                 base64.b64encode(reply_body.encode()).decode(self.fsencoding),
-                'request':
-                False
+                'request': False
             }
             LOGGER.debug(f"reply: {json.dumps(reply_body)}")
             reply_properties = pika.BasicProperties(
                 correlation_id=properties.correlation_id)
-            result = self._channel.basic_publish(
+            self._channel.basic_publish(
                 exchange=properties.headers['replyToExchange'],
                 routing_key=properties.reply_to,
                 body=json.dumps(reply_msg),
