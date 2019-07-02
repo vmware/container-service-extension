@@ -26,29 +26,12 @@ add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(
 apt-get -q update
 apt-get -q install -y docker-ce=18.06.3~ce~3-0~ubuntu
 apt-get -q install -y kubelet=1.13.5-00 kubeadm=1.13.5-00 kubectl=1.13.5-00 kubernetes-cni=0.7.5-00 --allow-unauthenticated
-apt-get -q autoremove -y
 systemctl restart docker
 while [ `systemctl is-active docker` != 'active' ]; do echo 'waiting for docker'; sleep 5; done
 
-echo 'downloading container images'
-docker pull k8s.gcr.io/kube-apiserver-amd64:v1.13.5
-docker pull k8s.gcr.io/kube-controller-manager-amd64:v1.13.5
-docker pull k8s.gcr.io/kube-proxy-amd64:v1.13.5
-docker pull k8s.gcr.io/kube-scheduler-amd64:v1.13.5
-
-docker pull k8s.gcr.io/etcd-amd64:3.2.24
-docker pull k8s.gcr.io/pause-amd64:3.1
-
-docker pull k8s.gcr.io/k8s-dns-dnsmasq-nanny-amd64:1.14.8
-docker pull k8s.gcr.io/k8s-dns-kube-dns-amd64:1.14.8
-docker pull k8s.gcr.io/k8s-dns-sidecar-amd64:1.14.8
-
-docker pull weaveworks/weave-kube:2.3.0
-docker pull weaveworks/weave-npc:2.3.0
-
+echo 'setting up weave'
 export kubever=$(kubectl version --client | base64 | tr -d '\n')
-wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&v=2.3.0"
-
+wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever"
 curl -L git.io/weave -o /usr/local/bin/weave
 chmod a+x /usr/local/bin/weave
 
@@ -57,14 +40,22 @@ apt-get -q install -y nfs-common nfs-kernel-server
 systemctl stop nfs-kernel-server.service
 systemctl disable nfs-kernel-server.service
 
-### common
-echo 'upgrading the system'
+# hold CSE dependent software from updating
 apt-mark hold open-vm-tools
+apt-mark hold docker-ce
+apt-mark hold kubelet
+apt-mark hold kubeadm
+apt-mark hold kubectl
+apt-mark hold kubernetes-cni
+apt-mark hold nfs-common
+apt-mark hold nfs-kernel-server
+
+echo 'upgrading the system'
 apt-get update
 apt-get -y -q -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade
+apt-get -q autoremove -y
 
 echo -n > /etc/machine-id
 sync
 sync
 echo 'customization completed'
-

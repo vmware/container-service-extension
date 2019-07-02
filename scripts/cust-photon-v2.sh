@@ -24,50 +24,32 @@ systemctl start iptables-ports.service
 # update repo info (needed for docker update)
 tdnf makecache -q
 
+echo 'upgrading the system'
+tdnf update tdnf -y
+# tdnf should be improved to handle this better. refer to jira PHO-548
+tdnf update --security --exclude "open-vm-tools,xerces-c,procps-ng"
+
 echo 'installing kuberentes'
 tdnf install -yq wget kubernetes-1.12.7-1.ph2 kubernetes-kubeadm-1.12.7-1.ph2
 
 echo 'install docker'
 tdnf install -yq wget docker-18.06.2-3.ph2
-
 systemctl enable docker
 systemctl start docker
 while [ `systemctl is-active docker` != 'active' ]; do echo 'waiting for docker'; sleep 5; done
 
-echo 'downloading container images'
-docker pull gcr.io/google_containers/kube-controller-manager-amd64:v1.12.7
-docker pull gcr.io/google_containers/kube-scheduler-amd64:v1.12.7
-docker pull gcr.io/google_containers/kube-apiserver-amd64:v1.12.7
-docker pull gcr.io/google_containers/kube-proxy-amd64:v1.12.7
-docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.7
-docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.7
-docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7
-docker pull gcr.io/google_containers/etcd-amd64:3.1.12
-docker pull gcr.io/google_containers/pause-amd64:3.1
-#
-docker pull weaveworks/weave-npc:2.3.0
-docker pull weaveworks/weave-kube:2.3.0
-
+echo 'installing weave'
 export kubever=$(kubectl version --client | base64 | tr -d '\n')
-wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&v=2.3.0"
+wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever"
+curl -L git.io/weave -o /usr/local/bin/weave
+chmod a+x /usr/local/bin/weave
 
-
-#Installing NFS
 echo 'installing required software for NFS'
 tdnf -y install nfs-utils
 systemctl stop nfs-server.service
 systemctl disable nfs-server.service
 
-### common
-# echo 'upgrading the system'
-# tdnf -yq distro-sync --refresh
-echo 'Notice: system not upgraded to the latest version'
-
 echo -n > /etc/machine-id
 sync
 sync
 echo 'customization completed'
-
-tdnf update python3 -y
-tdnf update linux-esx -y
-tdnf update openssh -y
