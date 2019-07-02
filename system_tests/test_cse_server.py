@@ -421,7 +421,7 @@ def test_0100_install_update(config, unregister_cse):
                     install_utils.get_data_file(env.UBUNTU_CUST_SCRIPT_NAME)
                 pattern = r'((kubernetes|docker\S*|kubelet|kubeadm|kubectl)\S*=\S*)'  # noqa
                 packages = [tup[0] for tup in re.findall(pattern, script)]
-                cmd = "dpkg -l | grep '^ii' | awk '{print $2\"=\"$3}'"
+                cmd = "dpkg -l | awk '{print $2\"=\"$3}'"
                 stdin, stdout, stderr = ssh_client.exec_command(cmd)
                 installed = [line.strip() for line in stdout]
                 for package in packages:
