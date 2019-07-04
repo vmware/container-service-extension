@@ -1330,19 +1330,6 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
                      exc_info=True)
         raise
 
-    # must reboot VM for some changes made during customization to take effect
-    vs = get_vsphere(config, vapp, vm_name, logger=LOGGER)
-    wait_until_tools_ready(vapp, vs, callback=callback)
-    vapp.reload()
-    task = vapp.shutdown()
-    stdout(task, ctx=ctx)
-    vapp.reload()
-    task = vapp.power_on()
-    stdout(task, ctx=ctx)
-    vapp.reload()
-    vs = get_vsphere(config, vapp, vm_name, logger=LOGGER)
-    wait_until_tools_ready(vapp, vs, callback=callback)
-
     if len(result) > 0:
         msg = f'Result: {result}'
         click.echo(msg)
@@ -1367,6 +1354,19 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
         LOGGER.error(msg, exc_info=True)
         # TODO() replace raw exception with specific exception
         raise Exception(msg)
+
+    # must reboot VM for some changes made during customization to take effect
+    # vs = get_vsphere(config, vapp, vm_name, logger=LOGGER)
+    # wait_until_tools_ready(vapp, vs, callback=callback)
+    # vapp.reload()
+    # task = vapp.shutdown()
+    # stdout(task, ctx=ctx)
+    # vapp.reload()
+    # task = vapp.power_on()
+    # stdout(task, ctx=ctx)
+    # vapp.reload()
+    # vs = get_vsphere(config, vapp, vm_name, logger=LOGGER)
+    # wait_until_tools_ready(vapp, vs, callback=callback)
 
 
 def capture_vapp_to_template(ctx, vapp, catalog_name, catalog_item_name,
