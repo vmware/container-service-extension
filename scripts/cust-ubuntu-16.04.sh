@@ -31,7 +31,7 @@ while [ `systemctl is-active docker` != 'active' ]; do echo 'waiting for docker'
 
 echo 'setting up weave'
 export kubever=$(kubectl version --client | base64 | tr -d '\n')
-wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever"
+wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&v=2.3.0"
 curl -L git.io/weave -o /usr/local/bin/weave
 chmod a+x /usr/local/bin/weave
 
@@ -40,7 +40,7 @@ apt-get -q install -y nfs-common nfs-kernel-server
 systemctl stop nfs-kernel-server.service
 systemctl disable nfs-kernel-server.service
 
-# hold CSE dependent software from updating
+# prevent updates to software that CSE depends on
 apt-mark hold open-vm-tools
 apt-mark hold docker-ce
 apt-mark hold kubelet
@@ -53,9 +53,13 @@ apt-mark hold nfs-kernel-server
 echo 'upgrading the system'
 apt-get update
 apt-get -y -q -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade
-apt-get -q autoremove -y
 
-echo -n > /etc/machine-id
+# /etc/machine-id must be empty so that new machine-id gets assigned on boot (in our case boot is vApp deployment)
+# https://jaylacroix.com/fixing-ubuntu-18-04-virtual-machines-that-fight-over-the-same-ip-address/
+truncate -s 0 /etc/machine-id
+rm /var/lib/dbus/machine-id || :
+ln -fs /etc/machine-id /var/lib/dbus/machine-id || : # dbus/machine-id is symlink pointing to /etc/machine-id
+
 sync
 sync
 echo 'customization completed'
