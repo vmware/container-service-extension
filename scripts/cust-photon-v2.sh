@@ -49,6 +49,7 @@ tdnf -y install nfs-utils
 systemctl stop nfs-server.service
 systemctl disable nfs-server.service
 
+# /etc/machine-id must be empty so that new machine-id gets assigned on boot (in our case boot is vApp deployment)
 echo -n > /etc/machine-id
 sync
 sync
