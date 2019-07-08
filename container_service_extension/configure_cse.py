@@ -1355,18 +1355,10 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
         # TODO() replace raw exception with specific exception
         raise Exception(msg)
 
-    # must reboot VM for some changes made during customization to take effect
-    # vs = get_vsphere(config, vapp, vm_name, logger=LOGGER)
-    # wait_until_tools_ready(vapp, vs, callback=callback)
-    # vapp.reload()
-    # task = vapp.shutdown()
-    # stdout(task, ctx=ctx)
-    # vapp.reload()
-    # task = vapp.power_on()
-    # stdout(task, ctx=ctx)
-    # vapp.reload()
-    # vs = get_vsphere(config, vapp, vm_name, logger=LOGGER)
-    # wait_until_tools_ready(vapp, vs, callback=callback)
+    # Do not reboot VM after customization. Reboot will generate a new
+    # machine-id, and once we capture the VM, all VMs deployed from the
+    # template will have the same machine-id, which can lead to unpredictable
+    # behavior
 
 
 def capture_vapp_to_template(ctx, vapp, catalog_name, catalog_item_name,
