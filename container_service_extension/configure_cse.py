@@ -181,34 +181,34 @@ SAMPLE_TEMPLATE_PHOTON_V2 = {
     'name': 'photon-v2',
     'catalog_item': 'photon-custom-hw11-2.0-304b817-k8s',
     'source_ova_name': 'photon-custom-hw11-2.0-304b817.ova',
-    'source_ova': 'http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custo\
-m-hw11-2.0-304b817.ova',
-    'sha256_ova': 'cb51e4b6d899c3588f961e73282709a0d054bb421787e140a1d80c24d4f\
-d89e1',
+    'source_ova': 'http://dl.bintray.com/vmware/photon/2.0/GA/ova/'
+                  'photon-custom-hw11-2.0-304b817.ova',
+    'sha256_ova': 'cb51e4b6d899c3588f961e73282709a0d054bb421787e'
+                  '140a1d80c24d4fd89e1',
     'temp_vapp': 'photon2-temp',
     'cleanup': True,
     'cpu': 2,
     'mem': 2048,
     'admin_password': 'guest_os_admin_password',
-    'description': 'PhotonOS v2\nDocker 17.06.0-9\nKubernetes 1.12.7\nweave \
-2.3.0'
+    'description': 'Photon 2\nDocker CE 18.06.2-3\n'
+                   'Kubernetes 1.12.7\nweave 2.3.0'
 }
 
 SAMPLE_TEMPLATE_UBUNTU_16_04 = {
     'name': 'ubuntu-16.04',
     'catalog_item': 'ubuntu-16.04-server-cloudimg-amd64-k8s',
     'source_ova_name': 'ubuntu-16.04-server-cloudimg-amd64.ova',
-    'source_ova': 'https://cloud-images.ubuntu.com/releases/xenial/release-201\
-80418/ubuntu-16.04-server-cloudimg-amd64.ova',
-    'sha256_ova': '3c1bec8e2770af5b9b0462e20b7b24633666feedff43c099a6fb1330fcc\
-869a9',
+    'source_ova': 'https://cloud-images.ubuntu.com/releases/xenial/'
+                  'release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova',
+    'sha256_ova': '3c1bec8e2770af5b9b0462e20b7b24633666feedff43c0'
+                  '99a6fb1330fcc869a9',
     'temp_vapp': 'ubuntu1604-temp',
     'cleanup': True,
     'cpu': 2,
     'mem': 2048,
     'admin_password': 'guest_os_admin_password',
-    'description': 'Ubuntu 16.04\nDocker 18.06.3~ce\nKubernetes 1.13.5\nweave\
- 2.3.0'
+    'description': 'Ubuntu 16.04\nDocker CE 5:18.09.7~3-0~ubuntu-xenial\n'
+                   'Kubernetes 1.13.5\nweave 2.3.0'
 }
 
 SAMPLE_BROKER_CONFIG = {
