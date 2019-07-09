@@ -247,7 +247,7 @@ def check(ctx, config, check_install, template):
     required=False,
     default=None,
     type=click.File('r'),
-    help='SSH public key to connect to the guest OS on the VM.')
+    help='Filepath of SSH public key to add to vApp template.')
 def install(ctx, config, template, update, no_capture, ssh_key_file):
     """Install CSE on vCloud Director."""
     try:
