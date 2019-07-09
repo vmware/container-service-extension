@@ -265,7 +265,8 @@ def validate_broker_config(broker_dict):
         'templates, or if 'ip_allocation_mode' is not 'dhcp' or 'pool'
     """
     check_keys_and_value_types(broker_dict, SAMPLE_BROKER_CONFIG['broker'],
-                               location="config file 'broker' section")
+                               location="config file 'broker' section",
+                               excluded_keys=['remote_template_cookbook_url'])
 
     default_exists = False
     for template in broker_dict['templates']:

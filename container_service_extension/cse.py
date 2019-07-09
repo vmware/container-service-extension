@@ -122,7 +122,7 @@ def version(ctx):
     required=False,
     default=None,
     metavar='OUTPUT_FILE_NAME',
-    help="Filepath to write CSE config file to.")
+    help="Filepath to write CSE config file to")
 @click.option(
     '-p',
     '--pks-output',
@@ -130,7 +130,7 @@ def version(ctx):
     required=False,
     default=None,
     metavar='OUTPUT_FILE_NAME',
-    help="Filepath to write PKS config file to.")
+    help="Filepath to write PKS config file to")
 def sample(ctx, output, pks_output):
     """Display sample CSE config file contents."""
     try:
@@ -154,7 +154,7 @@ def sample(ctx, output, pks_output):
     metavar='CONFIG_FILE_NAME',
     envvar='CSE_CONFIG',
     default='config.yaml',
-    help='Config file to use')
+    help='Filepath of CSE config file')
 @click.option(
     '-i',
     '--check-install',
@@ -215,7 +215,7 @@ def check(ctx, config, check_install, template):
     metavar='CONFIG_FILE_NAME',
     envvar='CSE_CONFIG',
     default='config.yaml',
-    help='Config file to use')
+    help='Filepath of CSE config file')
 @click.option(
     '-t',
     '--template',
@@ -224,7 +224,7 @@ def check(ctx, config, check_install, template):
     default='*',
     metavar='TEMPLATE_NAME',
     help="Create only the specified k8s template. Default value of '*' "
-         "means that all templates in config file will be created.")
+         "means that all templates in config file will be created")
 @click.option(
     '-u',
     '--update',
@@ -247,7 +247,7 @@ def check(ctx, config, check_install, template):
     required=False,
     default=None,
     type=click.File('r'),
-    help='SSH public key to connect to the guest OS on the VM.')
+    help='Filepath of SSH public key to add to vApp template')
 def install(ctx, config, template, update, no_capture, ssh_key_file):
     """Install CSE on vCloud Director."""
     try:
@@ -291,7 +291,7 @@ def install(ctx, config, template, update, no_capture, ssh_key_file):
     metavar='CONFIG_FILE_NAME',
     envvar='CSE_CONFIG',
     default='config.yaml',
-    help='Config file to use')
+    help='Filepath of CSE config file')
 @click.option(
     '-s',
     '--skip-check',
