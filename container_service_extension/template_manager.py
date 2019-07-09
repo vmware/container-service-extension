@@ -105,17 +105,16 @@ def download_all_template_scripts(remote_template_cookbook):
 
 
 def __test():
-    # mocking a running cse server
-    get_server_runtime_config = Mock()
-    get_server_runtime_config.return_value = {
-        'broker': {
-            'remote_template_cookbook_url': 'https://raw.githubusercontent.com/rocknes/container-service-extension/remote_template/template.yaml',  # noqa
-        }
-    }
-
     remote_template_cookbook = get_remote_template_cookbook()
     download_all_template_scripts(remote_template_cookbook)
 
 
 if __name__ == '__main__':
+    # mocking a running cse server
+    get_server_runtime_config = Mock()  # noqa
+    get_server_runtime_config.return_value = {
+        'broker': {
+            'remote_template_cookbook_url': 'https://raw.githubusercontent.com/rocknes/container-service-extension/remote_template/template.yaml',  # noqa
+        }
+    }
     __test()
