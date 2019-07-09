@@ -48,6 +48,17 @@ class K8sProviders(str, Enum):
     NONE = 'none'
 
 
+@unique
+class ScriptFile(str, Enum):
+    """Types of script for vApp template customizations in CSE."""
+
+    CUST = 'cust.sh'
+    INIT = 'init.sh'
+    MASTER = 'master.sh'
+    NFSD = 'nfsd.sh'
+    NODE = 'node.sh'
+
+
 # CSE requests
 @unique
 class CseOperation(Enum):

@@ -77,6 +77,8 @@ def check_file_permissions(filename):
     :raises Exception: if file has 'x' permissions for Owner or 'rwx'
         permissions for 'Others' or 'Group'.
     """
+    if os.name == 'nt':
+        return
     err_msgs = []
     file_mode = os.stat(filename).st_mode
     if file_mode & stat.S_IXUSR:
@@ -139,7 +141,8 @@ def create_and_share_catalog(org, catalog_name, catalog_desc='', logger=None):
     return org.get_catalog(catalog_name)
 
 
-def download_file(url, filepath, sha256=None, quiet=False, logger=None):
+def download_file(url, filepath, sha256=None, quiet=False, logger=None,
+                  force_overwrite=False):
     """Download a file from a url to local filepath.
 
     Will not overwrite files unless @sha256 is given.
@@ -152,9 +155,12 @@ def download_file(url, filepath, sha256=None, quiet=False, logger=None):
         sha256, download will be skipped.
     :param bool quiet: If True, console output is disabled.
     :param logging.Logger logger: optional logger to log with.
+    :param bool force_overwrite: if True, will download the file even if it
+        already exists or its SHA hasn't changed.
     """
     path = pathlib.Path(filepath)
-    if path.is_file() and (sha256 is None or get_sha256(filepath) == sha256):
+    if not force_overwrite and path.is_file() and \
+            (sha256 is None or get_sha256(filepath) == sha256):
         msg = f"Skipping download to '{filepath}' (file already exists)"
         if logger:
             logger.info(msg)
