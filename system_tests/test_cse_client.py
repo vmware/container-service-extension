@@ -450,58 +450,60 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
         print('SUCCESS')
 
 
-class TestSystemToggle(object):
+def execute_commands(cmd_list):
+    cmd_results = []
+    for each_cmd in cmd_list:
+        cmd = each_cmd[0]
+        if cmd == 'org_admin_login':
+            cmd = env.ORG_ADMIN_LOGIN
+        if cmd == 'vapp_author_login':
+            cmd = env.VAPP_AUTHOR_LOGIN
+        expected_exit_code = each_cmd[1]
+        result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
+                                       catch_exceptions=False)
+        assert result.exit_code == expected_exit_code, \
+            testutils.format_command_info(
+                'vcd', cmd, result.exit_code, result.output)
+        cmd_results.append(result)
+
+    return cmd_results
+
+
+@pytest.mark.parametrize('users', ['org_admin_login', 'vapp_author_login'])
+def test_50_vcd_cse_system_toggle(config, users):
     """Test `vcd cse system ...` commands.
 
-    Test that on disabling CSE, cluster deployments are no longer allowed, and
-    on enabling CSE, cluster deployments are allowed again.
+    Test that on disabling CSE, cluster deployments are no longer
+    allowed, and on enabling CSE, cluster deployments are allowed again.
 
-    These commands are combined into 1 test class because only sys admin can
-    modify the state of CSE server, but only org admin can test cluster
-    deployment to ensure that CSE is disabled/enabled. Also, this avoids cases
-    such as running the system disable test, and then running the cluster
-    operations test, which would fail due to CSE server being disabled).
+    These commands are combined into 1 test function because only sys admin
+    can modify the state of CSE server, org admin/tenant can test cluster
+    deployment to ensure that CSE is disabled/enabled. Also, this avoids
+    cases such as running the system disable test, and then running the
+    cluster operations test, which would fail due to CSE server being
+    disabled).
+
+    :param config: cse config file for vcd configuration
+    :param users: parameterized persona to run tests with different users
     """
+    # Batch cse commands together in a list and then execute them one by one
+    cmd_list = [
+        (env.SYS_ADMIN_LOGIN, 0),
+        ("cse system disable", 0),
+        (users, 0),
+        (f"vdc use {config['broker']['vdc']}", 0),
+        (f"cse cluster create {env.TEST_CLUSTER_NAME} -n "
+         f"{config['broker']['network']} -N 1", 2),
+        (env.SYS_ADMIN_LOGIN, 0),
+        ("cse system enable", 0),
+        (f"cse cluster create {env.TEST_CLUSTER_NAME} -n "
+         f"{config['broker']['network']} -N 1 -c 1000 --disable-rollback", 2)
+    ]
 
-    def test_0010_vcd_cse_system_disable(self, vcd_sys_admin):
-        cmd = 'cse system disable'
-        result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
-                                       catch_exceptions=False)
-        assert result.exit_code == 0,\
-            testutils.format_command_info('vcd', cmd, result.exit_code,
-                                          result.output)
+    execute_commands(cmd_list)
 
-    def test_0020_cluster_create_disabled(self, config, vcd_org_admin,
-                                          delete_test_cluster):
-        cmd = f"cse cluster create {env.TEST_CLUSTER_NAME} -n " \
-              f"{config['broker']['network']} -N 1"
-        result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
-                                       catch_exceptions=False)
-        assert result.exit_code == 2,\
-            testutils.format_command_info('vcd', cmd, result.exit_code,
-                                          result.output)
-        assert not env.vapp_exists(env.TEST_CLUSTER_NAME), \
-            "Cluster exists when it should not."
-
-    def test_0030_vcd_cse_system_enable(self, vcd_sys_admin):
-        cmd = 'cse system enable'
-        result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
-                                       catch_exceptions=False)
-        assert result.exit_code == 0,\
-            testutils.format_command_info('vcd', cmd, result.exit_code,
-                                          result.output)
-
-    def test_0040_cluster_create_enabled(self, config, vcd_org_admin,
-                                         delete_test_cluster):
-        cmd = f"cse cluster create {env.TEST_CLUSTER_NAME} -n " \
-            f"{config['broker']['network']} -N 1 -c 1000 --disable-rollback"
-        result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
-                                       catch_exceptions=False)
-        assert result.exit_code == 0,\
-            testutils.format_command_info('vcd', cmd, result.exit_code,
-                                          result.output)
-        assert env.vapp_exists(env.TEST_CLUSTER_NAME), \
-            "Cluster doesn't exist when it should."
+    assert not env.vapp_exists(env.TEST_CLUSTER_NAME), \
+        "Cluster exist when it should not."
 
 
 def test_9999_vcd_cse_system_stop(vcd_sys_admin):

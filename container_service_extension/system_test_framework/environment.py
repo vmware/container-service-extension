@@ -73,6 +73,11 @@ TEARDOWN_INSTALLATION = None
 TEARDOWN_CLUSTERS = None
 TEST_ALL_TEMPLATES = None
 
+# Persona login cmd
+SYS_ADMIN_LOGIN = None
+ORG_ADMIN_LOGIN = None
+VAPP_AUTHOR_LOGIN = None
+
 AMQP_USERNAME = None
 AMQP_PASSWORD = None
 CLIENT = None
@@ -90,7 +95,7 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     """
     global AMQP_USERNAME, AMQP_PASSWORD, CLIENT, ORG_HREF, VDC_HREF, \
         CATALOG_NAME, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
-        TEST_ALL_TEMPLATES
+        TEST_ALL_TEMPLATES, SYS_ADMIN_LOGIN, ORG_ADMIN_LOGIN, VAPP_AUTHOR_LOGIN
 
     config = testutils.yaml_to_dict(config_filepath)
     CLIENT = Client(config['vcd']['host'],
@@ -109,6 +114,16 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     CATALOG_NAME = config['broker']['catalog']
     AMQP_USERNAME = config['amqp']['username']
     AMQP_PASSWORD = config['amqp']['password']
+
+    SYS_ADMIN_LOGIN = f"login {config['vcd']['host']} system " \
+                      f"{config['vcd']['username']} " \
+                      f"-iwp {config['vcd']['password']}"
+    ORG_ADMIN_LOGIN = f"login {config['vcd']['host']} " \
+                      f"{config['broker']['org']}" \
+                      f" {ORG_ADMIN_NAME} -iwp {ORG_ADMIN_PASSWORD}"
+    VAPP_AUTHOR_LOGIN = f"login {config['vcd']['host']} " \
+                        f"{config['broker']['org']} " \
+                        f"{VAPP_AUTHOR_NAME} -iwp {VAPP_AUTHOR_PASSWORD}"
 
     test_config = config.get('test')
     if test_config is not None:
