@@ -14,10 +14,10 @@ import requests
 from vcd_cli.utils import stdout
 
 from container_service_extension.configure_cse import check_cse_installation
-from container_service_extension.configure_cse import generate_sample_config
 from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.configure_cse import install_cse
 from container_service_extension.exceptions import AmqpConnectionError
+from container_service_extension.sample_generator import generate_sample_config
 from container_service_extension.service import Service
 from container_service_extension.utils import check_python_version
 
