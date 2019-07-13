@@ -40,7 +40,7 @@ while [ `systemctl is-active docker` != 'active' ]; do echo 'waiting for docker'
 
 echo 'installing weave'
 export kubever=$(kubectl version --client | base64 | tr -d '\n')
-wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever"
+wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&v=2.3.0"
 curl -L git.io/weave -o /usr/local/bin/weave
 chmod a+x /usr/local/bin/weave
 
@@ -49,6 +49,7 @@ tdnf -y install nfs-utils
 systemctl stop nfs-server.service
 systemctl disable nfs-server.service
 
+# /etc/machine-id must be empty so that new machine-id gets assigned on boot (in our case boot is vApp deployment)
 echo -n > /etc/machine-id
 sync
 sync

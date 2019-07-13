@@ -1,8 +1,7 @@
 tox
 flake8
 flake8-import-order
-flake8_docstrings
-hacking
-yapf
+flake8-docstrings
 paramiko
 pytest
+pydocstyle < 4

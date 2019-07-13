@@ -24,14 +24,14 @@ deb http://apt.kubernetes.io/ kubernetes-xenial main
 EOF
 add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 apt-get -q update
-apt-get -q install -y docker-ce=18.06.3~ce~3-0~ubuntu
+apt-get -q install -y docker-ce=5:18.09.7~3-0~ubuntu-xenial
 apt-get -q install -y kubelet=1.13.5-00 kubeadm=1.13.5-00 kubectl=1.13.5-00 kubernetes-cni=0.7.5-00 --allow-unauthenticated
 systemctl restart docker
 while [ `systemctl is-active docker` != 'active' ]; do echo 'waiting for docker'; sleep 5; done
 
 echo 'setting up weave'
 export kubever=$(kubectl version --client | base64 | tr -d '\n')
-wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever"
+wget --no-verbose -O weave.yml "https://cloud.weave.works/k8s/net?k8s-version=$kubever&v=2.3.0"
 curl -L git.io/weave -o /usr/local/bin/weave
 chmod a+x /usr/local/bin/weave
 
@@ -40,7 +40,7 @@ apt-get -q install -y nfs-common nfs-kernel-server
 systemctl stop nfs-kernel-server.service
 systemctl disable nfs-kernel-server.service
 
-# hold CSE dependent software from updating
+# prevent updates to software that CSE depends on
 apt-mark hold open-vm-tools
 apt-mark hold docker-ce
 apt-mark hold kubelet
@@ -53,9 +53,13 @@ apt-mark hold nfs-kernel-server
 echo 'upgrading the system'
 apt-get update
 apt-get -y -q -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dist-upgrade
-apt-get -q autoremove -y
 
-echo -n > /etc/machine-id
+# /etc/machine-id must be empty so that new machine-id gets assigned on boot (in our case boot is vApp deployment)
+# https://jaylacroix.com/fixing-ubuntu-18-04-virtual-machines-that-fight-over-the-same-ip-address/
+truncate -s 0 /etc/machine-id
+rm /var/lib/dbus/machine-id || :
+ln -fs /etc/machine-id /var/lib/dbus/machine-id || : # dbus/machine-id is symlink pointing to /etc/machine-id
+
 sync
 sync
 echo 'customization completed'

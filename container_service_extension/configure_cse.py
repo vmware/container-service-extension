@@ -265,7 +265,8 @@ def validate_broker_config(broker_dict):
         'templates, or if 'ip_allocation_mode' is not 'dhcp' or 'pool'
     """
     check_keys_and_value_types(broker_dict, SAMPLE_BROKER_CONFIG['broker'],
-                               location="config file 'broker' section")
+                               location="config file 'broker' section",
+                               excluded_keys=['remote_template_cookbook_url'])
 
     default_exists = False
     for template in broker_dict['templates']:
@@ -1004,19 +1005,6 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
                      exc_info=True)
         raise
 
-    # must reboot VM for some changes made during customization to take effect
-    vs = get_vsphere(config, vapp, vm_name, logger=LOGGER)
-    wait_until_tools_ready(vapp, vs, callback=callback)
-    vapp.reload()
-    task = vapp.shutdown()
-    stdout(task, ctx=ctx)
-    vapp.reload()
-    task = vapp.power_on()
-    stdout(task, ctx=ctx)
-    vapp.reload()
-    vs = get_vsphere(config, vapp, vm_name, logger=LOGGER)
-    wait_until_tools_ready(vapp, vs, callback=callback)
-
     if len(result) > 0:
         msg = f'Result: {result}'
         click.echo(msg)
@@ -1041,6 +1029,11 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
         LOGGER.error(msg, exc_info=True)
         # TODO() replace raw exception with specific exception
         raise Exception(msg)
+
+    # Do not reboot VM after customization. Reboot will generate a new
+    # machine-id, and once we capture the VM, all VMs deployed from the
+    # template will have the same machine-id, which can lead to unpredictable
+    # behavior
 
 
 def capture_vapp_to_template(ctx, vapp, catalog_name, catalog_item_name,

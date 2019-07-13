@@ -44,7 +44,7 @@ class ServiceProcessor(object):
     PUT /cse/system
 
     GET /cse/template
-    """ ## noqa
+    """ # noqa
 
     def _parse_request_url(self, method, url):
         """Determine the operation that the REST request represent.
