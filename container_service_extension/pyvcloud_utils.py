@@ -2,6 +2,8 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import pathlib
+
 from pyvcloud.vcd.client import ApiVersion
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
@@ -274,3 +276,165 @@ def get_pvdc_id_from_pvdc_name(name, vc_name_in_vcd):
         if client:
             client.logout()
     return None
+
+
+def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
+                          org=None, org_name=None, logger=None):
+    """Upload local ova file to vCD catalog.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str filepath: file path to the .ova file.
+    :param str catalog_name: name of catalog.
+    :param bool update: signals whether to overwrite an existing catalog
+        item with this new one.
+    :param pyvcloud.vcd.org.Org org: specific org to use.
+    :param str org_name: specific org to use if @org is not given.
+        If None, uses currently logged-in org from @client.
+    :param logging.Logger logger: optional logger to log with.
+
+
+    :raises pyvcloud.vcd.exceptions.EntityNotFoundException if catalog
+        does not exist.
+    :raises pyvcloud.vcd.exceptions.UploadException if upload fails.
+    """
+    if org is None:
+        org = get_org(client, org_name=org_name)
+    catalog_item_name = pathlib.Path(filepath).name
+    if update:
+        try:
+            msg = f"Update flag set. Checking catalog '{catalog_name}' for " \
+                  f"'{catalog_item_name}'"
+            click.secho(msg, fg='yellow')
+            if logger:
+                logger.info(msg)
+            org.delete_catalog_item(catalog_name, catalog_item_name)
+            org.reload()
+            wait_for_catalog_item_to_resolve(client, catalog_name,
+                                             catalog_item_name, org=org)
+            msg = f"Update flag set. Checking catalog '{catalog_name}' for " \
+                  f"'{catalog_item_name}'"
+            click.secho(msg, fg='yellow')
+            if logger:
+                logger.info(msg)
+        except EntityNotFoundException:
+            pass
+    else:
+        try:
+            org.get_catalog_item(catalog_name, catalog_item_name)
+            msg = f"'{catalog_item_name}' already exists in catalog " \
+                  f"'{catalog_name}'"
+            click.secho(msg, fg='green')
+            if logger:
+                logger.info(msg)
+
+            return
+        except EntityNotFoundException:
+            pass
+
+    msg = f"Uploading '{catalog_item_name}' to catalog '{catalog_name}'"
+    click.secho(msg, fg='yellow')
+    if logger:
+        logger.info(msg)
+    org.upload_ovf(catalog_name, filepath)
+    org.reload()
+    wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
+                                     org=org)
+    msg = f"Uploaded '{catalog_item_name}' to catalog '{catalog_name}'"
+    click.secho(msg, fg='green')
+    if logger:
+        logger.info(msg)
+
+
+def catalog_exists(org, catalog_name):
+    """Check if catalog exists.
+
+    :param pyvcloud.vcd.org.Org org:
+    :param str catalog_name:
+
+    :return: True if catalog exists, False otherwise.
+
+    :rtype: bool
+    """
+    try:
+        org.get_catalog(catalog_name)
+        return True
+    except EntityNotFoundException:
+        return False
+
+
+def catalog_item_exists(org, catalog_name, catalog_item_name):
+    """Boolean function to check if catalog item exists (name check).
+
+    :param pyvcloud.vcd.org.Org org:
+    :param str catalog_name:
+    :param str catalog_item_name:
+
+    :return: True if catalog item exists, False otherwise.
+
+    :rtype: bool
+    """
+    try:
+        org.get_catalog_item(catalog_name, catalog_item_name)
+        return True
+    except EntityNotFoundException:
+        return False
+
+
+def create_and_share_catalog(org, catalog_name, catalog_desc='', logger=None):
+    """Create and share specified catalog.
+
+    If catalog does not exist in vCD, create it. Share the specified catalog
+    to all orgs.
+
+    :param pyvcloud.vcd.org.Org org:
+    :param str catalog_name:
+    :param str catalog_desc:
+    :param logging.Logger logger: optional logger to log with.
+
+    :return: XML representation of specified catalog.
+
+    :rtype: lxml.objectify.ObjectifiedElement
+
+    :raises pyvcloud.vcd.exceptions.EntityNotFoundException: if catalog sharing
+        fails due to catalog creation failing.
+    """
+    if catalog_exists(org, catalog_name):
+        msg = f"Found catalog '{catalog_name}'"
+        click.secho(msg, fg='green')
+        if logger:
+            logger.info(msg)
+    else:
+        msg = f"Creating catalog '{catalog_name}'"
+        click.secho(msg, fg='yellow')
+        if logger:
+            logger.info(msg)
+        org.create_catalog(catalog_name, catalog_desc)
+        msg = f"Created catalog '{catalog_name}'"
+        click.secho(msg, fg='green')
+        if logger:
+            logger.info(msg)
+        org.reload()
+    org.share_catalog(catalog_name)
+    org.reload()
+    return org.get_catalog(catalog_name)
+
+
+def wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
+                                     org=None, org_name=None):
+    """Wait for catalog item's most recent task to resolve.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str catalog_name:
+    :param str catalog_item_name:
+    :param pyvcloud.vcd.org.Org org: specific org to use.
+    :param str org_name: specific org to use if @org is not given.
+        If None, uses currently logged-in org from @client.
+
+    :raises EntityNotFoundException: if the org or catalog or catalog item
+        could not be found.
+    """
+    if org is None:
+        org = get_org(client, org_name=org_name)
+    item = org.get_catalog_item(catalog_name, catalog_item_name)
+    resource = client.get_resource(item.Entity.get('href'))
+    client.get_task_monitor().wait_for_success(resource.Tasks.Task[0])

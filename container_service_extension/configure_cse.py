@@ -24,17 +24,11 @@ import yaml
 
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.exceptions import AmqpError
-from container_service_extension.install_utils import catalog_exists
-from container_service_extension.install_utils import catalog_item_exists
 from container_service_extension.install_utils import check_file_permissions
-from container_service_extension.install_utils import create_and_share_catalog
 from container_service_extension.install_utils import download_file
 from container_service_extension.install_utils import get_data_file
 from container_service_extension.install_utils import get_vsphere
-from container_service_extension.install_utils import upload_ova_to_catalog
 from container_service_extension.install_utils import vgr_callback
-from container_service_extension.install_utils \
-    import wait_for_catalog_item_to_resolve
 from container_service_extension.install_utils import wait_until_tools_ready
 from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
@@ -50,8 +44,14 @@ from container_service_extension.pks_cache import Credentials
 from container_service_extension.pksclient.client.v1.api_client \
     import ApiClient as ApiClientV1
 from container_service_extension.pksclient.configuration import Configuration
+from container_service_extension.pyvcloud_utils import catalog_exists
+from container_service_extension.pyvcloud_utils import catalog_item_exists
+from container_service_extension.pyvcloud_utils import create_and_share_catalog
 from container_service_extension.pyvcloud_utils import get_org
 from container_service_extension.pyvcloud_utils import get_vdc
+from container_service_extension.pyvcloud_utils import upload_ova_to_catalog
+from container_service_extension.pyvcloud_utils import \
+    wait_for_catalog_item_to_resolve
 from container_service_extension.sample_generator import \
     PKS_ACCOUNTS_SECTION_KEY, PKS_NSXT_SERVERS_SECTION_KEY, \
     PKS_ORGS_SECTION_KEY, PKS_PVDCS_SECTION_KEY, PKS_SERVERS_SECTION_KEY, \
