@@ -9,8 +9,8 @@ from unittest.mock import Mock
 import requests
 import yaml
 
-from container_service_extension.install_utils import download_file
 from container_service_extension.server_constants import ScriptFile
+from container_service_extension.utils import download_file
 from container_service_extension.utils import get_server_runtime_config
 
 
@@ -19,7 +19,7 @@ REMOTE_SCRIPTS_DIR = 'scripts'
 LOCAL_SCRIPTS_DIR = '.cse_scripts'
 
 
-def download_file_into_memory(url):
+def _download_file_into_memory(url):
     """Download a file and store it in memory.
 
     This method is meant to download really small files (in order of few KBs).
@@ -58,7 +58,7 @@ def _construct_remote_script_url(
         f"{_scripts_folder_name(template_name, revision)}/{script_file}"
 
 
-def _construct_local_script_file_location(
+def construct_local_script_file_location(
         template_name, revision, script_file):
     home_dir = os.path.expanduser('~')
     cse_scripts_dir = os.path.join(
@@ -78,7 +78,7 @@ def get_remote_template_cookbook_url():
 
 def get_remote_template_cookbook():
     url = get_remote_template_cookbook_url()
-    template_cookbook_as_str = download_file_into_memory(url)
+    template_cookbook_as_str = _download_file_into_memory(url)
     return yaml.safe_load(template_cookbook_as_str)
 
 
@@ -89,11 +89,10 @@ def download_template_scripts(template_name, revision):
         remote_script_url = \
             _construct_remote_script_url(
                 base_url, template_name, revision, script_file)
-        local_script_file_location = _construct_local_script_file_location(
+        local_script_file_location = construct_local_script_file_location(
             template_name, revision, script_file)
         download_file(url=remote_script_url,
                       filepath=local_script_file_location,
-                      quiet=False,
                       force_overwrite=True)
 
 

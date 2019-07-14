@@ -178,10 +178,12 @@ class Service(object, metaclass=Singleton):
 
         return message
 
-    def run(self):
-        self.config = get_validated_config(self.config_file)
+    def run(self, msg_update_callback=None):
+        self.config = get_validated_config(
+            self.config_file, msg_update_callback=msg_update_callback)
         if self.should_check_config:
-            check_cse_installation(self.config)
+            check_cse_installation(
+                self.config, msg_update_callback=msg_update_callback)
 
         configure_server_logger()
 

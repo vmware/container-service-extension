@@ -279,7 +279,8 @@ def get_pvdc_id_from_pvdc_name(name, vc_name_in_vcd):
 
 
 def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
-                          org=None, org_name=None, logger=None):
+                          org=None, org_name=None, logger=None,
+                          msg_update_callback=None):
     """Upload local ova file to vCD catalog.
 
     :param pyvcloud.vcd.client.Client client:
@@ -291,6 +292,8 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
     :param str org_name: specific org to use if @org is not given.
         If None, uses currently logged-in org from @client.
     :param logging.Logger logger: optional logger to log with.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
+        that writes messages onto console.
 
 
     :raises pyvcloud.vcd.exceptions.EntityNotFoundException if catalog
@@ -304,16 +307,20 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
         try:
             msg = f"Update flag set. Checking catalog '{catalog_name}' for " \
                   f"'{catalog_item_name}'"
-            click.secho(msg, fg='yellow')
+            if msg_update_callback:
+                msg_update_callback.info(msg)
             if logger:
                 logger.info(msg)
+
             org.delete_catalog_item(catalog_name, catalog_item_name)
             org.reload()
             wait_for_catalog_item_to_resolve(client, catalog_name,
                                              catalog_item_name, org=org)
+
             msg = f"Update flag set. Checking catalog '{catalog_name}' for " \
                   f"'{catalog_item_name}'"
-            click.secho(msg, fg='yellow')
+            if msg_update_callback:
+                msg_update_callback.info(msg)
             if logger:
                 logger.info(msg)
         except EntityNotFoundException:
@@ -323,7 +330,8 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
             org.get_catalog_item(catalog_name, catalog_item_name)
             msg = f"'{catalog_item_name}' already exists in catalog " \
                   f"'{catalog_name}'"
-            click.secho(msg, fg='green')
+            if msg_update_callback:
+                msg_update_callback.general(msg)
             if logger:
                 logger.info(msg)
 
@@ -332,15 +340,18 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
             pass
 
     msg = f"Uploading '{catalog_item_name}' to catalog '{catalog_name}'"
-    click.secho(msg, fg='yellow')
+    if msg_update_callback:
+        msg_update_callback.info(msg)
     if logger:
         logger.info(msg)
+
     org.upload_ovf(catalog_name, filepath)
     org.reload()
     wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
                                      org=org)
     msg = f"Uploaded '{catalog_item_name}' to catalog '{catalog_name}'"
-    click.secho(msg, fg='green')
+    if msg_update_callback:
+        msg_update_callback.general(msg)
     if logger:
         logger.info(msg)
 
@@ -380,7 +391,8 @@ def catalog_item_exists(org, catalog_name, catalog_item_name):
         return False
 
 
-def create_and_share_catalog(org, catalog_name, catalog_desc='', logger=None):
+def create_and_share_catalog(org, catalog_name, catalog_desc='', logger=None,
+                             msg_update_callback=None):
     """Create and share specified catalog.
 
     If catalog does not exist in vCD, create it. Share the specified catalog
@@ -390,6 +402,8 @@ def create_and_share_catalog(org, catalog_name, catalog_desc='', logger=None):
     :param str catalog_name:
     :param str catalog_desc:
     :param logging.Logger logger: optional logger to log with.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
+        that writes messages onto console.
 
     :return: XML representation of specified catalog.
 
@@ -400,17 +414,22 @@ def create_and_share_catalog(org, catalog_name, catalog_desc='', logger=None):
     """
     if catalog_exists(org, catalog_name):
         msg = f"Found catalog '{catalog_name}'"
-        click.secho(msg, fg='green')
+        if msg_update_callback:
+            msg_update_callback.general(msg)
         if logger:
             logger.info(msg)
     else:
         msg = f"Creating catalog '{catalog_name}'"
-        click.secho(msg, fg='yellow')
+        if msg_update_callback:
+            msg_update_callback.info(msg)
         if logger:
             logger.info(msg)
+
         org.create_catalog(catalog_name, catalog_desc)
+
         msg = f"Created catalog '{catalog_name}'"
-        click.secho(msg, fg='green')
+        if msg_update_callback:
+            msg_update_callback.general(msg)
         if logger:
             logger.info(msg)
         org.reload()

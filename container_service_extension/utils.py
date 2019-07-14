@@ -3,13 +3,19 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import hashlib
+import os
+import pathlib
+import stat
 import sys
 
 import click
+import requests
 
 
 # chunk size in bytes for file reading
 BUF_SIZE = 65536
+# chunk size for downloading files
+SIZE_1MB = 1024 * 1024
 
 _type_to_string = {
     str: 'string',
@@ -18,6 +24,21 @@ _type_to_string = {
     dict: 'mapping',
     list: 'sequence',
 }
+
+
+class ConsoleMessagePrinter():
+
+    def general_no_color(self, msg):
+        click.secho(msg)
+
+    def general(self, msg):
+        click.secho(msg, fg='green')
+
+    def info(self, msg):
+        click.secho(msg, fg='yellow')
+
+    def error(self, msg):
+        click.secho(msg, fg='red')
 
 
 def get_server_runtime_config():
@@ -56,6 +77,81 @@ def get_duplicate_items_in_list(items):
     return list(duplicates)
 
 
+def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
+                               excluded_keys=[], msg_update_callback=None):
+    """Compare a dictionary with a reference dictionary.
+
+    The method ensures that  all keys and value types are the same in the
+    dictionaries.
+
+    :param dict dikt: the dictionary to check for validity
+    :param dict ref_dict: the dictionary to check against
+    :param str location: where this check is taking place, so error messages
+        can be more descriptive.
+    :param list excluded_keys: list of str, representing the list of key which
+        if missing won't raise an exception.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback
+        object that writes messages onto console.
+
+    :raises KeyError: if @dikt has missing or invalid keys
+    :raises TypeError: if the value of a property in @dikt does not match with
+        the value of the same property in @ref_dict
+    """
+    ref_keys = set(ref_dict.keys())
+    keys = set(dikt.keys())
+
+    missing_keys = ref_keys - keys - set(excluded_keys)
+
+    if missing_keys and msg_update_callback:
+        msg_update_callback.error(
+            f"Missing keys in {location}: {missing_keys}")
+    bad_value = False
+    for k in ref_keys:
+        if k not in keys:
+            continue
+        value_type = type(ref_dict[k])
+        if not isinstance(dikt[k], value_type) and msg_update_callback:
+            msg_update_callback.error(
+                f"{location} key '{k}': value type should be "
+                f"'{_type_to_string[value_type]}'")
+            bad_value = True
+
+    if missing_keys:
+        raise KeyError(f"Missing and/or invalid key in {location}")
+    if bad_value:
+        raise TypeError(f"Incorrect type for property value(s) in {location}")
+
+
+def check_python_version(msg_update_callback=None):
+    """Ensure that user's Python version >= 3.6.
+
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
+        that writes messages onto console.
+
+    :raises Exception: if user's Python version < 3.6.
+    """
+    if msg_update_callback:
+        msg_update_callback.general_no_color(
+            "Required Python version: >= 3.7.3\n"
+            f"Installed Python version: {sys.version}")
+    if sys.version_info < (3, 7, 3):
+        raise Exception("Python version should be 3.7.3 or greater")
+
+
+def str_to_bool(val):
+    """Convert string boolean values to bool.
+
+    The conversion is case insensitive.
+
+    :param val: input string
+
+    :return: True if val is 'true' otherwise False
+    """
+    if val:
+        return str(val).lower() == 'true'
+    return False
+
+
 def get_sha256(filepath):
     """Get sha256 hash of file as a string.
 
@@ -75,67 +171,123 @@ def get_sha256(filepath):
     return sha256.hexdigest()
 
 
-def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
-                               excluded_keys=[]):
-    """Compare a dictionary with a reference dictionary.
+def check_file_permissions(filename, msg_update_callback=None):
+    """Ensure that the file has correct permissions.
 
-    The method ensures that  all keys and value types are the same in the
-    dictionaries.
+    Unix based system:
+        Owner - r/w permission
+        Other - No access
+    Windows:
+        No check
 
-    :param dict dikt: the dictionary to check for validity
-    :param dict ref_dict: the dictionary to check against
-    :param str location: where this check is taking place, so error messages
-        can be more descriptive.
-    :param list excluded_keys: list of str, representing the list of key which
-        if missing won't raise an exception.
+    :param str filename: path to file.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback
+        object that writes messages onto console.
 
-    :raises KeyError: if @dikt has missing or invalid keys
-    :raises TypeError: if the value of a property in @dikt does not match with
-        the value of the same property in @ref_dict
+    :raises Exception: if file has 'x' permissions for Owner or 'rwx'
+        permissions for 'Others' or 'Group'.
     """
-    ref_keys = set(ref_dict.keys())
-    keys = set(dikt.keys())
+    if os.name == 'nt':
+        return
+    err_msgs = []
+    file_mode = os.stat(filename).st_mode
+    if file_mode & stat.S_IXUSR:
+        msg = f"Remove execute permission of the Owner for the file {filename}"
+        if msg_update_callback:
+            msg_update_callback.error(msg)
+        err_msgs.append(msg)
+    if file_mode & stat.S_IROTH or file_mode & stat.S_IWOTH \
+            or file_mode & stat.S_IXOTH:
+        msg = f"Remove read, write and execute permissions of Others for " \
+              f"the file {filename}"
+        if msg_update_callback:
+            msg_update_callback.error(msg)
+        err_msgs.append(msg)
+    if file_mode & stat.S_IRGRP or file_mode & stat.S_IWGRP \
+            or file_mode & stat.S_IXGRP:
+        msg = f"Remove read, write and execute permissions of Group for the " \
+              f"file {filename}"
+        if msg_update_callback:
+            msg_update_callback.error(msg)
+        err_msgs.append(msg)
 
-    missing_keys = ref_keys - keys - set(excluded_keys)
-
-    if missing_keys:
-        click.secho(f"Missing keys in {location}: {missing_keys}", fg='red')
-    bad_value = False
-    for k in ref_keys:
-        if k not in keys:
-            continue
-        value_type = type(ref_dict[k])
-        if not isinstance(dikt[k], value_type):
-            click.secho(f"{location} key '{k}': value type should be "
-                        f"'{_type_to_string[value_type]}'", fg='red')
-            bad_value = True
-
-    if missing_keys:
-        raise KeyError(f"Missing and/or invalid key in {location}")
-    if bad_value:
-        raise TypeError(f"Incorrect type for property value(s) in {location}")
+    if err_msgs:
+        raise IOError(err_msgs)
 
 
-def check_python_version():
-    """Ensure that user's Python version >= 3.6.
+def download_file(url, filepath, sha256=None, force_overwrite=False,
+                  logger=None, msg_update_callback=None):
+    """Download a file from a url to local filepath.
 
-    :raises Exception: if user's Python version < 3.6.
+    Will not overwrite files unless @sha256 is given.
+    Recursively creates specified directories in @filepath.
+
+    :param str url: source url.
+    :param str filepath: destination filepath.
+    :param str sha256: without this argument, if a file already exists at
+        @filepath, download will be skipped. If @sha256 matches the file's
+        sha256, download will be skipped.
+    :param bool force_overwrite: if True, will download the file even if it
+        already exists or its SHA hasn't changed.
+    :param logging.Logger logger: optional logger to log with.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback
+        object that writes messages onto console.
     """
-    click.echo("Required Python version: >= 3.7.3\n"
-               f"Installed Python version: {sys.version}")
-    if sys.version_info < (3, 7, 3):
-        raise Exception("Python version should be 3.7.3 or greater")
+    path = pathlib.Path(filepath)
+    if not force_overwrite and path.is_file() and \
+            (sha256 is None or get_sha256(filepath) == sha256):
+        msg = f"Skipping download to '{filepath}' (file already exists)"
+        if logger:
+            logger.info(msg)
+        if msg_update_callback:
+            msg_update_callback.general(msg)
+        return
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    msg = f"Downloading file from '{url}' to '{filepath}'..."
+    if logger:
+        logger.info(msg)
+    if msg_update_callback:
+        msg_update_callback.info(msg)
+    response = requests.get(url, stream=True)
+    with path.open(mode='wb') as f:
+        for chunk in response.iter_content(chunk_size=SIZE_1MB):
+            f.write(chunk)
+    msg = f"Download complete"
+    if logger:
+        logger.info(msg)
+    if msg_update_callback:
+        msg_update_callback.general(msg)
 
 
-def str_to_bool(val):
-    """Convert string boolean values to bool.
+def read_data_file(filepath, logger=None, msg_update_callback=None):
+    """Retrieve file content from local disk as a string.
 
-    The conversion is case insensitive.
+    :param str filepath: absolute filepath of the file, whose content we want
+        to get.
+    :param logging.Logger logger: optional logger to log with.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback
+        object that writes messages onto console.
 
-    :param val: input string
+    :return: the file contents as a string.
 
-    :return: True if val is 'true' otherwise False
+    :rtype: str
+
+    :raises FileNotFoundError: if requested data file cannot be
+        found.
     """
-    if val:
-        return str(val).lower() == 'true'
-    return False
+    path = pathlib.Path(filepath)
+    if not path.is_file():
+        msg = f"Requested data file at '{filepath}' not found"
+        if msg_update_callback:
+            msg_update_callback.error(msg)
+        if logger:
+            logger.error(msg, exc_info=True)
+        raise FileNotFoundError(msg)
+
+    msg = f"Found data file: {path}"
+    if msg_update_callback:
+        msg_update_callback.general(msg)
+    if logger:
+        logger.info(msg)
+    return path.read_text()
