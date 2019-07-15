@@ -9,8 +9,8 @@ from pyvcloud.vcd.client import Client
 import requests
 
 from container_service_extension.logger import configure_server_logger
-from container_service_extension.logger import SERVER_LOGGER
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
+from container_service_extension.logger import SERVER_LOGGER
 from container_service_extension.remote_template_manager import \
     download_all_template_scripts
 from container_service_extension.remote_template_manager import \
@@ -24,7 +24,7 @@ from container_service_extension.vsphere_utils import populate_vsphere_list
 if __name__ == '__main__':
     requests.packages.urllib3.disable_warnings()
     configure_server_logger()
-    
+
     get_server_runtime_config = Mock()  # noqa
     get_server_runtime_config.return_value = {
         'vcd': {
