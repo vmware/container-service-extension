@@ -110,10 +110,11 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
         if k not in keys:
             continue
         value_type = type(ref_dict[k])
-        if not isinstance(dikt[k], value_type) and msg_update_callback:
-            msg_update_callback.error(
-                f"{location} key '{k}': value type should be "
-                f"'{_type_to_string[value_type]}'")
+        if not isinstance(dikt[k], value_type):
+            if msg_update_callback:
+                msg_update_callback.error(
+                    f"{location} key '{k}': value type should be "
+                    f"'{_type_to_string[value_type]}'")
             bad_value = True
 
     if missing_keys:

@@ -215,11 +215,12 @@ def _validate_vcd_and_vcs_config(vcd_dict, vcs, msg_update_callback=None):
     check_keys_and_value_types(vcd_dict, SAMPLE_VCD_CONFIG['vcd'],
                                location="config file 'vcd' section",
                                msg_update_callback=msg_update_callback)
-    if not vcd_dict['verify'] and msg_update_callback:
-        msg_update_callback.general(
-            'InsecureRequestWarning: Unverified HTTPS request is '
-            'being made. Adding certificate verification is '
-            'strongly advised.')
+    if not vcd_dict['verify']:
+        if msg_update_callback:
+            msg_update_callback.general(
+                'InsecureRequestWarning: Unverified HTTPS request is '
+                'being made. Adding certificate verification is '
+                'strongly advised.')
         requests.packages.urllib3.disable_warnings()
 
     client = None
@@ -433,8 +434,8 @@ def _validate_pks_config_data_integrity(pks_config, msg_update_callback=None):
                              f"referenced by PVDC : {pvdc.get('name')} in "
                              f"Section : {PKS_PVDCS_SECTION_KEY}")
 
-    '''Check validity of all PKS api servers referenced in the
-        pks_api_servers section'''
+    # Check validity of all PKS api servers referenced in the pks_api_servers
+    # section
     for pks_server in pks_config[PKS_SERVERS_SECTION_KEY]:
         pks_account = pks_account_info_table.get(pks_server.get('name'))
         pks_configuration = Configuration()
