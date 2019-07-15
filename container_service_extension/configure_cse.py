@@ -1073,7 +1073,7 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False,
                             msg_update_callback=msg_update_callback)
     if not is_photon:
         vs = get_vsphere(config, vapp, vm_name, logger=LOGGER)
-        wait_until_tools_ready(vapp, vs, callback=callback)
+        wait_until_tools_ready(vapp, vm_name, vs, callback=callback)
 
         vapp.reload()
         task = vapp.shutdown()
@@ -1084,7 +1084,7 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False,
         vapp.reload()
 
     vs = get_vsphere(config, vapp, vm_name, logger=LOGGER)
-    wait_until_tools_ready(vapp, vs, callback=callback)
+    wait_until_tools_ready(vapp, vm_name, vs, callback=callback)
     password_auto = vapp.get_admin_password(vm_name)
 
     try:

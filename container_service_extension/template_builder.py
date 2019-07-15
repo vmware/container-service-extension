@@ -14,9 +14,9 @@ from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.pyvcloud_utils import upload_ova_to_catalog
 from container_service_extension.pyvcloud_utils import \
     wait_for_catalog_item_to_resolve
-from container_service_extension.server_constants import ScriptFile
-from container_service_extension.template_manager import \
+from container_service_extension.remote_template_manager import \
     construct_local_script_file_location
+from container_service_extension.server_constants import ScriptFile
 from container_service_extension.utils import download_file
 from container_service_extension.utils import read_data_file
 from container_service_extension.vsphere_utils import get_vsphere
@@ -27,7 +27,7 @@ from container_service_extension.vsphere_utils import wait_until_tools_ready
 # used for creating temp vapp
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = NetworkAdapterType.VMXNET3.value
 TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
-TEMP_VAPP_VM_NAME = 'Temp VM'
+TEMP_VAPP_VM_NAME = 'Temp-vm'
 
 
 class TemplateBuilder():
@@ -73,11 +73,12 @@ class TemplateBuilder():
             self.org = get_org(self.client, org_name=self.org_name)
         if vdc:
             self.vdc = vdc
-            vdc.get_resource()  # to make sure vdc.resource is populated
+            self.vdc.get_resource()  # to make sure vdc.resource is populated
             self.vdc_name = vdc.name
         else:
             self.vdc_name = build_params.get('vdc_name')
-            vdc = get_vdc(self.client, vdc_name=self.vdc_name, org=self.org)
+            self.vdc = get_vdc(self.client, vdc_name=self.vdc_name,
+                               org=self.org)
         self.catalog_name = build_params.get('catalog_name')
         self.catalog_item_name = build_params.get('catalog_item_name')
         self.catalog_item_description = \
@@ -86,9 +87,9 @@ class TemplateBuilder():
         self.temp_vapp_name = build_params.get('temp_vapp_name')
         self.cpu = build_params.get('cpu')
         self.memory = build_params.get('memory')
-        self.network_name = build_params('network_name')
-        self.ip_allocation_mode = build_params('ip_allocation_mode')
-        self.storage_profile = build_params('storage_profile')
+        self.network_name = build_params.get('network_name')
+        self.ip_allocation_mode = build_params.get('ip_allocation_mode')
+        self.storage_profile = build_params.get('storage_profile')
 
         if self.template_name and self.template_revision and \
                 self.ova_name and self.ova_href and self.ova_sha256 and \
@@ -258,13 +259,11 @@ class TemplateBuilder():
         is_photon = True if 'photon' in self.ova_name else False
         callback = vgr_callback(
             prepend_msg='Waiting for guest tools, status: "',
+            logger=self.logger,
             msg_update_callback=self.msg_update_callback)
         if not is_photon:
             # non photon os based vms need an extra reboot at start to get
             # tools running properly.
-            vs = get_vsphere(self.sys_admin_client, vapp, vm_name,
-                             logger=self.logger)
-            wait_until_tools_ready(vapp, vs, callback=callback)
             msg = f"Rebooting vApp '{self.temp_vapp_name}'"
             if self.msg_update_callback:
                 self.msg_update_callback.general(msg)
@@ -277,7 +276,7 @@ class TemplateBuilder():
 
         vs = get_vsphere(self.sys_admin_client, vapp, vm_name,
                          logger=self.logger)
-        wait_until_tools_ready(vapp, vs, callback=callback)
+        wait_until_tools_ready(vapp, vm_name, vs, callback=callback)
         password_auto = vapp.get_admin_password(vm_name)
 
         try:
@@ -292,6 +291,7 @@ class TemplateBuilder():
                 get_output=True,
                 delete_script=True,
                 callback=vgr_callback(
+                    logger=self.logger,
                     msg_update_callback=self.msg_update_callback))
         except Exception as err:
             # TODO() replace raw exception with specific exception
@@ -309,7 +309,7 @@ class TemplateBuilder():
         # effect
         vs = get_vsphere(self.sys_admin_client, vapp, vm_name,
                          logger=self.logger)
-        wait_until_tools_ready(vapp, vs, callback=callback)
+        wait_until_tools_ready(vapp, vm_name, vs, callback=callback)
         vapp.reload()
         msg = f"Rebooting vApp '{self.temp_vapp_name}'"
         if self.msg_update_callback:
@@ -321,7 +321,7 @@ class TemplateBuilder():
         vapp.reload()
         vs = get_vsphere(self.sys_admin_client, vapp, vm_name,
                          logger=self.logger)
-        wait_until_tools_ready(vapp, vs, callback=callback)
+        wait_until_tools_ready(vapp, vm_name, vs, callback=callback)
 
         if len(result) > 0:
             msg = f'Result: {result}'
@@ -367,7 +367,6 @@ class TemplateBuilder():
             self.logger.info(msg)
 
     def _capture_temp_vapp(self, vapp):
-        # capture temp vapp as template
         msg = f"Creating K8 template '{self.catalog_item_name}' from vApp " \
               f"'{self.temp_vapp_name}'"
         if self.msg_update_callback:
@@ -375,17 +374,39 @@ class TemplateBuilder():
         if self.logger:
             self.logger.info(msg)
 
-        description = self.catalog_item_description
         catalog = self.org.get_catalog(self.catalog_name)
         try:
+            msg = f"Shutting down vApp '{self.temp_vapp_name}'"
+            if self.msg_update_callback:
+                self.msg_update_callback.info(msg)
+            if self.logger:
+                self.logger.info(msg)
+
+            vapp.reload()
             task = vapp.shutdown()
             self.client.get_task_monitor().wait_for_success(task)
             vapp.reload()
-        except OperationNotSupportedException:
-            pass
+
+            msg = f"Sucessfully shut down vApp '{self.temp_vapp_name}'"
+            if self.msg_update_callback:
+                self.msg_update_callback.general(msg)
+            if self.logger:
+                self.logger.info(msg)
+        except OperationNotSupportedException as err:
+            if self.logger:
+                self.logger.debug("Encountered error with shutting down vApp "
+                                  f"'{self.temp_vapp_name}'" + str(err))
+
+        msg = f"Capturing template '{self.catalog_item_name}' from vApp " \
+              f"'{self.temp_vapp_name}'"
+        if self.msg_update_callback:
+            self.msg_update_callback.info(msg)
+        if self.logger:
+            self.logger.info(msg)
 
         task = self.org.capture_vapp(catalog, vapp.href,
-                                     self.catalog_item_name, description,
+                                     self.catalog_item_name,
+                                     self.catalog_item_description,
                                      customize_on_instantiate=True,
                                      overwrite=True)
         self.client.get_task_monitor().wait_for_success(task)
@@ -428,4 +449,4 @@ class TemplateBuilder():
         self._customize_vm(vapp, TEMP_VAPP_VM_NAME)
         self._capture_temp_vapp(vapp)
         if not retain_temp_vapp:
-            self._delete_temp_vapp(vapp)
+            self._delete_temp_vapp()

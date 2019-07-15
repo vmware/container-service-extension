@@ -95,10 +95,11 @@ def vgr_callback(prepend_msg='', logger=None, msg_update_callback=None):
     return callback
 
 
-def wait_until_tools_ready(vapp, vsphere, callback=vgr_callback()):
+def wait_until_tools_ready(vapp, vm_name, vsphere, callback=vgr_callback()):
     """Blocking function to ensure that a VSphere has VMware Tools ready.
 
     :param pyvcloud.vcd.vapp.VApp vapp:
+    :param str vm_name:
     :param vsphere_guest_run.vsphere.VSphere vsphere:
     :param function callback: a function to print out messages received from
         vsphere-guest-run functions. Function signature should be like this:
@@ -106,6 +107,6 @@ def wait_until_tools_ready(vapp, vsphere, callback=vgr_callback()):
         is a string.
     """
     vsphere.connect()
-    moid = vapp.get_vm_moid(vapp.name)
+    moid = vapp.get_vm_moid(vm_name)
     vm = vsphere.get_vm_by_moid(moid)
     vsphere.wait_until_tools_ready(vm, sleep=5, callback=callback)
