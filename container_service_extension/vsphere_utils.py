@@ -16,6 +16,13 @@ vsphere_list = []
 
 
 def populate_vsphere_list(vcs):
+    """Populate the gloabl variable holding info on vCenter servers.
+
+    This method must be called before a call to get_vsphere.
+
+    :param list vcs: list of dictionaries, where each dictionary hold the name,
+    admin username and password of a vCenter server.
+    """
     global vsphere_list
     vsphere_list = vcs
 
@@ -96,13 +103,13 @@ def vgr_callback(prepend_msg='', logger=None, msg_update_callback=None):
 
 
 def wait_until_tools_ready(vapp, vm_name, vsphere, callback=vgr_callback()):
-    """Blocking function to ensure that a VSphere has VMware Tools ready.
+    """Blocking function to ensure that a vm has VMware Tools ready.
 
     :param pyvcloud.vcd.vapp.VApp vapp:
     :param str vm_name:
     :param vsphere_guest_run.vsphere.VSphere vsphere:
     :param function callback: a function to print out messages received from
-        vsphere-guest-run functions. Function signature should be like this:
+        vsphere-guest-run functions. Function signature should be like:
         def callback(message, exception=None), where parameter 'message'
         is a string.
     """

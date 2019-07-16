@@ -20,9 +20,13 @@ from container_service_extension.vsphere_utils import populate_vsphere_list
 
 
 if __name__ == '__main__':
+    # disable insecure warnings
     requests.packages.urllib3.disable_warnings()
+
+    # configure the loggers
     configure_server_logger()
 
+    # sample server runtime/install config
     server_config = {
         'vcd': {
             'api_version': '32.0',
@@ -50,14 +54,17 @@ if __name__ == '__main__':
         }
     }
 
+    # intialize the vsphere list variable for get_vsphere to work properly
     populate_vsphere_list(server_config['vcs'])
 
+    # read remote template cookbook, download all scripts
     rtm = RemoteTemplateManager(
         remote_template_cookbook_url=server_config['broker']['remote_template_cookbook_url'], # noqa
         logger=SERVER_LOGGER, msg_update_callback=ConsoleMessagePrinter())
     remote_template_cookbook = rtm.get_remote_template_cookbook()
     rtm.download_all_template_scripts()
 
+    # create sys admin client to talk to vCD
     client = Client(
         uri=server_config['vcd']['host'],
         api_version=server_config['vcd']['api_version'],
@@ -71,6 +78,7 @@ if __name__ == '__main__':
                                         server_config['vcd']['password'])
     client.set_credentials(credentials)
 
+    # create all templates mentioned in cookbook
     for template in remote_template_cookbook['templates']:
         build_params = {
             'template_name': template['name'],

@@ -27,6 +27,7 @@ _type_to_string = {
 
 
 class ConsoleMessagePrinter():
+    """Callback object to print color coded message on console."""
 
     def general_no_color(self, msg):
         click.secho(msg)
@@ -265,12 +266,12 @@ def read_data_file(filepath, logger=None, msg_update_callback=None):
     """Retrieve file content from local disk as a string.
 
     :param str filepath: absolute filepath of the file, whose content we want
-        to get.
+        to read.
     :param logging.Logger logger: optional logger to log with.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback
         object that writes messages onto console.
 
-    :return: the file contents as a string.
+    :return: the contents of the file.
 
     :rtype: str
 

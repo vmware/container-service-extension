@@ -194,7 +194,8 @@ class Service(object, metaclass=Singleton):
                   f"\nwaiting for requests (ctrl+c to close)"
 
         signal.signal(signal.SIGINT, signal_handler)
-        click.secho(message)
+        if msg_update_callback:
+            msg_update_callback.general_no_color(message)
         LOGGER.info(message)
 
         if self.config.get('pks_config'):
@@ -240,7 +241,9 @@ class Service(object, metaclass=Singleton):
             except KeyboardInterrupt:
                 break
             except Exception:
-                click.secho(traceback.format_exc())
+                if msg_update_callback:
+                    msg_update_callback.general_no_color(
+                        traceback.format_exc())
                 sys.exit(1)
 
         LOGGER.info("Stop detected")

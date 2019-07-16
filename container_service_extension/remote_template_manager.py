@@ -37,22 +37,32 @@ def download_file_into_memory(url):
 
 
 def construct_revisioned_template_name(template_name, revision):
-    """."""
+    """Construct name of a template to include it's revision number."""
     return f"{template_name}_rev{revision}"
 
 
-def construct_local_script_file_location(template_name, revision, script_file):
-    """."""
+def construct_local_script_file_location(template_name, revision,
+                                         script_file_name):
+    """Construct the absolute path to a given script.
+
+    :param str template_name:
+    :param str revision:
+    :param str script_file_name:
+    """
     home_dir = os.path.expanduser('~')
     cse_scripts_dir = os.path.join(
         home_dir, LOCAL_SCRIPTS_DIR,
         construct_revisioned_template_name(template_name, revision))
     Path(cse_scripts_dir).mkdir(parents=True, exist_ok=True)
-    script_abs_path = os.path.join(cse_scripts_dir, script_file)
+    script_abs_path = os.path.join(cse_scripts_dir, script_file_name)
     return script_abs_path
 
 
 class RemoteTemplateManager():
+    """Manage interaction with remote template cookbook.
+
+    Exposes methods to download template cookbook and associated scripts.
+    """
 
     def __init__(self, remote_template_cookbook_url, logger=None,
                  msg_update_callback=None):
@@ -102,7 +112,7 @@ class RemoteTemplateManager():
         return url
 
     def get_remote_template_cookbook(self):
-        """."""
+        """Get the remote template cookbook as yaml."""
         template_cookbook_as_str = download_file_into_memory(self.url)
         cookbook = yaml.safe_load(template_cookbook_as_str)
         if self.logger:
@@ -134,7 +144,11 @@ class RemoteTemplateManager():
                           msg_update_callback=self.msg_update_callback)
 
     def download_all_template_scripts(self, force_overwrite=False):
-        """."""
+        """Download all scripts for all templates mentioned in cookbook.
+
+        :param bool force_overwrite: if True, will download the script even if
+            it already exists.
+        """
         remote_template_cookbook = self.get_remote_template_cookbook()
         for template in remote_template_cookbook['templates']:
             template_name = template['name']

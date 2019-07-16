@@ -31,6 +31,7 @@ TEMP_VAPP_VM_NAME = 'Temp-vm'
 
 
 class TemplateBuilder():
+    """Builder calls for K8 templates."""
 
     def __init__(self, client, sys_admin_client, build_params, org=None,
                  vdc=None, ssh_key=None, logger=None,
@@ -40,8 +41,12 @@ class TemplateBuilder():
         :param pyvcloud.vcd.Client client:
         :param pyvcloud.vcd.Client sys_admin_client:
         :param dict build_params:
-        :param pyvcloud.vcd.org.Org org: specific org to use.
-        :param pyvcloud.vcd.vdc.VDC vdc: specific vdc to use.
+        :param pyvcloud.vcd.org.Org org: specific org to use. Will override the
+            org_name specified in build_params, can be used to save few vCD
+            calls to create the Org object.
+        :param pyvcloud.vcd.vdc.VDC vdc: specific vdc to use. Will override the
+            vdc_name specified in build_params, can be used to save few vCD
+            calls to create the Vdc object.
         :param str ssh_key: public ssh key to place into the template vApp(s).
         :param logging.Logger logger: optional logger to log with.
         :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
@@ -101,6 +106,7 @@ class TemplateBuilder():
             self._is_valid = True
 
     def _cleanup_old_artifacts(self):
+        """Delete source ova, K8 template and temp vApp."""
         msg = "If K8 template, source ova file, and temporary vApp exists, " \
               "they will be deleted"
         if self.msg_update_callback:
@@ -108,13 +114,19 @@ class TemplateBuilder():
         if self.logger:
             self.logger.info(msg)
 
-        self._delete_catalog_item(item_name=self.catalog_item_name,
-                                  item_type='K8 template')
-        self._delete_catalog_item(item_name=self.ova_name,
-                                  item_type='source ova file')
+        self._delete_catalog_item(item_name=self.catalog_item_name)
+        self._delete_catalog_item(item_name=self.ova_name)
         self._delete_temp_vapp()
 
-    def _delete_catalog_item(self, item_name, item_type):
+    def _delete_catalog_item(self, item_name):
+        """Delete a catalog item.
+
+        The catalog item to delete, is searched in the catalog specified via
+        build_params.
+
+        :param str item_name: name of the item to delete.
+        :param str item_type
+        """
         try:
             self.org.delete_catalog_item(name=self.catalog_name,
                                          item_name=item_name)
@@ -123,8 +135,7 @@ class TemplateBuilder():
                 catalog_item_name=item_name, org=self.org)
             self.org.reload()
 
-            msg = f"Deleted {item_type} '{item_name}' from " \
-                  f"catalog '{self.catalog_name}'"
+            msg = f"Deleted '{item_name}' from catalog '{self.catalog_name}'"
             if self.msg_update_callback:
                 self.msg_update_callback.general(msg)
             if self.logger:
@@ -133,6 +144,7 @@ class TemplateBuilder():
             pass
 
     def _delete_temp_vapp(self):
+        """Delete the temp vApp for the K8 template."""
         try:
             msg = f"Deleting temporary vApp '{self.temp_vapp_name}'"
             if self.msg_update_callback:
@@ -153,6 +165,7 @@ class TemplateBuilder():
             pass
 
     def _upload_source_ova(self):
+        """Upload the base OS ova to catalog."""
         if catalog_item_exists(org=self.org, catalog_name=self.catalog_name,
                                catalog_item_name=self.ova_name):
             msg = f"Found ova file '{self.ova_name}' in catalog " \
@@ -171,6 +184,12 @@ class TemplateBuilder():
                                   msg_update_callback=self.msg_update_callback)
 
     def _get_init_script(self):
+        """Read the initialization script from disk to create temp vApp.
+
+        :return: content of the initialization script.
+
+        :rtype: str
+        """
         init_sctipt_filepath = construct_local_script_file_location(
             self.template_name, self.template_revision, ScriptFile.INIT)
         init_script = read_data_file(
@@ -186,6 +205,7 @@ class TemplateBuilder():
         return init_script
 
     def _create_temp_vapp(self):
+        """Create the temporary vApp."""
         try:
             self._delete_temp_vapp()
         except EntityNotFoundException:
@@ -230,13 +250,13 @@ class TemplateBuilder():
         return VApp(self.client, href=vapp_sparse_resource.get('href'))
 
     def _customize_vm(self, vapp, vm_name):
-        """Customize a VM in a VApp using customization script.
+        """Customize a vm in a VApp using customization script.
 
         :param pyvcloud.vcd.vapp.VApp vapp:
         :param str vm_name:
 
         :raises Exception: if unable to execute the customization script in
-            VSphere.
+            the vm.
         """
         msg = f"Customizing vApp '{self.temp_vapp_name}', vm '{vm_name}'"
         if self.msg_update_callback:
@@ -353,6 +373,10 @@ class TemplateBuilder():
             self.logger.info(msg)
 
     def _capture_temp_vapp(self, vapp):
+        """Capture a vapp as a template.
+
+        :param pyvcloud.vcd.VApp vapp:
+        """
         msg = f"Creating K8 template '{self.catalog_item_name}' from vApp " \
               f"'{self.temp_vapp_name}'"
         if self.msg_update_callback:
@@ -408,10 +432,10 @@ class TemplateBuilder():
     def build(self, force_recreate=False, retain_temp_vapp=False):
         """Create a K8 template.
 
-        :param bool force_recreate: if True and templates already exist in vCD,
-            overwrites existing templates.
+        :param bool force_recreate: if True and template already exist in vCD,
+            overwrites existing template.
         :param bool retain_temp_vapp: if True, temporary vApp will not be
-            captured or destroyed, so the user can ssh into the VM and debug.
+            deleted, so the user can ssh into its vm and debug.
         """
         if not self._is_valid:
             raise Exception('Invalid params for building template.')

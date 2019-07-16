@@ -446,7 +446,7 @@ def wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
     :param str catalog_name:
     :param str catalog_item_name:
     :param pyvcloud.vcd.org.Org org: specific org to use.
-    :param str org_name: specific org to use if @org is not given.
+    :param str org_name: specific org to use if @org is not provided.
         If None, uses currently logged-in org from @client.
 
     :raises EntityNotFoundException: if the org or catalog or catalog item
