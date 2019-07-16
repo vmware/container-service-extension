@@ -163,7 +163,7 @@ class TemplateBuilder():
                 self.logger.info(msg)
         else:
             ova_filepath = f"cse_cache/{self.ova_name}"
-            download_file(url=self.source_ova_href, filepath=ova_filepath,
+            download_file(url=self.ova_href, filepath=ova_filepath,
                           sha256=self.ova_sha256, logger=self.logger,
                           msg_update_callback=self.msg_update_callback)
             upload_ova_to_catalog(self.client, self.catalog_name, ova_filepath,
@@ -187,8 +187,6 @@ class TemplateBuilder():
 
     def _create_temp_vapp(self):
         try:
-            vapp = VApp(self.client,
-                        resource=self.vdc.get_vapp(self.temp_vapp_name))
             self._delete_temp_vapp()
         except EntityNotFoundException:
             pass
@@ -222,10 +220,6 @@ class TemplateBuilder():
         task = vapp_sparse_resource.Tasks.Task[0]
         self.client.get_task_monitor().wait_for_success(task)
         self.vdc.reload()
-        vapp = VApp(self.client, resource=vapp_sparse_resource)
-        # we don't do lazy loading here using vapp_sparse_resource.get('href'),
-        # because VApp would have an uninitialized attribute (vapp.name)
-        vapp.reload()
 
         msg = f"Created vApp '{self.temp_vapp_name}'"
         if self.msg_update_callback:
@@ -233,7 +227,7 @@ class TemplateBuilder():
         if self.logger:
             self.logger.info(msg)
 
-        return vapp
+        return VApp(self.client, href=vapp_sparse_resource.get('href'))
 
     def _customize_vm(self, vapp, vm_name):
         """Customize a VM in a VApp using customization script.
@@ -269,6 +263,7 @@ class TemplateBuilder():
                 self.msg_update_callback.general(msg)
             if self.logger:
                 self.logger.info(msg)
+
             vapp.reload()
             task = vapp.reboot()
             self.client.get_task_monitor().wait_for_success(task)
@@ -305,32 +300,16 @@ class TemplateBuilder():
                                   exc_info=True)
             raise
 
-        # must reboot VM for some changes made during customization to take
-        # effect
-        vs = get_vsphere(self.sys_admin_client, vapp, vm_name,
-                         logger=self.logger)
-        wait_until_tools_ready(vapp, vm_name, vs, callback=callback)
-        vapp.reload()
-        msg = f"Rebooting vApp '{self.temp_vapp_name}'"
-        if self.msg_update_callback:
-            self.msg_update_callback.general(msg)
-        if self.logger:
-            self.logger.info(msg)
-        task = vapp.reboot()
-        self.client.get_task_monitor().wait_for_success(task)
-        vapp.reload()
-        vs = get_vsphere(self.sys_admin_client, vapp, vm_name,
-                         logger=self.logger)
-        wait_until_tools_ready(vapp, vm_name, vs, callback=callback)
-
         if len(result) > 0:
             msg = f'Result: {result}'
             if self.msg_update_callback:
                 self.msg_update_callback.general_no_color(msg)
             if self.logger:
                 self.logger.debug(msg)
+
             result_stdout = result[1].content.decode()
             result_stderr = result[2].content.decode()
+
             msg = 'stderr:'
             if self.msg_update_callback:
                 self.msg_update_callback.general_no_color(msg)
@@ -341,6 +320,7 @@ class TemplateBuilder():
                     self.msg_update_callback.general_no_color(result_stderr)
                 if self.logger:
                     self.logger.debug(result_stderr)
+
             msg = 'stdout:'
             if self.msg_update_callback:
                 self.msg_update_callback.general_no_color(msg)
@@ -351,6 +331,7 @@ class TemplateBuilder():
                     self.msg_update_callback.general_no_color(result_stdout)
                 if self.logger:
                     self.logger.debug(result_stdout)
+
         if len(result) == 0 or result[0] != 0:
             msg = "Failed VM customization"
             if self.msg_update_callback:
@@ -359,6 +340,11 @@ class TemplateBuilder():
                 self.logger.error(msg, exc_info=True)
             # TODO: replace raw exception with specific exception
             raise Exception(msg)
+
+        # Do not reboot VM after customization. Reboot will generate a new
+        # machine-id, and once we capture the VM, all VMs deployed from the
+        # template will have the same machine-id, which can lead to
+        # unpredictable behavior
 
         msg = f"Customized vApp '{self.temp_vapp_name}', vm '{vm_name}'"
         if self.msg_update_callback:

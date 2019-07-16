@@ -2,8 +2,6 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from unittest.mock import Mock
-
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 import requests
@@ -12,9 +10,9 @@ from container_service_extension.logger import configure_server_logger
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER
 from container_service_extension.remote_template_manager import \
-    download_all_template_scripts
+    construct_revisioned_template_name
 from container_service_extension.remote_template_manager import \
-    get_remote_template_cookbook
+    RemoteTemplateManager
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.template_builder import TemplateBuilder
 from container_service_extension.utils import ConsoleMessagePrinter
@@ -25,8 +23,7 @@ if __name__ == '__main__':
     requests.packages.urllib3.disable_warnings()
     configure_server_logger()
 
-    get_server_runtime_config = Mock()  # noqa
-    get_server_runtime_config.return_value = {
+    server_config = {
         'vcd': {
             'api_version': '32.0',
             'host': '10.150.199.221',
@@ -53,11 +50,13 @@ if __name__ == '__main__':
         }
     }
 
-    server_config = get_server_runtime_config()
     populate_vsphere_list(server_config['vcs'])
 
-    remote_template_cookbook = get_remote_template_cookbook()
-    download_all_template_scripts(remote_template_cookbook)
+    rtm = RemoteTemplateManager(
+        remote_template_cookbook_url=server_config['broker']['remote_template_cookbook_url'], # noqa
+        logger=SERVER_LOGGER, msg_update_callback=ConsoleMessagePrinter())
+    remote_template_cookbook = rtm.get_remote_template_cookbook()
+    rtm.download_all_template_scripts()
 
     client = Client(
         uri=server_config['vcd']['host'],
@@ -72,9 +71,7 @@ if __name__ == '__main__':
                                         server_config['vcd']['password'])
     client.set_credentials(credentials)
 
-    count = 0
     for template in remote_template_cookbook['templates']:
-        count = count + 1
         build_params = {
             'template_name': template['name'],
             'template_revision': template['revision'],
@@ -84,7 +81,7 @@ if __name__ == '__main__':
             'org_name': server_config['broker']['org'],
             'vdc_name': server_config['broker']['vdc'],
             'catalog_name': server_config['broker']['catalog'],
-            'catalog_item_name': f"test_{count}",
+            'catalog_item_name': construct_revisioned_template_name(template['name'], template['revision']), # noqa
             'catalog_item_description': template['description'],
             'temp_vapp_name': template['name'] + '_temp',
             'cpu': template['cpu'],
