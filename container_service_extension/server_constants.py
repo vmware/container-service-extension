@@ -8,13 +8,11 @@ from enum import unique
 import requests
 
 
-# CSE SERVICE
-# used for registering CSE to vCD as an api extension service.
-CSE_SERVICE_NAME = 'cse'
-CSE_SERVICE_NAMESPACE = 'cse'
-# used to set up and start AMQP exchange
-EXCHANGE_TYPE = 'direct'
-SYSTEM_ORG_NAME = 'System'
+@unique
+class NodeType(str, Enum):
+    MASTER = 'mstr'
+    WORKER = 'node'
+    NFS = 'nfsd'
 
 # DEPLOY RIGHTS
 # used by authorization framework to weed out unauthorized calls.
