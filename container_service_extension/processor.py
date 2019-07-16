@@ -19,6 +19,7 @@ from container_service_extension.ovdc_request_handler import OvdcRequestHandler
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.utils import get_server_runtime_config
 
+from container_service_extension.shared_constants import RequestMethod
 
 class ServiceProcessor(object):
     """Process incoming REST request.
@@ -82,22 +83,22 @@ class ServiceProcessor(object):
 
         if is_cluster_request:
             if len(tokens) == 4:
-                if method == 'GET':
+                if method == RequestMethod.GET:
                     result['operation'] = CseOperation.CLUSTER_LIST
-                elif method == 'POST':
+                elif method == RequestMethod.POST:
                     result['operation'] = CseOperation.CLUSTER_CREATE
                 else:
                     raise CseRequestError(
                         status=requests.codes.method_not_allowed,
                         error_message="Method not allowed")
             elif len(tokens) == 5:
-                if method == 'GET':
+                if method == RequestMethod.GET:
                     result['operation'] = CseOperation.CLUSTER_INFO
                     result['cluster_name'] = tokens[4]
-                elif method == 'PUT':
+                elif method == RequestMethod.PUT:
                     result['operation'] = CseOperation.CLUSTER_RESIZE
                     result['cluster_name'] = tokens[4]
-                elif method == 'DELETE':
+                elif method == RequestMethod.DELETE:
                     result['operation'] = CseOperation.CLUSTER_DELETE
                     result['cluster_name'] = tokens[4]
                 else:
@@ -105,7 +106,7 @@ class ServiceProcessor(object):
                         status=requests.codes.method_not_allowed,
                         error_message="Method not allowed")
             elif len(tokens) == 6:
-                if method == 'GET':
+                if method == RequestMethod.GET:
                     if tokens[5] == 'config':
                         result['operation'] = CseOperation.CLUSTER_CONFIG
                         result['cluster_name'] = tokens[4]
@@ -116,16 +117,16 @@ class ServiceProcessor(object):
 
         if is_node_request:
             if len(tokens) == 4:
-                if method == 'POST':
+                if method == RequestMethod.POST:
                     result['operation'] = CseOperation.NODE_CREATE
-                elif method == 'DELETE':
+                elif method == RequestMethod.DELETE:
                     result['operation'] = CseOperation.NODE_DELETE
                 else:
                     raise CseRequestError(
                         status=requests.codes.method_not_allowed,
                         error_message="Method not allowed")
             elif len(tokens) == 5:
-                if method == 'GET':
+                if method == RequestMethod.GET:
                     result['operation'] = CseOperation.NODE_INFO
                     result['node_name'] = tokens[4]
                 else:
@@ -135,18 +136,18 @@ class ServiceProcessor(object):
 
         if is_ovdc_request:
             if len(tokens) == 4:
-                if method == 'GET':
+                if method == RequestMethod.GET:
                     result['operation'] = CseOperation.OVDC_LIST
                 else:
                     raise CseRequestError(
                         status=requests.codes.method_not_allowed,
                         error_message="Method not allowed")
             elif len(tokens) == 5:
-                if method == 'GET':
+                if method == RequestMethod.GET:
                     result['operation'] = CseOperation.OVDC_INFO
                     result['ovdc_id'] = tokens[4]
-                elif method == 'PUT':
-                    result['operation'] = CseOperation.OVDC_ENABLE_DISABLE
+                elif method == RequestMethod.PUT:
+                    result['operation'] = CseOperation.OVDC_UPDATE
                     result['ovdc_id'] = tokens[4]
                 else:
                     raise CseRequestError(
@@ -155,9 +156,9 @@ class ServiceProcessor(object):
 
         if is_system_request:
             if len(tokens) == 4:
-                if method == 'GET':
+                if method == RequestMethod.GET:
                     result['operation'] = CseOperation.SYSTEM_INFO
-                elif method == 'PUT':
+                elif method == RequestMethod.PUT:
                     result['operation'] = CseOperation.SYSTEM_UPDATE
                 else:
                     raise CseRequestError(
@@ -166,7 +167,7 @@ class ServiceProcessor(object):
 
         if is_template_request:
             if len(tokens) == 4:
-                if method == 'GET':
+                if method == RequestMethod.GET:
                     result['operation'] = CseOperation.TEMPLATE_LIST
                 else:
                     raise CseRequestError(

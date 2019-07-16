@@ -8,16 +8,17 @@ from container_service_extension.client.response_processor import \
     process_response
 from container_service_extension.client.response_processor import \
     response_to_exception
-from container_service_extension.cluster import TYPE_NODE
+
+from container_service_extension.shared_constants import RequestMethod
 
 
-class Cluster(object):
+class Cluster:
     def __init__(self, client):
         self.client = client
         self._uri = self.client.get_api_uri() + '/cse'
 
     def get_templates(self):
-        method = 'GET'
+        method = RequestMethod.GET
         uri = f"{self._uri}/templates"
         response = self.client._do_request_prim(
             method,
@@ -27,7 +28,7 @@ class Cluster(object):
         return process_response(response)
 
     def get_clusters(self, vdc=None, org=None):
-        method = 'GET'
+        method = RequestMethod.GET
         uri = f"{self._uri}/clusters"
         response = self.client._do_request_prim(
             method,
@@ -38,7 +39,7 @@ class Cluster(object):
         return process_response(response)
 
     def get_cluster_info(self, name, org=None, vdc=None):
-        method = 'GET'
+        method = RequestMethod.GET
         uri = f'{self._uri}/cluster/{name}'
         response = self.client._do_request_prim(
             method,
@@ -93,7 +94,7 @@ class Cluster(object):
 
         :return: (json) A parsed json object describing the requested cluster.
         """
-        method = 'POST'
+        method = RequestMethod.POST
         uri = f"{self._uri}/clusters"
         data = {
             'cluster_name': name,
@@ -125,7 +126,7 @@ class Cluster(object):
                        org=None,
                        vdc=None,
                        disable_rollback=True):
-        method = 'PUT'
+        method = RequestMethod.PUT
         uri = f"{self._uri}/cluster/{cluster_name}"
         data = {
             'name': cluster_name,
@@ -146,7 +147,7 @@ class Cluster(object):
         return process_response(response)
 
     def delete_cluster(self, cluster_name, org=None, vdc=None):
-        method = 'DELETE'
+        method = RequestMethod.DELETE
         uri = f"{self._uri}/cluster/{cluster_name}"
         response = self.client._do_request_prim(
             method,
@@ -157,7 +158,7 @@ class Cluster(object):
         return process_response(response)
 
     def get_cluster_config(self, cluster_name, org=None, vdc=None):
-        method = 'GET'
+        method = RequestMethod.GET
         uri = f"{self._uri}/cluster/{cluster_name}/config"
         response = self.client._do_request_prim(
             method,
@@ -218,7 +219,7 @@ class Cluster(object):
 
         :return: (json) A parsed json object describing the requested cluster.
         """
-        method = 'POST'
+        method = RequestMethod.POST
         uri = f'{self._uri}/nodes'
         data = {
             'cluster_name': cluster_name,
@@ -255,7 +256,7 @@ class Cluster(object):
         :return: (json) A parsed json object describing the requested cluster
             operation.
         """
-        method = 'DELETE'
+        method = RequestMethod.DELETE
         uri = f"{self._uri}/nodes"
         data = {'cluster_name': cluster_name, 'org': org, 'vdc': vdc,
                 'nodes': nodes, 'force': force}

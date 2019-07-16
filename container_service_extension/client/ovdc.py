@@ -9,15 +9,16 @@ from container_service_extension.client.response_processor import \
 from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
+from container_service_extension.shared_constants import RequestMethod
 
 
-class Ovdc(object):
+class Ovdc:
     def __init__(self, client):
         self.client = client
         self._uri = self.client.get_api_uri() + '/cse'
 
     def list_ovdc_for_k8s(self, list_pks_plans=False):
-        method = 'GET'
+        method = RequestMethod.GET
         uri = f'{self._uri}/ovdcs'
         response = self.client._do_request_prim(
             method,
@@ -50,7 +51,7 @@ class Ovdc(object):
 
         :rtype: dict
         """
-        method = 'PUT'
+        method = RequestMethod.PUT
         ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
@@ -89,7 +90,7 @@ class Ovdc(object):
 
         :rtype: dict
         """
-        method = 'GET'
+        method = RequestMethod.GET
         ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
