@@ -17,10 +17,8 @@ from container_service_extension.exceptions import CseClientError
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
 from container_service_extension.service import Service
-from container_service_extension.shared_constants import SERVER_DISABLE_ACTION
-from container_service_extension.shared_constants import SERVER_ENABLE_ACTION
-from container_service_extension.shared_constants import SERVER_STOP_ACTION
 
+from container_service_extension.shared_constants import ServerAction
 
 @vcd.group(short_help='Manage Kubernetes clusters')
 @click.pass_context
@@ -832,7 +830,7 @@ def stop_service(ctx):
         restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
-        result = system.update_service_status(action=SERVER_STOP_ACTION)
+        result = system.update_service_status(action=ServerAction.STOP)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -846,7 +844,7 @@ def enable_service(ctx):
         restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
-        result = system.update_service_status(action=SERVER_ENABLE_ACTION)
+        result = system.update_service_status(action=ServerAction.ENABLE)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -860,7 +858,7 @@ def disable_service(ctx):
         restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
-        result = system.update_service_status(action=SERVER_DISABLE_ACTION)
+        result = system.update_service_status(action=ServerAction.DISABLE)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)

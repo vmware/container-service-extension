@@ -12,6 +12,16 @@ ERROR_STACKTRACE_KEY = "stacktrace"
 UNKNOWN_ERROR_MESSAGE = "Unknown error. Please contact your system " \
                         "administrator"
 
+SERVER_ACTION_KEY = 'action'
+
+
+@unique
+class ServerAction(str, Enum):
+    DISABLE = 'disable'
+    ENABLE = 'enable'
+    STOP = 'stop'
+
+
 @unique
 class RequestMethod(str, Enum):
     GET = 'GET'

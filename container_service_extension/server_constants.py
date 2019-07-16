@@ -84,3 +84,9 @@ class CseOperation(Enum):
     SYSTEM_INFO = ('get info of system')
     SYSTEM_UPDATE = ('update system status')
     TEMPLATE_LIST = ('list all templates')
+
+# CSE SERVICE; used for registering CSE to vCD as an api extension service.
+CSE_SERVICE_NAME = 'cse'
+CSE_SERVICE_NAMESPACE = 'cse'
+EXCHANGE_TYPE = 'direct'
+SYSTEM_ORG_NAME = 'system'

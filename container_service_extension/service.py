@@ -28,9 +28,9 @@ from container_service_extension.pks_cache import PksCache
 from container_service_extension.pyvcloud_utils import \
     connect_vcd_user_via_token
 from container_service_extension.shared_constants import SERVER_ACTION_KEY
-from container_service_extension.shared_constants import SERVER_DISABLE_ACTION
-from container_service_extension.shared_constants import SERVER_ENABLE_ACTION
-from container_service_extension.shared_constants import SERVER_STOP_ACTION
+
+
+from container_service_extension.shared_constants import ServerAction
 
 
 class Singleton(type):
@@ -136,23 +136,23 @@ class Service(object, metaclass=Singleton):
 
         action = req_spec.get(SERVER_ACTION_KEY)
         if self._state == ServerState.RUNNING:
-            if action == SERVER_ENABLE_ACTION:
+            if action == ServerAction.ENABLE:
                 raise CseRequestError(
                     status_code=requests.codes.bad_request,
                     error_message='CSE is already enabled and running.')
-            elif action == SERVER_DISABLE_ACTION:
+            elif action == ServerAction.DISABLE:
                 self._state = ServerState.DISABLED
                 message = 'CSE has been disabled.'
-            elif action == SERVER_STOP_ACTION:
+            elif action == ServerAction.STOP:
                 raise CseRequestError(
                     status_code=requests.codes.bad_request,
                     error_message='Cannot stop CSE while it is enabled. '
                                   'Disable the service first')
         elif self._state == ServerState.DISABLED:
-            if action == SERVER_ENABLE_ACTION:
+            if action == ServerAction.ENABLE:
                 self._state = ServerState.RUNNING
                 message = 'CSE has been enabled and is running.'
-            elif action == SERVER_DISABLE_ACTION:
+            elif action == ServerAction.DISABLE:
                 raise CseRequestError(
                     status_code=requests.codes.bad_request,
                     error_message='CSE is already disabled.')
@@ -163,17 +163,17 @@ class Service(object, metaclass=Singleton):
                     message += f" CSE will finish processing {n} requests."
                 self._state = ServerState.STOPPING
         elif self._state == ServerState.STOPPING:
-            if action == SERVER_ENABLE_ACTION:
+            if action == ServerAction.ENABLE:
                 raise CseRequestError(
                     status_code=requests.codes.bad_request,
                     error_message='Cannot enable CSE while it is being'
                                   'stopped.')
-            elif action == SERVER_DISABLE_ACTION:
+            elif action == ServerAction.DISABLE:
                 raise CseRequestError(
                     status_code=requests.codes.bad_request,
                     error_message='Cannot disable CSE while it is being'
                                   ' stopped.')
-            elif action == SERVER_STOP_ACTION:
+            elif action == ServerAction.STOP:
                 message = 'CSE graceful shutdown is in progress.'
 
         return message

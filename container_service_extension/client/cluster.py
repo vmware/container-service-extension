@@ -10,6 +10,7 @@ from container_service_extension.client.response_processor import \
     response_to_exception
 
 from container_service_extension.shared_constants import RequestMethod
+from container_service_extension.server_constants import NodeType
 
 
 class Cluster:
@@ -131,7 +132,7 @@ class Cluster:
         data = {
             'name': cluster_name,
             'node_count': node_count,
-            'node_type': TYPE_NODE,
+            'node_type': NodeType.WORKER,
             'org': org,
             'vdc': vdc,
             'network': network_name,
@@ -193,7 +194,7 @@ class Cluster:
                  storage_profile=None,
                  ssh_key=None,
                  template=None,
-                 node_type=TYPE_NODE,
+                 node_type=NodeType.WORKER,
                  disable_rollback=True):
         """Add nodes to a Kubernetes cluster.
 
