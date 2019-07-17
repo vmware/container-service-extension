@@ -26,7 +26,6 @@ from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vdc import VDC
 from vcd_cli.vcd import vcd
 
-import container_service_extension.install_utils as install_utils
 import container_service_extension.pyvcloud_utils as pyvcloud_utils
 from container_service_extension.server_constants import CSE_SERVICE_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
@@ -180,8 +179,8 @@ def delete_catalog_item(item_name):
     org = Org(CLIENT, href=ORG_HREF)
     try:
         org.delete_catalog_item(CATALOG_NAME, item_name)
-        install_utils.wait_for_catalog_item_to_resolve(CLIENT, CATALOG_NAME,
-                                                       item_name, org=org)
+        pyvcloud_utils.wait_for_catalog_item_to_resolve(CLIENT, CATALOG_NAME,
+                                                        item_name, org=org)
         org.reload()
     except EntityNotFoundException:
         pass

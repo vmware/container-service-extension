@@ -4,7 +4,6 @@
 
 from urllib.parse import urlparse
 
-import click
 import pika
 from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
@@ -24,18 +23,8 @@ import yaml
 
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.exceptions import AmqpError
-from container_service_extension.install_utils import catalog_exists
-from container_service_extension.install_utils import catalog_item_exists
-from container_service_extension.install_utils import check_file_permissions
-from container_service_extension.install_utils import create_and_share_catalog
-from container_service_extension.install_utils import download_file
 from container_service_extension.install_utils import get_data_file
 from container_service_extension.install_utils import get_vsphere
-from container_service_extension.install_utils import upload_ova_to_catalog
-from container_service_extension.install_utils import vgr_callback
-from container_service_extension.install_utils \
-    import wait_for_catalog_item_to_resolve
-from container_service_extension.install_utils import wait_until_tools_ready
 from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
@@ -50,8 +39,14 @@ from container_service_extension.pks_cache import Credentials
 from container_service_extension.pksclient.client.v1.api_client \
     import ApiClient as ApiClientV1
 from container_service_extension.pksclient.configuration import Configuration
+from container_service_extension.pyvcloud_utils import catalog_exists
+from container_service_extension.pyvcloud_utils import catalog_item_exists
+from container_service_extension.pyvcloud_utils import create_and_share_catalog
 from container_service_extension.pyvcloud_utils import get_org
 from container_service_extension.pyvcloud_utils import get_vdc
+from container_service_extension.pyvcloud_utils import upload_ova_to_catalog
+from container_service_extension.pyvcloud_utils import \
+    wait_for_catalog_item_to_resolve
 from container_service_extension.sample_generator import \
     PKS_ACCOUNTS_SECTION_KEY, PKS_NSXT_SERVERS_SECTION_KEY, \
     PKS_ORGS_SECTION_KEY, PKS_PVDCS_SECTION_KEY, PKS_SERVERS_SECTION_KEY, \
@@ -68,8 +63,12 @@ from container_service_extension.server_constants import \
     CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, EXCHANGE_TYPE, \
     SYSTEM_ORG_NAME  # noqa
 from container_service_extension.uaaclient.uaaclient import UaaClient
+from container_service_extension.utils import check_file_permissions
 from container_service_extension.utils import check_keys_and_value_types
+from container_service_extension.utils import download_file
 from container_service_extension.utils import get_duplicate_items_in_list
+from container_service_extension.vsphere_utils import vgr_callback
+from container_service_extension.vsphere_utils import wait_until_tools_ready
 
 # used for creating temp vapp
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = "vmxnet3"
@@ -77,7 +76,7 @@ TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
 VERSION_V1 = 'v1'
 
 
-def get_validated_config(config_file_name):
+def get_validated_config(config_file_name, msg_update_callback=None):
     """Get the config file as a dictionary and check for validity.
 
     Ensures that all properties exist and all values are the expected type.
@@ -86,6 +85,8 @@ def get_validated_config(config_file_name):
     config file.
 
     :param str config_file_name: path to config file.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
+        that writes messages onto console.
 
     :return: CSE config
 
@@ -105,35 +106,46 @@ def get_validated_config(config_file_name):
     :raises pyVmomi.vim.fault.InvalidLogin: if 'vcs' 'username' or 'password'
         is invalid.
     """
-    check_file_permissions(config_file_name)
+    check_file_permissions(config_file_name,
+                           msg_update_callback=msg_update_callback)
     with open(config_file_name) as config_file:
         config = yaml.safe_load(config_file) or {}
     pks_config_location = config.get('pks_config')
-    click.secho(f"Validating config file '{config_file_name}'", fg='yellow')
+    if msg_update_callback:
+        msg_update_callback.info(
+            f"Validating config file '{config_file_name}'")
     # This allows us to compare top-level config keys and value types
     sample_config = {
         **SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
         **SAMPLE_VCS_CONFIG, **SAMPLE_SERVICE_CONFIG,
         **SAMPLE_BROKER_CONFIG
     }
-    check_keys_and_value_types(config, sample_config, location='config file')
-    validate_amqp_config(config['amqp'])
-    validate_vcd_and_vcs_config(config['vcd'], config['vcs'])
-    validate_broker_config(config['broker'])
+    check_keys_and_value_types(config, sample_config, location='config file',
+                               msg_update_callback=msg_update_callback)
+    _validate_amqp_config(config['amqp'], msg_update_callback)
+    _validate_vcd_and_vcs_config(config['vcd'], config['vcs'],
+                                 msg_update_callback)
+    _validate_broker_config(config['broker'], msg_update_callback)
     check_keys_and_value_types(config['service'],
                                SAMPLE_SERVICE_CONFIG['service'],
-                               location="config file 'service' section")
-    click.secho(f"Config file '{config_file_name}' is valid", fg='green')
+                               location="config file 'service' section",
+                               msg_update_callback=msg_update_callback)
+    if msg_update_callback:
+        msg_update_callback.general(
+            f"Config file '{config_file_name}' is valid")
     if isinstance(pks_config_location, str) and pks_config_location:
-        check_file_permissions(pks_config_location)
+        check_file_permissions(pks_config_location,
+                               msg_update_callback=msg_update_callback)
         with open(pks_config_location) as f:
             pks_config = yaml.safe_load(f) or {}
-        click.secho(f"Validating PKS config file '{pks_config_location}'",
-                    fg='yellow')
-        validate_pks_config_structure(pks_config)
-        validate_pks_config_data_integrity(pks_config)
-        click.secho(f"PKS Config file '{pks_config_location}' is valid",
-                    fg='green')
+        if msg_update_callback:
+            msg_update_callback.info(
+                f"Validating PKS config file '{pks_config_location}'")
+        _validate_pks_config_structure(pks_config, msg_update_callback)
+        _validate_pks_config_data_integrity(pks_config, msg_update_callback)
+        if msg_update_callback:
+            msg_update_callback.general(
+                f"PKS Config file '{pks_config_location}' is valid")
         config['pks_config'] = pks_config
     else:
         config['pks_config'] = None
@@ -141,13 +153,15 @@ def get_validated_config(config_file_name):
     return config
 
 
-def validate_amqp_config(amqp_dict):
+def _validate_amqp_config(amqp_dict, msg_update_callback=None):
     """Ensure that 'amqp' section of config is correct.
 
     Checks that 'amqp' section of config has correct keys and value types.
     Also ensures that connection to AMQP server is valid.
 
     :param dict amqp_dict: 'amqp' section of config file as a dict.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
+        that writes messages onto console.
 
     :raises KeyError: if @amqp_dict has missing or extra properties.
     :raises TypeError: if the value type for an @amqp_dict property
@@ -155,7 +169,8 @@ def validate_amqp_config(amqp_dict):
     :raises AmqpConnectionError: if AMQP connection failed.
     """
     check_keys_and_value_types(amqp_dict, SAMPLE_AMQP_CONFIG['amqp'],
-                               location="config file 'amqp' section")
+                               location="config file 'amqp' section",
+                               msg_update_callback=msg_update_callback)
     credentials = pika.PlainCredentials(amqp_dict['username'],
                                         amqp_dict['password'])
     parameters = pika.ConnectionParameters(amqp_dict['host'],
@@ -169,8 +184,10 @@ def validate_amqp_config(amqp_dict):
     connection = None
     try:
         connection = pika.BlockingConnection(parameters)
-        click.secho(f"Connected to AMQP server "
-                    f"({amqp_dict['host']}:{amqp_dict['port']})", fg='green')
+        if msg_update_callback:
+            msg_update_callback.general(
+                "Connected to AMQP server "
+                f"({amqp_dict['host']}:{amqp_dict['port']})")
     except Exception as err:
         raise AmqpConnectionError("Amqp connection failed:", str(err))
     finally:
@@ -178,7 +195,7 @@ def validate_amqp_config(amqp_dict):
             connection.close()
 
 
-def validate_vcd_and_vcs_config(vcd_dict, vcs):
+def _validate_vcd_and_vcs_config(vcd_dict, vcs, msg_update_callback=None):
     """Ensure that 'vcd' and vcs' section of config are correct.
 
     Checks that 'vcd' and 'vcs' section of config have correct keys and value
@@ -186,6 +203,8 @@ def validate_vcd_and_vcs_config(vcd_dict, vcs):
 
     :param dict vcd_dict: 'vcd' section of config file as a dict.
     :param list vcs: 'vcs' section of config file as a list of dicts.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
+        that writes messages onto console.
 
     :raises KeyError: if @vcd_dict or a vc in @vcs has missing or
         extra properties.
@@ -194,11 +213,14 @@ def validate_vcd_and_vcs_config(vcd_dict, vcs):
     :raises ValueError: if vCD has a VC that is not listed in the config file.
     """
     check_keys_and_value_types(vcd_dict, SAMPLE_VCD_CONFIG['vcd'],
-                               location="config file 'vcd' section")
+                               location="config file 'vcd' section",
+                               msg_update_callback=msg_update_callback)
     if not vcd_dict['verify']:
-        click.secho('InsecureRequestWarning: Unverified HTTPS request is '
-                    'being made. Adding certificate verification is '
-                    'strongly advised.', fg='yellow', err=True)
+        if msg_update_callback:
+            msg_update_callback.general(
+                'InsecureRequestWarning: Unverified HTTPS request is '
+                'being made. Adding certificate verification is '
+                'strongly advised.')
         requests.packages.urllib3.disable_warnings()
 
     client = None
@@ -218,13 +240,16 @@ def validate_vcd_and_vcs_config(vcd_dict, vcs):
         client.set_credentials(BasicLoginCredentials(vcd_dict['username'],
                                                      SYSTEM_ORG_NAME,
                                                      vcd_dict['password']))
-        click.secho(f"Connected to vCloud Director "
-                    f"({vcd_dict['host']}:{vcd_dict['port']})", fg='green')
+        if msg_update_callback:
+            msg_update_callback.general(
+                "Connected to vCloud Director "
+                f"({vcd_dict['host']}:{vcd_dict['port']})")
 
         for index, vc in enumerate(vcs, 1):
-            check_keys_and_value_types(vc, SAMPLE_VCS_CONFIG['vcs'][0],
-                                       location=f"config file 'vcs' section,"
-                                                f" vc #{index}")
+            check_keys_and_value_types(
+                vc, SAMPLE_VCS_CONFIG['vcs'][0],
+                location=f"config file 'vcs' section, vc #{index}",
+                msg_update_callback=msg_update_callback)
 
         # Check that all registered VCs in vCD are listed in config file
         platform = Platform(client)
@@ -242,21 +267,25 @@ def validate_vcd_and_vcs_config(vcd_dict, vcs):
             v = VSphere(vsphere_url.hostname, vc['username'],
                         vc['password'], vsphere_url.port)
             v.connect()
-            click.secho(f"Connected to vCenter Server '{vc['name']}' as "
-                        f"'{vc['username']}' ({vsphere_url.hostname}:"
-                        f"{vsphere_url.port})", fg='green')
+            if msg_update_callback:
+                msg_update_callback.general(
+                    f"Connected to vCenter Server '{vc['name']}' as "
+                    f"'{vc['username']}' ({vsphere_url.hostname}:"
+                    f"{vsphere_url.port})")
     finally:
         if client is not None:
             client.logout()
 
 
-def validate_broker_config(broker_dict):
+def _validate_broker_config(broker_dict, msg_update_callback=None):
     """Ensure that 'broker' section of config is correct.
 
     Checks that 'broker' section of config has correct keys and value
     types. Also checks that 'default_broker' property is a valid template.
 
     :param dict broker_dict: 'broker' section of config file as a dict.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
+        that writes messages onto console.
 
     :raises KeyError: if @broker_dict has missing or extra properties.
     :raises TypeError: if the value type for a @broker_dict property is
@@ -266,13 +295,15 @@ def validate_broker_config(broker_dict):
     """
     check_keys_and_value_types(broker_dict, SAMPLE_BROKER_CONFIG['broker'],
                                location="config file 'broker' section",
-                               excluded_keys=['remote_template_cookbook_url'])
+                               excluded_keys=['remote_template_cookbook_url'],
+                               msg_update_callback=msg_update_callback)
 
     default_exists = False
     for template in broker_dict['templates']:
         check_keys_and_value_types(template, SAMPLE_TEMPLATE_PHOTON_V2,
                                    location="config file broker "
-                                            "template section")
+                                            "template section",
+                                   msg_update_callback=msg_update_callback)
         if template['name'] == broker_dict['default_template']:
             default_exists = True
     if not default_exists:
@@ -289,7 +320,7 @@ def validate_broker_config(broker_dict):
                          f"should be either 'dhcp' or 'pool'")
 
 
-def validate_pks_config_structure(pks_config):
+def _validate_pks_config_structure(pks_config, msg_update_callback=None):
     sample_config = {
         **SAMPLE_PKS_SERVERS_SECTION, **SAMPLE_PKS_ACCOUNTS_SECTION,
         **SAMPLE_PKS_ORGS_SECTION, **SAMPLE_PKS_PVDCS_SECTION,
@@ -297,7 +328,8 @@ def validate_pks_config_structure(pks_config):
     }
     check_keys_and_value_types(pks_config, sample_config,
                                location='pks config file',
-                               excluded_keys=[PKS_ORGS_SECTION_KEY])
+                               excluded_keys=[PKS_ORGS_SECTION_KEY],
+                               msg_update_callback=msg_update_callback)
 
     pks_servers = pks_config[PKS_SERVERS_SECTION_KEY]
     for index, pks_server in enumerate(pks_servers, 1):
@@ -306,14 +338,16 @@ def validate_pks_config_structure(pks_config):
             SAMPLE_PKS_SERVERS_SECTION[PKS_SERVERS_SECTION_KEY][0],
             location=f"pks config file '{PKS_SERVERS_SECTION_KEY}' "
                      f"section, pks server #{index}",
-            excluded_keys=['proxy'])
+            excluded_keys=['proxy'],
+            msg_update_callback=msg_update_callback)
     pks_accounts = pks_config[PKS_ACCOUNTS_SECTION_KEY]
     for index, pks_account in enumerate(pks_accounts, 1):
         check_keys_and_value_types(
             pks_account,
             SAMPLE_PKS_ACCOUNTS_SECTION[PKS_ACCOUNTS_SECTION_KEY][0],
             location=f"pks config file '{PKS_ACCOUNTS_SECTION_KEY}' "
-                     f"section, pks account #{index}")
+                     f"section, pks account #{index}",
+            msg_update_callback=msg_update_callback)
     if PKS_ORGS_SECTION_KEY in pks_config.keys():
         orgs = pks_config[PKS_ORGS_SECTION_KEY]
         for index, org in enumerate(orgs, 1):
@@ -321,14 +355,16 @@ def validate_pks_config_structure(pks_config):
                 org,
                 SAMPLE_PKS_ORGS_SECTION[PKS_ORGS_SECTION_KEY][0],
                 location=f"pks config file '{PKS_ORGS_SECTION_KEY}' "
-                         f"section, org #{index}")
+                         f"section, org #{index}",
+                msg_update_callback=msg_update_callback)
     pvdcs = pks_config[PKS_PVDCS_SECTION_KEY]
     for index, pvdc in enumerate(pvdcs, 1):
         check_keys_and_value_types(
             pvdc,
             SAMPLE_PKS_PVDCS_SECTION[PKS_PVDCS_SECTION_KEY][0],
             location=f"pks config file '{PKS_PVDCS_SECTION_KEY}' "
-                     f"section, pvdc #{index}")
+                     f"section, pvdc #{index}",
+            msg_update_callback=msg_update_callback)
     nsxt_servers = pks_config[PKS_NSXT_SERVERS_SECTION_KEY]
     for index, nsxt_server in enumerate(nsxt_servers, 1):
         check_keys_and_value_types(
@@ -336,10 +372,11 @@ def validate_pks_config_structure(pks_config):
             SAMPLE_PKS_NSXT_SERVERS_SECTION[PKS_NSXT_SERVERS_SECTION_KEY][0],
             location=f"pks config file '{PKS_NSXT_SERVERS_SECTION_KEY}' "
                      f"section, nsxt server #{index}",
-            excluded_keys=['proxy'])
+            excluded_keys=['proxy'],
+            msg_update_callback=msg_update_callback)
 
 
-def validate_pks_config_data_integrity(pks_config):
+def _validate_pks_config_data_integrity(pks_config, msg_update_callback=None):
     all_pks_servers = \
         [entry['name'] for entry in pks_config[PKS_SERVERS_SECTION_KEY]]
     all_pks_accounts = \
@@ -397,8 +434,8 @@ def validate_pks_config_data_integrity(pks_config):
                              f"referenced by PVDC : {pvdc.get('name')} in "
                              f"Section : {PKS_PVDCS_SECTION_KEY}")
 
-    '''Check validity of all PKS api servers referenced in the
-        pks_api_servers section'''
+    # Check validity of all PKS api servers referenced in the pks_api_servers
+    # section
     for pks_server in pks_config[PKS_SERVERS_SECTION_KEY]:
         pks_account = pks_account_info_table.get(pks_server.get('name'))
         pks_configuration = Configuration()
@@ -428,10 +465,10 @@ def validate_pks_config_data_integrity(pks_config):
         pks_configuration.token = token
         client = ApiClientV1(configuration=pks_configuration)
 
-        if client:
-            click.secho(f"Connected to PKS server ("
-                        f"{pks_server.get('name')} ({pks_server.get('host')})",
-                        fg='green')
+        if client and msg_update_callback:
+            msg_update_callback.general(
+                "Connected to PKS server ("
+                f"{pks_server.get('name')} : {pks_server.get('host')})")
 
     # Check validity of all PKS api servers referenced in NSX-T section
     for nsxt_server in pks_config[PKS_NSXT_SERVERS_SECTION_KEY]:
@@ -455,8 +492,9 @@ def validate_pks_config_data_integrity(pks_config):
                 "Unable to connect to NSX-T server : "
                 f"{nsxt_server.get('name')} ({nsxt_server.get('host')})")
 
-        click.secho(f"Connected to NSX-T server ({nsxt_server.get('host')})",
-                    fg='green')
+        if msg_update_callback:
+            msg_update_callback.general(
+                f"Connected to NSX-T server ({nsxt_server.get('host')})")
 
         ipset_manager = IPSetManager(nsxt_client)
         if nsxt_server.get('nodes_ip_block_ids'):
@@ -494,7 +532,8 @@ def validate_pks_config_data_integrity(pks_config):
                 f"NSX-T server : {nsxt_server.get('name')}.")
 
 
-def check_cse_installation(config, check_template='*'):
+def check_cse_installation(config, check_template='*',
+                           msg_update_callback=None):
     """Ensure that CSE is installed on vCD according to the config file.
 
     Checks if CSE is registered to vCD, if catalog exists, and if templates
@@ -503,13 +542,16 @@ def check_cse_installation(config, check_template='*'):
     :param dict config: config yaml file as a dictionary
     :param str check_template: which template to check for. Default value of
         '*' means to check all templates specified in @config
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
+        that writes messages onto console.
 
     :raises EntityNotFoundException: if CSE is not registered to vCD as an
         extension, or if specified catalog does not exist, or if specified
         template(s) do not exist.
     """
-    click.secho(f"Validating CSE installation according to config file",
-                fg='yellow')
+    if msg_update_callback:
+        msg_update_callback.info(
+            "Validating CSE installation according to config file")
     err_msgs = []
     client = None
     try:
@@ -543,15 +585,18 @@ def check_cse_installation(config, check_template='*'):
                                          durable=True,
                                          passive=True,
                                          auto_delete=False)
-                click.secho(f"AMQP exchange '{amqp['exchange']}' exists",
-                            fg='green')
+                if msg_update_callback:
+                    msg_update_callback.general(
+                        f"AMQP exchange '{amqp['exchange']}' exists")
             except pika.exceptions.ChannelClosed:
                 msg = f"AMQP exchange '{amqp['exchange']}' does not exist"
-                click.secho(msg, fg='red')
+                if msg_update_callback:
+                    msg_update_callback.error(msg)
                 err_msgs.append(msg)
         except Exception:  # TODO() replace raw exception with specific
             msg = f"Could not connect to AMQP exchange '{amqp['exchange']}'"
-            click.secho(msg, fg='red')
+            if msg_update_callback:
+                msg_update_callback.error(msg)
             err_msgs.append(msg)
         finally:
             if connection is not None:
@@ -573,22 +618,29 @@ def check_cse_installation(config, check_template='*'):
                 if not exchange_matches:
                     msg += f"\nvCD-CSE exchange: {cse_info['exchange']}" \
                            f"\nCSE config exchange: {amqp['exchange']}"
-                click.secho(msg, fg='yellow')
+                if msg_update_callback:
+                    msg_update_callback.info(msg)
                 err_msgs.append(msg)
             if cse_info['enabled'] == 'true':
-                click.secho("CSE on vCD is currently enabled", fg='green')
+                if msg_update_callback:
+                    msg_update_callback.general(
+                        "CSE on vCD is currently enabled")
             else:
-                click.secho("CSE on vCD is currently disabled", fg='yellow')
+                if msg_update_callback:
+                    msg_update_callback.info(
+                        "CSE on vCD is currently disabled")
         except MissingRecordException:
             msg = "CSE is not registered to vCD"
-            click.secho(msg, fg='red')
+            if msg_update_callback:
+                msg_update_callback.error(msg)
             err_msgs.append(msg)
 
         # check that catalog exists in vCD
         org = Org(client, resource=client.get_org())
         catalog_name = config['broker']['catalog']
         if catalog_exists(org, catalog_name):
-            click.secho(f"Found catalog '{catalog_name}'", fg='green')
+            if msg_update_callback:
+                msg_update_callback.general(f"Found catalog '{catalog_name}'")
             # check that templates exist in vCD
             for template in config['broker']['templates']:
                 if check_template != '*' \
@@ -596,16 +648,20 @@ def check_cse_installation(config, check_template='*'):
                     continue
                 catalog_item_name = template['catalog_item']
                 if catalog_item_exists(org, catalog_name, catalog_item_name):
-                    click.secho(f"Found template '{catalog_item_name}' in "
-                                f"catalog '{catalog_name}'", fg='green')
+                    if msg_update_callback:
+                        msg_update_callback.general(
+                            f"Found template '{catalog_item_name}' in "
+                            f"catalog '{catalog_name}'")
                 else:
                     msg = f"Template '{catalog_item_name}' not found in " \
                           f"catalog '{catalog_name}'"
-                    click.secho(msg, fg='red')
+                    if msg_update_callback:
+                        msg_update_callback.error(msg)
                     err_msgs.append(msg)
         else:
             msg = f"Catalog '{catalog_name}' not found"
-            click.secho(msg, fg='red')
+            if msg_update_callback:
+                msg_update_callback.error(msg)
             err_msgs.append(msg)
     finally:
         if client is not None:
@@ -613,12 +669,13 @@ def check_cse_installation(config, check_template='*'):
 
     if err_msgs:
         raise EntityNotFoundException(err_msgs)
-
-    click.secho(f"CSE installation is valid", fg='green')
+    if msg_update_callback:
+        msg_update_callback.general("CSE installation is valid")
 
 
 def install_cse(ctx, config_file_name='config.yaml', template_name='*',
-                update=False, no_capture=False, ssh_key=None):
+                update=False, no_capture=False, ssh_key=None,
+                msg_update_callback=None):
     """Handle logistics for CSE installation.
 
     Handles decision making for configuring AMQP exchange/settings,
@@ -633,14 +690,18 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
     :param bool no_capture: if True, temporary vApp will not be captured or
         destroyed, so the user can ssh into and debug the VM.
     :param str ssh_key: public ssh key to place into template vApp(s).
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
+        that writes messages onto console.
 
     :raises AmqpError: if AMQP exchange could not be created.
     """
-    config = get_validated_config(config_file_name)
+    config = get_validated_config(config_file_name,
+                                  msg_update_callback=msg_update_callback)
     configure_install_logger()
     msg = f"Installing CSE on vCloud Director using config file " \
           f"'{config_file_name}'"
-    click.secho(msg, fg='yellow')
+    if msg_update_callback:
+        msg_update_callback.info(msg)
     LOGGER.info(msg)
     client = None
     try:
@@ -657,39 +718,46 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
         client.set_credentials(credentials)
         msg = f"Connected to vCD as system administrator: " \
               f"{config['vcd']['host']}:{config['vcd']['port']}"
-        click.secho(msg, fg='green')
+        if msg_update_callback:
+            msg_update_callback.general(msg)
         LOGGER.info(msg)
 
         # create amqp exchange if it doesn't exist
         amqp = config['amqp']
         create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
                              amqp['vhost'], amqp['ssl'], amqp['username'],
-                             amqp['password'])
+                             amqp['password'],
+                             msg_update_callback=msg_update_callback)
 
         # register or update cse on vCD
-        register_cse(client, amqp['routing_key'], amqp['exchange'])
+        register_cse(client, amqp['routing_key'], amqp['exchange'],
+                     msg_update_callback=msg_update_callback)
 
         # register rights to vCD
         # TODO() should also remove rights when unregistering CSE
         register_right(client, right_name=CSE_NATIVE_DEPLOY_RIGHT_NAME,
                        description=CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,
                        category=CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,
-                       bundle_key=CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY)
+                       bundle_key=CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY,
+                       msg_update_callback=msg_update_callback)
         register_right(client, right_name=CSE_PKS_DEPLOY_RIGHT_NAME,
                        description=CSE_PKS_DEPLOY_RIGHT_DESCRIPTION,
                        category=CSE_PKS_DEPLOY_RIGHT_CATEGORY,
-                       bundle_key=CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY)
+                       bundle_key=CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY,
+                       msg_update_callback=msg_update_callback)
 
         # set up cse catalog
         org = get_org(client, org_name=config['broker']['org'])
-        create_and_share_catalog(org, config['broker']['catalog'],
-                                 catalog_desc='CSE templates')
+        create_and_share_catalog(
+            org, config['broker']['catalog'], catalog_desc='CSE templates',
+            msg_update_callback=msg_update_callback)
         # create, customize, capture VM templates
         for template in config['broker']['templates']:
             if template_name == '*' or template['name'] == template_name:
-                create_template(ctx, client, config, template, update=update,
-                                no_capture=no_capture, ssh_key=ssh_key,
-                                org=org)
+                create_template(
+                    ctx, client, config, template, update=update,
+                    no_capture=no_capture, ssh_key=ssh_key, org=org,
+                    msg_update_callback=msg_update_callback)
 
         # if it's a PKS setup, setup NSX-T constructs
         if config.get('pks_config'):
@@ -697,7 +765,8 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
             for nsxt_server in nsxt_servers:
                 msg = f"Configuring NSX-T server ({nsxt_server.get('name')})" \
                       " for CSE. Please check install logs for details."
-                click.secho(msg, fg='green')
+                if msg_update_callback:
+                    msg_update_callback.general(msg)
                 LOGGER.info(msg)
                 nsxt_client = NSXTClient(
                     host=nsxt_server.get('host'),
@@ -717,7 +786,9 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
                     ncp_boundary_firewall_section_anchor_id=nsxt_server.get('distributed_firewall_section_anchor_id'))  # noqa
 
     except Exception:
-        click.secho("CSE Installation Error. Check CSE install logs", fg='red')
+        if msg_update_callback:
+            msg_update_callback.error(
+                "CSE Installation Error. Check CSE install logs")
         LOGGER.error("CSE Installation Error", exc_info=True)
         raise  # TODO() need installation relevant exceptions for rollback
     finally:
@@ -726,7 +797,8 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
 
 
 def create_template(ctx, client, config, template_config, update=False,
-                    no_capture=False, ssh_key=None, org=None, vdc=None):
+                    no_capture=False, ssh_key=None, org=None, vdc=None,
+                    msg_update_callback=None):
     """Handle template creation phase during CSE installation.
 
     :param click.core.Context ctx: click context object.
@@ -742,6 +814,8 @@ def create_template(ctx, client, config, template_config, update=False,
         specified in @config.
     :param pyvcloud.vcd.vdc.VDC vdc: specific vdc to use. If None, uses vdc
         specified in @config.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
+        that writes messages onto console.
     """
     if org is None:
         org = get_org(client, org_name=config['broker']['org'])
@@ -755,7 +829,8 @@ def create_template(ctx, client, config, template_config, update=False,
 
     if not update and catalog_item_exists(org, catalog_name, template_name):
         msg = f"Found template '{template_name}' in catalog '{catalog_name}'"
-        click.secho(msg, fg='green')
+        if msg_update_callback:
+            msg_update_callback.general(msg)
         LOGGER.info(msg)
         return
 
@@ -763,7 +838,8 @@ def create_template(ctx, client, config, template_config, update=False,
     if update:
         msg = f"--update flag set. If template, source ova file, " \
               f"and temporary vApp exist, they will be deleted"
-        click.secho(msg, fg='yellow')
+        if msg_update_callback:
+            msg_update_callback.info(msg)
         LOGGER.info(msg)
         try:
             org.delete_catalog_item(catalog_name, template_name)
@@ -771,7 +847,8 @@ def create_template(ctx, client, config, template_config, update=False,
                                              template_name, org=org)
             org.reload()
             msg = "Deleted vApp template"
-            click.secho(msg, fg='green')
+            if msg_update_callback:
+                msg_update_callback.general(msg)
             LOGGER.info(msg)
         except EntityNotFoundException:
             pass
@@ -781,7 +858,8 @@ def create_template(ctx, client, config, template_config, update=False,
                                              org=org)
             org.reload()
             msg = "Deleted ova file"
-            click.secho(msg, fg='green')
+            if msg_update_callback:
+                msg_update_callback.general(msg)
             LOGGER.info(msg)
         except EntityNotFoundException:
             pass
@@ -790,20 +868,23 @@ def create_template(ctx, client, config, template_config, update=False,
             stdout(task, ctx=ctx)
             vdc.reload()
             msg = "Deleted temporary vApp"
-            click.secho(msg, fg='green')
+            if msg_update_callback:
+                msg_update_callback.general(msg)
             LOGGER.info(msg)
         except EntityNotFoundException:
             pass
 
     # if needed, upload ova and create temp vapp
     msg = f"Creating template '{template_name}' in catalog '{catalog_name}'"
-    click.secho(msg, fg='yellow')
+    if msg_update_callback:
+        msg_update_callback.info(msg)
     LOGGER.info(msg)
     temp_vapp_exists = True
     try:
         vapp = VApp(client, resource=vdc.get_vapp(vapp_name))
         msg = f"Found vApp '{vapp_name}'"
-        click.secho(msg, fg='green')
+        if msg_update_callback:
+            msg_update_callback.general(msg)
         LOGGER.info(msg)
     except EntityNotFoundException:
         temp_vapp_exists = False
@@ -811,51 +892,61 @@ def create_template(ctx, client, config, template_config, update=False,
     if not temp_vapp_exists:
         if catalog_item_exists(org, catalog_name, ova_name):
             msg = f"Found ova file '{ova_name}' in catalog '{catalog_name}'"
-            click.secho(msg, fg='green')
+            if msg_update_callback:
+                msg_update_callback.general(msg)
             LOGGER.info(msg)
         else:
             # download/upload files to catalog if necessary
             ova_filepath = f"cse_cache/{ova_name}"
             download_file(template_config['source_ova'], ova_filepath,
-                          sha256=template_config['sha256_ova'], logger=LOGGER)
-            upload_ova_to_catalog(client, catalog_name, ova_filepath, org=org,
-                                  logger=LOGGER)
+                          sha256=template_config['sha256_ova'], logger=LOGGER,
+                          msg_update_callback=msg_update_callback)
+            upload_ova_to_catalog(
+                client, catalog_name, ova_filepath, org=org, logger=LOGGER,
+                msg_update_callback=msg_update_callback)
 
-        vapp = _create_temp_vapp(ctx, client, vdc, config, template_config,
-                                 ssh_key)
+        vapp = _create_temp_vapp(
+            ctx, client, vdc, config, template_config, ssh_key,
+            msg_update_callback=msg_update_callback)
 
     if no_capture:
         msg = f"'--no-capture' flag set. " \
               f"Not capturing vApp '{vapp.name}' as a template"
-        click.secho(msg, fg='yellow')
+        if msg_update_callback:
+            msg_update_callback.info(msg)
         LOGGER.info(msg)
         return
 
     # capture temp vapp as template
     msg = f"Creating template '{template_name}' from vApp '{vapp.name}'"
-    click.secho(msg, fg='yellow')
+    if msg_update_callback:
+        msg_update_callback.info(msg)
     LOGGER.info(msg)
-    capture_vapp_to_template(ctx, vapp, catalog_name, template_name,
-                             org=org, desc=template_config['description'],
-                             power_on=not template_config['cleanup'])
+    _capture_vapp_to_template(ctx, vapp, catalog_name, template_name,
+                              org=org, desc=template_config['description'],
+                              power_on=not template_config['cleanup'])
     msg = f"Created template '{template_name}' from vApp '{vapp_name}'"
-    click.secho(msg, fg='green')
+    if msg_update_callback:
+        msg_update_callback.general(msg)
     LOGGER.info(msg)
 
     # delete temp vapp
     if template_config['cleanup']:
         msg = f"Deleting vApp '{vapp_name}'"
-        click.secho(msg, fg='yellow')
+        if msg_update_callback:
+            msg_update_callback.info(msg)
         LOGGER.info(msg)
         task = vdc.delete_vapp(vapp_name, force=True)
         stdout(task, ctx=ctx)
         vdc.reload()
         msg = f"Deleted vApp '{vapp_name}'"
-        click.secho(msg, fg='green')
+        if msg_update_callback:
+            msg_update_callback.general(msg)
         LOGGER.info(msg)
 
 
-def _create_temp_vapp(ctx, client, vdc, config, template_config, ssh_key):
+def _create_temp_vapp(ctx, client, vdc, config, template_config, ssh_key,
+                      msg_update_callback=None):
     """Handle temporary VApp creation and customization step of CSE install.
 
     Initializes and customizes VApp.
@@ -865,6 +956,8 @@ def _create_temp_vapp(ctx, client, vdc, config, template_config, ssh_key):
     :param dict config: CSE config.
     :param dict template_config: specific template config section of @config.
     :param str ssh_key: ssh key to use in temporary VApp's VM. Can be None.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
+        that writes messages onto console.
 
     :return: VApp object for temporary VApp.
 
@@ -874,8 +967,9 @@ def _create_temp_vapp(ctx, client, vdc, config, template_config, ssh_key):
     :raises Exception: if VM customization fails.
     """
     vapp_name = template_config['temp_vapp']
-    init_script = get_data_file(f"init-{template_config['name']}.sh",
-                                logger=LOGGER)
+    init_script = get_data_file(
+        f"init-{template_config['name']}.sh",
+        logger=LOGGER, msg_update_callback=msg_update_callback)
     if ssh_key is not None:
         init_script += \
             f"""
@@ -884,24 +978,29 @@ def _create_temp_vapp(ctx, client, vdc, config, template_config, ssh_key):
             chmod -R go-rwx /root/.ssh
             """
     msg = f"Creating vApp '{vapp_name}'"
-    click.secho(msg, fg='yellow')
+    if msg_update_callback:
+        msg_update_callback.info(msg)
     LOGGER.info(msg)
     vapp = _create_vapp_from_config(client, vdc, config, template_config,
                                     init_script)
     msg = f"Created vApp '{vapp_name}'"
-    click.secho(msg, fg='green')
+    if msg_update_callback:
+        msg_update_callback.general(msg)
     LOGGER.info(msg)
     msg = f"Customizing vApp '{vapp_name}'"
-    click.secho(msg, fg='yellow')
+    if msg_update_callback:
+        msg_update_callback.info(msg)
     LOGGER.info(msg)
-    cust_script = get_data_file(f"cust-{template_config['name']}.sh",
-                                logger=LOGGER)
+    cust_script = get_data_file(
+        f"cust-{template_config['name']}.sh",
+        logger=LOGGER, msg_update_callback=msg_update_callback)
     ova_name = template_config['source_ova_name']
     is_photon = True if 'photon' in ova_name else False
     _customize_vm(ctx, config, vapp, vapp.name, cust_script,
-                  is_photon=is_photon)
+                  is_photon=is_photon, msg_update_callback=msg_update_callback)
     msg = f"Customized vApp '{vapp_name}'"
-    click.secho(msg, fg='green')
+    if msg_update_callback:
+        msg_update_callback.general(msg)
     LOGGER.info(msg)
 
     return vapp
@@ -951,7 +1050,8 @@ def _create_vapp_from_config(client, vdc, config, template_config,
     return vapp
 
 
-def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
+def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False,
+                  msg_update_callback=None):
     """Customize a VM in a VApp using the customization script @cust_script.
 
     :param click.core.Context ctx: click context object. Needed to pass to
@@ -963,14 +1063,17 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
     :param bool is_photon: True if the vapp was instantiated from
         a 'photon' ova file, False otherwise (False is safe even if
         the vapp is photon-based).
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
+        that writes messages onto console.
 
     :raises Exception: if unable to execute the customization script in
         VSphere.
     """
-    callback = vgr_callback(prepend_msg='Waiting for guest tools, status: "')
+    callback = vgr_callback(prepend_msg='Waiting for guest tools, status: "',
+                            msg_update_callback=msg_update_callback)
     if not is_photon:
         vs = get_vsphere(config, vapp, vm_name, logger=LOGGER)
-        wait_until_tools_ready(vapp, vs, callback=callback)
+        wait_until_tools_ready(vapp, vm_name, vs, callback=callback)
 
         vapp.reload()
         task = vapp.shutdown()
@@ -981,7 +1084,7 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
         vapp.reload()
 
     vs = get_vsphere(config, vapp, vm_name, logger=LOGGER)
-    wait_until_tools_ready(vapp, vs, callback=callback)
+    wait_until_tools_ready(vapp, vm_name, vs, callback=callback)
     password_auto = vapp.get_admin_password(vm_name)
 
     try:
@@ -995,37 +1098,46 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
             wait_time=10,
             get_output=True,
             delete_script=True,
-            callback=vgr_callback())
+            callback=vgr_callback(
+                msg_update_callback=msg_update_callback))
     except Exception as err:
         # TODO() replace raw exception with specific exception
         # unsure all errors execute_script_in_guest can result in
         # Docker TLS handshake timeout can occur when internet is slow
-        click.secho("Failed VM customization. Check CSE install log", fg='red')
+        if msg_update_callback:
+            msg_update_callback.error(
+                "Failed VM customization. Check CSE install log")
         LOGGER.error(f"Failed VM customization with error: {err}",
                      exc_info=True)
         raise
 
     if len(result) > 0:
         msg = f'Result: {result}'
-        click.echo(msg)
+        if msg_update_callback:
+            msg_update_callback.general_no_color(msg)
         LOGGER.debug(msg)
         result_stdout = result[1].content.decode()
         result_stderr = result[2].content.decode()
         msg = 'stderr:'
-        click.echo(msg)
+        if msg_update_callback:
+            msg_update_callback.general_no_color(msg)
         LOGGER.debug(msg)
         if len(result_stderr) > 0:
-            click.echo(result_stderr)
+            if msg_update_callback:
+                msg_update_callback.general_no_color(result_stderr)
             LOGGER.debug(result_stderr)
         msg = 'stdout:'
-        click.echo(msg)
+        if msg_update_callback:
+            msg_update_callback.general_no_color(msg)
         LOGGER.debug(msg)
         if len(result_stdout) > 0:
-            click.echo(result_stdout)
+            if msg_update_callback:
+                msg_update_callback.general_no_color(result_stdout)
             LOGGER.debug(result_stdout)
     if len(result) == 0 or result[0] != 0:
         msg = "Failed VM customization"
-        click.secho(f"{msg}. Check CSE install log", fg='red')
+        if msg_update_callback:
+            msg_update_callback.error(f"{msg}. Check CSE install log")
         LOGGER.error(msg, exc_info=True)
         # TODO() replace raw exception with specific exception
         raise Exception(msg)
@@ -1036,8 +1148,9 @@ def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False):
     # behavior
 
 
-def capture_vapp_to_template(ctx, vapp, catalog_name, catalog_item_name,
-                             desc='', power_on=False, org=None, org_name=None):
+def _capture_vapp_to_template(ctx, vapp, catalog_name, catalog_item_name,
+                              desc='', power_on=False, org=None,
+                              org_name=None):
     """Shutdown and capture existing VApp as a template in @catalog.
 
     VApp should have tools ready, or shutdown will fail, and VApp will be
@@ -1077,7 +1190,7 @@ def capture_vapp_to_template(ctx, vapp, catalog_name, catalog_item_name,
 
 
 def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
-                         username, password):
+                         username, password, msg_update_callback=None):
     """Create the specified AMQP exchange if it does not exist.
 
     If specified AMQP exchange exists already, does nothing.
@@ -1089,11 +1202,14 @@ def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
     :param bool use_ssl: Enable ssl.
     :param str username: AMQP username.
     :param str vhost: AMQP vhost.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
+        that writes messages onto console.
 
     :raises AmqpError: if AMQP exchange could not be created.
     """
     msg = f"Checking for AMQP exchange '{exchange_name}'"
-    click.secho(msg, fg='yellow')
+    if msg_update_callback:
+        msg_update_callback.info(msg)
     LOGGER.info(msg)
     credentials = pika.PlainCredentials(username, password)
     parameters = pika.ConnectionParameters(host, port, vhost, credentials,
@@ -1108,24 +1224,28 @@ def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
                                  durable=True, auto_delete=False)
     except Exception as err:
         msg = f"Cannot create AMQP exchange '{exchange_name}'"
-        click.secho(msg, fg='red')
+        if msg_update_callback:
+            msg_update_callback.error(msg)
         LOGGER.error(msg, exc_info=True)
         raise AmqpError(msg, str(err))
     finally:
         if connection is not None:
             connection.close()
     msg = f"AMQP exchange '{exchange_name}' is ready"
-    click.secho(msg, fg='green')
+    if msg_update_callback:
+        msg_update_callback.general(msg)
     LOGGER.info(msg)
 
 
-def register_cse(client, routing_key, exchange):
+def register_cse(client, routing_key, exchange, msg_update_callback=None):
     """Register or update CSE on vCD.
 
     :param pyvcloud.vcd.client.Client client:
     :param pyvcloud.vcd.client.Client client:
     :param str routing_key:
     :param str exchange:
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
+        that writes messages onto console.
     """
     ext = APIExtension(client)
     patterns = [
@@ -1150,11 +1270,13 @@ def register_cse(client, routing_key, exchange):
                              routing_key=routing_key, exchange=exchange)
         msg = f"Updated {CSE_SERVICE_NAME} API Extension in vCD"
 
-    click.secho(msg, fg='green')
+    if msg_update_callback:
+        msg_update_callback.general(msg)
     LOGGER.info(msg)
 
 
-def register_right(client, right_name, description, category, bundle_key):
+def register_right(client, right_name, description, category, bundle_key,
+                   msg_update_callback=None):
     """Register a right for CSE.
 
     :param pyvcloud.vcd.client.Client client:
@@ -1164,6 +1286,8 @@ def register_right(client, right_name, description, category, bundle_key):
         vCD Roles and Rights or specify a new category name.
     :param str bundle_key: is used to identify the right name and change
         its value to different languages using localization bundle.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
+        that writes messages onto console.
 
     :raises BadRequestException: if a right with given name already
         exists in vCD.
@@ -1177,10 +1301,11 @@ def register_right(client, right_name, description, category, bundle_key):
         # pyvcloud, update the code below to adhere to the new method names.
         system_org.get_right_record(right_name_in_vcd)
         msg = f"Right: {right_name} already exists in vCD"
-        click.secho(msg, fg='green')
+        if msg_update_callback:
+            msg_update_callback.general(msg)
         LOGGER.info(msg)
-        # Presence of the right in vCD is not guarantee that the right will be
-        # assigned to system org.
+        # Presence of the right in vCD is not a guarantee that the right will
+        # be assigned to system org too.
         rights_in_system = system_org.list_rights_of_org()
         for dikt in rights_in_system:
             # TODO(): When localization support comes in, this check should be
@@ -1188,19 +1313,22 @@ def register_right(client, right_name, description, category, bundle_key):
             if dikt['name'] == right_name_in_vcd:
                 msg = f"Right: {right_name} already assigned to System " \
                     f"organization."
-                click.secho(msg, fg='green')
+                if msg_update_callback:
+                    msg_update_callback.general(msg)
                 LOGGER.info(msg)
                 return
         # Since the right is not assigned to system org, we need to add it.
         msg = f"Assigning Right: {right_name} to System organization."
-        click.secho(msg, fg='green')
+        if msg_update_callback:
+            msg_update_callback.general(msg)
         LOGGER.info(msg)
         system_org.add_rights([right_name_in_vcd])
     except EntityNotFoundException:
         # Registering a right via api extension end point auto assigns it to
         # System org.
         msg = f"Registering Right: {right_name} in vCD"
-        click.secho(msg, fg='green')
+        if msg_update_callback:
+            msg_update_callback.general(msg)
         LOGGER.info(msg)
         ext.add_service_right(
             right_name, CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, description,
