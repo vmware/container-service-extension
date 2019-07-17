@@ -14,6 +14,7 @@ class NodeType(str, Enum):
     WORKER = 'node'
     NFS = 'nfsd'
 
+
 # DEPLOY RIGHTS
 # used by authorization framework to weed out unauthorized calls.
 CSE_NATIVE_DEPLOY_RIGHT_NAME = 'CSE NATIVE DEPLOY RIGHT'
@@ -77,13 +78,13 @@ class CseOperation(Enum):
     NODE_CREATE = ('create node', requests.codes.accepted)
     NODE_DELETE = ('delete node', requests.codes.accepted)
     NODE_INFO = ('get info of node')
-    OVDC_ENABLE_DISABLE = \
-        ('enable or disable ovdc for k8s', requests.codes.accepted)
+    OVDC_UPDATE = ('enable or disable ovdc for k8s', requests.codes.accepted)
     OVDC_INFO = ('get info of ovdc')
     OVDC_LIST = ('list ovdcs')
     SYSTEM_INFO = ('get info of system')
     SYSTEM_UPDATE = ('update system status')
     TEMPLATE_LIST = ('list all templates')
+
 
 # CSE SERVICE; used for registering CSE to vCD as an api extension service.
 CSE_SERVICE_NAME = 'cse'

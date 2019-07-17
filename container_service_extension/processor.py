@@ -21,6 +21,7 @@ from container_service_extension.utils import get_server_runtime_config
 
 from container_service_extension.shared_constants import RequestMethod
 
+
 class ServiceProcessor(object):
     """Process incoming REST request.
 
@@ -234,7 +235,7 @@ class ServiceProcessor(object):
             req_spec.update(
                 {'node_name': request_url_parse_result.get('node_name')})
         elif operation in \
-                (CseOperation.OVDC_ENABLE_DISABLE, CseOperation.OVDC_INFO):
+                (CseOperation.OVDC_UPDATE, CseOperation.OVDC_INFO):
             req_spec.update(
                 {'ovdc_id': request_url_parse_result.get('ovdc_id')})
 
@@ -263,7 +264,7 @@ class ServiceProcessor(object):
                     'description': t['description']
                 })
             reply['body'] = templates
-        elif operation in (CseOperation.OVDC_ENABLE_DISABLE,
+        elif operation in (CseOperation.OVDC_UPDATE,
                            CseOperation.OVDC_INFO, CseOperation.OVDC_LIST):
             ovdc_request_handler = \
                 OvdcRequestHandler(tenant_auth_token, req_spec)

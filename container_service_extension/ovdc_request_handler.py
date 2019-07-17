@@ -38,7 +38,7 @@ class OvdcRequestHandler(object):
         """
         result = {}
 
-        if op == CseOperation.OVDC_ENABLE_DISABLE:
+        if op == CseOperation.OVDC_UPDATE:
             ovdc_id = self.req_spec.get('ovdc_id')
             org_name = self.req_spec.get('org_name')
             pks_plans = self.req_spec.get('pks_plans')
