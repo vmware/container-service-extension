@@ -10,7 +10,7 @@ from container_service_extension.client.response_processor import \
     response_to_exception
 
 from container_service_extension.shared_constants import RequestMethod
-from container_service_extension.server_constants import NodeType
+from container_service_extension.shared_constants import RequestKey
 
 
 class Cluster:
@@ -36,7 +36,7 @@ class Cluster:
             uri,
             self.client._session,
             accept_type='application/json',
-            params={'org': org, 'vdc': vdc})
+            params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
         return process_response(response)
 
     def get_cluster_info(self, name, org=None, vdc=None):
@@ -47,7 +47,7 @@ class Cluster:
             uri,
             self.client._session,
             accept_type='application/json',
-            params={'org': org, 'vdc': vdc})
+            params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
         return process_response(response)
 
     def create_cluster(self,
@@ -98,18 +98,18 @@ class Cluster:
         method = RequestMethod.POST
         uri = f"{self._uri}/clusters"
         data = {
-            'cluster_name': name,
-            'node_count': node_count,
-            'vdc': vdc,
-            'cpu': cpu,
-            'memory': memory,
-            'network': network_name,
-            'storage_profile': storage_profile,
-            'ssh_key': ssh_key,
-            'template': template,
-            'enable_nfs': enable_nfs,
-            'disable_rollback': disable_rollback,
-            'org': org
+            RequestKey.CLUSTER_NAME: name,
+            RequestKey.NUM_WORKERS: node_count,
+            RequestKey.OVDC_NAME: vdc,
+            RequestKey.NUM_CPU: cpu,
+            RequestKey.MB_MEMORY: memory,
+            RequestKey.NETWORK_NAME: network_name,
+            RequestKey.STORAGE_PROFILE_NAME: storage_profile,
+            RequestKey.SSH_KEY_FILEPATH: ssh_key,
+            RequestKey.TEMPLATE_NAME: template,
+            RequestKey.ENABLE_NFS: enable_nfs,
+            RequestKey.DISABLE_ROLLBACK: disable_rollback,
+            RequestKey.ORG_NAME: org
         }
         response = self.client._do_request_prim(
             method,
@@ -130,13 +130,13 @@ class Cluster:
         method = RequestMethod.PUT
         uri = f"{self._uri}/cluster/{cluster_name}"
         data = {
-            'name': cluster_name,
-            'node_count': node_count,
-            'node_type': NodeType.WORKER,
-            'org': org,
-            'vdc': vdc,
-            'network': network_name,
-            'disable_rollback': disable_rollback
+            RequestKey.CLUSTER_NAME: cluster_name,
+            RequestKey.NUM_WORKERS: node_count,
+            RequestKey.ENABLE_NFS: False,
+            RequestKey.ORG_NAME: org,
+            RequestKey.OVDC_NAME: vdc,
+            RequestKey.NETWORK_NAME: network_name,
+            RequestKey.DISABLE_ROLLBACK: disable_rollback
         }
         response = self.client._do_request_prim(
             method,
@@ -155,7 +155,7 @@ class Cluster:
             uri,
             self.client._session,
             accept_type='application/json',
-            params={'org': org, 'vdc': vdc})
+            params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
         return process_response(response)
 
     def get_cluster_config(self, cluster_name, org=None, vdc=None):
@@ -166,21 +166,25 @@ class Cluster:
             uri,
             self.client._session,
             accept_type='text/x-yaml',
-            params={'org': org, 'vdc': vdc})
+            params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
         if response.status_code == requests.codes.ok:
             return response.content.decode('utf-8').replace('\\n', '\n')[1:-1]
         else:
             response_to_exception(response)
 
     def get_node_info(self, cluster_name, node_name, org=None, vdc=None):
-        method = 'GET'
+        method = RequestMethod.GET
         uri = f"{self._uri}/node/{node_name}"
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
             accept_type='application/json',
-            params={'org': org, 'vdc': vdc, 'cluster_name': cluster_name})
+            params={
+                RequestKey.ORG_NAME: org,
+                RequestKey.OVDC_NAME: vdc,
+                RequestKey.CLUSTER_NAME: cluster_name
+            })
         return process_response(response)
 
     def add_node(self,
@@ -194,7 +198,7 @@ class Cluster:
                  storage_profile=None,
                  ssh_key=None,
                  template=None,
-                 node_type=NodeType.WORKER,
+                 enable_nfs=False,
                  disable_rollback=True):
         """Add nodes to a Kubernetes cluster.
 
@@ -214,7 +218,8 @@ class Cluster:
             node vms without explicitly providing passwords
         :param template: (str): The name of the catalog template to use to
             instantiate the nodes
-        :param disable_rollback: (bool): Flag to control weather rollback
+        :param enable_nfs: (bool): Flag to enable NFS software on worker nodes
+        :param disable_rollback: (bool): Flag to control whether rollback
             should be performed or not in case of errors. True to rollback,
             False to not rollback
 
@@ -223,18 +228,18 @@ class Cluster:
         method = RequestMethod.POST
         uri = f'{self._uri}/nodes'
         data = {
-            'cluster_name': cluster_name,
-            'node_count': node_count,
-            'org': org,
-            'vdc': vdc,
-            'cpu': cpu,
-            'memory': memory,
-            'network': network_name,
-            'storage_profile': storage_profile,
-            'ssh_key': ssh_key,
-            'template': template,
-            'node_type': node_type,
-            'disable_rollback': disable_rollback
+            RequestKey.CLUSTER_NAME: cluster_name,
+            RequestKey.NUM_WORKERS: node_count,
+            RequestKey.ORG_NAME: org,
+            RequestKey.OVDC_NAME: vdc,
+            RequestKey.NUM_CPU: cpu,
+            RequestKey.MB_MEMORY: memory,
+            RequestKey.NETWORK_NAME: network_name,
+            RequestKey.STORAGE_PROFILE_NAME: storage_profile,
+            RequestKey.SSH_KEY_FILEPATH: ssh_key,
+            RequestKey.TEMPLATE_NAME: template,
+            RequestKey.ENABLE_NFS: enable_nfs,
+            RequestKey.DISABLE_ROLLBACK: disable_rollback
         }
         response = self.client._do_request_prim(
             method,
@@ -259,8 +264,13 @@ class Cluster:
         """
         method = RequestMethod.DELETE
         uri = f"{self._uri}/nodes"
-        data = {'cluster_name': cluster_name, 'org': org, 'vdc': vdc,
-                'nodes': nodes, 'force': force}
+        data = {
+            RequestKey.CLUSTER_NAME: cluster_name,
+            RequestKey.ORG_NAME: org,
+            RequestKey.OVDC_NAME: vdc,
+            RequestKey.NODE_NAMES_LIST: nodes,
+            RequestKey.FORCE_DELETE: force
+        }
         response = self.client._do_request_prim(
             method,
             uri,

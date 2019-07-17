@@ -15,8 +15,7 @@ class NodeType(str, Enum):
     NFS = 'nfsd'
 
 
-# DEPLOY RIGHTS
-# used by authorization framework to weed out unauthorized calls.
+# DEPLOY RIGHTS; used by authorization framework to weed out unauthorized calls.
 CSE_NATIVE_DEPLOY_RIGHT_NAME = 'CSE NATIVE DEPLOY RIGHT'
 CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION = 'Right necessary to deploy kubernetes ' \
     'cluster via vCD apis in CSE'
@@ -28,9 +27,11 @@ CSE_PKS_DEPLOY_RIGHT_DESCRIPTION = 'Right necessary to deploy kubernetes ' \
 CSE_PKS_DEPLOY_RIGHT_CATEGORY = 'pksRight'
 CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY = 'pksBundleKey'
 
-
-# KUBERNETES PROVIDERS
+# KUBERNETES PROVIDERS; used by server operations related to k8s providers
 K8S_PROVIDER_KEY = 'k8s_provider'
+PKS_PLANS_KEY = 'pks_plans'
+PKS_CLUSTER_DOMAIN_KEY = 'pks_cluster_domain'
+PKS_COMPUTE_PROFILE_KEY = 'pks_compute_profile_name'
 
 
 @unique

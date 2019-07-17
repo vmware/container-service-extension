@@ -140,7 +140,7 @@ def check_python_version(msg_update_callback=None):
         raise Exception("Python version should be 3.7.3 or greater")
 
 
-def str_to_bool(val):
+def str_to_bool(s):
     """Convert string boolean values to bool.
 
     The conversion is case insensitive.
@@ -149,9 +149,7 @@ def str_to_bool(val):
 
     :return: True if val is 'true' otherwise False
     """
-    if val:
-        return str(val).lower() == 'true'
-    return False
+    return str(s).lower() == 'true'
 
 
 def get_sha256(filepath):

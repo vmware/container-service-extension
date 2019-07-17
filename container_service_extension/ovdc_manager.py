@@ -22,6 +22,7 @@ from container_service_extension.pyvcloud_utils import get_sys_admin_client
 from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
+from container_service_extension.shared_constants import RequestKey
 from container_service_extension.utils import get_pks_cache
 from container_service_extension.utils import is_pks_enabled
 
@@ -130,9 +131,9 @@ def _construct_pks_compute_profile_name(vdc_id):
 
 
 def create_pks_compute_profile(pks_ctx, tenant_auth_token, req_spec):
-    ovdc_id = req_spec.get('ovdc_id')
-    org_name = req_spec.get('org_name')
-    ovdc_name = req_spec.get('ovdc_name')
+    ovdc_id = req_spec.get(RequestKey.OVDC_ID)
+    org_name = req_spec.get(RequestKey.ORG_NAME)
+    ovdc_name = req_spec.get(RequestKey.OVDC_NAME)
     # Compute profile creation
     pks_compute_profile_name = \
         _construct_pks_compute_profile_name(ovdc_id)

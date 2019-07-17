@@ -7,13 +7,14 @@ from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.ovdc_manager import \
     construct_ctr_prov_ctx_from_ovdc_metadata
-from container_service_extension.pks_cache import PKS_CLUSTER_DOMAIN_KEY
-from container_service_extension.pks_cache import PKS_PLANS_KEY
+from container_service_extension.server_constants import PKS_CLUSTER_DOMAIN_KEY
+from container_service_extension.server_constants import PKS_PLANS_KEY
 from container_service_extension.pksbroker import PKSBroker
 from container_service_extension.pksbroker_manager import PksBrokerManager
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
+from container_service_extension.shared_constants import RequestKey
 from container_service_extension.utils import get_pks_cache
 from container_service_extension.utils import is_pks_enabled
 from container_service_extension.vcdbroker import VcdBroker
@@ -31,6 +32,7 @@ from container_service_extension.vcdbroker_manager import VcdBrokerManager
 #  4. As part of refactoring, avoid accessing HTTP request body directly
 #  from VcdBroker and PksBroker. We should try to limit processing request to
 #  processor.py and broker_manager.py.
+
 
 class BrokerManager(object):
     """Manage calls to vCD and PKS brokers.
@@ -70,11 +72,11 @@ class BrokerManager(object):
         :rtype: dict
         """
         result = {}
-        self.is_ovdc_present_in_request = bool(self.req_spec.get('vdc'))
+        self.is_ovdc_present_in_request = bool(self.req_spec.get(RequestKey.OVDC_NAME))
 
         if op == CseOperation.CLUSTER_CONFIG:
             cluster_spec = \
-                {'cluster_name': self.req_spec.get('cluster_name')}
+                {'cluster_name': self.req_spec.get(RequestKey.CLUSTER_NAME)}
             result = self._get_cluster_config(**cluster_spec)
         elif op == CseOperation.CLUSTER_CREATE:
             # TODO(ClusterSpec) Create an inner class "ClusterSpec"
@@ -84,29 +86,29 @@ class BrokerManager(object):
             #  ClusterSpec either as a param (or)
             #  read from instance variable (if needed only).
             cluster_spec = {
-                'cluster_name': self.req_spec.get('cluster_name'),
-                'vdc_name': self.req_spec.get('vdc'),
-                'org_name': self.req_spec.get('org'),
-                'node_count': self.req_spec.get('node_count'),
-                'storage_profile': self.req_spec.get('storage_profile'),
-                'network_name': self.req_spec.get('network'),
-                'template': self.req_spec.get('template'),
+                'cluster_name': self.req_spec.get(RequestKey.CLUSTER_NAME),
+                'vdc_name': self.req_spec.get(RequestKey.OVDC_NAME),
+                'org_name': self.req_spec.get(RequestKey.ORG_NAME),
+                'node_count': self.req_spec.get(RequestKey.NUM_WORKERS),
+                'storage_profile': self.req_spec.get(RequestKey.STORAGE_PROFILE_NAME),
+                'network_name': self.req_spec.get(RequestKey.NETWORK_NAME),
+                'template': self.req_spec.get(RequestKey.TEMPLATE_NAME),
             }
             result = self._create_cluster(**cluster_spec)
         elif op == CseOperation.CLUSTER_DELETE:
             cluster_spec = \
-                {'cluster_name': self.req_spec.get('cluster_name')}
+                {'cluster_name': self.req_spec.get(RequestKey.CLUSTER_NAME)}
             result = self._delete_cluster(**cluster_spec)
         elif op == CseOperation.CLUSTER_INFO:
             cluster_spec = \
-                {'cluster_name': self.req_spec.get('cluster_name')}
+                {'cluster_name': self.req_spec.get(RequestKey.CLUSTER_NAME)}
             result = self._get_cluster_info(**cluster_spec)[0]
         elif op == CseOperation.CLUSTER_LIST:
             result = self._list_clusters()
         elif op == CseOperation.CLUSTER_RESIZE:
             cluster_spec = {
-                'cluster_name': self.req_spec.get('cluster_name'),
-                'node_count': self.req_spec.get('node_count')
+                'cluster_name': self.req_spec.get(RequestKey.CLUSTER_NAME),
+                'node_count': self.req_spec.get(RequestKey.NUM_WORKERS)
             }
             result = self._resize_cluster(**cluster_spec)
         elif op == CseOperation.NODE_CREATE:
@@ -118,8 +120,8 @@ class BrokerManager(object):
             broker = VcdBroker(self.tenant_auth_token, self.req_spec)
             result = broker.delete_nodes()
         elif op == CseOperation.NODE_INFO:
-            cluster_name = self.req_spec.get('cluster_name')
-            node_name = self.req_spec.get('node_name')
+            cluster_name = self.req_spec.get(RequestKey.CLUSTER_NAME)
+            node_name = self.req_spec.get(RequestKey.NODE_NAME)
             # Currently node info is a vCD only operation.
             broker = VcdBroker(self.tenant_auth_token, self.req_spec)
             result = broker.get_node_info(cluster_name, node_name)
@@ -262,8 +264,8 @@ class BrokerManager(object):
 
         :rtype: container_service_extension.abstract_broker.AbstractBroker
         """
-        ovdc_name = self.req_spec.get('vdc')
-        org_name = self.req_spec.get('org')
+        ovdc_name = self.req_spec.get(RequestKey.OVDC_NAME)
+        org_name = self.req_spec.get(RequestKey.ORG_NAME)
 
         ctr_prov_ctx = construct_ctr_prov_ctx_from_ovdc_metadata(
             ovdc_name=ovdc_name, org_name=org_name)

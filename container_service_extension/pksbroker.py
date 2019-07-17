@@ -55,6 +55,7 @@ from container_service_extension.server_constants import \
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.shared_constants import RequestKey
 from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import get_pks_cache
 
@@ -768,13 +769,13 @@ class PKSBroker(AbstractBroker):
         delegated to dedicated filter class say: PksClusterFilter.
         """
         # Apply vdc filter, if provided to all personae.
-        if self.req_spec.get('vdc'):
+        if self.req_spec.get(RequestKey.OVDC_NAME):
             cluster_list = self._apply_vdc_filter(cluster_list,
-                                                  self.req_spec.get('vdc'))
+                                                  self.req_spec.get(RequestKey.OVDC_NAME))
 
         # Apply org filter, if provided, for sys admin.
         if self.tenant_client.is_sysadmin():
-            org_name = self.req_spec.get('org')
+            org_name = self.req_spec.get(RequestKey.ORG_NAME)
             if org_name and org_name.lower() != SYSTEM_ORG_NAME.lower():
                 cluster_list = self._apply_org_filter(cluster_list, org_name)
             return cluster_list

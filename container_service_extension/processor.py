@@ -3,10 +3,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import base64
-from copy import deepcopy
 import json
 import sys
-import traceback
 from urllib.parse import parse_qsl
 
 import requests
@@ -17,9 +15,9 @@ from container_service_extension.exceptions import CseRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.ovdc_request_handler import OvdcRequestHandler
 from container_service_extension.server_constants import CseOperation
-from container_service_extension.utils import get_server_runtime_config
 
 from container_service_extension.shared_constants import RequestMethod
+from container_service_extension.shared_constants import RequestKey
 
 
 class ServiceProcessor(object):
@@ -190,7 +188,7 @@ class ServiceProcessor(object):
         request_url_parse_result = self._parse_request_url(
             method=body['method'], url=body['requestUri'])
 
-        # check for disabled server
+        tenant_auth_token = body['headers']['x-vcloud-authorization'] # TODO request id mapping in Service
         operation = request_url_parse_result['operation']
         if operation not in (CseOperation.SYSTEM_INFO,
                              CseOperation.SYSTEM_UPDATE):
@@ -201,43 +199,22 @@ class ServiceProcessor(object):
                     error_message='CSE service is disabled. Contact the'
                                   ' System Administrator.')
 
-        # parse query params
-        query_params = {}
-        if body['queryString']:
-            query_params = dict(parse_qsl(body['queryString']))
-
-        # parse body
+        # create request data dict from request body data
+        request_data = {}
         if len(body['body']) > 0:
-            try:
-                request_body = json.loads(
-                    base64.b64decode(
-                        body['body']).decode(sys.getfilesystemencoding()))
-                LOGGER.debug(f"request body: {json.dumps(request_body)}")
-            except Exception:
-                LOGGER.error(traceback.format_exc())
-                request_body = {}
-        else:
-            request_body = {}
-
-        # compose request spec for further processing
-        tenant_auth_token = body['headers']['x-vcloud-authorization']
-        req_spec = deepcopy(request_body)
-        for key, val in query_params.items():
-            req_spec[key] = val
-
+            raw_body = base64.b64decode(body['body']).decode(sys.getfilesystemencoding()) # noqa: E501
+            request_data = json.loads(raw_body)
+            LOGGER.debug(f"request body: {json.dumps(request_data)}")
+        # update request data dict with query params data
+        if body['queryString']:
+            request_data.update(dict(parse_qsl(body['queryString'])))
         # update request spec with operation specific data in the url
-        if operation in \
-                (CseOperation.CLUSTER_CONFIG, CseOperation.CLUSTER_DELETE,
-                 CseOperation.CLUSTER_INFO, CseOperation.CLUSTER_RESIZE):
-            req_spec.update(
-                {'cluster_name': request_url_parse_result.get('cluster_name')})
+        if operation in (CseOperation.CLUSTER_CONFIG, CseOperation.CLUSTER_DELETE, CseOperation.CLUSTER_INFO, CseOperation.CLUSTER_RESIZE):
+            request_data.update({RequestKey.CLUSTER_NAME: request_url_parse_result[RequestKey.CLUSTER_NAME]})
         elif operation == CseOperation.NODE_INFO:
-            req_spec.update(
-                {'node_name': request_url_parse_result.get('node_name')})
-        elif operation in \
-                (CseOperation.OVDC_UPDATE, CseOperation.OVDC_INFO):
-            req_spec.update(
-                {'ovdc_id': request_url_parse_result.get('ovdc_id')})
+            request_data.update({RequestKey.NODE_NAME: request_url_parse_result[RequestKey.NODE_NAME]})
+        elif operation in (CseOperation.OVDC_UPDATE, CseOperation.OVDC_INFO):
+            request_data.update({RequestKey.OVDC_ID: request_url_parse_result[RequestKey.OVDC_ID]})
 
         # process the request
         reply['status_code'] = operation.ideal_response_code
@@ -248,10 +225,10 @@ class ServiceProcessor(object):
             from container_service_extension.service import Service
             reply['body'] = {
                 'message':
-                Service().update_status(tenant_auth_token, req_spec)}
+                Service().update_status(tenant_auth_token, request_data)}
         elif operation == CseOperation.TEMPLATE_LIST:
             templates = []
-            server_config = get_server_runtime_config()
+            server_config = Service().config
             default_template_name = \
                 server_config['broker']['default_template']
             for t in server_config['broker']['templates']:
@@ -267,10 +244,10 @@ class ServiceProcessor(object):
         elif operation in (CseOperation.OVDC_UPDATE,
                            CseOperation.OVDC_INFO, CseOperation.OVDC_LIST):
             ovdc_request_handler = \
-                OvdcRequestHandler(tenant_auth_token, req_spec)
+                OvdcRequestHandler(tenant_auth_token, request_data)
             reply['body'] = ovdc_request_handler.invoke(op=operation)
         else:
-            broker_manager = BrokerManager(tenant_auth_token, req_spec)
+            broker_manager = BrokerManager(tenant_auth_token, request_data)
             reply['body'] = broker_manager.invoke(op=operation)
 
         LOGGER.debug(f"reply: {str(reply)}")

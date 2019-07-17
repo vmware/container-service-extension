@@ -17,8 +17,8 @@ from container_service_extension.exceptions import CseClientError
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
 from container_service_extension.service import Service
-
 from container_service_extension.shared_constants import ServerAction
+
 
 @vcd.group(short_help='Manage Kubernetes clusters')
 @click.pass_context
@@ -246,7 +246,7 @@ def cluster_delete(ctx, name, vdc, org):
     required=False,
     default=2,
     type=click.INT,
-    help='Number of nodes to create')
+    help='Number of worker nodes to create')
 @click.option(
     '-c',
     '--cpu',
@@ -271,7 +271,7 @@ def cluster_delete(ctx, name, vdc, org):
     'network_name',
     default=None,
     required=False,
-    help='Network name (Exclusive to native Kubernetes provider) (Required)')
+    help='Org vDC network name (Exclusive to native Kubernetes provider) (Required)')
 @click.option(
     '-s',
     '--storage-profile',
@@ -287,8 +287,7 @@ def cluster_delete(ctx, name, vdc, org):
     required=False,
     default=None,
     type=click.File('r'),
-    help='SSH public key to connect to the guest OS on the VM '
-         '(Exclusive to native Kubernetes provider)')
+    help='SSH public key filepath (Exclusive to native Kubernetes provider)')
 @click.option(
     '-t',
     '--template',
@@ -303,8 +302,7 @@ def cluster_delete(ctx, name, vdc, org):
     is_flag=True,
     required=False,
     default=False,
-    help='Create an additional NFS node '
-         '(Exclusive to native Kubernetes provider)')
+    help='Create 1 additional NFS node (if --nodes=2, then CSE will create 2 worker nodes and 1 NFS node) (Exclusive to native Kubernetes provider)')
 @click.option(
     '--disable-rollback',
     'disable_rollback',
@@ -364,7 +362,7 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
                        short_help='Resize the cluster to contain the '
                                   'specified number of worker nodes')
 @click.pass_context
-@click.argument('name', required=True)
+@click.argument('cluster_name', required=True)
 @click.option(
     '-N',
     '--nodes',
@@ -383,7 +381,7 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
 @click.option(
     '-v',
     '--vdc',
-    'vdc',
+    'vdc_name',
     required=False,
     default=None,
     metavar='VDC_NAME',
@@ -391,7 +389,7 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
 @click.option(
     '-o',
     '--org',
-    'org',
+    'org_name',
     default=None,
     required=False,
     metavar='ORG_NAME',
@@ -404,8 +402,8 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
     default=True,
     help='Disable rollback on failed node creation '
          '(Exclusive to native Kubernetes provider)')
-def cluster_resize(ctx, name, node_count, network_name, org, vdc,
-                   disable_rollback):
+def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
+                   vdc_name, disable_rollback):
     """Resize the cluster to contain the specified number of worker nodes.
 
     Clusters that use native Kubernetes provider can not be sized down
@@ -414,15 +412,15 @@ def cluster_resize(ctx, name, node_count, network_name, org, vdc,
     try:
         restore_session(ctx)
         client = ctx.obj['client']
-        if not client.is_sysadmin() and org is None:
-            org = ctx.obj['profiles'].get('org_in_use')
+        if not client.is_sysadmin() and org_name is None:
+            org_name = ctx.obj['profiles'].get('org_in_use')
         cluster = Cluster(client)
         result = cluster.resize_cluster(
             network_name,
-            name,
+            cluster_name,
             node_count=node_count,
-            org=org,
-            vdc=vdc,
+            org=org_name,
+            vdc=vdc_name,
             disable_rollback=disable_rollback)
         stdout(result, ctx)
     except Exception as e:
@@ -519,10 +517,10 @@ Examples
         The node will be connected to org VDC network 'mynetwork'.
         The VM will use the default template.
 \b
-    vcd cse node create mycluster --nodes 2 --type nfsd --network mynetwork \\
+    vcd cse node create mycluster --nodes 2 --type nfs --network mynetwork \\
     --template photon-v2 --cpu 3 --memory 1024 \\
     --storage-profile mystorageprofile --ssh-key ~/.ssh/id_rsa.pub \\
-        Add 2 nfsd nodes to vApp named 'mycluster' on vCD.
+        Add 2 nfs nodes to vApp named 'mycluster' on vCD.
         The nodes will be connected to org VDC network 'mynetwork'.
         All VMs will use the template 'photon-v2'.
         Each VM will have 3 vCPUs and 1024mb of memory.
@@ -641,12 +639,12 @@ def node_info(ctx, cluster_name, node_name, org_name, vdc):
     default=None,
     help='Name of the template to instantiate nodes from')
 @click.option(
-    '--type',
-    'node_type',
+    '--nfs',
+    'enable_nfs',
+    is_flag=True,
     required=False,
-    default='node',
-    type=click.Choice(['node', 'nfsd']),
-    help='Type of node to add')
+    default=False,
+    help='Enable NFS on all created nodes')
 @click.option(
     '--disable-rollback',
     'disable_rollback',
@@ -672,7 +670,7 @@ def node_info(ctx, cluster_name, node_name, org_name, vdc):
     help='Restrict cluster search to specified org')
 def create_node(ctx, cluster_name, node_count, org, vdc, cpu, memory,
                 network_name, storage_profile, ssh_key_file, template,
-                node_type, disable_rollback):
+                enable_nfs, disable_rollback):
     """Add node(s) to a cluster that uses native Kubernetes provider."""
     try:
         restore_session(ctx)
@@ -694,7 +692,7 @@ def create_node(ctx, cluster_name, node_count, org, vdc, cpu, memory,
             storage_profile=storage_profile,
             ssh_key=ssh_key,
             template=template,
-            node_type=node_type,
+            enable_nfs=enable_nfs,
             disable_rollback=disable_rollback)
         stdout(result, ctx)
     except Exception as e:
@@ -914,20 +912,20 @@ Examples
 @click.option(
     '-p',
     '--pks-plans',
-    'list_pks_plans',
+    'get_pks_plans',
     required=False,
     is_flag=True,
     default=False,
     help="Display available PKS plans if org VDC is backed by "
          "Enterprise PKS infrastructure")
 @click.pass_context
-def list_ovdcs(ctx, list_pks_plans):
+def list_ovdcs(ctx, get_pks_plans):
     """Display org VDCs in vCD that are visible to the logged in user."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
         ovdc = Ovdc(client)
-        result = ovdc.list_ovdc_for_k8s(list_pks_plans=list_pks_plans)
+        result = ovdc.list_ovdc_for_k8s(get_pks_plans=get_pks_plans)
         stdout(result, ctx, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)

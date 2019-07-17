@@ -27,10 +27,9 @@ from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PksCache
 from container_service_extension.pyvcloud_utils import \
     connect_vcd_user_via_token
-from container_service_extension.shared_constants import SERVER_ACTION_KEY
-
 
 from container_service_extension.shared_constants import ServerAction
+from container_service_extension.shared_constants import RequestKey
 
 
 class Singleton(type):
@@ -134,7 +133,7 @@ class Service(object, metaclass=Singleton):
             raise CseRequestError(status_code=requests.codes.unauthorized,
                                   error_message='Unauthorized to update CSE')
 
-        action = req_spec.get(SERVER_ACTION_KEY)
+        action = req_spec.get(RequestKey.SERVER_ACTION)
         if self._state == ServerState.RUNNING:
             if action == ServerAction.ENABLE:
                 raise CseRequestError(

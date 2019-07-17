@@ -23,7 +23,9 @@ from container_service_extension.exceptions import ScriptExecutionError
 from container_service_extension.install_utils import get_data_file
 from container_service_extension.install_utils import get_vsphere
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.server_constants import SYSTEM_ORG_NAME, NodeType
+from container_service_extension.server_constants import NodeType
+from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.shared_constants import RequestKey
 
 
 def wait_until_tools_ready(vm):
@@ -109,7 +111,8 @@ def load_from_metadata(client, name=None, cluster_id=None,
     return clusters
 
 
-def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
+def add_nodes(qty, template, node_type, config, client, org, vdc, vapp,
+              req_spec):
     try:
         if qty < 1:
             return None
@@ -118,26 +121,32 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
                                             template['catalog_item'])
         source_vapp = VApp(client, href=catalog_item.Entity.get('href'))
         source_vm = source_vapp.get_all_vms()[0].get('name')
-        storage_profile = None
-        if 'storage_profile' in body and body['storage_profile'] is not None:
-            storage_profile = vdc.get_storage_profile(body['storage_profile'])
-        cust_script_init = \
-    """#!/usr/bin/env bash
-    if [ x$1=x"postcustomization" ];
-    then
-    """ # NOQA
+        storage_profile = req_spec.get(RequestKey.STORAGE_PROFILE_NAME)
+        if storage_profile is not None:
+            storage_profile = vdc.get_storage_profile(storage_profile)
+
         cust_script_common = ''
+
+        cust_script_init = \
+"""
+#!/usr/bin/env bash
+if [ x$1=x"postcustomization" ];
+then
+""" # noqa: E128
+
         cust_script_end = \
-    """
-    fi
-    """  # NOQA
-        if 'ssh_key' in body and body['ssh_key'] is not None:
+"""
+fi
+"""  # noqa: E128
+
+        ssh_key_filepath = req_spec.get(RequestKey.SSH_KEY_FILEPATH)
+        if ssh_key_filepath is not None:
             cust_script_common += \
-    """
-    mkdir -p /root/.ssh
-    echo '{ssh_key}' >> /root/.ssh/authorized_keys
-    chmod -R go-rwx /root/.ssh
-    """.format(ssh_key=body['ssh_key'])  # NOQA
+f"""
+mkdir -p /root/.ssh
+echo '{ssh_key_filepath}' >> /root/.ssh/authorized_keys
+chmod -R go-rwx /root/.ssh
+""" # noqa
 
         if cust_script_common == '':
             cust_script = None
@@ -147,7 +156,7 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
         for n in range(qty):
             name = None
             while True:
-                name = f"{node_type}-{''.join(random.choices(string.ascii_lowercase + string.digits, k=4))}"
+                name = f"{node_type}-{''.join(random.choices(string.ascii_lowercase + string.digits, k=4))}" # noqa: E501
                 try:
                     vapp.get_vm(name)
                 except Exception:
@@ -158,7 +167,7 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
                 'target_vm_name': name,
                 'hostname': name,
                 'password_auto': True,
-                'network': body['network'],
+                'network': req_spec.get(RequestKey.NETWORK_NAME),
                 'ip_allocation_mode': 'pool'
             }
             if cust_script is not None:
@@ -166,30 +175,30 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
             if storage_profile is not None:
                 spec['storage_profile'] = storage_profile
             specs.append(spec)
-        if ('cpu' in body and body['cpu'] is not None) or \
-           ('memory' in body and body['memory'] is not None):
-            reconfigure_hw = True
-        else:
-            reconfigure_hw = False
-        task = vapp.add_vms(specs, power_on=not reconfigure_hw)
+
+        num_cpu = req_spec.get(RequestKey.NUM_CPU)
+        mb_memory = req_spec.get(RequestKey.MB_MEMORY)
+        configure_hw = True if num_cpu is not None or mb_memory is not None else False # noqa: E501
+        task = vapp.add_vms(specs, power_on=not configure_hw)
         # TODO(get details of the exception like not enough resources avail)
         client.get_task_monitor().wait_for_status(task)
-        if reconfigure_hw:
-            vapp.reload()
+        vapp.reload()
+        if configure_hw:
             for spec in specs:
                 vm_resource = vapp.get_vm(spec['target_vm_name'])
-                if 'cpu' in body and body['cpu'] is not None:
+                if num_cpu is not None:
                     vm = VM(client, resource=vm_resource)
-                    task = vm.modify_cpu(body['cpu'])
+                    task = vm.modify_cpu(num_cpu)
                     client.get_task_monitor().wait_for_status(task)
-                if 'memory' in body and body['memory'] is not None:
+                if mb_memory is not None:
                     vm = VM(client, resource=vm_resource)
-                    task = vm.modify_memory(body['memory'])
+                    task = vm.modify_memory(mb_memory)
                     client.get_task_monitor().wait_for_status(task)
                 vm = VM(client, resource=vm_resource)
                 task = vm.power_on()
                 client.get_task_monitor().wait_for_status(task)
-        vapp.reload()
+            vapp.reload()
+
         password = vapp.get_admin_password(spec['target_vm_name'])
         for spec in specs:
             vm_resource = vapp.get_vm(spec['target_vm_name'])

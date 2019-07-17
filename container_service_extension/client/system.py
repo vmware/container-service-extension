@@ -4,7 +4,7 @@
 
 from container_service_extension.client.response_processor \
     import process_response
-from container_service_extension.shared_constants import SERVER_ACTION_KEY
+from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
 
 
@@ -30,7 +30,7 @@ class System:
             method,
             uri,
             self.client._session,
-            contents={SERVER_ACTION_KEY: action},
+            contents={RequestKey.SERVER_ACTION: action},
             media_type='application/json',
             accept_type='application/json')
         return process_response(response)
