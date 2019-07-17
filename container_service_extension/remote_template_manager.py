@@ -36,13 +36,12 @@ def download_file_into_memory(url):
         return None
 
 
-def construct_revisioned_template_name(template_name, revision):
+def get_revisioned_template_name(template_name, revision):
     """Construct name of a template to include it's revision number."""
     return f"{template_name}_rev{revision}"
 
 
-def construct_local_script_file_location(template_name, revision,
-                                         script_file_name):
+def get_local_script_filepath(template_name, revision, script_file_name):
     """Construct the absolute path to a given script.
 
     :param str template_name:
@@ -52,7 +51,7 @@ def construct_local_script_file_location(template_name, revision,
     home_dir = os.path.expanduser('~')
     cse_scripts_dir = os.path.join(
         home_dir, LOCAL_SCRIPTS_DIR,
-        construct_revisioned_template_name(template_name, revision))
+        get_revisioned_template_name(template_name, revision))
     Path(cse_scripts_dir).mkdir(parents=True, exist_ok=True)
     script_abs_path = os.path.join(cse_scripts_dir, script_file_name)
     return script_abs_path
@@ -84,11 +83,11 @@ class RemoteTemplateManager():
         else:
             raise ValueError("Inalid url for template cookbook.")
 
-    def _construct_remote_script_url(self, template_name, revision,
-                                     script_file_name):
+    def _get_remote_script_url(self, template_name, revision,
+                               script_file_name):
         """.
 
-        The scripts of all template are kept relative to templates.yaml,
+        The scripts of all templates are kept relative to templates.yaml,
         under the 'scripts' folder. Scripts of a particular template is kept
         inside a sub-directory of 'scripts' named after the revisioned
         template.
@@ -107,12 +106,17 @@ class RemoteTemplateManager():
         base_url = self._get_base_url_from_remote_template_cookbook_url()
         url = base_url + \
             f"/{REMOTE_SCRIPTS_DIR}" \
-            f"/{construct_revisioned_template_name(template_name, revision)}" \
+            f"/{get_revisioned_template_name(template_name, revision)}" \
             f"/{script_file_name}"
         return url
 
     def get_remote_template_cookbook(self):
-        """Get the remote template cookbook as yaml."""
+        """Get the remote template cookbook as a dictionary.
+
+        :returns: the contents of the cookbook.
+
+        :rtype: dict
+        """
         template_cookbook_as_str = download_file_into_memory(self.url)
         cookbook = yaml.safe_load(template_cookbook_as_str)
         if self.logger:
@@ -131,14 +135,14 @@ class RemoteTemplateManager():
         """
         for script_file in ScriptFile:
             remote_script_url = \
-                self._construct_remote_script_url(
-                    template_name, revision, script_file)
+                self._get_remote_script_url(template_name, revision,
+                                            script_file)
 
-            local_script_file_location = construct_local_script_file_location(
+            local_script_filepath = get_local_script_filepath(
                 template_name, revision, script_file)
 
             download_file(url=remote_script_url,
-                          filepath=local_script_file_location,
+                          filepath=local_script_filepath,
                           force_overwrite=force_overwrite,
                           logger=self.logger,
                           msg_update_callback=self.msg_update_callback)

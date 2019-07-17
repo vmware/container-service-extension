@@ -15,7 +15,7 @@ from container_service_extension.pyvcloud_utils import upload_ova_to_catalog
 from container_service_extension.pyvcloud_utils import \
     wait_for_catalog_item_to_resolve
 from container_service_extension.remote_template_manager import \
-    construct_local_script_file_location
+    get_local_script_filepath
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.utils import download_file
 from container_service_extension.utils import read_data_file
@@ -60,7 +60,7 @@ class TemplateBuilder():
         self.logger = logger
         self.msg_update_callback = msg_update_callback
 
-        if not (self.client and self.sys_admin_client):
+        if self.client is None or self.sys_admin_client is None:
             return
 
         # validate and populate required fields
@@ -190,7 +190,7 @@ class TemplateBuilder():
 
         :rtype: str
         """
-        init_sctipt_filepath = construct_local_script_file_location(
+        init_sctipt_filepath = get_local_script_filepath(
             self.template_name, self.template_revision, ScriptFile.INIT)
         init_script = read_data_file(
             init_sctipt_filepath, logger=self.logger,
@@ -264,7 +264,7 @@ class TemplateBuilder():
         if self.logger:
             self.logger.info(msg)
 
-        cust_sctipt_filepath = construct_local_script_file_location(
+        cust_sctipt_filepath = get_local_script_filepath(
             self.template_name, self.template_revision, ScriptFile.CUST)
         cust_script = read_data_file(
             cust_sctipt_filepath, logger=self.logger,
