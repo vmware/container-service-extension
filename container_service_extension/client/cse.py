@@ -311,7 +311,7 @@ def cluster_delete(ctx, name, vdc, org):
     'disable_rollback',
     is_flag=True,
     required=False,
-    default=True,
+    default=False,
     help='Disable rollback on failed cluster creation '
          '(Exclusive to native Kubernetes provider)')
 @click.option(
@@ -354,7 +354,7 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
             ssh_key=ssh_key,
             template=template,
             enable_nfs=enable_nfs,
-            disable_rollback=disable_rollback,
+            rollback=not disable_rollback,
             org=org_name)
         stdout(result, ctx)
     except Exception as e:
@@ -402,7 +402,7 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
     'disable_rollback',
     is_flag=True,
     required=False,
-    default=True,
+    default=False,
     help='Disable rollback on failed node creation '
          '(Exclusive to native Kubernetes provider)')
 def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
@@ -424,7 +424,7 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
             node_count=node_count,
             org=org_name,
             vdc=vdc_name,
-            disable_rollback=disable_rollback)
+            rollback=not disable_rollback)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -653,7 +653,7 @@ def node_info(ctx, cluster_name, node_name, org_name, vdc):
     'disable_rollback',
     is_flag=True,
     required=False,
-    default=True,
+    default=False,
     help='Disable rollback for node')
 @click.option(
     '-v',
@@ -696,7 +696,7 @@ def create_node(ctx, cluster_name, node_count, org, vdc, cpu, memory,
             ssh_key=ssh_key,
             template=template,
             enable_nfs=enable_nfs,
-            disable_rollback=disable_rollback)
+            rollback=not disable_rollback)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -915,20 +915,20 @@ Examples
 @click.option(
     '-p',
     '--pks-plans',
-    'get_pks_plans',
+    'list_pks_plans',
     required=False,
     is_flag=True,
     default=False,
     help="Display available PKS plans if org VDC is backed by "
          "Enterprise PKS infrastructure")
 @click.pass_context
-def list_ovdcs(ctx, get_pks_plans):
+def list_ovdcs(ctx, list_pks_plans):
     """Display org VDCs in vCD that are visible to the logged in user."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
         ovdc = Ovdc(client)
-        result = ovdc.list_ovdc_for_k8s(get_pks_plans=get_pks_plans)
+        result = ovdc.list_ovdc_for_k8s(list_pks_plans=list_pks_plans)
         stdout(result, ctx, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)

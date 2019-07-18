@@ -60,7 +60,7 @@ class Cluster:
                        ssh_key=None,
                        template=None,
                        enable_nfs=False,
-                       disable_rollback=True,
+                       rollback=True,
                        org=None):
         """Create a new Kubernetes cluster.
 
@@ -82,9 +82,8 @@ class Cluster:
             instantiate the nodes
         :param enable_nfs: (bool): bool value to indicate if NFS node is to be
             created
-        :param disable_rollback: (bool): Flag to control weather rollback
-            should be performed or not in case of errors. True to rollback,
-            False to not rollback
+        :param rollback: (bool): Flag to control weather rollback
+            should be performed or not in case of errors.
         :param pks_ext_host: (str): Address from which to access the Kubernetes
         API for PKS.
         :param pks_plan: (str): Preconfigured PKS plan to use for deploying the
@@ -107,7 +106,7 @@ class Cluster:
             RequestKey.SSH_KEY_FILEPATH: ssh_key,
             RequestKey.TEMPLATE_NAME: template,
             RequestKey.ENABLE_NFS: enable_nfs,
-            RequestKey.DISABLE_ROLLBACK: disable_rollback,
+            RequestKey.ROLLBACK: rollback,
             RequestKey.ORG_NAME: org
         }
         response = self.client._do_request_prim(
@@ -125,7 +124,7 @@ class Cluster:
                        node_count,
                        org=None,
                        vdc=None,
-                       disable_rollback=True):
+                       rollback=True):
         method = RequestMethod.PUT
         uri = f"{self._uri}/cluster/{cluster_name}"
         data = {
@@ -135,7 +134,7 @@ class Cluster:
             RequestKey.ORG_NAME: org,
             RequestKey.OVDC_NAME: vdc,
             RequestKey.NETWORK_NAME: network_name,
-            RequestKey.DISABLE_ROLLBACK: disable_rollback
+            RequestKey.ROLLBACK: rollback
         }
         response = self.client._do_request_prim(
             method,
@@ -198,7 +197,7 @@ class Cluster:
                  ssh_key=None,
                  template=None,
                  enable_nfs=False,
-                 disable_rollback=True):
+                 rollback=True):
         """Add nodes to a Kubernetes cluster.
 
         :param org: (str): The name of the org that contains the cluster
@@ -218,9 +217,8 @@ class Cluster:
         :param template: (str): The name of the catalog template to use to
             instantiate the nodes
         :param enable_nfs: (bool): Flag to enable NFS software on worker nodes
-        :param disable_rollback: (bool): Flag to control whether rollback
-            should be performed or not in case of errors. True to rollback,
-            False to not rollback
+        :param rollback: (bool): Flag to control whether rollback
+            should be performed or not in case of errors.
 
         :return: (json) A parsed json object describing the requested cluster.
         """
@@ -238,7 +236,7 @@ class Cluster:
             RequestKey.SSH_KEY_FILEPATH: ssh_key,
             RequestKey.TEMPLATE_NAME: template,
             RequestKey.ENABLE_NFS: enable_nfs,
-            RequestKey.DISABLE_ROLLBACK: disable_rollback
+            RequestKey.ROLLBACK: rollback
         }
         response = self.client._do_request_prim(
             method,

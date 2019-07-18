@@ -88,7 +88,7 @@ def rollback_on_failure(func):
             try:
                 # arg[0] refers to the current instance of the broker thread
                 broker_instance = args[0]  # param self
-                if broker_instance.req_spec.get(RequestKey.DISABLE_ROLLBACK):
+                if broker_instance.req_spec.get(RequestKey.ROLLBACK):
                     broker_instance.cluster_rollback()
             except Exception as err:
                 LOGGER.error(f"Failed to rollback cluster creation:{str(err)}")
@@ -96,7 +96,7 @@ def rollback_on_failure(func):
             try:
                 broker_instance = args[0]
                 node_list = e.node_names
-                if broker_instance.req_spec.get(RequestKey.DISABLE_ROLLBACK):
+                if broker_instance.req_spec.get(RequestKey.ROLLBACK):
                     broker_instance.node_rollback(node_list)
             except Exception as err:
                 LOGGER.error(f"Failed to rollback node creation:{str(err)}")

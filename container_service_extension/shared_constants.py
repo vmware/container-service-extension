@@ -59,7 +59,7 @@ class RequestKey(str, Enum):
     ENABLE_NFS = 'enable_nfs'
     NODE_NAMES_LIST = 'node_names'
     SSH_KEY_FILEPATH = 'ssh_key_filepath'
-    DISABLE_ROLLBACK = 'disable_rollback'
+    ROLLBACK = 'rollback'
     FORCE_DELETE = 'force_delete'
 
     # keys related to ovdc requests
@@ -67,7 +67,7 @@ class RequestKey(str, Enum):
     OVDC_ID = 'ovdc_id'
     PKS_CLUSTER_DOMAIN = 'pks_cluster_domain'
     PKS_PLAN_NAME = 'pks_plan_name'
-    GET_PKS_PLANS = 'get_pks_plans'
+    LIST_PKS_PLANS = 'list_pks_plans'
 
     # keys related to system requests
     SERVER_ACTION = 'server_action'

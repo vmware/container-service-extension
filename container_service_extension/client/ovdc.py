@@ -17,7 +17,7 @@ class Ovdc:
         self.client = client
         self._uri = self.client.get_api_uri() + '/cse'
 
-    def list_ovdc_for_k8s(self, get_pks_plans=False):
+    def list_ovdc_for_k8s(self, list_pks_plans=False):
         method = RequestMethod.GET
         uri = f'{self._uri}/ovdcs'
         response = self.client._do_request_prim(
@@ -25,7 +25,7 @@ class Ovdc:
             uri,
             self.client._session,
             accept_type='application/json',
-            params={RequestKey.GET_PKS_PLANS: get_pks_plans})
+            params={RequestKey.LIST_PKS_PLANS: list_pks_plans})
         return process_response(response)
 
     def update_ovdc_for_k8s(self,

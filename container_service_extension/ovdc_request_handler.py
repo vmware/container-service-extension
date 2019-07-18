@@ -70,12 +70,12 @@ class OvdcRequestHandler(object):
             result = OvdcManager().get_ovdc_container_provider_metadata(
                 ovdc_id=ovdc_id)
         elif op == CseOperation.OVDC_LIST:
-            get_pks_plans = str_to_bool(self.req_spec.get(RequestKey.GET_PKS_PLANS)) # noqa: E501
-            result = self._list_ovdcs(get_pks_plans=get_pks_plans)
+            list_pks_plans = str_to_bool(self.req_spec.get(RequestKey.LIST_PKS_PLANS)) # noqa: E501
+            result = self._list_ovdcs(list_pks_plans=list_pks_plans)
 
         return result
 
-    def _list_ovdcs(self, get_pks_plans):
+    def _list_ovdcs(self, list_pks_plans):
         """Get list of ovdcs.
 
         If client is sysadmin,
@@ -91,7 +91,7 @@ class OvdcRequestHandler(object):
 
         ovdc_list = []
         vc_to_pks_plans_map = {}
-        if is_pks_enabled() and get_pks_plans:
+        if is_pks_enabled() and list_pks_plans:
             if client.is_sysadmin():
                 vc_to_pks_plans_map = self._construct_vc_to_pks_map()
             else:
@@ -111,7 +111,7 @@ class OvdcRequestHandler(object):
                     'org': org.get_name(),
                     K8S_PROVIDER_KEY: ctr_prov_ctx[K8S_PROVIDER_KEY]
                 }
-                if is_pks_enabled() and get_pks_plans:
+                if is_pks_enabled() and list_pks_plans:
                     pks_plans, pks_server = self.\
                         _get_pks_plans_and_server_for_vdc(client,
                                                           vdc_sparse,
