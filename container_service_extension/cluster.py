@@ -178,7 +178,7 @@ chmod -R go-rwx /root/.ssh
 
         num_cpu = req_spec.get(RequestKey.NUM_CPU)
         mb_memory = req_spec.get(RequestKey.MB_MEMORY)
-        configure_hw = True if num_cpu is not None or mb_memory is not None else False # noqa: E501
+        configure_hw = bool(num_cpu or mb_memory)
         task = vapp.add_vms(specs, power_on=not configure_hw)
         # TODO(get details of the exception like not enough resources avail)
         client.get_task_monitor().wait_for_status(task)
@@ -186,11 +186,11 @@ chmod -R go-rwx /root/.ssh
         if configure_hw:
             for spec in specs:
                 vm_resource = vapp.get_vm(spec['target_vm_name'])
-                if num_cpu is not None:
+                if num_cpu:
                     vm = VM(client, resource=vm_resource)
                     task = vm.modify_cpu(num_cpu)
                     client.get_task_monitor().wait_for_status(task)
-                if mb_memory is not None:
+                if mb_memory:
                     vm = VM(client, resource=vm_resource)
                     task = vm.modify_memory(mb_memory)
                     client.get_task_monitor().wait_for_status(task)

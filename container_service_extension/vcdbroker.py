@@ -570,7 +570,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY])
             self._update_task(
                 TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY], # noqa: 501
+                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY], # noqa: E501
                 stack_trace=stack_trace)
         finally:
             self._disconnect_sys_admin()

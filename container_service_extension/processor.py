@@ -17,6 +17,7 @@ from container_service_extension.ovdc_request_handler import OvdcRequestHandler
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
+import container_service_extension.utils as utils
 
 
 class ServiceProcessor(object):
@@ -187,6 +188,7 @@ class ServiceProcessor(object):
         url_data = self._parse_request_url(
             method=body['method'], url=body['requestUri'])
 
+        # check if server is disabled
         # TODO request id mapping in Service
         tenant_auth_token = body['headers']['x-vcloud-authorization']
         operation = url_data['operation']
@@ -204,10 +206,12 @@ class ServiceProcessor(object):
         if len(body['body']) > 0:
             raw_body = base64.b64decode(body['body']).decode(sys.getfilesystemencoding()) # noqa: E501
             request_data = json.loads(raw_body)
-            LOGGER.debug(f"request body: {json.dumps(request_data)}")
+            LOGGER.debug(f"request body: {request_data}")
         # update request data dict with query params data
         if body['queryString']:
-            request_data.update(dict(parse_qsl(body['queryString'])))
+            query_params = dict(parse_qsl(body['queryString']))
+            request_data.update(query_params)
+            LOGGER.debug(f"query parameters: {query_params}")
         # update request spec with operation specific data in the url
         if operation in (CseOperation.CLUSTER_CONFIG,
                          CseOperation.CLUSTER_DELETE,
@@ -237,7 +241,7 @@ class ServiceProcessor(object):
                 Service().update_status(tenant_auth_token, request_data)}
         elif operation == CseOperation.TEMPLATE_LIST:
             templates = []
-            server_config = Service().config
+            server_config = utils.get_server_runtime_config()
             default_template_name = \
                 server_config['broker']['default_template']
             for t in server_config['broker']['templates']:

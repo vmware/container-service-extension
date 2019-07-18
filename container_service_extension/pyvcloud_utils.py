@@ -126,23 +126,18 @@ def get_vdc(client, vdc_id=None, vdc_name=None, org=None, org_name=None,
         vdc.reload()
         return vdc
 
-    if org is None:
-        org = get_org(client, org_name=org_name)
-    if vdc_name is None:
-        try:
-            vdc_name = org.list_vdcs()[0]
-        except IndexError:
-            pass
+    resource = None
+    if vdc_name:
+        if not org:
+            org = get_org(client, org_name=org_name)
+        resource = org.get_vdc(vdc_name, is_admin_operation=is_admin_operation)
 
-    # TODO org.get_vdc() should throw exception if vdc not found in the org.
+    # TODO() org.get_vdc() should throw exception if vdc not found in the org.
     # This should be handled in pyvcloud. For now, it is handled here.
-    resource = org.get_vdc(vdc_name, is_admin_operation=is_admin_operation)
     if resource is None:
         raise EntityNotFoundException(f"VDC '{vdc_name}' not found in ORG "
                                       f"'{org.get_name()}'")
-    vdc = VDC(client, resource=resource)
-    vdc.reload()
-    return vdc
+    return VDC(client, resource=resource)
 
 
 def get_org_name_from_ovdc_id(vdc_id):
