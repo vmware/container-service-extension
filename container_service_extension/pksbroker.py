@@ -770,8 +770,9 @@ class PKSBroker(AbstractBroker):
         """
         # Apply vdc filter, if provided to all personae.
         if self.req_spec.get(RequestKey.OVDC_NAME):
-            cluster_list = self._apply_vdc_filter(cluster_list,
-                                                  self.req_spec.get(RequestKey.OVDC_NAME))
+            cluster_list = self._apply_vdc_filter(
+                cluster_list,
+                self.req_spec.get(RequestKey.OVDC_NAME))
 
         # Apply org filter, if provided, for sys admin.
         if self.tenant_client.is_sysadmin():

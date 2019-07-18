@@ -15,7 +15,7 @@ class NodeType(str, Enum):
     NFS = 'nfsd'
 
 
-# DEPLOY RIGHTS; used by authorization framework to weed out unauthorized calls.
+# DEPLOY RIGHTS; used by authorization framework to weed out unauthorized calls
 CSE_NATIVE_DEPLOY_RIGHT_NAME = 'CSE NATIVE DEPLOY RIGHT'
 CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION = 'Right necessary to deploy kubernetes ' \
     'cluster via vCD apis in CSE'

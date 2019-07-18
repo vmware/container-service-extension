@@ -7,13 +7,13 @@ from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.ovdc_manager import \
     construct_ctr_prov_ctx_from_ovdc_metadata
-from container_service_extension.server_constants import PKS_CLUSTER_DOMAIN_KEY
-from container_service_extension.server_constants import PKS_PLANS_KEY
 from container_service_extension.pksbroker import PKSBroker
 from container_service_extension.pksbroker_manager import PksBrokerManager
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
+from container_service_extension.server_constants import PKS_CLUSTER_DOMAIN_KEY
+from container_service_extension.server_constants import PKS_PLANS_KEY
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.utils import get_pks_cache
 from container_service_extension.utils import is_pks_enabled
@@ -72,7 +72,7 @@ class BrokerManager(object):
         :rtype: dict
         """
         result = {}
-        self.is_ovdc_present_in_request = bool(self.req_spec.get(RequestKey.OVDC_NAME))
+        self.is_ovdc_present_in_request = bool(self.req_spec.get(RequestKey.OVDC_NAME)) # noqa: E501
 
         if op == CseOperation.CLUSTER_CONFIG:
             cluster_spec = \
@@ -90,7 +90,7 @@ class BrokerManager(object):
                 'vdc_name': self.req_spec.get(RequestKey.OVDC_NAME),
                 'org_name': self.req_spec.get(RequestKey.ORG_NAME),
                 'node_count': self.req_spec.get(RequestKey.NUM_WORKERS),
-                'storage_profile': self.req_spec.get(RequestKey.STORAGE_PROFILE_NAME),
+                'storage_profile': self.req_spec.get(RequestKey.STORAGE_PROFILE_NAME), # noqa: E501
                 'network_name': self.req_spec.get(RequestKey.NETWORK_NAME),
                 'template': self.req_spec.get(RequestKey.TEMPLATE_NAME),
             }

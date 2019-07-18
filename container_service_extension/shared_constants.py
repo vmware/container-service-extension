@@ -42,6 +42,7 @@ class RequestKey(str, Enum):
     - When indexing into request data server-side:
         org_name = request_data.get(RequestKey.ORG_NAME)
     """
+
     # common/multiple request keys
     ORG_NAME = 'org_name'
     OVDC_NAME = 'ovdc_name'

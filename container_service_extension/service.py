@@ -27,9 +27,8 @@ from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PksCache
 from container_service_extension.pyvcloud_utils import \
     connect_vcd_user_via_token
-
-from container_service_extension.shared_constants import ServerAction
 from container_service_extension.shared_constants import RequestKey
+from container_service_extension.shared_constants import ServerAction
 
 
 class Singleton(type):

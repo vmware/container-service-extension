@@ -15,9 +15,8 @@ from container_service_extension.exceptions import CseRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.ovdc_request_handler import OvdcRequestHandler
 from container_service_extension.server_constants import CseOperation
-
-from container_service_extension.shared_constants import RequestMethod
 from container_service_extension.shared_constants import RequestKey
+from container_service_extension.shared_constants import RequestMethod
 
 
 class ServiceProcessor(object):
@@ -185,11 +184,12 @@ class ServiceProcessor(object):
         reply = {}
 
         # parse url
-        request_url_parse_result = self._parse_request_url(
+        url_data = self._parse_request_url(
             method=body['method'], url=body['requestUri'])
 
-        tenant_auth_token = body['headers']['x-vcloud-authorization'] # TODO request id mapping in Service
-        operation = request_url_parse_result['operation']
+        # TODO request id mapping in Service
+        tenant_auth_token = body['headers']['x-vcloud-authorization']
+        operation = url_data['operation']
         if operation not in (CseOperation.SYSTEM_INFO,
                              CseOperation.SYSTEM_UPDATE):
             from container_service_extension.service import Service
@@ -209,12 +209,21 @@ class ServiceProcessor(object):
         if body['queryString']:
             request_data.update(dict(parse_qsl(body['queryString'])))
         # update request spec with operation specific data in the url
-        if operation in (CseOperation.CLUSTER_CONFIG, CseOperation.CLUSTER_DELETE, CseOperation.CLUSTER_INFO, CseOperation.CLUSTER_RESIZE):
-            request_data.update({RequestKey.CLUSTER_NAME: request_url_parse_result[RequestKey.CLUSTER_NAME]})
+        if operation in (CseOperation.CLUSTER_CONFIG,
+                         CseOperation.CLUSTER_DELETE,
+                         CseOperation.CLUSTER_INFO,
+                         CseOperation.CLUSTER_RESIZE):
+            request_data.update({
+                RequestKey.CLUSTER_NAME: url_data[RequestKey.CLUSTER_NAME]
+            })
         elif operation == CseOperation.NODE_INFO:
-            request_data.update({RequestKey.NODE_NAME: request_url_parse_result[RequestKey.NODE_NAME]})
+            request_data.update({
+                RequestKey.NODE_NAME: url_data[RequestKey.NODE_NAME]
+            })
         elif operation in (CseOperation.OVDC_UPDATE, CseOperation.OVDC_INFO):
-            request_data.update({RequestKey.OVDC_ID: request_url_parse_result[RequestKey.OVDC_ID]})
+            request_data.update({
+                RequestKey.OVDC_ID: url_data[RequestKey.OVDC_ID]
+            })
 
         # process the request
         reply['status_code'] = operation.ideal_response_code

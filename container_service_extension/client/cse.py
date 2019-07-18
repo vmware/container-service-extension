@@ -271,7 +271,8 @@ def cluster_delete(ctx, name, vdc, org):
     'network_name',
     default=None,
     required=False,
-    help='Org vDC network name (Exclusive to native Kubernetes provider) (Required)')
+    help='Org vDC network name (Exclusive to native Kubernetes provider) '
+         '(Required)')
 @click.option(
     '-s',
     '--storage-profile',
@@ -302,7 +303,9 @@ def cluster_delete(ctx, name, vdc, org):
     is_flag=True,
     required=False,
     default=False,
-    help='Create 1 additional NFS node (if --nodes=2, then CSE will create 2 worker nodes and 1 NFS node) (Exclusive to native Kubernetes provider)')
+    help='Create 1 additional NFS node (if --nodes=2, then CSE will create '
+         '2 worker nodes and 1 NFS node) '
+         '(Exclusive to native Kubernetes provider)')
 @click.option(
     '--disable-rollback',
     'disable_rollback',
