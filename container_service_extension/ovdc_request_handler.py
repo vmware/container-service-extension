@@ -18,6 +18,7 @@ from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
+from container_service_extension.shared_constants import RequestKey
 from container_service_extension.utils import is_pks_enabled
 from container_service_extension.utils import str_to_bool
 
@@ -38,12 +39,12 @@ class OvdcRequestHandler(object):
         """
         result = {}
 
-        if op == CseOperation.OVDC_ENABLE_DISABLE:
-            ovdc_id = self.req_spec.get('ovdc_id')
-            org_name = self.req_spec.get('org_name')
-            pks_plans = self.req_spec.get('pks_plans')
-            pks_cluster_domain = self.req_spec.get('pks_cluster_domain')
-            container_provider = self.req_spec[K8S_PROVIDER_KEY]
+        if op == CseOperation.OVDC_UPDATE:
+            ovdc_id = self.req_spec.get(RequestKey.OVDC_ID)
+            org_name = self.req_spec.get(RequestKey.ORG_NAME)
+            pks_plans = self.req_spec.get(RequestKey.PKS_PLAN_NAME)
+            pks_cluster_domain = self.req_spec.get(RequestKey.PKS_CLUSTER_DOMAIN) # noqa: E501
+            container_provider = self.req_spec.get(RequestKey.K8S_PROVIDER)
 
             ctr_prov_ctx = construct_ctr_prov_ctx_from_pks_cache(
                 ovdc_id=ovdc_id, org_name=org_name, pks_plans=pks_plans,
@@ -65,11 +66,11 @@ class OvdcRequestHandler(object):
 
             result = {'task_href': task.get('href')}
         elif op == CseOperation.OVDC_INFO:
-            ovdc_id = self.req_spec.get('ovdc_id')
+            ovdc_id = self.req_spec.get(RequestKey.OVDC_ID)
             result = OvdcManager().get_ovdc_container_provider_metadata(
                 ovdc_id=ovdc_id)
         elif op == CseOperation.OVDC_LIST:
-            list_pks_plans = str_to_bool(self.req_spec.get('list_pks_plans'))
+            list_pks_plans = str_to_bool(self.req_spec.get(RequestKey.LIST_PKS_PLANS)) # noqa: E501
             result = self._list_ovdcs(list_pks_plans=list_pks_plans)
 
         return result

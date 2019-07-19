@@ -23,11 +23,9 @@ from container_service_extension.exceptions import ScriptExecutionError
 from container_service_extension.install_utils import get_data_file
 from container_service_extension.install_utils import get_vsphere
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
-
-TYPE_MASTER = 'mstr'
-TYPE_NODE = 'node'
-TYPE_NFS = 'nfsd'
+from container_service_extension.shared_constants import RequestKey
 
 
 def wait_until_tools_ready(vm):
@@ -113,7 +111,8 @@ def load_from_metadata(client, name=None, cluster_id=None,
     return clusters
 
 
-def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
+def add_nodes(qty, template, node_type, config, client, org, vdc, vapp,
+              req_spec):
     try:
         if qty < 1:
             return None
@@ -122,26 +121,32 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
                                             template['catalog_item'])
         source_vapp = VApp(client, href=catalog_item.Entity.get('href'))
         source_vm = source_vapp.get_all_vms()[0].get('name')
-        storage_profile = None
-        if 'storage_profile' in body and body['storage_profile'] is not None:
-            storage_profile = vdc.get_storage_profile(body['storage_profile'])
-        cust_script_init = \
-    """#!/usr/bin/env bash
-    if [ x$1=x"postcustomization" ];
-    then
-    """ # NOQA
+        storage_profile = req_spec.get(RequestKey.STORAGE_PROFILE_NAME)
+        if storage_profile is not None:
+            storage_profile = vdc.get_storage_profile(storage_profile)
+
         cust_script_common = ''
+
+        cust_script_init = \
+"""
+#!/usr/bin/env bash
+if [ x$1=x"postcustomization" ];
+then
+""" # noqa: E128
+
         cust_script_end = \
-    """
-    fi
-    """  # NOQA
-        if 'ssh_key' in body and body['ssh_key'] is not None:
+"""
+fi
+"""  # noqa: E128
+
+        ssh_key_filepath = req_spec.get(RequestKey.SSH_KEY_FILEPATH)
+        if ssh_key_filepath is not None:
             cust_script_common += \
-    """
-    mkdir -p /root/.ssh
-    echo '{ssh_key}' >> /root/.ssh/authorized_keys
-    chmod -R go-rwx /root/.ssh
-    """.format(ssh_key=body['ssh_key'])  # NOQA
+f"""
+mkdir -p /root/.ssh
+echo '{ssh_key_filepath}' >> /root/.ssh/authorized_keys
+chmod -R go-rwx /root/.ssh
+""" # noqa
 
         if cust_script_common == '':
             cust_script = None
@@ -151,10 +156,7 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
         for n in range(qty):
             name = None
             while True:
-                name = '%s-%s' % (
-                    node_type,
-                    ''.join(random.choices(
-                        string.ascii_lowercase + string.digits, k=4)))
+                name = f"{node_type}-{''.join(random.choices(string.ascii_lowercase + string.digits, k=4))}" # noqa: E501
                 try:
                     vapp.get_vm(name)
                 except Exception:
@@ -165,7 +167,7 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
                 'target_vm_name': name,
                 'hostname': name,
                 'password_auto': True,
-                'network': body['network'],
+                'network': req_spec.get(RequestKey.NETWORK_NAME),
                 'ip_allocation_mode': 'pool'
             }
             if cust_script is not None:
@@ -173,30 +175,30 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
             if storage_profile is not None:
                 spec['storage_profile'] = storage_profile
             specs.append(spec)
-        if ('cpu' in body and body['cpu'] is not None) or \
-           ('memory' in body and body['memory'] is not None):
-            reconfigure_hw = True
-        else:
-            reconfigure_hw = False
-        task = vapp.add_vms(specs, power_on=not reconfigure_hw)
+
+        num_cpu = req_spec.get(RequestKey.NUM_CPU)
+        mb_memory = req_spec.get(RequestKey.MB_MEMORY)
+        configure_hw = bool(num_cpu or mb_memory)
+        task = vapp.add_vms(specs, power_on=not configure_hw)
         # TODO(get details of the exception like not enough resources avail)
         client.get_task_monitor().wait_for_status(task)
-        if reconfigure_hw:
-            vapp.reload()
+        vapp.reload()
+        if configure_hw:
             for spec in specs:
                 vm_resource = vapp.get_vm(spec['target_vm_name'])
-                if 'cpu' in body and body['cpu'] is not None:
+                if num_cpu:
                     vm = VM(client, resource=vm_resource)
-                    task = vm.modify_cpu(body['cpu'])
+                    task = vm.modify_cpu(num_cpu)
                     client.get_task_monitor().wait_for_status(task)
-                if 'memory' in body and body['memory'] is not None:
+                if mb_memory:
                     vm = VM(client, resource=vm_resource)
-                    task = vm.modify_memory(body['memory'])
+                    task = vm.modify_memory(mb_memory)
                     client.get_task_monitor().wait_for_status(task)
                 vm = VM(client, resource=vm_resource)
                 task = vm.power_on()
                 client.get_task_monitor().wait_for_status(task)
-        vapp.reload()
+            vapp.reload()
+
         password = vapp.get_admin_password(spec['target_vm_name'])
         for spec in specs:
             vm_resource = vapp.get_vm(spec['target_vm_name'])
@@ -211,7 +213,7 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
                 nodes,
                 check_tools=True,
                 wait=False)
-            if node_type == TYPE_NFS:
+            if node_type == NodeType.NFS:
                 LOGGER.debug(
                     f"enabling NFS server on {spec['target_vm_name']}")
                 script = get_data_file('nfsd-%s.sh' % template['name'])
@@ -256,7 +258,7 @@ def get_init_info(config, vapp, password):
 kubeadm token create
 ip route get 1 | awk '{print $NF;exit}'
 """ # NOQA
-    nodes = get_nodes(vapp, TYPE_MASTER)
+    nodes = get_nodes(vapp, NodeType.MASTER)
     result = execute_script_in_nodes(
         config, vapp, password, script, nodes, check_tools=False)
     return result[0][1].content.decode().split()
@@ -268,7 +270,7 @@ def get_master_ip(config, vapp, template):
 """#!/usr/bin/env bash
 ip route get 1 | awk '{print $NF;exit}'
 """ # NOQA
-    nodes = get_nodes(vapp, TYPE_MASTER)
+    nodes = get_nodes(vapp, NodeType.MASTER)
     result = execute_script_in_nodes(
         config,
         vapp,
@@ -284,7 +286,7 @@ ip route get 1 | awk '{print $NF;exit}'
 
 def get_cluster_config(config, vapp, password):
     file_name = '/root/.kube/config'
-    nodes = get_nodes(vapp, TYPE_MASTER)
+    nodes = get_nodes(vapp, NodeType.MASTER)
     result = get_file_from_nodes(
         config, vapp, password, file_name, nodes, check_tools=False)
     if len(result) == 0 or result[0].status_code != requests.codes.ok:
@@ -294,7 +296,7 @@ def get_cluster_config(config, vapp, password):
 
 def init_cluster(config, vapp, template):
     script = get_data_file('mstr-%s.sh' % template['name'])
-    nodes = get_nodes(vapp, TYPE_MASTER)
+    nodes = get_nodes(vapp, NodeType.MASTER)
     result = execute_script_in_nodes(config, vapp, template['admin_password'],
                                      script, nodes)
     if result[0][0] != 0:
@@ -307,7 +309,7 @@ def join_cluster(config, vapp, template, target_nodes=None):
     tmp_script = get_data_file('node-%s.sh' % template['name'])
     script = tmp_script.format(token=init_info[0], ip=init_info[1])
     if target_nodes is None:
-        nodes = get_nodes(vapp, TYPE_NODE)
+        nodes = get_nodes(vapp, NodeType.WORKER)
     else:
         nodes = []
         for node in vapp.get_all_vms():
@@ -439,7 +441,7 @@ def delete_nodes_from_cluster(config, vapp, template, nodes, force=False):
         script += ' %s' % node
     script += '\n'
     password = template['admin_password']
-    master_nodes = get_nodes(vapp, TYPE_MASTER)
+    master_nodes = get_nodes(vapp, NodeType.MASTER)
     result = execute_script_in_nodes(
         config, vapp, password, script, master_nodes, check_tools=False)
     if result[0][0] != 0:

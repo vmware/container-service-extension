@@ -135,9 +135,8 @@ def get_vdc(client, vdc_id=None, vdc_name=None, org=None, org_name=None,
     # TODO() org.get_vdc() should throw exception if vdc not found in the org.
     # This should be handled in pyvcloud. For now, it is handled here.
     if resource is None:
-        raise EntityNotFoundException(
-            f"VDC '{vdc_name}' not found in ORG "
-            f"'{org.get_name()}'")
+        raise EntityNotFoundException(f"VDC '{vdc_name}' not found in ORG "
+                                      f"'{org.get_name()}'")
     return VDC(client, resource=resource)
 
 

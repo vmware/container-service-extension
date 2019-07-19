@@ -3,10 +3,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import base64
-from copy import deepcopy
 import json
 import sys
-import traceback
 from urllib.parse import parse_qsl
 
 import requests
@@ -17,7 +15,9 @@ from container_service_extension.exceptions import CseRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.ovdc_request_handler import OvdcRequestHandler
 from container_service_extension.server_constants import CseOperation
-from container_service_extension.utils import get_server_runtime_config
+from container_service_extension.shared_constants import RequestKey
+from container_service_extension.shared_constants import RequestMethod
+import container_service_extension.utils as utils
 
 
 class ServiceProcessor(object):
@@ -82,22 +82,22 @@ class ServiceProcessor(object):
 
         if is_cluster_request:
             if len(tokens) == 4:
-                if method == 'GET':
+                if method == RequestMethod.GET:
                     result['operation'] = CseOperation.CLUSTER_LIST
-                elif method == 'POST':
+                elif method == RequestMethod.POST:
                     result['operation'] = CseOperation.CLUSTER_CREATE
                 else:
                     raise CseRequestError(
                         status=requests.codes.method_not_allowed,
                         error_message="Method not allowed")
             elif len(tokens) == 5:
-                if method == 'GET':
+                if method == RequestMethod.GET:
                     result['operation'] = CseOperation.CLUSTER_INFO
                     result['cluster_name'] = tokens[4]
-                elif method == 'PUT':
+                elif method == RequestMethod.PUT:
                     result['operation'] = CseOperation.CLUSTER_RESIZE
                     result['cluster_name'] = tokens[4]
-                elif method == 'DELETE':
+                elif method == RequestMethod.DELETE:
                     result['operation'] = CseOperation.CLUSTER_DELETE
                     result['cluster_name'] = tokens[4]
                 else:
@@ -105,7 +105,7 @@ class ServiceProcessor(object):
                         status=requests.codes.method_not_allowed,
                         error_message="Method not allowed")
             elif len(tokens) == 6:
-                if method == 'GET':
+                if method == RequestMethod.GET:
                     if tokens[5] == 'config':
                         result['operation'] = CseOperation.CLUSTER_CONFIG
                         result['cluster_name'] = tokens[4]
@@ -116,16 +116,16 @@ class ServiceProcessor(object):
 
         if is_node_request:
             if len(tokens) == 4:
-                if method == 'POST':
+                if method == RequestMethod.POST:
                     result['operation'] = CseOperation.NODE_CREATE
-                elif method == 'DELETE':
+                elif method == RequestMethod.DELETE:
                     result['operation'] = CseOperation.NODE_DELETE
                 else:
                     raise CseRequestError(
                         status=requests.codes.method_not_allowed,
                         error_message="Method not allowed")
             elif len(tokens) == 5:
-                if method == 'GET':
+                if method == RequestMethod.GET:
                     result['operation'] = CseOperation.NODE_INFO
                     result['node_name'] = tokens[4]
                 else:
@@ -135,18 +135,18 @@ class ServiceProcessor(object):
 
         if is_ovdc_request:
             if len(tokens) == 4:
-                if method == 'GET':
+                if method == RequestMethod.GET:
                     result['operation'] = CseOperation.OVDC_LIST
                 else:
                     raise CseRequestError(
                         status=requests.codes.method_not_allowed,
                         error_message="Method not allowed")
             elif len(tokens) == 5:
-                if method == 'GET':
+                if method == RequestMethod.GET:
                     result['operation'] = CseOperation.OVDC_INFO
                     result['ovdc_id'] = tokens[4]
-                elif method == 'PUT':
-                    result['operation'] = CseOperation.OVDC_ENABLE_DISABLE
+                elif method == RequestMethod.PUT:
+                    result['operation'] = CseOperation.OVDC_UPDATE
                     result['ovdc_id'] = tokens[4]
                 else:
                     raise CseRequestError(
@@ -155,9 +155,9 @@ class ServiceProcessor(object):
 
         if is_system_request:
             if len(tokens) == 4:
-                if method == 'GET':
+                if method == RequestMethod.GET:
                     result['operation'] = CseOperation.SYSTEM_INFO
-                elif method == 'PUT':
+                elif method == RequestMethod.PUT:
                     result['operation'] = CseOperation.SYSTEM_UPDATE
                 else:
                     raise CseRequestError(
@@ -166,7 +166,7 @@ class ServiceProcessor(object):
 
         if is_template_request:
             if len(tokens) == 4:
-                if method == 'GET':
+                if method == RequestMethod.GET:
                     result['operation'] = CseOperation.TEMPLATE_LIST
                 else:
                     raise CseRequestError(
@@ -185,11 +185,13 @@ class ServiceProcessor(object):
         reply = {}
 
         # parse url
-        request_url_parse_result = self._parse_request_url(
+        url_data = self._parse_request_url(
             method=body['method'], url=body['requestUri'])
 
-        # check for disabled server
-        operation = request_url_parse_result['operation']
+        # check if server is disabled
+        # TODO request id mapping in Service
+        tenant_auth_token = body['headers']['x-vcloud-authorization']
+        operation = url_data['operation']
         if operation not in (CseOperation.SYSTEM_INFO,
                              CseOperation.SYSTEM_UPDATE):
             from container_service_extension.service import Service
@@ -199,43 +201,33 @@ class ServiceProcessor(object):
                     error_message='CSE service is disabled. Contact the'
                                   ' System Administrator.')
 
-        # parse query params
-        query_params = {}
+        # create request data dict from request body data
+        request_data = {}
+        if len(body['body']) > 0:
+            raw_body = base64.b64decode(body['body']).decode(sys.getfilesystemencoding()) # noqa: E501
+            request_data = json.loads(raw_body)
+            LOGGER.debug(f"request body: {request_data}")
+        # update request data dict with query params data
         if body['queryString']:
             query_params = dict(parse_qsl(body['queryString']))
-
-        # parse body
-        if len(body['body']) > 0:
-            try:
-                request_body = json.loads(
-                    base64.b64decode(
-                        body['body']).decode(sys.getfilesystemencoding()))
-                LOGGER.debug(f"request body: {json.dumps(request_body)}")
-            except Exception:
-                LOGGER.error(traceback.format_exc())
-                request_body = {}
-        else:
-            request_body = {}
-
-        # compose request spec for further processing
-        tenant_auth_token = body['headers']['x-vcloud-authorization']
-        req_spec = deepcopy(request_body)
-        for key, val in query_params.items():
-            req_spec[key] = val
-
+            request_data.update(query_params)
+            LOGGER.debug(f"query parameters: {query_params}")
         # update request spec with operation specific data in the url
-        if operation in \
-                (CseOperation.CLUSTER_CONFIG, CseOperation.CLUSTER_DELETE,
-                 CseOperation.CLUSTER_INFO, CseOperation.CLUSTER_RESIZE):
-            req_spec.update(
-                {'cluster_name': request_url_parse_result.get('cluster_name')})
+        if operation in (CseOperation.CLUSTER_CONFIG,
+                         CseOperation.CLUSTER_DELETE,
+                         CseOperation.CLUSTER_INFO,
+                         CseOperation.CLUSTER_RESIZE):
+            request_data.update({
+                RequestKey.CLUSTER_NAME: url_data[RequestKey.CLUSTER_NAME]
+            })
         elif operation == CseOperation.NODE_INFO:
-            req_spec.update(
-                {'node_name': request_url_parse_result.get('node_name')})
-        elif operation in \
-                (CseOperation.OVDC_ENABLE_DISABLE, CseOperation.OVDC_INFO):
-            req_spec.update(
-                {'ovdc_id': request_url_parse_result.get('ovdc_id')})
+            request_data.update({
+                RequestKey.NODE_NAME: url_data[RequestKey.NODE_NAME]
+            })
+        elif operation in (CseOperation.OVDC_UPDATE, CseOperation.OVDC_INFO):
+            request_data.update({
+                RequestKey.OVDC_ID: url_data[RequestKey.OVDC_ID]
+            })
 
         # process the request
         reply['status_code'] = operation.ideal_response_code
@@ -246,10 +238,10 @@ class ServiceProcessor(object):
             from container_service_extension.service import Service
             reply['body'] = {
                 'message':
-                Service().update_status(tenant_auth_token, req_spec)}
+                Service().update_status(tenant_auth_token, request_data)}
         elif operation == CseOperation.TEMPLATE_LIST:
             templates = []
-            server_config = get_server_runtime_config()
+            server_config = utils.get_server_runtime_config()
             default_template_name = \
                 server_config['broker']['default_template']
             for t in server_config['broker']['templates']:
@@ -262,13 +254,13 @@ class ServiceProcessor(object):
                     'description': t['description']
                 })
             reply['body'] = templates
-        elif operation in (CseOperation.OVDC_ENABLE_DISABLE,
+        elif operation in (CseOperation.OVDC_UPDATE,
                            CseOperation.OVDC_INFO, CseOperation.OVDC_LIST):
             ovdc_request_handler = \
-                OvdcRequestHandler(tenant_auth_token, req_spec)
+                OvdcRequestHandler(tenant_auth_token, request_data)
             reply['body'] = ovdc_request_handler.invoke(op=operation)
         else:
-            broker_manager = BrokerManager(tenant_auth_token, req_spec)
+            broker_manager = BrokerManager(tenant_auth_token, request_data)
             reply['body'] = broker_manager.invoke(op=operation)
 
         LOGGER.debug(f"reply: {str(reply)}")

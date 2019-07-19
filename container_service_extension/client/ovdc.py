@@ -7,24 +7,25 @@ from pyvcloud.vcd import utils
 from container_service_extension.client.response_processor import \
     process_response
 from container_service_extension.pyvcloud_utils import get_vdc
-from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
+from container_service_extension.shared_constants import RequestKey
+from container_service_extension.shared_constants import RequestMethod
 
 
-class Ovdc(object):
+class Ovdc:
     def __init__(self, client):
         self.client = client
         self._uri = self.client.get_api_uri() + '/cse'
 
     def list_ovdc_for_k8s(self, list_pks_plans=False):
-        method = 'GET'
+        method = RequestMethod.GET
         uri = f'{self._uri}/ovdcs'
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
             accept_type='application/json',
-            params={'list_pks_plans': list_pks_plans})
+            params={RequestKey.LIST_PKS_PLANS: list_pks_plans})
         return process_response(response)
 
     def update_ovdc_for_k8s(self,
@@ -50,7 +51,7 @@ class Ovdc(object):
 
         :rtype: dict
         """
-        method = 'PUT'
+        method = RequestMethod.PUT
         ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
@@ -62,12 +63,12 @@ class Ovdc(object):
             pks_cluster_domain = None
 
         data = {
-            'ovdc_id': ovdc_id,
-            'ovdc_name': ovdc_name,
-            'org_name': org_name,
-            K8S_PROVIDER_KEY: container_provider,
-            'pks_plans': pks_plan,
-            'pks_cluster_domain': pks_cluster_domain,
+            RequestKey.OVDC_ID: ovdc_id,
+            RequestKey.OVDC_NAME: ovdc_name,
+            RequestKey.ORG_NAME: org_name,
+            RequestKey.K8S_PROVIDER: container_provider,
+            RequestKey.PKS_PLAN_NAME: pks_plan,
+            RequestKey.PKS_CLUSTER_DOMAIN: pks_cluster_domain,
         }
 
         response = self.client._do_request_prim(
@@ -89,7 +90,7 @@ class Ovdc(object):
 
         :rtype: dict
         """
-        method = 'GET'
+        method = RequestMethod.GET
         ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))

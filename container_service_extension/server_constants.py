@@ -8,16 +8,14 @@ from enum import unique
 import requests
 
 
-# CSE SERVICE
-# used for registering CSE to vCD as an api extension service.
-CSE_SERVICE_NAME = 'cse'
-CSE_SERVICE_NAMESPACE = 'cse'
-# used to set up and start AMQP exchange
-EXCHANGE_TYPE = 'direct'
-SYSTEM_ORG_NAME = 'System'
+@unique
+class NodeType(str, Enum):
+    MASTER = 'mstr'
+    WORKER = 'node'
+    NFS = 'nfsd'
 
-# DEPLOY RIGHTS
-# used by authorization framework to weed out unauthorized calls.
+
+# DEPLOY RIGHTS; used by authorization framework to weed out unauthorized calls
 CSE_NATIVE_DEPLOY_RIGHT_NAME = 'CSE NATIVE DEPLOY RIGHT'
 CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION = 'Right necessary to deploy kubernetes ' \
     'cluster via vCD apis in CSE'
@@ -29,9 +27,11 @@ CSE_PKS_DEPLOY_RIGHT_DESCRIPTION = 'Right necessary to deploy kubernetes ' \
 CSE_PKS_DEPLOY_RIGHT_CATEGORY = 'pksRight'
 CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY = 'pksBundleKey'
 
-
-# KUBERNETES PROVIDERS
+# KUBERNETES PROVIDERS; used by server operations related to k8s providers
 K8S_PROVIDER_KEY = 'k8s_provider'
+PKS_PLANS_KEY = 'pks_plans'
+PKS_CLUSTER_DOMAIN_KEY = 'pks_cluster_domain'
+PKS_COMPUTE_PROFILE_KEY = 'pks_compute_profile_name'
 
 
 @unique
@@ -79,10 +79,16 @@ class CseOperation(Enum):
     NODE_CREATE = ('create node', requests.codes.accepted)
     NODE_DELETE = ('delete node', requests.codes.accepted)
     NODE_INFO = ('get info of node')
-    OVDC_ENABLE_DISABLE = \
-        ('enable or disable ovdc for k8s', requests.codes.accepted)
+    OVDC_UPDATE = ('enable or disable ovdc for k8s', requests.codes.accepted)
     OVDC_INFO = ('get info of ovdc')
     OVDC_LIST = ('list ovdcs')
     SYSTEM_INFO = ('get info of system')
     SYSTEM_UPDATE = ('update system status')
     TEMPLATE_LIST = ('list all templates')
+
+
+# CSE SERVICE; used for registering CSE to vCD as an api extension service.
+CSE_SERVICE_NAME = 'cse'
+CSE_SERVICE_NAMESPACE = 'cse'
+EXCHANGE_TYPE = 'direct'
+SYSTEM_ORG_NAME = 'system'

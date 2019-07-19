@@ -27,9 +27,6 @@ from container_service_extension.cluster import get_master_ip
 from container_service_extension.cluster import init_cluster
 from container_service_extension.cluster import join_cluster
 from container_service_extension.cluster import load_from_metadata
-from container_service_extension.cluster import TYPE_MASTER
-from container_service_extension.cluster import TYPE_NFS
-from container_service_extension.cluster import TYPE_NODE
 from container_service_extension.exception_handler import error_to_json
 from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterInitializationError
@@ -51,9 +48,11 @@ from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_NAME
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProviders
+from container_service_extension.server_constants import NodeType
 from container_service_extension.shared_constants import ERROR_DESCRIPTION_KEY
 from container_service_extension.shared_constants import ERROR_MESSAGE_KEY
 from container_service_extension.shared_constants import ERROR_STACKTRACE_KEY
+from container_service_extension.shared_constants import RequestKey
 from container_service_extension.utils import get_server_runtime_config
 
 
@@ -70,7 +69,6 @@ OP_MESSAGE = {
 }
 
 MAX_HOST_NAME_LENGTH = 25
-ROLLBACK_FLAG = 'disable_rollback'
 
 
 def rollback_on_failure(func):
@@ -90,7 +88,7 @@ def rollback_on_failure(func):
             try:
                 # arg[0] refers to the current instance of the broker thread
                 broker_instance = args[0]  # param self
-                if broker_instance.req_spec[ROLLBACK_FLAG]:
+                if broker_instance.req_spec.get(RequestKey.ROLLBACK):
                     broker_instance.cluster_rollback()
             except Exception as err:
                 LOGGER.error(f"Failed to rollback cluster creation:{str(err)}")
@@ -98,7 +96,7 @@ def rollback_on_failure(func):
             try:
                 broker_instance = args[0]
                 node_list = e.node_names
-                if broker_instance.req_spec[ROLLBACK_FLAG]:
+                if broker_instance.req_spec.get(RequestKey.ROLLBACK):
                     broker_instance.node_rollback(node_list)
             except Exception as err:
                 LOGGER.error(f"Failed to rollback node creation:{str(err)}")
@@ -180,12 +178,9 @@ class VcdBroker(AbstractBroker, threading.Thread):
 
     def _get_template(self, name=None):
         server_config = get_server_runtime_config()
-        if name is None:
-            if 'template' in self.req_spec and \
-                    self.req_spec['template'] is not None:
-                name = self.req_spec['template']
-            else:
-                name = server_config['broker']['default_template']
+        name = name or \
+            self.req_spec.get(RequestKey.TEMPLATE_NAME) or \
+            server_config['broker']['default_template']
         for template in server_config['broker']['templates']:
             if template['name'] == name:
                 return template
@@ -273,9 +268,11 @@ class VcdBroker(AbstractBroker, threading.Thread):
     def list_clusters(self):
         self._connect_tenant()
         clusters = []
-        for c in load_from_metadata(self.tenant_client,
-                                    org_name=self.req_spec.get('org'),
-                                    vdc_name=self.req_spec.get('vdc')):
+        raw_clusters = load_from_metadata(
+            self.tenant_client,
+            org_name=self.req_spec.get(RequestKey.ORG_NAME),
+            vdc_name=self.req_spec.get(RequestKey.OVDC_NAME))
+        for c in raw_clusters:
             clusters.append({
                 'name': c['name'],
                 'IP master': c['leader_endpoint'],
@@ -297,9 +294,11 @@ class VcdBroker(AbstractBroker, threading.Thread):
         :return: (dict): Info of the cluster.
         """
         self._connect_tenant()
-        clusters = load_from_metadata(self.tenant_client, name=cluster_name,
-                                      org_name=self.req_spec.get('org'),
-                                      vdc_name=self.req_spec.get('vdc'))
+        clusters = load_from_metadata(
+            self.tenant_client,
+            name=cluster_name,
+            org_name=self.req_spec.get(RequestKey.ORG_NAME),
+            vdc_name=self.req_spec.get(RequestKey.OVDC_NAME))
         if len(clusters) > 1:
             raise CseDuplicateClusterError(f"Multiple clusters of name"
                                            f" '{cluster_name}' detected.")
@@ -321,11 +320,11 @@ class VcdBroker(AbstractBroker, threading.Thread):
             except Exception:
                 LOGGER.debug(f"Unable to get ip address of node "
                              f"{vm.get('name')}")
-            if vm.get('name').startswith(TYPE_MASTER):
+            if vm.get('name').startswith(NodeType.MASTER):
                 cluster.get('master_nodes').append(node_info)
-            elif vm.get('name').startswith(TYPE_NODE):
+            elif vm.get('name').startswith(NodeType.WORKER):
                 cluster.get('nodes').append(node_info)
-            elif vm.get('name').startswith(TYPE_NFS):
+            elif vm.get('name').startswith(NodeType.NFS):
                 cluster.get('nfs_nodes').append(node_info)
         return cluster
 
@@ -338,10 +337,11 @@ class VcdBroker(AbstractBroker, threading.Thread):
         :return: (dict): Info of the node.
         """
         self._connect_tenant()
-        clusters = load_from_metadata(self.tenant_client,
-                                      name=cluster_name,
-                                      org_name=self.req_spec.get('org'),
-                                      vdc_name=self.req_spec.get('vdc'))
+        clusters = load_from_metadata(
+            self.tenant_client,
+            name=cluster_name,
+            org_name=self.req_spec.get(RequestKey.ORG_NAME),
+            vdc_name=self.req_spec.get(RequestKey.OVDC_NAME))
         if len(clusters) > 1:
             raise CseDuplicateClusterError(f"Multiple clusters of name"
                                            f" '{cluster_name}' detected.")
@@ -372,12 +372,12 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 except Exception:
                     LOGGER.debug(f"Unable to get ip address of node "
                                  f"{vm.get('name')}")
-                if vm.get('name').startswith(TYPE_MASTER):
+                if vm.get('name').startswith(NodeType.MASTER):
                     node_info['node_type'] = 'master'
-                elif vm.get('name').startswith(TYPE_NODE):
-                    node_info['node_type'] = 'node'
-                elif vm.get('name').startswith(TYPE_NFS):
-                    node_info['node_type'] = 'nfsd'
+                elif vm.get('name').startswith(NodeType.WORKER):
+                    node_info['node_type'] = 'worker'
+                elif vm.get('name').startswith(NodeType.NFS):
+                    node_info['node_type'] = 'nfs'
                     exports = self._get_nfs_exports(node_info['ipAddress'],
                                                     vapp,
                                                     vm)
@@ -392,8 +392,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
         clusters = load_from_metadata(
             self.tenant_client,
             name=cluster_name,
-            org_name=self.req_spec.get('org'),
-            vdc_name=self.req_spec.get('vdc'))
+            org_name=self.req_spec.get(RequestKey.ORG_NAME),
+            vdc_name=self.req_spec.get(RequestKey.OVDC_NAME))
         if len(clusters) > 1:
             raise CseDuplicateClusterError(f"Multiple clusters of name"
                                            f" '{cluster_name}' detected.")
@@ -446,7 +446,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
 
     @rollback_on_failure
     def create_cluster_thread(self):
-        network_name = self.req_spec['network']
+        network_name = self.req_spec.get(RequestKey.NETWORK_NAME)
         try:
             clusters = load_from_metadata(self.tenant_client,
                                           name=self.cluster_name)
@@ -454,10 +454,10 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 raise ClusterAlreadyExistsError(f"Cluster {self.cluster_name} "
                                                 "already exists.")
 
-            org_resource = \
-                self.tenant_client.get_org_by_name(self.req_spec['org'])
+            org_resource = self.tenant_client.get_org_by_name(
+                self.req_spec.get(RequestKey.ORG_NAME))
             org = Org(self.tenant_client, resource=org_resource)
-            vdc_resource = org.get_vdc(self.req_spec['vdc'])
+            vdc_resource = org.get_vdc(self.req_spec.get(RequestKey.OVDC_NAME))
             vdc = VDC(self.tenant_client, resource=vdc_resource)
             template = self._get_template()
             self._update_task(
@@ -493,7 +493,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
 
             server_config = get_server_runtime_config()
             try:
-                add_nodes(1, template, TYPE_MASTER, server_config,
+                add_nodes(1, template, NodeType.MASTER, server_config,
                           self.tenant_client, org, vdc, vapp, self.req_spec)
             except Exception as e:
                 raise MasterNodeCreationError(
@@ -509,32 +509,37 @@ class VcdBroker(AbstractBroker, threading.Thread):
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      master_ip)
             self.tenant_client.get_task_monitor().wait_for_status(task)
-            if self.req_spec['node_count'] > 0:
+            if self.req_spec.get(RequestKey.NUM_WORKERS) > 0:
                 self._update_task(
                     TaskStatus.RUNNING,
-                    message=f"Creating {self.req_spec['node_count']} node(s) "
-                            f"for {self.cluster_name}({self.cluster_id})")
+                    message=f"Creating "
+                            f"{self.req_spec.get(RequestKey.NUM_WORKERS)} "
+                            f"node(s) for "
+                            f"{self.cluster_name}({self.cluster_id})")
                 try:
-                    add_nodes(self.req_spec['node_count'], template, TYPE_NODE,
-                              server_config, self.tenant_client, org, vdc,
-                              vapp, self.req_spec)
+                    add_nodes(self.req_spec.get(RequestKey.NUM_WORKERS),
+                              template, NodeType.WORKER, server_config,
+                              self.tenant_client, org, vdc, vapp,
+                              self.req_spec)
                 except Exception as e:
                     raise WorkerNodeCreationError(
                         "Error while creating worker node:", str(e))
 
                 self._update_task(
                     TaskStatus.RUNNING,
-                    message=f"Adding {self.req_spec['node_count']} node(s) to "
+                    message=f"Adding "
+                            f"{self.req_spec.get(RequestKey.NUM_WORKERS)} "
+                            f"node(s) to "
                             f"{self.cluster_name}({self.cluster_id})")
                 vapp.reload()
                 join_cluster(server_config, vapp, template)
-            if self.req_spec['enable_nfs']:
+            if self.req_spec.get(RequestKey.ENABLE_NFS):
                 self._update_task(
                     TaskStatus.RUNNING,
                     message=f"Creating NFS node for {self.cluster_name}"
                             f"({self.cluster_id})")
                 try:
-                    add_nodes(1, template, TYPE_NFS,
+                    add_nodes(1, template, NodeType.NFS,
                               server_config, self.tenant_client, org, vdc,
                               vapp, self.req_spec)
                 except Exception as e:
@@ -565,7 +570,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY])
             self._update_task(
                 TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY],  # noqa
+                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY], # noqa: E501
                 stack_trace=stack_trace)
         finally:
             self._disconnect_sys_admin()
@@ -580,8 +585,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
         self.op = OP_DELETE_CLUSTER
         clusters = load_from_metadata(
             self.tenant_client, name=self.cluster_name,
-            org_name=self.req_spec.get('org'),
-            vdc_name=self.req_spec.get('vdc'))
+            org_name=self.req_spec.get(RequestKey.ORG_NAME),
+            vdc_name=self.req_spec.get(RequestKey.OVDC_NAME))
         if len(clusters) > 1:
             raise CseDuplicateClusterError(
                 f"Multiple clusters of name '{self.cluster_name}' detected.")
@@ -619,22 +624,22 @@ class VcdBroker(AbstractBroker, threading.Thread):
 
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def create_nodes(self):
-        self.cluster_name = self.req_spec['cluster_name']
-        LOGGER.debug(f"About to add {self.req_spec['node_count']} nodes to "
+        self.cluster_name = self.req_spec.get(RequestKey.CLUSTER_NAME)
+        LOGGER.debug(f"About to add "
+                     f"{self.req_spec.get(RequestKey.NUM_WORKERS)} nodes to "
                      f"cluster {self.cluster_name} on VDC "
-                     f"{self.req_spec['vdc']}")
-        if self.req_spec['node_count'] < 1:
-            raise CseServerError(f"Invalid node count: "
-                                 f"{self.req_spec['node_count']}.")
-        if self.req_spec['network'] is None:
+                     f"{self.req_spec.get(RequestKey.OVDC_NAME)}")
+        if self.req_spec.get(RequestKey.NUM_WORKERS) < 1:
+            raise CseServerError(f"Invalid node count: {self.req_spec.get(RequestKey.NUM_WORKERS)}.") # noqa: E501
+        if self.req_spec.get(RequestKey.NETWORK_NAME) is None:
             raise CseServerError(f'Network name is missing from the request.')
 
         self._connect_tenant()
         self._connect_sys_admin()
         clusters = load_from_metadata(
             self.tenant_client, name=self.cluster_name,
-            org_name=self.req_spec.get('org'),
-            vdc_name=self.req_spec.get('vdc'))
+            org_name=self.req_spec.get(RequestKey.ORG_NAME),
+            vdc_name=self.req_spec.get(RequestKey.OVDC_NAME))
 
         if len(clusters) > 1:
             raise CseDuplicateClusterError(f"Multiple clusters of name "
@@ -648,8 +653,9 @@ class VcdBroker(AbstractBroker, threading.Thread):
         self.cluster_id = self.cluster['cluster_id']
         self._update_task(
             TaskStatus.RUNNING,
-            message=f"Adding {self.req_spec['node_count']} node(s) to cluster "
-                    "{self.cluster_name}({self.cluster_id})")
+            message=f"Adding {self.req_spec.get(RequestKey.NUM_WORKERS)} "
+                    f"node(s) to cluster "
+                    f"{self.cluster_name}({self.cluster_id})")
         self.daemon = True
         self.start()
         result = {}
@@ -670,22 +676,31 @@ class VcdBroker(AbstractBroker, threading.Thread):
             template = self._get_template()
             self._update_task(
                 TaskStatus.RUNNING,
-                message=f"Creating {self.req_spec['node_count']} node(s) for "
-                        f"{self.cluster_name}({self.cluster_id})")
-            new_nodes = add_nodes(self.req_spec['node_count'], template,
-                                  self.req_spec['node_type'],
-                                  server_config, self.tenant_client,
-                                  org, vdc, vapp, self.req_spec)
-            if self.req_spec['node_type'] == TYPE_NFS:
+                message=f"Creating {self.req_spec.get(RequestKey.NUM_WORKERS)}"
+                        f" node(s) for {self.cluster_name}({self.cluster_id})")
+
+            node_type = NodeType.WORKER
+            if self.req_spec.get(RequestKey.ENABLE_NFS):
+                node_type = NodeType.NFS
+
+            new_nodes = add_nodes(self.req_spec.get(RequestKey.NUM_WORKERS),
+                                  template, node_type, server_config,
+                                  self.tenant_client, org, vdc, vapp,
+                                  self.req_spec)
+            if node_type == NodeType.NFS:
                 self._update_task(
                     TaskStatus.SUCCESS,
-                    message=f"Created {self.req_spec['node_count']} node(s) "
-                            f"for {self.cluster_name}({self.cluster_id})")
-            elif self.req_spec['node_type'] == TYPE_NODE:
+                    message=f"Created "
+                            f"{self.req_spec.get(RequestKey.NUM_WORKERS)} "
+                            f"node(s) for "
+                            f"{self.cluster_name}({self.cluster_id})")
+            elif node_type == NodeType.WORKER:
                 self._update_task(
                     TaskStatus.RUNNING,
-                    message=f"Adding {self.req_spec['node_count']} node(s) to "
-                            f"cluster {self.cluster_name}({self.cluster_id})")
+                    message=f"Adding "
+                            f"{self.req_spec.get(RequestKey.NUM_WORKERS)} "
+                            f"node(s) to cluster "
+                            f"{self.cluster_name}({self.cluster_id})")
                 target_nodes = []
                 for spec in new_nodes['specs']:
                     target_nodes.append(spec['target_vm_name'])
@@ -693,8 +708,10 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 join_cluster(server_config, vapp, template, target_nodes)
                 self._update_task(
                     TaskStatus.SUCCESS,
-                    message=f"Added {self.req_spec['node_count']} node(s) to "
-                            f"cluster {self.cluster_name}({self.cluster_id})")
+                    message=f"Added "
+                            f"{self.req_spec.get(RequestKey.NUM_WORKERS)} "
+                            f"node(s) to cluster "
+                            f"{self.cluster_name}({self.cluster_id})")
         except NodeCreationError as e:
             error_obj = error_to_json(e)
             LOGGER.error(traceback.format_exc())
@@ -702,7 +719,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY])
             self._update_task(
                 TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY],  # noqa
+                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY], # noqa: E501
                 stack_trace=stack_trace)
             raise
         except Exception as e:
@@ -712,7 +729,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY])
             self._update_task(
                 TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY],  # noqa
+                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY], # noqa: E501
                 stack_trace=stack_trace)
         finally:
             self._disconnect_sys_admin()
@@ -720,22 +737,21 @@ class VcdBroker(AbstractBroker, threading.Thread):
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def delete_nodes(self):
         result = {'body': {}}
-        self.cluster_name = self.req_spec['cluster_name']
+        self.cluster_name = self.req_spec.get(RequestKey.CLUSTER_NAME)
         LOGGER.debug(f"About to delete nodes from cluster with name: "
-                     f"{self.req_spec['cluster_name']}")
+                     f"{self.req_spec.get(RequestKey.CLUSTER_NAME)}")
 
-        if len(self.req_spec['nodes']) < 1:
-            raise CseServerError(f"Invalid list of nodes: "
-                                 f"{self.req_spec['nodes']}.")
-        for node in self.req_spec['nodes']:
-            if node.startswith(TYPE_MASTER):
+        if len(self.req_spec.get(RequestKey.NODE_NAMES_LIST)) < 1:
+            raise CseServerError(f"Invalid list of nodes: {self.req_spec.get(RequestKey.NODE_NAMES_LIST)}.") # noqa: E501
+        for node in self.req_spec.get(RequestKey.NODE_NAMES_LIST):
+            if node.startswith(NodeType.MASTER):
                 raise CseServerError(f"Can't delete a master node: '{node}'.")
         self._connect_tenant()
         self._connect_sys_admin()
         clusters = load_from_metadata(
             self.tenant_client, name=self.cluster_name,
-            org_name=self.req_spec.get('org'),
-            vdc_name=self.req_spec.get('vdc'))
+            org_name=self.req_spec.get(RequestKey.ORG_NAME),
+            vdc_name=self.req_spec.get(RequestKey.OVDC_NAME))
         if len(clusters) <= 0:
             raise CseServerError(f"Cluster '{self.cluster_name}' not found.")
 
@@ -747,13 +763,16 @@ class VcdBroker(AbstractBroker, threading.Thread):
         self.cluster_id = self.cluster['cluster_id']
         self._update_task(
             TaskStatus.RUNNING,
-            message=f"Deleting {len(self.req_spec['nodes'])} node(s) from "
-            f"cluster {self.cluster_name}({self.cluster_id})")
+            message=f"Deleting "
+                    f"{len(self.req_spec.get(RequestKey.NODE_NAMES_LIST))} "
+                    f"node(s) from cluster "
+                    f"{self.cluster_name}({self.cluster_id})")
         self.daemon = True
         self.start()
-        result = {}
-        result['cluster_name'] = self.cluster_name
-        result['task_href'] = self.task_resource.get('href')
+        result = {
+            'cluster_name': self.cluster_name,
+            'task_href': self.task_resource.get('href')
+        }
         return result
 
     def delete_nodes_thread(self):
@@ -764,23 +783,28 @@ class VcdBroker(AbstractBroker, threading.Thread):
             template = self._get_template()
             self._update_task(
                 TaskStatus.RUNNING,
-                message=f"Deleting {len(self.req_spec['nodes'])} node(s) from "
+                message=f"Deleting "
+                        f"{len(self.req_spec.get(RequestKey.NODE_NAMES_LIST))}"
+                        f" node(s) from "
                         f"{self.cluster_name}({self.cluster_id})")
             try:
                 server_config = get_server_runtime_config()
-                delete_nodes_from_cluster(server_config,
-                                          vapp,
-                                          template,
-                                          self.req_spec['nodes'],
-                                          self.req_spec['force'])
+                delete_nodes_from_cluster(
+                    server_config,
+                    vapp,
+                    template,
+                    self.req_spec.get(RequestKey.NODE_NAMES_LIST),
+                    self.req_spec.get(RequestKey.FORCE_DELETE))
             except Exception:
-                LOGGER.error(f"Couldn't delete node {self.req_spec['nodes']} "
-                             f"from cluster:{self.cluster_name}")
+                LOGGER.error(f"Couldn't delete node "
+                             f"{self.req_spec.get(RequestKey.NODE_NAMES_LIST)}"
+                             f" from cluster:{self.cluster_name}")
             self._update_task(
                 TaskStatus.RUNNING,
-                message=f"Undeploying {len(self.req_spec['nodes'])} node(s) "
-                        f"for {self.cluster_name}({self.cluster_id})")
-            for vm_name in self.req_spec['nodes']:
+                message=f"Undeploying "
+                        f"{len(self.req_spec.get(RequestKey.NODE_NAMES_LIST))}"
+                        f" node(s) for {self.cluster_name}({self.cluster_id})")
+            for vm_name in self.req_spec.get(RequestKey.NODE_NAMES_LIST):
                 vm = VM(self.tenant_client, resource=vapp.get_vm(vm_name))
                 try:
                     task = vm.undeploy()
@@ -789,14 +813,17 @@ class VcdBroker(AbstractBroker, threading.Thread):
                     LOGGER.warning(f"Couldn't undeploy VM {vm_name}")
             self._update_task(
                 TaskStatus.RUNNING,
-                message=f"Deleting {len(self.req_spec['nodes'])} VM(s) for "
-                        f"{self.cluster_name}({self.cluster_id})")
-            task = vapp.delete_vms(self.req_spec['nodes'])
+                message=f"Deleting "
+                        f"{len(self.req_spec.get(RequestKey.NODE_NAMES_LIST))}"
+                        f" VM(s) for {self.cluster_name}({self.cluster_id})")
+            task = vapp.delete_vms(self.req_spec.get(RequestKey.NODE_NAMES_LIST)) # noqa: E501
             self.tenant_client.get_task_monitor().wait_for_status(task)
             self._update_task(
                 TaskStatus.SUCCESS,
-                message=f"Deleted {len(self.req_spec['nodes'])} node(s) to "
-                        f"cluster {self.cluster_name}({self.cluster_id})")
+                message=f"Deleted "
+                        f"{len(self.req_spec.get(RequestKey.NODE_NAMES_LIST))}"
+                        f" node(s) to cluster "
+                        f"{self.cluster_name}({self.cluster_id})")
         except Exception as e:
             LOGGER.error(traceback.format_exc())
             error_obj = error_to_json(e)
@@ -804,7 +831,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY])
             self._update_task(
                 TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY],  # noqa
+                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY],  # noqa: E501
                 stack_trace=stack_trace)
         finally:
             self._disconnect_sys_admin()
@@ -835,6 +862,6 @@ class VcdBroker(AbstractBroker, threading.Thread):
             raise CseServerError(f"Cluster - {cluster_name} is already at the "
                                  f"size of {curr_worker_count}.")
 
-        self.req_spec['node_count'] = node_count - curr_worker_count
+        self.req_spec[RequestKey.NUM_WORKERS] = node_count - curr_worker_count
         response = self.create_nodes()
         return response
