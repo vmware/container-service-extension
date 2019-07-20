@@ -75,6 +75,7 @@ class RemoteTemplateManager():
         self.url = remote_template_cookbook_url
         self.logger = logger
         self.msg_update_callback = msg_update_callback
+        self.cookbook = None
 
     def _get_base_url_from_remote_template_cookbook_url(self):
         tokens = self.url.split('/')
@@ -117,12 +118,20 @@ class RemoteTemplateManager():
 
         :rtype: dict
         """
-        template_cookbook_as_str = download_file_into_memory(self.url)
-        cookbook = yaml.safe_load(template_cookbook_as_str)
-        if self.logger:
-            self.logger.debug("Downloaded remote template cookbook from"
-                              f"{self.url}")
-        return cookbook
+        if self.cookbook:
+            if self.logger:
+                self.logger.debug("Re-using cached copy of temaplte cookbook.")
+        else:
+            template_cookbook_as_str = download_file_into_memory(self.url)
+            self.cookbook = yaml.safe_load(template_cookbook_as_str)
+            if self.logger:
+                self.logger.debug("Downloaded remote template cookbook from"
+                                  f"{self.url}")
+        return self.cookbook
+
+    def get_default_templte_name(self):
+        remote_template_cookbook = self.get_remote_template_cookbook()
+        return remote_template_cookbook.get('default_template')
 
     def download_template_scripts(self, template_name, revision,
                                   force_overwrite=False):

@@ -3,15 +3,15 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from pyvcloud.vcd.client import MetadataDomain
-from pyvcloud.vcd.client import MetadataValueType
 from pyvcloud.vcd.client import MetadataVisibility
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.utils import metadata_to_dict
 
+from container_service_extension.pyvcloud_utils import get_org
+
 
 def _filter_template_metadata(template_name, data):
     filtered_data = {}
-    filtered_data['catalog_item_name'] = template_name
     if data.get('admin_password'):
         filtered_data['admin_password'] = data.get('admin_password')
     if data.get('compute_policy'):
@@ -28,15 +28,16 @@ def _filter_template_metadata(template_name, data):
         filtered_data['name'] = data.get('name')
     if data.get('revision'):
         filtered_data['revision'] = data.get('revision')
-
+    # if this is a valid K8 template, add the name of the template to result
+    if filtered_data:
+        filtered_data['catalog_item_name'] = template_name
     return filtered_data
 
 
 def get_all_metadata_on_catalog_item(client, catalog_name, catalog_item_name,
-                                     org_resource=None, org_name=None):
-    if org_resource is None:
-        org_resource = client.get_org_by_name(org_name=org_name)
-    org = Org(client, resource=org_resource)
+                                     org=None, org_name=None):
+    if org is None:
+        org = get_org(client, org_name=org_name)
     md = org.get_all_metadata_from_catalog_item(
         catalog_name=catalog_name,
         item_name=catalog_item_name)

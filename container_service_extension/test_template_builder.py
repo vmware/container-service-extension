@@ -4,7 +4,6 @@
 
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
-from pyvcloud.vcd.org import Org
 import requests
 
 from container_service_extension.local_template_manager import \
@@ -14,6 +13,7 @@ from container_service_extension.local_template_manager import \
 from container_service_extension.logger import configure_server_logger
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER
+from container_service_extension.pyvcloud_utils import get_org
 from container_service_extension.remote_template_manager import \
     get_revisioned_template_name
 from container_service_extension.remote_template_manager import \
@@ -97,22 +97,22 @@ def build_all_templates(client):
             data=template,
             org_name=org_name)
 
+
 def read_templates(client):
     org_name = server_config['broker']['org']
     catalog_name = server_config['broker']['catalog']
-    org = Org(client, resource=client.get_org_by_name(org_name))
-    org.reload()
+    org = get_org(client, org_name=org_name)
     catalog_item_names = [
         entry['name'] for entry in org.list_catalog_items(catalog_name)]
-    result = {'templates' : []}
+    result = []
     for catalog_item_name in catalog_item_names:
         md = get_all_metadata_on_catalog_item(
-            client, catalog_name, catalog_item_name,
-            org_resource=org.resource)
-        if len(md) > 1:
-            result['templates'].append(md)
+            client, catalog_name, catalog_item_name, org=org)
+        if md:
+            result.append(md)
 
     return result
+
 
 if __name__ == '__main__':
     # disable insecure warnings
@@ -141,4 +141,3 @@ if __name__ == '__main__':
     build_all_templates(client)
     dikt = read_templates(client)
     print(dikt)
-    
