@@ -55,7 +55,7 @@ from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 
 from container_service_extension.configure_cse import check_cse_installation
-from container_service_extension.configure_cse import get_validated_config
+from container_service_extension.config_validator import get_validated_config
 from container_service_extension.cse import cli
 import container_service_extension.install_utils as install_utils
 import container_service_extension.system_test_framework.environment as env
