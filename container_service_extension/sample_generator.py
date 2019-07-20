@@ -124,7 +124,8 @@ SAMPLE_BROKER_CONFIG = {
         'network': 'mynetwork',
         'ip_allocation_mode': 'pool',
         'storage_profile': '*',
-        'default_teamplte': 'photon-v2_k8-1.12_weave-2.3.0',
+        'default_teamplte': 'photon_template',
+        'default_template_revision': 0
         'remote_template_cookbook_url': 'https://raw.githubusercontent.com/rocknes/container-service-extension/remote_template/template.yaml', # noqa: E501
     }
 }
