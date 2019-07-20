@@ -11,20 +11,17 @@ from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import FenceMode
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
-from pyvcloud.vcd.exceptions import OperationNotSupportedException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.platform import Platform
-from pyvcloud.vcd.vapp import VApp
 import requests
 from requests.exceptions import HTTPError
-from vcd_cli.utils import stdout
 from vsphere_guest_run.vsphere import VSphere
 import yaml
 
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.exceptions import AmqpError
-from container_service_extension.install_utils import get_data_file
-from container_service_extension.install_utils import get_vsphere
+from container_service_extension.local_template_manager import \
+    set_metadata_on_catalog_item
 from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
@@ -43,32 +40,31 @@ from container_service_extension.pyvcloud_utils import catalog_exists
 from container_service_extension.pyvcloud_utils import catalog_item_exists
 from container_service_extension.pyvcloud_utils import create_and_share_catalog
 from container_service_extension.pyvcloud_utils import get_org
-from container_service_extension.pyvcloud_utils import get_vdc
-from container_service_extension.pyvcloud_utils import upload_ova_to_catalog
-from container_service_extension.pyvcloud_utils import \
-    wait_for_catalog_item_to_resolve
+from container_service_extension.remote_template_manager import \
+    get_revisioned_template_name
+from container_service_extension.remote_template_manager import \
+    RemoteTemplateManager
 from container_service_extension.sample_generator import \
     PKS_ACCOUNTS_SECTION_KEY, PKS_NSXT_SERVERS_SECTION_KEY, \
     PKS_ORGS_SECTION_KEY, PKS_PVDCS_SECTION_KEY, PKS_SERVERS_SECTION_KEY, \
     SAMPLE_AMQP_CONFIG, SAMPLE_BROKER_CONFIG, SAMPLE_PKS_ACCOUNTS_SECTION, \
     SAMPLE_PKS_NSXT_SERVERS_SECTION, SAMPLE_PKS_ORGS_SECTION, \
     SAMPLE_PKS_PVDCS_SECTION, SAMPLE_PKS_SERVERS_SECTION, \
-    SAMPLE_SERVICE_CONFIG, SAMPLE_TEMPLATE_PHOTON_V2, SAMPLE_VCD_CONFIG, \
-    SAMPLE_VCS_CONFIG  # noqa
+    SAMPLE_SERVICE_CONFIG, SAMPLE_VCD_CONFIG, SAMPLE_VCS_CONFIG # noqa: H301
 from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY, CSE_NATIVE_DEPLOY_RIGHT_CATEGORY, \
     CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION, CSE_NATIVE_DEPLOY_RIGHT_NAME, \
     CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY, CSE_PKS_DEPLOY_RIGHT_CATEGORY, \
     CSE_PKS_DEPLOY_RIGHT_DESCRIPTION, CSE_PKS_DEPLOY_RIGHT_NAME, \
     CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, EXCHANGE_TYPE, \
-    SYSTEM_ORG_NAME  # noqa
+    SYSTEM_ORG_NAME # noqa: H301
+from container_service_extension.template_builder import TemplateBuilder
 from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import check_file_permissions
 from container_service_extension.utils import check_keys_and_value_types
-from container_service_extension.utils import download_file
+from container_service_extension.utils import ConsoleMessagePrinter
 from container_service_extension.utils import get_duplicate_items_in_list
-from container_service_extension.vsphere_utils import vgr_callback
-from container_service_extension.vsphere_utils import wait_until_tools_ready
+
 
 # used for creating temp vapp
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = "vmxnet3"
@@ -297,18 +293,6 @@ def _validate_broker_config(broker_dict, msg_update_callback=None):
                                location="config file 'broker' section",
                                excluded_keys=['remote_template_cookbook_url'],
                                msg_update_callback=msg_update_callback)
-
-    default_exists = False
-    for template in broker_dict['templates']:
-        check_keys_and_value_types(template, SAMPLE_TEMPLATE_PHOTON_V2,
-                                   location="config file broker "
-                                            "template section",
-                                   msg_update_callback=msg_update_callback)
-        if template['name'] == broker_dict['default_template']:
-            default_exists = True
-    if not default_exists:
-        raise ValueError(f"Default template '{broker_dict['default_template']}"
-                         f"' not found in listed templates")
 
     valid_ip_allocation_modes = [
         'dhcp',
@@ -642,6 +626,7 @@ def check_cse_installation(config, check_template='*',
             if msg_update_callback:
                 msg_update_callback.general(f"Found catalog '{catalog_name}'")
             # check that templates exist in vCD
+            # Aritra : fix this to fit new template model
             for template in config['broker']['templates']:
                 if check_template != '*' \
                         and check_template != template['name']:
@@ -746,18 +731,55 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
                        bundle_key=CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY,
                        msg_update_callback=msg_update_callback)
 
+        org_name = config['broker']['org']
+        catalog_name = config['broker']['catalog']
+
         # set up cse catalog
-        org = get_org(client, org_name=config['broker']['org'])
+        org = get_org(client, org_name=org_name)
         create_and_share_catalog(
-            org, config['broker']['catalog'], catalog_desc='CSE templates',
+            org, catalog_name, catalog_desc='CSE templates',
             msg_update_callback=msg_update_callback)
-        # create, customize, capture VM templates
-        for template in config['broker']['templates']:
-            if template_name == '*' or template['name'] == template_name:
-                create_template(
-                    ctx, client, config, template, update=update,
-                    no_capture=no_capture, ssh_key=ssh_key, org=org,
-                    msg_update_callback=msg_update_callback)
+
+        # read remote template cookbook, download all scripts
+        rtm = RemoteTemplateManager(
+            remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
+            logger=LOGGER, msg_update_callback=ConsoleMessagePrinter())
+        remote_template_cookbook = rtm.get_remote_template_cookbook()
+        rtm.download_all_template_scripts()
+
+        # create all templates mentioned in cookbook
+        for template in remote_template_cookbook['templates']:
+            catalog_item_name = get_revisioned_template_name(
+                template['name'], template['revision'])
+            build_params = {
+                'template_name': template['name'],
+                'template_revision': template['revision'],
+                'source_ova_name': template['source_ova_name'],
+                'source_ova_href': template['source_ova'],
+                'source_ova_sha256': template['sha256_ova'],
+                'org_name': org_name,
+                'vdc_name': config['broker']['vdc'],
+                'catalog_name': catalog_name,
+                'catalog_item_name': catalog_item_name,
+                'catalog_item_description': template['description'],
+                'temp_vapp_name': template['name'] + '_temp',
+                'cpu': template['cpu'],
+                'memory': template['mem'],
+                'network_name': config['broker']['network'],
+                'ip_allocation_mode': config['broker']['ip_allocation_mode'],
+                'storage_profile': config['broker']['storage_profile']
+            }
+            builder = TemplateBuilder(
+                client, client, build_params, logger=LOGGER,
+                msg_update_callback=ConsoleMessagePrinter())
+            builder.build()
+
+            set_metadata_on_catalog_item(
+                client=client,
+                catalog_name=catalog_name,
+                catalog_item_name=catalog_item_name,
+                data=template,
+                org_name=org_name)
 
         # if it's a PKS setup, setup NSX-T constructs
         if config.get('pks_config'):
@@ -783,7 +805,7 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
                     nsxt_client=nsxt_client,
                     nodes_ip_block_id=nsxt_server.get('nodes_ip_block_ids'),
                     pods_ip_block_id=nsxt_server.get('pods_ip_block_ids'),
-                    ncp_boundary_firewall_section_anchor_id=nsxt_server.get('distributed_firewall_section_anchor_id'))  # noqa
+                    ncp_boundary_firewall_section_anchor_id=nsxt_server.get('distributed_firewall_section_anchor_id')) # noqa: E501
 
     except Exception:
         if msg_update_callback:
@@ -794,399 +816,6 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
     finally:
         if client is not None:
             client.logout()
-
-
-def create_template(ctx, client, config, template_config, update=False,
-                    no_capture=False, ssh_key=None, org=None, vdc=None,
-                    msg_update_callback=None):
-    """Handle template creation phase during CSE installation.
-
-    :param click.core.Context ctx: click context object.
-    :param pyvcloud.vcd.client.Client client:
-    :param dict config: CSE config.
-    :param dict template_config: specific template section of @config.
-    :param bool update: if True and templates already exist in vCD, overwrites
-        existing templates.
-    :param bool no_capture: if True, temporary vApp will not be captured or
-        destroyed, so the user can ssh into the VM and debug.
-    :param str ssh_key: public ssh key to place into the template vApp(s).
-    :param pyvcloud.vcd.org.Org org: specific org to use. If None, uses org
-        specified in @config.
-    :param pyvcloud.vcd.vdc.VDC vdc: specific vdc to use. If None, uses vdc
-        specified in @config.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
-        that writes messages onto console.
-    """
-    if org is None:
-        org = get_org(client, org_name=config['broker']['org'])
-    if vdc is None:
-        vdc = get_vdc(client, vdc_name=config['broker']['vdc'], org=org)
-    ctx.obj = {'client': client}
-    catalog_name = config['broker']['catalog']
-    template_name = template_config['catalog_item']
-    vapp_name = template_config['temp_vapp']
-    ova_name = template_config['source_ova_name']
-
-    if not update and catalog_item_exists(org, catalog_name, template_name):
-        msg = f"Found template '{template_name}' in catalog '{catalog_name}'"
-        if msg_update_callback:
-            msg_update_callback.general(msg)
-        LOGGER.info(msg)
-        return
-
-    # if update flag is set, delete existing template/ova file/temp vapp
-    if update:
-        msg = f"--update flag set. If template, source ova file, " \
-              f"and temporary vApp exist, they will be deleted"
-        if msg_update_callback:
-            msg_update_callback.info(msg)
-        LOGGER.info(msg)
-        try:
-            org.delete_catalog_item(catalog_name, template_name)
-            wait_for_catalog_item_to_resolve(client, catalog_name,
-                                             template_name, org=org)
-            org.reload()
-            msg = "Deleted vApp template"
-            if msg_update_callback:
-                msg_update_callback.general(msg)
-            LOGGER.info(msg)
-        except EntityNotFoundException:
-            pass
-        try:
-            org.delete_catalog_item(catalog_name, ova_name)
-            wait_for_catalog_item_to_resolve(client, catalog_name, ova_name,
-                                             org=org)
-            org.reload()
-            msg = "Deleted ova file"
-            if msg_update_callback:
-                msg_update_callback.general(msg)
-            LOGGER.info(msg)
-        except EntityNotFoundException:
-            pass
-        try:
-            task = vdc.delete_vapp(vapp_name, force=True)
-            stdout(task, ctx=ctx)
-            vdc.reload()
-            msg = "Deleted temporary vApp"
-            if msg_update_callback:
-                msg_update_callback.general(msg)
-            LOGGER.info(msg)
-        except EntityNotFoundException:
-            pass
-
-    # if needed, upload ova and create temp vapp
-    msg = f"Creating template '{template_name}' in catalog '{catalog_name}'"
-    if msg_update_callback:
-        msg_update_callback.info(msg)
-    LOGGER.info(msg)
-    temp_vapp_exists = True
-    try:
-        vapp = VApp(client, resource=vdc.get_vapp(vapp_name))
-        msg = f"Found vApp '{vapp_name}'"
-        if msg_update_callback:
-            msg_update_callback.general(msg)
-        LOGGER.info(msg)
-    except EntityNotFoundException:
-        temp_vapp_exists = False
-
-    if not temp_vapp_exists:
-        if catalog_item_exists(org, catalog_name, ova_name):
-            msg = f"Found ova file '{ova_name}' in catalog '{catalog_name}'"
-            if msg_update_callback:
-                msg_update_callback.general(msg)
-            LOGGER.info(msg)
-        else:
-            # download/upload files to catalog if necessary
-            ova_filepath = f"cse_cache/{ova_name}"
-            download_file(template_config['source_ova'], ova_filepath,
-                          sha256=template_config['sha256_ova'], logger=LOGGER,
-                          msg_update_callback=msg_update_callback)
-            upload_ova_to_catalog(
-                client, catalog_name, ova_filepath, org=org, logger=LOGGER,
-                msg_update_callback=msg_update_callback)
-
-        vapp = _create_temp_vapp(
-            ctx, client, vdc, config, template_config, ssh_key,
-            msg_update_callback=msg_update_callback)
-
-    if no_capture:
-        msg = f"'--no-capture' flag set. " \
-              f"Not capturing vApp '{vapp.name}' as a template"
-        if msg_update_callback:
-            msg_update_callback.info(msg)
-        LOGGER.info(msg)
-        return
-
-    # capture temp vapp as template
-    msg = f"Creating template '{template_name}' from vApp '{vapp.name}'"
-    if msg_update_callback:
-        msg_update_callback.info(msg)
-    LOGGER.info(msg)
-    _capture_vapp_to_template(ctx, vapp, catalog_name, template_name,
-                              org=org, desc=template_config['description'],
-                              power_on=not template_config['cleanup'])
-    msg = f"Created template '{template_name}' from vApp '{vapp_name}'"
-    if msg_update_callback:
-        msg_update_callback.general(msg)
-    LOGGER.info(msg)
-
-    # delete temp vapp
-    if template_config['cleanup']:
-        msg = f"Deleting vApp '{vapp_name}'"
-        if msg_update_callback:
-            msg_update_callback.info(msg)
-        LOGGER.info(msg)
-        task = vdc.delete_vapp(vapp_name, force=True)
-        stdout(task, ctx=ctx)
-        vdc.reload()
-        msg = f"Deleted vApp '{vapp_name}'"
-        if msg_update_callback:
-            msg_update_callback.general(msg)
-        LOGGER.info(msg)
-
-
-def _create_temp_vapp(ctx, client, vdc, config, template_config, ssh_key,
-                      msg_update_callback=None):
-    """Handle temporary VApp creation and customization step of CSE install.
-
-    Initializes and customizes VApp.
-
-    :param click.core.Context ctx: click context object.
-    :param pyvcloud.vcd.client.Client client:
-    :param dict config: CSE config.
-    :param dict template_config: specific template config section of @config.
-    :param str ssh_key: ssh key to use in temporary VApp's VM. Can be None.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
-        that writes messages onto console.
-
-    :return: VApp object for temporary VApp.
-
-    :rtype: pyvcloud.vcd.vapp.VApp
-
-    :raises FileNotFoundError: if init/customization scripts are not found.
-    :raises Exception: if VM customization fails.
-    """
-    vapp_name = template_config['temp_vapp']
-    init_script = get_data_file(
-        f"init-{template_config['name']}.sh",
-        logger=LOGGER, msg_update_callback=msg_update_callback)
-    if ssh_key is not None:
-        init_script += \
-            f"""
-            mkdir -p /root/.ssh
-            echo '{ssh_key}' >> /root/.ssh/authorized_keys
-            chmod -R go-rwx /root/.ssh
-            """
-    msg = f"Creating vApp '{vapp_name}'"
-    if msg_update_callback:
-        msg_update_callback.info(msg)
-    LOGGER.info(msg)
-    vapp = _create_vapp_from_config(client, vdc, config, template_config,
-                                    init_script)
-    msg = f"Created vApp '{vapp_name}'"
-    if msg_update_callback:
-        msg_update_callback.general(msg)
-    LOGGER.info(msg)
-    msg = f"Customizing vApp '{vapp_name}'"
-    if msg_update_callback:
-        msg_update_callback.info(msg)
-    LOGGER.info(msg)
-    cust_script = get_data_file(
-        f"cust-{template_config['name']}.sh",
-        logger=LOGGER, msg_update_callback=msg_update_callback)
-    ova_name = template_config['source_ova_name']
-    is_photon = True if 'photon' in ova_name else False
-    _customize_vm(ctx, config, vapp, vapp.name, cust_script,
-                  is_photon=is_photon, msg_update_callback=msg_update_callback)
-    msg = f"Customized vApp '{vapp_name}'"
-    if msg_update_callback:
-        msg_update_callback.general(msg)
-    LOGGER.info(msg)
-
-    return vapp
-
-
-def _create_vapp_from_config(client, vdc, config, template_config,
-                             init_script):
-    """Create a VApp from a specific template config.
-
-    This vApp is intended to be captured as a vApp template for CSE.
-    Fence mode and network adapter type are fixed.
-
-    :param pyvcloud.vcd.client.Client client:
-    :param dict config: CSE config.
-    :param dict template_config: specific template section of CSE config.
-    :param str init_script: initialization script for VApp.
-
-    :return: initialized VApp object.
-
-    :rtype: pyvcloud.vcd.vapp.VApp
-    """
-    vapp_sparse_resource = vdc.instantiate_vapp(
-        template_config['temp_vapp'],
-        config['broker']['catalog'],
-        template_config['source_ova_name'],
-        network=config['broker']['network'],
-        fence_mode=TEMP_VAPP_FENCE_MODE,
-        ip_allocation_mode=config['broker']['ip_allocation_mode'],
-        network_adapter_type=TEMP_VAPP_NETWORK_ADAPTER_TYPE,
-        deploy=True,
-        power_on=True,
-        memory=template_config['mem'],
-        cpu=template_config['cpu'],
-        password=None,
-        cust_script=init_script,
-        accept_all_eulas=True,
-        vm_name=template_config['temp_vapp'],
-        hostname=template_config['temp_vapp'],
-        storage_profile=config['broker']['storage_profile'])
-    task = vapp_sparse_resource.Tasks.Task[0]
-    client.get_task_monitor().wait_for_success(task)
-    vdc.reload()
-    # we don't do lazy loading here using vapp_sparse_resource.get('href'),
-    # because VApp would have an uninitialized attribute (vapp.name)
-    vapp = VApp(client, resource=vapp_sparse_resource)
-    vapp.reload()
-    return vapp
-
-
-def _customize_vm(ctx, config, vapp, vm_name, cust_script, is_photon=False,
-                  msg_update_callback=None):
-    """Customize a VM in a VApp using the customization script @cust_script.
-
-    :param click.core.Context ctx: click context object. Needed to pass to
-        stdout.
-    :param dict config: CSE config.
-    :param pyvcloud.vcd.vapp.VApp vapp:
-    :param str vm_name:
-    :param str cust_script: the customization script to run on
-    :param bool is_photon: True if the vapp was instantiated from
-        a 'photon' ova file, False otherwise (False is safe even if
-        the vapp is photon-based).
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
-        that writes messages onto console.
-
-    :raises Exception: if unable to execute the customization script in
-        VSphere.
-    """
-    callback = vgr_callback(prepend_msg='Waiting for guest tools, status: "',
-                            msg_update_callback=msg_update_callback)
-    if not is_photon:
-        vs = get_vsphere(config, vapp, vm_name, logger=LOGGER)
-        wait_until_tools_ready(vapp, vm_name, vs, callback=callback)
-
-        vapp.reload()
-        task = vapp.shutdown()
-        stdout(task, ctx=ctx)
-        vapp.reload()
-        task = vapp.power_on()
-        stdout(task, ctx=ctx)
-        vapp.reload()
-
-    vs = get_vsphere(config, vapp, vm_name, logger=LOGGER)
-    wait_until_tools_ready(vapp, vm_name, vs, callback=callback)
-    password_auto = vapp.get_admin_password(vm_name)
-
-    try:
-        result = vs.execute_script_in_guest(
-            vs.get_vm_by_moid(vapp.get_vm_moid(vm_name)),
-            'root',
-            password_auto,
-            cust_script,
-            target_file=None,
-            wait_for_completion=True,
-            wait_time=10,
-            get_output=True,
-            delete_script=True,
-            callback=vgr_callback(
-                msg_update_callback=msg_update_callback))
-    except Exception as err:
-        # TODO() replace raw exception with specific exception
-        # unsure all errors execute_script_in_guest can result in
-        # Docker TLS handshake timeout can occur when internet is slow
-        if msg_update_callback:
-            msg_update_callback.error(
-                "Failed VM customization. Check CSE install log")
-        LOGGER.error(f"Failed VM customization with error: {err}",
-                     exc_info=True)
-        raise
-
-    if len(result) > 0:
-        msg = f'Result: {result}'
-        if msg_update_callback:
-            msg_update_callback.general_no_color(msg)
-        LOGGER.debug(msg)
-        result_stdout = result[1].content.decode()
-        result_stderr = result[2].content.decode()
-        msg = 'stderr:'
-        if msg_update_callback:
-            msg_update_callback.general_no_color(msg)
-        LOGGER.debug(msg)
-        if len(result_stderr) > 0:
-            if msg_update_callback:
-                msg_update_callback.general_no_color(result_stderr)
-            LOGGER.debug(result_stderr)
-        msg = 'stdout:'
-        if msg_update_callback:
-            msg_update_callback.general_no_color(msg)
-        LOGGER.debug(msg)
-        if len(result_stdout) > 0:
-            if msg_update_callback:
-                msg_update_callback.general_no_color(result_stdout)
-            LOGGER.debug(result_stdout)
-    if len(result) == 0 or result[0] != 0:
-        msg = "Failed VM customization"
-        if msg_update_callback:
-            msg_update_callback.error(f"{msg}. Check CSE install log")
-        LOGGER.error(msg, exc_info=True)
-        # TODO() replace raw exception with specific exception
-        raise Exception(msg)
-
-    # Do not reboot VM after customization. Reboot will generate a new
-    # machine-id, and once we capture the VM, all VMs deployed from the
-    # template will have the same machine-id, which can lead to unpredictable
-    # behavior
-
-
-def _capture_vapp_to_template(ctx, vapp, catalog_name, catalog_item_name,
-                              desc='', power_on=False, org=None,
-                              org_name=None):
-    """Shutdown and capture existing VApp as a template in @catalog.
-
-    VApp should have tools ready, or shutdown will fail, and VApp will be
-    unavailable to be captured.
-
-    :param click.core.Context ctx: click context object needed for stdout.
-    :param pyvcloud.vcd.vapp.VApp vapp:
-    :param str catalog_name:
-    :param str catalog_item_name: catalog item name for the template.
-    :param str desc: template description.
-    :param bool power_on: if True, turns on VApp after capturing.
-    :param pyvcloud.vcd.org.Org org: specific org to use.
-    :param str org_name: specific org to use if @org is not given.
-        If None, uses currently logged-in org from @vapp (vapp.client).
-
-    :raises EntityNotFoundException: if the org could not be found.
-    """
-    if org is None:
-        org = get_org(vapp.client, org_name=org_name)
-    catalog = org.get_catalog(catalog_name)
-    try:
-        task = vapp.shutdown()
-        stdout(task, ctx=ctx)
-        vapp.reload()
-    except OperationNotSupportedException:
-        pass
-
-    task = org.capture_vapp(catalog, vapp.href, catalog_item_name, desc,
-                            customize_on_instantiate=True, overwrite=True)
-    stdout(task, ctx=ctx)
-    org.reload()
-
-    if power_on:
-        task = vapp.power_on()
-        stdout(task, ctx=ctx)
-        vapp.reload()
 
 
 def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
