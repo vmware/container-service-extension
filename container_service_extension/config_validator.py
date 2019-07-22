@@ -23,6 +23,8 @@ from container_service_extension.pks_cache import Credentials
 from container_service_extension.pksclient.client.v1.api_client \
     import ApiClient as ApiClientV1
 from container_service_extension.pksclient.configuration import Configuration
+from container_service_extension.remote_template_manager import \
+    RemoteTemplateManager
 from container_service_extension.sample_generator import \
     PKS_ACCOUNTS_SECTION_KEY, PKS_NSXT_SERVERS_SECTION_KEY, \
     PKS_ORGS_SECTION_KEY, PKS_PVDCS_SECTION_KEY, PKS_SERVERS_SECTION_KEY, \
@@ -30,8 +32,6 @@ from container_service_extension.sample_generator import \
     SAMPLE_PKS_NSXT_SERVERS_SECTION, SAMPLE_PKS_ORGS_SECTION, \
     SAMPLE_PKS_PVDCS_SECTION, SAMPLE_PKS_SERVERS_SECTION, \
     SAMPLE_SERVICE_CONFIG, SAMPLE_VCD_CONFIG, SAMPLE_VCS_CONFIG # noqa: H301
-from container_service_extension.remote_template_manager import \
-    RemoteTemplateManager
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import check_file_permissions
