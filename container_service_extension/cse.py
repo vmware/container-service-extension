@@ -223,12 +223,12 @@ def check(ctx, config, check_install, template):
 @click.option(
     '-t',
     '--template',
-    'template',
+    'create_templates',
+    is_flag=True,
     required=False,
-    default='*',
-    metavar='TEMPLATE_NAME',
-    help="Create only the specified k8s template. Default value of '*' "
-         "means that all templates in config file will be created")
+    default=True,
+    metavar='CREATE TEMPLATES',
+    help="If True, CSE will create all K8 templates during installation.")
 @click.option(
     '-u',
     '--update',
@@ -252,7 +252,7 @@ def check(ctx, config, check_install, template):
     default=None,
     type=click.File('r'),
     help='Filepath of SSH public key to add to vApp template')
-def install(ctx, config, template, update, no_capture, ssh_key_file):
+def install(ctx, config, create_templates, update, no_capture, ssh_key_file):
     """Install CSE on vCloud Director."""
     try:
         check_python_version(ConsoleMessagePrinter())
@@ -270,8 +270,9 @@ def install(ctx, config, template, update, no_capture, ssh_key_file):
     if ssh_key_file is not None:
         ssh_key = ssh_key_file.read()
     try:
-        install_cse(ctx, config_file_name=config, template_name=template,
-                    update=update, no_capture=no_capture, ssh_key=ssh_key,
+        install_cse(ctx, config_file_name=config,
+                    create_templates=create_templates, update=update,
+                    no_capture=no_capture, ssh_key=ssh_key,
                     msg_update_callback=ConsoleMessagePrinter())
     except (EntityNotFoundException, NotAcceptableException, VcdException,
             ValueError, KeyError, TypeError) as err:

@@ -179,9 +179,19 @@ class Service(object, metaclass=Singleton):
     def run(self, msg_update_callback=None):
         self.config = get_validated_config(
             self.config_file, msg_update_callback=msg_update_callback)
+
         if self.should_check_config:
             check_cse_installation(
                 self.config, msg_update_callback=msg_update_callback)
+
+        # TODO: this config hack shouldn't be done here. It should get auto 
+        # populated via get_validated_config
+        org_name = config['broker']['org']
+        org = get_org(client, org_name=org_name)
+        catalog_name = config['broker']['catalog']
+        k8_templates = get_all_K8_template_definition(
+                client=client, catalog_name=catalog_name, org=org)
+        self.config['templates'] = k8_templates
 
         configure_server_logger()
 
