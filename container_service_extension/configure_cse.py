@@ -39,6 +39,7 @@ from container_service_extension.server_constants import \
     SYSTEM_ORG_NAME # noqa: H301
 from container_service_extension.template_builder import TemplateBuilder
 from container_service_extension.utils import ConsoleMessagePrinter
+from container_service_extension.vsphere_utils import populate_vsphere_list
 
 
 def check_cse_installation(config, template_to_check=None,
@@ -220,6 +221,8 @@ def install_cse(ctx, config_file_name='config.yaml', create_templates=True,
     LOGGER.info(msg)
     client = None
     try:
+        populate_vsphere_list(config['vcs'])
+
         client = Client(config['vcd']['host'],
                         api_version=config['vcd']['api_version'],
                         verify_ssl_certs=config['vcd']['verify'],

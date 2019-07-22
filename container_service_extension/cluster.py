@@ -20,10 +20,13 @@ from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import DeleteNodeError
 from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import ScriptExecutionError
-from container_service_extension.install_utils import get_data_file
-from container_service_extension.install_utils import get_vsphere
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.pyvcloud_utils import get_sys_admin_client
+from container_service_extension.remote_template_manager import \
+    get_local_script_filepath
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.utils import read_data_file
+from container_service_extension.vsphere_utils import get_vsphere
 
 TYPE_MASTER = 'mstr'
 TYPE_NODE = 'node'
@@ -214,7 +217,9 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp, body):
             if node_type == TYPE_NFS:
                 LOGGER.debug(
                     f"enabling NFS server on {spec['target_vm_name']}")
-                script = get_data_file('nfsd-%s.sh' % template['name'])
+                sctipt_filepath = get_local_script_filepath(
+                    template['name'], template['revision'], ScriptFile.NFSD)
+                script = read_data_file(script_filepath, logger=LOGGER)
                 exec_results = execute_script_in_nodes(
                     config, vapp,
                     template['admin_password'],
@@ -293,7 +298,9 @@ def get_cluster_config(config, vapp, password):
 
 
 def init_cluster(config, vapp, template):
-    script = get_data_file('mstr-%s.sh' % template['name'])
+    script_filepath = get_local_script_filepath(
+        template['name'], template['revision'], ScriptFile.MASTER)
+    script = read_data_file(script_filepath, logger=LOGGER)
     nodes = get_nodes(vapp, TYPE_MASTER)
     result = execute_script_in_nodes(config, vapp, template['admin_password'],
                                      script, nodes)
@@ -304,7 +311,9 @@ def init_cluster(config, vapp, template):
 
 def join_cluster(config, vapp, template, target_nodes=None):
     init_info = get_init_info(config, vapp, template['admin_password'])
-    tmp_script = get_data_file('node-%s.sh' % template['name'])
+    tmp_script_filepath = get_local_script_filepath(
+        template['name'], template['revision'], ScriptFile.NODE)
+    tmp_script = read_data_file(tmp_script_filepath, logger=LOGGER)
     script = tmp_script.format(token=init_info[0], ip=init_info[1])
     if target_nodes is None:
         nodes = get_nodes(vapp, TYPE_NODE)
@@ -359,55 +368,64 @@ def execute_script_in_nodes(config,
                             check_tools=True,
                             wait=True):
     all_results = []
-    for node in nodes:
-        if 'chpasswd' in script:
-            p = re.compile(':.*\"')
-            debug_script = p.sub(':***\"', script)
-        else:
-            debug_script = script
-        LOGGER.debug(f"will try to execute script on {node.get('name')}:\n"
-                     f"{debug_script}")
-        vs = get_vsphere(config, vapp, node.get('name'))
-        vs.connect()
-        moid = vapp.get_vm_moid(node.get('name'))
-        vm = vs.get_vm_by_moid(moid)
-        if check_tools:
-            LOGGER.debug(f"waiting for tools on {node.get('name')}")
-            vs.wait_until_tools_ready(
-                vm, sleep=5, callback=wait_for_tools_ready_callback)
-            wait_until_ready_to_exec(vs, vm, password)
-        LOGGER.debug(f"about to execute script on {node.get('name')} (vm={vm})"
-                     f", wait={wait}")
-        if wait:
-            result = vs.execute_script_in_guest(
-                vm,
-                'root',
-                password,
-                script,
-                target_file=None,
-                wait_for_completion=True,
-                wait_time=10,
-                get_output=True,
-                delete_script=True,
-                callback=wait_for_guest_execution_callback)
-            result_stdout = result[1].content.decode()
-            result_stderr = result[2].content.decode()
-        else:
-            result = [
-                vs.execute_program_in_guest(
+    sys_admin_client = None
+    try:
+        sys_admin_client = get_sys_admin_client()
+        for node in nodes:
+            if 'chpasswd' in script:
+                p = re.compile(':.*\"')
+                debug_script = p.sub(':***\"', script)
+            else:
+                debug_script = script
+            LOGGER.debug(f"will try to execute script on {node.get('name')}:\n"
+                         f"{debug_script}")
+            
+            vs = get_vsphere(sys_admin_client, vapp, vm_name=node.get('name'),
+                             logger=LOGGER)
+            vs.connect()
+            moid = vapp.get_vm_moid(node.get('name'))
+            vm = vs.get_vm_by_moid(moid)
+            if check_tools:
+                LOGGER.debug(f"waiting for tools on {node.get('name')}")
+                vs.wait_until_tools_ready(
+                    vm, sleep=5, callback=wait_for_tools_ready_callback)
+                wait_until_ready_to_exec(vs, vm, password)
+            LOGGER.debug(f"about to execute script on {node.get('name')} "
+                         f"(vm={vm}), wait={wait}")
+            if wait:
+                result = vs.execute_script_in_guest(
                     vm,
                     'root',
                     password,
                     script,
-                    wait_for_completion=False,
-                    get_output=False)
-            ]
-            result_stdout = ''
-            result_stderr = ''
-        LOGGER.debug(result[0])
-        LOGGER.debug(result_stderr)
-        LOGGER.debug(result_stdout)
-        all_results.append(result)
+                    target_file=None,
+                    wait_for_completion=True,
+                    wait_time=10,
+                    get_output=True,
+                    delete_script=True,
+                    callback=wait_for_guest_execution_callback)
+                result_stdout = result[1].content.decode()
+                result_stderr = result[2].content.decode()
+            else:
+                result = [
+                    vs.execute_program_in_guest(
+                        vm,
+                        'root',
+                        password,
+                        script,
+                        wait_for_completion=False,
+                        get_output=False)
+                ]
+                result_stdout = ''
+                result_stderr = ''
+            LOGGER.debug(result[0])
+            LOGGER.debug(result_stderr)
+            LOGGER.debug(result_stdout)
+            all_results.append(result)
+    finally:
+        if sys_admin_client:
+            sys_admin_client.logout()
+
     return all_results
 
 
@@ -418,18 +436,26 @@ def get_file_from_nodes(config,
                         nodes,
                         check_tools=True):
     all_results = []
-    for node in nodes:
-        LOGGER.debug(f"getting file from node {node.get('name')}")
-        vs = get_vsphere(config, vapp, node.get('name'))
-        vs.connect()
-        moid = vapp.get_vm_moid(node.get('name'))
-        vm = vs.get_vm_by_moid(moid)
-        if check_tools:
-            vs.wait_until_tools_ready(
-                vm, sleep=5, callback=wait_for_tools_ready_callback)
-            wait_until_ready_to_exec(vs, vm, password)
-        result = vs.download_file_from_guest(vm, 'root', password, file_name)
-        all_results.append(result)
+        sys_admin_client = None
+    try:
+        sys_admin_client = get_sys_admin_client()
+        for node in nodes:
+            LOGGER.debug(f"getting file from node {node.get('name')}")
+            vs = get_vsphere(sys_admin_client, vapp, vm_name=node.get('name'),
+                             logger=LOGGER)
+            vs.connect()
+            moid = vapp.get_vm_moid(node.get('name'))
+            vm = vs.get_vm_by_moid(moid)
+            if check_tools:
+                vs.wait_until_tools_ready(
+                    vm, sleep=5, callback=wait_for_tools_ready_callback)
+                wait_until_ready_to_exec(vs, vm, password)
+            result = vs.download_file_from_guest(vm, 'root', password, 
+                                                 file_name)
+            all_results.append(result)
+    finally:
+        if sys_admin_client:
+            sys_admin_client.logout()
     return all_results
 
 
