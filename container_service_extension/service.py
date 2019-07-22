@@ -187,17 +187,6 @@ class Service(object, metaclass=Singleton):
 
         configure_server_logger()
 
-        message = f"Container Service Extension for vCloudDirector" \
-                  f"\nServer running using config file: {self.config_file}" \
-                  f"\nLog files: {SERVER_INFO_LOG_FILEPATH}, " \
-                  f"{SERVER_DEBUG_LOG_FILEPATH}" \
-                  f"\nwaiting for requests (ctrl+c to close)"
-
-        signal.signal(signal.SIGINT, signal_handler)
-        if msg_update_callback:
-            msg_update_callback.general_no_color(message)
-        LOGGER.info(message)
-
         if self.config.get('pks_config'):
             pks_config = self.config.get('pks_config')
             self.pks_cache = PksCache(
@@ -231,6 +220,17 @@ class Service(object, metaclass=Singleton):
         LOGGER.info(f"Number of threads started: {len(self.threads)}")
 
         self._state = ServerState.RUNNING
+
+        message = f"Container Service Extension for vCloudDirector" \
+                  f"\nServer running using config file: {self.config_file}" \
+                  f"\nLog files: {SERVER_INFO_LOG_FILEPATH}, " \
+                  f"{SERVER_DEBUG_LOG_FILEPATH}" \
+                  f"\nwaiting for requests (ctrl+c to close)"
+
+        signal.signal(signal.SIGINT, signal_handler)
+        if msg_update_callback:
+            msg_update_callback.general_no_color(message)
+        LOGGER.info(message)
 
         while True:
             try:

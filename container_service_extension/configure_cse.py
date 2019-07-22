@@ -41,7 +41,7 @@ from container_service_extension.template_builder import TemplateBuilder
 from container_service_extension.utils import ConsoleMessagePrinter
 
 
-def check_cse_installation(config, template_to_check,
+def check_cse_installation(config, template_to_check=None,
                            msg_update_callback=None):
     """Ensure that CSE is installed on vCD according to the config file.
 
@@ -189,7 +189,7 @@ def check_cse_installation(config, template_to_check,
         msg_update_callback.general("CSE installation is valid")
 
 
-def install_cse(ctx, config_file_name='config.yaml', template_name='*',
+def install_cse(ctx, config_file_name='config.yaml', create_templates=True,
                 update=False, no_capture=False, ssh_key=None,
                 msg_update_callback=None):
     """Handle logistics for CSE installation.
@@ -199,8 +199,7 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
 
     :param click.core.Context ctx:
     :param str config_file_name: config file name.
-    :param str template_name: which templates to create/update. A value of '*'
-        means to create/update all templates specified in config file.
+    :param bool create_templates: If False, skip creating the templates.
     :param bool update: if True and templates already exist in vCD,
         overwrites existing templates.
     :param bool no_capture: if True, temporary vApp will not be captured or
@@ -271,46 +270,47 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
             org, catalog_name, catalog_desc='CSE templates',
             msg_update_callback=msg_update_callback)
 
-        # read remote template cookbook, download all scripts
-        rtm = RemoteTemplateManager(
-            remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
-            logger=LOGGER, msg_update_callback=ConsoleMessagePrinter())
-        remote_template_cookbook = rtm.get_remote_template_cookbook()
-        rtm.download_all_template_scripts()
+        if create_templates:
+            # read remote template cookbook, download all scripts
+            rtm = RemoteTemplateManager(
+                remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
+                logger=LOGGER, msg_update_callback=ConsoleMessagePrinter())
+            remote_template_cookbook = rtm.get_remote_template_cookbook()
+            rtm.download_all_template_scripts()
 
-        # create all templates mentioned in cookbook
-        for template in remote_template_cookbook['templates']:
-            catalog_item_name = get_revisioned_template_name(
-                template['name'], template['revision'])
-            build_params = {
-                'template_name': template['name'],
-                'template_revision': template['revision'],
-                'source_ova_name': template['source_ova_name'],
-                'source_ova_href': template['source_ova'],
-                'source_ova_sha256': template['sha256_ova'],
-                'org_name': org_name,
-                'vdc_name': config['broker']['vdc'],
-                'catalog_name': catalog_name,
-                'catalog_item_name': catalog_item_name,
-                'catalog_item_description': template['description'],
-                'temp_vapp_name': template['name'] + '_temp',
-                'cpu': template['cpu'],
-                'memory': template['mem'],
-                'network_name': config['broker']['network'],
-                'ip_allocation_mode': config['broker']['ip_allocation_mode'],
-                'storage_profile': config['broker']['storage_profile']
-            }
-            builder = TemplateBuilder(
-                client, client, build_params, logger=LOGGER,
-                msg_update_callback=ConsoleMessagePrinter())
-            builder.build()
+            # create all templates mentioned in cookbook
+            for template in remote_template_cookbook['templates']:
+                catalog_item_name = get_revisioned_template_name(
+                    template['name'], template['revision'])
+                build_params = {
+                    'template_name': template['name'],
+                    'template_revision': template['revision'],
+                    'source_ova_name': template['source_ova_name'],
+                    'source_ova_href': template['source_ova'],
+                    'source_ova_sha256': template['sha256_ova'],
+                    'org_name': org_name,
+                    'vdc_name': config['broker']['vdc'],
+                    'catalog_name': catalog_name,
+                    'catalog_item_name': catalog_item_name,
+                    'catalog_item_description': template['description'],
+                    'temp_vapp_name': template['name'] + '_temp',
+                    'cpu': template['cpu'],
+                    'memory': template['mem'],
+                    'network_name': config['broker']['network'],
+                    'ip_allocation_mode': config['broker']['ip_allocation_mode'], # noqa: E501
+                    'storage_profile': config['broker']['storage_profile']
+                }
+                builder = TemplateBuilder(
+                    client, client, build_params, logger=LOGGER,
+                    msg_update_callback=ConsoleMessagePrinter())
+                builder.build()
 
-            set_metadata_on_catalog_item(
-                client=client,
-                catalog_name=catalog_name,
-                catalog_item_name=catalog_item_name,
-                data=template,
-                org_name=org_name)
+                set_metadata_on_catalog_item(
+                    client=client,
+                    catalog_name=catalog_name,
+                    catalog_item_name=catalog_item_name,
+                    data=template,
+                    org_name=org_name)
 
         # if it's a PKS setup, setup NSX-T constructs
         if config.get('pks_config'):
