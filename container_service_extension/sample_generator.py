@@ -125,7 +125,7 @@ SAMPLE_BROKER_CONFIG = {
         'ip_allocation_mode': 'pool',
         'storage_profile': '*',
         'default_teamplte': 'photon_template',
-        'default_template_revision': 0
+        'default_template_revision': 0,
         'remote_template_cookbook_url': 'https://raw.githubusercontent.com/rocknes/container-service-extension/remote_template/template.yaml', # noqa: E501
     }
 }

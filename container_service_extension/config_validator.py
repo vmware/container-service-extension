@@ -30,6 +30,8 @@ from container_service_extension.sample_generator import \
     SAMPLE_PKS_NSXT_SERVERS_SECTION, SAMPLE_PKS_ORGS_SECTION, \
     SAMPLE_PKS_PVDCS_SECTION, SAMPLE_PKS_SERVERS_SECTION, \
     SAMPLE_SERVICE_CONFIG, SAMPLE_VCD_CONFIG, SAMPLE_VCS_CONFIG # noqa: H301
+from container_service_extension.remote_template_manager import \
+    RemoteTemplateManager
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import check_file_permissions
@@ -269,6 +271,17 @@ def _validate_broker_config(broker_dict, msg_update_callback=None):
         raise ValueError(f"IP allocation mode is "
                          f"'{broker_dict['ip_allocation_mode']}' when it "
                          f"should be either 'dhcp' or 'pool'")
+
+    remote_template_cookbook=None
+    try:
+        rtm = RemoteTemplateManager(
+            remote_template_cookbook_url=broker_dict['remote_template_cookbook_url']) # noqa: E501
+        remote_template_cookbook = rtm.get_remote_template_cookbook()
+    except Exception:
+        raise ValueError("Invalid value in field remote_template_cookbook")
+
+    if not remote_template_cookbook:
+        raise Exception("Remote template cookbook is invalid.")
 
 
 def _validate_pks_config_structure(pks_config, msg_update_callback=None):
