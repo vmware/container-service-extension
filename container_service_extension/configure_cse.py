@@ -13,6 +13,8 @@ from pyvcloud.vcd.org import Org
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.exceptions import AmqpError
 from container_service_extension.local_template_manager import \
+    get_all_K8_template_definition
+from container_service_extension.local_template_manager import \
     set_metadata_on_catalog_item
 from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
@@ -22,7 +24,6 @@ from container_service_extension.nsxt.cse_nsxt_setup_utils import \
     setup_nsxt_constructs
 from container_service_extension.nsxt.nsxt_client import NSXTClient
 from container_service_extension.pyvcloud_utils import catalog_exists
-from container_service_extension.pyvcloud_utils import catalog_item_exists
 from container_service_extension.pyvcloud_utils import create_and_share_catalog
 from container_service_extension.pyvcloud_utils import get_org
 from container_service_extension.remote_template_manager import \
@@ -40,7 +41,7 @@ from container_service_extension.template_builder import TemplateBuilder
 from container_service_extension.utils import ConsoleMessagePrinter
 
 
-def check_cse_installation(config, check_template='*',
+def check_cse_installation(config, template_to_check,
                            msg_update_callback=None):
     """Ensure that CSE is installed on vCD according to the config file.
 
@@ -48,14 +49,14 @@ def check_cse_installation(config, check_template='*',
     exist.
 
     :param dict config: config yaml file as a dictionary
-    :param str check_template: which template to check for. Default value of
-        '*' means to check all templates specified in @config
+    :param str template_to_check: name of the template that should be present
+        in CSE catalog to declare an installation as valid.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
         that writes messages onto console.
 
-    :raises EntityNotFoundException: if CSE is not registered to vCD as an
-        extension, or if specified catalog does not exist, or if specified
-        template(s) do not exist.
+    :raises Exception: if CSE is not registered to vCD as an extension, or if
+        specified catalog does not exist, or if specified template(s) do not
+        exist.
     """
     if msg_update_callback:
         msg_update_callback.info(
@@ -144,40 +145,46 @@ def check_cse_installation(config, check_template='*',
             err_msgs.append(msg)
 
         # check that catalog exists in vCD
-        org = Org(client, resource=client.get_org())
+        org_name = config['broker']['org']
+        org = get_org(client, org_name=org_name)
         catalog_name = config['broker']['catalog']
         if catalog_exists(org, catalog_name):
             if msg_update_callback:
                 msg_update_callback.general(f"Found catalog '{catalog_name}'")
-            # check that templates exist in vCD
-            # Aritra : fix this to fit new template model
-            for template in config['broker']['templates']:
-                if check_template != '*' \
-                        and check_template != template['name']:
+
+            k8_templates = get_all_K8_template_definition(
+                client=client, catalog_name=catalog_name, org=org)
+
+            # check that K8 templates exist in vCD
+            found_template = False
+            for template in k8_templates:
+                if template_to_check and \
+                        (template['name'] != template_to_check):
                     continue
-                catalog_item_name = template['catalog_item']
-                if catalog_item_exists(org, catalog_name, catalog_item_name):
-                    if msg_update_callback:
-                        msg_update_callback.general(
-                            f"Found template '{catalog_item_name}' in "
-                            f"catalog '{catalog_name}'")
-                else:
-                    msg = f"Template '{catalog_item_name}' not found in " \
-                          f"catalog '{catalog_name}'"
-                    if msg_update_callback:
-                        msg_update_callback.error(msg)
-                    err_msgs.append(msg)
+
+                found_template = True
+                if msg_update_callback:
+                    msg_update_callback.general(
+                        f"Found K8 template '{template['name']}' at "
+                        f"revision {template['revision']} in catalog "
+                        f"'{catalog_name}'")
+
+            if not found_template:
+                msg = "No valid K8 template found in catalog '{catalog_name}'"
+                if msg_update_callback:
+                    msg_update_callback.error(msg)
+                err_msgs.append(msg)
         else:
             msg = f"Catalog '{catalog_name}' not found"
             if msg_update_callback:
                 msg_update_callback.error(msg)
             err_msgs.append(msg)
     finally:
-        if client is not None:
+        if client:
             client.logout()
 
     if err_msgs:
-        raise EntityNotFoundException(err_msgs)
+        raise Exception(err_msgs)
     if msg_update_callback:
         msg_update_callback.general("CSE installation is valid")
 
@@ -233,27 +240,27 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
 
         # create amqp exchange if it doesn't exist
         amqp = config['amqp']
-        create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
-                             amqp['vhost'], amqp['ssl'], amqp['username'],
-                             amqp['password'],
-                             msg_update_callback=msg_update_callback)
+        _create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
+                              amqp['vhost'], amqp['ssl'], amqp['username'],
+                              amqp['password'],
+                              msg_update_callback=msg_update_callback)
 
         # register or update cse on vCD
-        register_cse(client, amqp['routing_key'], amqp['exchange'],
-                     msg_update_callback=msg_update_callback)
+        _register_cse(client, amqp['routing_key'], amqp['exchange'],
+                      msg_update_callback=msg_update_callback)
 
         # register rights to vCD
         # TODO() should also remove rights when unregistering CSE
-        register_right(client, right_name=CSE_NATIVE_DEPLOY_RIGHT_NAME,
-                       description=CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,
-                       category=CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,
-                       bundle_key=CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY,
-                       msg_update_callback=msg_update_callback)
-        register_right(client, right_name=CSE_PKS_DEPLOY_RIGHT_NAME,
-                       description=CSE_PKS_DEPLOY_RIGHT_DESCRIPTION,
-                       category=CSE_PKS_DEPLOY_RIGHT_CATEGORY,
-                       bundle_key=CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY,
-                       msg_update_callback=msg_update_callback)
+        _register_right(client, right_name=CSE_NATIVE_DEPLOY_RIGHT_NAME,
+                        description=CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,
+                        category=CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,
+                        bundle_key=CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY,
+                        msg_update_callback=msg_update_callback)
+        _register_right(client, right_name=CSE_PKS_DEPLOY_RIGHT_NAME,
+                        description=CSE_PKS_DEPLOY_RIGHT_DESCRIPTION,
+                        category=CSE_PKS_DEPLOY_RIGHT_CATEGORY,
+                        bundle_key=CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY,
+                        msg_update_callback=msg_update_callback)
 
         org_name = config['broker']['org']
         catalog_name = config['broker']['catalog']
@@ -342,8 +349,8 @@ def install_cse(ctx, config_file_name='config.yaml', template_name='*',
             client.logout()
 
 
-def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
-                         username, password, msg_update_callback=None):
+def _create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
+                          username, password, msg_update_callback=None):
     """Create the specified AMQP exchange if it does not exist.
 
     If specified AMQP exchange exists already, does nothing.
@@ -390,7 +397,7 @@ def create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
     LOGGER.info(msg)
 
 
-def register_cse(client, routing_key, exchange, msg_update_callback=None):
+def _register_cse(client, routing_key, exchange, msg_update_callback=None):
     """Register or update CSE on vCD.
 
     :param pyvcloud.vcd.client.Client client:
@@ -428,8 +435,8 @@ def register_cse(client, routing_key, exchange, msg_update_callback=None):
     LOGGER.info(msg)
 
 
-def register_right(client, right_name, description, category, bundle_key,
-                   msg_update_callback=None):
+def _register_right(client, right_name, description, category, bundle_key,
+                    msg_update_callback=None):
     """Register a right for CSE.
 
     :param pyvcloud.vcd.client.Client client:
@@ -477,7 +484,7 @@ def register_right(client, right_name, description, category, bundle_key,
         LOGGER.info(msg)
         system_org.add_rights([right_name_in_vcd])
     except EntityNotFoundException:
-        # Registering a right via api extension end point auto assigns it to
+        # Registering a right via api extension end point, auto assigns it to
         # System org.
         msg = f"Registering Right: {right_name} in vCD"
         if msg_update_callback:

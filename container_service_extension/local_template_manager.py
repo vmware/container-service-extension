@@ -38,11 +38,26 @@ def get_all_metadata_on_catalog_item(client, catalog_name, catalog_item_name,
                                      org=None, org_name=None):
     if org is None:
         org = get_org(client, org_name=org_name)
-    md = org.get_all_metadata_from_catalog_item(
-        catalog_name=catalog_name,
-        item_name=catalog_item_name)
+    md = org.get_all_metadata_from_catalog_item(catalog_name=catalog_name,
+                                                item_name=catalog_item_name)
     data = metadata_to_dict(md)
     return _filter_template_metadata(catalog_item_name, data)
+
+
+def get_all_K8_template_definition(client, catalog_name, org=None,
+                                   org_name=None):
+    if not org:
+        org = get_org(client, org_name=org_name)
+    catalog_item_names = [
+        entry['name'] for entry in org.list_catalog_items(catalog_name)]
+    result = []
+    for catalog_item_name in catalog_item_names:
+        md = get_all_metadata_on_catalog_item(
+            client, catalog_name, catalog_item_name, org=org)
+        if md:
+            result.append(md)
+
+    return result
 
 
 def set_metadata_on_catalog_item(client, catalog_name, catalog_item_name,

@@ -16,7 +16,7 @@ import click
 import pkg_resources
 import requests
 
-from container_service_extension.confi_validator import get_validated_config
+from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.consumer import MessageConsumer
 from container_service_extension.exceptions import CseRequestError

@@ -169,11 +169,11 @@ def sample(ctx, output, pks_output):
     '--template',
     'template',
     required=False,
-    default='*',
+    default='',
     metavar='TEMPLATE_NAME',
-    help="If '--check-install' flag is used, validate specified k8s template. "
-         "Default value of '*' means that all k8s templates in config file"
-         " will be validated")
+    help="If '--check-install' flag is used, by default only presence of "
+    "atleast one K8 template will be checked. However this flag can be used to"
+    " look for a particular template")
 def check(ctx, config, check_install, template):
     """Validate CSE config file."""
     try:
@@ -202,9 +202,10 @@ def check(ctx, config, check_install, template):
         return
 
     try:
-        check_cse_installation(config_dict, check_template=template,
+        check_cse_installation(config_dict, template_to_check=template,
                                msg_update_callback=ConsoleMessagePrinter())
-    except EntityNotFoundException:
+    except Exception as err:
+        click.secho(f"Error : {err}")
         click.secho("CSE installation is invalid", fg='red')
 
 
