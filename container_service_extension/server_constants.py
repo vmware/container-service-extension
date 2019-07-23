@@ -54,7 +54,7 @@ class ScriptFile(str, Enum):
 
     CUST = 'cust.sh'
     INIT = 'init.sh'
-    MASTER = 'master.sh'
+    MASTER = 'mstr.sh'
     NFSD = 'nfsd.sh'
     NODE = 'node.sh'
 
