@@ -291,3 +291,10 @@ def read_data_file(filepath, logger=None, msg_update_callback=None):
     if logger:
         logger.info(msg)
     return path.read_text()
+
+
+def check_keys_in_dikt(required_keys, dikt, dict_name='dictionary'):
+    required = set(required_keys)
+    if not required.issubset(dikt.keys()):
+        raise KeyError(f"Missing required keys in {dict_name}: "
+                       f"{required.difference(dikt.keys())}")
