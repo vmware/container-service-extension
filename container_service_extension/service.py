@@ -14,21 +14,28 @@ import traceback
 
 import click
 import pkg_resources
+from pyvcloud.vcd.client import BasicLoginCredentials
+from pyvcloud.vcd.client import Client
 import requests
 
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.consumer import MessageConsumer
 from container_service_extension.exceptions import CseRequestError
+from container_service_extension.local_template_manager import \
+    get_all_K8_template_definition
 from container_service_extension.logger import configure_server_logger
 from container_service_extension.logger import SERVER_DEBUG_LOG_FILEPATH
+from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_INFO_LOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PksCache
 from container_service_extension.pyvcloud_utils import \
     connect_vcd_user_via_token
+from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import ServerAction
+from container_service_extension.vsphere_utils import populate_vsphere_list
 
 
 class Singleton(type):
@@ -177,23 +184,60 @@ class Service(object, metaclass=Singleton):
         return message
 
     def run(self, msg_update_callback=None):
+        configure_server_logger()
+
         self.config = get_validated_config(
             self.config_file, msg_update_callback=msg_update_callback)
+
+        populate_vsphere_list(self.config['vcs'])
+
+        # Read K8 catalog definition from catalog item metadata and append
+        # to server config
+        client = None
+        try:
+            client = Client(self.config['vcd']['host'],
+                            api_version=self.config['vcd']['api_version'],
+                            verify_ssl_certs=self.config['vcd']['verify'],
+                            log_file=SERVER_DEBUG_WIRELOG_FILEPATH,
+                            log_requests=True,
+                            log_headers=True,
+                            log_bodies=True)
+            credentials = BasicLoginCredentials(self.config['vcd']['username'],
+                                                SYSTEM_ORG_NAME,
+                                                self.config['vcd']['password'])
+            client.set_credentials(credentials)
+
+            org_name = self.config['broker']['org']
+            catalog_name = self.config['broker']['catalog']
+            k8_templates = get_all_K8_template_definition(
+                client=client, catalog_name=catalog_name, org_name=org_name)
+
+            if not k8_templates:
+                msg = "No valid K8 templates were found in catalog " \
+                      f"'{catalog_name}'"
+                if msg_update_callback:
+                    msg_update_callback.error(msg)
+                raise Exception(msg)
+
+            # check that K8 templates exist in vCD
+            # TODO look for deafult temaplte in the list of K8 tempaltes
+            for template in k8_templates:
+                if msg_update_callback:
+                    msg_update_callback.general(
+                        f"Found K8 template '{template['name']}' at "
+                        f"revision {template['revision']} in catalog "
+                        f"'{catalog_name}'")
+
+            self.config['broker']['templates'] = k8_templates
+        finally:
+            if client:
+                client.logout()
+
+        # TODO Rule framework, update config with rules
 
         if self.should_check_config:
             check_cse_installation(
                 self.config, msg_update_callback=msg_update_callback)
-
-        # TODO: this config hack shouldn't be done here. It should get auto 
-        # populated via get_validated_config
-        org_name = config['broker']['org']
-        org = get_org(client, org_name=org_name)
-        catalog_name = config['broker']['catalog']
-        k8_templates = get_all_K8_template_definition(
-                client=client, catalog_name=catalog_name, org=org)
-        self.config['templates'] = k8_templates
-
-        configure_server_logger()
 
         if self.config.get('pks_config'):
             pks_config = self.config.get('pks_config')

@@ -181,6 +181,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
         name = name or \
             self.req_spec.get(RequestKey.TEMPLATE_NAME) or \
             server_config['broker']['default_template']
+        # TODO: Also consider template revision
         for template in server_config['broker']['templates']:
             if template['name'] == name:
                 return template

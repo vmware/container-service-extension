@@ -122,7 +122,7 @@ def add_nodes(qty, template, node_type, config, client, org, vdc, vapp,
             return None
         specs = []
         catalog_item = org.get_catalog_item(config['broker']['catalog'],
-                                            template['catalog_item'])
+                                            template['catalog_item_name'])
         source_vapp = VApp(client, href=catalog_item.Entity.get('href'))
         source_vm = source_vapp.get_all_vms()[0].get('name')
         storage_profile = req_spec.get(RequestKey.STORAGE_PROFILE_NAME)

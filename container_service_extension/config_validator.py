@@ -272,7 +272,7 @@ def _validate_broker_config(broker_dict, msg_update_callback=None):
                          f"'{broker_dict['ip_allocation_mode']}' when it "
                          f"should be either 'dhcp' or 'pool'")
 
-    remote_template_cookbook=None
+    remote_template_cookbook = None
     try:
         rtm = RemoteTemplateManager(
             remote_template_cookbook_url=broker_dict['remote_template_cookbook_url']) # noqa: E501

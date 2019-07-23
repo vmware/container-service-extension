@@ -250,7 +250,7 @@ class ServiceProcessor(object):
                     'name': t['name'],
                     'is_default': is_default,
                     'catalog': server_config['broker']['catalog'],
-                    'catalog_item': t['catalog_item'],
+                    'catalog_item': t['catalog_item_name'],
                     'description': t['description']
                 })
             reply['body'] = templates

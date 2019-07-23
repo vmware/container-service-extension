@@ -13,8 +13,6 @@ from pyvcloud.vcd.org import Org
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.exceptions import AmqpError
 from container_service_extension.local_template_manager import \
-    get_all_K8_template_definition
-from container_service_extension.local_template_manager import \
     set_metadata_on_catalog_item
 from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
@@ -42,16 +40,15 @@ from container_service_extension.utils import ConsoleMessagePrinter
 from container_service_extension.vsphere_utils import populate_vsphere_list
 
 
-def check_cse_installation(config, template_to_check=None,
-                           msg_update_callback=None):
+def check_cse_installation(config, msg_update_callback=None):
     """Ensure that CSE is installed on vCD according to the config file.
 
-    Checks if CSE is registered to vCD, if catalog exists, and if templates
-    exist.
+    Checks,
+        1. AMQP exchange exists
+        2. CSE is registered with vCD,
+        3. CSE K8 catalog exists
 
     :param dict config: config yaml file as a dictionary
-    :param str template_to_check: name of the template that should be present
-        in CSE catalog to declare an installation as valid.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
         that writes messages onto console.
 
@@ -152,29 +149,6 @@ def check_cse_installation(config, template_to_check=None,
         if catalog_exists(org, catalog_name):
             if msg_update_callback:
                 msg_update_callback.general(f"Found catalog '{catalog_name}'")
-
-            k8_templates = get_all_K8_template_definition(
-                client=client, catalog_name=catalog_name, org=org)
-
-            # check that K8 templates exist in vCD
-            found_template = False
-            for template in k8_templates:
-                if template_to_check and \
-                        (template['name'] != template_to_check):
-                    continue
-
-                found_template = True
-                if msg_update_callback:
-                    msg_update_callback.general(
-                        f"Found K8 template '{template['name']}' at "
-                        f"revision {template['revision']} in catalog "
-                        f"'{catalog_name}'")
-
-            if not found_template:
-                msg = "No valid K8 template found in catalog '{catalog_name}'"
-                if msg_update_callback:
-                    msg_update_callback.error(msg)
-                err_msgs.append(msg)
         else:
             msg = f"Catalog '{catalog_name}' not found"
             if msg_update_callback:
@@ -190,8 +164,9 @@ def check_cse_installation(config, template_to_check=None,
         msg_update_callback.general("CSE installation is valid")
 
 
-def install_cse(ctx, config_file_name='config.yaml', create_templates=True,
-                update=False, no_capture=False, ssh_key=None,
+def install_cse(ctx, config_file_name='config.yaml',
+                skip_create_templates=True, update=False,
+                retain_temp_vapp=False, ssh_key=None,
                 msg_update_callback=None):
     """Handle logistics for CSE installation.
 
@@ -200,29 +175,31 @@ def install_cse(ctx, config_file_name='config.yaml', create_templates=True,
 
     :param click.core.Context ctx:
     :param str config_file_name: config file name.
-    :param bool create_templates: If False, skip creating the templates.
+    :param bool skip_create_templates: If True, skip creating the templates.
     :param bool update: if True and templates already exist in vCD,
         overwrites existing templates.
-    :param bool no_capture: if True, temporary vApp will not be captured or
-        destroyed, so the user can ssh into and debug the VM.
+    :param bool retain_temp_vapp: if True, temporary vApp will not destroyed,
+        so the user can ssh into and debug the vm.
     :param str ssh_key: public ssh key to place into template vApp(s).
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
         that writes messages onto console.
 
     :raises AmqpError: if AMQP exchange could not be created.
     """
+    configure_install_logger()
+
     config = get_validated_config(config_file_name,
                                   msg_update_callback=msg_update_callback)
-    configure_install_logger()
+    populate_vsphere_list(config['vcs'])
+
     msg = f"Installing CSE on vCloud Director using config file " \
           f"'{config_file_name}'"
     if msg_update_callback:
         msg_update_callback.info(msg)
     LOGGER.info(msg)
+
     client = None
     try:
-        populate_vsphere_list(config['vcs'])
-
         client = Client(config['vcd']['host'],
                         api_version=config['vcd']['api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
@@ -273,7 +250,12 @@ def install_cse(ctx, config_file_name='config.yaml', create_templates=True,
             org, catalog_name, catalog_desc='CSE templates',
             msg_update_callback=msg_update_callback)
 
-        if create_templates:
+        if skip_create_templates:
+            msg = "Skipping creation of templates."
+            if msg_update_callback:
+                msg_update_callback.info(msg)
+            LOGGER.warning(msg)
+        else:
             # read remote template cookbook, download all scripts
             rtm = RemoteTemplateManager(
                 remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
@@ -306,7 +288,8 @@ def install_cse(ctx, config_file_name='config.yaml', create_templates=True,
                 builder = TemplateBuilder(
                     client, client, build_params, logger=LOGGER,
                     msg_update_callback=ConsoleMessagePrinter())
-                builder.build()
+                builder.build(force_recreate=update,
+                              retain_temp_vapp=retain_temp_vapp)
 
                 set_metadata_on_catalog_item(
                     client=client,

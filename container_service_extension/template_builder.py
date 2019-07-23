@@ -444,8 +444,9 @@ class TemplateBuilder():
             if catalog_item_exists(org=self.org,
                                    catalog_name=self.catalog_name,
                                    catalog_item_name=self.catalog_item_name):
-                msg = f"Found template '{self.catalog_item_name}' in " \
-                      f"catalog '{self.catalog_name}.'"
+                msg = f"Found template '{self.template_name}' at revision " \
+                      f"{self.template_revision} in catalog " \
+                      f"'{self.catalog_name}.'"
                 if self.msg_update_callback:
                     self.msg_update_callback.general(msg)
                 if self.logger:
