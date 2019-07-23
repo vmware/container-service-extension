@@ -180,7 +180,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
         server_config = get_server_runtime_config()
         name = name or \
             self.req_spec.get(RequestKey.TEMPLATE_NAME) or \
-            server_config['broker']['default_template']
+            server_config['broker']['default_template_name']
         # TODO: Also consider template revision
         for template in server_config['broker']['templates']:
             if template['name'] == name:

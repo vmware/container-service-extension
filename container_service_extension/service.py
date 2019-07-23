@@ -217,16 +217,35 @@ class Service(object, metaclass=Singleton):
                       f"'{catalog_name}'"
                 if msg_update_callback:
                     msg_update_callback.error(msg)
+                LOGGER.error(msg)
                 raise Exception(msg)
 
             # check that K8 templates exist in vCD
             # TODO look for deafult temaplte in the list of K8 tempaltes
+            default_template_name = \
+                self.config['broker']['default_template_name']
+            default_template_revision = \
+                str(self.config['broker']['default_template_revision'])
+            found_default_template = False
             for template in k8_templates:
+                if str(template['revision']) == default_template_revision \
+                        and template['name'] == default_template_name:
+                    found_default_template = True
+
+                msg = f"Found K8 template '{template['name']}' at revision " \
+                      f"{template['revision']} in catalog '{catalog_name}'"
                 if msg_update_callback:
-                    msg_update_callback.general(
-                        f"Found K8 template '{template['name']}' at "
-                        f"revision {template['revision']} in catalog "
-                        f"'{catalog_name}'")
+                    msg_update_callback.general(msg)
+                LOGGER.info(msg)
+
+            if not found_default_template:
+                msg = f"Default template {default_template_name} with " \
+                      f"revision {default_template_revision} not found." \
+                      " Unable to start CSE server."
+                if msg_update_callback:
+                    msg_update_callback.error(msg)
+                LOGGER.error(msg)
+                sys.exit(1)
 
             self.config['broker']['templates'] = k8_templates
         finally:
@@ -296,6 +315,7 @@ class Service(object, metaclass=Singleton):
                 if msg_update_callback:
                     msg_update_callback.general_no_color(
                         traceback.format_exc())
+                LOGGER.error(traceback.format_exc())
                 sys.exit(1)
 
         LOGGER.info("Stop detected")

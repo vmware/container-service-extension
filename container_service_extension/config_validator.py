@@ -255,8 +255,8 @@ def _validate_broker_config(broker_dict, msg_update_callback=None):
     :raises KeyError: if @broker_dict has missing or extra properties.
     :raises TypeError: if the value type for a @broker_dict property is
         incorrect.
-    :raises ValueError: if 'default_template' value is not found in listed
-        'templates, or if 'ip_allocation_mode' is not 'dhcp' or 'pool'
+    :raises ValueError: if 'ip_allocation_mode' is not 'dhcp' or 'pool'. Or
+        if remote_template_cookbook_url is invalid.
     """
     check_keys_and_value_types(broker_dict, SAMPLE_BROKER_CONFIG['broker'],
                                location="config file 'broker' section",
