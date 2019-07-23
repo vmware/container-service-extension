@@ -12,9 +12,9 @@ import requests
 from container_service_extension.exception_handler import handle_exception
 from container_service_extension.exceptions import CseRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-import container_service_extension.request_handlers.ovdc_handler as ovdc_handler
-import container_service_extension.request_handlers.system_handler as system_handler
-import container_service_extension.request_handlers.template_handler as template_handler
+import container_service_extension.request_handlers.ovdc_handler as ovdc_handler # noqa: E501
+import container_service_extension.request_handlers.system_handler as system_handler # noqa: E501
+import container_service_extension.request_handlers.template_handler as template_handler # noqa: E501
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
@@ -194,7 +194,7 @@ def process_request(body):
     LOGGER.debug(f"body: {json.dumps(body)}")
 
     # parse url
-    url_data = _parse_request_url(method=body['method'], url=body['requestUri'])
+    url_data = _parse_request_url(method=body['method'], url=body['requestUri']) # noqa: E501
 
     # check if server is disabled
     # TODO request id mapping in Service
@@ -202,8 +202,11 @@ def process_request(body):
     operation = url_data['operation']
 
     from container_service_extension.service import Service
-    if operation not in (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE) and not Service().is_running():
-        raise CseRequestError(status_code=requests.codes.bad_request, error_message='CSE service is disabled. Contact the System Administrator.')
+    if operation not in (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE)\
+            and not Service().is_running():
+        raise CseRequestError(status_code=requests.codes.bad_request,
+                              error_message='CSE service is disabled. Contact'
+                                            ' the System Administrator.')
 
     # create request data dict from request body data
     request_data = {}
@@ -237,7 +240,8 @@ def process_request(body):
     reply = {}
     reply['status_code'] = operation.ideal_response_code
     try:
-        reply['body'] = OPERATION_TO_HANDLER[operation](request_data, tenant_auth_token)
+        reply['body'] = OPERATION_TO_HANDLER[operation](request_data,
+                                                        tenant_auth_token)
         LOGGER.debug(f"reply: {str(reply)}")
         return reply
     except KeyError:
