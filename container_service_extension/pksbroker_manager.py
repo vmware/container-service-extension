@@ -8,14 +8,12 @@ from container_service_extension.exceptions import PksClusterNotFoundError
 from container_service_extension.exceptions import PksDuplicateClusterError
 from container_service_extension.exceptions import PksServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+import container_service_extension.ovdc_utils as ovdc_utils
 from container_service_extension.pksbroker import PKSBroker
-from container_service_extension.pyvcloud_utils \
-    import connect_vcd_user_via_token
+from container_service_extension.pyvcloud_utils import connect_vcd_user_via_token # noqa: E501
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.utils import get_pks_cache
-
-import container_service_extension.ovdc_utils as ovdc_utils
 
 
 class PksBrokerManager(object):

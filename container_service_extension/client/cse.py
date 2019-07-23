@@ -1023,7 +1023,9 @@ def ovdc_disable(ctx, ovdc_name, org_name):
             ovdc = Ovdc(client)
             if org_name is None:
                 org_name = ctx.obj['profiles'].get('org_in_use')
-            result = ovdc.update_ovdc_for_k8s(enable=False, ovdc_name=ovdc_name, org_name=org_name)
+            result = ovdc.update_ovdc_for_k8s(enable=False,
+                                              ovdc_name=ovdc_name,
+                                              org_name=org_name)
             stdout(result, ctx)
         else:
             stderr("Insufficient permission to perform operation.", ctx)

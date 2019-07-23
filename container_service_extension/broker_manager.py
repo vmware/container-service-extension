@@ -149,17 +149,16 @@ class BrokerManager(object):
         # logged-in user to check for duplicates.
         cluster, _ = self._find_cluster_in_org(cluster_name,
                                                is_org_admin_search=True)
-        if not cluster:
-            ctr_prov_ctx = ovdc_utils.get_ovdc_k8s_provider_metadata(org_name=org_name, ovdc_name=vdc_name, get_credentials=True, get_nsxt_info=True)
-            if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProvider.PKS:
-                cluster_spec['pks_plan'] = ctr_prov_ctx[PKS_PLANS_KEY][0]
-                cluster_spec['pks_ext_host'] = \
-                    f"{cluster_name}.{ctr_prov_ctx[PKS_CLUSTER_DOMAIN_KEY]}"
-            broker = self._get_broker_based_on_ctr_prov_ctx(ctr_prov_ctx)
-            return broker.create_cluster(**cluster_spec)
-        else:
-            raise ClusterAlreadyExistsError(
-                f"Cluster {cluster_name} already exists.")
+        if cluster:
+            raise ClusterAlreadyExistsError(f"Cluster {cluster_name} "
+                                            f"already exists.")
+
+        ctr_prov_ctx = ovdc_utils.get_ovdc_k8s_provider_metadata(org_name=org_name, ovdc_name=vdc_name, get_credentials=True, get_nsxt_info=True) # noqa: E501
+        if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProvider.PKS:
+            cluster_spec['pks_plan'] = ctr_prov_ctx[PKS_PLANS_KEY][0]
+            cluster_spec['pks_ext_host'] = f"{cluster_name}.{ctr_prov_ctx[PKS_CLUSTER_DOMAIN_KEY]}" # noqa: E501
+        broker = self._get_broker_based_on_ctr_prov_ctx(ctr_prov_ctx)
+        return broker.create_cluster(**cluster_spec)
 
     def _delete_cluster(self, **cluster_spec):
         cluster, broker = self._get_cluster_info(**cluster_spec)
@@ -243,7 +242,7 @@ class BrokerManager(object):
         # exception.
         if is_pks_enabled():
             if ctr_prov_ctx:
-                if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProvider.PKS:                    
+                if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProvider.PKS:
                     return PKSBroker(self.tenant_auth_token, self.req_spec,
                                      pks_ctx=ctr_prov_ctx)
                 elif ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProvider.NATIVE:
@@ -265,6 +264,6 @@ class BrokerManager(object):
         ovdc_name = self.req_spec.get(RequestKey.OVDC_NAME)
         org_name = self.req_spec.get(RequestKey.ORG_NAME)
 
-        ctr_prov_ctx = ovdc_utils.get_ovdc_k8s_provider_metadata(org_name=org_name, ovdc_name=ovdc_name, get_credentials=True, get_nsxt_info=True)
+        ctr_prov_ctx = ovdc_utils.get_ovdc_k8s_provider_metadata(org_name=org_name, ovdc_name=ovdc_name, get_credentials=True, get_nsxt_info=True) # noqa: E501
 
         return self._get_broker_based_on_ctr_prov_ctx(ctr_prov_ctx)

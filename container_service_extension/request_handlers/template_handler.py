@@ -2,6 +2,10 @@ import container_service_extension.utils as utils
 
 
 def template_list(request_dict, tenant_auth_token):
+    """Request handler for template list operation.
+
+    :return: List of dictionaries with template info.
+    """
     config = utils.get_server_runtime_config()
     templates = []
     for t in config['broker']['templates']:
