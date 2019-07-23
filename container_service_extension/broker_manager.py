@@ -11,7 +11,7 @@ from container_service_extension.pksbroker import PKSBroker
 from container_service_extension.pksbroker_manager import PksBrokerManager
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
-from container_service_extension.server_constants import K8sProviders
+from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import PKS_CLUSTER_DOMAIN_KEY
 from container_service_extension.server_constants import PKS_PLANS_KEY
 from container_service_extension.shared_constants import RequestKey
@@ -153,7 +153,7 @@ class BrokerManager(object):
         if not cluster:
             ctr_prov_ctx = construct_ctr_prov_ctx_from_ovdc_metadata(
                 ovdc_name=vdc_name, org_name=org_name)
-            if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProviders.PKS:
+            if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProvider.PKS:
                 cluster_spec['pks_plan'] = ctr_prov_ctx[PKS_PLANS_KEY][0]
                 cluster_spec['pks_ext_host'] = \
                     f"{cluster_name}.{ctr_prov_ctx[PKS_CLUSTER_DOMAIN_KEY]}"
@@ -173,7 +173,7 @@ class BrokerManager(object):
         Logic of the method is as follows.
 
         If 'ovdc' is present in the cluster spec,
-            choose the right broker (by identifying the container_provider
+            choose the right broker (by identifying the k8s provider
             (vcd|pks) defined for that ovdc) to do get_cluster operation.
         else
             Invoke set of all (vCD/PKS) brokers in the org to find the cluster
@@ -199,7 +199,7 @@ class BrokerManager(object):
         """Logic of the method is as follows.
 
         If 'ovdc' is present in the body,
-            choose the right broker (by identifying the container_provider
+            choose the right broker (by identifying the k8s provider
             (vcd|pks) defined for that ovdc) to do list_clusters operation.
         Else
             Invoke set of all (vCD/PKS)brokers in the org to do list_clusters.
@@ -245,10 +245,10 @@ class BrokerManager(object):
         # exception.
         if is_pks_enabled():
             if ctr_prov_ctx:
-                if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProviders.PKS:
+                if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProvider.PKS:                    
                     return PKSBroker(self.tenant_auth_token, self.req_spec,
                                      pks_ctx=ctr_prov_ctx)
-                elif ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProviders.NATIVE:
+                elif ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProvider.NATIVE:
                     return VcdBroker(self.tenant_auth_token, self.req_spec)
 
         else:

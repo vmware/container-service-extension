@@ -21,7 +21,7 @@ from container_service_extension.pyvcloud_utils import get_pvdc_id
 from container_service_extension.pyvcloud_utils import get_sys_admin_client
 from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
-from container_service_extension.server_constants import K8sProviders
+from container_service_extension.server_constants import K8sProvider
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.utils import get_pks_cache
 from container_service_extension.utils import is_pks_enabled
@@ -75,7 +75,7 @@ def construct_ctr_prov_ctx_from_pks_cache(ovdc_id, org_name, pks_plans,
     try:
         ctr_prov_context = {}
         ctr_prov_context[K8S_PROVIDER_KEY] = container_provider
-        if container_provider == K8sProviders.PKS:
+        if container_provider == K8sProvider.PKS:
             if not is_pks_enabled():
                 raise CseServerError('CSE is not configured to work with PKS.')
 
@@ -195,12 +195,12 @@ class OvdcManager(object):
             all_metadata = metadata_to_dict(ovdc.get_all_metadata())
 
             if K8S_PROVIDER_KEY not in all_metadata:
-                container_provider = K8sProviders.NONE
+                container_provider = K8sProvider.NONE
             else:
                 container_provider = all_metadata[K8S_PROVIDER_KEY]
 
             ctr_prov_details = {}
-            if container_provider == K8sProviders.PKS:
+            if container_provider == K8sProvider.PKS:
                 # Filter out container provider metadata into a dict
                 ctr_prov_details = {
                     metadata_key:
@@ -248,9 +248,9 @@ class OvdcManager(object):
 
             metadata = {}
             metadata[K8S_PROVIDER_KEY] = container_provider or \
-                K8sProviders.NONE
+                K8sProvider.NONE
 
-            if container_provider != K8sProviders.PKS:
+            if container_provider != K8sProvider.PKS:
                 LOGGER.debug(f"Remove existing metadata for ovdc:{ovdc_name}")
                 self._remove_metadata_from_ovdc(ovdc, PksCache.get_pks_keys())
 

@@ -7,7 +7,7 @@ from pyvcloud.vcd import utils
 from container_service_extension.client.response_processor import \
     process_response
 from container_service_extension.pyvcloud_utils import get_vdc
-from container_service_extension.server_constants import K8sProviders
+from container_service_extension.server_constants import K8sProvider
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
 
@@ -32,13 +32,13 @@ class Ovdc:
                             enable,
                             ovdc_name,
                             org_name=None,
-                            container_provider=None,
+                            k8s_provider=None,
                             pks_plan=None,
                             pks_cluster_domain=None):
         """Enable/Disable ovdc for k8s for the given container provider.
 
         :param bool enable: If set to True will enable the vdc for the
-            paricular container_provider else if set to False, K8 support on
+            paricular k8s_provider else if set to False, K8 support on
             the vdc will be disabled.
         :param str ovdc_name: Name of the ovdc to be enabled
         :param str k8s_provider: Name of the container provider
@@ -58,7 +58,7 @@ class Ovdc:
         uri = f'{self._uri}/ovdc/{ovdc_id}'
 
         if not enable:
-            container_provider = K8sProviders.NONE
+            k8s_provider = K8sProvider.NONE
             pks_plan = None
             pks_cluster_domain = None
 
@@ -66,7 +66,7 @@ class Ovdc:
             RequestKey.OVDC_ID: ovdc_id,
             RequestKey.OVDC_NAME: ovdc_name,
             RequestKey.ORG_NAME: org_name,
-            RequestKey.K8S_PROVIDER: container_provider,
+            RequestKey.K8S_PROVIDER: k8s_provider,
             RequestKey.PKS_PLAN_NAME: pks_plan,
             RequestKey.PKS_CLUSTER_DOMAIN: pks_cluster_domain,
         }
