@@ -8,14 +8,14 @@ from container_service_extension.exceptions import PksClusterNotFoundError
 from container_service_extension.exceptions import PksDuplicateClusterError
 from container_service_extension.exceptions import PksServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.ovdc_manager import construct_pks_context
-from container_service_extension.ovdc_manager import OvdcManager
 from container_service_extension.pksbroker import PKSBroker
 from container_service_extension.pyvcloud_utils \
     import connect_vcd_user_via_token
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.utils import get_pks_cache
+
+import container_service_extension.ovdc_utils as ovdc_utils
 
 
 class PksBrokerManager(object):
@@ -101,7 +101,7 @@ class PksBrokerManager(object):
         if self.vcd_client.is_sysadmin():
             all_pks_account_info = \
                 self.pks_cache.get_all_pks_account_info_in_system()
-            pks_ctx_list = [construct_pks_context(
+            pks_ctx_list = [ovdc_utils.construct_pks_context(
                 pks_account_info, credentials_required=True)
                 for pks_account_info in all_pks_account_info]
             return pks_ctx_list
@@ -112,7 +112,7 @@ class PksBrokerManager(object):
             pks_account_infos = \
                 self.pks_cache.get_exclusive_pks_accounts_info_for_org(
                     org_name)
-            pks_ctx_list = [construct_pks_context
+            pks_ctx_list = [ovdc_utils.construct_pks_context
                             (pks_account_info, credentials_required=True)
                             for pks_account_info in pks_account_infos]
         else:
@@ -124,10 +124,9 @@ class PksBrokerManager(object):
             for vdc_name in vdc_names:
                 # this is a full blown pks_account_info + pvdc_info +
                 # compute_profile_name dictionary
-                ctr_prov_ctx = \
-                    OvdcManager().get_ovdc_container_provider_metadata(
-                        ovdc_name=vdc_name, org_name=org_name,
-                        credentials_required=True)
+                ctr_prov_ctx = ovdc_utils.get_ovdc_k8s_provider_metadata(
+                    ovdc_name=vdc_name, org_name=org_name,
+                    get_credentials=True)
                 if ctr_prov_ctx[K8S_PROVIDER_KEY] == K8sProvider.PKS:
                     pks_ctx_dict[ctr_prov_ctx['vc']] = ctr_prov_ctx
 

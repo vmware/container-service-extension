@@ -5,8 +5,7 @@
 from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseServerError
-from container_service_extension.ovdc_manager import \
-    construct_ctr_prov_ctx_from_ovdc_metadata
+import container_service_extension.ovdc_utils as ovdc_utils
 from container_service_extension.pksbroker import PKSBroker
 from container_service_extension.pksbroker_manager import PksBrokerManager
 from container_service_extension.server_constants import CseOperation
@@ -151,8 +150,7 @@ class BrokerManager(object):
         cluster, _ = self._find_cluster_in_org(cluster_name,
                                                is_org_admin_search=True)
         if not cluster:
-            ctr_prov_ctx = construct_ctr_prov_ctx_from_ovdc_metadata(
-                ovdc_name=vdc_name, org_name=org_name)
+            ctr_prov_ctx = ovdc_utils.get_ovdc_k8s_provider_metadata(org_name=org_name, ovdc_name=vdc_name, get_credentials=True, get_nsxt_info=True)
             if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProvider.PKS:
                 cluster_spec['pks_plan'] = ctr_prov_ctx[PKS_PLANS_KEY][0]
                 cluster_spec['pks_ext_host'] = \
@@ -258,7 +256,7 @@ class BrokerManager(object):
                              "deployment")
 
     def _get_broker_based_on_vdc(self):
-        """Get the broker based on ovdc.
+        """Get the broker based on org VDC.
 
         :return: broker
 
@@ -267,7 +265,6 @@ class BrokerManager(object):
         ovdc_name = self.req_spec.get(RequestKey.OVDC_NAME)
         org_name = self.req_spec.get(RequestKey.ORG_NAME)
 
-        ctr_prov_ctx = construct_ctr_prov_ctx_from_ovdc_metadata(
-            ovdc_name=ovdc_name, org_name=org_name)
+        ctr_prov_ctx = ovdc_utils.get_ovdc_k8s_provider_metadata(org_name=org_name, ovdc_name=ovdc_name, get_credentials=True, get_nsxt_info=True)
 
         return self._get_broker_based_on_ctr_prov_ctx(ctr_prov_ctx)
