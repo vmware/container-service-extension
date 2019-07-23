@@ -14,7 +14,7 @@ from container_service_extension.pksbroker import PKSBroker
 from container_service_extension.pyvcloud_utils \
     import connect_vcd_user_via_token
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
-from container_service_extension.server_constants import K8sProviders
+from container_service_extension.server_constants import K8sProvider
 from container_service_extension.utils import get_pks_cache
 
 
@@ -128,7 +128,7 @@ class PksBrokerManager(object):
                     OvdcManager().get_ovdc_container_provider_metadata(
                         ovdc_name=vdc_name, org_name=org_name,
                         credentials_required=True)
-                if ctr_prov_ctx[K8S_PROVIDER_KEY] == K8sProviders.PKS:
+                if ctr_prov_ctx[K8S_PROVIDER_KEY] == K8sProvider.PKS:
                     pks_ctx_dict[ctr_prov_ctx['vc']] = ctr_prov_ctx
 
             pks_ctx_list = list(pks_ctx_dict.values())

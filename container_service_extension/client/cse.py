@@ -15,7 +15,7 @@ from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.system import System
 from container_service_extension.exceptions import CseClientError
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
-from container_service_extension.server_constants import K8sProviders
+from container_service_extension.server_constants import K8sProvider
 from container_service_extension.service import Service
 from container_service_extension.shared_constants import ServerAction
 
@@ -733,7 +733,7 @@ def list_nodes(ctx, name, org, vdc):
             org = ctx.obj['profiles'].get('org_in_use')
         cluster = Cluster(client)
         cluster_info = cluster.get_cluster_info(name, org=org, vdc=vdc)
-        if cluster_info.get(K8S_PROVIDER_KEY) != K8sProviders.NATIVE:
+        if cluster_info.get(K8S_PROVIDER_KEY) != K8sProvider.NATIVE:
             raise CseClientError('Node commands are not supported by non '
                                  'native clusters.')
         all_nodes = cluster_info['master_nodes'] + cluster_info['nodes']
@@ -941,9 +941,9 @@ def list_ovdcs(ctx, list_pks_plans):
 @click.option(
     '-k',
     '--k8s-provider',
-    'container_provider',
+    'k8s_provider',
     required=True,
-    type=click.Choice([K8sProviders.NATIVE, K8sProviders.PKS]),
+    type=click.Choice([K8sProvider.NATIVE, K8sProvider.PKS]),
     help="Name of the Kubernetes provider to use for this org VDC")
 @click.option(
     '-p',
@@ -952,7 +952,7 @@ def list_ovdcs(ctx, list_pks_plans):
     required=False,
     metavar='PLAN_NAME',
     help=f"PKS plan to use for all cluster deployments in this org VDC "
-         f"(Exclusive to --k8s-provider={K8sProviders.PKS}) (Required)")
+         f"(Exclusive to --k8s-provider={K8sProvider.PKS}) (Required)")
 @click.option(
     '-d',
     '--pks-cluster-domain',
@@ -960,7 +960,7 @@ def list_ovdcs(ctx, list_pks_plans):
     required=False,
     help=f"Domain name suffix used to construct FQDN of deployed clusters "
          f"in this org VDC "
-         f"(Exclusive to --k8s-provider={K8sProviders.PKS}) (Required)")
+         f"(Exclusive to --k8s-provider={K8sProvider.PKS}) (Required)")
 @click.option(
     '-o',
     '--org',
@@ -970,10 +970,10 @@ def list_ovdcs(ctx, list_pks_plans):
     metavar='ORG_NAME',
     help="Use the specified org to look for the org VDC. Defaults to current "
          "org in use")
-def ovdc_enable(ctx, ovdc_name, container_provider, pks_plan,
+def ovdc_enable(ctx, ovdc_name, k8s_provider, pks_plan,
                 pks_cluster_domain, org_name):
     """Set Kubernetes provider for an org VDC."""
-    if container_provider == K8sProviders.PKS and \
+    if k8s_provider == K8sProvider.PKS and \
             (pks_plan is None or pks_cluster_domain is None):
         click.secho("One or both of the required params (--pks-plan,"
                     " --pks-cluster-domain) are missing", fg='yellow')
@@ -990,7 +990,7 @@ def ovdc_enable(ctx, ovdc_name, container_provider, pks_plan,
                 enable=True,
                 ovdc_name=ovdc_name,
                 org_name=org_name,
-                container_provider=container_provider,
+                k8s_provider=k8s_provider,
                 pks_plan=pks_plan,
                 pks_cluster_domain=pks_cluster_domain)
             stdout(result, ctx)
@@ -1023,8 +1023,7 @@ def ovdc_disable(ctx, ovdc_name, org_name):
             ovdc = Ovdc(client)
             if org_name is None:
                 org_name = ctx.obj['profiles'].get('org_in_use')
-            result = ovdc.update_ovdc_for_k8s(
-                enable=False, ovdc_name=ovdc_name, org_name=org_name)
+            result = ovdc.update_ovdc_for_k8s(enable=False, ovdc_name=ovdc_name, org_name=org_name)
             stdout(result, ctx)
         else:
             stderr("Insufficient permission to perform operation.", ctx)

@@ -17,7 +17,7 @@ from container_service_extension.pyvcloud_utils import \
 from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
-from container_service_extension.server_constants import K8sProviders
+from container_service_extension.server_constants import K8sProvider
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.utils import is_pks_enabled
 from container_service_extension.utils import str_to_bool
@@ -51,7 +51,7 @@ class OvdcRequestHandler(object):
                 pks_cluster_domain=pks_cluster_domain,
                 container_provider=container_provider)
 
-            if container_provider == K8sProviders.PKS:
+            if container_provider == K8sProvider.PKS:
                 if is_pks_enabled():
                     create_pks_compute_profile(
                         ctr_prov_ctx, self.tenant_auth_token, self.req_spec)

@@ -47,7 +47,7 @@ from container_service_extension.pyvcloud_utils import get_sys_admin_client
 from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_NAME
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
-from container_service_extension.server_constants import K8sProviders
+from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import NodeType
 from container_service_extension.shared_constants import ERROR_DESCRIPTION_KEY
 from container_service_extension.shared_constants import ERROR_MESSAGE_KEY
@@ -282,7 +282,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 'status': c['status'],
                 'vdc_id': c['vdc_id'],
                 'org_name': get_org_name_from_ovdc_id(c['vdc_id']),
-                K8S_PROVIDER_KEY: K8sProviders.NATIVE
+                K8S_PROVIDER_KEY: K8sProvider.NATIVE
             })
         return clusters
 
@@ -306,7 +306,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
             raise ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")
 
         cluster = clusters[0]
-        cluster[K8S_PROVIDER_KEY] = K8sProviders.NATIVE
+        cluster[K8S_PROVIDER_KEY] = K8sProvider.NATIVE
         vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
         vms = vapp.get_all_vms()
         for vm in vms:
