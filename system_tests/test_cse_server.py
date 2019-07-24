@@ -65,6 +65,7 @@ from container_service_extension.remote_template_manager import \
 from container_service_extension.server_constants import ScriptFile
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
+from container_service_extension.template_builder import TEMP_VAPP_VM_NAME
 from container_service_extension.utils import read_data_file
 
 
@@ -307,6 +308,7 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse):
     - creates photon temp vapp,
     - creates k8s templates
     - skips deleting the temp vapp
+    - proper packages are installed in the vm in temp vApp
 
     command: cse install --config cse_test_config.yaml --retain-temp-vapp
         --ssh-key ~/.ssh/id_rsa.pub
@@ -357,7 +359,7 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse):
                 assert False, 'vApp does not exist when it should.'
 
             vapp = VApp(env.CLIENT, resource=vapp_resource)
-            ip = vapp.get_primary_ip(temp_vapp_name)
+            ip = vapp.get_primary_ip(TEMP_VAPP_VM_NAME)
             # ssh into vms to check for installed software
             ssh_client.connect(ip, username='root')
             # run different commands depending on OS
@@ -406,8 +408,8 @@ def test_0100_install_update(config, unregister_cse):
         --ssh-key ~/.ssh/id_rsa.pub --update
     required files: cse_test_config.yaml, ~/.ssh/id_rsa.pub,
         ubuntu/photon init/cust scripts
-    expected: cse registered, source ovas exist, temp vapps don't exist,
-        k8s templates exist.
+    expected: cse registered, source ovas exist, k8s templates exist and
+        temp vapps don't exist.
     """
     try:
         for template_config in env.TEMPLATE_DEFINITIONS:
@@ -472,7 +474,6 @@ def test_0120_cse_run(config):
     $ cse run --config cse_test_config
     $ cse run --config cse_test_config --skip-check
     """
-    return
     cmds = [
         f"cse run -c {env.ACTIVE_CONFIG_FILEPATH}",
         f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} -s"

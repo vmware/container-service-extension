@@ -54,6 +54,7 @@ import re
 import subprocess
 import time
 
+import psutil
 import pytest
 from vcd_cli.vcd import vcd
 
@@ -81,11 +82,6 @@ def cse_server():
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     install_cmd = ['install', '--config', env.ACTIVE_CONFIG_FILEPATH,
                    '--ssh-key', env.SSH_KEY_FILEPATH]
-    for template in config['broker']['templates']:
-        if not env.catalog_item_exists(template['catalog_item']):
-            install_cmd.append('--update')
-            break
-
     env.setup_active_config()
     result = env.CLI_RUNNER.invoke(cli, install_cmd,
                                    input='y',
@@ -96,8 +92,9 @@ def cse_server():
 
     # start cse server as subprocess
     cmd = f"cse run -c {env.ACTIVE_CONFIG_FILEPATH}"
-    p = subprocess.Popen(cmd.split(), stdout=subprocess.DEVNULL,
-                         stderr=subprocess.STDOUT)
+    p = subprocess.Popen(cmd.split(), shell=True)
+                         # stdout=subprocess.DEVNULL,
+                         # stderr=subprocess.STDOUT)
     time.sleep(env.WAIT_INTERVAL)  # server takes a little time to set up
 
     # enable kubernetes functionality on our ovdc
@@ -134,7 +131,12 @@ def cse_server():
 
     # terminate cse server subprocess
     try:
-        p.terminate()
+        # p.terminate()
+        parent_pid = p.pid
+        parent = psutil.Process(parent_pid)	
+        for child in parent.children(recursive=True):
+            child.kill()
+        parent.kill()
     except OSError:
         pass
 
@@ -268,7 +270,22 @@ def delete_test_cluster():
         env.delete_vapp(env.TEST_CLUSTER_NAME)
 
 
-def test_0010_vcd_cse_version(vcd_org_admin):
+def execute_commands(cmd_list):
+    cmd_results = []
+    for action in cmd_list:
+        cmd = action.cmd
+        expected_exit_code = action.exit_code
+        result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
+                                       catch_exceptions=False)
+        assert result.exit_code == expected_exit_code, \
+            testutils.format_command_info(
+                'vcd', cmd, result.exit_code, result.output)
+        cmd_results.append(result)
+
+    return cmd_results
+
+
+def test_0010_vcd_cse_version(c):
     """Test vcd cse version command."""
     cmd = "cse version"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
@@ -367,7 +384,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
                                       result.output)
     print('SUCCESS')
 
-    template_names = [config['broker']['default_template']]
+    template_names = [config['broker']['default_template_name']]
     if env.TEST_ALL_TEMPLATES:
         template_pattern = r'(True|False)\s*(\S*)'
         matches = re.findall(template_pattern, result.output)
@@ -449,21 +466,6 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
             "Cluster exists when it should not"
         num_nodes = 0
         print('SUCCESS')
-
-
-def execute_commands(cmd_list):
-    cmd_results = []
-    for action in cmd_list:
-        cmd = action.cmd
-        expected_exit_code = action.exit_code
-        result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
-                                       catch_exceptions=False)
-        assert result.exit_code == expected_exit_code, \
-            testutils.format_command_info(
-                'vcd', cmd, result.exit_code, result.output)
-        cmd_results.append(result)
-
-    return cmd_results
 
 
 @pytest.mark.parametrize('test_runner_username', ['sys_admin','org_admin', 'vapp_author'])

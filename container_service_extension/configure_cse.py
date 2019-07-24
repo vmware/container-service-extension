@@ -17,6 +17,7 @@ from container_service_extension.local_template_manager import \
 from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOG_FILEPATH
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
+from container_service_extension.logger import INSTALL_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.nsxt.cse_nsxt_setup_utils import \
     setup_nsxt_constructs
@@ -203,7 +204,7 @@ def install_cse(ctx, config_file_name='config.yaml',
         client = Client(config['vcd']['host'],
                         api_version=config['vcd']['api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
-                        log_file=INSTALL_LOG_FILEPATH,
+                        log_file=INSTALL_WIRELOG_FILEPATH,
                         log_requests=True,
                         log_headers=True,
                         log_bodies=True)
@@ -261,7 +262,7 @@ def install_cse(ctx, config_file_name='config.yaml',
                 remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
                 logger=LOGGER, msg_update_callback=ConsoleMessagePrinter())
             remote_template_cookbook = rtm.get_remote_template_cookbook()
-            rtm.download_all_template_scripts()
+            rtm.download_all_template_scripts(force_overwrite=update)
 
             # create all templates mentioned in cookbook
             for template in remote_template_cookbook['templates']:

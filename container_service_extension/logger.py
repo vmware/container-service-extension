@@ -48,6 +48,8 @@ INSTALL_LOGGER_NAME = 'container_service_extension.install'
 INSTALL_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-install_{_TIMESTAMP}.log"
 INSTALL_LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
 
+INSTALL_WIRELOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-install-wire_{_TIMESTAMP}.log"
+
 # cse client logger and config
 # cse client logs info level and debug level logs to:
 # cse-logs/cse-client-info.log
