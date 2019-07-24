@@ -318,6 +318,7 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse):
     """
     ssh_client = None
     try:
+        # To shorten the run time of the test
         for template_config in env.TEMPLATE_DEFINITIONS:
             env.replace_cust_script_with_empty_script(
                 template_config['name'], template_config['revision'])
@@ -412,6 +413,7 @@ def test_0100_install_update(config, unregister_cse):
         temp vapps don't exist.
     """
     try:
+        # To shorten the run time of the test
         for template_config in env.TEMPLATE_DEFINITIONS:
             env.replace_cust_script_with_empty_script(
                 template_config['name'], template_config['revision'])
@@ -481,7 +483,10 @@ def test_0120_cse_run(config):
 
     for cmd in cmds:
         try:
-            p = subprocess.run(cmd.split(), timeout=15)
+            if os.name == 'nt':
+                p = subprocess.run(cmd.split(), shell=True, timeout=15)
+            else:
+                p = subprocess.run(cmd.split(), timeout=15)
             assert False, f"`{cmd}` failed with returncode {p.returncode}"
         except subprocess.TimeoutExpired:
             pass
