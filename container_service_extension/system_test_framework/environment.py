@@ -14,7 +14,6 @@
 # limitations under the License.
 import os
 from pathlib import Path
-import shutil
 
 from click.testing import CliRunner
 from pyvcloud.vcd.api_extension import APIExtension
@@ -27,10 +26,16 @@ from pyvcloud.vcd.vdc import VDC
 from vcd_cli.vcd import vcd
 
 import container_service_extension.pyvcloud_utils as pyvcloud_utils
+from container_service_extension.remote_template_manager import \
+    get_local_script_filepath
+from container_service_extension.remote_template_manager import \
+    RemoteTemplateManager
 from container_service_extension.server_constants import CSE_SERVICE_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
+from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 import container_service_extension.system_test_framework.utils as testutils
+
 
 """
 This module manages environment state during CSE system tests.
@@ -50,9 +55,8 @@ environment.CLIENT but will not change the CLIENT that was imported.
 """
 BASE_CONFIG_FILEPATH = 'base_config.yaml'
 ACTIVE_CONFIG_FILEPATH = 'cse_test_config.yaml'
+TEMPLATE_DEFINITIONS = None
 
-PHOTON_CUST_SCRIPT_NAME = 'cust-photon-v2.sh'
-UBUNTU_CUST_SCRIPT_NAME = 'cust-ubuntu-16.04.sh'
 SCRIPTS_DIR = 'scripts'
 
 SSH_KEY_FILEPATH = str(Path.home() / '.ssh' / 'id_rsa.pub')
@@ -96,10 +100,17 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     """
     global AMQP_USERNAME, AMQP_PASSWORD, CLIENT, ORG_HREF, VDC_HREF, \
         CATALOG_NAME, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
-        TEST_ALL_TEMPLATES, SYS_ADMIN_LOGIN_CMD, ORG_ADMIN_LOGIN_CMD,\
-        VAPP_AUTHOR_LOGIN_CMD, USER_LOGIN_CMD_MAP
+        TEMPLATE_DEFINITIONS, TEST_ALL_TEMPLATES, SYS_ADMIN_LOGIN_CMD, \
+        ORG_ADMIN_LOGIN_CMD, VAPP_AUTHOR_LOGIN_CMD, USER_LOGIN_CMD_MAP
 
     config = testutils.yaml_to_dict(config_filepath)
+
+    rtm = RemoteTemplateManager(
+        config['broker']['remote_template_cookbook_url'])
+    template_cookbook = rtm.get_remote_template_cookbook()
+    TEMPLATE_DEFINITIONS = template_cookbook['templates']
+    rtm.download_all_template_scripts(force_overwrite=True)
+
     CLIENT = Client(config['vcd']['host'],
                     api_version=config['vcd']['api_version'],
                     verify_ssl_certs=config['vcd']['verify'])
@@ -144,7 +155,7 @@ def cleanup_environment():
 
 
 def setup_active_config():
-    """Set up the active config file from BASE_CONFIG_FILEPATH.
+    """Set up the active config file from BASE_CONFIG.
 
     'test' section is removed if it exists in base config, active config is
     created at ACTIVE_CONFIG_FILEPATH.
@@ -165,10 +176,8 @@ def setup_active_config():
 
 def teardown_active_config():
     """Delete the active config file if it exists."""
-    try:
-        Path(ACTIVE_CONFIG_FILEPATH).unlink()
-    except FileNotFoundError:
-        pass
+    if os.path.exists(ACTIVE_CONFIG_FILEPATH):
+        os.remove(ACTIVE_CONFIG_FILEPATH)
 
 
 def create_user(username, password, role):
@@ -241,24 +250,32 @@ def unregister_cse():
         pass
 
 
-def delete_cust_scripts():
-    """Delete directory 'system_tests/scripts' if it exists."""
-    try:
-        shutil.rmtree('scripts')
-    except FileNotFoundError:
-        pass
+def replace_cust_script_with_empty_script(template_name, revision):
+    """Replace customization script of a template with a blank file.
 
-
-def create_empty_cust_scripts():
-    """Create empty customization scripts.
-
-    Creates:
-        - system_tests/scripts/cust-ubuntu-16.04.sh
-        - system_tests/scripts/cust-photon-v2.sh
+    Saves a copy of the original script.
     """
-    Path('scripts').mkdir(exist_ok=True)
-    Path(f'scripts/{UBUNTU_CUST_SCRIPT_NAME}').write_text('')
-    Path(f'scripts/{PHOTON_CUST_SCRIPT_NAME}').write_text('')
+    script_filepath = get_local_script_filepath(
+        template_name, revision, ScriptFile.CUST)
+    script_folder_path = os.path.dirname(script_filepath)
+    Path(script_folder_path).mkdir(exist_ok=True)
+    script_new_filepath = script_filepath + ".bak"
+    os.rename(script_filepath, script_new_filepath)
+    Path(script_filepath).write_text('')
+
+
+def restore_cust_script(template_name, revision):
+    """Restore the contents of customization script of a template."""
+    script_filepath = get_local_script_filepath(
+        template_name, revision, ScriptFile.CUST)
+    dir_path = os.path.dirname(script_filepath)
+    Path(dir_path).mkdir(exist_ok=True)
+    backup_script_filepath = script_filepath + ".bak"
+    if os.path.exists(script_filepath) and \
+            os.path.getsize(script_filepath) == 0:
+        os.remove(script_filepath)
+    if os.path.exists(backup_script_filepath):
+        os.rename(backup_script_filepath, script_filepath)
 
 
 def catalog_item_exists(catalog_item, catalog_name=None):

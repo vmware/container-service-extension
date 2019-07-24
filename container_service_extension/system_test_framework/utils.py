@@ -41,24 +41,12 @@ def yaml_to_dict(filepath):
         return yaml.safe_load(f)
 
 
-def get_default_template_config(config):
-    template_config = None
-    for template_dict in config['broker']['templates']:
-        if template_dict['name'] == config['broker']['default_template']:
-            template_config = template_dict
-            break
+def get_temp_vapp_name(template_name):
+    """.
 
-    assert template_config is not None, \
-        'Default template not found in config file.'
-
-    return template_config
-
-
-def delete_file(filepath):
-    try:
-        Path(filepath).unlink()
-    except FileNotFoundError:
-        pass
+    This temp vapp name logic is borrowed from cse_install method
+    """
+    return template_name + '_temp'
 
 
 def format_command_info(cmd_root, cmd, exit_code, output):
