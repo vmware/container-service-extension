@@ -229,12 +229,12 @@ def construct_pks_context(pks_account_info, pvdc_info=None, nsxt_info=None,
 
 def construct_ctr_prov_ctx_from_pks_cache(ovdc_id, org_name, pks_plans,
                                           pks_cluster_domain,
-                                          container_provider):
+                                          k8s_provider):
     client = None
     try:
         ctr_prov_context = {}
-        ctr_prov_context[K8S_PROVIDER_KEY] = container_provider
-        if container_provider == K8sProvider.PKS:
+        ctr_prov_context[K8S_PROVIDER_KEY] = k8s_provider
+        if k8s_provider == K8sProvider.PKS:
             if not utils.is_pks_enabled():
                 raise CseServerError('CSE is not configured to work with PKS.')
 

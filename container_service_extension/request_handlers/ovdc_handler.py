@@ -27,7 +27,7 @@ def ovdc_update(request_dict, tenant_auth_token):
         org_name=request_dict.get(RequestKey.ORG_NAME),
         pks_plans=request_dict.get(RequestKey.PKS_PLAN_NAME),
         pks_cluster_domain=request_dict.get(RequestKey.PKS_CLUSTER_DOMAIN),
-        container_provider=request_dict.get(RequestKey.K8S_PROVIDER))
+        k8s_provider=request_dict.get(RequestKey.K8S_PROVIDER))
 
     if request_dict.get(RequestKey.K8S_PROVIDER) == K8sProvider.PKS:
         if not utils.is_pks_enabled():
