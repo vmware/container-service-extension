@@ -130,13 +130,16 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
 
     SYS_ADMIN_LOGIN_CMD = f"login {config['vcd']['host']} system " \
                           f"{config['vcd']['username']} " \
-                          f"-iwp {config['vcd']['password']}"
+                          f"-iwp {config['vcd']['password']} " \
+                          f"-V {config['vcd']['api_version']}"
     ORG_ADMIN_LOGIN_CMD = f"login {config['vcd']['host']} " \
                           f"{config['broker']['org']}" \
-                          f" {ORG_ADMIN_NAME} -iwp {ORG_ADMIN_PASSWORD}"
+                          f" {ORG_ADMIN_NAME} -iwp {ORG_ADMIN_PASSWORD} " \
+                          f"-V {config['vcd']['api_version']}"
     VAPP_AUTHOR_LOGIN_CMD = f"login {config['vcd']['host']} " \
                             f"{config['broker']['org']} " \
-                            f"{VAPP_AUTHOR_NAME} -iwp {VAPP_AUTHOR_PASSWORD}"
+                            f"{VAPP_AUTHOR_NAME} -iwp {VAPP_AUTHOR_PASSWORD}" \
+                            f" -V {config['vcd']['api_version']}"
 
     USER_LOGIN_CMD_MAP = {'sys_admin': SYS_ADMIN_LOGIN_CMD,
                           'org_admin': ORG_ADMIN_LOGIN_CMD,
@@ -183,7 +186,8 @@ def teardown_active_config():
 def create_user(username, password, role):
     config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
     cmd = f"login {config['vcd']['host']} {SYSTEM_ORG_NAME} " \
-          f"{config['vcd']['username']} -iwp {config['vcd']['password']}"
+          f"{config['vcd']['username']} -iwp {config['vcd']['password']} " \
+          f"-V {config['vcd']['api_version']}"
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0
     cmd = f"org use {config['broker']['org']}"

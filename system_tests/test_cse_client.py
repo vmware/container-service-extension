@@ -101,7 +101,8 @@ def cse_server():
     # by default, an ovdc cannot deploy kubernetes clusters
     # TODO() this should be removed once this behavior is changed
     cmd = f"login {config['vcd']['host']} {constants.SYSTEM_ORG_NAME} " \
-          f"{config['vcd']['username']} -iwp {config['vcd']['password']}"
+          f"{config['vcd']['username']} -iwp {config['vcd']['password']} " \
+          f"-V {config['vcd']['api_version']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
@@ -155,7 +156,8 @@ def vcd_sys_admin():
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     cmd = f"login {config['vcd']['host']} system " \
-          f"{config['vcd']['username']} -iwp {config['vcd']['password']}"
+          f"{config['vcd']['username']} -iwp {config['vcd']['password']} " \
+          f"-V {config['vcd']['api_version']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
@@ -196,7 +198,8 @@ def vcd_org_admin():
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     cmd = f"login {config['vcd']['host']} {config['broker']['org']} " \
-          f"{env.ORG_ADMIN_NAME} -iwp {env.ORG_ADMIN_PASSWORD}"
+          f"{env.ORG_ADMIN_NAME} -iwp {env.ORG_ADMIN_PASSWORD} " \
+          f"-V {config['vcd']['api_version']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
@@ -231,7 +234,8 @@ def vcd_vapp_author():
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     cmd = f"login {config['vcd']['host']} {config['broker']['org']} " \
-          f"{env.VAPP_AUTHOR_NAME} -iwp {env.VAPP_AUTHOR_PASSWORD}"
+          f"{env.VAPP_AUTHOR_NAME} -iwp {env.VAPP_AUTHOR_PASSWORD} " \
+          f"-V {config['vcd']['api_version']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
