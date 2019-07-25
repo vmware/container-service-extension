@@ -355,6 +355,11 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse):
                 assert False, 'vApp does not exist when it should.'
 
             vapp = VApp(env.CLIENT, resource=vapp_resource)
+            # The temp vapp is shutdown before the template is captured, it
+            # needs to be powered on before trying to ssh into it.
+            task = vapp.power_on()
+            env.CLIENT.get_task_monitor().wait_for_success(task)
+
             ip = vapp.get_primary_ip(TEMP_VAPP_VM_NAME)
             # ssh into vms to check for installed software
             ssh_client.connect(ip, username='root')

@@ -146,7 +146,7 @@ def cse_server():
                 parent.kill()
             else:
                 p.terminate()
-    except OSError, psutil.Error:
+    except (OSError, psutil.Error):
         pass
 
 
