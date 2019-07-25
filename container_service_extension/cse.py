@@ -18,6 +18,7 @@ from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.configure_cse import install_cse
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.sample_generator import generate_sample_config
+from container_service_extension.service import Service
 from container_service_extension.utils import check_python_version
 from container_service_extension.utils import ConsoleMessagePrinter
 
@@ -106,7 +107,6 @@ def cli(ctx):
 @click.pass_context
 def version(ctx):
     """Display CSE version."""
-    from container_service_extension.service import Service
     ver_obj = Service.version()
     ver_str = '%s, %s, version %s' % (ver_obj['product'],
                                       ver_obj['description'],
@@ -311,7 +311,6 @@ def run(ctx, config, skip_check):
         click.secho(str(err), fg='red')
         sys.exit(1)
 
-    from container_service_extension.service import Service
     try:
         service = Service(config, should_check_config=not skip_check)
         service.run(msg_update_callback=ConsoleMessagePrinter())

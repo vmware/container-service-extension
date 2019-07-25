@@ -124,7 +124,7 @@ class PksBrokerManager(object):
                 # compute_profile_name dictionary
                 ctr_prov_ctx = ovdc_utils.get_ovdc_k8s_provider_metadata(
                     ovdc_name=vdc_name, org_name=org_name,
-                    get_credentials=True)
+                    include_credentials=True)
                 if ctr_prov_ctx[K8S_PROVIDER_KEY] == K8sProvider.PKS:
                     pks_ctx_dict[ctr_prov_ctx['vc']] = ctr_prov_ctx
 

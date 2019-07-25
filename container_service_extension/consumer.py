@@ -12,7 +12,7 @@ import pika
 import requests
 
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-import container_service_extension.processor as processor
+import container_service_extension.request_processor as request_processor
 from container_service_extension.server_constants import EXCHANGE_TYPE
 
 
@@ -152,7 +152,7 @@ class MessageConsumer(object):
                          f"from {properties.app_id} "
                          f"({threading.currentThread().ident}): "
                          f"{json.dumps(body_json)}, props: {properties}")
-            result = processor.process_request(body_json)
+            result = request_processor.process_request(body_json)
             status_code = result['status_code']
             reply_body = json.dumps(result['body'])
         except Exception as e:

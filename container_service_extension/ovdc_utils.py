@@ -24,14 +24,15 @@ import container_service_extension.utils as utils
 
 
 def get_ovdc_k8s_provider_metadata(org_name=None, ovdc_name=None, ovdc_id=None,
-                                   get_credentials=False, get_nsxt_info=False):
+                                   include_credentials=False,
+                                   include_nsxt_info=False):
     """Get k8s provider metadata for an org VDC.
 
     :param str org_name:
     :param str ovdc_name:
     :param str ovdc_id:
-    :param bool get_credentials:
-    :param bool get_nsxt_info:
+    :param bool include_credentials:
+    :param bool include_nsxt_info:
 
     :return: Dictionary with k8s provider metadata
 
@@ -54,13 +55,13 @@ def get_ovdc_k8s_provider_metadata(org_name=None, ovdc_name=None, ovdc_id=None,
             result[PKS_PLANS_KEY] = result[PKS_PLANS_KEY].split(',')
 
             # Get the credentials from PksCache
-            if get_credentials or get_nsxt_info:
+            if include_credentials or include_nsxt_info:
                 pks_cache = utils.get_pks_cache()
                 pvdc_info = pks_cache.get_pvdc_info(vcd_utils.get_pvdc_id(ovdc)) # noqa: E501
-            if get_credentials:
+            if include_credentials:
                 pks_info = pks_cache.get_pks_account_info(org_name, pvdc_info.vc) # noqa: E501
                 result.update(pks_info.credentials._asdict())
-            if get_nsxt_info:
+            if include_nsxt_info:
                 nsxt_info = pks_cache.get_nsxt_info(pvdc_info.vc)
                 result['nsxt'] = nsxt_info
 

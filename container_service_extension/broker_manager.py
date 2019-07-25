@@ -30,7 +30,7 @@ from container_service_extension.vcdbroker_manager import VcdBrokerManager
 #  3. Refactor both client and server code accordingly
 #  4. As part of refactoring, avoid accessing HTTP request body directly
 #  from VcdBroker and PksBroker. We should try to limit processing request to
-#  processor.py and broker_manager.py.
+#  request_processor.py and broker_manager.py.
 
 
 class BrokerManager(object):
@@ -153,7 +153,7 @@ class BrokerManager(object):
             raise ClusterAlreadyExistsError(f"Cluster {cluster_name} "
                                             f"already exists.")
 
-        ctr_prov_ctx = ovdc_utils.get_ovdc_k8s_provider_metadata(org_name=org_name, ovdc_name=vdc_name, get_credentials=True, get_nsxt_info=True) # noqa: E501
+        ctr_prov_ctx = ovdc_utils.get_ovdc_k8s_provider_metadata(org_name=org_name, ovdc_name=vdc_name, include_credentials=True, include_nsxt_info=True) # noqa: E501
         if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProvider.PKS:
             cluster_spec['pks_plan'] = ctr_prov_ctx[PKS_PLANS_KEY][0]
             cluster_spec['pks_ext_host'] = f"{cluster_name}.{ctr_prov_ctx[PKS_CLUSTER_DOMAIN_KEY]}" # noqa: E501
@@ -264,6 +264,6 @@ class BrokerManager(object):
         ovdc_name = self.req_spec.get(RequestKey.OVDC_NAME)
         org_name = self.req_spec.get(RequestKey.ORG_NAME)
 
-        ctr_prov_ctx = ovdc_utils.get_ovdc_k8s_provider_metadata(org_name=org_name, ovdc_name=ovdc_name, get_credentials=True, get_nsxt_info=True) # noqa: E501
+        ctr_prov_ctx = ovdc_utils.get_ovdc_k8s_provider_metadata(org_name=org_name, ovdc_name=ovdc_name, include_credentials=True, include_nsxt_info=True) # noqa: E501
 
         return self._get_broker_based_on_ctr_prov_ctx(ctr_prov_ctx)
