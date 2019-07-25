@@ -214,14 +214,13 @@ class Service(object, metaclass=Singleton):
 
             if not k8_templates:
                 msg = "No valid K8 templates were found in catalog " \
-                      f"'{catalog_name}'"
+                      f"'{catalog_name}'. Unable to start CSE server."
                 if msg_update_callback:
                     msg_update_callback.error(msg)
                 LOGGER.error(msg)
-                raise Exception(msg)
+                sys.exit(1)
 
             # check that K8 templates exist in vCD
-            # TODO look for deafult temaplte in the list of K8 tempaltes
             default_template_name = \
                 self.config['broker']['default_template_name']
             default_template_revision = \
@@ -279,20 +278,23 @@ class Service(object, metaclass=Singleton):
                 t = Thread(name=name, target=consumer_thread, args=(c, ))
                 t.daemon = True
                 t.start()
-                LOGGER.info("Started thread {t.ident}")
+                msg = f"Started thread '{name} ({t.ident})'"
+                if msg_update_callback:
+                    msg_update_callback.general(msg)
+                LOGGER.info(msg)
                 self.threads.append(t)
                 self.consumers.append(c)
                 time.sleep(0.25)
             except KeyboardInterrupt:
                 break
             except Exception:
-                print(traceback.format_exc())
+                LOGGER.error(traceback.format_exc())
 
         LOGGER.info(f"Number of threads started: {len(self.threads)}")
 
         self._state = ServerState.RUNNING
 
-        message = f"Container Service Extension for vCloudDirector" \
+        message = f"Container Service Extension for vCloud Director" \
                   f"\nServer running using config file: {self.config_file}" \
                   f"\nLog files: {SERVER_INFO_LOG_FILEPATH}, " \
                   f"{SERVER_DEBUG_LOG_FILEPATH}" \

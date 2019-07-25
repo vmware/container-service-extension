@@ -15,7 +15,6 @@ from container_service_extension.exceptions import AmqpError
 from container_service_extension.local_template_manager import \
     set_metadata_on_catalog_item
 from container_service_extension.logger import configure_install_logger
-from container_service_extension.logger import INSTALL_LOG_FILEPATH
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
 from container_service_extension.logger import INSTALL_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH

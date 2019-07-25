@@ -120,12 +120,12 @@ class RemoteTemplateManager():
         """
         if self.cookbook:
             if self.logger:
-                self.logger.debug("Re-using cached copy of temaplte cookbook.")
+                self.logger.debug("Re-using cached copy of template cookbook.")
         else:
             template_cookbook_as_str = download_file_into_memory(self.url)
             self.cookbook = yaml.safe_load(template_cookbook_as_str)
             if self.logger:
-                self.logger.debug("Downloaded remote template cookbook from"
+                self.logger.debug("Downloaded remote template cookbook from "
                                   f"{self.url}")
         return self.cookbook
 

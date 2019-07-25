@@ -2,6 +2,31 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import os
+import re
+import subprocess
+import time
+
+import paramiko
+import pytest
+from pyvcloud.vcd.exceptions import EntityNotFoundException
+from pyvcloud.vcd.vapp import VApp
+from pyvcloud.vcd.vdc import VDC
+
+from container_service_extension.config_validator import get_validated_config
+from container_service_extension.configure_cse import check_cse_installation
+from container_service_extension.cse import cli
+from container_service_extension.remote_template_manager import \
+    get_local_script_filepath
+from container_service_extension.remote_template_manager import \
+    get_revisioned_template_name
+from container_service_extension.server_constants import ScriptFile
+import container_service_extension.system_test_framework.environment as env
+import container_service_extension.system_test_framework.utils as testutils
+from container_service_extension.template_builder import TEMP_VAPP_VM_NAME
+from container_service_extension.utils import read_data_file
+
+
 """
 CSE server tests to test validity and functionality of `cse` CLI commands.
 
@@ -45,29 +70,17 @@ if a right exists without adding it. Also need functionality to remove CSE
 rights when CSE is unregistered.
 """
 
-import os
-import re
-import subprocess
-import time
 
-import paramiko
-import pytest
-from pyvcloud.vcd.exceptions import EntityNotFoundException
-from pyvcloud.vcd.vapp import VApp
-from pyvcloud.vcd.vdc import VDC
-
-from container_service_extension.config_validator import get_validated_config
-from container_service_extension.configure_cse import check_cse_installation
-from container_service_extension.cse import cli
-from container_service_extension.remote_template_manager import \
-    get_local_script_filepath
-from container_service_extension.remote_template_manager import \
-    get_revisioned_template_name
-from container_service_extension.server_constants import ScriptFile
-import container_service_extension.system_test_framework.environment as env
-import container_service_extension.system_test_framework.utils as testutils
-from container_service_extension.template_builder import TEMP_VAPP_VM_NAME
-from container_service_extension.utils import read_data_file
+def _remove_cse_artifacts():
+    for template in env.TEMPLATE_DEFINITIONS:
+        env.delete_catalog_item(template['source_ova_name'])
+        catalog_item_name = get_revisioned_template_name(
+            template['name'], template['revision'])
+        env.delete_catalog_item(catalog_item_name)
+        temp_vapp_name = testutils.get_temp_vapp_name(template['name'])
+        env.delete_vapp(temp_vapp_name)
+    env.delete_catalog()
+    env.unregister_cse()
 
 
 @pytest.fixture(scope='module', autouse='true')
@@ -84,38 +97,19 @@ def delete_installation_entities():
     - Delete source ova files, vapp templates, temp vapps, catalogs
     - Unregister CSE from vCD
     """
-    for template in env.TEMPLATE_DEFINITIONS:
-        env.delete_catalog_item(template['source_ova_name'])
-        catalog_item_name = get_revisioned_template_name(
-            template['name'], template['revision'])
-        env.delete_catalog_item(catalog_item_name)
-        temp_vapp_name = testutils.get_temp_vapp_name(template['name'])
-        env.delete_vapp(temp_vapp_name)
-
-    env.delete_catalog()
-    env.unregister_cse()
-
+    _remove_cse_artifacts()
     yield
-
     if env.TEARDOWN_INSTALLATION:
-        for template in env.TEMPLATE_DEFINITIONS:
-            env.delete_catalog_item(template['source_ova_name'])
-            catalog_item_name = get_revisioned_template_name(
-                template['name'], template['revision'])
-            env.delete_catalog_item(catalog_item_name)
-            temp_vapp_name = template['name'] + '_temp'
-            env.delete_vapp(temp_vapp_name)
-        env.delete_catalog()
-        env.unregister_cse()
+        _remove_cse_artifacts()
 
 
 @pytest.fixture
-def unregister_cse():
+def unregister_cse_before_test():
     """Fixture to ensure that CSE is not registered to vCD.
 
     Usage: add the parameter 'unregister_cse' to the test function.
 
-    Note: we do not do teardown unregister_cse(), because the user may want
+    Note: we don't do teardown unregister_cse(), because the user may want
     to preserve the state of vCD after tests run.
     """
     env.unregister_cse()
@@ -255,7 +249,8 @@ def test_0070_check_invalid_installation(config):
         pass
 
 
-def test_0080_install_skip_template_creation(config, unregister_cse):
+def test_0080_install_skip_template_creation(config,
+                                             unregister_cse_before_test):
     """Test install.
 
     Installation options: '--config', '--ssh-key', '--skip-create-templates'
@@ -298,7 +293,7 @@ def test_0080_install_skip_template_creation(config, unregister_cse):
             'vApp exists when it should not.'
 
 
-def test_0090_install_retain_temp_vapp(config, unregister_cse):
+def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
     """Test install.
 
     Installation options: '--config', '--template', '--ssh-key',
@@ -361,8 +356,8 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse):
         task = vapp.power_on()
         env.CLIENT.get_task_monitor().wait_for_success(task)
 
-        # HACK!
-        time.sleep(env.WAIT_INTERVAL * 6)  # let the shh daemon come up
+        # HACK! let the ssh daemon come up
+        time.sleep(env.WAIT_INTERVAL) # 30 seconds
 
         ip = vapp.get_primary_ip(TEMP_VAPP_VM_NAME)
         try:
@@ -397,7 +392,8 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse):
             if ssh_client:
                 ssh_client.close()
 
-def test_0100_install_update(config, unregister_cse):
+
+def test_0100_install_update(config, unregister_cse_before_test):
     """Tests installation option: '--update'.
 
     Tests that installation:
@@ -411,45 +407,35 @@ def test_0100_install_update(config, unregister_cse):
     expected: cse registered, source ovas exist, k8s templates exist and
         temp vapps don't exist.
     """
-    try:
-        # To shorten the run time of the test
-        for template_config in env.TEMPLATE_DEFINITIONS:
-            env.replace_cust_script_with_empty_script(
-                template_config['name'], template_config['revision'])
+    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
+          f"{env.SSH_KEY_FILEPATH} --update"
+    result = env.CLI_RUNNER.invoke(
+        cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0,\
+        testutils.format_command_info('cse', cmd, result.exit_code,
+                                      result.output)
 
-        cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-              f"{env.SSH_KEY_FILEPATH} --update"
-        result = env.CLI_RUNNER.invoke(
-            cli, cmd.split(), catch_exceptions=False)
-        assert result.exit_code == 0,\
-            testutils.format_command_info('cse', cmd, result.exit_code,
-                                          result.output)
+    # check that cse was registered correctly
+    env.check_cse_registration(config['amqp']['routing_key'],
+                               config['amqp']['exchange'])
 
-        # check that cse was registered correctly
-        env.check_cse_registration(config['amqp']['routing_key'],
-                                   config['amqp']['exchange'])
+    for template_config in env.TEMPLATE_DEFINITIONS:
+        # check that source ova file exists in catalog
+        assert env.catalog_item_exists(
+            template_config['source_ova_name']), \
+            'Source ova file does not existswhen it should.'
 
-        for template_config in env.TEMPLATE_DEFINITIONS:
-            # check that source ova file exists in catalog
-            assert env.catalog_item_exists(
-                template_config['source_ova_name']), \
-                'Source ova file does not existswhen it should.'
+        # check that k8s templates exist
+        catalog_item_name = get_revisioned_template_name(
+            template_config['name'], template_config['revision'])
+        assert env.catalog_item_exists(catalog_item_name), \
+            'k8s template does not exist when it should.'
 
-            # check that k8s templates exist
-            catalog_item_name = get_revisioned_template_name(
-                template_config['name'], template_config['revision'])
-            assert env.catalog_item_exists(catalog_item_name), \
-                'k8s template does not exist when it should.'
-
-            # check that temp vapp does not exists
-            temp_vapp_name = testutils.get_temp_vapp_name(
-                template_config['name'])
-            assert not env.vapp_exists(temp_vapp_name), \
-                'vApp exists when it should not.'
-    finally:
-        for template_config in env.TEMPLATE_DEFINITIONS:
-            env.restore_cust_script(
-                template_config['name'], template_config['revision'])
+        # check that temp vapp does not exists
+        temp_vapp_name = testutils.get_temp_vapp_name(
+            template_config['name'])
+        assert not env.vapp_exists(temp_vapp_name), \
+            'vApp exists when it should not.'
 
 
 def test_0110_cse_check_valid_installation(config):
@@ -481,11 +467,22 @@ def test_0120_cse_run(config):
     ]
 
     for cmd in cmds:
+        p = None
         try:
             if os.name == 'nt':
-                p = subprocess.run(cmd.split(), shell=True, timeout=15)
+                p = subprocess.Popen(cmd, shell=True)
             else:
-                p = subprocess.run(cmd.split(), timeout=15)
+                p = subprocess.Popen(cmd.split())
+            p.wait(timeout=env.WAIT_INTERVAL * 2) # 1 minute
             assert False, f"`{cmd}` failed with returncode {p.returncode}"
         except subprocess.TimeoutExpired:
             pass
+        finally:
+            try:
+                if p:
+                    if os.name == 'nt':
+                        subprocess.run(f"taskkill /f /pid {p.pid} /t")
+                    else:
+                        p.terminate()
+            except OSError:
+                pass

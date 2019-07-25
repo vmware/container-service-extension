@@ -27,12 +27,9 @@ from vcd_cli.vcd import vcd
 
 import container_service_extension.pyvcloud_utils as pyvcloud_utils
 from container_service_extension.remote_template_manager import \
-    get_local_script_filepath
-from container_service_extension.remote_template_manager import \
     RemoteTemplateManager
 from container_service_extension.server_constants import CSE_SERVICE_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
-from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 import container_service_extension.system_test_framework.utils as testutils
 
@@ -90,7 +87,7 @@ ORG_HREF = None
 VDC_HREF = None
 CATALOG_NAME = None
 
-WAIT_INTERVAL = 10
+WAIT_INTERVAL = 30
 
 
 def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
@@ -252,34 +249,6 @@ def unregister_cse():
                                               CSE_SERVICE_NAMESPACE)
     except MissingRecordException:
         pass
-
-
-def replace_cust_script_with_empty_script(template_name, revision):
-    """Replace customization script of a template with a blank file.
-
-    Saves a copy of the original script.
-    """
-    script_filepath = get_local_script_filepath(
-        template_name, revision, ScriptFile.CUST)
-    script_folder_path = os.path.dirname(script_filepath)
-    Path(script_folder_path).mkdir(exist_ok=True)
-    script_new_filepath = script_filepath + ".bak"
-    os.rename(script_filepath, script_new_filepath)
-    Path(script_filepath).write_text('')
-
-
-def restore_cust_script(template_name, revision):
-    """Restore the contents of customization script of a template."""
-    script_filepath = get_local_script_filepath(
-        template_name, revision, ScriptFile.CUST)
-    dir_path = os.path.dirname(script_filepath)
-    Path(dir_path).mkdir(exist_ok=True)
-    backup_script_filepath = script_filepath + ".bak"
-    if os.path.exists(script_filepath) and \
-            os.path.getsize(script_filepath) == 0:
-        os.remove(script_filepath)
-    if os.path.exists(backup_script_filepath):
-        os.rename(backup_script_filepath, script_filepath)
 
 
 def catalog_item_exists(catalog_item, catalog_name=None):
