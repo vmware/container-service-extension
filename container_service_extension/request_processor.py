@@ -191,6 +191,8 @@ def _parse_request_url(method, url):
 
 @handle_exception
 def process_request(body):
+    from container_service_extension.service import Service
+
     LOGGER.debug(f"body: {json.dumps(body)}")
 
     # parse url
@@ -201,7 +203,6 @@ def process_request(body):
     tenant_auth_token = body['headers']['x-vcloud-authorization']
     operation = url_data['operation']
 
-    from container_service_extension.service import Service
     if operation not in (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE)\
             and not Service().is_running():
         raise CseRequestError(status_code=requests.codes.bad_request,

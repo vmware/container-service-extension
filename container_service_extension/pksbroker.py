@@ -94,9 +94,7 @@ class PKSBroker(AbstractBroker):
         if not pks_ctx:
             raise ValueError(
                 "PKS context is required to establish connection to PKS")
-        from pprint import pprint
 
-        pprint(pks_ctx)
         self.username = pks_ctx['username']
         self.secret = pks_ctx['secret']
         self.pks_host_uri = \
