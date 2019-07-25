@@ -19,6 +19,9 @@ def ovdc_update(request_dict, tenant_auth_token):
     required = [RequestKey.ORG_NAME, RequestKey.OVDC_NAME,
                 RequestKey.K8S_PROVIDER, RequestKey.OVDC_ID]
     utils.ensure_keys_in_dict(required, request_dict, dict_name='request')
+    if request_dict.get(RequestKey.K8S_PROVIDER) == K8sProvider.PKS:
+        required = [RequestKey.PKS_PLAN_NAME, RequestKey.PKS_CLUSTER_DOMAIN]
+        utils.ensure_keys_in_dict(required, request_dict, dict_name='request')
     k8s_provider = request_dict[RequestKey.K8S_PROVIDER]
 
     k8s_provider_info = {K8S_PROVIDER_KEY: k8s_provider}
