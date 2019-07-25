@@ -13,7 +13,7 @@ from pyvcloud.vcd.org import Org
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.exceptions import AmqpError
 from container_service_extension.local_template_manager import \
-    set_metadata_on_catalog_item
+    save_k8s_local_template_definition_as_metadata
 from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
 from container_service_extension.logger import INSTALL_WIRELOG_FILEPATH
@@ -34,7 +34,7 @@ from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY, CSE_PKS_DEPLOY_RIGHT_CATEGORY, \
     CSE_PKS_DEPLOY_RIGHT_DESCRIPTION, CSE_PKS_DEPLOY_RIGHT_NAME, \
     CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, EXCHANGE_TYPE, \
-    SYSTEM_ORG_NAME # noqa: H301
+    RemoteTemplateDefinition, SYSTEM_ORG_NAME # noqa: H301
 from container_service_extension.template_builder import TemplateBuilder
 from container_service_extension.utils import ConsoleMessagePrinter
 from container_service_extension.vsphere_utils import populate_vsphere_list
@@ -165,9 +165,8 @@ def check_cse_installation(config, msg_update_callback=None):
 
 
 def install_cse(ctx, config_file_name='config.yaml',
-                skip_create_templates=True, update=False,
-                retain_temp_vapp=False, ssh_key=None,
-                msg_update_callback=None):
+                skip_template_creation=True, force_update=False, ssh_key=None,
+                retain_temp_vapp=False, msg_update_callback=None):
     """Handle logistics for CSE installation.
 
     Handles decision making for configuring AMQP exchange/settings,
@@ -175,12 +174,12 @@ def install_cse(ctx, config_file_name='config.yaml',
 
     :param click.core.Context ctx:
     :param str config_file_name: config file name.
-    :param bool skip_create_templates: If True, skip creating the templates.
-    :param bool update: if True and templates already exist in vCD,
+    :param bool skip_template_creation: If True, skip creating the templates.
+    :param bool force_update: if True and templates already exist in vCD,
         overwrites existing templates.
+    :param str ssh_key: public ssh key to place into template vApp(s).
     :param bool retain_temp_vapp: if True, temporary vApp will not destroyed,
         so the user can ssh into and debug the vm.
-    :param str ssh_key: public ssh key to place into template vApp(s).
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
         that writes messages onto console.
 
@@ -250,7 +249,7 @@ def install_cse(ctx, config_file_name='config.yaml',
             org, catalog_name, catalog_desc='CSE templates',
             msg_update_callback=msg_update_callback)
 
-        if skip_create_templates:
+        if skip_template_creation:
             msg = "Skipping creation of templates."
             if msg_update_callback:
                 msg_update_callback.info(msg)
@@ -262,27 +261,29 @@ def install_cse(ctx, config_file_name='config.yaml',
                 logger=LOGGER, msg_update_callback=ConsoleMessagePrinter())
             remote_template_cookbook = rtm.get_remote_template_cookbook()
 
-            # create all templates mentioned in cookbook
+            # create all templates defined in cookbook
             for template in remote_template_cookbook['templates']:
-                rtm.download_template_scripts(template_name=template['name'],
-                                              revision=template['revision'],
-                                              force_overwrite=update)
+                rtm.download_template_scripts(
+                    template_name=template[RemoteTemplateDefinition.NAME],
+                    revision=template[RemoteTemplateDefinition.REVISION],
+                    force_overwrite=force_update)
                 catalog_item_name = get_revisioned_template_name(
-                    template['name'], template['revision'])
+                    template[RemoteTemplateDefinition.NAME],
+                    template[RemoteTemplateDefinition.REVISION])
                 build_params = {
-                    'template_name': template['name'],
-                    'template_revision': template['revision'],
-                    'source_ova_name': template['source_ova_name'],
-                    'source_ova_href': template['source_ova'],
-                    'source_ova_sha256': template['sha256_ova'],
+                    'template_name': template[RemoteTemplateDefinition.NAME],
+                    'template_revision': template[RemoteTemplateDefinition.REVISION], # noqa: E501
+                    'source_ova_name': template[RemoteTemplateDefinition.SOURCE_OVA_NAME], # noqa: E501
+                    'source_ova_href': template[RemoteTemplateDefinition.SOURCE_OVA_HREF], # noqa: E501
+                    'source_ova_sha256': template[RemoteTemplateDefinition.SOURCE_OVA_SHA256], # noqa: E501
                     'org_name': org_name,
                     'vdc_name': config['broker']['vdc'],
                     'catalog_name': catalog_name,
                     'catalog_item_name': catalog_item_name,
-                    'catalog_item_description': template['description'],
-                    'temp_vapp_name': template['name'] + '_temp',
-                    'cpu': template['cpu'],
-                    'memory': template['mem'],
+                    'catalog_item_description': template[RemoteTemplateDefinition.DESCRIPTION], # noqa: E501
+                    'temp_vapp_name': template[RemoteTemplateDefinition.NAME] + '_temp', # noqa: E501
+                    'cpu': template[RemoteTemplateDefinition.CPU],
+                    'memory': template[RemoteTemplateDefinition.MEMORY],
                     'network_name': config['broker']['network'],
                     'ip_allocation_mode': config['broker']['ip_allocation_mode'], # noqa: E501
                     'storage_profile': config['broker']['storage_profile']
@@ -290,14 +291,18 @@ def install_cse(ctx, config_file_name='config.yaml',
                 builder = TemplateBuilder(
                     client, client, build_params, ssh_key=ssh_key,
                     logger=LOGGER, msg_update_callback=ConsoleMessagePrinter())
-                builder.build(force_recreate=update,
+                builder.build(force_recreate=force_update,
                               retain_temp_vapp=retain_temp_vapp)
 
-                set_metadata_on_catalog_item(
+                # remote definition is a super set of local definition, barring
+                # the key 'catalog_item_name'
+                template_definition = dict(template)
+                template_definition['catalog_item_name'] = catalog_item_name
+                save_k8s_local_template_definition_as_metadata(
                     client=client,
                     catalog_name=catalog_name,
                     catalog_item_name=catalog_item_name,
-                    data=template,
+                    template_definition=template_definition,
                     org_name=org_name)
 
         # if it's a PKS setup, setup NSX-T constructs

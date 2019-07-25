@@ -33,12 +33,11 @@ from container_service_extension.sample_generator import \
     SAMPLE_PKS_PVDCS_SECTION, SAMPLE_PKS_SERVERS_SECTION, \
     SAMPLE_SERVICE_CONFIG, SAMPLE_VCD_CONFIG, SAMPLE_VCS_CONFIG # noqa: H301
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.server_constants import VERSION_V1
 from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import check_file_permissions
 from container_service_extension.utils import check_keys_and_value_types
 from container_service_extension.utils import get_duplicate_items_in_list
-
-VERSION_V1 = 'v1'
 
 
 def get_validated_config(config_file_name, msg_update_callback=None):

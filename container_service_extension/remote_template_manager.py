@@ -129,10 +129,6 @@ class RemoteTemplateManager():
                                   f"{self.url}")
         return self.cookbook
 
-    def get_default_templte_name(self):
-        remote_template_cookbook = self.get_remote_template_cookbook()
-        return remote_template_cookbook.get('default_template')
-
     def download_template_scripts(self, template_name, revision,
                                   force_overwrite=False):
         """Download all scripts of a template to local scripts folder.

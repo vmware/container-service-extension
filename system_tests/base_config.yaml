@@ -2,11 +2,11 @@
 # Fill in fields marked with '???'
 
 test:
-  teardown_installation: false # Affects test_cse_server.py.
+  teardown_installation: true  # Affects test_cse_server.py.
                                #   if true, delete all installation entities (even on test failure).
                                #   if false, do not delete installation entities (even on test success).
                                #   if this key is omitted, defaults to true.
-  teardown_clusters: false     # Affects test_cse_client.py.
+  teardown_clusters: true      # Affects test_cse_client.py.
                                #   if true, delete test cluster (env.TEST_CLUSTER_NAME) on test failure.
                                #   if false, do not delete test cluster on test failure.
                                #   if this key is omitted, defaults to true.
@@ -18,11 +18,11 @@ test:
 
 amqp:
   exchange: test-exchange # cse exclusive exchange used by amqp server
-  host: '10.150.200.187'
+  host: '???'
   password: guest
   port: 5672
-  prefix: vcd
-  routing_key: cse
+  prefix: test-prefix-vcd
+  routing_key: test-routing-key-cse
   ssl: false
   ssl_accept_all: false
   username: guest
@@ -30,17 +30,17 @@ amqp:
 
 vcd:
   api_version: '32.0'
-  host: '10.150.199.221'
+  host: '???'
   log: true
-  password: 'ca$hc0w'
+  password: '???'
   port: 443
-  username: 'administrator'
+  username: '???'
   verify: false
 
 vcs:
-- name: vc1
-  password: 'Welcome@123'
-  username: 'administrator@vsphere.local'
+- name: '???'
+  password: '???'
+  username: '???'
   verify: false
 
 service:
@@ -48,16 +48,15 @@ service:
   listeners: 5
 
 broker:
-  catalog: 'cse-test-cat'                 # public shared catalog within org where the template will be published
+  catalog: cse                          # public shared catalog within org where the template will be published
   default_template_name: photon-v2_k8-1.12_weave-2.3.0
                                         # name of the default template to use if none is specified
   default_template_revision: 1          # revision of the default template to use if none is specified
   ip_allocation_mode: pool              # dhcp or pool
-  network: 'cse-test-orgvdc-net'        # org network within @vdc that will be used during the install process to build the template
+  network: '???'                        # org network within @vdc that will be used during the install process to build the template
                                         #   Should have outbound access to the public internet
                                         #   CSE appliance doesn't need to be connected to this network
-  org: 'cse-test-org'                            # vCD org that contains the shared catalog where the master templates will be stored
+  org: '???'                            # vCD org that contains the shared catalog where the master templates will be stored
   remote_template_cookbook_url: https://raw.githubusercontent.com/rocknes/container-service-extension/remote_template/template.yaml
   storage_profile: '*'                  # name of the storage profile to use when creating the temporary vApp used to build the template
-  type: 'native'
-  vdc: 'cse-test-orgvdc'                # VDC within @org that will be used during the install process to build the template
+  vdc: '???'                            # VDC within @org that will be used during the install process to build the template

@@ -117,7 +117,6 @@ SAMPLE_SERVICE_CONFIG = {
 
 SAMPLE_BROKER_CONFIG = {
     'broker': {
-        'type': 'native',
         'org': 'myorg',
         'vdc': 'myorgvdc',
         'catalog': 'cse',

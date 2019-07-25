@@ -208,21 +208,21 @@ def check(ctx, config, check_install):
     help='Filepath of CSE config file')
 @click.option(
     '-s',
-    '--skip-create-templates',
-    'skip_create_templates',
+    '--skip-template-creation',
+    'skip_template_creation',
     is_flag=True,
-    help='If provided, CSE will create all k8s templates during installation')
+    help='Skips creating CSE k8s template during installation')
 @click.option(
-    '-u',
-    '--update',
+    '-f',
+    '--force-update',
     is_flag=True,
-    help='Recreate CSE k8s templates on vCD if they already exist')
+    help='Recreate CSE k8s templates on vCD even if they already exist')
 @click.option(
     '-d',
     '--retain-temp-vapp',
     'retain_temp_vapp',
     is_flag=True,
-    help='Retain the temporary vApp after the template has been capture.'
+    help='Retain the temporary vApp after the template has been captured'
          ' --ssh-key option is required if this flag is used')
 @click.option(
     '-k',
@@ -232,8 +232,8 @@ def check(ctx, config, check_install):
     default=None,
     type=click.File('r'),
     help='Filepath of SSH public key to add to vApp template')
-def install(ctx, config, skip_create_templates, update, retain_temp_vapp,
-            ssh_key_file):
+def install(ctx, config, skip_template_creation, force_update,
+            retain_temp_vapp, ssh_key_file):
     """Install CSE on vCloud Director."""
     try:
         check_python_version(ConsoleMessagePrinter())
@@ -252,8 +252,9 @@ def install(ctx, config, skip_create_templates, update, retain_temp_vapp,
         ssh_key = ssh_key_file.read()
     try:
         install_cse(ctx, config_file_name=config,
-                    skip_create_templates=skip_create_templates, update=update,
-                    retain_temp_vapp=retain_temp_vapp, ssh_key=ssh_key,
+                    skip_template_creation=skip_template_creation,
+                    force_update=force_update, ssh_key=ssh_key,
+                    retain_temp_vapp=retain_temp_vapp,
                     msg_update_callback=ConsoleMessagePrinter())
     except (EntityNotFoundException, NotAcceptableException, VcdException,
             ValueError, KeyError, TypeError) as err:
