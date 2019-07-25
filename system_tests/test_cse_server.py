@@ -48,6 +48,7 @@ rights when CSE is unregistered.
 import os
 import re
 import subprocess
+import time
 
 import paramiko
 import pytest
@@ -316,52 +317,55 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse):
     expected: cse registered, catalog exists, source ovas exist,
         temp vapps exist, k8s templates exist.
     """
-    ssh_client = None
-    try:
-        cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-              f"{env.SSH_KEY_FILEPATH} --retain-temp-vapp"
-        result = env.CLI_RUNNER.invoke(cli, cmd.split(),
-                                       catch_exceptions=False)
-        assert result.exit_code == 0,\
-            testutils.format_command_info('cse', cmd, result.exit_code,
-                                          result.output)
+    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
+          f"{env.SSH_KEY_FILEPATH} --retain-temp-vapp"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(),
+                                   catch_exceptions=False)
+    assert result.exit_code == 0,\
+        testutils.format_command_info('cse', cmd, result.exit_code,
+                                      result.output)
 
-        # check that cse was registered correctly
-        env.check_cse_registration(config['amqp']['routing_key'],
-                                   config['amqp']['exchange'])
+    # check that cse was registered correctly
+    env.check_cse_registration(config['amqp']['routing_key'],
+                               config['amqp']['exchange'])
 
-        vdc = VDC(env.CLIENT, href=env.VDC_HREF)
-        ssh_client = paramiko.SSHClient()
-        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        for template_config in env.TEMPLATE_DEFINITIONS:
-            # check that source ova file exists in catalog
-            assert env.catalog_item_exists(
-                template_config['source_ova_name']), \
-                'Source ova file does not existswhen it should.'
+    vdc = VDC(env.CLIENT, href=env.VDC_HREF)
+    ssh_client = paramiko.SSHClient()
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-            # check that k8s templates exist
-            catalog_item_name = get_revisioned_template_name(
-                template_config['name'], template_config['revision'])
-            assert env.catalog_item_exists(catalog_item_name), \
-                'k8s template does not exist when it should.'
+    for template_config in env.TEMPLATE_DEFINITIONS:
+        # check that source ova file exists in catalog
+        assert env.catalog_item_exists(
+            template_config['source_ova_name']), \
+            'Source ova file does not existswhen it should.'
 
-            # check that temp vapp exists
-            temp_vapp_name = testutils.get_temp_vapp_name(
-                template_config['name'])
-            try:
-                vdc.reload()
-                vapp_resource = vdc.get_vapp(temp_vapp_name)
-            except EntityNotFoundException:
-                assert False, 'vApp does not exist when it should.'
+        # check that k8s templates exist
+        catalog_item_name = get_revisioned_template_name(
+            template_config['name'], template_config['revision'])
+        assert env.catalog_item_exists(catalog_item_name), \
+            'k8s template does not exist when it should.'
 
-            vapp = VApp(env.CLIENT, resource=vapp_resource)
-            # The temp vapp is shutdown before the template is captured, it
-            # needs to be powered on before trying to ssh into it.
-            task = vapp.power_on()
-            env.CLIENT.get_task_monitor().wait_for_success(task)
+        # check that temp vapp exists
+        temp_vapp_name = testutils.get_temp_vapp_name(
+            template_config['name'])
+        try:
+            vdc.reload()
+            vapp_resource = vdc.get_vapp(temp_vapp_name)
+        except EntityNotFoundException:
+            assert False, 'vApp does not exist when it should.'
 
-            ip = vapp.get_primary_ip(TEMP_VAPP_VM_NAME)
-            # ssh into vms to check for installed software
+        # ssh into vms to check for installed software
+        vapp = VApp(env.CLIENT, resource=vapp_resource)
+        # The temp vapp is shutdown before the template is captured, it
+        # needs to be powered on before trying to ssh into it.
+        task = vapp.power_on()
+        env.CLIENT.get_task_monitor().wait_for_success(task)
+
+        # HACK!
+        time.sleep(env.WAIT_INTERVAL * 6)  # let the shh daemon come up
+
+        ip = vapp.get_primary_ip(TEMP_VAPP_VM_NAME)
+        try:
             ssh_client.connect(ip, username='root')
             # run different commands depending on OS
             if 'photon' in temp_vapp_name:
@@ -389,10 +393,9 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse):
                 for package in packages:
                     assert package in installed, \
                         f"{package} not found in Ubuntu VM"
-    finally:
-        if ssh_client:
-            ssh_client.close()
-
+        finally:
+            if ssh_client:
+                ssh_client.close()
 
 def test_0100_install_update(config, unregister_cse):
     """Tests installation option: '--update'.
