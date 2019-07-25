@@ -262,10 +262,12 @@ def install_cse(ctx, config_file_name='config.yaml',
                 remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
                 logger=LOGGER, msg_update_callback=ConsoleMessagePrinter())
             remote_template_cookbook = rtm.get_remote_template_cookbook()
-            rtm.download_all_template_scripts(force_overwrite=update)
 
             # create all templates mentioned in cookbook
             for template in remote_template_cookbook['templates']:
+                rtm.download_template_scripts(template_name=template['name'],
+                                              revision=template['revision'],
+                                              force_overwrite=update)
                 catalog_item_name = get_revisioned_template_name(
                     template['name'], template['revision'])
                 build_params = {
@@ -287,8 +289,8 @@ def install_cse(ctx, config_file_name='config.yaml',
                     'storage_profile': config['broker']['storage_profile']
                 }
                 builder = TemplateBuilder(
-                    client, client, build_params, logger=LOGGER,
-                    msg_update_callback=ConsoleMessagePrinter())
+                    client, client, build_params, ssh_key=ssh_key,
+                    logger=LOGGER, msg_update_callback=ConsoleMessagePrinter())
                 builder.build(force_recreate=update,
                               retain_temp_vapp=retain_temp_vapp)
 
