@@ -260,7 +260,7 @@ def test_0080_install_skip_template_creation(config, unregister_cse):
     Installation options: '--config', '--ssh-key', '--skip-create-templates'
 
     Tests that installation:
-    - registers CSE, without installing nay of the templates
+    - registers CSE, without installing the templates
 
     command: cse install --config cse_test_config.yaml
         --ssh-key ~/.ssh/id_rsa.pub --skip-create-templates
@@ -308,7 +308,7 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse):
     - creates photon temp vapp,
     - creates k8s templates
     - skips deleting the temp vapp
-    - proper packages are installed in the vm in temp vApp
+    - checks that proper packages are installed in the vm in temp vApp
 
     command: cse install --config cse_test_config.yaml --retain-temp-vapp
         --ssh-key ~/.ssh/id_rsa.pub
@@ -318,11 +318,6 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse):
     """
     ssh_client = None
     try:
-        # To shorten the run time of the test
-        for template_config in env.TEMPLATE_DEFINITIONS:
-            env.replace_cust_script_with_empty_script(
-                template_config['name'], template_config['revision'])
-
         cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
               f"{env.SSH_KEY_FILEPATH} --retain-temp-vapp"
         result = env.CLI_RUNNER.invoke(cli, cmd.split(),
@@ -390,10 +385,6 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse):
                     assert package in installed, \
                         f"{package} not found in Ubuntu VM"
     finally:
-        for template_config in env.TEMPLATE_DEFINITIONS:
-            env.restore_cust_script(
-                template_config['name'], template_config['revision'])
-
         if ssh_client:
             ssh_client.close()
 

@@ -146,7 +146,7 @@ def cse_server():
                 parent.kill()
             else:
                 p.terminate()
-    except OSError:
+    except OSError, psutil.Error:
         pass
 
 
@@ -297,7 +297,7 @@ def execute_commands(cmd_list):
     return cmd_results
 
 
-def test_0010_vcd_cse_version(c):
+def test_0010_vcd_cse_version():
     """Test vcd cse version command."""
     cmd = "cse version"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
@@ -480,7 +480,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
         print('SUCCESS')
 
 
-@pytest.mark.parametrize('test_runner_username', ['sys_admin','org_admin', 'vapp_author'])
+@pytest.mark.parametrize('test_runner_username', ['sys_admin', 'org_admin', 'vapp_author']) # noqa: E501
 def test_50_vcd_cse_system_toggle(config, test_runner_username,
                                   delete_test_cluster):
     """Test `vcd cse system ...` commands.
