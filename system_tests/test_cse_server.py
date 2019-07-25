@@ -265,7 +265,7 @@ def test_0080_install_skip_template_creation(config,
         temp vapps do not exist, k8s templates do not exist.
     """
     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-          f"{env.SSH_KEY_FILEPATH} --skip-create-templates"
+          f"{env.SSH_KEY_FILEPATH} --skip-template-creation"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
@@ -393,7 +393,7 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
                 ssh_client.close()
 
 
-def test_0100_install_update(config, unregister_cse_before_test):
+def test_0100_install_force_update(config, unregister_cse_before_test):
     """Tests installation option: '--update'.
 
     Tests that installation:
@@ -408,7 +408,7 @@ def test_0100_install_update(config, unregister_cse_before_test):
         temp vapps don't exist.
     """
     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-          f"{env.SSH_KEY_FILEPATH} --update"
+          f"{env.SSH_KEY_FILEPATH} --force-update"
     result = env.CLI_RUNNER.invoke(
         cli, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
