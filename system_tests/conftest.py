@@ -28,10 +28,8 @@ def environment():
     - logout client
     """
     env.init_environment()
-    env.delete_cust_scripts()
     yield
     env.cleanup_environment()
-    env.delete_cust_scripts()
 
 
 @pytest.fixture(scope='session', autouse=True)

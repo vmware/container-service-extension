@@ -50,6 +50,7 @@ TODO() by priority
 """
 
 import collections
+import os
 import re
 import subprocess
 import time
@@ -81,11 +82,6 @@ def cse_server():
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     install_cmd = ['install', '--config', env.ACTIVE_CONFIG_FILEPATH,
                    '--ssh-key', env.SSH_KEY_FILEPATH]
-    for template in config['broker']['templates']:
-        if not env.catalog_item_exists(template['catalog_item']):
-            install_cmd.append('--update')
-            break
-
     env.setup_active_config()
     result = env.CLI_RUNNER.invoke(cli, install_cmd,
                                    input='y',
@@ -96,15 +92,21 @@ def cse_server():
 
     # start cse server as subprocess
     cmd = f"cse run -c {env.ACTIVE_CONFIG_FILEPATH}"
-    p = subprocess.Popen(cmd.split(), stdout=subprocess.DEVNULL,
-                         stderr=subprocess.STDOUT)
-    time.sleep(env.WAIT_INTERVAL)  # server takes a little time to set up
+    p = None
+    if os.name == 'nt':
+        p = subprocess.Popen(cmd, shell=True)
+    else:
+        p = subprocess.Popen(cmd.split(),
+                             stdout=subprocess.DEVNULL,
+                             stderr=subprocess.STDOUT)
+    time.sleep(env.WAIT_INTERVAL)  # server takes a little while to set up
 
     # enable kubernetes functionality on our ovdc
     # by default, an ovdc cannot deploy kubernetes clusters
     # TODO() this should be removed once this behavior is changed
     cmd = f"login {config['vcd']['host']} {constants.SYSTEM_ORG_NAME} " \
-          f"{config['vcd']['username']} -iwp {config['vcd']['password']}"
+          f"{config['vcd']['username']} -iwp {config['vcd']['password']} " \
+          f"-V {config['vcd']['api_version']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
@@ -134,7 +136,11 @@ def cse_server():
 
     # terminate cse server subprocess
     try:
-        p.terminate()
+        if p:
+            if os.name == 'nt':
+                subprocess.Popen(f"taskkill /f /pid {p.pid} /t")
+            else:
+                p.terminate()
     except OSError:
         pass
 
@@ -153,7 +159,8 @@ def vcd_sys_admin():
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     cmd = f"login {config['vcd']['host']} system " \
-          f"{config['vcd']['username']} -iwp {config['vcd']['password']}"
+          f"{config['vcd']['username']} -iwp {config['vcd']['password']} " \
+          f"-V {config['vcd']['api_version']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
@@ -194,7 +201,8 @@ def vcd_org_admin():
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     cmd = f"login {config['vcd']['host']} {config['broker']['org']} " \
-          f"{env.ORG_ADMIN_NAME} -iwp {env.ORG_ADMIN_PASSWORD}"
+          f"{env.ORG_ADMIN_NAME} -iwp {env.ORG_ADMIN_PASSWORD} " \
+          f"-V {config['vcd']['api_version']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
@@ -229,7 +237,8 @@ def vcd_vapp_author():
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     cmd = f"login {config['vcd']['host']} {config['broker']['org']} " \
-          f"{env.VAPP_AUTHOR_NAME} -iwp {env.VAPP_AUTHOR_PASSWORD}"
+          f"{env.VAPP_AUTHOR_NAME} -iwp {env.VAPP_AUTHOR_PASSWORD} " \
+          f"-V {config['vcd']['api_version']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
@@ -268,7 +277,22 @@ def delete_test_cluster():
         env.delete_vapp(env.TEST_CLUSTER_NAME)
 
 
-def test_0010_vcd_cse_version(vcd_org_admin):
+def execute_commands(cmd_list):
+    cmd_results = []
+    for action in cmd_list:
+        cmd = action.cmd
+        expected_exit_code = action.exit_code
+        result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
+                                       catch_exceptions=False)
+        assert result.exit_code == expected_exit_code, \
+            testutils.format_command_info(
+                'vcd', cmd, result.exit_code, result.output)
+        cmd_results.append(result)
+
+    return cmd_results
+
+
+def test_0010_vcd_cse_version():
     """Test vcd cse version command."""
     cmd = "cse version"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
@@ -302,7 +326,7 @@ def test_0030_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
         testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
     # TODO() make cluster rollback delete call blocking
-    time.sleep(env.WAIT_INTERVAL * 6)  # wait for vApp to be deleted
+    time.sleep(env.WAIT_INTERVAL * 2)  # wait for vApp to be deleted
     assert not env.vapp_exists(env.TEST_CLUSTER_NAME), \
         "Cluster exists when it should not."
 
@@ -367,7 +391,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
                                       result.output)
     print('SUCCESS')
 
-    template_names = [config['broker']['default_template']]
+    template_names = [config['broker']['default_template_name']]
     if env.TEST_ALL_TEMPLATES:
         template_pattern = r'(True|False)\s*(\S*)'
         matches = re.findall(template_pattern, result.output)
@@ -451,25 +475,10 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
         print('SUCCESS')
 
 
-def execute_commands(cmd_list):
-    cmd_results = []
-    for action in cmd_list:
-        cmd = action.cmd
-        expected_exit_code = action.exit_code
-        result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
-                                       catch_exceptions=False)
-        assert result.exit_code == expected_exit_code, \
-            testutils.format_command_info(
-                'vcd', cmd, result.exit_code, result.output)
-        cmd_results.append(result)
-
-    return cmd_results
-
-
-@pytest.mark.parametrize('test_runner_username', ['sys_admin','org_admin', 'vapp_author'])
-def test_50_vcd_cse_system_toggle(config, test_runner_username,
-                                  delete_test_cluster):
-    """Test `vcd cse system ...` commands.
+@pytest.mark.parametrize('test_runner_username', ['sys_admin', 'org_admin', 'vapp_author']) # noqa: E501
+def test_0050_vcd_cse_system_toggle(config, test_runner_username,
+                                    delete_test_cluster):
+    """Test 'vcd cse system ...' commands.
 
     Test that on disabling CSE, cluster deployments are no longer
     allowed, and on enabling CSE, cluster deployments are allowed again.

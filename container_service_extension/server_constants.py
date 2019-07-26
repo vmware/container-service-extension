@@ -15,6 +15,12 @@ class NodeType(str, Enum):
     NFS = 'nfsd'
 
 
+# CSE SERVICE; used for registering CSE to vCD as an api extension service.
+CSE_SERVICE_NAME = 'cse'
+CSE_SERVICE_NAMESPACE = 'cse'
+EXCHANGE_TYPE = 'direct'
+SYSTEM_ORG_NAME = 'system'
+
 # DEPLOY RIGHTS; used by authorization framework to weed out unauthorized calls
 CSE_NATIVE_DEPLOY_RIGHT_NAME = 'CSE NATIVE DEPLOY RIGHT'
 CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION = 'Right necessary to deploy kubernetes ' \
@@ -32,6 +38,9 @@ K8S_PROVIDER_KEY = 'k8s_provider'
 PKS_PLANS_KEY = 'pks_plans'
 PKS_CLUSTER_DOMAIN_KEY = 'pks_cluster_domain'
 PKS_COMPUTE_PROFILE_KEY = 'pks_compute_profile_name'
+
+# PKS API endpoint version
+VERSION_V1 = 'v1'
 
 
 @unique
@@ -54,9 +63,43 @@ class ScriptFile(str, Enum):
 
     CUST = 'cust.sh'
     INIT = 'init.sh'
-    MASTER = 'master.sh'
+    MASTER = 'mstr.sh'
     NFSD = 'nfsd.sh'
     NODE = 'node.sh'
+
+
+@unique
+class LocalTemplateKey(str, Enum):
+    """Enumerate the keys that define a template."""
+
+    ADMIN_PASSWORD = 'admin_password'
+    CATALOG_ITEM_NAME = 'catalog_item_name'
+    COMPUTE_POLICY = 'compute_policy'
+    CPU = 'cpu'
+    DEPRECATED = 'deprecated'
+    DESCRIPTION = 'description'
+    MEMORY = 'mem'
+    NAME = 'name'
+    REVISION = 'revision'
+
+
+@unique
+class RemoteTemplateKey(str, Enum):
+    """Enumerate the keys that define a template."""
+
+    ADMIN_PASSWORD = 'admin_password'
+    COMPUTE_POLICY = 'compute_policy'
+    CPU = 'cpu'
+    DEPRECATED = 'deprecated'
+    DEPRECATED_IN_CSE_VERSION = 'depricated_in_cse_version'
+    DESCRIPTION = 'description'
+    MEMORY = 'mem'
+    NAME = 'name'
+    MINIMUM_REQUIRED_CSE_VERSION = 'required_cse_version'
+    REVISION = 'revision'
+    SOURCE_OVA_HREF = 'source_ova'
+    SOURCE_OVA_NAME = 'source_ova_name'
+    SOURCE_OVA_SHA256 = 'sha256_ova'
 
 
 # CSE requests
@@ -85,10 +128,3 @@ class CseOperation(Enum):
     SYSTEM_INFO = ('get info of system')
     SYSTEM_UPDATE = ('update system status')
     TEMPLATE_LIST = ('list all templates')
-
-
-# CSE SERVICE; used for registering CSE to vCD as an api extension service.
-CSE_SERVICE_NAME = 'cse'
-CSE_SERVICE_NAMESPACE = 'cse'
-EXCHANGE_TYPE = 'direct'
-SYSTEM_ORG_NAME = 'system'

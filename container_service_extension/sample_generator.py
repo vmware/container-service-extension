@@ -115,47 +115,17 @@ SAMPLE_SERVICE_CONFIG = {
     }
 }
 
-SAMPLE_TEMPLATE_PHOTON_V2 = {
-    'name': 'photon-v2',
-    'catalog_item': 'photon-custom-hw11-2.0-304b817-k8s',
-    'source_ova_name': 'photon-custom-hw11-2.0-304b817.ova',
-    'source_ova': 'http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova', # noqa: E501
-    'sha256_ova': 'cb51e4b6d899c3588f961e73282709a0d054bb421787e140a1d80c24d4fd89e1', # noqa: E501
-    'temp_vapp': 'photon2-temp',
-    'cleanup': True,
-    'cpu': 2,
-    'mem': 2048,
-    'admin_password': 'guest_os_admin_password',
-    'description': 'PhotonOS v2\nDocker CE 18.06.2-3\nKubernetes 1.12.7\nweave2.3.0' # noqa: E501
-}
-
-SAMPLE_TEMPLATE_UBUNTU_16_04 = {
-    'name': 'ubuntu-16.04',
-    'catalog_item': 'ubuntu-16.04-server-cloudimg-amd64-k8s',
-    'source_ova_name': 'ubuntu-16.04-server-cloudimg-amd64.ova',
-    'source_ova': 'https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova', # noqa: E501
-    'sha256_ova': '3c1bec8e2770af5b9b0462e20b7b24633666feedff43c099a6fb1330fcc869a9', # noqa: E501
-    'temp_vapp': 'ubuntu1604-temp',
-    'cleanup': True,
-    'cpu': 2,
-    'mem': 2048,
-    'admin_password': 'guest_os_admin_password',
-    'description': 'Ubuntu 16.04\nDocker CE 5:18.09.7~3-0~ubuntu-xenial\nKubernetes 1.13.5\nweave 2.3.0' # noqa: E501
-}
-
 SAMPLE_BROKER_CONFIG = {
     'broker': {
-        'type': 'default',
         'org': 'myorg',
         'vdc': 'myorgvdc',
         'catalog': 'cse',
         'network': 'mynetwork',
         'ip_allocation_mode': 'pool',
         'storage_profile': '*',
+        'default_template_name': 'photon_template',
+        'default_template_revision': 0,
         'remote_template_cookbook_url': 'https://raw.githubusercontent.com/rocknes/container-service-extension/remote_template/template.yaml', # noqa: E501
-        'default_template': SAMPLE_TEMPLATE_PHOTON_V2['name'],
-        'templates': [SAMPLE_TEMPLATE_PHOTON_V2, SAMPLE_TEMPLATE_UBUNTU_16_04],
-        'cse_msg_dir': '/tmp/cse'
     }
 }
 

@@ -243,14 +243,14 @@ class ServiceProcessor(object):
             templates = []
             server_config = utils.get_server_runtime_config()
             default_template_name = \
-                server_config['broker']['default_template']
+                server_config['broker']['default_template_name']
             for t in server_config['broker']['templates']:
                 is_default = t['name'] == default_template_name
                 templates.append({
                     'name': t['name'],
                     'is_default': is_default,
                     'catalog': server_config['broker']['catalog'],
-                    'catalog_item': t['catalog_item'],
+                    'catalog_item': t['catalog_item_name'],
                     'description': t['description']
                 })
             reply['body'] = templates

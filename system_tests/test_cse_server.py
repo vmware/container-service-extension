@@ -2,6 +2,31 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import os
+import re
+import subprocess
+import time
+
+import paramiko
+import pytest
+from pyvcloud.vcd.exceptions import EntityNotFoundException
+from pyvcloud.vcd.vapp import VApp
+from pyvcloud.vcd.vdc import VDC
+
+from container_service_extension.config_validator import get_validated_config
+from container_service_extension.configure_cse import check_cse_installation
+from container_service_extension.cse import cli
+from container_service_extension.remote_template_manager import \
+    get_local_script_filepath
+from container_service_extension.remote_template_manager import \
+    get_revisioned_template_name
+from container_service_extension.server_constants import ScriptFile
+import container_service_extension.system_test_framework.environment as env
+import container_service_extension.system_test_framework.utils as testutils
+from container_service_extension.template_builder import TEMP_VAPP_VM_NAME
+from container_service_extension.utils import read_data_file
+
+
 """
 CSE server tests to test validity and functionality of `cse` CLI commands.
 
@@ -45,21 +70,17 @@ if a right exists without adding it. Also need functionality to remove CSE
 rights when CSE is unregistered.
 """
 
-import re
-import subprocess
 
-import paramiko
-import pytest
-from pyvcloud.vcd.exceptions import EntityNotFoundException
-from pyvcloud.vcd.vapp import VApp
-from pyvcloud.vcd.vdc import VDC
-
-from container_service_extension.configure_cse import check_cse_installation
-from container_service_extension.configure_cse import get_validated_config
-from container_service_extension.cse import cli
-import container_service_extension.install_utils as install_utils
-import container_service_extension.system_test_framework.environment as env
-import container_service_extension.system_test_framework.utils as testutils
+def _remove_cse_artifacts():
+    for template in env.TEMPLATE_DEFINITIONS:
+        env.delete_catalog_item(template['source_ova_name'])
+        catalog_item_name = get_revisioned_template_name(
+            template['name'], template['revision'])
+        env.delete_catalog_item(catalog_item_name)
+        temp_vapp_name = testutils.get_temp_vapp_name(template['name'])
+        env.delete_vapp(temp_vapp_name)
+    env.delete_catalog()
+    env.unregister_cse()
 
 
 @pytest.fixture(scope='module', autouse='true')
@@ -76,53 +97,19 @@ def delete_installation_entities():
     - Delete source ova files, vapp templates, temp vapps, catalogs
     - Unregister CSE from vCD
     """
-    config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
-    for template in config['broker']['templates']:
-        env.delete_catalog_item(template['source_ova_name'])
-        env.delete_catalog_item(template['catalog_item'])
-        env.delete_vapp(template['temp_vapp'])
-    env.delete_catalog()
-    env.unregister_cse()
-
+    _remove_cse_artifacts()
     yield
-
     if env.TEARDOWN_INSTALLATION:
-        for template in config['broker']['templates']:
-            env.delete_catalog_item(template['source_ova_name'])
-            env.delete_catalog_item(template['catalog_item'])
-            env.delete_vapp(template['temp_vapp'])
-        env.delete_catalog()
-        env.unregister_cse()
+        _remove_cse_artifacts()
 
 
 @pytest.fixture
-def blank_cust_scripts():
-    """Fixture to use blank customization scripts for a test.
-
-    Usage: add the parameter 'blank_cust_scripts' to the test function. Use
-    this fixture if the test outcome does not rely on running the
-    customization scripts. vApp customization is a bottleneck for installation,
-    so this is useful to run installation tests faster.
-
-    Setup tasks:
-    - Create empty file 'system_tests/scripts/cust-ubuntu-16.04.sh
-    - Create empty file 'system_tests/scripts/cust-photon-v2.sh
-
-    Teardown tasks:
-    - Delete directory 'system_tests/scripts'
-    """
-    env.create_empty_cust_scripts()
-    yield
-    env.delete_cust_scripts()
-
-
-@pytest.fixture
-def unregister_cse():
+def unregister_cse_before_test():
     """Fixture to ensure that CSE is not registered to vCD.
 
     Usage: add the parameter 'unregister_cse' to the test function.
 
-    Note: we do not do teardown unregister_cse(), because the user may want
+    Note: we don't do teardown unregister_cse(), because the user may want
     to preserve the state of vCD after tests run.
     """
     env.unregister_cse()
@@ -153,7 +140,8 @@ def test_0010_cse_sample():
         testutils.format_command_info('cse', cmd, result.exit_code,
                                       result.output)
 
-    testutils.delete_file(output_filepath)
+    if os.path.exists(output_filepath):
+        os.remove(output_filepath)
 
 
 def test_0020_cse_version():
@@ -183,12 +171,6 @@ def test_0030_cse_check(config):
         testutils.format_command_info('cse', cmd, result.exit_code,
                                       result.output)
 
-    cmd = f"check -c {env.ACTIVE_CONFIG_FILEPATH} -t dummy"
-    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0,\
-        testutils.format_command_info('cse', cmd, result.exit_code,
-                                      result.output)
-
 
 def test_0040_config_missing_keys(config):
     """Test that config files with missing keys don't pass validation."""
@@ -198,14 +180,9 @@ def test_0040_config_missing_keys(config):
     bad_key_config2 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
     del bad_key_config2['vcs'][0]['username']
 
-    bad_key_config3 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
-    del bad_key_config3['broker']['templates'][0]['mem']
-    del bad_key_config3['broker']['templates'][0]['name']
-
     configs = [
         bad_key_config1,
-        bad_key_config2,
-        bad_key_config3
+        bad_key_config2
     ]
 
     for config in configs:
@@ -235,8 +212,7 @@ def test_0050_config_invalid_value_types(config):
     bad_values_config3['vcs'][0]['verify'] = 'a'
 
     bad_values_config4 = testutils.yaml_to_dict(env.ACTIVE_CONFIG_FILEPATH)
-    bad_values_config4['broker']['templates'][0]['cpu'] = 'a'
-    bad_values_config4['broker']['templates'][0]['name'] = 123
+    bad_values_config4['broker']['remote_template_cookbook_url'] = 1
 
     configs = [
         bad_values_config1,
@@ -269,34 +245,77 @@ def test_0070_check_invalid_installation(config):
     try:
         check_cse_installation(config)
         assert False, "cse check passed when it should have failed."
-    except EntityNotFoundException:
+    except Exception:
         pass
 
 
-def test_0080_install_no_capture(config, blank_cust_scripts, unregister_cse):
+def test_0080_install_skip_template_creation(config,
+                                             unregister_cse_before_test):
+    """Test install.
+
+    Installation options: '--config', '--ssh-key', '--skip-create-templates'
+
+    Tests that installation:
+    - registers CSE, without installing the templates
+
+    command: cse install --config cse_test_config.yaml
+        --ssh-key ~/.ssh/id_rsa.pub --skip-create-templates
+    required files: ~/.ssh/id_rsa.pub, cse_test_config.yaml,
+    expected: cse registered, catalog exists, source ovas do not exist,
+        temp vapps do not exist, k8s templates do not exist.
+    """
+    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
+          f"{env.SSH_KEY_FILEPATH} --skip-template-creation"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0,\
+        testutils.format_command_info('cse', cmd, result.exit_code,
+                                      result.output)
+
+    # check that cse was registered correctly
+    env.check_cse_registration(config['amqp']['routing_key'],
+                               config['amqp']['exchange'])
+
+    for template_config in env.TEMPLATE_DEFINITIONS:
+        # check that source ova file does not exist in catalog
+        assert not env.catalog_item_exists(
+            template_config['source_ova_name']), \
+            'Source ova file exists when it should not.'
+
+        # check that k8s templates does not exist
+        catalog_item_name = get_revisioned_template_name(
+            template_config['name'], template_config['revision'])
+        assert not env.catalog_item_exists(catalog_item_name), \
+            'k8s templates exist when they should not.'
+
+        # check that temp vapp does not exists
+        temp_vapp_name = testutils.get_temp_vapp_name(template_config['name'])
+        assert not env.vapp_exists(temp_vapp_name), \
+            'vApp exists when it should not.'
+
+
+def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
     """Test install.
 
     Installation options: '--config', '--template', '--ssh-key',
-        '--no-capture'.
+        '--retain-temp-vapp'.
 
     Tests that installation:
     - downloads/uploads ova file,
     - creates photon temp vapp,
-    - skips temp vapp capture.
+    - creates k8s templates
+    - skips deleting the temp vapp
+    - checks that proper packages are installed in the vm in temp vApp
 
-    command: cse install --config cse_test_config.yaml --template photon-v2
-        --ssh-key ~/.ssh/id_rsa.pub --no-capture
-    required files: ~/.ssh/id_rsa.pub, cse_test_config.yaml,
-        photon-v2 init, photon-v2 cust (blank)
-    expected: cse registered, catalog exists, photon-v2 ova exists,
-        temp vapp does not exist, template does not exist.
+    command: cse install --config cse_test_config.yaml --retain-temp-vapp
+        --ssh-key ~/.ssh/id_rsa.pub
+    required files: ~/.ssh/id_rsa.pub, cse_test_config.yaml
+    expected: cse registered, catalog exists, source ovas exist,
+        temp vapps exist, k8s templates exist.
     """
-    template_config = testutils.get_default_template_config(config)
-
     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-          f"{env.SSH_KEY_FILEPATH} --template {template_config['name']} " \
-          f"--no-capture"
-    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+          f"{env.SSH_KEY_FILEPATH} --retain-temp-vapp"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(),
+                                   catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
                                       result.output)
@@ -304,111 +323,51 @@ def test_0080_install_no_capture(config, blank_cust_scripts, unregister_cse):
     # check that cse was registered correctly
     env.check_cse_registration(config['amqp']['routing_key'],
                                config['amqp']['exchange'])
-
-    # check that source ova file exists in catalog
-    assert env.catalog_item_exists(template_config['source_ova_name']), \
-        'Source ova file does not exist when it should.'
-
-    # check that vapp templates do not exist
-    assert not env.catalog_item_exists(template_config['catalog_item']), \
-        'vApp templates exist when they should not (--no-capture was used).'
-
-    # check that temp vapp exists (--no-capture)
-    assert env.vapp_exists(template_config['temp_vapp']), \
-        'vApp does not exist when it should (--no-capture).'
-
-
-def test_0090_install_temp_vapp_already_exists(config, blank_cust_scripts,
-                                               unregister_cse):
-    """Test installation when temp vapp already exists.
-
-    Tests that installation:
-    - captures temp vapp as template correctly,
-    - does not delete temp_vapp when config file 'cleanup' property is false.
-
-    command: cse install --config cse_test_config.yaml
-        --template photon-v2
-    required files: cse_test_config.yaml
-    expected: cse not registered, photon-v2 template exists, temp-vapp exists
-    """
-    # set cleanup to false for this test
-    for i, template_dict in enumerate(config['broker']['templates']):
-        config['broker']['templates'][i]['cleanup'] = False
-
-    template_config = testutils.get_default_template_config(config)
-
-    testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
-
-    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-          f"{env.SSH_KEY_FILEPATH} --template {template_config['name']}"
-    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0,\
-        testutils.format_command_info('cse', cmd, result.exit_code,
-                                      result.output)
-
-    # check that cse was registered correctly
-    env.check_cse_registration(config['amqp']['routing_key'],
-                               config['amqp']['exchange'])
-
-    # check that vapp template exists in catalog
-    assert env.catalog_item_exists(template_config['catalog_item']), \
-        'vApp template does not exist when it should.'
-
-    # check that temp vapp exists (cleanup: false)
-    assert env.vapp_exists(template_config['temp_vapp']), \
-        'vApp does not exist when it should (cleanup: false).'
-
-
-def test_0100_install_update(config, unregister_cse):
-    """Tests installation option: '--update'.
-
-    Tests that installation:
-    - creates all templates correctly,
-    - customizes temp vapps correctly.
-
-    command: cse install --config cse_test_config.yaml
-        --ssh-key ~/.ssh/id_rsa.pub --update --no-capture
-    required files: cse_test_config.yaml, ~/.ssh/id_rsa.pub,
-        ubuntu/photon init/cust scripts
-    expected: cse registered, ubuntu/photon ovas exist, temp vapps exist,
-        templates exist.
-    """
-    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-          f"{env.SSH_KEY_FILEPATH} --update --no-capture"
-    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0,\
-        testutils.format_command_info('cse', cmd, result.exit_code,
-                                      result.output)
 
     vdc = VDC(env.CLIENT, href=env.VDC_HREF)
-
-    # check that cse was registered correctly
-    env.check_cse_registration(config['amqp']['routing_key'],
-                               config['amqp']['exchange'])
-
-    # ssh into vms to check for installed software
     ssh_client = paramiko.SSHClient()
     ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-    # check that ova files and temp vapps exist
-    for template_config in config['broker']['templates']:
-        assert env.catalog_item_exists(template_config['source_ova_name']), \
-            'Source ova files do not exist when they should.'
+    for template_config in env.TEMPLATE_DEFINITIONS:
+        # check that source ova file exists in catalog
+        assert env.catalog_item_exists(
+            template_config['source_ova_name']), \
+            'Source ova file does not existswhen it should.'
 
-        temp_vapp_name = template_config['temp_vapp']
+        # check that k8s templates exist
+        catalog_item_name = get_revisioned_template_name(
+            template_config['name'], template_config['revision'])
+        assert env.catalog_item_exists(catalog_item_name), \
+            'k8s template does not exist when it should.'
+
+        # check that temp vapp exists
+        temp_vapp_name = testutils.get_temp_vapp_name(
+            template_config['name'])
         try:
+            vdc.reload()
             vapp_resource = vdc.get_vapp(temp_vapp_name)
         except EntityNotFoundException:
-            assert False, 'vApp does not exist when it should (--no-capture)'
+            assert False, 'vApp does not exist when it should.'
 
+        # ssh into vms to check for installed software
         vapp = VApp(env.CLIENT, resource=vapp_resource)
-        ip = vapp.get_primary_ip(temp_vapp_name)
+        # The temp vapp is shutdown before the template is captured, it
+        # needs to be powered on before trying to ssh into it.
+        task = vapp.power_on()
+        env.CLIENT.get_task_monitor().wait_for_success(task)
+
+        # HACK! let the ssh daemon come up
+        time.sleep(env.WAIT_INTERVAL) # 30 seconds
+
+        ip = vapp.get_primary_ip(TEMP_VAPP_VM_NAME)
         try:
             ssh_client.connect(ip, username='root')
             # run different commands depending on OS
             if 'photon' in temp_vapp_name:
-                script = \
-                    install_utils.get_data_file(env.PHOTON_CUST_SCRIPT_NAME)
+                script_filepath = get_local_script_filepath(
+                    template_config['name'], template_config['revision'],
+                    ScriptFile.CUST)
+                script = read_data_file(script_filepath)
                 pattern = r'(kubernetes\S*)'
                 packages = re.findall(pattern, script)
                 stdin, stdout, stderr = ssh_client.exec_command("rpm -qa")
@@ -417,9 +376,11 @@ def test_0100_install_update(config, unregister_cse):
                     assert package in installed, \
                         f"{package} not found in Photon VM"
             elif 'ubuntu' in temp_vapp_name:
-                script = \
-                    install_utils.get_data_file(env.UBUNTU_CUST_SCRIPT_NAME)
-                pattern = r'((kubernetes|docker\S*|kubelet|kubeadm|kubectl)\S*=\S*)'  # noqa
+                script_filepath = get_local_script_filepath(
+                    template_config['name'], template_config['revision'],
+                    ScriptFile.CUST)
+                script = read_data_file(script_filepath)
+                pattern = r'((kubernetes|docker\S*|kubelet|kubeadm|kubectl)\S*=\S*)'  # noqa: E501
                 packages = [tup[0] for tup in re.findall(pattern, script)]
                 cmd = "dpkg -l | awk '{print $2\"=\"$3}'"
                 stdin, stdout, stderr = ssh_client.exec_command(cmd)
@@ -428,23 +389,28 @@ def test_0100_install_update(config, unregister_cse):
                     assert package in installed, \
                         f"{package} not found in Ubuntu VM"
         finally:
-            ssh_client.close()
+            if ssh_client:
+                ssh_client.close()
 
 
-def test_0110_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
-    """Tests that installation deletes temp vapps when 'cleanup' is True.
+def test_0100_install_force_update(config, unregister_cse_before_test):
+    """Tests installation option: '--update'.
+
+    Tests that installation:
+    - creates all templates correctly,
+    - customizes temp vapps correctly.
 
     command: cse install --config cse_test_config.yaml
-    expected: temp vapps are deleted
+        --ssh-key ~/.ssh/id_rsa.pub --update
+    required files: cse_test_config.yaml, ~/.ssh/id_rsa.pub,
+        ubuntu/photon init/cust scripts
+    expected: cse registered, source ovas exist, k8s templates exist and
+        temp vapps don't exist.
     """
-    # set cleanup to true in config file
-    for template_config in config['broker']['templates']:
-        template_config['cleanup'] = True
-    testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
-
-    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} " \
-          f"--ssh-key {env.SSH_KEY_FILEPATH}"
-    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
+          f"{env.SSH_KEY_FILEPATH} --force-update"
+    result = env.CLI_RUNNER.invoke(
+        cli, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
                                       result.output)
@@ -453,17 +419,26 @@ def test_0110_install_cleanup_true(config, blank_cust_scripts, unregister_cse):
     env.check_cse_registration(config['amqp']['routing_key'],
                                config['amqp']['exchange'])
 
-    for template_config in config['broker']['templates']:
-        # check that vapp templates exists
-        assert env.catalog_item_exists(template_config['catalog_item']), \
-            'vApp template does not exist when it should.'
+    for template_config in env.TEMPLATE_DEFINITIONS:
+        # check that source ova file exists in catalog
+        assert env.catalog_item_exists(
+            template_config['source_ova_name']), \
+            'Source ova file does not existswhen it should.'
 
-        # check that temp vapps do not exist (cleanup: true)
-        assert not env.vapp_exists(template_config['temp_vapp']), \
-            'Temp vapp exists when it should not (cleanup: True).'
+        # check that k8s templates exist
+        catalog_item_name = get_revisioned_template_name(
+            template_config['name'], template_config['revision'])
+        assert env.catalog_item_exists(catalog_item_name), \
+            'k8s template does not exist when it should.'
+
+        # check that temp vapp does not exists
+        temp_vapp_name = testutils.get_temp_vapp_name(
+            template_config['name'])
+        assert not env.vapp_exists(temp_vapp_name), \
+            'vApp exists when it should not.'
 
 
-def test_0120_cse_check_valid_installation(config):
+def test_0110_cse_check_valid_installation(config):
     """Tests that `cse check` passes for a valid installation.
 
     command: cse check -c cse_test_config.yaml -i
@@ -475,7 +450,7 @@ def test_0120_cse_check_valid_installation(config):
         assert False, "cse check failed when it should have passed."
 
 
-def test_0130_cse_run(config):
+def test_0120_cse_run(config):
     """Test `cse run` command.
 
     Run cse server as a subprocess with a timeout. If we
@@ -492,8 +467,22 @@ def test_0130_cse_run(config):
     ]
 
     for cmd in cmds:
+        p = None
         try:
-            p = subprocess.run(cmd.split(), timeout=15)
+            if os.name == 'nt':
+                p = subprocess.Popen(cmd, shell=True)
+            else:
+                p = subprocess.Popen(cmd.split())
+            p.wait(timeout=env.WAIT_INTERVAL * 2) # 1 minute
             assert False, f"`{cmd}` failed with returncode {p.returncode}"
         except subprocess.TimeoutExpired:
             pass
+        finally:
+            try:
+                if p:
+                    if os.name == 'nt':
+                        subprocess.run(f"taskkill /f /pid {p.pid} /t")
+                    else:
+                        p.terminate()
+            except OSError:
+                pass

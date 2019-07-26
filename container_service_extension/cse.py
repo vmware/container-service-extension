@@ -13,8 +13,8 @@ from pyVmomi import vim
 import requests
 from vcd_cli.utils import stdout
 
+from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
-from container_service_extension.configure_cse import get_validated_config
 from container_service_extension.configure_cse import install_cse
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.sample_generator import generate_sample_config
@@ -161,20 +161,8 @@ def sample(ctx, output, pks_output):
     '--check-install',
     'check_install',
     is_flag=True,
-    required=False,
-    default=False,
     help='Checks that CSE is installed on vCD according to the config file')
-@click.option(
-    '-t',
-    '--template',
-    'template',
-    required=False,
-    default='*',
-    metavar='TEMPLATE_NAME',
-    help="If '--check-install' flag is used, validate specified k8s template. "
-         "Default value of '*' means that all k8s templates in config file"
-         " will be validated")
-def check(ctx, config, check_install, template):
+def check(ctx, config, check_install):
     """Validate CSE config file."""
     try:
         check_python_version(ConsoleMessagePrinter())
@@ -198,14 +186,13 @@ def check(ctx, config, check_install, template):
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
 
-    if not check_install or config_dict is None:
-        return
-
-    try:
-        check_cse_installation(config_dict, check_template=template,
-                               msg_update_callback=ConsoleMessagePrinter())
-    except EntityNotFoundException:
-        click.secho("CSE installation is invalid", fg='red')
+    if check_install and config_dict:
+        try:
+            check_cse_installation(
+                config_dict, msg_update_callback=ConsoleMessagePrinter())
+        except Exception as err:
+            click.secho(f"Error : {err}")
+            click.secho("CSE installation is invalid", fg='red')
 
 
 @cli.command(short_help='Install CSE on vCD')
@@ -220,29 +207,23 @@ def check(ctx, config, check_install, template):
     default='config.yaml',
     help='Filepath of CSE config file')
 @click.option(
-    '-t',
-    '--template',
-    'template',
-    required=False,
-    default='*',
-    metavar='TEMPLATE_NAME',
-    help="Create only the specified k8s template. Default value of '*' "
-         "means that all templates in config file will be created")
-@click.option(
-    '-u',
-    '--update',
+    '-s',
+    '--skip-template-creation',
+    'skip_template_creation',
     is_flag=True,
-    default=False,
-    required=False,
-    help='Recreate CSE native k8s templates on vCD if they already exist')
+    help='Skips creating CSE k8s template during installation')
 @click.option(
-    '-n',
-    '--no-capture',
+    '-f',
+    '--force-update',
     is_flag=True,
-    required=False,
-    default=False,
-    help='Do not capture the temporary vApp as a catalog template. --ssh-key '
-         'option is required if this flag is used')
+    help='Recreate CSE k8s templates on vCD even if they already exist')
+@click.option(
+    '-d',
+    '--retain-temp-vapp',
+    'retain_temp_vapp',
+    is_flag=True,
+    help='Retain the temporary vApp after the template has been captured'
+         ' --ssh-key option is required if this flag is used')
 @click.option(
     '-k',
     '--ssh-key',
@@ -251,7 +232,8 @@ def check(ctx, config, check_install, template):
     default=None,
     type=click.File('r'),
     help='Filepath of SSH public key to add to vApp template')
-def install(ctx, config, template, update, no_capture, ssh_key_file):
+def install(ctx, config, skip_template_creation, force_update,
+            retain_temp_vapp, ssh_key_file):
     """Install CSE on vCloud Director."""
     try:
         check_python_version(ConsoleMessagePrinter())
@@ -259,7 +241,7 @@ def install(ctx, config, template, update, no_capture, ssh_key_file):
         click.secho(str(err), fg='red')
         sys.exit(1)
 
-    if no_capture and ssh_key_file is None:
+    if retain_temp_vapp and not ssh_key_file:
         click.echo('Must provide ssh-key file (using --ssh-key OR -k) if '
                    '--no-capture is True, or else temporary vm will '
                    'be inaccessible')
@@ -269,8 +251,10 @@ def install(ctx, config, template, update, no_capture, ssh_key_file):
     if ssh_key_file is not None:
         ssh_key = ssh_key_file.read()
     try:
-        install_cse(ctx, config_file_name=config, template_name=template,
-                    update=update, no_capture=no_capture, ssh_key=ssh_key,
+        install_cse(ctx, config_file_name=config,
+                    skip_template_creation=skip_template_creation,
+                    force_update=force_update, ssh_key=ssh_key,
+                    retain_temp_vapp=retain_temp_vapp,
                     msg_update_callback=ConsoleMessagePrinter())
     except (EntityNotFoundException, NotAcceptableException, VcdException,
             ValueError, KeyError, TypeError) as err:
@@ -300,8 +284,6 @@ def install(ctx, config, template, update, no_capture, ssh_key_file):
     '-s',
     '--skip-check',
     is_flag=True,
-    default=False,
-    required=False,
     help='Skip CSE installation checks')
 def run(ctx, config, skip_check):
     """Run CSE service."""
