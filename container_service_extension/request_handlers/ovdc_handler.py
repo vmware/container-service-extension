@@ -41,7 +41,7 @@ def ovdc_update(request_dict, tenant_auth_token):
         ovdc_utils.create_pks_compute_profile(k8s_provider_info,
                                               tenant_auth_token, request_dict)
 
-    task = ovdc_utils.set_ovdc_k8s_provider_metadata(
+    task = ovdc_utils.update_ovdc_k8s_provider_metadata(
         ovdc_id=request_dict[RequestKey.OVDC_ID],
         k8s_provider_data=k8s_provider_info,
         k8s_provider=k8s_provider)

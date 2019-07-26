@@ -137,9 +137,9 @@ def get_ovdc_list(client, list_pks_plans=False, request_dict=None,
     return ovdc_list
 
 
-def set_ovdc_k8s_provider_metadata(ovdc_id,
-                                   k8s_provider_data=None,
-                                   k8s_provider=None):
+def update_ovdc_k8s_provider_metadata(ovdc_id,
+                                      k8s_provider_data=None,
+                                      k8s_provider=None):
     """Set the k8s provider metadata of given ovdc.
 
     :param str ovdc_id:
