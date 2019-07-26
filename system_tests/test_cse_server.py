@@ -359,16 +359,15 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
         ip = vapp.get_primary_ip(TEMP_VAPP_VM_NAME)
 
         try:
-            ssh_client.connect(ip, username='root')
-            max_tries = 4
+            max_tries = 5
             for i in range(max_tries):
-                time.sleep(env.WAIT_INTERVAL)
                 try:
                     ssh_client.connect(ip, username='root')
                     break
                 except Exception:
                     if i == max_tries - 1:
                         raise
+                    time.sleep(env.WAIT_INTERVAL)
 
             # run different commands depending on OS
             if 'photon' in temp_vapp_name:
