@@ -95,8 +95,7 @@ def get_ovdc_list(client, list_pks_plans=False, request_dict=None,
         raise UnauthorizedActionError('Operation Denied. Plans available '
                                       'only for System Administrator.')
     if list_pks_plans and (request_dict is None or tenant_auth_token is None):
-        raise ValueError("Request_dict and tenant_auth_token required "
-                         "if list_pks_plans is True")
+        raise ValueError("Missing required parameters for list pks plans.")
 
     if client.is_sysadmin():
         org_resource_list = client.get_org_list()
