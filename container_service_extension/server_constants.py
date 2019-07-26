@@ -69,7 +69,7 @@ class ScriptFile(str, Enum):
 
 
 @unique
-class LocalTemplateDefinition(str, Enum):
+class LocalTemplateKey(str, Enum):
     """Enumerate the keys that define a template."""
 
     ADMIN_PASSWORD = 'admin_password'
@@ -84,7 +84,7 @@ class LocalTemplateDefinition(str, Enum):
 
 
 @unique
-class RemoteTemplateDefinition(str, Enum):
+class RemoteTemplateKey(str, Enum):
     """Enumerate the keys that define a template."""
 
     ADMIN_PASSWORD = 'admin_password'

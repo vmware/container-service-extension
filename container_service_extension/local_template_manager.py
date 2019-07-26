@@ -9,11 +9,11 @@ from pyvcloud.vcd.utils import metadata_to_dict
 
 from container_service_extension.pyvcloud_utils import get_org
 from container_service_extension.server_constants import \
-    LocalTemplateDefinition
+    LocalTemplateKey
 
 
 def _dict_to_k8s_local_template_definition(dikt):
-    valid_keys = [e.value for e in LocalTemplateDefinition]
+    valid_keys = [e.value for e in LocalTemplateKey]
     missing_keys = []
     definition = {}
     for key in valid_keys:
