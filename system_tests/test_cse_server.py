@@ -355,7 +355,7 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
         # needs to be powered on before trying to ssh into it.
         task = vapp.power_on()
         env.CLIENT.get_task_monitor().wait_for_success(task)
-
+        vapp.reload()
         ip = vapp.get_primary_ip(TEMP_VAPP_VM_NAME)
 
         try:
