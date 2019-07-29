@@ -149,6 +149,11 @@ class VcdBroker(AbstractBroker, threading.Thread):
         else:
             task_href = None
 
+        org_resource = self.tenant_client.get_org_by_name(
+            self.req_spec.get(RequestKey.ORG_NAME))
+        org = Org(self.tenant_client, resource=org_resource)
+        user_href = org.get_user(self.client_session.get('user')).get('href')
+
         self.task_resource = self.task.update(
             status=status.value,
             namespace='vcloud.cse',
@@ -156,10 +161,10 @@ class VcdBroker(AbstractBroker, threading.Thread):
             operation_name=self.op,
             details='',
             progress=None,
-            owner_href=f"urn:cse:cluster:{self.cluster_id}",
-            owner_name=self.cluster_name,
-            owner_type='application/vcloud.cse.cluster+xml',
-            user_href=self.tenant_info['user_id'],
+            owner_href=self.tenant_info['org_href'],
+            owner_name=self.tenant_info['org_name'],
+            owner_type='application/vnd.vmware.vcloud.org+xml',
+            user_href=user_href,
             user_name=self.tenant_info['user_name'],
             org_href=self.tenant_info['org_href'],
             task_href=task_href,
