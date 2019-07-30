@@ -5,13 +5,12 @@
 from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseServerError
-from container_service_extension.ovdc_manager import \
-    construct_ctr_prov_ctx_from_ovdc_metadata
+import container_service_extension.ovdc_utils as ovdc_utils
 from container_service_extension.pksbroker import PKSBroker
 from container_service_extension.pksbroker_manager import PksBrokerManager
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
-from container_service_extension.server_constants import K8sProviders
+from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import PKS_CLUSTER_DOMAIN_KEY
 from container_service_extension.server_constants import PKS_PLANS_KEY
 from container_service_extension.shared_constants import RequestKey
@@ -31,7 +30,7 @@ from container_service_extension.vcdbroker_manager import VcdBrokerManager
 #  3. Refactor both client and server code accordingly
 #  4. As part of refactoring, avoid accessing HTTP request body directly
 #  from VcdBroker and PksBroker. We should try to limit processing request to
-#  processor.py and broker_manager.py.
+#  request_processor.py and broker_manager.py.
 
 
 class BrokerManager(object):
@@ -150,18 +149,16 @@ class BrokerManager(object):
         # logged-in user to check for duplicates.
         cluster, _ = self._find_cluster_in_org(cluster_name,
                                                is_org_admin_search=True)
-        if not cluster:
-            ctr_prov_ctx = construct_ctr_prov_ctx_from_ovdc_metadata(
-                ovdc_name=vdc_name, org_name=org_name)
-            if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProviders.PKS:
-                cluster_spec['pks_plan'] = ctr_prov_ctx[PKS_PLANS_KEY][0]
-                cluster_spec['pks_ext_host'] = \
-                    f"{cluster_name}.{ctr_prov_ctx[PKS_CLUSTER_DOMAIN_KEY]}"
-            broker = self._get_broker_based_on_ctr_prov_ctx(ctr_prov_ctx)
-            return broker.create_cluster(**cluster_spec)
-        else:
-            raise ClusterAlreadyExistsError(
-                f"Cluster {cluster_name} already exists.")
+        if cluster:
+            raise ClusterAlreadyExistsError(f"Cluster {cluster_name} "
+                                            f"already exists.")
+
+        ctr_prov_ctx = ovdc_utils.get_ovdc_k8s_provider_metadata(org_name=org_name, ovdc_name=vdc_name, include_credentials=True, include_nsxt_info=True) # noqa: E501
+        if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProvider.PKS:
+            cluster_spec['pks_plan'] = ctr_prov_ctx[PKS_PLANS_KEY][0]
+            cluster_spec['pks_ext_host'] = f"{cluster_name}.{ctr_prov_ctx[PKS_CLUSTER_DOMAIN_KEY]}" # noqa: E501
+        broker = self._get_broker_based_on_ctr_prov_ctx(ctr_prov_ctx)
+        return broker.create_cluster(**cluster_spec)
 
     def _delete_cluster(self, **cluster_spec):
         cluster, broker = self._get_cluster_info(**cluster_spec)
@@ -173,7 +170,7 @@ class BrokerManager(object):
         Logic of the method is as follows.
 
         If 'ovdc' is present in the cluster spec,
-            choose the right broker (by identifying the container_provider
+            choose the right broker (by identifying the k8s provider
             (vcd|pks) defined for that ovdc) to do get_cluster operation.
         else
             Invoke set of all (vCD/PKS) brokers in the org to find the cluster
@@ -199,7 +196,7 @@ class BrokerManager(object):
         """Logic of the method is as follows.
 
         If 'ovdc' is present in the body,
-            choose the right broker (by identifying the container_provider
+            choose the right broker (by identifying the k8s provider
             (vcd|pks) defined for that ovdc) to do list_clusters operation.
         Else
             Invoke set of all (vCD/PKS)brokers in the org to do list_clusters.
@@ -245,10 +242,10 @@ class BrokerManager(object):
         # exception.
         if is_pks_enabled():
             if ctr_prov_ctx:
-                if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProviders.PKS:
+                if ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProvider.PKS:
                     return PKSBroker(self.tenant_auth_token, self.req_spec,
                                      pks_ctx=ctr_prov_ctx)
-                elif ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProviders.NATIVE:
+                elif ctr_prov_ctx.get(K8S_PROVIDER_KEY) == K8sProvider.NATIVE:
                     return VcdBroker(self.tenant_auth_token, self.req_spec)
 
         else:
@@ -258,7 +255,7 @@ class BrokerManager(object):
                              "deployment")
 
     def _get_broker_based_on_vdc(self):
-        """Get the broker based on ovdc.
+        """Get the broker based on org VDC.
 
         :return: broker
 
@@ -267,7 +264,6 @@ class BrokerManager(object):
         ovdc_name = self.req_spec.get(RequestKey.OVDC_NAME)
         org_name = self.req_spec.get(RequestKey.ORG_NAME)
 
-        ctr_prov_ctx = construct_ctr_prov_ctx_from_ovdc_metadata(
-            ovdc_name=ovdc_name, org_name=org_name)
+        ctr_prov_ctx = ovdc_utils.get_ovdc_k8s_provider_metadata(org_name=org_name, ovdc_name=ovdc_name, include_credentials=True, include_nsxt_info=True) # noqa: E501
 
         return self._get_broker_based_on_ctr_prov_ctx(ctr_prov_ctx)

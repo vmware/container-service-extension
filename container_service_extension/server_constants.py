@@ -7,13 +7,11 @@ from enum import unique
 
 import requests
 
-
-@unique
-class NodeType(str, Enum):
-    MASTER = 'mstr'
-    WORKER = 'node'
-    NFS = 'nfsd'
-
+# CSE SERVICE; used for registering CSE to vCD as an api extension service.
+CSE_SERVICE_NAME = 'cse'
+CSE_SERVICE_NAMESPACE = 'cse'
+EXCHANGE_TYPE = 'direct'
+SYSTEM_ORG_NAME = 'system'
 
 # CSE SERVICE; used for registering CSE to vCD as an api extension service.
 CSE_SERVICE_NAME = 'cse'
@@ -44,12 +42,19 @@ VERSION_V1 = 'v1'
 
 
 @unique
-class K8sProviders(str, Enum):
+class NodeType(str, Enum):
+    MASTER = 'mstr'
+    WORKER = 'node'
+    NFS = 'nfsd'
+
+
+@unique
+class K8sProvider(str, Enum):
     """Types of Kubernetes providers.
 
     Having a str mixin allows us to do things like:
-    'native' == K8sProviders.NATIVE
-    f"Kubernetes provider is '{K8sProviders.NATIVE}'
+    'native' == K8sProvider.NATIVE
+    f"Kubernetes provider is '{K8sProvider.NATIVE}'
     """
 
     NATIVE = 'native'

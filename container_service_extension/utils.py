@@ -78,6 +78,13 @@ def get_duplicate_items_in_list(items):
     return list(duplicates)
 
 
+def ensure_keys_in_dict(required_keys, dikt, dict_name='dictionary'):
+    required = set(required_keys)
+    if not required.issubset(dikt.keys()):
+        raise KeyError(f"Missing required keys in {dict_name}: "
+                       f"{required.difference(dikt.keys())}")
+
+
 def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
                                excluded_keys=[], msg_update_callback=None):
     """Compare a dictionary with a reference dictionary.

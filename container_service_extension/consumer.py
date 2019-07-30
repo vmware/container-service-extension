@@ -12,7 +12,7 @@ import pika
 import requests
 
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.processor import ServiceProcessor
+import container_service_extension.request_processor as request_processor
 from container_service_extension.server_constants import EXCHANGE_TYPE
 
 
@@ -39,7 +39,6 @@ class MessageConsumer(object):
         self.exchange = exchange
         self.routing_key = routing_key
         self.queue = routing_key
-        self.service_processor = ServiceProcessor()
         self.fsencoding = sys.getfilesystemencoding()
 
     def connect(self):
@@ -153,7 +152,7 @@ class MessageConsumer(object):
                          f"from {properties.app_id} "
                          f"({threading.currentThread().ident}): "
                          f"{json.dumps(body_json)}, props: {properties}")
-            result = self.service_processor.process_request(body_json)
+            result = request_processor.process_request(body_json)
             status_code = result['status_code']
             reply_body = json.dumps(result['body'])
         except Exception as e:

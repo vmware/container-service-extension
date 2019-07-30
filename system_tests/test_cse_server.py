@@ -332,7 +332,7 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
         # check that source ova file exists in catalog
         assert env.catalog_item_exists(
             template_config['source_ova_name']), \
-            'Source ova file does not existswhen it should.'
+            'Source ova file does not exist when it should.'
 
         # check that k8s templates exist
         catalog_item_name = get_revisioned_template_name(
@@ -355,13 +355,20 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
         # needs to be powered on before trying to ssh into it.
         task = vapp.power_on()
         env.CLIENT.get_task_monitor().wait_for_success(task)
-
-        # HACK! let the ssh daemon come up
-        time.sleep(env.WAIT_INTERVAL) # 30 seconds
-
+        vapp.reload()
         ip = vapp.get_primary_ip(TEMP_VAPP_VM_NAME)
+
         try:
-            ssh_client.connect(ip, username='root')
+            max_tries = 5
+            for i in range(max_tries):
+                try:
+                    ssh_client.connect(ip, username='root')
+                    break
+                except Exception:
+                    if i == max_tries - 1:
+                        raise
+                    time.sleep(env.WAIT_INTERVAL)
+
             # run different commands depending on OS
             if 'photon' in temp_vapp_name:
                 script_filepath = get_local_script_filepath(

@@ -190,18 +190,16 @@ class TemplateBuilder():
 
         :rtype: str
         """
-        init_sctipt_filepath = get_local_script_filepath(
+        init_script_filepath = get_local_script_filepath(
             self.template_name, self.template_revision, ScriptFile.INIT)
         init_script = read_data_file(
-            init_sctipt_filepath, logger=self.logger,
+            init_script_filepath, logger=self.logger,
             msg_update_callback=self.msg_update_callback)
         if self.ssh_key is not None:
             init_script += \
-                f"""
-                mkdir -p /root/.ssh
-                echo '{self.ssh_key}' >> /root/.ssh/authorized_keys
-                chmod -R go-rwx /root/.ssh
-                """
+                f"mkdir -p /root/.ssh\n" \
+                f"echo '{self.ssh_key}' >> /root/.ssh/authorized_keys\n" \
+                f"chmod -R go-rwx /root/.ssh"
         return init_script
 
     def _create_temp_vapp(self):
@@ -397,7 +395,7 @@ class TemplateBuilder():
             self.client.get_task_monitor().wait_for_success(task)
             vapp.reload()
 
-            msg = f"Sucessfully shut down vApp '{self.temp_vapp_name}'"
+            msg = f"Successfully shut down vApp '{self.temp_vapp_name}'"
             if self.msg_update_callback:
                 self.msg_update_callback.general(msg)
             if self.logger:
