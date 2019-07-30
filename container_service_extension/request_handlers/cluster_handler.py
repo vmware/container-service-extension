@@ -10,7 +10,7 @@ def cluster_create(request_dict, tenant_auth_token):
     Required data: org_name, ovdc_name, cluster_name, num_nodes.
     Conditional data: if k8s_provider is 'native', num_cpu, mb_memory,
         network_name, storage_profile_name, template_name, enable_nfs,
-        rollback are required.
+        rollback are required (validation handled elsewhere).
 
     :return: Dict
     """
@@ -31,8 +31,8 @@ def cluster_resize(request_dict, tenant_auth_token):
 
     Required data: org_name, cluster_name, num_nodes.
     Conditional data: if k8s_provider is 'native', network_name,
-        rollback are required.
-    Optional data: ovdc_name
+        rollback are required (validation handled elsewhere).
+    Optional data: ovdc_name.
 
     :return: Dict
     """
@@ -51,7 +51,7 @@ def cluster_delete(request_dict, tenant_auth_token):
     """Request handler for cluster operation.
 
     Required data: org_name, cluster_name.
-    Optional data: ovdc_name
+    Optional data: ovdc_name.
 
     :return: Dict
     """
@@ -69,7 +69,7 @@ def cluster_info(request_dict, tenant_auth_token):
     """Request handler for cluster operation.
 
     Required data: org_name, cluster_name.
-    Optional data: ovdc_name
+    Optional data: ovdc_name.
 
     :return: Dict
     """
@@ -87,7 +87,7 @@ def cluster_config(request_dict, tenant_auth_token):
     """Request handler for cluster operation.
 
     Required data: org_name, cluster_name.
-    Optional data: ovdc_name
+    Optional data: ovdc_name.
 
     :return: Dict
     """
@@ -115,7 +115,7 @@ def node_create(request_dict, tenant_auth_token):
 
     Required data: org name, ovdc name, cluster name, num nodes, num cpu,
         mb memory, network name, storage profile name, template name,
-        rollback, enable nfs
+        rollback, enable nfs.
 
     :return: Dict
     """
@@ -142,8 +142,8 @@ def node_create(request_dict, tenant_auth_token):
 def node_delete(request_dict, tenant_auth_token):
     """Request handler for cluster operation.
 
-    Required data: org_name, cluster_name, node_names_list
-    Optional data: ssh_key_file, ovdc_name
+    Required data: org_name, cluster_name, node_names_list.
+    Optional data: ssh_key_file, ovdc_name.
 
     :return: Dict
     """
@@ -163,8 +163,8 @@ def node_delete(request_dict, tenant_auth_token):
 def node_info(request_dict, tenant_auth_token):
     """Request handler for cluster operation.
 
-    Required data: org_name, cluster_name, node_name
-    Optional data: ovdc_name
+    Required data: org_name, cluster_name, node_name.
+    Optional data: ovdc_name.
 
     :return: Dict
     """
