@@ -332,7 +332,7 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
         # check that source ova file exists in catalog
         assert env.catalog_item_exists(
             template_config['source_ova_name']), \
-            'Source ova file does not existswhen it should.'
+            'Source ova file does not exist when it should.'
 
         # check that k8s templates exist
         catalog_item_name = get_revisioned_template_name(
