@@ -49,10 +49,8 @@ class AbstractBroker(abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_cluster_config(self, cluster_name):
+    def get_cluster_config(self):
         """Get the configuration for the cluster.
-
-        :param: str cluster_name: Name of the cluster.
 
         :return: Configuration of cluster
 
@@ -66,7 +64,7 @@ class AbstractBroker(abc.ABC):
 
         :return: response object
 
-        :rtype: dict
+        :rtype: list
 
         """
         pass

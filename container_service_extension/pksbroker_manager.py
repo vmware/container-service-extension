@@ -13,10 +13,11 @@ from container_service_extension.pksbroker import PKSBroker
 from container_service_extension.pyvcloud_utils import connect_vcd_user_via_token # noqa: E501
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
+from container_service_extension.shared_constants import RequestKey
 from container_service_extension.utils import get_pks_cache
 
 
-class PksBrokerManager(object):
+class PksBrokerManager:
     def __init__(self, tenant_auth_token, request_spec):
         self.tenant_auth_token = tenant_auth_token
         self.req_spec = request_spec
@@ -38,7 +39,7 @@ class PksBrokerManager(object):
                 pks_clusters.append(pks_cluster)
         return pks_clusters
 
-    def find_cluster_in_org(self, cluster_name, is_org_admin_search=False):
+    def find_cluster_in_org(self, is_org_admin_search=False):
         """Invoke all PKS brokers in the org to find the cluster.
 
         'is_org_admin_search' is used here to prevent cluster creation with
@@ -51,15 +52,14 @@ class PksBrokerManager(object):
         Else:
             (None, None) if cluster not found.
         """
+        cluster_name = self.req_spec[RequestKey.CLUSTER_NAME]
         pks_ctx_list = \
             self.create_pks_context_for_all_accounts_in_org()
         for pks_ctx in pks_ctx_list:
             pksbroker = PKSBroker(self.tenant_auth_token, self.req_spec,
                                   pks_ctx)
             try:
-                return pksbroker.get_cluster_info(
-                    cluster_name=cluster_name,
-                    is_org_admin_search=is_org_admin_search), pksbroker
+                return pksbroker.get_cluster_info(is_org_admin_search=is_org_admin_search), pksbroker # noqa: E501
             except PksClusterNotFoundError as err:
                 # If a cluster is not found, then broker_manager will
                 # decide if it wants to raise an error or ignore it if was it

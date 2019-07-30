@@ -57,8 +57,7 @@ from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.uaaclient.uaaclient import UaaClient
-from container_service_extension.utils import get_pks_cache
-
+import container_service_extension.utils as utils
 
 # Delimiter to append with user id context
 USER_ID_SEPARATOR = "---"
@@ -105,7 +104,7 @@ class PKSBroker(AbstractBroker):
             if pks_ctx.get('proxy') else None
         self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE_KEY, None)
         self.nsxt_server = \
-            get_pks_cache().get_nsxt_info(pks_ctx.get('vc'))
+            utils.get_pks_cache().get_nsxt_info(pks_ctx.get('vc'))
         if self.nsxt_server:
             self.nsxt_client = NSXTClient(
                 host=self.nsxt_server.get('host'),
@@ -261,7 +260,7 @@ class PKSBroker(AbstractBroker):
         return list_of_cluster_dicts
 
     @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
-    def create_cluster(self, **cluster_spec):
+    def create_cluster(self):
         """Create cluster in PKS environment.
 
         To retain the user context, user-id of the logged-in user is appended
@@ -275,16 +274,25 @@ class PKSBroker(AbstractBroker):
 
         :rtype: dict
         """
-        cluster_name = cluster_spec['cluster_name']
+        required = [
+            RequestKey.CLUSTER_NAME,
+            RequestKey.NUM_WORKERS,
+            RequestKey.PKS_PLAN_NAME,
+            'pks_ext_host' # noqa: E501 this should not be part of the request spec, check broker_manager._create_cluster(). request spec should not be getting modified ever
+        ]
+        utils.ensure_keys_in_dict(required, self.req_spec, dict_name='request')
+
+        cluster_name = self.req_spec[RequestKey.CLUSTER_NAME]
         qualified_cluster_name = self._append_user_id(cluster_name)
-        cluster_spec['cluster_name'] = qualified_cluster_name
+        self.req_spec[RequestKey.CLUSTER_NAME] = qualified_cluster_name
 
         if not self.nsxt_server:
             raise CseServerError(
                 "NSX-T server details not found for PKS server selected for "
                 f"cluster : {cluster_name}. Aborting creation of cluster.")
 
-        cluster_info = self._create_cluster(**cluster_spec)
+        # this needs to be refactored
+        cluster_info = self._create_cluster(**self.req_spec)
 
         self._isolate_cluster(cluster_name, qualified_cluster_name,
                               cluster_info.get('uuid'))
@@ -313,12 +321,6 @@ class PKSBroker(AbstractBroker):
 
         :rtype: dict
         """
-        # TODO(ClusterSpec) Create an inner class "ClusterSpec"
-        #  in abstract_broker.py and have subclasses define and use it
-        #  as instance variable.
-        #  Method 'Create_cluster' in VcdBroker and PksBroker should take
-        #  ClusterSpec either as a param (or)
-        #  read from instance variable (if needed only).
         compute_profile = compute_profile \
             if compute_profile else self.compute_profile
         cluster_api = ClusterApiV1Beta(api_client=self.client_v1beta)
@@ -348,7 +350,7 @@ class PKSBroker(AbstractBroker):
 
         return cluster_dict
 
-    def get_cluster_info(self, cluster_name, **kwargs):
+    def get_cluster_info(self, **kwargs):
         """Get the details of a cluster with a given name in PKS environment.
 
         System administrator gets the given cluster information regardless of
@@ -360,6 +362,8 @@ class PKSBroker(AbstractBroker):
 
         :rtype: dict
         """
+        cluster_name = self.req_spec[RequestKey.CLUSTER_NAME]
+
         if self.tenant_client.is_sysadmin() \
                 or is_org_admin(self.client_session) \
                 or kwargs.get('is_org_admin_search'):
@@ -375,16 +379,18 @@ class PKSBroker(AbstractBroker):
             if len(filtered_cluster_list) == 0:
                 raise PksServerError(requests.codes.not_found,
                                      f"cluster {cluster_name} not found.")
-            cluster_info = filtered_cluster_list[0]
-        else:
-            cluster_info = \
-                self._get_cluster_info(self._append_user_id(cluster_name))
-            self._restore_original_name(cluster_info)
-            if not kwargs.get('is_admin_request'):
-                self._filter_pks_properties(cluster_info)
+            return filtered_cluster_list[0]
+
+        cluster_info = \
+            self._get_cluster_info(self._append_user_id(cluster_name))
+        self._restore_original_name(cluster_info)
+        if not kwargs.get('is_admin_request'):
+            self._filter_pks_properties(cluster_info)
 
         return cluster_info
 
+    # this function is still being used by _list_clusters for some reason
+    # ideally we would like to merge this function with the above function
     def _get_cluster_info(self, cluster_name):
         """Get the details of a cluster with a given name in PKS environment.
 
@@ -413,52 +419,42 @@ class PKSBroker(AbstractBroker):
 
         return cluster_dict
 
-    def get_cluster_config(self, cluster_name):
+    def get_cluster_config(self):
         """Get the configuration of the cluster with the given name in PKS.
 
         System administrator gets the given cluster config regardless of
         who is the owner of the cluster. Other users get config only on
         the cluster they own.
 
-        :param str cluster_name: Name of the cluster
         :return: Configuration of the cluster.
 
         :rtype: str
         """
+        cluster_name = self.req_spec[RequestKey.CLUSTER_NAME]
+
         if self.tenant_client.is_sysadmin() or \
                 is_org_admin(self.client_session):
-            cluster_info = self.get_cluster_info(cluster_name)
+            cluster_info = self.get_cluster_info()
             qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
             qualified_cluster_name = self._append_user_id(cluster_name)
 
         self._check_cluster_isolation(cluster_name, qualified_cluster_name)
 
-        config_info = self._get_cluster_config(qualified_cluster_name)
-        return self.filter_traces_of_user_context(config_info)
-
-    def _get_cluster_config(self, cluster_name):
-        """Get the configuration of the cluster with the given name in PKS.
-
-        :param str cluster_name: Name of the cluster
-        :return: Configuration of the cluster.
-
-        :rtype: str
-        """
         cluster_api = ClusterApiV1(api_client=self.client_v1)
 
         LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to get"
                      f" detailed configuration of cluster with name: "
                      f"{cluster_name}")
-        config = cluster_api.create_user(cluster_name=cluster_name)
-
+        config = cluster_api.create_user(cluster_name=qualified_cluster_name)
         LOGGER.debug(f"Received response from PKS: {self.pks_host_uri} on "
                      f"cluster: {cluster_name} with details: {config}")
         cluster_config = yaml.safe_dump(config, default_flow_style=False)
-        return cluster_config
+
+        return self.filter_traces_of_user_context(cluster_config)
 
     @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
-    def delete_cluster(self, cluster_name):
+    def delete_cluster(self):
         """Delete the cluster with a given name in PKS environment.
 
         System administrator can delete the given cluster regardless of
@@ -467,6 +463,8 @@ class PKSBroker(AbstractBroker):
 
         :param str cluster_name: Name of the cluster
         """
+        cluster_name = self.req_spec[RequestKey.CLUSTER_NAME]
+
         if self.tenant_client.is_sysadmin() \
                 or is_org_admin(self.client_session):
             cluster_info = self.get_cluster_info(cluster_name)
@@ -474,7 +472,20 @@ class PKSBroker(AbstractBroker):
         else:
             qualified_cluster_name = self._append_user_id(cluster_name)
 
-        result = self._delete_cluster(qualified_cluster_name)
+        result = {}
+        cluster_api = ClusterApiV1(api_client=self.client_v1)
+        LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to delete "
+                     f"the cluster with name: {qualified_cluster_name}")
+        try:
+            cluster_api.delete_cluster(cluster_name=qualified_cluster_name)
+        except v1Exception as err:
+            LOGGER.debug(f"Deleting cluster {qualified_cluster_name} failed"
+                         f" with error:\n {err}")
+            raise PksServerError(err.status, err.body)
+        LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to delete"
+                     f" the cluster: {qualified_cluster_name}")
+        result['name'] = qualified_cluster_name
+        result['task_status'] = 'in progress'
 
         # remove cluster network isolation
         LOGGER.debug(f"Removing network isolation of cluster {cluster_name}.")
@@ -493,51 +504,22 @@ class PKSBroker(AbstractBroker):
         self._filter_pks_properties(result)
         return result
 
-    def _delete_cluster(self, cluster_name):
-        """Delete the cluster with a given name in PKS environment.
-
-        Also deletes associated NSX-T Distributed Firewall rules that kept the
-        cluster network isolated from other clusters.
-
-        :param str cluster_name: Name of the cluster
-        """
-        result = {}
-
-        cluster_api = ClusterApiV1(api_client=self.client_v1)
-
-        LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to delete "
-                     f"the cluster with name: {cluster_name}")
-        try:
-            cluster_api.delete_cluster(cluster_name=cluster_name)
-        except v1Exception as err:
-            LOGGER.debug(f"Deleting cluster {cluster_name} failed with "
-                         f"error:\n {err}")
-            raise PksServerError(err.status, err.body)
-
-        LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to delete"
-                     f" the cluster: {cluster_name}")
-
-        result['name'] = cluster_name
-        result['task_status'] = 'in progress'
-        return result
-
     @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
-    def resize_cluster(self, **cluster_spec):
+    def resize_cluster(self):
         """Resize the cluster of a given name to given number of worker nodes.
 
         System administrator can resize the given cluster regardless of
         who is the owner of the cluster. Other users can only resize
         the cluster they own.
 
-        :param dict cluster_spec: named parameters that are required to
-        resize cluster (cluster_name, node_count)
 
         :return: response status
 
         :rtype: dict
 
         """
-        cluster_name = cluster_spec['cluster_name']
+        cluster_name = self.req_spec[RequestKey.CLUSTER_NAME]
+        num_workers = self.req_spec[RequestKey.NUM_WORKERS]
 
         if self.tenant_client.is_sysadmin() \
                 or is_org_admin(self.client_session):
@@ -548,39 +530,25 @@ class PKSBroker(AbstractBroker):
 
         self._check_cluster_isolation(cluster_name, qualified_cluster_name)
 
-        cluster_spec['cluster_name'] = qualified_cluster_name
-        result = self._resize_cluster(**cluster_spec)
-        self._restore_original_name(result)
-        self._filter_pks_properties(result)
-        return result
-
-    def _resize_cluster(self, cluster_name, node_count, **kwargs):
-        """Resize the cluster of a given name to given number of worker nodes.
-
-        :param str cluster_name: Name of the cluster
-        :param int node_count: New size of the worker nodes
-        """
         result = {}
         cluster_api = ClusterApiV1(api_client=self.client_v1)
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to resize "
-                     f"the cluster with name: {cluster_name} to "
-                     f"{node_count} worker nodes")
-
-        resize_params = UpdateClusterParameters(
-            kubernetes_worker_instances=node_count)
+                     f"the cluster with name: {qualified_cluster_name} to "
+                     f"{num_workers} worker nodes")
+        resize_params = UpdateClusterParameters(kubernetes_worker_instances=num_workers) # noqa: E501
         try:
-            cluster_api.update_cluster(cluster_name, body=resize_params)
+            cluster_api.update_cluster(qualified_cluster_name, body=resize_params) # noqa: E501
         except v1Exception as err:
-            LOGGER.debug(f"Resizing cluster {cluster_name} failed with "
-                         f"error:\n {err}")
+            LOGGER.debug(f"Resizing cluster {qualified_cluster_name} failed"
+                         f" with error:\n {err}")
             raise PksServerError(err.status, err.body)
-
         LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to resize"
-                     f" the cluster: {cluster_name}")
+                     f" the cluster: {qualified_cluster_name}")
 
-        result['name'] = cluster_name
+        result['name'] = qualified_cluster_name
         result['task_status'] = 'in progress'
-
+        self._restore_original_name(result)
+        self._filter_pks_properties(result)
         return result
 
     def _check_cluster_isolation(self, cluster_name, qualified_cluster_name):

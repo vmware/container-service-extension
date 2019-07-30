@@ -5,10 +5,11 @@
 from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseDuplicateClusterError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.shared_constants import RequestKey
 from container_service_extension.vcdbroker import VcdBroker
 
 
-class VcdBrokerManager(object):
+class VcdBrokerManager:
     def __init__(self, tenant_auth_token, request_spec):
         self.tenant_auth_token = tenant_auth_token
         self.req_spec = request_spec
@@ -20,12 +21,8 @@ class VcdBrokerManager(object):
             vcd_clusters.append(cluster)
         return vcd_clusters
 
-    def find_cluster_in_org(self, cluster_name, is_org_admin_search=False):
+    def find_cluster_in_org(self):
         """Invoke vCD broker to find the cluster in the org.
-
-        'is_org_admin_search' is used here to prevent cluster creation with
-        same cluster-name by users within org. If it is true,
-        cluster list is filtered by the org name of the logged-in user.
 
         If cluster found:
             Return a tuple of (cluster and the broker instance used to find
@@ -33,9 +30,10 @@ class VcdBrokerManager(object):
         Else:
             (None, None) if cluster not found.
         """
+        cluster_name = self.req_spec[RequestKey.CLUSTER_NAME]
         vcd_broker = VcdBroker(self.tenant_auth_token, self.req_spec)
         try:
-            return vcd_broker.get_cluster_info(cluster_name), vcd_broker
+            return vcd_broker.get_cluster_info(), vcd_broker
         except ClusterNotFoundError as err:
             # If a cluster is not found, then broker_manager will
             # decide if it wants to raise an error or ignore it if was it just
