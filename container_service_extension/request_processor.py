@@ -12,6 +12,7 @@ import requests
 from container_service_extension.exception_handler import handle_exception
 from container_service_extension.exceptions import CseRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+import container_service_extension.request_handlers.cluster_handler as cluster_handler # noqa: E501
 import container_service_extension.request_handlers.ovdc_handler as ovdc_handler # noqa: E501
 import container_service_extension.request_handlers.system_handler as system_handler # noqa: E501
 import container_service_extension.request_handlers.template_handler as template_handler # noqa: E501
@@ -46,6 +47,15 @@ GET /cse/template
 """ # noqa: E501
 
 OPERATION_TO_HANDLER = {
+    CseOperation.CLUSTER_CONFIG: cluster_handler.cluster_config,
+    CseOperation.CLUSTER_CREATE: cluster_handler.cluster_create,
+    CseOperation.CLUSTER_DELETE: cluster_handler.cluster_delete,
+    CseOperation.CLUSTER_INFO: cluster_handler.cluster_info,
+    CseOperation.CLUSTER_LIST: cluster_handler.cluster_list,
+    CseOperation.CLUSTER_RESIZE: cluster_handler.cluster_resize,
+    CseOperation.NODE_CREATE: cluster_handler.node_create,
+    CseOperation.NODE_DELETE: cluster_handler.node_delete,
+    CseOperation.NODE_INFO: cluster_handler.node_info,
     CseOperation.OVDC_UPDATE: ovdc_handler.ovdc_update,
     CseOperation.OVDC_INFO: ovdc_handler.ovdc_info,
     CseOperation.OVDC_LIST: ovdc_handler.ovdc_list,
@@ -238,18 +248,9 @@ def process_request(body):
         })
 
     # process the request
-    reply = {}
-    reply['status_code'] = operation.ideal_response_code
-    try:
-        reply['body'] = OPERATION_TO_HANDLER[operation](request_data,
-                                                        tenant_auth_token)
-        LOGGER.debug(f"reply: {str(reply)}")
-        return reply
-    except KeyError:
-        pass
-    # TODO all cluster operations should route to cluster_handler.py
-    from container_service_extension.broker_manager import BrokerManager
-    broker_manager = BrokerManager(tenant_auth_token, request_data)
-    reply['body'] = broker_manager.invoke(op=operation)
+    reply = {
+        'status_code': operation.ideal_response_code,
+        'body': OPERATION_TO_HANDLER[operation](request_data, tenant_auth_token) # noqa: E501
+    }
     LOGGER.debug(f"reply: {str(reply)}")
     return reply

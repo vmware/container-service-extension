@@ -180,11 +180,7 @@ def vcd_sys_admin():
 
     yield
 
-    cmd = "logout"
-    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0,\
-        testutils.format_command_info('vcd', cmd, result.exit_code,
-                                      result.output)
+    result = env.CLI_RUNNER.invoke(vcd, ['logout'])
 
 
 @pytest.fixture
@@ -218,9 +214,6 @@ def vcd_org_admin():
     yield
 
     result = env.CLI_RUNNER.invoke(vcd, ['logout'])
-    assert result.exit_code == 0,\
-        testutils.format_command_info('vcd', cmd, result.exit_code,
-                                      result.output)
 
 
 @pytest.fixture
@@ -254,9 +247,6 @@ def vcd_vapp_author():
     yield
 
     result = env.CLI_RUNNER.invoke(vcd, ['logout'])
-    assert result.exit_code == 0,\
-        testutils.format_command_info('vcd', cmd, result.exit_code,
-                                      result.output)
 
 
 @pytest.fixture
