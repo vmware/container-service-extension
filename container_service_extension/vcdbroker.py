@@ -426,30 +426,30 @@ class VcdBroker(AbstractBroker, threading.Thread):
             name=self.req_spec.get(RequestKey.TEMPLATE_NAME),
             revision=self.req_spec.get(RequestKey.TEMPLATE_REVISION))
 
-        cluster_name = self.req_spec[RequestKey.CLUSTER_NAME]
-        if not self._is_valid_name(cluster_name):
-            raise CseServerError(f"Invalid cluster name '{cluster_name}'")
+        self.cluster_name = self.req_spec[RequestKey.CLUSTER_NAME]
+        if not self._is_valid_name(self.cluster_name):
+            raise CseServerError("Invalid cluster name "
+                                 f"'{self.cluster_name}'")
 
+        self._connect_tenant()
         clusters = load_from_metadata(self.tenant_client,
                                       name=self.cluster_name)
         if len(clusters) != 0:
             raise ClusterAlreadyExistsError(f"Cluster {self.cluster_name} "
                                             "already exists.")
 
-        LOGGER.debug(f"About to create cluster {cluster_name} on "
+        LOGGER.debug(f"About to create cluster {self.cluster_name} on "
                      f"{self.req_spec[RequestKey.OVDC_NAME]} with "
                      f"{self.req_spec[RequestKey.NUM_WORKERS]} worker nodes, "
                      f"storage profile="
                      f"{self.req_spec[RequestKey.STORAGE_PROFILE_NAME]}")
 
-        self._connect_tenant()
         self._connect_sys_admin()
-        self.cluster_name = cluster_name
         self.cluster_id = str(uuid.uuid4())
         self.op = OP_CREATE_CLUSTER
         self._update_task(
             TaskStatus.RUNNING,
-            message=f"Creating cluster {cluster_name}({self.cluster_id})")
+            message=f"Creating cluster {self.cluster_name}({self.cluster_id})")
         self.daemon = True
         self.start()
         result = {}
