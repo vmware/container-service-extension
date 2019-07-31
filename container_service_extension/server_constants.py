@@ -133,3 +133,13 @@ class CseOperation(Enum):
     SYSTEM_INFO = ('get info of system')
     SYSTEM_UPDATE = ('update system status')
     TEMPLATE_LIST = ('list all templates')
+
+
+@unique
+class ClusterMetadataKey(str, Enum):
+    BACKWARD_COMPATIBILE_TEMPLATE_NAME = 'cse.template'
+    CLUSTER_ID = 'cse.cluster.id'
+    CSE_VERSION = 'cse.version'
+    MASTER_IP = 'cse.master.ip'
+    TEMPLATE_NAME = 'cse.template.name'
+    TEMPLATE_REVISION = 'cse.template.revision'

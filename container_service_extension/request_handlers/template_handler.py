@@ -12,9 +12,10 @@ def template_list(request_dict, tenant_auth_token):
     for t in config['broker']['templates']:
         templates.append({
             'name': t[LocalTemplateKey.NAME],
-            'is_default': t[LocalTemplateKey.NAME] == config['broker']['default_template_name'] and t[LocalTemplateKey.REVISION] == config['broker']['default_template_revision'], # noqa: E501
+            'revision': t[LocalTemplateKey.REVISION],
+            'is_default': t[LocalTemplateKey.NAME] == config['broker']['default_template_name'] and str(t[LocalTemplateKey.REVISION]) == str(config['broker']['default_template_revision']), # noqa: E501
             'catalog': config['broker']['catalog'],
             'catalog_item': t[LocalTemplateKey.CATALOG_ITEM_NAME],
-            'description': t[LocalTemplateKey.DESCRIPTION]
+            'description': t[LocalTemplateKey.DESCRIPTION].replace("\\n", ", ")
         })
     return templates
