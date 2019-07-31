@@ -35,6 +35,7 @@ from container_service_extension.pyvcloud_utils import \
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import ServerAction
+from container_service_extension.utils import str_to_bool
 from container_service_extension.vsphere_utils import populate_vsphere_list
 
 
@@ -195,13 +196,18 @@ class Service(object, metaclass=Singleton):
         # to server config
         client = None
         try:
+            log_filename = None
+            log_wire = str_to_bool(self.config['service'].get('log_wire'))
+            if log_wire:
+                log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
+
             client = Client(self.config['vcd']['host'],
                             api_version=self.config['vcd']['api_version'],
                             verify_ssl_certs=self.config['vcd']['verify'],
-                            log_file=SERVER_DEBUG_WIRELOG_FILEPATH,
-                            log_requests=True,
-                            log_headers=True,
-                            log_bodies=True)
+                            log_file=log_filename,
+                            log_requests=log_wire,
+                            log_headers=log_wire,
+                            log_bodies=log_wire)
             credentials = BasicLoginCredentials(self.config['vcd']['username'],
                                                 SYSTEM_ORG_NAME,
                                                 self.config['vcd']['password'])

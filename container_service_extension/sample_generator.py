@@ -111,7 +111,8 @@ SAMPLE_VCS_CONFIG = {
 SAMPLE_SERVICE_CONFIG = {
     'service': {
         'listeners': 5,
-        'enforce_authorization': False
+        'enforce_authorization': False,
+        'log_wire': False
     }
 }
 

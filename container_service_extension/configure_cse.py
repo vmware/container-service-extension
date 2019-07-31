@@ -37,6 +37,7 @@ from container_service_extension.server_constants import \
     RemoteTemplateKey, SYSTEM_ORG_NAME # noqa: H301
 from container_service_extension.template_builder import TemplateBuilder
 from container_service_extension.utils import ConsoleMessagePrinter
+from container_service_extension.utils import str_to_bool
 from container_service_extension.vsphere_utils import populate_vsphere_list
 
 
@@ -62,13 +63,18 @@ def check_cse_installation(config, msg_update_callback=None):
     err_msgs = []
     client = None
     try:
+        log_filename = None
+        log_wire = str_to_bool(config['service'].get('log_wire'))
+        if log_wire:
+            log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
+
         client = Client(config['vcd']['host'],
                         api_version=config['vcd']['api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
-                        log_file=SERVER_DEBUG_WIRELOG_FILEPATH,
-                        log_requests=True,
-                        log_headers=True,
-                        log_bodies=True)
+                        log_file=log_filename,
+                        log_requests=log_wire,
+                        log_headers=log_wire,
+                        log_bodies=log_wire)
         credentials = BasicLoginCredentials(config['vcd']['username'],
                                             SYSTEM_ORG_NAME,
                                             config['vcd']['password'])
@@ -199,13 +205,18 @@ def install_cse(ctx, config_file_name='config.yaml',
 
     client = None
     try:
+        log_filename = None
+        log_wire = str_to_bool(config['service'].get('log_wire'))
+        if log_wire:
+            log_filename = INSTALL_WIRELOG_FILEPATH
+
         client = Client(config['vcd']['host'],
                         api_version=config['vcd']['api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
-                        log_file=INSTALL_WIRELOG_FILEPATH,
-                        log_requests=True,
-                        log_headers=True,
-                        log_bodies=True)
+                        log_file=log_filename,
+                        log_requests=log_wire,
+                        log_headers=log_wire,
+                        log_bodies=log_wire)
         credentials = BasicLoginCredentials(config['vcd']['username'],
                                             SYSTEM_ORG_NAME,
                                             config['vcd']['password'])

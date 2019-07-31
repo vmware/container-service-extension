@@ -99,7 +99,10 @@ def load_from_metadata(client, name=None, cluster_id=None,
                 elif entry.Key == ClusterMetadataKey.MASTER_IP:
                     cluster['leader_endpoint'] = str(entry.TypedValue.Value)
                 elif entry.Key == ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME: # noqa: E501
-                    cluster['template_name'] = str(entry.TypedValue.Value)
+                    # Don't overwrite the value if already populated from the
+                    # value corresponding to ClusterMetadataKey.TEMPLATE_NAME
+                    if not cluster['template_name']:
+                        cluster['template_name'] = str(entry.TypedValue.Value)
                 elif entry.Key == ClusterMetadataKey.TEMPLATE_NAME:
                     cluster['template_name'] = str(entry.TypedValue.Value)
                 elif entry.Key == ClusterMetadataKey.TEMPLATE_REVISION:

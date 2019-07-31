@@ -520,7 +520,7 @@ Examples
         The node will be connected to org VDC network 'mynetwork'.
         The VM will use the default template.
 \b
-    vcd cse node create mycluster --nodes 2 --type nfs --network mynetwork \\
+    vcd cse node create mycluster --nodes 2 --enable-nfs --network mynetwork \\
     --template-name photon-v2 --template-revision 1 --cpu 3 --memory 1024 \\
     --storage-profile mystorageprofile --ssh-key ~/.ssh/id_rsa.pub \\
         Add 2 nfs nodes to vApp named 'mycluster' on vCD.
@@ -649,7 +649,7 @@ def node_info(ctx, cluster_name, node_name, org_name, vdc):
     default=None,
     help='Name of the template to instantiate nodes from')
 @click.option(
-    '--nfs',
+    '--enable-nfs',
     'enable_nfs',
     is_flag=True,
     help='Enable NFS on all created nodes')
