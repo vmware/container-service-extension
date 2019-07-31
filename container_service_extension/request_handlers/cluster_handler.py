@@ -37,7 +37,6 @@ def cluster_resize(request_dict, tenant_auth_token):
     :return: Dict
     """
     required = [
-        RequestKey.ORG_NAME,
         RequestKey.CLUSTER_NAME,
         RequestKey.NUM_WORKERS
     ]
@@ -146,7 +145,6 @@ def node_delete(request_dict, tenant_auth_token):
     :return: Dict
     """
     required = [
-        RequestKey.ORG_NAME,
         RequestKey.CLUSTER_NAME,
         RequestKey.NODE_NAMES_LIST
     ]
@@ -167,7 +165,6 @@ def node_info(request_dict, tenant_auth_token):
     :return: Dict
     """
     required = [
-        RequestKey.ORG_NAME,
         RequestKey.CLUSTER_NAME,
         RequestKey.NODE_NAME
     ]
