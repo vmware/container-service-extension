@@ -14,8 +14,6 @@ from vsphere_guest_run.vsphere import VSphere
 import yaml
 
 from container_service_extension.exceptions import AmqpConnectionError
-from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
-from container_service_extension.logger import setup_log_file_directory
 from container_service_extension.nsxt.dfw_manager import DFWManager
 from container_service_extension.nsxt.ipset_manager import IPSetManager
 from container_service_extension.nsxt.nsxt_client import NSXTClient
@@ -93,6 +91,7 @@ def get_validated_config(config_file_name, msg_update_callback=None):
     check_keys_and_value_types(config['service'],
                                SAMPLE_SERVICE_CONFIG['service'],
                                location="config file 'service' section",
+                               excluded_keys=['log_wire'],
                                msg_update_callback=msg_update_callback)
     if msg_update_callback:
         msg_update_callback.general(
@@ -189,18 +188,9 @@ def _validate_vcd_and_vcs_config(vcd_dict, vcs, msg_update_callback=None):
 
     client = None
     try:
-        # TODO() we get an error during client initialization if the specified
-        # logfile points to the directory which doesn't exist. This issue
-        # should be fixed in pyvcloud, where the logging setup creates
-        # directories used in the log filepath if they do not exist yet.
-        setup_log_file_directory()
         client = Client(vcd_dict['host'],
                         api_version=vcd_dict['api_version'],
-                        verify_ssl_certs=vcd_dict['verify'],
-                        log_file=SERVER_DEBUG_WIRELOG_FILEPATH,
-                        log_requests=True,
-                        log_headers=True,
-                        log_bodies=True)
+                        verify_ssl_certs=vcd_dict['verify'])
         client.set_credentials(BasicLoginCredentials(vcd_dict['username'],
                                                      SYSTEM_ORG_NAME,
                                                      vcd_dict['password']))
@@ -259,7 +249,6 @@ def _validate_broker_config(broker_dict, msg_update_callback=None):
     """
     check_keys_and_value_types(broker_dict, SAMPLE_BROKER_CONFIG['broker'],
                                location="config file 'broker' section",
-                               excluded_keys=['remote_template_cookbook_url'],
                                msg_update_callback=msg_update_callback)
 
     valid_ip_allocation_modes = [

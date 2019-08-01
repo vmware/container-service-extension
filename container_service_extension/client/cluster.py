@@ -58,7 +58,8 @@ class Cluster:
                        memory=None,
                        storage_profile=None,
                        ssh_key=None,
-                       template=None,
+                       template_name=None,
+                       template_revision=None,
                        enable_nfs=False,
                        rollback=True,
                        org=None):
@@ -78,7 +79,9 @@ class Cluster:
             will back the cluster
         :param ssh_key: (str): The ssh key that clients can use to log into the
             node vms without explicitly providing passwords
-        :param template: (str): The name of the template to use to
+        :param template_name: (str): The name of the template to use to
+            instantiate the nodes
+        :param template_revision: (str): The revision of the template to use to
             instantiate the nodes
         :param enable_nfs: (bool): bool value to indicate if NFS node is to be
             created
@@ -104,7 +107,8 @@ class Cluster:
             RequestKey.NETWORK_NAME: network_name,
             RequestKey.STORAGE_PROFILE_NAME: storage_profile,
             RequestKey.SSH_KEY_FILEPATH: ssh_key,
-            RequestKey.TEMPLATE_NAME: template,
+            RequestKey.TEMPLATE_NAME: template_name,
+            RequestKey.TEMPLATE_REVISION: template_revision,
             RequestKey.ENABLE_NFS: enable_nfs,
             RequestKey.ROLLBACK: rollback,
             RequestKey.ORG_NAME: org
@@ -195,7 +199,8 @@ class Cluster:
                  memory=None,
                  storage_profile=None,
                  ssh_key=None,
-                 template=None,
+                 template_name=None,
+                 template_revision=None,
                  enable_nfs=False,
                  rollback=True):
         """Add nodes to a Kubernetes cluster.
@@ -214,7 +219,9 @@ class Cluster:
             will back the new nodes
         :param ssh_key: (str): The ssh key that clients can use to log into the
             node vms without explicitly providing passwords
-        :param template: (str): The name of the catalog template to use to
+        :param template_name: (str): The name of the catalog template to use to
+            instantiate the nodes
+        :param template_revision: (str): The revision of the template to use to
             instantiate the nodes
         :param enable_nfs: (bool): Flag to enable NFS software on worker nodes
         :param rollback: (bool): Flag to control whether rollback
@@ -234,7 +241,8 @@ class Cluster:
             RequestKey.NETWORK_NAME: network_name,
             RequestKey.STORAGE_PROFILE_NAME: storage_profile,
             RequestKey.SSH_KEY_FILEPATH: ssh_key,
-            RequestKey.TEMPLATE_NAME: template,
+            RequestKey.TEMPLATE_NAME: template_name,
+            RequestKey.TEMPLATE_REVISION: template_revision,
             RequestKey.ENABLE_NFS: enable_nfs,
             RequestKey.ROLLBACK: rollback
         }

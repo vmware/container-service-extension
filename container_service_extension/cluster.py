@@ -24,26 +24,12 @@ from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pyvcloud_utils import get_sys_admin_client
 from container_service_extension.remote_template_manager import \
     get_local_script_filepath
+from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
-from container_service_extension.shared_constants import RequestKey
 from container_service_extension.utils import read_data_file
 from container_service_extension.vsphere_utils import get_vsphere
-
-
-def wait_until_tools_ready(vm):
-    while True:
-        try:
-            status = vm.guest.toolsRunningStatus
-            if 'guestToolsRunning' == status:
-                LOGGER.debug(f"vm tools {vm} are ready")
-                return
-            LOGGER.debug(f"waiting for vm tools {vm} to be ready ({status})")
-            time.sleep(1)
-        except Exception:
-            LOGGER.debug(f"waiting for vm tools {vm} to be ready ({status})* ")
-            time.sleep(1)
 
 
 def load_from_metadata(client, name=None, cluster_id=None,
@@ -73,8 +59,12 @@ def load_from_metadata(client, name=None, cluster_id=None,
         resource_type,
         query_result_format=QueryResultFormat.ID_RECORDS,
         qfilter=query_filter,
-        fields='metadata:cse.cluster.id,metadata:cse.master.ip,'
-               'metadata:cse.version,metadata:cse.template')
+        fields='metadata:' + ClusterMetadataKey.CLUSTER_ID + ',metadata:' + # noqa: W504,E501
+               ClusterMetadataKey.MASTER_IP + ',metadata:' + # noqa: W504
+               ClusterMetadataKey.CSE_VERSION + ',metadata:' + # noqa: W504
+               ClusterMetadataKey.TEMPLATE_NAME + ',metadata:' + # noqa: W504
+               ClusterMetadataKey.TEMPLATE_REVISION + ',metadata:' + # noqa: W504,E501
+               ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME)
     records = list(q.execute())
 
     clusters = []
@@ -94,38 +84,56 @@ def load_from_metadata(client, name=None, cluster_id=None,
             'nodes': [],
             'nfs_nodes': [],
             'number_of_vms': record.get('numberOfVMs'),
-            'template': '',
+            'template_name': '',
+            'template_revision': '',
             'cse_version': '',
             'cluster_id': '',
             'status': record.get('status')
         }
         if hasattr(record, 'Metadata'):
             for entry in record.Metadata.MetadataEntry:
-                if entry.Key == 'cse.cluster.id':
+                if entry.Key == ClusterMetadataKey.CLUSTER_ID:
                     cluster['cluster_id'] = str(entry.TypedValue.Value)
-                elif entry.Key == 'cse.version':
+                elif entry.Key == ClusterMetadataKey.CSE_VERSION:
                     cluster['cse_version'] = str(entry.TypedValue.Value)
-                elif entry.Key == 'cse.master.ip':
+                elif entry.Key == ClusterMetadataKey.MASTER_IP:
                     cluster['leader_endpoint'] = str(entry.TypedValue.Value)
-                elif entry.Key == 'cse.template':
-                    cluster['template'] = str(entry.TypedValue.Value)
+                elif entry.Key == ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME: # noqa: E501
+                    # Don't overwrite the value if already populated from the
+                    # value corresponding to ClusterMetadataKey.TEMPLATE_NAME
+                    if not cluster['template_name']:
+                        cluster['template_name'] = str(entry.TypedValue.Value)
+                elif entry.Key == ClusterMetadataKey.TEMPLATE_NAME:
+                    cluster['template_name'] = str(entry.TypedValue.Value)
+                elif entry.Key == ClusterMetadataKey.TEMPLATE_REVISION:
+                    cluster['template_revision'] = str(entry.TypedValue.Value)
 
         clusters.append(cluster)
 
     return clusters
 
 
-def add_nodes(qty, template, node_type, config, client, org, vdc, vapp,
-              req_spec):
+def add_nodes(client,
+              num_nodes,
+              node_type,
+              org,
+              vdc,
+              vapp,
+              catalog_name,
+              template,
+              network_name,
+              num_cpu=None,
+              memory_in_mb=None,
+              storage_profile=None,
+              ssh_key_filepath=None):
     try:
-        if qty < 1:
+        if num_nodes < 1:
             return None
         specs = []
-        catalog_item = org.get_catalog_item(config['broker']['catalog'],
+        catalog_item = org.get_catalog_item(catalog_name,
                                             template['catalog_item_name'])
         source_vapp = VApp(client, href=catalog_item.Entity.get('href'))
         source_vm = source_vapp.get_all_vms()[0].get('name')
-        storage_profile = req_spec.get(RequestKey.STORAGE_PROFILE_NAME)
         if storage_profile is not None:
             storage_profile = vdc.get_storage_profile(storage_profile)
 
@@ -143,7 +151,6 @@ then
 fi
 """  # noqa: E128
 
-        ssh_key_filepath = req_spec.get(RequestKey.SSH_KEY_FILEPATH)
         if ssh_key_filepath is not None:
             cust_script_common += \
 f"""
@@ -157,7 +164,8 @@ chmod -R go-rwx /root/.ssh
         else:
             cust_script = cust_script_init + cust_script_common + \
                 cust_script_end
-        for n in range(qty):
+
+        for n in range(num_nodes):
             name = None
             while True:
                 name = f"{node_type}-{''.join(random.choices(string.ascii_lowercase + string.digits, k=4))}" # noqa: E501
@@ -171,7 +179,7 @@ chmod -R go-rwx /root/.ssh
                 'target_vm_name': name,
                 'hostname': name,
                 'password_auto': True,
-                'network': req_spec.get(RequestKey.NETWORK_NAME),
+                'network': network_name,
                 'ip_allocation_mode': 'pool'
             }
             if cust_script is not None:
@@ -180,11 +188,10 @@ chmod -R go-rwx /root/.ssh
                 spec['storage_profile'] = storage_profile
             specs.append(spec)
 
-        num_cpu = req_spec.get(RequestKey.NUM_CPU)
-        mb_memory = req_spec.get(RequestKey.MB_MEMORY)
-        configure_hw = bool(num_cpu or mb_memory)
+        configure_hw = bool(num_cpu or memory_in_mb)
         task = vapp.add_vms(specs, power_on=not configure_hw)
-        # TODO(get details of the exception like not enough resources avail)
+        # TODO: get details of the exception like not enough resources
+        # available.
         client.get_task_monitor().wait_for_status(task)
         vapp.reload()
         if configure_hw:
@@ -194,9 +201,9 @@ chmod -R go-rwx /root/.ssh
                     vm = VM(client, resource=vm_resource)
                     task = vm.modify_cpu(num_cpu)
                     client.get_task_monitor().wait_for_status(task)
-                if mb_memory:
+                if memory_in_mb:
                     vm = VM(client, resource=vm_resource)
-                    task = vm.modify_memory(mb_memory)
+                    task = vm.modify_memory(memory_in_mb)
                     client.get_task_monitor().wait_for_status(task)
                 vm = VM(client, resource=vm_resource)
                 task = vm.power_on()
@@ -210,7 +217,6 @@ chmod -R go-rwx /root/.ssh
                 f"/bin/echo \"root:{template['admin_password']}\" | chpasswd"
             nodes = [vm_resource]
             execute_script_in_nodes(
-                config,
                 vapp,
                 password,
                 command,
@@ -224,10 +230,8 @@ chmod -R go-rwx /root/.ssh
                     template['name'], template['revision'], ScriptFile.NFSD)
                 script = read_data_file(script_filepath, logger=LOGGER)
                 exec_results = execute_script_in_nodes(
-                    config, vapp,
-                    template['admin_password'],
-                    script, nodes)
-                errors = get_script_execution_errors(exec_results)
+                    vapp, template['admin_password'], script, nodes)
+                errors = _get_script_execution_errors(exec_results)
                 if errors:
                     raise ScriptExecutionError(
                         f"Script execution failed on node "
@@ -238,7 +242,7 @@ chmod -R go-rwx /root/.ssh
     return {'task': task, 'specs': specs}
 
 
-def get_nodes(vapp, node_type):
+def _get_nodes(vapp, node_type):
     nodes = []
     for node in vapp.get_all_vms():
         if node.get('name').startswith(node_type):
@@ -246,39 +250,38 @@ def get_nodes(vapp, node_type):
     return nodes
 
 
-def wait_for_tools_ready_callback(message, exception=None):
+def _wait_for_tools_ready_callback(message, exception=None):
     LOGGER.debug(f"waiting for guest tools, status: {message}")
     if exception is not None:
         LOGGER.error(f"exception: {str(exception)}")
 
 
-def wait_for_guest_execution_callback(message, exception=None):
+def _wait_for_guest_execution_callback(message, exception=None):
     LOGGER.debug(message)
     if exception is not None:
         LOGGER.error(f"exception: {str(exception)}")
 
 
-def get_init_info(config, vapp, password):
+def _get_init_info(vapp, password):
     script = \
 """#!/usr/bin/env bash
 kubeadm token create
 ip route get 1 | awk '{print $NF;exit}'
 """ # NOQA
-    nodes = get_nodes(vapp, NodeType.MASTER)
+    nodes = _get_nodes(vapp, NodeType.MASTER)
     result = execute_script_in_nodes(
-        config, vapp, password, script, nodes, check_tools=False)
+        vapp, password, script, nodes, check_tools=False)
     return result[0][1].content.decode().split()
 
 
-def get_master_ip(config, vapp, template):
+def get_master_ip(vapp, template):
     LOGGER.debug(f"getting master IP for vapp: {vapp.resource.get('name')}")
     script = \
 """#!/usr/bin/env bash
 ip route get 1 | awk '{print $NF;exit}'
 """ # NOQA
-    nodes = get_nodes(vapp, NodeType.MASTER)
+    nodes = _get_nodes(vapp, NodeType.MASTER)
     result = execute_script_in_nodes(
-        config,
         vapp,
         template['admin_password'],
         script,
@@ -290,42 +293,42 @@ ip route get 1 | awk '{print $NF;exit}'
     return master_ip
 
 
-def get_cluster_config(config, vapp, password):
+def fetch_cluster_config(vapp, password):
     file_name = '/root/.kube/config'
-    nodes = get_nodes(vapp, NodeType.MASTER)
-    result = get_file_from_nodes(
-        config, vapp, password, file_name, nodes, check_tools=False)
+    nodes = _get_nodes(vapp, NodeType.MASTER)
+    result = _get_file_from_nodes(
+        vapp, password, file_name, nodes, check_tools=False)
     if len(result) == 0 or result[0].status_code != requests.codes.ok:
         raise ClusterOperationError('Couldn\'t get cluster configuration')
     return result[0].content.decode()
 
 
-def init_cluster(config, vapp, template):
+def init_cluster(vapp, template):
     script_filepath = get_local_script_filepath(
         template['name'], template['revision'], ScriptFile.MASTER)
     script = read_data_file(script_filepath, logger=LOGGER)
-    nodes = get_nodes(vapp, NodeType.MASTER)
-    result = execute_script_in_nodes(config, vapp, template['admin_password'],
+    nodes = _get_nodes(vapp, NodeType.MASTER)
+    result = execute_script_in_nodes(vapp, template['admin_password'],
                                      script, nodes)
     if result[0][0] != 0:
         raise ClusterInitializationError(
             f"Couldn\'t initialize cluster:\n{result[0][2].content.decode()}")
 
 
-def join_cluster(config, vapp, template, target_nodes=None):
-    init_info = get_init_info(config, vapp, template['admin_password'])
+def join_cluster(vapp, template, target_nodes=None):
+    init_info = _get_init_info(vapp, template['admin_password'])
     tmp_script_filepath = get_local_script_filepath(
         template['name'], template['revision'], ScriptFile.NODE)
     tmp_script = read_data_file(tmp_script_filepath, logger=LOGGER)
     script = tmp_script.format(token=init_info[0], ip=init_info[1])
     if target_nodes is None:
-        nodes = get_nodes(vapp, NodeType.WORKER)
+        nodes = _get_nodes(vapp, NodeType.WORKER)
     else:
         nodes = []
         for node in vapp.get_all_vms():
             if node.get('name') in target_nodes:
                 nodes.append(node)
-    results = execute_script_in_nodes(config, vapp, template['admin_password'],
+    results = execute_script_in_nodes(vapp, template['admin_password'],
                                       script, nodes)
     for result in results:
         if result[0] != 0:
@@ -333,7 +336,7 @@ def join_cluster(config, vapp, template, target_nodes=None):
                 'Couldn\'t join cluster:\n%s' % result[2].content.decode())
 
 
-def wait_until_ready_to_exec(vs, vm, password, tries=30):
+def _wait_until_ready_to_exec(vs, vm, password, tries=30):
     ready = False
     script = \
 """#!/usr/bin/env bash
@@ -351,7 +354,7 @@ uname -a
                 wait_time=5,
                 get_output=True,
                 delete_script=True,
-                callback=wait_for_guest_execution_callback)
+                callback=_wait_for_guest_execution_callback)
             if result[0] == 0:
                 ready = True
                 break
@@ -363,8 +366,7 @@ uname -a
         raise CseServerError('VM is not ready to execute scripts')
 
 
-def execute_script_in_nodes(config,
-                            vapp,
+def execute_script_in_nodes(vapp,
                             password,
                             script,
                             nodes,
@@ -391,8 +393,8 @@ def execute_script_in_nodes(config,
             if check_tools:
                 LOGGER.debug(f"waiting for tools on {node.get('name')}")
                 vs.wait_until_tools_ready(
-                    vm, sleep=5, callback=wait_for_tools_ready_callback)
-                wait_until_ready_to_exec(vs, vm, password)
+                    vm, sleep=5, callback=_wait_for_tools_ready_callback)
+                _wait_until_ready_to_exec(vs, vm, password)
             LOGGER.debug(f"about to execute script on {node.get('name')} "
                          f"(vm={vm}), wait={wait}")
             if wait:
@@ -406,7 +408,7 @@ def execute_script_in_nodes(config,
                     wait_time=10,
                     get_output=True,
                     delete_script=True,
-                    callback=wait_for_guest_execution_callback)
+                    callback=_wait_for_guest_execution_callback)
                 result_stdout = result[1].content.decode()
                 result_stderr = result[2].content.decode()
             else:
@@ -432,12 +434,7 @@ def execute_script_in_nodes(config,
     return all_results
 
 
-def get_file_from_nodes(config,
-                        vapp,
-                        password,
-                        file_name,
-                        nodes,
-                        check_tools=True):
+def _get_file_from_nodes(vapp, password, file_name, nodes, check_tools=True):
     all_results = []
     sys_admin_client = None
     try:
@@ -451,8 +448,8 @@ def get_file_from_nodes(config,
             vm = vs.get_vm_by_moid(moid)
             if check_tools:
                 vs.wait_until_tools_ready(
-                    vm, sleep=5, callback=wait_for_tools_ready_callback)
-                wait_until_ready_to_exec(vs, vm, password)
+                    vm, sleep=5, callback=_wait_for_tools_ready_callback)
+                _wait_until_ready_to_exec(vs, vm, password)
             result = vs.download_file_from_guest(vm, 'root', password,
                                                  file_name)
             all_results.append(result)
@@ -462,15 +459,15 @@ def get_file_from_nodes(config,
     return all_results
 
 
-def delete_nodes_from_cluster(config, vapp, template, nodes, force=False):
+def delete_nodes_from_cluster(vapp, template, nodes, force=False):
     script = '#!/usr/bin/env bash\nkubectl delete node '
     for node in nodes:
         script += ' %s' % node
     script += '\n'
     password = template['admin_password']
-    master_nodes = get_nodes(vapp, NodeType.MASTER)
+    master_nodes = _get_nodes(vapp, NodeType.MASTER)
     result = execute_script_in_nodes(
-        config, vapp, password, script, master_nodes, check_tools=False)
+        vapp, password, script, master_nodes, check_tools=False)
     if result[0][0] != 0:
         if not force:
             raise DeleteNodeError(
@@ -478,7 +475,7 @@ def delete_nodes_from_cluster(config, vapp, template, nodes, force=False):
                 f"{result[0][2].content.decode()}")
 
 
-def get_script_execution_errors(results):
+def _get_script_execution_errors(results):
     errors = []
     for result in results:
         if result[0] != 0:

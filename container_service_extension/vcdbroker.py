@@ -22,7 +22,7 @@ from container_service_extension.authorization import secure
 from container_service_extension.cluster import add_nodes
 from container_service_extension.cluster import delete_nodes_from_cluster
 from container_service_extension.cluster import execute_script_in_nodes
-from container_service_extension.cluster import get_cluster_config
+from container_service_extension.cluster import fetch_cluster_config
 from container_service_extension.cluster import get_master_ip
 from container_service_extension.cluster import init_cluster
 from container_service_extension.cluster import join_cluster
@@ -42,6 +42,7 @@ from container_service_extension.exceptions import NodeNotFoundError
 from container_service_extension.exceptions import WorkerNodeCreationError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
+from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_NAME
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
@@ -174,16 +175,19 @@ class VcdBroker(AbstractBroker, threading.Thread):
         allowed = re.compile(r"(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
         return all(allowed.match(x) for x in name.split("."))
 
-    def _get_template(self, name=None):
+    def _get_template(self, name=None, revision=None):
         server_config = utils.get_server_runtime_config()
         name = name or \
             self.req_spec.get(RequestKey.TEMPLATE_NAME) or \
             server_config['broker']['default_template_name']
-        # TODO: Also consider template revision
+        revision = revision or \
+            self.req_spec.get(RequestKey.TEMPLATE_REVISION) or \
+            server_config['broker']['default_template_revision']
         for template in server_config['broker']['templates']:
-            if template['name'] == name:
+            if (template['name'] == name) and \
+                    (str(template['revision']) == str(revision)):
                 return template
-        raise Exception(f"Template {name} not found.")
+        raise Exception(f"Template '{name}' at revision {revision} not found.")
 
     def _get_nfs_exports(self, ip, vapp, node):
         """Get the exports from remote NFS server (helper method).
@@ -197,14 +201,16 @@ class VcdBroker(AbstractBroker, threading.Thread):
 
         :return: (List): List of exports
         """
-        # TODO(right template) find a right way to retrieve
-        # the template from which nfs node was created.
+        # TODO: Find the right way to retrieve the template from which nfs node
+        # was created.
         server_config = utils.get_server_runtime_config()
         template = server_config['broker']['templates'][0]
         script = f"#!/usr/bin/env bash\nshowmount -e {ip}"
-        result = execute_script_in_nodes(
-            server_config, vapp, template['admin_password'],
-            script, nodes=[node], check_tools=False)
+        result = execute_script_in_nodes(vapp,
+                                         template['admin_password'],
+                                         script,
+                                         nodes=[node],
+                                         check_tools=False)
         lines = result[0][1].content.decode().split('\n')
         exports = []
         for index in range(1, len(lines) - 1):
@@ -223,9 +229,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
         vapp = VApp(self.tenant_client, href=self.cluster['vapp_href'])
         template = self._get_template()
         try:
-            server_config = utils.get_server_runtime_config()
-            delete_nodes_from_cluster(server_config, vapp, template,
-                                      node_list, force=True)
+            delete_nodes_from_cluster(vapp, template, node_list, force=True)
         except Exception:
             LOGGER.warning("Couldn't delete node {node_list} from cluster:"
                            "{self.cluster_name}")
@@ -275,7 +279,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
             clusters.append({
                 'name': c['name'],
                 'IP master': c['leader_endpoint'],
-                'template': c['template'],
+                'template_name': c.get('template_name'),
+                'template_revision': c.get('template_revision'),
                 'VMs': c['number_of_vms'],
                 'vdc': c['vdc_name'],
                 'status': c['status'],
@@ -316,8 +321,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 'ipAddress': ''
             }
             try:
-                node_info['ipAddress'] = vapp.get_primary_ip(
-                    vm.get('name'))
+                node_info['ipAddress'] = vapp.get_primary_ip(vm.get('name'))
             except Exception:
                 LOGGER.debug(f"Unable to get ip address of node "
                              f"{vm.get('name')}")
@@ -404,11 +408,10 @@ class VcdBroker(AbstractBroker, threading.Thread):
             raise ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")
 
         vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
-        template = self._get_template(name=clusters[0]['template'])
-        server_config = utils.get_server_runtime_config()
-        result = get_cluster_config(server_config, vapp,
-                                    template['admin_password'])
-        return result
+        template = self._get_template(
+            name=clusters[0]['template_name'],
+            revision=clusters[0]['template_revision'])
+        return fetch_cluster_config(vapp, template['admin_password'])
 
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def create_cluster(self):
@@ -417,26 +420,36 @@ class VcdBroker(AbstractBroker, threading.Thread):
         ]
         utils.ensure_keys_in_dict(required, self.req_spec, dict_name='request')
 
-        # check that requested/default template is valid
-        self._get_template(name=self.req_spec.get(RequestKey.TEMPLATE_NAME))
+        # check that requested template is valid, else fall back to default
+        # template.
+        self._get_template(
+            name=self.req_spec.get(RequestKey.TEMPLATE_NAME),
+            revision=self.req_spec.get(RequestKey.TEMPLATE_REVISION))
 
-        cluster_name = self.req_spec[RequestKey.CLUSTER_NAME]
-        LOGGER.debug(f"About to create cluster {cluster_name} on "
+        self.cluster_name = self.req_spec[RequestKey.CLUSTER_NAME]
+        if not self._is_valid_name(self.cluster_name):
+            raise CseServerError("Invalid cluster name "
+                                 f"'{self.cluster_name}'")
+
+        self._connect_tenant()
+        clusters = load_from_metadata(self.tenant_client,
+                                      name=self.cluster_name)
+        if len(clusters) != 0:
+            raise ClusterAlreadyExistsError(f"Cluster {self.cluster_name} "
+                                            "already exists.")
+
+        LOGGER.debug(f"About to create cluster {self.cluster_name} on "
                      f"{self.req_spec[RequestKey.OVDC_NAME]} with "
                      f"{self.req_spec[RequestKey.NUM_WORKERS]} worker nodes, "
                      f"storage profile="
                      f"{self.req_spec[RequestKey.STORAGE_PROFILE_NAME]}")
-        if not self._is_valid_name(cluster_name):
-            raise CseServerError(f"Invalid cluster name '{cluster_name}'")
 
-        self._connect_tenant()
         self._connect_sys_admin()
-        self.cluster_name = cluster_name
         self.cluster_id = str(uuid.uuid4())
         self.op = OP_CREATE_CLUSTER
         self._update_task(
             TaskStatus.RUNNING,
-            message=f"Creating cluster {cluster_name}({self.cluster_id})")
+            message=f"Creating cluster {self.cluster_name}({self.cluster_id})")
         self.daemon = True
         self.start()
         result = {}
@@ -447,20 +460,13 @@ class VcdBroker(AbstractBroker, threading.Thread):
 
     @rollback_on_failure
     def create_cluster_thread(self):
-        network_name = self.req_spec.get(RequestKey.NETWORK_NAME)
         try:
-            clusters = load_from_metadata(self.tenant_client,
-                                          name=self.cluster_name)
-            if len(clusters) != 0:
-                raise ClusterAlreadyExistsError(f"Cluster {self.cluster_name} "
-                                                "already exists.")
-
             org_resource = self.tenant_client.get_org_by_name(
                 self.req_spec.get(RequestKey.ORG_NAME))
             org = Org(self.tenant_client, resource=org_resource)
             vdc_resource = org.get_vdc(self.req_spec.get(RequestKey.OVDC_NAME))
             vdc = VDC(self.tenant_client, resource=vdc_resource)
-            template = self._get_template()
+            network_name = self.req_spec.get(RequestKey.NETWORK_NAME)
             self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Creating cluster vApp {self.cluster_name}"
@@ -477,15 +483,19 @@ class VcdBroker(AbstractBroker, threading.Thread):
 
             self.tenant_client.get_task_monitor().wait_for_status(
                 vapp_resource.Tasks.Task[0])
+
+            template = self._get_template()
+
             tags = {}
-            tags['cse.cluster.id'] = self.cluster_id
-            tags['cse.version'] = pkg_resources.require(
+            tags[ClusterMetadataKey.CLUSTER_ID] = self.cluster_id
+            tags[ClusterMetadataKey.CSE_VERSION] = pkg_resources.require(
                 'container-service-extension')[0].version
-            tags['cse.template'] = template['name']
+            tags[ClusterMetadataKey.TEMPLATE_NAME] = template['name']
+            tags[ClusterMetadataKey.TEMPLATE_REVISION] = template['revision']
             vapp = VApp(self.tenant_client, href=vapp_resource.get('href'))
-            for k, v in tags.items():
-                task = vapp.set_metadata('GENERAL', 'READWRITE', k, v)
-                self.tenant_client.get_task_monitor().wait_for_status(task)
+            task = vapp.set_multiple_metadata(tags)
+            self.tenant_client.get_task_monitor().wait_for_status(task)
+
             self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Creating master node for {self.cluster_name}"
@@ -493,9 +503,22 @@ class VcdBroker(AbstractBroker, threading.Thread):
             vapp.reload()
 
             server_config = utils.get_server_runtime_config()
+            catalog_name = server_config['broker']['catalog']
             try:
-                add_nodes(1, template, NodeType.MASTER, server_config,
-                          self.tenant_client, org, vdc, vapp, self.req_spec)
+                add_nodes(
+                    client=self.tenant_client,
+                    num_nodes=1,
+                    node_type=NodeType.MASTER,
+                    org=org,
+                    vdc=vdc,
+                    vapp=vapp,
+                    catalog_name=catalog_name,
+                    template=template,
+                    network_name=self.req_spec.get(RequestKey.NETWORK_NAME),
+                    num_cpu=self.req_spec.get(RequestKey.NUM_CPU),
+                    memory_in_mb=self.req_spec.get(RequestKey.MB_MEMORY),
+                    storage_profile=self.req_spec.get(RequestKey.STORAGE_PROFILE_NAME), # noqa: E501
+                    ssh_key_filepath=self.req_spec.get(RequestKey.SSH_KEY_FILEPATH)) # noqa: E501
             except Exception as e:
                 raise MasterNodeCreationError(
                     "Error while adding master node:", str(e))
@@ -505,8 +528,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 message=f"Initializing cluster {self.cluster_name}"
                         f"({self.cluster_id})")
             vapp.reload()
-            init_cluster(server_config, vapp, template)
-            master_ip = get_master_ip(server_config, vapp, template)
+            init_cluster(vapp, template)
+            master_ip = get_master_ip(vapp, template)
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      master_ip)
             self.tenant_client.get_task_monitor().wait_for_status(task)
@@ -518,10 +541,20 @@ class VcdBroker(AbstractBroker, threading.Thread):
                             f"node(s) for "
                             f"{self.cluster_name}({self.cluster_id})")
                 try:
-                    add_nodes(self.req_spec.get(RequestKey.NUM_WORKERS),
-                              template, NodeType.WORKER, server_config,
-                              self.tenant_client, org, vdc, vapp,
-                              self.req_spec)
+                    add_nodes(
+                        client=self.tenant_client,
+                        num_nodes=self.req_spec.get(RequestKey.NUM_WORKERS),
+                        node_type=NodeType.WORKER,
+                        org=org,
+                        vdc=vdc,
+                        vapp=vapp,
+                        catalog_name=catalog_name,
+                        template=template,
+                        network_name=self.req_spec.get(RequestKey.NETWORK_NAME), # noqa: E501
+                        num_cpu=self.req_spec.get(RequestKey.NUM_CPU),
+                        memory_in_mb=self.req_spec.get(RequestKey.MB_MEMORY),
+                        storage_profile=self.req_spec.get(RequestKey.STORAGE_PROFILE_NAME), # noqa: E501
+                        ssh_key_filepath=self.req_spec.get(RequestKey.SSH_KEY_FILEPATH)) # noqa: E501
                 except Exception as e:
                     raise WorkerNodeCreationError(
                         "Error while creating worker node:", str(e))
@@ -533,16 +566,27 @@ class VcdBroker(AbstractBroker, threading.Thread):
                             f"node(s) to "
                             f"{self.cluster_name}({self.cluster_id})")
                 vapp.reload()
-                join_cluster(server_config, vapp, template)
+                join_cluster(vapp, template)
             if self.req_spec.get(RequestKey.ENABLE_NFS):
                 self._update_task(
                     TaskStatus.RUNNING,
                     message=f"Creating NFS node for {self.cluster_name}"
                             f"({self.cluster_id})")
                 try:
-                    add_nodes(1, template, NodeType.NFS,
-                              server_config, self.tenant_client, org, vdc,
-                              vapp, self.req_spec)
+                    add_nodes(
+                        client=self.tenant_client,
+                        num_nodes=1,
+                        node_type=NodeType.NFS,
+                        org=org,
+                        vdc=vdc,
+                        vapp=vapp,
+                        catalog_name=catalog_name,
+                        template=template,
+                        network_name=self.req_spec.get(RequestKey.NETWORK_NAME), # noqa: E501
+                        num_cpu=self.req_spec.get(RequestKey.NUM_CPU),
+                        memory_in_mb=self.req_spec.get(RequestKey.MB_MEMORY),
+                        storage_profile=self.req_spec.get(RequestKey.STORAGE_PROFILE_NAME), # noqa: E501
+                        ssh_key_filepath=self.req_spec.get(RequestKey.SSH_KEY_FILEPATH)) # noqa: E501
                 except Exception as e:
                     raise NFSNodeCreationError(
                         "Error while creating NFS node:", str(e))
@@ -670,7 +714,6 @@ class VcdBroker(AbstractBroker, threading.Thread):
         LOGGER.debug(f"About to add nodes to cluster with name: "
                      f"{self.cluster_name}")
         try:
-            server_config = utils.get_server_runtime_config()
             org_resource = self.tenant_client.get_org()
             org = Org(self.tenant_client, resource=org_resource)
             vdc = VDC(self.tenant_client, href=self.cluster['vdc_href'])
@@ -685,10 +728,25 @@ class VcdBroker(AbstractBroker, threading.Thread):
             if self.req_spec.get(RequestKey.ENABLE_NFS):
                 node_type = NodeType.NFS
 
-            new_nodes = add_nodes(self.req_spec.get(RequestKey.NUM_WORKERS),
-                                  template, node_type, server_config,
-                                  self.tenant_client, org, vdc, vapp,
-                                  self.req_spec)
+            server_config = utils.get_server_runtime_config()
+            catalog_name = server_config['broker']['catalog']
+
+            new_nodes = \
+                add_nodes(
+                    client=self.tenant_client,
+                    num_nodes=self.req_spec.get(RequestKey.NUM_WORKERS),
+                    node_type=node_type,
+                    org=org,
+                    vdc=vdc,
+                    vapp=vapp,
+                    catalog_name=catalog_name,
+                    template=template,
+                    network_name=self.req_spec.get(RequestKey.NETWORK_NAME),
+                    num_cpu=self.req_spec.get(RequestKey.NUM_CPU),
+                    memory_in_mb=self.req_spec.get(RequestKey.MB_MEMORY),
+                    storage_profile=self.req_spec.get(RequestKey.STORAGE_PROFILE_NAME), # noqa: E501
+                    ssh_key_filepath=self.req_spec.get(RequestKey.SSH_KEY_FILEPATH)) # noqa: E501
+
             if node_type == NodeType.NFS:
                 self._update_task(
                     TaskStatus.SUCCESS,
@@ -707,7 +765,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 for spec in new_nodes['specs']:
                     target_nodes.append(spec['target_vm_name'])
                 vapp.reload()
-                join_cluster(server_config, vapp, template, target_nodes)
+                join_cluster(vapp, template, target_nodes)
                 self._update_task(
                     TaskStatus.SUCCESS,
                     message=f"Added "
@@ -790,9 +848,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                         f" node(s) from "
                         f"{self.cluster_name}({self.cluster_id})")
             try:
-                server_config = utils.get_server_runtime_config()
                 delete_nodes_from_cluster(
-                    server_config,
                     vapp,
                     template,
                     self.req_spec.get(RequestKey.NODE_NAMES_LIST),

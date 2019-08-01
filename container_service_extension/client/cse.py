@@ -66,17 +66,8 @@ def list_templates(ctx):
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        result = []
-        templates = cluster.get_templates()
-        for t in templates:
-            result.append({
-                'name': t['name'],
-                'description': t['description'],
-                'catalog': t['catalog'],
-                'catalog_item': t['catalog_item'],
-                'is_default': t['is_default'],
-            })
-        stdout(result, ctx, show_id=True)
+        result = cluster.get_templates()
+        stdout(result, ctx, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
 
@@ -108,9 +99,9 @@ Examples
         Kubernetes provider.
 \b
     vcd cse cluster create mycluster --nodes 1 --enable-nfs \\
-    --network mynetwork --template photon-v2 --cpu 3 --memory 1024 \\
-    --storage-profile mystorageprofile --ssh-key ~/.ssh/id_rsa.pub \\
-    --disable-rollback --vdc othervdc
+    --network mynetwork --template-name photon-v2 --template-revision 1 \\
+    --cpu 3 --memory 1024 --storage-profile mystorageprofile \\
+    --ssh-key ~/.ssh/id_rsa.pub --disable-rollback --vdc othervdc
         Create a Kubernetes cluster named 'mycluster' on org VDC 'othervdc'.
         The cluster will have 1 worker node and 1 NFS node.
         The cluster will be connected to org VDC network 'mynetwork'.
@@ -291,18 +282,26 @@ def cluster_delete(ctx, name, vdc, org):
     help='SSH public key filepath (Exclusive to native Kubernetes provider)')
 @click.option(
     '-t',
-    '--template',
-    'template',
+    '--template-name',
+    'template_name',
     required=False,
     default=None,
     help='Name of the template to instantiate nodes from '
-         '(Exclusive to native Kubernetes provider)')
+         '(Exclusive to native Kubernetes provider). Must be provided if '
+         '--template-revision flag is specified')
+@click.option(
+    '-r',
+    '--template-revision',
+    'template_revision',
+    required=False,
+    default=None,
+    help='Revision of the template to instantiate nodes from'
+         '((Exclusive to native Kubernetes provider). Must be provided if '
+         '--template-name flag is specified')
 @click.option(
     '--enable-nfs',
     'enable_nfs',
     is_flag=True,
-    required=False,
-    default=False,
     help='Create 1 additional NFS node (if --nodes=2, then CSE will create '
          '2 worker nodes and 1 NFS node) '
          '(Exclusive to native Kubernetes provider)')
@@ -310,9 +309,7 @@ def cluster_delete(ctx, name, vdc, org):
     '--disable-rollback',
     'disable_rollback',
     is_flag=True,
-    required=False,
-    default=False,
-    help='Disable rollback on failed cluster creation '
+    help='Disable rollback on cluster creation failure '
          '(Exclusive to native Kubernetes provider)')
 @click.option(
     '-o',
@@ -323,14 +320,16 @@ def cluster_delete(ctx, name, vdc, org):
     metavar='ORG_NAME',
     help='Org to use. Defaults to currently logged-in org')
 def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
-                   storage_profile, ssh_key_file, template, enable_nfs,
-                   disable_rollback, org_name):
+                   storage_profile, ssh_key_file, template_name,
+                   template_revision, enable_nfs, disable_rollback, org_name):
     """Create a Kubernetes cluster."""
     try:
-        restore_session(ctx)
-        client = ctx.obj['client']
-        cluster = Cluster(client)
+        if (template_name and not template_revision) or \
+                (not template_name and template_revision):
+            raise Exception("Both flags --template-name(-t) and "
+                            "--template-revision (-r) must be specified.")
 
+        restore_session(ctx)
         if vdc is None:
             vdc = ctx.obj['profiles'].get('vdc_in_use')
             if not vdc:
@@ -343,6 +342,8 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
         if ssh_key_file is not None:
             ssh_key = ssh_key_file.read()
 
+        client = ctx.obj['client']
+        cluster = Cluster(client)
         result = cluster.create_cluster(
             vdc,
             network_name,
@@ -352,7 +353,8 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
             memory=memory,
             storage_profile=storage_profile,
             ssh_key=ssh_key,
-            template=template,
+            template_name=template_name,
+            template_revision=template_revision,
             enable_nfs=enable_nfs,
             rollback=not disable_rollback,
             org=org_name)
@@ -401,9 +403,7 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
     '--disable-rollback',
     'disable_rollback',
     is_flag=True,
-    required=False,
-    default=False,
-    help='Disable rollback on failed node creation '
+    help='Disable rollback on node creation failure '
          '(Exclusive to native Kubernetes provider)')
 def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
                    vdc_name, disable_rollback):
@@ -520,8 +520,8 @@ Examples
         The node will be connected to org VDC network 'mynetwork'.
         The VM will use the default template.
 \b
-    vcd cse node create mycluster --nodes 2 --type nfs --network mynetwork \\
-    --template photon-v2 --cpu 3 --memory 1024 \\
+    vcd cse node create mycluster --nodes 2 --enable-nfs --network mynetwork \\
+    --template-name photon-v2 --template-revision 1 --cpu 3 --memory 1024 \\
     --storage-profile mystorageprofile --ssh-key ~/.ssh/id_rsa.pub \\
         Add 2 nfs nodes to vApp named 'mycluster' on vCD.
         The nodes will be connected to org VDC network 'mynetwork'.
@@ -636,25 +636,28 @@ def node_info(ctx, cluster_name, node_name, org_name, vdc):
     help='SSH public key to connect to the guest OS on the VM')
 @click.option(
     '-t',
-    '--template',
-    'template',
+    '--template-name',
+    'template_name',
     required=False,
     default=None,
     help='Name of the template to instantiate nodes from')
 @click.option(
-    '--nfs',
+    '-r',
+    '--template-revision',
+    'template_revision',
+    required=False,
+    default=None,
+    help='Name of the template to instantiate nodes from')
+@click.option(
+    '--enable-nfs',
     'enable_nfs',
     is_flag=True,
-    required=False,
-    default=False,
     help='Enable NFS on all created nodes')
 @click.option(
     '--disable-rollback',
     'disable_rollback',
     is_flag=True,
-    required=False,
-    default=False,
-    help='Disable rollback for node')
+    help='Disable rollback on node deployment failure')
 @click.option(
     '-v',
     '--vdc',
@@ -672,10 +675,15 @@ def node_info(ctx, cluster_name, node_name, org_name, vdc):
     metavar='ORG_NAME',
     help='Restrict cluster search to specified org')
 def create_node(ctx, cluster_name, node_count, org, vdc, cpu, memory,
-                network_name, storage_profile, ssh_key_file, template,
-                enable_nfs, disable_rollback):
+                network_name, storage_profile, ssh_key_file, template_name,
+                template_revision, enable_nfs, disable_rollback):
     """Add node(s) to a cluster that uses native Kubernetes provider."""
     try:
+        if (template_name and not template_revision) or \
+                (not template_name and template_revision):
+            raise Exception("Both flags --template-name(-t) and "
+                            "--template-revision (-r) must be specified.")
+
         restore_session(ctx)
         client = ctx.obj['client']
         if org is None and not client.is_sysadmin():
@@ -694,7 +702,8 @@ def create_node(ctx, cluster_name, node_count, org, vdc, cpu, memory,
             memory=memory,
             storage_profile=storage_profile,
             ssh_key=ssh_key,
-            template=template,
+            template_name=template_name,
+            template_revision=template_revision,
             enable_nfs=enable_nfs,
             rollback=not disable_rollback)
         stdout(result, ctx)
@@ -916,9 +925,7 @@ Examples
     '-p',
     '--pks-plans',
     'list_pks_plans',
-    required=False,
     is_flag=True,
-    default=False,
     help="Display available PKS plans if org VDC is backed by "
          "Enterprise PKS infrastructure")
 @click.pass_context

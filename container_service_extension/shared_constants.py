@@ -55,6 +55,7 @@ class RequestKey(str, Enum):
     STORAGE_PROFILE_NAME = 'storage_profile_name'
     NUM_WORKERS = 'num_workers'
     TEMPLATE_NAME = 'template_name'
+    TEMPLATE_REVISION = 'template_revision'
     NODE_NAME = 'node_name'
     ENABLE_NFS = 'enable_nfs'
     NODE_NAMES_LIST = 'node_names'

@@ -24,6 +24,7 @@ from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.utils import get_server_runtime_config
+from container_service_extension.utils import str_to_bool
 
 # Cache to keep ovdc_id to org_name mapping for vcd cse cluster list
 OVDC_TO_ORG_MAP = {}
@@ -36,14 +37,18 @@ def connect_vcd_user_via_token(tenant_auth_token):
     vcd_uri = server_config['vcd']['host']
     version = server_config['vcd']['api_version']
     verify_ssl_certs = server_config['vcd']['verify']
+    log_filename = None
+    log_wire = str_to_bool(server_config['service'].get('log_wire'))
+    if log_wire:
+        log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
     client_tenant = Client(
         uri=vcd_uri,
         api_version=version,
         verify_ssl_certs=verify_ssl_certs,
-        log_file=SERVER_DEBUG_WIRELOG_FILEPATH,
-        log_requests=True,
-        log_headers=True,
-        log_bodies=True)
+        log_file=log_filename,
+        log_requests=log_wire,
+        log_headers=log_wire,
+        log_bodies=log_wire)
     session = client_tenant.rehydrate_from_token(tenant_auth_token)
     return (client_tenant, session)
 
@@ -55,14 +60,18 @@ def get_sys_admin_client():
                        "request is being made. Adding certificate "
                        "verification is strongly advised.")
         requests.packages.urllib3.disable_warnings()
+    log_filename = None
+    log_wire = str_to_bool(server_config['service'].get('log_wire'))
+    if log_wire:
+        log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
     client = Client(
         uri=server_config['vcd']['host'],
         api_version=server_config['vcd']['api_version'],
         verify_ssl_certs=server_config['vcd']['verify'],
-        log_file=SERVER_DEBUG_WIRELOG_FILEPATH,
-        log_requests=True,
-        log_headers=True,
-        log_bodies=True)
+        log_file=log_filename,
+        log_requests=log_wire,
+        log_headers=log_wire,
+        log_bodies=log_wire)
     credentials = BasicLoginCredentials(server_config['vcd']['username'],
                                         SYSTEM_ORG_NAME,
                                         server_config['vcd']['password'])

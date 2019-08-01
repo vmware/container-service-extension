@@ -9,8 +9,8 @@ def cluster_create(request_dict, tenant_auth_token):
 
     Required data: org_name, ovdc_name, cluster_name, num_nodes.
     Conditional data: if k8s_provider is 'native', num_cpu, mb_memory,
-        network_name, storage_profile_name, template_name, enable_nfs,
-        rollback are required (validation handled elsewhere).
+        network_name, storage_profile_name, template_name, template_revision,
+        enable_nfs, rollback are required (validation handled elsewhere).
 
     :return: Dict
     """
@@ -37,7 +37,6 @@ def cluster_resize(request_dict, tenant_auth_token):
     :return: Dict
     """
     required = [
-        RequestKey.ORG_NAME,
         RequestKey.CLUSTER_NAME,
         RequestKey.NUM_WORKERS
     ]
@@ -56,7 +55,6 @@ def cluster_delete(request_dict, tenant_auth_token):
     :return: Dict
     """
     required = [
-        RequestKey.ORG_NAME,
         RequestKey.CLUSTER_NAME,
     ]
     utils.ensure_keys_in_dict(required, request_dict, dict_name="request")
@@ -74,7 +72,6 @@ def cluster_info(request_dict, tenant_auth_token):
     :return: Dict
     """
     required = [
-        RequestKey.ORG_NAME,
         RequestKey.CLUSTER_NAME,
     ]
     utils.ensure_keys_in_dict(required, request_dict, dict_name="request")
@@ -92,7 +89,6 @@ def cluster_config(request_dict, tenant_auth_token):
     :return: Dict
     """
     required = [
-        RequestKey.ORG_NAME,
         RequestKey.CLUSTER_NAME,
     ]
     utils.ensure_keys_in_dict(required, request_dict, dict_name="request")
@@ -115,7 +111,7 @@ def node_create(request_dict, tenant_auth_token):
 
     Required data: org name, ovdc name, cluster name, num nodes, num cpu,
         mb memory, network name, storage profile name, template name,
-        rollback, enable nfs.
+        template_revision, rollback, enable nfs.
 
     :return: Dict
     """
@@ -128,6 +124,7 @@ def node_create(request_dict, tenant_auth_token):
         RequestKey.NETWORK_NAME,
         RequestKey.STORAGE_PROFILE_NAME,
         RequestKey.TEMPLATE_NAME,
+        RequestKey.TEMPLATE_REVISION,
         RequestKey.ROLLBACK,
         RequestKey.ENABLE_NFS,
     ]
@@ -148,7 +145,6 @@ def node_delete(request_dict, tenant_auth_token):
     :return: Dict
     """
     required = [
-        RequestKey.ORG_NAME,
         RequestKey.CLUSTER_NAME,
         RequestKey.NODE_NAMES_LIST
     ]
@@ -169,7 +165,6 @@ def node_info(request_dict, tenant_auth_token):
     :return: Dict
     """
     required = [
-        RequestKey.ORG_NAME,
         RequestKey.CLUSTER_NAME,
         RequestKey.NODE_NAME
     ]
