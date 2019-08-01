@@ -91,6 +91,7 @@ def get_validated_config(config_file_name, msg_update_callback=None):
     check_keys_and_value_types(config['service'],
                                SAMPLE_SERVICE_CONFIG['service'],
                                location="config file 'service' section",
+                               excluded_keys=['log_wire'],
                                msg_update_callback=msg_update_callback)
     if msg_update_callback:
         msg_update_callback.general(
@@ -248,7 +249,6 @@ def _validate_broker_config(broker_dict, msg_update_callback=None):
     """
     check_keys_and_value_types(broker_dict, SAMPLE_BROKER_CONFIG['broker'],
                                location="config file 'broker' section",
-                               excluded_keys=['remote_template_cookbook_url'],
                                msg_update_callback=msg_update_callback)
 
     valid_ip_allocation_modes = [
