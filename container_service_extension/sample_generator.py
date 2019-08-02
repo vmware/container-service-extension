@@ -147,24 +147,24 @@ TEMPLATE_RULE_NOTE = """# [Optional] Template rule section
 #template_rules:
 #- name: Rule1
 #  target:
-#    template_name: photonv2
-#    template_revision: 1
+#    name: photonv2
+#    revision: 1
 #  action:
 #    admin_password: 'new password'
 #    compute_policy: 'new policy'
 #    cpu: 4
-#    memory: 512
+#    mem: 512
 #- name: Rule2
 #  target:
-#    template_name: ubuntu
-#    template_revision: 2
+#    name: ubuntu
+#    revision: 2
 #  action:
 #    cpu: 2
-#    memory: 10245
+#    mem: 1024
 #- name: Rule3
 #  target:
-#    template_name: ubuntu
-#    template_revision: 1
+#    name: ubuntu
+#    revision: 1
 #  action:
 #    admin_password: 'new password'
 """

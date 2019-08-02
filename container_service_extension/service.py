@@ -36,6 +36,7 @@ from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import ServerAction
+from container_service_extension.template_rule import TemplateRule
 from container_service_extension.utils import str_to_bool
 from container_service_extension.vsphere_utils import populate_vsphere_list
 
@@ -195,7 +196,7 @@ class Service(object, metaclass=Singleton):
 
         # Read k8s catalog definition from catalog item metadata and append
         # the same to to server run-time config
-        self._read_template_definition_from_catalog(
+        self._load_template_definition_from_catalog(
             msg_update_callback=msg_update_callback)
 
         # Read templates rules from config and update template deinfition in
@@ -281,6 +282,11 @@ class Service(object, metaclass=Singleton):
         LOGGER.info("Done")
 
     def _load_template_definition_from_catalog(self, msg_update_callback=None):
+        msg = "Loading k8s template definition from catalog"
+        LOGGER.info(msg)
+        if msg_update_callback:
+            msg_update_callback.general_no_color(msg)
+
         client = None
         try:
             log_filename = None
@@ -348,69 +354,45 @@ class Service(object, metaclass=Singleton):
         if 'template_rules' not in self.config:
             return
         rules = self.config['template_rules']
-        if len(rules) == 0:
+        if not rules:
             return
 
-        # Arrange the k8s templates in server run-time config by name and
-        # revision for ease of querying.
+        # Arrange the k8s templates by name and revision for ease of querying.
+        # The resulting data srtucture is a 3 level dictionary, where
+        # first level dictionary is key-ed by the template name, while the
+        # second level dictionary is keyed by the various revisions of the
+        # template in question. And as value corresponding to each second level
+        # dictionary key, we have local k8s template definition represented as
+        # a dictionary.
         templates = self.config['broker']['templates']
         template_table = {}
         for template in templates:
             template_name = template[LocalTemplateKey.NAME]
-            template_revision = template[LocalTemplateKey.REVISION]
+            template_revision = str(template[LocalTemplateKey.REVISION])
             if template_name not in template_table:
                 template_table[template_name] = {}
             template_table[template_name][template_revision] = template
 
         # process rules
-        for rule in rules:
-            rule_name = rule.get('name')
+        msg = f"Processing template rules."
+        LOGGER.debug(msg)
+        if msg_update_callback:
+            msg_update_callback.general_no_color(msg)
 
-            target = rule.get('target')
-            if not target:
-                target_name = rule['target'].get('name')
-                target_revision = rule['target'].get('revision')
-            else:
-                target_name = None
-                target_revision = None
-            if target_name not in template_table or target_revision not in template_table[target_name]: # noqa: E501
-                msg = f"Rule : {rule_name}'s target is not a valid k8s " \
-                      "template."
-                LOGGER.warning(msg)
-                if msg_update_callback:
-                    msg_update_callback.info(msg)
-                continue
-            target_template = template_table[target_name][target_revision]
+        for rule_def in rules:
+            rule = TemplateRule(rule_def, logger=LOGGER, msg_update_callback=msg_update_callback) # noqa: E501
+            msg = f"Processing rule : {rule}."
+            LOGGER.debug(msg)
+            if msg_update_callback:
+                msg_update_callback.general_no_color(msg)
 
-            action = rule.get('action')
-            if not action:
+            if not rule.validate(template_table):
                 continue
 
-            default_modified = False
-            action_admin_password = action.get(LocalTemplateKey.ADMIN_PASSWORD)
-            if action_admin_password and action_admin_password != target_template[LocalTemplateKey.ADMIN_PASSWORD]: # noqa: E501
-                target_template[LocalTemplateKey.ADMIN_PASSWORD] = action_admin_password # noqa: E501
-                default_modified = True
+            target_template = template_table[rule.target['name']][str(rule.target['revision'])] # noqa: E501
+            rule.apply_on(target_template)
 
-            action_compute_profile = action.get(LocalTemplateKey.COMPUTE_POLICY) # noqa: E501
-            if action_compute_profile and action_compute_profile != target_template[LocalTemplateKey.COMPUTE_POLICY]: # noqa: E501
-                target_template[LocalTemplateKey.COMPUTE_POLICY] = action_compute_profile # noqa: E501
-                default_modified = True
-                # TODO: Update the compute policy of the template right away!
-
-            action_cpu = action.get(LocalTemplateKey.CPU)
-            if action_cpu and action_cpu != target_template[LocalTemplateKey.CPU]: # noqa: E501
-                target_template[LocalTemplateKey.CPU] = action_cpu
-                default_modified = True
-
-            action_memory = action.get(LocalTemplateKey.MEMORY)
-            if action_memory and action_cpu != target_template[LocalTemplateKey.MEMORY]: # noqa: E501
-                target_template[LocalTemplateKey.MEMORY] = action_memory
-                default_modified = True
-
-            if default_modified:
-                target_template['default_modefied'] = True
-                msg = "Process rule : '{rule_name}'"
-                LOGGER.debug(msg)
-                if msg_update_callback:
-                    msg_update_callback.general(msg)
+            msg = f"Finished processeing rule : '{rule.name}'"
+            LOGGER.debug(msg)
+            if msg_update_callback:
+                msg_update_callback.general(msg)
