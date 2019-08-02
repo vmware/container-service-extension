@@ -32,6 +32,7 @@ from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PksCache
 from container_service_extension.pyvcloud_utils import \
     connect_vcd_user_via_token
+from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import ServerAction
@@ -192,73 +193,14 @@ class Service(object, metaclass=Singleton):
 
         populate_vsphere_list(self.config['vcs'])
 
-        # Read K8 catalog definition from catalog item metadata and append
-        # to server config
-        client = None
-        try:
-            log_filename = None
-            log_wire = str_to_bool(self.config['service'].get('log_wire'))
-            if log_wire:
-                log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
+        # Read k8s catalog definition from catalog item metadata and append
+        # the same to to server run-time config
+        self._read_template_definition_from_catalog(
+            msg_update_callback=msg_update_callback)
 
-            client = Client(self.config['vcd']['host'],
-                            api_version=self.config['vcd']['api_version'],
-                            verify_ssl_certs=self.config['vcd']['verify'],
-                            log_file=log_filename,
-                            log_requests=log_wire,
-                            log_headers=log_wire,
-                            log_bodies=log_wire)
-            credentials = BasicLoginCredentials(self.config['vcd']['username'],
-                                                SYSTEM_ORG_NAME,
-                                                self.config['vcd']['password'])
-            client.set_credentials(credentials)
-
-            org_name = self.config['broker']['org']
-            catalog_name = self.config['broker']['catalog']
-            k8_templates = get_all_k8s_local_template_definition(
-                client=client, catalog_name=catalog_name, org_name=org_name)
-
-            if not k8_templates:
-                msg = "No valid K8 templates were found in catalog " \
-                      f"'{catalog_name}'. Unable to start CSE server."
-                if msg_update_callback:
-                    msg_update_callback.error(msg)
-                LOGGER.error(msg)
-                sys.exit(1)
-
-            # Check that deafult K8 template exists in vCD at the correct
-            # revision
-            default_template_name = \
-                self.config['broker']['default_template_name']
-            default_template_revision = \
-                str(self.config['broker']['default_template_revision'])
-            found_default_template = False
-            for template in k8_templates:
-                if str(template['revision']) == default_template_revision \
-                        and template['name'] == default_template_name:
-                    found_default_template = True
-
-                msg = f"Found K8 template '{template['name']}' at revision " \
-                      f"{template['revision']} in catalog '{catalog_name}'"
-                if msg_update_callback:
-                    msg_update_callback.general(msg)
-                LOGGER.info(msg)
-
-            if not found_default_template:
-                msg = f"Default template {default_template_name} with " \
-                      f"revision {default_template_revision} not found." \
-                      " Unable to start CSE server."
-                if msg_update_callback:
-                    msg_update_callback.error(msg)
-                LOGGER.error(msg)
-                sys.exit(1)
-
-            self.config['broker']['templates'] = k8_templates
-        finally:
-            if client:
-                client.logout()
-
-        # TODO Rule framework, update config with rules
+        # Read templates rules from config and update template deinfition in
+        # server run-time config
+        self._process_template_rules(msg_update_callback=msg_update_callback)
 
         if self.should_check_config:
             check_cse_installation(
@@ -337,3 +279,138 @@ class Service(object, metaclass=Singleton):
 
         self._state = ServerState.STOPPED
         LOGGER.info("Done")
+
+    def _load_template_definition_from_catalog(self, msg_update_callback=None):
+        client = None
+        try:
+            log_filename = None
+            log_wire = str_to_bool(self.config['service'].get('log_wire'))
+            if log_wire:
+                log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
+
+            client = Client(self.config['vcd']['host'],
+                            api_version=self.config['vcd']['api_version'],
+                            verify_ssl_certs=self.config['vcd']['verify'],
+                            log_file=log_filename,
+                            log_requests=log_wire,
+                            log_headers=log_wire,
+                            log_bodies=log_wire)
+            credentials = BasicLoginCredentials(self.config['vcd']['username'],
+                                                SYSTEM_ORG_NAME,
+                                                self.config['vcd']['password'])
+            client.set_credentials(credentials)
+
+            org_name = self.config['broker']['org']
+            catalog_name = self.config['broker']['catalog']
+            k8_templates = get_all_k8s_local_template_definition(
+                client=client, catalog_name=catalog_name, org_name=org_name)
+
+            if not k8_templates:
+                msg = "No valid K8 templates were found in catalog " \
+                      f"'{catalog_name}'. Unable to start CSE server."
+                if msg_update_callback:
+                    msg_update_callback.error(msg)
+                LOGGER.error(msg)
+                sys.exit(1)
+
+            # Check that deafult K8 template exists in vCD at the correct
+            # revision
+            default_template_name = \
+                self.config['broker']['default_template_name']
+            default_template_revision = \
+                str(self.config['broker']['default_template_revision'])
+            found_default_template = False
+            for template in k8_templates:
+                if str(template[LocalTemplateKey.REVISION]) == default_template_revision and template[LocalTemplateKey.NAME] == default_template_name: # noqa: E501
+                    found_default_template = True
+
+                msg = f"Found K8 template '{template['name']}' at revision " \
+                      f"{template['revision']} in catalog '{catalog_name}'"
+                if msg_update_callback:
+                    msg_update_callback.general(msg)
+                LOGGER.info(msg)
+
+            if not found_default_template:
+                msg = f"Default template {default_template_name} with " \
+                      f"revision {default_template_revision} not found." \
+                      " Unable to start CSE server."
+                if msg_update_callback:
+                    msg_update_callback.error(msg)
+                LOGGER.error(msg)
+                sys.exit(1)
+
+            self.config['broker']['templates'] = k8_templates
+        finally:
+            if client:
+                client.logout()
+
+    def _process_template_rules(self, msg_update_callback=None):
+        if 'template_rules' not in self.config:
+            return
+        rules = self.config['template_rules']
+        if len(rules) == 0:
+            return
+
+        # Arrange the k8s templates in server run-time config by name and
+        # revision for ease of querying.
+        templates = self.config['broker']['templates']
+        template_table = {}
+        for template in templates:
+            template_name = template[LocalTemplateKey.NAME]
+            template_revision = template[LocalTemplateKey.REVISION]
+            if template_name not in template_table:
+                template_table[template_name] = {}
+            template_table[template_name][template_revision] = template
+
+        # process rules
+        for rule in rules:
+            rule_name = rule.get('name')
+
+            target = rule.get('target')
+            if not target:
+                target_name = rule['target'].get('name')
+                target_revision = rule['target'].get('revision')
+            else:
+                target_name = None
+                target_revision = None
+            if target_name not in template_table or target_revision not in template_table[target_name]: # noqa: E501
+                msg = f"Rule : {rule_name}'s target is not a valid k8s " \
+                      "template."
+                LOGGER.warning(msg)
+                if msg_update_callback:
+                    msg_update_callback.info(msg)
+                continue
+            target_template = template_table[target_name][target_revision]
+
+            action = rule.get('action')
+            if not action:
+                continue
+
+            default_modified = False
+            action_admin_password = action.get(LocalTemplateKey.ADMIN_PASSWORD)
+            if action_admin_password and action_admin_password != target_template[LocalTemplateKey.ADMIN_PASSWORD]: # noqa: E501
+                target_template[LocalTemplateKey.ADMIN_PASSWORD] = action_admin_password # noqa: E501
+                default_modified = True
+
+            action_compute_profile = action.get(LocalTemplateKey.COMPUTE_POLICY) # noqa: E501
+            if action_compute_profile and action_compute_profile != target_template[LocalTemplateKey.COMPUTE_POLICY]: # noqa: E501
+                target_template[LocalTemplateKey.COMPUTE_POLICY] = action_compute_profile # noqa: E501
+                default_modified = True
+                # TODO: Update the compute policy of the template right away!
+
+            action_cpu = action.get(LocalTemplateKey.CPU)
+            if action_cpu and action_cpu != target_template[LocalTemplateKey.CPU]: # noqa: E501
+                target_template[LocalTemplateKey.CPU] = action_cpu
+                default_modified = True
+
+            action_memory = action.get(LocalTemplateKey.MEMORY)
+            if action_memory and action_cpu != target_template[LocalTemplateKey.MEMORY]: # noqa: E501
+                target_template[LocalTemplateKey.MEMORY] = action_memory
+                default_modified = True
+
+            if default_modified:
+                target_template['default_modefied'] = True
+                msg = "Process rule : '{rule_name}'"
+                LOGGER.debug(msg)
+                if msg_update_callback:
+                    msg_update_callback.general(msg)
