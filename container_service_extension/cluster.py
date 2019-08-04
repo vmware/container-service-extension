@@ -162,7 +162,7 @@ def add_nodes(client,
                 'vapp': source_vapp.resource,
                 'target_vm_name': name,
                 'hostname': name,
-                'password_auto': True,
+                'password': template['admin_password'],
                 'network': network_name,
                 'ip_allocation_mode': 'pool'
             }
@@ -182,8 +182,6 @@ def add_nodes(client,
             num_cpu = template[LocalTemplateKey.CPU]
         if not memory_in_mb:
             memory_in_mb = template[LocalTemplateKey.MEMORY]
-        change_password_command = \
-            f"/bin/echo \"root:{template['admin_password']}\" | chpasswd"
         for spec in specs:
             vm_name = spec['target_vm_name']
             vm_resource = vapp.get_vm(vm_name)
@@ -199,12 +197,6 @@ def add_nodes(client,
             client.get_task_monitor().wait_for_status(task)
             vapp.reload()
 
-            node_names = [vm_name]
-            execute_script_in_nodes(
-                vapp=vapp,
-                node_names=node_names,
-                script=change_password_command,
-                wait=False)
             if node_type == NodeType.NFS:
                 LOGGER.debug(
                     f"Enabling NFS server on {spec['target_vm_name']}")
@@ -253,7 +245,7 @@ def _get_init_info(vapp):
 
     node_names = _get_node_names(vapp, NodeType.MASTER)
     result = execute_script_in_nodes(
-        vapp=vapp, node_names=node_names, script=script, check_tools=False)
+        vapp=vapp, node_names=node_names, script=script)
     return result[0][1].content.decode().split()
 
 
@@ -362,13 +354,8 @@ def execute_script_in_nodes(vapp,
     try:
         sys_admin_client = get_sys_admin_client()
         for node_name in node_names:
-            if 'chpasswd' in script:
-                p = re.compile(':.*\"')
-                debug_script = p.sub(':***\"', script)
-            else:
-                debug_script = script
             LOGGER.debug(f"will try to execute script on {node_name}:\n"
-                         f"{debug_script}")
+                         f"{script}")
 
             vs = get_vsphere(sys_admin_client, vapp, vm_name=node_name,
                              logger=LOGGER)

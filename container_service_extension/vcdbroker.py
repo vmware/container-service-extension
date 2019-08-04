@@ -9,6 +9,7 @@ import traceback
 import uuid
 
 import pkg_resources
+from pyvcloud.vcd.client import EntityType
 from pyvcloud.vcd.client import TaskStatus
 from pyvcloud.vcd.client import VCLOUD_STATUS_MAP
 from pyvcloud.vcd.org import Org
@@ -148,9 +149,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
         else:
             task_href = None
 
-        org_resource = self.tenant_client.get_org_by_name(
-            self.req_spec.get(RequestKey.ORG_NAME))
-        org = Org(self.tenant_client, resource=org_resource)
+        org_sparse = self.tenant_client.get_org()
+        org = Org(self.tenant_client, href=org_sparse.get('href'))
         user_href = org.get_user(self.client_session.get('user')).get('href')
 
         self.task_resource = self.task.update(
@@ -162,7 +162,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
             progress=None,
             owner_href=self.tenant_info['org_href'],
             owner_name=self.tenant_info['org_name'],
-            owner_type='application/vnd.vmware.vcloud.org+xml',
+            owner_type=EntityType.ORG.value,
             user_href=user_href,
             user_name=self.tenant_info['user_name'],
             org_href=self.tenant_info['org_href'],
@@ -560,6 +560,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                             f"{self.cluster_name}({self.cluster_id})")
                 vapp.reload()
                 join_cluster(vapp, template)
+
             if self.req_spec.get(RequestKey.ENABLE_NFS):
                 self._update_task(
                     TaskStatus.RUNNING,
