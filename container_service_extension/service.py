@@ -357,21 +357,7 @@ class Service(object, metaclass=Singleton):
         if not rules:
             return
 
-        # Arrange the k8s templates by name and revision for ease of querying.
-        # The resulting data srtucture is a 3 level dictionary, where
-        # first level dictionary is key-ed by the template name, while the
-        # second level dictionary is keyed by the various revisions of the
-        # template in question. And as value corresponding to each second level
-        # dictionary key, we have local k8s template definition represented as
-        # a dictionary.
         templates = self.config['broker']['templates']
-        template_table = {}
-        for template in templates:
-            template_name = template[LocalTemplateKey.NAME]
-            template_revision = str(template[LocalTemplateKey.REVISION])
-            if template_name not in template_table:
-                template_table[template_name] = {}
-            template_table[template_name][template_revision] = template
 
         # process rules
         msg = f"Processing template rules."
@@ -380,19 +366,21 @@ class Service(object, metaclass=Singleton):
             msg_update_callback.general_no_color(msg)
 
         for rule_def in rules:
-            rule = TemplateRule(rule_def, logger=LOGGER, msg_update_callback=msg_update_callback) # noqa: E501
+            rule = TemplateRule(
+                name=rule_def.get('name'), target=rule_def.get('target'),
+                action=rule_def.get('action'), logger=LOGGER,
+                msg_update_callback=msg_update_callback)
+
             msg = f"Processing rule : {rule}."
             LOGGER.debug(msg)
             if msg_update_callback:
                 msg_update_callback.general_no_color(msg)
 
-            if not rule.validate(template_table):
-                continue
+            # Since the patching is in-place, the changes will reflect back on
+            # the dictionary holding the server runtime configuration.
+            rule.apply(templates)
 
-            target_template = template_table[rule.target['name']][str(rule.target['revision'])] # noqa: E501
-            rule.apply_on(target_template)
-
-            msg = f"Finished processeing rule : '{rule.name}'"
+            msg = f"Finished processing rule : '{rule.name}'"
             LOGGER.debug(msg)
             if msg_update_callback:
                 msg_update_callback.general(msg)

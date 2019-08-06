@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import random
-import re
 import string
 import time
 
@@ -162,7 +161,7 @@ def add_nodes(client,
                 'vapp': source_vapp.resource,
                 'target_vm_name': name,
                 'hostname': name,
-                'password': template['admin_password'],
+                'password': template[LocalTemplateKey.ADMIN_PASSWORD],
                 'network': network_name,
                 'ip_allocation_mode': 'pool'
             }
@@ -173,8 +172,6 @@ def add_nodes(client,
             specs.append(spec)
 
         task = vapp.add_vms(specs, power_on=False)
-        # TODO: get details of the exception like not enough resources
-        # available.
         client.get_task_monitor().wait_for_status(task)
         vapp.reload()
 
@@ -198,19 +195,21 @@ def add_nodes(client,
             vapp.reload()
 
             if node_type == NodeType.NFS:
-                LOGGER.debug(
-                    f"Enabling NFS server on {spec['target_vm_name']}")
+                LOGGER.debug(f"Enabling NFS server on {vm_name}")
                 script_filepath = get_local_script_filepath(
-                    template['name'], template['revision'], ScriptFile.NFSD)
+                    template[LocalTemplateKey.NAME],
+                    template[LocalTemplateKey.REVISION],
+                    ScriptFile.NFSD)
                 script = read_data_file(script_filepath, logger=LOGGER)
                 exec_results = execute_script_in_nodes(
-                    vapp=vapp, node_names=node_names, script=script)
+                    vapp=vapp, node_names=[vm_name], script=script)
                 errors = _get_script_execution_errors(exec_results)
                 if errors:
                     raise ScriptExecutionError(
-                        f"Script execution failed on node "
-                        f"{spec['target_vm_name']}:{errors}")
+                        f"Script execution failed on node {vm_name}:{errors}")
     except Exception as e:
+        # TODO: get details of the exception to determine cause of failure,
+        # e.g. not enough resources available.
         node_list = [entry.get('target_vm_name') for entry in specs]
         raise NodeCreationError(node_list, str(e))
     return {'task': task, 'specs': specs}
@@ -280,7 +279,8 @@ def fetch_cluster_config(vapp):
 
 def init_cluster(vapp, template):
     script_filepath = get_local_script_filepath(
-        template['name'], template['revision'], ScriptFile.MASTER)
+        template[LocalTemplateKey.NAME], template[LocalTemplateKey.REVISION],
+        ScriptFile.MASTER)
     script = read_data_file(script_filepath, logger=LOGGER)
     node_names = _get_node_names(vapp, NodeType.MASTER)
     result = execute_script_in_nodes(
@@ -295,7 +295,8 @@ def init_cluster(vapp, template):
 def join_cluster(vapp, template, target_nodes=None):
     init_info = _get_init_info(vapp)
     tmp_script_filepath = get_local_script_filepath(
-        template['name'], template['revision'], ScriptFile.NODE)
+        template[LocalTemplateKey.NAME], template[LocalTemplateKey.REVISION],
+        ScriptFile.NODE)
     tmp_script = read_data_file(tmp_script_filepath, logger=LOGGER)
     script = tmp_script.format(token=init_info[0], ip=init_info[1])
     if target_nodes is None:

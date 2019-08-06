@@ -6,21 +6,47 @@ from container_service_extension.server_constants import LocalTemplateKey
 
 
 class TemplateRule:
-    def __init__(self, definition, logger=None, msg_update_callback=None):
-        """."""
-        self.name = definition.get('name')
-        self.target = definition.get('target')
-        self.action = definition.get('action')
+    """Represents a template rule object.
+
+    Rules can be defined to override template definitions as defined by remote
+    template cookbook. Each rule acts on 'target' viz. a template, and can have
+    only one target. Matching is driven by name and revision of the template.
+    If only name is specified without the revision or vice versa, the rule will
+    not be processed. And once a match is found, as an 'action' the following
+    attributes can be overriden.
+        * admin_password
+        * compute_policy
+        * cpu
+        * memory
+    """
+
+    def __init__(self, name, target, action, logger=None,
+                 msg_update_callback=None):
+        """Initialize TemplateRule object.
+
+        :param str name: name of the rule.
+        :param dict target: target template of the rule. The keys 'name' and
+            'revision' should be present in the dictionary.
+        :param dict action: attributes of the target template to update,
+            accepted keys are 'admin_password', 'compute_policy', 'cpu' and
+            'memory'.
+        :param logging.Logger logger: optional logger to log with.
+        :param utils.ConsoleMessagePrinter msg_update_callback: Callback
+            object that writes messages onto console.
+        """
+        self.name = name
+        self.target = target
+        self.action = action
         self.logger = logger
         self.msg_update_callback = msg_update_callback
 
     def __str__(self):
         redacted_action = dict(self.action)
         if 'admin_password' in redacted_action:
-            redacted_action['admin_password'] = "[REDCATED]"
+            redacted_action['admin_password'] = "[REDACTED]"
         return f"{self.name} : ({self.target.get('name')} at rev {self.target.get('revision')}) -> {redacted_action}" # noqa: E501
 
-    def validate(self, template_table):
+    def _validate(self, template_table):
         """."""
         if self.target:
             target_name = self.target.get('name')
@@ -30,7 +56,7 @@ class TemplateRule:
             if self.logger:
                 self.logger.warning(msg)
             if self.msg_update_callback:
-                self.msg_update_callback.info(msg)
+                self.msg_update_callback.error(msg)
             return False
 
         if not target_name:
@@ -38,7 +64,7 @@ class TemplateRule:
             if self.logger:
                 self.logger.warning(msg)
             if self.msg_update_callback:
-                self.msg_update_callback.info(msg)
+                self.msg_update_callback.error(msg)
             return False
 
         if not target_revision:
@@ -46,7 +72,7 @@ class TemplateRule:
             if self.logger:
                 self.logger.warning(msg)
             if self.msg_update_callback:
-                self.msg_update_callback.info(msg)
+                self.msg_update_callback.error(msg)
             return False
 
         if target_name not in template_table:
@@ -55,7 +81,7 @@ class TemplateRule:
             if self.logger:
                 self.logger.warning(msg)
             if self.msg_update_callback:
-                self.msg_update_callback.info(msg)
+                self.msg_update_callback.error(msg)
             return False
 
         if str(target_revision) not in template_table[target_name]:
@@ -64,7 +90,7 @@ class TemplateRule:
             if self.logger:
                 self.logger.warning(msg)
             if self.msg_update_callback:
-                self.msg_update_callback.info(msg)
+                self.msg_update_callback.error(msg)
             return False
 
         if not self.action:
@@ -72,7 +98,7 @@ class TemplateRule:
             if self.logger:
                 self.logger.warning(msg)
             if self.msg_update_callback:
-                self.msg_update_callback.info(msg)
+                self.msg_update_callback.error(msg)
             return False
 
         all_actions = set(self.action.keys())
@@ -90,13 +116,41 @@ class TemplateRule:
             if self.logger:
                 self.logger.warning(msg)
             if self.msg_update_callback:
-                self.msg_update_callback.info(msg)
+                self.msg_update_callback.error(msg)
             # the rule is still valid, so don't fail the validation.
 
         return True
 
-    def apply_on(self, target_template):
-        """."""
+    def apply(self, templates):
+        """Validate and apply a rule on templates.
+
+        If the rule validation fails, appropriate message will be logged and
+        updated via msg_update_callback. If validation goes through, an
+        in-place updation of template deifintion will occur. Unknown action
+        keys will be ignored.
+
+        :param list templates: list of local template defintions
+        """
+        # Arrange the k8s templates by name and revision for ease of querying.
+        # The resulting data srtucture is a 3 level dictionary, where
+        # first level dictionary is key-ed by the template name, while the
+        # second level dictionary is keyed by the various revisions of the
+        # template in question. And as value corresponding to each second level
+        # dictionary key, we have local k8s template definition represented as
+        # a dictionary.
+        template_table = {}
+        for template in templates:
+            template_name = template[LocalTemplateKey.NAME]
+            template_revision = str(template[LocalTemplateKey.REVISION])
+            if template_name not in template_table:
+                template_table[template_name] = {}
+            template_table[template_name][template_revision] = template
+
+        if not self._validate(template_table):
+            return
+
+        target_template = template_table[self.target['name']][str(self.target['revision'])] # noqa: E501
+
         new_admin_password = self.action.get(LocalTemplateKey.ADMIN_PASSWORD) # noqa: E501
         if new_admin_password and new_admin_password != target_template[LocalTemplateKey.ADMIN_PASSWORD]: # noqa: E501
             target_template[LocalTemplateKey.ADMIN_PASSWORD] = new_admin_password # noqa: E501

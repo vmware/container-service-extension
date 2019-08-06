@@ -136,7 +136,7 @@ TEMPLATE_RULE_NOTE = """# [Optional] Template rule section
 # should match exactly one template. Matching is driven by name and revision of
 # the template. If only name is specified without the revision or vice versa,
 # the rule will not be processed. And once a match is found, as an action the
-# following arrtibutes can be overriden.
+# following attributes can be overriden.
 # * admin_password
 # * compute_policy
 # * cpu
