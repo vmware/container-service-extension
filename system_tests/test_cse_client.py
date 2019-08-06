@@ -62,6 +62,10 @@ from container_service_extension.cse import cli
 import container_service_extension.server_constants as constants
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
+from container_service_extension.system_test_framework.utils import \
+    execute_commands
+from container_service_extension.system_test_framework.utils import \
+    list_cluster_output_validator
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -251,7 +255,7 @@ def vcd_vapp_author():
 
 
 @pytest.fixture
-def delete_test_cluster():
+def delete_test_clusters():
     """Fixture to ensure that test cluster doesn't exist before or after tests.
 
     Usage: add the parameter 'delete_test_cluster' to the test function.
@@ -262,25 +266,16 @@ def delete_test_cluster():
     Teardown tasks (only if config key 'teardown_clusters'=True):
     - Delete test cluster vApp
     """
-    env.delete_vapp(env.TEST_CLUSTER_NAME)
+    env.delete_vapp(env.SYS_ADMIN_TEST_CLUSTER_NAME)
+    env.delete_vapp(env.ORG_ADMIN_TEST_CLUSTER_NAME)
+    env.delete_vapp(env.VAPP_ADMIN_TEST_CLUSTER_NAME)
+
     yield
+
     if env.TEARDOWN_CLUSTERS:
-        env.delete_vapp(env.TEST_CLUSTER_NAME)
-
-
-def execute_commands(cmd_list):
-    cmd_results = []
-    for action in cmd_list:
-        cmd = action.cmd
-        expected_exit_code = action.exit_code
-        result = env.CLI_RUNNER.invoke(vcd, cmd.split(),
-                                       catch_exceptions=False)
-        assert result.exit_code == expected_exit_code, \
-            testutils.format_command_info(
-                'vcd', cmd, result.exit_code, result.output)
-        cmd_results.append(result)
-
-    return cmd_results
+        env.delete_vapp(env.SYS_ADMIN_TEST_CLUSTER_NAME)
+        env.delete_vapp(env.ORG_ADMIN_TEST_CLUSTER_NAME)
+        env.delete_vapp(env.VAPP_ADMIN_TEST_CLUSTER_NAME)
 
 
 def test_0010_vcd_cse_version():
@@ -302,7 +297,7 @@ def test_0020_vcd_cse_system_info(vcd_org_admin):
 
 
 def test_0030_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
-                                              delete_test_cluster):
+                                              delete_test_clusters):
     """Test that --disable-rollback option works during cluster creation.
 
     commands:
@@ -310,7 +305,7 @@ def test_0030_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
     $ vcd cse cluster create testcluster -n NETWORK -N 1 -c 1000
         --disable-rollback
     """
-    cmd = f"cse cluster create {env.TEST_CLUSTER_NAME} -n " \
+    cmd = f"cse cluster create {env.SYS_ADMIN_TEST_CLUSTER_NAME} -n " \
           f"{config['broker']['network']} -N 1 -c 1000"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
@@ -318,7 +313,7 @@ def test_0030_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
                                       result.output)
     # TODO: Make cluster rollback delete call blocking
     time.sleep(env.WAIT_INTERVAL * 2)  # wait for vApp to be deleted
-    assert not env.vapp_exists(env.TEST_CLUSTER_NAME), \
+    assert not env.vapp_exists(env.SYS_ADMIN_TEST_CLUSTER_NAME), \
         "Cluster exists when it should not."
 
     cmd += " --disable-rollback"
@@ -326,12 +321,12 @@ def test_0030_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
-    assert env.vapp_exists(env.TEST_CLUSTER_NAME), \
+    assert env.vapp_exists(env.SYS_ADMIN_TEST_CLUSTER_NAME), \
         "Cluster does not exist when it should."
 
 
 def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
-                                                  delete_test_cluster):
+                                                  delete_test_clusters):
     """Test cse cluster/node commands.
 
     This test function contains several sub-test blocks that can be commented
@@ -356,7 +351,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
         :rtype: List[str]
         """
         node_pattern = r'(node-\S+)'
-        node_list_cmd = f"cse node list {env.TEST_CLUSTER_NAME}"
+        node_list_cmd = f"cse node list {env.SYS_ADMIN_TEST_CLUSTER_NAME}"
         print(f"Running command [vcd {node_list_cmd}]...", end='')
         node_list_result = env.CLI_RUNNER.invoke(vcd, node_list_cmd.split(),
                                                  catch_exceptions=False)
@@ -393,7 +388,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
           f"revision: {template_revision}\n")
     # vcd cse cluster create testcluster -n NETWORK -N 1 -t TEMPLATE_NAME
     # -r TEMPLATE_REVISION
-    cmd = f"cse cluster create {env.TEST_CLUSTER_NAME} -n " \
+    cmd = f"cse cluster create {env.SYS_ADMIN_TEST_CLUSTER_NAME} -n " \
           f"{config['broker']['network']} -N 1 -t {template_name} " \
           f"-r {template_revision}"
     num_nodes += 1
@@ -402,16 +397,16 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
-    assert env.vapp_exists(env.TEST_CLUSTER_NAME), \
+    assert env.vapp_exists(env.SYS_ADMIN_TEST_CLUSTER_NAME), \
         "Cluster doesn't exist when it should."
     print(f"SUCCESS")
     nodes = check_node_list()
 
     cmds = [
-        f"cse cluster config {env.TEST_CLUSTER_NAME}",
-        f"cse cluster info {env.TEST_CLUSTER_NAME}",
+        f"cse cluster config {env.SYS_ADMIN_TEST_CLUSTER_NAME}",
+        f"cse cluster info {env.SYS_ADMIN_TEST_CLUSTER_NAME}",
         f"cse cluster list",
-        f"cse node info {env.TEST_CLUSTER_NAME} {nodes[0]}"
+        f"cse node info {env.SYS_ADMIN_TEST_CLUSTER_NAME} {nodes[0]}"
     ]
     for cmd in cmds:
         print(f"Running command [vcd {cmd}]...", end='')
@@ -424,7 +419,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
         print('SUCCESS')
 
     # vcd cse node delete testcluster TESTNODE
-    cmd = f"cse node delete {env.TEST_CLUSTER_NAME} {nodes[0]}"
+    cmd = f"cse node delete {env.SYS_ADMIN_TEST_CLUSTER_NAME} {nodes[0]}"
     num_nodes -= 1
     print(f"Running command [vcd {cmd}]...", end='')
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), input='y',
@@ -436,7 +431,7 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
     check_node_list()
 
     # vcd cse node create testcluster -n NETWORK -t PHOTON
-    cmd = f"cse node create {env.TEST_CLUSTER_NAME} -n " \
+    cmd = f"cse node create {env.SYS_ADMIN_TEST_CLUSTER_NAME} -n " \
           f"{config['broker']['network']} -t {template_name} "\
           f"-r {template_revision}"
     num_nodes += 1
@@ -450,23 +445,24 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
     check_node_list()
 
     # vcd cse cluster delete testcluster
-    cmd = f"cse cluster delete {env.TEST_CLUSTER_NAME}"
+    cmd = f"cse cluster delete {env.SYS_ADMIN_TEST_CLUSTER_NAME}"
     print(f"Running command [vcd {cmd}]...", end='')
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), input='y',
                                    catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
-    assert not env.vapp_exists(env.TEST_CLUSTER_NAME), \
+    assert not env.vapp_exists(env.SYS_ADMIN_TEST_CLUSTER_NAME), \
         "Cluster exists when it should not"
     num_nodes = 0
     print('SUCCESS')
 
 
-@pytest.mark.parametrize('test_runner_username', ['sys_admin', 'org_admin', 'vapp_author']) # noqa: E501
+@pytest.mark.parametrize('test_runner_username', ['sys_admin', 'org_admin',
+                                                  'vapp_author'])
 def test_0050_vcd_cse_system_toggle(config, test_runner_username,
-                                    delete_test_cluster):
-    """Test 'vcd cse system ...' commands.
+                                    delete_test_clusters):
+    """Test `vcd cse system ...` commands.
 
     Test that on disabling CSE, cluster deployments are no longer
     allowed, and on enabling CSE, cluster deployments are allowed again.
@@ -483,28 +479,127 @@ def test_0050_vcd_cse_system_toggle(config, test_runner_username,
     different users
     """
     # Batch cse commands together in a list and then execute them one by one
-    cmd_binder = collections.namedtuple('UserCmdBinder', 'cmd exit_code')
+    cmd_binder = collections.namedtuple('UserCmdBinder',
+                                        'cmd exit_code validate_output_func'
+                                        ' test_user')
     cmd_list = [
-        cmd_binder(cmd=env.SYS_ADMIN_LOGIN_CMD, exit_code=0),
-        cmd_binder(cmd=f"cse system disable", exit_code=0),
+        cmd_binder(cmd=env.SYS_ADMIN_LOGIN_CMD, exit_code=0,
+                   validate_output_func=None, test_user='sys_admin'),
+        cmd_binder(cmd=f"cse system disable", exit_code=0,
+                   validate_output_func=None, test_user='sys_admin'),
         cmd_binder(cmd=env.USER_LOGIN_CMD_MAP.get(test_runner_username),
-                   exit_code=0),
-        cmd_binder(cmd=f"org use {config['broker']['org']}", exit_code=0),
-        cmd_binder(cmd=f"cse cluster create {env.TEST_CLUSTER_NAME} -n "
-                       f"{config['broker']['network']} -N 1", exit_code=2),
-        cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0),
-        cmd_binder(cmd=env.SYS_ADMIN_LOGIN_CMD, exit_code=0),
-        cmd_binder(cmd="cse system enable", exit_code=0),
-        cmd_binder(cmd=f"cse cluster create {env.TEST_CLUSTER_NAME} -n "
-                       f"{config['broker']['network']} -N 1 -c 1000 "
-                       f"--disable-rollback", exit_code=2),
-        cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0)
+                   exit_code=0, validate_output_func=None,
+                   test_user=test_runner_username),
+        cmd_binder(cmd=f"org use {config['broker']['org']}", exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=f"cse cluster create {env.SYS_ADMIN_TEST_CLUSTER_NAME} "
+                       f"-n {config['broker']['network']} -N 1", exit_code=2,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=env.SYS_ADMIN_LOGIN_CMD, exit_code=0,
+                   validate_output_func=None, test_user='sys_admin'),
+        cmd_binder(cmd="cse system enable", exit_code=0,
+                   validate_output_func=None, test_user='sys_admin'),
+        cmd_binder(cmd=f"cse cluster create {env.SYS_ADMIN_TEST_CLUSTER_NAME} "
+                       f"-n {config['broker']['network']} -N 1 -c 1000 "
+                       f"--disable-rollback", exit_code=2,
+                   validate_output_func=None, test_user='sys_admin'),
+        cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
+                   validate_output_func=None, test_user='sys_admin')
     ]
 
     execute_commands(cmd_list)
 
-    assert not env.vapp_exists(env.TEST_CLUSTER_NAME), \
+    assert not env.vapp_exists(env.SYS_ADMIN_TEST_CLUSTER_NAME), \
         "Cluster exist when it should not."
+
+
+def test_0060_vcd_share_catalog(config):
+    """Enable catalog sharing to vDC's within the org.
+
+    :param config:cse config file for vcd configuration
+    """
+    cmd_binder = collections.namedtuple('UserCmdBinder',
+                                        'cmd exit_code validate_output_func '
+                                        'test_user')
+    cmd_list = [
+        cmd_binder(cmd=env.SYS_ADMIN_LOGIN_CMD, exit_code=0,
+                   validate_output_func=None, test_user='sys_admin'),
+        cmd_binder(cmd=f"org use {config['broker']['org']}", exit_code=0,
+                   validate_output_func=None, test_user='sys_admin'),
+        cmd_binder(cmd=f"catalog acl add {config['broker']['catalog']}"
+                       f" \'org:{config['broker']['org']}:ReadOnly\'",
+                   exit_code=0, validate_output_func=None,
+                   test_user='sys_admin'),
+        cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
+                   validate_output_func=None, test_user='sys_admin')
+    ]
+    execute_commands(cmd_list)
+
+
+@pytest.mark.parametrize('test_runner_username', ['sys_admin', 'org_admin',
+                                                  'vapp_author'])
+def test_0070_vcd_cse_cluster_create(config, test_runner_username):
+    """Test 'vcd cse cluster create ...' command for various cse users.
+
+    Test cluster creation from different persona's- sys_admin, org_admin
+    and vapp_author. Created clusters will remain in the system for further
+    command tests - list, resize and delete.
+
+    :param config: cse config file for vcd configuration
+    :param test_runner_username: parameterized persona to run tests with
+    different users
+    """
+    cmd_binder = collections.namedtuple('UserCmdBinder',
+                                        'cmd exit_code validate_output_func '
+                                        'test_user')
+    print(f"Running cluster create operation for {test_runner_username}")
+    cmd_list = [
+        cmd_binder(cmd=env.USER_LOGIN_CMD_MAP.get(test_runner_username),
+                   exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+
+        cmd_binder(cmd=f"org use {config['broker']['org']}", exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=f"vdc use {config['broker']['vdc']}", exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=f"cse cluster create "
+                       f"{env.USERNAME_TO_TEST_CLUSTER_NAME_MAP.get(test_runner_username)}"  # noqa
+                       f" -n {config['broker']['network']} -N 1", exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username)
+    ]
+    execute_commands(cmd_list)
+
+    assert env.vapp_exists(env.USERNAME_TO_TEST_CLUSTER_NAME_MAP.
+                           get(test_runner_username)), \
+        "Cluster should exist"
+    print(f"Successfully created cluster {env.USERNAME_TO_TEST_CLUSTER_NAME_MAP.get(test_runner_username)} "  # noqa
+          f"for {test_runner_username}")
+
+
+@pytest.mark.parametrize('test_runner_username', ['sys_admin', 'org_admin',
+                                                  'vapp_author'])
+def test_0080_vcd_cse_cluster_list(test_runner_username):
+    cmd_binder = collections.namedtuple('UserCmdBinder',
+                                        'cmd exit_code validate_output_func '
+                                        'test_user')
+    print(f"Running cluster list operation for {test_runner_username}")
+    cmd_list = [
+        cmd_binder(cmd=env.USER_LOGIN_CMD_MAP.get(test_runner_username),
+                   exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=f"cse cluster list", exit_code=0,
+                   validate_output_func=list_cluster_output_validator,
+                   test_user=test_runner_username),
+        cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username)
+    ]
+
+    execute_commands(cmd_list)
+    print(f"Successfully listed cluster for {test_runner_username}.")
 
 
 def test_9999_vcd_cse_system_stop(vcd_sys_admin):
