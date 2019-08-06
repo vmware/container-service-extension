@@ -136,7 +136,8 @@ def cse_server():
 
     # terminate cse server subprocess
     try:
-        if p:
+        # check if the subprocess is running or not
+        if p and p.poll() is None:
             if os.name == 'nt':
                 subprocess.Popen(f"taskkill /f /pid {p.pid} /t")
             else:
@@ -364,7 +365,10 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
                                           node_list_result.exit_code,
                                           node_list_result.output)
         print('SUCCESS')
+        print(f"Output : {node_list_result.output}")
         node_list = re.findall(node_pattern, node_list_result.output)
+        print(f"Computed node list : {node_list}")
+        print(f"Expected # of nodes : {num_nodes}")
         assert len(node_list) == num_nodes, \
             f"Test cluster has {len(node_list)} nodes, when it should have " \
             f"{num_nodes} node(s)."

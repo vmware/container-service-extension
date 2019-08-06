@@ -130,6 +130,45 @@ SAMPLE_BROKER_CONFIG = {
     }
 }
 
+TEMPLATE_RULE_NOTE = """# [Optional] Template rule section
+# Rules can be defined to override template definitions as defined by remote
+# template cookbook. This section will contain 0 or more such rules, each rule
+# should match exactly one template. Matching is driven by name and revision of
+# the template. If only name is specified without the revision or vice versa,
+# the rule will not be processed. And once a match is found, as an action the
+# following attributes can be overriden.
+# * admin_password
+# * compute_policy
+# * cpu
+# * memory
+# Note: This overide only works on clusters deployed off templates, the
+# templates are still created as per the cookbook recipe.
+
+#template_rules:
+#- name: Rule1
+#  target:
+#    name: photonv2
+#    revision: 1
+#  action:
+#    admin_password: 'new password'
+#    compute_policy: 'new policy'
+#    cpu: 4
+#    mem: 512
+#- name: Rule2
+#  target:
+#    name: ubuntu
+#    revision: 2
+#  action:
+#    cpu: 2
+#    mem: 1024
+#- name: Rule3
+#  target:
+#    name: ubuntu
+#    revision: 1
+#  action:
+#    admin_password: 'new password'
+"""
+
 PKS_CONFIG_FILE_LOCATION_SECTION_KEY = 'pks_config'
 SAMPLE_PKS_CONFIG_FILE_LOCATION = {
     PKS_CONFIG_FILE_LOCATION_SECTION_KEY: None
@@ -272,6 +311,7 @@ def generate_sample_config(output=None, pks_output=None):
                                     default_flow_style=False) + '\n'
     sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
                                     default_flow_style=False) + '\n'
+    sample_config += TEMPLATE_RULE_NOTE + '\n'
     sample_config += NOTE_FOR_PKS_KEY_IN_CONFIG_FILE + '\n'
 
     if pks_output:

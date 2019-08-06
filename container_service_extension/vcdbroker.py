@@ -9,6 +9,7 @@ import traceback
 import uuid
 
 import pkg_resources
+from pyvcloud.vcd.client import EntityType
 from pyvcloud.vcd.client import TaskStatus
 from pyvcloud.vcd.client import VCLOUD_STATUS_MAP
 from pyvcloud.vcd.org import Org
@@ -94,9 +95,9 @@ def rollback_on_failure(func):
         except NodeCreationError as e:
             try:
                 broker_instance = args[0]
-                node_list = e.node_names
+                node_names = e.node_names
                 if broker_instance.req_spec.get(RequestKey.ROLLBACK):
-                    broker_instance.node_rollback(node_list)
+                    broker_instance.node_rollback(node_names)
             except Exception as err:
                 LOGGER.error(f"Failed to rollback node creation:{str(err)}")
     return wrapper
@@ -148,9 +149,8 @@ class VcdBroker(AbstractBroker, threading.Thread):
         else:
             task_href = None
 
-        org_resource = self.tenant_client.get_org_by_name(
-            self.req_spec.get(RequestKey.ORG_NAME))
-        org = Org(self.tenant_client, resource=org_resource)
+        org_sparse = self.tenant_client.get_org()
+        org = Org(self.tenant_client, href=org_sparse.get('href'))
         user_href = org.get_user(self.client_session.get('user')).get('href')
 
         self.task_resource = self.task.update(
@@ -162,7 +162,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
             progress=None,
             owner_href=self.tenant_info['org_href'],
             owner_name=self.tenant_info['org_name'],
-            owner_type='application/vnd.vmware.vcloud.org+xml',
+            owner_type=EntityType.ORG.value,
             user_href=user_href,
             user_name=self.tenant_info['user_name'],
             org_href=self.tenant_info['org_href'],
@@ -194,27 +194,20 @@ class VcdBroker(AbstractBroker, threading.Thread):
                 return template
         raise Exception(f"Template '{name}' at revision {revision} not found.")
 
-    def _get_nfs_exports(self, ip, vapp, node):
+    def _get_nfs_exports(self, ip, vapp, vm_name):
         """Get the exports from remote NFS server (helper method).
 
-        :param ip: (str): IP address of the NFS server
-        :param vapp: (pyvcloud.vcd.vapp.VApp): The vApp or cluster
-         to which node belongs
-        :param node: (str): IP address of the NFS server
-        :param node: (`lxml.objectify.StringElement`) object
-        representing the vm resource.
+        :param str ip: IP address of the NFS server
+        :param pyvcloud.vcd.vapp.VApp vapp: The vApp (cluster) to which the
+            node belongs
+        :param str vm_name:
 
         :return: (List): List of exports
         """
-        # TODO: Find the right way to retrieve the template from which nfs node
-        # was created.
-        server_config = utils.get_server_runtime_config()
-        template = server_config['broker']['templates'][0]
         script = f"#!/usr/bin/env bash\nshowmount -e {ip}"
-        result = execute_script_in_nodes(vapp,
-                                         template['admin_password'],
-                                         script,
-                                         nodes=[node],
+        result = execute_script_in_nodes(vapp=vapp,
+                                         node_names=[vm_name],
+                                         script=script,
                                          check_tools=False)
         lines = result[0][1].content.decode().split('\n')
         exports = []
@@ -223,29 +216,28 @@ class VcdBroker(AbstractBroker, threading.Thread):
             exports.append(export)
         return exports
 
-    def node_rollback(self, node_list):
+    def node_rollback(self, node_names):
         """Rollback for node creation failure.
 
-        :param list node_list: faulty nodes to be deleted
+        :param list node_names: faulty nodes to be deleted
         """
         LOGGER.info(f"About to rollback nodes from cluster with name: "
                     "{self.cluster_name}")
-        LOGGER.info(f"Node list to be deleted:{node_list}")
+        LOGGER.info(f"Node list to be deleted:{node_names}")
         vapp = VApp(self.tenant_client, href=self.cluster['vapp_href'])
-        template = self._get_template()
         try:
-            delete_nodes_from_cluster(vapp, template, node_list, force=True)
+            delete_nodes_from_cluster(vapp, node_names, force=True)
         except Exception:
-            LOGGER.warning("Couldn't delete node {node_list} from cluster:"
+            LOGGER.warning("Couldn't delete node {node_names} from cluster:"
                            "{self.cluster_name}")
-        for vm_name in node_list:
+        for vm_name in node_names:
             vm = VM(self.tenant_client, resource=vapp.get_vm(vm_name))
             try:
                 vm.undeploy()
             except Exception:
                 LOGGER.warning(f"Couldn't undeploy VM {vm_name}")
-        vapp.delete_vms(node_list)
-        LOGGER.info(f"Successfully deleted nodes: {node_list}")
+        vapp.delete_vms(node_names)
+        LOGGER.info(f"Successfully deleted nodes: {node_names}")
 
     def cluster_rollback(self):
         """Rollback for cluster creation failure."""
@@ -390,7 +382,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                     node_info['node_type'] = 'nfs'
                     exports = self._get_nfs_exports(node_info['ipAddress'],
                                                     vapp,
-                                                    vm)
+                                                    vm.get('name'))
                     node_info['exports'] = exports
         if node_info is None:
             raise NodeNotFoundError(f"Node '{node_name}' not found in "
@@ -413,10 +405,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
             raise ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")
 
         vapp = VApp(self.tenant_client, href=clusters[0]['vapp_href'])
-        template = self._get_template(
-            name=clusters[0]['template_name'],
-            revision=clusters[0]['template_revision'])
-        return fetch_cluster_config(vapp, template['admin_password'])
+        return fetch_cluster_config(vapp)
 
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def create_cluster(self):
@@ -433,8 +422,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
 
         self.cluster_name = self.req_spec[RequestKey.CLUSTER_NAME]
         if not self._is_valid_name(self.cluster_name):
-            raise CseServerError("Invalid cluster name "
-                                 f"'{self.cluster_name}'")
+            raise CseServerError("Invalid cluster name '{self.cluster_name}'")
 
         self._connect_tenant()
         clusters = load_from_metadata(self.tenant_client,
@@ -534,7 +522,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                         f"({self.cluster_id})")
             vapp.reload()
             init_cluster(vapp, template)
-            master_ip = get_master_ip(vapp, template)
+            master_ip = get_master_ip(vapp)
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      master_ip)
             self.tenant_client.get_task_monitor().wait_for_status(task)
@@ -572,6 +560,7 @@ class VcdBroker(AbstractBroker, threading.Thread):
                             f"{self.cluster_name}({self.cluster_id})")
                 vapp.reload()
                 join_cluster(vapp, template)
+
             if self.req_spec.get(RequestKey.ENABLE_NFS):
                 self._update_task(
                     TaskStatus.RUNNING,
@@ -845,7 +834,6 @@ class VcdBroker(AbstractBroker, threading.Thread):
                      f"{self.cluster_name}")
         try:
             vapp = VApp(self.tenant_client, href=self.cluster['vapp_href'])
-            template = self._get_template()
             self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Deleting "
@@ -855,7 +843,6 @@ class VcdBroker(AbstractBroker, threading.Thread):
             try:
                 delete_nodes_from_cluster(
                     vapp,
-                    template,
                     self.req_spec.get(RequestKey.NODE_NAMES_LIST),
                     self.req_spec.get(RequestKey.FORCE_DELETE))
             except Exception:
