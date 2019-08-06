@@ -58,7 +58,9 @@ SCRIPTS_DIR = 'scripts'
 
 SSH_KEY_FILEPATH = str(Path.home() / '.ssh' / 'id_rsa.pub')
 CLI_RUNNER = CliRunner()
-TEST_CLUSTER_NAME = 'testcluster'
+TEST_CLUSTER_NAME = 'testclustersystem'
+TEST_CLUSTER_ADMIN = 'testclusteradmin'
+TEST_CLUSTER_VAPP = 'testclustervapp'
 
 # required user info
 ORG_ADMIN_NAME = 'orgadmin'
@@ -79,6 +81,7 @@ ORG_ADMIN_LOGIN_CMD = None
 VAPP_AUTHOR_LOGIN_CMD = None
 USER_LOGOUT_CMD = f"logout"
 USER_LOGIN_CMD_MAP = {}
+CLUSTER_CREATION_MAP = {}
 
 AMQP_USERNAME = None
 AMQP_PASSWORD = None
@@ -98,7 +101,8 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     global AMQP_USERNAME, AMQP_PASSWORD, CLIENT, ORG_HREF, VDC_HREF, \
         CATALOG_NAME, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
         TEMPLATE_DEFINITIONS, TEST_ALL_TEMPLATES, SYS_ADMIN_LOGIN_CMD, \
-        ORG_ADMIN_LOGIN_CMD, VAPP_AUTHOR_LOGIN_CMD, USER_LOGIN_CMD_MAP
+        ORG_ADMIN_LOGIN_CMD, VAPP_AUTHOR_LOGIN_CMD, USER_LOGIN_CMD_MAP, \
+        CLUSTER_CREATION_MAP
 
     config = testutils.yaml_to_dict(config_filepath)
 
@@ -141,6 +145,10 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     USER_LOGIN_CMD_MAP = {'sys_admin': SYS_ADMIN_LOGIN_CMD,
                           'org_admin': ORG_ADMIN_LOGIN_CMD,
                           'vapp_author': VAPP_AUTHOR_LOGIN_CMD}
+
+    CLUSTER_CREATION_MAP = {'sys_admin': TEST_CLUSTER_NAME,
+                            'org_admin': TEST_CLUSTER_ADMIN,
+                            'vapp_author': TEST_CLUSTER_VAPP}
 
     test_config = config.get('test')
     if test_config is not None:
