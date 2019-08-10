@@ -28,6 +28,7 @@ class RequestMethod(str, Enum):
     PUT = 'PUT'
 
 
+# TODO need mapping from request key to proper vcd construct error message
 @unique
 class RequestKey(str, Enum):
     """Keys that can exist in the request data that client sends to server.
@@ -61,7 +62,6 @@ class RequestKey(str, Enum):
     NODE_NAMES_LIST = 'node_names'
     SSH_KEY_FILEPATH = 'ssh_key_filepath'
     ROLLBACK = 'rollback'
-    FORCE_DELETE = 'force_delete'
 
     # keys related to ovdc requests
     K8S_PROVIDER = 'k8s_provider'

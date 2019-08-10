@@ -80,7 +80,7 @@ class Ovdc:
             accept_type='application/json')
         return process_response(response)
 
-    def info_ovdc_for_k8s(self, ovdc_name, org_name=None):
+    def info_ovdc_for_k8s(self, ovdc_name, org_name):
         """Disable ovdc for k8s for the given container provider.
 
         :param str ovdc_name: Name of the ovdc to be enabled

@@ -134,7 +134,7 @@ class Service(object, metaclass=Singleton):
         }
         return ver_obj
 
-    def update_status(self, tenant_auth_token, req_spec):
+    def update_status(self, tenant_auth_token, request_data):
         tenant_client, _ = connect_vcd_user_via_token(
             tenant_auth_token=tenant_auth_token)
 
@@ -142,7 +142,7 @@ class Service(object, metaclass=Singleton):
             raise CseRequestError(status_code=requests.codes.unauthorized,
                                   error_message='Unauthorized to update CSE')
 
-        action = req_spec.get(RequestKey.SERVER_ACTION)
+        action = request_data.get(RequestKey.SERVER_ACTION)
         if self._state == ServerState.RUNNING:
             if action == ServerAction.ENABLE:
                 raise CseRequestError(

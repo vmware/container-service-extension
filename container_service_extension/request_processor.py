@@ -112,13 +112,13 @@ def _parse_request_url(method, url):
         elif len(tokens) == 5:
             if method == RequestMethod.GET:
                 result['operation'] = CseOperation.CLUSTER_INFO
-                result['cluster_name'] = tokens[4]
+                result[RequestKey.CLUSTER_NAME] = tokens[4]
             elif method == RequestMethod.PUT:
                 result['operation'] = CseOperation.CLUSTER_RESIZE
-                result['cluster_name'] = tokens[4]
+                result[RequestKey.CLUSTER_NAME] = tokens[4]
             elif method == RequestMethod.DELETE:
                 result['operation'] = CseOperation.CLUSTER_DELETE
-                result['cluster_name'] = tokens[4]
+                result[RequestKey.CLUSTER_NAME] = tokens[4]
             else:
                 raise CseRequestError(
                     status=requests.codes.method_not_allowed,
@@ -127,7 +127,7 @@ def _parse_request_url(method, url):
             if method == RequestMethod.GET:
                 if tokens[5] == 'config':
                     result['operation'] = CseOperation.CLUSTER_CONFIG
-                    result['cluster_name'] = tokens[4]
+                    result[RequestKey.CLUSTER_NAME] = tokens[4]
             else:
                 raise CseRequestError(
                     status=requests.codes.method_not_allowed,
@@ -146,7 +146,7 @@ def _parse_request_url(method, url):
         elif len(tokens) == 5:
             if method == RequestMethod.GET:
                 result['operation'] = CseOperation.NODE_INFO
-                result['node_name'] = tokens[4]
+                result[RequestKey.NODE_NAME] = tokens[4]
             else:
                 raise CseRequestError(
                     status=requests.codes.method_not_allowed,
@@ -163,10 +163,10 @@ def _parse_request_url(method, url):
         elif len(tokens) == 5:
             if method == RequestMethod.GET:
                 result['operation'] = CseOperation.OVDC_INFO
-                result['ovdc_id'] = tokens[4]
+                result[RequestKey.OVDC_ID] = tokens[4]
             elif method == RequestMethod.PUT:
                 result['operation'] = CseOperation.OVDC_UPDATE
-                result['ovdc_id'] = tokens[4]
+                result[RequestKey.OVDC_ID] = tokens[4]
             else:
                 raise CseRequestError(
                     status=requests.codes.method_not_allowed,
