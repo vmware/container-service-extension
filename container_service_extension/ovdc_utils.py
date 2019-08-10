@@ -11,8 +11,8 @@ from container_service_extension.exceptions import PksServerError
 from container_service_extension.exceptions import UnauthorizedActionError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PksCache
-from container_service_extension.pksbroker import PKSBroker
-from container_service_extension.pksbroker_manager import PksBrokerManager
+from container_service_extension.pksbroker import PksBroker
+import container_service_extension.pksbroker_manager as pks_broker_manager
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
@@ -47,8 +47,9 @@ def get_ovdc_k8s_provider_metadata(org_name=None, ovdc_name=None, ovdc_id=None,
         all_metadata = pyvcd_utils.metadata_to_dict(ovdc.get_all_metadata())
         k8s_provider = all_metadata.get(K8S_PROVIDER_KEY, K8sProvider.NONE)
 
-        result = {}
-        result[K8S_PROVIDER_KEY] = k8s_provider
+        result = {
+            K8S_PROVIDER_KEY: k8s_provider
+        }
 
         if k8s_provider == K8sProvider.PKS:
             result.update({k: all_metadata[k] for k in PksCache.get_pks_keys()}) # noqa: E501
@@ -57,9 +58,12 @@ def get_ovdc_k8s_provider_metadata(org_name=None, ovdc_name=None, ovdc_id=None,
             # Get the credentials from PksCache
             if include_credentials or include_nsxt_info:
                 pks_cache = utils.get_pks_cache()
-                pvdc_info = pks_cache.get_pvdc_info(vcd_utils.get_pvdc_id(ovdc)) # noqa: E501
+                pvdc_info = \
+                    pks_cache.get_pvdc_info(vcd_utils.get_pvdc_id(ovdc))
             if include_credentials:
-                pks_info = pks_cache.get_pks_account_info(org_name, pvdc_info.vc) # noqa: E501
+                # noqa: E501 TODO in case only ovdc_id is provided, we need a way to get org_name
+                pks_info = \
+                    pks_cache.get_pks_account_info(org_name, pvdc_info.vc)
                 result.update(pks_info.credentials._asdict())
             if include_nsxt_info:
                 nsxt_info = pks_cache.get_nsxt_info(pvdc_info.vc)
@@ -71,13 +75,11 @@ def get_ovdc_k8s_provider_metadata(org_name=None, ovdc_name=None, ovdc_id=None,
             client.logout()
 
 
-def get_ovdc_list(client, list_pks_plans=False, request_dict=None,
-                  tenant_auth_token=None):
+def get_ovdc_list(client, list_pks_plans=False, tenant_auth_token=None):
     """Get details for all client-visible org VDCs.
 
     :param pyvcloud.vcd.client.Client client:
     :param bool list_pks_plans:
-    :param dict request_dict:
     :param str tenant_auth_token:
 
     :return: List of dict with str keys: ['name', 'org', 'k8s provider'].
@@ -88,13 +90,13 @@ def get_ovdc_list(client, list_pks_plans=False, request_dict=None,
 
     :raises UnauthorizedActionError: if trying to @list_pks_plans
         as non-sysadmin.
-    :raises ValueError: if @list_pks_plans is True and @request_dict or
-        @tenant_auth_token are None.
+    :raises ValueError: if @list_pks_plans is True and @tenant_auth_token
+        are None.
     """
     if list_pks_plans and not client.is_sysadmin():
         raise UnauthorizedActionError('Operation Denied. Plans available '
                                       'only for System Administrator.')
-    if list_pks_plans and (request_dict is None or tenant_auth_token is None):
+    if list_pks_plans and tenant_auth_token is None:
         raise ValueError("Missing required parameters for list pks plans.")
 
     if client.is_sysadmin():
@@ -109,7 +111,12 @@ def get_ovdc_list(client, list_pks_plans=False, request_dict=None,
         for vdc_sparse in vdc_list:
             ovdc_name = vdc_sparse['name']
             org_name = org.get_name()
-            k8s_provider = get_ovdc_k8s_provider_metadata(ovdc_name=ovdc_name, org_name=org_name)[K8S_PROVIDER_KEY] # noqa: E501
+
+            k8s_metadata = \
+                get_ovdc_k8s_provider_metadata(
+                    ovdc_name=ovdc_name,
+                    org_name=org_name)[K8S_PROVIDER_KEY]
+            k8s_provider = k8s_metadata[K8S_PROVIDER_KEY]
             ovdc_info = {
                 'name': ovdc_name,
                 'org': org_name,
@@ -123,8 +130,10 @@ def get_ovdc_list(client, list_pks_plans=False, request_dict=None,
                     vdc = vcd_utils.get_vdc(client, vdc_name=ovdc_name,
                                             org_name=org_name)
                     vc_name = vdc.get_resource().ComputeProviderScope
-                    vc_to_pks_plans_map = _get_vc_to_pks_plans_map(tenant_auth_token, request_dict) # noqa: E501
-                    pks_plan_and_server_info = vc_to_pks_plans_map.get(vc_name, []) # noqa: E501
+                    vc_to_pks_plans_map = \
+                        _get_vc_to_pks_plans_map(tenant_auth_token)
+                    pks_plan_and_server_info = \
+                        vc_to_pks_plans_map.get(vc_name, [])
                     if len(pks_plan_and_server_info) > 0:
                         pks_plans = pks_plan_and_server_info[0]
                         pks_server = pks_plan_and_server_info[1]
@@ -178,15 +187,14 @@ def update_ovdc_k8s_provider_metadata(ovdc_id,
             client.logout()
 
 
-def _get_vc_to_pks_plans_map(tenant_auth_token, request_dict):
+def _get_vc_to_pks_plans_map(tenant_auth_token):
     pks_vc_plans_map = {}
-    pksbroker_manager = PksBrokerManager(tenant_auth_token, request_dict)
-    pks_ctx_list = pksbroker_manager.create_pks_context_for_all_accounts_in_org() # noqa: E501
+    pks_ctx_list = pks_broker_manager.create_pks_context_for_all_accounts_in_org(tenant_auth_token) # noqa: E501
 
     for pks_ctx in pks_ctx_list:
         if pks_ctx['vc'] in pks_vc_plans_map:
             continue
-        pks_broker = PKSBroker(tenant_auth_token, request_dict, pks_ctx)
+        pks_broker = PksBroker(pks_ctx, tenant_auth_token)
         plans = pks_broker.list_plans()
         plan_names = [plan.get('name') for plan in plans]
         pks_vc_plans_map[pks_ctx['vc']] = [plan_names, pks_ctx['host']]
@@ -227,7 +235,7 @@ def construct_pks_context(pks_account_info, pvdc_info=None, nsxt_info=None,
     return pks_ctx
 
 
-def construct_ctr_prov_ctx_from_pks_cache(ovdc_id, org_name, pks_plans,
+def construct_k8s_metadata_from_pks_cache(ovdc_id, org_name, pks_plans,
                                           pks_cluster_domain,
                                           k8s_provider):
     client = None
@@ -289,10 +297,10 @@ def _construct_pks_compute_profile_name(vdc_id):
             client.logout()
 
 
-def create_pks_compute_profile(pks_ctx, tenant_auth_token, req_spec):
-    ovdc_id = req_spec.get(RequestKey.OVDC_ID)
-    org_name = req_spec.get(RequestKey.ORG_NAME)
-    ovdc_name = req_spec.get(RequestKey.OVDC_NAME)
+def create_pks_compute_profile(pks_ctx, tenant_auth_token, request_data):
+    ovdc_id = request_data.get(RequestKey.OVDC_ID)
+    org_name = request_data.get(RequestKey.ORG_NAME)
+    ovdc_name = request_data.get(RequestKey.OVDC_NAME)
     # Compute profile creation
     pks_compute_profile_name = \
         _construct_pks_compute_profile_name(ovdc_id)
@@ -312,7 +320,7 @@ def create_pks_compute_profile(pks_ctx, tenant_auth_token, req_spec):
     LOGGER.debug(f"Creating PKS Compute Profile with name:"
                  f"{pks_compute_profile_name}")
 
-    pksbroker = PKSBroker(tenant_auth_token, req_spec, pks_ctx)
+    pksbroker = PksBroker(pks_ctx, tenant_auth_token)
     try:
         pksbroker.create_compute_profile(**compute_profile_params)
     except PksServerError as ex:

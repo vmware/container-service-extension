@@ -125,9 +125,9 @@ class PksServerError(CseServerError):
     def __str__(self):
         # TODO() Removing user context should be moved to PksServer response
         #  processing aka filtering layer
-        from container_service_extension.pksbroker import PKSBroker
+        from container_service_extension.pksbroker import PksBroker
         return f"PKS error\n status: {self.status}\n body: " \
-            f" {PKSBroker.filter_traces_of_user_context(self.body)}\n"
+            f" {PksBroker.filter_traces_of_user_context(self.body)}\n"
 
 
 class PksConnectionError(PksServerError):

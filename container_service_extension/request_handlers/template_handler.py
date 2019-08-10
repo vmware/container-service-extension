@@ -2,7 +2,7 @@ from container_service_extension.server_constants import LocalTemplateKey
 import container_service_extension.utils as utils
 
 
-def template_list(request_dict, tenant_auth_token):
+def template_list(request_data, tenant_auth_token):
     """Request handler for template list operation.
 
     :return: List of dictionaries with template info.

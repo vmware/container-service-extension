@@ -53,7 +53,7 @@ class Cluster:
                        vdc,
                        network_name,
                        name,
-                       node_count=2,
+                       node_count=None,
                        cpu=None,
                        memory=None,
                        storage_profile=None,
@@ -255,15 +255,13 @@ class Cluster:
             accept_type='application/json')
         return process_response(response)
 
-    def delete_nodes(self, cluster_name, nodes, org=None, vdc=None,
-                     force=False):
+    def delete_nodes(self, cluster_name, nodes, org=None, vdc=None):
         """Delete nodes from a Kubernetes cluster.
 
         :param org: (str): Name of the organization that contains the cluster
         :param vdc: (str): The name of the vdc that contains the cluster
         :param name: (str): The name of the cluster
         :param nodes: (list(str)): The list of nodes to delete
-        :param force: (bool): Force delete the node VM even if kubernetes fails
         :return: (json) A parsed json object describing the requested cluster
             operation.
         """
@@ -273,8 +271,7 @@ class Cluster:
             RequestKey.CLUSTER_NAME: cluster_name,
             RequestKey.ORG_NAME: org,
             RequestKey.OVDC_NAME: vdc,
-            RequestKey.NODE_NAMES_LIST: nodes,
-            RequestKey.FORCE_DELETE: force
+            RequestKey.NODE_NAMES_LIST: nodes
         }
         response = self.client._do_request_prim(
             method,
