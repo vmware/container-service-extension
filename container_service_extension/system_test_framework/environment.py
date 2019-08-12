@@ -83,6 +83,11 @@ USER_LOGOUT_CMD = f"logout"
 USER_LOGIN_CMD_MAP = {}
 USERNAME_TO_TEST_CLUSTER_NAME_MAP = {}
 
+# System test users
+SYS_ADMIN_NAME = 'sys_admin'
+ORG_ADMIN_NAME = 'org_admin'
+VAPP_AUTHOR_NAME = 'vapp_author'
+
 AMQP_USERNAME = None
 AMQP_PASSWORD = None
 CLIENT = None
@@ -146,9 +151,9 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
                           'org_admin': ORG_ADMIN_LOGIN_CMD,
                           'vapp_author': VAPP_AUTHOR_LOGIN_CMD}
 
-    USERNAME_TO_TEST_CLUSTER_NAME_MAP = {'sys_admin': SYS_ADMIN_TEST_CLUSTER_NAME,
-                            'org_admin': ORG_ADMIN_TEST_CLUSTER_NAME,
-                            'vapp_author': VAPP_ADMIN_TEST_CLUSTER_NAME}
+    USERNAME_TO_TEST_CLUSTER_NAME_MAP = {'sys_admin': SYS_ADMIN_TEST_CLUSTER_NAME,  # noqa
+                                         'org_admin': ORG_ADMIN_TEST_CLUSTER_NAME,  # noqa
+                                         'vapp_author': VAPP_ADMIN_TEST_CLUSTER_NAME}  # noqa
 
     test_config = config.get('test')
     if test_config is not None:
