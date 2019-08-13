@@ -7,6 +7,7 @@ __pycache__/
 *.so
 
 # Distribution / packaging
+container_service_extension/version.py
 .Python
 build/
 develop-eggs/
@@ -92,12 +93,19 @@ ENV/
 # Rope project settings
 .ropeproject
 
+# Other IDE project settings
+.idea/
+.vscode/
+
 # Documentation artifacts created by Jekyll.
 .sass-cache/
 _site/
 
 # mypy
 .mypy_cache/
+
+# Mac OS
+.DS_Store
 
 cse_cache
 
