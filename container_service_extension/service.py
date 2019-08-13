@@ -319,7 +319,7 @@ class Service(object, metaclass=Singleton):
                 LOGGER.error(msg)
                 sys.exit(1)
 
-            # Check that deafult K8 template exists in vCD at the correct
+            # Check that default k8s template exists in vCD at the correct
             # revision
             default_template_name = \
                 self.config['broker']['default_template_name']
