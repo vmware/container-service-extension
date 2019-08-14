@@ -34,10 +34,10 @@ from container_service_extension.utils import ConsoleMessagePrinter
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-SHOW_ALL = "show all"
-SHOW_DIFF = "show diff"
-SHOW_LOCAL = "show local"
-SHOW_REMOTE = "show remote"
+DISPLAY_ALL = "all"
+DISPLAY_DIFF = "diff"
+DISPLAY_LOCAL = "local"
+DISPLAY_REMOTE = "remote"
 
 
 @click.group(context_settings=CONTEXT_SETTINGS, invoke_without_command=True)
@@ -128,13 +128,13 @@ Examples
         Display all templates, including that are currently in the local
         catalog, and the ones that are defined in remote template cookbook.
 \b
-    cse template list --local -c config.yaml
+    cse template list --display local -c config.yaml
         Display templates that are currently in the local catalog.
 \b
-    cse template list --remote -c config.yaml
+    cse template list --display remote -c config.yaml
         Display templates that are defined in the remote template cookbook.
 \b
-    cse template list --diff -c config.yaml
+    cse template list --display diff -c config.yaml
         Display only templates that are defined in remote template cookbook but
         not present in the local catalog.
 \b
@@ -383,34 +383,15 @@ def run(ctx, config, skip_check):
     default='config.yaml',
     help='Filepath of CSE config file')
 @click.option(
-    '-a',
-    '--all',
-    'show_option',
-    flag_value=SHOW_ALL,
-    default=True,
-    help='List all templates available in local catalog and remote template '
-         'cookbook')
-@click.option(
     '-d',
-    '--diff',
-    'show_option',
-    flag_value=SHOW_DIFF,
-    help='List templates available in remote template cookbook that are not '
-         'in the local catalog')
-@click.option(
-    '-l',
-    '--local',
-    'show_option',
-    flag_value=SHOW_LOCAL,
-    help='List templates available in the local catalog')
-@click.option(
-    '-r',
-    '--remote',
-    'show_option',
-    flag_value=SHOW_REMOTE,
-    help='List templates available in remote template cookbook')
-def list_template(ctx, config_file_name, show_option):
-    """List CSE k8s templates """
+    '--display',
+    'display_option',
+    type=click.Choice(
+        [DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL, DISPLAY_REMOTE]),
+    default=DISPLAY_ALL,
+    help='Choose templates to display.')
+def list_template(ctx, config_file_name, display_option):
+    """List CSE k8s templates."""
     try:
         try:
             check_python_version()
@@ -426,7 +407,7 @@ def list_template(ctx, config_file_name, show_option):
             config_dict = yaml.safe_load(config_file) or {}
 
         local_templates = []
-        if show_option in (SHOW_ALL, SHOW_DIFF, SHOW_LOCAL):
+        if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL):
             client = None
             try:
                 # To supress the warning message that pyvcloud prints if
@@ -479,7 +460,7 @@ def list_template(ctx, config_file_name, show_option):
                     client.logout()
 
         remote_templates = []
-        if show_option in (SHOW_ALL, SHOW_DIFF, SHOW_REMOTE):
+        if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_REMOTE):
             rtm = RemoteTemplateManager(
                 remote_template_cookbook_url=config_dict['broker']['remote_template_cookbook_url'], # noqa: E501
                 msg_update_callback=ConsoleMessagePrinter())
@@ -505,7 +486,7 @@ def list_template(ctx, config_file_name, show_option):
                 remote_templates.append(template)
 
         result = []
-        if show_option is SHOW_ALL:
+        if display_option is DISPLAY_ALL:
             result = remote_templates
             # If local copy of template exists, update the remote definition
             # with relevant values, else add the local definition to the result
@@ -522,7 +503,7 @@ def list_template(ctx, config_file_name, show_option):
                         break
                 if not found:
                     result.append(local_template)
-        elif show_option in SHOW_DIFF:
+        elif display_option in DISPLAY_DIFF:
             for remote_template in remote_templates:
                 found = False
                 for local_template in local_templates:
@@ -531,9 +512,9 @@ def list_template(ctx, config_file_name, show_option):
                         break
                 if not found:
                     result.append(remote_template)
-        elif show_option in SHOW_LOCAL:
+        elif display_option in DISPLAY_LOCAL:
             result = local_templates
-        elif show_option in SHOW_REMOTE:
+        elif display_option in DISPLAY_REMOTE:
             result = remote_templates
 
         stdout(result, ctx, sort_headers=False)
