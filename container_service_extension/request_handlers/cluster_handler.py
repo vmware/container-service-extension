@@ -12,23 +12,32 @@ from container_service_extension.vcdbroker import VcdBroker
 
 
 def cluster_create(request_data, tenant_auth_token):
-    """Request handler for cluster operation.
+    """Request handler for cluster create operation.
 
-    Required data: org_name, ovdc_name, cluster_name, num_nodes.
-    Conditional data: if k8s_provider is 'native', num_cpu, mb_memory,
-        network_name, storage_profile_name, template_name, template_revision,
-        enable_nfs, rollback are required (validation handled elsewhere).
+    Required data: org_name, ovdc_name, cluster_name
+    Conditional data and default values:
+        if k8s_provider is 'native':
+            network_name, num_nodes=2, num_cpu=None, mb_memory=None,
+            storage_profile_name=None, template_name=default,
+            template_revision=default, ssh_key_filepath=None, enable_nfs=False,
+            rollback=True
+
+    (data validation handled in brokers).
 
     :return: Dict
     """
+    required = [
+        RequestKey.CLUSTER_NAME
+    ]
+    utils.ensure_keys_in_dict(required, request_data, dict_name='data')
     cluster_name = request_data[RequestKey.CLUSTER_NAME]
     # TODO HACK 'is_org_admin_search' is used here to prevent users from
     # creating clusters with the same name, including clusters in PKS
     # True means that the cluster list is filtered by the org name of
     # the logged-in user to check that there are no duplicate clusters
     request_data['is_org_admin_search'] = True
-    cluster, _ = broker_manager.find_cluster_in_org(request_data,
-                                                    tenant_auth_token)
+    cluster, _ = broker_manager.get_cluster_and_broker(request_data,
+                                                       tenant_auth_token)
     if cluster is not None:
         raise ClusterAlreadyExistsError(f"Cluster {cluster_name} "
                                         f"already exists.")
@@ -49,12 +58,15 @@ def cluster_create(request_data, tenant_auth_token):
 
 
 def cluster_resize(request_data, tenant_auth_token):
-    """Request handler for cluster operation.
+    """Request handler for cluster resize operation.
 
-    Required data: org_name, cluster_name, num_nodes.
-    Conditional data: if k8s_provider is 'native', network_name,
-        rollback are required (validation handled elsewhere).
-    Optional data: ovdc_name.
+    Required data: cluster_name, num_nodes
+    Optional data and default values: org_name=None, ovdc_name=None
+    Conditional data and default values:
+        if k8s_provider is 'native':
+            network_name, rollback=True
+
+    (data validation handled in brokers)
 
     :return: Dict
     """
@@ -64,10 +76,10 @@ def cluster_resize(request_data, tenant_auth_token):
 
 
 def cluster_delete(request_data, tenant_auth_token):
-    """Request handler for cluster operation.
+    """Request handler for cluster delete operation.
 
-    Required data: org_name, cluster_name.
-    Optional data: ovdc_name.
+    Required data: cluster_name
+    Optional data and default values: org_name=None, ovdc_name=None
 
     :return: Dict
     """
@@ -77,10 +89,10 @@ def cluster_delete(request_data, tenant_auth_token):
 
 
 def cluster_info(request_data, tenant_auth_token):
-    """Request handler for cluster operation.
+    """Request handler for cluster info operation.
 
-    Required data: org_name, cluster_name.
-    Optional data: ovdc_name.
+    Required data: cluster_name
+    Optional data and default values: org_name=None, ovdc_name=None
 
     :return: Dict
     """
@@ -90,10 +102,10 @@ def cluster_info(request_data, tenant_auth_token):
 
 
 def cluster_config(request_data, tenant_auth_token):
-    """Request handler for cluster operation.
+    """Request handler for cluster config operation.
 
-    Required data: org_name, cluster_name.
-    Optional data: ovdc_name.
+    Required data: cluster_name
+    Optional data and default values: org_name=None, ovdc_name=None
 
     :return: Dict
     """
@@ -103,11 +115,13 @@ def cluster_config(request_data, tenant_auth_token):
 
 
 def cluster_list(request_data, tenant_auth_token):
-    """Request handler for cluster operation.
+    """Request handler for cluster list operation.
 
     All (vCD/PKS) brokers in the org do 'list cluster' operation.
     Post-process the result returned by pks broker.
     Aggregate all the results into a list.
+
+    Optional data and default values: org_name=None, ovdc_name=None
 
     :return: List
     """
@@ -138,11 +152,13 @@ def cluster_list(request_data, tenant_auth_token):
 
 
 def node_create(request_data, tenant_auth_token):
-    """Request handler for cluster operation.
+    """Request handler for node create operation.
 
-    Required data: org name, ovdc name, cluster name, num nodes, num cpu,
-        mb memory, network name, storage profile name, template name,
-        template_revision, rollback, enable nfs.
+    Required data: cluster_name, network_name
+    Optional data and default values: org_name=None, ovdc_name=None,
+        num_nodes=1, num_cpu=None, mb_memory=None, storage_profile_name=None,
+        template_name=default, template_revision=default,
+        ssh_key_filepath=None, rollback=True, enable_nfs=False,
 
     :return: Dict
     """
@@ -152,10 +168,10 @@ def node_create(request_data, tenant_auth_token):
 
 
 def node_delete(request_data, tenant_auth_token):
-    """Request handler for cluster operation.
+    """Request handler for node delete operation.
 
-    Required data: org_name, cluster_name, node_names_list.
-    Optional data: ssh_key_file, ovdc_name.
+    Required data: cluster_name, node_names_list
+    Optional data and default values: org_name=None, ovdc_name=None
 
     :return: Dict
     """
@@ -165,10 +181,10 @@ def node_delete(request_data, tenant_auth_token):
 
 
 def node_info(request_data, tenant_auth_token):
-    """Request handler for cluster operation.
+    """Request handler for node info operation.
 
-    Required data: org_name, cluster_name, node_name.
-    Optional data: ovdc_name.
+    Required data: cluster_name, node_name
+    Optional data and default values: org_name=None, ovdc_name=None
 
     :return: Dict
     """

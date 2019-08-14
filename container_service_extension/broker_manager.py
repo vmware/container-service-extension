@@ -45,7 +45,7 @@ def get_cluster_info(request_data, tenant_auth_token):
                                          request_data[RequestKey.OVDC_NAME])
         return broker.get_cluster_info(request_data), broker
 
-    cluster, broker = find_cluster_in_org(request_data, tenant_auth_token)
+    cluster, broker = get_cluster_and_broker(request_data, tenant_auth_token)
     if cluster is None:
         raise ClusterNotFoundError(f"Cluster {cluster_name} not found "
                                    f"either in vCD or PKS")
@@ -53,23 +53,20 @@ def get_cluster_info(request_data, tenant_auth_token):
     return cluster, broker
 
 
-def find_cluster_in_org(request_data, tenant_auth_token):
+def get_cluster_and_broker(request_data, tenant_auth_token):
     cluster_name = request_data[RequestKey.CLUSTER_NAME]
     vcd_broker = VcdBroker(tenant_auth_token)
     try:
         return vcd_broker.get_cluster_info(request_data), vcd_broker
-    except ClusterNotFoundError as err:
-        # If a cluster is not found, then broker_manager will
-        # decide if it wants to raise an error or ignore it if was it just
-        # scanning the broker to check if it can handle the cluster request
-        # or not.
-        LOGGER.debug(f"Get cluster info on {cluster_name} on vCD "
-                     f"failed with error: {err}")
     except CseDuplicateClusterError as err:
         LOGGER.debug(f"Get cluster info on {cluster_name} on vCD "
                      f"failed with error: {err}")
         raise
-    except Exception as err:
+    except (ClusterNotFoundError, Exception) as err:
+        # If a cluster is not found, then broker_manager will
+        # decide if it wants to raise an error or ignore it if was it just
+        # scanning the broker to check if it can handle the cluster request
+        # or not.
         LOGGER.debug(f"Get cluster info on {cluster_name} on vCD "
                      f"failed with error: {err}")
 
@@ -79,14 +76,11 @@ def find_cluster_in_org(request_data, tenant_auth_token):
         pks_broker = PksBroker(pks_ctx, tenant_auth_token)
         try:
             return pks_broker.get_cluster_info(request_data), pks_broker
-        except PksClusterNotFoundError as err:
-            LOGGER.debug(f"Get cluster info on {cluster_name} "
-                         f"failed on {pks_ctx['host']} with error: {err}")
         except PksDuplicateClusterError as err:
             LOGGER.debug(f"Get cluster info on {cluster_name} "
                          f"failed on {pks_ctx['host']} with error: {err}")
             raise
-        except PksServerError as err:
+        except (PksClusterNotFoundError, PksServerError) as err:
             LOGGER.debug(f"Get cluster info on {cluster_name} "
                          f"failed on {pks_ctx['host']} with error: {err}")
 
@@ -105,9 +99,11 @@ def get_broker_from_k8s_metadata(k8s_metadata, tenant_auth_token):
         if not k8s_metadata or k8s_metadata.get(K8S_PROVIDER_KEY) == K8sProvider.NONE: # noqa: E501
             raise CseServerError("Org VDC is not enabled for Kubernetes "
                                  "cluster deployment")
+
         if k8s_metadata.get(K8S_PROVIDER_KEY) == K8sProvider.PKS:
             return PksBroker(k8s_metadata, tenant_auth_token)
-        elif k8s_metadata.get(K8S_PROVIDER_KEY) == K8sProvider.NATIVE:
+
+        if k8s_metadata.get(K8S_PROVIDER_KEY) == K8sProvider.NATIVE:
             return VcdBroker(tenant_auth_token)
 
     return VcdBroker(tenant_auth_token)

@@ -313,11 +313,10 @@ class PksBroker(AbstractBroker):
 
         return cluster_info
 
-    def _create_cluster(self, *,
-                        cluster_name=None,
-                        num_workers=None,
-                        pks_plan_name=None,
-                        pks_ext_host=None):
+    # all parameters following '*args' are required and keyword-only
+    def _create_cluster(self, *args,
+                        cluster_name, num_workers, pks_plan_name,
+                        pks_ext_host):
         """Create cluster in PKS environment.
 
         Creates Distributed Firewall rules in NSX-T to isolate the cluster

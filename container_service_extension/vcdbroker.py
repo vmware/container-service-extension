@@ -103,7 +103,7 @@ class VcdBroker(AbstractBroker):
         operation and returns cluster/node metadata as dictionary.
 
         Required data: cluster_name
-        Optional data and defaults: org_name=None, ovdc_name=None
+        Optional data and default values: org_name=None, ovdc_name=None
         """
         required = [
             RequestKey.CLUSTER_NAME
@@ -146,7 +146,7 @@ class VcdBroker(AbstractBroker):
         Common broker function that validates data for the 'list clusters'
         operation and returns a list of cluster data.
 
-        Optional data and defaults: org_name=None, ovdc_name=None
+        Optional data and default values: org_name=None, ovdc_name=None
         """
         defaults = {
             RequestKey.ORG_NAME: None,
@@ -183,7 +183,7 @@ class VcdBroker(AbstractBroker):
         as a string.
 
         Required data: cluster_name
-        Optional data and defaults: org_name=None, ovdc_name=None
+        Optional data and default values: org_name=None, ovdc_name=None
         """
         required = [
             RequestKey.CLUSTER_NAME
@@ -238,10 +238,9 @@ class VcdBroker(AbstractBroker):
         be polled to get updates on task progress.
 
         Required data: cluster_name, org_name, ovdc_name, network_name
-        Optional data and defaults: num_nodes=2, num_cpu=None, mb_memory=None,
-            storage_profile_name=None, ssh_key_filepath=None,
-            template_name=default template name,
-            template_revision=default template revision, enable_nfs=False,
+        Optional data and default values: num_nodes=2, num_cpu=None,
+            mb_memory=None, storage_profile_name=None, ssh_key_filepath=None,
+            template_name=default, template_revision=default, enable_nfs=False,
             rollback=True
         """
         required = [
@@ -326,7 +325,7 @@ class VcdBroker(AbstractBroker):
         to get updates on task progress.
 
         Required data: cluster_name, network, num_nodes
-        Optional data and defaults: org_name=None, ovdc_name=None,
+        Optional data and default values: org_name=None, ovdc_name=None,
             rollback=True
         """
         required = [
@@ -369,7 +368,7 @@ class VcdBroker(AbstractBroker):
         `result['task_href']` can be polled to get updates on task progress.
 
         Required data: cluster_name
-        Optional data and defaults: org_name=None, ovdc_name=None
+        Optional data and default values: org_name=None, ovdc_name=None
         """
         required = [
             RequestKey.CLUSTER_NAME
@@ -404,7 +403,7 @@ class VcdBroker(AbstractBroker):
         """Get node metadata as dictionary.
 
         Required data: cluster_name, node_name
-        Optional data and defaults: org_name=None, ovdc_name=None
+        Optional data and default values: org_name=None, ovdc_name=None
         """
         required = [
             RequestKey.CLUSTER_NAME,
@@ -466,10 +465,10 @@ class VcdBroker(AbstractBroker):
         to get updates on task progress.
 
         Required data: cluster_name, network_name
-        Optional data and defaults: num_nodes=2, num_cpu=None, mb_memory=None,
-            storage_profile_name=None, ssh_key_filepath=None,
-            template_name=default template name, template_revision=default
-            template revision, enable_nfs=False, rollback=True
+        Optional data and default values: num_nodes=2, num_cpu=None,
+            mb_memory=None, storage_profile_name=None, ssh_key_filepath=None,
+            template_name=default, template_revision=default, enable_nfs=False,
+            rollback=True
         """
         required = [
             RequestKey.CLUSTER_NAME,
@@ -540,7 +539,7 @@ class VcdBroker(AbstractBroker):
         to get updates on task progress.
 
         Required data: cluster_name, node_names_list
-        Optional data and defaults: org_name=None, ovdc_name=None
+        Optional data and default values: org_name=None, ovdc_name=None
         """
         required = [
             RequestKey.CLUSTER_NAME,
@@ -584,22 +583,14 @@ class VcdBroker(AbstractBroker):
             'task_href': self.task_resource.get('href')
         }
 
+    # all parameters following '*args' are required and keyword-only
     @run_async
-    def _create_cluster_async(self, *,
-                              org_name=None,
-                              ovdc_name=None,
-                              cluster_name=None,
-                              cluster_id=None,
-                              template_name=None,
-                              template_revision=None,
-                              num_workers=None,
-                              network_name=None,
-                              num_cpu=None,
-                              mb_memory=None,
-                              storage_profile_name=None,
-                              ssh_key_filepath=None,
-                              enable_nfs=None,
-                              rollback=None):
+    def _create_cluster_async(self, *args,
+                              org_name, ovdc_name, cluster_name, cluster_id,
+                              template_name, template_revision, num_workers,
+                              network_name, num_cpu, mb_memory,
+                              storage_profile_name, ssh_key_filepath,
+                              enable_nfs, rollback):
         org_resource = self.tenant_client.get_org_by_name(org_name)
         org = Org(self.tenant_client, resource=org_resource)
         vdc_resource = org.get_vdc(ovdc_name)
@@ -768,21 +759,12 @@ class VcdBroker(AbstractBroker):
             self.logout_sys_admin_client()
 
     @run_async
-    def _create_nodes_async(self, *,
-                            cluster_name=None,
-                            cluster_vdc_href=None,
-                            cluster_vapp_href=None,
-                            cluster_id=None,
-                            template_name=None,
-                            template_revision=None,
-                            num_workers=None,
-                            network_name=None,
-                            num_cpu=None,
-                            mb_memory=None,
-                            storage_profile_name=None,
-                            ssh_key_filepath=None,
-                            enable_nfs=None,
-                            rollback=None):
+    def _create_nodes_async(self, *args,
+                            cluster_name, cluster_vdc_href, cluster_vapp_href,
+                            cluster_id, template_name, template_revision,
+                            num_workers, network_name, num_cpu, mb_memory,
+                            storage_profile_name, ssh_key_filepath, enable_nfs,
+                            rollback):
         org_resource = self.tenant_client.get_org()
         org = Org(self.tenant_client, resource=org_resource)
         vdc = VDC(self.tenant_client, href=cluster_vdc_href)
@@ -870,11 +852,10 @@ class VcdBroker(AbstractBroker):
         finally:
             self.logout_sys_admin_client()
 
+    # all parameters following '*args' are required and keyword-only
     @run_async
-    def _delete_nodes_async(self, *,
-                            cluster_name=None,
-                            cluster_vapp_href=None,
-                            node_names_list=None):
+    def _delete_nodes_async(self, *args,
+                            cluster_name, cluster_vapp_href, node_names_list):
         try:
             self._update_task(
                 TaskStatus.RUNNING,
@@ -900,10 +881,9 @@ class VcdBroker(AbstractBroker):
         finally:
             self.logout_sys_admin_client()
 
+    # all parameters following '*args' are required and keyword-only
     @run_async
-    def _delete_cluster_async(self, *,
-                              cluster_name=None,
-                              cluster_vdc_href=None):
+    def _delete_cluster_async(self, *args, cluster_name, cluster_vdc_href):
         try:
             self._update_task(
                 TaskStatus.RUNNING,
@@ -920,17 +900,17 @@ class VcdBroker(AbstractBroker):
         finally:
             self.logout_sys_admin_client()
 
+    # all parameters following '*args' are required and keyword-only
     # synchronous cluster/node delete functions are required for rollback
-    def _delete_cluster(self, *, cluster_name=None, cluster_vdc_href=None):
+    def _delete_cluster(self, *args, cluster_name, cluster_vdc_href):
         LOGGER.debug(f"About to delete cluster with name: {cluster_name}")
         vdc = VDC(self.tenant_client, href=cluster_vdc_href)
         task = vdc.delete_vapp(cluster_name, force=True)
         self.tenant_client.get_task_monitor().wait_for_status(task)
 
-    def _delete_nodes(self, *,
-                      cluster_name=None,
-                      cluster_vapp_href=None,
-                      node_names_list=None):
+    # all parameters following '*args' are required and keyword-only
+    def _delete_nodes(self, *args,
+                      cluster_name, cluster_vapp_href, node_names_list):
         LOGGER.debug(f"About to delete nodes {node_names_list} "
                      f"from cluster {cluster_name}")
         vapp = VApp(self.tenant_client, href=cluster_vapp_href)
