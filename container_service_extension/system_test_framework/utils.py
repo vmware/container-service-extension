@@ -98,3 +98,25 @@ def list_cluster_output_validator(output, runner_username):
     if runner_username == 'vapp_author':
         # vapp author can only see clusters created by him
         assert len(re.findall('testcluster', output)) == 1
+
+
+def list_node_output_validator(output, runner_username):
+    """Test cse cluster list command output.
+
+    Validate cse cluster list command based on persona.
+
+    :param output: list of results from execution of cse commands
+    :param runner_username: persona used to run the command
+    """
+    node_pattern = r'(node-\S+)'
+    if runner_username == 'sys_admin':
+        # sys admin can see all the clusters
+        assert len(re.findall(node_pattern, output)) == 4
+
+    if runner_username == 'org_admin':
+        # org admin can see all the clusters belonging to the org
+        assert len(re.findall('testcluster', output)) == 3
+
+    if runner_username == 'vapp_author':
+        # vapp author can only see clusters created by him
+        assert len(re.findall('testcluster', output)) == 3
