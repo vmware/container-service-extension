@@ -91,7 +91,7 @@ def get_ovdc_list(client, list_pks_plans=False, tenant_auth_token=None):
     :raises UnauthorizedActionError: if trying to @list_pks_plans
         as non-sysadmin.
     :raises ValueError: if @list_pks_plans is True and @tenant_auth_token
-        are None.
+        is None.
     """
     if list_pks_plans and not client.is_sysadmin():
         raise UnauthorizedActionError('Operation Denied. Plans available '

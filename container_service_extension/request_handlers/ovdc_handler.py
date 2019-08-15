@@ -24,11 +24,8 @@ def ovdc_update(request_data, tenant_auth_token):
         RequestKey.K8S_PROVIDER,
         RequestKey.OVDC_ID
     ]
-    utils.ensure_keys_in_dict(required, request_data, dict_name='request')
-    defaults = {
-        RequestKey.ORG_NAME: None
-    }
-    validated_data = {**defaults, **request_data}
+    utils.ensure_keys_in_dict(required, request_data, dict_name='data')
+    validated_data = request_data
 
     k8s_provider = validated_data[RequestKey.K8S_PROVIDER]
     k8s_provider_info = {K8S_PROVIDER_KEY: k8s_provider}
@@ -40,8 +37,7 @@ def ovdc_update(request_data, tenant_auth_token):
             RequestKey.PKS_PLAN_NAME,
             RequestKey.PKS_CLUSTER_DOMAIN
         ]
-        utils.ensure_keys_in_dict(required, validated_data,
-                                  dict_name='request')
+        utils.ensure_keys_in_dict(required, validated_data, dict_name='data')
 
         k8s_provider_info = ovdc_utils.construct_k8s_metadata_from_pks_cache(
             ovdc_id=validated_data[RequestKey.OVDC_ID],
@@ -71,7 +67,7 @@ def ovdc_info(request_data, tenant_auth_token):
     required = [
         RequestKey.OVDC_ID
     ]
-    utils.ensure_keys_in_dict(required, request_data, dict_name='request')
+    utils.ensure_keys_in_dict(required, request_data, dict_name='data')
 
     return ovdc_utils.get_ovdc_k8s_provider_metadata(
         ovdc_id=request_data[RequestKey.OVDC_ID])
