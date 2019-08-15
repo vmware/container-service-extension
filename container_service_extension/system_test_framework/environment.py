@@ -75,6 +75,11 @@ TEARDOWN_INSTALLATION = None
 TEARDOWN_CLUSTERS = None
 TEST_ALL_TEMPLATES = None
 
+# System test users
+SYS_ADMIN_NAME = 'sys_admin'
+ORG_ADMIN_NAME = 'org_admin'
+VAPP_AUTHOR_NAME = 'vapp_author'
+
 # Persona login cmd
 SYS_ADMIN_LOGIN_CMD = None
 ORG_ADMIN_LOGIN_CMD = None
