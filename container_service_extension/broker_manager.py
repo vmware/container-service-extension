@@ -38,14 +38,25 @@ def get_cluster_info(request_data, tenant_auth_token):
 
     :rtype: tuple
     """
+    required = [
+        RequestKey.CLUSTER_NAME
+    ]
+    utils.ensure_keys_in_dict(required, request_data, dict_name='data')
     cluster_name = request_data[RequestKey.CLUSTER_NAME]
+    org_name = request_data.get(RequestKey.ORG_NAME)
+    ovdc_name = request_data.get(RequestKey.OVDC_NAME)
 
-    if request_data.get(RequestKey.OVDC_NAME) is not None:
-        broker = get_broker_based_on_vdc(request_data[RequestKey.ORG_NAME],
-                                         request_data[RequestKey.OVDC_NAME])
+    if ovdc_name is not None and org_name is not None:
+        k8s_metadata = \
+            ovdc_utils.get_ovdc_k8s_provider_metadata(org_name=org_name,
+                                                      ovdc_name=ovdc_name,
+                                                      include_credentials=True,
+                                                      include_nsxt_info=True)
+        broker = get_broker_from_k8s_metadata(k8s_metadata, tenant_auth_token)
         return broker.get_cluster_info(request_data), broker
 
     cluster, broker = get_cluster_and_broker(request_data, tenant_auth_token)
+
     if cluster is None:
         raise ClusterNotFoundError(f"Cluster {cluster_name} not found "
                                    f"either in vCD or PKS")
@@ -107,19 +118,3 @@ def get_broker_from_k8s_metadata(k8s_metadata, tenant_auth_token):
             return VcdBroker(tenant_auth_token)
 
     return VcdBroker(tenant_auth_token)
-
-
-def get_broker_based_on_vdc(org_name, ovdc_name, tenant_auth_token):
-    """Get the broker based on org VDC.
-
-    :return: broker
-
-    :rtype: container_service_extension.abstract_broker.AbstractBroker
-    """
-    k8s_metadata = \
-        ovdc_utils.get_ovdc_k8s_provider_metadata(
-            org_name=org_name,
-            ovdc_name=ovdc_name,
-            include_credentials=True,
-            include_nsxt_info=True)
-    return get_broker_from_k8s_metadata(k8s_metadata, tenant_auth_token)
