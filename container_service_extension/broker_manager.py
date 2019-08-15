@@ -42,7 +42,6 @@ def get_cluster_info(request_data, tenant_auth_token):
         RequestKey.CLUSTER_NAME
     ]
     utils.ensure_keys_in_dict(required, request_data, dict_name='data')
-    cluster_name = request_data[RequestKey.CLUSTER_NAME]
     org_name = request_data.get(RequestKey.ORG_NAME)
     ovdc_name = request_data.get(RequestKey.OVDC_NAME)
 
@@ -55,13 +54,7 @@ def get_cluster_info(request_data, tenant_auth_token):
         broker = get_broker_from_k8s_metadata(k8s_metadata, tenant_auth_token)
         return broker.get_cluster_info(request_data), broker
 
-    cluster, broker = get_cluster_and_broker(request_data, tenant_auth_token)
-
-    if cluster is None:
-        raise ClusterNotFoundError(f"Cluster {cluster_name} not found "
-                                   f"either in vCD or PKS")
-
-    return cluster, broker
+    return get_cluster_and_broker(request_data, tenant_auth_token)
 
 
 def get_cluster_and_broker(request_data, tenant_auth_token):
@@ -69,33 +62,40 @@ def get_cluster_and_broker(request_data, tenant_auth_token):
     vcd_broker = VcdBroker(tenant_auth_token)
     try:
         return vcd_broker.get_cluster_info(request_data), vcd_broker
+    except ClusterNotFoundError as err:
+        # continue searching using PksBrokers
+        LOGGER.debug(f"{err}")
     except CseDuplicateClusterError as err:
-        LOGGER.debug(f"Get cluster info on {cluster_name} on vCD "
-                     f"failed with error: {err}")
+        # fail because multiple clusters with same name exist
+        # only case is when multiple same-name clusters exist across orgs
+        # and sys admin tries to do a cluster operation
+        LOGGER.debug(f"{err}")
         raise
-    except (ClusterNotFoundError, Exception) as err:
-        # If a cluster is not found, then broker_manager will
-        # decide if it wants to raise an error or ignore it if was it just
-        # scanning the broker to check if it can handle the cluster request
-        # or not.
-        LOGGER.debug(f"Get cluster info on {cluster_name} on vCD "
-                     f"failed with error: {err}")
+    except Exception as err:
+        LOGGER.error(f"Unknown error: {err}", exc_info=True)
+        raise
 
     pks_ctx_list = \
         create_pks_context_for_all_accounts_in_org(tenant_auth_token)
     for pks_ctx in pks_ctx_list:
+        debug_msg = f"Get cluster info for cluster '{cluster_name}' " \
+                    f"failed on host '{pks_ctx['host']}' with error: "
         pks_broker = PksBroker(pks_ctx, tenant_auth_token)
         try:
             return pks_broker.get_cluster_info(request_data), pks_broker
-        except PksDuplicateClusterError as err:
-            LOGGER.debug(f"Get cluster info on {cluster_name} "
-                         f"failed on {pks_ctx['host']} with error: {err}")
-            raise
         except (PksClusterNotFoundError, PksServerError) as err:
-            LOGGER.debug(f"Get cluster info on {cluster_name} "
-                         f"failed on {pks_ctx['host']} with error: {err}")
+            # continue searching using other PksBrokers
+            LOGGER.debug(f"{debug_msg}{err}")
+        except PksDuplicateClusterError as err:
+            # fail because multiple clusters with same name exist
+            LOGGER.debug(f"{debug_msg}{err}")
+            raise
+        except Exception as err:
+            LOGGER.error(f"Unknown error: {err}", exc_info=True)
+            raise
 
-    return None, None
+    # only raised if cluster was not found in VcdBroker or PksBrokers
+    raise ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")
 
 
 def get_broker_from_k8s_metadata(k8s_metadata, tenant_auth_token):

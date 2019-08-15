@@ -1,5 +1,6 @@
 import container_service_extension.broker_manager as broker_manager
 from container_service_extension.exceptions import ClusterAlreadyExistsError
+from container_service_extension.exceptions import ClusterNotFoundError
 import container_service_extension.ovdc_utils as ovdc_utils
 import container_service_extension.pksbroker_manager as pks_broker_manager
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
@@ -22,7 +23,7 @@ def cluster_create(request_data, tenant_auth_token):
             template_revision=default, ssh_key_filepath=None, enable_nfs=False,
             rollback=True
 
-    (data validation handled in brokers).
+    (data validation handled in brokers)
 
     :return: Dict
     """
@@ -36,11 +37,13 @@ def cluster_create(request_data, tenant_auth_token):
     # True means that the cluster list is filtered by the org name of
     # the logged-in user to check that there are no duplicate clusters
     request_data['is_org_admin_search'] = True
-    cluster, _ = broker_manager.get_cluster_and_broker(request_data,
-                                                       tenant_auth_token)
-    if cluster is not None:
+
+    try:
+        broker_manager.get_cluster_and_broker(request_data, tenant_auth_token)
         raise ClusterAlreadyExistsError(f"Cluster {cluster_name} "
                                         f"already exists.")
+    except ClusterNotFoundError:
+        pass
 
     k8s_metadata = \
         ovdc_utils.get_ovdc_k8s_provider_metadata(
@@ -81,6 +84,8 @@ def cluster_delete(request_data, tenant_auth_token):
     Required data: cluster_name
     Optional data and default values: org_name=None, ovdc_name=None
 
+    (data validation handled in brokers)
+
     :return: Dict
     """
     _, broker = broker_manager.get_cluster_info(request_data,
@@ -94,6 +99,8 @@ def cluster_info(request_data, tenant_auth_token):
     Required data: cluster_name
     Optional data and default values: org_name=None, ovdc_name=None
 
+    (data validation handled in brokers)
+
     :return: Dict
     """
     cluster, _ = broker_manager.get_cluster_info(request_data,
@@ -106,6 +113,8 @@ def cluster_config(request_data, tenant_auth_token):
 
     Required data: cluster_name
     Optional data and default values: org_name=None, ovdc_name=None
+
+    (data validation handled in brokers)
 
     :return: Dict
     """
@@ -122,6 +131,8 @@ def cluster_list(request_data, tenant_auth_token):
     Aggregate all the results into a list.
 
     Optional data and default values: org_name=None, ovdc_name=None
+
+    (data validation handled in brokers)
 
     :return: List
     """
@@ -160,6 +171,8 @@ def node_create(request_data, tenant_auth_token):
         template_name=default, template_revision=default,
         ssh_key_filepath=None, rollback=True, enable_nfs=False,
 
+    (data validation handled in brokers)
+
     :return: Dict
     """
     # Currently node create is a vCD only operation.
@@ -173,6 +186,8 @@ def node_delete(request_data, tenant_auth_token):
     Required data: cluster_name, node_names_list
     Optional data and default values: org_name=None, ovdc_name=None
 
+    (data validation handled in brokers)
+
     :return: Dict
     """
     # Currently node delete is a vCD only operation.
@@ -185,6 +200,8 @@ def node_info(request_data, tenant_auth_token):
 
     Required data: cluster_name, node_name
     Optional data and default values: org_name=None, ovdc_name=None
+
+    (data validation handled in brokers)
 
     :return: Dict
     """
