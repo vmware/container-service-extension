@@ -152,7 +152,7 @@ class ComputePolicyManager:
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
-        vdc = get_vdc(org_name=org_name, vdc_name=vdc_name,
+        vdc = get_vdc(self._vcd_client, org_name=org_name, vdc_name=vdc_name,
                       is_admin_operation=True)
         return vdc.add_compute_policy(policy_href)
 
