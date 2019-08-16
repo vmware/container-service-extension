@@ -6,20 +6,29 @@ import abc
 
 from pyvcloud.vcd.client import _WellKnownEndpoint
 
-from container_service_extension.pyvcloud_utils import \
-    connect_vcd_user_via_token
+import container_service_extension.pyvcloud_utils as vcd_utils
 
 
 class AbstractBroker(abc.ABC):
 
-    def __init__(self, tenant_auth_token, request_spec):
-        self.tenant_auth_token = tenant_auth_token
-        self.req_spec = request_spec
+    def __init__(self, tenant_auth_token):
+        self.tenant_client = None
         self.client_session = None
-        self.tenant_info = None
+        self.tenant_user_name = None
+        self.tenant_user_id = None
+        self.tenant_org_name = None
+        self.tenant_org_href = None
+
+        self.tenant_client, self.client_session = \
+            vcd_utils.connect_vcd_user_via_token(tenant_auth_token=tenant_auth_token) # noqa: E501
+        self.tenant_user_name = self.client_session.get('user')
+        self.tenant_user_id = self.client_session.get('userId')
+        self.tenant_org_name = self.client_session.get('org')
+        self.tenant_org_href = \
+            self.tenant_client._get_wk_endpoint(_WellKnownEndpoint.LOGGED_IN_ORG) # noqa: E501
 
     @abc.abstractmethod
-    def create_cluster(self):
+    def create_cluster(self, data):
         """Create cluster.
 
         :return: response object
@@ -29,7 +38,7 @@ class AbstractBroker(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def delete_cluster(self):
+    def delete_cluster(self, data):
         """Delete the given cluster.
 
         :return: response object
@@ -39,7 +48,7 @@ class AbstractBroker(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_cluster_info(self):
+    def get_cluster_info(self, data):
         """Get the information about the cluster.
 
         :return: response object
@@ -49,7 +58,7 @@ class AbstractBroker(abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_cluster_config(self):
+    def get_cluster_config(self, data):
         """Get the configuration for the cluster.
 
         :return: Configuration of cluster
@@ -59,7 +68,7 @@ class AbstractBroker(abc.ABC):
         """
 
     @abc.abstractmethod
-    def list_clusters(self):
+    def list_clusters(self, data):
         """Get the list of clusters.
 
         :return: response object
@@ -70,7 +79,7 @@ class AbstractBroker(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def resize_cluster(self):
+    def resize_cluster(self, data):
         """Scale the cluster.
 
         :return: response object
@@ -78,26 +87,3 @@ class AbstractBroker(abc.ABC):
         :rtype: dict
         """
         pass
-
-    def get_tenant_client_session(self):
-        """Return <Session> XML object of a logged in vCD user.
-
-        :return: the session of the tenant user.
-
-        :rtype: lxml.objectify.ObjectifiedElement containing <Session> XML
-            data.
-        """
-        if self.client_session is None:
-            self._connect_tenant()
-        return self.client_session
-
-    def _connect_tenant(self):
-        self.tenant_client, self.client_session = connect_vcd_user_via_token(
-            tenant_auth_token=self.tenant_auth_token)
-        self.tenant_info = {
-            'user_name': self.client_session.get('user'),
-            'user_id': self.client_session.get('userId'),
-            'org_name': self.client_session.get('org'),
-            'org_href': self.tenant_client._get_wk_endpoint(
-                _WellKnownEndpoint.LOGGED_IN_ORG)
-        }

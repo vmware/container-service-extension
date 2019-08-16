@@ -103,7 +103,7 @@ Common keyword arguments for @pytest.fixture()
 
 ```python
 import container_service_extension.system_test_framework.environment as env
-from container_service_extension.cse import cli
+from container_service_extension.server_cli import cli
 from vcd_cli.vcd import vcd
 
 # test command: `cse sample --output myconfig.yaml`

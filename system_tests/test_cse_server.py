@@ -15,11 +15,11 @@ from pyvcloud.vcd.vdc import VDC
 
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
-from container_service_extension.cse import cli
 from container_service_extension.remote_template_manager import \
     get_local_script_filepath
 from container_service_extension.remote_template_manager import \
     get_revisioned_template_name
+from container_service_extension.server_cli import cli
 from container_service_extension.server_constants import ScriptFile
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils

@@ -71,8 +71,8 @@ EXCLUDE_KEYS = ['authorization_mode', 'compute_profile', 'pks_cluster_name',
 #  different layer.
 
 
-class PKSBroker(AbstractBroker):
-    """PKSBroker makes API calls to PKS server.
+class PksBroker(AbstractBroker):
+    """PksBroker makes API calls to PKS server.
 
     It performs CRUD operations on Kubernetes clusters.
     """
@@ -80,7 +80,7 @@ class PKSBroker(AbstractBroker):
     VERSION_V1 = 'v1'
     VERSION_V1BETA = 'v1beta1'
 
-    def __init__(self, tenant_auth_token, request_spec, pks_ctx):
+    def __init__(self, pks_ctx, tenant_auth_token):
         """Initialize PKS broker.
 
         :param dict pks_ctx: A dictionary with which should atleast have the
@@ -89,22 +89,30 @@ class PKSBroker(AbstractBroker):
             keys. Currently all callers of this method is using ovdc cache
             (subject to change) to initialize PKS broker.
         """
-        super().__init__(tenant_auth_token, request_spec)
+        self.tenant_client = None
+        self.client_session = None
+        self.tenant_user_name = None
+        self.tenant_user_id = None
+        self.tenant_org_name = None
+        self.tenant_org_href = None
+        # populates above attributes
+        super().__init__(tenant_auth_token)
+
         if not pks_ctx:
             raise ValueError(
                 "PKS context is required to establish connection to PKS")
 
         self.username = pks_ctx['username']
         self.secret = pks_ctx['secret']
-        self.pks_host_uri = \
-            f"https://{pks_ctx['host']}:{pks_ctx['port']}"
-        self.uaac_uri = \
-            f"https://{pks_ctx['host']}:{pks_ctx['uaac_port']}"
-        self.proxy_uri = f"http://{pks_ctx['proxy']}:80" \
-            if pks_ctx.get('proxy') else None
+        self.pks_host_uri = f"https://{pks_ctx['host']}:{pks_ctx['port']}"
+        self.uaac_uri = f"https://{pks_ctx['host']}:{pks_ctx['uaac_port']}"
+        self.proxy_uri = None
+        if pks_ctx.get('proxy'):
+            self.proxy_uri = f"http://{pks_ctx['proxy']}:80"
         self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE_KEY, None)
         self.nsxt_server = \
             utils.get_pks_cache().get_nsxt_info(pks_ctx.get('vc'))
+        self.nsxt_client = None
         if self.nsxt_server:
             self.nsxt_client = NSXTClient(
                 host=self.nsxt_server.get('host'),
@@ -118,19 +126,16 @@ class PKSBroker(AbstractBroker):
                 log_body=True)
         # TODO() Add support in pyvcloud to send metadata values with their
         # types intact.
-        verify_ssl_value_in_ctx = pks_ctx.get('verify')
-        if isinstance(verify_ssl_value_in_ctx, bool):
-            self.verify = verify_ssl_value_in_ctx
-        elif isinstance(verify_ssl_value_in_ctx, str):
-            self.verify = \
-                False if verify_ssl_value_in_ctx.lower() == 'false' else True
-        else:
-            self.verify = True
+        verify_ssl = pks_ctx.get('verify')
+        self.verify = True
+        if isinstance(verify_ssl, bool):
+            self.verify = verify_ssl
+        elif isinstance(verify_ssl, str):
+            self.verify = utils.str_to_bool(verify_ssl)
+
         token = self._get_token()
         self.client_v1 = self._get_pks_client(token, self.VERSION_V1)
         self.client_v1beta = self._get_pks_client(token, self.VERSION_V1BETA)
-        self.client_session = None
-        self.get_tenant_client_session()
 
     def _get_token(self):
         """Connect to UAA server, authenticate and get token.
@@ -199,7 +204,7 @@ class PKSBroker(AbstractBroker):
             pks_plans_list.append(plan.to_dict())
         return pks_plans_list
 
-    def list_clusters(self, **kwargs):
+    def list_clusters(self, data):
         """Get list of clusters in PKS environment.
 
         System administrator gets all the clusters for the given service
@@ -215,7 +220,7 @@ class PKSBroker(AbstractBroker):
         for cluster in cluster_list:
             self._restore_original_name(cluster)
 
-        return self._filter_clusters(cluster_list, **kwargs)
+        return self._filter_clusters(cluster_list, **data)
 
     def _list_clusters(self):
         """Get list of clusters in PKS environment.
@@ -260,7 +265,7 @@ class PKSBroker(AbstractBroker):
         return list_of_cluster_dicts
 
     @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
-    def create_cluster(self):
+    def create_cluster(self, data):
         """Create cluster in PKS environment.
 
         To retain the user context, user-id of the logged-in user is appended
@@ -276,15 +281,16 @@ class PKSBroker(AbstractBroker):
         """
         required = [
             RequestKey.CLUSTER_NAME,
-            RequestKey.NUM_WORKERS,
             RequestKey.PKS_PLAN_NAME,
-            'pks_ext_host' # noqa: E501 this should not be part of the request spec, check broker_manager._create_cluster(). request spec should not be getting modified ever
+            'pks_ext_host', # noqa: E501 TODO this should not be part of the request spec
+            RequestKey.ORG_NAME,
+            RequestKey.OVDC_NAME
         ]
-        utils.ensure_keys_in_dict(required, self.req_spec, dict_name='request')
+        utils.ensure_keys_in_dict(required, data, dict_name='data')
 
-        cluster_name = self.req_spec[RequestKey.CLUSTER_NAME]
+        cluster_name = data[RequestKey.CLUSTER_NAME]
         qualified_cluster_name = self._append_user_id(cluster_name)
-        self.req_spec[RequestKey.CLUSTER_NAME] = qualified_cluster_name
+        data[RequestKey.CLUSTER_NAME] = qualified_cluster_name
 
         if not self.nsxt_server:
             raise CseServerError(
@@ -292,7 +298,11 @@ class PKSBroker(AbstractBroker):
                 f"cluster : {cluster_name}. Aborting creation of cluster.")
 
         # this needs to be refactored
-        cluster_info = self._create_cluster(**self.req_spec)
+        cluster_info = self._create_cluster(
+            cluster_name=data[RequestKey.CLUSTER_NAME],
+            num_workers=data[RequestKey.NUM_WORKERS],
+            pks_plan_name=data[RequestKey.PKS_PLAN_NAME],
+            pks_ext_host=data['pks_ext_host'])
 
         self._isolate_cluster(cluster_name, qualified_cluster_name,
                               cluster_info.get('uuid'))
@@ -303,8 +313,10 @@ class PKSBroker(AbstractBroker):
 
         return cluster_info
 
-    def _create_cluster(self, cluster_name, node_count, pks_plan, pks_ext_host,
-                        compute_profile=None, **kwargs):
+    # all parameters following '*args' are required and keyword-only
+    def _create_cluster(self, *args,
+                        cluster_name, num_workers, pks_plan_name,
+                        pks_ext_host):
         """Create cluster in PKS environment.
 
         Creates Distributed Firewall rules in NSX-T to isolate the cluster
@@ -315,21 +327,20 @@ class PKSBroker(AbstractBroker):
         that PKS supports.
         :param str external_host_name: User-preferred external hostname
          of the K8 cluster
-        :param str compute_profile: Name of the compute profile
 
         :return: Details of the cluster
 
         :rtype: dict
         """
-        compute_profile = compute_profile \
-            if compute_profile else self.compute_profile
         cluster_api = ClusterApiV1Beta(api_client=self.client_v1beta)
         cluster_params = \
             ClusterParameters(kubernetes_master_host=pks_ext_host,
-                              kubernetes_worker_instances=node_count)
-        cluster_request = ClusterRequest(name=cluster_name, plan_name=pks_plan,
-                                         parameters=cluster_params,
-                                         compute_profile_name=compute_profile)
+                              kubernetes_worker_instances=num_workers)
+        cluster_request = \
+            ClusterRequest(name=cluster_name,
+                           plan_name=pks_plan_name,
+                           parameters=cluster_params,
+                           compute_profile_name=self.compute_profile)
 
         LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to create "
                      f"cluster of name: {cluster_name}")
@@ -350,7 +361,7 @@ class PKSBroker(AbstractBroker):
 
         return cluster_dict
 
-    def get_cluster_info(self, **kwargs):
+    def get_cluster_info(self, data):
         """Get the details of a cluster with a given name in PKS environment.
 
         System administrator gets the given cluster information regardless of
@@ -362,13 +373,12 @@ class PKSBroker(AbstractBroker):
 
         :rtype: dict
         """
-        cluster_name = self.req_spec[RequestKey.CLUSTER_NAME]
+        cluster_name = data[RequestKey.CLUSTER_NAME]
 
         if self.tenant_client.is_sysadmin() \
                 or is_org_admin(self.client_session) \
-                or kwargs.get('is_org_admin_search'):
-            cluster_list = self.list_clusters(
-                is_org_admin_search=kwargs.get('is_org_admin_search'))
+                or data.get('is_org_admin_search'):
+            cluster_list = self.list_clusters(data)
             filtered_cluster_list = \
                 self._filter_list_by_cluster_name(cluster_list, cluster_name)
             LOGGER.debug(f"filtered Cluster List:{filtered_cluster_list}")
@@ -384,7 +394,7 @@ class PKSBroker(AbstractBroker):
         cluster_info = \
             self._get_cluster_info(self._append_user_id(cluster_name))
         self._restore_original_name(cluster_info)
-        if not kwargs.get('is_admin_request'):
+        if not data.get('is_admin_request'):
             self._filter_pks_properties(cluster_info)
 
         return cluster_info
@@ -419,7 +429,7 @@ class PKSBroker(AbstractBroker):
 
         return cluster_dict
 
-    def get_cluster_config(self):
+    def get_cluster_config(self, data):
         """Get the configuration of the cluster with the given name in PKS.
 
         System administrator gets the given cluster config regardless of
@@ -430,11 +440,11 @@ class PKSBroker(AbstractBroker):
 
         :rtype: str
         """
-        cluster_name = self.req_spec[RequestKey.CLUSTER_NAME]
+        cluster_name = data[RequestKey.CLUSTER_NAME]
 
         if self.tenant_client.is_sysadmin() or \
                 is_org_admin(self.client_session):
-            cluster_info = self.get_cluster_info()
+            cluster_info = self.get_cluster_info(data)
             qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
             qualified_cluster_name = self._append_user_id(cluster_name)
@@ -454,7 +464,7 @@ class PKSBroker(AbstractBroker):
         return self.filter_traces_of_user_context(cluster_config)
 
     @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
-    def delete_cluster(self):
+    def delete_cluster(self, data):
         """Delete the cluster with a given name in PKS environment.
 
         System administrator can delete the given cluster regardless of
@@ -463,11 +473,11 @@ class PKSBroker(AbstractBroker):
 
         :param str cluster_name: Name of the cluster
         """
-        cluster_name = self.req_spec[RequestKey.CLUSTER_NAME]
+        cluster_name = data[RequestKey.CLUSTER_NAME]
 
         if self.tenant_client.is_sysadmin() \
                 or is_org_admin(self.client_session):
-            cluster_info = self.get_cluster_info(cluster_name)
+            cluster_info = self.get_cluster_info(data)
             qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
             qualified_cluster_name = self._append_user_id(cluster_name)
@@ -505,7 +515,7 @@ class PKSBroker(AbstractBroker):
         return result
 
     @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
-    def resize_cluster(self):
+    def resize_cluster(self, data):
         """Resize the cluster of a given name to given number of worker nodes.
 
         System administrator can resize the given cluster regardless of
@@ -518,12 +528,12 @@ class PKSBroker(AbstractBroker):
         :rtype: dict
 
         """
-        cluster_name = self.req_spec[RequestKey.CLUSTER_NAME]
-        num_workers = self.req_spec[RequestKey.NUM_WORKERS]
+        cluster_name = data[RequestKey.CLUSTER_NAME]
+        num_workers = data[RequestKey.NUM_WORKERS]
 
         if self.tenant_client.is_sysadmin() \
                 or is_org_admin(self.client_session):
-            cluster_info = self.get_cluster_info(cluster_name)
+            cluster_info = self.get_cluster_info(data)
             qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
             qualified_cluster_name = self._append_user_id(cluster_name)
@@ -535,9 +545,11 @@ class PKSBroker(AbstractBroker):
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to resize "
                      f"the cluster with name: {qualified_cluster_name} to "
                      f"{num_workers} worker nodes")
-        resize_params = UpdateClusterParameters(kubernetes_worker_instances=num_workers) # noqa: E501
+        resize_params = \
+            UpdateClusterParameters(kubernetes_worker_instances=num_workers)
         try:
-            cluster_api.update_cluster(qualified_cluster_name, body=resize_params) # noqa: E501
+            cluster_api.update_cluster(qualified_cluster_name,
+                                       body=resize_params)
         except v1Exception as err:
             LOGGER.debug(f"Resizing cluster {qualified_cluster_name} failed"
                          f" with error:\n {err}")
@@ -738,21 +750,20 @@ class PKSBroker(AbstractBroker):
         delegated to dedicated filter class say: PksClusterFilter.
         """
         # Apply vdc filter, if provided to all personae.
-        if self.req_spec.get(RequestKey.OVDC_NAME):
-            cluster_list = self._apply_vdc_filter(
-                cluster_list,
-                self.req_spec.get(RequestKey.OVDC_NAME))
+        if kwargs.get(RequestKey.OVDC_NAME):
+            cluster_list = \
+                self._apply_vdc_filter(cluster_list,
+                                       kwargs.get(RequestKey.OVDC_NAME))
 
         # Apply org filter, if provided, for sys admin.
         if self.tenant_client.is_sysadmin():
-            org_name = self.req_spec.get(RequestKey.ORG_NAME)
+            org_name = kwargs.get(RequestKey.ORG_NAME)
             if org_name and org_name.lower() != SYSTEM_ORG_NAME.lower():
                 cluster_list = self._apply_org_filter(cluster_list, org_name)
             return cluster_list
 
         # Filter the cluster list for org admin and others.
-        if is_org_admin(self.client_session) or \
-                kwargs.get('is_org_admin_search'):
+        if is_org_admin(self.client_session) or kwargs.get('is_org_admin_search'): # noqa: E501
             # TODO() - Service accounts for exclusive org does not
             #  require the following filtering.
             cluster_list = [cluster_dict for cluster_dict in cluster_list
@@ -916,15 +927,16 @@ class PKSBroker(AbstractBroker):
 
     def generate_cluster_subset_with_given_keys(self, cluster):
         pks_cluster = cluster
+
         compute_profile_name = cluster.get('compute_profile_name', '')
+        pks_cluster['vdc'] = ''
         if compute_profile_name:
-            vdc_id = self._extract_vdc_id_from_pks_compute_profile_name(compute_profile_name)  # noqa
+            vdc_id = self._extract_vdc_id_from_pks_compute_profile_name(compute_profile_name)  # noqa: E501
             pks_cluster['org_name'] = get_org_name_from_ovdc_id(vdc_id)
-            pks_cluster['vdc'] = self._extract_vdc_name_from_pks_compute_profile_name(compute_profile_name)  # noqa
-        else:
-            vdc_id = ''
-            pks_cluster['vdc'] = ''
+            pks_cluster['vdc'] = self._extract_vdc_name_from_pks_compute_profile_name(compute_profile_name)  # noqa: E501
+
         pks_cluster['status'] = \
             cluster.get('last_action', '').lower() + ' ' + \
             cluster.get('last_action_state', '').lower()
+
         return pks_cluster

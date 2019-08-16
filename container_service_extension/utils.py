@@ -79,10 +79,16 @@ def get_duplicate_items_in_list(items):
 
 
 def ensure_keys_in_dict(required_keys, dikt, dict_name='dictionary'):
+    """Ensure that @required_keys exist in @dikt and are not None."""
     required = set(required_keys)
     if not required.issubset(dikt.keys()):
         raise KeyError(f"Missing required keys in {dict_name}: "
                        f"{required.difference(dikt.keys())}")
+
+    keys_with_none_value = [k for k, v in dikt.items() if k in required and v is None] # noqa: E501
+    if len(keys_with_none_value) > 0:
+        raise ValueError(f"Required keys in {dict_name} have None as "
+                         f"value: {keys_with_none_value}")
 
 
 def check_keys_and_value_types(dikt, ref_dict, location='dictionary',

@@ -235,7 +235,7 @@ def cluster_delete(ctx, name, vdc, org):
     '--nodes',
     'node_count',
     required=False,
-    default=2,
+    default=None,
     type=click.INT,
     help='Number of worker nodes to create')
 @click.option(
@@ -333,7 +333,7 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
         if vdc is None:
             vdc = ctx.obj['profiles'].get('vdc_in_use')
             if not vdc:
-                raise Exception(f"Virtual datacenter context is not set. "
+                raise Exception("Virtual datacenter context is not set. "
                                 "Use either command 'vcd vdc use' or option "
                                 "'--vdc' to set the vdc context.")
         if org_name is None:
@@ -372,10 +372,10 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
     '-N',
     '--nodes',
     'node_count',
-    required=False,
-    default=1,
+    required=True,
+    default=None,
     type=click.INT,
-    help='New size of the cluster (or) new worker node count of the cluster')
+    help='Desired number of worker nodes for the cluster')
 @click.option(
     '-n',
     '--network',
@@ -755,15 +755,10 @@ def list_nodes(ctx, name, org, vdc):
                     short_help='Delete node(s) in a cluster that was created '
                                'with native Kubernetes provider')
 @click.pass_context
-@click.argument('name', required=True)
-@click.argument('node-names', nargs=-1)
-@click.confirmation_option(prompt='Are you sure you want to delete the '
-                                  'node(s)?')
-@click.option(
-    '-f',
-    '--force',
-    is_flag=True,
-    help='Force delete node VM(s)')
+@click.argument('cluster_name', required=True)
+@click.argument('node_names', nargs=-1, required=True)
+@click.confirmation_option(prompt='Are you sure you want to delete '
+                                  'the node(s)?')
 @click.option(
     '-v',
     '--vdc',
@@ -780,7 +775,7 @@ def list_nodes(ctx, name, org, vdc):
     required=False,
     metavar='ORG_NAME',
     help='Restrict cluster search to specified org')
-def delete_nodes(ctx, name, node_names, org, vdc, force):
+def delete_nodes(ctx, cluster_name, node_names, org, vdc):
     """Delete node(s) in a cluster that uses native Kubernetes provider."""
     try:
         restore_session(ctx)
@@ -788,8 +783,8 @@ def delete_nodes(ctx, name, node_names, org, vdc, force):
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
         cluster = Cluster(client)
-        result = cluster.delete_nodes(name, node_names, org=org, vdc=vdc,
-                                      force=force)
+        result = cluster.delete_nodes(cluster_name, list(node_names), org=org,
+                                      vdc=vdc)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -1063,7 +1058,7 @@ def ovdc_info(ctx, ovdc_name, org_name):
             ovdc = Ovdc(client)
             if org_name is None:
                 org_name = ctx.obj['profiles'].get('org_in_use')
-            result = ovdc.info_ovdc_for_k8s(ovdc_name, org_name=org_name)
+            result = ovdc.info_ovdc_for_k8s(ovdc_name, org_name)
             stdout(result, ctx)
         else:
             stderr("Insufficient permission to perform operation", ctx)
