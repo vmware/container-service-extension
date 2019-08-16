@@ -585,6 +585,52 @@ def test_0080_vcd_cse_cluster_list(test_runner_username):
     print(f"Successfully listed cluster for {test_runner_username}.")
 
 
+@pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME, env.ORG_ADMIN_NAME,
+                                                  env.VAPP_AUTHOR_NAME])
+def test_0090_vcd_cse_cluster_info(test_runner_username):
+    cmd_binder = collections.namedtuple('UserCmdBinder',
+                                        'cmd exit_code validate_output_func '
+                                        'test_user')
+    print(f"Running cluster info operation for {test_runner_username} on "
+          f"{env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}")
+    cmd_list = [
+        cmd_binder(cmd=env.USER_LOGIN_CMD_MAP.get(test_runner_username),
+                   exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=f"cse cluster info {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}",  # noqa
+                   exit_code=0, validate_output_func=None,
+                   test_user=test_runner_username),
+        cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username)
+    ]
+
+    execute_commands(cmd_list)
+    print(f"Successful cluster info on {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}.")  # noqa
+
+
+@pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME, env.ORG_ADMIN_NAME,
+                                                  env.VAPP_AUTHOR_NAME])
+def test_0100_vcd_cse_cluster_config(test_runner_username):
+    cmd_binder = collections.namedtuple('UserCmdBinder',
+                                        'cmd exit_code validate_output_func '
+                                        'test_user')
+    print(f"Running cluster config operation for {test_runner_username} on "
+          f"{env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}")
+    cmd_list = [
+        cmd_binder(cmd=env.USER_LOGIN_CMD_MAP.get(test_runner_username),
+                   exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=f"cse cluster config {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}",  # noqa
+                   exit_code=0, validate_output_func=None,
+                   test_user=test_runner_username),
+        cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username)
+    ]
+
+    execute_commands(cmd_list)
+    print(f"Successful cluster config on {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}.")  # noqa
+
+
 def test_9999_vcd_cse_system_stop(vcd_sys_admin):
     """Test `vcd cse system stop -y`.
 
