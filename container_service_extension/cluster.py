@@ -32,20 +32,6 @@ import container_service_extension.utils as utils
 import container_service_extension.vsphere_utils as vs_utils
 
 
-def wait_until_tools_ready(vm):
-    while True:
-        try:
-            status = vm.guest.toolsRunningStatus
-            if 'guestToolsRunning' == status:
-                LOGGER.debug(f"vm tools {vm} are ready")
-                return
-            LOGGER.debug(f"waiting for vm tools {vm} to be ready ({status})")
-            time.sleep(1)
-        except Exception:
-            LOGGER.debug(f"waiting for vm tools {vm} to be ready ({status})* ")
-            time.sleep(1)
-
-
 def is_valid_cluster_name(name):
     """Validate that the cluster name against the pattern."""
     if len(name) > 25:
