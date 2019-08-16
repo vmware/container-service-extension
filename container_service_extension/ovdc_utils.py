@@ -112,10 +112,8 @@ def get_ovdc_list(client, list_pks_plans=False, tenant_auth_token=None):
             ovdc_name = vdc_sparse['name']
             org_name = org.get_name()
 
-            k8s_metadata = \
-                get_ovdc_k8s_provider_metadata(
-                    ovdc_name=ovdc_name,
-                    org_name=org_name)[K8S_PROVIDER_KEY]
+            k8s_metadata = get_ovdc_k8s_provider_metadata(ovdc_name=ovdc_name,
+                                                          org_name=org_name)
             k8s_provider = k8s_metadata[K8S_PROVIDER_KEY]
             ovdc_info = {
                 'name': ovdc_name,
