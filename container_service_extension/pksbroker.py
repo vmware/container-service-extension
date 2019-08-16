@@ -927,15 +927,16 @@ class PksBroker(AbstractBroker):
 
     def generate_cluster_subset_with_given_keys(self, cluster):
         pks_cluster = cluster
+
         compute_profile_name = cluster.get('compute_profile_name', '')
+        pks_cluster['vdc'] = ''
         if compute_profile_name:
-            vdc_id = self._extract_vdc_id_from_pks_compute_profile_name(compute_profile_name)  # noqa
+            vdc_id = self._extract_vdc_id_from_pks_compute_profile_name(compute_profile_name)  # noqa: E501
             pks_cluster['org_name'] = get_org_name_from_ovdc_id(vdc_id)
-            pks_cluster['vdc'] = self._extract_vdc_name_from_pks_compute_profile_name(compute_profile_name)  # noqa
-        else:
-            vdc_id = '' # TODO why is this here?
-            pks_cluster['vdc'] = ''
+            pks_cluster['vdc'] = self._extract_vdc_name_from_pks_compute_profile_name(compute_profile_name)  # noqa: E501
+
         pks_cluster['status'] = \
             cluster.get('last_action', '').lower() + ' ' + \
             cluster.get('last_action_state', '').lower()
+
         return pks_cluster
