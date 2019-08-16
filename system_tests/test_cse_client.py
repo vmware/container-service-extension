@@ -58,7 +58,7 @@ import time
 import pytest
 from vcd_cli.vcd import vcd
 
-from container_service_extension.cse import cli
+from container_service_extension.server_cli import cli
 import container_service_extension.server_constants as constants
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
