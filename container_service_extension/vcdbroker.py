@@ -626,12 +626,12 @@ class VcdBroker(AbstractBroker):
             vapp = VApp(self.tenant_client, href=vapp_resource.get('href'))
             task = vapp.set_multiple_metadata(tags)
             self.tenant_client.get_task_monitor().wait_for_status(task)
-            vapp.reload()
 
             self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Creating master node for "
                         f"{cluster_name} ({cluster_id})")
+            vapp.reload()
             server_config = utils.get_server_runtime_config()
             catalog_name = server_config['broker']['catalog']
             try:
@@ -651,18 +651,17 @@ class VcdBroker(AbstractBroker):
             except Exception as e:
                 raise MasterNodeCreationError("Error adding master node:",
                                               str(e))
-            vapp.reload()
+
             self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Initializing cluster {cluster_name} ({cluster_id})")
+            vapp.reload()
             init_cluster(vapp, template[LocalTemplateKey.NAME],
                          template[LocalTemplateKey.REVISION])
-
             master_ip = get_master_ip(vapp)
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      master_ip)
             self.tenant_client.get_task_monitor().wait_for_status(task)
-            vapp.reload()
 
             self._update_task(
                 TaskStatus.RUNNING,
@@ -685,13 +684,15 @@ class VcdBroker(AbstractBroker):
             except Exception as e:
                 raise WorkerNodeCreationError("Error creating worker node:",
                                               str(e))
-            vapp.reload()
+
             self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Adding {num_workers} node(s) to "
                         f"{cluster_name}({cluster_id})")
+            vapp.reload()
             join_cluster(vapp, template[LocalTemplateKey.NAME],
                          template[LocalTemplateKey.REVISION])
+
             if enable_nfs:
                 self._update_task(
                     TaskStatus.RUNNING,
