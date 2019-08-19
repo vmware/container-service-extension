@@ -19,6 +19,7 @@ import yaml
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.configure_cse import install_cse
+from container_service_extension.configure_cse import install_template
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.local_template_manager import \
     get_all_k8s_local_template_definition
@@ -300,15 +301,16 @@ def install(ctx, config, skip_template_creation, force_update,
 
     if retain_temp_vapp and not ssh_key_file:
         click.echo('Must provide ssh-key file (using --ssh-key OR -k) if '
-                   '--no-capture is True, or else temporary vm will '
+                   '--retain-temp-vapp is provided, or else temporary vm will '
                    'be inaccessible')
         return
 
     ssh_key = None
     if ssh_key_file is not None:
         ssh_key = ssh_key_file.read()
+
     try:
-        install_cse(ctx, config_file_name=config,
+        install_cse(config_file_name=config,
                     skip_template_creation=skip_template_creation,
                     force_update=force_update, ssh_key=ssh_key,
                     retain_temp_vapp=retain_temp_vapp,
@@ -520,6 +522,82 @@ def list_template(ctx, config_file_name, display_option):
         stdout(result, ctx, sort_headers=False)
     except Exception as err:
         click.secho(str(err), fg='red')
+
+
+@template.command('install', short_help='Install CSE on vCD')
+@click.pass_context
+@click.argument('template_name', metavar='TEMPLATE_NAME')
+@click.argument('template_revision', metavar='TEMPLATE_REVISION')
+@click.option(
+    '-c',
+    '--config',
+    'config_file_name',
+    type=click.Path(exists=True),
+    metavar='CONFIG_FILE_NAME',
+    envvar='CSE_CONFIG',
+    default='config.yaml',
+    help='Filepath of CSE config file')
+@click.option(
+    '-f',
+    '--force',
+    'force_create',
+    is_flag=True,
+    help='Recreate CSE k8s templates on vCD even if they already exist')
+@click.option(
+    '-d',
+    '--retain-temp-vapp',
+    'retain_temp_vapp',
+    is_flag=True,
+    help='Retain the temporary vApp after the template has been captured'
+         ' --ssh-key option is required if this flag is used')
+@click.option(
+    '-k',
+    '--ssh-key',
+    'ssh_key_file',
+    required=False,
+    default=None,
+    type=click.File('r'),
+    help='Filepath of SSH public key to add to vApp template')
+def install_cse_template(ctx, template_name, template_revision,
+                         config_file_name, force_create, retain_temp_vapp,
+                         ssh_key_file):
+    """."""
+    try:
+        check_python_version(ConsoleMessagePrinter())
+    except Exception as err:
+        click.secho(str(err), fg='red')
+        sys.exit(1)
+
+    if retain_temp_vapp and not ssh_key_file:
+        click.echo('Must provide ssh-key file (using --ssh-key OR -k) if '
+                   '--retain-temp-vapp is provided, or else temporary vm will '
+                   'be inaccessible')
+        return
+
+    ssh_key = None
+    if ssh_key_file is not None:
+        ssh_key = ssh_key_file.read()
+
+    try:
+        install_template(
+            template_name=template_name,
+            template_revision=template_revision,
+            config_file_name=config_file_name,
+            force_create=force_create,
+            retain_temp_vapp=retain_temp_vapp,
+            ssh_key=ssh_key,
+            msg_update_callback=ConsoleMessagePrinter())
+    except (EntityNotFoundException, NotAcceptableException, VcdException,
+            ValueError, KeyError, TypeError) as err:
+        click.secho(str(err), fg='red')
+    except AmqpConnectionError as err:
+        click.secho(str(err), fg='red')
+        click.secho("check config file amqp section.", fg='red')
+    except requests.exceptions.ConnectionError as err:
+        click.secho(f"Cannot connect to {err.request.url}.", fg='red')
+    except vim.fault.InvalidLogin:
+        click.secho("vCenter login failed (check config file vCenter "
+                    "username/password).", fg='red')
 
 
 if __name__ == '__main__':
