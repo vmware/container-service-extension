@@ -326,6 +326,9 @@ def install_template(template_name, template_revision, config_file_name,
                      msg_update_callback):
     """Install a particular template in CSE.
 
+    If template_name and revision are wild carded to *, all templates defined
+    in remote template cookbook will be installed.
+
     :param str template_name:
     :param str template_revision:
     :param str config_file_name: config file name.
@@ -382,7 +385,9 @@ def install_template(template_name, template_revision, config_file_name,
 
         found_template = False
         for template in remote_template_cookbook['templates']:
-            if template[RemoteTemplateKey.NAME] == template_name and str(template[RemoteTemplateKey.REVISION]) == str(template_revision): # noqa: E501
+            template_name_matched = template_name in (template[RemoteTemplateKey.NAME], '*') # noqa: E501
+            template_revision_matched = str(template_revision) in (str(template[RemoteTemplateKey.REVISION]), '*') # noqa: E501
+            if template_name_matched and template_revision_matched:
                 found_template = True
                 _install_template(
                     client=client,
@@ -398,7 +403,7 @@ def install_template(template_name, template_revision, config_file_name,
                     retain_temp_vapp=retain_temp_vapp,
                     ssh_key=ssh_key,
                     msg_update_callback=msg_update_callback)
-                break
+
         if not found_template:
             msg = f"Template '{template_name}' at revision " \
                   f"'{template_revision}' not found in remote template " \

@@ -151,12 +151,6 @@ Examples
         Install all templates defined in remote template cookbook. Tempaltes
         already in the local catalog that match one in the remote catalog will
         be recreated from scratch.
-\b
-    cse template delete -c config.yaml
-        Delete all templates from local catalog.
-\b
-    cse template delete [template name] [template revision] -c config.yaml
-        Delete a particular template at a given revision from local catalog.
     """
     pass
 
@@ -524,10 +518,10 @@ def list_template(ctx, config_file_name, display_option):
         click.secho(str(err), fg='red')
 
 
-@template.command('install', short_help='Install CSE on vCD')
+@template.command('install', short_help='Create Kubernetes templates')
 @click.pass_context
-@click.argument('template_name', metavar='TEMPLATE_NAME')
-@click.argument('template_revision', metavar='TEMPLATE_REVISION')
+@click.argument('template_name', metavar='TEMPLATE_NAME', default='*')
+@click.argument('template_revision', metavar='TEMPLATE_REVISION', default='*')
 @click.option(
     '-c',
     '--config',
@@ -561,7 +555,7 @@ def list_template(ctx, config_file_name, display_option):
 def install_cse_template(ctx, template_name, template_revision,
                          config_file_name, force_create, retain_temp_vapp,
                          ssh_key_file):
-    """."""
+    """Create CSE k8s templates."""
     try:
         check_python_version(ConsoleMessagePrinter())
     except Exception as err:
