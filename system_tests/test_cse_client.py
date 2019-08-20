@@ -464,7 +464,8 @@ def test_0040_vcd_cse_cluster_and_node_operations(config, vcd_org_admin,
     print('SUCCESS')
 
 
-@pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME, env.ORG_ADMIN_NAME,
+@pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
+                                                  env.ORG_ADMIN_NAME,
                                                   env.VAPP_AUTHOR_NAME])
 def test_0050_vcd_cse_system_toggle(config, test_runner_username,
                                     delete_test_clusters):
@@ -521,7 +522,8 @@ def test_0050_vcd_cse_system_toggle(config, test_runner_username,
         "Cluster exist when it should not."
 
 
-@pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME, env.ORG_ADMIN_NAME,
+@pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
+                                                  env.ORG_ADMIN_NAME,
                                                   env.VAPP_AUTHOR_NAME])
 def test_0070_vcd_cse_cluster_create(config, test_runner_username):
     """Test 'vcd cse cluster create ...' command for various cse users.
@@ -556,13 +558,16 @@ def test_0070_vcd_cse_cluster_create(config, test_runner_username):
     ]
     execute_commands(cmd_list)
 
-    assert env.vapp_exists(env.USERNAME_TO_CLUSTER_NAME[test_runner_username]), \
-        "Cluster should exist"
+    assert env.vapp_exists(
+        env.USERNAME_TO_CLUSTER_NAME[test_runner_username]),\
+        f"Cluster {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]} " \
+        f"should exist"
     print(f"Successfully created cluster {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]} "  # noqa
           f"for {test_runner_username}")
 
 
-@pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME, env.ORG_ADMIN_NAME,
+@pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
+                                                  env.ORG_ADMIN_NAME,
                                                   env.VAPP_AUTHOR_NAME])
 def test_0080_vcd_cse_cluster_list(test_runner_username):
     cmd_binder = collections.namedtuple('UserCmdBinder',
@@ -582,6 +587,54 @@ def test_0080_vcd_cse_cluster_list(test_runner_username):
 
     execute_commands(cmd_list)
     print(f"Successfully listed cluster for {test_runner_username}.")
+
+
+@pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
+                                                  env.ORG_ADMIN_NAME,
+                                                  env.VAPP_AUTHOR_NAME])
+def test_0090_vcd_cse_cluster_info(test_runner_username):
+    cmd_binder = collections.namedtuple('UserCmdBinder',
+                                        'cmd exit_code validate_output_func '
+                                        'test_user')
+    print(f"Running cluster info operation for {test_runner_username} on "
+          f"{env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}")
+    cmd_list = [
+        cmd_binder(cmd=env.USER_LOGIN_CMD_MAP.get(test_runner_username),
+                   exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=f"cse cluster info {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}",  # noqa
+                   exit_code=0, validate_output_func=None,
+                   test_user=test_runner_username),
+        cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username)
+    ]
+
+    execute_commands(cmd_list)
+    print(f"Successful cluster info on {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}.")  # noqa
+
+
+@pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
+                                                  env.ORG_ADMIN_NAME,
+                                                  env.VAPP_AUTHOR_NAME])
+def test_0100_vcd_cse_cluster_config(test_runner_username):
+    cmd_binder = collections.namedtuple('UserCmdBinder',
+                                        'cmd exit_code validate_output_func '
+                                        'test_user')
+    print(f"Running cluster config operation for {test_runner_username} on "
+          f"{env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}")
+    cmd_list = [
+        cmd_binder(cmd=env.USER_LOGIN_CMD_MAP.get(test_runner_username),
+                   exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=f"cse cluster config {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}",  # noqa
+                   exit_code=0, validate_output_func=None,
+                   test_user=test_runner_username),
+        cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username)
+    ]
+
+    execute_commands(cmd_list)
+    print(f"Successful cluster config on {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}.")  # noqa
 
 
 def test_0120_vcd_cse_cluster_delete(config):
@@ -635,7 +688,8 @@ def test_0120_vcd_cse_cluster_delete(config):
     execute_commands(cmd_list)
 
     for cluster_name in env.USERNAME_TO_CLUSTER_NAME.values():
-        assert not env.vapp_exists(cluster_name), f"Cluster {cluster_name} exists when it should not"
+        assert not env.vapp_exists(cluster_name), \
+            f"Cluster {cluster_name} exists when it should not"
     print(f"Successfully deleted clusters.")
 
 
