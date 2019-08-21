@@ -92,6 +92,7 @@ VDC_HREF = None
 CATALOG_NAME = None
 
 WAIT_INTERVAL = 30
+NODES_COUNT = 1
 
 
 def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
