@@ -2,8 +2,12 @@ from collections import namedtuple
 
 from pyvcloud.vcd.client import MetadataDomain
 from pyvcloud.vcd.client import MetadataVisibility
+from pyvcloud.vcd.client import QueryResultFormat
+from pyvcloud.vcd.client import ResourceType
+from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.org import Org
 import pyvcloud.vcd.utils as pyvcd_utils
+from pyvcloud.vcd.utils import to_dict
 import requests
 
 from container_service_extension.exceptions import CseServerError
@@ -122,12 +126,26 @@ def get_ovdc_list(client, list_pks_plans=False, tenant_auth_token=None):
             }
 
             if list_pks_plans:
+                # client is sys admin if we're here
                 pks_plans = ''
                 pks_server = ''
                 if k8s_provider == K8sProvider.PKS:
-                    vdc = vcd_utils.get_vdc(client, vdc_name=ovdc_name,
-                                            org_name=org_name)
-                    vc_name = vdc.get_resource().ComputeProviderScope
+                    # vc name for vdc can only be found using typed query
+                    q = \
+                        client.get_typed_query(
+                            ResourceType.ADMIN_ORG_VDC.value,
+                            query_result_format=QueryResultFormat.RECORDS,
+                            qfilter=f"name=={ovdc_name};orgName=={org_name}")
+                    ovdc_records = list(q.execute())
+                    if len(ovdc_records) == 0:
+                        raise EntityNotFoundException(f"Org VDC {ovdc_name} not found in org {org_name}") # noqa: E501
+                    ovdc_record = None
+                    # there should only ever be one element in the generator
+                    for record in ovdc_records:
+                        ovdc_record = to_dict(record, resource_type=ResourceType.ADMIN_ORG_VDC.value) # noqa: E501
+                        break
+                    vc_name = ovdc_record['vcName']
+
                     vc_to_pks_plans_map = \
                         _get_vc_to_pks_plans_map(tenant_auth_token)
                     pks_plan_and_server_info = \
