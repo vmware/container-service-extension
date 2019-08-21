@@ -81,7 +81,7 @@ SYS_ADMIN_LOGIN_CMD = None
 ORG_ADMIN_LOGIN_CMD = None
 VAPP_AUTHOR_LOGIN_CMD = None
 USER_LOGOUT_CMD = f"logout"
-USER_LOGIN_CMD_MAP = {}
+USERNAME_TO_LOGIN_CMD = {}
 USERNAME_TO_CLUSTER_NAME = {}
 
 AMQP_USERNAME = None
@@ -102,7 +102,7 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     global AMQP_USERNAME, AMQP_PASSWORD, CLIENT, ORG_HREF, VDC_HREF, \
         CATALOG_NAME, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
         TEMPLATE_DEFINITIONS, TEST_ALL_TEMPLATES, SYS_ADMIN_LOGIN_CMD, \
-        ORG_ADMIN_LOGIN_CMD, VAPP_AUTHOR_LOGIN_CMD, USER_LOGIN_CMD_MAP, \
+        ORG_ADMIN_LOGIN_CMD, VAPP_AUTHOR_LOGIN_CMD, USERNAME_TO_LOGIN_CMD, \
         USERNAME_TO_CLUSTER_NAME
 
     config = testutils.yaml_to_dict(config_filepath)
@@ -143,7 +143,7 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
                             f"{VAPP_AUTHOR_NAME} -iwp {VAPP_AUTHOR_PASSWORD}" \
                             f" -V {config['vcd']['api_version']}"
 
-    USER_LOGIN_CMD_MAP = {'sys_admin': SYS_ADMIN_LOGIN_CMD,
+    USERNAME_TO_LOGIN_CMD = {'sys_admin': SYS_ADMIN_LOGIN_CMD,
                           'org_admin': ORG_ADMIN_LOGIN_CMD,
                           'vapp_author': VAPP_AUTHOR_LOGIN_CMD}
 
