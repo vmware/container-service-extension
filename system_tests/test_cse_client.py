@@ -66,6 +66,8 @@ from container_service_extension.system_test_framework.utils import \
     execute_commands
 from container_service_extension.system_test_framework.utils import \
     list_cluster_output_validator
+from container_service_extension.system_test_framework.utils import \
+    list_node_output_validator
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -637,7 +639,107 @@ def test_0100_vcd_cse_cluster_config(test_runner_username):
     print(f"Successful cluster config on {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}.")  # noqa
 
 
-def test_0120_vcd_cse_cluster_delete(config):
+@pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME])
+def test_0110_vcd_cse_node_operation(test_runner_username, config):
+    """Test 'vcd cse node create/list/info/delete ...' commands.
+
+    Test node creation from different persona's- sys_admin, org_admin
+    and vapp_author. Created nodes will remain in the system for further
+    command tests - list and delete.
+
+    :param config: cse config file for vcd configuration
+    :param test_runner_username: parameterized persona to run tests with
+    different users
+    """
+    cmd_binder = collections.namedtuple('UserCmdBinder',
+                                        'cmd exit_code validate_output_func '
+                                        'test_user')
+    print(f"Running node add and list operation for {test_runner_username}")
+    cmd_list = [
+        cmd_binder(cmd=env.USER_LOGIN_CMD_MAP.get(test_runner_username),
+                   exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=f"org use {config['broker']['org']}", exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=f"vdc use {config['broker']['vdc']}", exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=f"cse node create {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}"  # noqa
+                       f" -n {config['broker']['network']}", exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=f"cse node list {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}",   # noqa
+                   exit_code=0,
+                   validate_output_func=list_node_output_validator,
+                   test_user=test_runner_username),
+        cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username)
+    ]
+    cmd_results = execute_commands(cmd_list)
+
+    print(f"Successfully added node to cluster "
+          f"{env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}")
+
+    # Get cse list nodes output to be used for node info & delete
+    node_pattern = r'(node-\S+)'
+    node_list_output = []
+    for each_cmd_output in cmd_results:
+        node_list = re.findall(node_pattern, each_cmd_output.output)
+        if node_list:
+            node_list_output = list(node_list)
+
+    print(f"Running node info operation on cluster "
+          f"{env.USERNAME_TO_CLUSTER_NAME[test_runner_username]} for"
+          f" node {node_list_output[0]}")
+    cmd_list = [
+        cmd_binder(cmd=env.USER_LOGIN_CMD_MAP.get(test_runner_username),
+                   exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=f"org use {config['broker']['org']}", exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=f"vdc use {config['broker']['vdc']}", exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=f"cse node info {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]} "   # noqa
+                       f"{node_list_output[0]}",
+                   exit_code=0, validate_output_func=None,
+                   test_user=test_runner_username),
+        cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username)
+    ]
+
+    execute_commands(cmd_list)
+    print(f"Successful node info on {node_list_output[0]}.")  # noqa
+
+    print(f"Running node delete operation for {test_runner_username} on "
+          f"cluster {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]} "
+          f"to delete node {node_list_output[0]}")
+    cmd_list = [
+        cmd_binder(cmd=env.USER_LOGIN_CMD_MAP.get(test_runner_username),
+                   exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=f"org use {config['broker']['org']}", exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=f"vdc use {config['broker']['vdc']}", exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username),
+        cmd_binder(cmd=f"cse node delete {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]} "   # noqa
+                       f"{node_list_output[0]}",
+                   exit_code=0, validate_output_func=None,
+                   test_user=test_runner_username),
+        cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
+                   validate_output_func=None, test_user=test_runner_username)
+    ]
+
+    cmd_results = execute_commands(cmd_list)
+
+    for each_cmd_output in cmd_results:
+        node_list = re.findall(node_pattern, each_cmd_output.output)
+        if node_list:
+            assert len(node_list) == 1, "Only 1 node should exist " \
+                                        "in the cluster"
+
+    print(f"Successfully deleted node {node_list_output[0]} from "
+          f"{env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}")
+
+
+def test_0130_vcd_cse_cluster_delete(config):
     """Test 'vcd cse cluster delete ...' command for various cse users.
 
     Cluster delete operation on the above create clusters operations-
