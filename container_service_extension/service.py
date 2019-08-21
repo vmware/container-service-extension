@@ -32,6 +32,7 @@ from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PksCache
 from container_service_extension.pyvcloud_utils import \
     connect_vcd_user_via_token
+from container_service_extension.pyvcloud_utils import get_org
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import RequestKey
@@ -202,6 +203,11 @@ class Service(object, metaclass=Singleton):
         # Read templates rules from config and update template deinfition in
         # server run-time config
         self._process_template_rules(msg_update_callback=msg_update_callback)
+
+        # Make sure that all vms in tempaltes are compliant with the compute
+        # policy specified in template definition (can be affected by rules).
+        self._process_template_compute_policy_compliance(
+            msg_update_callback=msg_update_callback)
 
         if self.should_check_config:
             check_cse_installation(
@@ -384,3 +390,56 @@ class Service(object, metaclass=Singleton):
             LOGGER.debug(msg)
             if msg_update_callback:
                 msg_update_callback.general(msg)
+
+    def _process_template_compute_policy_compliance(self,
+                                                    msg_update_callback=None):
+        msg = "Loading k8s template definition from catalog"
+        LOGGER.info(msg)
+        if msg_update_callback:
+            msg_update_callback.general_no_color(msg)
+
+        client = None
+        try:
+            log_filename = None
+            log_wire = str_to_bool(self.config['service'].get('log_wire'))
+            if log_wire:
+                log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
+
+            client = Client(self.config['vcd']['host'],
+                            api_version=self.config['vcd']['api_version'],
+                            verify_ssl_certs=self.config['vcd']['verify'],
+                            log_file=log_filename,
+                            log_requests=log_wire,
+                            log_headers=log_wire,
+                            log_bodies=log_wire)
+            credentials = BasicLoginCredentials(self.config['vcd']['username'],
+                                                SYSTEM_ORG_NAME,
+                                                self.config['vcd']['password'])
+            client.set_credentials(credentials)
+
+            org_name = self.config['broker']['org']
+            catalog_name = self.config['broker']['catalog']
+
+            org = get_org(client, org_name=org_name)
+
+            # TODO: fill the param list
+            cpm = ComputePolicyManager()
+            for template in self.config['broker']['templates']:
+                try:
+                    policy_name = template[LocalTemplateKey.COMPUTE_POLICY]
+                    if policy_name:
+                        policy = cpm.get_policy(policy_name=policy_name)
+                        # create the policy if not present in system
+                        if not policy:
+                            policy = cpm.add_policy(policy_name=policy_name)
+                        org.assign_compute_policy_to_vapp_template_vms(
+                            catalog_name=catalog_name,
+                            catalog_item_name=template[LocalTemplateKey.CATALOG_ITEM_NAME], # noqa: E501
+                            compute_policy_href=compute_policy['href'])
+                except OperationNotSupportedException:
+                    LOGGER.debug("Compute policy not supported by vCD. Skipping"
+                                 " assigning it to templates")
+                    break
+        finally:
+            if client:
+                client.logout()
