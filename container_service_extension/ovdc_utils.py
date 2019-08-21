@@ -4,6 +4,7 @@ from pyvcloud.vcd.client import MetadataDomain
 from pyvcloud.vcd.client import MetadataVisibility
 from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.client import ResourceType
+from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.org import Org
 import pyvcloud.vcd.utils as pyvcd_utils
 from pyvcloud.vcd.utils import to_dict
@@ -137,12 +138,11 @@ def get_ovdc_list(client, list_pks_plans=False, tenant_auth_token=None):
                             qfilter=f"name=={ovdc_name};orgName=={org_name}")
                     ovdc_records = list(q.execute())
                     if len(ovdc_records) == 0:
-                        raise Exception(f"Org VDC {ovdc_name} not "
-                                        f"found in org {org_name}")
+                        raise EntityNotFoundException(f"Org VDC {ovdc_name} not found in org {org_name}") # noqa: E501
                     ovdc_record = None
                     # there should only ever be one element in the generator
                     for record in ovdc_records:
-                        ovdc_record = to_dict(record, resource_type=ResourceType.ADMIN_ORG_VDC.value) # noqa
+                        ovdc_record = to_dict(record, resource_type=ResourceType.ADMIN_ORG_VDC.value) # noqa: E501
                         break
                     vc_name = ovdc_record['vcName']
 
