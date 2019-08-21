@@ -297,7 +297,7 @@ def install(ctx, config, skip_template_creation, force_update,
         click.echo('Must provide ssh-key file (using --ssh-key OR -k) if '
                    '--retain-temp-vapp is provided, or else temporary vm will '
                    'be inaccessible')
-        return
+        sys.exit(1)
 
     ssh_key = None
     if ssh_key_file is not None:
@@ -566,7 +566,7 @@ def install_cse_template(ctx, template_name, template_revision,
         click.echo('Must provide ssh-key file (using --ssh-key OR -k) if '
                    '--retain-temp-vapp is provided, or else temporary vm will '
                    'be inaccessible')
-        return
+        sys.exit(1)
 
     ssh_key = None
     if ssh_key_file is not None:

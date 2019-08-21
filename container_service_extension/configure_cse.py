@@ -36,7 +36,6 @@ from container_service_extension.server_constants import \
     CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, EXCHANGE_TYPE, \
     RemoteTemplateKey, SYSTEM_ORG_NAME # noqa: H301
 from container_service_extension.template_builder import TemplateBuilder
-from container_service_extension.utils import ConsoleMessagePrinter
 from container_service_extension.utils import str_to_bool
 from container_service_extension.vsphere_utils import populate_vsphere_list
 
@@ -598,7 +597,7 @@ def _install_template(client, remote_template_manager, template, org_name,
     }
     builder = TemplateBuilder(
         client, client, build_params, ssh_key=ssh_key,
-        logger=LOGGER, msg_update_callback=ConsoleMessagePrinter())
+        logger=LOGGER, msg_update_callback=msg_update_callback)
     builder.build(force_recreate=force_update,
                   retain_temp_vapp=retain_temp_vapp)
 
