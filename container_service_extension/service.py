@@ -16,8 +16,12 @@ import click
 import pkg_resources
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
+from pyvcloud.vcd.exceptions import MissingLinkException
+from pyvcloud.vcd.exceptions import OperationNotSupportedException
 import requests
 
+from container_service_extension.cloudapi.compute_policy_manager import \
+    ComputePolicyManager
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.consumer import MessageConsumer
@@ -32,7 +36,6 @@ from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PksCache
 from container_service_extension.pyvcloud_utils import \
     connect_vcd_user_via_token
-from container_service_extension.pyvcloud_utils import get_org
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import RequestKey
@@ -417,29 +420,34 @@ class Service(object, metaclass=Singleton):
                                                 self.config['vcd']['password'])
             client.set_credentials(credentials)
 
-            org_name = self.config['broker']['org']
-            catalog_name = self.config['broker']['catalog']
-
-            org = get_org(client, org_name=org_name)
-
-            # TODO: fill the param list
-            cpm = ComputePolicyManager()
-            for template in self.config['broker']['templates']:
-                try:
+            try:
+                cpm = ComputePolicyManager(client)
+                for template in self.config['broker']['templates']:
                     policy_name = template[LocalTemplateKey.COMPUTE_POLICY]
+                    # if policy name is not empty, stamp it on the template
                     if policy_name:
                         policy = cpm.get_policy(policy_name=policy_name)
                         # create the policy if not present in system
                         if not policy:
                             policy = cpm.add_policy(policy_name=policy_name)
-                        org.assign_compute_policy_to_vapp_template_vms(
-                            catalog_name=catalog_name,
-                            catalog_item_name=template[LocalTemplateKey.CATALOG_ITEM_NAME], # noqa: E501
-                            compute_policy_href=compute_policy['href'])
-                except OperationNotSupportedException:
-                    LOGGER.debug("Compute policy not supported by vCD. Skipping"
-                                 " assigning it to templates")
-                    break
+                        cpm.assign_compute_policy_to_vapp_template_vms(
+                            compute_policy_href=policy['href'],
+                            org_name=self.config['broker']['org'],
+                            catalog_name=self.config['broker']['catalog'],
+                            catalog_item_name=template[LocalTemplateKey.CATALOG_ITEM_NAME]) # noqa: E501
+                    else:
+                        # empty policy name means we should remove policy from
+                        # template
+                        pass
+                        # TODO: pyvcloud doesn't have a method to blindly
+                        # remove compute policy from a template
+                        # cpm.remove_compute_policy_from_vapp_template_vms(
+                        #    org_name=self.config['broker']['org'],
+                        #    catalog_name=self.config['broker']['catalog'],
+                        #    catalog_item_name=template[LocalTemplateKey.CATALOG_ITEM_NAME]) # noqa: E501
+            except (OperationNotSupportedException, MissingLinkException):
+                LOGGER.debug("Compute policy not supported by vCD. Skipping"
+                             " assigning it to templates.")
         finally:
             if client:
                 client.logout()

@@ -2,7 +2,6 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import find_link
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
@@ -23,27 +22,32 @@ class ComputePolicyManager:
     original names when returned back to the caller.
     """
 
-    def __init__(self, vcd_uri, tenant_auth_token, verify_ssl,
-                 api_version):
+    def __init__(self, client):
         """Initialize ComputePolicyManager Object.
 
-        :param str vcd_uri: base_url to create client
-        :param str tenant_auth_token: HTTP basic authentication token
-        :param str api_version:
-        :param bool verify_ssl: if True, verify SSL certificates of remote
-        host, else ignore verification.
+        :param pyvcloud.vcd.client client:
+
+        :raises: MissingLinkException: If cloudapi endpoint is not found in
+            session.
         """
-        self._vcd_client = Client(uri=vcd_uri,
-                                  api_version=api_version,
-                                  verify_ssl_certs=verify_ssl)
-        session = self._vcd_client.rehydrate_from_token(tenant_auth_token)
+        self._vcd_client = client
+        # TODO: pyvcloud should expose methods to grab the session and token
+        # from a client object.
+        auth_token = \
+            self._vcd_client._session.headers['x-vcloud-authorization']
+        # pyvcloud doesn't store the vCD session response in client. So we need
+        # to get it from vCD.
+        session = self._vcd_client.rehydrate_from_token(auth_token)
+        # Ideally this information should be fetched from
+        # client._session_endpoints. However pyvcloud client doesn't store
+        # the cloudapi link, so we have to find it manually.
         link = find_link(session, RelationType.OPEN_API,
                          EntityType.APPLICATION_JSON)
 
         self.cloud_api_client = CloudApiClient(
             base_url=link.href,
-            auth_token=tenant_auth_token,
-            verify_ssl=verify_ssl)
+            auth_token=auth_token,
+            verify_ssl=self._vcd_client._verify_ssl_certs)
 
     def list_policies(self):
         """Get all policies that are created by CSE.
@@ -140,12 +144,17 @@ class ComputePolicyManager:
             updated_policy['href'] = policy_info['href']
             return updated_policy
 
-    def add_compute_policy_to_vdc(self, org_name, vdc_name, policy_href):
-        """Add compute policy to the given vdc that is found in given org.
+    def add_compute_policy_to_vdc(self, policy_href, vdc_id=None,
+                                  org_name=None, vdc_name=None):
+        """Add compute policy to the given vdc.
 
+        Atleast one of vdc_id or (org_name, vdc_name) should be provided, so
+        that the target vdc can be located.
+
+        :param policy_href: policy href that is created using cloudapi
+        :param str vdc_id: id of the vdc to assign the policy
         :param str org_name: name of the organization to look for the vdc
         :param str vdc_name: name of the vdc to assign the policy
-        :param policy_href: policy href that is created using cloudapi
 
         :return: an object containing VdcComputePolicyReferences XML element
         that refers to individual VdcComputePolicies.
@@ -153,15 +162,42 @@ class ComputePolicyManager:
         :rtype: lxml.objectify.ObjectifiedElement
         """
         vdc = get_vdc(self._vcd_client, org_name=org_name, vdc_name=vdc_name,
-                      is_admin_operation=True)
+                      vdc_id=vdc_id, is_admin_operation=True)
         return vdc.add_compute_policy(policy_href)
 
-    def remove_compute_policy_from_vdc(self, org_name, vdc_name, policy_href):
-        """Delete the compute policy from the vdc that belongs to given org.
+    def list_compute_policy_on_vdc(self, vdc_id=None, org_name=None,
+                                   vdc_name=None):
+        """List compute policy currently assigned to a given vdc.
 
+        Atleast one of vdc_id or (org_name, vdc_name) should be provided, so
+        that the target vdc can be located.
+
+        :param str vdc_id: id of the vdc for which policies need to be
+            retrieved.
+        :param str org_name: name of the organization to look for the vdc.
+        :param str vdc_name: name of the vdc for which policies need to be
+            retrieved.
+
+        :return: an object containing VdcComputePolicyReferences XML element
+            that refers to individual VdcComputePolicies.
+
+        :rtype: lxml.objectify.ObjectifiedElement
+        """
+        vdc = get_vdc(self._vcd_client, org_name=org_name, vdc_name=vdc_name,
+                      vdc_id=vdc_id, is_admin_operation=True)
+        return vdc.list_compute_policies()
+
+    def remove_compute_policy_from_vdc(self, policy_href, vdc_id=None,
+                                       org_name=None, vdc_name=None):
+        """Delete the compute policy from the specified vdc.
+
+        Atleast one of vdc_id or (org_name, vdc_name) should be provided,
+        so that the target vdc can be located.
+
+        :param policy_href: policy href that is created using cloudapi
+        :param str vdc_id: id of the vdc to assign the policy
         :param str org_name: name of the organization to look for the vdc
         :param str vdc_name: name of the vdc to assign the policy
-        :param policy_href: policy href that is created using cloudapi
 
         :return: an object containing VdcComputePolicyReferences XML element
         that refers to individual VdcComputePolicies.
@@ -169,20 +205,20 @@ class ComputePolicyManager:
         :rtype: lxml.objectify.ObjectifiedElement
         """
         vdc = get_vdc(self._vcd_client, org_name=org_name, vdc_name=vdc_name,
-                      is_admin_operation=True)
+                      vdc_id=vdc_id, is_admin_operation=True)
         return vdc.remove_compute_policy(policy_href)
 
     def assign_compute_policy_to_vapp_template_vms(self,
+                                                   compute_policy_href,
                                                    org_name,
                                                    catalog_name,
-                                                   catalog_item_name,
-                                                   compute_policy_href):
+                                                   catalog_item_name):
         """Assign the compute policy to vms of given vapp template.
 
+        :param str compute_policy_href: compute policy to be removed
         :param str org_name: name of the organization that has the catalog
         :param str catalog_name: name of the catalog
         :param str catalog_item_name: name of the catalog item that has vms
-        :param str compute_policy_href: compute policy to be removed
 
         :return: an object of type EntityType.TASK XML which represents
         the asynchronous task that is updating virtual application template.
@@ -194,19 +230,20 @@ class ComputePolicyManager:
             catalog_name, catalog_item_name, compute_policy_href)
 
     def remove_compute_policy_from_vapp_template_vms(self,
+                                                     compute_policy_href,
                                                      org_name,
                                                      catalog_name,
-                                                     catalog_item_name,
-                                                     compute_policy_href):
+                                                     catalog_item_name):
         """Remove the compute policy from vms of given vapp template.
 
-        :param str org_name: name of the organization that has the catalog
-        :param str catalog_name: name of the catalog
-        :param str catalog_item_name: name of the catalog item that has vms
-        :param str compute_policy_href: compute policy to be removed
+        :param str compute_policy_href: compute policy to be removed.
+        :param str org_name: name of the organization that has the catalog.
+        :param str catalog_name: name of the catalog.
+        :param str catalog_item_name: name of the catalog item that has vms.
 
         :return: an object of type EntityType.TASK XML which represents
-        the asynchronous task that is updating virtual application template.
+            the asynchronous task that is updating virtual application
+            template.
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
