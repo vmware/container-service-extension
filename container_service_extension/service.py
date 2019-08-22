@@ -396,7 +396,7 @@ class Service(object, metaclass=Singleton):
 
     def _process_template_compute_policy_compliance(self,
                                                     msg_update_callback=None):
-        msg = "Loading k8s template definition from catalog"
+        msg = "Processing compute policy for k8s templates."
         LOGGER.info(msg)
         if msg_update_callback:
             msg_update_callback.general_no_color(msg)
@@ -421,33 +421,55 @@ class Service(object, metaclass=Singleton):
             client.set_credentials(credentials)
 
             try:
+                org_name = self.config['broker']['org']
+                catalog_name = self.config['broker']['catalog']
                 cpm = ComputePolicyManager(client)
                 for template in self.config['broker']['templates']:
                     policy_name = template[LocalTemplateKey.COMPUTE_POLICY]
+                    catalog_item_name = template[LocalTemplateKey.CATALOG_ITEM_NAME] # noqa: E501
                     # if policy name is not empty, stamp it on the template
                     if policy_name:
                         policy = cpm.get_policy(policy_name=policy_name)
                         # create the policy if not present in system
                         if not policy:
+                            msg = "Creating missing compute policy " \
+                                f"'{policy_name}'."
+                            if msg_update_callback:
+                                msg_update_callback.info(msg)
+                            LOGGER.debug(msg)
                             policy = cpm.add_policy(policy_name=policy_name)
+
+                        msg = f"Assiging compute policy '{policy_name}' to " \
+                            f"template '{catalog_item_name}'."
+                        if msg_update_callback:
+                            msg_update_callback.general(msg)
+                        LOGGER.debug(msg)
                         cpm.assign_compute_policy_to_vapp_template_vms(
                             compute_policy_href=policy['href'],
-                            org_name=self.config['broker']['org'],
-                            catalog_name=self.config['broker']['catalog'],
-                            catalog_item_name=template[LocalTemplateKey.CATALOG_ITEM_NAME]) # noqa: E501
+                            org_name=org_name,
+                            catalog_name=catalog_name,
+                            catalog_item_name= catalog_item_name)
                     else:
                         # empty policy name means we should remove policy from
                         # template
                         pass
                         # TODO: pyvcloud doesn't have a method to blindly
                         # remove compute policy from a template
+                        msg = f"Removing compute policy from template " \
+                            f"'{catalog_item_name}'."
+                        if msg_update_callback:
+                            msg_update_callback.general(msg)
+                        LOGGER.debug(msg)
                         # cpm.remove_compute_policy_from_vapp_template_vms(
-                        #    org_name=self.config['broker']['org'],
-                        #    catalog_name=self.config['broker']['catalog'],
-                        #    catalog_item_name=template[LocalTemplateKey.CATALOG_ITEM_NAME]) # noqa: E501
+                        #    org_name=org_name,
+                        #    catalog_name=catalog_name,
+                        #    catalog_item_name=catalog_item_name)
             except (OperationNotSupportedException, MissingLinkException):
-                LOGGER.debug("Compute policy not supported by vCD. Skipping"
-                             " assigning it to templates.")
+                msg = "Compute policy not supported by vCD. Skipping " \
+                    "assigning/removing it to/from templates."
+                if msg_update_callback:
+                    msg_update_callback.info(msg)
+                LOGGER.debug(msg)
         finally:
             if client:
                 client.logout()
