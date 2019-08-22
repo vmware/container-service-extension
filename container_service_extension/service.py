@@ -206,7 +206,7 @@ class Service(object, metaclass=Singleton):
         # server run-time config
         self._process_template_rules(msg_update_callback=msg_update_callback)
 
-        # Make sure that all vms in tempaltes are compliant with the compute
+        # Make sure that all vms in templates are compliant with the compute
         # policy specified in template definition (can be affected by rules).
         self._process_template_compute_policy_compliance(
             msg_update_callback=msg_update_callback)
