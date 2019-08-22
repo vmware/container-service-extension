@@ -16,11 +16,10 @@ import click
 import pkg_resources
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
-from pyvcloud.vcd.exceptions import MissingLinkException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 import requests
 
-from container_service_extension.cloudapi.compute_policy_manager import \
+from container_service_extension.compute_policy_manager import \
     ComputePolicyManager
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
@@ -448,7 +447,7 @@ class Service(object, metaclass=Singleton):
                             compute_policy_href=policy['href'],
                             org_name=org_name,
                             catalog_name=catalog_name,
-                            catalog_item_name= catalog_item_name)
+                            catalog_item_name=catalog_item_name)
                     else:
                         # empty policy name means we should remove policy from
                         # template
@@ -464,7 +463,7 @@ class Service(object, metaclass=Singleton):
                         #    org_name=org_name,
                         #    catalog_name=catalog_name,
                         #    catalog_item_name=catalog_item_name)
-            except (OperationNotSupportedException, MissingLinkException):
+            except OperationNotSupportedException:
                 msg = "Compute policy not supported by vCD. Skipping " \
                     "assigning/removing it to/from templates."
                 if msg_update_callback:

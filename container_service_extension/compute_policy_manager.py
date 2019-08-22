@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from pyvcloud.vcd.client import find_link
+from pyvcloud.vcd.exceptions import MissingLinkException
+from pyvcloud.vcd.exceptions import OperationNotSupportedException
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CloudApiResource
@@ -18,6 +20,11 @@ from container_service_extension.shared_constants import RequestMethod
 class ComputePolicyManager:
     """Manages creating, deleting, updating cloudapi compute policies.
 
+    Also provides an interface to assign/remove/list compute policies to/from
+    vapp templates and org vdcs.
+
+    These operations are supposed to be performed by only sytem administrators.
+
     All policy names are prepended with CSE specific literal and restored to
     original names when returned back to the caller.
     """
@@ -27,9 +34,15 @@ class ComputePolicyManager:
 
         :param pyvcloud.vcd.client client:
 
-        :raises: MissingLinkException: If cloudapi endpoint is not found in
-            session.
+        :raises: OperationNotSupportedException: If cloudapi endpoint is not
+            found in session.
+        :raises: ValueError: If non sys admin client is passed during
+            initialization.
         """
+        if not client.is_sysadmin():
+            raise ValueError("Only Sys admin clients should be used to "
+                             "initialize ComputePolicyManager.")
+
         self._vcd_client = client
         # TODO: pyvcloud should expose methods to grab the session and token
         # from a client object.
@@ -41,10 +54,14 @@ class ComputePolicyManager:
         # Ideally this information should be fetched from
         # client._session_endpoints. However pyvcloud client doesn't store
         # the cloudapi link, so we have to find it manually.
-        link = find_link(session, RelationType.OPEN_API,
-                         EntityType.APPLICATION_JSON)
+        try:
+            link = find_link(session, RelationType.OPEN_API,
+                             EntityType.APPLICATION_JSON)
+        except MissingLinkException:
+            raise OperationNotSupportedException(
+                "Cloudapi endpoint unavailable at current api version.")
 
-        self.cloud_api_client = CloudApiClient(
+        self._cloudapi_client = CloudApiClient(
             base_url=link.href,
             auth_token=auth_token,
             verify_ssl=self._vcd_client._verify_ssl_certs)
@@ -55,7 +72,7 @@ class ComputePolicyManager:
         :return: list of CSE created policies
         :rtype: list of dict
         """
-        policies = self.cloud_api_client.do_request(
+        policies = self._cloudapi_client.do_request(
             RequestMethod.GET, CloudApiResource.VDC_COMPUTE_POLICIES)
         cse_policies = []
         for policy in policies['values']:
@@ -94,7 +111,7 @@ class ComputePolicyManager:
         policy_info['name'] = self._get_cse_policy_name(policy_name)
         if description:
             policy_info['description'] = description
-        created_policy = self.cloud_api_client.do_request(
+        created_policy = self._cloudapi_client.do_request(
             RequestMethod.POST,
             resource_url_relative_path=CloudApiResource.VDC_COMPUTE_POLICIES,
             payload=policy_info)
@@ -103,8 +120,8 @@ class ComputePolicyManager:
         created_policy['href'] = self._get_policy_href(created_policy['id'])
         return created_policy
 
-    def remove_policy(self, policy_name):
-        """Remove the compute policy with the given name.
+    def delete_policy(self, policy_name):
+        """Delete the compute policy with the given name.
 
         :param str policy_name: name of the compute policy
         """
@@ -112,7 +129,7 @@ class ComputePolicyManager:
         if policy_info:
             resource_url_relative_path = \
                 f"{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_info['id']}"
-            return self.cloud_api_client.do_request(
+            return self._cloudapi_client.do_request(
                 RequestMethod.DELETE,
                 resource_url_relative_path=resource_url_relative_path)
 
@@ -135,7 +152,7 @@ class ComputePolicyManager:
                 payload['description'] = new_policy_info['description']
             resource_url_relative_path = \
                 f"{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_info['id']}"
-            updated_policy = self.cloud_api_client.do_request(
+            updated_policy = self._cloudapi_client.do_request(
                 RequestMethod.PUT,
                 resource_url_relative_path=resource_url_relative_path,
                 payload=payload)
@@ -227,7 +244,9 @@ class ComputePolicyManager:
         """
         org = get_org(self._vcd_client, org_name=org_name)
         return org.assign_compute_policy_to_vapp_template_vms(
-            catalog_name, catalog_item_name, compute_policy_href)
+            catalog_name=catalog_name,
+            catalog_item_name=catalog_item_name,
+            compute_policy_href=compute_policy_href)
 
     def remove_compute_policy_from_vapp_template_vms(self,
                                                      compute_policy_href,
@@ -249,7 +268,31 @@ class ComputePolicyManager:
         """
         org = get_org(self._vcd_client, org_name=org_name)
         return org.remove_compute_policy_from_vapp_template_vms(
-            catalog_name, catalog_item_name, compute_policy_href)
+            catalog_name=catalog_name,
+            catalog_item_name=catalog_item_name,
+            compute_policy_href=compute_policy_href)
+
+    def remove_all_compute_policies_from_vapp_template_vms(self,
+                                                           org_name,
+                                                           catalog_name,
+                                                           catalog_item_name):
+        """Remove all compute policies from vms of given vapp template.
+
+        :param str org_name: name of the organization that has the catalog.
+        :param str catalog_name: name of the catalog.
+        :param str catalog_item_name: name of the catalog item that has vms.
+
+        :return: an object of type EntityType.TASK XML which represents
+            the asynchronous task that is updating virtual application
+            template.
+
+        :rtype: lxml.objectify.ObjectifiedElement
+        """
+        # TODO: Once pyvcloud exposes the method, uncomment the following
+        # org = get_org(self._vcd_client, org_name=org_name)
+        # return org.remove_all_compute_policies_from_vapp_template_vms(
+        #    catalog_name, catalog_item_name)
+        pass
 
     def _get_cse_policy_name(self, policy_name):
         """Add cse specific prefix to the policy name.
@@ -281,4 +324,4 @@ class ComputePolicyManager:
         :return: policy href
         :rtype: str
         """
-        return f"{self.cloud_api_client._versioned_url}{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_id}"  # noqa
+        return f"{self._cloudapi_client.get_versioned_url()}{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_id}"  # noqa
