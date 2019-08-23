@@ -151,19 +151,22 @@ class TemplateRule:
 
         target_template = template_table[self.target['name']][str(self.target['revision'])] # noqa: E501
 
-        new_admin_password = self.action.get(LocalTemplateKey.ADMIN_PASSWORD) # noqa: E501
-        if new_admin_password and new_admin_password != target_template[LocalTemplateKey.ADMIN_PASSWORD]: # noqa: E501
-            target_template[LocalTemplateKey.ADMIN_PASSWORD] = new_admin_password # noqa: E501
+        new_admin_password = \
+            self.action.get(LocalTemplateKey.ADMIN_PASSWORD)
+        if new_admin_password is not None:
+            target_template[LocalTemplateKey.ADMIN_PASSWORD] = \
+                new_admin_password
 
-        new_compute_profile = self.action.get(LocalTemplateKey.COMPUTE_POLICY) # noqa: E501
-        if new_compute_profile and new_compute_profile != target_template[LocalTemplateKey.COMPUTE_POLICY]: # noqa: E501
-            target_template[LocalTemplateKey.COMPUTE_POLICY] = new_compute_profile # noqa: E501
-            # TODO: Update the compute policy of the template right away!
+        new_compute_policy = \
+            self.action.get(LocalTemplateKey.COMPUTE_POLICY)
+        if new_compute_policy is not None:
+            target_template[LocalTemplateKey.COMPUTE_POLICY] = \
+                new_compute_policy
 
         new_cpu = self.action.get(LocalTemplateKey.CPU)
-        if new_cpu and new_cpu != target_template[LocalTemplateKey.CPU]: # noqa: E501
+        if new_cpu is not None:
             target_template[LocalTemplateKey.CPU] = new_cpu
 
         new_memory = self.action.get(LocalTemplateKey.MEMORY)
-        if new_memory and new_memory != target_template[LocalTemplateKey.MEMORY]: # noqa: E501
+        if new_memory is not None:
             target_template[LocalTemplateKey.MEMORY] = new_memory

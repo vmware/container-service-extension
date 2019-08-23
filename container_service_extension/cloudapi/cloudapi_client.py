@@ -31,6 +31,9 @@ class CloudApiClient(object):
         self._log_headers = log_headers
         self._log_body = log_body
 
+    def get_versioned_url(self):
+        return self._versioned_url
+
     def do_request(self, method, resource_url_relative_path=None,
                    payload=None):
         """Make a request to cloudpai server.

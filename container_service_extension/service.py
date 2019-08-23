@@ -16,8 +16,11 @@ import click
 import pkg_resources
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
+from pyvcloud.vcd.exceptions import OperationNotSupportedException
 import requests
 
+from container_service_extension.compute_policy_manager import \
+    ComputePolicyManager
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.consumer import MessageConsumer
@@ -203,6 +206,11 @@ class Service(object, metaclass=Singleton):
         # server run-time config
         self._process_template_rules(msg_update_callback=msg_update_callback)
 
+        # Make sure that all vms in templates are compliant with the compute
+        # policy specified in template definition (can be affected by rules).
+        self._process_template_compute_policy_compliance(
+            msg_update_callback=msg_update_callback)
+
         if self.should_check_config:
             check_cse_installation(
                 self.config, msg_update_callback=msg_update_callback)
@@ -384,3 +392,83 @@ class Service(object, metaclass=Singleton):
             LOGGER.debug(msg)
             if msg_update_callback:
                 msg_update_callback.general(msg)
+
+    def _process_template_compute_policy_compliance(self,
+                                                    msg_update_callback=None):
+        msg = "Processing compute policy for k8s templates."
+        LOGGER.info(msg)
+        if msg_update_callback:
+            msg_update_callback.general_no_color(msg)
+
+        client = None
+        try:
+            log_filename = None
+            log_wire = str_to_bool(self.config['service'].get('log_wire'))
+            if log_wire:
+                log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
+
+            client = Client(self.config['vcd']['host'],
+                            api_version=self.config['vcd']['api_version'],
+                            verify_ssl_certs=self.config['vcd']['verify'],
+                            log_file=log_filename,
+                            log_requests=log_wire,
+                            log_headers=log_wire,
+                            log_bodies=log_wire)
+            credentials = BasicLoginCredentials(self.config['vcd']['username'],
+                                                SYSTEM_ORG_NAME,
+                                                self.config['vcd']['password'])
+            client.set_credentials(credentials)
+
+            try:
+                org_name = self.config['broker']['org']
+                catalog_name = self.config['broker']['catalog']
+                cpm = ComputePolicyManager(client)
+                for template in self.config['broker']['templates']:
+                    policy_name = template[LocalTemplateKey.COMPUTE_POLICY]
+                    catalog_item_name = template[LocalTemplateKey.CATALOG_ITEM_NAME] # noqa: E501
+                    # if policy name is not empty, stamp it on the template
+                    if policy_name:
+                        policy = cpm.get_policy(policy_name=policy_name)
+                        # create the policy if not present in system
+                        if not policy:
+                            msg = "Creating missing compute policy " \
+                                f"'{policy_name}'."
+                            if msg_update_callback:
+                                msg_update_callback.info(msg)
+                            LOGGER.debug(msg)
+                            policy = cpm.add_policy(policy_name=policy_name)
+
+                        msg = f"Assiging compute policy '{policy_name}' to " \
+                            f"template '{catalog_item_name}'."
+                        if msg_update_callback:
+                            msg_update_callback.general(msg)
+                        LOGGER.debug(msg)
+                        cpm.assign_compute_policy_to_vapp_template_vms(
+                            compute_policy_href=policy['href'],
+                            org_name=org_name,
+                            catalog_name=catalog_name,
+                            catalog_item_name=catalog_item_name)
+                    else:
+                        # empty policy name means we should remove policy from
+                        # template
+                        pass
+                        # TODO: pyvcloud doesn't have a method to blindly
+                        # remove compute policy from a template
+                        msg = f"Removing compute policy from template " \
+                            f"'{catalog_item_name}'."
+                        if msg_update_callback:
+                            msg_update_callback.general(msg)
+                        LOGGER.debug(msg)
+                        # cpm.remove_compute_policy_from_vapp_template_vms(
+                        #    org_name=org_name,
+                        #    catalog_name=catalog_name,
+                        #    catalog_item_name=catalog_item_name)
+            except OperationNotSupportedException:
+                msg = "Compute policy not supported by vCD. Skipping " \
+                    "assigning/removing it to/from templates."
+                if msg_update_callback:
+                    msg_update_callback.info(msg)
+                LOGGER.debug(msg)
+        finally:
+            if client:
+                client.logout()

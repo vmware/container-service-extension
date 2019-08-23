@@ -2,8 +2,9 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import find_link
+from pyvcloud.vcd.exceptions import MissingLinkException
+from pyvcloud.vcd.exceptions import OperationNotSupportedException
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CloudApiResource
@@ -19,31 +20,51 @@ from container_service_extension.shared_constants import RequestMethod
 class ComputePolicyManager:
     """Manages creating, deleting, updating cloudapi compute policies.
 
+    Also provides an interface to assign/remove/list compute policies to/from
+    vapp templates and org vdcs.
+
+    These operations are supposed to be performed by only sytem administrators.
+
     All policy names are prepended with CSE specific literal and restored to
     original names when returned back to the caller.
     """
 
-    def __init__(self, vcd_uri, tenant_auth_token, verify_ssl,
-                 api_version):
+    def __init__(self, client):
         """Initialize ComputePolicyManager Object.
 
-        :param str vcd_uri: base_url to create client
-        :param str tenant_auth_token: HTTP basic authentication token
-        :param str api_version:
-        :param bool verify_ssl: if True, verify SSL certificates of remote
-        host, else ignore verification.
-        """
-        self._vcd_client = Client(uri=vcd_uri,
-                                  api_version=api_version,
-                                  verify_ssl_certs=verify_ssl)
-        session = self._vcd_client.rehydrate_from_token(tenant_auth_token)
-        link = find_link(session, RelationType.OPEN_API,
-                         EntityType.APPLICATION_JSON)
+        :param pyvcloud.vcd.client client:
 
-        self.cloud_api_client = CloudApiClient(
+        :raises: OperationNotSupportedException: If cloudapi endpoint is not
+            found in session.
+        :raises: ValueError: If non sys admin client is passed during
+            initialization.
+        """
+        if not client.is_sysadmin():
+            raise ValueError("Only Sys admin clients should be used to "
+                             "initialize ComputePolicyManager.")
+
+        self._vcd_client = client
+        # TODO: pyvcloud should expose methods to grab the session and token
+        # from a client object.
+        auth_token = \
+            self._vcd_client._session.headers['x-vcloud-authorization']
+        # pyvcloud doesn't store the vCD session response in client. So we need
+        # to get it from vCD.
+        session = self._vcd_client.rehydrate_from_token(auth_token)
+        # Ideally this information should be fetched from
+        # client._session_endpoints. However pyvcloud client doesn't store
+        # the cloudapi link, so we have to find it manually.
+        try:
+            link = find_link(session, RelationType.OPEN_API,
+                             EntityType.APPLICATION_JSON)
+        except MissingLinkException:
+            raise OperationNotSupportedException(
+                "Cloudapi endpoint unavailable at current api version.")
+
+        self._cloudapi_client = CloudApiClient(
             base_url=link.href,
-            auth_token=tenant_auth_token,
-            verify_ssl=verify_ssl)
+            auth_token=auth_token,
+            verify_ssl=self._vcd_client._verify_ssl_certs)
 
     def list_policies(self):
         """Get all policies that are created by CSE.
@@ -51,7 +72,7 @@ class ComputePolicyManager:
         :return: list of CSE created policies
         :rtype: list of dict
         """
-        policies = self.cloud_api_client.do_request(
+        policies = self._cloudapi_client.do_request(
             RequestMethod.GET, CloudApiResource.VDC_COMPUTE_POLICIES)
         cse_policies = []
         for policy in policies['values']:
@@ -90,7 +111,7 @@ class ComputePolicyManager:
         policy_info['name'] = self._get_cse_policy_name(policy_name)
         if description:
             policy_info['description'] = description
-        created_policy = self.cloud_api_client.do_request(
+        created_policy = self._cloudapi_client.do_request(
             RequestMethod.POST,
             resource_url_relative_path=CloudApiResource.VDC_COMPUTE_POLICIES,
             payload=policy_info)
@@ -99,8 +120,8 @@ class ComputePolicyManager:
         created_policy['href'] = self._get_policy_href(created_policy['id'])
         return created_policy
 
-    def remove_policy(self, policy_name):
-        """Remove the compute policy with the given name.
+    def delete_policy(self, policy_name):
+        """Delete the compute policy with the given name.
 
         :param str policy_name: name of the compute policy
         """
@@ -108,7 +129,7 @@ class ComputePolicyManager:
         if policy_info:
             resource_url_relative_path = \
                 f"{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_info['id']}"
-            return self.cloud_api_client.do_request(
+            return self._cloudapi_client.do_request(
                 RequestMethod.DELETE,
                 resource_url_relative_path=resource_url_relative_path)
 
@@ -131,7 +152,7 @@ class ComputePolicyManager:
                 payload['description'] = new_policy_info['description']
             resource_url_relative_path = \
                 f"{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_info['id']}"
-            updated_policy = self.cloud_api_client.do_request(
+            updated_policy = self._cloudapi_client.do_request(
                 RequestMethod.PUT,
                 resource_url_relative_path=resource_url_relative_path,
                 payload=payload)
@@ -140,12 +161,17 @@ class ComputePolicyManager:
             updated_policy['href'] = policy_info['href']
             return updated_policy
 
-    def add_compute_policy_to_vdc(self, org_name, vdc_name, policy_href):
-        """Add compute policy to the given vdc that is found in given org.
+    def add_compute_policy_to_vdc(self, policy_href, vdc_id=None,
+                                  org_name=None, vdc_name=None):
+        """Add compute policy to the given vdc.
 
+        Atleast one of vdc_id or (org_name, vdc_name) should be provided, so
+        that the target vdc can be located.
+
+        :param policy_href: policy href that is created using cloudapi
+        :param str vdc_id: id of the vdc to assign the policy
         :param str org_name: name of the organization to look for the vdc
         :param str vdc_name: name of the vdc to assign the policy
-        :param policy_href: policy href that is created using cloudapi
 
         :return: an object containing VdcComputePolicyReferences XML element
         that refers to individual VdcComputePolicies.
@@ -153,15 +179,42 @@ class ComputePolicyManager:
         :rtype: lxml.objectify.ObjectifiedElement
         """
         vdc = get_vdc(self._vcd_client, org_name=org_name, vdc_name=vdc_name,
-                      is_admin_operation=True)
+                      vdc_id=vdc_id, is_admin_operation=True)
         return vdc.add_compute_policy(policy_href)
 
-    def remove_compute_policy_from_vdc(self, org_name, vdc_name, policy_href):
-        """Delete the compute policy from the vdc that belongs to given org.
+    def list_compute_policy_on_vdc(self, vdc_id=None, org_name=None,
+                                   vdc_name=None):
+        """List compute policy currently assigned to a given vdc.
 
+        Atleast one of vdc_id or (org_name, vdc_name) should be provided, so
+        that the target vdc can be located.
+
+        :param str vdc_id: id of the vdc for which policies need to be
+            retrieved.
+        :param str org_name: name of the organization to look for the vdc.
+        :param str vdc_name: name of the vdc for which policies need to be
+            retrieved.
+
+        :return: an object containing VdcComputePolicyReferences XML element
+            that refers to individual VdcComputePolicies.
+
+        :rtype: lxml.objectify.ObjectifiedElement
+        """
+        vdc = get_vdc(self._vcd_client, org_name=org_name, vdc_name=vdc_name,
+                      vdc_id=vdc_id, is_admin_operation=True)
+        return vdc.list_compute_policies()
+
+    def remove_compute_policy_from_vdc(self, policy_href, vdc_id=None,
+                                       org_name=None, vdc_name=None):
+        """Delete the compute policy from the specified vdc.
+
+        Atleast one of vdc_id or (org_name, vdc_name) should be provided,
+        so that the target vdc can be located.
+
+        :param policy_href: policy href that is created using cloudapi
+        :param str vdc_id: id of the vdc to assign the policy
         :param str org_name: name of the organization to look for the vdc
         :param str vdc_name: name of the vdc to assign the policy
-        :param policy_href: policy href that is created using cloudapi
 
         :return: an object containing VdcComputePolicyReferences XML element
         that refers to individual VdcComputePolicies.
@@ -169,20 +222,20 @@ class ComputePolicyManager:
         :rtype: lxml.objectify.ObjectifiedElement
         """
         vdc = get_vdc(self._vcd_client, org_name=org_name, vdc_name=vdc_name,
-                      is_admin_operation=True)
+                      vdc_id=vdc_id, is_admin_operation=True)
         return vdc.remove_compute_policy(policy_href)
 
     def assign_compute_policy_to_vapp_template_vms(self,
+                                                   compute_policy_href,
                                                    org_name,
                                                    catalog_name,
-                                                   catalog_item_name,
-                                                   compute_policy_href):
+                                                   catalog_item_name):
         """Assign the compute policy to vms of given vapp template.
 
+        :param str compute_policy_href: compute policy to be removed
         :param str org_name: name of the organization that has the catalog
         :param str catalog_name: name of the catalog
         :param str catalog_item_name: name of the catalog item that has vms
-        :param str compute_policy_href: compute policy to be removed
 
         :return: an object of type EntityType.TASK XML which represents
         the asynchronous task that is updating virtual application template.
@@ -191,28 +244,55 @@ class ComputePolicyManager:
         """
         org = get_org(self._vcd_client, org_name=org_name)
         return org.assign_compute_policy_to_vapp_template_vms(
-            catalog_name, catalog_item_name, compute_policy_href)
+            catalog_name=catalog_name,
+            catalog_item_name=catalog_item_name,
+            compute_policy_href=compute_policy_href)
 
     def remove_compute_policy_from_vapp_template_vms(self,
+                                                     compute_policy_href,
                                                      org_name,
                                                      catalog_name,
-                                                     catalog_item_name,
-                                                     compute_policy_href):
+                                                     catalog_item_name):
         """Remove the compute policy from vms of given vapp template.
 
-        :param str org_name: name of the organization that has the catalog
-        :param str catalog_name: name of the catalog
-        :param str catalog_item_name: name of the catalog item that has vms
-        :param str compute_policy_href: compute policy to be removed
+        :param str compute_policy_href: compute policy to be removed.
+        :param str org_name: name of the organization that has the catalog.
+        :param str catalog_name: name of the catalog.
+        :param str catalog_item_name: name of the catalog item that has vms.
 
         :return: an object of type EntityType.TASK XML which represents
-        the asynchronous task that is updating virtual application template.
+            the asynchronous task that is updating virtual application
+            template.
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
         org = get_org(self._vcd_client, org_name=org_name)
         return org.remove_compute_policy_from_vapp_template_vms(
-            catalog_name, catalog_item_name, compute_policy_href)
+            catalog_name=catalog_name,
+            catalog_item_name=catalog_item_name,
+            compute_policy_href=compute_policy_href)
+
+    def remove_all_compute_policies_from_vapp_template_vms(self,
+                                                           org_name,
+                                                           catalog_name,
+                                                           catalog_item_name):
+        """Remove all compute policies from vms of given vapp template.
+
+        :param str org_name: name of the organization that has the catalog.
+        :param str catalog_name: name of the catalog.
+        :param str catalog_item_name: name of the catalog item that has vms.
+
+        :return: an object of type EntityType.TASK XML which represents
+            the asynchronous task that is updating virtual application
+            template.
+
+        :rtype: lxml.objectify.ObjectifiedElement
+        """
+        # TODO: Once pyvcloud exposes the method, uncomment the following
+        # org = get_org(self._vcd_client, org_name=org_name)
+        # return org.remove_all_compute_policies_from_vapp_template_vms(
+        #    catalog_name, catalog_item_name)
+        pass
 
     def _get_cse_policy_name(self, policy_name):
         """Add cse specific prefix to the policy name.
@@ -244,4 +324,4 @@ class ComputePolicyManager:
         :return: policy href
         :rtype: str
         """
-        return f"{self.cloud_api_client._versioned_url}{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_id}"  # noqa
+        return f"{self._cloudapi_client.get_versioned_url()}{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_id}"  # noqa
