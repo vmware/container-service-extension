@@ -65,10 +65,10 @@ VAPP_AUTHOR_TEST_CLUSTER_NAME = 'testclustervapp'
 # required user info
 SYS_ADMIN_NAME = 'sys_admin'
 ORG_ADMIN_NAME = 'org_admin'
-ORG_ADMIN_PASSWORD = 'password'
+ORG_ADMIN_PASSWORD = 'password'  # nosec: test environment
 ORG_ADMIN_ROLE_NAME = 'Organization Administrator'
 VAPP_AUTHOR_NAME = 'vapp_author'
-VAPP_AUTHOR_PASSWORD = 'password'
+VAPP_AUTHOR_PASSWORD = 'password'  # nosec: test environment
 VAPP_AUTHOR_ROLE_NAME = 'vApp Author'
 
 # config file 'test' section flags

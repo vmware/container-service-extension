@@ -284,7 +284,7 @@ class Service(object, metaclass=Singleton):
             try:
                 c.stop()
             except Exception:
-                pass
+                LOGGER.error(traceback.format_exc())
 
         self._state = ServerState.STOPPED
         LOGGER.info("Done")

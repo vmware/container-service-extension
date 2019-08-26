@@ -43,7 +43,7 @@ class TemplateRule:
     def __str__(self):
         redacted_action = dict(self.action)
         if 'admin_password' in redacted_action:
-            redacted_action['admin_password'] = "[REDACTED]"
+            redacted_action['admin_password'] = "[REDACTED]"  # nosec: redacted
         return f"{self.name} : ({self.target.get('name')} at rev {self.target.get('revision')}) -> {redacted_action}" # noqa: E501
 
     def _validate(self, template_table):
