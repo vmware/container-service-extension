@@ -438,8 +438,8 @@ class Service(object, metaclass=Singleton):
                             LOGGER.debug(msg)
                             policy = cpm.add_policy(policy_name=policy_name)
 
-                        msg = f"Assiging compute policy '{policy_name}' to " \
-                            f"template '{catalog_item_name}'."
+                        msg = f"Assigning compute policy '{policy_name}' to " \
+                              f"template '{catalog_item_name}'."
                         if msg_update_callback:
                             msg_update_callback.general(msg)
                         LOGGER.debug(msg)

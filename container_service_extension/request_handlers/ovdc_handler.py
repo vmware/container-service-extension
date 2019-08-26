@@ -10,9 +10,9 @@ import container_service_extension.utils as utils
 def ovdc_update(request_data, tenant_auth_token):
     """Request handler for ovdc enable, disable operations.
 
-    Required data: org_name, ovdc_name, k8s_provider.
-    Conditional data: if k8s_provider is 'ent-pks', pks_plan_name,
-        pks_cluster_domain are required.
+    Required data: org_name, ovdc_name, k8s_provider
+    Conditional data:
+        if k8s_provider is 'ent-pks': pks_plan_name, pks_cluster_domain
 
     :return: Dictionary with org VDC update task href.
     """
@@ -60,7 +60,7 @@ def ovdc_update(request_data, tenant_auth_token):
 def ovdc_info(request_data, tenant_auth_token):
     """Request handler for ovdc info operation.
 
-    Required data: org_name, ovdc_name.
+    Required data: org_name, ovdc_name
 
     :return: Dictionary with org VDC k8s provider metadata.
     """
