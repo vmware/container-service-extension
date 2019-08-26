@@ -38,7 +38,7 @@ class CloudApiClient(object):
                    payload=None):
         """Make a request to cloudpai server.
 
-        :param shared_constants.RequestMethodVerb method: One of the HTTP verb
+        :param shared_constants.RequestMethod method: One of the HTTP verb
         defined in the enum.
         :param str resource_url_relative_path: part of the url that identifies
         just the resource (the host and the common /cloudapi/1.0.0 should be
