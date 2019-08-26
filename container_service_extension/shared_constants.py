@@ -28,6 +28,12 @@ class RequestMethod(str, Enum):
     PUT = 'PUT'
 
 
+@unique
+class ComputePolicyAction(str, Enum):
+    ADD = 'add'
+    REMOVE = 'remove'
+
+
 # TODO need mapping from request key to proper vcd construct error message
 @unique
 class RequestKey(str, Enum):
@@ -69,6 +75,8 @@ class RequestKey(str, Enum):
     PKS_CLUSTER_DOMAIN = 'pks_cluster_domain'
     PKS_PLAN_NAME = 'pks_plan_name'
     LIST_PKS_PLANS = 'list_pks_plans'
+    COMPUTE_POLICY_ACTION = 'action'
+    COMPUTE_POLICY_NAME = 'compute_policy_name'
 
     # keys related to system requests
     SERVER_ACTION = 'server_action'
