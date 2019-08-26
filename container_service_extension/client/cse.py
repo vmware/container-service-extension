@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import os
+import sys
 
 import click
 from vcd_cli.utils import restore_session
@@ -17,6 +18,7 @@ from container_service_extension.exceptions import CseClientError
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.service import Service
+from container_service_extension.shared_constants import ComputePolicyAction
 from container_service_extension.shared_constants import ServerAction
 
 
@@ -1064,3 +1066,116 @@ def ovdc_info(ctx, ovdc_name, org_name):
             stderr("Insufficient permission to perform operation", ctx)
     except Exception as e:
         stderr(e, ctx)
+
+
+@ovdc_group.group('compute-policy',
+                  short_help='Manage compute policies for an org VDC')
+@click.pass_context
+def compute_policy_group(ctx):
+    """Manage Kubernetes provider for org VDCs.
+
+All commands execute in the context of user's currently logged-in
+organization. Use a different organization by using the '--org' option.
+
+Currently supported Kubernetes-providers:
+
+- native (vCD)
+
+- ent-pks (Enterprise PKS)
+
+\b
+Examples
+    vcd cse ovdc enable ovdc1 --k8s-provider native
+        Set 'ovdc1' Kubernetes provider to be native (vCD).
+\b
+    vcd cse ovdc enable ovdc2 --k8s-provider ent-pks \\
+    --pks-plan 'plan1' --pks-cluster-domain 'myorg.com'
+        Set 'ovdc2' Kubernetes provider to be ent-pks.
+        Use pks plan 'plan1' for 'ovdc2'.
+        Set cluster domain to be 'myorg.com'.
+\b
+    vcd cse ovdc disable ovdc3
+        Set 'ovdc3' Kubernetes provider to be none,
+        which disables Kubernetes cluster deployment on 'ovdc3'.
+\b
+    vcd cse ovdc info ovdc1
+        Display detailed information about ovdc 'ovdc1'.
+\b
+    vcd cse ovdc list
+        Display ovdcs in vCD that are visible to the logged in user.
+        vcd cse ovdc list
+\b
+        vcd cse ovdc list --pks-plans
+            Displays list of ovdcs in a given org along with available PKS
+            plans if any. If executed by System-administrator, it will
+            display all ovdcs from all orgs.
+    """
+    pass
+
+
+@compute_policy_group.command('list', short_help='')
+@click.pass_context
+@click.argument('org_name', metavar='ORG_NAME')
+@click.argument('ovdc_name', metavar='OVDC_NAME')
+def compute_policy_list(ctx, org_name, ovdc_name):
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        if not client.is_sysadmin():
+            stderr("Insufficient permission to perform operation.", ctx)
+            sys.exit(1)
+
+        ovdc = Ovdc(client)
+        result = ovdc.list_ovdc_compute_policies(ovdc_name, org_name)
+        stdout(result, ctx)
+    except Exception as e:
+        stderr(e, ctx)
+        sys.exit(1)
+
+
+@compute_policy_group.command('add', short_help='')
+@click.pass_context
+@click.argument('org_name', metavar='ORG_NAME')
+@click.argument('ovdc_name', metavar='OVDC_NAME')
+@click.argument('compute_policy_name', metavar='COMPUTE_POLICY_NAME')
+def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        if not client.is_sysadmin():
+            stderr("Insufficient permission to perform operation.", ctx)
+            sys.exit(1)
+
+        ovdc = Ovdc(client)
+        result = ovdc.update_ovdc_compute_policies(ovdc_name,
+                                                   org_name,
+                                                   compute_policy_name,
+                                                   ComputePolicyAction.ADD)
+        stdout(result, ctx)
+    except Exception as e:
+        stderr(e, ctx)
+        sys.exit(1)
+
+
+@compute_policy_group.command('remove', short_help='')
+@click.pass_context
+@click.argument('org_name', metavar='ORG_NAME')
+@click.argument('ovdc_name', metavar='OVDC_NAME')
+@click.argument('compute_policy_name', metavar='COMPUTE_POLICY_NAME')
+def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name):
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        if not client.is_sysadmin():
+            stderr("Insufficient permission to perform operation.", ctx)
+            sys.exit(1)
+
+        ovdc = Ovdc(client)
+        result = ovdc.update_ovdc_compute_policies(ovdc_name,
+                                                   org_name,
+                                                   compute_policy_name,
+                                                   ComputePolicyAction.REMOVE)
+        stdout(result, ctx)
+    except Exception as e:
+        stderr(e, ctx)
+        sys.exit(1)
