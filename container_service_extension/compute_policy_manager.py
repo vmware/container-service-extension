@@ -198,11 +198,20 @@ class ComputePolicyManager:
         :return: an object containing VdcComputePolicyReferences XML element
             that refers to individual VdcComputePolicies.
 
-        :rtype: lxml.objectify.ObjectifiedElement
+        :rtype: List[Dict]
         """
         vdc = get_vdc(self._vcd_client, org_name=org_name, vdc_name=vdc_name,
                       vdc_id=vdc_id, is_admin_operation=True)
-        return vdc.list_compute_policies()
+
+        result = []
+        cp_list = vdc.list_compute_policies()
+        for cp in cp_list:
+            result.append({
+                'name': self._get_original_policy_name(cp.get('name')),
+                'href': cp.get('href')
+            })
+
+        return result
 
     def remove_compute_policy_from_vdc(self, policy_href, vdc_id=None,
                                        org_name=None, vdc_name=None):
