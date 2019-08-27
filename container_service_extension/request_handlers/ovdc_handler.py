@@ -103,7 +103,7 @@ def ovdc_compute_policy_list(request_data, tenant_auth_token):
     client, _ = vcd_utils.connect_vcd_user_via_token(tenant_auth_token)
 
     cpm = ComputePolicyManager(client)
-    return cpm.list_compute_policy_on_vdc(vdc_id=request_data[RequestKey.OVDC_ID]) # noqa: E501
+    return cpm.list_compute_policies_on_vdc(vdc_id=request_data[RequestKey.OVDC_ID]) # noqa: E501
 
 
 def ovdc_compute_policy_update(request_data, tenant_auth_token):

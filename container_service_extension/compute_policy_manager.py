@@ -182,8 +182,8 @@ class ComputePolicyManager:
                       vdc_id=vdc_id, is_admin_operation=True)
         return vdc.add_compute_policy(policy_href)
 
-    def list_compute_policy_on_vdc(self, vdc_id=None, org_name=None,
-                                   vdc_name=None):
+    def list_compute_policies_on_vdc(self, vdc_id=None, org_name=None,
+                                     vdc_name=None):
         """List compute policy currently assigned to a given vdc.
 
         Atleast one of vdc_id or (org_name, vdc_name) should be provided, so
