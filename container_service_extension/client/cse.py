@@ -1072,43 +1072,20 @@ def ovdc_info(ctx, ovdc_name, org_name):
                   short_help='Manage compute policies for an org VDC')
 @click.pass_context
 def compute_policy_group(ctx):
-    """Manage Kubernetes provider for org VDCs.
+    """Manage compute policies for org VDCs.
 
-All commands execute in the context of user's currently logged-in
-organization. Use a different organization by using the '--org' option.
-
-Currently supported Kubernetes-providers:
-
-- native (vCD)
-
-- ent-pks (Enterprise PKS)
+System administrator operations.
 
 \b
 Examples
-    vcd cse ovdc enable ovdc1 --k8s-provider native
-        Set 'ovdc1' Kubernetes provider to be native (vCD).
+    vcd cse ovdc compute-policy list ORG_NAME OVDC_NAME
+        List all compute policies on an org VDC.
 \b
-    vcd cse ovdc enable ovdc2 --k8s-provider ent-pks \\
-    --pks-plan 'plan1' --pks-cluster-domain 'myorg.com'
-        Set 'ovdc2' Kubernetes provider to be ent-pks.
-        Use pks plan 'plan1' for 'ovdc2'.
-        Set cluster domain to be 'myorg.com'.
+    vcd cse ovdc compute-policy add ORG_NAME OVDC_NAME POLICY_NAME
+        Add a compute policy to an org VDC.
 \b
-    vcd cse ovdc disable ovdc3
-        Set 'ovdc3' Kubernetes provider to be none,
-        which disables Kubernetes cluster deployment on 'ovdc3'.
-\b
-    vcd cse ovdc info ovdc1
-        Display detailed information about ovdc 'ovdc1'.
-\b
-    vcd cse ovdc list
-        Display ovdcs in vCD that are visible to the logged in user.
-        vcd cse ovdc list
-\b
-        vcd cse ovdc list --pks-plans
-            Displays list of ovdcs in a given org along with available PKS
-            plans if any. If executed by System-administrator, it will
-            display all ovdcs from all orgs.
+    vcd cse ovdc compute-policy remove ORG_NAME OVDC_NAME POLICY_NAME
+        Remove a compute policy from an org VDC.
     """
     pass
 
