@@ -144,12 +144,12 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
                             f" -V {config['vcd']['api_version']}"
 
     USERNAME_TO_LOGIN_CMD = {'sys_admin': SYS_ADMIN_LOGIN_CMD,
-                          'org_admin': ORG_ADMIN_LOGIN_CMD,
-                          'vapp_author': VAPP_AUTHOR_LOGIN_CMD}
+                             'org_admin': ORG_ADMIN_LOGIN_CMD,
+                             'vapp_author': VAPP_AUTHOR_LOGIN_CMD}
 
-    USERNAME_TO_CLUSTER_NAME = {'sys_admin': SYS_ADMIN_TEST_CLUSTER_NAME,  # noqa
-                                         'org_admin': ORG_ADMIN_TEST_CLUSTER_NAME,  # noqa
-                                         'vapp_author': VAPP_AUTHOR_TEST_CLUSTER_NAME}  # noqa
+    USERNAME_TO_CLUSTER_NAME = {'sys_admin': SYS_ADMIN_TEST_CLUSTER_NAME,
+                                'org_admin': ORG_ADMIN_TEST_CLUSTER_NAME,
+                                'vapp_author': VAPP_AUTHOR_TEST_CLUSTER_NAME}
 
     test_config = config.get('test')
     if test_config is not None:
@@ -292,7 +292,7 @@ def is_cse_registered():
 def is_cse_registration_valid(routing_key, exchange):
     try:
         ext = APIExtension(CLIENT).get_extension(CSE_SERVICE_NAME,
-                                                 namespace=CSE_SERVICE_NAMESPACE)  # noqa
+                                                 namespace=CSE_SERVICE_NAMESPACE)  # noqa: E501
     except MissingRecordException:
         return False
 
