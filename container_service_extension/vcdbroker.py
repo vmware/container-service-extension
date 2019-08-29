@@ -200,16 +200,13 @@ class VcdBroker(AbstractBroker):
                               org_name=validated_data[RequestKey.ORG_NAME],
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
         vapp = VApp(self.tenant_client, href=cluster['vapp_href'])
-        template = get_template(name=cluster['template_name'],
-                                revision=cluster['template_revision'])
-        template_password = template[LocalTemplateKey.ADMIN_PASSWORD]
-
         node_names = get_node_names(vapp, NodeType.MASTER)
 
         all_results = []
         try:
             for node_name in node_names:
                 LOGGER.debug(f"getting file from node {node_name}")
+                password = vapp.get_admin_password(node_name)
                 vs = vs_utils.get_vsphere(self.sys_admin_client, vapp,
                                           vm_name=node_name, logger=LOGGER)
                 vs.connect()
@@ -217,7 +214,7 @@ class VcdBroker(AbstractBroker):
                 vm = vs.get_vm_by_moid(moid)
                 filename = '/root/.kube/config'
                 result = vs.download_file_from_guest(vm, 'root',
-                                                     template_password,
+                                                     password,
                                                      filename)
                 all_results.append(result)
         finally:
