@@ -39,8 +39,8 @@ GET /cse/node/{node name}?cluster_name={cluster name}&org={org name}&vdc={vdc na
 GET /cse/ovdcs
 GET /cse/ovdc/{ovdc id}
 PUT /cse/ovdc/{ovdc id}
-GET /ovdc/{ovdc_id}/compute-policies
-PUT /ovdc/{ovdc_id}/compute-policies
+GET /cse/ovdc/{ovdc_id}/compute-policies
+PUT /cse/ovdc/{ovdc_id}/compute-policies
 
 GET /cse/system
 PUT /cse/system

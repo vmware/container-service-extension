@@ -130,8 +130,8 @@ class CseOperation(Enum):
     OVDC_UPDATE = ('enable or disable ovdc for k8s', requests.codes.accepted)
     OVDC_INFO = ('get info of ovdc')
     OVDC_LIST = ('list ovdcs')
-    OVDC_COMPUTE_POLICY_LIST = ('list ovdc compute policies', requests.codes.accepted) # noqa: E501
-    OVDC_COMPUTE_POLICY_UPDATE = ('update ovdc compute policies', requests.codes.accepted) # noqa: E501
+    OVDC_COMPUTE_POLICY_LIST = ('list ovdc compute policies')
+    OVDC_COMPUTE_POLICY_UPDATE = ('update ovdc compute policies')
     SYSTEM_INFO = ('get info of system')
     SYSTEM_UPDATE = ('update system status')
     TEMPLATE_LIST = ('list all templates')

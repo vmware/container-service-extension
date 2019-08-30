@@ -105,8 +105,7 @@ class Ovdc:
 
         :param str ovdc_name: Name of org VDC to update
         :param str org_name: Name of org that @ovdc_name belongs to
-        :param str compute_policy_name: Name of compute policy to add
-            to org VDC
+        :param str compute_policy_name: Name of compute policy to add or remove
         :param ComputePolicyAction action:
 
         :rtype: dict

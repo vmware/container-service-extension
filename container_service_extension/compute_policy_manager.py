@@ -195,10 +195,8 @@ class ComputePolicyManager:
         :param str vdc_name: name of the vdc for which policies need to be
             retrieved.
 
-        :return: an object containing VdcComputePolicyReferences XML element
-            that refers to individual VdcComputePolicies.
-
-        :rtype: List[Dict]
+        :return: A list of dictionaries with the 'name' and 'href' key
+        :rtype: List
         """
         vdc = get_vdc(self._vcd_client, org_name=org_name, vdc_name=vdc_name,
                       vdc_id=vdc_id, is_admin_operation=True)
