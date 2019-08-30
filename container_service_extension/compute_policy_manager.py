@@ -182,8 +182,8 @@ class ComputePolicyManager:
                       vdc_id=vdc_id, is_admin_operation=True)
         return vdc.add_compute_policy(policy_href)
 
-    def list_compute_policy_on_vdc(self, vdc_id=None, org_name=None,
-                                   vdc_name=None):
+    def list_compute_policies_on_vdc(self, vdc_id=None, org_name=None,
+                                     vdc_name=None):
         """List compute policy currently assigned to a given vdc.
 
         Atleast one of vdc_id or (org_name, vdc_name) should be provided, so
@@ -195,14 +195,21 @@ class ComputePolicyManager:
         :param str vdc_name: name of the vdc for which policies need to be
             retrieved.
 
-        :return: an object containing VdcComputePolicyReferences XML element
-            that refers to individual VdcComputePolicies.
-
-        :rtype: lxml.objectify.ObjectifiedElement
+        :return: A list of dictionaries with the 'name' and 'href' key
+        :rtype: List
         """
         vdc = get_vdc(self._vcd_client, org_name=org_name, vdc_name=vdc_name,
                       vdc_id=vdc_id, is_admin_operation=True)
-        return vdc.list_compute_policies()
+
+        result = []
+        cp_list = vdc.list_compute_policies()
+        for cp in cp_list:
+            result.append({
+                'name': self._get_original_policy_name(cp.get('name')),
+                'href': cp.get('href')
+            })
+
+        return result
 
     def remove_compute_policy_from_vdc(self, policy_href, vdc_id=None,
                                        org_name=None, vdc_name=None):

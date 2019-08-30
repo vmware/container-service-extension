@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import os
+import sys
 
 import click
 from vcd_cli.utils import restore_session
@@ -17,6 +18,7 @@ from container_service_extension.exceptions import CseClientError
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.service import Service
+from container_service_extension.shared_constants import ComputePolicyAction
 from container_service_extension.shared_constants import ServerAction
 
 
@@ -1064,3 +1066,93 @@ def ovdc_info(ctx, ovdc_name, org_name):
             stderr("Insufficient permission to perform operation", ctx)
     except Exception as e:
         stderr(e, ctx)
+
+
+@ovdc_group.group('compute-policy',
+                  short_help='Manage compute policies for an org VDC')
+@click.pass_context
+def compute_policy_group(ctx):
+    """Manage compute policies for org VDCs.
+
+System administrator operations.
+
+\b
+Examples
+    vcd cse ovdc compute-policy list ORG_NAME OVDC_NAME
+        List all compute policies on an org VDC.
+\b
+    vcd cse ovdc compute-policy add ORG_NAME OVDC_NAME POLICY_NAME
+        Add a compute policy to an org VDC.
+\b
+    vcd cse ovdc compute-policy remove ORG_NAME OVDC_NAME POLICY_NAME
+        Remove a compute policy from an org VDC.
+    """
+    pass
+
+
+@compute_policy_group.command('list', short_help='')
+@click.pass_context
+@click.argument('org_name', metavar='ORG_NAME')
+@click.argument('ovdc_name', metavar='OVDC_NAME')
+def compute_policy_list(ctx, org_name, ovdc_name):
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        if not client.is_sysadmin():
+            stderr("Insufficient permission to perform operation.", ctx)
+            sys.exit(1)
+
+        ovdc = Ovdc(client)
+        result = ovdc.list_ovdc_compute_policies(ovdc_name, org_name)
+        stdout(result, ctx)
+    except Exception as e:
+        stderr(e, ctx)
+        sys.exit(1)
+
+
+@compute_policy_group.command('add', short_help='')
+@click.pass_context
+@click.argument('org_name', metavar='ORG_NAME')
+@click.argument('ovdc_name', metavar='OVDC_NAME')
+@click.argument('compute_policy_name', metavar='COMPUTE_POLICY_NAME')
+def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        if not client.is_sysadmin():
+            stderr("Insufficient permission to perform operation.", ctx)
+            sys.exit(1)
+
+        ovdc = Ovdc(client)
+        result = ovdc.update_ovdc_compute_policies(ovdc_name,
+                                                   org_name,
+                                                   compute_policy_name,
+                                                   ComputePolicyAction.ADD)
+        stdout(result, ctx)
+    except Exception as e:
+        stderr(e, ctx)
+        sys.exit(1)
+
+
+@compute_policy_group.command('remove', short_help='')
+@click.pass_context
+@click.argument('org_name', metavar='ORG_NAME')
+@click.argument('ovdc_name', metavar='OVDC_NAME')
+@click.argument('compute_policy_name', metavar='COMPUTE_POLICY_NAME')
+def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name):
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        if not client.is_sysadmin():
+            stderr("Insufficient permission to perform operation.", ctx)
+            sys.exit(1)
+
+        ovdc = Ovdc(client)
+        result = ovdc.update_ovdc_compute_policies(ovdc_name,
+                                                   org_name,
+                                                   compute_policy_name,
+                                                   ComputePolicyAction.REMOVE)
+        stdout(result, ctx)
+    except Exception as e:
+        stderr(e, ctx)
+        sys.exit(1)

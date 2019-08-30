@@ -40,14 +40,12 @@ class Ovdc:
         :param bool enable: If set to True will enable the vdc for the
             paricular k8s_provider else if set to False, K8 support on
             the vdc will be disabled.
-        :param str ovdc_name: Name of the ovdc to be enabled
+        :param str ovdc_name: Name of org VDC to update
+        :param str org_name: Name of org that @ovdc_name belongs to
         :param str k8s_provider: Name of the container provider
         :param str pks_plan: PKS plan
         :param str pks_cluster_domain: Suffix of the domain name, which will be
          used to construct FQDN of the clusters.
-        :param str org_name: Name of organization that belongs to ovdc_name
-
-        :return: response object
 
         :rtype: dict
         """
@@ -83,10 +81,8 @@ class Ovdc:
     def info_ovdc_for_k8s(self, ovdc_name, org_name):
         """Disable ovdc for k8s for the given container provider.
 
-        :param str ovdc_name: Name of the ovdc to be enabled
-        :param str org_name: Name of organization that belongs to ovdc_name
-
-        :return: response object
+        :param str ovdc_name: Name of the org VDC to be enabled
+        :param str org_name: Name of org that @ovdc_name belongs to
 
         :rtype: dict
         """
@@ -95,6 +91,59 @@ class Ovdc:
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
         uri = f'{self._uri}/ovdc/{ovdc_id}'
+
+        response = self.client._do_request_prim(
+            method,
+            uri,
+            self.client._session,
+            accept_type='application/json')
+        return process_response(response)
+
+    def update_ovdc_compute_policies(self, ovdc_name, org_name,
+                                     compute_policy_name, action):
+        """Update an ovdc's compute policies.
+
+        :param str ovdc_name: Name of org VDC to update
+        :param str org_name: Name of org that @ovdc_name belongs to
+        :param str compute_policy_name: Name of compute policy to add or remove
+        :param ComputePolicyAction action:
+
+        :rtype: dict
+        """
+        method = RequestMethod.PUT
+        ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
+                       is_admin_operation=True)
+        ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
+        uri = f'{self._uri}/ovdc/{ovdc_id}/compute-policies'
+
+        data = {
+            RequestKey.OVDC_ID: ovdc_id, # also exists in url
+            RequestKey.COMPUTE_POLICY_NAME: compute_policy_name,
+            RequestKey.COMPUTE_POLICY_ACTION: action
+        }
+
+        response = self.client._do_request_prim(
+            method,
+            uri,
+            self.client._session,
+            contents=data,
+            media_type='application/json',
+            accept_type='application/json')
+        return process_response(response)
+
+    def list_ovdc_compute_policies(self, ovdc_name, org_name):
+        """List an ovdc's compute policies.
+
+        :param str ovdc_name: Name of org VDC to update
+        :param str org_name: Name of org that @ovdc_name belongs to
+
+        :rtype: dict
+        """
+        method = RequestMethod.GET
+        ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
+                       is_admin_operation=True)
+        ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
+        uri = f'{self._uri}/ovdc/{ovdc_id}/compute-policies'
 
         response = self.client._do_request_prim(
             method,

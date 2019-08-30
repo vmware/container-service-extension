@@ -31,12 +31,13 @@ def process_response(response):
     :raises VcdResponseError: if response http status code is not 2xx
     """
     if response.status_code in [
-        requests.codes.ok, requests.codes.created,
+        requests.codes.ok,
+        requests.codes.created,
         requests.codes.accepted
     ]:
         return deserialize_response_content(response)
-    else:
-        response_to_exception(response)
+
+    response_to_exception(response)
 
 
 def deserialize_response_content(response):
