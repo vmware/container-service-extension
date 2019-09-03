@@ -67,7 +67,7 @@ def secure(required_rights=[]):
                 if server_config['service']['enforce_authorization']:
                     sys_admin_client = get_sys_admin_client()
                     broker_instance = args[0]  # self
-                    user_session = broker_instance.client_session()
+                    user_session = broker_instance.client_session
                     is_authorized = _is_authorized(sys_admin_client,
                                                    user_session,
                                                    required_rights)

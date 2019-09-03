@@ -493,7 +493,7 @@ class VcdBroker(AbstractBroker):
         validated_data = {**defaults, **data}
         num_workers = validated_data[RequestKey.NUM_WORKERS]
         if num_workers < 1:
-            raise CseServerError(f"Worker node count must be > 1 "
+            raise CseServerError(f"Worker node count must be > 0 "
                                  f"(received {num_workers}).")
 
         cluster = get_cluster(self.tenant_client, cluster_name,
