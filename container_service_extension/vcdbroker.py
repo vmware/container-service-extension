@@ -276,11 +276,13 @@ class VcdBroker(AbstractBroker):
             RequestKey.ROLLBACK: True,
         }
         validated_data = {**defaults, **data}
+        template_name = validated_data[RequestKey.TEMPLATE_NAME]
+        template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
 
         # check that requested number of worker nodes is at least more than 1
         num_workers = validated_data[RequestKey.NUM_WORKERS]
         if num_workers < 1:
-            raise CseServerError(f"Worker node count must be > 1 "
+            raise CseServerError(f"Worker node count must be > 0 "
                                  f"(received {num_workers}).")
 
         cluster_id = str(uuid.uuid4())
@@ -289,14 +291,16 @@ class VcdBroker(AbstractBroker):
         # call, session becomes None
         self._update_task(
             TaskStatus.RUNNING,
-            message=f"Creating cluster vApp {cluster_name}({cluster_id})")
+            message=f"Creating cluster vApp '{cluster_name}' ({cluster_id})"
+                    f" from template '{template_name}' "
+                    f"(revision {template_revision})")
         self._create_cluster_async(
             org_name=validated_data[RequestKey.ORG_NAME],
             ovdc_name=validated_data[RequestKey.OVDC_NAME],
             cluster_name=cluster_name,
             cluster_id=cluster_id,
-            template_name=validated_data[RequestKey.TEMPLATE_NAME],
-            template_revision=validated_data[RequestKey.TEMPLATE_REVISION],
+            template_name=template_name,
+            template_revision=template_revision,
             num_workers=validated_data[RequestKey.NUM_WORKERS],
             network_name=validated_data[RequestKey.NETWORK_NAME],
             num_cpu=validated_data[RequestKey.NUM_CPU],
@@ -323,8 +327,9 @@ class VcdBroker(AbstractBroker):
 
         Required data: cluster_name, network, num_nodes
         Optional data and default values: org_name=None, ovdc_name=None,
-            rollback=True
+            rollback=True, template_name=None, template_revision=None
         """
+        # default template for resizing should be master's template
         required = [
             RequestKey.CLUSTER_NAME,
             RequestKey.NUM_WORKERS,
@@ -334,15 +339,19 @@ class VcdBroker(AbstractBroker):
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None,
-            RequestKey.ROLLBACK: True
+            RequestKey.ROLLBACK: True,
+            RequestKey.TEMPLATE_NAME: None,
+            RequestKey.TEMPLATE_REVISION: None
         }
         validated_data = {**defaults, **data}
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         num_workers_wanted = validated_data[RequestKey.NUM_WORKERS]
         if num_workers_wanted < 1:
-            raise CseServerError(f"Worker node count must be > 1 "
+            raise CseServerError(f"Worker node count must be > 0 "
                                  f"(received {num_workers_wanted}).")
 
+        # cluster_handler does a cluster info call, but that call does not
+        # have any node info, so this cluster info call must be made
         cluster_info = self.get_cluster_info(validated_data)
         num_workers = len(cluster_info['nodes'])
         if num_workers > num_workers_wanted:
@@ -491,6 +500,9 @@ class VcdBroker(AbstractBroker):
             RequestKey.ROLLBACK: True,
         }
         validated_data = {**defaults, **data}
+        template_name = validated_data[RequestKey.TEMPLATE_NAME]
+        template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
+
         num_workers = validated_data[RequestKey.NUM_WORKERS]
         if num_workers < 1:
             raise CseServerError(f"Worker node count must be > 0 "
@@ -503,16 +515,18 @@ class VcdBroker(AbstractBroker):
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
         # call, session becomes None
-        self._update_task(TaskStatus.RUNNING,
-                          message=f"Creating and adding {num_workers} "
-                                  f"node(s) to {cluster_name}({cluster_id})")
+        self._update_task(
+            TaskStatus.RUNNING,
+            message=f"Creating {num_workers} node(s) from template "
+                    f"'{template_name}' (revision {template_revision}) and "
+                    f"adding to {cluster_name} ({cluster_id})")
         self._create_nodes_async(
             cluster_name=cluster_name,
             cluster_vdc_href=cluster['vdc_href'],
             cluster_vapp_href=cluster['vapp_href'],
             cluster_id=cluster_id,
-            template_name=validated_data[RequestKey.TEMPLATE_NAME],
-            template_revision=validated_data[RequestKey.TEMPLATE_REVISION],
+            template_name=template_name,
+            template_revision=template_revision,
             num_workers=validated_data[RequestKey.NUM_WORKERS],
             network_name=validated_data[RequestKey.NETWORK_NAME],
             num_cpu=validated_data[RequestKey.NUM_CPU],
@@ -768,8 +782,9 @@ class VcdBroker(AbstractBroker):
         vdc = VDC(self.tenant_client, href=cluster_vdc_href)
         vapp = VApp(self.tenant_client, href=cluster_vapp_href)
         template = get_template(name=template_name, revision=template_revision)
-        msg = f"Creating and adding {num_workers} node(s) to" \
-              f" {cluster_name}({cluster_id})"
+        msg = f"Creating {num_workers} node(s) from template " \
+              f"'{template_name}' (revision {template_revision}) and " \
+              f"adding to {cluster_name} ({cluster_id})"
         LOGGER.debug(msg)
         try:
             self._update_task(TaskStatus.RUNNING, message=msg)

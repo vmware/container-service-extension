@@ -2,12 +2,7 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import requests
-
-from container_service_extension.client.response_processor import \
-    process_response
-from container_service_extension.client.response_processor import \
-    response_to_exception
+from container_service_extension.client.response_processor import process_response # noqa: E501
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
 
@@ -128,17 +123,20 @@ class Cluster:
                        node_count,
                        org=None,
                        vdc=None,
-                       rollback=True):
+                       rollback=True,
+                       template_name=None,
+                       template_revision=None):
         method = RequestMethod.PUT
         uri = f"{self._uri}/cluster/{cluster_name}"
         data = {
             RequestKey.CLUSTER_NAME: cluster_name,
             RequestKey.NUM_WORKERS: node_count,
-            RequestKey.ENABLE_NFS: False,
             RequestKey.ORG_NAME: org,
             RequestKey.OVDC_NAME: vdc,
             RequestKey.NETWORK_NAME: network_name,
-            RequestKey.ROLLBACK: rollback
+            RequestKey.ROLLBACK: rollback,
+            RequestKey.TEMPLATE_NAME: template_name,
+            RequestKey.TEMPLATE_REVISION: template_revision,
         }
         response = self.client._do_request_prim(
             method,
@@ -169,6 +167,7 @@ class Cluster:
             self.client._session,
             accept_type='application/json',
             params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
+
         return process_response(response)
 
     def get_node_info(self, cluster_name, node_name, org=None, vdc=None):
