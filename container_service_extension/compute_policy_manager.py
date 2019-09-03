@@ -275,9 +275,9 @@ class ComputePolicyManager:
         """
         org = get_org(self._vcd_client, org_name=org_name)
         return org.remove_compute_policy_from_vapp_template_vms(
-            catalog_name=catalog_name,
-            catalog_item_name=catalog_item_name,
-            compute_policy_href=compute_policy_href)
+            catalog_name,
+            catalog_item_name,
+            compute_policy_href)
 
     def remove_all_compute_policies_from_vapp_template_vms(self,
                                                            org_name,
@@ -295,11 +295,9 @@ class ComputePolicyManager:
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
-        # TODO: Once pyvcloud exposes the method, uncomment the following
-        # org = get_org(self._vcd_client, org_name=org_name)
-        # return org.remove_all_compute_policies_from_vapp_template_vms(
-        #    catalog_name, catalog_item_name)
-        pass
+        org = get_org(self._vcd_client, org_name=org_name)
+        return org.remove_all_compute_policies_from_vapp_template_vms(
+            catalog_name, catalog_item_name)
 
     def _get_cse_policy_name(self, policy_name):
         """Add cse specific prefix to the policy name.

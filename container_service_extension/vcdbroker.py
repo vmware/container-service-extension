@@ -359,8 +359,8 @@ class VcdBroker(AbstractBroker):
                                  f"vCD powered Kubernetes clusters. Use "
                                  f"'vcd cse delete node' command.")
         elif num_workers == num_workers_wanted:
-            raise CseServerError(f"Cluster - {cluster_name} is already at the "
-                                 f"size of {num_workers}.")
+            raise CseServerError(f"Cluster '{cluster_name}' already has "
+                                 f"{num_workers} worker nodes.")
 
         validated_data[RequestKey.NUM_WORKERS] = num_workers_wanted - num_workers # noqa: E501
         return self.create_nodes(validated_data)

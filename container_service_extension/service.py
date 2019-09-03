@@ -451,18 +451,15 @@ class Service(object, metaclass=Singleton):
                     else:
                         # empty policy name means we should remove policy from
                         # template
-                        pass
-                        # TODO: pyvcloud doesn't have a method to blindly
-                        # remove compute policy from a template
                         msg = f"Removing compute policy from template " \
-                            f"'{catalog_item_name}'."
+                              f"'{catalog_item_name}'."
                         if msg_update_callback:
                             msg_update_callback.general(msg)
                         LOGGER.debug(msg)
-                        # cpm.remove_compute_policy_from_vapp_template_vms(
-                        #    org_name=org_name,
-                        #    catalog_name=catalog_name,
-                        #    catalog_item_name=catalog_item_name)
+                        cpm.remove_all_compute_policies_from_vapp_template_vms(
+                            org_name=org_name,
+                            catalog_name=catalog_name,
+                            catalog_item_name=catalog_item_name)
             except OperationNotSupportedException:
                 msg = "Compute policy not supported by vCD. Skipping " \
                     "assigning/removing it to/from templates."
