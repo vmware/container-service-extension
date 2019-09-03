@@ -167,12 +167,9 @@ class Cluster:
             method,
             uri,
             self.client._session,
-            accept_type='text/x-yaml',
+            accept_type='application/json',
             params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
-        if response.status_code == requests.codes.ok:
-            return response.content.decode('utf-8').replace('\\n', '\n')[1:-1]
-        else:
-            response_to_exception(response)
+        return process_response(response)
 
     def get_node_info(self, cluster_name, node_name, org=None, vdc=None):
         method = RequestMethod.GET
