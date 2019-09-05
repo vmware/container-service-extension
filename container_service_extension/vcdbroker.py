@@ -605,7 +605,6 @@ class VcdBroker(AbstractBroker):
         org = vcd_utils.get_org(self.tenant_client, org_name=org_name)
         vdc = vcd_utils.get_vdc(
             self.tenant_client, vdc_name=ovdc_name, org=org)
-        print(vdc.href)
 
         LOGGER.debug(f"About to create cluster {cluster_name} on {ovdc_name}"
                      f" with {num_workers} worker nodes, "
