@@ -350,7 +350,7 @@ class VcdBroker(AbstractBroker):
             raise CseServerError(f"Worker node count must be > 0 "
                                  f"(received {num_workers_wanted}).")
 
-        # cluster_handler.py already makes a cluster info API call to vCD, but 
+        # cluster_handler.py already makes a cluster info API call to vCD, but
         # that call does not return any node info, so this additional
         # cluster info call must be made
         cluster_info = self.get_cluster_info(validated_data)
