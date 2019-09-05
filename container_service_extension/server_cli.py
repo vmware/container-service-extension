@@ -503,7 +503,6 @@ def convert_cluster(ctx, config_file_name, cluster_name, password, org_name,
             console_message_printer.general(
                 "Finished processing metadata of cluster.")
 
-
             try:
                 console_message_printer.info(
                     f"Undeploying the vApp '{cluster['name']}'")
