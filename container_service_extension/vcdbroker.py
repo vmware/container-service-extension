@@ -329,7 +329,7 @@ class VcdBroker(AbstractBroker):
         Optional data and default values: org_name=None, ovdc_name=None,
             rollback=True, template_name=None, template_revision=None
         """
-        # default template for resizing should be master's template
+        # TODO default template for resizing should be master's template
         required = [
             RequestKey.CLUSTER_NAME,
             RequestKey.NUM_WORKERS,
@@ -350,8 +350,9 @@ class VcdBroker(AbstractBroker):
             raise CseServerError(f"Worker node count must be > 0 "
                                  f"(received {num_workers_wanted}).")
 
-        # cluster_handler does a cluster info call, but that call does not
-        # have any node info, so this cluster info call must be made
+        # cluster_handler.py already makes a cluster info API call to vCD, but 
+        # that call does not return any node info, so this additional
+        # cluster info call must be made
         cluster_info = self.get_cluster_info(validated_data)
         num_workers = len(cluster_info['nodes'])
         if num_workers > num_workers_wanted:
