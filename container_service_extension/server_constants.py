@@ -77,7 +77,6 @@ class ScriptFile(str, Enum):
 class LocalTemplateKey(str, Enum):
     """Enumerate the keys that define a template."""
 
-    ADMIN_PASSWORD = 'admin_password'  # nosec: Not a hardcoded password
     CATALOG_ITEM_NAME = 'catalog_item_name'
     COMPUTE_POLICY = 'compute_policy'
     CPU = 'cpu'
@@ -92,7 +91,6 @@ class LocalTemplateKey(str, Enum):
 class RemoteTemplateKey(str, Enum):
     """Enumerate the keys that define a template."""
 
-    ADMIN_PASSWORD = 'admin_password'  # nosec: Not a hardcoded password
     COMPUTE_POLICY = 'compute_policy'
     CPU = 'cpu'
     DEPRECATED = 'deprecated'
