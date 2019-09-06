@@ -397,20 +397,20 @@ def run(ctx, config, skip_check):
     'org_name',
     default=None,
     metavar='ORG_NAME',
-    help="Match only clusters from a specific org")
+    help="Only convert clusters from a specific org")
 @click.option(
     '-v',
     '--vdc',
     'vdc_name',
     default=None,
     metavar='VDC_NAME',
-    help='Match only clusters from a specific org VDC')
+    help='Only convert clusters from a specific org VDC')
 @click.option(
     '-g',
     '--skip-wait-for-gc',
     'skip_wait_for_gc',
     is_flag=True,
-    help='Skip waiting for guest customizaiton to finish on vms')
+    help='Skip waiting for guest customization to finish on vms')
 def convert_cluster(ctx, config_file_name, cluster_name, password, org_name,
                     vdc_name, skip_wait_for_gc):
     try:
