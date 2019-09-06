@@ -85,7 +85,7 @@ SAMPLE_VCD_CONFIG = {
         'port': 443,
         'username': 'administrator',
         'password': 'my_secret_password',
-        'api_version': '33.0',
+        'api_version': '32.0',
         'verify': True,
         'log': True
     }
