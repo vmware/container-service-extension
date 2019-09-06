@@ -59,6 +59,7 @@ The conversion will reset the admin password of the vms in the cluster and add n
 If the vms in the cluster were setup up to use ssh keys for root login, those key pairings will be preserved.
 This operation will cause a force reboot of the vApp.
 
+---
 
 ## CSE 2.0.0
 
@@ -117,6 +118,8 @@ Action required (by Admins and Users)
     * Delete clusters that were created with older templates. Recreate clusters with new templates
     * Alternatively, tenant-users can update docker version manually on existing clusters
 
+---
+
 ## CSE 2.0 Beta (2.0.0.0b1)
 
 **This version is meant to be used for fresh installations of CSE only**
@@ -149,6 +152,7 @@ Note: `pip install container-service-extension` installs previous official
 |---------|-----------|--------------|-------|
 |2.0 Beta | 9.5, 9.7  | 1.4          | 2.3   | 
 
+---
 
 ## CSE 1.2.7
 
