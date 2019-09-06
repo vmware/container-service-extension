@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import os
-import sys
 
 import click
 from vcd_cli.utils import restore_session
@@ -117,16 +116,23 @@ Examples
         All of these options except for '--nodes' and '--vdc' are only
         applicable for clusters using native (vCD) Kubernetes provider.
 \b
-    vcd cse cluster resize mycluster --network mynetwork
-        Resize the cluster to have 1 worker node. On resize failure,
+    vcd cse cluster resize mycluster --nodes 5 --network mynetwork
+        Resize the cluster to have 5 worker nodes. On resize failure,
         returns cluster to original size.
+        If cluster is using native (vCD) Kubernetes provider, nodes will be
+        created from server default template and revision.
         '--network' is only applicable for clusters using
         native (vCD) Kubernetes provider.
         '--vdc' option can be used for faster command execution.
 \b
-    vcd cse cluster resize mycluster -N 10 --disable-rollback
+    vcd cse cluster resize mycluster -N 10 --template-name my_template \\
+    --template-revision 2 --disable-rollback
         Resize the cluster size to 10 worker nodes. On resize failure,
         cluster will be left cluster in error state for troubleshooting.
+        If cluster is using native (vCD) Kubernetes provider, nodes will be
+        created from template 'my_template' revision 2.
+        '--template-name and --template-revision' are only applicable for
+        clusters using native (vCD) Kubernetes provider.
 \b
     vcd cse cluster config mycluster > ~/.kube/config
         Write cluster config details into '~/.kube/config' to manage cluster
@@ -288,18 +294,20 @@ def cluster_delete(ctx, name, vdc, org):
     'template_name',
     required=False,
     default=None,
-    help='Name of the template to instantiate nodes from '
-         '(Exclusive to native Kubernetes provider). Must be provided if '
-         '--template-revision flag is specified')
+    help='Name of the template to create new nodes from. '
+         'If not specified, server default will be used '
+         '(Exclusive to native Kubernetes provider) '
+         '(Must be used with --template-revision).')
 @click.option(
     '-r',
     '--template-revision',
     'template_revision',
     required=False,
     default=None,
-    help='Revision of the template to instantiate nodes from'
-         '((Exclusive to native Kubernetes provider). Must be provided if '
-         '--template-name flag is specified')
+    help='Revision number of the template to create new nodes from. '
+         'If not specified, server default will be used '
+         '(Exclusive to native Kubernetes provider) '
+         '(Must be used with --template-revision).')
 @click.option(
     '--enable-nfs',
     'enable_nfs',
@@ -407,14 +415,40 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
     is_flag=True,
     help='Disable rollback on node creation failure '
          '(Exclusive to native Kubernetes provider)')
+@click.option(
+    '-t',
+    '--template-name',
+    'template_name',
+    required=False,
+    default=None,
+    help='Name of the template to create new nodes from. '
+         'If not specified, server default will be used '
+         '(Exclusive to native Kubernetes provider) '
+         '(Must be used with --template-revision).')
+@click.option(
+    '-r',
+    '--template-revision',
+    'template_revision',
+    required=False,
+    default=None,
+    help='Revision number of the template to create new nodes from. '
+         'If not specified, server default will be used '
+         '(Exclusive to native Kubernetes provider) '
+         '(Must be used with --template-revision).')
 def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
-                   vdc_name, disable_rollback):
+                   vdc_name, disable_rollback, template_name,
+                   template_revision):
     """Resize the cluster to contain the specified number of worker nodes.
 
     Clusters that use native Kubernetes provider can not be sized down
     (use 'vcd cse node delete' command to do so).
     """
     try:
+        if (template_name and not template_revision) or \
+                (not template_name and template_revision):
+            raise Exception("Both --template-name (-t) and "
+                            "--template-revision (-r) must be specified.")
+
         restore_session(ctx)
         client = ctx.obj['client']
         if not client.is_sysadmin() and org_name is None:
@@ -426,7 +460,9 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
             node_count=node_count,
             org=org_name,
             vdc=vdc_name,
-            rollback=not disable_rollback)
+            rollback=not disable_rollback,
+            template_name=template_name,
+            template_revision=template_revision)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -642,14 +678,18 @@ def node_info(ctx, cluster_name, node_name, org_name, vdc):
     'template_name',
     required=False,
     default=None,
-    help='Name of the template to instantiate nodes from')
+    help='Name of the template to create new nodes from. '
+         'If not specified, server default will be used '
+         '(Must be used with --template-revision).')
 @click.option(
     '-r',
     '--template-revision',
     'template_revision',
     required=False,
     default=None,
-    help='Name of the template to instantiate nodes from')
+    help='Revision number of the template to create new nodes from. '
+         'If not specified, server default will be used '
+         '(Must be used with --template-revision).')
 @click.option(
     '--enable-nfs',
     'enable_nfs',
@@ -683,7 +723,7 @@ def create_node(ctx, cluster_name, node_count, org, vdc, cpu, memory,
     try:
         if (template_name and not template_revision) or \
                 (not template_name and template_revision):
-            raise Exception("Both flags --template-name(-t) and "
+            raise Exception("Both --template-name (-t) and "
                             "--template-revision (-r) must be specified.")
 
         restore_session(ctx)
@@ -1099,15 +1139,13 @@ def compute_policy_list(ctx, org_name, ovdc_name):
         restore_session(ctx)
         client = ctx.obj['client']
         if not client.is_sysadmin():
-            stderr("Insufficient permission to perform operation.", ctx)
-            sys.exit(1)
+            raise Exception("Insufficient permission to perform operation.")
 
         ovdc = Ovdc(client)
         result = ovdc.list_ovdc_compute_policies(ovdc_name, org_name)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
-        sys.exit(1)
 
 
 @compute_policy_group.command('add', short_help='')
@@ -1120,8 +1158,7 @@ def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
         restore_session(ctx)
         client = ctx.obj['client']
         if not client.is_sysadmin():
-            stderr("Insufficient permission to perform operation.", ctx)
-            sys.exit(1)
+            raise Exception("Insufficient permission to perform operation.")
 
         ovdc = Ovdc(client)
         result = ovdc.update_ovdc_compute_policies(ovdc_name,
@@ -1131,7 +1168,6 @@ def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
-        sys.exit(1)
 
 
 @compute_policy_group.command('remove', short_help='')
@@ -1144,8 +1180,7 @@ def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name):
         restore_session(ctx)
         client = ctx.obj['client']
         if not client.is_sysadmin():
-            stderr("Insufficient permission to perform operation.", ctx)
-            sys.exit(1)
+            raise Exception("Insufficient permission to perform operation.")
 
         ovdc = Ovdc(client)
         result = ovdc.update_ovdc_compute_policies(ovdc_name,
@@ -1155,4 +1190,3 @@ def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name):
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
-        sys.exit(1)
