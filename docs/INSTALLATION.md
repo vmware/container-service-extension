@@ -30,7 +30,7 @@ Install kubectl using directions from the [Kubernetes web site](https://kubernet
 <a name="gettingcse"></a>
 ## Install CSE Software
 
-Install Python 3.6 or greater. See Python installation instructions and
+Install Python 3.7.3 or greater. See Python installation instructions and
 downloads at <https://www.python.org> or consult the [vcd-cli install
 procedure](https://vmware.github.io/vcd-cli/install.html).  Pip, Python's
 package manager comes with Python.
@@ -38,10 +38,10 @@ package manager comes with Python.
 Verify python and pip installation:
 ```sh
 $ python3 --version
-Python 3.7.0
+Python 3.7.4
 
 $ pip3 --version
-pip 18.0 from /usr/local/lib/python3.7/site-packages/pip (python 3.7)
+pip 19.2.3 from /usr/local/lib/python3.7/site-packages/pip (python 3.7)
 ```
 
 Now install and verify CSE:
@@ -50,7 +50,7 @@ $ pip3 install container-service-extension
 ...
 
 $ cse version
-CSE, Container Service Extension for VMware vCloud Director, version 1.2.5
+CSE, Container Service Extension for VMware vCloud Director, version 2.5.0
 ```
 
 Alternatively, a specific version of CSE can be installed from GitHub as
