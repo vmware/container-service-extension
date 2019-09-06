@@ -599,9 +599,9 @@ config file properties) or the tenant network(s) where the clusters
 will be created.
 
 You should install the CSE software on the CSE appliance as described
-in [Software Installation](/INSTALLATION.html).  Once this is done
-you can invoke server setup using the `cse install` command.  The
-example below shows a typical command.
+in [Software Installation](/container-service-extension/INSTALLATION.html).
+Once this is done you can invoke server setup using the `cse install` command.
+The example below shows a typical command.
 
 ```bash
 cse install -c config.yaml --ssh-key ~/.ssh/id_rsa.pub
