@@ -33,9 +33,9 @@ CSE successfully on vCD.
 
 * An org.
 * A VDC within the org, which
- * has an org VDC network connected to an external network (with internet connectivity). The external network connection is required to enable template VMs to download packages during configuration.
- * can host/deploy vApps
- * has sufficient storage to create vApps and publish them as templates. 
+  * has an org VDC network connected to an external network (with internet connectivity). The external network connection is required to enable cluster VMs to download packages during configuration.
+  * can host vApps
+  * has sufficient storage to create vApps and publish them as templates. 
 * Users in the org with privileges necessary to perform operations like configuring AMQP, creating public catalog entries, and managing vApps.  
 * A good network connectivity between the machine where CSE is installed and the vCD server as well as the Internet.  This avoids intermittent failures in OVA upload/download operations.
 
@@ -273,15 +273,10 @@ broker:
 #    mem: 1024
 
 # Filling out this key for regular CSE set up is optional and should be left
-# as is. Only for CSE set up enabled for PKS container provider, this value
-# needs to point to a valid PKS config file name.
+# as is. Only for CSE setup enabled for Enterprise PKS container provider, this
+# value needs to point to a valid Enterprise PKS config file name.
 
 pks_config: null
-
-# [OPTIONAL] PKS CONFIGS
-# These configs are required only for customers with PKS enabled CSE.
-# Regular CSE users, with no PKS container provider in their system, do not
-# need these configs to be filled out in a separate yaml file.
 ```
 
 The config file has 5 mandatory sections (`amqp`, `vcd`, `vcs`, `service`,
@@ -340,12 +335,12 @@ The following table summariize key parameters.
 
 | Property | Value |
 |-|-|
-| catalog | Publicly shared catalog within `org` where k8s vApp templates will be published |
-| default_template_name | Name of the default template to use if none is specified during cluster/node creation/resizing |
+| catalog | Publicly shared catalog within `org` where K8s templates will be published |
+| default_template_name | Name of the default template to use if none is specified during cluster and node operations |
 | default_template_revision | Revision of the default template to use if none is specified during cluster/node creation/resizing |
 | ip_allocation_mode | IP allocation mode to be used during the install process to build the template. Possible values are `dhcp` or `pool`. During creation of clusters for tenants, `pool` IP allocation mode is always used |
 | network | Org Network within `vdc` that will be used during the install process to build the template. It should have outbound access to the public Internet. The `CSE` appliance doesn't need to be connected to this network |
-| org | vCD organization that contains the shared catalog where the k8s templates will be stored |
+| org | vCD organization that contains the shared catalog where the K8s templates will be stored |
 | remote_template_cookbook_url | URL of the template repo where all template definition and associated script files are hosted |
 | storage_profile | Name of the storage profile to use when creating the temporary vApp used to build the template |
 | vdc | Virtual datacenter within `org` that will be used during the install process to build the template |
@@ -371,65 +366,65 @@ Filling out this key for regular CSE set up is optional and should be left
 as is. Only for CSE set up enabled for [Enterprise PKS](/container-service-extension/ENT-PKS.html) 
 container provider, this value needs to point to absolute path of valid Enterprise PKS config file. Refer [Enterprise PKS enablement](/container-service-extension/ENT-PKS.html) for more details.
 
-Enabling Enterprise PKS as a K8 provider changes the default behavior of CSE as described below.
+Enabling Enterprise PKS as a K8s provider changes the default behavior of CSE as described below.
 Presence of valid value for `pks_config` property gives an indication to CSE that 
-Enterprise PKS is enabled (in addition to Native vCD) as a K8 provider in the system.
+Enterprise PKS is enabled (in addition to Native vCD) as a K8s provider in the system.
 
-- CSE begins to mandate any given `ovdc` to be enabled for either Native or Enterprise PKS as a backing K8 provider.
+- CSE begins to mandate any given `ovdc` to be enabled for either Native or Enterprise PKS as a backing K8s provider.
 Admins can do this using `vcd cse ovdc enable` command. This step is mandatory for ovdc(s) with 
-pre-existing native K8 clusters as well i.e., if CSE is upgraded from 1.2.x to 2.0 and `pks_config` 
-is set, then it becomes mandatory to enable those ovdc(s) with pre-existing native K8 clusters.
+pre-existing native K8s clusters as well i.e., if CSE is upgraded from 1.2.x to 2.0 and `pks_config` 
+is set, then it becomes mandatory to enable those ovdc(s) with pre-existing native K8s clusters.
 - In other words, If `pks_config`  value is present and if an ovdc is not enabled for either of the supported
-K8 providers, users will not be able to do any further K8 deployments in that ovdc.
+K8s providers, users will not be able to do any further K8s deployments in that ovdc.
 
 In the absence of value for `pks_config` key, there will not be any change in CSE's default behavior i.e.,
-any ovdc is open for native K8 cluster deployments.
+any ovdc is open for native K8s cluster deployments.
 
 #### Enterprise PKS Config file
 ```yaml
-# Config file for PKS enabled CSE Server to be filled by administrators.
+# Config file for Enterprise PKS enabled CSE Server to be filled by administrators.
 # This config file has the following four sections:
 #   1. pks_api_servers:
-#       a. Each entry in the list represents a PKS api server that is part 
-#          of the deployment.
+#       a. Each entry in the list represents a Enterprise PKS api server that
+#          is part of the deployment.
 #       b. The field 'name' in each entry should be unique. The value of 
-#          the field has no bearing on the real world PKS api server, it's 
+#          the field has no bearing on the real world Enterprise PKS api server, it's 
 #          used to tie in various segments of the config file together.
-#       c. The field 'vc' represents the name with which the PKS vCenter 
+#       c. The field 'vc' represents the name with which the Enterprise PKS vCenter 
 #          is registered in vCD.
 #       d. The field 'cpi' needs to be retrieved by executing "bosh cpi-config"
 #          on Enterprise PKS set up.
 #   2. pks_accounts:
-#       a. Each entry in the list represents a PKS account that can be used 
-#          talk to a certain PKS api server.
+#       a. Each entry in the list represents a Enterprise PKS account that can be used 
+#          talk to a certain Enterprise PKS api server.
 #       b. The field 'name' in each entry should be unique. The value of 
-#          the field has no bearing on the real world PKS accounts, it's 
+#          the field has no bearing on the real world Enterprise PKS accounts, it's 
 #          used to tie in various segments of the config file together.
-#       c. The field 'pks_api_server' is a reference to the PKS api server 
+#       c. The field 'pks_api_server' is a reference to the Enterprise PKS api server 
 #          which owns this account. It's value should be equal to value of 
-#          the field 'name' of the corresponding PKS api server.
+#          the field 'name' of the corresponding Enterprise PKS api server.
 #   3. pvdcs:
 #       a. Each entry in the list represents a Provider VDC in vCD that is 
-#          backed by a cluster of the PKS managed vCenter server.
+#          backed by a cluster of the Enterprise PKS managed vCenter server.
 #       b. The field 'name' in each entry should be the name of the 
 #          Provider VDC as it appears in vCD.
-#       c. The field 'pks_api_server' is a reference to the PKS api server 
+#       c. The field 'pks_api_server' is a reference to the Enterprise PKS api server 
 #          which owns this account. It's value should be equal to value of 
-#          the field 'name' of the corresponding PKS api server.
+#          the field 'name' of the corresponding Enterprise PKS api server.
 #   4. nsxt_servers:
 #       a. Each entry in the list represents a NSX-T server that has been 
-#          alongside a PKS server to manage its networking. CSE needs these 
+#          alongside a Enterprise PKS server to manage its networking. CSE needs these 
 #          details to enforce network isolation of clusters.
 #       b. The field 'name' in each entry should be unique. The value of 
 #          the field has no bearing on the real world NSX-T server, it's 
 #          used to tie in various segments of the config file together.
-#       c. The field 'pks_api_server' is a reference to the PKS api server 
+#       c. The field 'pks_api_server' is a reference to the Enterprise PKS api server 
 #          which owns this account. It's value should be equal to value of 
-#          the field 'name' of the corresponding PKS api server.
+#          the field 'name' of the corresponding Enterprise PKS api server.
 #       d. The field 'distributed_firewall_section_anchor_id' should be 
 #          populated with id of a Distributed Firewall Section e.g. it can 
 #          be the id of the section called 'Default Layer3 Section' which 
-#          PKS creates on installation.
+#          Enterprise PKS creates on installation.
 # For more information, please refer to CSE documentation page:
 # https://vmware.github.io/container-service-extension/INSTALLATION.html
 
@@ -511,21 +506,20 @@ nsxt_servers:
   - id2
   username: admin
   verify: true
-
 ```
 
 <a name="vmtemplates"></a>
 
 ## K8s Templates
 
-`CSE` supports multiple k8s templates to create Kubernetes clusters
-from. Templates may vary in guest OS or software (k8s, docker-ce, weave)
+`CSE` supports multiple K8s templates to create Kubernetes clusters
+from. Templates may vary in guest OS or software (K8s, docker-ce, weave)
 versions. The templates are defined by a cookbook which is hosted remotely.
 Out of box the sample config file will point to the official VMware template
 cookbook. Each template name is unique and is contructed based on the OS
-flavor, k8s version and weave version. A version change in either OS, k8s
+flavor, K8s version and weave version. A version change in either OS, K8s
 major/minor version or weave major/minor verion will result in a new template.
-While a change in just k8s micro version or change in associated scripts will
+While a change in just K8s micro version or change in associated scripts will
 cause a revision bump to the template. The template definitions along with
 their revisions are managed by the owner of the remote template cookbook.
 During CSE installation if the option `skip-template-creation` is not specified
@@ -533,34 +527,36 @@ then all templates defined in the remote cookbook will be created. Otherwise
 no templates will be created and service provider will need to manually pick
 and choose the template they want to create using 
 ```sh
- cse template install [OPTIONS] TEMPLATE_NAME TEMPLATE_REVISION
+cse template list
+cse template install [OPTIONS] TEMPLATE_NAME TEMPLATE_REVISION
 ```
 One of the templates must be declared as the default template in the config
-file, without it the CSE server won't start up. Tenants have the option to
+file, without it the CSE server won't start up. Tenants also have the option to
 specify the template to use during cluster/node creation.
 
-### Source .ova Files for VM Templates
+### Source .ova Files for K8s Templates
 
-The following table shows URLs for OVA files used as VM templates.
+The following table lists URLs of the OVA files that are used as the base for
+the K8s templates.
 
 | OS | OVA Name | URL | SHA256 |
 |-|-|-|-|
 | Photon OS 2.0 GA     | photon-custom-hw11-2.0-304b817.ova | `http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova`                       | cb51e4b6d899c3588f961e73282709a0d054bb421787e140a1d80c24d4fd89e1 |
 | Ubuntu 16.04.4 LTS   | ubuntu-16.04-server-cloudimg-amd64.ova | `https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova` | 3c1bec8e2770af5b9b0462e20b7b24633666feedff43c099a6fb1330fcc869a9 |
 
-### Updating VM Templates
+### Updating K8s Templates
 
-Templates may be updated from time to time to upgrade software or
+K8s templates may be updated from time to time to upgrade software or
 make configuration changes.  When this occurs, the remote template cookbook
 will be updated by VMWare. If a service provider wishes to get new templates
 or old template at a newer revision, CSE Server should be gracefully stopped,
 and the following commands be used to list and create templates.
 ```sh
-cse template list
+cse template list --display diff
 cse template install [OPTIONS] TEMPLATE_NAME TEMPLATE_REVISION
 ```
 Updating a template doesn't have any effect on existing Kubernetes master and
-worker nodes in k8s clusters. CSE and template compatibility can be found in
+worker nodes in K8s clusters. CSE and template compatibility can be found in
 release notes.
 
 ---
@@ -867,7 +863,7 @@ cse install --config config.yaml
 * Monitor status of CSE Server and clusters
 * Operate CSE as a service
 * Enable a given organization vdc for either Native or Enterprise PKS deployments.
-This command is necessary only when more than one K8 provider exists in the system
+This command is necessary only when more than one K8s provider exists in the system
 
 The following show useful sample commands.
 
@@ -890,6 +886,6 @@ vcd org use ORGNAME
 # Let VDCNAME be active vdc for this session.
 vcd vdc use VDCNAME
 
-# Enable organization vdc for a particular K8 provider (Native/Enterprise PKS)
+# Enable organization vdc for a particular K8s provider (Native/Enterprise PKS)
 vcd cse ovdc enable VDCNAME --k8s-provider [native|ent-pks]
 ```
