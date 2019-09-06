@@ -5,6 +5,61 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 2.5 Beta (2.5.0.0b1)
+
+Release Date: 2019-09-06
+
+Supported vCD versions: 9.1, 9.5, 9.7
+
+| Template OS | Docker | Kubernetes | Pod Network |
+|-|-|-|-|
+| Photon OS 2.0 GA | 18.06.2 | 1.12.7 | Weave 2.3.0 |
+| Ubuntu 16.04.4 LTS | 18.09.7 | 1.15.3 | Weave 2.3.0 |
+| Ubuntu 16.04.4 LTS | 18.09.7 | 1.15.3 | Weave 2.5.2 |
+
+**Installation of binaries**
+
+```sh
+pip install container-service-extension==2.5.0.0b1
+```
+
+or
+
+```sh
+pip install container-service-extension --pre
+```
+
+Note: `pip install container-service-extension` installs previous official
+version of CSE - 2.0.0. Specify the above mentioned exact version to install 
+CSE 2.5.0 beta.
+
+**New Features**
+
+- Support for multiple K8s templates
+- [Essential PKS based templates](/container-service-extension/ESS-PKS.html)
+
+**Compatibility matrix**
+
+|CSE | vCD |Enterprise PKS| NSX-T |
+|-|-|-|-|
+|2.5.0 Beta | 9.1, 9.5, 9.7  | 1.4 | 2.3, 2.4 |
+
+**Notes to System Administrator**
+
+Out of box, pre existing clusters created by CSE 2.0.0 or below can't be
+managed by CSE 2.5.0. To be able to manage them, these clusters needs to be
+converted to the format that CSE 2.5.0 recognizes. A new command has been added
+to the CSE server cli to achieve the same.
+
+```sh
+cse convert-cluster
+```
+
+The conversion will reset the admin password of the vms in the cluster and add new metadata to the cluster vApp.
+If the vms in the cluster were setup up to use ssh keys for root login, those key pairings will be preserved.
+This operation will cause a force reboot of the vApp.
+
+
 ## CSE 2.0.0
 
 Release Date: 2019-05-24
