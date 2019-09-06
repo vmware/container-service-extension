@@ -345,7 +345,7 @@ The following table summariize key parameters.
 | storage_profile | Name of the storage profile to use when creating the temporary vApp used to build the template |
 | vdc | Virtual datacenter within `org` that will be used during the install process to build the template |
 
-### 'template_rules' Section
+### `template_rules` Section
 Rules can be defined to override template definitions as defined by remote
 template cookbook. This section will contain 0 or more such rules, each rule
 should match exactly one template. Matching is driven by name and revision of
