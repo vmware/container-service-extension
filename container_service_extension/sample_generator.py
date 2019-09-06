@@ -85,7 +85,7 @@ SAMPLE_VCD_CONFIG = {
         'port': 443,
         'username': 'administrator',
         'password': 'my_secret_password',
-        'api_version': '31.0',
+        'api_version': '33.0',
         'verify': True,
         'log': True
     }
@@ -124,8 +124,8 @@ SAMPLE_BROKER_CONFIG = {
         'network': 'mynetwork',
         'ip_allocation_mode': 'pool',
         'storage_profile': '*',
-        'default_template_name': 'photon_template',
-        'default_template_revision': 0,
+        'default_template_name': 'ubuntu-16.04_k8-1.15_weave-2.5.2',
+        'default_template_revision': 1,
         'remote_template_cookbook_url': 'https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template.yaml', # noqa: E501
     }
 }
@@ -147,26 +147,26 @@ TEMPLATE_RULE_NOTE = """# [Optional] Template rule section
 #template_rules:
 #- name: Rule1
 #  target:
-#    name: photonv2
+#    name: photon-v2_k8-1.12_weave-2.3.0
 #    revision: 1
 #  action:
-#    admin_password: 'new password'
-#    compute_policy: 'new policy'
+#    admin_password: 'mypassword'
+#    compute_policy: 'photon-policy'
 #    cpu: 4
 #    mem: 512
 #- name: Rule2
 #  target:
-#    name: ubuntu
+#    name: my_template
 #    revision: 2
 #  action:
 #    cpu: 2
 #    mem: 1024
 #- name: Rule3
 #  target:
-#    name: ubuntu
+#    name: ubuntu-16.04_k8-1.15_weave-2.5.2
 #    revision: 1
 #  action:
-#    admin_password: 'new password'
+#    admin_password: 'mypassword'
 """
 
 PKS_CONFIG_FILE_LOCATION_SECTION_KEY = 'pks_config'
