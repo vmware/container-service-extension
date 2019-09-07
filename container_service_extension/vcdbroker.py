@@ -500,6 +500,11 @@ class VcdBroker(AbstractBroker):
             RequestKey.ROLLBACK: True,
         }
         validated_data = {**defaults, **data}
+
+        # TODO HACK default dictionary combining needs to be fixed
+        validated_data[RequestKey.TEMPLATE_NAME] = validated_data[RequestKey.TEMPLATE_NAME] or template[LocalTemplateKey.NAME] # noqa: E501
+        validated_data[RequestKey.TEMPLATE_REVISION] = validated_data[RequestKey.TEMPLATE_REVISION] or template[LocalTemplateKey.REVISION] # noqa: E501
+
         template_name = validated_data[RequestKey.TEMPLATE_NAME]
         template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
 
