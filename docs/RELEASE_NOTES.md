@@ -5,7 +5,7 @@ title: Release Notes
 
 # Release Notes
 
-## CSE 2.5 Beta (2.5.0.0b1)
+## CSE 2.5.0 Beta (2.5.0.0b1)
 
 Release Date: 2019-09-06
 
@@ -46,18 +46,16 @@ CSE 2.5.0 beta.
 
 **Notes to System Administrator**
 
-Out of box, pre existing clusters created by CSE 2.0.0 or below can't be
-managed by CSE 2.5.0. To be able to manage them, these clusters needs to be
-converted to the format that CSE 2.5.0 recognizes. A new command has been added
-to the CSE server cli to achieve the same.
-
+If you are upgrading to CSE 2.5.0.0b1 and you have pre-existing K8s clusters
+deployed from CSE 2.0.0 or below, you must run the following command to
+preserve manageability of those clusters in CSE 2.5.0.
 ```sh
 cse convert-cluster
 ```
-
-The conversion will reset the admin password of the vms in the cluster and add new metadata to the cluster vApp.
-If the vms in the cluster were setup up to use ssh keys for root login, those key pairings will be preserved.
-This operation will cause a force reboot of the vApp.
+This command resets the admin password of all nodes in the cluster, as well as,
+adds new metadata to the cluster. If nodes in the cluster are setup with
+ssh keys for root login, those key pairings will be preserved. The command does
+a force reboot of the cluster.
 
 ---
 
