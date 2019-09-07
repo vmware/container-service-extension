@@ -137,7 +137,6 @@ TEMPLATE_RULE_NOTE = """# [Optional] Template rule section
 # the template. If only name is specified without the revision or vice versa,
 # the rule will not be processed. And once a match is found, as an action the
 # following attributes can be overriden.
-# * admin_password
 # * compute_policy
 # * cpu
 # * memory
@@ -150,8 +149,7 @@ TEMPLATE_RULE_NOTE = """# [Optional] Template rule section
 #    name: photon-v2_k8-1.12_weave-2.3.0
 #    revision: 1
 #  action:
-#    admin_password: 'mypassword'
-#    compute_policy: 'photon-policy'
+#    compute_policy: "sample policy"
 #    cpu: 4
 #    mem: 512
 #- name: Rule2
@@ -161,12 +159,6 @@ TEMPLATE_RULE_NOTE = """# [Optional] Template rule section
 #  action:
 #    cpu: 2
 #    mem: 1024
-#- name: Rule3
-#  target:
-#    name: ubuntu-16.04_k8-1.15_weave-2.5.2
-#    revision: 1
-#  action:
-#    admin_password: 'mypassword'
 """
 
 PKS_CONFIG_FILE_LOCATION_SECTION_KEY = 'pks_config'
@@ -264,7 +256,7 @@ SAMPLE_PKS_NSXT_SERVERS_SECTION = {
             'name': 'nsxt-server-1',
             'host': 'nsxt1.domain.local',
             'username': 'admin',
-            'password': 'secret',
+            'password': 'my_secret_password',
             'pks_api_server': 'pks-api-server-1',
             # 'proxy': 'proxy1.pks.local:80',
             'nodes_ip_block_ids': ['id1', 'id2'],
@@ -275,7 +267,7 @@ SAMPLE_PKS_NSXT_SERVERS_SECTION = {
             'name': 'nsxt-server-2',
             'host': 'nsxt2.domain.local',
             'username': 'admin',
-            'password': 'secret',
+            'password': 'my_secret_password',
             'pks_api_server': 'pks-api-server-2',
             # 'proxy': 'proxy2.pks.local:80',
             'nodes_ip_block_ids': ['id1', 'id2'],

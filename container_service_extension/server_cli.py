@@ -4,6 +4,7 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 import sys
+import time
 
 import click
 from pyvcloud.vcd.client import BasicLoginCredentials
@@ -11,11 +12,15 @@ from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import NotAcceptableException
 from pyvcloud.vcd.exceptions import VcdException
+from pyvcloud.vcd.utils import metadata_to_dict
+from pyvcloud.vcd.vapp import VApp
+from pyvcloud.vcd.vm import VM
 from pyVmomi import vim
 import requests
 from vcd_cli.utils import stdout
 import yaml
 
+from container_service_extension.cluster import get_all_clusters
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.configure_cse import install_cse
@@ -26,12 +31,14 @@ from container_service_extension.local_template_manager import \
 from container_service_extension.remote_template_manager import \
     RemoteTemplateManager
 from container_service_extension.sample_generator import generate_sample_config
+from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import RemoteTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.service import Service
 from container_service_extension.utils import check_python_version
 from container_service_extension.utils import ConsoleMessagePrinter
+from container_service_extension.utils import str_to_bool
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -365,6 +372,198 @@ def run(ctx, config, skip_check):
         click.secho("CSE Server failure. Please check the logs.", fg='red')
 
 
+@cli.command('convert-cluster', short_help='Converts pre CSE 2.5.0 clusters to CSE 2.5.0 cluster format') # noqa: E501
+@click.pass_context
+@click.argument('cluster_name', metavar='CLUSTER_NAME', default=None)
+@click.option(
+    '-c',
+    '--config',
+    'config_file_name',
+    type=click.Path(exists=True),
+    metavar='CONFIG_FILE_NAME',
+    envvar='CSE_CONFIG',
+    default='config.yaml',
+    help='Filepath of CSE config file')
+@click.option(
+    '-p',
+    '--password',
+    'password',
+    default=None,
+    metavar='ADMIN_PASSWORD',
+    help="New root password to set on cluster vms. If left empty password will be auto-generated") # noqa: E501
+@click.option(
+    '-o',
+    '--org',
+    'org_name',
+    default=None,
+    metavar='ORG_NAME',
+    help="Only convert clusters from a specific org")
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc_name',
+    default=None,
+    metavar='VDC_NAME',
+    help='Only convert clusters from a specific org VDC')
+@click.option(
+    '-g',
+    '--skip-wait-for-gc',
+    'skip_wait_for_gc',
+    is_flag=True,
+    help='Skip waiting for guest customization to finish on vms')
+def convert_cluster(ctx, config_file_name, cluster_name, password, org_name,
+                    vdc_name, skip_wait_for_gc):
+    try:
+        check_python_version()
+    except Exception as err:
+        click.secho(str(err), fg='red')
+        sys.exit(1)
+
+    client = None
+    try:
+        console_message_printer = ConsoleMessagePrinter()
+        config = get_validated_config(
+            config_file_name, msg_update_callback=console_message_printer)
+
+        log_filename = None
+        log_wire = str_to_bool(config['service'].get('log_wire'))
+        if log_wire:
+            log_filename = 'cluster_convert_wire.log'
+
+        client = Client(config['vcd']['host'],
+                        api_version=config['vcd']['api_version'],
+                        verify_ssl_certs=config['vcd']['verify'],
+                        log_file=log_filename,
+                        log_requests=log_wire,
+                        log_headers=log_wire,
+                        log_bodies=log_wire)
+        credentials = BasicLoginCredentials(config['vcd']['username'],
+                                            SYSTEM_ORG_NAME,
+                                            config['vcd']['password'])
+        client.set_credentials(credentials)
+        msg = f"Connected to vCD as system administrator: " \
+              f"{config['vcd']['host']}:{config['vcd']['port']}"
+        console_message_printer.general(msg)
+
+        cluster_records = get_all_clusters(client=client,
+                                           cluster_name=cluster_name,
+                                           org_name=org_name,
+                                           ovdc_name=vdc_name)
+
+        if len(cluster_records) == 0:
+            console_message_printer.info(f"No clusters were found.")
+            return
+
+        vms = []
+        for cluster in cluster_records:
+            console_message_printer.info(
+                f"Processing cluster '{cluster['name']}'.")
+            vapp_href = cluster['vapp_href']
+            vapp = VApp(client, href=vapp_href)
+
+            console_message_printer.info("Processing metadata of cluster.")
+            metadata = metadata_to_dict(vapp.get_metadata())
+            old_template_name = None
+            new_template_name = None
+            if ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME in metadata: # noqa: E501
+                old_template_name = metadata.pop(ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME) # noqa: E501
+            version = metadata.get(ClusterMetadataKey.CSE_VERSION)
+            if old_template_name:
+                console_message_printer.info(
+                    "Determining k8s version on cluster.")
+                if 'photon' in old_template_name:
+                    new_template_name = 'photon-v2'
+                    if '1.0.0' in version:
+                        new_template_name += '_k8s-1.8_weave-2.0.5'
+                    elif any(ver in version for ver in ('1.1.0', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4',)): # noqa: E501
+                        new_template_name += '_k8s-1.9_weave-2.3.0'
+                    elif any(ver in version for ver in ('1.2.5', '1.2.6', '1.2.7',)): # noqa: E501
+                        new_template_name += '_k8s-1.10_weave-2.3.0'
+                    elif '2.0.0' in version:
+                        new_template_name += '_k8s-1.12_weave-2.3.0'
+                elif 'ubuntu' in old_template_name:
+                    new_template_name = 'ubuntu-16.04'
+                    if '1.0.0' in version:
+                        new_template_name += '_k8s-1.9_weave-2.1.3'
+                    elif any(ver in version for ver in ('1.1.0', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4', '1.2.5', '1.2.6', '1.2.7')): # noqa: E501
+                        new_template_name += '_k8s-1.10_weave-2.3.0'
+                    elif '2.0.0' in version:
+                        new_template_name += '_k8s-1.13_weave-2.3.0'
+
+            if new_template_name:
+                console_message_printer.info("Updating metadata of cluster.")
+                task = vapp.remove_metadata(ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME) # noqa: E501
+                client.get_task_monitor().wait_for_success(task)
+                new_metadata_to_add = {
+                    ClusterMetadataKey.TEMPLATE_NAME: new_template_name,
+                    ClusterMetadataKey.TEMPLATE_REVISION: 0
+                }
+                task = vapp.set_multiple_metadata(new_metadata_to_add)
+                client.get_task_monitor().wait_for_success(task)
+            console_message_printer.general(
+                "Finished processing metadata of cluster.")
+
+            try:
+                console_message_printer.info(
+                    f"Undeploying the vApp '{cluster['name']}'")
+                task = vapp.undeploy()
+                client.get_task_monitor().wait_for_success(task)
+                console_message_printer.general(
+                    "Successfully undeployed the vApp.")
+            except Exception as err:
+                console_message_printer.error(str(err))
+
+            vm_resources = vapp.get_all_vms()
+            for vm_resource in vm_resources:
+                console_message_printer.info(
+                    f"Processing vm '{vm_resource.get('name')}'.")
+                vm = VM(client, href=vm_resource.get('href'))
+                vms.append(vm)
+
+                console_message_printer.info("Updating vm admin password.")
+                task = vm.update_guest_customization_section(
+                    enabled=True,
+                    admin_password_enabled=True,
+                    admin_password_auto=not password,
+                    admin_password=password,
+                )
+                client.get_task_monitor().wait_for_success(task)
+                console_message_printer.general("Successfully updated vm .")
+
+                console_message_printer.info("Deploying vm.")
+                task = vm.power_on_and_force_recustomization()
+                client.get_task_monitor().wait_for_success(task)
+                console_message_printer.general("Successfully deployed vm.")
+
+            console_message_printer.info("Deploying cluster")
+            task = vapp.deploy(power_on=True)
+            client.get_task_monitor().wait_for_success(task)
+            console_message_printer.general("Successfully deployed cluster.")
+            console_message_printer.general(
+                f"Successfully processed cluster '{cluster['name']}'.")
+
+        if skip_wait_for_gc:
+            return
+
+        while True:
+            for vm in vms:
+                status = vm.get_guest_customization_status()
+                if status != 'GC_PENDING':
+                    vms.remove(vm)
+            console_message_printer.info(
+                f"Waiting on guest customization to finish on {len(vms)} vms.")
+            if not len(vms) == 0:
+                time.sleep(5)
+            else:
+                break
+
+    except Exception as err:
+        click.secho(str(err), fg='red')
+    finally:
+        if client:
+            client.logout()
+
+
 @template.command(
     'list',
     short_help='List Kubernetes templates')
@@ -449,7 +648,6 @@ def list_template(ctx, config_file_name, display_option):
                     template['cpu'] = definition[LocalTemplateKey.CPU]
                     template['memory'] = definition[LocalTemplateKey.MEMORY]
                     template['description'] = definition[LocalTemplateKey.DESCRIPTION] # noqa: E501
-                    template['admin_password'] = definition[LocalTemplateKey.ADMIN_PASSWORD] # noqa: E501
                     local_templates.append(template)
             finally:
                 if client:
@@ -477,8 +675,6 @@ def list_template(ctx, config_file_name, display_option):
                 template['memory'] = definition[RemoteTemplateKey.MEMORY]
                 template['description'] = \
                     definition[RemoteTemplateKey.DESCRIPTION]
-                template['admin_password'] = \
-                    definition[RemoteTemplateKey.ADMIN_PASSWORD]
                 remote_templates.append(template)
 
         result = []

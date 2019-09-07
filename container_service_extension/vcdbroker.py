@@ -9,7 +9,6 @@ import uuid
 import pkg_resources
 from pyvcloud.vcd.client import TaskStatus
 from pyvcloud.vcd.client import VCLOUD_STATUS_MAP
-from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.task import Task
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
@@ -603,10 +602,9 @@ class VcdBroker(AbstractBroker):
                               network_name, num_cpu, mb_memory,
                               storage_profile_name, ssh_key_filepath,
                               enable_nfs, rollback):
-        org_resource = self.tenant_client.get_org_by_name(org_name)
-        org = Org(self.tenant_client, resource=org_resource)
-        vdc_resource = org.get_vdc(ovdc_name)
-        vdc = VDC(self.tenant_client, resource=vdc_resource)
+        org = vcd_utils.get_org(self.tenant_client, org_name=org_name)
+        vdc = vcd_utils.get_vdc(
+            self.tenant_client, vdc_name=ovdc_name, org=org)
 
         LOGGER.debug(f"About to create cluster {cluster_name} on {ovdc_name}"
                      f" with {num_workers} worker nodes, "
@@ -623,7 +621,7 @@ class VcdBroker(AbstractBroker):
                                     fence_mode='bridged')
             except Exception as e:
                 msg = f"Error while creating vApp: {e}"
-                LOGGER.debug(msg)
+                LOGGER.debug(str(e))
                 raise ClusterOperationError(msg)
             self.tenant_client.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0]) # noqa: E501
 
@@ -778,8 +776,7 @@ class VcdBroker(AbstractBroker):
                             num_workers, network_name, num_cpu, mb_memory,
                             storage_profile_name, ssh_key_filepath, enable_nfs,
                             rollback):
-        org_resource = self.tenant_client.get_org()
-        org = Org(self.tenant_client, resource=org_resource)
+        org = vcd_utils.get_org(self.tenant_client)
         vdc = VDC(self.tenant_client, href=cluster_vdc_href)
         vapp = VApp(self.tenant_client, href=cluster_vapp_href)
         template = get_template(name=template_name, revision=template_revision)
@@ -969,8 +966,7 @@ class VcdBroker(AbstractBroker):
         if self.task_resource is not None:
             task_href = self.task_resource.get('href')
 
-        org_sparse = self.tenant_client.get_org()
-        org = Org(self.tenant_client, resource=org_sparse)
+        org = vcd_utils.get_org(self.tenant_client)
         user_href = org.get_user(self.client_session.get('user')).get('href')
 
         self.task_resource = self.task.update(

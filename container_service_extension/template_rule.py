@@ -14,7 +14,6 @@ class TemplateRule:
     If only name is specified without the revision or vice versa, the rule will
     not be processed. And once a match is found, as an 'action' the following
     attributes can be overriden.
-        * admin_password
         * compute_policy
         * cpu
         * memory
@@ -28,8 +27,7 @@ class TemplateRule:
         :param dict target: target template of the rule. The keys 'name' and
             'revision' should be present in the dictionary.
         :param dict action: attributes of the target template to update,
-            accepted keys are 'admin_password', 'compute_policy', 'cpu' and
-            'memory'.
+            accepted keys are 'compute_policy', 'cpu' and 'memory'.
         :param logging.Logger logger: optional logger to log with.
         :param utils.ConsoleMessagePrinter msg_update_callback: Callback
             object that writes messages onto console.
@@ -41,10 +39,7 @@ class TemplateRule:
         self.msg_update_callback = msg_update_callback
 
     def __str__(self):
-        redacted_action = dict(self.action)
-        if 'admin_password' in redacted_action:
-            redacted_action['admin_password'] = "[REDACTED]"  # nosec: redacted
-        return f"{self.name} : ({self.target.get('name')} at rev {self.target.get('revision')}) -> {redacted_action}" # noqa: E501
+        return f"{self.name} : ({self.target.get('name')} at rev {self.target.get('revision')}) -> {self.action}" # noqa: E501
 
     def _validate(self, template_table):
         """."""
@@ -104,7 +99,6 @@ class TemplateRule:
         all_actions = set(self.action.keys())
         invalid_actions = list(
             all_actions - set([
-                LocalTemplateKey.ADMIN_PASSWORD,
                 LocalTemplateKey.COMPUTE_POLICY,
                 LocalTemplateKey.CPU,
                 LocalTemplateKey.MEMORY
@@ -150,12 +144,6 @@ class TemplateRule:
             return
 
         target_template = template_table[self.target['name']][str(self.target['revision'])] # noqa: E501
-
-        new_admin_password = \
-            self.action.get(LocalTemplateKey.ADMIN_PASSWORD)
-        if new_admin_password is not None:
-            target_template[LocalTemplateKey.ADMIN_PASSWORD] = \
-                new_admin_password
 
         new_compute_policy = \
             self.action.get(LocalTemplateKey.COMPUTE_POLICY)

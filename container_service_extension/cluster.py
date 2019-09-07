@@ -185,7 +185,7 @@ def add_nodes(client, num_nodes, node_type, org, vdc, vapp, catalog_name,
                 'vapp': source_vapp.resource,
                 'target_vm_name': name,
                 'hostname': name,
-                'password': template[LocalTemplateKey.ADMIN_PASSWORD],
+                'password_auto': True,
                 'network': network_name,
                 'ip_allocation_mode': 'pool'
             }
