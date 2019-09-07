@@ -1,6 +1,69 @@
 CHANGES
 =======
 
+* Small typo fix in docs navigation panel
+* CSE 2.5.0beta1 docs (#422)
+* Add todo hack to fix how default values are handled (#424)
+* [VCDA-1155] Expose command to migrate clusters deployed by CSE 2.0.0 and below to current CSE. (#421)
+* Update pyvcloud and vcd-cli requirement for CSE 2.5.0 (#423)
+* Add template name and resize to cluster resize (#419)
+* [VCDA-1136] Implement ovdc compute policy operations (#414)
+* Update requirement pyvcloud >= 20.1.1.dev90 (#417)
+* Update template repo for system tests to vmware official template recipe repo. (#418)
+* Get the password from vapp instead of from template that causes backward incompatibility on template name (#416)
+* Updating sample generator to pull template recipe from vmware repo by default. (#415)
+* [VCDA-1095] Add persona support for node operation
+* B105: hardcoded\_password\_string: false positives and test environment password strings marked not vulnerable (#413)
+* [VCDA-1120] Making templates complaint with the compute policy (#410)
+* [VCDA-1108] Fix how \`ovdc list --pks-plans\` gets vCenter name (#408)
+* [VCDA-1066, VCDA-1068] Implement cse template install command (#407)
+* Fix ovdc list bug (#405)
+* [VCDA-1096] Add persona support for cluster info and config
+* Fix-Missing-Vcd-Client-Argument (#403)
+* [VCDA-1094] Add persona support for delete clusters
+* Refactor brokers and server data handling (#398)
+* [VCDA-1093] Add persona based tests for cluster create and list (#396)
+* [VCDA-1093] Add persona based tests for cluster create and list
+* Update pyvcloud dependency to 20.1.1.dev73 (#400)
+* [VCDA-1060, VCDA-1063, VCDA-1064] - Implemented cse template list command (#401)
+* Support for vdc compute policy to vdc and vms (#397)
+* [VCDA-1084, VCDA-1085] Introduction of template default over-ride rules  (#394)
+* [VCDA-1105] Fix task based CSE operation for vCD 9.8 (#391)
+* [VCDA-1113] Expose template revision as cli command options (#393)
+* Add cluster request handler and refactor brokers to use request dictionary (#392)
+* Add ovdc, system, template request handlers (#388)
+* [VCDA -1083,1089,1114] Replace local template section in config yaml with remote template cookbook workflow (#387)
+* [VCDA-1098] Add persona support for system test framework (#384)
+* Organize constants/bare strings into enums for data consistency (#386)
+* [VCDA-1087] Add functionality to create templates out of recipe and scripts downloaded from remote template cookbook (#385)
+* Fix bugs preventing proper Kubernetes app deployment on clusters (#382)
+* [VCDA-1062] Introduce remote template cookbook (#383)
+* Upgrade packages in template vApps to address vulnerabilities (#376)
+* Revert unintentionally checked in code. (#379)
+* [VCDA - 939, 959,1072, 1074] Refactor CSE's broker manager, processor, util files, client - server communication (#371)
+* VCDA-X: Fix tox.ini to exclude auto-generated PKS and UAAC client files from flake8 check (#375)
+* [VCDA-1050] Update Photon Docker version and system tests (#373)
+*  Update assert failures to print useful debugging info (#369)
+* Fix wrong command in enterprise PKS tenant workflow image
+* Fix doc error - Wrong command in doc for generating sample config files. (#374)
+* Change how passwords are generated and read for K8 cluster vms (#367)
+* Fixed stack trace displayed on console when executing vcd cse node info (#366)
+* Handle org and vdc arguments (#365)
+* [VCDA-1037] vcd cse node info command broken after enabling PKS (#350)
+* Documentation on OIDC and Pay-as-you-go models for ovdc (#362)
+* Include org option and set the default org if not provided in the command line (#364)
+* Handle vdc,org options for delete cluster (#357)
+* VCDA-999: Unable to get the correct cluster config as sys admin (#361)
+* Add DNS suffix bug info to known issues doc (#360)
+* Extend the query filter that extracts vApp list with vdc and org values from the query parameters (#354)
+* [VCDA-1007] Validate PKS connection at CSE startup (#337)
+* Filtering cluster list as org-admin also includes org-admin as owner check (#351)
+* Documentation updates to CSE 2.0 GA (#348)
+
+2.0.0
+-----
+
+* Update Changelog
 * Documentation updates to CSE2.0 (#346)
 * [VCDA-1016] Update CLI help strings (#336)
 * CSE 2.0 documentation updates (#345)
