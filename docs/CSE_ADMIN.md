@@ -24,22 +24,6 @@ perform admistrative operations.  Please refer to the [vcd-cli
 documentation](https://vmware.github.io/vcd-cli/) if necessary to get familiar with command line
 operations against vCD.
 
-<a name="compatibility"></a>
-
-## CSE Server Versions
-
-CSE servers run the Python container-service-extension (CSE) package
-and its dependencies.  The following table shows compatibility
-between CSE and vCD versions.  For new installations we recommend
-using the highest available CSE version.
-
-| CSE version | vCD version         |
-|-------------|---------------------|
-| 1.1.x       | 8.20, 9.0, 9.1      |
-| 1.2.x       | 9.0, 9.1, 9.5       |
-
----
-
 <a name="prerequisites"></a>
 
 ## vCD Prerequisites
@@ -47,10 +31,13 @@ using the highest available CSE version.
 There are several important requirements that must be fulfilled to install
 CSE successfully on vCD.
 
-* Provide an org.
-* Provide a VDC within the org that has an external org network in which vApps may be instantiated and sufficient storage to create vApps and publish them as templates. The external network connection is required to enable template VMs to download packages during configuration.
-* Provide a user in the org with privileges necessary to perform operations like configuring AMQP, creating public catalog entries, and managing vApps.  
-* A good network connection from the host running installation to vCD as well as the Internet.  This avoids intermittent failures in OVA upload/download operations.
+* An org.
+* A VDC within the org, which
+  * has an org VDC network connected to an external network (with internet connectivity). The external network connection is required to enable cluster VMs to download packages during configuration.
+  * can host vApps
+  * has sufficient storage to create vApps and publish them as templates. 
+* Users in the org with privileges necessary to perform operations like configuring AMQP, creating public catalog entries, and managing vApps.  
+* A good network connectivity between the machine where CSE is installed and the vCD server as well as the Internet.  This avoids intermittent failures in OVA upload/download operations.
 
 You can use existing resources from your vCD installation or create
 new ones. The following sub-sections illustrate how to set up a
@@ -242,65 +229,60 @@ vcs:
 service:
   enforce_authorization: false
   listeners: 5
+  log_wire: false
 
 broker:
   catalog: cse
-  cse_msg_dir: /tmp/cse
-  default_template: photon-v2
+  default_template_name: photon_template
+  default_template_revision: 0
   ip_allocation_mode: pool
   network: mynetwork
   org: myorg
+  remote_template_cookbook_url: https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template.yaml
   storage_profile: '*'
-  templates:
-  - admin_password: guest_os_admin_password
-    catalog_item: photon-custom-hw11-2.0-304b817-k8s
-    cleanup: true
-    cpu: 2
-    description: 'PhotonOS v2
-
-      Docker 17.06.0-9
-
-      Kubernetes 1.12.7
-
-      weave 2.3.0'
-    mem: 2048
-    name: photon-v2
-    sha256_ova: cb51e4b6d899c3588f961e73282709a0d054bb421787e140a1d80c24d4fd89e1
-    source_ova: http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova
-    source_ova_name: photon-custom-hw11-2.0-304b817.ova
-    temp_vapp: photon2-temp
-  - admin_password: guest_os_admin_password
-    catalog_item: ubuntu-16.04-server-cloudimg-amd64-k8s
-    cleanup: true
-    cpu: 2
-    description: 'Ubuntu 16.04
-
-      Docker 18.06.3~ce
-
-      Kubernetes 1.13.5
-
-      weave 2.3.0'
-    mem: 2048
-    name: ubuntu-16.04
-    sha256_ova: 3c1bec8e2770af5b9b0462e20b7b24633666feedff43c099a6fb1330fcc869a9
-    source_ova: https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova
-    source_ova_name: ubuntu-16.04-server-cloudimg-amd64.ova
-    temp_vapp: ubuntu1604-temp
-  type: default
   vdc: myorgvdc
 
+# [Optional] Template rule section
+# Rules can be defined to override template definitions as defined by remote
+# template cookbook. This section will contain 0 or more such rules, each rule
+# should match exactly one template. Matching is driven by name and revision of
+# the template. If only name is specified without the revision or vice versa,
+# the rule will not be processed. And once a match is found, as an action the
+# following attributes can be overriden.
+# * compute_policy
+# * cpu
+# * memory
+# Note: This overide only works on clusters deployed off templates, the
+# templates are still created as per the cookbook recipe.
+
+#template_rules:
+#- name: Rule1
+#  target:
+#    name: photonv2
+#    revision: 1
+#  action:
+#    compute_policy: 'new policy'
+#    cpu: 4
+#    mem: 512
+#- name: Rule2
+#  target:
+#    name: ubuntu
+#    revision: 2
+#  action:
+#    cpu: 2
+#    mem: 1024
+
 # Filling out this key for regular CSE set up is optional and should be left
-# as is. Only for CSE set up enabled for Enterprise PKS container provider, this value
-# needs to point to a valid PKS config file name.
+# as is. Only for CSE setup enabled for Enterprise PKS container provider, this
+# value needs to point to a valid Enterprise PKS config file name.
 
 pks_config: null
-
 ```
 
-The config file has 5 sections: `amqp`, `vcd`, `vcs`, `service`,
-and `broker`.  The following sub-sections explain the principle
-configuration properties for each section as well as how they are
-used.
+The config file has 5 mandatory sections (`amqp`, `vcd`, `vcs`, `service`,
+and, `broker`) and 1 optional section (`template_rules`).  The following
+sub-sections explain the principle configuration properties for each section
+as well as how they are used.
 
 ### `amqp` Section
 
@@ -309,11 +291,11 @@ communication between vCD and the running CSE server.  The `amqp`
 section controls the AMQP communication parameters. The following
 properties will need to be set for all deployments.
 
-| Property          | Value |
-|:------------------|:------------------------------------------------------------------------------------------------|
-| host            | IP or hostname of the vCloud Director AMQP server (may be different from the vCD cell hosts) |
-| username        | Username of the vCD service account with minimum roles and rights |
-| password        | Password of the vCD service account |
+| Property | Value |
+|-|-|
+| host | IP or hostname of the vCloud Director AMQP server (may be different from the vCD cell hosts) |
+| username | Username of the vCD service account with minimum roles and rights |
+| password | Password of the vCD service account |
 
 Other properties may be left as is or edited to match site conventions.
 
@@ -329,20 +311,21 @@ Properties in this section supply credentials necessary for the following operat
 
 Each `vc` under the `vcs` section has the following properties:
 
-| Property          | Value                                                                                           |
-|:------------------|:------------------------------------------------------------------------------------------------|
-| name            | Name of the vCenter registered in vCD                                                                           |
-| username        | Username of the vCenter service account with minimum of guest-operation privileges             |
-| password        | Password of the vCenter service account                                                        |
+| Property | Value |
+|-|-|
+| name | Name of the vCenter registered in vCD |
+| username | Username of the vCenter service account with minimum of guest-operation privileges |
+| password | Password of the vCenter service account |
 
 ### `service` Section
 
 The service section contains properties that define CSE server behavior.
 
-| Property              | Value                                                                                                                                 |
-|-----------------------|---------------------------------------------------------------------------------------------------------------------------------------|
-| listeners             | Number of threads that CSE server should use                                                                                          |
+| Property | Value |
+|-|-|
+| listeners | Number of threads that CSE server should use |
 | enforce_authorization | If True, CSE server will use role-based access control, where users without the correct CSE right will not be able to deploy clusters (Added in CSE 1.2.6) |
+| log_wire | If True, will log all REST calls initiated by CSE to vCD. (Added in CSE 2.5.0) |
 
 ### `broker` Section
 
@@ -350,35 +333,29 @@ The `broker` section contains properties to define resources used by
 the CSE server including org and VDC as well as template definitions.
 The following table summariize key parameters.
 
-| Property           | Value                                                                                                                                                                                                                |
-|:--------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| catalog            | Publicly shared catalog within `org` where VM templates will be published |
-| cse_msg_dir        | Reserved for future use |
-| cleanup            | Set to false to keep VMs used for templates from being cleaned up (helpful for debugging as well as workaround for [Issue #170](https://github.com/vmware/container-service-extension/issues/170)) |
-| default_template   | Name of the default template to use if none is specified |
-| network            | Org Network within `vdc` that will be used during the install process to build the template. It should have outbound access to the public Internet. The `CSE` appliance doesn't need to be connected to this network |
-| ip_allocation_mode | IP allocation mode to be used during the install process to build the template. Possible values are `dhcp` or `pool`. During creation of clusters for tenants, `pool` IP allocation mode is always used              |
-| org                | vCD organization that contains the shared catalog where the master templates will be stored |
-| storage_profile    | Name of the storage profile to use when creating the temporary vApp used to build the template |
-| templates          | A list of templates available for clusters |
-| type               | Broker type, set to `default` |
-| vdc                | Virtual datacenter within `org` that will be used during the install process to build the template |
+| Property | Value |
+|-|-|
+| catalog | Publicly shared catalog within `org` where K8s templates will be published |
+| default_template_name | Name of the default template to use if none is specified during cluster and node operations |
+| default_template_revision | Revision of the default template to use if none is specified during cluster/node creation/resizing |
+| ip_allocation_mode | IP allocation mode to be used during the install process to build the template. Possible values are `dhcp` or `pool`. During creation of clusters for tenants, `pool` IP allocation mode is always used |
+| network | Org Network within `vdc` that will be used during the install process to build the template. It should have outbound access to the public Internet. The `CSE` appliance doesn't need to be connected to this network |
+| org | vCD organization that contains the shared catalog where the K8s templates will be stored |
+| remote_template_cookbook_url | URL of the template repository where all template definitions and associated script files are hosted |
+| storage_profile | Name of the storage profile to use when creating the temporary vApp used to build the template |
+| vdc | Virtual datacenter within `org` that will be used during the install process to build the template |
 
-Each `template` in the `templates` property has the following properties:
+### `template_rules` Section
+Rules can be created to change the following 3 attributes of templates defined
+by the remote template repository. 
+ * compute policy
+ * cpu
+ * memory
 
-| Property          | Value                                                                                                                                                                                                             |
-|:------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| name            | Unique name of the template |
-| source_ova      | URL of the source OVA to download |
-| sha256_ova      | sha256 of the source OVA |
-| source_ova_name | Name of the source OVA in the catalog |
-| catalog_item    | Name of the template in the catalog |
-| description     | Information about the template |
-| temp_vapp       | Name of the temporary vApp used to build the template. Once the template is created, this vApp can be deleted. It will be deleted by default during the installation based on the value of the `cleanup` property |
-| cleanup         | If `True`, `temp_vapp` will be deleted by the install process after the master template is created |
-| admin_password  | `root` password for the template and instantiated VMs. This password should not be shared with tenants |
-| cpu             | Number of virtual CPUs to be allocated for each VM |
-| mem             | Memory in MB to be allocated for each VM |
+This section will contain 0 or more such rules, each rule
+should match exactly one template. Matching is driven by name and revision of
+the template. If only name is specified without the revision or vice versa,
+the rule will not be processed.
 
 <a name="pksconfig"></a>
 ### `pks_config` property
@@ -387,65 +364,65 @@ Filling out this key for regular CSE set up is optional and should be left
 as is. Only for CSE set up enabled for [Enterprise PKS](/container-service-extension/ENT-PKS.html) 
 container provider, this value needs to point to absolute path of valid Enterprise PKS config file. Refer [Enterprise PKS enablement](/container-service-extension/ENT-PKS.html) for more details.
 
-Enabling Enterprise PKS as a K8 provider changes the default behavior of CSE as described below.
+Enabling Enterprise PKS as a K8s provider changes the default behavior of CSE as described below.
 Presence of valid value for `pks_config` property gives an indication to CSE that 
-Enterprise PKS is enabled (in addition to Native vCD) as a K8 provider in the system.
+Enterprise PKS is enabled (in addition to Native vCD) as a K8s provider in the system.
 
-- CSE begins to mandate any given `ovdc` to be enabled for either Native or Enterprise PKS as a backing K8 provider.
+- CSE begins to mandate any given `ovdc` to be enabled for either Native or Enterprise PKS as a backing K8s provider.
 Admins can do this using `vcd cse ovdc enable` command. This step is mandatory for ovdc(s) with 
-pre-existing native K8 clusters as well i.e., if CSE is upgraded from 1.2.x to 2.0 and `pks_config` 
-is set, then it becomes mandatory to enable those ovdc(s) with pre-existing native K8 clusters.
+pre-existing native K8s clusters as well i.e., if CSE is upgraded from 1.2.x to 2.0 and `pks_config` 
+is set, then it becomes mandatory to enable those ovdc(s) with pre-existing native K8s clusters.
 - In other words, If `pks_config`  value is present and if an ovdc is not enabled for either of the supported
-K8 providers, users will not be able to do any further K8 deployments in that ovdc.
+K8s providers, users will not be able to do any further K8s deployments in that ovdc.
 
 In the absence of value for `pks_config` key, there will not be any change in CSE's default behavior i.e.,
-any ovdc is open for native K8 cluster deployments.
+any ovdc is open for native K8s cluster deployments.
 
 #### Enterprise PKS Config file
 ```yaml
-# Config file for PKS enabled CSE Server to be filled by administrators.
+# Config file for Enterprise PKS enabled CSE Server to be filled by administrators.
 # This config file has the following four sections:
 #   1. pks_api_servers:
-#       a. Each entry in the list represents a PKS api server that is part 
-#          of the deployment.
+#       a. Each entry in the list represents a Enterprise PKS api server that
+#          is part of the deployment.
 #       b. The field 'name' in each entry should be unique. The value of 
-#          the field has no bearing on the real world PKS api server, it's 
+#          the field has no bearing on the real world Enterprise PKS api server, it's 
 #          used to tie in various segments of the config file together.
-#       c. The field 'vc' represents the name with which the PKS vCenter 
+#       c. The field 'vc' represents the name with which the Enterprise PKS vCenter 
 #          is registered in vCD.
 #       d. The field 'cpi' needs to be retrieved by executing "bosh cpi-config"
 #          on Enterprise PKS set up.
 #   2. pks_accounts:
-#       a. Each entry in the list represents a PKS account that can be used 
-#          talk to a certain PKS api server.
+#       a. Each entry in the list represents a Enterprise PKS account that can be used 
+#          talk to a certain Enterprise PKS api server.
 #       b. The field 'name' in each entry should be unique. The value of 
-#          the field has no bearing on the real world PKS accounts, it's 
+#          the field has no bearing on the real world Enterprise PKS accounts, it's 
 #          used to tie in various segments of the config file together.
-#       c. The field 'pks_api_server' is a reference to the PKS api server 
+#       c. The field 'pks_api_server' is a reference to the Enterprise PKS api server 
 #          which owns this account. It's value should be equal to value of 
-#          the field 'name' of the corresponding PKS api server.
+#          the field 'name' of the corresponding Enterprise PKS api server.
 #   3. pvdcs:
 #       a. Each entry in the list represents a Provider VDC in vCD that is 
-#          backed by a cluster of the PKS managed vCenter server.
+#          backed by a cluster of the Enterprise PKS managed vCenter server.
 #       b. The field 'name' in each entry should be the name of the 
 #          Provider VDC as it appears in vCD.
-#       c. The field 'pks_api_server' is a reference to the PKS api server 
+#       c. The field 'pks_api_server' is a reference to the Enterprise PKS api server 
 #          which owns this account. It's value should be equal to value of 
-#          the field 'name' of the corresponding PKS api server.
+#          the field 'name' of the corresponding Enterprise PKS api server.
 #   4. nsxt_servers:
 #       a. Each entry in the list represents a NSX-T server that has been 
-#          alongside a PKS server to manage its networking. CSE needs these 
+#          alongside a Enterprise PKS server to manage its networking. CSE needs these 
 #          details to enforce network isolation of clusters.
 #       b. The field 'name' in each entry should be unique. The value of 
 #          the field has no bearing on the real world NSX-T server, it's 
 #          used to tie in various segments of the config file together.
-#       c. The field 'pks_api_server' is a reference to the PKS api server 
+#       c. The field 'pks_api_server' is a reference to the Enterprise PKS api server 
 #          which owns this account. It's value should be equal to value of 
-#          the field 'name' of the corresponding PKS api server.
+#          the field 'name' of the corresponding Enterprise PKS api server.
 #       d. The field 'distributed_firewall_section_anchor_id' should be 
 #          populated with id of a Distributed Firewall Section e.g. it can 
 #          be the id of the section called 'Default Layer3 Section' which 
-#          PKS creates on installation.
+#          Enterprise PKS creates on installation.
 # For more information, please refer to CSE documentation page:
 # https://vmware.github.io/container-service-extension/INSTALLATION.html
 
@@ -527,58 +504,64 @@ nsxt_servers:
   - id2
   username: admin
   verify: true
-
 ```
 
 <a name="vmtemplates"></a>
 
-## VM Templates
+## K8s Templates
 
-`CSE` supports multiple VM templates to create Kubernetes clusters
-from. Templates may vary in guest OS or software versions, and must
-have a unique name. One template must be defined as the default
-template, and tenants have the option to specify the template to
-use during cluster/node creation.
+`CSE 2.5` supports deploying Kubernetes clusters from multiple K8s templates.
+Templates vary by guest OS, like Photon, Ubuntu, as well as, software versions,
+like Kubernetes, Docker, or Weave. Each template name is uniquely constructed
+based on the flavor of guest OS, K8s version, and the Weave software version.
+The definitions of different templates reside in an official location hosted at
+a remote repository URL. The CSE sample config file, out of the box, points to
+the official location of those templates definitions. The remote repository is
+officially managed by maintainers of the CSE.
 
-### Source .ova Files for VM Templates
+Service Providers can expect newer templates as updates to OS versions, K8s
+major or minor versions, or Weave major or minor versions are made available.
+They can also expect revised templates (through a change to the revision of
+existing templates) with updated K8s micro versions. 
 
-The following table shows URLs for OVA files used as VM templates.
+During CSE installation, CSE creates all the K8s templates for all template
+definitions available at the remote repository URL specified in the config
+file. Alternatively, Service Providers have the option to install CSE with 
+`--skip-template-creation` option, in which case CSE does not create any K8s
+templates. Service Providers can subsequently create selective K8s templates 
+sing the following command. 
+```sh
+cse template list
+cse template install [OPTIONS] TEMPLATE_NAME TEMPLATE_REVISION
+```
+Please note that a default K8s template and revision must be specified in the
+config file for CSE server to successfully start up. Tenants can always
+override the default templates via specifying their choice of revision of a
+template during cluster operations like `vcd cse cluster create`,
+`vcd cse cluster resize`, and `vcd cse node create`.
 
-| OS                   | OVA Name                               | URL                                                                                                       | SHA256                                                           |
-|----------------------|----------------------------------------|-----------------------------------------------------------------------------------------------------------|------------------------------------------------------------------|
-| Photon OS 1.0, Rev 2 | photon-custom-hw11-1.0-62c543d.ova     | `https://bintray.com/vmware/photon/download_file?file_path=photon-custom-hw11-1.0-62c543d.ova`            | 6d6024c5531f5554bb0d2f51f3005078ce6d4ee63c142f2453a416824c5344ca |
-| Photon OS 2.0 GA     | photon-custom-hw11-2.0-304b817.ova     | `http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova`                       | cb51e4b6d899c3588f961e73282709a0d054bb421787e140a1d80c24d4fd89e1 |
+### Source .ova Files for K8s Templates
+
+The following table lists URLs of the OVA files that are used as the base for
+the K8s templates.
+
+| OS | OVA Name | URL | SHA256 |
+|-|-|-|-|
+| Photon OS 2.0 GA     | photon-custom-hw11-2.0-304b817.ova | `http://dl.bintray.com/vmware/photon/2.0/GA/ova/photon-custom-hw11-2.0-304b817.ova`                       | cb51e4b6d899c3588f961e73282709a0d054bb421787e140a1d80c24d4fd89e1 |
 | Ubuntu 16.04.4 LTS   | ubuntu-16.04-server-cloudimg-amd64.ova | `https://cloud-images.ubuntu.com/releases/xenial/release-20180418/ubuntu-16.04-server-cloudimg-amd64.ova` | 3c1bec8e2770af5b9b0462e20b7b24633666feedff43c099a6fb1330fcc869a9 |
 
-### Updating VM Templates
+### Updating K8s Templates
 
-Templates may be updated from time to time to upgrade software or
-make configuration changes.  When this occurs, CSE Server should
-be gracefully stopped before making VM template changes to avoid errors
-that can occur when using `vcd cse cluster create ...` or `vcd cse
-node create ...`
-
-In general, updating a template doesn't have any effect on existing
-Kubernetes master and worker nodes. CSE and template compatibility
-can be found in release notes.
-
-Templates can also be generated on a vCD instance that CSE Server
-is not registered to. Templates can be generated in multiple vCD
-instances in parallel.
-
-To update a template rerun the `cse install` command as follows:
-
+K8s Template definitions will be updated with newer software packages or
+configuration changes from time to time at the remote repository by CSE
+maintainers. Service Providers can refresh their existing templates with
+revised versions or install new templates by using below command. Please note
+that a graceful shut down of CSE Server is required first.
 ```sh
-cse install -c config.yaml --template photon-v2 --update
+cse template list --display diff
+cse template install [OPTIONS] TEMPLATE_NAME TEMPLATE_REVISION
 ```
-
-Updating a template increases `versionNumber` of the corresponding
-catalog item by 1.  You can look at the version number(s) using a
-vcd-cli command like the following:
-
-```sh
-vcd catalog info cse photon-custom-hw11-2.0-304b817-k8s
-```
+The refreshed templates do not impact existing K8s clusters in the environment.
 
 ---
 
@@ -599,9 +582,9 @@ config file properties) or the tenant network(s) where the clusters
 will be created.
 
 You should install the CSE software on the CSE appliance as described
-in [Software Installation](/INSTALLATION.html).  Once this is done
-you can invoke server setup using the `cse install` command.  The
-example below shows a typical command.
+in [Software Installation](/container-service-extension/INSTALLATION.html).
+Once this is done you can invoke server setup using the `cse install` command.
+The example below shows a typical command.
 
 ```bash
 cse install -c config.yaml --ssh-key ~/.ssh/id_rsa.pub
@@ -884,7 +867,7 @@ cse install --config config.yaml
 * Monitor status of CSE Server and clusters
 * Operate CSE as a service
 * Enable a given organization vdc for either Native or Enterprise PKS deployments.
-This command is necessary only when more than one K8 provider exists in the system
+This command is necessary only when more than one K8s provider exists in the system
 
 The following show useful sample commands.
 
@@ -907,6 +890,6 @@ vcd org use ORGNAME
 # Let VDCNAME be active vdc for this session.
 vcd vdc use VDCNAME
 
-# Enable organization vdc for a particular K8 provider (Native/Enterprise PKS)
+# Enable organization vdc for a particular K8s provider (Native/Enterprise PKS)
 vcd cse ovdc enable VDCNAME --k8s-provider [native|ent-pks]
 ```

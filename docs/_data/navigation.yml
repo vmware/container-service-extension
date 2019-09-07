@@ -95,6 +95,13 @@
     sublink: faq
   - name: Compatibility matrix
     sublink: compatibility-matrix
+- name: "Essential PKS"
+  link: ESS-PKS.html
+  subtoc:
+  - name: Overview
+    sublink: overview
+  - name: Enablement
+    sublink: enablement
 - name: "Troubleshooting"
   link: TROUBLESHOOTING.html
 - name: "Known Issues"
