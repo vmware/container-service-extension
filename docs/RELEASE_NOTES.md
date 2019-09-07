@@ -48,7 +48,7 @@ CSE 2.5.0 beta.
 
 If you are upgrading to CSE 2.5.0.0b1 and you have pre-existing K8s clusters
 deployed from CSE 2.0.0 or below, you must run the following command to
-preserve manageability of those clusters in CSE 2.5.0.
+preserve manageability of those clusters in CSE 2.5.0.0b1.
 ```sh
 cse convert-cluster
 ```
