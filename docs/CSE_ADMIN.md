@@ -341,23 +341,21 @@ The following table summariize key parameters.
 | ip_allocation_mode | IP allocation mode to be used during the install process to build the template. Possible values are `dhcp` or `pool`. During creation of clusters for tenants, `pool` IP allocation mode is always used |
 | network | Org Network within `vdc` that will be used during the install process to build the template. It should have outbound access to the public Internet. The `CSE` appliance doesn't need to be connected to this network |
 | org | vCD organization that contains the shared catalog where the K8s templates will be stored |
-| remote_template_cookbook_url | URL of the template repo where all template definition and associated script files are hosted |
+| remote_template_cookbook_url | URL of the template repository where all template definitions and associated script files are hosted |
 | storage_profile | Name of the storage profile to use when creating the temporary vApp used to build the template |
 | vdc | Virtual datacenter within `org` that will be used during the install process to build the template |
 
 ### `template_rules` Section
-Rules can be defined to override template definitions as defined by remote
-template cookbook. This section will contain 0 or more such rules, each rule
-should match exactly one template. Matching is driven by name and revision of
-the template. If only name is specified without the revision or vice versa,
-the rule will not be processed. And once a match is found, as an action the
-following attributes can be overriden.
- * compute_policy
+Rules can be created to change the following 3 attributes of templates defined
+by the remote template repository. 
+ * compute policy
  * cpu
  * memory
 
-Note: This overide only works on clusters deployed off templates, the
-templates are still created as per the cookbook recipe.
+This section will contain 0 or more such rules, each rule
+should match exactly one template. Matching is driven by name and revision of
+the template. If only name is specified without the revision or vice versa,
+the rule will not be processed.
 
 <a name="pksconfig"></a>
 ### `pks_config` property
@@ -512,27 +510,35 @@ nsxt_servers:
 
 ## K8s Templates
 
-`CSE` supports multiple K8s templates to create Kubernetes clusters
-from. Templates may vary in guest OS or software (K8s, docker-ce, weave)
-versions. The templates are defined by a cookbook which is hosted remotely.
-Out of box the sample config file will point to the official VMware template
-cookbook. Each template name is unique and is contructed based on the OS
-flavor, K8s version and weave version. A version change in either OS, K8s
-major/minor version or weave major/minor verion will result in a new template.
-While a change in just K8s micro version or change in associated scripts will
-cause a revision bump to the template. The template definitions along with
-their revisions are managed by the owner of the remote template cookbook.
-During CSE installation if the option `skip-template-creation` is not specified
-then all templates defined in the remote cookbook will be created. Otherwise
-no templates will be created and service provider will need to manually pick
-and choose the template they want to create using 
+`CSE 2.5` supports deploying Kubernetes clusters from multiple K8s templates.
+Templates vary by guest OS, like Photon, Ubuntu, as well as, software versions,
+like Kubernetes, Docker, or Weave. Each template name is uniquely constructed
+based on the flavor of guest OS, K8s version, and the Weave software version.
+The definitions of different templates reside in an official location hosted at
+a remote repository URL. The CSE sample config file, out of the box, points to
+the official location of those templates definitions. The remote repository is
+officially managed by maintainers of the CSE.
+
+Service Providers can expect newer templates as updates to OS versions, K8s
+major or minor versions, or Weave major or minor versions are made available.
+They can also expect revised templates (through a change to the revision of
+existing templates) with updated K8s micro versions. 
+
+During CSE installation, CSE creates all the K8s templates for all template
+definitions available at the remote repository URL specified in the config
+file. Alternatively, Service Providers have the option to install CSE with 
+`--skip-template-creation` option, in which case CSE does not create any K8s
+templates. Service Providers can subsequently create selective K8s templates 
+sing the following command. 
 ```sh
 cse template list
 cse template install [OPTIONS] TEMPLATE_NAME TEMPLATE_REVISION
 ```
-One of the templates must be declared as the default template in the config
-file, without it the CSE server won't start up. Tenants also have the option to
-specify the template to use during cluster/node creation.
+Please note that a default K8s template and revision must be specified in the
+config file for CSE server to successfully start up. Tenants can always
+override the default templates via specifying their choice of revision of a
+template during cluster operations like `vcd cse cluster create`,
+`vcd cse cluster resize`, and `vcd cse node create`.
 
 ### Source .ova Files for K8s Templates
 
@@ -546,18 +552,16 @@ the K8s templates.
 
 ### Updating K8s Templates
 
-K8s templates may be updated from time to time to upgrade software or
-make configuration changes.  When this occurs, the remote template cookbook
-will be updated by VMWare. If a service provider wishes to get new templates
-or old template at a newer revision, CSE Server should be gracefully stopped,
-and the following commands be used to list and create templates.
+K8s Template definitions will be updated with newer software packages or
+configuration changes from time to time at the remote repository by CSE
+maintainers. Service Providers can refresh their existing templates with
+revised versions or install new templates by using below command. Please note
+that a graceful shut down of CSE Server is required first.
 ```sh
 cse template list --display diff
 cse template install [OPTIONS] TEMPLATE_NAME TEMPLATE_REVISION
 ```
-Updating a template doesn't have any effect on existing Kubernetes master and
-worker nodes in K8s clusters. CSE and template compatibility can be found in
-release notes.
+The refreshed templates do not impact existing K8s clusters in the environment.
 
 ---
 
