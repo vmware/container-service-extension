@@ -230,7 +230,8 @@ def add_nodes(client, num_nodes, node_type, org, vdc, vapp, catalog_name,
                 errors = _get_script_execution_errors(exec_results)
                 if errors:
                     raise ScriptExecutionError(
-                        f"Script execution failed on node {vm_name}:{errors}")
+                        f"Script execution failed on node {vm_name}:"
+                        f"{script}:{errors}")
     except Exception as e:
         # TODO: get details of the exception to determine cause of failure,
         # e.g. not enough resources available.
@@ -266,6 +267,11 @@ def get_master_ip(vapp):
     node_names = get_node_names(vapp, NodeType.MASTER)
     result = execute_script_in_nodes(vapp=vapp, node_names=node_names,
                                      script=script, check_tools=False)
+    errors = _get_script_execution_errors(result)
+    if errors:
+        raise ScriptExecutionError(
+            f"Script execution failed on master node {node_names}:"
+            f"{script}:{errors}")
     master_ip = result[0][1].content.decode().split()[0]
     LOGGER.debug(f"Retrieved master IP for vapp: "
                  f"{vapp.get_resource().get('name')}, ip: {master_ip}")
@@ -280,6 +286,11 @@ def init_cluster(vapp, template_name, template_revision):
     node_names = get_node_names(vapp, NodeType.MASTER)
     result = execute_script_in_nodes(vapp=vapp, node_names=node_names,
                                      script=script)
+    errors = _get_script_execution_errors(result)
+    if errors:
+        raise ScriptExecutionError(
+            f"Script execution failed to initiate cluster on node "
+            f"{node_names}:{script}:{errors}")
     if result[0][0] != 0:
         raise ClusterInitializationError(
             f"Couldn\'t initialize cluster:\n{result[0][2].content.decode()}")
@@ -292,6 +303,11 @@ def join_cluster(vapp, template_name, template_revision, target_nodes=None):
     node_names = get_node_names(vapp, NodeType.MASTER)
     master_result = execute_script_in_nodes(vapp=vapp, node_names=node_names,
                                             script=script)
+    errors = _get_script_execution_errors(master_result)
+    if errors:
+        raise ScriptExecutionError(
+            f"Script execution failed on master node {node_names}:"
+            f"{script}:{errors}")
     init_info = master_result[0][1].content.decode().split()
 
     node_names = get_node_names(vapp, NodeType.WORKER)
@@ -304,7 +320,11 @@ def join_cluster(vapp, template_name, template_revision, target_nodes=None):
     script = tmp_script.format(token=init_info[0], ip=init_info[1])
     worker_results = execute_script_in_nodes(vapp=vapp, node_names=node_names,
                                              script=script)
-
+    errors = _get_script_execution_errors(worker_results)
+    if errors:
+        raise ScriptExecutionError(
+            f"Script execution failed on worker node {node_names}:"
+            f"{script}:{errors}")
     for result in worker_results:
         if result[0] != 0:
             raise ClusterJoiningError(f"Couldn't join cluster:"
@@ -403,6 +423,11 @@ def delete_nodes_from_cluster(vapp, node_names):
     master_node_names = get_node_names(vapp, NodeType.MASTER)
     result = execute_script_in_nodes(vapp=vapp, node_names=master_node_names,
                                      script=script, check_tools=False)
+    errors = _get_script_execution_errors(result)
+    if errors:
+        raise ScriptExecutionError(
+            f"Script execution failed on delete node "
+            f"{master_node_names}:{script}:{errors}")
     if result[0][0] != 0:
         raise DeleteNodeError(f"Couldn't delete node(s):"
                               f"\n{result[0][2].content.decode()}")
