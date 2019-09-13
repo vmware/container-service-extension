@@ -369,31 +369,31 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
                         raise
                     time.sleep(env.WAIT_INTERVAL)
 
+            script_filepath = get_local_script_filepath(
+                template_config['name'],
+                template_config['revision'],
+                ScriptFile.CUST)
+            script = read_data_file(script_filepath)
             # run different commands depending on OS
             if 'photon' in temp_vapp_name:
-                script_filepath = get_local_script_filepath(
-                    template_config['name'], template_config['revision'],
-                    ScriptFile.CUST)
-                script = read_data_file(script_filepath)
                 pattern = r'(kubernetes\S*)'
                 packages = re.findall(pattern, script)
                 stdin, stdout, stderr = ssh_client.exec_command("rpm -qa")
                 installed = [line.strip('.x86_64\n') for line in stdout]
                 for package in packages:
                     assert package in installed, \
-                        f"{package} not found in Photon VM"
+                        f"{package} from script '{script_filepath}' not " \
+                        f"found in Photon VM's installed packages: {installed}"
             elif 'ubuntu' in temp_vapp_name:
-                script_filepath = get_local_script_filepath(
-                    template_config['name'], template_config['revision'],
-                    ScriptFile.CUST)
-                script = read_data_file(script_filepath)
                 pattern = r'((kubernetes|docker\S*|kubelet|kubeadm|kubectl)\S*=\S*)'  # noqa: E501
                 packages = [tup[0] for tup in re.findall(pattern, script)]
                 cmd = "dpkg -l | awk '{print $2\"=\"$3}'"
                 stdin, stdout, stderr = ssh_client.exec_command(cmd)
                 installed = [line.strip() for line in stdout]
                 for package in packages:
-                    assert package in installed, f"{package} not found in Ubuntu VM's installed packages: {installed}" # noqa: E501
+                    assert package in installed, \
+                        f"{package} from script '{script_filepath}' not " \
+                        f"found in Ubuntu VM's installed packages: {installed}"
         finally:
             if ssh_client:
                 ssh_client.close()
