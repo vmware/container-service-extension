@@ -2,6 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from pyvcloud.vcd.client import ApiVersion
 from pyvcloud.vcd.client import find_link
 from pyvcloud.vcd.exceptions import MissingLinkException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
@@ -13,6 +14,7 @@ from container_service_extension.cloudapi.constants import \
 from container_service_extension.cloudapi.constants import EntityType
 from container_service_extension.cloudapi.constants import RelationType
 from container_service_extension.pyvcloud_utils import get_org
+from container_service_extension.pyvcloud_utils import get_sys_admin_client
 from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.shared_constants import RequestMethod
 
@@ -42,7 +44,11 @@ class ComputePolicyManager:
         if not client.is_sysadmin():
             raise ValueError("Only Sys admin clients should be used to "
                              "initialize ComputePolicyManager.")
-
+        if float(client.get_api_version()) >= \
+                float(ApiVersion.VERSION_32.value):
+            self._vcd_client_32 = \
+                get_sys_admin_client(
+                    api_version_no=ApiVersion.VERSION_32.value)
         self._vcd_client = client
         # TODO: pyvcloud should expose methods to grab the session and token
         # from a client object.
@@ -273,7 +279,11 @@ class ComputePolicyManager:
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
-        org = get_org(self._vcd_client, org_name=org_name)
+        if float(self._vcd_client.get_api_version()) >= \
+                float(ApiVersion.VERSION_32.value):
+            org = get_org(self._vcd_client_32, org_name=org_name)
+        else:
+            org = get_org(self._vcd_client, org_name=org_name)
         return org.remove_compute_policy_from_vapp_template_vms(
             catalog_name,
             catalog_item_name,
@@ -295,7 +305,11 @@ class ComputePolicyManager:
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
-        org = get_org(self._vcd_client, org_name=org_name)
+        if float(self._vcd_client.get_api_version()) >= \
+                float(ApiVersion.VERSION_32.value):
+            org = get_org(self._vcd_client_32, org_name=org_name)
+        else:
+            org = get_org(self._vcd_client, org_name=org_name)
         return org.remove_all_compute_policies_from_vapp_template_vms(
             catalog_name, catalog_item_name)
 

@@ -53,7 +53,7 @@ def connect_vcd_user_via_token(tenant_auth_token):
     return (client_tenant, session)
 
 
-def get_sys_admin_client():
+def get_sys_admin_client(api_version_no=None):
     server_config = get_server_runtime_config()
     if not server_config['vcd']['verify']:
         LOGGER.warning("InsecureRequestWarning: Unverified HTTPS "
@@ -62,11 +62,15 @@ def get_sys_admin_client():
         requests.packages.urllib3.disable_warnings()
     log_filename = None
     log_wire = str_to_bool(server_config['service'].get('log_wire'))
+
+    if api_version_no is None:
+        api_version_no = server_config['vcd']['api_version']
+
     if log_wire:
         log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
     client = Client(
         uri=server_config['vcd']['host'],
-        api_version=server_config['vcd']['api_version'],
+        api_version=api_version_no,
         verify_ssl_certs=server_config['vcd']['verify'],
         log_file=log_filename,
         log_requests=log_wire,
