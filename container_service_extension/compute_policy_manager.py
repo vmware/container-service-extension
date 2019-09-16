@@ -2,6 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from pyvcloud.vcd.client import ApiVersion
 from pyvcloud.vcd.client import find_link
 from pyvcloud.vcd.exceptions import MissingLinkException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
@@ -13,6 +14,7 @@ from container_service_extension.cloudapi.constants import \
 from container_service_extension.cloudapi.constants import EntityType
 from container_service_extension.cloudapi.constants import RelationType
 from container_service_extension.pyvcloud_utils import get_org
+from container_service_extension.pyvcloud_utils import get_sys_admin_client
 from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.shared_constants import RequestMethod
 
@@ -42,8 +44,15 @@ class ComputePolicyManager:
         if not client.is_sysadmin():
             raise ValueError("Only Sys admin clients should be used to "
                              "initialize ComputePolicyManager.")
-
-        self._vcd_client = client
+        if float(client.get_api_version()) >= \
+                float(ApiVersion.VERSION_32.value):
+            # We need a API 32.0 client for add/remove compute policy calls
+            # (Currently this is bug in vCD)
+            # TODO: remove the this hack once vCD bug is fixed
+            self._vcd_client = get_sys_admin_client(
+                api_version=ApiVersion.VERSION_32.value)
+        else:
+            self._vcd_client = client
         # TODO: pyvcloud should expose methods to grab the session and token
         # from a client object.
         auth_token = \
