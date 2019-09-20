@@ -12,6 +12,16 @@ from container_service_extension.server_constants import \
     LocalTemplateKey
 
 
+def get_template_k8s_version(template_name):
+    if template_name:
+        properties = template_name.split("_")
+        if len(properties) == 3:
+            k8s_info = properties[1].split("-")
+            if len(k8s_info) == 2:
+                if k8s_info[0] in ("k8", "esspks"):
+                    return k8s_info[1]
+    return "Unknown"
+
 def _dict_to_k8s_local_template_definition(dikt):
     valid_keys = [e.value for e in LocalTemplateKey]
     missing_keys = []

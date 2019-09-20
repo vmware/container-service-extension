@@ -165,6 +165,7 @@ class VcdBroker(AbstractBroker):
                 'IP master': c['leader_endpoint'],
                 'template_name': c.get('template_name'),
                 'template_revision': c.get('template_revision'),
+                'k8s_version': c.get('k8s_version'),
                 'VMs': c['number_of_vms'],
                 'vdc': c['vdc_name'],
                 'status': c['status'],

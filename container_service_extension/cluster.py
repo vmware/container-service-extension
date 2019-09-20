@@ -20,6 +20,8 @@ from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import DeleteNodeError
 from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import ScriptExecutionError
+from container_service_extension.local_template_manager import \
+    get_template_k8s_version
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.remote_template_manager import get_local_script_filepath # noqa: E501
@@ -114,6 +116,8 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
                     cluster['template_name'] = str(entry.TypedValue.Value)
                 elif entry.Key == ClusterMetadataKey.TEMPLATE_REVISION:
                     cluster['template_revision'] = str(entry.TypedValue.Value)
+            cluster['k8s_version'] = \
+                get_template_k8s_version(cluster.get('template_name'))
 
         clusters.append(cluster)
 

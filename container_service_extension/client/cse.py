@@ -179,7 +179,7 @@ def list_clusters(ctx, vdc, org_name):
         if not client.is_sysadmin() and org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
         result = cluster.get_clusters(vdc=vdc, org=org_name)
-        stdout(result, ctx, show_id=True)
+        stdout(result, ctx, show_id=True, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
 
