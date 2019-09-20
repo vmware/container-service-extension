@@ -81,7 +81,7 @@ class ComputePolicyManager:
         for policy in policies['values']:
             if policy['name'].startswith(COMPUTE_POLICY_NAME_PREFIX):
                 policy['display_name'] = \
-                    self._get_original_policy_name(policy['name'])
+                    self._get_policy_display_name(policy['name'])
             else:
                 policy['display_name'] = policy['name']
             cse_policies.append(policy)
@@ -118,7 +118,7 @@ class ComputePolicyManager:
             RequestMethod.POST,
             resource_url_relative_path=CloudApiResource.VDC_COMPUTE_POLICIES,
             payload=policy_info)
-        created_policy['display_name'] = self._get_original_policy_name(
+        created_policy['display_name'] = self._get_policy_display_name(
             created_policy['name'])
         created_policy['href'] = self._get_policy_href(created_policy['id'])
         return created_policy
@@ -160,7 +160,7 @@ class ComputePolicyManager:
                 resource_url_relative_path=resource_url_relative_path,
                 payload=payload)
             updated_policy['display_name'] = \
-                self._get_original_policy_name(updated_policy['name'])
+                self._get_policy_display_name(updated_policy['name'])
             updated_policy['href'] = policy_info['href']
             return updated_policy
 
@@ -197,7 +197,7 @@ class ComputePolicyManager:
         cp_list = vdc.list_compute_policies()
         for cp in cp_list:
             result.append({
-                'name': self._get_original_policy_name(cp.get('name')),
+                'name': self._get_policy_display_name(cp.get('name')),
                 'href': cp.get('href'),
                 'id': cp.get('id')
             })
@@ -324,7 +324,7 @@ class ComputePolicyManager:
         """
         return f"{COMPUTE_POLICY_NAME_PREFIX}{policy_name}"
 
-    def _get_original_policy_name(self, policy_name):
+    def _get_policy_display_name(self, policy_name):
         """Remove cse specific prefix from the given policy name.
 
         :param str policy_name: name of the policy
