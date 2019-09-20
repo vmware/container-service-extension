@@ -52,6 +52,8 @@ class CloudApiClient(object):
 
         :raises HTTPError: if the underlying REST call fails.
         """
+        # TODO this only sends a request to the first page found.
+        # TODO this should instead be able to deal with pagination
         url = f"{self._versioned_url}{resource_url_relative_path}"
 
         response = requests.request(
