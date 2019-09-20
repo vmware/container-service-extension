@@ -77,6 +77,7 @@ class RequestKey(str, Enum):
     LIST_PKS_PLANS = 'list_pks_plans'
     COMPUTE_POLICY_ACTION = 'action'
     COMPUTE_POLICY_NAME = 'compute_policy_name'
+    REMOVE_COMPUTE_POLICY_FROM_VMS = 'remove_compute_policy_from_vms'
 
     # keys related to system requests
     SERVER_ACTION = 'server_action'

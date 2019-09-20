@@ -3,8 +3,10 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from pyvcloud.vcd.client import find_link
+from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingLinkException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
+from pyvcloud.vcd.vm import VM
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CloudApiResource
@@ -12,8 +14,7 @@ from container_service_extension.cloudapi.constants import \
     COMPUTE_POLICY_NAME_PREFIX
 from container_service_extension.cloudapi.constants import EntityType
 from container_service_extension.cloudapi.constants import RelationType
-from container_service_extension.pyvcloud_utils import get_org
-from container_service_extension.pyvcloud_utils import get_vdc
+import container_service_extension.pyvcloud_utils as pyvcd_utils
 from container_service_extension.shared_constants import RequestMethod
 
 
@@ -161,76 +162,86 @@ class ComputePolicyManager:
             updated_policy['href'] = policy_info['href']
             return updated_policy
 
-    def add_compute_policy_to_vdc(self, policy_href, vdc_id=None,
-                                  org_name=None, vdc_name=None):
+    def add_compute_policy_to_vdc(self, vdc_id, compute_policy_href):
         """Add compute policy to the given vdc.
 
-        Atleast one of vdc_id or (org_name, vdc_name) should be provided, so
-        that the target vdc can be located.
-
-        :param policy_href: policy href that is created using cloudapi
         :param str vdc_id: id of the vdc to assign the policy
-        :param str org_name: name of the organization to look for the vdc
-        :param str vdc_name: name of the vdc to assign the policy
+        :param compute_policy_href: policy href that is created using cloudapi
 
         :return: an object containing VdcComputePolicyReferences XML element
         that refers to individual VdcComputePolicies.
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
-        vdc = get_vdc(self._vcd_client, org_name=org_name, vdc_name=vdc_name,
-                      vdc_id=vdc_id, is_admin_operation=True)
-        return vdc.add_compute_policy(policy_href)
+        vdc = pyvcd_utils.get_vdc(self._vcd_client,
+                                  vdc_id=vdc_id,
+                                  is_admin_operation=True)
+        return vdc.add_compute_policy(compute_policy_href)
 
-    def list_compute_policies_on_vdc(self, vdc_id=None, org_name=None,
-                                     vdc_name=None):
+    def list_compute_policies_on_vdc(self, vdc_id):
         """List compute policy currently assigned to a given vdc.
-
-        Atleast one of vdc_id or (org_name, vdc_name) should be provided, so
-        that the target vdc can be located.
 
         :param str vdc_id: id of the vdc for which policies need to be
             retrieved.
-        :param str org_name: name of the organization to look for the vdc.
-        :param str vdc_name: name of the vdc for which policies need to be
-            retrieved.
 
-        :return: A list of dictionaries with the 'name' and 'href' key
+        :return: A list of dictionaries with the keys 'name', 'href', and 'id'
         :rtype: List
         """
-        vdc = get_vdc(self._vcd_client, org_name=org_name, vdc_name=vdc_name,
-                      vdc_id=vdc_id, is_admin_operation=True)
+        vdc = pyvcd_utils.get_vdc(self._vcd_client,
+                                  vdc_id=vdc_id,
+                                  is_admin_operation=True)
 
         result = []
         cp_list = vdc.list_compute_policies()
         for cp in cp_list:
             result.append({
                 'name': self._get_original_policy_name(cp.get('name')),
-                'href': cp.get('href')
+                'href': cp.get('href'),
+                'id': cp.get('id')
             })
 
         return result
 
-    def remove_compute_policy_from_vdc(self, policy_href, vdc_id=None,
-                                       org_name=None, vdc_name=None):
+    def remove_compute_policy_from_vdc(self, vdc_id, compute_policy_href,
+                                       remove_compute_policy_from_vms=False):
         """Delete the compute policy from the specified vdc.
 
-        Atleast one of vdc_id or (org_name, vdc_name) should be provided,
-        so that the target vdc can be located.
-
-        :param policy_href: policy href that is created using cloudapi
         :param str vdc_id: id of the vdc to assign the policy
-        :param str org_name: name of the organization to look for the vdc
-        :param str vdc_name: name of the vdc to assign the policy
+        :param compute_policy_href: policy href that is created using cloudapi
+        :param bool remove_compute_policy_from_vms: If True, will set affected
+            VMs' compute policy to 'System Default'
 
         :return: an object containing VdcComputePolicyReferences XML element
         that refers to individual VdcComputePolicies.
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
-        vdc = get_vdc(self._vcd_client, org_name=org_name, vdc_name=vdc_name,
-                      vdc_id=vdc_id, is_admin_operation=True)
-        return vdc.remove_compute_policy(policy_href)
+        if remove_compute_policy_from_vms:
+            cp_list = self.list_compute_policies_on_vdc(vdc_id)
+            system_default_href = None
+            system_default_id = None
+            for cp_dict in cp_list:
+                if cp_dict['name'] == 'System Default':
+                    system_default_href = cp_dict['href']
+                    system_default_id = cp_dict['id']
+            if system_default_href is None:
+                raise EntityNotFoundException("Error: 'System Default' "
+                                              "policy not found.")
+
+            vapps = pyvcd_utils.get_all_vapps_in_ovdc(self._vcd_client, vdc_id)
+            for vapp in vapps:
+                vm_resources = vapp.get_all_vms()
+                for vm_resource in vm_resources:
+                    if vm_resource.VdcComputePolicy.get('href') == compute_policy_href: # noqa: E501
+                        vm = VM(self._vcd_client, resource=vm_resource)
+                        task = vm.update_compute_policy(system_default_href,
+                                                        system_default_id)
+                        self._vcd_client.get_task_monitor().wait_for_status(task) # noqa: E501
+
+        vdc = pyvcd_utils.get_vdc(self._vcd_client,
+                                  vdc_id=vdc_id,
+                                  is_admin_operation=True)
+        return vdc.remove_compute_policy(compute_policy_href)
 
     def assign_compute_policy_to_vapp_template_vms(self,
                                                    compute_policy_href,
@@ -249,7 +260,7 @@ class ComputePolicyManager:
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
-        org = get_org(self._vcd_client, org_name=org_name)
+        org = pyvcd_utils.get_org(self._vcd_client, org_name=org_name)
         return org.assign_compute_policy_to_vapp_template_vms(
             catalog_name=catalog_name,
             catalog_item_name=catalog_item_name,
@@ -273,7 +284,7 @@ class ComputePolicyManager:
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
-        org = get_org(self._vcd_client, org_name=org_name)
+        org = pyvcd_utils.get_org(self._vcd_client, org_name=org_name)
         return org.remove_compute_policy_from_vapp_template_vms(
             catalog_name,
             catalog_item_name,
@@ -295,7 +306,7 @@ class ComputePolicyManager:
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
-        org = get_org(self._vcd_client, org_name=org_name)
+        org = pyvcd_utils.get_org(self._vcd_client, org_name=org_name)
         return org.remove_all_compute_policies_from_vapp_template_vms(
             catalog_name, catalog_item_name)
 
