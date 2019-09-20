@@ -17,6 +17,8 @@ from container_service_extension.cloudapi.constants import RelationType
 import container_service_extension.pyvcloud_utils as pyvcd_utils
 from container_service_extension.shared_constants import RequestMethod
 
+_SYSTEM_DEFAULT_COMPUTE_POLICY = 'System Default'
+
 
 class ComputePolicyManager:
     """Manages creating, deleting, updating cloudapi compute policies.
@@ -221,18 +223,20 @@ class ComputePolicyManager:
             system_default_href = None
             system_default_id = None
             for cp_dict in cp_list:
-                if cp_dict['name'] == 'System Default':
+                if cp_dict['name'] == _SYSTEM_DEFAULT_COMPUTE_POLICY:
                     system_default_href = cp_dict['href']
                     system_default_id = cp_dict['id']
             if system_default_href is None:
-                raise EntityNotFoundException("Error: 'System Default' "
-                                              "policy not found.")
+                raise EntityNotFoundException(
+                    f"Error: {_SYSTEM_DEFAULT_COMPUTE_POLICY} "
+                    f"compute policy not found.")
 
+            compute_policy_id = compute_policy_href.split('/')[-1]
             vapps = pyvcd_utils.get_all_vapps_in_ovdc(self._vcd_client, vdc_id)
             for vapp in vapps:
                 vm_resources = vapp.get_all_vms()
                 for vm_resource in vm_resources:
-                    if vm_resource.VdcComputePolicy.get('href') == compute_policy_href: # noqa: E501
+                    if vm_resource.VdcComputePolicy.get('id') == compute_policy_id: # noqa: E501
                         vm = VM(self._vcd_client, resource=vm_resource)
                         task = vm.update_compute_policy(system_default_href,
                                                         system_default_id)
