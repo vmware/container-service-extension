@@ -1164,7 +1164,8 @@ def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
         result = ovdc.update_ovdc_compute_policies(ovdc_name,
                                                    org_name,
                                                    compute_policy_name,
-                                                   ComputePolicyAction.ADD)
+                                                   ComputePolicyAction.ADD,
+                                                   False)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -1175,7 +1176,16 @@ def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
 @click.argument('org_name', metavar='ORG_NAME')
 @click.argument('ovdc_name', metavar='OVDC_NAME')
 @click.argument('compute_policy_name', metavar='COMPUTE_POLICY_NAME')
-def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name):
+@click.option(
+    '-f',
+    '--force',
+    'remove_compute_policy_from_vms',
+    is_flag=True,
+    help="Remove the specified compute policy from deployed VMs as well. "
+         "Affected VMs will have 'System Default' compute policy. "
+         "Does not remove the compute policy from vApp templates in catalog.")
+def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name,
+                          remove_compute_policy_from_vms):
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -1186,7 +1196,8 @@ def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name):
         result = ovdc.update_ovdc_compute_policies(ovdc_name,
                                                    org_name,
                                                    compute_policy_name,
-                                                   ComputePolicyAction.REMOVE)
+                                                   ComputePolicyAction.REMOVE,
+                                                   remove_compute_policy_from_vms) # noqa: E501
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
