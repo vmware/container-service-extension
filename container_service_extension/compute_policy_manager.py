@@ -6,8 +6,8 @@ from pyvcloud.vcd.client import find_link
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingLinkException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
-from pyvcloud.vcd.vm import VM
 from pyvcloud.vcd.utils import retrieve_compute_policy_id_from_href
+from pyvcloud.vcd.vm import VM
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CloudApiResource
@@ -96,6 +96,7 @@ class ComputePolicyManager:
         :return: policy details if found, else None
         :rtype: dict
         """
+        # TODO there can be multiple policies with the same name
         for policy_dict in self.list_policies():
             if policy_dict.get('display_name') == policy_name:
                 policy_dict['href'] = self._get_policy_href(policy_dict['id'])
