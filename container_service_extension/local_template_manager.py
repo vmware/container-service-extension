@@ -22,6 +22,7 @@ def get_template_k8s_version(template_name):
                     return k8s_info[1]
     return "Unknown"
 
+
 def _dict_to_k8s_local_template_definition(dikt):
     valid_keys = [e.value for e in LocalTemplateKey]
     missing_keys = []
