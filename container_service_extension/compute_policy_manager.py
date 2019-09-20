@@ -7,11 +7,11 @@ from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingLinkException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 from pyvcloud.vcd.vm import VM
+from pyvcloud.vcd.utils import retrieve_compute_policy_id_from_href
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CloudApiResource
-from container_service_extension.cloudapi.constants import \
-    COMPUTE_POLICY_NAME_PREFIX
+from container_service_extension.cloudapi.constants import COMPUTE_POLICY_NAME_PREFIX # noqa: E501
 from container_service_extension.cloudapi.constants import EntityType
 from container_service_extension.cloudapi.constants import RelationType
 import container_service_extension.pyvcloud_utils as pyvcd_utils
@@ -231,7 +231,7 @@ class ComputePolicyManager:
                     f"Error: {_SYSTEM_DEFAULT_COMPUTE_POLICY} "
                     f"compute policy not found.")
 
-            compute_policy_id = compute_policy_href.split('/')[-1]
+            compute_policy_id = retrieve_compute_policy_id_from_href(compute_policy_href) # noqa: E501
             vapps = pyvcd_utils.get_all_vapps_in_ovdc(self._vcd_client, vdc_id)
             for vapp in vapps:
                 vm_resources = vapp.get_all_vms()
