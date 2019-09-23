@@ -140,7 +140,7 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token):
             cp_href = _cp['href']
             cp_id = _cp['id']
     if cp_href is None:
-        raise ValueError(f"Compute policy '{cp_name}' ({cp_id}) not found.")
+        raise ValueError(f"Compute policy '{cp_name}' not found.")
 
     if action == ComputePolicyAction.ADD:
         cpm.add_compute_policy_to_vdc(ovdc_id, cp_href)
@@ -155,8 +155,7 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token):
                 remove_compute_policy_from_vms=remove_compute_policy_from_vms)
         except EntityNotFoundException:
             raise EntityNotFoundException(
-                f"Compute policy '{cp_name}' ({cp_id}) not "
-                f"found in ovdc ({ovdc_id})")
+                f"Compute policy '{cp_name}' not found in ovdc ({ovdc_id})")
         except Exception:
             # This ensures that BadRequestException message is printed
             # to console. (error when ovdc currently has VMs/vApp
