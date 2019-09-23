@@ -1,3 +1,7 @@
+# container-service-extension
+# Copyright (c) 2019 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
 from collections import namedtuple
 
 from pyvcloud.vcd.client import MetadataDomain

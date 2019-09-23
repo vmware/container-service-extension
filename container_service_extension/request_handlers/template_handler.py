@@ -1,3 +1,7 @@
+# container-service-extension
+# Copyright (c) 2019 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
 from container_service_extension.server_constants import LocalTemplateKey
 import container_service_extension.utils as utils
 

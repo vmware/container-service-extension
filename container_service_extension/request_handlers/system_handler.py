@@ -1,3 +1,8 @@
+# container-service-extension
+# Copyright (c) 2019 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
+
 def system_info(request_data, tenant_auth_token):
     """Request handler for system info operation.
 

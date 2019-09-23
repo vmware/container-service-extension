@@ -1,3 +1,7 @@
+# container-service-extension
+# Copyright (c) 2019 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
 import container_service_extension.broker_manager as broker_manager
 from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterNotFoundError

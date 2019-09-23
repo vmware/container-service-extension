@@ -1,3 +1,7 @@
+# container-service-extension
+# Copyright (c) 2019 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 
 from container_service_extension.compute_policy_manager import ComputePolicyManager # noqa: E501
