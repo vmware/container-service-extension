@@ -401,13 +401,16 @@ class Service(object, metaclass=Singleton):
         if msg_update_callback:
             msg_update_callback.general_no_color(msg)
 
-        client = None
-        try:
-            log_filename = None
-            log_wire = str_to_bool(self.config['service'].get('log_wire'))
-            if log_wire:
-                log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
+        log_filename = None
+        log_wire = str_to_bool(self.config['service'].get('log_wire'))
+        if log_wire:
+            log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
 
+        org_name = self.config['broker']['org']
+        catalog_name = self.config['broker']['catalog']
+        client = None
+        hack_client = None
+        try:
             client = Client(self.config['vcd']['host'],
                             api_version=self.config['vcd']['api_version'],
                             verify_ssl_certs=self.config['vcd']['verify'],
@@ -419,7 +422,6 @@ class Service(object, metaclass=Singleton):
                                                 SYSTEM_ORG_NAME,
                                                 self.config['vcd']['password'])
             client.set_credentials(credentials)
-
             # TODO this api version 32 client should be removed once
             # vcd can handle cp removal on version 33
             hack_client = Client(self.config['vcd']['host'],
@@ -430,11 +432,10 @@ class Service(object, metaclass=Singleton):
                                  log_headers=log_wire,
                                  log_bodies=log_wire)
             hack_client.set_credentials(credentials)
+            cpm = ComputePolicyManager(client)
+            hack_cpm = ComputePolicyManager(hack_client)
 
             try:
-                org_name = self.config['broker']['org']
-                catalog_name = self.config['broker']['catalog']
-                cpm = ComputePolicyManager(client)
                 for template in self.config['broker']['templates']:
                     policy_name = template[LocalTemplateKey.COMPUTE_POLICY]
                     catalog_item_name = template[LocalTemplateKey.CATALOG_ITEM_NAME] # noqa: E501
@@ -471,8 +472,10 @@ class Service(object, metaclass=Singleton):
 
                         # TODO this should use the above CPM once the vcd bug
                         # is fixed
-                        hack_cpm = ComputePolicyManager(hack_client)
-                        hack_cpm.remove_all_compute_policies_from_vapp_template_vms( # noqa: E501
+                        _cpm = cpm
+                        if float(client.get_api_version()) >= float(ApiVersion.VERSION_32.value): # noqa: E501
+                            _cpm = hack_cpm
+                        _cpm.remove_all_compute_policies_from_vapp_template_vms( # noqa: E501
                             org_name=org_name,
                             catalog_name=catalog_name,
                             catalog_item_name=catalog_item_name)
