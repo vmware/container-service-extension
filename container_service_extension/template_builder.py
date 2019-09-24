@@ -355,9 +355,11 @@ class TemplateBuilder():
             if self.msg_update_callback:
                 self.msg_update_callback.error(f"{msg}. Please check logs.")
             if self.logger:
-                self.logger.error(msg, exc_info=True)
+                self.logger.error(
+                    f"{msg}\nResult start===\n{result}\n===Result end",
+                    exc_info=True)
             # TODO: replace raw exception with specific exception
-            raise Exception(msg)
+            raise Exception(f"{msg}; Result: {result}")
 
         # Do not reboot VM after customization. Reboot will generate a new
         # machine-id, and once we capture the VM, all VMs deployed from the
