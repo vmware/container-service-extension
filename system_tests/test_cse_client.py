@@ -386,7 +386,7 @@ def test_0050_vcd_cse_system_toggle(config, test_runner_username,
     execute_commands(cmd_list)
 
     assert not env.vapp_exists(env.SYS_ADMIN_TEST_CLUSTER_NAME), \
-        "Cluster exist when it should not."
+        "Cluster exists when it should not."
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
