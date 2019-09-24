@@ -658,7 +658,7 @@ class VcdBroker(AbstractBroker):
             catalog_name = server_config['broker']['catalog']
             try:
                 add_nodes(client=self.tenant_client,
-                          num_nodes=num_workers,
+                          num_nodes=1,
                           node_type=NodeType.MASTER,
                           org=org,
                           vdc=vdc,
