@@ -7,7 +7,7 @@ import traceback
 
 import requests
 
-from container_service_extension.error_messages import MinorErrorCode
+from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.exceptions import CseRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.shared_constants import ERROR_DESCRIPTION_KEY

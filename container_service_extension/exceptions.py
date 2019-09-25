@@ -4,7 +4,7 @@
 
 import requests
 
-from container_service_extension.error_messages import MinorErrorCode
+from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.shared_constants import ERROR_MINOR_CODE_KEY
 
 
