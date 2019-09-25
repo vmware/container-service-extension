@@ -6,7 +6,7 @@ import json
 
 import requests
 
-from container_service_extension.error_messages import MinorErrorCode
+from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.exceptions import CseResponseError
 from container_service_extension.shared_constants import ERROR_DESCRIPTION_KEY
 from container_service_extension.shared_constants import ERROR_MINOR_CODE_KEY
