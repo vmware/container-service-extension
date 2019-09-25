@@ -2,7 +2,10 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from pyvcloud.vcd.exceptions import VcdException
+import requests
+
+from container_service_extension.error_messages import MinorErrorCode
+from container_service_extension.shared_constants import ERROR_MINOR_CODE_KEY
 
 
 class AmqpError(Exception):
@@ -13,7 +16,8 @@ class AmqpConnectionError(AmqpError):
     """Raised when amqp connection is not open."""
 
 
-class VcdResponseError(Exception):
+# To be used only by clients
+class CseResponseError(Exception):
     """Base class for all vcd response related Exceptions."""
 
     def __init__(self, status_code, error_message):
@@ -24,16 +28,20 @@ class VcdResponseError(Exception):
         return str(self.error_message)
 
 
-class CseServerError(VcdException):
-    """Base class for cse server side operation related exceptions."""
+class CseServerError(Exception):
+    """Base class for cse server side exceptions."""
 
 
 class CseRequestError(CseServerError):
-    """Base class for all REST request errors."""
+    """Base class for all incoming CSE REST request errors."""
 
-    def __init__(self, status_code, error_message=None):
-        self.status_code = int(status_code)
+    def __init__(self, status_code, error_message=None,
+                 minor_error_code=None):
+        self.status_code = status_code
         self._error_message = str(error_message)
+        if not minor_error_code:
+            minor_error_code = MinorErrorCode.DEFAULT_ERROR_CODE
+        setattr(self, ERROR_MINOR_CODE_KEY, minor_error_code)
 
     def __str__(self):
         return self._error_message
@@ -59,10 +67,6 @@ class NodeNotFoundError(CseServerError):
     """Raised when a node is not found in the environment."""
 
 
-class UnauthorizedActionError(CseServerError):
-    """Raised when an action is attempted by an unauthorized user."""
-
-
 class PksServerError(CseServerError):
     """Raised when error is received from PKS."""
 
@@ -76,6 +80,48 @@ class PksServerError(CseServerError):
         from container_service_extension.pksbroker import PksBroker
         return f"PKS error\n status: {self.status}\n body: " \
             f" {PksBroker.filter_traces_of_user_context(self.body)}\n"
+
+
+class BadRequestError(CseRequestError):
+    """Raised when an invalid action is attempted by an user."""
+
+    def __init__(self, error_message=None, minor_error_code=None):
+        CseRequestError.__init__(self, requests.codes.bad_request,
+                                 error_message, minor_error_code)
+
+
+class InternalServerRequestError(CseRequestError):
+    """Raised when an internal server error occurs while processing a REST request.""" # noqa: E501
+
+    def __init__(self, error_message=None, minor_error_code=None):
+        CseRequestError.__init__(self, requests.codes.internal_server_error,
+                                 error_message, minor_error_code)
+
+
+class MethodNotAllowedRequestError(CseRequestError):
+    """Raised when an invalid HTTP method is attempted on a CSE REST endpoint.""" # noqa: E501
+
+    def __init__(self, error_message="Method not allowed",
+                 minor_error_code=None):
+        CseRequestError.__init__(self, requests.codes.method_not_allowed,
+                                 error_message, minor_error_code)
+
+
+class NotFoundRequestError(CseRequestError):
+    """Raised when an invalid CSE REST endpoint is accessed."""
+
+    def __init__(self, error_message="Invalid url - not found",
+                 minor_error_code=None):
+        CseRequestError.__init__(self, requests.codes.not_found, error_message,
+                                 minor_error_code)
+
+
+class UnauthorizedRequestError(CseRequestError):
+    """Raised when an action is attempted by an unauthorized user."""
+
+    def __init__(self, error_message=None, minor_error_code=None):
+        CseRequestError.__init__(self, requests.codes.unauthorized,
+                                 error_message, minor_error_code)
 
 
 class ClusterJoiningError(ClusterOperationError):

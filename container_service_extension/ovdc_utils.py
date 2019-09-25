@@ -16,7 +16,7 @@ import requests
 
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import PksServerError
-from container_service_extension.exceptions import UnauthorizedActionError
+from container_service_extension.exceptions import UnauthorizedRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PksCache
 from container_service_extension.pksbroker import PksBroker
@@ -96,16 +96,16 @@ def get_ovdc_list(client, list_pks_plans=False, tenant_auth_token=None):
 
     :rtype: List[Dict]
 
-    :raises UnauthorizedActionError: if trying to @list_pks_plans
+    :raises UnauthorizedRequestError: if trying to @list_pks_plans
         as non-sysadmin.
     :raises ValueError: if @list_pks_plans is True and @tenant_auth_token
         is None.
     """
     if list_pks_plans and not client.is_sysadmin():
-        raise UnauthorizedActionError('Operation Denied. Plans available '
-                                      'only for System Administrator.')
+        raise UnauthorizedRequestError('Operation Denied. Plans available '
+                                       'only for System Administrator.')
     if list_pks_plans and tenant_auth_token is None:
-        raise ValueError("Missing required parameters for list pks plans.")
+        raise ValueError("Missing required parameters for listing pks plans.")
 
     if client.is_sysadmin():
         org_resource_list = client.get_org_list()

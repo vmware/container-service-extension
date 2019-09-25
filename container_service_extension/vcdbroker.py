@@ -28,7 +28,6 @@ from container_service_extension.cluster import get_template
 from container_service_extension.cluster import init_cluster
 from container_service_extension.cluster import is_valid_cluster_name
 from container_service_extension.cluster import join_cluster
-from container_service_extension.exception_handler import error_to_json
 from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterInitializationError
 from container_service_extension.exceptions import ClusterJoiningError
@@ -48,9 +47,6 @@ from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import NodeType
-from container_service_extension.shared_constants import ERROR_DESCRIPTION_KEY
-from container_service_extension.shared_constants import ERROR_MESSAGE_KEY
-from container_service_extension.shared_constants import ERROR_STACKTRACE_KEY
 from container_service_extension.shared_constants import RequestKey
 import container_service_extension.utils as utils
 import container_service_extension.vsphere_utils as vs_utils
@@ -762,22 +758,12 @@ class VcdBroker(AbstractBroker):
                                  exc_info=True)
             LOGGER.error(f"Error creating cluster {cluster_name}",
                          exc_info=True)
-            error_obj = error_to_json(e)
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY]) # noqa: E501
-            self._update_task(
-                TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY], # noqa: E501
-                stack_trace=stack_trace)
+            self._update_task(TaskStatus.ERROR, error_message=str(e))
             # raising an exception here prints a stacktrace to server console
         except Exception as e:
             LOGGER.error(f"Unknown error creating cluster {cluster_name}",
                          exc_info=True)
-            error_obj = error_to_json(e)
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY]) # noqa: E501
-            self._update_task(
-                TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY], # noqa: E501
-                stack_trace=stack_trace)
+            self._update_task(TaskStatus.ERROR, error_message=str(e))
         finally:
             self.logout_sys_admin_client()
 
@@ -856,22 +842,12 @@ class VcdBroker(AbstractBroker):
                                  exc_info=True)
             LOGGER.error(f"Error adding nodes to {cluster_name}",
                          exc_info=True)
-            error_obj = error_to_json(e)
             LOGGER.error(str(e), exc_info=True)
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY]) # noqa: E501
-            self._update_task(
-                TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY], # noqa: E501
-                stack_trace=stack_trace)
+            self._update_task(TaskStatus.ERROR, error_message=str(e))
             # raising an exception here prints a stacktrace to server console
         except Exception as e:
-            error_obj = error_to_json(e)
             LOGGER.error(str(e), exc_info=True)
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY]) # noqa: E501
-            self._update_task(
-                TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY], # noqa: E501
-                stack_trace=stack_trace)
+            self._update_task(TaskStatus.ERROR, error_message=str(e))
         finally:
             self.logout_sys_admin_client()
 
@@ -895,12 +871,7 @@ class VcdBroker(AbstractBroker):
             LOGGER.error(f"Unexpected error while deleting nodes "
                          f"{node_names_list}: {e}",
                          exc_info=True)
-            error_obj = error_to_json(e)
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY]) # noqa: E501
-            self._update_task(
-                TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY], # noqa: E501
-                stack_trace=stack_trace)
+            self._update_task(TaskStatus.ERROR, error_message=str(e))
         finally:
             self.logout_sys_admin_client()
 

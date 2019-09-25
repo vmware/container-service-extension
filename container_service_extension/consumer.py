@@ -14,6 +14,7 @@ import requests
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.request_processor as request_processor
 from container_service_extension.server_constants import EXCHANGE_TYPE
+from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 
 
 class MessageConsumer(object):
@@ -156,7 +157,7 @@ class MessageConsumer(object):
             status_code = result['status_code']
             reply_body = json.dumps(result['body'])
         except Exception as e:
-            reply_body = '{"message": "%s"}' % str(e)
+            reply_body = {RESPONSE_MESSAGE_KEY: str(e)}
             status_code = requests.codes.internal_server_error
             tb = traceback.format_exc()
             LOGGER.error(tb)

@@ -35,6 +35,7 @@ def cluster_create(request_data, tenant_auth_token):
         RequestKey.CLUSTER_NAME
     ]
     utils.ensure_keys_in_dict(required, request_data, dict_name='data')
+
     cluster_name = request_data[RequestKey.CLUSTER_NAME]
     # TODO HACK 'is_org_admin_search' is used here to prevent users from
     # creating clusters with the same name, including clusters in PKS
@@ -57,7 +58,7 @@ def cluster_create(request_data, tenant_auth_token):
             include_nsxt_info=True)
     if k8s_metadata.get(K8S_PROVIDER_KEY) == K8sProvider.PKS:
         request_data[RequestKey.PKS_PLAN_NAME] = k8s_metadata[PKS_PLANS_KEY][0]
-        request_data['pks_ext_host'] = \
+        request_data[RequestKey.PKS_EXT_HOST] = \
             f"{cluster_name}.{k8s_metadata[PKS_CLUSTER_DOMAIN_KEY]}"
     broker = broker_manager.get_broker_from_k8s_metadata(k8s_metadata,
                                                          tenant_auth_token)

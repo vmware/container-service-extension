@@ -282,7 +282,7 @@ class PksBroker(AbstractBroker):
         required = [
             RequestKey.CLUSTER_NAME,
             RequestKey.PKS_PLAN_NAME,
-            'pks_ext_host', # noqa: E501 TODO this should not be part of the request spec
+            RequestKey.PKS_EXT_HOST,
             RequestKey.ORG_NAME,
             RequestKey.OVDC_NAME
         ]
@@ -302,7 +302,7 @@ class PksBroker(AbstractBroker):
             cluster_name=data[RequestKey.CLUSTER_NAME],
             num_workers=data[RequestKey.NUM_WORKERS],
             pks_plan_name=data[RequestKey.PKS_PLAN_NAME],
-            pks_ext_host=data['pks_ext_host'])
+            pks_ext_host=data[RequestKey.PKS_EXT_HOST])
 
         self._isolate_cluster(cluster_name, qualified_cluster_name,
                               cluster_info.get('uuid'))

@@ -2,7 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-
+from container_service_extension.shared_constants import RequestKey
 import container_service_extension.utils as utils
 
 
@@ -28,7 +28,4 @@ def system_update(request_data, tenant_auth_token):
 
     # TODO: circular dependency with request_processor.py
     import container_service_extension.service as service
-    return {
-        'message': service.Service().update_status(tenant_auth_token,
-                                                   request_data)
-    }
+    return service.Service().update_status(tenant_auth_token, request_data)

@@ -5,7 +5,9 @@
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 
 from container_service_extension.compute_policy_manager import ComputePolicyManager # noqa: E501
+from container_service_extension.exceptions import BadRequestError
 from container_service_extension.exceptions import CseServerError
+from container_service_extension.exceptions import InternalServerRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.ovdc_utils as ovdc_utils
 import container_service_extension.pyvcloud_utils as vcd_utils
@@ -144,7 +146,7 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token):
             cp_href = _cp['href']
             cp_id = _cp['id']
     if cp_href is None:
-        raise ValueError(f"Compute policy '{cp_name}' not found.")
+        raise BadRequestError(f"Compute policy '{cp_name}' not found.")
 
     if action == ComputePolicyAction.ADD:
         cpm.add_compute_policy_to_vdc(ovdc_id, cp_href)
@@ -166,12 +168,12 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token):
             # templates with the compute policy reference, so compute policy
             # cannot be removed)
             msg = f"Could not remove compute policy '{cp_name}' " \
-                  f"({cp_id}) from ovdc ({ovdc_id})"
+                  f"({cp_id}) from ovdc ({ovdc_id})."
             LOGGER.error(msg, exc_info=True)
-            raise Exception(
-                f"{msg} (check that no vApp templates or VMs currently "
+            raise InternalServerRequestError(
+                f"{msg} (Please check that no vApp templates or VMs currently "
                 f"contain a reference to the compute policy)")
         return f"Removed compute policy '{cp_name}' ({cp_id}) " \
                f"from ovdc ({ovdc_id})"
 
-    raise ValueError("Unsupported compute policy action")
+    raise BadRequestError("Unsupported compute policy action")

@@ -18,14 +18,14 @@ from pyvcloud.vcd.client import ApiVersion
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
-import requests
 
 from container_service_extension.compute_policy_manager import \
     ComputePolicyManager
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.consumer import MessageConsumer
-from container_service_extension.exceptions import CseRequestError
+from container_service_extension.exceptions import BadRequestError
+from container_service_extension.exceptions import UnauthorizedRequestError
 from container_service_extension.local_template_manager import \
     get_all_k8s_local_template_definition
 from container_service_extension.logger import configure_server_logger
@@ -143,21 +143,19 @@ class Service(object, metaclass=Singleton):
             tenant_auth_token=tenant_auth_token)
 
         if not tenant_client.is_sysadmin():
-            raise CseRequestError(status_code=requests.codes.unauthorized,
-                                  error_message='Unauthorized to update CSE')
+            raise UnauthorizedRequestError(
+                error_message='Unauthorized to update CSE')
 
         action = request_data.get(RequestKey.SERVER_ACTION)
         if self._state == ServerState.RUNNING:
             if action == ServerAction.ENABLE:
-                raise CseRequestError(
-                    status_code=requests.codes.bad_request,
+                raise BadRequestError(
                     error_message='CSE is already enabled and running.')
             elif action == ServerAction.DISABLE:
                 self._state = ServerState.DISABLED
                 message = 'CSE has been disabled.'
             elif action == ServerAction.STOP:
-                raise CseRequestError(
-                    status_code=requests.codes.bad_request,
+                raise BadRequestError(
                     error_message='Cannot stop CSE while it is enabled. '
                                   'Disable the service first')
         elif self._state == ServerState.DISABLED:
@@ -165,8 +163,7 @@ class Service(object, metaclass=Singleton):
                 self._state = ServerState.RUNNING
                 message = 'CSE has been enabled and is running.'
             elif action == ServerAction.DISABLE:
-                raise CseRequestError(
-                    status_code=requests.codes.bad_request,
+                raise BadRequestError(
                     error_message='CSE is already disabled.')
             elif action == 'stop':
                 message = 'CSE graceful shutdown started.'
@@ -176,13 +173,11 @@ class Service(object, metaclass=Singleton):
                 self._state = ServerState.STOPPING
         elif self._state == ServerState.STOPPING:
             if action == ServerAction.ENABLE:
-                raise CseRequestError(
-                    status_code=requests.codes.bad_request,
+                raise BadRequestError(
                     error_message='Cannot enable CSE while it is being'
                                   'stopped.')
             elif action == ServerAction.DISABLE:
-                raise CseRequestError(
-                    status_code=requests.codes.bad_request,
+                raise BadRequestError(
                     error_message='Cannot disable CSE while it is being'
                                   ' stopped.')
             elif action == ServerAction.STOP:
