@@ -72,7 +72,7 @@ class ComputePolicyManager:
     def get_all_cse_policies(self):
         """Get all compute policies in vCD that were created by CSE.
 
-        Returns a generator that when iterated over will return all CSE compute
+        Returns a generator that when iterated over will yield all CSE compute
         policies in vCD, making multiple requests when necessary.
         This is implemented with a generator because cloudapi paginates
         the `GET /vdcComputePolicies` endpoint.
