@@ -398,7 +398,7 @@ class Service(object, metaclass=Singleton):
             msg_update_callback.general_no_color(msg)
 
         log_filename = None
-        log_wire = str_to_bool(self.config['service'].get('log_wire'))
+        log_wire = utils.str_to_bool(self.config['service'].get('log_wire'))
         if log_wire:
             log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
 

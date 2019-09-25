@@ -107,6 +107,15 @@ class MethodNotAllowedRequestError(CseRequestError):
                                  error_message, minor_error_code)
 
 
+class NotAcceptableRequestError(CseRequestError):
+    """Raised when CSE can't serve the provided the response as per the accept header in the request.""" # noqa: E501
+
+    def __init__(self, error_message="Not acceptable",
+                 minor_error_code=None):
+        CseRequestError.__init__(self, requests.codes.not_acceptable,
+                                 error_message, minor_error_code)
+
+
 class NotFoundRequestError(CseRequestError):
     """Raised when an invalid CSE REST endpoint is accessed."""
 
