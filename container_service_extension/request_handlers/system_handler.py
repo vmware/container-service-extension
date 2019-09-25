@@ -3,6 +3,9 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 
+import container_service_extension.utils as utils
+
+
 def system_info(request_data, tenant_auth_token):
     """Request handler for system info operation.
 
@@ -18,6 +21,11 @@ def system_update(request_data, tenant_auth_token):
 
     :return: Dictionary with system update status.
     """
+    required = [
+        RequestKey.SERVER_ACTION
+    ]
+    utils.ensure_keys_in_dict(required, request_data, dict_name='data')
+
     # TODO: circular dependency with request_processor.py
     import container_service_extension.service as service
     return {

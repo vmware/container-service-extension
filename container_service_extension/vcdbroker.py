@@ -237,7 +237,7 @@ class VcdBroker(AbstractBroker):
 
         Required data: cluster_name, org_name, ovdc_name, network_name
         Optional data and default values: num_nodes=2, num_cpu=None,
-            mb_memory=None, storage_profile_name=None, ssh_key_filepath=None,
+            mb_memory=None, storage_profile_name=None, ssh_key=None,
             template_name=default, template_revision=default, enable_nfs=False,
             rollback=True
         """
@@ -270,7 +270,7 @@ class VcdBroker(AbstractBroker):
             RequestKey.NUM_CPU: None,
             RequestKey.MB_MEMORY: None,
             RequestKey.STORAGE_PROFILE_NAME: None,
-            RequestKey.SSH_KEY_FILEPATH: None,
+            RequestKey.SSH_KEY: None,
             RequestKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME],
             RequestKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION],
             RequestKey.ENABLE_NFS: False,
@@ -312,7 +312,7 @@ class VcdBroker(AbstractBroker):
             num_cpu=validated_data[RequestKey.NUM_CPU],
             mb_memory=validated_data[RequestKey.MB_MEMORY],
             storage_profile_name=validated_data[RequestKey.STORAGE_PROFILE_NAME], # noqa: E501
-            ssh_key_filepath=validated_data[RequestKey.SSH_KEY_FILEPATH],
+            ssh_key=validated_data[RequestKey.SSH_KEY],
             enable_nfs=validated_data[RequestKey.ENABLE_NFS],
             rollback=validated_data[RequestKey.ROLLBACK])
 
@@ -479,7 +479,7 @@ class VcdBroker(AbstractBroker):
 
         Required data: cluster_name, network_name
         Optional data and default values: num_nodes=2, num_cpu=None,
-            mb_memory=None, storage_profile_name=None, ssh_key_filepath=None,
+            mb_memory=None, storage_profile_name=None, ssh_key=None,
             template_name=default, template_revision=default, enable_nfs=False,
             rollback=True
         """
@@ -500,7 +500,7 @@ class VcdBroker(AbstractBroker):
             RequestKey.NUM_CPU: None,
             RequestKey.MB_MEMORY: None,
             RequestKey.STORAGE_PROFILE_NAME: None,
-            RequestKey.SSH_KEY_FILEPATH: None,
+            RequestKey.SSH_KEY: None,
             RequestKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME],
             RequestKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION],
             RequestKey.ENABLE_NFS: False,
@@ -544,7 +544,7 @@ class VcdBroker(AbstractBroker):
             num_cpu=validated_data[RequestKey.NUM_CPU],
             mb_memory=validated_data[RequestKey.MB_MEMORY],
             storage_profile_name=validated_data[RequestKey.STORAGE_PROFILE_NAME], # noqa: E501
-            ssh_key_filepath=validated_data[RequestKey.SSH_KEY_FILEPATH],
+            ssh_key=validated_data[RequestKey.SSH_KEY],
             enable_nfs=validated_data[RequestKey.ENABLE_NFS],
             rollback=validated_data[RequestKey.ROLLBACK])
 
@@ -612,8 +612,8 @@ class VcdBroker(AbstractBroker):
                               org_name, ovdc_name, cluster_name, cluster_id,
                               template_name, template_revision, num_workers,
                               network_name, num_cpu, mb_memory,
-                              storage_profile_name, ssh_key_filepath,
-                              enable_nfs, rollback):
+                              storage_profile_name, ssh_key, enable_nfs,
+                              rollback):
         org = vcd_utils.get_org(self.tenant_client, org_name=org_name)
         vdc = vcd_utils.get_vdc(
             self.tenant_client, vdc_name=ovdc_name, org=org)
@@ -669,7 +669,7 @@ class VcdBroker(AbstractBroker):
                           num_cpu=num_cpu,
                           memory_in_mb=mb_memory,
                           storage_profile=storage_profile_name,
-                          ssh_key_filepath=ssh_key_filepath)
+                          ssh_key=ssh_key)
             except Exception as e:
                 raise MasterNodeCreationError("Error adding master node:",
                                               str(e))
@@ -702,7 +702,7 @@ class VcdBroker(AbstractBroker):
                           num_cpu=num_cpu,
                           memory_in_mb=mb_memory,
                           storage_profile=storage_profile_name,
-                          ssh_key_filepath=ssh_key_filepath)
+                          ssh_key=ssh_key)
             except Exception as e:
                 raise WorkerNodeCreationError("Error creating worker node:",
                                               str(e))
@@ -733,7 +733,7 @@ class VcdBroker(AbstractBroker):
                               num_cpu=num_cpu,
                               memory_in_mb=mb_memory,
                               storage_profile=storage_profile_name,
-                              ssh_key_filepath=ssh_key_filepath)
+                              ssh_key=ssh_key)
                 except Exception as e:
                     raise NFSNodeCreationError("Error creating NFS node:",
                                                str(e))
@@ -786,7 +786,7 @@ class VcdBroker(AbstractBroker):
                             cluster_name, cluster_vdc_href, cluster_vapp_href,
                             cluster_id, template_name, template_revision,
                             num_workers, network_name, num_cpu, mb_memory,
-                            storage_profile_name, ssh_key_filepath, enable_nfs,
+                            storage_profile_name, ssh_key, enable_nfs,
                             rollback):
         org = vcd_utils.get_org(self.tenant_client)
         vdc = VDC(self.tenant_client, href=cluster_vdc_href)
@@ -818,7 +818,7 @@ class VcdBroker(AbstractBroker):
                                   num_cpu=num_cpu,
                                   memory_in_mb=mb_memory,
                                   storage_profile=storage_profile_name,
-                                  ssh_key_filepath=ssh_key_filepath)
+                                  ssh_key=ssh_key)
 
             if node_type == NodeType.NFS:
                 self._update_task(

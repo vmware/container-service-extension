@@ -66,7 +66,7 @@ class RequestKey(str, Enum):
     NODE_NAME = 'node_name'
     ENABLE_NFS = 'enable_nfs'
     NODE_NAMES_LIST = 'node_names'
-    SSH_KEY_FILEPATH = 'ssh_key_filepath'
+    SSH_KEY = 'ssh_key'
     ROLLBACK = 'rollback'
 
     # keys related to ovdc requests

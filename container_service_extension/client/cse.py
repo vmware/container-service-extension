@@ -13,7 +13,6 @@ from vcd_cli.vcd import vcd
 from container_service_extension.client.cluster import Cluster
 from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.system import System
-from container_service_extension.exceptions import CseClientError
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.service import Service
@@ -785,8 +784,8 @@ def list_nodes(ctx, name, org, vdc):
         cluster = Cluster(client)
         cluster_info = cluster.get_cluster_info(name, org=org, vdc=vdc)
         if cluster_info.get(K8S_PROVIDER_KEY) != K8sProvider.NATIVE:
-            raise CseClientError('Node commands are not supported by non '
-                                 'native clusters.')
+            raise Exception('Node commands are not supported by non native '
+                            'clusters.')
         all_nodes = cluster_info['master_nodes'] + cluster_info['nodes']
         stdout(all_nodes, ctx, show_id=True)
     except Exception as e:

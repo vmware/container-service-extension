@@ -24,7 +24,7 @@ def cluster_create(request_data, tenant_auth_token):
         if k8s_provider is 'native':
             network_name, num_nodes=2, num_cpu=None, mb_memory=None,
             storage_profile_name=None, template_name=default,
-            template_revision=default, ssh_key_filepath=None, enable_nfs=False,
+            template_revision=default, ssh_key=None, enable_nfs=False,
             rollback=True
 
     (data validation handled in brokers)
@@ -174,7 +174,7 @@ def node_create(request_data, tenant_auth_token):
     Optional data and default values: org_name=None, ovdc_name=None,
         num_nodes=1, num_cpu=None, mb_memory=None, storage_profile_name=None,
         template_name=default, template_revision=default,
-        ssh_key_filepath=None, rollback=True, enable_nfs=False,
+        ssh_key=None, rollback=True, enable_nfs=False,
 
     (data validation handled in brokers)
 

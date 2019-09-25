@@ -5,8 +5,23 @@
 from pyvcloud.vcd.exceptions import VcdException
 
 
-class CseClientError(Exception):
-    """Raised for any client side error."""
+class AmqpError(Exception):
+    """Base class for Amqp related errors."""
+
+
+class AmqpConnectionError(AmqpError):
+    """Raised when amqp connection is not open."""
+
+
+class VcdResponseError(Exception):
+    """Base class for all vcd response related Exceptions."""
+
+    def __init__(self, status_code, error_message):
+        self.status_code = status_code
+        self.error_message = error_message
+
+    def __str__(self):
+        return str(self.error_message)
 
 
 class CseServerError(VcdException):
@@ -36,6 +51,33 @@ class ClusterNotFoundError(CseServerError):
     """Raised when cluster is not found in the environment."""
 
 
+class CseDuplicateClusterError(CseServerError):
+    """Raised when multiple vCD clusters of same name detected."""
+
+
+class NodeNotFoundError(CseServerError):
+    """Raised when a node is not found in the environment."""
+
+
+class UnauthorizedActionError(CseServerError):
+    """Raised when an action is attempted by an unauthorized user."""
+
+
+class PksServerError(CseServerError):
+    """Raised when error is received from PKS."""
+
+    def __init__(self, status, body=None):
+        self.status = status
+        self.body = body
+
+    def __str__(self):
+        # TODO() Removing user context should be moved to PksServer response
+        #  processing aka filtering layer
+        from container_service_extension.pksbroker import PksBroker
+        return f"PKS error\n status: {self.status}\n body: " \
+            f" {PksBroker.filter_traces_of_user_context(self.body)}\n"
+
+
 class ClusterJoiningError(ClusterOperationError):
     """Raised when any error happens while cluster join operation."""
 
@@ -46,14 +88,6 @@ class ClusterInitializationError(ClusterOperationError):
 
 class ClusterNetworkIsolationError(ClusterOperationError):
     """Raised when any error happens while isolating cluster network."""
-
-
-class CseDuplicateClusterError(CseServerError):
-    """Raised when multiple vCD clusters of same name detected."""
-
-
-class NodeNotFoundError(CseServerError):
-    """Raised when a node is not found in the environment."""
 
 
 class NodeOperationError(ClusterOperationError):
@@ -90,44 +124,6 @@ class ScriptExecutionError(NodeOperationError):
 
 class DeleteNodeError(NodeOperationError):
     """Raised when there is any error while deleting node."""
-
-
-class AmqpError(Exception):
-    """Base class for Amqp related errors."""
-
-
-class AmqpConnectionError(AmqpError):
-    """Raised when amqp connection is not open."""
-
-
-class UnauthorizedActionError(CseServerError):
-    """Raised when an action is attempted by an unauthorized user."""
-
-
-class VcdResponseError(Exception):
-    """Base class for all vcd response related Exceptions."""
-
-    def __init__(self, status_code, error_message):
-        self.status_code = status_code
-        self.error_message = error_message
-
-    def __str__(self):
-        return str(self.error_message)
-
-
-class PksServerError(CseServerError):
-    """Raised when error is received from PKS."""
-
-    def __init__(self, status, body=None):
-        self.status = status
-        self.body = body
-
-    def __str__(self):
-        # TODO() Removing user context should be moved to PksServer response
-        #  processing aka filtering layer
-        from container_service_extension.pksbroker import PksBroker
-        return f"PKS error\n status: {self.status}\n body: " \
-            f" {PksBroker.filter_traces_of_user_context(self.body)}\n"
 
 
 class PksConnectionError(PksServerError):

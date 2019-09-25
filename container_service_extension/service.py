@@ -41,7 +41,7 @@ from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import ServerAction
 from container_service_extension.template_rule import TemplateRule
-from container_service_extension.utils import str_to_bool
+import container_service_extension.utils as utils
 from container_service_extension.vsphere_utils import populate_vsphere_list
 
 
@@ -299,7 +299,8 @@ class Service(object, metaclass=Singleton):
         client = None
         try:
             log_filename = None
-            log_wire = str_to_bool(self.config['service'].get('log_wire'))
+            log_wire = \
+                utils.str_to_bool(self.config['service'].get('log_wire'))
             if log_wire:
                 log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
 

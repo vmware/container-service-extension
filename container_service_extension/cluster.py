@@ -153,7 +153,7 @@ def get_template(name=None, revision=None):
 
 def add_nodes(client, num_nodes, node_type, org, vdc, vapp, catalog_name,
               template, network_name, num_cpu=None, memory_in_mb=None,
-              storage_profile=None, ssh_key_filepath=None):
+              storage_profile=None, ssh_key=None):
     specs = []
     try:
         if num_nodes < 1:
@@ -166,13 +166,13 @@ def add_nodes(client, num_nodes, node_type, org, vdc, vapp, catalog_name,
             storage_profile = vdc.get_storage_profile(storage_profile)
 
         cust_script = None
-        if ssh_key_filepath is not None:
+        if ssh_key is not None:
             cust_script = \
                 "#!/usr/bin/env bash\n" \
                 "if [ x$1=x\"postcustomization\" ];\n" \
                 "then\n" \
                 "mkdir -p /root/.ssh\n" \
-                f"echo '{ssh_key_filepath}' >> /root/.ssh/authorized_keys\n" \
+                f"echo '{ssh_key}' >> /root/.ssh/authorized_keys\n" \
                 "chmod -R go-rwx /root/.ssh\n" \
                 "fi"
 
