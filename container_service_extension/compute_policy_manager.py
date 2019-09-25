@@ -11,7 +11,7 @@ from pyvcloud.vcd.vm import VM
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CloudApiResource
-from container_service_extension.cloudapi.constants import COMPUTE_POLICY_NAME_PREFIX # noqa: E501
+from container_service_extension.cloudapi.constants import CSE_COMPUTE_POLICY_PREFIX # noqa: E501
 from container_service_extension.cloudapi.constants import EntityType
 from container_service_extension.cloudapi.constants import RelationType
 import container_service_extension.pyvcloud_utils as pyvcd_utils
@@ -69,24 +69,36 @@ class ComputePolicyManager:
             auth_token=auth_token,
             verify_ssl=self._vcd_client._verify_ssl_certs)
 
-    def list_policies(self):
-        """Get all policies that are created by CSE.
+    def get_all_cse_policies(self):
+        """Get all compute policies in vCD that were created by CSE.
 
-        :return: list of CSE created policies
-        :rtype: list of dict
+        Returns a generator that when iterated over will return all CSE compute
+        policies in vCD, making multiple requests when necessary.
+        This is implemented with a generator because cloudapi paginates
+        the `GET /vdcComputePolicies` endpoint.
+
+        :return: Generator that yields all CSE compute policies in vCD
+        :rtype: Generator[Dict, None, None]
         """
-        policies = self._cloudapi_client.do_request(
-            RequestMethod.GET, CloudApiResource.VDC_COMPUTE_POLICIES)
-        cse_policies = []
-        for policy in policies['values']:
-            if policy['name'].startswith(COMPUTE_POLICY_NAME_PREFIX):
-                policy['display_name'] = \
-                    self._get_policy_display_name(policy['name'])
-            else:
-                policy['display_name'] = policy['name']
-            cse_policies.append(policy)
+        # TODO we can make this function take in filter query parameters
+        page_size = 25
+        page_num = 1
+        response_body = self._cloudapi_client.do_request(
+            RequestMethod.GET,
+            f"{CloudApiResource.VDC_COMPUTE_POLICIES}?sortAsc=&pageSize={page_size}&sortDesc=&page={page_num}") # noqa: E501
+        while response_body['values'] != []:
+            for policy in response_body['values']:
+                cp_name = policy['name']
+                if not cp_name.startswith(CSE_COMPUTE_POLICY_PREFIX):
+                    continue
 
-        return cse_policies
+                policy['display_name'] = self._get_policy_display_name(cp_name)
+                yield policy
+
+            page_num += 1
+            response_body = self._cloudapi_client.do_request(
+                RequestMethod.GET,
+                f"{CloudApiResource.VDC_COMPUTE_POLICIES}?sortAsc=&pageSize={page_size}&sortDesc=&page={page_num}") # noqa: E501
 
     def get_policy(self, policy_name):
         """Get the compute policy information for the given policy name.
@@ -96,8 +108,12 @@ class ComputePolicyManager:
         :return: policy details if found, else None
         :rtype: dict
         """
-        # TODO there can be multiple policies with the same name
-        for policy_dict in self.list_policies():
+        # NOTE 'System Default' is the only case where multiple compute
+        # policies with the same name may exist.
+        # TODO filter query parameter
+        # `cloudapi/1.0.0/vdcComputePolicies?filter=` can be used to reduce
+        # number of api calls
+        for policy_dict in self.get_all_cse_policies():
             if policy_dict.get('display_name') == policy_name:
                 policy_dict['href'] = self._get_policy_href(policy_dict['id'])
                 return policy_dict
@@ -323,7 +339,7 @@ class ComputePolicyManager:
         :return: policy name unique to cse
         :rtype: str
         """
-        return f"{COMPUTE_POLICY_NAME_PREFIX}{policy_name}"
+        return f"{CSE_COMPUTE_POLICY_PREFIX}{policy_name}"
 
     def _get_policy_display_name(self, policy_name):
         """Remove cse specific prefix from the given policy name.
@@ -333,8 +349,8 @@ class ComputePolicyManager:
         :return: policy name after removing cse specific prefix
         :rtype: str
         """
-        if policy_name and policy_name.startswith(COMPUTE_POLICY_NAME_PREFIX):
-            return policy_name.replace(COMPUTE_POLICY_NAME_PREFIX, '', 1)
+        if policy_name and policy_name.startswith(CSE_COMPUTE_POLICY_PREFIX):
+            return policy_name.replace(CSE_COMPUTE_POLICY_PREFIX, '', 1)
         return policy_name
 
     def _get_policy_href(self, policy_id):

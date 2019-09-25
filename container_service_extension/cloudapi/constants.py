@@ -5,7 +5,7 @@
 from enum import Enum
 
 CLOUDAPI_DEFAULT_VERSION = '1.0.0'
-COMPUTE_POLICY_NAME_PREFIX = 'cse----'
+CSE_COMPUTE_POLICY_PREFIX = 'cse----'
 
 
 class CloudApiResource(str, Enum):
