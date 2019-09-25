@@ -17,6 +17,7 @@ from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.role import Role
 from pyvcloud.vcd.utils import extract_id
 from pyvcloud.vcd.utils import get_admin_href
+from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 import requests
 
@@ -465,3 +466,23 @@ def wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
     item = org.get_catalog_item(catalog_name, catalog_item_name)
     resource = client.get_resource(item.Entity.get('href'))
     client.get_task_monitor().wait_for_success(resource.Tasks.Task[0])
+
+
+def get_all_vapps_in_ovdc(client, ovdc_id):
+    resource_type = ResourceType.VAPP.value
+    if client.is_sysadmin():
+        resource_type = ResourceType.ADMIN_VAPP.value
+
+    q = client.get_typed_query(
+        resource_type,
+        query_result_format=QueryResultFormat.RECORDS,
+        equality_filter=('vdc', f"{client.get_api_uri()}/vdc/{ovdc_id}")
+    )
+
+    vapps = []
+    for record in q.execute():
+        vapp = VApp(client, href=record.get('href'))
+        vapp.reload()
+        vapps.append(vapp)
+
+    return vapps

@@ -2,6 +2,7 @@ from pyvcloud.vcd.exceptions import EntityNotFoundException
 
 from container_service_extension.compute_policy_manager import ComputePolicyManager # noqa: E501
 from container_service_extension.exceptions import CseServerError
+from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.ovdc_utils as ovdc_utils
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
@@ -103,7 +104,7 @@ def ovdc_compute_policy_list(request_data, tenant_auth_token):
     client, _ = vcd_utils.connect_vcd_user_via_token(tenant_auth_token)
 
     cpm = ComputePolicyManager(client)
-    return cpm.list_compute_policies_on_vdc(vdc_id=request_data[RequestKey.OVDC_ID]) # noqa: E501
+    return cpm.list_compute_policies_on_vdc(request_data[RequestKey.OVDC_ID])
 
 
 def ovdc_compute_policy_update(request_data, tenant_auth_token):
@@ -119,36 +120,54 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token):
         RequestKey.COMPUTE_POLICY_NAME
     ]
     utils.ensure_keys_in_dict(required, request_data, dict_name='data')
+    defaults = {
+        RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: False,
+    }
+    validated_data = {**defaults, **request_data}
+    utils.ensure_keys_in_dict(required, validated_data, dict_name='data')
+    action = validated_data[RequestKey.COMPUTE_POLICY_ACTION]
+    cp_name = validated_data[RequestKey.COMPUTE_POLICY_NAME]
+    ovdc_id = validated_data[RequestKey.OVDC_ID]
+    remove_compute_policy_from_vms = validated_data[RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS] # noqa: E501
+
     client, _ = vcd_utils.connect_vcd_user_via_token(tenant_auth_token)
-    action = request_data[RequestKey.COMPUTE_POLICY_ACTION]
-    cp_name = request_data[RequestKey.COMPUTE_POLICY_NAME]
-    ovdc_id = request_data[RequestKey.OVDC_ID]
 
     cpm = ComputePolicyManager(client)
-    cp = cpm.get_policy(cp_name)
-    if cp is None:
-        raise ValueError(f"Compute policy '{cp_name}' does not exist")
-    cp_href = cp['href']
+    cp_href = None
+    cp_id = None
+    for _cp in cpm.list_compute_policies_on_vdc(ovdc_id):
+        if _cp['name'] == cp_name:
+            cp_href = _cp['href']
+            cp_id = _cp['id']
+    if cp_href is None:
+        raise ValueError(f"Compute policy '{cp_name}' not found.")
 
     if action == ComputePolicyAction.ADD:
-        cpm.add_compute_policy_to_vdc(cp_href, vdc_id=ovdc_id)
-        return f"Added compute policy '{cp_name}' to ovdc '{ovdc_id}'"
+        cpm.add_compute_policy_to_vdc(ovdc_id, cp_href)
+        return f"Added compute policy '{cp_name}' ({cp_id}) to ovdc " \
+               f"({ovdc_id})"
 
     if action == ComputePolicyAction.REMOVE:
         try:
-            cpm.remove_compute_policy_from_vdc(cp_href, vdc_id=ovdc_id)
+            cpm.remove_compute_policy_from_vdc(
+                ovdc_id,
+                cp_href,
+                remove_compute_policy_from_vms=remove_compute_policy_from_vms)
         except EntityNotFoundException:
-            raise EntityNotFoundException(f"Compute policy '{cp_name}' not "
-                                          f"found in ovdc '{ovdc_id}'")
+            raise EntityNotFoundException(
+                f"Compute policy '{cp_name}' not found in ovdc ({ovdc_id})")
         except Exception:
             # This ensures that BadRequestException message is printed
             # to console. (error when ovdc currently has VMs/vApp
             # templates with the compute policy reference, so compute policy
             # cannot be removed)
-            raise Exception(f"Could not remove compute policy '{cp_name}' "
-                            f"from ovdc '{ovdc_id}' (check that no vApp"
-                            f" templates or VMs currently contain a reference"
-                            f" to the compute policy).")
-        return f"Removed compute policy '{cp_name}' from ovdc '{ovdc_id}'"
+            msg = f"Could not remove compute policy '{cp_name}' " \
+                  f"({cp_id}) from ovdc ({ovdc_id})"
+            LOGGER.error(msg, exc_info=True)
+            raise Exception(
+                f"{msg} (check that no vApp templates or VMs currently "
+                f"contain a reference to the compute policy)")
+        return f"Removed compute policy '{cp_name}' ({cp_id}) " \
+               f"from ovdc ({ovdc_id})"
 
     raise ValueError("Unsupported compute policy action")

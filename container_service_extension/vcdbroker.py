@@ -137,6 +137,7 @@ class VcdBroker(AbstractBroker):
                 cluster.get('nodes').append(node_info)
             elif vm.get('name').startswith(NodeType.NFS):
                 cluster.get('nfs_nodes').append(node_info)
+
         return cluster
 
     def list_clusters(self, data):
@@ -276,6 +277,11 @@ class VcdBroker(AbstractBroker):
             RequestKey.ROLLBACK: True,
         }
         validated_data = {**defaults, **data}
+
+        # TODO HACK default dictionary combining needs to be fixed
+        validated_data[RequestKey.TEMPLATE_NAME] = validated_data[RequestKey.TEMPLATE_NAME] or template[LocalTemplateKey.NAME] # noqa: E501
+        validated_data[RequestKey.TEMPLATE_REVISION] = validated_data[RequestKey.TEMPLATE_REVISION] or template[LocalTemplateKey.REVISION] # noqa: E501
+
         template_name = validated_data[RequestKey.TEMPLATE_NAME]
         template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
 
@@ -652,7 +658,7 @@ class VcdBroker(AbstractBroker):
             catalog_name = server_config['broker']['catalog']
             try:
                 add_nodes(client=self.tenant_client,
-                          num_nodes=num_workers,
+                          num_nodes=1,
                           node_type=NodeType.MASTER,
                           org=org,
                           vdc=vdc,

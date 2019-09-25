@@ -103,7 +103,7 @@ def cse_server():
         p = subprocess.Popen(cmd.split(),
                              stdout=subprocess.DEVNULL,
                              stderr=subprocess.STDOUT)
-    time.sleep(env.WAIT_INTERVAL)  # server takes a little while to set up
+    time.sleep(env.WAIT_INTERVAL * 3)  # server takes a little while to set up
 
     # enable kubernetes functionality on our ovdc
     # by default, an ovdc cannot deploy kubernetes clusters
@@ -386,7 +386,7 @@ def test_0050_vcd_cse_system_toggle(config, test_runner_username,
     execute_commands(cmd_list)
 
     assert not env.vapp_exists(env.SYS_ADMIN_TEST_CLUSTER_NAME), \
-        "Cluster exist when it should not."
+        "Cluster exists when it should not."
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,

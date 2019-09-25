@@ -100,7 +100,8 @@ class Ovdc:
         return process_response(response)
 
     def update_ovdc_compute_policies(self, ovdc_name, org_name,
-                                     compute_policy_name, action):
+                                     compute_policy_name, action,
+                                     remove_compute_policy_from_vms):
         """Update an ovdc's compute policies.
 
         :param str ovdc_name: Name of org VDC to update
@@ -119,7 +120,8 @@ class Ovdc:
         data = {
             RequestKey.OVDC_ID: ovdc_id, # also exists in url
             RequestKey.COMPUTE_POLICY_NAME: compute_policy_name,
-            RequestKey.COMPUTE_POLICY_ACTION: action
+            RequestKey.COMPUTE_POLICY_ACTION: action,
+            RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: remove_compute_policy_from_vms # noqa: E501
         }
 
         response = self.client._do_request_prim(
