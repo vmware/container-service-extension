@@ -5,7 +5,6 @@
 import requests
 
 from container_service_extension.minor_error_codes import MinorErrorCode
-from container_service_extension.shared_constants import ERROR_MINOR_CODE_KEY
 
 
 class AmqpError(Exception):
@@ -20,9 +19,10 @@ class AmqpConnectionError(AmqpError):
 class CseResponseError(Exception):
     """Base class for all vcd response related Exceptions."""
 
-    def __init__(self, status_code, error_message):
+    def __init__(self, status_code, error_message, minor_error_code):
         self.status_code = status_code
         self.error_message = error_message
+        self.minor_error_code = minor_error_code
 
     def __str__(self):
         return str(self.error_message)
@@ -38,13 +38,13 @@ class CseRequestError(CseServerError):
     def __init__(self, status_code, error_message=None,
                  minor_error_code=None):
         self.status_code = status_code
-        self._error_message = str(error_message)
+        self.error_message = str(error_message)
         if not minor_error_code:
             minor_error_code = MinorErrorCode.DEFAULT_ERROR_CODE
-        setattr(self, ERROR_MINOR_CODE_KEY, minor_error_code)
+        self.minor_error_message = minor_error_code
 
     def __str__(self):
-        return self._error_message
+        return self.error_message
 
 
 class ClusterOperationError(CseServerError):

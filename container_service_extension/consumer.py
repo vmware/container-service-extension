@@ -158,7 +158,6 @@ class MessageConsumer(object):
 
             response_format = None
             accept_header = body_json['headers']['Accept'].lower()
-            print(accept_header)
             accept_header = accept_header.split(';')[0]
             tokens = accept_header.split('/')
             if len(tokens) > 1:
@@ -166,9 +165,8 @@ class MessageConsumer(object):
                     response_format = tokens[1]
             if not response_format:
                 response_format = tokens[0]
-            response_format = response_format.replace('*+' , '')
+            response_format = response_format.replace('*+', '')
 
-            print(response_format)
             if not ('json' in response_format or '*' == response_format):
                 raise NotAcceptableRequestError(
                     error_message="CSE can only serve response as json.")

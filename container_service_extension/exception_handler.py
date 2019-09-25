@@ -7,9 +7,9 @@ import traceback
 
 import requests
 
-from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.exceptions import CseRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.shared_constants import ERROR_DESCRIPTION_KEY
 from container_service_extension.shared_constants import ERROR_MINOR_CODE_KEY
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
@@ -38,12 +38,12 @@ def handle_exception(func):
         except Exception as err:
             if isinstance(err, CseRequestError):
                 result['status_code'] = err.status_code
+                minor_error_code = err.minor_error_code
             else:
                 result['status_code'] = requests.codes.internal_server_error
+                minor_error_code = MinorErrorCode.DEFAULT_ERROR_CODE
 
             error_string = str(err if err else '')
-            minor_error_code = getattr(err, ERROR_MINOR_CODE_KEY,
-                                       MinorErrorCode.DEFAULT_ERROR_CODE)
             result['body'] = {
                 RESPONSE_MESSAGE_KEY: {
                     ERROR_MINOR_CODE_KEY: int(minor_error_code.value),

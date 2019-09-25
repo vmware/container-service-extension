@@ -6,8 +6,8 @@ import json
 
 import requests
 
-from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.exceptions import CseResponseError
+from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.shared_constants import ERROR_DESCRIPTION_KEY
 from container_service_extension.shared_constants import ERROR_MINOR_CODE_KEY
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
@@ -38,7 +38,7 @@ def process_response(response):
     ]:
         return deserialize_response_content(response)
 
-    response_to_exception(response)
+    raise response_to_exception(response)
 
 
 def deserialize_response_content(response):
@@ -65,16 +65,17 @@ def deserialize_response_content(response):
 
 
 def response_to_exception(response):
-    """Raise exception with appropriate messages.
-
-    The class of exception raised depends on the key: status code
+    """Return exception object with appropriate messages.
 
     :param requests.models.Response response: object that has attributes
         status code and content
 
-    :raises: CseResponseError
+    :return: exception with proper error message
+
+    :rtype: CseResponseError
     """
     error_message = None
+    minor_error_code = None
 
     if response.status_code == requests.codes.gateway_timeout:
         error_message = 'Timed out while trying to communicate with CSE Server.' # noqa: E501
@@ -85,15 +86,15 @@ def response_to_exception(response):
         response_dict = deserialize_response_content(response)
         if RESPONSE_MESSAGE_KEY in response_dict:
             message = response_dict[RESPONSE_MESSAGE_KEY]
-            if ERROR_DESCRIPTION_KEY in message:
-                error_message = message[ERROR_DESCRIPTION_KEY]
-            if ERROR_MINOR_CODE_KEY in message:
-                minor_error_code = MinorErrorCode(message[ERROR_MINOR_CODE_KEY]) # noqa: E501
-                if minor_error_code != MinorErrorCode.DEFAULT_ERROR_CODE:
-                    # look for custom client error message in some table
-                    error_message = 'custom message'
-
+            if isinstance(message, dict):
+                if ERROR_DESCRIPTION_KEY in message:
+                    error_message = message[ERROR_DESCRIPTION_KEY]
+                if ERROR_MINOR_CODE_KEY in message:
+                    minor_error_code = MinorErrorCode(message[ERROR_MINOR_CODE_KEY]) # noqa: E501
+            else:
+                error_message = message
     if not error_message:
         error_message = UNKNOWN_ERROR_MESSAGE
 
-    raise CseResponseError(response.status_code, error_message)
+    raise CseResponseError(
+        response.status_code, error_message, minor_error_code)
