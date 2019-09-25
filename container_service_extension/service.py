@@ -14,6 +14,7 @@ import traceback
 
 import click
 import pkg_resources
+from pyvcloud.vcd.client import ApiVersion
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
@@ -400,29 +401,42 @@ class Service(object, metaclass=Singleton):
         if msg_update_callback:
             msg_update_callback.general_no_color(msg)
 
+        log_filename = None
+        log_wire = str_to_bool(self.config['service'].get('log_wire'))
+        if log_wire:
+            log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
+
+        org_name = self.config['broker']['org']
+        catalog_name = self.config['broker']['catalog']
+        api_version = self.config['vcd']['api_version']
         client = None
         try:
-            log_filename = None
-            log_wire = str_to_bool(self.config['service'].get('log_wire'))
-            if log_wire:
-                log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
+            if float(api_version) >= float(ApiVersion.VERSION_32.value): # noqa: E501
+                # TODO this api version 32 client should be removed once
+                # vcd can handle cp removal/replacement on version 33
+                client = Client(self.config['vcd']['host'],
+                                api_version=ApiVersion.VERSION_32.value,
+                                verify_ssl_certs=self.config['vcd']['verify'],
+                                log_file=log_filename,
+                                log_requests=log_wire,
+                                log_headers=log_wire,
+                                log_bodies=log_wire)
+            else:
+                client = Client(self.config['vcd']['host'],
+                                api_version=api_version,
+                                verify_ssl_certs=self.config['vcd']['verify'],
+                                log_file=log_filename,
+                                log_requests=log_wire,
+                                log_headers=log_wire,
+                                log_bodies=log_wire)
 
-            client = Client(self.config['vcd']['host'],
-                            api_version=self.config['vcd']['api_version'],
-                            verify_ssl_certs=self.config['vcd']['verify'],
-                            log_file=log_filename,
-                            log_requests=log_wire,
-                            log_headers=log_wire,
-                            log_bodies=log_wire)
             credentials = BasicLoginCredentials(self.config['vcd']['username'],
                                                 SYSTEM_ORG_NAME,
                                                 self.config['vcd']['password'])
             client.set_credentials(credentials)
+            cpm = ComputePolicyManager(client)
 
             try:
-                org_name = self.config['broker']['org']
-                catalog_name = self.config['broker']['catalog']
-                cpm = ComputePolicyManager(client)
                 for template in self.config['broker']['templates']:
                     policy_name = template[LocalTemplateKey.COMPUTE_POLICY]
                     catalog_item_name = template[LocalTemplateKey.CATALOG_ITEM_NAME] # noqa: E501
@@ -456,6 +470,7 @@ class Service(object, metaclass=Singleton):
                         if msg_update_callback:
                             msg_update_callback.general(msg)
                         LOGGER.debug(msg)
+
                         cpm.remove_all_compute_policies_from_vapp_template_vms(
                             org_name=org_name,
                             catalog_name=catalog_name,
