@@ -408,32 +408,33 @@ class Service(object, metaclass=Singleton):
 
         org_name = self.config['broker']['org']
         catalog_name = self.config['broker']['catalog']
+        api_version = self.config['vcd']['api_version']
         client = None
-        hack_client = None
         try:
-            client = Client(self.config['vcd']['host'],
-                            api_version=self.config['vcd']['api_version'],
-                            verify_ssl_certs=self.config['vcd']['verify'],
-                            log_file=log_filename,
-                            log_requests=log_wire,
-                            log_headers=log_wire,
-                            log_bodies=log_wire)
+            if float(api_version) >= float(ApiVersion.VERSION_32.value): # noqa: E501
+                # TODO this api version 32 client should be removed once
+                # vcd can handle cp removal/replacement on version 33
+                client = Client(self.config['vcd']['host'],
+                                api_version=ApiVersion.VERSION_32.value,
+                                verify_ssl_certs=self.config['vcd']['verify'],
+                                log_file=log_filename,
+                                log_requests=log_wire,
+                                log_headers=log_wire,
+                                log_bodies=log_wire)
+            else:
+                client = Client(self.config['vcd']['host'],
+                                api_version=api_version,
+                                verify_ssl_certs=self.config['vcd']['verify'],
+                                log_file=log_filename,
+                                log_requests=log_wire,
+                                log_headers=log_wire,
+                                log_bodies=log_wire)
+
             credentials = BasicLoginCredentials(self.config['vcd']['username'],
                                                 SYSTEM_ORG_NAME,
                                                 self.config['vcd']['password'])
             client.set_credentials(credentials)
-            # TODO this api version 32 client should be removed once
-            # vcd can handle cp removal on version 33
-            hack_client = Client(self.config['vcd']['host'],
-                                 api_version=ApiVersion.VERSION_32.value,
-                                 verify_ssl_certs=self.config['vcd']['verify'],
-                                 log_file=log_filename,
-                                 log_requests=log_wire,
-                                 log_headers=log_wire,
-                                 log_bodies=log_wire)
-            hack_client.set_credentials(credentials)
             cpm = ComputePolicyManager(client)
-            hack_cpm = ComputePolicyManager(hack_client)
 
             try:
                 for template in self.config['broker']['templates']:
@@ -470,12 +471,7 @@ class Service(object, metaclass=Singleton):
                             msg_update_callback.general(msg)
                         LOGGER.debug(msg)
 
-                        # TODO this should use the above CPM once the vcd bug
-                        # is fixed
-                        _cpm = cpm
-                        if float(client.get_api_version()) >= float(ApiVersion.VERSION_32.value): # noqa: E501
-                            _cpm = hack_cpm
-                        _cpm.remove_all_compute_policies_from_vapp_template_vms( # noqa: E501
+                        cpm.remove_all_compute_policies_from_vapp_template_vms(
                             org_name=org_name,
                             catalog_name=catalog_name,
                             catalog_item_name=catalog_item_name)
@@ -488,6 +484,3 @@ class Service(object, metaclass=Singleton):
         finally:
             if client:
                 client.logout()
-            # TODO remove this once compute policy vcd 33.0 bug is fixed
-            if hack_client:
-                hack_client.logout()
