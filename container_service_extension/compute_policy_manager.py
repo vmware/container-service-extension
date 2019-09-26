@@ -81,12 +81,11 @@ class ComputePolicyManager:
         :rtype: Generator[Dict, None, None]
         """
         # TODO we can make this function take in filter query parameters
-        page_size = 25
         page_num = 1
         response_body = self._cloudapi_client.do_request(
             RequestMethod.GET,
-            f"{CloudApiResource.VDC_COMPUTE_POLICIES}?sortAsc=&pageSize={page_size}&sortDesc=&page={page_num}") # noqa: E501
-        while response_body['values'] != []:
+            f"{CloudApiResource.VDC_COMPUTE_POLICIES}?page={page_num}")
+        while len(response_body['values']) > 0:
             for policy in response_body['values']:
                 cp_name = policy['name']
                 if not cp_name.startswith(CSE_COMPUTE_POLICY_PREFIX):
@@ -98,7 +97,7 @@ class ComputePolicyManager:
             page_num += 1
             response_body = self._cloudapi_client.do_request(
                 RequestMethod.GET,
-                f"{CloudApiResource.VDC_COMPUTE_POLICIES}?sortAsc=&pageSize={page_size}&sortDesc=&page={page_num}") # noqa: E501
+                f"{CloudApiResource.VDC_COMPUTE_POLICIES}?page={page_num}")
 
     def get_policy(self, policy_name):
         """Get the compute policy information for the given policy name.
