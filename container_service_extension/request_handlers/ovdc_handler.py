@@ -11,6 +11,7 @@ from container_service_extension.exceptions import InternalServerRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.ovdc_utils as ovdc_utils
 import container_service_extension.pyvcloud_utils as vcd_utils
+import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.shared_constants import ComputePolicyAction
@@ -35,9 +36,9 @@ def ovdc_update(request_data, tenant_auth_token):
         RequestKey.K8S_PROVIDER,
         RequestKey.OVDC_ID
     ]
-    utils.ensure_keys_in_dict(required, request_data, dict_name='data')
-    validated_data = request_data
+    req_utils.validate_payload(request_data, required)
 
+    validated_data = request_data
     k8s_provider = validated_data[RequestKey.K8S_PROVIDER]
     k8s_provider_info = {K8S_PROVIDER_KEY: k8s_provider}
 
@@ -48,7 +49,7 @@ def ovdc_update(request_data, tenant_auth_token):
             RequestKey.PKS_PLAN_NAME,
             RequestKey.PKS_CLUSTER_DOMAIN
         ]
-        utils.ensure_keys_in_dict(required, validated_data, dict_name='data')
+        req_utils.validate_payload(validated_data, required)
 
         k8s_provider_info = ovdc_utils.construct_k8s_metadata_from_pks_cache(
             ovdc_id=validated_data[RequestKey.OVDC_ID],
@@ -78,7 +79,7 @@ def ovdc_info(request_data, tenant_auth_token):
     required = [
         RequestKey.OVDC_ID
     ]
-    utils.ensure_keys_in_dict(required, request_data, dict_name='data')
+    req_utils.validate_payload(request_data, required)
 
     return ovdc_utils.get_ovdc_k8s_provider_metadata(
         ovdc_id=request_data[RequestKey.OVDC_ID])
@@ -106,7 +107,8 @@ def ovdc_compute_policy_list(request_data, tenant_auth_token):
     required = [
         RequestKey.OVDC_ID
     ]
-    utils.ensure_keys_in_dict(required, request_data, dict_name='data')
+    req_utils.validate_payload(request_data, required)
+
     client, _ = vcd_utils.connect_vcd_user_via_token(tenant_auth_token)
 
     cpm = ComputePolicyManager(client)
@@ -125,12 +127,14 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token):
         RequestKey.COMPUTE_POLICY_ACTION,
         RequestKey.COMPUTE_POLICY_NAME
     ]
-    utils.ensure_keys_in_dict(required, request_data, dict_name='data')
+    req_utils.validate_payload(request_data, required)
+
     defaults = {
         RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: False,
     }
     validated_data = {**defaults, **request_data}
-    utils.ensure_keys_in_dict(required, validated_data, dict_name='data')
+    req_utils.validate_payload(request_data, required)
+
     action = validated_data[RequestKey.COMPUTE_POLICY_ACTION]
     cp_name = validated_data[RequestKey.COMPUTE_POLICY_NAME]
     ovdc_id = validated_data[RequestKey.OVDC_ID]

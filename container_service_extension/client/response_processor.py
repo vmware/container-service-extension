@@ -74,12 +74,11 @@ def response_to_exception(response):
 
     :rtype: CseResponseError
     """
-    error_message = None
-    minor_error_code = None
+    error_message = ""
+    minor_error_code = MinorErrorCode.DEFAULT_ERROR_CODE
 
-    if response.status_code == requests.codes.gateway_timeout:
-        error_message = 'Timed out while trying to communicate with CSE Server.' # noqa: E501
-    elif response.status_code == requests.codes.unauthorized:
+    # in case of 401, content type is not set in the response and body is empty
+    if response.status_code == requests.codes.unauthorized:
         error_message = 'Session has expired or user not logged in.'\
                         ' Please re-login.'
     elif 'json' in response.headers['Content-Type']:

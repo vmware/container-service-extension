@@ -2,8 +2,8 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.shared_constants import RequestKey
-import container_service_extension.utils as utils
 
 
 def system_info(request_data, tenant_auth_token):
@@ -24,7 +24,7 @@ def system_update(request_data, tenant_auth_token):
     required = [
         RequestKey.SERVER_ACTION
     ]
-    utils.ensure_keys_in_dict(required, request_data, dict_name='data')
+    req_utils.validate_payload(request_data, required)
 
     # TODO: circular dependency with request_processor.py
     import container_service_extension.service as service

@@ -7,6 +7,7 @@ from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterNotFoundError
 import container_service_extension.ovdc_utils as ovdc_utils
 import container_service_extension.pksbroker_manager as pks_broker_manager
+import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import PKS_CLUSTER_DOMAIN_KEY
@@ -34,7 +35,7 @@ def cluster_create(request_data, tenant_auth_token):
     required = [
         RequestKey.CLUSTER_NAME
     ]
-    utils.ensure_keys_in_dict(required, request_data, dict_name='data')
+    req_utils.validate_payload(request_data, required)
 
     cluster_name = request_data[RequestKey.CLUSTER_NAME]
     # TODO HACK 'is_org_admin_search' is used here to prevent users from

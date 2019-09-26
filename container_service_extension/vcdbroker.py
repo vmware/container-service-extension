@@ -41,6 +41,7 @@ from container_service_extension.exceptions import NodeNotFoundError
 from container_service_extension.exceptions import WorkerNodeCreationError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
+import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_NAME # noqa: E501
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
@@ -103,7 +104,8 @@ class VcdBroker(AbstractBroker):
         required = [
             RequestKey.CLUSTER_NAME
         ]
-        utils.ensure_keys_in_dict(required, data, dict_name='data')
+        req_utils.validate_payload(data, required)
+
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
@@ -185,7 +187,8 @@ class VcdBroker(AbstractBroker):
         required = [
             RequestKey.CLUSTER_NAME
         ]
-        utils.ensure_keys_in_dict(required, data, dict_name='data')
+        req_utils.validate_payload(data, required)
+
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
@@ -243,7 +246,8 @@ class VcdBroker(AbstractBroker):
             RequestKey.OVDC_NAME,
             RequestKey.NETWORK_NAME
         ]
-        utils.ensure_keys_in_dict(required, data, dict_name='data')
+        req_utils.validate_payload(data, required)
+
         cluster_name = data[RequestKey.CLUSTER_NAME]
         # check that cluster name is syntactically valid
         if not is_valid_cluster_name(cluster_name):
@@ -337,7 +341,8 @@ class VcdBroker(AbstractBroker):
             RequestKey.NUM_WORKERS,
             RequestKey.NETWORK_NAME
         ]
-        utils.ensure_keys_in_dict(required, data, dict_name='data')
+        req_utils.validate_payload(data, required)
+
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None,
@@ -382,7 +387,8 @@ class VcdBroker(AbstractBroker):
         required = [
             RequestKey.CLUSTER_NAME
         ]
-        utils.ensure_keys_in_dict(required, data, dict_name='data')
+        req_utils.validate_payload(data, required)
+
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
@@ -418,7 +424,8 @@ class VcdBroker(AbstractBroker):
             RequestKey.CLUSTER_NAME,
             RequestKey.NODE_NAME
         ]
-        utils.ensure_keys_in_dict(required, data, dict_name='data')
+        req_utils.validate_payload(data, required)
+
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
@@ -483,7 +490,8 @@ class VcdBroker(AbstractBroker):
             RequestKey.CLUSTER_NAME,
             RequestKey.NETWORK_NAME
         ]
-        utils.ensure_keys_in_dict(required, data, dict_name='data')
+        req_utils.validate_payload(data, required)
+
         cluster_name = data[RequestKey.CLUSTER_NAME]
         # check that requested/default template is valid
         template = get_template(
@@ -564,7 +572,8 @@ class VcdBroker(AbstractBroker):
             RequestKey.CLUSTER_NAME,
             RequestKey.NODE_NAMES_LIST
         ]
-        utils.ensure_keys_in_dict(required, data, dict_name='data')
+        req_utils.validate_payload(data, required)
+
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
