@@ -19,6 +19,9 @@ from container_service_extension.shared_constants import RequestKey
 import container_service_extension.utils as utils
 
 
+SYSTEM_DEFAULT_COMPUTE_POLICY_NAME = "System Default"
+
+
 def ovdc_update(request_data, tenant_auth_token):
     """Request handler for ovdc enable, disable operations.
 
@@ -145,10 +148,16 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token):
     cpm = ComputePolicyManager(client)
     cp_href = None
     cp_id = None
-    for _cp in cpm.list_compute_policies_on_vdc(ovdc_id):
-        if _cp['name'] == cp_name:
-            cp_href = _cp['href']
-            cp_id = _cp['id']
+    if cp_name == SYSTEM_DEFAULT_COMPUTE_POLICY_NAME:
+        for _cp in cpm.list_compute_policies_on_vdc(ovdc_id):
+            if _cp['name'] == cp_name:
+                cp_href = _cp['href']
+                cp_id = _cp['id']
+    else:
+        _cp = cpm.get_policy(cp_name)
+        cp_href = _cp['href']
+        cp_id = _cp['id']
+
     if cp_href is None:
         raise BadRequestError(f"Compute policy '{cp_name}' not found.")
 

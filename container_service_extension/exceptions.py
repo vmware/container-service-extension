@@ -36,9 +36,11 @@ class CseRequestError(CseServerError):
     """Base class for all incoming CSE REST request errors."""
 
     def __init__(self, status_code, error_message=None,
-                 minor_error_code=MinorErrorCode.DEFAULT_ERROR_CODE):
+                 minor_error_code=None):
         self.status_code = status_code
         self.error_message = str(error_message)
+        if not minor_error_code:
+            minor_error_code = MinorErrorCode.DEFAULT_ERROR_CODE
         self.minor_error_code = minor_error_code
 
     def __str__(self):

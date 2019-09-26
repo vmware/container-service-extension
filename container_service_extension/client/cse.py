@@ -19,6 +19,7 @@ from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.service import Service
 from container_service_extension.shared_constants import ComputePolicyAction
+from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 from container_service_extension.shared_constants import ServerAction
 
 
@@ -517,7 +518,7 @@ def cluster_config(ctx, name, vdc, org):
         cluster = Cluster(client)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
-        cluster_config = cluster.get_cluster_config(name, vdc=vdc, org=org)
+        cluster_config = cluster.get_cluster_config(name, vdc=vdc, org=org).get(RESPONSE_MESSAGE_KEY) # noqa: E501
         if os.name == 'nt':
             cluster_config = str.replace(cluster_config, '\n', '\r\n')
 
