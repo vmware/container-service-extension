@@ -88,11 +88,9 @@ class ComputePolicyManager:
         while len(response_body['values']) > 0:
             for policy in response_body['values']:
                 cp_name = policy['name']
-                if not cp_name.startswith(CSE_COMPUTE_POLICY_PREFIX):
-                    continue
-
-                policy['display_name'] = self._get_policy_display_name(cp_name)
-                yield policy
+                if cp_name.startswith(CSE_COMPUTE_POLICY_PREFIX):
+                    policy['display_name'] = self._get_policy_display_name(cp_name) # noqa: E501
+                    yield policy
 
             page_num += 1
             response_body = self._cloudapi_client.do_request(
