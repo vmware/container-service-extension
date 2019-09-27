@@ -7,7 +7,7 @@ from enum import unique
 
 
 @unique
-class MinorErrorCode(Enum):
+class MinorErrorCode(int, Enum):
     """Collection of error code and related messages."""
 
     DEFAULT_ERROR_CODE = -1

@@ -46,7 +46,7 @@ def handle_exception(func):
             error_string = str(err if err else '')
             result['body'] = {
                 RESPONSE_MESSAGE_KEY: {
-                    ERROR_MINOR_CODE_KEY: int(minor_error_code.value),
+                    ERROR_MINOR_CODE_KEY: int(minor_error_code),
                     ERROR_DESCRIPTION_KEY: error_string
                 }
             }

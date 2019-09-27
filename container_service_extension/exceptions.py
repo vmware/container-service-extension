@@ -86,16 +86,16 @@ class BadRequestError(CseRequestError):
     """Raised when an invalid action is attempted by an user."""
 
     def __init__(self, error_message=None, minor_error_code=None):
-        CseRequestError.__init__(self, requests.codes.bad_request,
-                                 error_message, minor_error_code)
+        super().__init__(requests.codes.bad_request, error_message,
+                         minor_error_code)
 
 
 class InternalServerRequestError(CseRequestError):
     """Raised when an internal server error occurs while processing a REST request.""" # noqa: E501
 
     def __init__(self, error_message=None, minor_error_code=None):
-        CseRequestError.__init__(self, requests.codes.internal_server_error,
-                                 error_message, minor_error_code)
+        super().__init__(requests.codes.internal_server_error, error_message,
+                         minor_error_code)
 
 
 class MethodNotAllowedRequestError(CseRequestError):
@@ -103,8 +103,8 @@ class MethodNotAllowedRequestError(CseRequestError):
 
     def __init__(self, error_message="Method not allowed",
                  minor_error_code=None):
-        CseRequestError.__init__(self, requests.codes.method_not_allowed,
-                                 error_message, minor_error_code)
+        super().__init__(requests.codes.method_not_allowed, error_message,
+                         minor_error_code)
 
 
 class NotAcceptableRequestError(CseRequestError):
@@ -112,8 +112,8 @@ class NotAcceptableRequestError(CseRequestError):
 
     def __init__(self, error_message="Not acceptable",
                  minor_error_code=None):
-        CseRequestError.__init__(self, requests.codes.not_acceptable,
-                                 error_message, minor_error_code)
+        super().__init__(requests.codes.not_acceptable, error_message,
+                         minor_error_code)
 
 
 class NotFoundRequestError(CseRequestError):
@@ -121,16 +121,16 @@ class NotFoundRequestError(CseRequestError):
 
     def __init__(self, error_message="Invalid url - not found",
                  minor_error_code=None):
-        CseRequestError.__init__(self, requests.codes.not_found, error_message,
-                                 minor_error_code)
+        super().__init__(requests.codes.not_found, error_message,
+                         minor_error_code)
 
 
 class UnauthorizedRequestError(CseRequestError):
     """Raised when an action is attempted by an unauthorized user."""
 
     def __init__(self, error_message=None, minor_error_code=None):
-        CseRequestError.__init__(self, requests.codes.unauthorized,
-                                 error_message, minor_error_code)
+        super().__init__(requests.codes.unauthorized, error_message,
+                         minor_error_code)
 
 
 class ClusterJoiningError(ClusterOperationError):
