@@ -384,6 +384,10 @@ class TemplateBuilder():
         if self.logger:
             self.logger.info(msg)
 
+        # DEV NOTE: With api v33.0 and onwards, get_catalog operation will fail
+        # for non admin users of an org which is not hosting the catalog, even
+        # if the catalog is explicitly shared with the org in question. Please
+        # use this method only for org admin and sys admins.
         catalog = self.org.get_catalog(self.catalog_name)
         try:
             msg = f"Shutting down vApp '{self.temp_vapp_name}'"

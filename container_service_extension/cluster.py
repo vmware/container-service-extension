@@ -46,9 +46,10 @@ def is_valid_cluster_name(name):
 
 def get_all_clusters(client, cluster_name=None, cluster_id=None,
                      org_name=None, ovdc_name=None):
-    query_filter = 'metadata:cse.cluster.id==STRING:*'
     if cluster_id is not None:
         query_filter = f'metadata:cse.cluster.id==STRING:{cluster_id}'
+    else:
+        query_filter = 'metadata:cse.cluster.id==STRING:*'
 
     if cluster_name is not None:
         query_filter += f';name=={cluster_name}'
@@ -74,10 +75,9 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
                ClusterMetadataKey.TEMPLATE_NAME + ',metadata:' + # noqa: W504
                ClusterMetadataKey.TEMPLATE_REVISION + ',metadata:' + # noqa: W504,E501
                ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME)
-    records = list(q.execute())
 
     clusters = []
-    for record in records:
+    for record in q.execute():
         vapp_id = record.get('id').split(':')[-1]
         vdc_id = record.get('vdc').split(':')[-1]
 
@@ -158,9 +158,32 @@ def add_nodes(client, num_nodes, node_type, org, vdc, vapp, catalog_name,
     try:
         if num_nodes < 1:
             return None
-        catalog_item = org.get_catalog_item(
-            catalog_name, template[LocalTemplateKey.CATALOG_ITEM_NAME])
-        source_vapp = VApp(client, href=catalog_item.Entity.get('href'))
+
+        # DEV NOTE: With api v33.0 and onwards, get_catalog operation will fail
+        # for non admin users of an an org which is not hosting the catalog,
+        # even if the catalog is explicitly shared with the org in question.
+        # This happens because for api v 33.0 and onwards, the Org XML no
+        # longer returns the href to catalogs accessible to the org, and typed
+        # queries hide the catalog link from non admin users.
+        # As a workaround, we will use a sys admin client to get the href and
+        # pass it forward. Do note that the catalog itself can still be
+        # accessed by these non admin users, just that they can't find by the
+        # href on their own.
+
+        sys_admin_client = None
+        try:
+            sys_admin_client = vcd_utils.get_sys_admin_client()
+            org_name = org.get_name()
+            org_resource = sys_admin_client.get_org_by_name(org_name)
+            org_sa = Org(sys_admin_client, resource=org_resource)
+            catalog_item = org_sa.get_catalog_item(
+                catalog_name, template[LocalTemplateKey.CATALOG_ITEM_NAME])
+            catalog_item_href = catalog_item.Entity.get('href')
+        finally:
+            if sys_admin_client:
+                sys_admin_client.logout()
+
+        source_vapp = VApp(client, href=catalog_item_href)
         source_vm = source_vapp.get_all_vms()[0].get('name')
         if storage_profile is not None:
             storage_profile = vdc.get_storage_profile(storage_profile)
@@ -283,21 +306,25 @@ def get_master_ip(vapp):
 
 
 def init_cluster(vapp, template_name, template_revision):
-    script_filepath = get_local_script_filepath(template_name,
-                                                template_revision,
-                                                ScriptFile.MASTER)
-    script = utils.read_data_file(script_filepath, logger=LOGGER)
-    node_names = get_node_names(vapp, NodeType.MASTER)
-    result = execute_script_in_nodes(vapp=vapp, node_names=node_names,
-                                     script=script)
-    errors = _get_script_execution_errors(result)
-    if errors:
-        raise ScriptExecutionError(
-            f"Initialize cluster script execution failed on node "
-            f"{node_names}:{errors}")
-    if result[0][0] != 0:
+    try:
+        script_filepath = get_local_script_filepath(template_name,
+                                                    template_revision,
+                                                    ScriptFile.MASTER)
+        script = utils.read_data_file(script_filepath, logger=LOGGER)
+        node_names = get_node_names(vapp, NodeType.MASTER)
+        result = execute_script_in_nodes(vapp=vapp, node_names=node_names,
+                                         script=script)
+        errors = _get_script_execution_errors(result)
+        if errors:
+            raise ScriptExecutionError(
+                f"Initialize cluster script execution failed on node "
+                f"{node_names}:{errors}")
+        if result[0][0] != 0:
+            raise ClusterInitializationError(f"Couldn't initialize cluster:\n{result[0][2].content.decode()}") # noqa: E501
+    except Exception as e:
+        LOGGER.error(e, exc_info=True)
         raise ClusterInitializationError(
-            f"Couldn\'t initialize cluster:\n{result[0][2].content.decode()}")
+            f"Couldn't initialize cluster: {str(e)}")
 
 
 def join_cluster(vapp, template_name, template_revision, target_nodes=None):
