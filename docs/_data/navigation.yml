@@ -23,13 +23,11 @@
   subtoc:
   - name: Overview
     sublink: overview
-  - name: CSE Server Versions
-    sublink: compatibility
   - name: vCD Prerequisites
     sublink: prerequisites
   - name: Server Config File
     sublink: configfile
-  - name: VM Templates
+  - name: Kubernetes Templates
     sublink: vmtemplates
   - name: Server Setup
     sublink: serversetup
