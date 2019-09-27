@@ -8,7 +8,7 @@ from pathlib import Path
 
 from setuptools import setup
 
-osl = 'open_source_license_container-service-extension_2.0_GA.txt'
+osl = 'open_source_license_container-service-extension_2.5_GA.txt'
 cse_scripts_dir = '/container_service_extension_scripts'
 
 setup(
