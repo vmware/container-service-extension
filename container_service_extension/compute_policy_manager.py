@@ -82,9 +82,10 @@ class ComputePolicyManager:
         """
         # TODO we can make this function take in filter query parameters
         page_num = 1
+        # without the &sortAsc parameter, vCD returns unpredictable results
         response_body = self._cloudapi_client.do_request(
             RequestMethod.GET,
-            f"{CloudApiResource.VDC_COMPUTE_POLICIES}?page={page_num}")
+            f"{CloudApiResource.VDC_COMPUTE_POLICIES}?page={page_num}&sortAsc=name") # noqa: E501
         while len(response_body['values']) > 0:
             for policy in response_body['values']:
                 cp_name = policy['name']
@@ -95,7 +96,7 @@ class ComputePolicyManager:
             page_num += 1
             response_body = self._cloudapi_client.do_request(
                 RequestMethod.GET,
-                f"{CloudApiResource.VDC_COMPUTE_POLICIES}?page={page_num}")
+                f"{CloudApiResource.VDC_COMPUTE_POLICIES}?page={page_num}&sortAsc=name") # noqa: E501
 
     def get_policy(self, policy_name):
         """Get the compute policy information for the given policy name.
