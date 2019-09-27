@@ -1,8 +1,13 @@
+# container-service-extension
+# Copyright (c) 2019 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
 import container_service_extension.broker_manager as broker_manager
 from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterNotFoundError
 import container_service_extension.ovdc_utils as ovdc_utils
 import container_service_extension.pksbroker_manager as pks_broker_manager
+import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import PKS_CLUSTER_DOMAIN_KEY
@@ -20,7 +25,7 @@ def cluster_create(request_data, tenant_auth_token):
         if k8s_provider is 'native':
             network_name, num_nodes=2, num_cpu=None, mb_memory=None,
             storage_profile_name=None, template_name=default,
-            template_revision=default, ssh_key_filepath=None, enable_nfs=False,
+            template_revision=default, ssh_key=None, enable_nfs=False,
             rollback=True
 
     (data validation handled in brokers)
@@ -30,7 +35,8 @@ def cluster_create(request_data, tenant_auth_token):
     required = [
         RequestKey.CLUSTER_NAME
     ]
-    utils.ensure_keys_in_dict(required, request_data, dict_name='data')
+    req_utils.validate_payload(request_data, required)
+
     cluster_name = request_data[RequestKey.CLUSTER_NAME]
     # TODO HACK 'is_org_admin_search' is used here to prevent users from
     # creating clusters with the same name, including clusters in PKS
@@ -53,7 +59,7 @@ def cluster_create(request_data, tenant_auth_token):
             include_nsxt_info=True)
     if k8s_metadata.get(K8S_PROVIDER_KEY) == K8sProvider.PKS:
         request_data[RequestKey.PKS_PLAN_NAME] = k8s_metadata[PKS_PLANS_KEY][0]
-        request_data['pks_ext_host'] = \
+        request_data[RequestKey.PKS_EXT_HOST] = \
             f"{cluster_name}.{k8s_metadata[PKS_CLUSTER_DOMAIN_KEY]}"
     broker = broker_manager.get_broker_from_k8s_metadata(k8s_metadata,
                                                          tenant_auth_token)
@@ -170,7 +176,7 @@ def node_create(request_data, tenant_auth_token):
     Optional data and default values: org_name=None, ovdc_name=None,
         num_nodes=1, num_cpu=None, mb_memory=None, storage_profile_name=None,
         template_name=default, template_revision=default,
-        ssh_key_filepath=None, rollback=True, enable_nfs=False,
+        ssh_key=None, rollback=True, enable_nfs=False,
 
     (data validation handled in brokers)
 

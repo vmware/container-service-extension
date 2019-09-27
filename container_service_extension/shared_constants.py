@@ -5,12 +5,12 @@
 from enum import Enum
 from enum import unique
 
-ERROR_DESCRIPTION_KEY = "description"
-ERROR_MESSAGE_KEY = "message"
-ERROR_REASON_KEY = "reason"
-ERROR_STACKTRACE_KEY = "stacktrace"
-UNKNOWN_ERROR_MESSAGE = "Unknown error. Please contact your system " \
-                        "administrator"
+ERROR_DESCRIPTION_KEY = "error description"
+ERROR_MINOR_CODE_KEY = "minor error code"
+UNKNOWN_ERROR_MESSAGE = "Unknown error. Please contact your System " \
+                        "Administrator"
+
+RESPONSE_MESSAGE_KEY = "message"
 
 
 @unique
@@ -66,7 +66,7 @@ class RequestKey(str, Enum):
     NODE_NAME = 'node_name'
     ENABLE_NFS = 'enable_nfs'
     NODE_NAMES_LIST = 'node_names'
-    SSH_KEY_FILEPATH = 'ssh_key_filepath'
+    SSH_KEY = 'ssh_key'
     ROLLBACK = 'rollback'
 
     # keys related to ovdc requests
@@ -81,3 +81,6 @@ class RequestKey(str, Enum):
 
     # keys related to system requests
     SERVER_ACTION = 'server_action'
+
+    # keys that are only used internally at server side
+    PKS_EXT_HOST = 'pks_ext_host'

@@ -4,7 +4,6 @@
 
 import functools
 
-
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pyvcloud_utils import get_sys_admin_client
 from container_service_extension.pyvcloud_utils import get_user_rights

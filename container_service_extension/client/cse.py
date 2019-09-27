@@ -13,11 +13,13 @@ from vcd_cli.vcd import vcd
 from container_service_extension.client.cluster import Cluster
 from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.system import System
-from container_service_extension.exceptions import CseClientError
+from container_service_extension.exceptions import CseResponseError
+from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.service import Service
 from container_service_extension.shared_constants import ComputePolicyAction
+from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 from container_service_extension.shared_constants import ServerAction
 
 
@@ -369,6 +371,15 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
             rollback=not disable_rollback,
             org=org_name)
         stdout(result, ctx)
+    except CseResponseError as e:
+        minor_error_code_to_error_message = {
+            MinorErrorCode.REQUEST_KEY_NETWORK_NAME_MISSING: 'Missing option "-n" / "--network".', # noqa: E501
+            MinorErrorCode.REQUEST_KEY_NETWORK_NAME_INVALID: 'Invalid or missing value for option "-n" / "--network".' # noqa: E501
+        }
+        e.error_message = \
+            minor_error_code_to_error_message.get(
+                e.minor_error_code, e.error_message)
+        stderr(e, ctx)
     except Exception as e:
         stderr(e, ctx)
 
@@ -464,6 +475,15 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
             template_name=template_name,
             template_revision=template_revision)
         stdout(result, ctx)
+    except CseResponseError as e:
+        minor_error_code_to_error_message = {
+            MinorErrorCode.REQUEST_KEY_NETWORK_NAME_MISSING: 'Missing option "-n" / "--network".', # noqa: E501
+            MinorErrorCode.REQUEST_KEY_NETWORK_NAME_INVALID: 'Invalid or missing value for option "-n" / "--network".' # noqa: E501
+        }
+        e.error_message = \
+            minor_error_code_to_error_message.get(
+                e.minor_error_code, e.error_message)
+        stderr(e, ctx)
     except Exception as e:
         stderr(e, ctx)
 
@@ -498,7 +518,7 @@ def cluster_config(ctx, name, vdc, org):
         cluster = Cluster(client)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
-        cluster_config = cluster.get_cluster_config(name, vdc=vdc, org=org)
+        cluster_config = cluster.get_cluster_config(name, vdc=vdc, org=org).get(RESPONSE_MESSAGE_KEY) # noqa: E501
         if os.name == 'nt':
             cluster_config = str.replace(cluster_config, '\n', '\r\n')
 
@@ -785,8 +805,8 @@ def list_nodes(ctx, name, org, vdc):
         cluster = Cluster(client)
         cluster_info = cluster.get_cluster_info(name, org=org, vdc=vdc)
         if cluster_info.get(K8S_PROVIDER_KEY) != K8sProvider.NATIVE:
-            raise CseClientError('Node commands are not supported by non '
-                                 'native clusters.')
+            raise Exception('Node commands are not supported by non native '
+                            'clusters.')
         all_nodes = cluster_info['master_nodes'] + cluster_info['nodes']
         stdout(all_nodes, ctx, show_id=True)
     except Exception as e:

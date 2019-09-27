@@ -12,6 +12,7 @@ from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.ovdc_utils as ovdc_utils
 from container_service_extension.pksbroker import PksBroker
 from container_service_extension.pksbroker_manager import create_pks_context_for_all_accounts_in_org # noqa: E501
+import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.shared_constants import RequestKey
@@ -41,7 +42,8 @@ def get_cluster_info(request_data, tenant_auth_token):
     required = [
         RequestKey.CLUSTER_NAME
     ]
-    utils.ensure_keys_in_dict(required, request_data, dict_name='data')
+    req_utils.validate_payload(request_data, required)
+
     org_name = request_data.get(RequestKey.ORG_NAME)
     ovdc_name = request_data.get(RequestKey.OVDC_NAME)
 

@@ -11,9 +11,12 @@ import traceback
 import pika
 import requests
 
+from container_service_extension.exceptions import CseRequestError
+from container_service_extension.exceptions import NotAcceptableRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.request_processor as request_processor
 from container_service_extension.server_constants import EXCHANGE_TYPE
+from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 
 
 class MessageConsumer(object):
@@ -152,12 +155,33 @@ class MessageConsumer(object):
                          f"from {properties.app_id} "
                          f"({threading.currentThread().ident}): "
                          f"{json.dumps(body_json)}, props: {properties}")
+
+            response_format = None
+            accept_header = body_json['headers']['Accept'].lower()
+            accept_header = accept_header.split(';')[0]
+            tokens = accept_header.split('/')
+            if len(tokens) > 1:
+                if tokens[0] in ('*', 'application'):
+                    response_format = tokens[1]
+            if not response_format:
+                response_format = tokens[0]
+            response_format = response_format.replace('*+', '')
+
+            if not ('json' in response_format or '*' == response_format):
+                raise NotAcceptableRequestError(
+                    error_message="CSE can only serve response as json.")
+
             result = request_processor.process_request(body_json)
+
             status_code = result['status_code']
             reply_body = json.dumps(result['body'])
         except Exception as e:
-            reply_body = '{"message": "%s"}' % str(e)
-            status_code = requests.codes.internal_server_error
+            if isinstance(e, CseRequestError):
+                status_code = e.status_code
+            else:
+                status_code = requests.codes.internal_server_error
+            reply_body = json.dumps({RESPONSE_MESSAGE_KEY: str(e)})
+
             tb = traceback.format_exc()
             LOGGER.error(tb)
 
@@ -165,15 +189,15 @@ class MessageConsumer(object):
             reply_msg = {
                 'id': body_json['id'],
                 'headers': {
-                    'Content-Type': body_json['headers']['Accept'],
+                    'Content-Type': 'application/json',
                     'Content-Length': len(reply_body)
                 },
                 'statusCode': status_code,
-                'body':
-                base64.b64encode(reply_body.encode()).decode(self.fsencoding),
+                'body': base64.b64encode(reply_body.encode()).decode(self.fsencoding), # noqa: E501
                 'request': False
             }
-            LOGGER.debug(f"reply: {json.dumps(reply_body)}")
+            LOGGER.debug(f"reply: {reply_body}")
+
             reply_properties = pika.BasicProperties(
                 correlation_id=properties.correlation_id)
             self._channel.basic_publish(

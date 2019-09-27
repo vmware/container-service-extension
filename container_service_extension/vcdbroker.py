@@ -28,7 +28,6 @@ from container_service_extension.cluster import get_template
 from container_service_extension.cluster import init_cluster
 from container_service_extension.cluster import is_valid_cluster_name
 from container_service_extension.cluster import join_cluster
-from container_service_extension.exception_handler import error_to_json
 from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterInitializationError
 from container_service_extension.exceptions import ClusterJoiningError
@@ -42,15 +41,13 @@ from container_service_extension.exceptions import NodeNotFoundError
 from container_service_extension.exceptions import WorkerNodeCreationError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
+import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_NAME # noqa: E501
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import NodeType
-from container_service_extension.shared_constants import ERROR_DESCRIPTION_KEY
-from container_service_extension.shared_constants import ERROR_MESSAGE_KEY
-from container_service_extension.shared_constants import ERROR_STACKTRACE_KEY
 from container_service_extension.shared_constants import RequestKey
 import container_service_extension.utils as utils
 import container_service_extension.vsphere_utils as vs_utils
@@ -107,7 +104,8 @@ class VcdBroker(AbstractBroker):
         required = [
             RequestKey.CLUSTER_NAME
         ]
-        utils.ensure_keys_in_dict(required, data, dict_name='data')
+        req_utils.validate_payload(data, required)
+
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
@@ -189,7 +187,8 @@ class VcdBroker(AbstractBroker):
         required = [
             RequestKey.CLUSTER_NAME
         ]
-        utils.ensure_keys_in_dict(required, data, dict_name='data')
+        req_utils.validate_payload(data, required)
+
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
@@ -237,7 +236,7 @@ class VcdBroker(AbstractBroker):
 
         Required data: cluster_name, org_name, ovdc_name, network_name
         Optional data and default values: num_nodes=2, num_cpu=None,
-            mb_memory=None, storage_profile_name=None, ssh_key_filepath=None,
+            mb_memory=None, storage_profile_name=None, ssh_key=None,
             template_name=default, template_revision=default, enable_nfs=False,
             rollback=True
         """
@@ -247,7 +246,8 @@ class VcdBroker(AbstractBroker):
             RequestKey.OVDC_NAME,
             RequestKey.NETWORK_NAME
         ]
-        utils.ensure_keys_in_dict(required, data, dict_name='data')
+        req_utils.validate_payload(data, required)
+
         cluster_name = data[RequestKey.CLUSTER_NAME]
         # check that cluster name is syntactically valid
         if not is_valid_cluster_name(cluster_name):
@@ -270,7 +270,7 @@ class VcdBroker(AbstractBroker):
             RequestKey.NUM_CPU: None,
             RequestKey.MB_MEMORY: None,
             RequestKey.STORAGE_PROFILE_NAME: None,
-            RequestKey.SSH_KEY_FILEPATH: None,
+            RequestKey.SSH_KEY: None,
             RequestKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME],
             RequestKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION],
             RequestKey.ENABLE_NFS: False,
@@ -312,7 +312,7 @@ class VcdBroker(AbstractBroker):
             num_cpu=validated_data[RequestKey.NUM_CPU],
             mb_memory=validated_data[RequestKey.MB_MEMORY],
             storage_profile_name=validated_data[RequestKey.STORAGE_PROFILE_NAME], # noqa: E501
-            ssh_key_filepath=validated_data[RequestKey.SSH_KEY_FILEPATH],
+            ssh_key=validated_data[RequestKey.SSH_KEY],
             enable_nfs=validated_data[RequestKey.ENABLE_NFS],
             rollback=validated_data[RequestKey.ROLLBACK])
 
@@ -341,7 +341,8 @@ class VcdBroker(AbstractBroker):
             RequestKey.NUM_WORKERS,
             RequestKey.NETWORK_NAME
         ]
-        utils.ensure_keys_in_dict(required, data, dict_name='data')
+        req_utils.validate_payload(data, required)
+
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None,
@@ -386,7 +387,8 @@ class VcdBroker(AbstractBroker):
         required = [
             RequestKey.CLUSTER_NAME
         ]
-        utils.ensure_keys_in_dict(required, data, dict_name='data')
+        req_utils.validate_payload(data, required)
+
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
@@ -422,7 +424,8 @@ class VcdBroker(AbstractBroker):
             RequestKey.CLUSTER_NAME,
             RequestKey.NODE_NAME
         ]
-        utils.ensure_keys_in_dict(required, data, dict_name='data')
+        req_utils.validate_payload(data, required)
+
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
@@ -479,7 +482,7 @@ class VcdBroker(AbstractBroker):
 
         Required data: cluster_name, network_name
         Optional data and default values: num_nodes=2, num_cpu=None,
-            mb_memory=None, storage_profile_name=None, ssh_key_filepath=None,
+            mb_memory=None, storage_profile_name=None, ssh_key=None,
             template_name=default, template_revision=default, enable_nfs=False,
             rollback=True
         """
@@ -487,7 +490,8 @@ class VcdBroker(AbstractBroker):
             RequestKey.CLUSTER_NAME,
             RequestKey.NETWORK_NAME
         ]
-        utils.ensure_keys_in_dict(required, data, dict_name='data')
+        req_utils.validate_payload(data, required)
+
         cluster_name = data[RequestKey.CLUSTER_NAME]
         # check that requested/default template is valid
         template = get_template(
@@ -500,7 +504,7 @@ class VcdBroker(AbstractBroker):
             RequestKey.NUM_CPU: None,
             RequestKey.MB_MEMORY: None,
             RequestKey.STORAGE_PROFILE_NAME: None,
-            RequestKey.SSH_KEY_FILEPATH: None,
+            RequestKey.SSH_KEY: None,
             RequestKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME],
             RequestKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION],
             RequestKey.ENABLE_NFS: False,
@@ -544,7 +548,7 @@ class VcdBroker(AbstractBroker):
             num_cpu=validated_data[RequestKey.NUM_CPU],
             mb_memory=validated_data[RequestKey.MB_MEMORY],
             storage_profile_name=validated_data[RequestKey.STORAGE_PROFILE_NAME], # noqa: E501
-            ssh_key_filepath=validated_data[RequestKey.SSH_KEY_FILEPATH],
+            ssh_key=validated_data[RequestKey.SSH_KEY],
             enable_nfs=validated_data[RequestKey.ENABLE_NFS],
             rollback=validated_data[RequestKey.ROLLBACK])
 
@@ -568,7 +572,8 @@ class VcdBroker(AbstractBroker):
             RequestKey.CLUSTER_NAME,
             RequestKey.NODE_NAMES_LIST
         ]
-        utils.ensure_keys_in_dict(required, data, dict_name='data')
+        req_utils.validate_payload(data, required)
+
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
@@ -612,8 +617,8 @@ class VcdBroker(AbstractBroker):
                               org_name, ovdc_name, cluster_name, cluster_id,
                               template_name, template_revision, num_workers,
                               network_name, num_cpu, mb_memory,
-                              storage_profile_name, ssh_key_filepath,
-                              enable_nfs, rollback):
+                              storage_profile_name, ssh_key, enable_nfs,
+                              rollback):
         org = vcd_utils.get_org(self.tenant_client, org_name=org_name)
         vdc = vcd_utils.get_vdc(
             self.tenant_client, vdc_name=ovdc_name, org=org)
@@ -669,7 +674,7 @@ class VcdBroker(AbstractBroker):
                           num_cpu=num_cpu,
                           memory_in_mb=mb_memory,
                           storage_profile=storage_profile_name,
-                          ssh_key_filepath=ssh_key_filepath)
+                          ssh_key=ssh_key)
             except Exception as e:
                 raise MasterNodeCreationError("Error adding master node:",
                                               str(e))
@@ -702,7 +707,7 @@ class VcdBroker(AbstractBroker):
                           num_cpu=num_cpu,
                           memory_in_mb=mb_memory,
                           storage_profile=storage_profile_name,
-                          ssh_key_filepath=ssh_key_filepath)
+                          ssh_key=ssh_key)
             except Exception as e:
                 raise WorkerNodeCreationError("Error creating worker node:",
                                               str(e))
@@ -733,7 +738,7 @@ class VcdBroker(AbstractBroker):
                               num_cpu=num_cpu,
                               memory_in_mb=mb_memory,
                               storage_profile=storage_profile_name,
-                              ssh_key_filepath=ssh_key_filepath)
+                              ssh_key=ssh_key)
                 except Exception as e:
                     raise NFSNodeCreationError("Error creating NFS node:",
                                                str(e))
@@ -762,22 +767,12 @@ class VcdBroker(AbstractBroker):
                                  exc_info=True)
             LOGGER.error(f"Error creating cluster {cluster_name}",
                          exc_info=True)
-            error_obj = error_to_json(e)
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY]) # noqa: E501
-            self._update_task(
-                TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY], # noqa: E501
-                stack_trace=stack_trace)
+            self._update_task(TaskStatus.ERROR, error_message=str(e))
             # raising an exception here prints a stacktrace to server console
         except Exception as e:
             LOGGER.error(f"Unknown error creating cluster {cluster_name}",
                          exc_info=True)
-            error_obj = error_to_json(e)
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY]) # noqa: E501
-            self._update_task(
-                TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY], # noqa: E501
-                stack_trace=stack_trace)
+            self._update_task(TaskStatus.ERROR, error_message=str(e))
         finally:
             self.logout_sys_admin_client()
 
@@ -786,7 +781,7 @@ class VcdBroker(AbstractBroker):
                             cluster_name, cluster_vdc_href, cluster_vapp_href,
                             cluster_id, template_name, template_revision,
                             num_workers, network_name, num_cpu, mb_memory,
-                            storage_profile_name, ssh_key_filepath, enable_nfs,
+                            storage_profile_name, ssh_key, enable_nfs,
                             rollback):
         org = vcd_utils.get_org(self.tenant_client)
         vdc = VDC(self.tenant_client, href=cluster_vdc_href)
@@ -818,7 +813,7 @@ class VcdBroker(AbstractBroker):
                                   num_cpu=num_cpu,
                                   memory_in_mb=mb_memory,
                                   storage_profile=storage_profile_name,
-                                  ssh_key_filepath=ssh_key_filepath)
+                                  ssh_key=ssh_key)
 
             if node_type == NodeType.NFS:
                 self._update_task(
@@ -856,22 +851,12 @@ class VcdBroker(AbstractBroker):
                                  exc_info=True)
             LOGGER.error(f"Error adding nodes to {cluster_name}",
                          exc_info=True)
-            error_obj = error_to_json(e)
             LOGGER.error(str(e), exc_info=True)
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY]) # noqa: E501
-            self._update_task(
-                TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY], # noqa: E501
-                stack_trace=stack_trace)
+            self._update_task(TaskStatus.ERROR, error_message=str(e))
             # raising an exception here prints a stacktrace to server console
         except Exception as e:
-            error_obj = error_to_json(e)
             LOGGER.error(str(e), exc_info=True)
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY]) # noqa: E501
-            self._update_task(
-                TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY], # noqa: E501
-                stack_trace=stack_trace)
+            self._update_task(TaskStatus.ERROR, error_message=str(e))
         finally:
             self.logout_sys_admin_client()
 
@@ -895,12 +880,7 @@ class VcdBroker(AbstractBroker):
             LOGGER.error(f"Unexpected error while deleting nodes "
                          f"{node_names_list}: {e}",
                          exc_info=True)
-            error_obj = error_to_json(e)
-            stack_trace = ''.join(error_obj[ERROR_MESSAGE_KEY][ERROR_STACKTRACE_KEY]) # noqa: E501
-            self._update_task(
-                TaskStatus.ERROR,
-                error_message=error_obj[ERROR_MESSAGE_KEY][ERROR_DESCRIPTION_KEY], # noqa: E501
-                stack_trace=stack_trace)
+            self._update_task(TaskStatus.ERROR, error_message=str(e))
         finally:
             self.logout_sys_admin_client()
 

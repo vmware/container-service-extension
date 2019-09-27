@@ -1,15 +1,25 @@
+# container-service-extension
+# Copyright (c) 2019 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 
 from container_service_extension.compute_policy_manager import ComputePolicyManager # noqa: E501
+from container_service_extension.exceptions import BadRequestError
 from container_service_extension.exceptions import CseServerError
+from container_service_extension.exceptions import InternalServerRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.ovdc_utils as ovdc_utils
 import container_service_extension.pyvcloud_utils as vcd_utils
+import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.shared_constants import ComputePolicyAction
 from container_service_extension.shared_constants import RequestKey
 import container_service_extension.utils as utils
+
+
+SYSTEM_DEFAULT_COMPUTE_POLICY_NAME = "System Default"
 
 
 def ovdc_update(request_data, tenant_auth_token):
@@ -29,9 +39,9 @@ def ovdc_update(request_data, tenant_auth_token):
         RequestKey.K8S_PROVIDER,
         RequestKey.OVDC_ID
     ]
-    utils.ensure_keys_in_dict(required, request_data, dict_name='data')
-    validated_data = request_data
+    req_utils.validate_payload(request_data, required)
 
+    validated_data = request_data
     k8s_provider = validated_data[RequestKey.K8S_PROVIDER]
     k8s_provider_info = {K8S_PROVIDER_KEY: k8s_provider}
 
@@ -42,7 +52,7 @@ def ovdc_update(request_data, tenant_auth_token):
             RequestKey.PKS_PLAN_NAME,
             RequestKey.PKS_CLUSTER_DOMAIN
         ]
-        utils.ensure_keys_in_dict(required, validated_data, dict_name='data')
+        req_utils.validate_payload(validated_data, required)
 
         k8s_provider_info = ovdc_utils.construct_k8s_metadata_from_pks_cache(
             ovdc_id=validated_data[RequestKey.OVDC_ID],
@@ -72,7 +82,7 @@ def ovdc_info(request_data, tenant_auth_token):
     required = [
         RequestKey.OVDC_ID
     ]
-    utils.ensure_keys_in_dict(required, request_data, dict_name='data')
+    req_utils.validate_payload(request_data, required)
 
     return ovdc_utils.get_ovdc_k8s_provider_metadata(
         ovdc_id=request_data[RequestKey.OVDC_ID])
@@ -100,7 +110,8 @@ def ovdc_compute_policy_list(request_data, tenant_auth_token):
     required = [
         RequestKey.OVDC_ID
     ]
-    utils.ensure_keys_in_dict(required, request_data, dict_name='data')
+    req_utils.validate_payload(request_data, required)
+
     client, _ = vcd_utils.connect_vcd_user_via_token(tenant_auth_token)
 
     cpm = ComputePolicyManager(client)
@@ -119,12 +130,14 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token):
         RequestKey.COMPUTE_POLICY_ACTION,
         RequestKey.COMPUTE_POLICY_NAME
     ]
-    utils.ensure_keys_in_dict(required, request_data, dict_name='data')
+    req_utils.validate_payload(request_data, required)
+
     defaults = {
         RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: False,
     }
     validated_data = {**defaults, **request_data}
-    utils.ensure_keys_in_dict(required, validated_data, dict_name='data')
+    req_utils.validate_payload(request_data, required)
+
     action = validated_data[RequestKey.COMPUTE_POLICY_ACTION]
     cp_name = validated_data[RequestKey.COMPUTE_POLICY_NAME]
     ovdc_id = validated_data[RequestKey.OVDC_ID]
@@ -135,12 +148,18 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token):
     cpm = ComputePolicyManager(client)
     cp_href = None
     cp_id = None
-    for _cp in cpm.list_compute_policies_on_vdc(ovdc_id):
-        if _cp['name'] == cp_name:
-            cp_href = _cp['href']
-            cp_id = _cp['id']
+    if cp_name == SYSTEM_DEFAULT_COMPUTE_POLICY_NAME:
+        for _cp in cpm.list_compute_policies_on_vdc(ovdc_id):
+            if _cp['name'] == cp_name:
+                cp_href = _cp['href']
+                cp_id = _cp['id']
+    else:
+        _cp = cpm.get_policy(cp_name)
+        cp_href = _cp['href']
+        cp_id = _cp['id']
+
     if cp_href is None:
-        raise ValueError(f"Compute policy '{cp_name}' not found.")
+        raise BadRequestError(f"Compute policy '{cp_name}' not found.")
 
     if action == ComputePolicyAction.ADD:
         cpm.add_compute_policy_to_vdc(ovdc_id, cp_href)
@@ -162,12 +181,12 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token):
             # templates with the compute policy reference, so compute policy
             # cannot be removed)
             msg = f"Could not remove compute policy '{cp_name}' " \
-                  f"({cp_id}) from ovdc ({ovdc_id})"
+                  f"({cp_id}) from ovdc ({ovdc_id})."
             LOGGER.error(msg, exc_info=True)
-            raise Exception(
-                f"{msg} (check that no vApp templates or VMs currently "
+            raise InternalServerRequestError(
+                f"{msg} (Please check that no vApp templates or VMs currently "
                 f"contain a reference to the compute policy)")
         return f"Removed compute policy '{cp_name}' ({cp_id}) " \
                f"from ovdc ({ovdc_id})"
 
-    raise ValueError("Unsupported compute policy action")
+    raise BadRequestError("Unsupported compute policy action")

@@ -7,10 +7,10 @@ import json
 import sys
 from urllib.parse import parse_qsl
 
-import requests
-
 from container_service_extension.exception_handler import handle_exception
-from container_service_extension.exceptions import CseRequestError
+from container_service_extension.exceptions import BadRequestError
+from container_service_extension.exceptions import MethodNotAllowedRequestError
+from container_service_extension.exceptions import NotFoundRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.request_handlers.cluster_handler as cluster_handler # noqa: E501
 import container_service_extension.request_handlers.ovdc_handler as ovdc_handler # noqa: E501
@@ -19,6 +19,7 @@ import container_service_extension.request_handlers.template_handler as template
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
+from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 
 
 """Process incoming requests
@@ -84,8 +85,7 @@ def process_request(body):
     # check if server is disabled
     if operation not in (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE)\
             and not Service().is_running():
-        raise CseRequestError(status_code=requests.codes.bad_request,
-                              error_message='CSE service is disabled. Contact'
+        raise BadRequestError(error_message='CSE service is disabled. Contact'
                                             ' the System Administrator.')
 
     # create request data dict from request body data
@@ -104,9 +104,15 @@ def process_request(body):
 
     # process the request
     tenant_auth_token = body['headers']['x-vcloud-authorization']
+    body_content = \
+        OPERATION_TO_HANDLER[operation](request_data, tenant_auth_token)
+
+    if not (isinstance(body_content, (list, dict))):
+        body_content = {RESPONSE_MESSAGE_KEY: str(body_content)}
+
     reply = {
         'status_code': operation.ideal_response_code,
-        'body': OPERATION_TO_HANDLER[operation](request_data, tenant_auth_token) # noqa: E501
+        'body': body_content
     }
     LOGGER.debug(f"reply: {str(reply)}")
     return reply
@@ -127,14 +133,11 @@ def _get_url_data(method, url):
 
     :rtype: dict
     """
-    invalid_url_msg = "Invalid url - not found"
-    bad_method_msg = "Method not allowed"
     tokens = url.split('/')
     num_tokens = len(tokens)
 
     if num_tokens < 4:
-        raise CseRequestError(requests.codes.not_found,
-                              error_message=invalid_url_msg)
+        raise NotFoundRequestError()
 
     operation_type = tokens[3].lower()
     if operation_type.endswith('s'):
@@ -146,8 +149,7 @@ def _get_url_data(method, url):
                 return {_OPERATION_KEY: CseOperation.CLUSTER_LIST}
             if method == RequestMethod.POST:
                 return {_OPERATION_KEY: CseOperation.CLUSTER_CREATE}
-            raise CseRequestError(requests.codes.method_not_allowed,
-                                  error_message=bad_method_msg)
+            raise MethodNotAllowedRequestError()
         if num_tokens == 5:
             if method == RequestMethod.GET:
                 return {
@@ -164,16 +166,14 @@ def _get_url_data(method, url):
                     _OPERATION_KEY: CseOperation.CLUSTER_DELETE,
                     RequestKey.CLUSTER_NAME: tokens[4]
                 }
-            raise CseRequestError(requests.codes.method_not_allowed,
-                                  error_message=bad_method_msg)
+            raise MethodNotAllowedRequestError()
         if num_tokens == 6 and tokens[5] == 'config':
             if method == RequestMethod.GET:
                 return {
                     _OPERATION_KEY: CseOperation.CLUSTER_CONFIG,
                     RequestKey.CLUSTER_NAME: tokens[4]
                 }
-            raise CseRequestError(requests.codes.method_not_allowed,
-                                  error_message=bad_method_msg)
+            raise MethodNotAllowedRequestError()
 
     elif operation_type == 'node':
         if num_tokens == 4:
@@ -181,23 +181,20 @@ def _get_url_data(method, url):
                 return {_OPERATION_KEY: CseOperation.NODE_CREATE}
             if method == RequestMethod.DELETE:
                 return {_OPERATION_KEY: CseOperation.NODE_DELETE}
-            raise CseRequestError(requests.codes.method_not_allowed,
-                                  error_message=bad_method_msg)
+            raise MethodNotAllowedRequestError()
         if num_tokens == 5:
             if method == RequestMethod.GET:
                 return {
                     _OPERATION_KEY: CseOperation.NODE_INFO,
                     RequestKey.NODE_NAME: tokens[4]
                 }
-            raise CseRequestError(requests.codes.method_not_allowed,
-                                  error_message=bad_method_msg)
+            raise MethodNotAllowedRequestError()
 
     elif operation_type == 'ovdc':
         if num_tokens == 4:
             if method == RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.OVDC_LIST}
-            raise CseRequestError(requests.codes.method_not_allowed,
-                                  error_message=bad_method_msg)
+            raise MethodNotAllowedRequestError()
         if num_tokens == 5:
             if method == RequestMethod.GET:
                 return {
@@ -209,8 +206,7 @@ def _get_url_data(method, url):
                     _OPERATION_KEY: CseOperation.OVDC_UPDATE,
                     RequestKey.OVDC_ID: tokens[4]
                 }
-            raise CseRequestError(requests.codes.method_not_allowed,
-                                  error_message=bad_method_msg)
+            raise MethodNotAllowedRequestError()
         if num_tokens == 6 and tokens[5] == 'compute-policies':
             if method == RequestMethod.GET:
                 return {
@@ -222,8 +218,7 @@ def _get_url_data(method, url):
                     _OPERATION_KEY: CseOperation.OVDC_COMPUTE_POLICY_UPDATE,
                     RequestKey.OVDC_ID: tokens[4]
                 }
-            raise CseRequestError(requests.codes.method_not_allowed,
-                                  error_message=bad_method_msg)
+            raise MethodNotAllowedRequestError()
 
     elif operation_type == 'system':
         if num_tokens == 4:
@@ -231,15 +226,12 @@ def _get_url_data(method, url):
                 return {_OPERATION_KEY: CseOperation.SYSTEM_INFO}
             if method == RequestMethod.PUT:
                 return {_OPERATION_KEY: CseOperation.SYSTEM_UPDATE}
-            raise CseRequestError(requests.codes.method_not_allowed,
-                                  error_message=bad_method_msg)
+            raise MethodNotAllowedRequestError()
 
     elif operation_type == 'template':
         if num_tokens == 4:
             if method == RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.TEMPLATE_LIST}
-            raise CseRequestError(requests.codes.method_not_allowed,
-                                  error_message=bad_method_msg)
+            raise MethodNotAllowedRequestError()
 
-    raise CseRequestError(requests.codes.not_found,
-                          error_message=invalid_url_msg)
+    raise NotFoundRequestError()

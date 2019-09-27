@@ -9,10 +9,10 @@ import requests
 
 from container_service_extension.exceptions import CseRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.shared_constants import ERROR_DESCRIPTION_KEY
-from container_service_extension.shared_constants import ERROR_MESSAGE_KEY
-from container_service_extension.shared_constants import ERROR_REASON_KEY
-from container_service_extension.shared_constants import ERROR_STACKTRACE_KEY
+from container_service_extension.shared_constants import ERROR_MINOR_CODE_KEY
+from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 
 
 def handle_exception(func):
@@ -35,36 +35,21 @@ def handle_exception(func):
         result = {}
         try:
             result = func(*args, **kwargs)
-        except CseRequestError as e:
-            result['status_code'] = e.status_code
-            result['body'] = {'message': str(e)}
-            LOGGER.error(traceback.format_exc())
         except Exception as err:
-            result['status_code'] = requests.codes.internal_server_error
-            result['body'] = error_to_json(err)
+            if isinstance(err, CseRequestError):
+                result['status_code'] = err.status_code
+                minor_error_code = err.minor_error_code
+            else:
+                result['status_code'] = requests.codes.internal_server_error
+                minor_error_code = MinorErrorCode.DEFAULT_ERROR_CODE
+
+            error_string = str(err if err else '')
+            result['body'] = {
+                RESPONSE_MESSAGE_KEY: {
+                    ERROR_MINOR_CODE_KEY: int(minor_error_code),
+                    ERROR_DESCRIPTION_KEY: error_string
+                }
+            }
             LOGGER.error(traceback.format_exc())
         return result
     return exception_handler_wrapper
-
-
-def error_to_json(error):
-    """Convert the given python exception object to a dictionary.
-
-    :param error: Exception object.
-
-    :return: dictionary with error reason, error description and stacktrace
-
-    :rtype: dict
-    """
-    if error:
-        error_string = str(error)
-        reasons = error_string.split(',')
-        return {
-            ERROR_MESSAGE_KEY: {
-                ERROR_REASON_KEY: reasons[0],
-                ERROR_DESCRIPTION_KEY: error_string,
-                ERROR_STACKTRACE_KEY: traceback.format_exception(
-                    error.__class__, error, error.__traceback__)
-            }
-        }
-    return dict()

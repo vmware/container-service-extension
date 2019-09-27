@@ -50,6 +50,7 @@ from container_service_extension.pksclient.models.v1beta.\
 from container_service_extension.pyvcloud_utils import \
     get_org_name_from_ovdc_id
 from container_service_extension.pyvcloud_utils import is_org_admin
+import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
@@ -282,11 +283,11 @@ class PksBroker(AbstractBroker):
         required = [
             RequestKey.CLUSTER_NAME,
             RequestKey.PKS_PLAN_NAME,
-            'pks_ext_host', # noqa: E501 TODO this should not be part of the request spec
+            RequestKey.PKS_EXT_HOST,
             RequestKey.ORG_NAME,
             RequestKey.OVDC_NAME
         ]
-        utils.ensure_keys_in_dict(required, data, dict_name='data')
+        req_utils.validate_payload(data, required)
 
         cluster_name = data[RequestKey.CLUSTER_NAME]
         qualified_cluster_name = self._append_user_id(cluster_name)
@@ -302,7 +303,7 @@ class PksBroker(AbstractBroker):
             cluster_name=data[RequestKey.CLUSTER_NAME],
             num_workers=data[RequestKey.NUM_WORKERS],
             pks_plan_name=data[RequestKey.PKS_PLAN_NAME],
-            pks_ext_host=data['pks_ext_host'])
+            pks_ext_host=data[RequestKey.PKS_EXT_HOST])
 
         self._isolate_cluster(cluster_name, qualified_cluster_name,
                               cluster_info.get('uuid'))

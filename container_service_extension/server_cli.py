@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 # container-service-extension
-# Copyright (c) 2017 VMware, Inc. All Rights Reserved.
+# Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+
 import sys
 import time
 
@@ -644,10 +645,12 @@ def list_template(ctx, config_file_name, display_option):
                         template['default'] = True
                     else:
                         template['default'] = False
-                    template['deprecated'] = definition[LocalTemplateKey.DEPRECATED] # noqa: E501
+                    template['deprecated'] = \
+                        str_to_bool(definition[LocalTemplateKey.DEPRECATED])
                     template['cpu'] = definition[LocalTemplateKey.CPU]
                     template['memory'] = definition[LocalTemplateKey.MEMORY]
-                    template['description'] = definition[LocalTemplateKey.DESCRIPTION] # noqa: E501
+                    template['description'] = \
+                        definition[LocalTemplateKey.DESCRIPTION]
                     local_templates.append(template)
             finally:
                 if client:
@@ -670,7 +673,7 @@ def list_template(ctx, config_file_name, display_option):
                 template['remote'] = True
                 template['default'] = False
                 template['deprecated'] = \
-                    definition[RemoteTemplateKey.DEPRECATED]
+                    str_to_bool(definition[RemoteTemplateKey.DEPRECATED])
                 template['cpu'] = definition[RemoteTemplateKey.CPU]
                 template['memory'] = definition[RemoteTemplateKey.MEMORY]
                 template['description'] = \
