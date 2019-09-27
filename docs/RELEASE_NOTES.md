@@ -366,7 +366,7 @@ Supported vCD versions: 9.0, 9.1, 9.5
 
 ## CSE 1.1.0
 
-Release date: 2018-04-20
+Release date: 2018-06-15
 
 | vCD         | OS                 | Docker     | Kubernetes | Pod Network |
 |:------------|:-------------------|:-----------|:-----------|:------------|
