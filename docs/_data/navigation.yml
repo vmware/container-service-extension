@@ -111,6 +111,8 @@
     sublink: general
   - name: NFS Limitations
     sublink: nfs
+  - name: Enterprise PKS Limitations
+    sublink: ent-pks
 - name: "Release Notes"
   link: RELEASE_NOTES.html
 - name: Contributing
