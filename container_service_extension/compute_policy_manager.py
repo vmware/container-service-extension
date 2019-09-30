@@ -69,7 +69,7 @@ class ComputePolicyManager:
             auth_token=auth_token,
             verify_ssl=self._vcd_client._verify_ssl_certs)
 
-    def get_all_cse_policies(self):
+    def get_all_policies(self):
         """Get all compute policies in vCD that were created by CSE.
 
         Returns a generator that when iterated over will yield all CSE compute
@@ -105,7 +105,9 @@ class ComputePolicyManager:
         :return: policy details if found, else None
         :rtype: dict
         """
-        # NOTE 'System Default' is the only case where multiple compute
+        # NOTE If multiple policies with the same name exist, this function
+        # returns the first found.
+        # 'System Default' is the only case where multiple compute
         # policies with the same name may exist.
         # TODO filter query parameter
         # `cloudapi/1.0.0/vdcComputePolicies?filter=` can be used to reduce
