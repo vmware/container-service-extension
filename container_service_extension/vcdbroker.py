@@ -2,8 +2,6 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import functools
-import threading
 import uuid
 
 import pkg_resources
@@ -51,17 +49,6 @@ from container_service_extension.server_constants import NodeType
 from container_service_extension.shared_constants import RequestKey
 import container_service_extension.utils as utils
 import container_service_extension.vsphere_utils as vs_utils
-
-
-def run_async(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        t = threading.Thread(target=func, args=args, kwargs=kwargs,
-                             daemon=True)
-        t.start()
-        return t
-
-    return wrapper
 
 
 class VcdBroker(AbstractBroker):
@@ -612,7 +599,7 @@ class VcdBroker(AbstractBroker):
         }
 
     # all parameters following '*args' are required and keyword-only
-    @run_async
+    @utils.run_async
     def _create_cluster_async(self, *args,
                               org_name, ovdc_name, cluster_name, cluster_id,
                               template_name, template_revision, num_workers,
@@ -776,7 +763,7 @@ class VcdBroker(AbstractBroker):
         finally:
             self.logout_sys_admin_client()
 
-    @run_async
+    @utils.run_async
     def _create_nodes_async(self, *args,
                             cluster_name, cluster_vdc_href, cluster_vapp_href,
                             cluster_id, template_name, template_revision,
@@ -861,7 +848,7 @@ class VcdBroker(AbstractBroker):
             self.logout_sys_admin_client()
 
     # all parameters following '*args' are required and keyword-only
-    @run_async
+    @utils.run_async
     def _delete_nodes_async(self, *args,
                             cluster_name, cluster_vapp_href, node_names_list):
         try:
@@ -885,7 +872,7 @@ class VcdBroker(AbstractBroker):
             self.logout_sys_admin_client()
 
     # all parameters following '*args' are required and keyword-only
-    @run_async
+    @utils.run_async
     def _delete_cluster_async(self, *args, cluster_name, cluster_vdc_href):
         try:
             self._update_task(
