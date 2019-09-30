@@ -2,13 +2,9 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from pyvcloud.vcd.exceptions import EntityNotFoundException
-
 from container_service_extension.compute_policy_manager import ComputePolicyManager # noqa: E501
 from container_service_extension.exceptions import BadRequestError
 from container_service_extension.exceptions import CseServerError
-from container_service_extension.exceptions import InternalServerRequestError
-from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.ovdc_utils as ovdc_utils
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.request_handlers.request_utils as req_utils
@@ -167,26 +163,9 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token):
                f"({ovdc_id})"
 
     if action == ComputePolicyAction.REMOVE:
-        try:
-            cpm.remove_compute_policy_from_vdc(
-                ovdc_id,
-                cp_href,
-                remove_compute_policy_from_vms=remove_compute_policy_from_vms)
-        except EntityNotFoundException:
-            raise EntityNotFoundException(
-                f"Compute policy '{cp_name}' not found in ovdc ({ovdc_id})")
-        except Exception:
-            # This ensures that BadRequestException message is printed
-            # to console. (error when ovdc currently has VMs/vApp
-            # templates with the compute policy reference, so compute policy
-            # cannot be removed)
-            msg = f"Could not remove compute policy '{cp_name}' " \
-                  f"({cp_id}) from ovdc ({ovdc_id})."
-            LOGGER.error(msg, exc_info=True)
-            raise InternalServerRequestError(
-                f"{msg} (Please check that no vApp templates or VMs currently "
-                f"contain a reference to the compute policy)")
-        return f"Removed compute policy '{cp_name}' ({cp_id}) " \
-               f"from ovdc ({ovdc_id})"
+        return cpm.remove_compute_policy_from_vdc(
+            ovdc_id,
+            cp_href,
+            remove_compute_policy_from_vms=remove_compute_policy_from_vms)
 
     raise BadRequestError("Unsupported compute policy action")

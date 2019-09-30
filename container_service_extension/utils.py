@@ -2,11 +2,13 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import functools
 import hashlib
 import os
 import pathlib
 import stat
 import sys
+import threading
 
 import click
 import requests
@@ -291,3 +293,14 @@ def read_data_file(filepath, logger=None, msg_update_callback=None):
     if logger:
         logger.info(msg)
     return path.read_text()
+
+
+def run_async(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        t = threading.Thread(target=func, args=args, kwargs=kwargs,
+                             daemon=True)
+        t.start()
+        return t
+
+    return wrapper
