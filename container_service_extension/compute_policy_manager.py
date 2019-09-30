@@ -112,7 +112,7 @@ class ComputePolicyManager:
         # TODO filter query parameter
         # `cloudapi/1.0.0/vdcComputePolicies?filter=` can be used to reduce
         # number of api calls
-        for policy_dict in self.get_all_cse_policies():
+        for policy_dict in self.get_all_policies():
             if policy_dict.get('display_name') == policy_name:
                 policy_dict['href'] = self._get_policy_href(policy_dict['id'])
                 return policy_dict
