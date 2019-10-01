@@ -123,8 +123,8 @@ SAMPLE_BROKER_CONFIG = {
         'network': 'mynetwork',
         'ip_allocation_mode': 'pool',
         'storage_profile': '*',
-        'default_template_name': 'ubuntu-16.04_k8-1.15_weave-2.5.2',
-        'default_template_revision': 1,
+        'default_template_name': 'my_template',
+        'default_template_revision': 0,
         'remote_template_cookbook_url': 'https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template.yaml', # noqa: E501
     }
 }
