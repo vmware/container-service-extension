@@ -14,7 +14,7 @@ from pyvcloud.vcd.vm import VM
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CloudApiResource
-from container_service_extension.cloudapi.constants import COMPUTE_POLICY_NAME_PREFIX # noqa: E501
+from container_service_extension.cloudapi.constants import CSE_COMPUTE_POLICY_PREFIX # noqa: E501
 # TODO move cloudapi.constants.EntityType to pyvcloud
 from container_service_extension.cloudapi.constants import EntityType as CloudAPIEntityType # noqa: E501
 from container_service_extension.cloudapi.constants import RelationType
@@ -300,7 +300,7 @@ class ComputePolicyManager:
         :return: policy name unique to cse
         :rtype: str
         """
-        return f"{COMPUTE_POLICY_NAME_PREFIX}{policy_name}"
+        return f"{CSE_COMPUTE_POLICY_PREFIX}{policy_name}"
 
     def _get_policy_display_name(self, policy_name):
         """Remove cse specific prefix from the given policy name.
@@ -310,8 +310,8 @@ class ComputePolicyManager:
         :return: policy name after removing cse specific prefix
         :rtype: str
         """
-        if policy_name and policy_name.startswith(COMPUTE_POLICY_NAME_PREFIX):
-            return policy_name.replace(COMPUTE_POLICY_NAME_PREFIX, '', 1)
+        if policy_name and policy_name.startswith(CSE_COMPUTE_POLICY_PREFIX):
+            return policy_name.replace(CSE_COMPUTE_POLICY_PREFIX, '', 1)
         return policy_name
 
     def _get_policy_href(self, policy_id):
