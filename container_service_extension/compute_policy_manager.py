@@ -2,20 +2,21 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from pyvcloud.vcd.client import EntityType as PyvcdEntityType
+from pyvcloud.vcd.client import EntityType
 from pyvcloud.vcd.client import find_link
 from pyvcloud.vcd.client import TaskStatus
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingLinkException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
-from pyvcloud.vcd.utils import retrieve_compute_policy_id_from_href
 from pyvcloud.vcd.task import Task
+from pyvcloud.vcd.utils import retrieve_compute_policy_id_from_href
 from pyvcloud.vcd.vm import VM
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CloudApiResource
-from container_service_extension.cloudapi.constants import CSE_COMPUTE_POLICY_PREFIX # noqa: E501
-from container_service_extension.cloudapi.constants import EntityType
+from container_service_extension.cloudapi.constants import COMPUTE_POLICY_NAME_PREFIX # noqa: E501
+# TODO move cloudapi.constants.EntityType to pyvcloud
+from container_service_extension.cloudapi.constants import EntityType as CloudAPIEntityType # noqa: E501
 from container_service_extension.cloudapi.constants import RelationType
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.pyvcloud_utils as pyvcd_utils
@@ -54,24 +55,23 @@ class ComputePolicyManager:
         self._vcd_client = client
         # TODO: pyvcloud should expose methods to grab the session and token
         # from a client object.
-        auth_token = \
-            self._vcd_client._session.headers['x-vcloud-authorization']
+        token = self._vcd_client._session.headers['x-vcloud-authorization']
         # pyvcloud doesn't store the vCD session response in client. So we need
         # to get it from vCD.
-        self._session = self._vcd_client.rehydrate_from_token(auth_token)
+        self._session = self._vcd_client.rehydrate_from_token(token)
         # Ideally this information should be fetched from
         # client._session_endpoints. However pyvcloud client doesn't store
         # the cloudapi link, so we have to find it manually.
         try:
             link = find_link(self._session, RelationType.OPEN_API,
-                             EntityType.APPLICATION_JSON)
+                             CloudAPIEntityType.APPLICATION_JSON)
         except MissingLinkException:
             raise OperationNotSupportedException(
                 "Cloudapi endpoint unavailable at current api version.")
 
         self._cloudapi_client = CloudApiClient(
             base_url=link.href,
-            auth_token=auth_token,
+            auth_token=token,
             verify_ssl=self._vcd_client._verify_ssl_certs)
 
     def get_all_policies(self):
@@ -355,7 +355,7 @@ class ComputePolicyManager:
             progress=None,
             owner_href=vdc.href,
             owner_name=vdc.name,
-            owner_type=PyvcdEntityType.VDC.value,
+            owner_type=EntityType.VDC.value,
             user_href=user_href,
             user_name=user_name,
             org_href=org.href)
@@ -364,6 +364,10 @@ class ComputePolicyManager:
         self._remove_compute_policy_from_vdc_async(
             task=task,
             task_href=task_href,
+            user_href=user_href,
+            org_href=org.name,
+            vdc_href=vdc.href,
+            vdc_name=vdc.href,
             ovdc_id=ovdc_id,
             compute_policy_href=compute_policy_href,
             remove_compute_policy_from_vms=remove_compute_policy_from_vms)
@@ -376,16 +380,14 @@ class ComputePolicyManager:
     def _remove_compute_policy_from_vdc_async(self, *args,
                                               task,
                                               task_href,
+                                              user_href,
+                                              org_href,
+                                              vdc_href,
+                                              vdc_name,
                                               ovdc_id,
                                               compute_policy_href,
                                               remove_compute_policy_from_vms):
-        vdc = pyvcd_utils.get_vdc(self._vcd_client, vdc_id=ovdc_id)
-
-        # TODO is there any better way to get the client href
-        org = pyvcd_utils.get_org(self._vcd_client)
-        org.reload()
         user_name = self._session.get('user')
-        user_href = org.get_user(user_name).get('href')
 
         try:
             if remove_compute_policy_from_vms:
@@ -411,94 +413,104 @@ class ComputePolicyManager:
                         if vm_resource.VdcComputePolicy.get('id') == compute_policy_id: # noqa: E501
                             target_vms.append(vm_resource)
                 vm_names = [vm.get('name') for vm in target_vms]
-                _update_vdc_task_resource(
-                    task,
-                    TaskStatus.RUNNING,
-                    vdc.href,
-                    vdc.name,
-                    user_href,
-                    user_name,
-                    task_href,
-                    org.href,
-                    message=f"Setting compute policy to "
-                            f"'{_SYSTEM_DEFAULT_COMPUTE_POLICY}' on "
-                            f"{len(vm_names)} affected VMs: {vm_names}")
+
+                task.update(
+                    status=TaskStatus.RUNNING,
+                    namespace='vcloud.cse',
+                    operation=f"Setting compute policy to "
+                              f"'{_SYSTEM_DEFAULT_COMPUTE_POLICY}' on "
+                              f"{len(vm_names)} affected VMs: {vm_names}",
+                    operation_name='Updating VDC',
+                    details='',
+                    progress=None,
+                    owner_href=vdc_href,
+                    owner_name=vdc_name,
+                    owner_type=EntityType.VDC.value,
+                    user_href=user_href,
+                    user_name=user_name,
+                    task_href=task_href,
+                    org_href=org_href,
+                )
 
                 task_monitor = self._vcd_client.get_task_monitor()
                 for vm_resource in target_vms:
-                    vm = VM(self._vcd_client, resource=vm_resource)
+                    vm = VM(self._vcd_client, href=vm_resource.get('href'))
                     _task = vm.update_compute_policy(system_default_href,
                                                      system_default_id)
-                    _update_vdc_task_resource(
-                        task,
-                        TaskStatus.RUNNING,
-                        vdc.href,
-                        vdc.name,
-                        user_href,
-                        user_name,
-                        task_href,
-                        org.href,
-                        message=f"Setting compute policy to "
-                                f"'{_SYSTEM_DEFAULT_COMPUTE_POLICY}' on VM "
-                                f"'{vm_resource.get('name')}'")
+
+                    task.update(
+                        status=TaskStatus.RUNNING,
+                        namespace='vcloud.cse',
+                        operation=f"Setting compute policy to "
+                                  f"'{_SYSTEM_DEFAULT_COMPUTE_POLICY}' on VM "
+                                  f"'{vm_resource.get('name')}'",
+                        operation_name='Updating VDC',
+                        details='',
+                        progress=None,
+                        owner_href=vdc_href,
+                        owner_name=vdc_name,
+                        owner_type=EntityType.VDC.value,
+                        user_href=user_href,
+                        user_name=user_name,
+                        task_href=task_href,
+                        org_href=org_href,
+                    )
                     task_monitor.wait_for_success(_task)
 
             vdc = pyvcd_utils.get_vdc(self._vcd_client,
                                       vdc_id=ovdc_id,
                                       is_admin_operation=True)
-            _update_vdc_task_resource(
-                task,
-                TaskStatus.RUNNING,
-                vdc.href,
-                vdc.name,
-                user_href,
-                user_name,
-                task_href,
-                org.href,
-                message=f"Removing compute policy (href:{compute_policy_href})"
-                        f" from org VDC '{vdc.name}'")
+
+            task.update(
+                status=TaskStatus.RUNNING,
+                namespace='vcloud.cse',
+                operation=f"Removing compute policy (href:"
+                          f"{compute_policy_href}) from org VDC '{vdc_name}'",
+                operation_name='Updating VDC',
+                details='',
+                progress=None,
+                owner_href=vdc_href,
+                owner_name=vdc_name,
+                owner_type=EntityType.VDC.value,
+                user_href=user_href,
+                user_name=user_name,
+                task_href=task_href,
+                org_href=org_href,
+            )
+
             vdc.remove_compute_policy(compute_policy_href)
-            _update_vdc_task_resource(
-                task,
-                TaskStatus.SUCCESS,
-                vdc.href,
-                vdc.name,
-                user_href,
-                user_name,
-                task_href,
-                org.href,
-                message=f"Removed compute policy (href: {compute_policy_href})"
-                        f" from org VDC '{vdc.name}'")
+
+            task.update(
+                status=TaskStatus.SUCCESS,
+                namespace='vcloud.cse',
+                operation=f"Removed compute policy (href: "
+                          f"{compute_policy_href}) from org VDC '{vdc_name}'",
+                operation_name='Updating VDC',
+                details='',
+                progress=None,
+                owner_href=vdc_href,
+                owner_name=vdc_name,
+                owner_type=EntityType.VDC.value,
+                user_href=user_href,
+                user_name=user_name,
+                task_href=task_href,
+                org_href=org_href,
+            )
         except Exception as err:
             LOGGER.error(err, exc_info=True)
-            _update_vdc_task_resource(
-                task,
-                TaskStatus.ERROR,
-                vdc.href,
-                vdc.name,
-                user_href,
-                user_name,
-                task_href,
-                org.href,
-                error_message=f"{err}")
-
-
-def _update_vdc_task_resource(task, status, vdc_href, vdc_name, user_href,
-                              user_name, task_href, org_href, message='',
-                              error_message=None):
-    return task.update(
-        status=status.value,
-        namespace='vcloud.cse',
-        operation=message,
-        operation_name='Updating VDC',
-        details='',
-        progress=None,
-        owner_href=vdc_href,
-        owner_name=vdc_name,
-        owner_type=PyvcdEntityType.VDC.value,
-        user_href=user_href,
-        user_name=user_name,
-        task_href=task_href,
-        org_href=org_href,
-        error_message=error_message,
-    )
+            task.update(
+                status=TaskStatus.ERROR,
+                namespace='vcloud.cse',
+                operation='',
+                operation_name='Updating VDC',
+                details='',
+                progress=None,
+                owner_href=vdc_href,
+                owner_name=vdc_name,
+                owner_type=EntityType.VDC.value,
+                user_href=user_href,
+                user_name=user_name,
+                task_href=task_href,
+                org_href=org_href,
+                error_message=f"{err}"
+            )
