@@ -456,10 +456,6 @@ class ComputePolicyManager:
                     )
                     task_monitor.wait_for_success(_task)
 
-            vdc = pyvcd_utils.get_vdc(self._vcd_client,
-                                      vdc_id=ovdc_id,
-                                      is_admin_operation=True)
-
             task.update(
                 status=TaskStatus.RUNNING.value,
                 namespace='vcloud.cse',
