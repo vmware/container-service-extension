@@ -350,7 +350,7 @@ class ComputePolicyManager:
             task=task,
             task_href=task_href,
             user_href=user_href,
-            org_href=org.name,
+            org_href=org.href,
             vdc_href=vdc.href,
             vdc_name=vdc.href,
             ovdc_id=ovdc_id,
@@ -400,7 +400,7 @@ class ComputePolicyManager:
                 vm_names = [vm.get('name') for vm in target_vms]
 
                 task.update(
-                    status=TaskStatus.RUNNING,
+                    status=TaskStatus.RUNNING.value,
                     namespace='vcloud.cse',
                     operation=f"Setting compute policy to "
                               f"'{_SYSTEM_DEFAULT_COMPUTE_POLICY}' on "
@@ -424,7 +424,7 @@ class ComputePolicyManager:
                                                      system_default_id)
 
                     task.update(
-                        status=TaskStatus.RUNNING,
+                        status=TaskStatus.RUNNING.value,
                         namespace='vcloud.cse',
                         operation=f"Setting compute policy to "
                                   f"'{_SYSTEM_DEFAULT_COMPUTE_POLICY}' on VM "
@@ -447,7 +447,7 @@ class ComputePolicyManager:
                                       is_admin_operation=True)
 
             task.update(
-                status=TaskStatus.RUNNING,
+                status=TaskStatus.RUNNING.value,
                 namespace='vcloud.cse',
                 operation=f"Removing compute policy (href:"
                           f"{compute_policy_href}) from org VDC '{vdc_name}'",
@@ -466,7 +466,7 @@ class ComputePolicyManager:
             vdc.remove_compute_policy(compute_policy_href)
 
             task.update(
-                status=TaskStatus.SUCCESS,
+                status=TaskStatus.SUCCESS.value,
                 namespace='vcloud.cse',
                 operation=f"Removed compute policy (href: "
                           f"{compute_policy_href}) from org VDC '{vdc_name}'",
@@ -484,7 +484,7 @@ class ComputePolicyManager:
         except Exception as err:
             LOGGER.error(err, exc_info=True)
             task.update(
-                status=TaskStatus.ERROR,
+                status=TaskStatus.ERROR.value,
                 namespace='vcloud.cse',
                 operation='',
                 operation_name='Updating VDC',
