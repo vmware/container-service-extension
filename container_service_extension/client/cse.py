@@ -1203,7 +1203,8 @@ def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
     is_flag=True,
     help="Remove the specified compute policy from deployed VMs as well. "
          "Affected VMs will have 'System Default' compute policy. "
-         "Does not remove the compute policy from vApp templates in catalog.")
+         "Does not remove the compute policy from vApp templates in catalog. "
+         "This VM compute policy update is irreversible.")
 def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name,
                           remove_compute_policy_from_vms):
     try:

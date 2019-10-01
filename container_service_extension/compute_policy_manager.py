@@ -366,8 +366,6 @@ class ComputePolicyManager:
             task_href=task_href,
             user_href=user_href,
             org_href=org.href,
-            vdc_href=vdc.href,
-            vdc_name=vdc.href,
             ovdc_id=ovdc_id,
             compute_policy_href=compute_policy_href,
             remove_compute_policy_from_vms=remove_compute_policy_from_vms)
@@ -382,12 +380,13 @@ class ComputePolicyManager:
                                               task_href,
                                               user_href,
                                               org_href,
-                                              vdc_href,
-                                              vdc_name,
                                               ovdc_id,
                                               compute_policy_href,
                                               remove_compute_policy_from_vms):
         user_name = self._session.get('user')
+        vdc = pyvcd_utils.get_vdc(self._vcd_client,
+                                  vdc_id=ovdc_id,
+                                  is_admin_operation=True)
 
         try:
             if remove_compute_policy_from_vms:
@@ -420,11 +419,11 @@ class ComputePolicyManager:
                     operation=f"Setting compute policy to "
                               f"'{_SYSTEM_DEFAULT_COMPUTE_POLICY}' on "
                               f"{len(vm_names)} affected VMs: {vm_names}",
-                    operation_name='Updating VDC',
+                    operation_name='Remove org VDC compute policy',
                     details='',
                     progress=None,
-                    owner_href=vdc_href,
-                    owner_name=vdc_name,
+                    owner_href=vdc.href,
+                    owner_name=vdc.name,
                     owner_type=EntityType.VDC.value,
                     user_href=user_href,
                     user_name=user_name,
@@ -444,11 +443,11 @@ class ComputePolicyManager:
                         operation=f"Setting compute policy to "
                                   f"'{_SYSTEM_DEFAULT_COMPUTE_POLICY}' on VM "
                                   f"'{vm_resource.get('name')}'",
-                        operation_name='Updating VDC',
+                        operation_name='Remove org VDC compute policy',
                         details='',
                         progress=None,
-                        owner_href=vdc_href,
-                        owner_name=vdc_name,
+                        owner_href=vdc.href,
+                        owner_name=vdc.name,
                         owner_type=EntityType.VDC.value,
                         user_href=user_href,
                         user_name=user_name,
@@ -465,12 +464,12 @@ class ComputePolicyManager:
                 status=TaskStatus.RUNNING.value,
                 namespace='vcloud.cse',
                 operation=f"Removing compute policy (href:"
-                          f"{compute_policy_href}) from org VDC '{vdc_name}'",
-                operation_name='Updating VDC',
+                          f"{compute_policy_href}) from org VDC '{vdc.name}'",
+                operation_name='Remove org VDC compute policy',
                 details='',
                 progress=None,
-                owner_href=vdc_href,
-                owner_name=vdc_name,
+                owner_href=vdc.href,
+                owner_name=vdc.name,
                 owner_type=EntityType.VDC.value,
                 user_href=user_href,
                 user_name=user_name,
@@ -484,12 +483,12 @@ class ComputePolicyManager:
                 status=TaskStatus.SUCCESS.value,
                 namespace='vcloud.cse',
                 operation=f"Removed compute policy (href: "
-                          f"{compute_policy_href}) from org VDC '{vdc_name}'",
+                          f"{compute_policy_href}) from org VDC '{vdc.name}'",
                 operation_name='Updating VDC',
                 details='',
                 progress=None,
-                owner_href=vdc_href,
-                owner_name=vdc_name,
+                owner_href=vdc.href,
+                owner_name=vdc.name,
                 owner_type=EntityType.VDC.value,
                 user_href=user_href,
                 user_name=user_name,
@@ -502,11 +501,11 @@ class ComputePolicyManager:
                 status=TaskStatus.ERROR.value,
                 namespace='vcloud.cse',
                 operation='',
-                operation_name='Updating VDC',
+                operation_name='Remove org VDC compute policy',
                 details='',
                 progress=None,
-                owner_href=vdc_href,
-                owner_name=vdc_name,
+                owner_href=vdc.href,
+                owner_name=vdc.name,
                 owner_type=EntityType.VDC.value,
                 user_href=user_href,
                 user_name=user_name,
