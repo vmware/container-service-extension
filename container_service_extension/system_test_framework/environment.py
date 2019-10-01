@@ -259,6 +259,10 @@ def catalog_item_exists(catalog_item, catalog_name=None):
         catalog_name = CATALOG_NAME
     org = Org(CLIENT, href=ORG_HREF)
     try:
+        # DEV NOTE: With api v33.0 and onwards, get_catalog_item operation will
+        # fail for non admin users of an an org which is not hosting the
+        # catalog, even if the catalog is explicitly shared with the org in
+        # question. Please use this method only for org admin and sys admins.
         org.get_catalog_item(catalog_name, catalog_item)
         return True
     except EntityNotFoundException:

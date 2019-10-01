@@ -336,6 +336,11 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
             pass
     else:
         try:
+            # DEV NOTE: With api v33.0 and onwards, get_catalog_item operation
+            # will fail for non admin users of an org which is not hosting the
+            # catalog, even if the catalog is explicitly shared with the org in
+            # question. Please use this method only for org admin and
+            # sys admins.
             org.get_catalog_item(catalog_name, catalog_item_name)
             msg = f"'{catalog_item_name}' already exists in catalog " \
                   f"'{catalog_name}'"
@@ -375,6 +380,10 @@ def catalog_exists(org, catalog_name):
 
     :rtype: bool
     """
+    # DEV NOTE: With api v33.0 and onwards, get_catalog operation will fail for
+    # non admin users of an org which is not hosting the catalog, even if the
+    # catalog is explicitly shared with the org in question. Please use this
+    # method only for org admin and sys admins.
     try:
         org.get_catalog(catalog_name)
         return True
@@ -393,6 +402,10 @@ def catalog_item_exists(org, catalog_name, catalog_item_name):
 
     :rtype: bool
     """
+    # DEV NOTE: With api v33.0 and onwards, get_catalog_item operation will
+    # fail for non admin users of an an org which is not hosting the catalog,
+    # even if the catalog is explicitly shared with the org in question. Please
+    # use this method only for org admin and sys admins.
     try:
         org.get_catalog_item(catalog_name, catalog_item_name)
         return True
@@ -444,6 +457,10 @@ def create_and_share_catalog(org, catalog_name, catalog_desc='', logger=None,
         org.reload()
     org.share_catalog(catalog_name)
     org.reload()
+    # DEV NOTE: With api v33.0 and onwards, get_catalog operation will fail for
+    # non admin users of an org which is not hosting the catalog, even if the
+    # catalog is explicitly shared with the org in question. Please use this
+    # method only for org admin and sys admins.
     return org.get_catalog(catalog_name)
 
 
@@ -463,6 +480,10 @@ def wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
     """
     if org is None:
         org = get_org(client, org_name=org_name)
+    # DEV NOTE: With api v33.0 and onwards, get_catalog_item operation will
+    # fail for non admin users of an an org which is not hosting the catalog,
+    # even if the catalog is explicitly shared with the org in question. Please
+    # use this method only for org admin and sys admins.
     item = org.get_catalog_item(catalog_name, catalog_item_name)
     resource = client.get_resource(item.Entity.get('href'))
     client.get_task_monitor().wait_for_success(resource.Tasks.Task[0])
