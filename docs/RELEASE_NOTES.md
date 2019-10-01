@@ -36,7 +36,6 @@ CSE 2.5.0 beta.
 **New Features**
 
 - Support for multiple K8s templates
-- [Essential PKS based templates](/container-service-extension/ESS-PKS.html)
 
 **Compatibility matrix**
 
