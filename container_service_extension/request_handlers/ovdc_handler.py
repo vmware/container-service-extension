@@ -1,6 +1,7 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+from pyvcloud.vcd.exceptions import EntityNotFoundException
 
 from container_service_extension.compute_policy_manager import ComputePolicyManager # noqa: E501
 from container_service_extension.exceptions import BadRequestError
@@ -150,9 +151,12 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token):
                 cp_href = _cp['href']
                 cp_id = _cp['id']
     else:
-        _cp = cpm.get_policy(cp_name)
-        cp_href = _cp['href']
-        cp_id = _cp['id']
+        try:
+            _cp = cpm.get_policy(cp_name)
+            cp_href = _cp['href']
+            cp_id = _cp['id']
+        except EntityNotFoundException:
+            pass
 
     if cp_href is None:
         raise BadRequestError(f"Compute policy '{cp_name}' not found.")
