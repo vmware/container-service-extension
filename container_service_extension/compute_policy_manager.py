@@ -122,6 +122,9 @@ class ComputePolicyManager:
                 policy_dict['href'] = self._get_policy_href(policy_dict['id'])
                 return policy_dict
 
+        raise EntityNotFoundException(f"Compute policy '{policy_name}'"
+                                      f" does not exist.")
+
     def add_policy(self, policy_name, description=None):
         """Add policy with the given name and description.
 
