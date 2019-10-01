@@ -4,6 +4,7 @@
 
 import os
 from pathlib import Path
+import stat
 
 import requests
 import yaml
@@ -151,6 +152,10 @@ class RemoteTemplateManager():
                           force_overwrite=force_overwrite,
                           logger=self.logger,
                           msg_update_callback=self.msg_update_callback)
+
+            # Set Read,Write permission only for the owner
+            if os.name != 'nt':
+                os.chmod(local_script_filepath, stat.S_IRUSR | stat.S_IWUSR)
 
     def download_all_template_scripts(self, force_overwrite=False):
         """Download all scripts for all templates mentioned in cookbook.
