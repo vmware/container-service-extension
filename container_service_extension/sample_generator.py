@@ -6,49 +6,54 @@ import yaml
 
 
 INSTRUCTIONS_FOR_PKS_CONFIG_FILE = "\
-# Config file for PKS enabled CSE Server to be filled by administrators.\n\
-# This config file has the following four sections:\n\
+# Config file for Enterprise PKS enabled CSE Server to be filled by \n\
+# administrators. This config file has the following four sections:\n\
 #   1. pks_api_servers:\n\
-#       a. Each entry in the list represents a PKS api server that is part \n\
-#          of the deployment.\n\
-#       b. The field 'name' in each entry should be unique. The value of \n\
-#          the field has no bearing on the real world PKS api server, it's \n\
-#          used to tie in various segments of the config file together.\n\
-#       c. The field 'vc' represents the name with which the PKS vCenter \n\
-#          is registered in vCD.\n\
-#       d. The field 'cpi' needs to be retrieved by executing \n\
-#          'bosh cpi-config' on Enterprise PKS set up. \n\
+#       a. Each entry in the list represents a Enterprise PKS api server\n\
+#          that is part of the deployment.\n\
+#       b. The field 'name' in each entry should be unique. The value of\n\
+#          the field has no bearing on the real world Enterprise PKS api\n\
+#          server, it's used to tie in various segments of the config file\n\
+#          together.\n\
+#       c. The field 'vc' represents the name with which the Enterprise PKS\n\
+#          vCenter is registered in vCD.\n\
+#       d. The field 'cpi' needs to be retrieved by executing\n\
+#          'bosh cpi-config' on Enterprise PKS set up.\n\
 #   2. pks_accounts:\n\
-#       a. Each entry in the list represents a PKS account that can be used \n\
-#          talk to a certain PKS api server.\n\
-#       b. The field 'name' in each entry should be unique. The value of \n\
-#          the field has no bearing on the real world PKS accounts, it's \n\
-#          used to tie in various segments of the config file together.\n\
-#       c. The field 'pks_api_server' is a reference to the PKS api server \n\
-#          which owns this account. It's value should be equal to value of \n\
-#          the field 'name' of the corresponding PKS api server.\n\
+#       a. Each entry in the list represents a Enterprise PKS account that\n\
+#          can be used talk to a certain Enterprise PKS api server.\n\
+#       b. The field 'name' in each entry should be unique. The value of\n\
+#          the field has no bearing on the real world Enterprise PKS\n\
+#          accounts, it's used to tie in various segments of the config\n\
+#          file together.\n\
+#       c. The field 'pks_api_server' is a reference to the Enterprise PKS\n\
+#          api server which owns this account. It's value should be equal to\n\
+#          value of the field 'name' of the corresponding Enterprise PKS api\n\
+#          server.\n\
 #   3. pvdcs:\n\
-#       a. Each entry in the list represents a Provider VDC in vCD that is \n\
-#          backed by a cluster of the PKS managed vCenter server.\n\
-#       b. The field 'name' in each entry should be the name of the \n\
+#       a. Each entry in the list represents a Provider VDC in vCD that is\n\
+#          backed by a cluster of the Enterprise PKS managed vCenter server.\n\
+#       b. The field 'name' in each entry should be the name of the\n\
 #          Provider VDC as it appears in vCD.\n\
-#       c. The field 'pks_api_server' is a reference to the PKS api server \n\
-#          which owns this account. It's value should be equal to value of \n\
-#          the field 'name' of the corresponding PKS api server.\n\
+#       c. The field 'pks_api_server' is a reference to the Enterprise PKS\n\
+#          api server which owns this account. It's value should be equal to\n\
+#          value of the field 'name' of the corresponding Enterprise PKS api\n\
+#          server.\n\
 #   4. nsxt_servers:\n\
-#       a. Each entry in the list represents a NSX-T server that has been \n\
-#          alongside a PKS server to manage its networking. CSE needs these \n\
-#          details to enforce network isolation of clusters.\n\
-#       b. The field 'name' in each entry should be unique. The value of \n\
-#          the field has no bearing on the real world NSX-T server, it's \n\
+#       a. Each entry in the list represents a NSX-T server that has been\n\
+#          alongside a Enterprise PKS server to manage its networking. CSE\n\
+#          needs these details to enforce network isolation of clusters.\n\
+#       b. The field 'name' in each entry should be unique. The value of\n\
+#          the field has no bearing on the real world NSX-T server, it's\n\
 #          used to tie in various segments of the config file together.\n\
-#       c. The field 'pks_api_server' is a reference to the PKS api server \n\
-#          which owns this account. It's value should be equal to value of \n\
-#          the field 'name' of the corresponding PKS api server.\n\
-#       d. The field 'distributed_firewall_section_anchor_id' should be \n\
-#          populated with id of a Distributed Firewall Section e.g. it can \n\
-#          be the id of the section called 'Default Layer3 Section' which \n\
-#          PKS creates on installation.\n\
+#       c. The field 'pks_api_server' is a reference to the Enterprise PKS\n\
+#          api server which owns this account. It's value should be equal to\n\
+#          value of the field 'name' of the corresponding Enterprise PKS api\n\
+#          server.\n\
+#       d. The field 'distributed_firewall_section_anchor_id' should be\n\
+#          populated with id of a Distributed Firewall Section e.g. it can\n\
+#          be the id of the section called 'Default Layer3 Section' which\n\
+#          Enterprise PKS creates on installation.\n\
 # For more information, please refer to CSE documentation page:\n\
 # https://vmware.github.io/container-service-extension/INSTALLATION.html\n"
 
@@ -60,7 +65,7 @@ NOTE_FOR_PKS_KEY_IN_CONFIG_FILE = "\
 PKS_CONFIG_NOTE = "\
 # [OPTIONAL] PKS CONFIGS\n\
 # These configs are required only for customers with PKS enabled CSE.\n\
-# Regular CSE users, with no PKS container provider in their system, do not \n\
+# Regular CSE users, with no PKS container provider in their system, do not\n\
 # need these configs to be filled out in a separate yaml file."
 
 SAMPLE_AMQP_CONFIG = {
@@ -84,7 +89,7 @@ SAMPLE_VCD_CONFIG = {
         'port': 443,
         'username': 'administrator',
         'password': 'my_secret_password',
-        'api_version': '32.0',
+        'api_version': '33.0',
         'verify': True,
         'log': True
     }
