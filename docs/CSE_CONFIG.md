@@ -158,27 +158,35 @@ The following table summariize key parameters.
 | Property | Value |
 |-|-|
 | catalog | Publicly shared catalog within `org` where K8s templates will be published |
-| default_template_name | Name of the default template to use if none is specified during cluster and node operations |
-| default_template_revision | Revision of the default template to use if none is specified during cluster and node operations |
+| default_template_name | Name of the default template to use if none is specified during cluster and node operations. CSE server won't start up if this value is invalid. (Added in CSE 2.5.0) |
+| default_template_revision | Revision of the default template to use if none is specified during cluster and node operations.  CSE server won't start up if this value is invalid. (Added in CSE 2.5.0) |
 | ip_allocation_mode | IP allocation mode to be used during the install process to build the template. Possible values are `dhcp` or `pool`. During creation of clusters for tenants, `pool` IP allocation mode is always used |
 | network | Org Network within `vdc` that will be used during the install process to build the template. It should have outbound access to the public Internet. The `CSE` appliance doesn't need to be connected to this network |
 | org | vCD organization that contains the shared catalog where the K8s templates will be stored |
-| remote_template_cookbook_url | URL of the template repository where all template definitions and associated script files are hosted |
+| remote_template_cookbook_url | URL of the template repository where all template definitions and associated script files are hosted. (Added in CSE 2.5.0) |
 | storage_profile | Name of the storage profile to use when creating the temporary vApp used to build the template |
 | vdc | Virtual datacenter within `org` that will be used during the install process to build the template |
 
 ### `template_rules` Section
-Rules can be created to change the following 3 attributes of templates defined
-by the remote template repository. 
- * compute policy
- * cpu
- * memory
+(Added in CSE 2.5.0)\
+Rules can be created to override come of the default attributes of templates
+defined by the remote template repository. 
 
-This section will contain 0 or more such rules, each rule
-should match exactly one template. Matching is driven by name and revision of
+This section can contain zero or more such rules, each rule should match
+exactly one template. Matching is driven by name and revision of
 the template. If only name is specified without the revision or vice versa,
-the rule will not be processed. More detaits on how compute policies are used
-with templates can be found [here](/container-service-extension/TEMPLATE_MANAGEMENT.html)
+the rule will not be processed.
+
+Each rule compromises of the following attributes
+
+| Property | Value |
+|-|-|
+| name | Name of the rule |
+| target | Name and revision of a template |
+| action | Properties to over-ride, accepted properties are compute-policy, cpu and memory |
+
+More detaits on how compute policies are used with templates can be found
+[here](/container-service-extension/TEMPLATE_MANAGEMENT.html).
 
 <a name="pksconfig"></a>
 ### `pks_config` property
