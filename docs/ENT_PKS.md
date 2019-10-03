@@ -72,7 +72,7 @@ Below timeline diagram depicts infrastructure set-up and tenant
 Do not choose Pay-as-you-go model for ovdc(s). Refer [FAQ](#faq) for more details.
 2. Use these [CSE commands](#cse-commands) to grant K8 deployment rights to chosen tenants and tenant-users. Refer 
 [RBAC feature](/container-service-extension/RBAC.html) for more details
-3. Use [CSE command](#cse-commands) to enable organiation vdc(s) with a chosen K8-provider (native (or) ent-pks).
+3. Use [CSE command](#cse-commands) to enable organization vdc(s) with a chosen K8-provider (native (or) ent-pks).
 
 Below diagram illustrates a time sequence view of setting up the infrastructure for CSE 2.0,
  followed by the on boarding of tenants. The expected steps are executed by Cloud providers 
@@ -83,24 +83,24 @@ Below diagram illustrates a time sequence view of setting up the infrastructure 
 <a name="communication-view"></a>
 ## CSE, vCD, Enterprise PKS Component Illustration
 Below diagram outlines the communication flow between components for the tenant's 
-workflow to create a new K8 cluster.
+work-flow to create a new K8 cluster.
 
 Legend: 
-* The path depicted in pink signifies the workflow of K8 cluster deployments on Native K8 Provider Solution in CSE 2.0.
-* The path depicted in blue signifies the workflow of K8 cluster deployments on Enterprise K8 Provider Solution in CSE 2.0.
+* The path depicted in pink signifies the work-flow of K8 cluster deployments on Native K8 Provider Solution in CSE 2.0.
+* The path depicted in blue signifies the work-flow of K8 cluster deployments on Enterprise K8 Provider Solution in CSE 2.0.
 
-Refer [tenant-workflow](#tenant-workflow) to understand the below decision 
+Refer [tenant-work-flow](#tenant-work-flow) to understand the below decision 
 box in grey color in detail.
 ![communication-flow](img/ent-pks/02-communication-flow.png)
 
-<a name="tenant-workflow"></a>
-## Tenant workflow of create-cluster operation
+<a name="tenant-work-flow"></a>
+## Tenant work-flow of create-cluster operation
 
-To understand the creation of new K8 cluster workflow in detail, review below flow chart in its entirety. 
+To understand the creation of new K8 cluster work-flow in detail, review below flow chart in its entirety. 
 In this illustration, user from  tenant "Pepsi" attempts to create a new K8 cluster
  in organization VDC "ovdc-1", and based on the administrator's enablement for "ovdc-1", 
  the course of action can alter.
-![tenant-workflow](img/ent-pks/05-tenant-flow.png)
+![tenant-work-flow](img/ent-pks/05-tenant-flow.png)
 
 <a name="cse-commands"></a>
 ## CSE commands

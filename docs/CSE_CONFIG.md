@@ -194,7 +194,7 @@ for further details on compute policies.
 Filling out this key for regular CSE set up is optional and should be left
 as is. Only for CSE set up enabled for [Enterprise PKS](/container-service-extension/ENT_PKS.html)
 container provider, this value needs to point to absolute path of valid Enterprise PKS config file.
-Please refer to [Enterprise PKS enablement](/container-service-extension/ENT-PKS.html) for more details.
+Please refer to [Enterprise PKS enablement](/container-service-extension/ENT_PKS.html) for more details.
 
 Enabling Enterprise PKS as a K8s provider changes the default behavior of CSE as described below.
 Presence of valid value for `pks_config` property gives an indication to CSE that 
