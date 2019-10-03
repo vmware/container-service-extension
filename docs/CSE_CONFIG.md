@@ -183,7 +183,7 @@ Each rule comprises of the following attributes
 |-|-|
 | name | Name of the rule |
 | target | Name and revision of the template on which the rule will be applied |
-| action | Template properties that will be overridden. Only supported properties are `compute-policy`, `cpu`, and `memory` |
+| action | Template properties that will be overridden. Only supported properties are `compute_policy`, `cpu`, and `memory` |
 
 Please refer to [Restricting Kubernetes templates](/container-service-extension/TEMPLATE_MANAGEMENT.html)
 for further details on compute policies.
