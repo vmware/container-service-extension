@@ -430,9 +430,9 @@ class Service(object, metaclass=Singleton):
                                                 SYSTEM_ORG_NAME,
                                                 self.config['vcd']['password'])
             client.set_credentials(credentials)
-            cpm = ComputePolicyManager(client)
 
             try:
+                cpm = ComputePolicyManager(client)
                 for template in self.config['broker']['templates']:
                     policy_name = template[LocalTemplateKey.COMPUTE_POLICY]
                     catalog_item_name = template[LocalTemplateKey.CATALOG_ITEM_NAME] # noqa: E501
