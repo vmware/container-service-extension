@@ -67,11 +67,11 @@ broker:
 # should match exactly one template. Matching is driven by name and revision of
 # the template. If only name is specified without the revision or vice versa,
 # the rule will not be processed. And once a match is found, as an action the
-# following attributes can be overriden.
+# following attributes can be overridden.
 # * compute_policy
 # * cpu
 # * memory
-# Note: This overide only works on clusters deployed off templates, the
+# Note: This override only works on clusters deployed off templates, the
 # templates are still created as per the cookbook recipe.
 
 #template_rules:
@@ -118,7 +118,7 @@ properties will need to be set for all deployments.
 
 Other properties may be left as is or edited to match site conventions.
 
-For more information on AMQP settings, see the [vCD API documention on AMQP](https://code.vmware.com/apis/442/vcloud#/doc/doc/types/AmqpSettingsType.html).
+For more information on AMQP settings, see the [vCD API documentation on AMQP](https://code.vmware.com/apis/442/vcloud#/doc/doc/types/AmqpSettingsType.html).
 
 ### `vcs` Section
 
@@ -153,7 +153,7 @@ The service section contains properties that define CSE server behavior.
 
 The `broker` section contains properties to define resources used by
 the CSE server including org and VDC as well as template definitions.
-The following table summariize key parameters.
+The following table summarizes key parameters.
 
 | Property | Value |
 |-|-|
@@ -172,10 +172,10 @@ The following table summariize key parameters.
 Rules can be created to override some of the default attributes of templates
 defined by the remote template repository. 
 
-This section can contain zero or more such rules, each rule should match
-exactly one template. Matching is driven by name and revision of
-the template. If only name is specified without the revision or vice versa,
-the rule will not be processed.
+This section can contain zero or more such rules, each rule matches exactly one
+template. Matching is driven by name and revision of the template. If only name
+is specified without the revision or vice versa, the rule will not be
+processed.
 
 Each rule comprises of the following attributes
 
@@ -183,17 +183,18 @@ Each rule comprises of the following attributes
 |-|-|
 | name | Name of the rule |
 | target | Name and revision of the template on which the rule will be applied |
-| action | Template properties that will be overridden. Only supported properties are compute-policy, cpu, and memory |
+| action | Template properties that will be overridden. Only supported properties are `compute-policy`, `cpu`, and `memory` |
 
-More detaits on template management, and how compute policies are used within
-templates can be found [here](/container-service-extension/TEMPLATE_MANAGEMENT.html).
+Please refer to [Restricting Kubernetes templates](/container-service-extension/TEMPLATE_MANAGEMENT.html)
+for further details on compute policies.
 
 <a name="pksconfig"></a>
 ### `pks_config` property
 
 Filling out this key for regular CSE set up is optional and should be left
-as is. Only for CSE set up enabled for [Enterprise PKS](/container-service-extension/ENT_PKS.html) 
-container provider, this value needs to point to absolute path of valid Enterprise PKS config file. Refer [Enterprise PKS enablement](/container-service-extension/ENT-PKS.html) for more details.
+as is. Only for CSE set up enabled for [Enterprise PKS](/container-service-extension/ENT_PKS.html)
+container provider, this value needs to point to absolute path of valid Enterprise PKS config file.
+Please refer to [Enterprise PKS enablement](/container-service-extension/ENT-PKS.html) for more details.
 
 Enabling Enterprise PKS as a K8s provider changes the default behavior of CSE as described below.
 Presence of valid value for `pks_config` property gives an indication to CSE that 
@@ -201,7 +202,7 @@ Enterprise PKS is enabled (in addition to Native vCD) as a K8s provider in the s
 
 - CSE begins to mandate any given `ovdc` to be enabled for either Native or Enterprise PKS as a backing K8s provider.
 Admins can do this using `vcd cse ovdc enable` command. This step is mandatory for ovdc(s) with 
-pre-existing native K8s clusters as well i.e., if CSE is upgraded from 1.2.x to 2.0 and `pks_config` 
+preexisting native K8s clusters as well i.e., if CSE is upgraded from 1.2.x to 2.0 and `pks_config` 
 is set, then it becomes mandatory to enable those ovdc(s) with pre-existing native K8s clusters.
 - In other words, If `pks_config`  value is present and if an ovdc is not enabled for either of the supported
 K8s providers, users will not be able to do any further K8s deployments in that ovdc.
