@@ -66,7 +66,7 @@ cleaning up.
 ### Creating a Cluster with an Attached NFS node
 
 NFS administration starts with cluster creation, where we can
-provision an NFS node. Let's create an Ubuntu-based cluster using
+provision an NFS node. Let's create an Ubuntu based cluster using
 the `vcd cse cluster create` command shown below. The `--enable-nfs`
 option signals that CSE should include an NFS node. The `--ssh-key`
 option ensures nodes are provisioned with the user's SSH key. The

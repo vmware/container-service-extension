@@ -57,8 +57,8 @@ Supported vCD versions: 9.1, 9.5, 9.7
 | Template OS | Docker | Kubernetes | Pod Network |
 |-|-|-|-|
 | Photon OS 2.0 GA | 18.06.2 | 1.12.7 | Weave 2.3.0 |
-| Ubuntu 16.04.4 LTS | 18.09.7 | 1.13.5 | Weave 2.3.0 |
-| Ubuntu 16.04.4 LTS | 18.09.7 | 1.15.3 | Weave 2.5.2 |
+| Ubuntu 16.04 LTS | 18.09.7 | 1.13.5 | Weave 2.3.0 |
+| Ubuntu 16.04 LTS | 18.09.7 | 1.15.3 | Weave 2.5.2 |
 
 **Installation of binaries**
 
