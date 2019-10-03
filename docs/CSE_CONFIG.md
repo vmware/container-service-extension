@@ -165,7 +165,7 @@ The following table summarizes key parameters.
 | org | vCD organization that contains the shared catalog where the K8s templates will be stored |
 | remote_template_cookbook_url | URL of the template repository where all template definitions and associated script files are hosted. (Added in CSE 2.5.0) |
 | storage_profile | Name of the storage profile to use when creating the temporary vApp used to build the template |
-| vdc | Virtual datacenter within `org` that will be used during the install process to build the template |
+| vdc | Virtual data-center within `org` that will be used during the install process to build the template |
 
 ### `template_rules` Section
 (Added in CSE 2.5.0)\
@@ -201,8 +201,8 @@ Presence of valid value for `pks_config` property gives an indication to CSE tha
 Enterprise PKS is enabled (in addition to Native vCD) as a K8s provider in the system.
 
 - CSE begins to mandate any given `ovdc` to be enabled for either Native or Enterprise PKS as a backing K8s provider.
-Admins can do this using `vcd cse ovdc enable` command. This step is mandatory for ovdc(s) with 
-preexisting native K8s clusters as well i.e., if CSE is upgraded from 1.2.x to 2.0 and `pks_config` 
+Cloud Administrators can do so via `vcd cse ovdc enable` command. This step is mandatory for ovdc(s) with
+preexisting native K8s clusters as well i.e., if CSE is upgraded from 1.2.x to 2.0 and `pks_config`
 is set, then it becomes mandatory to enable those ovdc(s) with pre-existing native K8s clusters.
 - In other words, If `pks_config`  value is present and if an ovdc is not enabled for either of the supported
 K8s providers, users will not be able to do any further K8s deployments in that ovdc.

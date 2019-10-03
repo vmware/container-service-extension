@@ -10,11 +10,11 @@ title: CSE Server Management
 
 This page contains procedures to install and manage Container Service
 Extension (CSE) on vCloud Director (vCD). Users who perform these procedures
-are cloud administrators with sysadmin access and a solid understanding
+are cloud administrators with `sysadmin` access and a solid understanding
 of vCD management.
 
 Procedures on this page make regular use of vcd-cli commands to
-perform admistrative operations. Please refer to the [vcd-cli
+perform administrative operations. Please refer to the [vcd-cli
 documentation](https://vmware.github.io/vcd-cli/) if necessary to familiarize
 yourself with vcd-cli.
 
@@ -58,7 +58,7 @@ The `cse install` command supports the following options:
 | \--force-update | -f | n/a | Recreate CSE k8s templates on vCD even if they already exist | False |
 | \--retain-temp-vapp | -d | n/a | Retain the temporary vApp after the template has been captured --ssh-key option is required if this flag is used | False |
 | \--skip-template-creation | -s | n/a | Skips creating CSE k8s template during installation | False |
-| \--ssh-key | -k    | path to public ssh key file | ssh-key file to use for vm access (root password ssh access is disabled for security reasons) | None |
+| \--ssh-key | -k    | path to public ssh key file | ssh-key file to use for VM access (root password ssh access is disabled for security reasons) | None |
 
 To monitor the vApp customization process, we can ssh into the temporary vApp.
 In the temporary vApp, the output of the customization script is captured in 
@@ -79,7 +79,7 @@ To validate that CSE server has been installed correctly, use the command
 cse check --config config.yaml --check-install
 ```
 
-The validty of a CSE config file can also be checked using this command.
+The validity of a CSE config file can also be checked using this command.
 ```sh
 cse check --config config.yaml
 ```
@@ -181,7 +181,7 @@ viz. `cse-server-wire-debug.log` will also show up under the log folder.
 ### Running CSE Server as a Service
 
 A sample `systemd` unit is provided by CSE. Here are instructions for
-installaion.
+installation.
 
 * Copy file `cse.service` from CSE installation location and move it to `/etc/systemd/system/cse.service`.
 * Copy `cse.sh` to /home/vmware.

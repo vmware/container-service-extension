@@ -12,7 +12,7 @@ CSE successfully on vCD.
 
 * An org.
 * A VDC within the org, which
-  * has an org VDC network connected to an external network (with internet connectivity). The external network connection is required to enable cluster VMs to download packages during configuration.
+  * has an org VDC network connected to an external network (with Internet connectivity). The external network connection is required to enable cluster VMs to download packages during configuration.
   * can host vApps
   * has sufficient storage to create vApps and publish them as templates. 
 * Users in the org with privileges necessary to perform operations like configuring AMQP, creating public catalog entries, and managing vApps.  
