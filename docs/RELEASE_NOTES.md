@@ -5,6 +5,49 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 2.5.0
+
+Release Date: 2019-10-04
+
+Supported vCD versions: 9.1, 9.5, 9.7, 10.0
+
+| Template OS | Docker | Kubernetes | Pod Network |
+|-|-|-|-|
+| Photon OS 2.0 GA | 18.06.2 | 1.12.7 | Weave 2.3.0 |
+| Ubuntu 16.04.4 LTS | 18.09.7 | 1.13.5 | Weave 2.3.0 |
+| Ubuntu 16.04.4 LTS | 18.09.7 | 1.15.3 | Weave 2.5.2 |
+
+
+**New Features**
+
+- Support for multiple K8s templates on the same OS.
+- Granular template management.
+- Capability to update templates with newer version of Kubernetes without re-installing CSE.
+
+
+**Enterprise PKS compatibility matrix**
+
+|CSE | vCD |Enterprise PKS| NSX-T |
+|-|-|-|-|
+|2.5.0 | 9.1, 9.5, 9.7, 10.0  | 1.4 | 2.3, 2.4 |
+
+**Notes to System Administrator**
+
+If you are upgrading to CSE 2.5.0 and you have pre-existing K8s clusters
+deployed from CSE 2.0.0 or below, you must run the following command to
+preserve manageability of those clusters in CSE 2.5.0.
+```sh
+cse convert-cluster
+```
+This command resets the admin password of all nodes in the cluster, as well as,
+adds new metadata to the cluster. If nodes in the cluster are setup with
+ssh keys for root login, those key pairings will be preserved. The command does
+a force reboot of the cluster.
+
+---
+
+# Release Notes
+
 ## CSE 2.5.0 Beta (2.5.0.0b1)
 
 Release Date: 2019-09-06
