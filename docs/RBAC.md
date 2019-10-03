@@ -23,8 +23,8 @@ operations. To perform these operations, a user must have a certain right in
 their assigned role. The following table lays out the right requirement for all
 the restricted operations.
 
-| Operation |  Container Provider | Right | Introduced in |
-|:----------|:--------------------|:------|:--------------|
+| Operation | Container Provider | Right | Introduced in |
+| -| -| -| -|
 | cluster create | Native(vCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
 | cluster delete | Native(vCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
 | cluster resize | Native(vCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
@@ -61,30 +61,30 @@ Cloud Administrator turns on the role based access control for CSE
 
 Cloud administrator propagates the new right to Tenants, in order to grant
 access for CSE operations. 
-
-    >vcd right add -o 'org name' "{cse}:CSE NATIVE DEPLOY RIGHT"
-
+```sh
+vcd right add -o 'org name' "{cse}:CSE NATIVE DEPLOY RIGHT"
+```
 Cloud administrator can revoke access by removal of the right from the
 concerned Tenants.
-
-    >vcd right remove -o 'org name' "{cse}:CSE NATIVE DEPLOY RIGHT"
-
+```sh
+vcd right remove -o 'org name' "{cse}:CSE NATIVE DEPLOY RIGHT"
+```
 At this point, a user can't access restrictive operations, if the required
 right is not propagated to his/her role.
 
-Tenant administrators should add the new right (granted to them by Cloud admin)
+Tenant administrators should add the new right (granted to them by Cloud Admin)
 to existing roles in the organization, or create new roles with the new right.
 Subsequently, they assign new or updated roles to users whom they wish to grant
 access to the restricted CSE operations.
-
-    >vcd role add-right 'role name' "{cse}:CSE NATIVE DEPLOY RIGHT"
-
-There is no action required on tenant users.
+```sh
+vcd role add-right 'role name' "{cse}:CSE NATIVE DEPLOY RIGHT"
+```
+There is no action required to be taken by tenant users.
 
 <a name="faq"></a>
 ## FAQ
 * I upgraded to CSE v1.2.6 and I do not want to leverage RBAC. Will the upgrade
-  disrupt my userbase?
+  disrupt my user base?
     * CSE v1.2.6 does not turn RBAC on by default upon upgrade or
       fresh-install. It needs to be [explicitly enabled](#enablement).
 * If my administrator does not grant me the new right, will I lose access to my

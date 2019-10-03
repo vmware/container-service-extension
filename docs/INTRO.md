@@ -18,7 +18,7 @@ Kubernetes clusters as self-contained vApps.
 ## How CSE Works
 
 CSE has a server component that installs as a vCD extension. It exposes REST
-API endpoint points via vCD. CSE also has a client componenet that plugs in
+API endpoint points via vCD. CSE also has a client component that plugs in
 ``vcd-cli``, communicates with the CSE server via the exposed API endpoints, and
 facilitates vCD users to create Kubernetes clusters in vCD. The following
 diagram illustrates the interactions between the components.
@@ -30,7 +30,7 @@ diagram illustrates the interactions between the components.
 
 **Cloud administrators** handle setting up vCD, CSE config
 file, CSE Server, and Kubernetes templates. Cloud administrators are expected to
-posses sysadmin privileges and as well as experience in vCD administration.
+posses `sysadmin` privileges and as well as experience in vCD administration.
 
 Once CSE Server is running and Kubernetes templates are available, **tenant
 organization administrators and users** can use CSE client (``vcd-cli``)

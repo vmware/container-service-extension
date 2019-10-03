@@ -17,7 +17,8 @@ that were run on VMs.
 * `cse-server-wire-debug.log` logs all REST calls originating from CSE to vCD.
 This file is generated only if the `log_wire` field under `service` section of
 config file is set to `true`.
-* `vcd.log`, `vcd_cli_error.log` log vcd-cli and pyvcloud activity on client side. Stack traces and HTTP messages specific to vcd-cli are recorded here.
+* `vcd.log`, `vcd_cli_error.log` log vcd-cli and pyvcloud activity on client
+side. Stack traces and HTTP messages specific to vcd-cli are recorded here.
 
 Common mistakes:
 * Config file fields are incorrect.

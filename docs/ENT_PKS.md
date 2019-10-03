@@ -22,13 +22,26 @@ interfaces for K8 deployments.
 
 <a name="architecture"></a>
 ## Architecture
-CSE 2.0 architecture comprises of Enterprise PKS Infrastructure stack, vCloud Director Infrastructure stack, and CSE 2.0 modules. The Enterprise PKS Infrastructure stack is necessary only if there is an intention to leverage it for K8 cluster deployments. The diagram below illustrates a physical view of the complete infrastructure, as well as, its logical mapping in to vCloud Director hierarchy, for ease of understanding. 
+CSE 2.0 architecture comprises of Enterprise PKS Infrastructure stack, vCloud
+Director Infrastructure stack, and CSE 2.0 modules. The Enterprise PKS
+Infrastructure stack is necessary only if there is an intention to leverage it
+for K8 cluster deployments. The diagram below illustrates a physical view of
+the complete infrastructure, as well as, its logical mapping in to vCloud
+Director hierarchy, for ease of understanding. 
 
 Legend:
-* Green - Depicts vSphere infrastructure managed by vCloud Director, just as CSE 1.x, without any of Enterprise PKS.
-* Blue - Depicts the Enterprise PKS infrastructure stack managed and available for use in vCloud Director for K8 cluster deployments. It also illustrates multi-tenancy for K8 cluster deployments on single Enterprise PKS infrastructure.
-* Purple - Depicts a single tenant dedicated Enterprise PKS infrastructure stack managed and available for use in vCloud Director for K8 cluster deployments. It also illustrates the use-case of a tenant leveraging multiple instances of Enterprise PKS infrastructure stack, say, to segregate K8s cluster workloads.
-* K8-prov - This label depicts the K8 Provider that is enabled on a given tenant's Organization VDC in vCloud Director.
+* Green - Depicts vSphere infrastructure managed by vCloud Director, just as
+CSE 1.x, without any of Enterprise PKS.
+* Blue - Depicts the Enterprise PKS infrastructure stack managed and available
+for use in vCloud Director for K8 cluster deployments. It also illustrates
+multi-tenancy for K8 cluster deployments on single Enterprise PKS infrastructure.
+* Purple - Depicts a single tenant dedicated Enterprise PKS infrastructure
+stack managed and available for use in vCloud Director for K8 cluster
+deployments. It also illustrates the use-case of a tenant leveraging multiple
+instances of Enterprise PKS infrastructure stack, say, to segregate K8s cluster
+workloads.
+* K8-prov - This label depicts the K8 Provider that is enabled on a given
+tenant's Organization VDC in vCloud Director.
 
 ![provider-setup](img/ent-pks/03-provider-setup-1.png)
 
@@ -52,18 +65,22 @@ Below timeline diagram depicts infrastructure set-up and tenant
  3. Create [Enterprise PKS service accounts](#faq) per each Enterprise PKS instance.
  4. On-board Enterprise PKS instance(s) in vCD
     * Attach Enterprise PKS' corresponding vSphere in vCD through vCD UI.
-    * Create provider-vdc(s) in vCD from underlying resources of newly attached Enterprise PKS' vSphere(s).
-    Ensure these pvdc(s) are dedicated for Enterprise PKS K8 deployments only.
+    * Create provider-vdc(s) in vCD from underlying resources of newly attached
+      Enterprise PKS' vSphere(s). Ensure these pvdc(s) are dedicated for Enterprise
+      PKS K8 deployments only.
  5. Install, configure and start CSE 
     * Follow instructions to install CSE 2.0 beta [here](/container-service-extension/RELEASE_NOTES.html)
     * Use `cse sample` command to generate `config.yaml` and `pks.yaml` template files.
     * Configure `config.yaml` with vCD and K8 template details.
-    * Configure `pks.yaml` with Enterprise PKS details. This file is necessary only 
-    if there is an intention to leverage Enterprise PKS for K8 deployments. Refer [pks_config key](/container-service-extension/CSE_ADMIN.html#pksconfig) 
-    in `config.yaml` for more details on how to fill in `pks.yaml` and how it's presence changes the 
-    CSE's default behavior on user's ability to deploy (Native/Enterprise PKS) K8 clusters in any given organization vdc.
-    * Run `CSE install` command. It prepares NSX-T(s) of Enterprise PKS instances for tenant isolation. 
-    Ensure this command is run for on-boarding of new Enterprise PKS instances at later point of time.
+    * Configure `pks.yaml` with Enterprise PKS details. This file is necessary
+      only if there is an intention to leverage Enterprise PKS for K8
+      deployments. Refer [pks_config key](/container-service-extension/CSE_ADMIN.html#pksconfig) 
+      in `config.yaml` for more details on how to fill in `pks.yaml` and how
+      it's presence changes the CSE's default behavior on user's ability to
+      deploy (Native/Enterprise PKS) K8 clusters in any given organization vdc.
+    * Run `CSE install` command. It prepares NSX-T(s) of Enterprise PKS
+      instances for tenant isolation. Ensure this command is run for
+      on-boarding of new Enterprise PKS instances at later point of time.
     * Start the CSE service. 
     
  <a name="tenant-onboarding"></a>   
@@ -186,17 +203,18 @@ Below steps of granting rights are required only if [RBAC feature](/container-se
     For example - RBAC feature is known to impose some slowness in the system. 
     Enterprise PKS based K8 cluster deployments have some performance implications. 
     The performance optimizations will be coming in near future
-* If there are Extension time out errors while executing commands, how can they be remediated?
+* If there are Extension time out errors while executing commands, how can they be remedied?
     * Increase the vCD extension timeout to a higher value. Refer [Setting the API Extension Timeout](/container-service-extension/CSE_ADMIN.html#extension-timeout)
 
 <a name="compatibility-matrix"></a>
 ## Compatibility matrix
 
-|CSE      | Supported vCD Versions |Enterprise PKS| NSX-T | 
+|CSE      | Supported vCD Versions |Enterprise PKS| NSX-T |
 |---------|------------------------|--------------|-------|
-|2.0 Beta | 9.5, 9.7               | 1.4          | 2.3   | 
-|2.0.0    | 9.5, 9.7               | 1.4          | 2.3   | 
-|2.0.0    | 9.5, 9.7               | 1.4          | 2.4   | 
-
+|2.0 Beta | 9.5, 9.7               | 1.4          | 2.3   |
+|2.0.0    | 9.5, 9.7               | 1.4          | 2.3   |
+|2.0.0    | 9.5, 9.7               | 1.4          | 2.4   |
+|2.0.0    | 9.5, 9.7, 10.0         | 1.4          | 2.3   |
+|2.0.0    | 9.5, 9.7, 10.0         | 1.4          | 2.4   |
 
 

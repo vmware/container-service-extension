@@ -7,12 +7,12 @@ title: NFS Persistent Volumes
 ## Overview
 
 CSE can automatically add NFS nodes to the Kubernetes configuration
-when creating a new cluster.  Cluster administrators can use the
+when creating a new cluster. Cluster administrators can use the
 NFS node(s) to implement static persistent volumes, which in turn
 enable deployment of stateful applications.
 
 This page describes NFS node management and provides a tutorial
-example of setting up a persistent volume resource on NFS.  The
+example of setting up a persistent volume resource on NFS. The
 presentation assumes a basic understanding of [Kubernetes
 storage](https://kubernetes.io/docs/concepts/storage/) as well as
 [NFS administration](https://help.ubuntu.com/community/SettingUpNFSHowTo).
@@ -25,10 +25,10 @@ See the linked articles for more information if needed.
 [Static persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#static)
 are pre-provisioned by the cluster administrator. They carry the
 details of the real storage which is available for use by cluster
-users.  They exist in the Kubernetes API and are available for
+users. They exist in the Kubernetes API and are available for
 consumption. Users can allocate a static persistent volume by
 creating a persistent volume claim that requires the same or less
-storage.  CSE supports static volumes hosted on NFS.
+storage. CSE supports static volumes hosted on NFS.
 
 [Dynamic persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#dynamic)
 are not pre-provisioned by the cluster administrator. When none of
@@ -42,13 +42,13 @@ CSE does not currently support dynamic persistent volumes.
 An NFS volume allows an existing NFS (Network File System) share
 to be mounted into one or more pods. When the pod(s) are removed, the
 contents of the NFS volume are preserved and the volume is merely
-unmounted.  This means that an NFS volume can be pre-populated with
-data, and that data can be “handed off” between pods. NFS can be
+unmounted. This means that an NFS volume can be pre-populated with
+data, and that data can be "handed off" between pods. NFS can be
 mounted by multiple writers simultaneously.
 
 To use NFS volumes we need to have our own NFS server running with
 the shares exported. CSE provides commands to add pre-configured
-NFS server(s) to any given cluster.  The following diagram
+NFS server(s) to any given cluster. The following diagram
 shows the implementation architecture.
 
 ![cse-nfs](img/cse-nfs.png)
@@ -67,9 +67,9 @@ cleaning up.
 
 NFS administration starts with cluster creation, where we can
 provision an NFS node. Let's create an Ubuntu-based cluster using
-the `vcd cse cluster create` command shown below.  The `--enable-nfs`
-option signals that CSE should include an NFS node.  The `--ssh-key`
-option ensures nodes are provisioned with the user's SSH key.  The
+the `vcd cse cluster create` command shown below. The `--enable-nfs`
+option signals that CSE should include an NFS node. The `--ssh-key`
+option ensures nodes are provisioned with the user's SSH key. The
 SSH key is necessary to login to the NFS host and set up shares.
 
 ```shell
@@ -77,7 +77,7 @@ SSH key is necessary to login to the NFS host and set up shares.
 vcd login cse.acme.com devops imanadmin  --password='T0pS3cr3t'
 # Create cluster with 2 worker nodes and NFS server node.
 vcd cse cluster create mycluster --nodes 2 \
- --network mynetwork -t ubuntu-16.04 --enable-nfs \
+ --network mynetwork -t ubuntu-16.04_k8-1.13_weave-2.3.0 -r 1 --enable-nfs \
  --ssh-key ~/.ssh/id_rsa.pub
 ```
 This operation will take several minutes while the CSE extension builds the
@@ -89,13 +89,13 @@ following.
 ```shell
 # Add an NFS server (node of type NFS).
 vcd cse node create mycluster --nodes 1 --network mynetwork \
-  -t ubuntu-16.04 --type nfsd
+  -t ubuntu-16.04_k8-1.13_weave-2.3.0 -r 1 --type nfsd
 ```
 
 ### Setting up NFS Shares
 
 The next step is to create NFS shares that can be allocated via persistent
-volume resources.  First, we need to add an independent disk to the NFS
+volume resources. First, we need to add an independent disk to the NFS
 node to create a file system that we can export.
 
 ```shell
@@ -113,7 +113,7 @@ ssh root@10.150.200.22
 ... (root prompt appears) ...
 ```
 
-Partition and format the new disk.  On Ubuntu the disk will
+Partition and format the new disk. On Ubuntu the disk will
 show up as /dev/sdb. The procedure below is an example; feel free
 to use other methods depending on your taste in Linux administration.
 
@@ -159,7 +159,7 @@ mount -a
 ```
 
 At this point you should have a working file system under /export.
-The last step is to create directories and share them via NFS.  
+The last step is to create directories and share them via NFS.
 
 ```
 cd /export
@@ -175,7 +175,7 @@ vi /etc/exports
 exportfs -r
 ```
 
-Our work to prepare the file system shares is complete.  You can
+Our work to prepare the file system shares is complete. You can
 logout from the NFS node.
 
 ### Using Kubernetes Persistent Volumes
@@ -231,7 +231,7 @@ EOF
 
 We now launch an application that uses the persistent volume claim.
 This example runs busybox in a couple of pods that write to the
-shared storage.  
+shared storage.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -269,7 +269,7 @@ EOF
 
 ### Checking Health
 
-We can check the state of the deployed application and its storage.  First
+We can check the state of the deployed application and its storage. First
 let's ensure all resources are in good health.
 ```shell
 kubectl get pv
@@ -279,7 +279,7 @@ kubectl get pods
 ```
 
 We can now look at the state of the storage using the handy
-`kubectl exec` command to run a command on one of the pods.  (Substitute
+`kubectl exec` command to run a command on one of the pods. (Substitute
 the correct pod name from your `kubectl get pods` output.)
 ```
 $ kubectl exec -it nfs-busybox-gcnht cat /mnt/index.html
@@ -304,7 +304,7 @@ kubectl delete pv/nfs-vol1
 volume claim (PVC)?
     - A persistent volume is ready-to-use storage space created by
     the cluster admin. CSE currently only supports static persistent
-    volumes.  A persistent volume claim is the storage requirement
+    volumes. A persistent volume claim is the storage requirement
     specified by the user. Kubernetes dynamically binds/unbinds the PVC
     to PV at runtime. Learn more
     [here](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#static)
@@ -316,6 +316,6 @@ volume claim (PVC)?
 
 - What happens to storage when a Kubernetes application terminates?
     - Kubernetes returns the persistent volume and its claim to the
-    pool.  The data from the application remains on the volume.  It
+    pool. The data from the application remains on the volume. It
     can be cleaned up manually by logging into the NFS node VM and
     deleting files.
