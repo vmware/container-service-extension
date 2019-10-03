@@ -7,6 +7,18 @@ title: Known Issues
 <a name="general"></a>
 
 ---
+### CSE server fails to start up after disabling the Service Provider Access to the Legacy API Endpoint
+
+Workaround: Don't disable Service Provider Access to the Legacy API Endpoint
+
+vCD 10.0 deprecated the `/api/sessions` REST end point, and introduced a new 
+`/cloudapi/` based REST endpoint for authenticating vCD users. CSE relies on
+the `/api` end point to fetch System administrator login token to perform myriad
+tasks on vCD. So, it's important that the older endpoint is not disabled.
+
+[More details](https://docs.vmware.com/en/vCloud-Director/10.0/com.vmware.vcloud.install.doc/GUID-84390C8F-E8C5-4137-A1A5-53EC27FE0024.html)
+
+---
 
 ### Failures during template creation or installation
 

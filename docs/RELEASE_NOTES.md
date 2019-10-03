@@ -11,25 +11,25 @@ Release Date: 2019-10-04
 
 Supported vCD versions: 9.1, 9.5, 9.7, 10.0
 
-| Template OS | Docker | Kubernetes | Pod Network |
-|-|-|-|-|
-| Photon OS 2.0 GA | 18.06.2 | 1.12.7 | Weave 2.3.0 |
-| Ubuntu 16.04.4 LTS | 18.09.7 | 1.13.5 | Weave 2.3.0 |
-| Ubuntu 16.04.4 LTS | 18.09.7 | 1.15.3 | Weave 2.5.2 |
-
-
-**New Features**
-
-- Support for multiple K8s templates on the same OS.
-- Granular template management.
-- Capability to update templates with newer version of Kubernetes without re-installing CSE.
-
-
-**Enterprise PKS compatibility matrix**
+Enterprise PKS compatibility matrix
 
 |CSE | vCD |Enterprise PKS| NSX-T |
 |-|-|-|-|
 |2.5.0 | 9.1, 9.5, 9.7, 10.0  | 1.4 | 2.3, 2.4 |
+
+**New Features**
+
+* Multiple Kubernetes Templates
+  * CSE now offers the new capability to use variety of 
+    Kubernetes templates in real time for Kubernetes cluster deployments. With
+    that also comes the complete offering of Kubernetes templates life-cycle
+    management for Service Providers.
+* Remote Repository for Kubernetes Templates
+  * Service Providers can fetch  new and/or revised Kubernetes templates from
+  remote repository without updating CSE (Exception - bug fixes and new
+  features will require newer CSE versions).
+
+More details on the template related features can be found [here](/container-service-extension/TEMPLATE_MANAGEMENT.html).
 
 **Notes to System Administrator**
 
