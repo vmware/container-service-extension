@@ -169,7 +169,7 @@ The following table summariize key parameters.
 
 ### `template_rules` Section
 (Added in CSE 2.5.0)\
-Rules can be created to override come of the default attributes of templates
+Rules can be created to override some of the default attributes of templates
 defined by the remote template repository. 
 
 This section can contain zero or more such rules, each rule should match
@@ -177,16 +177,16 @@ exactly one template. Matching is driven by name and revision of
 the template. If only name is specified without the revision or vice versa,
 the rule will not be processed.
 
-Each rule compromises of the following attributes
+Each rule comprises of the following attributes
 
 | Property | Value |
 |-|-|
 | name | Name of the rule |
-| target | Name and revision of a template |
-| action | Properties to over-ride, accepted properties are compute-policy, cpu and memory |
+| target | Name and revision of the template on which the rule will be applied |
+| action | Template properties that will be overridden. Only supported properties are compute-policy, cpu, and memory |
 
-More detaits on how compute policies are used with templates can be found
-[here](/container-service-extension/TEMPLATE_MANAGEMENT.html).
+More detaits on template management, and how compute policies are used within
+templates can be found [here](/container-service-extension/TEMPLATE_MANAGEMENT.html).
 
 <a name="pksconfig"></a>
 ### `pks_config` property
