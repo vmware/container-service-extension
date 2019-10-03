@@ -2,6 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+
 from pyvcloud.vcd.client import EntityType
 from pyvcloud.vcd.client import find_link
 from pyvcloud.vcd.client import TaskStatus
@@ -11,6 +12,7 @@ from pyvcloud.vcd.exceptions import OperationNotSupportedException
 from pyvcloud.vcd.task import Task
 from pyvcloud.vcd.utils import retrieve_compute_policy_id_from_href
 from pyvcloud.vcd.vm import VM
+import requests
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CloudApiResource
@@ -22,6 +24,7 @@ from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.pyvcloud_utils as pyvcd_utils
 from container_service_extension.shared_constants import RequestMethod
 import container_service_extension.utils as utils
+
 
 _SYSTEM_DEFAULT_COMPUTE_POLICY = 'System Default'
 
@@ -65,14 +68,16 @@ class ComputePolicyManager:
         try:
             link = find_link(self._session, RelationType.OPEN_API,
                              CloudAPIEntityType.APPLICATION_JSON)
-        except MissingLinkException:
+            self._cloudapi_client = CloudApiClient(
+                base_url=link.href,
+                auth_token=token,
+                verify_ssl=self._vcd_client._verify_ssl_certs)
+            self._cloudapi_client.do_request(
+                RequestMethod.GET,
+                f"{CloudApiResource.VDC_COMPUTE_POLICIES}")
+        except (MissingLinkException, requests.exceptions.HTTPError):
             raise OperationNotSupportedException(
                 "Cloudapi endpoint unavailable at current api version.")
-
-        self._cloudapi_client = CloudApiClient(
-            base_url=link.href,
-            auth_token=token,
-            verify_ssl=self._vcd_client._verify_ssl_certs)
 
     def get_all_policies(self):
         """Get all compute policies in vCD that were created by CSE.
