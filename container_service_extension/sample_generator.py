@@ -6,8 +6,8 @@ import yaml
 
 
 INSTRUCTIONS_FOR_PKS_CONFIG_FILE = "\
-# Config file for Enterprise PKS enabled CSE Server to be filled by \n\
-# administrators. This config file has the following four sections:\n\
+# Enterprise PKS config file to enable Enterprise PKS functionality on CSE\n\
+# Please fill out the following four sections:\n\
 #   1. pks_api_servers:\n\
 #       a. Each entry in the list represents a Enterprise PKS api server\n\
 #          that is part of the deployment.\n\
@@ -36,18 +36,18 @@ INSTRUCTIONS_FOR_PKS_CONFIG_FILE = "\
 #       b. The field 'name' in each entry should be the name of the\n\
 #          Provider VDC as it appears in vCD.\n\
 #       c. The field 'pks_api_server' is a reference to the Enterprise PKS\n\
-#          api server which owns this account. It's value should be equal to\n\
+#          api server which owns this account. Its value should be equal to\n\
 #          value of the field 'name' of the corresponding Enterprise PKS api\n\
 #          server.\n\
 #   4. nsxt_servers:\n\
 #       a. Each entry in the list represents a NSX-T server that has been\n\
-#          alongside a Enterprise PKS server to manage its networking. CSE\n\
+#          alongside an Enterprise PKS server to manage its networking. CSE\n\
 #          needs these details to enforce network isolation of clusters.\n\
 #       b. The field 'name' in each entry should be unique. The value of\n\
 #          the field has no bearing on the real world NSX-T server, it's\n\
 #          used to tie in various segments of the config file together.\n\
 #       c. The field 'pks_api_server' is a reference to the Enterprise PKS\n\
-#          api server which owns this account. It's value should be equal to\n\
+#          api server which owns this account. Its value should be equal to\n\
 #          value of the field 'name' of the corresponding Enterprise PKS api\n\
 #          server.\n\
 #       d. The field 'distributed_firewall_section_anchor_id' should be\n\
@@ -58,15 +58,13 @@ INSTRUCTIONS_FOR_PKS_CONFIG_FILE = "\
 # https://vmware.github.io/container-service-extension/INSTALLATION.html\n"
 
 NOTE_FOR_PKS_KEY_IN_CONFIG_FILE = "\
-# Filling out this key for regular CSE set up is optional and should be left\n\
-# as is. Only for CSE set up enabled for PKS container provider, this value\n\
-# needs to point to a valid PKS config file name.\n"
+# This key should only be used if using Enterprise PKS with CSE. \n\
+# Value should be a filepath to PKS config file.\n"
 
 PKS_CONFIG_NOTE = "\
 # [OPTIONAL] PKS CONFIGS\n\
-# These configs are required only for customers with PKS enabled CSE.\n\
-# Regular CSE users, with no PKS container provider in their system, do not\n\
-# need these configs to be filled out in a separate yaml file."
+# These configs are used for Enterprise PKS functionality.\n\
+# If Enterprise PKS is not being used, do not use these configs.\n"
 
 SAMPLE_AMQP_CONFIG = {
     'amqp': {
@@ -136,16 +134,17 @@ SAMPLE_BROKER_CONFIG = {
 
 TEMPLATE_RULE_NOTE = """# [Optional] Template rule section
 # Rules can be defined to override template definitions as defined by remote
-# template cookbook. This section will contain 0 or more such rules, each rule
-# should match exactly one template. Matching is driven by name and revision of
-# the template. If only name is specified without the revision or vice versa,
-# the rule will not be processed. And once a match is found, as an action the
-# following attributes can be overriden.
+# template cookbook.
+# Any rule defined in this section can match exactly one template.
+# Template name and revision must be provided for the rule to be processed.
+# Templates will still have the default attributes that were defined during template creation.
+# These newly defined attributes only affect new cluster deployments from templates.
+# Template rules can override the following attributes:
 # * compute_policy
 # * cpu
 # * memory
-# Note: This overide only works on clusters deployed off templates, the
-# templates are still created as per the cookbook recipe.
+
+# Example 'template_rules' section:
 
 #template_rules:
 #- name: Rule1
@@ -163,7 +162,7 @@ TEMPLATE_RULE_NOTE = """# [Optional] Template rule section
 #  action:
 #    cpu: 2
 #    mem: 1024
-"""
+""" # noqa: E501
 
 PKS_CONFIG_FILE_LOCATION_SECTION_KEY = 'pks_config'
 SAMPLE_PKS_CONFIG_FILE_LOCATION = {
