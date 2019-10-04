@@ -27,13 +27,13 @@ administrative tasks.
 
 Install kubectl using directions from the [Kubernetes web site](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
 
-<a name="gettingcse"></a>
+<a name="getting_cse"></a>
 ## Install CSE Software
 
-Install Python 3.7.3 or greater. See Python installation instructions and
+Install python 3.7.3 or greater. See python installation instructions and
 downloads at <https://www.python.org> or consult the [vcd-cli install
-procedure](https://vmware.github.io/vcd-cli/install.html).  Pip, Python's
-package manager comes with Python.
+procedure](https://vmware.github.io/vcd-cli/install.html). `Pip`, python's
+package manager is present by default in every python installation.
 
 Verify python and pip installation:
 ```sh
@@ -44,7 +44,7 @@ $ pip3 --version
 pip 19.2.3 from /usr/local/lib/python3.7/site-packages/pip (python 3.7)
 ```
 
-Now install and verify CSE:
+Install and verify CSE:
 ```sh
 $ pip3 install container-service-extension
 ...
@@ -58,25 +58,24 @@ follows:
 ```sh
 > pip3 install git+https://github.com/vmware/container-service-extension.git@1.2.4
 ```
-*NOTE:* pip3 install from git fails on virtual environments created by
-`python3 -m venv`.  See <https://github.com/vmware/container-service-extension/issues/181> for details and workaround.
 
 To discover available CSE source versions on GitHub see the following URL:
 <https://github.com/vmware/container-service-extension/tags>
 
----
-<a name="csevcdcli"></a>
+
+<a name="enable_cse_vcd_cli"></a>
 ## Enable CSE Client
 
-After initial installation you'll see a response like the following
-when running `vcd cse` commands, which means that the CSE client
-is not enabled.
+After initial installation of CSE, while running `vcd cse` commands, you'll
+probably notice an error like the the following.
 ```sh
 > vcd cse version
 Error: No such command "cse".
 ```
-To enable edit `~/.vcd-cli/profiles.yaml` to include this section:
-```
+This means that the CSE client is not enabled in vcd-cli.
+To enable CSE client in vcd-cli, edit `~/.vcd-cli/profiles.yaml` to include the
+following (at the end of the file):
+```sh
 extensions:
 - container_service_extension.client.cse
 ```

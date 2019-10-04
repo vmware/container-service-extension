@@ -27,7 +27,7 @@ Community: https://vmwarecode.slack.com  #vcd (channel)
 - Install Python 3.6 or greater (https://realpython.com/installing-python/)
 - Install pip (Python's package manager)
 
-Verify python and pip installation with: 
+Verify python and pip installation with:
 
 ```bash
 > python3 --version
@@ -44,7 +44,7 @@ A virtual environment is a project workspace (a folder/directory) where your pro
 
 The virtual environment program we will use is [`virtualenv`](https://virtualenv.pypa.io/en/stable/), though there are others that do the same thing, such as `pipenv`, `conda`, `venv`, etc. The program [`virtualenvwrapper`](https://virtualenvwrapper.readthedocs.io/en/latest/) includes a lot of helpful shortcuts/functionality for managing your virtual environments, and using it is personal preference.
 
-When no virtual environment is active, python packages install to user or global site-packages directory. 
+When no virtual environment is active, python packages install to user or global site-packages directory.
 
 With a virtual environment active, python packages install to the virtual environment's site-packages, and user/global site-packages are hidden from the interpreter
 
@@ -116,7 +116,7 @@ upstream	https://github.com/vmware/container-service-extension.git (push)
 - Install CSE package to virtual environment so we can test our code changes
 ```bash
 # -e for editable mode. Code changes are reflected without installing again
-> pip install -e path/to/container-service-extension 
+> pip install -e path/to/container-service-extension
 > pip list
 Package                     Version      Location
 --------------------------- ------------ ----------------------------------------------
@@ -223,7 +223,7 @@ cse sample > config.yaml
 - CSE Server log is **cse.log**
 - CSE Installation log is **cse-check.log**
 - **vcd-cli** logs is **vcd.log**
-  
+
 ```bash
 > cse install -c config.yaml
 > cse version
@@ -273,38 +273,38 @@ Common Git commands:
 > git branch
 
 # see remote upstream's changes, but don't apply
-> git fetch upstream 
+> git fetch upstream
 
 # switch local branches
-> git checkout branchname 
+> git checkout branchname
 
 # view git commit log
-> git log 
+> git log
 
 ### Commands with side effects
 # signs the commit message to avoid annoying github bot
-> git commit -s 
+> git commit -s
 
 # Adds changes to last commit and change commit message
-> git commit --amend 
+> git commit --amend
 
 # places all uncommitted changes into stash
-> git stash 
+> git stash
 
 # lists all stashed changes
-> git stash list 
+> git stash list
 
 # applies the most recent stash and removes it from stash
-> git stash pop 
+> git stash pop
 
 # without --rebase, applies pulled code on top of your current changes. With --rebase, applies the remote changes first, then applies your code changes on top of those.
-> git pull --rebase 
+> git pull --rebase
 
 # allow user to modify commit history for latest 5 commits (squashing is very useful)
-> git rebase -i HEAD~5 
+> git rebase -i HEAD~5
 
 # Forces the remote origin branch to be the same as your local branch. Can be used to update an open pull request after using git rebase locally. Fairly safe to use since nothing should be forked from your remote origin
-> git push origin branchname --force 
+> git push origin branchname --force
 ```
 
 Git resources:

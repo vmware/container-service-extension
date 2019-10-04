@@ -11,43 +11,43 @@ This page shows basic commands that allow tenants to create, manage,
 and remove Kubernetes clusters using CSE. The primary tool for these
 operations is the `vcd cse` client command.
 
-Here is an overview of the process that a tenant administrator might 
-go through to install `vcd cse` and creat a cluster.  It includes 
-some internals of CSE so that you can understand what is happening 
-behind the covers. 
+Here is an overview of the process that a tenant administrator might
+go through to install `vcd cse` and create a cluster. It includes
+some internals of CSE so that you can understand what is happening
+behind the covers.
 
-![cse-usage](img/cse-usage-2.png)
+![cse-usage](img/cse-usage-example.png)
 
-CSE Kubernetes clusters can include persistent volumes mounted on NFS. 
-Procedures for creating and managing NFS nodes are located on the 
-[NFS Node Management](/NFS_STATIC_PV.html) page. 
+CSE Kubernetes clusters can include persistent volumes mounted on NFS.
+Procedures for creating and managing NFS nodes can be found at
+[NFS Node Management](/container-service-extension/NFS_STATIC_PV.html).
 
-<a name="usefulcommands"></a>
+<a name="useful_commands"></a>
 ## Useful Commands
-`vcd cse ...` commands are used by tenant/org administrators and users to:
+`vcd cse ...` commands are used by tenant organization administrators and users to:
 - list templates
-- get CSE Server status
-- create, list, and delete clusters/nodes
+- get CSE server status
+- create, list, info, delete clusters/nodes
 
-Here is a summary of commands available to manage templates, clusters
-and nodes:
+Here is a summary of commands available to view templates and manage clusters and nodes:
 
-| Command                                           | Description                                     |
-|:--------------------------------------------------|:--------------------------------------------|
-| `vcd cse template list`                           | List available templates to create clusters |
-| `vcd cse cluster create CLUSTER_NAME`           | Create a new Kubernetes cluster             |
-| `vcd cse cluster resize CLUSTER_NAME`           | Resize a new Kubernetes cluster             |
-| `vcd cse cluster create CLUSTER_NAME --enable-nfs`| Create a new Kubernetes cluster with NFS PV support.|
-| `vcd cse cluster list`                            | List created clusters.                      |
-| `vcd cse cluster delete CLUSTER_NAME`           | Delete a Kubernetes cluster.                |
-| `vcd cse node create CLUSTER_NAME --nodes n`    | Add `n` nodes to a cluster.                 |
-| `vcd cse node create CLUSTER_NAME --type nfsd`  | Add an NFS node to a cluster.               |
-| `vcd cse node list CLUSTER_NAME`                | List nodes of a cluster.                    |
-| `vcd cse node delete CLUSTER_NAME NODE_NAME` | Delete nodes from a cluster.                |
+| Command | Description |
+|-|-|
+| `vcd cse template list` | List available templates to create clusters |
+| `vcd cse cluster create CLUSTER_NAME` | Create a new Kubernetes cluster |
+| `vcd cse cluster resize CLUSTER_NAME` | Grow a Kubernetes cluster by adding new nodes |
+| `vcd cse cluster create CLUSTER_NAME --enable-nfs`| Create a new Kubernetes cluster with NFS Persistent Volume support.|
+| `vcd cse cluster list` | List available clusters. |
+| `vcd cse cluster delete CLUSTER_NAME` | Delete a Kubernetes cluster. |
+| `vcd cse node create CLUSTER_NAME --nodes n` | Add `n` nodes to a cluster. |
+| `vcd cse node create CLUSTER_NAME --type nfsd` | Add an NFS node to a cluster. |
+| `vcd cse node list CLUSTER_NAME` | List nodes of a cluster. |
+| `vcd cse node delete CLUSTER_NAME NODE_NAME` | Delete nodes from a cluster. |
 
 By default, CSE Client will display the task progress until the
-task finishes or fails. The `--no-wait` will return the task
-information, which you can use to monitor the task progress:
+task finishes or fails. The `--no-wait` flag can be used to skip waiting on the
+task. CSE client will still show the task information of console, and end user
+can choose to monitor the task progress manually.
 
 ```sh
 > vcd --no-wait cse cluster create CLUSTER_NAME --network intranet --ssh-key ~/.ssh/id_rsa.pub
@@ -64,10 +64,10 @@ information, which you can use to monitor the task progress:
 `vcd cse` commands can be scripted to automate the creation and operation
 of Kubernetes clusters and nodes.
 
-Users can also interact with CSE via the Python package or the CSE
-API exposed in vCD.
+Users can interact with CSE via the Python package (container-service-extension)
+or the CSE REST API exposed via vCD.
 
-This Python script creates a Kubernetes cluster on vCloud Director:
+This following Python script creates a Kubernetes cluster on vCloud Director:
 ```python
 #!/usr/bin/env python3
 from pyvcloud.vcd.client import BasicLoginCredentials
@@ -107,17 +107,17 @@ client.logout()
 # and one node of type NFS server
 > vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh/id_rsa.pub --enable-nfs
 
-# add 2 worker nodes to a cluster with 4GB of ram and 4 CPUs each, from the photon-v2 template
-# and using the specified storage profile
-> vcd cse node create mycluster --nodes 2 --network intranet --ssh-key ~/.ssh/id_rsa.pub --memory 4096 --cpu 4 --template photon-v2 --storage-profile Development
+# add 2 worker nodes to a cluster with 4GB of ram and 4 CPUs each, from a photon template,
+# using the specified storage profile
+> vcd cse node create mycluster --nodes 2 --network intranet --ssh-key ~/.ssh/id_rsa.pub --memory 4096 --cpu 4 --template-name sample_photon_template --template-revision 1 --storage-profile sample_storage_profile
 
-# add 1 nfsd node to a cluster with 4GB of ram and 4 CPUs each, from the photon-v2 template
-# and using the specified storage profile
-> vcd cse node create mycluster --nodes 1 --type nfsd --network intranet --ssh-key ~/.ssh/id_rsa.pub --memory 4096 --cpu 4 --template photon-v2 --storage-profile Development
+# add 1 nfsd node to a cluster with 4GB of ram and 4 CPUs each, from a photon template,
+# using the specified storage profile
+> vcd cse node create mycluster --nodes 1 --type nfsd --network intranet --ssh-key ~/.ssh/id_rsa.pub --memory 4096 --cpu 4 --template-name sample_photon_template --template-revision 1 --storage-profile sample_storage_profile
 
-# resize the cluster to have 8 worker node. On resize failure, returns cluster to original size.
+# resize the cluster to have 8 worker node. If resize fails, the cluster is returned to it's original size.
 # '--network' is only applicable for clusters using native (vCD) Kubernetes provider.
-> vcd cse cluster resize mycluster --network mynetwork --nodes 8     
+> vcd cse cluster resize mycluster --network mynetwork --nodes 8
 
 # info on a given node. If the node is of type nfsd, it displays info about Exports.
 > vcd cse node info mycluster nfsd-dj3s

@@ -5,6 +5,53 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 2.5.0
+
+Release Date: 2019-10-03
+
+Supported vCD versions: 9.1, 9.5, 9.7, 10.0
+
+Enterprise PKS compatibility matrix
+
+|CSE | vCD |Enterprise PKS| NSX-T |
+|-|-|-|-|
+|2.5.0 | 9.1, 9.5, 9.7, 10.0  | 1.4 | 2.3, 2.4 |
+
+**New Features**
+* New Templates with updated Kubernetes and Weave
+  * [Template Announcements](/container-service-extension/TEMPLATE_ANNOUNCEMENTS.html)
+* Multiple Kubernetes Templates
+  * CSE now offers the new capability to use variety of
+    Kubernetes templates in real time for Kubernetes cluster deployments. With
+    that also comes the complete offering of Kubernetes templates life-cycle
+    management for Service Providers. More details
+    [here](/container-service-extension/TEMPLATE_MANAGEMENT.html#kubernetes_templates).
+* Remote Repository for Kubernetes Templates
+  * Service Providers can fetch  new and/or revised Kubernetes templates from
+  remote repository without updating CSE (Exception - bug fixes and new
+  features will require newer CSE versions). More details
+  [here](/container-service-extension/TEMPLATE_MANAGEMENT.html#creating_kubernetes_templates).
+
+**Notes to System Administrator**
+
+Upgrade from CSE 2.5.0.0b1 is not supported.
+
+
+If you are upgrading to CSE 2.5.0 from any other version of CSE, and you have
+preexisting deployed K8s clusters, you must run the following command to
+preserve manageability of those clusters in CSE 2.5.0.
+```sh
+cse convert-cluster
+```
+This command resets the admin password of all nodes in the cluster, as well as,
+adds new metadata to the cluster. If nodes in the cluster are setup with
+ssh keys for root login, those key pairings will be preserved. The command does
+a force reboot of the cluster.
+
+---
+
+# Release Notes
+
 ## CSE 2.5.0 Beta (2.5.0.0b1)
 
 Release Date: 2019-09-06
@@ -14,8 +61,8 @@ Supported vCD versions: 9.1, 9.5, 9.7
 | Template OS | Docker | Kubernetes | Pod Network |
 |-|-|-|-|
 | Photon OS 2.0 GA | 18.06.2 | 1.12.7 | Weave 2.3.0 |
-| Ubuntu 16.04.4 LTS | 18.09.7 | 1.13.5 | Weave 2.3.0 |
-| Ubuntu 16.04.4 LTS | 18.09.7 | 1.15.3 | Weave 2.5.2 |
+| Ubuntu 16.04 LTS | 18.09.7 | 1.13.5 | Weave 2.3.0 |
+| Ubuntu 16.04 LTS | 18.09.7 | 1.15.3 | Weave 2.5.2 |
 
 **Installation of binaries**
 
@@ -30,7 +77,7 @@ pip install container-service-extension --pre
 ```
 
 Note: `pip install container-service-extension` installs previous official
-version of CSE - 2.0.0. Specify the above mentioned exact version to install 
+version of CSE - 2.0.0. Specify the above mentioned exact version to install
 CSE 2.5.0 beta.
 
 **New Features**
@@ -75,32 +122,32 @@ Native vCD templates need to be updated to avail below versions of K8 distributi
 
 **New Updates**
 
-- [Enterprise PKS enablement](/container-service-extension/ENT-PKS.html) - CSE 
+- [Enterprise PKS enablement](/container-service-extension/ENT_PKS.html) - CSE
 now supports new K8 provider Enterprise PKS in addition to Native vCD as K8 provider.
 - [Role based access control](/container-service-extension/RBAC.html) - Enabling
  this feature allows users granted with specific K8 rights only to deploy K8 clusters.
-- Python version has to be >= 3.7.3. This change has been made in order to address 
+- Python version has to be >= 3.7.3. This change has been made in order to address
 [CVE-2019-9636](https://nvd.nist.gov/vuln/detail/CVE-2019-9636)
 
 **Enterprise PKS Compatibility matrix**
 
-|CSE      | Supported vCD Versions |Enterprise PKS| NSX-T | 
+|CSE      | Supported vCD Versions |Enterprise PKS| NSX-T |
 |---------|------------------------|--------------|-------|
-|2.0.0    | 9.5, 9.7               | 1.4          | 2.3   | 
-|2.0.0    | 9.5, 9.7               | 1.4          | 2.4   | 
+|2.0.0    | 9.5, 9.7               | 1.4          | 2.3   |
+|2.0.0    | 9.5, 9.7               | 1.4          | 2.4   |
 
 **Notes to System Administrator**
 
-When more than one K8 provider exists in the system, system administrator is required to 
-perform an extra step of enabling organization vdc(s) with a desired K8 provider 
-(Native/Enterprise PKS). 
+When more than one K8 provider exists in the system, system administrator is required to
+perform an extra step of enabling organization vdc(s) with a desired K8 provider
+(Native/Enterprise PKS).
 
-To be specific, 
-- If Enterprise PKS is not in the set up, users are allowed to deploy K8 clusters in any organization vdc. 
+To be specific,
+- If Enterprise PKS is not in the set up, users are allowed to deploy K8 clusters in any organization vdc.
 - If Enterprise PKS is present in the CSE set up, users are allowed to deploy K8 clusters only in those
 organization vdc(s) enabled either for Native (or) Enterprise PKS.
 
-Click [here](/container-service-extension/CSE_ADMIN.html#pksconfig) for more details.
+Click [here](/container-service-extension/CSE_CONFIG.html#pksconfig) for more details.
 
 **vCD Native templates patching**
 
@@ -135,19 +182,19 @@ Supported vCD versions: 9.5, 9.7
 - `pip install container-service-extension --pre`
 
 Note: `pip install container-service-extension` installs previous official
- version of CSE - 1.2.7. Specify the above mentioned exact version to install 
+ version of CSE - 1.2.7. Specify the above mentioned exact version to install
  CSE 2.0 beta.
 
 **New Features**
 
-- [Enterprise PKS enablement](/container-service-extension/ENT-PKS.html)
+- [Enterprise PKS enablement](/container-service-extension/ENT_PKS.html)
 - [Role based access control](/container-service-extension/RBAC.html)
 
 **Compatibility matrix**
 
-|CSE      | vCD       |Enterprise PKS| NSX-T | 
+|CSE      | vCD       |Enterprise PKS| NSX-T |
 |---------|-----------|--------------|-------|
-|2.0 Beta | 9.5, 9.7  | 1.4          | 2.3   | 
+|2.0 Beta | 9.5, 9.7  | 1.4          | 2.3   |
 
 ---
 
@@ -200,7 +247,7 @@ Supported vCD versions: 9.1, 9.5
 **New Feature:**
 
 * Role based access control for deployment of kubernetes cluster
-  * New config file key `enforce_authorization` under `service` section. Please refer to [config file documentation](CSE_ADMIN.md#configfile)
+  * New config file key `enforce_authorization` under `service` section. Please refer to [config file documentation](CSE_CONFIG.html#service_section)
 * Improved logging and error messages.
 
 **Bug Fixes:**
