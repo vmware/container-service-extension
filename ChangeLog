@@ -1,6 +1,38 @@
 CHANGES
 =======
 
+2.5.0
+-----
+
+* Some more edits in docs (#456)
+* Update docs for CSE 2.5.0 (#455)
+* Update documentation diagrams (#454)
+* Fix typos in CSE sample text (#453)
+* Check cloudapi vdcComputePolicy uri endpoint (#452)
+* [VCDA-1239] Bump up version requirement for pyvcloud and vcd-cli (#451)
+* [VCDA-1211] Modify VM compute policy update to be asynchronous (#443)
+* Log file information updated (#446)
+* Change default template name and revision values to sample values. (#449)
+* Remove documentation for Essential PKS (#450)
+* [VCDA-1203] Refactor \`get\_all\_cse\_policies()\` to return a generator  (#437)
+* Set the script file permissions to read,write for owner only (#448)
+* [VCDA-1138] Updated OSL file 2.5 GA release (#439)
+* [VCDA-1210] Fix cluster deployment for non admin cross org users with api v33.0 (#442)
+* [VCDA-1223] CSE SERVER MANAGEMENT - Left Side Navigation Changes (#441)
+* Navigation link added for Enterprise PKS Limitations (#445)
+* [VCDA-1213] Fixed GA Release Date For CSE 1.1.0 (#440)
+* [VCDA-1164] Introduced minor error codes in CSE responses, customization of error message on client (#436)
+* [VCDA-1175] Replace existing VMs compute policy with 'System Default' during forced ovdc compute policy removal (#433)
+* [VCDA-1195] Force template compute policy removal client to api version 32.0 (#435)
+* Add debug messages to server tests (#428)
+* [VCDA-1199] Add K8s\_version field to output of /api/cse/clusters and /api/cse/cluster/{name} (#434)
+* Update pyvcloud requirement to v20.1.1dev97 (#431)
+* [VCDA-1193] VM customization script runs check result errors (#427)
+
+2.5.0b1
+-------
+
+* Updating Changelog
 * Small typo fix in docs navigation panel
 * CSE 2.5.0beta1 docs (#422)
 * Add todo hack to fix how default values are handled (#424)
