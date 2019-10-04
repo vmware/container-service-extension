@@ -63,16 +63,17 @@ broker:
 
 # [Optional] Template rule section
 # Rules can be defined to override template definitions as defined by remote
-# template cookbook. This section will contain 0 or more such rules, each rule
-# should match exactly one template. Matching is driven by name and revision of
-# the template. If only name is specified without the revision or vice versa,
-# the rule will not be processed. And once a match is found, as an action the
-# following attributes can be overridden.
+# template cookbook.
+# Any rule defined in this section can match exactly one template.
+# Template name and revision must be provided for the rule to be processed.
+# Templates will still have the default attributes that were defined during template creation.
+# These newly defined attributes only affect new cluster deployments from templates.
+# Template rules can override the following attributes:
 # * compute_policy
 # * cpu
 # * memory
-# Note: This override only works on clusters deployed off templates, the
-# templates are still created as per the cookbook recipe.
+
+# Example 'template_rules' section:
 
 #template_rules:
 #- name: Rule1
@@ -91,9 +92,8 @@ broker:
 #    cpu: 2
 #    mem: 1024
 
-# Filling out this key for regular CSE set up is optional and should be left
-# as is. Only for CSE set up enabled for PKS container provider, this value
-# needs to point to a valid PKS config file name.
+# This key should only be used if using Enterprise PKS with CSE. 
+# Value should be a filepath to PKS config file.
 
 pks_config: null
 ```
@@ -212,8 +212,8 @@ any ovdc is open for native K8s cluster deployments.
 
 #### Enterprise PKS Config file
 ```yaml
-# Config file for Enterprise PKS enabled CSE Server to be filled by 
-# administrators. This config file has the following four sections:
+# Enterprise PKS config file to enable Enterprise PKS functionality on CSE
+# Please fill out the following four sections:
 #   1. pks_api_servers:
 #       a. Each entry in the list represents a Enterprise PKS api server
 #          that is part of the deployment.
@@ -242,18 +242,18 @@ any ovdc is open for native K8s cluster deployments.
 #       b. The field 'name' in each entry should be the name of the
 #          Provider VDC as it appears in vCD.
 #       c. The field 'pks_api_server' is a reference to the Enterprise PKS
-#          api server which owns this account. It's value should be equal to
+#          api server which owns this account. Its value should be equal to
 #          value of the field 'name' of the corresponding Enterprise PKS api
 #          server.
 #   4. nsxt_servers:
 #       a. Each entry in the list represents a NSX-T server that has been
-#          alongside a Enterprise PKS server to manage its networking. CSE
+#          alongside an Enterprise PKS server to manage its networking. CSE
 #          needs these details to enforce network isolation of clusters.
 #       b. The field 'name' in each entry should be unique. The value of
 #          the field has no bearing on the real world NSX-T server, it's
 #          used to tie in various segments of the config file together.
 #       c. The field 'pks_api_server' is a reference to the Enterprise PKS
-#          api server which owns this account. It's value should be equal to
+#          api server which owns this account. Its value should be equal to
 #          value of the field 'name' of the corresponding Enterprise PKS api
 #          server.
 #       d. The field 'distributed_firewall_section_anchor_id' should be
