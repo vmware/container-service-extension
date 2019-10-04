@@ -57,7 +57,7 @@ install new templates by using below command. Please note that a graceful shut
 down of CSE Server is advised before attempting to update the templates.
 ```sh
 cse template list --display diff
-cse template install [OPTIONS] TEMPLATE_NAME TEMPLATE_REVISION
+cse template install TEMPLATE_NAME TEMPLATE_REVISION
 ```
 The refreshed templates do not impact existing Kubernetes clusters in the
 environment.
