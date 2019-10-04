@@ -23,7 +23,7 @@ API endpoint points via vCD. CSE also has a client component that plugs in
 facilitates vCD users to create Kubernetes clusters in vCD. The following
 diagram illustrates the interactions between the components.
 
-![cse-workflow](img/cse-workflow-2.png)
+![cse-workflow](img/cse-workflow.png)
 
 <a name="cseusers"></a>
 ## CSE User Types

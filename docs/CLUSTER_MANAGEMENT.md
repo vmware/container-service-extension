@@ -16,7 +16,7 @@ go through to install `vcd cse` and create a cluster. It includes
 some internals of CSE so that you can understand what is happening
 behind the covers.
 
-![cse-usage](img/cse-usage-2.png)
+![cse-usage](img/cse-usage-example.png)
 
 CSE Kubernetes clusters can include persistent volumes mounted on NFS.
 Procedures for creating and managing NFS nodes can be found at

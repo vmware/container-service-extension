@@ -48,7 +48,7 @@ Please find more details on how to generate sample config file and populate it c
 
 The following diagram illustrates installation steps visually.
 
-![cse-install](img/cse-install-2.png)
+![cse-install](img/cse-server-installation.png)
 
 The `cse install` command supports the following options:
 
