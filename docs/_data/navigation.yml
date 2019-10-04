@@ -20,9 +20,6 @@
     sublink: enable_cse_vcd_cli
 - name: "CSE Server Installation Prerequisites"
   link: CSE_INSTALL_PREREQUISITES.html
-  subtoc:
-  - name: vCD Prerequisites
-    sublink: prerequisites
 - name: "CSE Server Configuration File"
   link: CSE_CONFIG.html
 - name: "CSE Server Management"

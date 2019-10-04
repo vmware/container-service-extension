@@ -216,7 +216,7 @@ when executing any CSE command:
 
 ```bash
 $ vcd cse cluster list
-Usage: vcd cse cluster list [OPTIONS]
+Usage: vcd cse cluster list
 
 Error: CSE service is disabled. Contact the System Administrator.
 ```
