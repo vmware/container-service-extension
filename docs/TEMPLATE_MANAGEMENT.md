@@ -1,8 +1,8 @@
 ---
 layout: default
-title: Template Management
+title: Kubernetes Template Management
 ---
-# Template Management
+# Kubernetes Template Management
 
 <a name="overview"></a>
 ## Overview
@@ -72,18 +72,19 @@ starting from CSE 2.5, service providers have the option to selectively
 restrict Kubernetes templates from being used by tenants in order to prohibit
 them from deploying Kubernetes Clusters.
 
-This is accomplished with the use of Compute Policies feature of vCD 10.0.
+This is accomplished with the use of VDC Compute Policies feature of vCD 10.0.
 CSE 2.5 offers the capability to service providers to tag selected templates
 and organization VDCs with compute policy which restricts Kubernetes cluster
 deployments from tagged templates to only tagged organization VDCs.
 
 ### Enable Restriction on Kubernetes Templates
 Restriction on Kubernetes templates is enabled by leveraging the [template_rules
-section](/container-service-extension/CSE_CONFIG.md#templte_rules)
-Service Providers can mark Kubernetes templates as _protected_ by tagging them
-with a `VdcComputePolicy`. To do so, Service Providers need to define a
-template rule in the config section, whose target is the template to protect,
-and as `action` a value must be specified for the key `compute_policy`.
+section](/container-service-extension/CSE_CONFIG.html#templte_rules) in CSE
+config file. Service Providers can mark Kubernetes templates as _protected_ by
+tagging them with a `VdcComputePolicy`. To do so, Service Providers need to
+define a template rule in the `template_rules` section, whose target is the
+template to protect, and as `action` a value must be specified for the key
+`compute_policy`.
 ```yaml
 template_rules:
 - name: Photon Template Rule

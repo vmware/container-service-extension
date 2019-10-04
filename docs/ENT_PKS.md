@@ -74,7 +74,7 @@ Below timeline diagram depicts infrastructure set-up and tenant
     * Configure `config.yaml` with vCD and K8 template details.
     * Configure `pks.yaml` with Enterprise PKS details. This file is necessary
       only if there is an intention to leverage Enterprise PKS for K8
-      deployments. Refer [pks_config key](/container-service-extension/CSE_ADMIN.html#pksconfig)
+      deployments. Refer [pks_config key](/container-service-extension/CSE_CONFIG.html#pksconfig)
       in `config.yaml` for more details on how to fill in `pks.yaml` and how
       it's presence changes the CSE's default behavior on user's ability to
       deploy (Native/Enterprise PKS) K8 clusters in any given organization vdc.
@@ -204,7 +204,8 @@ Below steps of granting rights are required only if [RBAC feature](/container-se
     Enterprise PKS based K8 cluster deployments have some performance implications.
     The performance optimizations will be coming in near future
 * If there are Extension time out errors while executing commands, how can they be remedied?
-    * Increase the vCD extension timeout to a higher value. Refer [Setting the API Extension Timeout](/container-service-extension/CSE_ADMIN.html#extension-timeout)
+    * Increase the vCD extension timeout to a higher value. Refer to
+      [Setting the API Extension Timeout](/container-service-extension/CSE_SERVER_MANAGEMENT.html#extension-timeout)
 
 <a name="compatibility-matrix"></a>
 ## Compatibility matrix

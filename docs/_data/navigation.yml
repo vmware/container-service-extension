@@ -1,4 +1,4 @@
-- name: Introduction
+- name: "Introduction"
   link: INTRO.html
   subtoc:
   - name: Overview
@@ -15,52 +15,40 @@
   - name: Install Kubectl
     sublink: kubectl
   - name: Install CSE Software
-    sublink: gettingcse
+    sublink: getting_cse
   - name: Enable CSE Client 
-    sublink: csevcdcli
-- name: "CSE Server Management"
-  link: CSE_ADMIN.html
+    sublink: enable_cse_vcd_cli
+- name: "CSE Server Installation Prerequisites"
+  link: CSE_INSTALL_PREREQUISITES.html
   subtoc:
-  - name: Overview
-    sublink: overview
   - name: vCD Prerequisites
     sublink: prerequisites
-  - name: Server Config File
-    sublink: configfile
-  - name: Kubernetes Templates
-    sublink: vmtemplates
+- name: "CSE Server Configuration File"
+  link: CSE_CONFIG.html
+- name: "CSE Server Management"
+  link: CSE_SERVER_MANAGEMENT.html
+  subtoc:
+  - name: Overview
+    sublink: overview
   - name: Server Setup
-    sublink: serversetup
+    sublink: server_setup
   - name: Server Operation
-    sublink: serveroperation
+    sublink: server_operation
   - name: Server Upgrade and Removal
-    sublink: serverupgrade
+    sublink: server_upgrade
   - name: Useful Commands
-    sublink: commandssysadmin
-- name: "Kubernetes Cluster Management"
-  link: CLUSTER_ADMIN.html
+    sublink: commands_sys_admin
+- name: "Kubernetes Template Management"
+  link: TEMPLATE_MANAGEMENT.html
   subtoc:
   - name: Overview
     sublink: overview
-  - name: Useful Commands
-    sublink: usefulcommands
-  - name: Automation
-    sublink: automation
-  - name: Example Use Case
-    sublink: example
-- name: "NFS Node Management"
-  link: NFS_STATIC_PV.html
-  subtoc:
-  - name: Overview
-    sublink: overview
-  - name: Persistent Volume Types
-    sublink: volumes
-  - name: NFS Volume Architecture
-    sublink: architecture
-  - name: Storage Tutorial
-    sublink: tutorial
-  - name: FAQ
-    sublink: faq
+  - name: Kubernetes Templates
+    sublink: kubernetes_templates
+  - name: Restricting Kubernetes Templates for Tenants
+    sublink: restrict_templates
+  - name: Source .ova Files for Kubernetes Templates
+    sublink: template_os_source
 - name: "Role Based Access Control"
   link: RBAC.html
   subtoc:
@@ -74,8 +62,19 @@
     sublink: enablement
   - name: FAQ
     sublink: faq
+- name: "Kubernetes Cluster Management"
+  link: CLUSTER_MANAGEMENT.html
+  subtoc:
+  - name: Overview
+    sublink: overview
+  - name: Useful Commands
+    sublink: useful_commands
+  - name: Automation
+    sublink: automation
+  - name: Example Use Case
+    sublink: example
 - name: "Enterprise PKS enablement"
-  link: ENT-PKS.html
+  link: ENT_PKS.html
   subtoc:
   - name: Overview
     sublink: overview
@@ -93,6 +92,19 @@
     sublink: faq
   - name: Compatibility matrix
     sublink: compatibility-matrix
+- name: "NFS Node Management"
+  link: NFS_STATIC_PV.html
+  subtoc:
+  - name: Overview
+    sublink: overview
+  - name: Persistent Volume Types
+    sublink: volumes
+  - name: NFS Volume Architecture
+    sublink: architecture
+  - name: Storage Tutorial
+    sublink: tutorial
+  - name: FAQ
+    sublink: faq
 - name: "Troubleshooting"
   link: TROUBLESHOOTING.html
 - name: "Known Issues"
@@ -106,7 +118,9 @@
     sublink: ent-pks
 - name: "Release Notes"
   link: RELEASE_NOTES.html
-- name: Contributing
+- name: "Template Announcements"
+  link: TEMPLATE_ANNOUNCEMENTS.html
+- name: "Contributing"
   link: CONTRIBUTING.html
   subtoc:
   - name: Overview

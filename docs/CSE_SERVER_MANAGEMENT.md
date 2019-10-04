@@ -19,7 +19,7 @@ documentation](https://vmware.github.io/vcd-cli/) if necessary to familiarize
 yourself with vcd-cli.
 
 
-<a name="serversetup"></a>
+<a name="server_setup"></a>
 
 ## Server Setup
 
@@ -154,7 +154,7 @@ vcd catalog acl add cse-cat 'org:test-org:ReadOnly'
 
 ---
 
-<a name="serveroperation"></a>
+<a name="server_operation"></a>
 
 ## Server Operation
 
@@ -249,7 +249,7 @@ version               2.5.0
 ```
 ---
 
-<a name="serverupgrade"></a>
+<a name="server_upgrade"></a>
 
 ## Server Upgrade and Removal
 
@@ -279,7 +279,7 @@ Upgrading CSE server is no different than installing it for the first time.
 
 ---
 
-<a name="commandssysadmin"></a>
+<a name="commands_sys_admin"></a>
 
 ## Useful Commands
 

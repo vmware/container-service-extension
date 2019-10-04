@@ -18,7 +18,6 @@ endpoint is not disabled in vCloud Director.
 
 [More details](https://docs.vmware.com/en/vCloud-Director/10.0/com.vmware.vcloud.install.doc/GUID-84390C8F-E8C5-4137-A1A5-53EC27FE0024.html)
 
----
 
 ### Failures during template creation or installation
 
@@ -27,19 +26,16 @@ endpoint is not disabled in vCloud Director.
 - If the VM has no Internet access, scripts may fail
 - Check CSE logs for script outputs, to determine the cause behind the observed failure
 
----
 
 ### CSE service fails to start
 
 - Workaround: rebooting the VM starts the service
 
----
 
 ### CSE 1.2.6 and up are incompatible with vCD 9.0
 
 - CSE installation fails with MissingLinkException
 
----
 
 ### Cluster creation fails when vCD external network has a DNS suffix and the DNS server resolves `localhost.my.suffix` to a valid IP
 

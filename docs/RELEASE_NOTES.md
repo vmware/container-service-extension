@@ -7,7 +7,7 @@ title: Release Notes
 
 ## CSE 2.5.0
 
-Release Date: 2019-10-04
+Release Date: 2019-10-03
 
 Supported vCD versions: 9.1, 9.5, 9.7, 10.0
 
@@ -19,7 +19,7 @@ Enterprise PKS compatibility matrix
 
 **New Features**
 * New Templates with updated Kubernetes and Weave
-  * [Template Announcements](/container-service-extension/TEMPLATE_ANOUNCEMENTS.html)
+  * [Template Announcements](/container-service-extension/TEMPLATE_ANNOUNCEMENTS.html)
 * Multiple Kubernetes Templates
   * CSE now offers the new capability to use variety of
     Kubernetes templates in real time for Kubernetes cluster deployments. With
@@ -122,7 +122,7 @@ Native vCD templates need to be updated to avail below versions of K8 distributi
 
 **New Updates**
 
-- [Enterprise PKS enablement](/container-service-extension/ENT-PKS.html) - CSE
+- [Enterprise PKS enablement](/container-service-extension/ENT_PKS.html) - CSE
 now supports new K8 provider Enterprise PKS in addition to Native vCD as K8 provider.
 - [Role based access control](/container-service-extension/RBAC.html) - Enabling
  this feature allows users granted with specific K8 rights only to deploy K8 clusters.
@@ -147,7 +147,7 @@ To be specific,
 - If Enterprise PKS is present in the CSE set up, users are allowed to deploy K8 clusters only in those
 organization vdc(s) enabled either for Native (or) Enterprise PKS.
 
-Click [here](/container-service-extension/CSE_ADMIN.html#pksconfig) for more details.
+Click [here](/container-service-extension/CSE_CONFIG.html#pksconfig) for more details.
 
 **vCD Native templates patching**
 
@@ -187,7 +187,7 @@ Note: `pip install container-service-extension` installs previous official
 
 **New Features**
 
-- [Enterprise PKS enablement](/container-service-extension/ENT-PKS.html)
+- [Enterprise PKS enablement](/container-service-extension/ENT_PKS.html)
 - [Role based access control](/container-service-extension/RBAC.html)
 
 **Compatibility matrix**
@@ -247,7 +247,7 @@ Supported vCD versions: 9.1, 9.5
 **New Feature:**
 
 * Role based access control for deployment of kubernetes cluster
-  * New config file key `enforce_authorization` under `service` section. Please refer to [config file documentation](CSE_ADMIN.md#configfile)
+  * New config file key `enforce_authorization` under `service` section. Please refer to [config file documentation](CSE_CONFIG.html#service_section)
 * Improved logging and error messages.
 
 **Bug Fixes:**

@@ -27,7 +27,7 @@ administrative tasks.
 
 Install kubectl using directions from the [Kubernetes web site](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
 
-<a name="gettingcse"></a>
+<a name="getting_cse"></a>
 ## Install CSE Software
 
 Install python 3.7.3 or greater. See python installation instructions and
@@ -63,7 +63,7 @@ To discover available CSE source versions on GitHub see the following URL:
 <https://github.com/vmware/container-service-extension/tags>
 
 
-<a name="csevcdcli"></a>
+<a name="enable_cse_vcd_cli"></a>
 ## Enable CSE Client
 
 After initial installation of CSE, while running `vcd cse` commands, you'll

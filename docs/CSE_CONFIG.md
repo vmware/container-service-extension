@@ -1,9 +1,9 @@
 ---
 layout: default
-title: CSE Server Config File
+title: CSE Server Configuration File
 ---
 
-## CSE Server Config File
+## CSE Server Configuration File
 
 The CSE server installation as well runtime is controlled by a yaml
 configuration file that must be filled out prior to installation. You can
@@ -142,6 +142,7 @@ Each `vc` under the `vcs` section has the following properties:
 Note : All VCs registered in vCD must be listed here, otherwise CSE server
 installation will fail during pre-check phase.
 
+<a name="service_section"></a>
 ### `service` Section
 
 The service section contains properties that define CSE server behavior.
@@ -190,7 +191,7 @@ Each rule comprises of the following attributes
 | target | Name and revision of the template on which the rule will be applied |
 | action | Template properties that will be overridden. Only supported properties are `compute_policy`, `cpu`, and `memory` |
 
-Please refer to [Restricting Kubernetes templates](/container-service-extension/TEMPLATE_MANAGEMENT.html)
+Please refer to [Restricting Kubernetes templates](/container-service-extension/TEMPLATE_MANAGEMENT.html#restrict_templates)
 for further details on compute policies.
 
 <a name="pksconfig"></a>

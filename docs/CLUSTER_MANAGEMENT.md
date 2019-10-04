@@ -20,7 +20,7 @@ behind the covers.
 
 CSE Kubernetes clusters can include persistent volumes mounted on NFS.
 Procedures for creating and managing NFS nodes can be found at
-[NFS Node Management](/NFS_STATIC_PV.html).
+[NFS Node Management](/container-service-extension/NFS_STATIC_PV.html).
 
 <a name="useful_commands"></a>
 ## Useful Commands
