@@ -92,12 +92,12 @@ class VcdBroker(AbstractBroker):
             RequestKey.CLUSTER_NAME
         ]
         req_utils.validate_payload(data, required)
-
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
         }
         validated_data = {**defaults, **data}
+
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         cluster = get_cluster(self.tenant_client, cluster_name,
                               org_name=validated_data[RequestKey.ORG_NAME],
@@ -175,7 +175,6 @@ class VcdBroker(AbstractBroker):
             RequestKey.CLUSTER_NAME
         ]
         req_utils.validate_payload(data, required)
-
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
@@ -264,16 +263,11 @@ class VcdBroker(AbstractBroker):
             RequestKey.ROLLBACK: True,
         }
         validated_data = {**defaults, **data}
-
-        # TODO HACK default dictionary combining needs to be fixed
-        validated_data[RequestKey.TEMPLATE_NAME] = validated_data[RequestKey.TEMPLATE_NAME] or template[LocalTemplateKey.NAME] # noqa: E501
-        validated_data[RequestKey.TEMPLATE_REVISION] = validated_data[RequestKey.TEMPLATE_REVISION] or template[LocalTemplateKey.REVISION] # noqa: E501
-
         template_name = validated_data[RequestKey.TEMPLATE_NAME]
         template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
+        num_workers = validated_data[RequestKey.NUM_WORKERS]
 
         # check that requested number of worker nodes is at least more than 1
-        num_workers = validated_data[RequestKey.NUM_WORKERS]
         if num_workers < 1:
             raise CseServerError(f"Worker node count must be > 0 "
                                  f"(received {num_workers}).")
@@ -329,7 +323,7 @@ class VcdBroker(AbstractBroker):
             RequestKey.NETWORK_NAME
         ]
         req_utils.validate_payload(data, required)
-
+        # template-related defaults are taken care of in self.create_nodes()
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None,
@@ -338,8 +332,10 @@ class VcdBroker(AbstractBroker):
             RequestKey.TEMPLATE_REVISION: None
         }
         validated_data = {**defaults, **data}
+
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         num_workers_wanted = validated_data[RequestKey.NUM_WORKERS]
+
         if num_workers_wanted < 1:
             raise CseServerError(f"Worker node count must be > 0 "
                                  f"(received {num_workers_wanted}).")
@@ -375,12 +371,12 @@ class VcdBroker(AbstractBroker):
             RequestKey.CLUSTER_NAME
         ]
         req_utils.validate_payload(data, required)
-
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
         }
         validated_data = {**defaults, **data}
+
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
 
         cluster = get_cluster(self.tenant_client, cluster_name,
@@ -412,12 +408,12 @@ class VcdBroker(AbstractBroker):
             RequestKey.NODE_NAME
         ]
         req_utils.validate_payload(data, required)
-
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
         }
         validated_data = {**defaults, **data}
+
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         node_name = validated_data[RequestKey.NODE_NAME]
 
@@ -478,8 +474,6 @@ class VcdBroker(AbstractBroker):
             RequestKey.NETWORK_NAME
         ]
         req_utils.validate_payload(data, required)
-
-        cluster_name = data[RequestKey.CLUSTER_NAME]
         # check that requested/default template is valid
         template = get_template(
             name=data.get(RequestKey.TEMPLATE_NAME),
@@ -499,14 +493,11 @@ class VcdBroker(AbstractBroker):
         }
         validated_data = {**defaults, **data}
 
-        # TODO HACK default dictionary combining needs to be fixed
-        validated_data[RequestKey.TEMPLATE_NAME] = validated_data[RequestKey.TEMPLATE_NAME] or template[LocalTemplateKey.NAME] # noqa: E501
-        validated_data[RequestKey.TEMPLATE_REVISION] = validated_data[RequestKey.TEMPLATE_REVISION] or template[LocalTemplateKey.REVISION] # noqa: E501
-
+        cluster_name = data[RequestKey.CLUSTER_NAME]
         template_name = validated_data[RequestKey.TEMPLATE_NAME]
         template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
-
         num_workers = validated_data[RequestKey.NUM_WORKERS]
+
         if num_workers < 1:
             raise CseServerError(f"Worker node count must be > 0 "
                                  f"(received {num_workers}).")
@@ -560,14 +551,15 @@ class VcdBroker(AbstractBroker):
             RequestKey.NODE_NAMES_LIST
         ]
         req_utils.validate_payload(data, required)
-
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
         }
         validated_data = {**defaults, **data}
+
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         node_names_list = validated_data[RequestKey.NODE_NAMES_LIST]
+
         # check that there are nodes to delete
         if len(node_names_list) == 0:
             LOGGER.debug("No nodes specified to delete")

@@ -37,8 +37,12 @@ def ovdc_update(request_data, tenant_auth_token):
         RequestKey.OVDC_ID
     ]
     req_utils.validate_payload(request_data, required)
+    defaults = {
+        RequestKey.PKS_PLAN_NAME: None,
+        RequestKey.PKS_CLUSTER_DOMAIN: None
+    }
+    validated_data = {**defaults, **request_data}
 
-    validated_data = request_data
     k8s_provider = validated_data[RequestKey.K8S_PROVIDER]
     k8s_provider_info = {K8S_PROVIDER_KEY: k8s_provider}
 
@@ -90,8 +94,14 @@ def ovdc_list(request_data, tenant_auth_token):
 
     :return: List of dictionaries with org VDC k8s provider metadata.
     """
+    defaults = {
+        RequestKey.LIST_PKS_PLANS: False
+    }
+    validated_data = {**defaults, **request_data}
+
     client, _ = vcd_utils.connect_vcd_user_via_token(tenant_auth_token)
-    list_pks_plans = utils.str_to_bool(request_data[RequestKey.LIST_PKS_PLANS])
+    # TODO check if this is needed
+    list_pks_plans = utils.str_to_bool(validated_data[RequestKey.LIST_PKS_PLANS]) # noqa: E501
 
     return ovdc_utils.get_ovdc_list(client, list_pks_plans=list_pks_plans,
                                     tenant_auth_token=tenant_auth_token)
@@ -133,7 +143,6 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token):
         RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: False,
     }
     validated_data = {**defaults, **request_data}
-    req_utils.validate_payload(request_data, required)
 
     action = validated_data[RequestKey.COMPUTE_POLICY_ACTION]
     cp_name = validated_data[RequestKey.COMPUTE_POLICY_NAME]
