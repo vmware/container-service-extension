@@ -14,8 +14,8 @@ CSE successfully on vCD.
 * A VDC within the org, which
   * has an org VDC network connected to an external network (with Internet connectivity). The external network connection is required to enable cluster VMs to download packages during configuration.
   * can host vApps
-  * has sufficient storage to create vApps and publish them as templates. 
-* Users in the org with privileges necessary to perform operations like configuring AMQP, creating public catalog entries, and managing vApps.  
+  * has sufficient storage to create vApps and publish them as templates.
+* Users in the org with privileges necessary to perform operations like configuring AMQP, creating public catalog entries, and managing vApps.
 * A good network connectivity between the machine where CSE is installed and the vCD server as well as the Internet.  This avoids intermittent failures in OVA upload/download operations.
 
 You can use existing resources from your vCD installation or create

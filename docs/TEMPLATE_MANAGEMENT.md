@@ -24,10 +24,11 @@ file, out of the box, points to the official location of those templates
 definitions. The remote repository is officially managed by maintainers of the
 CSE project.
 
+<a name="creating_kubernetes_templates"></a>
 ### Creating Kubernetes Templates
 During CSE server installation, CSE provides the option to create Kubernetes
 templates from all template definitions available at the remote repository
-URL specified in the [config file](/container-service-extension/CSE_CONFIG.html).
+URL specified in the [config file](/container-service-extension/CSE_CONFIG.html#broker).
 Alternatively, Service Providers have the option to install CSE server with
 `--skip-template-creation` flag, if specified CSE does not create any
 Kubernetes templates during installation. Once CSE server installation is
@@ -63,61 +64,67 @@ environment.
 
 <a name="restrict_templates"></a>
 ## Restricting Kubernetes Templates for Tenants
-Out of the box, Kubernetes templates are not restricted for use. All tenants
-have access to Kubernetes templates to deploy Kubernetes clusters, as long as
-they have sufficient permissions to interact with CSE. However, starting from
-CSE 2.5, service providers have the option to selectively restrict Kubernetes
-templates from being used by tenants in order to prohibit them from deploying
-Kubernetes Clusters.
 
-### Protecting Kubernetes Templates
-CSE uses vCD's `VdcComputePolicy` to enforce this tenant level restriction.
+Out of the box, Kubernetes templates are not restricted for use. All tenants
+have access to all the Kubernetes templates to deploy Kubernetes clusters, as
+long as they have sufficient permissions to interact with CSE. However,
+starting from CSE 2.5, service providers have the option to selectively
+restrict Kubernetes templates from being used by tenants in order to prohibit
+them from deploying Kubernetes Clusters.
+
+This is accomplished with the use of Compute Policies feature of vCD 10.0.
+CSE 2.5 offers the capability to service providers to tag selected templates
+and organization VDCs with compute policy which restricts Kubernetes cluster
+deployments from tagged templates to only tagged organization VDCs.
+
+### Enable Restriction on Kubernetes Templates
+Restriction on Kubernetes templates is enabled by leveraging the [template_rules
+section](/container-service-extension/CSE_CONFIG.md#templte_rules)
 Service Providers can mark Kubernetes templates as _protected_ by tagging them
 with a `VdcComputePolicy`. To do so, Service Providers need to define a
 template rule in the config section, whose target is the template to protect,
-and as `action` a value must be specified for the key `compute-policy`.
+and as `action` a value must be specified for the key `compute_policy`.
 ```yaml
 template_rules:
-- name: Rule1
+- name: Photon Template Rule
   target:
     name: photon-v2_k8-1.12_weave-2.3.0
     revision: 1
   action:
-    compute_policy: "Policy for Tenant 1"
+    compute_policy: "Photon Template Policy"
 ```
-The name of the compute policy can be chosen by service provider at will, CSE
-will create the policy if it's already not present in vCD. Also, the name of
-the policy will be internally qualified by CSE to make sure it doesn't
-interfere with regular compute policies in vCD. Once the rule is processed
-during CSE server startup, the desired compute policy will be assigned to the
-Kubernetes template. And any request to deploy a Kubernetes cluster using the
-template will fail unless the org VDC on which the cluster is being deployed
-supports the afore-mentioned compute policy.
+Service providers select the name of the compute policy per their choice, and
+CSE creates that compute policy in vCD, if it's not already present. During CSE
+server startup, the template rule "Photon Template Rule" is processed and the
+defined Kubernetes template is tagged with the compute policy. At this point,
+the Kubernetes template is restricted from further use, until tenant
+organization VDCs are enabled with matching compute policy to permit Kubernetes
+cluster deployments.
 
-### Granting Tenants Permission to use Kubernetes Templates
-Service provider can selectively choose tenants whom they want to give access
-to the template by adding the compute policy to the relevant org VDC(s). To do
-so, they can utilize the following command.
+### Grant Tenants access to Kubernetes Templates
+Service providers select tenants to whom they want to grant access of certain
+Kubernetes Templates based cluster deployments. Then, they enable selected
+tenants' organization VDCs with the same compute policy as present on the
+Kubernetes Template. To do so, the following command should be used
 ```sh
 vcd cse ovdc compute-policy add ORG_NAME OVDC_NAME POLICY_NAME
 ```
 
-### Revoking Permission to use Kubernetes Templates from Tenants
+### Revoke Permission to use Kubernetes Templates from Tenants
 Permission to use a protected template can be revoked at any time from the
 tenant, via the following command.
 ```sh
 vcd cse ovdc compute-policy remove ORG_NAME OVDC_NAME POLICY_NAME
 ```
-If there are deployed cluster that are referencing the compute policy, then
--f/--force flag should be used to force the operation. All such clusters will
-remain deployed but revert to `System Default` compute policy.
+If there are Kubernetes clusters in that organization VDC, use `-f/--force`
+flag to force the operation. The clusters will remain deployed, and will
+switch to `System Default` compute policy.
 
-### Removing Protection status from a Kubernetes Templates
-To remove the _protected_ status of a template, service provider can simply
-delete the rule that assigns the compute policy to the template and restart
-the CSE server. In future, if there are templates that are _protected_ out of
-box, in that case the rule need to tweaked to specify an empty policy to get
-rid of the _protection_.
+### Remove restriction from Kubernetes Templates
+In order to remove the restriction from Kubernetes templates, Service providers
+can delete the template rule from the config file and restart the CSE server.
+Alternatively, the same outcome can be achieved by specifying an empty policy
+name in the concerned rule.
 ```yaml
 template_rules:
 - name: Rule1

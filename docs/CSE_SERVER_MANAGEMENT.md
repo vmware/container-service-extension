@@ -61,7 +61,7 @@ The `cse install` command supports the following options:
 | \--ssh-key | -k    | path to public ssh key file | ssh-key file to use for VM access (root password ssh access is disabled for security reasons) | None |
 
 To monitor the vApp customization process, we can ssh into the temporary vApp.
-In the temporary vApp, the output of the customization script is captured in 
+In the temporary vApp, the output of the customization script is captured in
 `/tmp/FILENAME.out` as well as `/tmp/FILENAME.err`:
 
 ```sh
@@ -130,12 +130,12 @@ vcd system extension create cse cse cse vcdext '/api/cse, /api/cse/.*, /api/cse/
 
 ### Sharing CSE catalog with non admin tenant users
 
-CSE installation creates a catalog to store all the Kubernetes templates that are later 
-used to deploy Kubernetes clusters. This catalog is by default shared with all 
-organization administrators. However if users who are not organization 
-administrator want to access this catalog (cluster creation requires access to 
-this catalog), the catalog needs to be explicitly shared with each individual 
-organization by System administrators. The following commands can be run by a System 
+CSE installation creates a catalog to store all the Kubernetes templates that are later
+used to deploy Kubernetes clusters. This catalog is by default shared with all
+organization administrators. However if users who are not organization
+administrator want to access this catalog (cluster creation requires access to
+this catalog), the catalog needs to be explicitly shared with each individual
+organization by System administrators. The following commands can be run by a System
 administrator to do so,
 
 ```sh
@@ -264,7 +264,7 @@ Upgrading CSE server is no different than installing it for the first time.
 3. Check the release notes at the end of this document for version compatibility.
 4. Review the configuration file for any new options introduced or deprecated in the new version.
 5. `cse sample` command should be used to generate a new sample config file.
-5. If the previously generated templates are no longer supported by the new version, delete the old templates (from vCD UI / vcd-cli) and generate new ones via 
+5. If the previously generated templates are no longer supported by the new version, delete the old templates (from vCD UI / vcd-cli) and generate new ones via
    * `cse install -c myconfig.yaml`
 6. If CSE is being run as a service, start the new version of the service with `systemctl start cse`.
 

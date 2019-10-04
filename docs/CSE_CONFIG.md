@@ -1,6 +1,9 @@
-<a name="configfile"></a>
+---
+layout: default
+title: CSE Server Config File
+---
 
-## Server Config File
+## CSE Server Config File
 
 The CSE server installation as well runtime is controlled by a yaml
 configuration file that must be filled out prior to installation. You can
@@ -92,7 +95,7 @@ broker:
 #    cpu: 2
 #    mem: 1024
 
-# This key should only be used if using Enterprise PKS with CSE. 
+# This key should only be used if using Enterprise PKS with CSE.
 # Value should be a filepath to PKS config file.
 
 pks_config: null
@@ -149,10 +152,11 @@ The service section contains properties that define CSE server behavior.
 | enforce_authorization | If True, CSE server will use role-based access control, where users without the correct CSE right will not be able to deploy clusters (Added in CSE 1.2.6) |
 | log_wire | If True, will log all REST calls initiated by CSE to vCD. (Added in CSE 2.5.0) |
 
+<a name="broker"></a>
 ### `broker` Section
 
 The `broker` section contains properties to define resources used by
-the CSE server including org and VDC as well as template definitions.
+the CSE server including org and VDC as well as template repository location.
 The following table summarizes key parameters.
 
 | Property | Value |
@@ -167,10 +171,11 @@ The following table summarizes key parameters.
 | storage_profile | Name of the storage profile to use when creating the temporary vApp used to build the template |
 | vdc | Virtual data-center within `org` that will be used during the install process to build the template |
 
+<a name="templte_rules"></a>
 ### `template_rules` Section
 (Added in CSE 2.5.0)\
 Rules can be created to override some of the default attributes of templates
-defined by the remote template repository. 
+defined by the remote template repository.
 
 This section can contain zero or more such rules, each rule matches exactly one
 template. Matching is driven by name and revision of the template. If only name
@@ -197,7 +202,7 @@ container provider, this value needs to point to absolute path of valid Enterpri
 Please refer to [Enterprise PKS enablement](/container-service-extension/ENT_PKS.html) for more details.
 
 Enabling Enterprise PKS as a K8s provider changes the default behavior of CSE as described below.
-Presence of valid value for `pks_config` property gives an indication to CSE that 
+Presence of valid value for `pks_config` property gives an indication to CSE that
 Enterprise PKS is enabled (in addition to Native vCD) as a K8s provider in the system.
 
 - CSE begins to mandate any given `ovdc` to be enabled for either Native or Enterprise PKS as a backing K8s provider.

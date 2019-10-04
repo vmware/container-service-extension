@@ -119,13 +119,13 @@ to use other methods depending on your taste in Linux administration.
 
 ```
 root@nfsd-ljsn:~# parted /dev/sdb
-(parted) mklabel gpt                                                      
+(parted) mklabel gpt
 Warning: The existing disk label on /dev/sdb will be destroyed and all data on
 this disk will be lost. Do you want to continue?
-Yes/No? yes                                                               
+Yes/No? yes
 (parted) unit GB
 (parted) mkpart primary 0 100
-(parted) print                                                            
+(parted) print
 Model: VMware Virtual disk (scsi)
 Disk /dev/sdb: 100GB
 Sector size (logical/physical): 512B/512B
@@ -146,7 +146,7 @@ Superblock backups stored on blocks:
 Allocating group tables: done
 Writing inode tables: done
 Creating journal (32768 blocks): done
-Writing superblocks and filesystem accounting information: done   
+Writing superblocks and filesystem accounting information: done
 ```
 
 Create a mount point, add the new partition to your list of file systems,

@@ -66,7 +66,7 @@ To discover available CSE source versions on GitHub see the following URL:
 <a name="csevcdcli"></a>
 ## Enable CSE Client
 
-After initial installation of CSE, while running `vcd cse` commands, you'll 
+After initial installation of CSE, while running `vcd cse` commands, you'll
 probably notice an error like the the following.
 ```sh
 > vcd cse version

@@ -11,10 +11,10 @@ title: Known Issues
 
 Workaround: Don't disable Service Provider Access to the Legacy API Endpoint
 
-vCD 10.0 deprecated the `/api/sessions` REST end point, and introduced a new 
+vCD 10.0 deprecates the `/api/sessions` REST end point, and introduces a new
 `/cloudapi/` based REST endpoint for authenticating vCD users. CSE relies on
-the `/api` end point to fetch System administrator login token to perform myriad
-tasks on vCD. So, it's important that the older endpoint is not disabled.
+the '/api' end point for operations, so it is necessary that the legacy API
+endpoint is not disabled in vCloud Director.
 
 [More details](https://docs.vmware.com/en/vCloud-Director/10.0/com.vmware.vcloud.install.doc/GUID-84390C8F-E8C5-4137-A1A5-53EC27FE0024.html)
 
@@ -59,7 +59,7 @@ The workaround (More detail [HERE](https://github.com/kubernetes/kubernetes/issu
 is to create a **kubeadm** config file (no way to specify **listen-peer-urls**
 argument in command line), and modify the `kubeadm init` command in the CSE
 master script for the template of the cluster you are attempting to deploy.
-CSE master script is located at 
+CSE master script is located at
 `~/.cse-scripts/<template name>_rev<template_revision>/scripts/mstr.sh`
 
 Change command from,
@@ -90,7 +90,7 @@ avert this problem if the need arises.
        /home 203.0.113.256(rw,sync,no_root_squash,no_subtree_check) 203.0.113.257(rw,sync,no_root_squash,no_subtree_check)
     ```
 * Administrator can manually add a vApp network for each Kubernetes cluster in vCD.
-* Create a ssh tunnel from each worker node (using ssh local port forwarding) and then 
+* Create a ssh tunnel from each worker node (using ssh local port forwarding) and then
   use `127.0.0.1:<port>` in the Kubernetes declarative specs as IP of the NFS server.
     * In NFS server, for any given shared directory, add below line to `/etc/exports` file.
       * `/home localhost(insecure,rw,sync,no_subtree_check)`
@@ -110,17 +110,17 @@ avert this problem if the need arises.
 <a name="ent-pks"></a>
 ## Enterprise PKS Limitations
 
-* When attaching an NSX-T-backed vCenter (such as Enterprise PKS vCenter) to a 
-MicrosoftSQL-backed vCD, the vCenter can fail to connect. Refer to this 
+* When attaching an NSX-T-backed vCenter (such as Enterprise PKS vCenter) to a
+MicrosoftSQL-backed vCD, the vCenter can fail to connect. Refer to this
 [work around](https://docs.vmware.com/en/vCloud-Director/9.7/rn/vmware-vcloud-director-for-service-providers-97-release-notes.html)
-* Command `vcd cse node info` on native K8 clusters is broken when 
+* Command `vcd cse node info` on native K8 clusters is broken when
 Enterprise PKS is part of CSE set-up
-* Once `vcd cse cluster resize` is run on Enterprise PKS based clusters, 
-organization administrator's attempts to view and perform CRUD operations on those 
+* Once `vcd cse cluster resize` is run on Enterprise PKS based clusters,
+organization administrator's attempts to view and perform CRUD operations on those
 clusters will begin to fail with errors.
-* Once `vcd cse cluster resize` is run on Enterprise PKS based clusters, commands 
-`vcd cse cluster info` and `vcd cse cluster list` on those resized clusters will begin to display 
-incomplete results. 
-* Once a given organization vdc is enabled for Enterprise PKS, 
-renaming that organization vdc in vCD will cause further K8 cluster deployment 
+* Once `vcd cse cluster resize` is run on Enterprise PKS based clusters, commands
+`vcd cse cluster info` and `vcd cse cluster list` on those resized clusters will begin to display
+incomplete results.
+* Once a given organization vdc is enabled for Enterprise PKS,
+renaming that organization vdc in vCD will cause further K8 cluster deployment
 failures in that organization vdc.

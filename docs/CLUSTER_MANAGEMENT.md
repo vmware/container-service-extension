@@ -11,16 +11,16 @@ This page shows basic commands that allow tenants to create, manage,
 and remove Kubernetes clusters using CSE. The primary tool for these
 operations is the `vcd cse` client command.
 
-Here is an overview of the process that a tenant administrator might 
+Here is an overview of the process that a tenant administrator might
 go through to install `vcd cse` and create a cluster. It includes
 some internals of CSE so that you can understand what is happening
-behind the covers. 
+behind the covers.
 
 ![cse-usage](img/cse-usage-2.png)
 
-CSE Kubernetes clusters can include persistent volumes mounted on NFS. 
+CSE Kubernetes clusters can include persistent volumes mounted on NFS.
 Procedures for creating and managing NFS nodes can be found at
-[NFS Node Management](/NFS_STATIC_PV.html). 
+[NFS Node Management](/NFS_STATIC_PV.html).
 
 <a name="useful_commands"></a>
 ## Useful Commands
@@ -117,7 +117,7 @@ client.logout()
 
 # resize the cluster to have 8 worker node. If resize fails, the cluster is returned to it's original size.
 # '--network' is only applicable for clusters using native (vCD) Kubernetes provider.
-> vcd cse cluster resize mycluster --network mynetwork --nodes 8     
+> vcd cse cluster resize mycluster --network mynetwork --nodes 8
 
 # info on a given node. If the node is of type nfsd, it displays info about Exports.
 > vcd cse node info mycluster nfsd-dj3s

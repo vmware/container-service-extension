@@ -37,7 +37,7 @@ the restricted operations.
 Note: Role Based Access Control feature is turned off by default.
 
 <a name="functioning"></a>
-## Functioning 
+## Functioning
 
 Once the feature is turned on, any invocation of the restricted CSE
 operations will cause the call to go through an authorization filter. In the
@@ -60,7 +60,7 @@ Cloud Administrator turns on the role based access control for CSE
 - restarts the CSE server
 
 Cloud administrator propagates the new right to Tenants, in order to grant
-access for CSE operations. 
+access for CSE operations.
 ```sh
 vcd right add -o 'org name' "{cse}:CSE NATIVE DEPLOY RIGHT"
 ```
