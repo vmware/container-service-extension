@@ -7,6 +7,25 @@ title: Known Issues
 <a name="general"></a>
 
 ---
+### CSE 2.5 - Unable to create cluster if  --nodes/-N flag is missing
+
+**Problem:** Executing the following command,
+```sh
+vcd cse cluster create test-cluster --network vdc-net
+```
+will result in the following error message being displayed on the console.
+```sh
+Error: '<' not supported between instances of 'NoneType' and 'int'
+```
+
+**Workaround:** Always specify the number of worker nodes during cluster create
+operation via the -N/--nodes flag.
+
+**Root cause:** CSE 2.5 has a bug in the code that chooses the default number
+of workers to create in a cluster while creating it (the cluster). Due to the
+bug instead of the historical value `2`, `None` is picked up and that results
+the error message we see on the console.
+
 ### CSE server fails to start up after disabling the Service Provider Access to the Legacy API Endpoint
 
 Workaround: Don't disable Service Provider Access to the Legacy API Endpoint
