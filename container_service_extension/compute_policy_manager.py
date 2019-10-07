@@ -112,8 +112,9 @@ class ComputePolicyManager:
 
         :param str policy_name: name of the compute policy
 
-        :return: policy details if found, else None
+        :return: dictionary containing policy details
         :rtype: dict
+        :raises: EntityNotFoundException: if compute policy is not found
         """
         # NOTE If multiple policies with the same name exist, this function
         # returns the first found.
@@ -158,12 +159,11 @@ class ComputePolicyManager:
         :param str policy_name: name of the compute policy
         """
         policy_info = self.get_policy(policy_name)
-        if policy_info:
-            resource_url_relative_path = \
-                f"{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_info['id']}"
-            return self._cloudapi_client.do_request(
-                RequestMethod.DELETE,
-                resource_url_relative_path=resource_url_relative_path)
+        resource_url_relative_path = \
+            f"{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_info['id']}"
+        return self._cloudapi_client.do_request(
+            RequestMethod.DELETE,
+            resource_url_relative_path=resource_url_relative_path)
 
     def update_policy(self, policy_name, new_policy_info):
         """Update the existing compute policy with new policy information.
@@ -176,7 +176,7 @@ class ComputePolicyManager:
         :rtype: dict
         """
         policy_info = self.get_policy(policy_name)
-        if policy_info and new_policy_info.get('name'):
+        if new_policy_info.get('name'):
             payload = {}
             payload['name'] = \
                 self._get_cse_policy_name(new_policy_info['name'])
