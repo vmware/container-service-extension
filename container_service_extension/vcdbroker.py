@@ -493,7 +493,7 @@ class VcdBroker(AbstractBroker):
         }
         validated_data = {**defaults, **data}
 
-        cluster_name = data[RequestKey.CLUSTER_NAME]
+        cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         template_name = validated_data[RequestKey.TEMPLATE_NAME]
         template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
         num_workers = validated_data[RequestKey.NUM_WORKERS]
