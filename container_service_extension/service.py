@@ -17,6 +17,7 @@ import pkg_resources
 from pyvcloud.vcd.client import ApiVersion
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
+from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 
 from container_service_extension.compute_policy_manager import \
@@ -438,11 +439,12 @@ class Service(object, metaclass=Singleton):
                     catalog_item_name = template[LocalTemplateKey.CATALOG_ITEM_NAME] # noqa: E501
                     # if policy name is not empty, stamp it on the template
                     if policy_name:
-                        policy = cpm.get_policy(policy_name=policy_name)
-                        # create the policy if not present in system
-                        if not policy:
-                            msg = "Creating missing compute policy " \
-                                f"'{policy_name}'."
+                        try:
+                            policy = cpm.get_policy(policy_name=policy_name)
+                        except EntityNotFoundException:
+                            # create the policy if it does not exist
+                            msg = f"Creating missing compute policy " \
+                                  f"'{policy_name}'."
                             if msg_update_callback:
                                 msg_update_callback.info(msg)
                             LOGGER.debug(msg)
