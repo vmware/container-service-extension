@@ -158,6 +158,9 @@ class ComputePolicyManager:
         """Delete the compute policy with the given name.
 
         :param str policy_name: name of the compute policy
+
+        :return: dictionary containing response text
+        :rtype: dict
         :raises: EntityNotFoundException: if compute policy is not found
         """
         policy_info = self.get_policy(policy_name)

@@ -418,8 +418,7 @@ def test_0070_vcd_cse_cluster_create(config, test_runner_username):
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=f"cse cluster create "
                        f"{env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}"
-                       f" -n {config['broker']['network']} -N 1 "
-                       f"--disable-rollback", exit_code=0,
+                       f" -n {config['broker']['network']} -N 1 ", exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
                    validate_output_func=None, test_user=test_runner_username)
