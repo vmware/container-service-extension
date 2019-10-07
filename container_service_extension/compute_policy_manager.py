@@ -139,6 +139,7 @@ class ComputePolicyManager:
 
         :return: created policy information
         :rtype: dict
+        :raises: EntityNotFoundException: if compute policy is not found
         """
         policy_info = {}
         policy_info['name'] = self._get_cse_policy_name(policy_name)
@@ -157,6 +158,7 @@ class ComputePolicyManager:
         """Delete the compute policy with the given name.
 
         :param str policy_name: name of the compute policy
+        :raises: EntityNotFoundException: if compute policy is not found
         """
         policy_info = self.get_policy(policy_name)
         resource_url_relative_path = \
@@ -172,7 +174,7 @@ class ComputePolicyManager:
         :param dict new_policy_info: updated policy information with name and
         optional description
 
-        :return: updated policy information; if no policy is found, return None
+        :return: updated policy information
         :rtype: dict
         """
         policy_info = self.get_policy(policy_name)
