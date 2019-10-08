@@ -23,8 +23,7 @@ Server startup fails with this error:
 Error: Compute policy 'mycomputepolicy' not found.
 ```
 
-**Workaround:** Create the compute policy via REST API to vCD's CloudAPI endpoint
-or only start CSE server with an already existing compute policy
+**Workaround:** Only start CSE server with an already existing compute policy
 
 **Root cause:** CSE 2.5 has a bug where we raise an Exception if a specified compute
 policy is not found. Server startup does not properly catch this exception.
