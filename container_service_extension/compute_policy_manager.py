@@ -139,7 +139,6 @@ class ComputePolicyManager:
 
         :return: created policy information
         :rtype: dict
-        :raises: EntityNotFoundException: if compute policy is not found
         """
         policy_info = {}
         policy_info['name'] = self._get_cse_policy_name(policy_name)
@@ -179,6 +178,7 @@ class ComputePolicyManager:
 
         :return: updated policy information
         :rtype: dict
+        :raises: EntityNotFoundException: if compute policy is not found
         """
         policy_info = self.get_policy(policy_name)
         if new_policy_info.get('name'):
