@@ -36,12 +36,8 @@ def ovdc_update(request_data, tenant_auth_token):
         RequestKey.K8S_PROVIDER,
         RequestKey.OVDC_ID
     ]
-    req_utils.validate_payload(request_data, required)
-    defaults = {
-        RequestKey.PKS_PLAN_NAME: None,
-        RequestKey.PKS_CLUSTER_DOMAIN: None
-    }
-    validated_data = {**defaults, **request_data}
+    validated_data = request_data
+    req_utils.validate_payload(validated_data, required)
 
     k8s_provider = validated_data[RequestKey.K8S_PROVIDER]
     k8s_provider_info = {K8S_PROVIDER_KEY: k8s_provider}
@@ -137,12 +133,11 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token):
         RequestKey.COMPUTE_POLICY_ACTION,
         RequestKey.COMPUTE_POLICY_NAME
     ]
-    req_utils.validate_payload(request_data, required)
-
     defaults = {
         RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: False,
     }
     validated_data = {**defaults, **request_data}
+    req_utils.validate_payload(validated_data, required)
 
     action = validated_data[RequestKey.COMPUTE_POLICY_ACTION]
     cp_name = validated_data[RequestKey.COMPUTE_POLICY_NAME]

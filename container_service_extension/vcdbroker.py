@@ -91,12 +91,12 @@ class VcdBroker(AbstractBroker):
         required = [
             RequestKey.CLUSTER_NAME
         ]
-        req_utils.validate_payload(data, required)
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
         }
         validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         cluster = get_cluster(self.tenant_client, cluster_name,
@@ -174,12 +174,12 @@ class VcdBroker(AbstractBroker):
         required = [
             RequestKey.CLUSTER_NAME
         ]
-        req_utils.validate_payload(data, required)
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
         }
         validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         cluster = get_cluster(self.tenant_client, cluster_name,
@@ -232,8 +232,6 @@ class VcdBroker(AbstractBroker):
             RequestKey.OVDC_NAME,
             RequestKey.NETWORK_NAME
         ]
-        req_utils.validate_payload(data, required)
-
         cluster_name = data[RequestKey.CLUSTER_NAME]
         # check that cluster name is syntactically valid
         if not is_valid_cluster_name(cluster_name):
@@ -263,6 +261,7 @@ class VcdBroker(AbstractBroker):
             RequestKey.ROLLBACK: True,
         }
         validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
         template_name = validated_data[RequestKey.TEMPLATE_NAME]
         template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
         num_workers = validated_data[RequestKey.NUM_WORKERS]
@@ -322,7 +321,6 @@ class VcdBroker(AbstractBroker):
             RequestKey.NUM_WORKERS,
             RequestKey.NETWORK_NAME
         ]
-        req_utils.validate_payload(data, required)
         # template-related defaults are taken care of in self.create_nodes()
         defaults = {
             RequestKey.ORG_NAME: None,
@@ -332,6 +330,7 @@ class VcdBroker(AbstractBroker):
             RequestKey.TEMPLATE_REVISION: None
         }
         validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         num_workers_wanted = validated_data[RequestKey.NUM_WORKERS]
@@ -370,12 +369,12 @@ class VcdBroker(AbstractBroker):
         required = [
             RequestKey.CLUSTER_NAME
         ]
-        req_utils.validate_payload(data, required)
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
         }
         validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
 
@@ -407,12 +406,12 @@ class VcdBroker(AbstractBroker):
             RequestKey.CLUSTER_NAME,
             RequestKey.NODE_NAME
         ]
-        req_utils.validate_payload(data, required)
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
         }
         validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         node_name = validated_data[RequestKey.NODE_NAME]
@@ -473,7 +472,6 @@ class VcdBroker(AbstractBroker):
             RequestKey.CLUSTER_NAME,
             RequestKey.NETWORK_NAME
         ]
-        req_utils.validate_payload(data, required)
         # check that requested/default template is valid
         template = get_template(
             name=data.get(RequestKey.TEMPLATE_NAME),
@@ -492,6 +490,7 @@ class VcdBroker(AbstractBroker):
             RequestKey.ROLLBACK: True,
         }
         validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         template_name = validated_data[RequestKey.TEMPLATE_NAME]
@@ -550,12 +549,12 @@ class VcdBroker(AbstractBroker):
             RequestKey.CLUSTER_NAME,
             RequestKey.NODE_NAMES_LIST
         ]
-        req_utils.validate_payload(data, required)
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
         }
         validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         node_names_list = validated_data[RequestKey.NODE_NAMES_LIST]
