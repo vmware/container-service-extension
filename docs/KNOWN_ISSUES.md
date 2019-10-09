@@ -7,6 +7,23 @@ title: Known Issues
 <a name="general"></a>
 
 ---
+
+### CSE 2.5 - Unable to create new compute policies using template rules, so CSE server is unable to start if new compute policy is defined in template rules
+
+**Problem:** In `template_rules` section of CSE config file, administrators
+can input a compute policy name to associate with a template. If this
+compute policy name does not yet exist in vCD, CSE should create the policy
+and continue server startup as normal. However, CSE 2.5 errors out if the
+compute policy does not exist in vCD.
+
+Server startup fails with this error:
+
+```sh
+Error: Compute policy 'mycomputepolicy' not found.
+```
+
+**Workaround:** Only start CSE server with an already existing compute policy
+
 ### CSE 2.5 - Unable to create cluster if  --nodes/-N flag is missing
 
 **Problem:** Executing the following command,
