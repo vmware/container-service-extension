@@ -139,6 +139,7 @@ class ComputePolicyManager:
 
         :return: created policy information
         :rtype: dict
+        :raises: HTTPError 400 if policy already exists
         """
         policy_info = {}
         policy_info['name'] = self._get_cse_policy_name(policy_name)
