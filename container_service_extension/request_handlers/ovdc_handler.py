@@ -127,13 +127,12 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token):
         RequestKey.COMPUTE_POLICY_ACTION,
         RequestKey.COMPUTE_POLICY_NAME
     ]
-    req_utils.validate_payload(request_data, required)
 
     defaults = {
         RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: False,
     }
     validated_data = {**defaults, **request_data}
-    req_utils.validate_payload(request_data, required)
+    req_utils.validate_payload(validated_data, required)
 
     action = validated_data[RequestKey.COMPUTE_POLICY_ACTION]
     cp_name = validated_data[RequestKey.COMPUTE_POLICY_NAME]

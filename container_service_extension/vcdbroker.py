@@ -91,13 +91,13 @@ class VcdBroker(AbstractBroker):
         required = [
             RequestKey.CLUSTER_NAME
         ]
-        req_utils.validate_payload(data, required)
 
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
         }
         validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         cluster = get_cluster(self.tenant_client, cluster_name,
                               org_name=validated_data[RequestKey.ORG_NAME],
@@ -174,13 +174,13 @@ class VcdBroker(AbstractBroker):
         required = [
             RequestKey.CLUSTER_NAME
         ]
-        req_utils.validate_payload(data, required)
 
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
         }
         validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         cluster = get_cluster(self.tenant_client, cluster_name,
@@ -328,7 +328,6 @@ class VcdBroker(AbstractBroker):
             RequestKey.NUM_WORKERS,
             RequestKey.NETWORK_NAME
         ]
-        req_utils.validate_payload(data, required)
 
         defaults = {
             RequestKey.ORG_NAME: None,
@@ -338,6 +337,7 @@ class VcdBroker(AbstractBroker):
             RequestKey.TEMPLATE_REVISION: None
         }
         validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         num_workers_wanted = validated_data[RequestKey.NUM_WORKERS]
         if num_workers_wanted < 1:
@@ -374,13 +374,13 @@ class VcdBroker(AbstractBroker):
         required = [
             RequestKey.CLUSTER_NAME
         ]
-        req_utils.validate_payload(data, required)
 
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
         }
         validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
 
         cluster = get_cluster(self.tenant_client, cluster_name,
@@ -411,13 +411,13 @@ class VcdBroker(AbstractBroker):
             RequestKey.CLUSTER_NAME,
             RequestKey.NODE_NAME
         ]
-        req_utils.validate_payload(data, required)
 
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
         }
         validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         node_name = validated_data[RequestKey.NODE_NAME]
 
@@ -477,7 +477,6 @@ class VcdBroker(AbstractBroker):
             RequestKey.CLUSTER_NAME,
             RequestKey.NETWORK_NAME
         ]
-        req_utils.validate_payload(data, required)
 
         cluster_name = data[RequestKey.CLUSTER_NAME]
         # check that requested/default template is valid
@@ -498,6 +497,7 @@ class VcdBroker(AbstractBroker):
             RequestKey.ROLLBACK: True,
         }
         validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
 
         # TODO HACK default dictionary combining needs to be fixed
         validated_data[RequestKey.TEMPLATE_NAME] = validated_data[RequestKey.TEMPLATE_NAME] or template[LocalTemplateKey.NAME] # noqa: E501
@@ -559,13 +559,13 @@ class VcdBroker(AbstractBroker):
             RequestKey.CLUSTER_NAME,
             RequestKey.NODE_NAMES_LIST
         ]
-        req_utils.validate_payload(data, required)
 
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
         }
         validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         node_names_list = validated_data[RequestKey.NODE_NAMES_LIST]
         # check that there are nodes to delete
