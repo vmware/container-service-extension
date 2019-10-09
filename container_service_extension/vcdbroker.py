@@ -321,15 +321,8 @@ class VcdBroker(AbstractBroker):
             RequestKey.NUM_WORKERS,
             RequestKey.NETWORK_NAME
         ]
-        # template-related defaults are taken care of in self.create_nodes()
-        defaults = {
-            RequestKey.ORG_NAME: None,
-            RequestKey.OVDC_NAME: None,
-            RequestKey.ROLLBACK: True,
-            RequestKey.TEMPLATE_NAME: None,
-            RequestKey.TEMPLATE_REVISION: None
-        }
-        validated_data = {**defaults, **data}
+        # default data values are taken care of in self.create_nodes()
+        validated_data = data
         req_utils.validate_payload(validated_data, required)
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
