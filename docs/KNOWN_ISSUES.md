@@ -7,9 +7,28 @@ title: Known Issues
 <a name="general"></a>
 
 ---
-### CSE 2.5 - Unable to create cluster if  --nodes/-N flag is missing
 
-**Problem:** Executing the following command,
+### CSE 2.5 - Unable to create new compute policies using template rules, so CSE server is unable to start if new compute policy is defined in template rules
+
+### CSE server (2.5) is unable to start if a new compute policy is defined in the template_rules section of the CSE server config file
+
+In `template_rules` section of CSE config file, administrators
+can input a compute policy name to associate with a template. If this
+compute policy name does not yet exist in vCD, CSE should create the policy
+and continue server startup as normal. However, CSE 2.5 errors out if the
+compute policy does not exist in vCD.
+
+Server startup fails with this error:
+
+```sh
+Error: Compute policy 'mycomputepolicy' not found.
+```
+
+Workaround: No workaround
+
+### Unable to create cluster if  --nodes/-N flag is missing
+
+Executing the following command on CSE 2.5:
 ```sh
 vcd cse cluster create test-cluster --network vdc-net
 ```
@@ -18,13 +37,8 @@ will result in the following error message being displayed on the console.
 Error: '<' not supported between instances of 'NoneType' and 'int'
 ```
 
-**Workaround:** Always specify the number of worker nodes during cluster create
+Workaround: Always specify the number of worker nodes during cluster create
 operation via the -N/--nodes flag.
-
-**Root cause:** CSE 2.5 has a bug in the code that chooses the default number
-of workers to create in a cluster while creating it (the cluster). Due to the
-bug instead of the historical value `2`, `None` is picked up and that results
-the error message we see on the console.
 
 ### CSE server fails to start up after disabling the Service Provider Access to the Legacy API Endpoint
 
