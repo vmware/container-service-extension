@@ -8,7 +8,7 @@ title: Known Issues
 
 ---
 
-### CSE server (2.5) is unable to start if a new compute policy is defined in the template_rules section of the CSE server config file
+### Unable to start CSE 2.5 server if a new compute policy is defined in the template_rules section of the CSE server config file
 
 In `template_rules` section of CSE config file, administrators
 can input a compute policy name to associate with a template. If this
