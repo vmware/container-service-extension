@@ -29,7 +29,7 @@ amqp:
   vhost: /
 
 vcd:
-  api_version: '32.0'
+  api_version: '33.0'
   host: '???'
   log: true
   password: '???'
