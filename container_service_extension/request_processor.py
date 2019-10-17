@@ -101,11 +101,13 @@ def process_request(body):
         LOGGER.debug(f"query parameters: {query_params}")
     # update request spec with operation specific data in the url
     request_data.update(url_data)
+    # remove None values from request payload
+    data = {k: v for k, v in request_data.items() if v is not None}
 
     # process the request
     tenant_auth_token = body['headers']['x-vcloud-authorization']
     body_content = \
-        OPERATION_TO_HANDLER[operation](request_data, tenant_auth_token)
+        OPERATION_TO_HANDLER[operation](data, tenant_auth_token)
 
     if not (isinstance(body_content, (list, dict))):
         body_content = {RESPONSE_MESSAGE_KEY: str(body_content)}
