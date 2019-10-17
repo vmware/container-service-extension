@@ -112,8 +112,9 @@ class ComputePolicyManager:
 
         :param str policy_name: name of the compute policy
 
-        :return: policy details if found, else None
+        :return: dictionary containing policy details
         :rtype: dict
+        :raises: EntityNotFoundException: if compute policy is not found
         """
         # NOTE If multiple policies with the same name exist, this function
         # returns the first found.
@@ -138,6 +139,7 @@ class ComputePolicyManager:
 
         :return: created policy information
         :rtype: dict
+        :raises: HTTPError 400 if policy already exists
         """
         policy_info = {}
         policy_info['name'] = self._get_cse_policy_name(policy_name)
@@ -156,14 +158,17 @@ class ComputePolicyManager:
         """Delete the compute policy with the given name.
 
         :param str policy_name: name of the compute policy
+
+        :return: dictionary containing response text
+        :rtype: dict
+        :raises: EntityNotFoundException: if compute policy is not found
         """
         policy_info = self.get_policy(policy_name)
-        if policy_info:
-            resource_url_relative_path = \
-                f"{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_info['id']}"
-            return self._cloudapi_client.do_request(
-                RequestMethod.DELETE,
-                resource_url_relative_path=resource_url_relative_path)
+        resource_url_relative_path = \
+            f"{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_info['id']}"
+        return self._cloudapi_client.do_request(
+            RequestMethod.DELETE,
+            resource_url_relative_path=resource_url_relative_path)
 
     def update_policy(self, policy_name, new_policy_info):
         """Update the existing compute policy with new policy information.
@@ -172,11 +177,12 @@ class ComputePolicyManager:
         :param dict new_policy_info: updated policy information with name and
         optional description
 
-        :return: updated policy information; if no policy is found, return None
+        :return: updated policy information
         :rtype: dict
+        :raises: EntityNotFoundException: if compute policy is not found
         """
         policy_info = self.get_policy(policy_name)
-        if policy_info and new_policy_info.get('name'):
+        if new_policy_info.get('name'):
             payload = {}
             payload['name'] = \
                 self._get_cse_policy_name(new_policy_info['name'])
