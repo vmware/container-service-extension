@@ -5,6 +5,24 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 2.5.1
+
+Release Date: 2019-10-18
+
+Supported vCD versions: 9.1, 9.5, 9.7, 10.0
+
+Enterprise PKS compatibility matrix
+
+|CSE | vCD |Enterprise PKS| NSX-T |
+|-|-|-|-|
+|2.5.0 | 9.1, 9.5, 9.7, 10.0  | 1.4 | 2.3, 2.4 |
+
+**Bug Fixes**
+* Fixed known issue where users are unable to start CSE 2.5 server if a new compute policy is defined in the template_rules section of the CSE server config file
+* Fixed known issue where 'cluster create' command fails if the '--nodes/-N' option is missing.
+
+---
+
 ## CSE 2.5.0
 
 Release Date: 2019-10-03
@@ -49,8 +67,6 @@ ssh keys for root login, those key pairings will be preserved. The command does
 a force reboot of the cluster.
 
 ---
-
-# Release Notes
 
 ## CSE 2.5.0 Beta (2.5.0.0b1)
 
