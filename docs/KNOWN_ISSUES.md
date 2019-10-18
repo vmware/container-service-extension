@@ -8,6 +8,24 @@ title: Known Issues
 
 ---
 
+### `vcd cse ovdc list` operation will timeout when a large number of org vdcs exist
+
+CSE makes an API call per org vdc in order to access CSE-relevant org vdc metadata.
+
+Example when trying to use `vcd cse ovdc list` when 250+ org vdcs exist:
+
+```sh
+vcd cse ovdc list
+Usage: vcd cse ovdc list [OPTIONS]
+Try "vcd cse ovdc list -h" for help.
+
+Error: Unknown error. Please contact your System Administrator
+```
+
+Workaround: extend the cell timeout to be able to wait for the required amount of time
+
+---
+
 ### Unable to start CSE 2.5 server if a new compute policy is defined in the template_rules section of the CSE server config file
 
 In `template_rules` section of CSE config file, administrators
