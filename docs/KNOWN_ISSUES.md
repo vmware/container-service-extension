@@ -24,6 +24,8 @@ Error: Compute policy 'mycomputepolicy' not found.
 
 Workaround: No workaround
 
+Fixed in CSE 2.5.1
+
 ### Unable to create cluster if  --nodes/-N flag is missing
 
 Executing the following command on CSE 2.5:
@@ -37,6 +39,8 @@ Error: '<' not supported between instances of 'NoneType' and 'int'
 
 Workaround: Always specify the number of worker nodes during cluster create
 operation via the -N/--nodes flag.
+
+Fixed in CSE 2.5.1
 
 ### CSE server fails to start up after disabling the Service Provider Access to the Legacy API Endpoint
 
