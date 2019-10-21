@@ -3,28 +3,19 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import os
-import re
 import subprocess
-import time
 
-import paramiko
 import pytest
 from pyvcloud.vcd.exceptions import EntityNotFoundException
-from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.remote_template_manager import \
-    get_local_script_filepath
-from container_service_extension.remote_template_manager import \
     get_revisioned_template_name
 from container_service_extension.server_cli import cli
-from container_service_extension.server_constants import ScriptFile
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
-from container_service_extension.template_builder import TEMP_VAPP_VM_NAME
-from container_service_extension.utils import read_data_file
 
 
 """
@@ -325,9 +316,6 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
                                config['amqp']['exchange'])
 
     vdc = VDC(env.CLIENT, href=env.VDC_HREF)
-    ssh_client = paramiko.SSHClient()
-    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
     for template_config in env.TEMPLATE_DEFINITIONS:
         # check that source ova file exists in catalog
         assert env.catalog_item_exists(
@@ -345,58 +333,9 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
             template_config['name'])
         try:
             vdc.reload()
-            vapp_resource = vdc.get_vapp(temp_vapp_name)
+            vdc.get_vapp(temp_vapp_name)
         except EntityNotFoundException:
             assert False, 'vApp does not exist when it should.'
-
-        # ssh into vms to check for installed software
-        vapp = VApp(env.CLIENT, resource=vapp_resource)
-        # The temp vapp is shutdown before the template is captured, it
-        # needs to be powered on before trying to ssh into it.
-        task = vapp.power_on()
-        env.CLIENT.get_task_monitor().wait_for_success(task)
-        vapp.reload()
-        ip = vapp.get_primary_ip(TEMP_VAPP_VM_NAME)
-
-        try:
-            max_tries = 5
-            for i in range(max_tries):
-                try:
-                    ssh_client.connect(ip, username='root')
-                    break
-                except Exception:
-                    if i == max_tries - 1:
-                        raise
-                    time.sleep(env.WAIT_INTERVAL)
-
-            script_filepath = get_local_script_filepath(
-                template_config['name'],
-                template_config['revision'],
-                ScriptFile.CUST)
-            script = read_data_file(script_filepath)
-            # run different commands depending on OS
-            if 'photon' in temp_vapp_name:
-                pattern = r'(kubernetes\S*)'
-                packages = re.findall(pattern, script)
-                stdin, stdout, stderr = ssh_client.exec_command("rpm -qa")
-                installed = [line.strip('.x86_64\n') for line in stdout]
-                for package in packages:
-                    assert package in installed, \
-                        f"{package} from script '{script_filepath}' not " \
-                        f"found in Photon VM's installed packages: {installed}"
-            elif 'ubuntu' in temp_vapp_name:
-                pattern = r'((kubernetes|docker\S*|kubelet|kubeadm|kubectl)\S*=\S*)'  # noqa: E501
-                packages = [tup[0] for tup in re.findall(pattern, script)]
-                cmd = "dpkg -l | awk '{print $2\"=\"$3}'"
-                stdin, stdout, stderr = ssh_client.exec_command(cmd)
-                installed = [line.strip() for line in stdout]
-                for package in packages:
-                    assert package in installed, \
-                        f"{package} from script '{script_filepath}' not " \
-                        f"found in Ubuntu VM's installed packages: {installed}"
-        finally:
-            if ssh_client:
-                ssh_client.close()
 
 
 def test_0100_install_force_update(config, unregister_cse_before_test):
