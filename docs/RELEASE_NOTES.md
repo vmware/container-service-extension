@@ -7,7 +7,7 @@ title: Release Notes
 
 ## CSE 2.5.1
 
-Release Date: 2019-10-18
+Release Date: 2019-10-23
 
 Supported vCD versions: 9.1, 9.5, 9.7, 10.0
 
