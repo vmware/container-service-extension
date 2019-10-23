@@ -44,6 +44,8 @@ Workaround: No workaround
 
 Fixed in CSE 2.5.1
 
+---
+
 ### Unable to create cluster if  --nodes/-N flag is missing
 
 Executing the following command on CSE 2.5:
@@ -60,6 +62,8 @@ operation via the -N/--nodes flag.
 
 Fixed in CSE 2.5.1
 
+---
+
 ### CSE server fails to start up after disabling the Service Provider Access to the Legacy API Endpoint
 
 Workaround: Don't disable Service Provider Access to the Legacy API Endpoint
@@ -71,6 +75,7 @@ endpoint is not disabled in vCloud Director.
 
 [More details](https://docs.vmware.com/en/vCloud-Director/10.0/com.vmware.vcloud.install.doc/GUID-84390C8F-E8C5-4137-A1A5-53EC27FE0024.html)
 
+---
 
 ### Failures during template creation or installation
 
@@ -79,16 +84,19 @@ endpoint is not disabled in vCloud Director.
 - If the VM has no Internet access, scripts may fail
 - Check CSE logs for script outputs, to determine the cause behind the observed failure
 
+---
 
 ### CSE service fails to start
 
 - Workaround: rebooting the VM starts the service
 
+---
 
 ### CSE 1.2.6 and up are incompatible with vCD 9.0
 
 - CSE installation fails with MissingLinkException
 
+---
 
 ### Cluster creation fails when vCD external network has a DNS suffix and the DNS server resolves `localhost.my.suffix` to a valid IP
 
