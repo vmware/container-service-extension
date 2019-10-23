@@ -268,27 +268,12 @@ class TemplateBuilder():
             cust_sctipt_filepath, logger=self.logger,
             msg_update_callback=self.msg_update_callback)
 
-        is_photon = True if 'photon' in self.ova_name else False
+        vs = get_vsphere(self.sys_admin_client, vapp, vm_name,
+                         logger=self.logger)
         callback = vgr_callback(
             prepend_msg='Waiting for guest tools, status: "',
             logger=self.logger,
             msg_update_callback=self.msg_update_callback)
-        if not is_photon:
-            # non photon os based vms need an extra reboot at start to get
-            # tools running properly.
-            msg = f"Rebooting vApp '{self.temp_vapp_name}'"
-            if self.msg_update_callback:
-                self.msg_update_callback.general(msg)
-            if self.logger:
-                self.logger.info(msg)
-
-            vapp.reload()
-            task = vapp.reboot()
-            self.client.get_task_monitor().wait_for_success(task)
-            vapp.reload()
-
-        vs = get_vsphere(self.sys_admin_client, vapp, vm_name,
-                         logger=self.logger)
         wait_until_tools_ready(vapp, vm_name, vs, callback=callback)
         password_auto = vapp.get_admin_password(vm_name)
 
