@@ -17,7 +17,9 @@ Enterprise PKS compatibility matrix
 |-|-|-|-|
 |2.5.0 | 9.1, 9.5, 9.7, 10.0  | 1.4 | 2.3, 2.4 |
 
-[New template revisions with updated Kubernetes](/container-service-extension/TEMPLATE_ANNOUNCEMENTS.html)
+**New Features**
+* New Template revisions with updated Kubernetes
+  * [Template Announcements](/container-service-extension/TEMPLATE_ANNOUNCEMENTS.html)
 
 **Bug Fixes**
 * Fixed known issue where users are unable to start CSE 2.5 server if a new compute policy is defined in the template_rules section of the CSE server config file

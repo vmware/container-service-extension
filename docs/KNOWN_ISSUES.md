@@ -8,11 +8,11 @@ title: Known Issues
 
 ---
 
-### `vcd cse ovdc list` operation will timeout when a large number of org vdcs exist
+### `vcd cse ovdc list` operation will timeout when a large number of organization VDCs exist
 
-CSE makes an API call per org vdc in order to access CSE-relevant org vdc metadata.
+CSE makes an API call per organization VDC in order to access required metadata, and that can timeout with large number of VDCs.
 
-Example when trying to use `vcd cse ovdc list` when 250+ org vdcs exist:
+Example - Trying to use `vcd cse ovdc list` with 250+ VDCs:
 
 ```sh
 vcd cse ovdc list
@@ -22,7 +22,17 @@ Try "vcd cse ovdc list -h" for help.
 Error: Unknown error. Please contact your System Administrator
 ```
 
-Workaround: extend the cell timeout to be able to wait for the required amount of time
+Workaround: extend the cell timeout to be able to wait for the required amount of time.
+
+To extend vcd cell timeout, execute these commands in the vcd cell:
+
+```sh
+$ cd /opt/vmware/vcloud-director/bin
+$ ./cell-management-tool manage-config -n extensibility.timeout -l
+
+# Property "extensibility.timeout" normally should have the value of "10"
+$ ./cell-management-tool manage-config -n extensibility.timeout -v 30
+```
 
 ---
 
