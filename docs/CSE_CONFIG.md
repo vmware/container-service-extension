@@ -113,11 +113,12 @@ communication between vCD and the running CSE server. The `amqp`
 section controls the AMQP communication parameters. The following
 properties will need to be set for all deployments.
 
-| Property | Value |
-|-|-|
-| host | IP or hostname of the vCloud Director AMQP server (may be different from the vCD cell hosts) |
-| username | Username of the vCD service account with minimum roles and rights |
-| password | Password of the vCD service account |
+| Property | Value                                                                                        |
+|----------|----------------------------------------------------------------------------------------------|
+| exchange | Exchange name unique to CSE (CSE will create and use this exchange to communicate to vCD)    |
+| host     | IP or hostname of the vCloud Director AMQP server (may be different from the vCD cell hosts) |
+| username | AMQP username                                                                                |
+| password | AMQP password                                                                                |
 
 Other properties may be left as is or edited to match site conventions.
 

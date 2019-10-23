@@ -8,35 +8,23 @@ title: Known Issues
 
 ---
 
-### Unable to start CSE 2.5 server if a new compute policy is defined in the template_rules section of the CSE server config file
+### `vcd cse ovdc list` operation will timeout when a large number of organization VDCs exist
 
-In `template_rules` section of CSE config file, administrators
-can input a compute policy name to associate with a template. If this
-compute policy name does not yet exist in vCD, CSE should create the policy
-and continue server startup as normal. However, CSE 2.5 errors out if the
-compute policy does not exist in vCD.
+CSE makes an API call per organization VDC in order to access required metadata, and that can timeout with large number of VDCs.
 
-Server startup fails with this error:
+Example - Trying to use `vcd cse ovdc list` with 250+ VDCs:
 
 ```sh
-Error: Compute policy 'mycomputepolicy' not found.
+vcd cse ovdc list
+Usage: vcd cse ovdc list [OPTIONS]
+Try "vcd cse ovdc list -h" for help.
+
+Error: Unknown error. Please contact your System Administrator
 ```
 
-Workaround: No workaround
+Workaround: extend the cell timeout to be able to wait for the required amount of time. See the section 'Setting the API Extension Timeout' under [CSE Server Management](https://vmware.github.io/container-service-extension/CSE_SERVER_MANAGEMENT.html#extension-timeout).
 
-### Unable to create cluster if  --nodes/-N flag is missing
-
-Executing the following command on CSE 2.5:
-```sh
-vcd cse cluster create test-cluster --network vdc-net
-```
-will result in the following error message being displayed on the console.
-```sh
-Error: '<' not supported between instances of 'NoneType' and 'int'
-```
-
-Workaround: Always specify the number of worker nodes during cluster create
-operation via the -N/--nodes flag.
+---
 
 ### CSE server fails to start up after disabling the Service Provider Access to the Legacy API Endpoint
 
@@ -49,6 +37,7 @@ endpoint is not disabled in vCloud Director.
 
 [More details](https://docs.vmware.com/en/vCloud-Director/10.0/com.vmware.vcloud.install.doc/GUID-84390C8F-E8C5-4137-A1A5-53EC27FE0024.html)
 
+---
 
 ### Failures during template creation or installation
 
@@ -57,16 +46,19 @@ endpoint is not disabled in vCloud Director.
 - If the VM has no Internet access, scripts may fail
 - Check CSE logs for script outputs, to determine the cause behind the observed failure
 
+---
 
 ### CSE service fails to start
 
 - Workaround: rebooting the VM starts the service
 
+---
 
 ### CSE 1.2.6 and up are incompatible with vCD 9.0
 
 - CSE installation fails with MissingLinkException
 
+---
 
 ### Cluster creation fails when vCD external network has a DNS suffix and the DNS server resolves `localhost.my.suffix` to a valid IP
 
