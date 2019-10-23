@@ -1,6 +1,15 @@
 CHANGES
 =======
 
+* Update known issues and release notes for CSE 2.5.1 (#465)
+* Remove unnecessary reboot in template creation (#468)
+* Fix bug blocking new compute policy creation and server startup (#461)
+* Fix how server handles default data values (#459)
+* Fix duplicated heading in known issues (#464)
+* Update known issues (#462)
+* Update Known Issues for CSE 2.5 (#460)
+* Updating Changelog
+
 2.5.0
 -----
 
