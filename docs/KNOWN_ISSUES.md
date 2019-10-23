@@ -22,7 +22,7 @@ Try "vcd cse ovdc list -h" for help.
 Error: Unknown error. Please contact your System Administrator
 ```
 
-Workaround: extend the cell timeout to be able to wait for the required amount of time.
+Workaround: extend the cell timeout to be able to wait for the required amount of time. See the section 'Setting the API Extension Timeout' under [CSE Server Management](https://vmware.github.io/container-service-extension/CSE_SERVER_MANAGEMENT.html#extension-timeout).
 
 To extend vcd cell timeout, execute these commands in the vcd cell:
 
