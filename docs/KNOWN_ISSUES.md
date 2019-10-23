@@ -24,16 +24,6 @@ Error: Unknown error. Please contact your System Administrator
 
 Workaround: extend the cell timeout to be able to wait for the required amount of time. See the section 'Setting the API Extension Timeout' under [CSE Server Management](https://vmware.github.io/container-service-extension/CSE_SERVER_MANAGEMENT.html#extension-timeout).
 
-To extend vcd cell timeout, execute these commands in the vcd cell:
-
-```sh
-$ cd /opt/vmware/vcloud-director/bin
-$ ./cell-management-tool manage-config -n extensibility.timeout -l
-
-# Property "extensibility.timeout" normally should have the value of "10"
-$ ./cell-management-tool manage-config -n extensibility.timeout -v 30
-```
-
 ---
 
 ### CSE server fails to start up after disabling the Service Provider Access to the Legacy API Endpoint
