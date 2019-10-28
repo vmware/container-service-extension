@@ -13,6 +13,8 @@ from requests.exceptions import HTTPError
 from vsphere_guest_run.vsphere import VSphere
 import yaml
 
+from container_service_extension.encryption_engine import \
+    decrypt_file_in_memory
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.nsxt.dfw_manager import DFWManager
 from container_service_extension.nsxt.ipset_manager import IPSetManager
@@ -38,7 +40,10 @@ from container_service_extension.utils import check_keys_and_value_types
 from container_service_extension.utils import get_duplicate_items_in_list
 
 
-def get_validated_config(config_file_name, msg_update_callback=None):
+def get_validated_config(config_file_name,
+                         skip_config_decryption=False,
+                         decrypt_password=None,
+                         msg_update_callback=None):
     """Get the config file as a dictionary and check for validity.
 
     Ensures that all properties exist and all values are the expected type.
@@ -70,8 +75,13 @@ def get_validated_config(config_file_name, msg_update_callback=None):
     """
     check_file_permissions(config_file_name,
                            msg_update_callback=msg_update_callback)
-    with open(config_file_name) as config_file:
-        config = yaml.safe_load(config_file) or {}
+    if skip_config_decryption:
+        with open(config_file_name) as config_file:
+            config = yaml.safe_load(config_file) or {}
+    else:
+        config = yaml.safe_load(
+            decrypt_file_in_memory(config_file_name, decrypt_password)) or {}
+
     pks_config_location = config.get('pks_config')
     if msg_update_callback:
         msg_update_callback.info(

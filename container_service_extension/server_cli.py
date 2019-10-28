@@ -8,6 +8,7 @@ import sys
 import time
 
 import click
+import cryptography
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -26,6 +27,8 @@ from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.configure_cse import install_cse
 from container_service_extension.configure_cse import install_template
+from container_service_extension.encryption_engine import decrypt_file
+from container_service_extension.encryption_engine import encrypt_file
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.local_template_manager import \
     get_all_k8s_local_template_definition
@@ -106,12 +109,34 @@ def cli(ctx):
             template 'photon-v2' exists.)
 \b
         cse run
-            Run CSE Server using data from 'config.yaml', but first validate
-            that CSE was installed according to 'config.yaml'.
+            Run CSE Server using data from encrypted 'config.yaml',
+            but first validate that CSE was installed according to
+            'config.yaml'. This will prompt for password for decrypting
+            the 'config.yaml'.
 \b
-        cse run --config myconfig.yaml --skip-check
-            Run CSE Server using data from 'myconfig.yaml' without first
-            validating that CSE was installed according to 'myconfig.yaml'.
+        cse run --password xxxx
+            Run CSE Server using data from encrypted 'config.yaml'. Decryption
+            of the config happens using password 'xxxx'. First validate that
+            CSE was installed according to 'config.yaml'.
+\b
+        cse run --config myconfig.yaml --skip-check --password xxxx
+            Run CSE Server using data from encrypted 'myconfig.yaml'
+            without first validating that CSE was installed according
+            to 'myconfig.yaml'. Decryption of the config happens using
+            password 'xxxx'
+\b
+        cse run --config myconfig.yaml --skip-check --skip-config-decryption
+            Run CSE Server using data from plain text 'myconfig.yaml'
+            without first validating that CSE was installed according
+            to 'myconfig.yaml'. Skip decryption of the config file.
+\b
+        cse encrypt --password xyz --output [encrypted-file-path] config.yaml
+            Encrypt the config.yaml in plain-text and save it in the given
+            output file. If no output file provided, defaults to stdout.
+\b
+        cse decrypt --password xyz --output [decrypted-file-path] cipher.txt
+            Decrypt the config file cipher.txt and save it in the given
+            output file. If no output file provided, defaults to stdout.
 \b
     Environment Variables
         CSE_CONFIG
@@ -255,6 +280,68 @@ def check(ctx, config, check_install):
             click.secho("CSE installation is invalid", fg='red')
 
 
+@cli.command(short_help='Decrypt the given input file')
+@click.pass_context
+@click.argument('input_file', metavar='INPUT_FILE',
+                type=click.Path(exists=True))
+@click.option(
+    '-o',
+    '--output',
+    'output_file',
+    required=False,
+    default=None,
+    metavar='OUTPUT_FILE',
+    help='Filepath to write decrypted file to')
+@click.option(
+    '-p',
+    '--password',
+    'password',
+    default=None,
+    metavar='DECRYPT_PASSWORD',
+    help="password to use for decryption")
+def decrypt(ctx, input_file, password, output_file):
+    """Decrypt CSE config file."""
+    try:
+        check_python_version(ConsoleMessagePrinter())
+    except Exception as err:
+        click.secho(str(err), fg='red')
+        sys.exit(1)
+    if password is None:
+        password = click.prompt('Password', hide_input=True, type=str)
+    decrypt_file(input_file, password, output_file)
+
+
+@cli.command(short_help='Encrypt the given input file')
+@click.pass_context
+@click.argument('input_file', metavar='INPUT_FILE',
+                type=click.Path(exists=True))
+@click.option(
+    '-o',
+    '--output',
+    'output_file',
+    required=False,
+    default=None,
+    metavar='OUTPUT_FILE',
+    help='Filepath to write encrypted file to')
+@click.option(
+    '-p',
+    '--password',
+    'password',
+    default=None,
+    metavar='ENCRYPT_PASSWORD',
+    help="password to use for encryption")
+def encrypt(ctx, input_file, password, output_file):
+    """Encrypt CSE config file."""
+    try:
+        check_python_version(ConsoleMessagePrinter())
+    except Exception as err:
+        click.secho(str(err), fg='red')
+        sys.exit(1)
+    if password is None:
+        password = click.prompt('Password', hide_input=True, type=str)
+    encrypt_file(input_file, password, output_file)
+
+
 @cli.command(short_help='Install CSE on vCD')
 @click.pass_context
 @click.option(
@@ -346,16 +433,34 @@ def install(ctx, config, skip_template_creation, force_update,
     '--skip-check',
     is_flag=True,
     help='Skip CSE installation checks')
-def run(ctx, config, skip_check):
+@click.option(
+    '-k',
+    '--skip-config-decryption',
+    is_flag=True,
+    help='Skip decryption of CSE config file')
+@click.option(
+    '-p',
+    '--password',
+    'password',
+    default=None,
+    metavar='DECRYPT_PASSWORD',
+    help='password to use for decrypt config file')
+def run(ctx, config, skip_check, skip_config_decryption, password):
     """Run CSE service."""
+    print(skip_config_decryption, password)
     try:
         check_python_version(ConsoleMessagePrinter())
     except Exception as err:
         click.secho(str(err), fg='red')
         sys.exit(1)
+    if not skip_config_decryption and password is None:
+        password = click.prompt('Password for config file decryption',
+                                hide_input=True, type=str)
 
     try:
-        service = Service(config, should_check_config=not skip_check)
+        service = Service(config, should_check_config=not skip_check,
+                          skip_config_decryption=skip_config_decryption,
+                          decrypt_password=password)
         service.run(msg_update_callback=ConsoleMessagePrinter())
     except (NotAcceptableException, VcdException, ValueError, KeyError,
             TypeError) as err:
@@ -368,6 +473,8 @@ def run(ctx, config, skip_check):
     except vim.fault.InvalidLogin:
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
+    except cryptography.fernet.InvalidToken:
+        click.secho("CSE config file decryption failed.", fg='red')
     except Exception as err:
         click.secho(str(err), fg='red')
         click.secho("CSE Server failure. Please check the logs.", fg='red')
