@@ -17,7 +17,6 @@ from container_service_extension.exceptions import ClusterJoiningError
 from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import CseDuplicateClusterError
 from container_service_extension.exceptions import CseServerError
-from container_service_extension.exceptions import DeleteNodeError
 from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import ScriptExecutionError
 from container_service_extension.local_template_manager import \
@@ -254,7 +253,7 @@ def add_nodes(client, num_nodes, node_type, org, vdc, vapp, catalog_name,
                 script = utils.read_data_file(script_filepath, logger=LOGGER)
                 exec_results = execute_script_in_nodes(
                     vapp=vapp, node_names=[vm_name], script=script)
-                errors = _get_script_execution_errors(exec_results)
+                errors = get_script_execution_errors(exec_results)
                 if errors:
                     raise ScriptExecutionError(
                         f"VM customization script execution failed on node "
@@ -294,7 +293,7 @@ def get_master_ip(vapp):
     node_names = get_node_names(vapp, NodeType.MASTER)
     result = execute_script_in_nodes(vapp=vapp, node_names=node_names,
                                      script=script, check_tools=False)
-    errors = _get_script_execution_errors(result)
+    errors = get_script_execution_errors(result)
     if errors:
         raise ScriptExecutionError(
             f"Get master IP script execution failed on master node "
@@ -314,7 +313,7 @@ def init_cluster(vapp, template_name, template_revision):
         node_names = get_node_names(vapp, NodeType.MASTER)
         result = execute_script_in_nodes(vapp=vapp, node_names=node_names,
                                          script=script)
-        errors = _get_script_execution_errors(result)
+        errors = get_script_execution_errors(result)
         if errors:
             raise ScriptExecutionError(
                 f"Initialize cluster script execution failed on node "
@@ -334,7 +333,7 @@ def join_cluster(vapp, template_name, template_revision, target_nodes=None):
     node_names = get_node_names(vapp, NodeType.MASTER)
     master_result = execute_script_in_nodes(vapp=vapp, node_names=node_names,
                                             script=script)
-    errors = _get_script_execution_errors(master_result)
+    errors = get_script_execution_errors(master_result)
     if errors:
         raise ScriptExecutionError(
             f"Join cluster script execution failed on master node "
@@ -351,7 +350,7 @@ def join_cluster(vapp, template_name, template_revision, target_nodes=None):
     script = tmp_script.format(token=init_info[0], ip=init_info[1])
     worker_results = execute_script_in_nodes(vapp=vapp, node_names=node_names,
                                              script=script)
-    errors = _get_script_execution_errors(worker_results)
+    errors = get_script_execution_errors(worker_results)
     if errors:
         raise ScriptExecutionError(
             f"Join cluster script execution failed on worker node "
@@ -445,24 +444,5 @@ def execute_script_in_nodes(vapp, node_names, script, check_tools=True,
     return all_results
 
 
-def delete_nodes_from_cluster(vapp, node_names):
-    script = "#!/usr/bin/env bash\n" \
-             "kubectl delete node "
-    for node_name in node_names:
-        script += f' {node_name}'
-    script += '\n'
-    master_node_names = get_node_names(vapp, NodeType.MASTER)
-    result = execute_script_in_nodes(vapp=vapp, node_names=master_node_names,
-                                     script=script, check_tools=False)
-    errors = _get_script_execution_errors(result)
-    if errors:
-        raise ScriptExecutionError(
-            f"Delete node from cluster script execution failed on node "
-            f"{master_node_names}:{errors}")
-    if result[0][0] != 0:
-        raise DeleteNodeError(f"Couldn't delete node(s):"
-                              f"\n{result[0][2].content.decode()}")
-
-
-def _get_script_execution_errors(results):
+def get_script_execution_errors(results):
     return [result[2].content.decode() for result in results if result[0] != 0]
