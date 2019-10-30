@@ -44,6 +44,11 @@ class ConsoleMessagePrinter():
         click.secho(msg, fg='red')
 
 
+def prompt_text(text, color='black', hide_input=False):
+    click_text = click.style(str(text), fg=color)
+    return click.prompt(click_text, hide_input=hide_input, type=str)
+
+
 def get_server_runtime_config():
     from container_service_extension.service import Service
     return Service().get_service_config()

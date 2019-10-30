@@ -18,6 +18,7 @@ def encrypt_file(input_file, passwd, output_file):
     :param str output_file: path to cipher-text file
     """
     with open(input_file, 'rb') as infile:
+        out_file = None
         try:
             encryptor = Fernet(_derive_key(passwd))
             out_file = open(output_file, 'wb') \
