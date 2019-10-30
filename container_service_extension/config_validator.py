@@ -42,7 +42,7 @@ from container_service_extension.utils import get_duplicate_items_in_list
 
 def get_validated_config(config_file_name,
                          skip_config_decryption=False,
-                         decrypt_password=None,
+                         decryption_password=None,
                          msg_update_callback=None):
     """Get the config file as a dictionary and check for validity.
 
@@ -52,6 +52,8 @@ def get_validated_config(config_file_name,
     config file.
 
     :param str config_file_name: path to config file.
+    :param bool skip_config_decryption: do not decrypt the config file.
+    :param str decryption_password: password to decrypt the config file.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
         that writes messages onto console.
 
@@ -80,7 +82,8 @@ def get_validated_config(config_file_name,
             config = yaml.safe_load(config_file) or {}
     else:
         config = yaml.safe_load(
-            decrypt_file_in_memory(config_file_name, decrypt_password)) or {}
+            decrypt_file_in_memory(config_file_name,
+                                   decryption_password)) or {}
 
     pks_config_location = config.get('pks_config')
     if msg_update_callback:
@@ -109,8 +112,13 @@ def get_validated_config(config_file_name,
     if isinstance(pks_config_location, str) and pks_config_location:
         check_file_permissions(pks_config_location,
                                msg_update_callback=msg_update_callback)
-        with open(pks_config_location) as f:
-            pks_config = yaml.safe_load(f) or {}
+        if skip_config_decryption:
+            with open(pks_config_location) as f:
+                pks_config = yaml.safe_load(f) or {}
+        else:
+            pks_config = yaml.safe_load(
+                decrypt_file_in_memory(config_file_name,
+                                       decryption_password)) or {}
         if msg_update_callback:
             msg_update_callback.info(
                 f"Validating PKS config file '{pks_config_location}'")
