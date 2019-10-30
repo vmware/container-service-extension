@@ -16,12 +16,12 @@ import requests
 from container_service_extension.abstract_broker import AbstractBroker
 from container_service_extension.authorization import secure
 from container_service_extension.cluster import add_nodes
-from container_service_extension.cluster import delete_nodes_from_cluster
 from container_service_extension.cluster import execute_script_in_nodes
 from container_service_extension.cluster import get_all_clusters
 from container_service_extension.cluster import get_cluster
 from container_service_extension.cluster import get_master_ip
 from container_service_extension.cluster import get_node_names
+from container_service_extension.cluster import get_script_execution_errors
 from container_service_extension.cluster import get_template
 from container_service_extension.cluster import init_cluster
 from container_service_extension.cluster import is_valid_cluster_name
@@ -36,6 +36,8 @@ from container_service_extension.exceptions import MasterNodeCreationError
 from container_service_extension.exceptions import NFSNodeCreationError
 from container_service_extension.exceptions import NodeCreationError
 from container_service_extension.exceptions import NodeNotFoundError
+from container_service_extension.exceptions import NodeOperationError
+from container_service_extension.exceptions import ScriptExecutionError
 from container_service_extension.exceptions import WorkerNodeCreationError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
@@ -572,6 +574,7 @@ class VcdBroker(AbstractBroker):
             TaskStatus.RUNNING,
             message=f"Deleting {len(node_names_list)} node(s)"
                     f" from cluster {cluster_name}({cluster_id})")
+
         self._delete_nodes_async(
             cluster_name=cluster_name,
             cluster_vapp_href=cluster['vapp_href'],
@@ -838,11 +841,23 @@ class VcdBroker(AbstractBroker):
         try:
             self._update_task(
                 TaskStatus.RUNNING,
-                message=f"Deleting {len(node_names_list)} node(s) "
-                        f"from cluster {cluster_name}")
+                message=f"Draining {len(node_names_list)} node(s) "
+                        f"from cluster {cluster_name}: {node_names_list}")
+
+            # if nodes fail to drain this will raise an exception
+            self._drain_nodes(cluster_name=cluster_name,
+                              vapp_href=cluster_vapp_href,
+                              node_names=node_names_list)
+
+            self._update_task(
+                TaskStatus.RUNNING,
+                message=f"Deleting {len(node_names_list)} node(s)"
+                        f" from cluster {cluster_name}: {node_names_list}")
+
             self._delete_nodes(cluster_name=cluster_name,
                                cluster_vapp_href=cluster_vapp_href,
                                node_names_list=node_names_list)
+
             self._update_task(
                 TaskStatus.SUCCESS,
                 message=f"Deleted {len(node_names_list)} node(s)"
@@ -887,12 +902,18 @@ class VcdBroker(AbstractBroker):
                       cluster_name, cluster_vapp_href, node_names_list):
         LOGGER.debug(f"About to delete nodes {node_names_list} "
                      f"from cluster {cluster_name}")
-        vapp = VApp(self.tenant_client, href=cluster_vapp_href)
+
+        script = "#!/usr/bin/env bash\nkubectl delete node "
+        for node_name in node_names_list:
+            script += f' {node_name}'
+        script += '\n'
         try:
-            delete_nodes_from_cluster(vapp, node_names_list)
+            self._run_script_in_master_vm(cluster_vapp_href, script)
         except Exception:
             LOGGER.error(f"Couldn't delete node {node_names_list} "
-                         f"from cluster:{cluster_name}")
+                         f"from cluster {cluster_name}")
+
+        vapp = VApp(self.tenant_client, href=cluster_vapp_href)
         for vm_name in node_names_list:
             vm = VM(self.tenant_client, resource=vapp.get_vm(vm_name))
             try:
@@ -902,6 +923,27 @@ class VcdBroker(AbstractBroker):
                 LOGGER.warning(f"Couldn't undeploy VM {vm_name}")
         task = vapp.delete_vms(node_names_list)
         self.tenant_client.get_task_monitor().wait_for_status(task)
+
+        LOGGER.debug(f"Deleted nodes {node_names_list} from cluster "
+                     f"{cluster_name}")
+
+    # all parameters following '*args' are required and keyword-only
+    def _drain_nodes(self, *args,
+                     cluster_name, vapp_href, node_names):
+        LOGGER.debug(f"Draining nodes {node_names} "
+                     f"from cluster {cluster_name}")
+
+        script = f"#!/usr/bin/env bash\n"
+        for node_name in node_names:
+            script += f"kubectl drain {node_name} " \
+                      f"--dry-run --ignore-daemonsets --timeout=60s\n" \
+                      f"kubectl drain {node_name} " \
+                      f"--ignore-daemonsets --timeout=60s\n"
+        # imo caller should handle exceptions
+        self._run_script_in_master_vm(vapp_href, script)
+
+        LOGGER.debug(f"Drained nodes {node_names} "
+                     f"from cluster {cluster_name}")
 
     def _update_task(self, status, message='', error_message=None,
                      stack_trace=''):
@@ -969,3 +1011,19 @@ class VcdBroker(AbstractBroker):
             export = lines[index].strip().split()[0]
             exports.append(export)
         return exports
+
+    def _run_script_in_master_vm(self, vapp_href, script):
+        vapp = VApp(self.tenant_client, href=vapp_href)
+        master_node_names = get_node_names(vapp, NodeType.MASTER)
+        results = execute_script_in_nodes(vapp=vapp,
+                                          node_names=master_node_names,
+                                          script=script,
+                                          check_tools=False)
+        errors = get_script_execution_errors(results)
+        if errors:
+            raise ScriptExecutionError(
+                f"Script execution failed on node {master_node_names}\n"
+                f"Errors: {errors}")
+        if results[0][0] != 0:
+            raise NodeOperationError(f"Error during node operation:\n"
+                                     f"{results[0][2].content.decode()}")
