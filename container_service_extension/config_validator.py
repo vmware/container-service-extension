@@ -81,6 +81,9 @@ def get_validated_config(config_file_name,
         with open(config_file_name) as config_file:
             config = yaml.safe_load(config_file) or {}
     else:
+        if msg_update_callback:
+            msg_update_callback.info(
+                f"Decrypting '{config_file_name}'")
         config = yaml.safe_load(
             decrypt_file_in_memory(config_file_name,
                                    decryption_password)) or {}
@@ -116,8 +119,11 @@ def get_validated_config(config_file_name,
             with open(pks_config_location) as f:
                 pks_config = yaml.safe_load(f) or {}
         else:
+            if msg_update_callback:
+                msg_update_callback.info(
+                    f"Decrypting '{pks_config_location}'")
             pks_config = yaml.safe_load(
-                decrypt_file_in_memory(config_file_name,
+                decrypt_file_in_memory(pks_config_location,
                                        decryption_password)) or {}
         if msg_update_callback:
             msg_update_callback.info(
