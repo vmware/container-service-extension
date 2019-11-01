@@ -557,9 +557,7 @@ def run(ctx, config, skip_check, skip_config_decryption, password):
     default='config.yaml',
     help='Filepath of CSE config file')
 @click.option(
-    '-p',
-    '--password',
-    'password',
+    '--admin-password',
     default=None,
     metavar='ADMIN_PASSWORD',
     help="New root password to set on cluster vms. If left empty password will be auto-generated") # noqa: E501
@@ -596,8 +594,8 @@ def run(ctx, config, skip_check, skip_config_decryption, password):
     metavar='PASSWORD_FOR_DECRYPTION',
     help='password to use for decrypting config file')
 def convert_cluster(ctx, config_file_name, skip_config_decryption,
-                    decryption_password, cluster_name, password, org_name,
-                    vdc_name, skip_wait_for_gc):
+                    decryption_password, cluster_name, admin_password,
+                    org_name, vdc_name, skip_wait_for_gc):
     if not skip_config_decryption and decryption_password is None:
         decryption_password = prompt_text(
             'Password for config file decryption', color='green',
@@ -716,8 +714,8 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
                 task = vm.update_guest_customization_section(
                     enabled=True,
                     admin_password_enabled=True,
-                    admin_password_auto=not password,
-                    admin_password=password,
+                    admin_password_auto=not admin_password,
+                    admin_password=admin_password,
                 )
                 client.get_task_monitor().wait_for_success(task)
                 console_message_printer.general("Successfully updated vm .")
