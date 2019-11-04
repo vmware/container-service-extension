@@ -2,8 +2,10 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import filecmp
 import os
 import subprocess
+import tempfile
 
 import pytest
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -22,22 +24,22 @@ import container_service_extension.system_test_framework.utils as testutils
 CSE server tests to test validity and functionality of `cse` CLI commands.
 
 Tests these following commands:
-$ cse check --config cse_test_config.yaml (missing/invalid keys)
-$ cse check --config cse_test_config.yaml (incorrect value types)
-$ cse check --config cse_test_config.yaml -i (cse not installed yet)
+$ cse check --config cse_test_config.yaml --skip-config-decryption (missing/invalid keys)
+$ cse check --config cse_test_config.yaml --skip-config-decryption (incorrect value types)
+$ cse check --config cse_test_config.yaml -i --skip-config-decryption (cse not installed yet)
 
-$ cse install --config cse_test_config.yaml --template photon-v2
+$ cse install --config cse_test_config.yaml --template photon-v2 --skip-config-decryption
     --ssh-key ~/.ssh/id_rsa.pub --no-capture
 
-$ cse install --config cse_test_config.yaml --template photon-v2
+$ cse install --config cse_test_config.yaml --template photon-v2 --skip-config-decryption 
 $ cse install --config cse_test_config.yaml --ssh-key ~/.ssh/id_rsa.pub
-    --update --no-capture
-$ cse install --config cse_test_config.yaml
+    --update --no-capture --skip-config-decryption 
+$ cse install --config cse_test_config.yaml --skip-config-decryption 
 
-$ cse check --config cse_test_config.yaml -i
+$ cse check --config cse_test_config.yaml -i --skip-config-decryption 
 
-$ cse run --config cse_test_config.yaml
-$ cse run --config cse_test_config.yaml --skip-check
+$ cse run --config cse_test_config.yaml --skip-config-decryption 
+$ cse run --config cse_test_config.yaml --skip-check --skip-config-decryption
 
 NOTE:
 - Edit 'base_config.yaml' for your own vCD instance.
@@ -435,3 +437,24 @@ def test_0120_cse_run(config):
                         p.terminate()
             except OSError:
                 pass
+
+
+def test_0130_cse_encrypt_decrypt(config):
+    """Test `cse encrypt plain-config.yaml and cse decrypt encrypted-config`.
+
+    1. Execute `cse encrypt` on plain-config file and store the encrypted file.
+    2. Execute `cse decrypt` on the encrypted config file get decrypted file.
+    3. Compare plain-config file and decrypted config file and check result.
+    """
+    encrypted_file = tempfile.NamedTemporaryFile()
+    cmd = f"encrypt {env.ACTIVE_CONFIG_FILEPATH} -o {encrypted_file.name} -p vmware"  # noqa: E501
+    env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+
+    # Run `cse decrypt` on the encrypted config file from previous step
+    decrypted_file = tempfile.NamedTemporaryFile()
+    cmd = f"decrypt {encrypted_file.name} -o {decrypted_file.name} -p vmware"
+    env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+
+    # File comparison also include content comparison
+    assert filecmp.cmp(env.ACTIVE_CONFIG_FILEPATH, decrypted_file.name,
+                       shallow=False)
