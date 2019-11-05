@@ -14,7 +14,7 @@ from vsphere_guest_run.vsphere import VSphere
 import yaml
 
 from container_service_extension.encryption_engine import \
-    decrypt_file_in_memory
+    get_decrypted_file_contents
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.nsxt.dfw_manager import DFWManager
 from container_service_extension.nsxt.ipset_manager import IPSetManager
@@ -85,8 +85,8 @@ def get_validated_config(config_file_name,
             msg_update_callback.info(
                 f"Decrypting '{config_file_name}'")
         config = yaml.safe_load(
-            decrypt_file_in_memory(config_file_name,
-                                   decryption_password)) or {}
+            get_decrypted_file_contents(config_file_name,
+                                        decryption_password)) or {}
 
     pks_config_location = config.get('pks_config')
     if msg_update_callback:
@@ -123,8 +123,8 @@ def get_validated_config(config_file_name,
                 msg_update_callback.info(
                     f"Decrypting '{pks_config_location}'")
             pks_config = yaml.safe_load(
-                decrypt_file_in_memory(pks_config_location,
-                                       decryption_password)) or {}
+                get_decrypted_file_contents(pks_config_location,
+                                            decryption_password)) or {}
         if msg_update_callback:
             msg_update_callback.info(
                 f"Validating PKS config file '{pks_config_location}'")

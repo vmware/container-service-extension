@@ -28,9 +28,9 @@ from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.configure_cse import install_cse
 from container_service_extension.configure_cse import install_template
 from container_service_extension.encryption_engine import decrypt_file
-from container_service_extension.encryption_engine import \
-    decrypt_file_in_memory
 from container_service_extension.encryption_engine import encrypt_file
+from container_service_extension.encryption_engine import \
+    get_decrypted_file_contents
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.local_template_manager import \
     get_all_k8s_local_template_definition
@@ -53,7 +53,7 @@ DISPLAY_ALL = "all"
 DISPLAY_DIFF = "diff"
 DISPLAY_LOCAL = "local"
 DISPLAY_REMOTE = "remote"
-CONFIG_DECRYTPTION_FAILED = \
+CONFIG_DECRYPTION_ERROR_MSG = \
     "CSE config file decryption failed: invalid decryption password"
 
 
@@ -222,7 +222,7 @@ def version(ctx):
     stdout(ver_obj, ctx, ver_str)
 
 
-@cli.command('sample', short_help='Generate sample CSE config by default')
+@cli.command('sample', short_help='Generate sample CSE config')
 @click.pass_context
 @click.option(
     '-o',
@@ -231,13 +231,16 @@ def version(ctx):
     required=False,
     default=None,
     metavar='OUTPUT_FILE_NAME',
-    help="Filepath to write config file to")
+    help="Filepath to write CSE config file to")
 @click.option(
     '-p',
-    '--pks-config',
-    is_flag=True,
-    help='Generate only sample PKS config')
-def sample(ctx, output, pks_config):
+    '--pks-output',
+    'pks_output',
+    required=False,
+    default=None,
+    metavar='OUTPUT_FILE_NAME',
+    help="Filepath to write PKS config file to")
+def sample(ctx, output, pks_output):
     """Display sample CSE config file contents."""
     try:
         check_python_version()
@@ -246,7 +249,7 @@ def sample(ctx, output, pks_config):
         sys.exit(1)
 
     click.secho(generate_sample_config(output=output,
-                                       pks_config=pks_config))
+                                       pks_output=pks_output))
 
 
 @cli.command(short_help="Checks that CSE config file is valid (Can also check "
@@ -305,7 +308,7 @@ def check(ctx, config, skip_config_decryption, password, check_install):
     except requests.exceptions.ConnectionError as err:
         click.secho(f"Cannot connect to {err.request.url}.", fg='red')
     except cryptography.fernet.InvalidToken:
-        click.secho(CONFIG_DECRYTPTION_FAILED, fg='red')
+        click.secho(CONFIG_DECRYPTION_ERROR_MSG, fg='red')
     except vim.fault.InvalidLogin:
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
@@ -477,7 +480,7 @@ def install(ctx, config, skip_config_decryption, password,
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
     except cryptography.fernet.InvalidToken:
-        click.secho(CONFIG_DECRYTPTION_FAILED, fg='red')
+        click.secho(CONFIG_DECRYPTION_ERROR_MSG, fg='red')
 
 
 @cli.command(short_help='Run CSE service')
@@ -535,7 +538,7 @@ def run(ctx, config, skip_check, skip_config_decryption, password):
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
     except cryptography.fernet.InvalidToken:
-        click.secho(CONFIG_DECRYTPTION_FAILED, fg='red')
+        click.secho(CONFIG_DECRYPTION_ERROR_MSG, fg='red')
     except Exception as err:
         click.secho(str(err), fg='red')
         click.secho("CSE Server failure. Please check the logs.", fg='red')
@@ -744,7 +747,7 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
             else:
                 break
     except cryptography.fernet.InvalidToken:
-        click.secho(CONFIG_DECRYTPTION_FAILED, fg='red')
+        click.secho(CONFIG_DECRYPTION_ERROR_MSG, fg='red')
     except Exception as err:
         click.secho(str(err), fg='red')
     finally:
@@ -809,7 +812,7 @@ def list_template(ctx, config_file_name, skip_config_decryption, password,
         else:
             console_message_printer.info(f"Decrypting '{config_file_name}'")
             config_dict = yaml.safe_load(
-                decrypt_file_in_memory(config_file_name, password)) or {}
+                get_decrypted_file_contents(config_file_name, password)) or {}
 
         local_templates = []
         if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL):
@@ -923,7 +926,7 @@ def list_template(ctx, config_file_name, skip_config_decryption, password,
 
         stdout(result, ctx, sort_headers=False)
     except cryptography.fernet.InvalidToken:
-        click.secho(CONFIG_DECRYTPTION_FAILED, fg='red')
+        click.secho(CONFIG_DECRYPTION_ERROR_MSG, fg='red')
     except Exception as err:
         click.secho(str(err), fg='red')
 
@@ -1021,7 +1024,7 @@ def install_cse_template(ctx, template_name, template_revision,
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
     except cryptography.fernet.InvalidToken:
-        click.secho(CONFIG_DECRYTPTION_FAILED, fg='red')
+        click.secho(CONFIG_DECRYPTION_ERROR_MSG, fg='red')
 
 
 if __name__ == '__main__':

@@ -40,10 +40,13 @@ def decrypt_file(input_file, passwd, output_file):
     :param str input_file: path to encrypted file
     :param str passwd: password to make decryption key
     :param str output_file: path to plain-text file
+
+    :raises cryptography.fernet.InvalidToken: wrong password for decryption
+    raises this error.
     """
     out_file = None
     try:
-        decrypted_data = decrypt_file_in_memory(input_file, passwd)
+        decrypted_data = get_decrypted_file_contents(input_file, passwd)
         out_file = open(output_file, 'wb') \
             if output_file else sys.stdout.buffer
         out_file.write(decrypted_data)
@@ -52,7 +55,7 @@ def decrypt_file(input_file, passwd, output_file):
             out_file.close()
 
 
-def decrypt_file_in_memory(input_file, passwd):
+def get_decrypted_file_contents(input_file, passwd):
     """Decrypt the given input file.
 
     Decryption uses the given password to derive encryption key.
@@ -63,6 +66,9 @@ def decrypt_file_in_memory(input_file, passwd):
     :return: decrypted data
 
     :rtype: bytes
+
+    :raises cryptography.fernet.InvalidToken: wrong password for decryption
+    raises this error.
     """
     with open(input_file, 'rb') as infile:
         decryptor = Fernet(_derive_key(passwd))

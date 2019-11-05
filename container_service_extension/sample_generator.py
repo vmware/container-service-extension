@@ -282,54 +282,61 @@ SAMPLE_PKS_NSXT_SERVERS_SECTION = {
 }
 
 
-def generate_sample_config(output=None, pks_config=None):
+def generate_sample_config(output=None, pks_output=None):
     """Generate sample configs for cse.
 
     If config file names are
     provided, configs are dumped into respective files.
 
     :param str output: name of the config file to dump the CSE configs.
-    :param bool pks_config: flag to convey only sample PKS config file is
-    required.
+    :param str pks_output: name of the PKS config file to dump the PKS
+    configs.
 
-    :return: sample config file
+    :return: sample config/ sample config files
 
     :rtype: dict
     """
-    if not pks_config:
-        sample_config = yaml.safe_dump(SAMPLE_AMQP_CONFIG,
-                                       default_flow_style=False) + '\n'
-        sample_config += yaml.safe_dump(SAMPLE_VCD_CONFIG,
-                                        default_flow_style=False) + '\n'
-        sample_config += yaml.safe_dump(SAMPLE_VCS_CONFIG,
-                                        default_flow_style=False) + '\n'
-        sample_config += yaml.safe_dump(SAMPLE_SERVICE_CONFIG,
-                                        default_flow_style=False) + '\n'
-        sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
-                                        default_flow_style=False) + '\n'
-        sample_config += TEMPLATE_RULE_NOTE + '\n'
+    sample_config = yaml.safe_dump(SAMPLE_AMQP_CONFIG,
+                                   default_flow_style=False) + '\n'
+    sample_config += yaml.safe_dump(SAMPLE_VCD_CONFIG,
+                                    default_flow_style=False) + '\n'
+    sample_config += yaml.safe_dump(SAMPLE_VCS_CONFIG,
+                                    default_flow_style=False) + '\n'
+    sample_config += yaml.safe_dump(SAMPLE_SERVICE_CONFIG,
+                                    default_flow_style=False) + '\n'
+    sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
+                                    default_flow_style=False) + '\n'
+    sample_config += TEMPLATE_RULE_NOTE + '\n'
+    sample_config += NOTE_FOR_PKS_KEY_IN_CONFIG_FILE + '\n'
+
+    if pks_output:
+        pks_config_location_dict = {}
+        pks_config_location_dict[PKS_CONFIG_FILE_LOCATION_SECTION_KEY] = \
+            f"{pks_output}"
+        sample_config += yaml.safe_dump(pks_config_location_dict,
+                                        default_flow_style=False)
     else:
-        sample_pks_config = yaml.safe_dump(
-            SAMPLE_PKS_SERVERS_SECTION, default_flow_style=False) + '\n'
-        sample_pks_config += yaml.safe_dump(
-            SAMPLE_PKS_ACCOUNTS_SECTION, default_flow_style=False) + '\n'
-        # Org - PKS account mapping section will be supressed for CSE 2.0 alpha
-        # sample_pks_config += yaml.safe_dump(
-        #    SAMPLE_PKS_ORGS_SECTION, default_flow_style=False) + '\n'
-        sample_pks_config += yaml.safe_dump(
-            SAMPLE_PKS_PVDCS_SECTION, default_flow_style=False) + '\n'
-        sample_pks_config += yaml.safe_dump(
-            SAMPLE_PKS_NSXT_SERVERS_SECTION, default_flow_style=False)
+        sample_config += yaml.safe_dump(SAMPLE_PKS_CONFIG_FILE_LOCATION,
+                                        default_flow_style=False)
+
+    sample_pks_config = yaml.safe_dump(
+        SAMPLE_PKS_SERVERS_SECTION, default_flow_style=False) + '\n'
+    sample_pks_config += yaml.safe_dump(
+        SAMPLE_PKS_ACCOUNTS_SECTION, default_flow_style=False) + '\n'
+    # Org - PKS account mapping section will be supressed for CSE 2.0 alpha
+    # sample_pks_config += yaml.safe_dump(
+    #    SAMPLE_PKS_ORGS_SECTION, default_flow_style=False) + '\n'
+    sample_pks_config += yaml.safe_dump(
+        SAMPLE_PKS_PVDCS_SECTION, default_flow_style=False) + '\n'
+    sample_pks_config += yaml.safe_dump(
+        SAMPLE_PKS_NSXT_SERVERS_SECTION, default_flow_style=False)
 
     if output:
         with open(output, 'w') as f:
-            if not pks_config:
-                f.write(sample_config)
-            else:
-                f.write(
-                    f"{INSTRUCTIONS_FOR_PKS_CONFIG_FILE}\n{sample_pks_config}")
+            f.write(sample_config)
+    if pks_output:
+        with open(pks_output, 'w') as f:
+            f.write(f"{INSTRUCTIONS_FOR_PKS_CONFIG_FILE}\n{sample_pks_config}")
 
-    if not pks_config:
-        return sample_config.strip()
-    else:
-        return sample_pks_config.strip()
+    return sample_config.strip() + '\n\n' + PKS_CONFIG_NOTE + '\n\n' + \
+        sample_pks_config.strip()
