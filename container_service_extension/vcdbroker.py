@@ -2,11 +2,17 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import random
+import re
+import string
+import time
 import uuid
 
 import pkg_resources
+from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.client import TaskStatus
 from pyvcloud.vcd.client import VCLOUD_STATUS_MAP
+from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.task import Task
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
@@ -15,22 +21,12 @@ import requests
 
 from container_service_extension.abstract_broker import AbstractBroker
 from container_service_extension.authorization import secure
-from container_service_extension.cluster import add_nodes
-from container_service_extension.cluster import execute_script_in_nodes
-from container_service_extension.cluster import get_all_clusters
-from container_service_extension.cluster import get_cluster
-from container_service_extension.cluster import get_master_ip
-from container_service_extension.cluster import get_node_names
-from container_service_extension.cluster import get_script_execution_errors
-from container_service_extension.cluster import get_template
-from container_service_extension.cluster import init_cluster
-from container_service_extension.cluster import is_valid_cluster_name
-from container_service_extension.cluster import join_cluster
 from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterInitializationError
 from container_service_extension.exceptions import ClusterJoiningError
 from container_service_extension.exceptions import ClusterNotFoundError
 from container_service_extension.exceptions import ClusterOperationError
+from container_service_extension.exceptions import CseDuplicateClusterError
 from container_service_extension.exceptions import CseServerError
 from container_service_extension.exceptions import MasterNodeCreationError
 from container_service_extension.exceptions import NFSNodeCreationError
@@ -39,8 +35,10 @@ from container_service_extension.exceptions import NodeNotFoundError
 from container_service_extension.exceptions import NodeOperationError
 from container_service_extension.exceptions import ScriptExecutionError
 from container_service_extension.exceptions import WorkerNodeCreationError
+from container_service_extension.local_template_manager import get_template_k8s_version # noqa: E501
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
+from container_service_extension.remote_template_manager import get_local_script_filepath # noqa: E501
 import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_NAME # noqa: E501
@@ -48,6 +46,8 @@ from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import NodeType
+from container_service_extension.server_constants import ScriptFile
+from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import RequestKey
 import container_service_extension.utils as utils
 import container_service_extension.vsphere_utils as vs_utils
@@ -443,7 +443,7 @@ class VcdBroker(AbstractBroker):
                 node_info['node_type'] = 'worker'
             elif vm_name.startswith(NodeType.NFS):
                 node_info['node_type'] = 'nfs'
-                node_info['exports'] = self._get_nfs_exports(node_info['ipAddress'], vapp, vm_name) # noqa: E501
+                node_info['exports'] = get_nfs_exports(node_info['ipAddress'], vapp, vm_name) # noqa: E501
         if node_info is None:
             raise NodeNotFoundError(f"Node '{node_name}' not found in "
                                     f"cluster '{cluster_name}'")
@@ -511,7 +511,7 @@ class VcdBroker(AbstractBroker):
         self._create_nodes_async(
             cluster_name=cluster_name,
             cluster_vdc_href=cluster['vdc_href'],
-            cluster_vapp_href=cluster['vapp_href'],
+            vapp_href=cluster['vapp_href'],
             cluster_id=cluster_id,
             template_name=template_name,
             template_revision=template_revision,
@@ -577,7 +577,7 @@ class VcdBroker(AbstractBroker):
 
         self._delete_nodes_async(
             cluster_name=cluster_name,
-            cluster_vapp_href=cluster['vapp_href'],
+            vapp_href=cluster['vapp_href'],
             node_names_list=validated_data[RequestKey.NODE_NAMES_LIST])
 
         return {
@@ -752,14 +752,14 @@ class VcdBroker(AbstractBroker):
 
     @utils.run_async
     def _create_nodes_async(self, *args,
-                            cluster_name, cluster_vdc_href, cluster_vapp_href,
+                            cluster_name, cluster_vdc_href, vapp_href,
                             cluster_id, template_name, template_revision,
                             num_workers, network_name, num_cpu, mb_memory,
                             storage_profile_name, ssh_key, enable_nfs,
                             rollback):
         org = vcd_utils.get_org(self.tenant_client)
         vdc = VDC(self.tenant_client, href=cluster_vdc_href)
-        vapp = VApp(self.tenant_client, href=cluster_vapp_href)
+        vapp = VApp(self.tenant_client, href=vapp_href)
         template = get_template(name=template_name, revision=template_revision)
         msg = f"Creating {num_workers} node(s) from template " \
               f"'{template_name}' (revision {template_revision}) and " \
@@ -817,7 +817,7 @@ class VcdBroker(AbstractBroker):
                 LOGGER.info(msg)
                 try:
                     self._delete_nodes(cluster_name=cluster_name,
-                                       cluster_vapp_href=cluster_vapp_href,
+                                       vapp_href=vapp_href,
                                        node_names_list=e.node_names)
                 except Exception:
                     LOGGER.error(f"Failed to delete nodes {e.node_names} "
@@ -837,7 +837,7 @@ class VcdBroker(AbstractBroker):
     # all parameters following '*args' are required and keyword-only
     @utils.run_async
     def _delete_nodes_async(self, *args,
-                            cluster_name, cluster_vapp_href, node_names_list):
+                            cluster_name, vapp_href, node_names_list):
         try:
             self._update_task(
                 TaskStatus.RUNNING,
@@ -846,7 +846,7 @@ class VcdBroker(AbstractBroker):
 
             # if nodes fail to drain this will raise an exception
             self._drain_nodes(cluster_name=cluster_name,
-                              vapp_href=cluster_vapp_href,
+                              vapp_href=vapp_href,
                               node_names=node_names_list)
 
             self._update_task(
@@ -855,7 +855,7 @@ class VcdBroker(AbstractBroker):
                         f" from cluster {cluster_name}: {node_names_list}")
 
             self._delete_nodes(cluster_name=cluster_name,
-                               cluster_vapp_href=cluster_vapp_href,
+                               vapp_href=vapp_href,
                                node_names_list=node_names_list)
 
             self._update_task(
@@ -899,7 +899,7 @@ class VcdBroker(AbstractBroker):
 
     # all parameters following '*args' are required and keyword-only
     def _delete_nodes(self, *args,
-                      cluster_name, cluster_vapp_href, node_names_list):
+                      cluster_name, vapp_href, node_names_list):
         LOGGER.debug(f"About to delete nodes {node_names_list} "
                      f"from cluster {cluster_name}")
 
@@ -908,12 +908,12 @@ class VcdBroker(AbstractBroker):
             script += f' {node_name}'
         script += '\n'
         try:
-            self._run_script_in_master_vm(cluster_vapp_href, script)
+            run_script_in_master_vm(self.tenant_client, vapp_href, script)
         except Exception:
             LOGGER.error(f"Couldn't delete node {node_names_list} "
                          f"from cluster {cluster_name}")
 
-        vapp = VApp(self.tenant_client, href=cluster_vapp_href)
+        vapp = VApp(self.tenant_client, href=vapp_href)
         for vm_name in node_names_list:
             vm = VM(self.tenant_client, resource=vapp.get_vm(vm_name))
             try:
@@ -940,7 +940,7 @@ class VcdBroker(AbstractBroker):
                       f"kubectl drain {node_name} " \
                       f"--ignore-daemonsets --timeout=60s\n"
         # imo caller should handle exceptions
-        self._run_script_in_master_vm(vapp_href, script)
+        run_script_in_master_vm(self.tenant_client, vapp_href, script)
 
         LOGGER.debug(f"Drained nodes {node_names} "
                      f"from cluster {cluster_name}")
@@ -992,38 +992,454 @@ class VcdBroker(AbstractBroker):
             stack_trace=stack_trace
         )
 
-    def _get_nfs_exports(self, ip, vapp, vm_name):
-        """Get the exports from remote NFS server (helper method).
 
-        :param ip: (str): IP address of the NFS server
-        :param vapp: (pyvcloud.vcd.vapp.VApp): The vApp or cluster
-         to which node belongs
-        :param vm_name: name of node's VM
+def run_script_in_master_vm(client, vapp_href, script):
+    vapp = VApp(client, href=vapp_href)
+    master_node_names = get_node_names(vapp, NodeType.MASTER)
+    results = execute_script_in_nodes(vapp=vapp,
+                                      node_names=master_node_names,
+                                      script=script,
+                                      check_tools=False)
+    errors = get_script_execution_errors(results)
+    if errors:
+        raise ScriptExecutionError(f"Script execution failed on node "
+                                   f"{master_node_names}\nErrors: {errors}")
+    if results[0][0] != 0:
+        raise NodeOperationError(f"Error during node operation:\n"
+                                 f"{results[0][2].content.decode()}")
 
-        :return: (List): List of exports
-        """
-        script = f"#!/usr/bin/env bash\nshowmount -e {ip}"
-        result = execute_script_in_nodes(vapp=vapp, node_names=[vm_name],
-                                         script=script, check_tools=False)
-        lines = result[0][1].content.decode().split('\n')
-        exports = []
-        for index in range(1, len(lines) - 1):
-            export = lines[index].strip().split()[0]
-            exports.append(export)
-        return exports
 
-    def _run_script_in_master_vm(self, vapp_href, script):
-        vapp = VApp(self.tenant_client, href=vapp_href)
-        master_node_names = get_node_names(vapp, NodeType.MASTER)
-        results = execute_script_in_nodes(vapp=vapp,
-                                          node_names=master_node_names,
-                                          script=script,
-                                          check_tools=False)
-        errors = get_script_execution_errors(results)
+def get_nfs_exports(ip, vapp, vm_name):
+    """Get the exports from remote NFS server (helper method).
+
+    :param ip: (str): IP address of the NFS server
+    :param vapp: (pyvcloud.vcd.vapp.VApp): The vApp or cluster
+        to which node belongs
+    :param vm_name: name of node's VM
+
+    :return: (List): List of exports
+    """
+    script = f"#!/usr/bin/env bash\nshowmount -e {ip}"
+    result = execute_script_in_nodes(vapp=vapp, node_names=[vm_name],
+                                     script=script, check_tools=False)
+    lines = result[0][1].content.decode().split('\n')
+    exports = []
+    for index in range(1, len(lines) - 1):
+        export = lines[index].strip().split()[0]
+        exports.append(export)
+    return exports
+
+
+def is_valid_cluster_name(name):
+    """Validate that the cluster name against the pattern."""
+    if len(name) > 25:
+        return False
+    if name[-1] == '.':
+        name = name[:-1]
+    allowed = re.compile(r"(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
+    return all(allowed.match(x) for x in name.split("."))
+
+
+def get_all_clusters(client, cluster_name=None, cluster_id=None,
+                     org_name=None, ovdc_name=None):
+    if cluster_id is not None:
+        query_filter = f'metadata:cse.cluster.id==STRING:{cluster_id}'
+    else:
+        query_filter = 'metadata:cse.cluster.id==STRING:*'
+
+    if cluster_name is not None:
+        query_filter += f';name=={cluster_name}'
+
+    if ovdc_name is not None:
+        query_filter += f";vdcName=={ovdc_name}"
+
+    resource_type = 'vApp'
+    if client.is_sysadmin():
+        resource_type = 'adminVApp'
+        if org_name is not None and org_name.lower() != SYSTEM_ORG_NAME.lower(): # noqa: E501
+            org_resource = client.get_org_by_name(org_name)
+            org = Org(client, resource=org_resource)
+            query_filter += f";org=={org.resource.get('id')}"
+
+    q = client.get_typed_query(
+        resource_type,
+        query_result_format=QueryResultFormat.ID_RECORDS,
+        qfilter=query_filter,
+        fields='metadata:' + ClusterMetadataKey.CLUSTER_ID + ',metadata:' + # noqa: W504,E501
+               ClusterMetadataKey.MASTER_IP + ',metadata:' + # noqa: W504
+               ClusterMetadataKey.CSE_VERSION + ',metadata:' + # noqa: W504
+               ClusterMetadataKey.TEMPLATE_NAME + ',metadata:' + # noqa: W504
+               ClusterMetadataKey.TEMPLATE_REVISION + ',metadata:' + # noqa: W504,E501
+               ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME)
+
+    clusters = []
+    for record in q.execute():
+        vapp_id = record.get('id').split(':')[-1]
+        vdc_id = record.get('vdc').split(':')[-1]
+
+        cluster = {
+            'name': record.get('name'),
+            'vapp_id': vapp_id,
+            'vapp_href': f'{client._uri}/vApp/vapp-{vapp_id}',
+            'vdc_name': record.get('vdcName'),
+            'vdc_href': f'{client._uri}/vdc/{vdc_id}',
+            'vdc_id': vdc_id,
+            'leader_endpoint': '',
+            'master_nodes': [],
+            'nodes': [],
+            'nfs_nodes': [],
+            'number_of_vms': record.get('numberOfVMs'),
+            'template_name': '',
+            'template_revision': '',
+            'cse_version': '',
+            'cluster_id': '',
+            'status': record.get('status')
+        }
+        if hasattr(record, 'Metadata'):
+            for entry in record.Metadata.MetadataEntry:
+                if entry.Key == ClusterMetadataKey.CLUSTER_ID:
+                    cluster['cluster_id'] = str(entry.TypedValue.Value)
+                elif entry.Key == ClusterMetadataKey.CSE_VERSION:
+                    cluster['cse_version'] = str(entry.TypedValue.Value)
+                elif entry.Key == ClusterMetadataKey.MASTER_IP:
+                    cluster['leader_endpoint'] = str(entry.TypedValue.Value)
+                elif entry.Key == ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME: # noqa: E501
+                    # Don't overwrite the value if already populated from the
+                    # value corresponding to ClusterMetadataKey.TEMPLATE_NAME
+                    if not cluster['template_name']:
+                        cluster['template_name'] = str(entry.TypedValue.Value)
+                elif entry.Key == ClusterMetadataKey.TEMPLATE_NAME:
+                    cluster['template_name'] = str(entry.TypedValue.Value)
+                elif entry.Key == ClusterMetadataKey.TEMPLATE_REVISION:
+                    cluster['template_revision'] = str(entry.TypedValue.Value)
+            cluster['k8s_version'] = \
+                get_template_k8s_version(cluster.get('template_name'))
+
+        clusters.append(cluster)
+
+    return clusters
+
+
+def get_cluster(client, cluster_name, cluster_id=None, org_name=None,
+                ovdc_name=None):
+    clusters = get_all_clusters(client, cluster_name=cluster_name,
+                                cluster_id=cluster_id, org_name=org_name,
+                                ovdc_name=ovdc_name)
+    if len(clusters) > 1:
+        raise CseDuplicateClusterError(f"Found multiple clusters named"
+                                       f" '{cluster_name}'.")
+    if len(clusters) == 0:
+        raise ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")
+
+    return clusters[0]
+
+
+def get_template(name=None, revision=None):
+    if (name is None and revision is not None) or (name is not None and revision is None): # noqa: E501
+        raise ValueError(f"If template revision is specified, then template "
+                         f"name must also be specified (and vice versa).")
+    server_config = utils.get_server_runtime_config()
+    name = name or server_config['broker']['default_template_name']
+    revision = revision or server_config['broker']['default_template_revision']
+    for template in server_config['broker']['templates']:
+        if template[LocalTemplateKey.NAME] == name and str(template[LocalTemplateKey.REVISION]) == str(revision): # noqa: E501
+            return template
+    raise Exception(f"Template '{name}' at revision {revision} not found.")
+
+
+def add_nodes(client, num_nodes, node_type, org, vdc, vapp, catalog_name,
+              template, network_name, num_cpu=None, memory_in_mb=None,
+              storage_profile=None, ssh_key=None):
+    specs = []
+    try:
+        if num_nodes < 1:
+            return None
+
+        # DEV NOTE: With api v33.0 and onwards, get_catalog operation will fail
+        # for non admin users of an an org which is not hosting the catalog,
+        # even if the catalog is explicitly shared with the org in question.
+        # This happens because for api v 33.0 and onwards, the Org XML no
+        # longer returns the href to catalogs accessible to the org, and typed
+        # queries hide the catalog link from non admin users.
+        # As a workaround, we will use a sys admin client to get the href and
+        # pass it forward. Do note that the catalog itself can still be
+        # accessed by these non admin users, just that they can't find by the
+        # href on their own.
+
+        sys_admin_client = None
+        try:
+            sys_admin_client = vcd_utils.get_sys_admin_client()
+            org_name = org.get_name()
+            org_resource = sys_admin_client.get_org_by_name(org_name)
+            org_sa = Org(sys_admin_client, resource=org_resource)
+            catalog_item = org_sa.get_catalog_item(
+                catalog_name, template[LocalTemplateKey.CATALOG_ITEM_NAME])
+            catalog_item_href = catalog_item.Entity.get('href')
+        finally:
+            if sys_admin_client:
+                sys_admin_client.logout()
+
+        source_vapp = VApp(client, href=catalog_item_href)
+        source_vm = source_vapp.get_all_vms()[0].get('name')
+        if storage_profile is not None:
+            storage_profile = vdc.get_storage_profile(storage_profile)
+
+        cust_script = None
+        if ssh_key is not None:
+            cust_script = \
+                "#!/usr/bin/env bash\n" \
+                "if [ x$1=x\"postcustomization\" ];\n" \
+                "then\n" \
+                "mkdir -p /root/.ssh\n" \
+                f"echo '{ssh_key}' >> /root/.ssh/authorized_keys\n" \
+                "chmod -R go-rwx /root/.ssh\n" \
+                "fi"
+
+        for n in range(num_nodes):
+            name = None
+            while True:
+                name = f"{node_type}-{''.join(random.choices(string.ascii_lowercase + string.digits, k=4))}" # noqa: E501
+                try:
+                    vapp.get_vm(name)
+                except Exception:
+                    break
+            spec = {
+                'source_vm_name': source_vm,
+                'vapp': source_vapp.resource,
+                'target_vm_name': name,
+                'hostname': name,
+                'password_auto': True,
+                'network': network_name,
+                'ip_allocation_mode': 'pool'
+            }
+            if cust_script is not None:
+                spec['cust_script'] = cust_script
+            if storage_profile is not None:
+                spec['storage_profile'] = storage_profile
+            specs.append(spec)
+
+        task = vapp.add_vms(specs, power_on=False)
+        client.get_task_monitor().wait_for_status(task)
+        vapp.reload()
+
+        if not num_cpu:
+            num_cpu = template[LocalTemplateKey.CPU]
+        if not memory_in_mb:
+            memory_in_mb = template[LocalTemplateKey.MEMORY]
+        for spec in specs:
+            vm_name = spec['target_vm_name']
+            vm_resource = vapp.get_vm(vm_name)
+            vm = VM(client, resource=vm_resource)
+
+            task = vm.modify_cpu(num_cpu)
+            client.get_task_monitor().wait_for_status(task)
+
+            task = vm.modify_memory(memory_in_mb)
+            client.get_task_monitor().wait_for_status(task)
+
+            task = vm.power_on()
+            client.get_task_monitor().wait_for_status(task)
+            vapp.reload()
+
+            if node_type == NodeType.NFS:
+                LOGGER.debug(f"Enabling NFS server on {vm_name}")
+                script_filepath = get_local_script_filepath(
+                    template[LocalTemplateKey.NAME],
+                    template[LocalTemplateKey.REVISION],
+                    ScriptFile.NFSD)
+                script = utils.read_data_file(script_filepath, logger=LOGGER)
+                exec_results = execute_script_in_nodes(
+                    vapp=vapp, node_names=[vm_name], script=script)
+                errors = get_script_execution_errors(exec_results)
+                if errors:
+                    raise ScriptExecutionError(
+                        f"VM customization script execution failed on node "
+                        f"{vm_name}:{errors}")
+    except Exception as e:
+        # TODO: get details of the exception to determine cause of failure,
+        # e.g. not enough resources available.
+        node_list = [entry.get('target_vm_name') for entry in specs]
+        raise NodeCreationError(node_list, str(e))
+
+    vapp.reload()
+    return {'task': task, 'specs': specs}
+
+
+def get_node_names(vapp, node_type):
+    return [vm.get('name') for vm in vapp.get_all_vms() if vm.get('name').startswith(node_type)] # noqa: E501
+
+
+def _wait_for_tools_ready_callback(message, exception=None):
+    LOGGER.debug(f"waiting for guest tools, status: {message}")
+    if exception is not None:
+        LOGGER.error(f"exception: {str(exception)}")
+
+
+def _wait_for_guest_execution_callback(message, exception=None):
+    LOGGER.debug(message)
+    if exception is not None:
+        LOGGER.error(f"exception: {str(exception)}")
+
+
+def get_master_ip(vapp):
+    LOGGER.debug(f"Getting master IP for vapp: "
+                 f"{vapp.get_resource().get('name')}")
+    script = "#!/usr/bin/env bash\n" \
+             "ip route get 1 | awk '{print $NF;exit}'\n" \
+
+    node_names = get_node_names(vapp, NodeType.MASTER)
+    result = execute_script_in_nodes(vapp=vapp, node_names=node_names,
+                                     script=script, check_tools=False)
+    errors = get_script_execution_errors(result)
+    if errors:
+        raise ScriptExecutionError(
+            f"Get master IP script execution failed on master node "
+            f"{node_names}:{errors}")
+    master_ip = result[0][1].content.decode().split()[0]
+    LOGGER.debug(f"Retrieved master IP for vapp: "
+                 f"{vapp.get_resource().get('name')}, ip: {master_ip}")
+    return master_ip
+
+
+def init_cluster(vapp, template_name, template_revision):
+    try:
+        script_filepath = get_local_script_filepath(template_name,
+                                                    template_revision,
+                                                    ScriptFile.MASTER)
+        script = utils.read_data_file(script_filepath, logger=LOGGER)
+        node_names = get_node_names(vapp, NodeType.MASTER)
+        result = execute_script_in_nodes(vapp=vapp, node_names=node_names,
+                                         script=script)
+        errors = get_script_execution_errors(result)
         if errors:
             raise ScriptExecutionError(
-                f"Script execution failed on node {master_node_names}\n"
-                f"Errors: {errors}")
-        if results[0][0] != 0:
-            raise NodeOperationError(f"Error during node operation:\n"
-                                     f"{results[0][2].content.decode()}")
+                f"Initialize cluster script execution failed on node "
+                f"{node_names}:{errors}")
+        if result[0][0] != 0:
+            raise ClusterInitializationError(f"Couldn't initialize cluster:\n{result[0][2].content.decode()}") # noqa: E501
+    except Exception as e:
+        LOGGER.error(e, exc_info=True)
+        raise ClusterInitializationError(
+            f"Couldn't initialize cluster: {str(e)}")
+
+
+def join_cluster(vapp, template_name, template_revision, target_nodes=None):
+    script = "#!/usr/bin/env bash\n" \
+             "kubeadm token create\n" \
+             "ip route get 1 | awk '{print $NF;exit}'\n"
+    node_names = get_node_names(vapp, NodeType.MASTER)
+    master_result = execute_script_in_nodes(vapp=vapp, node_names=node_names,
+                                            script=script)
+    errors = get_script_execution_errors(master_result)
+    if errors:
+        raise ScriptExecutionError(
+            f"Join cluster script execution failed on master node "
+            f"{node_names}:{errors}")
+    init_info = master_result[0][1].content.decode().split()
+
+    node_names = get_node_names(vapp, NodeType.WORKER)
+    if target_nodes is not None:
+        node_names = [name for name in node_names if name in target_nodes]
+    tmp_script_filepath = get_local_script_filepath(template_name,
+                                                    template_revision,
+                                                    ScriptFile.NODE)
+    tmp_script = utils.read_data_file(tmp_script_filepath, logger=LOGGER)
+    script = tmp_script.format(token=init_info[0], ip=init_info[1])
+    worker_results = execute_script_in_nodes(vapp=vapp, node_names=node_names,
+                                             script=script)
+    errors = get_script_execution_errors(worker_results)
+    if errors:
+        raise ScriptExecutionError(
+            f"Join cluster script execution failed on worker node "
+            f"{node_names}:{errors}")
+    for result in worker_results:
+        if result[0] != 0:
+            raise ClusterJoiningError(f"Couldn't join cluster:"
+                                      f"\n{result[2].content.decode()}")
+
+
+def _wait_until_ready_to_exec(vs, vm, password, tries=30):
+    ready = False
+    script = "#!/usr/bin/env bash\n" \
+             "uname -a\n"
+    for _ in range(tries):
+        result = vs.execute_script_in_guest(
+            vm, 'root', password, script,
+            target_file=None,
+            wait_for_completion=True,
+            wait_time=5,
+            get_output=True,
+            delete_script=True,
+            callback=_wait_for_guest_execution_callback)
+        if result[0] == 0:
+            ready = True
+            break
+        LOGGER.info(f"Script returned {result[0]}; VM is not "
+                    f"ready to execute scripts, yet")
+        time.sleep(2)
+
+    if not ready:
+        raise CseServerError('VM is not ready to execute scripts')
+
+
+def execute_script_in_nodes(vapp, node_names, script, check_tools=True,
+                            wait=True):
+    all_results = []
+    sys_admin_client = None
+    try:
+        sys_admin_client = vcd_utils.get_sys_admin_client()
+        for node_name in node_names:
+            LOGGER.debug(f"will try to execute script on {node_name}:\n"
+                         f"{script}")
+
+            vs = vs_utils.get_vsphere(sys_admin_client, vapp,
+                                      vm_name=node_name, logger=LOGGER)
+            vs.connect()
+            moid = vapp.get_vm_moid(node_name)
+            vm = vs.get_vm_by_moid(moid)
+            password = vapp.get_admin_password(node_name)
+            if check_tools:
+                LOGGER.debug(f"waiting for tools on {node_name}")
+                vs.wait_until_tools_ready(
+                    vm,
+                    sleep=5,
+                    callback=_wait_for_tools_ready_callback)
+                _wait_until_ready_to_exec(vs, vm, password)
+            LOGGER.debug(f"about to execute script on {node_name} "
+                         f"(vm={vm}), wait={wait}")
+            if wait:
+                result = \
+                    vs.execute_script_in_guest(
+                        vm, 'root', password, script,
+                        target_file=None,
+                        wait_for_completion=True,
+                        wait_time=10,
+                        get_output=True,
+                        delete_script=True,
+                        callback=_wait_for_guest_execution_callback)
+                result_stdout = result[1].content.decode()
+                result_stderr = result[2].content.decode()
+            else:
+                result = [
+                    vs.execute_program_in_guest(vm,
+                                                'root',
+                                                password,
+                                                script,
+                                                wait_for_completion=False,
+                                                get_output=False)
+                ]
+                result_stdout = ''
+                result_stderr = ''
+            LOGGER.debug(result[0])
+            LOGGER.debug(result_stderr)
+            LOGGER.debug(result_stdout)
+            all_results.append(result)
+    finally:
+        if sys_admin_client:
+            sys_admin_client.logout()
+
+    return all_results
+
+
+def get_script_execution_errors(results):
+    return [result[2].content.decode() for result in results if result[0] != 0]
