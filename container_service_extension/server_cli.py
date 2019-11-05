@@ -222,7 +222,7 @@ def version(ctx):
     stdout(ver_obj, ctx, ver_str)
 
 
-@cli.command('sample', short_help='Generate sample CSE config')
+@cli.command('sample', short_help='Generate sample CSE config by default')
 @click.pass_context
 @click.option(
     '-o',
@@ -231,16 +231,13 @@ def version(ctx):
     required=False,
     default=None,
     metavar='OUTPUT_FILE_NAME',
-    help="Filepath to write CSE config file to")
+    help="Filepath to write config file to")
 @click.option(
     '-p',
-    '--pks-output',
-    'pks_output',
-    required=False,
-    default=None,
-    metavar='OUTPUT_FILE_NAME',
-    help="Filepath to write PKS config file to")
-def sample(ctx, output, pks_output):
+    '--pks-config',
+    is_flag=True,
+    help='Generate only sample PKS config')
+def sample(ctx, output, pks_config):
     """Display sample CSE config file contents."""
     try:
         check_python_version()
@@ -249,7 +246,7 @@ def sample(ctx, output, pks_output):
         sys.exit(1)
 
     click.secho(generate_sample_config(output=output,
-                                       pks_output=pks_output))
+                                       pks_config=pks_config))
 
 
 @cli.command(short_help="Checks that CSE config file is valid (Can also check "
