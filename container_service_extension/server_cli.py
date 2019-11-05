@@ -21,7 +21,6 @@ import requests
 from vcd_cli.utils import stdout
 import yaml
 
-from container_service_extension.cluster import get_all_clusters
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.configure_cse import install_cse
@@ -40,6 +39,7 @@ from container_service_extension.service import Service
 from container_service_extension.utils import check_python_version
 from container_service_extension.utils import ConsoleMessagePrinter
 from container_service_extension.utils import str_to_bool
+from container_service_extension.vcdbroker import get_all_clusters
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
