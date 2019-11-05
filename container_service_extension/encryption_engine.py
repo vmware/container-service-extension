@@ -43,7 +43,7 @@ def decrypt_file(input_file, passwd, output_file):
     """
     out_file = None
     try:
-        decrypted_data = decrypt_file_in_memory(input_file, passwd)
+        decrypted_data = get_decrypted_file_contents(input_file, passwd)
         out_file = open(output_file, 'wb') \
             if output_file else sys.stdout.buffer
         out_file.write(decrypted_data)
@@ -52,7 +52,7 @@ def decrypt_file(input_file, passwd, output_file):
             out_file.close()
 
 
-def decrypt_file_in_memory(input_file, passwd):
+def get_decrypted_file_contents(input_file, passwd):
     """Decrypt the given input file.
 
     Decryption uses the given password to derive encryption key.
