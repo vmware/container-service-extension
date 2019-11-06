@@ -939,7 +939,6 @@ class VcdBroker(AbstractBroker):
                       f"--dry-run --ignore-daemonsets --timeout=60s\n" \
                       f"kubectl drain {node_name} " \
                       f"--ignore-daemonsets --timeout=60s\n"
-        # imo caller should handle exceptions
         run_script_in_master_vm(self.tenant_client, vapp_href, script)
 
         LOGGER.debug(f"Drained nodes {node_names} "
