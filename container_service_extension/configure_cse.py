@@ -170,7 +170,8 @@ def check_cse_installation(config, msg_update_callback=None):
 
 
 def install_cse(config_file_name, skip_template_creation, force_update,
-                ssh_key, retain_temp_vapp, skip_config_decryption=False,
+                ssh_key, retain_temp_vapp, pks_config_file=None,
+                skip_config_decryption=False,
                 decryption_password=None, msg_update_callback=None):
     """Handle logistics for CSE installation.
 
@@ -184,6 +185,7 @@ def install_cse(config_file_name, skip_template_creation, force_update,
     :param str ssh_key: public ssh key to place into template vApp(s).
     :param bool retain_temp_vapp: if True, temporary vApp will not destroyed,
         so the user can ssh into and debug the vm.
+    :param str pks_config_file: pks config file name.
     :param bool skip_config_decryption: do not decrypt the config file.
     :param str decryption_password: password to decrypt the config file.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
@@ -194,7 +196,8 @@ def install_cse(config_file_name, skip_template_creation, force_update,
     configure_install_logger()
 
     config = get_validated_config(
-        config_file_name, skip_config_decryption=skip_config_decryption,
+        config_file_name, pks_config_file=pks_config_file,
+        skip_config_decryption=skip_config_decryption,
         decryption_password=decryption_password,
         msg_update_callback=msg_update_callback)
 

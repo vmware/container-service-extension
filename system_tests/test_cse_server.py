@@ -127,7 +127,7 @@ def test_0010_cse_sample():
         testutils.format_command_info('cse', cmd, result.exit_code,
                                       result.output)
 
-    cmd = f'sample --pks-output {output_filepath}'
+    cmd = f'sample --pks-config --output {output_filepath}'
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
