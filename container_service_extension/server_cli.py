@@ -8,6 +8,7 @@ import sys
 import time
 
 import click
+import cryptography
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -26,6 +27,10 @@ from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.configure_cse import install_cse
 from container_service_extension.configure_cse import install_template
+from container_service_extension.encryption_engine import decrypt_file
+from container_service_extension.encryption_engine import encrypt_file
+from container_service_extension.encryption_engine import \
+    get_decrypted_file_contents
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.local_template_manager import \
     get_all_k8s_local_template_definition
@@ -39,6 +44,7 @@ from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.service import Service
 from container_service_extension.utils import check_python_version
 from container_service_extension.utils import ConsoleMessagePrinter
+from container_service_extension.utils import prompt_text
 from container_service_extension.utils import str_to_bool
 
 
@@ -47,6 +53,8 @@ DISPLAY_ALL = "all"
 DISPLAY_DIFF = "diff"
 DISPLAY_LOCAL = "local"
 DISPLAY_REMOTE = "remote"
+CONFIG_DECRYPTION_ERROR_MSG = \
+    "CSE config file decryption failed: invalid decryption password"
 
 
 @click.group(context_settings=CONTEXT_SETTINGS, invoke_without_command=True)
@@ -56,6 +64,9 @@ def cli(ctx):
 
 \b
     Examples
+\b
+    By default, following commands expect an encrypted CSE configuration file.
+    To accept a plain-text configuration file, use --skip-config-decryption.
         cse version
             Display CSE version.
 \b
@@ -106,12 +117,34 @@ def cli(ctx):
             template 'photon-v2' exists.)
 \b
         cse run
-            Run CSE Server using data from 'config.yaml', but first validate
-            that CSE was installed according to 'config.yaml'.
+            Run CSE Server using data from encrypted 'config.yaml',
+            but first validate that CSE was installed according to
+            'config.yaml'. This will prompt for password for decrypting
+            the 'config.yaml'.
 \b
-        cse run --config myconfig.yaml --skip-check
-            Run CSE Server using data from 'myconfig.yaml' without first
-            validating that CSE was installed according to 'myconfig.yaml'.
+        cse run --password xxxx
+            Run CSE Server using data from encrypted 'config.yaml'. Decryption
+            of the config happens using password 'xxxx'. First validate that
+            CSE was installed according to 'config.yaml'.
+\b
+        cse run --config myconfig.yaml --skip-check --password xxxx
+            Run CSE Server using data from encrypted 'myconfig.yaml'
+            without first validating that CSE was installed according
+            to 'myconfig.yaml'. Decryption of the config happens using
+            password 'xxxx'
+\b
+        cse run --config myconfig.yaml --skip-check --skip-config-decryption
+            Run CSE Server using data from plain text 'myconfig.yaml'
+            without first validating that CSE was installed according
+            to 'myconfig.yaml'. Skip decryption of the config file.
+\b
+        cse encrypt --password xyz --output [encrypted-file-path] config.yaml
+            Encrypt the config.yaml in plain-text and save it in the given
+            output file. If no output file provided, defaults to stdout.
+\b
+        cse decrypt --password xyz --output [decrypted-file-path] cipher.txt
+            Decrypt the config file cipher.txt and save it in the given
+            output file. If no output file provided, defaults to stdout.
 \b
     Environment Variables
         CSE_CONFIG
@@ -133,9 +166,19 @@ def template(ctx):
 
 \b
 Examples
-    cse template list -c config.yaml
+    By default, following commands expect an encrypted CSE configuration file.
+    To accept a plain-text configuration file, use --skip-config-decryption.
+
+    cse template list -c config.yaml --password xyzss
         Display all templates, including that are currently in the local
         catalog, and the ones that are defined in remote template cookbook.
+        config.yaml will be decrypted using the given password 'xyzss'. If no
+        password provided in the option, user will be prompted for password.
+\b
+    cse template list -c config.yaml --skip-config-decryption
+        Display all templates, including that are currently in the local
+        catalog, and the ones that are defined in remote template cookbook.
+        If config.yaml is in plain-text, use --skil-config-decryption.
 \b
     cse template list --display local -c config.yaml
         Display templates that are currently in the local catalog.
@@ -147,9 +190,14 @@ Examples
         Display only templates that are defined in remote template cookbook but
         not present in the local catalog.
 \b
-    cse template install -c config.yaml
+    cse template install -c config.yaml --skip-config-decryption
         Install all templates defined in remote template cookbook that are
-        missing from the local catalog.
+        missing from the local catalog. Skip decryption of config file
+\b
+    cse template install -c config.yaml --password abcde
+        Install all templates defined in remote template cookbook that are
+        missing from the local catalog. Before that, Decrypt config.yaml using
+        password 'abcde'
 \b
     cse template install [template name] [template revision] -c config.yaml
         Install a particular template at a given revision defined in remote
@@ -217,13 +265,28 @@ def sample(ctx, output, pks_output):
     default='config.yaml',
     help='Filepath of CSE config file')
 @click.option(
+    '-s',
+    '--skip-config-decryption',
+    is_flag=True,
+    help='Skip decryption of CSE config file')
+@click.option(
+    '-p',
+    '--password',
+    'password',
+    default=None,
+    metavar='PASSWORD_FOR_DECRYPTION',
+    help='password to use for decrypting config file')
+@click.option(
     '-i',
     '--check-install',
     'check_install',
     is_flag=True,
     help='Checks that CSE is installed on vCD according to the config file')
-def check(ctx, config, check_install):
+def check(ctx, config, skip_config_decryption, password, check_install):
     """Validate CSE config file."""
+    if not skip_config_decryption and password is None:
+        password = prompt_text('Password for config file decryption',
+                               color='green', hide_input=True)
     try:
         check_python_version(ConsoleMessagePrinter())
     except Exception as err:
@@ -233,7 +296,9 @@ def check(ctx, config, check_install):
     config_dict = None
     try:
         config_dict = get_validated_config(
-            config, msg_update_callback=ConsoleMessagePrinter())
+            config, skip_config_decryption=skip_config_decryption,
+            decryption_password=password,
+            msg_update_callback=ConsoleMessagePrinter())
     except (NotAcceptableException, VcdException, ValueError,
             KeyError, TypeError) as err:
         click.secho(str(err), fg='red')
@@ -242,6 +307,8 @@ def check(ctx, config, check_install):
         click.secho("check config file amqp section.", fg='red')
     except requests.exceptions.ConnectionError as err:
         click.secho(f"Cannot connect to {err.request.url}.", fg='red')
+    except cryptography.fernet.InvalidToken:
+        click.secho(CONFIG_DECRYPTION_ERROR_MSG, fg='red')
     except vim.fault.InvalidLogin:
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
@@ -253,6 +320,72 @@ def check(ctx, config, check_install):
         except Exception as err:
             click.secho(f"Error : {err}")
             click.secho("CSE installation is invalid", fg='red')
+
+
+@cli.command(short_help='Decrypt the given input file')
+@click.pass_context
+@click.argument('input_file', metavar='INPUT_FILE',
+                type=click.Path(exists=True))
+@click.option(
+    '-o',
+    '--output',
+    'output_file',
+    required=False,
+    default=None,
+    metavar='OUTPUT_FILE',
+    help='Filepath to write decrypted file to')
+@click.option(
+    '-p',
+    '--password',
+    'password',
+    default=None,
+    metavar='PASSWORD_FOR_DECRYPTION',
+    help="password to use for decrypting the config file")
+def decrypt(ctx, input_file, password, output_file):
+    """Decrypt CSE config file."""
+    if password is None:
+        password = prompt_text('Password', hide_input=True, color='green')
+    try:
+        check_python_version(ConsoleMessagePrinter())
+        decrypt_file(input_file, password, output_file)
+    except cryptography.fernet.InvalidToken:
+        click.secho("Decryption failed: invalid password", fg='red')
+    except Exception as err:
+        click.secho(str(err), fg='red')
+        sys.exit(1)
+
+
+@cli.command(short_help='Encrypt the given input file')
+@click.pass_context
+@click.argument('input_file', metavar='INPUT_FILE',
+                type=click.Path(exists=True))
+@click.option(
+    '-o',
+    '--output',
+    'output_file',
+    required=False,
+    default=None,
+    metavar='OUTPUT_FILE',
+    help='Filepath to write encrypted file to')
+@click.option(
+    '-p',
+    '--password',
+    'password',
+    default=None,
+    metavar='PASSWORD_FOR_ENCRYPTION',
+    help="password to use for encrypting the config file")
+def encrypt(ctx, input_file, password, output_file):
+    """Encrypt CSE config file."""
+    if password is None:
+        password = prompt_text('Password', hide_input=True, color='green')
+    try:
+        check_python_version(ConsoleMessagePrinter())
+        encrypt_file(input_file, password, output_file)
+    except cryptography.fernet.InvalidToken:
+        click.secho("Encryption failed: invalid password", fg='red')
+    except Exception as err:
+        click.secho(str(err), fg='red')
+        sys.exit(1)
 
 
 @cli.command(short_help='Install CSE on vCD')
@@ -268,6 +401,18 @@ def check(ctx, config, check_install):
     help='Filepath of CSE config file')
 @click.option(
     '-s',
+    '--skip-config-decryption',
+    is_flag=True,
+    help='Skip decryption of CSE config file')
+@click.option(
+    '-p',
+    '--password',
+    'password',
+    default=None,
+    metavar='PASSWORD_FOR_DECRYPTION',
+    help='password to use for decrypting config file')
+@click.option(
+    '-t',
     '--skip-template-creation',
     'skip_template_creation',
     is_flag=True,
@@ -292,9 +437,13 @@ def check(ctx, config, check_install):
     default=None,
     type=click.File('r'),
     help='Filepath of SSH public key to add to vApp template')
-def install(ctx, config, skip_template_creation, force_update,
+def install(ctx, config, skip_config_decryption, password,
+            skip_template_creation, force_update,
             retain_temp_vapp, ssh_key_file):
     """Install CSE on vCloud Director."""
+    if not skip_config_decryption and password is None:
+        password = prompt_text('Password for config file decryption',
+                               color='green', hide_input=True)
     try:
         check_python_version(ConsoleMessagePrinter())
     except Exception as err:
@@ -316,6 +465,8 @@ def install(ctx, config, skip_template_creation, force_update,
                     skip_template_creation=skip_template_creation,
                     force_update=force_update, ssh_key=ssh_key,
                     retain_temp_vapp=retain_temp_vapp,
+                    skip_config_decryption=skip_config_decryption,
+                    decryption_password=password,
                     msg_update_callback=ConsoleMessagePrinter())
     except (EntityNotFoundException, NotAcceptableException, VcdException,
             ValueError, KeyError, TypeError) as err:
@@ -328,6 +479,8 @@ def install(ctx, config, skip_template_creation, force_update,
     except vim.fault.InvalidLogin:
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
+    except cryptography.fernet.InvalidToken:
+        click.secho(CONFIG_DECRYPTION_ERROR_MSG, fg='red')
 
 
 @cli.command(short_help='Run CSE service')
@@ -342,12 +495,26 @@ def install(ctx, config, skip_template_creation, force_update,
     default='config.yaml',
     help='Filepath of CSE config file')
 @click.option(
-    '-s',
     '--skip-check',
     is_flag=True,
     help='Skip CSE installation checks')
-def run(ctx, config, skip_check):
+@click.option(
+    '-s',
+    '--skip-config-decryption',
+    is_flag=True,
+    help='Skip decryption of CSE config file')
+@click.option(
+    '-p',
+    '--password',
+    'password',
+    default=None,
+    metavar='PASSWORD_FOR_DECRYPTION',
+    help='password to use for decrypting config file')
+def run(ctx, config, skip_check, skip_config_decryption, password):
     """Run CSE service."""
+    if not skip_config_decryption and password is None:
+        password = prompt_text('Password for config file decryption',
+                               color='green', hide_input=True)
     try:
         check_python_version(ConsoleMessagePrinter())
     except Exception as err:
@@ -355,7 +522,9 @@ def run(ctx, config, skip_check):
         sys.exit(1)
 
     try:
-        service = Service(config, should_check_config=not skip_check)
+        service = Service(config, should_check_config=not skip_check,
+                          skip_config_decryption=skip_config_decryption,
+                          decryption_password=password)
         service.run(msg_update_callback=ConsoleMessagePrinter())
     except (NotAcceptableException, VcdException, ValueError, KeyError,
             TypeError) as err:
@@ -368,6 +537,8 @@ def run(ctx, config, skip_check):
     except vim.fault.InvalidLogin:
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
+    except cryptography.fernet.InvalidToken:
+        click.secho(CONFIG_DECRYPTION_ERROR_MSG, fg='red')
     except Exception as err:
         click.secho(str(err), fg='red')
         click.secho("CSE Server failure. Please check the logs.", fg='red')
@@ -386,9 +557,7 @@ def run(ctx, config, skip_check):
     default='config.yaml',
     help='Filepath of CSE config file')
 @click.option(
-    '-p',
-    '--password',
-    'password',
+    '--admin-password',
     default=None,
     metavar='ADMIN_PASSWORD',
     help="New root password to set on cluster vms. If left empty password will be auto-generated") # noqa: E501
@@ -412,8 +581,26 @@ def run(ctx, config, skip_check):
     'skip_wait_for_gc',
     is_flag=True,
     help='Skip waiting for guest customization to finish on vms')
-def convert_cluster(ctx, config_file_name, cluster_name, password, org_name,
-                    vdc_name, skip_wait_for_gc):
+@click.option(
+    '-s',
+    '--skip-config-decryption',
+    is_flag=True,
+    help='Skip decryption of CSE config file')
+@click.option(
+    '-p',
+    '--password',
+    'decryption_password',
+    default=None,
+    metavar='PASSWORD_FOR_DECRYPTION',
+    help='password to use for decrypting config file')
+def convert_cluster(ctx, config_file_name, skip_config_decryption,
+                    decryption_password, cluster_name, admin_password,
+                    org_name, vdc_name, skip_wait_for_gc):
+    if not skip_config_decryption and decryption_password is None:
+        decryption_password = prompt_text(
+            'Password for config file decryption', color='green',
+            hide_input=True)
+
     try:
         check_python_version()
     except Exception as err:
@@ -424,7 +611,9 @@ def convert_cluster(ctx, config_file_name, cluster_name, password, org_name,
     try:
         console_message_printer = ConsoleMessagePrinter()
         config = get_validated_config(
-            config_file_name, msg_update_callback=console_message_printer)
+            config_file_name, skip_config_decryption=skip_config_decryption,
+            decryption_password=decryption_password,
+            msg_update_callback=console_message_printer)
 
         log_filename = None
         log_wire = str_to_bool(config['service'].get('log_wire'))
@@ -525,8 +714,8 @@ def convert_cluster(ctx, config_file_name, cluster_name, password, org_name,
                 task = vm.update_guest_customization_section(
                     enabled=True,
                     admin_password_enabled=True,
-                    admin_password_auto=not password,
-                    admin_password=password,
+                    admin_password_auto=not admin_password,
+                    admin_password=admin_password,
                 )
                 client.get_task_monitor().wait_for_success(task)
                 console_message_printer.general("Successfully updated vm .")
@@ -557,7 +746,8 @@ def convert_cluster(ctx, config_file_name, cluster_name, password, org_name,
                 time.sleep(5)
             else:
                 break
-
+    except cryptography.fernet.InvalidToken:
+        click.secho(CONFIG_DECRYPTION_ERROR_MSG, fg='red')
     except Exception as err:
         click.secho(str(err), fg='red')
     finally:
@@ -579,6 +769,18 @@ def convert_cluster(ctx, config_file_name, cluster_name, password, org_name,
     default='config.yaml',
     help='Filepath of CSE config file')
 @click.option(
+    '-s',
+    '--skip-config-decryption',
+    is_flag=True,
+    help='Skip decryption of CSE config file')
+@click.option(
+    '-p',
+    '--password',
+    'password',
+    default=None,
+    metavar='PASSWORD_FOR_DECRYPTION',
+    help='password to use for decrypting config file')
+@click.option(
     '-d',
     '--display',
     'display_option',
@@ -586,9 +788,14 @@ def convert_cluster(ctx, config_file_name, cluster_name, password, org_name,
         [DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL, DISPLAY_REMOTE]),
     default=DISPLAY_ALL,
     help='Choose templates to display.')
-def list_template(ctx, config_file_name, display_option):
+def list_template(ctx, config_file_name, skip_config_decryption, password,
+                  display_option):
     """List CSE k8s templates."""
+    if not skip_config_decryption and password is None:
+        password = prompt_text('Password for config file decryption',
+                               color='green', hide_input=True)
     try:
+        console_message_printer = ConsoleMessagePrinter()
         try:
             check_python_version()
         except Exception as err:
@@ -599,8 +806,13 @@ def list_template(ctx, config_file_name, display_option):
         # installation is not being perfomred. If values in config file are
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
-        with open(config_file_name) as config_file:
-            config_dict = yaml.safe_load(config_file) or {}
+        if skip_config_decryption:
+            with open(config_file_name) as config_file:
+                config_dict = yaml.safe_load(config_file) or {}
+        else:
+            console_message_printer.info(f"Decrypting '{config_file_name}'")
+            config_dict = yaml.safe_load(
+                get_decrypted_file_contents(config_file_name, password)) or {}
 
         local_templates = []
         if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL):
@@ -713,6 +925,8 @@ def list_template(ctx, config_file_name, display_option):
             result = remote_templates
 
         stdout(result, ctx, sort_headers=False)
+    except cryptography.fernet.InvalidToken:
+        click.secho(CONFIG_DECRYPTION_ERROR_MSG, fg='red')
     except Exception as err:
         click.secho(str(err), fg='red')
 
@@ -730,6 +944,18 @@ def list_template(ctx, config_file_name, display_option):
     envvar='CSE_CONFIG',
     default='config.yaml',
     help='Filepath of CSE config file')
+@click.option(
+    '-s',
+    '--skip-config-decryption',
+    is_flag=True,
+    help='Skip decryption of CSE config file')
+@click.option(
+    '-p',
+    '--password',
+    'password',
+    default=None,
+    metavar='PASSWORD_FOR_DECRYPTION',
+    help='password to use for decrypting config file')
 @click.option(
     '-f',
     '--force',
@@ -752,9 +978,13 @@ def list_template(ctx, config_file_name, display_option):
     type=click.File('r'),
     help='Filepath of SSH public key to add to vApp template')
 def install_cse_template(ctx, template_name, template_revision,
-                         config_file_name, force_create, retain_temp_vapp,
+                         config_file_name, skip_config_decryption, password,
+                         force_create, retain_temp_vapp,
                          ssh_key_file):
     """Create CSE k8s templates."""
+    if not skip_config_decryption and password is None:
+        password = prompt_text('Password for config file decryption',
+                               color='green', hide_input=True)
     try:
         check_python_version(ConsoleMessagePrinter())
     except Exception as err:
@@ -779,6 +1009,8 @@ def install_cse_template(ctx, template_name, template_revision,
             force_create=force_create,
             retain_temp_vapp=retain_temp_vapp,
             ssh_key=ssh_key,
+            skip_config_decryption=skip_config_decryption,
+            decryption_password=password,
             msg_update_callback=ConsoleMessagePrinter())
     except (EntityNotFoundException, NotAcceptableException, VcdException,
             ValueError, KeyError, TypeError) as err:
@@ -791,6 +1023,8 @@ def install_cse_template(ctx, template_name, template_revision,
     except vim.fault.InvalidLogin:
         click.secho("vCenter login failed (check config file vCenter "
                     "username/password).", fg='red')
+    except cryptography.fernet.InvalidToken:
+        click.secho(CONFIG_DECRYPTION_ERROR_MSG, fg='red')
 
 
 if __name__ == '__main__':

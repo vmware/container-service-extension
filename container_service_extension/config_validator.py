@@ -13,6 +13,8 @@ from requests.exceptions import HTTPError
 from vsphere_guest_run.vsphere import VSphere
 import yaml
 
+from container_service_extension.encryption_engine import \
+    get_decrypted_file_contents
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.nsxt.dfw_manager import DFWManager
 from container_service_extension.nsxt.ipset_manager import IPSetManager
@@ -38,7 +40,10 @@ from container_service_extension.utils import check_keys_and_value_types
 from container_service_extension.utils import get_duplicate_items_in_list
 
 
-def get_validated_config(config_file_name, msg_update_callback=None):
+def get_validated_config(config_file_name,
+                         skip_config_decryption=False,
+                         decryption_password=None,
+                         msg_update_callback=None):
     """Get the config file as a dictionary and check for validity.
 
     Ensures that all properties exist and all values are the expected type.
@@ -47,6 +52,8 @@ def get_validated_config(config_file_name, msg_update_callback=None):
     config file.
 
     :param str config_file_name: path to config file.
+    :param bool skip_config_decryption: do not decrypt the config file.
+    :param str decryption_password: password to decrypt the config file.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
         that writes messages onto console.
 
@@ -70,8 +77,17 @@ def get_validated_config(config_file_name, msg_update_callback=None):
     """
     check_file_permissions(config_file_name,
                            msg_update_callback=msg_update_callback)
-    with open(config_file_name) as config_file:
-        config = yaml.safe_load(config_file) or {}
+    if skip_config_decryption:
+        with open(config_file_name) as config_file:
+            config = yaml.safe_load(config_file) or {}
+    else:
+        if msg_update_callback:
+            msg_update_callback.info(
+                f"Decrypting '{config_file_name}'")
+        config = yaml.safe_load(
+            get_decrypted_file_contents(config_file_name,
+                                        decryption_password)) or {}
+
     pks_config_location = config.get('pks_config')
     if msg_update_callback:
         msg_update_callback.info(
@@ -99,8 +115,16 @@ def get_validated_config(config_file_name, msg_update_callback=None):
     if isinstance(pks_config_location, str) and pks_config_location:
         check_file_permissions(pks_config_location,
                                msg_update_callback=msg_update_callback)
-        with open(pks_config_location) as f:
-            pks_config = yaml.safe_load(f) or {}
+        if skip_config_decryption:
+            with open(pks_config_location) as f:
+                pks_config = yaml.safe_load(f) or {}
+        else:
+            if msg_update_callback:
+                msg_update_callback.info(
+                    f"Decrypting '{pks_config_location}'")
+            pks_config = yaml.safe_load(
+                get_decrypted_file_contents(pks_config_location,
+                                            decryption_password)) or {}
         if msg_update_callback:
             msg_update_callback.info(
                 f"Validating PKS config file '{pks_config_location}'")

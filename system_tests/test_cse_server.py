@@ -2,8 +2,10 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import filecmp
 import os
 import subprocess
+import tempfile
 
 import pytest
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -22,22 +24,22 @@ import container_service_extension.system_test_framework.utils as testutils
 CSE server tests to test validity and functionality of `cse` CLI commands.
 
 Tests these following commands:
-$ cse check --config cse_test_config.yaml (missing/invalid keys)
-$ cse check --config cse_test_config.yaml (incorrect value types)
-$ cse check --config cse_test_config.yaml -i (cse not installed yet)
+$ cse check --config cse_test_config.yaml --skip-config-decryption (missing/invalid keys)
+$ cse check --config cse_test_config.yaml --skip-config-decryption (incorrect value types)
+$ cse check --config cse_test_config.yaml -i --skip-config-decryption (cse not installed yet)
 
-$ cse install --config cse_test_config.yaml --template photon-v2
+$ cse install --config cse_test_config.yaml --template photon-v2 --skip-config-decryption
     --ssh-key ~/.ssh/id_rsa.pub --no-capture
 
-$ cse install --config cse_test_config.yaml --template photon-v2
+$ cse install --config cse_test_config.yaml --template photon-v2 --skip-config-decryption 
 $ cse install --config cse_test_config.yaml --ssh-key ~/.ssh/id_rsa.pub
-    --update --no-capture
-$ cse install --config cse_test_config.yaml
+    --update --no-capture --skip-config-decryption 
+$ cse install --config cse_test_config.yaml --skip-config-decryption 
 
-$ cse check --config cse_test_config.yaml -i
+$ cse check --config cse_test_config.yaml -i --skip-config-decryption 
 
-$ cse run --config cse_test_config.yaml
-$ cse run --config cse_test_config.yaml --skip-check
+$ cse run --config cse_test_config.yaml --skip-config-decryption 
+$ cse run --config cse_test_config.yaml --skip-check --skip-config-decryption
 
 NOTE:
 - Edit 'base_config.yaml' for your own vCD instance.
@@ -150,13 +152,13 @@ def test_0030_cse_check(config):
     Test that `cse check` command along with every option is an actual command.
     Does not test for validity of config files or CSE installations.
     """
-    cmd = f"check -c {env.ACTIVE_CONFIG_FILEPATH}"
+    cmd = f"check -c {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
                                       result.output)
 
-    cmd = f"check -c {env.ACTIVE_CONFIG_FILEPATH} -i"
+    cmd = f"check -c {env.ACTIVE_CONFIG_FILEPATH} -i --skip-config-decryption"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
@@ -179,7 +181,8 @@ def test_0040_config_missing_keys(config):
     for config in configs:
         testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
         try:
-            get_validated_config(env.ACTIVE_CONFIG_FILEPATH)
+            get_validated_config(env.ACTIVE_CONFIG_FILEPATH,
+                                 skip_config_decryption=True)
             assert False, f"{env.ACTIVE_CONFIG_FILEPATH} passed validation " \
                           f"when it should not have"
         except KeyError:
@@ -215,7 +218,8 @@ def test_0050_config_invalid_value_types(config):
     for config in configs:
         testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
         try:
-            get_validated_config(env.ACTIVE_CONFIG_FILEPATH)
+            get_validated_config(env.ACTIVE_CONFIG_FILEPATH,
+                                 skip_config_decryption=True)
             assert False, f"{env.ACTIVE_CONFIG_FILEPATH} passed validation " \
                           f"when it should not have"
         except TypeError:
@@ -225,7 +229,8 @@ def test_0050_config_invalid_value_types(config):
 def test_0060_config_valid(config):
     """Test that configs with valid keys and value types pass validation."""
     try:
-        get_validated_config(env.ACTIVE_CONFIG_FILEPATH)
+        get_validated_config(env.ACTIVE_CONFIG_FILEPATH,
+                             skip_config_decryption=True)
     except (KeyError, TypeError, ValueError):
         assert False, f"{env.ACTIVE_CONFIG_FILEPATH} did not pass validation" \
                       f" when it should have"
@@ -244,7 +249,8 @@ def test_0080_install_skip_template_creation(config,
                                              unregister_cse_before_test):
     """Test install.
 
-    Installation options: '--config', '--ssh-key', '--skip-create-templates'
+    Installation options: '--config', '--ssh-key', '--skip-create-templates',
+    '--skip-config-decryption'
 
     Tests that installation:
     - registers CSE, without installing the templates
@@ -256,7 +262,7 @@ def test_0080_install_skip_template_creation(config,
         temp vapps do not exist, k8s templates do not exist.
     """
     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-          f"{env.SSH_KEY_FILEPATH} --skip-template-creation"
+          f"{env.SSH_KEY_FILEPATH} --skip-template-creation --skip-config-decryption"  # noqa: E501
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
@@ -288,7 +294,7 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
     """Test install.
 
     Installation options: '--config', '--template', '--ssh-key',
-        '--retain-temp-vapp'.
+        '--retain-temp-vapp', '--skip-config-decryption'.
 
     Tests that installation:
     - downloads/uploads ova file,
@@ -304,7 +310,7 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
         temp vapps exist, k8s templates exist.
     """
     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-          f"{env.SSH_KEY_FILEPATH} --retain-temp-vapp"
+          f"{env.SSH_KEY_FILEPATH} --retain-temp-vapp --skip-config-decryption"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(),
                                    catch_exceptions=False)
     assert result.exit_code == 0,\
@@ -339,21 +345,21 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
 
 
 def test_0100_install_force_update(config, unregister_cse_before_test):
-    """Tests installation option: '--update'.
+    """Tests installation option: '--force-update'.
 
     Tests that installation:
     - creates all templates correctly,
     - customizes temp vapps correctly.
 
     command: cse install --config cse_test_config.yaml
-        --ssh-key ~/.ssh/id_rsa.pub --update
+        --ssh-key ~/.ssh/id_rsa.pub --force-update --skip-config-decryption
     required files: cse_test_config.yaml, ~/.ssh/id_rsa.pub,
         ubuntu/photon init/cust scripts
     expected: cse registered, source ovas exist, k8s templates exist and
         temp vapps don't exist.
     """
     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-          f"{env.SSH_KEY_FILEPATH} --force-update"
+          f"{env.SSH_KEY_FILEPATH} --force-update --skip-config-decryption"
     result = env.CLI_RUNNER.invoke(
         cli, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
@@ -368,7 +374,7 @@ def test_0100_install_force_update(config, unregister_cse_before_test):
         # check that source ova file exists in catalog
         assert env.catalog_item_exists(
             template_config['source_ova_name']), \
-            'Source ova file does not existswhen it should.'
+            'Source ova file does not exists when it should.'
 
         # check that k8s templates exist
         catalog_item_name = get_revisioned_template_name(
@@ -404,11 +410,11 @@ def test_0120_cse_run(config):
 
     commands:
     $ cse run --config cse_test_config
-    $ cse run --config cse_test_config --skip-check
+    $ cse run --config cse_test_config --skip-check --skip-config-decryption
     """
     cmds = [
-        f"cse run -c {env.ACTIVE_CONFIG_FILEPATH}",
-        f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} -s"
+        f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption",
+        f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} --skip-check --skip-config-decryption"  # noqa: E501
     ]
 
     for cmd in cmds:
@@ -431,3 +437,24 @@ def test_0120_cse_run(config):
                         p.terminate()
             except OSError:
                 pass
+
+
+def test_0130_cse_encrypt_decrypt(config):
+    """Test `cse encrypt plain-config.yaml and cse decrypt encrypted-config`.
+
+    1. Execute `cse encrypt` on plain-config file and store the encrypted file.
+    2. Execute `cse decrypt` on the encrypted config file get decrypted file.
+    3. Compare plain-config file and decrypted config file and check result.
+    """
+    encrypted_file = tempfile.NamedTemporaryFile()
+    cmd = f"encrypt {env.ACTIVE_CONFIG_FILEPATH} -o {encrypted_file.name} -p vmware"  # noqa: E501
+    env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+
+    # Run `cse decrypt` on the encrypted config file from previous step
+    decrypted_file = tempfile.NamedTemporaryFile()
+    cmd = f"decrypt {encrypted_file.name} -o {decrypted_file.name} -p vmware"
+    env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+
+    # File comparison also include content comparison
+    assert filecmp.cmp(env.ACTIVE_CONFIG_FILEPATH, decrypted_file.name,
+                       shallow=False)

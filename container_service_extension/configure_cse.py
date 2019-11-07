@@ -170,7 +170,8 @@ def check_cse_installation(config, msg_update_callback=None):
 
 
 def install_cse(config_file_name, skip_template_creation, force_update,
-                ssh_key, retain_temp_vapp, msg_update_callback=None):
+                ssh_key, retain_temp_vapp, skip_config_decryption=False,
+                decryption_password=None, msg_update_callback=None):
     """Handle logistics for CSE installation.
 
     Handles decision making for configuring AMQP exchange/settings,
@@ -183,6 +184,8 @@ def install_cse(config_file_name, skip_template_creation, force_update,
     :param str ssh_key: public ssh key to place into template vApp(s).
     :param bool retain_temp_vapp: if True, temporary vApp will not destroyed,
         so the user can ssh into and debug the vm.
+    :param bool skip_config_decryption: do not decrypt the config file.
+    :param str decryption_password: password to decrypt the config file.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
         that writes messages onto console.
 
@@ -190,8 +193,11 @@ def install_cse(config_file_name, skip_template_creation, force_update,
     """
     configure_install_logger()
 
-    config = get_validated_config(config_file_name,
-                                  msg_update_callback=msg_update_callback)
+    config = get_validated_config(
+        config_file_name, skip_config_decryption=skip_config_decryption,
+        decryption_password=decryption_password,
+        msg_update_callback=msg_update_callback)
+
     populate_vsphere_list(config['vcs'])
 
     msg = f"Installing CSE on vCloud Director using config file " \
@@ -322,7 +328,8 @@ def install_cse(config_file_name, skip_template_creation, force_update,
 
 def install_template(template_name, template_revision, config_file_name,
                      force_create, retain_temp_vapp, ssh_key,
-                     msg_update_callback):
+                     skip_config_decryption=False, decryption_password=None,
+                     msg_update_callback=None):
     """Install a particular template in CSE.
 
     If template_name and revision are wild carded to *, all templates defined
@@ -336,13 +343,17 @@ def install_template(template_name, template_revision, config_file_name,
     :param str ssh_key: public ssh key to place into template vApp(s).
     :param bool retain_temp_vapp: if True, temporary vApp will not destroyed,
         so the user can ssh into and debug the vm.
+    :param bool skip_config_decryption: do not decrypt the config file.
+    :param str decryption_password: password to decrypt the config file.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
         that writes messages onto console.
     """
     configure_install_logger()
 
-    config = get_validated_config(config_file_name,
-                                  msg_update_callback=msg_update_callback)
+    config = get_validated_config(
+        config_file_name, skip_config_decryption=skip_config_decryption,
+        decryption_password=decryption_password,
+        msg_update_callback=msg_update_callback)
     populate_vsphere_list(config['vcs'])
 
     msg = f"Installing template '{template_name}' at revision " \

@@ -80,10 +80,13 @@ class ServerState(Enum):
 
 
 class Service(object, metaclass=Singleton):
-    def __init__(self, config_file, should_check_config=True):
+    def __init__(self, config_file, should_check_config=True,
+                 skip_config_decryption=False, decryption_password=None):
         self.config_file = config_file
         self.config = None
         self.should_check_config = should_check_config
+        self.skip_config_decryption = skip_config_decryption
+        self.decryption_password = decryption_password
         self.consumers = []
         self.threads = []
         self.pks_cache = None
@@ -190,7 +193,10 @@ class Service(object, metaclass=Singleton):
         configure_server_logger()
 
         self.config = get_validated_config(
-            self.config_file, msg_update_callback=msg_update_callback)
+            self.config_file,
+            skip_config_decryption=self.skip_config_decryption,
+            decryption_password=self.decryption_password,
+            msg_update_callback=msg_update_callback)
 
         populate_vsphere_list(self.config['vcs'])
 
