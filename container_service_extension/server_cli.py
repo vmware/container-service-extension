@@ -221,7 +221,7 @@ def version(ctx):
     stdout(ver_obj, ctx, ver_str)
 
 
-@cli.command('sample', short_help='Generate sample CSE config by default')
+@cli.command('sample', short_help='Generate sample CSE/PKS config')
 @click.pass_context
 @click.option(
     '-o',
@@ -248,8 +248,9 @@ def sample(ctx, output, pks_config):
                                        pks_config=pks_config))
 
 
-@cli.command(short_help="Checks that CSE config file is valid (Can also check "
-                        "that CSE is installed according to config file)")
+@cli.command(short_help="Checks that CSE/PKS config file is valid (Can also "
+                        "check that CSE/PKS"
+                        " is installed according to config file)")
 @click.pass_context
 @click.argument('config', metavar='CONFIG_FILE_NAME',
                 type=click.Path(exists=True))
@@ -263,7 +264,7 @@ def sample(ctx, output, pks_config):
     '-s',
     '--skip-config-decryption',
     is_flag=True,
-    help='Skip decryption of CSE config file')
+    help='Skip decryption of CSE/PKS config file')
 @click.option(
     '-p',
     '--password',
@@ -276,7 +277,8 @@ def sample(ctx, output, pks_config):
     '--check-install',
     'check_install',
     is_flag=True,
-    help='Checks that CSE is installed on vCD according to the config file')
+    help='Checks that CSE/PKS is installed on vCD according '
+         'to the config file')
 def check(ctx, config, pks_config, skip_config_decryption, password,
           check_install):
     """Validate CSE config file."""
@@ -403,7 +405,7 @@ def encrypt(ctx, input_file, password, output_file):
     '-s',
     '--skip-config-decryption',
     is_flag=True,
-    help='Skip decryption of CSE config file')
+    help='Skip decryption of CSE/PKS config file')
 @click.option(
     '-p',
     '--password',
@@ -502,7 +504,7 @@ def install(ctx, config, pks_config, skip_config_decryption, password,
     '-s',
     '--skip-config-decryption',
     is_flag=True,
-    help='Skip decryption of CSE config file')
+    help='Skip decryption of CSE/PKS config file')
 @click.option(
     '-p',
     '--password',
