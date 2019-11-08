@@ -84,7 +84,7 @@ def cse_server():
     - Stop CSE server
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
-    install_cmd = ['install', '--config', env.ACTIVE_CONFIG_FILEPATH,
+    install_cmd = ['install', env.ACTIVE_CONFIG_FILEPATH,
                    '--ssh-key', env.SSH_KEY_FILEPATH,
                    '--skip-config-decryption']
     env.setup_active_config()
@@ -96,7 +96,7 @@ def cse_server():
                                       result.output)
 
     # start cse server as subprocess
-    cmd = f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption"
+    cmd = f"cse run {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption"
     p = None
     if os.name == 'nt':
         p = subprocess.Popen(cmd, shell=True)
