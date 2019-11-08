@@ -95,10 +95,6 @@ broker:
 #    cpu: 2
 #    mem: 1024
 
-# This key should only be used if using Enterprise PKS with CSE.
-# Value should be a filepath to PKS config file.
-
-pks_config: null
 ```
 
 The config file has 5 mandatory sections (`amqp`, `vcd`, `vcs`, `service`,
@@ -195,27 +191,13 @@ Each rule comprises of the following attributes
 Please refer to [Restricting Kubernetes templates](/container-service-extension/TEMPLATE_MANAGEMENT.html#restrict_templates)
 for further details on compute policies.
 
-<a name="pksconfig"></a>
-### `pks_config` property
-
-Filling out this key for regular CSE set up is optional and should be left
-as is. Only for CSE set up enabled for [Enterprise PKS](/container-service-extension/ENT_PKS.html)
-container provider, this value needs to point to absolute path of valid Enterprise PKS config file.
-Please refer to [Enterprise PKS enablement](/container-service-extension/ENT_PKS.html) for more details.
-
 Enabling Enterprise PKS as a K8s provider changes the default behavior of CSE as described below.
-Presence of valid value for `pks_config` property gives an indication to CSE that
-Enterprise PKS is enabled (in addition to Native vCD) as a K8s provider in the system.
+#TODO
 
 - CSE begins to mandate any given `ovdc` to be enabled for either Native or Enterprise PKS as a backing K8s provider.
 Cloud Administrators can do so via `vcd cse ovdc enable` command. This step is mandatory for ovdc(s) with
-preexisting native K8s clusters as well i.e., if CSE is upgraded from 1.2.x to 2.0 and `pks_config`
-is set, then it becomes mandatory to enable those ovdc(s) with pre-existing native K8s clusters.
-- In other words, If `pks_config`  value is present and if an ovdc is not enabled for either of the supported
-K8s providers, users will not be able to do any further K8s deployments in that ovdc.
+preexisting native K8s clusters as well. #TODO
 
-In the absence of value for `pks_config` key, there will not be any change in CSE's default behavior i.e.,
-any ovdc is open for native K8s cluster deployments.
 
 #### Enterprise PKS Config file
 ```yaml
@@ -272,9 +254,9 @@ any ovdc is open for native K8s cluster deployments.
 
 pks_api_servers:
 - clusters:
-  - pks-s1-az-1
-  - pks-s1-az-2
-  - pks-s1-az-3
+  - vsphere-cluster-1
+  - vsphere-cluster-2
+  - vsphere-cluster-3
   cpi: cpi1
   datacenter: pks-s1-dc
   host: pks-api-server-1.pks.local
@@ -284,9 +266,9 @@ pks_api_servers:
   vc: vc1
   verify: true
 - clusters:
-  - pks-s2-az-1
-  - pks-s2-az-2
-  - pks-s2-az-3
+  - vsphere-cluster-4
+  - vsphere-cluster-5
+  - vsphere-cluster-6
   cpi: cpi2
   datacenter: pks-s2-dc
   host: pks-api-server-2.pks.local
@@ -314,10 +296,10 @@ pvdcs:
 - cluster: pks-s1-az-1
   name: pvdc1
   pks_api_server: pks-api-server-1
-- cluster: pks-s2-az-1
+- cluster: vsphere-cluster-1
   name: pvdc2
   pks_api_server: pks-api-server-2
-- cluster: pks-s1-az-2
+- cluster: vsphere-cluster-4
   name: pvdc3
   pks_api_server: pks-api-server-1
 
