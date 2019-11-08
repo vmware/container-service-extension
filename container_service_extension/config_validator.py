@@ -41,7 +41,7 @@ from container_service_extension.utils import get_duplicate_items_in_list
 
 
 def get_validated_config(config_file_name,
-                         pks_config_file=None,
+                         pks_config_filename=None,
                          skip_config_decryption=False,
                          decryption_password=None,
                          msg_update_callback=None):
@@ -53,7 +53,7 @@ def get_validated_config(config_file_name,
     config file.
 
     :param str config_file_name: path to config file.
-    :param str pks_config_file: path to PKS config file.
+    :param str pks_config_filename: path to PKS config file.
     :param bool skip_config_decryption: do not decrypt the config file.
     :param str decryption_password: password to decrypt the config file.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
@@ -113,27 +113,27 @@ def get_validated_config(config_file_name,
     if msg_update_callback:
         msg_update_callback.general(
             f"Config file '{config_file_name}' is valid")
-    if pks_config_file:
-        check_file_permissions(pks_config_file,
+    if pks_config_filename:
+        check_file_permissions(pks_config_filename,
                                msg_update_callback=msg_update_callback)
         if skip_config_decryption:
-            with open(pks_config_file) as f:
+            with open(pks_config_filename) as f:
                 pks_config = yaml.safe_load(f) or {}
         else:
             if msg_update_callback:
                 msg_update_callback.info(
-                    f"Decrypting '{pks_config_file}'")
+                    f"Decrypting '{pks_config_filename}'")
             pks_config = yaml.safe_load(
-                get_decrypted_file_contents(pks_config_file,
+                get_decrypted_file_contents(pks_config_filename,
                                             decryption_password)) or {}
         if msg_update_callback:
             msg_update_callback.info(
-                f"Validating PKS config file '{pks_config_file}'")
+                f"Validating PKS config file '{pks_config_filename}'")
         _validate_pks_config_structure(pks_config, msg_update_callback)
         _validate_pks_config_data_integrity(pks_config, msg_update_callback)
         if msg_update_callback:
             msg_update_callback.general(
-                f"PKS Config file '{pks_config_file}' is valid")
+                f"PKS Config file '{pks_config_filename}' is valid")
         config['pks_config'] = pks_config
     else:
         config['pks_config'] = None

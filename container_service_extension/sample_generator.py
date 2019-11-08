@@ -57,15 +57,6 @@ INSTRUCTIONS_FOR_PKS_CONFIG_FILE = "\
 # For more information, please refer to CSE documentation page:\n\
 # https://vmware.github.io/container-service-extension/INSTALLATION.html\n"
 
-NOTE_FOR_PKS_KEY_IN_CONFIG_FILE = "\
-# This key should only be used if using Enterprise PKS with CSE. \n\
-# Value should be a filepath to PKS config file.\n"
-
-PKS_CONFIG_NOTE = "\
-# [OPTIONAL] PKS CONFIGS\n\
-# These configs are used for Enterprise PKS functionality.\n\
-# If Enterprise PKS is not being used, do not use these configs.\n"
-
 SAMPLE_AMQP_CONFIG = {
     'amqp': {
         'host': 'amqp.vmware.com',
@@ -162,12 +153,8 @@ TEMPLATE_RULE_NOTE = """# [Optional] Template rule section
 #  action:
 #    cpu: 2
 #    mem: 1024
-""" # noqa: E501
+"""  # noqa: E501
 
-PKS_CONFIG_FILE_LOCATION_SECTION_KEY = 'pks_config'
-SAMPLE_PKS_CONFIG_FILE_LOCATION = {
-    PKS_CONFIG_FILE_LOCATION_SECTION_KEY: None
-}
 
 PKS_SERVERS_SECTION_KEY = 'pks_api_servers'
 SAMPLE_PKS_SERVERS_SECTION = {
@@ -179,7 +166,8 @@ SAMPLE_PKS_SERVERS_SECTION = {
             'uaac_port': '8443',
             # 'proxy': 'proxy1.pks.local:80',
             'datacenter': 'pks-s1-dc',
-            'clusters': ['pks-s1-az-1', 'pks-s1-az-2', 'pks-s1-az-3'],
+            'clusters': ['vsphere-cluster-1', 'vsphere-cluster-2',
+                         'vsphere-cluster-3'],
             'cpi': 'cpi1',
             'vc': 'vc1',
             'verify': True
@@ -190,7 +178,8 @@ SAMPLE_PKS_SERVERS_SECTION = {
             'uaac_port': '8443',
             # 'proxy': 'proxy2.pks.local:80',
             'datacenter': 'pks-s2-dc',
-            'clusters': ['pks-s2-az-1', 'pks-s2-az-2', 'pks-s2-az-3'],
+            'clusters': ['vsphere-cluster-4', 'vsphere-cluster-5',
+                         'vsphere-cluster-6'],
             'cpi': 'cpi2',
             'vc': 'vc2',
             'verify': True
@@ -239,15 +228,15 @@ SAMPLE_PKS_PVDCS_SECTION = {
         {
             'name': 'pvdc1',
             'pks_api_server': 'pks-api-server-1',
-            'cluster': 'pks-s1-az-1',
+            'cluster': 'vsphere-cluster-1',
         }, {
             'name': 'pvdc2',
             'pks_api_server': 'pks-api-server-2',
-            'cluster': 'pks-s2-az-1'
+            'cluster': 'vsphere-cluster-4'
         }, {
             'name': 'pvdc3',
             'pks_api_server': 'pks-api-server-1',
-            'cluster': 'pks-s1-az-2'
+            'cluster': 'vsphere-cluster-2'
         }
     ]
 }
@@ -282,21 +271,21 @@ SAMPLE_PKS_NSXT_SERVERS_SECTION = {
 }
 
 
-def generate_sample_config(output=None, pks_config=None):
+def generate_sample_config(output=None, generate_pks_config=False):
     """Generate sample configs for cse.
 
     If config file names are
     provided, configs are dumped into respective files.
 
     :param str output: name of the config file to dump the CSE configs.
-    :param bool pks_config: flag to indicate only sample PKS config file
-    is required.
+    :param bool generate_pks_config: Flag to generate sample of PKS specific
+    configuration file instead of sample regular CSE configuration file.
 
     :return: sample config
 
     :rtype: dict
     """
-    if not pks_config:
+    if not generate_pks_config:
         sample_config = yaml.safe_dump(SAMPLE_AMQP_CONFIG,
                                        default_flow_style=False) + '\n'
         sample_config += yaml.safe_dump(SAMPLE_VCD_CONFIG,
@@ -320,7 +309,9 @@ def generate_sample_config(output=None, pks_config=None):
             SAMPLE_PKS_PVDCS_SECTION, default_flow_style=False) + '\n'
         sample_config += yaml.safe_dump(
             SAMPLE_PKS_NSXT_SERVERS_SECTION, default_flow_style=False)
-        sample_config = f"{INSTRUCTIONS_FOR_PKS_CONFIG_FILE}\n{sample_config}"
+        if output:
+            sample_config = f"{INSTRUCTIONS_FOR_PKS_CONFIG_FILE}" \
+                f"\n{sample_config}"
 
     if output:
         with open(output, 'w') as f:

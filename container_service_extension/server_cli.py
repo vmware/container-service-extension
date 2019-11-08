@@ -91,7 +91,11 @@ def cli(ctx):
         cse install encrypted-config.yaml -p abcde
             Install CSE using data from 'encrypted-config.yaml' after running
             decryption on the config file using password 'abcde'
-
+\b
+        cse install encrypted-config.yaml --pks-config encrypted-pks-config.yaml -p abcde
+            Install CSE using data from 'encrypted-config.yaml' after running
+            decryption on both the encrypted-config.yaml and encrypted-pks-config.yaml
+            file using password 'abcde'.
 \b
         cse install config.yaml --template photon-v2 --skip-config-decryption
             Install CSE using data from 'config.yaml' but only create
@@ -128,6 +132,13 @@ def cli(ctx):
             'config.yaml'. This will prompt for password for decrypting
             the 'config.yaml'.
 \b
+        cse run config.yaml --pks-config pks-config.yaml -p abcde
+            Run CSE Server using data from encrypted 'config.yaml' and
+            encrypted pks-config.yaml, but first validate that CSE was
+            installed according to 'config.yaml' and PKS was installed
+            according to pks-config.yaml. Before validation, decryption will
+            be run on both of these configuration using password 'abcde'.
+\b
         cse run --password xxxx config.yaml
             Run CSE Server using data from encrypted 'config.yaml'. Decryption
             of the config happens using password 'xxxx'. First validate that
@@ -151,8 +162,16 @@ def cli(ctx):
         cse decrypt --password xyz --output [decrypted-file-path] cipher.txt
             Decrypt the config file cipher.txt and save it in the given
             output file. If no output file provided, defaults to stdout.
+\b
+    Environment Variables
+        CSE_CONFIG
+            If this environment variable is set, the commands will use the file
+            indicated in the variable as CSE config file. The CSE config file
+            provided by the user in the command line will have preference over
+            the environment variable. If both are omitted, it defaults to file
+            'config.yaml' in the current directory.
 
-    """
+    """  # noqa: E501
     if ctx.invoked_subcommand is None:
         click.secho(ctx.get_help())
         return
@@ -221,7 +240,7 @@ def version(ctx):
     stdout(ver_obj, ctx, ver_str)
 
 
-@cli.command('sample', short_help='Generate sample CSE config by default')
+@cli.command('sample', short_help='Generate sample CSE/PKS config')
 @click.pass_context
 @click.option(
     '-o',
@@ -245,11 +264,12 @@ def sample(ctx, output, pks_config):
         sys.exit(1)
 
     click.secho(generate_sample_config(output=output,
-                                       pks_config=pks_config))
+                                       generate_pks_config=pks_config))
 
 
-@cli.command(short_help="Checks that CSE config file is valid (Can also check "
-                        "that CSE is installed according to config file)")
+@cli.command(short_help="Checks that CSE/PKS config file is valid (Can also "
+                        "check that CSE/PKS"
+                        " is installed according to config file)")
 @click.pass_context
 @click.argument('config', metavar='CONFIG_FILE_NAME',
                 type=click.Path(exists=True))
@@ -263,7 +283,7 @@ def sample(ctx, output, pks_config):
     '-s',
     '--skip-config-decryption',
     is_flag=True,
-    help='Skip decryption of CSE config file')
+    help='Skip decryption of CSE/PKS config file')
 @click.option(
     '-p',
     '--password',
@@ -276,7 +296,8 @@ def sample(ctx, output, pks_config):
     '--check-install',
     'check_install',
     is_flag=True,
-    help='Checks that CSE is installed on vCD according to the config file')
+    help='Checks that CSE/PKS is installed on vCD according '
+         'to the config file')
 def check(ctx, config, pks_config, skip_config_decryption, password,
           check_install):
     """Validate CSE config file."""
@@ -292,7 +313,7 @@ def check(ctx, config, pks_config, skip_config_decryption, password,
     config_dict = None
     try:
         config_dict = get_validated_config(
-            config, pks_config_file=pks_config,
+            config, pks_config_filename=pks_config,
             skip_config_decryption=skip_config_decryption,
             decryption_password=password,
             msg_update_callback=ConsoleMessagePrinter())
@@ -403,7 +424,7 @@ def encrypt(ctx, input_file, password, output_file):
     '-s',
     '--skip-config-decryption',
     is_flag=True,
-    help='Skip decryption of CSE config file')
+    help='Skip decryption of CSE/PKS config file')
 @click.option(
     '-p',
     '--password',
@@ -462,7 +483,7 @@ def install(ctx, config, pks_config, skip_config_decryption, password,
 
     try:
         install_cse(config_file_name=config,
-                    pks_config_file=pks_config,
+                    pks_config_filename=pks_config,
                     skip_template_creation=skip_template_creation,
                     force_update=force_update, ssh_key=ssh_key,
                     retain_temp_vapp=retain_temp_vapp,
@@ -502,7 +523,7 @@ def install(ctx, config, pks_config, skip_config_decryption, password,
     '-s',
     '--skip-config-decryption',
     is_flag=True,
-    help='Skip decryption of CSE config file')
+    help='Skip decryption of CSE/PKS config file')
 @click.option(
     '-p',
     '--password',
