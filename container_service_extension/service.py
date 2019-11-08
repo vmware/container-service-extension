@@ -196,7 +196,7 @@ class Service(object, metaclass=Singleton):
 
         self.config = get_validated_config(
             self.config_file,
-            self.pks_config_file,
+            pks_config_filename=self.pks_config_file,
             skip_config_decryption=self.skip_config_decryption,
             decryption_password=self.decryption_password,
             msg_update_callback=msg_update_callback)
