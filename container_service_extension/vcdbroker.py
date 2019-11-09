@@ -844,10 +844,15 @@ class VcdBroker(AbstractBroker):
                 message=f"Draining {len(node_names_list)} node(s) "
                         f"from cluster {cluster_name}: {node_names_list}")
 
-            # if nodes fail to drain this will raise an exception
-            self._drain_nodes(cluster_name=cluster_name,
-                              vapp_href=vapp_href,
-                              node_names=node_names_list)
+            # if nodes fail to drain, continue with node deletion anyways
+            try:
+                self._drain_nodes(cluster_name=cluster_name,
+                                  vapp_href=vapp_href,
+                                  node_names=node_names_list)
+            except (NodeOperationError, ScriptExecutionError) as err:
+                LOGGER.warning(f"Failed to drain nodes: {node_names_list} in "
+                               f"cluster {cluster_name}. "
+                               f"Continuing node delete...\nError: {err}")
 
             self._update_task(
                 TaskStatus.RUNNING,
