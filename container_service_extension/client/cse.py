@@ -334,7 +334,7 @@ def cluster_delete(ctx, name, vdc, org):
 def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
                    storage_profile, ssh_key_file, template_name,
                    template_revision, enable_nfs, disable_rollback, org_name):
-    """Create a Kubernetes cluster."""
+    """Create a Kubernetes cluster (max name length is 25 characters)."""
     try:
         if (template_name and not template_revision) or \
                 (not template_name and template_revision):
