@@ -41,6 +41,7 @@ from container_service_extension.utils import get_duplicate_items_in_list
 
 
 def get_validated_config(config_file_name,
+                         pks_config_file_name=None,
                          skip_config_decryption=False,
                          decryption_password=None,
                          msg_update_callback=None):
@@ -52,6 +53,7 @@ def get_validated_config(config_file_name,
     config file.
 
     :param str config_file_name: path to config file.
+    :param str pks_config_file_name: path to PKS config file.
     :param bool skip_config_decryption: do not decrypt the config file.
     :param str decryption_password: password to decrypt the config file.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
@@ -88,7 +90,6 @@ def get_validated_config(config_file_name,
             get_decrypted_file_contents(config_file_name,
                                         decryption_password)) or {}
 
-    pks_config_location = config.get('pks_config')
     if msg_update_callback:
         msg_update_callback.info(
             f"Validating config file '{config_file_name}'")
@@ -112,27 +113,27 @@ def get_validated_config(config_file_name,
     if msg_update_callback:
         msg_update_callback.general(
             f"Config file '{config_file_name}' is valid")
-    if isinstance(pks_config_location, str) and pks_config_location:
-        check_file_permissions(pks_config_location,
+    if pks_config_file_name:
+        check_file_permissions(pks_config_file_name,
                                msg_update_callback=msg_update_callback)
         if skip_config_decryption:
-            with open(pks_config_location) as f:
+            with open(pks_config_file_name) as f:
                 pks_config = yaml.safe_load(f) or {}
         else:
             if msg_update_callback:
                 msg_update_callback.info(
-                    f"Decrypting '{pks_config_location}'")
+                    f"Decrypting '{pks_config_file_name}'")
             pks_config = yaml.safe_load(
-                get_decrypted_file_contents(pks_config_location,
+                get_decrypted_file_contents(pks_config_file_name,
                                             decryption_password)) or {}
         if msg_update_callback:
             msg_update_callback.info(
-                f"Validating PKS config file '{pks_config_location}'")
+                f"Validating PKS config file '{pks_config_file_name}'")
         _validate_pks_config_structure(pks_config, msg_update_callback)
         _validate_pks_config_data_integrity(pks_config, msg_update_callback)
         if msg_update_callback:
             msg_update_callback.general(
-                f"PKS Config file '{pks_config_location}' is valid")
+                f"PKS Config file '{pks_config_file_name}' is valid")
         config['pks_config'] = pks_config
     else:
         config['pks_config'] = None
