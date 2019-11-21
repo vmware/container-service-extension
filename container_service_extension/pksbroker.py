@@ -301,7 +301,7 @@ class PksBroker(AbstractBroker):
         # this needs to be refactored
         cluster_info = self._create_cluster(
             cluster_name=data[RequestKey.CLUSTER_NAME],
-            num_workers=data[RequestKey.NUM_WORKERS],
+            num_workers=data.get(RequestKey.NUM_WORKERS),
             pks_plan_name=data[RequestKey.PKS_PLAN_NAME],
             pks_ext_host=data[RequestKey.PKS_EXT_HOST])
 
