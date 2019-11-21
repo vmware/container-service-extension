@@ -299,6 +299,7 @@ class PksBroker(AbstractBroker):
                 f"cluster : {cluster_name}. Aborting creation of cluster.")
 
         # this needs to be refactored
+        # when num_workers==None, PKS creates however many the plan specifies
         cluster_info = self._create_cluster(
             cluster_name=data[RequestKey.CLUSTER_NAME],
             num_workers=data.get(RequestKey.NUM_WORKERS),
