@@ -61,7 +61,7 @@ def validate_payload(payload, required_keys):
 
     required = set(required_keys)
     if not required.issubset(payload.keys()):
-        missing_keys = required.difference(payload.keys())
+        missing_keys = list(required.difference(payload.keys()))
         error_message = \
             f"Missing required keys in request payload: {missing_keys}"
         valid = False
