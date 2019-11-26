@@ -269,8 +269,8 @@ class VcdBroker(AbstractBroker):
         num_workers = validated_data[RequestKey.NUM_WORKERS]
 
         # check that requested number of worker nodes is at least more than 1
-        if num_workers < 1:
-            raise CseServerError(f"Worker node count must be > 0 "
+        if num_workers < 0:
+            raise CseServerError(f"Worker node count must be >= 0 "
                                  f"(received {num_workers}).")
 
         cluster_id = str(uuid.uuid4())
