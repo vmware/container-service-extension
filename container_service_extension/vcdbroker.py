@@ -1054,14 +1054,13 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
                      org_name=None, ovdc_name=None):
     """Get list of dictionaries containing data for each visible cluster.
 
-    Cluster data dictionaries have these keys: 
+    Cluster data dictionaries have these keys:
         'name', 'vapp_id', 'vapp_href', 'vdc_name', 'vdc_href', 'vdc_id',
         'leader_endpoint', 'master_nodes', 'nodes', 'nfs_nodes',
         'number_of_vms', 'template_name', 'template_revision',
         'cse_version', 'cluster_id', 'status', 'os', 'docker_version',
         'kubernetes', 'kubernetes_version', 'cni', 'cni_version'
     """
-
     query_filter = f'metadata:{ClusterMetadataKey.CLUSTER_ID}==STRING:*'
     if cluster_id is not None:
         query_filter = f'metadata:{ClusterMetadataKey.CLUSTER_ID}==STRING:{cluster_id}' # noqa: E501
