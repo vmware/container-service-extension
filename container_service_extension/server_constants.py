@@ -85,6 +85,13 @@ class LocalTemplateKey(str, Enum):
     MEMORY = 'mem'
     NAME = 'name'
     REVISION = 'revision'
+    OS = 'os'
+    DOCKER_VERSION = 'docker_version'
+    KUBERNETES = 'kubernetes'
+    KUBERNETES_VERSION = 'kubernetes_version'
+    CNI = 'cni'
+    CNI_VERSION = 'cni_version'
+    UPGRADE_FROM = 'upgrade_from'
 
 
 @unique
@@ -94,7 +101,7 @@ class RemoteTemplateKey(str, Enum):
     COMPUTE_POLICY = 'compute_policy'
     CPU = 'cpu'
     DEPRECATED = 'deprecated'
-    DEPRECATED_IN_CSE_VERSION = 'depricated_in_cse_version'
+    DEPRECATED_IN_CSE_VERSION = 'deprecated_in_cse_version'
     DESCRIPTION = 'description'
     MEMORY = 'mem'
     NAME = 'name'
@@ -103,6 +110,13 @@ class RemoteTemplateKey(str, Enum):
     SOURCE_OVA_HREF = 'source_ova'
     SOURCE_OVA_NAME = 'source_ova_name'
     SOURCE_OVA_SHA256 = 'sha256_ova'
+    OS = 'os'
+    DOCKER_VERSION = 'docker_version'
+    KUBERNETES = 'kubernetes'
+    KUBERNETES_VERSION = 'kubernetes_version'
+    CNI = 'cni'
+    CNI_VERSION = 'cni_version'
+    UPGRADE_FROM = 'upgrade_from'
 
 
 # CSE requests
@@ -143,3 +157,9 @@ class ClusterMetadataKey(str, Enum):
     MASTER_IP = 'cse.master.ip'
     TEMPLATE_NAME = 'cse.template.name'
     TEMPLATE_REVISION = 'cse.template.revision'
+    OS = "cse.os"
+    DOCKER_VERSION = "cse.docker.version"
+    KUBERNETES = "cse.kubernetes"
+    KUBERNETES_VERSION = "cse.kubernetes.version"
+    CNI = "cse.cni"
+    CNI_VERSION = 'cse.cni.version'
