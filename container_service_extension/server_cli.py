@@ -715,7 +715,7 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
 
             # this step uses hard-coded data from the newly updated
             # cse.template.name and cse.template.revision metadata fields as
-            # well as github history to add [cse.os, cse.docker.version, 
+            # well as github history to add [cse.os, cse.docker.version,
             # cse.kubernetes, cse.kubernetes.version, cse.cni, cse.cni.version]
             # to the clusters
             vapp.reload()
