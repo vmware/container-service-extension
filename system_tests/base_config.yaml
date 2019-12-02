@@ -47,6 +47,8 @@ service:
   enforce_authorization: false
   listeners: 5
   log_wire: false
+  telemetry:
+    enable: true
 
 broker:
   catalog: cse                          # public shared catalog within org where the template will be published
