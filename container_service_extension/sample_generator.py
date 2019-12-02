@@ -105,7 +105,11 @@ SAMPLE_SERVICE_CONFIG = {
     'service': {
         'listeners': 5,
         'enforce_authorization': False,
-        'log_wire': False
+        'log_wire': False,
+        'telemetry': {
+            'enable': True
+        }
+
     }
 }
 

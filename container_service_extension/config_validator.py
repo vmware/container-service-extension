@@ -110,6 +110,11 @@ def get_validated_config(config_file_name,
                                location="config file 'service' section",
                                excluded_keys=['log_wire'],
                                msg_update_callback=msg_update_callback)
+    check_keys_and_value_types(config['service']['telemetry'],
+                               SAMPLE_SERVICE_CONFIG['service']['telemetry'],
+                               location="config file 'service->telemetry' "
+                                        "section",
+                               msg_update_callback=msg_update_callback)
     if msg_update_callback:
         msg_update_callback.general(
             f"Config file '{config_file_name}' is valid")
