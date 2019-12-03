@@ -38,13 +38,6 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
 
     :rtype: list of dicts
     """
-    # We do not do strict checking for all keys in LocalTemplateKey because
-    # if we make a change to template metadata, then these deprecated templates
-    # or template revisions would not be visible to CSE server. Clusters would
-    # not be able to be deployed from these templates. To allow for this
-    # flexibility, we only key templates based on LocalTemplateKey.NAME and
-    # LocalTemplateKey.REVISION.
-
     if not org:
         org = get_org(client, org_name=org_name)
     catalog_item_names = [
@@ -66,53 +59,17 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
             LocalTemplateKey.NAME,
             LocalTemplateKey.REVISION,
         }
+        # if catalog item doesn't have the old metadata keys, CSE should
+        # not recognize it as a template
         if not metadata_dict.keys() >= old_metadata_keys:
             continue
 
         # if 2.5.1+ template metadata is missing, add them to the dict
         template_name = metadata_dict[LocalTemplateKey.NAME]
-        template_revision = metadata_dict.get(LocalTemplateKey.REVISION, '0')
-        tokens = template_name.split('_')
-        k8s_version = '0.0.0'
-        docker_version = '0.0.0'
-        if 'photon' in template_name:
-            docker_version = '17.06.0'
-            if template_revision == '1':
-                docker_version = '18.06.2'
-            if '1.8' in template_name:
-                k8s_version = '1.8.1'
-            elif '1.9' in template_name:
-                k8s_version = '1.9.6'
-            elif '1.10' in template_name:
-                k8s_version = '1.10.11'
-            elif '1.12' in template_name:
-                k8s_version = '1.12.7'
-            elif '1.14' in template_name:
-                k8s_version = '1.14.6'
-        if 'ubuntu' in template_name:
-            docker_version = '18.09.7'
-            if '1.9' in template_name:
-                docker_version = '17.12.0'
-                k8s_version = '1.9.3'
-            elif '1.10' in template_name:
-                docker_version = '18.03.0'
-                k8s_version = '1.10.1'
-                # cse version does not exist in template metadata
-                # if cse_version in ('1.2.5', '1.2.6, 1.2.7'):
-                #     k8s_version = '1.10.11'
-                # if cse_version in ('1.2.7'):
-                #     docker_version = '18.06.2'
-            elif '1.13' in template_name:
-                docker_version = '18.06.3'
-                k8s_version = '1.13.5'
-                if template_revision == '2':
-                    k8s_version = '1.13.12'
-            elif '1.15' in template_name:
-                docker_version = '18.09.7'
-                k8s_version = '1.15.3'
-                if template_revision == '2':
-                    k8s_version = '1.15.5'
+        template_revision = str(metadata_dict.get(LocalTemplateKey.REVISION, '0')) # noqa: E501
 
+        k8s_version, docker_version = get_k8s_and_docker_versions(template_name, template_revision=template_revision) # noqa: E501
+        tokens = template_name.split('_')
         if LocalTemplateKey.OS not in metadata_dict:
             metadata_dict[LocalTemplateKey.OS] = tokens[0]
         if LocalTemplateKey.DOCKER_VERSION not in metadata_dict:
@@ -131,3 +88,47 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
         templates.append(metadata_dict)
 
     return templates
+
+
+def get_k8s_and_docker_versions(template_name, template_revision='0',
+                                cse_version=None):
+    k8s_version = '0.0.0'
+    docker_version = '0.0.0'
+    if 'photon' in template_name:
+        docker_version = '17.06.0'
+        if template_revision == '1':
+            docker_version = '18.06.2'
+        if '1.8' in template_name:
+            k8s_version = '1.8.1'
+        elif '1.9' in template_name:
+            k8s_version = '1.9.6'
+        elif '1.10' in template_name:
+            k8s_version = '1.10.11'
+        elif '1.12' in template_name:
+            k8s_version = '1.12.7'
+        elif '1.14' in template_name:
+            k8s_version = '1.14.6'
+    if 'ubuntu' in template_name:
+        docker_version = '18.09.7'
+        if '1.9' in template_name:
+            docker_version = '17.12.0'
+            k8s_version = '1.9.3'
+        elif '1.10' in template_name:
+            docker_version = '18.03.0'
+            k8s_version = '1.10.1'
+            if cse_version in ('1.2.5', '1.2.6, 1.2.7'):
+                k8s_version = '1.10.11'
+            if cse_version in ('1.2.7'):
+                docker_version = '18.06.2'
+        elif '1.13' in template_name:
+            docker_version = '18.06.3'
+            k8s_version = '1.13.5'
+            if template_revision == '2':
+                k8s_version = '1.13.12'
+        elif '1.15' in template_name:
+            docker_version = '18.09.7'
+            k8s_version = '1.15.3'
+            if template_revision == '2':
+                k8s_version = '1.15.5'
+
+    return k8s_version, docker_version

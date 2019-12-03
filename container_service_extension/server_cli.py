@@ -28,13 +28,11 @@ from container_service_extension.configure_cse import install_cse
 from container_service_extension.configure_cse import install_template
 from container_service_extension.encryption_engine import decrypt_file
 from container_service_extension.encryption_engine import encrypt_file
-from container_service_extension.encryption_engine import \
-    get_decrypted_file_contents
+from container_service_extension.encryption_engine import get_decrypted_file_contents # noqa: E501
 from container_service_extension.exceptions import AmqpConnectionError
-from container_service_extension.local_template_manager import \
-    get_all_k8s_local_template_definition
-from container_service_extension.remote_template_manager import \
-    RemoteTemplateManager
+from container_service_extension.local_template_manager import get_all_k8s_local_template_definition # noqa: E501
+from container_service_extension.local_template_manager import get_k8s_and_docker_versions # noqa: E501
+from container_service_extension.remote_template_manager import RemoteTemplateManager # noqa: E501
 from container_service_extension.sample_generator import generate_sample_config
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import LocalTemplateKey
@@ -721,54 +719,16 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
             vapp.reload()
             metadata_dict = metadata_to_dict(vapp.get_metadata())
             template_name = metadata_dict.get(ClusterMetadataKey.TEMPLATE_NAME)
-            template_revision = str(metadata_dict.get(ClusterMetadataKey.TEMPLATE_REVISION)) # noqa: E501
+            template_revision = str(metadata_dict.get(ClusterMetadataKey.TEMPLATE_REVISION, '0')) # noqa: E501
 
             if template_name:
+                k8s_version, docker_version = get_k8s_and_docker_versions(template_name, template_revision=template_revision, cse_version=cse_version) # noqa: E501
                 tokens = template_name.split('_')
-                kubernetes_version = '0.0.0'
-                docker_version = '0.0.0'
-                if 'photon' in template_name:
-                    docker_version = '17.06.0'
-                    if template_revision == '1':
-                        docker_version = '18.06.2'
-                    if '1.8' in template_name:
-                        kubernetes_version = '1.8.1'
-                    elif '1.9' in template_name:
-                        kubernetes_version = '1.9.6'
-                    elif '1.10' in template_name:
-                        kubernetes_version = '1.10.11'
-                    elif '1.12' in template_name:
-                        kubernetes_version = '1.12.7'
-                    elif '1.14' in template_name:
-                        kubernetes_version = '1.14.6'
-                if 'ubuntu' in template_name:
-                    docker_version = '18.09.7'
-                    if '1.9' in template_name:
-                        docker_version = '17.12.0'
-                        kubernetes_version = '1.9.3'
-                    elif '1.10' in template_name:
-                        docker_version = '18.03.0'
-                        kubernetes_version = '1.10.1'
-                        if cse_version in ('1.2.5', '1.2.6, 1.2.7'):
-                            kubernetes_version = '1.10.11'
-                        if cse_version in ('1.2.7'):
-                            docker_version = '18.06.2'
-                    elif '1.13' in template_name:
-                        docker_version = '18.06.3'
-                        kubernetes_version = '1.13.5'
-                        if template_revision == '2':
-                            kubernetes_version = '1.13.12'
-                    elif '1.15' in template_name:
-                        docker_version = '18.09.7'
-                        kubernetes_version = '1.15.3'
-                        if template_revision == '2':
-                            kubernetes_version = '1.15.5'
-
                 new_metadata = {
                     ClusterMetadataKey.OS: tokens[0],
                     ClusterMetadataKey.DOCKER_VERSION: docker_version,
                     ClusterMetadataKey.KUBERNETES: 'upstream',
-                    ClusterMetadataKey.KUBERNETES_VERSION: kubernetes_version,
+                    ClusterMetadataKey.KUBERNETES_VERSION: k8s_version,
                     ClusterMetadataKey.CNI: tokens[2].split('-')[0],
                     ClusterMetadataKey.CNI_VERSION: tokens[2].split('-')[1],
                 }
