@@ -10,13 +10,15 @@ from container_service_extension.server_constants import \
 
 
 def get_template_k8s_version(template_name):
-    if template_name:
-        properties = template_name.split("_")
-        if len(properties) == 3:
-            k8s_info = properties[1].split("-")
-            if len(k8s_info) == 2:
-                if k8s_info[0] in ("k8", "esspks"):
-                    return k8s_info[1]
+    try:
+        tokens = template_name.split('_')
+        if len(tokens) == 3:
+            k8s_info = tokens[1].split('-')
+            if len(k8s_info) == 2 and k8s_info[0] in ('k8', 'esspks'):
+                return k8s_info[1]
+    except Exception:
+        pass
+
     return "Unknown"
 
 
