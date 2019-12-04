@@ -41,6 +41,8 @@ from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import ServerAction
+from container_service_extension.telemetry.constants import COLLECTOR_ID
+from container_service_extension.telemetry.constants import VAC_URL
 from container_service_extension.template_rule import TemplateRule
 import container_service_extension.utils as utils
 from container_service_extension.vsphere_utils import populate_vsphere_list
@@ -220,6 +222,10 @@ class Service(object, metaclass=Singleton):
         if self.should_check_config:
             check_cse_installation(
                 self.config, msg_update_callback=msg_update_callback)
+
+        # Store telemetry url and collector id in config
+        self._store_telemetry_url_in_config()
+        self._store_telemetry_collector_id_in_config()
 
         if self.config.get('pks_config'):
             pks_config = self.config.get('pks_config')
@@ -491,3 +497,23 @@ class Service(object, metaclass=Singleton):
         finally:
             if client:
                 client.logout()
+
+    def _store_telemetry_url_in_config(self):
+        """Store the default value of telemetry url in config.
+
+        Store this value under config[service][telemetry][vac_url].
+        Do not overwrite any existing value.
+        """
+        telemetry_info = self.config['service'].get('telemetry')
+        if telemetry_info and telemetry_info.get('enable') is True and \
+                telemetry_info.get('vac_url') is None:
+            telemetry_info.update({'vac_url': VAC_URL})
+
+    def _store_telemetry_collector_id_in_config(self):
+        """Store the default value of collector id in config.
+
+        Store this value under config[service][telemetry][collector_id]
+        """
+        telemetry_info = self.config['service'].get('telemetry')
+        if telemetry_info and telemetry_info.get('enable') is True:
+            telemetry_info.update({'collector_id': COLLECTOR_ID})
