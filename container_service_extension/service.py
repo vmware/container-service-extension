@@ -41,6 +41,12 @@ from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import ServerAction
+from container_service_extension.telemetry.telemetry_utils import \
+    get_telemetry_collector_id
+from container_service_extension.telemetry.telemetry_utils import \
+    get_telemetry_instance_id
+from container_service_extension.telemetry.telemetry_utils \
+    import get_telemetry_url
 from container_service_extension.template_rule import TemplateRule
 import container_service_extension.utils as utils
 from container_service_extension.vsphere_utils import populate_vsphere_list
@@ -220,6 +226,15 @@ class Service(object, metaclass=Singleton):
         if self.should_check_config:
             check_cse_installation(
                 self.config, msg_update_callback=msg_update_callback)
+
+        # Store telemetry instance id, url and collector id in config
+        self.config['service']['telemetry']['instance_id'] = \
+            get_telemetry_instance_id(
+                self.config['service']['telemetry']['enable'],
+                self.config['vcd'])
+        if 'vac_url' not in self.config['service']['telemetry']:
+            self.config['service']['telemetry']['vac_url'] = get_telemetry_url()  # noqa: E501
+        self.config['service']['telemetry']['collector_id'] = get_telemetry_collector_id()  # noqa: E501
 
         if self.config.get('pks_config'):
             pks_config = self.config.get('pks_config')
