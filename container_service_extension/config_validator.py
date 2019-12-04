@@ -34,6 +34,10 @@ from container_service_extension.sample_generator import \
     SAMPLE_SERVICE_CONFIG, SAMPLE_VCD_CONFIG, SAMPLE_VCS_CONFIG # noqa: H301
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.server_constants import VERSION_V1
+from container_service_extension.telemetry.constants import COLLECTOR_ID
+from container_service_extension.telemetry.constants import VAC_URL
+from container_service_extension.telemetry.telemetry_utils import \
+    get_telemetry_instance_id
 from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import check_file_permissions
 from container_service_extension.utils import check_keys_and_value_types
@@ -142,6 +146,16 @@ def get_validated_config(config_file_name,
         config['pks_config'] = pks_config
     else:
         config['pks_config'] = None
+
+    # Store telemetry instance id, url and collector id in config
+    if config['service']['telemetry']['enable'] is True:
+        config['service']['telemetry']['instance_id'] =  \
+            get_telemetry_instance_id(config['vcd'])
+
+    if 'vac_url' not in config['service']['telemetry']:
+        config['service']['telemetry']['vac_url'] = VAC_URL
+
+    config['service']['telemetry']['collector_id'] = COLLECTOR_ID
 
     return config
 
