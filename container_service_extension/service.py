@@ -14,6 +14,7 @@ import traceback
 
 import click
 import pkg_resources
+from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import ApiVersion
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
@@ -37,6 +38,8 @@ from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PksCache
 from container_service_extension.pyvcloud_utils import \
     connect_vcd_user_via_token
+from container_service_extension.server_constants import CSE_SERVICE_NAME
+from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import RequestKey
@@ -220,6 +223,9 @@ class Service(object, metaclass=Singleton):
         if self.should_check_config:
             check_cse_installation(
                 self.config, msg_update_callback=msg_update_callback)
+
+        # get CSE extension id and store it as telemetry instance id in config
+        self._store_telemetry_instance_id_in_config()
 
         if self.config.get('pks_config'):
             pks_config = self.config.get('pks_config')
@@ -490,4 +496,30 @@ class Service(object, metaclass=Singleton):
                 LOGGER.debug(msg)
         finally:
             if client:
+                client.logout()
+
+    def _store_telemetry_instance_id_in_config(self):
+        """Get CSE extension id and store it in config[service][telemetry].
+
+        Any exception is logged as error. No exception is leaked out
+        of this method and does not affect the server startup.
+        """
+        try:
+            telemetry_info = self.config['service'].get('telemetry')
+            if telemetry_info and telemetry_info.get('enable') is True:
+                client = Client(self.config['vcd']['host'],
+                                api_version=self.config['vcd']['api_version'],
+                                verify_ssl_certs=self.config['vcd']['verify'])
+                client.set_credentials(BasicLoginCredentials(
+                    self.config['vcd']['username'], SYSTEM_ORG_NAME,
+                    self.config['vcd']['password']))
+                ext = APIExtension(client)
+                cse_info = ext.get_extension_info(
+                    CSE_SERVICE_NAME, namespace=CSE_SERVICE_NAMESPACE)
+
+                telemetry_info.update({'instance_id': cse_info.get('id')})
+        except Exception as err:
+            LOGGER.error("Cannot retrieve telemetry instance id" + err)
+        finally:
+            if client is not None:
                 client.logout()
