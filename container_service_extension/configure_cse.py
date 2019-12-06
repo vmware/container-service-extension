@@ -591,6 +591,16 @@ def _install_template(client, remote_template_manager, template, org_name,
     catalog_item_name = get_revisioned_template_name(
         template[RemoteTemplateKey.NAME],
         template[RemoteTemplateKey.REVISION])
+
+    # remote template data is a super set of local template data, barring
+    # the key 'catalog_item_name'
+    template_data = dict(template)
+    template_data[LocalTemplateKey.CATALOG_ITEM_NAME] = catalog_item_name
+
+    missing_keys = [k for k in LocalTemplateKey if k not in template_data]
+    if len(missing_keys) > 0:
+        raise ValueError(f"Invalid template data. Missing keys: {missing_keys}") # noqa: E501
+
     build_params = {
         'template_name': template[RemoteTemplateKey.NAME],
         'template_revision': template[RemoteTemplateKey.REVISION],
@@ -615,17 +625,7 @@ def _install_template(client, remote_template_manager, template, org_name,
     builder.build(force_recreate=force_update,
                   retain_temp_vapp=retain_temp_vapp)
 
-    # remote template data is a super set of local template data, barring
-    # the key 'catalog_item_name'
-    template_data = dict(template)
-    template_data[LocalTemplateKey.CATALOG_ITEM_NAME] = catalog_item_name
-
-    missing_keys = [k for k in LocalTemplateKey if k not in template_data]
-    if len(missing_keys) > 0:
-        raise ValueError(f"Invalid template data. Missing keys: {missing_keys}") # noqa: E501
-
     template_metadata = {k: v for k, v in template_data.items() if k in LocalTemplateKey} # noqa: E501
-
     org_resource = client.get_org_by_name(org_name=org_name)
     org = Org(client, resource=org_resource)
     org.set_multiple_metadata_on_catalog_item(
