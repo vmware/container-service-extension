@@ -625,7 +625,7 @@ def _install_template(client, remote_template_manager, template, org_name,
     builder.build(force_recreate=force_update,
                   retain_temp_vapp=retain_temp_vapp)
 
-    template_metadata = {k: v for k, v in template_data.items() if k in LocalTemplateKey} # noqa: E501
+    template_metadata = {k: template_data[k] for k in LocalTemplateKey}
     org_resource = client.get_org_by_name(org_name=org_name)
     org = Org(client, resource=org_resource)
     org.set_multiple_metadata_on_catalog_item(
