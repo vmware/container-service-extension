@@ -1081,18 +1081,19 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
         resource_type,
         query_result_format=QueryResultFormat.ID_RECORDS,
         qfilter=query_filter,
-        fields=f'metadata:{ClusterMetadataKey.MASTER_IP}'
+        fields=f'metadata:{ClusterMetadataKey.CLUSTER_ID}'
+               f',metadata:{ClusterMetadataKey.MASTER_IP}'
                f',metadata:{ClusterMetadataKey.CSE_VERSION}'
                f',metadata:{ClusterMetadataKey.TEMPLATE_NAME}'
                f',metadata:{ClusterMetadataKey.TEMPLATE_REVISION}'
                f',metadata:{ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME}' # noqa: E501
-               f',metadata:{ClusterMetadataKey.OS}'
-               f',metadata:{ClusterMetadataKey.DOCKER_VERSION}')
+               f',metadata:{ClusterMetadataKey.OS}')
     q2 = client.get_typed_query(
         resource_type,
         query_result_format=QueryResultFormat.ID_RECORDS,
         qfilter=query_filter,
-        fields=f'metadata:{ClusterMetadataKey.KUBERNETES}'
+        fields=f'metadata:{ClusterMetadataKey.DOCKER_VERSION}'
+               f',metadata:{ClusterMetadataKey.KUBERNETES}'
                f',metadata:{ClusterMetadataKey.KUBERNETES_VERSION}'
                f',metadata:{ClusterMetadataKey.CNI}'
                f',metadata:{ClusterMetadataKey.CNI_VERSION}')
