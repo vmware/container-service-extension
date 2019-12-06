@@ -85,7 +85,7 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
         if LocalTemplateKey.CNI_VERSION not in metadata_dict:
             metadata_dict[LocalTemplateKey.CNI_VERSION] = tokens[2].split('-')[1] # noqa: E501
         if LocalTemplateKey.UPGRADE_FROM not in metadata_dict:
-            metadata_dict[LocalTemplateKey.UPGRADE_FROM] = template_name
+            metadata_dict[LocalTemplateKey.UPGRADE_FROM] = "[]"
 
         templates.append(metadata_dict)
 
