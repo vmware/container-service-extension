@@ -2,6 +2,8 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import ast
+
 from pyvcloud.vcd.utils import metadata_to_dict
 
 from container_service_extension.pyvcloud_utils import get_org
@@ -66,6 +68,11 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
         if not metadata_dict.keys() >= old_metadata_keys:
             continue
 
+        # non-string metadata is written to the dictionary as a string
+        # 'upgrade_from' should be converted to an array if it is a string
+        if LocalTemplateKey.UPGRADE_FROM in metadata_dict and isinstance(metadata_dict[LocalTemplateKey.UPGRADE_FROM], str): # noqa: E501
+            metadata_dict[LocalTemplateKey.UPGRADE_FROM] = ast.literal_eval(metadata_dict[LocalTemplateKey.UPGRADE_FROM]) # noqa: E501
+
         # if 2.5.1+ template metadata is missing, add them to the dict
         template_name = metadata_dict[LocalTemplateKey.NAME]
         template_revision = str(metadata_dict.get(LocalTemplateKey.REVISION, '0')) # noqa: E501
@@ -85,7 +92,16 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
         if LocalTemplateKey.CNI_VERSION not in metadata_dict:
             metadata_dict[LocalTemplateKey.CNI_VERSION] = tokens[2].split('-')[1] # noqa: E501
         if LocalTemplateKey.UPGRADE_FROM not in metadata_dict:
-            metadata_dict[LocalTemplateKey.UPGRADE_FROM] = "[]"
+            metadata_dict[LocalTemplateKey.UPGRADE_FROM] = []
+
+        # final check that all keys in LocalTemplateKey exist in the template
+        # should never fail, but useful to double check dev work
+        missing_metadata = set(LocalTemplateKey) - metadata_dict.keys()
+        num_missing_metadata = len(missing_metadata)
+        if num_missing_metadata > 0:
+            raise ValueError(f"Template '{template_name}' missing "
+                             f"{num_missing_metadata} metadata: "
+                             f"{missing_metadata}")
 
         templates.append(metadata_dict)
 
