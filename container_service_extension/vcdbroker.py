@@ -1152,7 +1152,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
                 elif element.Key == ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME and clusters[vapp_id]['template_name'] == '': # noqa: E501
                     clusters[vapp_id]['template_name'] = str(element.TypedValue.Value) # noqa: E501
 
-        # pre-2.5.1 clusters may not have kubernetes version metadata
+        # pre-2.6 clusters may not have kubernetes version metadata
         if clusters[vapp_id]['kubernetes_version'] == '':
             clusters[vapp_id]['kubernetes_version'] = get_template_k8s_version(clusters[vapp_id]['template_name']) # noqa: E501
 
