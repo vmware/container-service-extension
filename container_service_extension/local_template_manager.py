@@ -70,8 +70,12 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
 
         # non-string metadata is written to the dictionary as a string
         # 'upgrade_from' should be converted to an array if it is a string
-        if LocalTemplateKey.UPGRADE_FROM in metadata_dict and isinstance(metadata_dict[LocalTemplateKey.UPGRADE_FROM], str): # noqa: E501
-            metadata_dict[LocalTemplateKey.UPGRADE_FROM] = ast.literal_eval(metadata_dict[LocalTemplateKey.UPGRADE_FROM]) # noqa: E501
+        # 'upgrade_from' should be converted to [] if it is ['']
+        if LocalTemplateKey.UPGRADE_FROM in metadata_dict:
+            if isinstance(metadata_dict[LocalTemplateKey.UPGRADE_FROM], str): # noqa: E501
+                metadata_dict[LocalTemplateKey.UPGRADE_FROM] = ast.literal_eval(metadata_dict[LocalTemplateKey.UPGRADE_FROM]) # noqa: E501
+            if metadata_dict[LocalTemplateKey.UPGRADE_FROM] == ['']:
+                metadata_dict[LocalTemplateKey.UPGRADE_FROM] = []
 
         # if 2.5.1+ template metadata is missing, add them to the dict
         template_name = metadata_dict[LocalTemplateKey.NAME]
