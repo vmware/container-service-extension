@@ -52,7 +52,7 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
                                                     item_name=item_name)
         metadata_dict = metadata_to_dict(md)
 
-        # make sure all pre-2.5.1 template metadata exists on catalog item
+        # make sure all pre-2.6 template metadata exists on catalog item
         old_metadata_keys = {
             LocalTemplateKey.CATALOG_ITEM_NAME,
             LocalTemplateKey.COMPUTE_POLICY,
