@@ -1156,6 +1156,8 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
         if clusters[vapp_id]['kubernetes_version'] == '':
             clusters[vapp_id]['kubernetes_version'] = get_template_k8s_version(clusters[vapp_id]['template_name']) # noqa: E501
 
+    # api query can fetch only 8 metadata at a time
+    # since we have more than 8 metadata, we need to use 2 queries
     for record in q2.execute():
         vapp_id = record.get('id').split(':')[-1]
         if hasattr(record, 'Metadata'):
