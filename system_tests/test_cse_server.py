@@ -19,6 +19,7 @@ from container_service_extension.server_cli import cli
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
 
+PASSWORD_FOR_CONFIG_ENCRYPTION = "vmware"
 
 """
 CSE server tests to test validity and functionality of `cse` CLI commands.
@@ -439,20 +440,50 @@ def test_0120_cse_run(config):
                 pass
 
 
-def test_0130_cse_encrypt_decrypt(config):
+def test_0130_cse_encrypt_decrypt_with_password_from_stdin(config):
     """Test `cse encrypt plain-config.yaml and cse decrypt encrypted-config`.
+
+    Get the password for encrypt/decrypt from stdin.
 
     1. Execute `cse encrypt` on plain-config file and store the encrypted file.
     2. Execute `cse decrypt` on the encrypted config file get decrypted file.
     3. Compare plain-config file and decrypted config file and check result.
     """
     encrypted_file = tempfile.NamedTemporaryFile()
-    cmd = f"encrypt {env.ACTIVE_CONFIG_FILEPATH} -o {encrypted_file.name} -p vmware"  # noqa: E501
+    cmd = f"encrypt {env.ACTIVE_CONFIG_FILEPATH} -o {encrypted_file.name}"  # noqa: E501
+    env.CLI_RUNNER.invoke(cli, cmd.split(),
+                          input=PASSWORD_FOR_CONFIG_ENCRYPTION,
+                          catch_exceptions=False)
+
+    # Run `cse decrypt` on the encrypted config file from previous step
+    decrypted_file = tempfile.NamedTemporaryFile()
+    cmd = f"decrypt {encrypted_file.name} -o {decrypted_file.name}"
+    env.CLI_RUNNER.invoke(cli, cmd.split(),
+                          input=PASSWORD_FOR_CONFIG_ENCRYPTION,
+                          catch_exceptions=False)
+
+    # File comparison also include content comparison
+    assert filecmp.cmp(env.ACTIVE_CONFIG_FILEPATH, decrypted_file.name,
+                       shallow=False)
+
+
+def test_0140_cse_encrypt_decrypt_with_password_from_environment_var(config):
+    """Test `cse encrypt plain-config.yaml and cse decrypt encrypted-config`.
+
+    Get the password for encrypt/decrypt from environment variable.
+
+    1. Execute `cse encrypt` on plain-config file and store the encrypted file.
+    2. Execute `cse decrypt` on the encrypted config file get decrypted file.
+    3. Compare plain-config file and decrypted config file and check result.
+    """
+    os.environ['CSE_CONFIG_PASSWORD'] = PASSWORD_FOR_CONFIG_ENCRYPTION
+    encrypted_file = tempfile.NamedTemporaryFile()
+    cmd = f"encrypt {env.ACTIVE_CONFIG_FILEPATH} -o {encrypted_file.name}"  # noqa: E501
     env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
 
     # Run `cse decrypt` on the encrypted config file from previous step
     decrypted_file = tempfile.NamedTemporaryFile()
-    cmd = f"decrypt {encrypted_file.name} -o {decrypted_file.name} -p vmware"
+    cmd = f"decrypt {encrypted_file.name} -o {decrypted_file.name}"
     env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
 
     # File comparison also include content comparison
