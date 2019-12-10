@@ -4,11 +4,13 @@
 
 import ast
 
+from pyvcloud.vcd.client import MetadataDomain
+from pyvcloud.vcd.client import MetadataVisibility
+from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.utils import metadata_to_dict
 
 from container_service_extension.pyvcloud_utils import get_org
-from container_service_extension.server_constants import \
-    LocalTemplateKey
+from container_service_extension.server_constants import LocalTemplateKey
 
 
 def get_template_k8s_version(template_name):
@@ -110,6 +112,18 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
         templates.append(metadata_dict)
 
     return templates
+
+
+def save_metadata(client, org_name, catalog_name, catalog_item_name,
+                  template_data):
+    org_resource = client.get_org_by_name(org_name=org_name)
+    org = Org(client, resource=org_resource)
+    org.set_multiple_metadata_on_catalog_item(
+        catalog_name=catalog_name,
+        item_name=catalog_item_name,
+        key_value_dict={k: template_data[k] for k in LocalTemplateKey},
+        domain=MetadataDomain.SYSTEM,
+        visibility=MetadataVisibility.PRIVATE)
 
 
 def get_k8s_and_docker_versions(template_name, template_revision='0',

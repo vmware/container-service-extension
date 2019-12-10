@@ -6,14 +6,13 @@ import pika
 from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
-from pyvcloud.vcd.client import MetadataDomain
-from pyvcloud.vcd.client import MetadataVisibility
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.exceptions import AmqpError
+import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
 from container_service_extension.logger import INSTALL_WIRELOG_FILEPATH
@@ -625,12 +624,5 @@ def _install_template(client, remote_template_manager, template, org_name,
     builder.build(force_recreate=force_update,
                   retain_temp_vapp=retain_temp_vapp)
 
-    template_metadata = {k: template_data[k] for k in LocalTemplateKey}
-    org_resource = client.get_org_by_name(org_name=org_name)
-    org = Org(client, resource=org_resource)
-    org.set_multiple_metadata_on_catalog_item(
-        catalog_name=catalog_name,
-        item_name=catalog_item_name,
-        key_value_dict=template_metadata,
-        domain=MetadataDomain.SYSTEM,
-        visibility=MetadataVisibility.PRIVATE)
+    ltm.save_metadata(client, org_name, catalog_name, catalog_item_name,
+                      template_data)
