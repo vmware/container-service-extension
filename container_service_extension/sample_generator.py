@@ -123,7 +123,7 @@ SAMPLE_BROKER_CONFIG = {
         'storage_profile': '*',
         'default_template_name': 'my_template',
         'default_template_revision': 0,
-        'remote_template_cookbook_url': 'https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template.yaml', # noqa: E501
+        'remote_template_cookbook_url': 'https://raw.githubusercontent.com/andrew-ni/container-service-extension-templates/new-metadata/template.yaml', # noqa: E501
     }
 }
 
