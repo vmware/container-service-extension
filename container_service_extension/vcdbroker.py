@@ -212,6 +212,44 @@ class VcdBroker(AbstractBroker):
             raise ClusterOperationError("Couldn't get cluster configuration")
         return all_results[0].content.decode()
 
+    def get_cluster_upgrade_plan(self, data):
+        """Get the template names/revisions that the cluster can upgrade to.
+
+        Required data: cluster_name
+        Optional data and default values: org_name=None, ovdc_name=None
+
+        :return: A list of tuples with template name and revision
+
+        :rtype: List[Tuple(str, str)]
+        """
+        required = [
+            RequestKey.CLUSTER_NAME
+        ]
+        defaults = {
+            RequestKey.ORG_NAME: None,
+            RequestKey.OVDC_NAME: None
+        }
+        validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
+
+        cluster = get_cluster(self.tenant_client,
+                              validated_data[RequestKey.CLUSTER_NAME],
+                              org_name=validated_data[RequestKey.ORG_NAME],
+                              ovdc_name=validated_data[RequestKey.OVDC_NAME])
+
+        src_name = cluster['template_name']
+        src_rev = cluster['template_revision']
+
+        upgrades = []
+        config = utils.get_server_runtime_config()
+        for t in config['broker']['templates']:
+            if src_name in t[LocalTemplateKey.UPGRADE_FROM]:
+                if t[LocalTemplateKey.NAME] == src_name and int(t[LocalTemplateKey.REVISION]) <= int(src_rev): # noqa: E501
+                    continue
+                upgrades.append((t[LocalTemplateKey.NAME], t[LocalTemplateKey.REVISION])) # noqa: E501
+
+        return upgrades
+
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def create_cluster(self, data):
         """Start the cluster creation operation.

@@ -488,6 +488,49 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
         stderr(e, ctx)
 
 
+@cluster_group.command('upgrade-plan',
+                       short_help='Display templates that the specified '
+                                  'cluster can upgrade to')
+@click.pass_context
+@click.argument('cluster_name', required=True)
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    metavar='VDC_NAME',
+    help='Restrict cluster search to specific org VDC')
+@click.option(
+    '-o',
+    '--org',
+    'org_name',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help="Restrict cluster search to specific org")
+def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name):
+    """Display templates that the specified cluster can upgrade to."""
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        cluster = Cluster(client)
+        if not client.is_sysadmin() and org_name is None:
+            org_name = ctx.obj['profiles'].get('org_in_use')
+        templates = cluster.get_upgrade_plan(cluster_name, vdc=vdc,
+                                             org=org_name)
+
+        result = []
+        for template in templates:
+            result.append({
+                'Template Name': template[0],
+                'Template Revision': template[1]
+            })
+        stdout(result, ctx)
+    except Exception as e:
+        stderr(e, ctx)
+
+
 @cluster_group.command('config', short_help='Display cluster configuration')
 @click.pass_context
 @click.argument('name', required=True)
