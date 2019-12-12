@@ -28,13 +28,11 @@ from container_service_extension.configure_cse import install_cse
 from container_service_extension.configure_cse import install_template
 from container_service_extension.encryption_engine import decrypt_file
 from container_service_extension.encryption_engine import encrypt_file
-from container_service_extension.encryption_engine import \
-    get_decrypted_file_contents
+from container_service_extension.encryption_engine import get_decrypted_file_contents # noqa: E501
 from container_service_extension.exceptions import AmqpConnectionError
-from container_service_extension.local_template_manager import \
-    get_all_k8s_local_template_definition
-from container_service_extension.remote_template_manager import \
-    RemoteTemplateManager
+from container_service_extension.local_template_manager import get_all_k8s_local_template_definition # noqa: E501
+from container_service_extension.local_template_manager import get_k8s_and_docker_versions # noqa: E501
+from container_service_extension.remote_template_manager import RemoteTemplateManager # noqa: E501
 from container_service_extension.sample_generator import generate_sample_config
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import LocalTemplateKey
@@ -570,7 +568,7 @@ def run(ctx, config, pks_config, skip_check, skip_config_decryption, password):
         click.secho("CSE Server failure. Please check the logs.", fg='red')
 
 
-@cli.command('convert-cluster', short_help='Converts pre CSE 2.5.0 clusters to CSE 2.5.0 cluster format') # noqa: E501
+@cli.command('convert-cluster', short_help='Converts pre CSE 2.5.2 clusters to CSE 2.5.2+ cluster format') # noqa: E501
 @click.pass_context
 @click.argument('cluster_name', metavar='CLUSTER_NAME', default=None)
 @click.argument('config_file_name', metavar='CONFIG_FILE_NAME',
@@ -672,33 +670,34 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
             vapp_href = cluster['vapp_href']
             vapp = VApp(client, href=vapp_href)
 
+            # this step removes the old 'cse.template' metadata and adds
+            # cse.template.name and cse.template.revision metadata
+            # using hard-coded values taken from github history
             console_message_printer.info("Processing metadata of cluster.")
-            metadata = metadata_to_dict(vapp.get_metadata())
-            old_template_name = None
+            metadata_dict = metadata_to_dict(vapp.get_metadata())
+            old_template_name = metadata_dict.get(ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME) # noqa: E501
             new_template_name = None
-            if ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME in metadata: # noqa: E501
-                old_template_name = metadata.pop(ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME) # noqa: E501
-            version = metadata.get(ClusterMetadataKey.CSE_VERSION)
+            cse_version = metadata_dict.get(ClusterMetadataKey.CSE_VERSION)
             if old_template_name:
                 console_message_printer.info(
                     "Determining k8s version on cluster.")
                 if 'photon' in old_template_name:
                     new_template_name = 'photon-v2'
-                    if '1.0.0' in version:
+                    if cse_version in ('1.0.0'):
                         new_template_name += '_k8s-1.8_weave-2.0.5'
-                    elif any(ver in version for ver in ('1.1.0', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4',)): # noqa: E501
+                    elif cse_version in ('1.1.0', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4'): # noqa: E501
                         new_template_name += '_k8s-1.9_weave-2.3.0'
-                    elif any(ver in version for ver in ('1.2.5', '1.2.6', '1.2.7',)): # noqa: E501
+                    elif cse_version in ('1.2.5', '1.2.6', '1.2.7',): # noqa: E501
                         new_template_name += '_k8s-1.10_weave-2.3.0'
-                    elif '2.0.0' in version:
+                    elif cse_version in ('2.0.0'):
                         new_template_name += '_k8s-1.12_weave-2.3.0'
                 elif 'ubuntu' in old_template_name:
                     new_template_name = 'ubuntu-16.04'
-                    if '1.0.0' in version:
+                    if cse_version in ('1.0.0'):
                         new_template_name += '_k8s-1.9_weave-2.1.3'
-                    elif any(ver in version for ver in ('1.1.0', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4', '1.2.5', '1.2.6', '1.2.7')): # noqa: E501
+                    elif cse_version in ('1.1.0', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4', '1.2.5', '1.2.6', '1.2.7'): # noqa: E501
                         new_template_name += '_k8s-1.10_weave-2.3.0'
-                    elif '2.0.0' in version:
+                    elif cse_version in ('2.0.0'):
                         new_template_name += '_k8s-1.13_weave-2.3.0'
 
             if new_template_name:
@@ -711,56 +710,94 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
                 }
                 task = vapp.set_multiple_metadata(new_metadata_to_add)
                 client.get_task_monitor().wait_for_success(task)
+
+            # this step uses hard-coded data from the newly updated
+            # cse.template.name and cse.template.revision metadata fields as
+            # well as github history to add [cse.os, cse.docker.version,
+            # cse.kubernetes, cse.kubernetes.version, cse.cni, cse.cni.version]
+            # to the clusters
+            vapp.reload()
+            metadata_dict = metadata_to_dict(vapp.get_metadata())
+            template_name = metadata_dict.get(ClusterMetadataKey.TEMPLATE_NAME)
+            template_revision = str(metadata_dict.get(ClusterMetadataKey.TEMPLATE_REVISION, '0')) # noqa: E501
+
+            if template_name:
+                k8s_version, docker_version = get_k8s_and_docker_versions(template_name, template_revision=template_revision, cse_version=cse_version) # noqa: E501
+                tokens = template_name.split('_')
+                new_metadata = {
+                    ClusterMetadataKey.OS: tokens[0],
+                    ClusterMetadataKey.DOCKER_VERSION: docker_version,
+                    ClusterMetadataKey.KUBERNETES: 'upstream',
+                    ClusterMetadataKey.KUBERNETES_VERSION: k8s_version,
+                    ClusterMetadataKey.CNI: tokens[2].split('-')[0],
+                    ClusterMetadataKey.CNI_VERSION: tokens[2].split('-')[1],
+                }
+                task = vapp.set_multiple_metadata(new_metadata)
+                client.get_task_monitor().wait_for_success(task)
+
             console_message_printer.general(
                 "Finished processing metadata of cluster.")
 
-            try:
-                console_message_printer.info(
-                    f"Undeploying the vApp '{cluster['name']}'")
-                task = vapp.undeploy()
-                client.get_task_monitor().wait_for_success(task)
-                console_message_printer.general(
-                    "Successfully undeployed the vApp.")
-            except Exception as err:
-                console_message_printer.error(str(err))
-
+            reset_admin_pw = False
             vm_resources = vapp.get_all_vms()
             for vm_resource in vm_resources:
-                console_message_printer.info(
-                    f"Processing vm '{vm_resource.get('name')}'.")
-                vm = VM(client, href=vm_resource.get('href'))
-                vms.append(vm)
+                try:
+                    vapp.get_admin_password(vm_resource.get('name'))
+                except EntityNotFoundException:
+                    reset_admin_pw = True
+                    break
 
-                console_message_printer.info("Updating vm admin password.")
-                task = vm.update_guest_customization_section(
-                    enabled=True,
-                    admin_password_enabled=True,
-                    admin_password_auto=not admin_password,
-                    admin_password=admin_password,
-                )
+            if reset_admin_pw:
+                try:
+                    console_message_printer.info(
+                        f"Undeploying the vApp '{cluster['name']}'")
+                    task = vapp.undeploy()
+                    client.get_task_monitor().wait_for_success(task)
+                    console_message_printer.general(
+                        "Successfully undeployed the vApp.")
+                except Exception as err:
+                    console_message_printer.error(str(err))
+
+                for vm_resource in vm_resources:
+                    console_message_printer.info(
+                        f"Processing vm '{vm_resource.get('name')}'.")
+                    vm = VM(client, href=vm_resource.get('href'))
+                    vms.append(vm)
+
+                    console_message_printer.info("Updating vm admin password")
+                    task = vm.update_guest_customization_section(
+                        enabled=True,
+                        admin_password_enabled=True,
+                        admin_password_auto=not admin_password,
+                        admin_password=admin_password,
+                    )
+                    client.get_task_monitor().wait_for_success(task)
+                    console_message_printer.general("Successfully updated vm")
+
+                    console_message_printer.info("Deploying vm.")
+                    task = vm.power_on_and_force_recustomization()
+                    client.get_task_monitor().wait_for_success(task)
+                    console_message_printer.general("Successfully deployed vm")
+
+                console_message_printer.info("Deploying cluster")
+                task = vapp.deploy(power_on=True)
                 client.get_task_monitor().wait_for_success(task)
-                console_message_printer.general("Successfully updated vm .")
+                console_message_printer.general("Successfully deployed cluster") # noqa: E501
 
-                console_message_printer.info("Deploying vm.")
-                task = vm.power_on_and_force_recustomization()
-                client.get_task_monitor().wait_for_success(task)
-                console_message_printer.general("Successfully deployed vm.")
-
-            console_message_printer.info("Deploying cluster")
-            task = vapp.deploy(power_on=True)
-            client.get_task_monitor().wait_for_success(task)
-            console_message_printer.general("Successfully deployed cluster.")
             console_message_printer.general(
-                f"Successfully processed cluster '{cluster['name']}'.")
+                f"Successfully processed cluster '{cluster['name']}'")
 
         if skip_wait_for_gc:
             return
 
         while True:
+            to_remove = []
             for vm in vms:
                 status = vm.get_guest_customization_status()
                 if status != 'GC_PENDING':
-                    vms.remove(vm)
+                    to_remove.append(vm)
+            for vm in to_remove:
+                vms.remove(vm)
             console_message_printer.info(
                 f"Waiting on guest customization to finish on {len(vms)} vms.")
             if not len(vms) == 0:

@@ -12,8 +12,7 @@ from pyvcloud.vcd.org import Org
 
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.exceptions import AmqpError
-from container_service_extension.local_template_manager import \
-    save_k8s_local_template_definition_as_metadata
+import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
 from container_service_extension.logger import INSTALL_WIRELOG_FILEPATH
@@ -33,7 +32,7 @@ from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION, CSE_NATIVE_DEPLOY_RIGHT_NAME, \
     CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY, CSE_PKS_DEPLOY_RIGHT_CATEGORY, \
     CSE_PKS_DEPLOY_RIGHT_DESCRIPTION, CSE_PKS_DEPLOY_RIGHT_NAME, \
-    CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, EXCHANGE_TYPE, \
+    CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, EXCHANGE_TYPE, LocalTemplateKey, \
     RemoteTemplateKey, SYSTEM_ORG_NAME # noqa: H301
 from container_service_extension.template_builder import TemplateBuilder
 from container_service_extension.utils import str_to_bool
@@ -591,6 +590,16 @@ def _install_template(client, remote_template_manager, template, org_name,
     catalog_item_name = get_revisioned_template_name(
         template[RemoteTemplateKey.NAME],
         template[RemoteTemplateKey.REVISION])
+
+    # remote template data is a super set of local template data, barring
+    # the key 'catalog_item_name'
+    template_data = dict(template)
+    template_data[LocalTemplateKey.CATALOG_ITEM_NAME] = catalog_item_name
+
+    missing_keys = [k for k in LocalTemplateKey if k not in template_data]
+    if len(missing_keys) > 0:
+        raise ValueError(f"Invalid template data. Missing keys: {missing_keys}") # noqa: E501
+
     build_params = {
         'template_name': template[RemoteTemplateKey.NAME],
         'template_revision': template[RemoteTemplateKey.REVISION],
@@ -609,19 +618,11 @@ def _install_template(client, remote_template_manager, template, org_name,
         'ip_allocation_mode': ip_allocation_mode, # noqa: E501
         'storage_profile': storage_profile
     }
-    builder = TemplateBuilder(
-        client, client, build_params, ssh_key=ssh_key,
-        logger=LOGGER, msg_update_callback=msg_update_callback)
+    builder = TemplateBuilder(client, client, build_params, ssh_key=ssh_key,
+                              logger=LOGGER,
+                              msg_update_callback=msg_update_callback)
     builder.build(force_recreate=force_update,
                   retain_temp_vapp=retain_temp_vapp)
 
-    # remote definition is a super set of local definition, barring
-    # the key 'catalog_item_name'
-    template_definition = dict(template)
-    template_definition['catalog_item_name'] = catalog_item_name
-    save_k8s_local_template_definition_as_metadata(
-        client=client,
-        catalog_name=catalog_name,
-        catalog_item_name=catalog_item_name,
-        template_definition=template_definition,
-        org_name=org_name)
+    ltm.save_metadata(client, org_name, catalog_name, catalog_item_name,
+                      template_data)

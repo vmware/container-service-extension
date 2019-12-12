@@ -622,7 +622,13 @@ class VcdBroker(AbstractBroker):
                 ClusterMetadataKey.CLUSTER_ID: cluster_id,
                 ClusterMetadataKey.CSE_VERSION: pkg_resources.require('container-service-extension')[0].version, # noqa: E501
                 ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME], # noqa: E501
-                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION] # noqa: E501
+                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION], # noqa: E501
+                ClusterMetadataKey.OS: template[LocalTemplateKey.OS], # noqa: E501
+                ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION], # noqa: E501
+                ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES], # noqa: E501
+                ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION], # noqa: E501
+                ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
+                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION] # noqa: E501
             }
             vapp = VApp(self.tenant_client, href=vapp_resource.get('href'))
             task = vapp.set_multiple_metadata(tags)
@@ -1046,17 +1052,22 @@ def is_valid_cluster_name(name):
 
 def get_all_clusters(client, cluster_name=None, cluster_id=None,
                      org_name=None, ovdc_name=None):
-    if cluster_id is not None:
-        query_filter = f'metadata:cse.cluster.id==STRING:{cluster_id}'
-    else:
-        query_filter = 'metadata:cse.cluster.id==STRING:*'
+    """Get list of dictionaries containing data for each visible cluster.
 
+    Cluster data dictionaries have these keys:
+        'name', 'vapp_id', 'vapp_href', 'vdc_name', 'vdc_href', 'vdc_id',
+        'leader_endpoint', 'master_nodes', 'nodes', 'nfs_nodes',
+        'number_of_vms', 'template_name', 'template_revision',
+        'cse_version', 'cluster_id', 'status', 'os', 'docker_version',
+        'kubernetes', 'kubernetes_version', 'cni', 'cni_version'
+    """
+    query_filter = f'metadata:{ClusterMetadataKey.CLUSTER_ID}==STRING:*'
+    if cluster_id is not None:
+        query_filter = f'metadata:{ClusterMetadataKey.CLUSTER_ID}==STRING:{cluster_id}' # noqa: E501
     if cluster_name is not None:
         query_filter += f';name=={cluster_name}'
-
     if ovdc_name is not None:
         query_filter += f";vdcName=={ovdc_name}"
-
     resource_type = 'vApp'
     if client.is_sysadmin():
         resource_type = 'adminVApp'
@@ -1065,26 +1076,53 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
             org = Org(client, resource=org_resource)
             query_filter += f";org=={org.resource.get('id')}"
 
+    # 2 queries are required because each query can only return 8 metadata
     q = client.get_typed_query(
         resource_type,
         query_result_format=QueryResultFormat.ID_RECORDS,
         qfilter=query_filter,
-        fields='metadata:' + ClusterMetadataKey.CLUSTER_ID + ',metadata:' + # noqa: W504,E501
-               ClusterMetadataKey.MASTER_IP + ',metadata:' + # noqa: W504
-               ClusterMetadataKey.CSE_VERSION + ',metadata:' + # noqa: W504
-               ClusterMetadataKey.TEMPLATE_NAME + ',metadata:' + # noqa: W504
-               ClusterMetadataKey.TEMPLATE_REVISION + ',metadata:' + # noqa: W504,E501
-               ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME)
+        fields=f'metadata:{ClusterMetadataKey.CLUSTER_ID}'
+               f',metadata:{ClusterMetadataKey.MASTER_IP}'
+               f',metadata:{ClusterMetadataKey.CSE_VERSION}'
+               f',metadata:{ClusterMetadataKey.TEMPLATE_NAME}'
+               f',metadata:{ClusterMetadataKey.TEMPLATE_REVISION}'
+               f',metadata:{ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME}' # noqa: E501
+               f',metadata:{ClusterMetadataKey.OS}')
+    q2 = client.get_typed_query(
+        resource_type,
+        query_result_format=QueryResultFormat.ID_RECORDS,
+        qfilter=query_filter,
+        fields=f'metadata:{ClusterMetadataKey.DOCKER_VERSION}'
+               f',metadata:{ClusterMetadataKey.KUBERNETES}'
+               f',metadata:{ClusterMetadataKey.KUBERNETES_VERSION}'
+               f',metadata:{ClusterMetadataKey.CNI}'
+               f',metadata:{ClusterMetadataKey.CNI_VERSION}')
 
-    clusters = []
+    metadata_key_to_cluster_key = {
+        ClusterMetadataKey.CLUSTER_ID: 'cluster_id',
+        ClusterMetadataKey.CSE_VERSION: 'cse_version',
+        ClusterMetadataKey.MASTER_IP: 'leader_endpoint',
+        ClusterMetadataKey.TEMPLATE_NAME: 'template_name',
+        ClusterMetadataKey.TEMPLATE_REVISION: 'template_revision',
+        ClusterMetadataKey.OS: 'os',
+        ClusterMetadataKey.DOCKER_VERSION: 'docker_version',
+        ClusterMetadataKey.KUBERNETES: 'kubernetes',
+        ClusterMetadataKey.KUBERNETES_VERSION: 'kubernetes_version',
+        ClusterMetadataKey.CNI: 'cni',
+        ClusterMetadataKey.CNI_VERSION: 'cni_version'
+    }
+
+    clusters = {}
     for record in q.execute():
         vapp_id = record.get('id').split(':')[-1]
         vdc_id = record.get('vdc').split(':')[-1]
+        vapp_href = f'{client._uri}/vApp/vapp-{vapp_id}'
 
-        cluster = {
+        # TODO THIS CLUSTER DICTIONARY NEEDS TO BE MORE WELL-DEFINED
+        clusters[vapp_id] = {
             'name': record.get('name'),
             'vapp_id': vapp_id,
-            'vapp_href': f'{client._uri}/vApp/vapp-{vapp_id}',
+            'vapp_href': vapp_href,
             'vdc_name': record.get('vdcName'),
             'vdc_href': f'{client._uri}/vdc/{vdc_id}',
             'vdc_id': vdc_id,
@@ -1097,31 +1135,40 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
             'template_revision': '',
             'cse_version': '',
             'cluster_id': '',
-            'status': record.get('status')
+            'status': record.get('status'),
+            'os': '',
+            'docker_version': '',
+            'kubernetes': '',
+            'kubernetes_version': '',
+            'cni': '',
+            'cni_version': ''
         }
+
         if hasattr(record, 'Metadata'):
-            for entry in record.Metadata.MetadataEntry:
-                if entry.Key == ClusterMetadataKey.CLUSTER_ID:
-                    cluster['cluster_id'] = str(entry.TypedValue.Value)
-                elif entry.Key == ClusterMetadataKey.CSE_VERSION:
-                    cluster['cse_version'] = str(entry.TypedValue.Value)
-                elif entry.Key == ClusterMetadataKey.MASTER_IP:
-                    cluster['leader_endpoint'] = str(entry.TypedValue.Value)
-                elif entry.Key == ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME: # noqa: E501
-                    # Don't overwrite the value if already populated from the
-                    # value corresponding to ClusterMetadataKey.TEMPLATE_NAME
-                    if not cluster['template_name']:
-                        cluster['template_name'] = str(entry.TypedValue.Value)
-                elif entry.Key == ClusterMetadataKey.TEMPLATE_NAME:
-                    cluster['template_name'] = str(entry.TypedValue.Value)
-                elif entry.Key == ClusterMetadataKey.TEMPLATE_REVISION:
-                    cluster['template_revision'] = str(entry.TypedValue.Value)
-            cluster['k8s_version'] = \
-                get_template_k8s_version(cluster.get('template_name'))
+            for element in record.Metadata.MetadataEntry:
+                if element.Key in metadata_key_to_cluster_key:
+                    clusters[vapp_id][metadata_key_to_cluster_key[element.Key]] = str(element.TypedValue.Value) # noqa: E501
+                # for pre-2.5.0 cluster backwards compatibility
+                elif element.Key == ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME and clusters[vapp_id]['template_name'] == '': # noqa: E501
+                    clusters[vapp_id]['template_name'] = str(element.TypedValue.Value) # noqa: E501
 
-        clusters.append(cluster)
+        # pre-2.6 clusters may not have kubernetes version metadata
+        if clusters[vapp_id]['kubernetes_version'] == '':
+            clusters[vapp_id]['kubernetes_version'] = get_template_k8s_version(clusters[vapp_id]['template_name']) # noqa: E501
 
-    return clusters
+    # api query can fetch only 8 metadata at a time
+    # since we have more than 8 metadata, we need to use 2 queries
+    for record in q2.execute():
+        vapp_id = record.get('id').split(':')[-1]
+        if hasattr(record, 'Metadata'):
+            for element in record.Metadata.MetadataEntry:
+                if element.Key in metadata_key_to_cluster_key:
+                    clusters[vapp_id][metadata_key_to_cluster_key[element.Key]] = str(element.TypedValue.Value) # noqa: E501
+                # for pre-2.5.0 cluster backwards compatibility
+                elif element.Key == ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME and clusters[vapp_id]['template_name'] == '': # noqa: E501
+                    clusters[vapp_id]['template_name'] = str(element.TypedValue.Value) # noqa: E501
+
+    return list(clusters.values())
 
 
 def get_cluster(client, cluster_name, cluster_id=None, org_name=None,

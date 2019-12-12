@@ -142,8 +142,8 @@ def cluster_list(request_data, tenant_auth_token):
 
     :return: List
     """
-    vcd_clusters_info = \
-        VcdBroker(tenant_auth_token).list_clusters(request_data)
+    vcd_broker = VcdBroker(tenant_auth_token)
+    vcd_clusters_info = vcd_broker.list_clusters(request_data)
 
     pks_clusters_info = []
     if utils.is_pks_enabled():
