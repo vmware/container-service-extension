@@ -218,9 +218,9 @@ class VcdBroker(AbstractBroker):
         Required data: cluster_name
         Optional data and default values: org_name=None, ovdc_name=None
 
-        :return: A list of tuples with template name and revision
+        :return: A list of dictionaries with keys defined in LocalTemplateKey
 
-        :rtype: List[Tuple(str, str)]
+        :rtype: List[Dict]
         """
         required = [
             RequestKey.CLUSTER_NAME
@@ -246,7 +246,7 @@ class VcdBroker(AbstractBroker):
             if src_name in t[LocalTemplateKey.UPGRADE_FROM]:
                 if t[LocalTemplateKey.NAME] == src_name and int(t[LocalTemplateKey.REVISION]) <= int(src_rev): # noqa: E501
                     continue
-                upgrades.append((t[LocalTemplateKey.NAME], t[LocalTemplateKey.REVISION])) # noqa: E501
+                upgrades.append(t)
 
         return upgrades
 
