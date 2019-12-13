@@ -111,8 +111,6 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
 
         templates.append(metadata_dict)
 
-        print(f"{item_name}\n{metadata_dict}\n===")
-
     return templates
 
 
