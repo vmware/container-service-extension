@@ -4,6 +4,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import os
 import sys
 import time
 
@@ -53,6 +54,8 @@ DISPLAY_LOCAL = "local"
 DISPLAY_REMOTE = "remote"
 CONFIG_DECRYPTION_ERROR_MSG = \
     "Config file decryption failed: invalid decryption password"
+PASSWORD_FOR_CONFIG_ENCRYPTION_MSG = "Password for config file encryption"
+PASSWORD_FOR_CONFIG_DECRYPTION_MSG = "Password for config file decryption"
 
 
 @click.group(context_settings=CONTEXT_SETTINGS, invoke_without_command=True)
@@ -84,14 +87,16 @@ def cli(ctx):
         cse install config.yaml --skip-config-decryption
             Install CSE using data from 'config.yaml'.
 \b
-        cse install encrypted-config.yaml -p abcde
+        cse install encrypted-config.yaml
             Install CSE using data from 'encrypted-config.yaml' after running
-            decryption on the config file using password 'abcde'
+            decryption on the config file using the password provided by the
+            user via stdin.
 \b
-        cse install encrypted-config.yaml --pks-config encrypted-pks-config.yaml -p abcde
+        cse install encrypted-config.yaml --pks-config encrypted-pks-config.yaml
             Install CSE using data from 'encrypted-config.yaml' after running
-            decryption on both the encrypted-config.yaml and encrypted-pks-config.yaml
-            file using password 'abcde'.
+            decryption on both the encrypted-config.yaml and
+            encrypted-pks-config.yaml using the password provided by the user
+            via stdin.
 \b
         cse install config.yaml --template photon-v2 --skip-config-decryption
             Install CSE using data from 'config.yaml' but only create
@@ -124,38 +129,38 @@ def cli(ctx):
 \b
         cse run config.yaml
             Run CSE Server using data from encrypted 'config.yaml',
-            but first validate that CSE was installed according to
-            'config.yaml'. This will prompt for password for decrypting
-            the 'config.yaml'.
+            but first validate that CSE was installed according to 'config.yaml'.
+            This will prompt for password for decrypting the 'config.yaml'.
 \b
-        cse run config.yaml --pks-config pks-config.yaml -p abcde
+        cse run config.yaml --pks-config pks-config.yaml
             Run CSE Server using data from encrypted 'config.yaml' and
             encrypted pks-config.yaml, but first validate that CSE was
             installed according to 'config.yaml' and PKS was installed
             according to pks-config.yaml. Before validation, decryption will
-            be run on both of these configuration using password 'abcde'.
+            be run on both of these configuration using password provided by
+            the user via stdin.
 \b
-        cse run --password xxxx config.yaml
+        cse run config.yaml
             Run CSE Server using data from encrypted 'config.yaml'. Decryption
-            of the config happens using password 'xxxx'. First validate that
-            CSE was installed according to 'config.yaml'.
+            of the config happens using the password provided by the user via
+            stdin. First validate that CSE was installed according to 'config.yaml'.
 \b
-        cse run config.yaml --skip-check --password xxxx
+        cse run config.yaml --skip-check
             Run CSE Server using data from encrypted 'myconfig.yaml'
             without first validating that CSE was installed according
             to 'myconfig.yaml'. Decryption of the config happens using
-            password 'xxxx'
+            password provided by the user via stdin.
 \b
         cse run myconfig.yaml --skip-check --skip-config-decryption
             Run CSE Server using data from plain text 'myconfig.yaml'
             without first validating that CSE was installed according
             to 'myconfig.yaml'. Skip decryption of the config file.
 \b
-        cse encrypt --password xyz --output [encrypted-file-path] config.yaml
+        cse encrypt --output [encrypted-file-path] config.yaml
             Encrypt the config.yaml in plain-text and save it in the given
             output file. If no output file provided, defaults to stdout.
 \b
-        cse decrypt --password xyz --output [decrypted-file-path] cipher.txt
+        cse decrypt --output [decrypted-file-path] cipher.txt
             Decrypt the config file cipher.txt and save it in the given
             output file. If no output file provided, defaults to stdout.
 \b
@@ -166,6 +171,12 @@ def cli(ctx):
             provided by the user in the command line will have preference over
             the environment variable. If both are omitted, it defaults to file
             'config.yaml' in the current directory.
+\b
+        CSE_CONFIG_PASSWORD
+            If this environment variable is set, the commands will use the
+            value provided in this variable to encrypt/decrypt CSE config file.
+            If this variable is not set, then user will be prompted for
+            password to encrypt/decrypt the CSE config file.
 
     """  # noqa: E501
     if ctx.invoked_subcommand is None:
@@ -183,16 +194,16 @@ Examples
     By default, following commands expect an encrypted CSE configuration file
     To accept a plain-text configuration file, use --skip-config-decryption.
 \b
-    cse template list config.yaml --password xyzss
+    cse template list config.yaml
         Display all templates, including that are currently in the local
         catalog, and the ones that are defined in remote template cookbook.
-        config.yaml will be decrypted using the given password 'xyzss'. If no
-        password provided in the option, user will be prompted for password.
+        config.yaml will be decrypted using the password provided by the user
+        via stdin.
 \b
     cse template list config.yaml --skip-config-decryption
         Display all templates, including that are currently in the local
         catalog, and the ones that are defined in remote template cookbook.
-        If config.yaml is in plain-text, use --skil-config-decryption.
+        If config.yaml is in plain-text, use --skip-config-decryption.
 \b
     cse template list --display local config.yaml --skip-config-decryption
         Display templates that are currently in the local catalog.
@@ -208,10 +219,10 @@ Examples
         Install all templates defined in remote template cookbook that are
         missing from the local catalog. Skip decryption of config file
 \b
-    cse template install config.yaml --password abcde
+    cse template install config.yaml
         Install all templates defined in remote template cookbook that are
-        missing from the local catalog. Before that, Decrypt config.yaml using
-        password 'abcde'
+        missing from the local catalog. Before that, config.yaml will
+        be decrypted using the password provided by the user via stdin.
 \b
     cse template install [template name] [template revision] config.yaml
         Install a particular template at a given revision defined in remote
@@ -283,25 +294,20 @@ def sample(ctx, output, pks_config):
     is_flag=True,
     help='Skip decryption of CSE/PKS config file')
 @click.option(
-    '-p',
-    '--password',
-    'password',
-    default=None,
-    metavar='PASSWORD_FOR_DECRYPTION',
-    help='password to use for decrypting config file')
-@click.option(
     '-i',
     '--check-install',
     'check_install',
     is_flag=True,
     help='Checks that CSE/PKS is installed on vCD according '
          'to the config file')
-def check(ctx, config, pks_config, skip_config_decryption, password,
-          check_install):
+def check(ctx, config, pks_config, skip_config_decryption, check_install):
     """Validate CSE config file."""
-    if not skip_config_decryption and password is None:
-        password = prompt_text('Password for config file decryption',
-                               color='green', hide_input=True)
+    if skip_config_decryption:
+        password = None
+    else:
+        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+            color='green', hide_input=True)
     try:
         check_python_version(ConsoleMessagePrinter())
     except Exception as err:
@@ -350,17 +356,10 @@ def check(ctx, config, pks_config, skip_config_decryption, password,
     default=None,
     metavar='OUTPUT_FILE',
     help='Filepath to write decrypted file to')
-@click.option(
-    '-p',
-    '--password',
-    'password',
-    default=None,
-    metavar='PASSWORD_FOR_DECRYPTION',
-    help="password to use for decrypting the config file")
-def decrypt(ctx, input_file, password, output_file):
+def decrypt(ctx, input_file, output_file):
     """Decrypt CSE config file."""
-    if password is None:
-        password = prompt_text('Password', hide_input=True, color='green')
+    password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+        PASSWORD_FOR_CONFIG_DECRYPTION_MSG, hide_input=True, color='green')
     try:
         check_python_version(ConsoleMessagePrinter())
         decrypt_file(input_file, password, output_file)
@@ -394,8 +393,8 @@ def decrypt(ctx, input_file, password, output_file):
     help="password to use for encrypting the config file")
 def encrypt(ctx, input_file, password, output_file):
     """Encrypt CSE config file."""
-    if password is None:
-        password = prompt_text('Password', hide_input=True, color='green')
+    password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+        PASSWORD_FOR_CONFIG_ENCRYPTION_MSG, hide_input=True, color='green')
     try:
         check_python_version(ConsoleMessagePrinter())
         encrypt_file(input_file, password, output_file)
@@ -426,13 +425,6 @@ def encrypt(ctx, input_file, password, output_file):
     is_flag=True,
     help='Skip decryption of CSE/PKS config file')
 @click.option(
-    '-p',
-    '--password',
-    'password',
-    default=None,
-    metavar='PASSWORD_FOR_DECRYPTION',
-    help='password to use for decrypting config file')
-@click.option(
     '-t',
     '--skip-template-creation',
     'skip_template_creation',
@@ -458,13 +450,16 @@ def encrypt(ctx, input_file, password, output_file):
     default=None,
     type=click.File('r'),
     help='Filepath of SSH public key to add to vApp template')
-def install(ctx, config, pks_config, skip_config_decryption, password,
+def install(ctx, config, pks_config, skip_config_decryption,
             skip_template_creation, force_update,
             retain_temp_vapp, ssh_key_file):
     """Install CSE on vCloud Director."""
-    if not skip_config_decryption and password is None:
-        password = prompt_text('Password for config file decryption',
-                               color='green', hide_input=True)
+    if skip_config_decryption:
+        password = None
+    else:
+        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+            color='green', hide_input=True)
     try:
         check_python_version(ConsoleMessagePrinter())
     except Exception as err:
@@ -526,18 +521,14 @@ def install(ctx, config, pks_config, skip_config_decryption, password,
     '--skip-config-decryption',
     is_flag=True,
     help='Skip decryption of CSE/PKS config file')
-@click.option(
-    '-p',
-    '--password',
-    'password',
-    default=None,
-    metavar='PASSWORD_FOR_DECRYPTION',
-    help='password to use for decrypting config file')
-def run(ctx, config, pks_config, skip_check, skip_config_decryption, password):
+def run(ctx, config, pks_config, skip_check, skip_config_decryption):
     """Run CSE service."""
-    if not skip_config_decryption and password is None:
-        password = prompt_text('Password for config file decryption',
-                               color='green', hide_input=True)
+    if skip_config_decryption:
+        password = None
+    else:
+        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+            color='green', hide_input=True)
     try:
         check_python_version(ConsoleMessagePrinter())
     except Exception as err:
@@ -605,20 +596,15 @@ def run(ctx, config, pks_config, skip_check, skip_config_decryption, password):
     '--skip-config-decryption',
     is_flag=True,
     help='Skip decryption of CSE config file')
-@click.option(
-    '-p',
-    '--password',
-    'decryption_password',
-    default=None,
-    metavar='PASSWORD_FOR_DECRYPTION',
-    help='password to use for decrypting config file')
 def convert_cluster(ctx, config_file_name, skip_config_decryption,
-                    decryption_password, cluster_name, admin_password,
+                    cluster_name, admin_password,
                     org_name, vdc_name, skip_wait_for_gc):
-    if not skip_config_decryption and decryption_password is None:
-        decryption_password = prompt_text(
-            'Password for config file decryption', color='green',
-            hide_input=True)
+    if skip_config_decryption:
+        decryption_password = None
+    else:
+        decryption_password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+            color='green', hide_input=True)
 
     try:
         check_python_version()
@@ -827,13 +813,6 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
     is_flag=True,
     help='Skip decryption of CSE config file')
 @click.option(
-    '-p',
-    '--password',
-    'password',
-    default=None,
-    metavar='PASSWORD_FOR_DECRYPTION',
-    help='password to use for decrypting config file')
-@click.option(
     '-d',
     '--display',
     'display_option',
@@ -841,12 +820,15 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
         [DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL, DISPLAY_REMOTE]),
     default=DISPLAY_ALL,
     help='Choose templates to display.')
-def list_template(ctx, config_file_name, skip_config_decryption, password,
+def list_template(ctx, config_file_name, skip_config_decryption,
                   display_option):
     """List CSE k8s templates."""
-    if not skip_config_decryption and password is None:
-        password = prompt_text('Password for config file decryption',
-                               color='green', hide_input=True)
+    if skip_config_decryption:
+        password = None
+    else:
+        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+            color='green', hide_input=True)
     try:
         console_message_printer = ConsoleMessagePrinter()
         try:
@@ -998,13 +980,6 @@ def list_template(ctx, config_file_name, skip_config_decryption, password,
     is_flag=True,
     help='Skip decryption of CSE config file')
 @click.option(
-    '-p',
-    '--password',
-    'password',
-    default=None,
-    metavar='PASSWORD_FOR_DECRYPTION',
-    help='password to use for decrypting config file')
-@click.option(
     '-f',
     '--force',
     'force_create',
@@ -1026,13 +1001,16 @@ def list_template(ctx, config_file_name, skip_config_decryption, password,
     type=click.File('r'),
     help='Filepath of SSH public key to add to vApp template')
 def install_cse_template(ctx, template_name, template_revision,
-                         config_file_name, skip_config_decryption, password,
+                         config_file_name, skip_config_decryption,
                          force_create, retain_temp_vapp,
                          ssh_key_file):
     """Create CSE k8s templates."""
-    if not skip_config_decryption and password is None:
-        password = prompt_text('Password for config file decryption',
-                               color='green', hide_input=True)
+    if skip_config_decryption:
+        password = None
+    else:
+        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+            color='green', hide_input=True)
     try:
         check_python_version(ConsoleMessagePrinter())
     except Exception as err:
