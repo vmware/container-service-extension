@@ -2,6 +2,7 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import copy
 import random
 import re
 import string
@@ -49,6 +50,10 @@ from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import RequestKey
+from container_service_extension.telemetry.constants import CseOperation
+from container_service_extension.telemetry.constants import PayloadKey
+from container_service_extension.telemetry.telemetry_handler import \
+    record_cse_operation_details
 import container_service_extension.utils as utils
 import container_service_extension.vsphere_utils as vs_utils
 
@@ -140,6 +145,10 @@ class VcdBroker(AbstractBroker):
             RequestKey.OVDC_NAME: None
         }
         validated_data = {**defaults, **data}
+
+        # Record the data for analytics
+        record_cse_operation_details(cse_operation=CseOperation.CLUSTER_LIST,
+                                     cse_params=copy.deepcopy(validated_data))
 
         raw_clusters = get_all_clusters(
             self.tenant_client,
@@ -274,6 +283,12 @@ class VcdBroker(AbstractBroker):
                                  f"(received {num_workers}).")
 
         cluster_id = str(uuid.uuid4())
+
+        # Record the data for analytics
+        cse_params = copy.deepcopy(validated_data)
+        cse_params[PayloadKey.CLUSTER_ID] = cluster_id
+        record_cse_operation_details(cse_operation=CseOperation.CLUSTER_CREATE,
+                                     cse_params=cse_params)
         # must _update_task or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
         # call, session becomes None
