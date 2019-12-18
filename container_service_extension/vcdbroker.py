@@ -2,6 +2,7 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import copy
 import random
 import re
 import string
@@ -49,8 +50,14 @@ from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import RequestKey
+from container_service_extension.telemetry.constants import CseOperation
+from container_service_extension.telemetry.constants import PayloadKey
+from container_service_extension.telemetry.telemetry_handler import \
+    record_cse_operation_details
 import container_service_extension.utils as utils
 import container_service_extension.vsphere_utils as vs_utils
+
+TEMPLATE_KEY_CNI_VERSION = LocalTemplateKey.CNI_VERSION
 
 
 class VcdBroker(AbstractBroker):
@@ -140,6 +147,10 @@ class VcdBroker(AbstractBroker):
             RequestKey.OVDC_NAME: None
         }
         validated_data = {**defaults, **data}
+
+        # Record the data for analytics
+        record_cse_operation_details(cse_operation=CseOperation.CLUSTER_LIST,
+                                     cse_params=copy.deepcopy(validated_data))
 
         raw_clusters = get_all_clusters(
             self.tenant_client,
@@ -312,6 +323,7 @@ class VcdBroker(AbstractBroker):
                                  f"(received {num_workers}).")
 
         cluster_id = str(uuid.uuid4())
+
         # must _update_task or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
         # call, session becomes None
@@ -335,6 +347,19 @@ class VcdBroker(AbstractBroker):
             ssh_key=validated_data[RequestKey.SSH_KEY],
             enable_nfs=validated_data[RequestKey.ENABLE_NFS],
             rollback=validated_data[RequestKey.ROLLBACK])
+
+        # Record the data for analytics
+        cse_params = copy.deepcopy(validated_data)
+        cse_params[PayloadKey.CLUSTER_ID] = cluster_id
+        cse_params[LocalTemplateKey.MEMORY] = template.get(LocalTemplateKey.MEMORY)  # noqa: E501
+        cse_params[LocalTemplateKey.CPU] = template.get(LocalTemplateKey.CPU)
+        cse_params[LocalTemplateKey.KUBERNETES] = template.get(LocalTemplateKey.KUBERNETES)  # noqa: E501
+        cse_params[LocalTemplateKey.KUBERNETES_VERSION] = template.get(LocalTemplateKey.KUBERNETES_VERSION)  # noqa: E501
+        cse_params[LocalTemplateKey.OS] = template.get(LocalTemplateKey.OS)
+        cse_params[LocalTemplateKey.CNI] = template.get(LocalTemplateKey.CNI)
+        cse_params[LocalTemplateKey.CNI_VERSION] = template.get(LocalTemplateKey.CNI_VERSION)  # noqa: E501
+        record_cse_operation_details(cse_operation=CseOperation.CLUSTER_CREATE,
+                                     cse_params=cse_params)
 
         return {
             'name': cluster_name,

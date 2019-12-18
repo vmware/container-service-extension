@@ -13,10 +13,14 @@ from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import PKS_CLUSTER_DOMAIN_KEY
 from container_service_extension.server_constants import PKS_PLANS_KEY
 from container_service_extension.shared_constants import RequestKey
+from container_service_extension.telemetry.constants import CseOperation
+from container_service_extension.telemetry.telemetry_handler import \
+    user_action_recorder
 import container_service_extension.utils as utils
 import container_service_extension.vcdbroker as vcdbroker
 
 
+@user_action_recorder(cse_operation=CseOperation.CLUSTER_CREATE)
 def cluster_create(request_data, tenant_auth_token):
     """Request handler for cluster create operation.
 
@@ -140,6 +144,7 @@ def cluster_upgrade_plan(request_data, tenant_auth_token):
     return broker.get_cluster_upgrade_plan(request_data)
 
 
+@user_action_recorder(cse_operation=CseOperation.CLUSTER_LIST)
 def cluster_list(request_data, tenant_auth_token):
     """Request handler for cluster list operation.
 
