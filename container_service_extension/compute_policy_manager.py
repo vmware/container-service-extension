@@ -406,11 +406,9 @@ class ComputePolicyManager:
             if remove_compute_policy_from_vms:
                 cp_list = self.list_compute_policies_on_vdc(ovdc_id)
                 system_default_href = None
-                system_default_id = None
                 for cp_dict in cp_list:
                     if cp_dict['name'] == _SYSTEM_DEFAULT_COMPUTE_POLICY:
                         system_default_href = cp_dict['href']
-                        system_default_id = cp_dict['id']
                 if system_default_href is None:
                     raise EntityNotFoundException(
                         f"Error: {_SYSTEM_DEFAULT_COMPUTE_POLICY} "
@@ -448,8 +446,7 @@ class ComputePolicyManager:
                 task_monitor = self._vcd_client.get_task_monitor()
                 for vm_resource in target_vms:
                     vm = VM(self._vcd_client, href=vm_resource.get('href'))
-                    _task = vm.update_compute_policy(system_default_href,
-                                                     system_default_id)
+                    _task = vm.update_compute_policy(system_default_href)
 
                     task.update(
                         status=TaskStatus.RUNNING.value,

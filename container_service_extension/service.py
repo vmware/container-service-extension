@@ -14,7 +14,6 @@ import traceback
 
 import click
 import pkg_resources
-from pyvcloud.vcd.client import ApiVersion
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -414,27 +413,15 @@ class Service(object, metaclass=Singleton):
 
         org_name = self.config['broker']['org']
         catalog_name = self.config['broker']['catalog']
-        api_version = self.config['vcd']['api_version']
         client = None
         try:
-            if float(api_version) >= float(ApiVersion.VERSION_32.value): # noqa: E501
-                # TODO this api version 32 client should be removed once
-                # vcd can handle cp removal/replacement on version 33
-                client = Client(self.config['vcd']['host'],
-                                api_version=ApiVersion.VERSION_32.value,
-                                verify_ssl_certs=self.config['vcd']['verify'],
-                                log_file=log_filename,
-                                log_requests=log_wire,
-                                log_headers=log_wire,
-                                log_bodies=log_wire)
-            else:
-                client = Client(self.config['vcd']['host'],
-                                api_version=api_version,
-                                verify_ssl_certs=self.config['vcd']['verify'],
-                                log_file=log_filename,
-                                log_requests=log_wire,
-                                log_headers=log_wire,
-                                log_bodies=log_wire)
+            client = Client(self.config['vcd']['host'],
+                            api_version=self.config['vcd']['api_version'],
+                            verify_ssl_certs=self.config['vcd']['verify'],
+                            log_file=log_filename,
+                            log_requests=log_wire,
+                            log_headers=log_wire,
+                            log_bodies=log_wire)
 
             credentials = BasicLoginCredentials(self.config['vcd']['username'],
                                                 SYSTEM_ORG_NAME,
