@@ -23,7 +23,7 @@ def get_telemetry_instance_id(vcd, logger_instance=None,
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
     that writes messages onto console.
 
-    :return instance id to use for sending data to Vmware analytics server
+    :return instance id to use for sending data to Vmware telemetry server
 
     :rtype str
 

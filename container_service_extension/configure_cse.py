@@ -32,6 +32,15 @@ from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_DESCRIPTION, CSE_PKS_DEPLOY_RIGHT_NAME, \
     CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, EXCHANGE_TYPE, LocalTemplateKey, \
     RemoteTemplateKey, SYSTEM_ORG_NAME # noqa: H301
+from container_service_extension.telemetry.constants import CseOperation
+from container_service_extension.telemetry.constants import OperationStatus
+from container_service_extension.telemetry.constants import PayloadKey
+from container_service_extension.telemetry.telemetry_handler \
+    import record_user_action
+from container_service_extension.telemetry.telemetry_handler import \
+    record_user_action_details
+from container_service_extension.telemetry.telemetry_utils import \
+    get_telemetry_instance_id
 from container_service_extension.template_builder import TemplateBuilder
 from container_service_extension.utils import str_to_bool
 from container_service_extension.vsphere_utils import populate_vsphere_list
@@ -175,6 +184,8 @@ def install_cse(config_file_name, skip_template_creation, force_update,
     Handles decision making for configuring AMQP exchange/settings,
     extension registration, catalog setup, and template creation.
 
+    Also records telemetry data on installation details.
+
     :param str config_file_name: config file name.
     :param bool skip_template_creation: If True, skip creating the templates.
     :param bool force_update: if True and templates already exist in vCD,
@@ -289,6 +300,27 @@ def install_cse(config_file_name, skip_template_creation, force_update,
                     ssh_key=ssh_key,
                     msg_update_callback=msg_update_callback)
 
+        # Telemetry - Construct telemetry data
+        telemetry_data = {
+            PayloadKey.WAS_DECRYPTION_SKIPPED: True if skip_config_decryption else False,  # noqa: E501
+            PayloadKey.WAS_PASSWORD_PROVIDED: True if decryption_password else False,  # noqa: E501
+            PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: True if pks_config_file_name else False,  # noqa: E501
+            PayloadKey.WERE_TEMPLATES_SKIPPED: True if skip_template_creation else False,  # noqa: E501
+            PayloadKey.WERE_TEMPLATES_FORCE_UPDATED: True if force_update else False,  # noqa: E501
+            PayloadKey.WAS_TEMP_VAPP_RETAINED: True if retain_temp_vapp else False,  # noqa: E501
+            PayloadKey.WAS_SSH_KEY_SPECIFIED: True if ssh_key else False  # noqa: E501
+        }
+
+        # Telemetry - Store telemetry instance id in config.
+        if config['service']['telemetry']['enable'] is True:
+            config['service']['telemetry']['instance_id'] = \
+                get_telemetry_instance_id(config['vcd'])
+
+        # Telemetry - Record detailed telemetry data on install
+        record_user_action_details(CseOperation.INSTALL_SERVER,
+                                   telemetry_data,
+                                   telemetry_settings=config['service']['telemetry'])  # noqa: E501
+
         # if it's a PKS setup, setup NSX-T constructs
         if config.get('pks_config'):
             nsxt_servers = config.get('pks_config')['nsxt_servers']
@@ -314,12 +346,20 @@ def install_cse(config_file_name, skip_template_creation, force_update,
                     nodes_ip_block_id=nsxt_server.get('nodes_ip_block_ids'),
                     pods_ip_block_id=nsxt_server.get('pods_ip_block_ids'),
                     ncp_boundary_firewall_section_anchor_id=nsxt_server.get('distributed_firewall_section_anchor_id')) # noqa: E501
+        # Telemetry - Record successful install action
+        record_user_action(CseOperation.INSTALL_SERVER,
+                           telemetry_settings=config['service']['telemetry'])
 
-    except Exception:
+    except Exception as err:
         if msg_update_callback:
             msg_update_callback.error(
                 "CSE Installation Error. Check CSE install logs")
         LOGGER.error("CSE Installation Error", exc_info=True)
+        # Telemetry - Record failed install action
+        record_user_action(CseOperation.INSTALL_SERVER,
+                           status=OperationStatus.FAILED,
+                           message=str(err),
+                           telemetry_settings=config['service']['telemetry'])
         raise  # TODO() need installation relevant exceptions for rollback
     finally:
         if client is not None:

@@ -43,7 +43,7 @@ class VacClient(object):
         self._log_body = log_body
 
     def send_data(self, payload=None):
-        """Ingest the given payload into Vmware Analytics Server.
+        """Send the given payload into Vmware Analytics Server.
 
         Trap all exceptions and log them.
 
