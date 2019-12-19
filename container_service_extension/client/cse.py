@@ -535,6 +535,45 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name):
         stderr(e, ctx)
 
 
+@cluster_group.command('upgrade',
+                       short_help="Upgrade cluster software to specified "
+                                  "template's software versions")
+@click.pass_context
+@click.argument('cluster_name', required=True)
+@click.argument('template_name', required=True)
+@click.argument('template_revision', required=True)
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    metavar='VDC_NAME',
+    help='Restrict cluster search to specific org VDC')
+@click.option(
+    '-o',
+    '--org',
+    'org_name',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help="Restrict cluster search to specific org")
+def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
+                    vdc, org_name):
+    """Upgrade cluster software to specified template's software versions."""
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        cluster = Cluster(client)
+        if not client.is_sysadmin() and org_name is None:
+            org_name = ctx.obj['profiles'].get('org_in_use')
+
+        result = cluster.upgrade_cluster(cluster_name, vdc=vdc, org=org_name)
+        stdout(result, ctx)
+    except Exception as e:
+        stderr(e, ctx)
+
+
 @cluster_group.command('config', short_help='Display cluster configuration')
 @click.pass_context
 @click.argument('name', required=True)
