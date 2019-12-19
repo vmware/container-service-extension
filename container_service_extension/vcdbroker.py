@@ -793,6 +793,7 @@ class VcdBroker(AbstractBroker):
         finally:
             self.logout_sys_admin_client()
 
+    # all parameters following '*args' are required and keyword-only
     @utils.run_async
     def _create_nodes_async(self, *args,
                             cluster_name, cluster_vdc_href, vapp_href,
@@ -976,8 +977,7 @@ class VcdBroker(AbstractBroker):
                      f"{cluster_name}")
 
     # all parameters following '*args' are required and keyword-only
-    def _drain_nodes(self, *args,
-                     cluster_name, vapp_href, node_names):
+    def _drain_nodes(self, *args, cluster_name, vapp_href, node_names):
         LOGGER.debug(f"Draining nodes {node_names} "
                      f"from cluster {cluster_name}")
 
@@ -1091,7 +1091,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
                      org_name=None, ovdc_name=None):
     """Get list of dictionaries containing data for each visible cluster.
 
-    Cluster data dictionaries have these keys:
+    TODO define these cluster data dictionary keys better:
         'name', 'vapp_id', 'vapp_href', 'vdc_name', 'vdc_href', 'vdc_id',
         'leader_endpoint', 'master_nodes', 'nodes', 'nfs_nodes',
         'number_of_vms', 'template_name', 'template_revision',
@@ -1527,6 +1527,32 @@ def execute_script_in_nodes(vapp, node_names, script, check_tools=True,
             sys_admin_client.logout()
 
     return all_results
+
+
+def run_script_in_nodes(client, vapp_href, node_names, script):
+    """Run script in all specified nodes.
+
+    Wrapper around `execute_script_in_nodes()`. Use when we don't care about
+    preserving script results
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str vapp_href:
+    :param List[str] node_names:
+    :param str script:
+    """
+    # when is tools checking necessary?
+    vapp = VApp(client, href=vapp_href)
+    results = execute_script_in_nodes(vapp=vapp,
+                                      node_names=node_names,
+                                      script=script,
+                                      check_tools=False)
+    errors = get_script_execution_errors(results)
+    if errors:
+        raise ScriptExecutionError(f"Script execution failed on node "
+                                   f"{node_names}\nErrors: {errors}")
+    if results[0][0] != 0:
+        raise NodeOperationError(f"Error during node operation:\n"
+                                 f"{results[0][2].content.decode()}")
 
 
 def get_script_execution_errors(results):
