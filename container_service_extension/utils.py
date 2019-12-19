@@ -256,7 +256,8 @@ def download_file(url, filepath, sha256=None, force_overwrite=False,
         logger.info(msg)
     if msg_update_callback:
         msg_update_callback.info(msg)
-    response = requests.get(url, stream=True)
+    response = requests.get(url, stream=True,
+                            headers={'Cache-Control': 'no-cache'})
     with path.open(mode='wb') as f:
         for chunk in response.iter_content(chunk_size=SIZE_1MB):
             f.write(chunk)
