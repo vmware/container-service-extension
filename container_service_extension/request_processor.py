@@ -32,6 +32,7 @@ GET /cse/cluster/{cluster name}?org={org name}&vdc={vdc name}
 PUT /cse/cluster/{cluster name}?org={org name}&vdc={vdc name}
 DELETE /cse/cluster/{cluster name}?org={org name}&vdc={vdc name}
 GET /cse/cluster/{cluster name}/config?org={org name}&vdc={vdc name}
+GET /cse/cluster/{cluster name}/upgrade-plan?org={org name}&vdc={vdc name}
 
 POST /cse/nodes
 DELETE /cse/nodes
@@ -56,6 +57,7 @@ OPERATION_TO_HANDLER = {
     CseOperation.CLUSTER_INFO: cluster_handler.cluster_info,
     CseOperation.CLUSTER_LIST: cluster_handler.cluster_list,
     CseOperation.CLUSTER_RESIZE: cluster_handler.cluster_resize,
+    CseOperation.CLUSTER_UPGRADE_PLAN: cluster_handler.cluster_upgrade_plan,
     CseOperation.NODE_CREATE: cluster_handler.node_create,
     CseOperation.NODE_DELETE: cluster_handler.node_delete,
     CseOperation.NODE_INFO: cluster_handler.node_info,
@@ -169,14 +171,19 @@ def _get_url_data(method, url):
                     RequestKey.CLUSTER_NAME: tokens[4]
                 }
             raise MethodNotAllowedRequestError()
-        if num_tokens == 6 and tokens[5] == 'config':
+        if num_tokens == 6:
             if method == RequestMethod.GET:
-                return {
-                    _OPERATION_KEY: CseOperation.CLUSTER_CONFIG,
-                    RequestKey.CLUSTER_NAME: tokens[4]
-                }
+                if tokens[5] == 'config':
+                    return {
+                        _OPERATION_KEY: CseOperation.CLUSTER_CONFIG,
+                        RequestKey.CLUSTER_NAME: tokens[4]
+                    }
+                if tokens[5] == 'upgrade-plan':
+                    return {
+                        _OPERATION_KEY: CseOperation.CLUSTER_UPGRADE_PLAN,
+                        RequestKey.CLUSTER_NAME: tokens[4]
+                    }
             raise MethodNotAllowedRequestError()
-
     elif operation_type == 'node':
         if num_tokens == 4:
             if method == RequestMethod.POST:

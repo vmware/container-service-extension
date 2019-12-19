@@ -136,6 +136,7 @@ class CseOperation(Enum):
     CLUSTER_INFO = ('get info of cluster')
     CLUSTER_LIST = ('list clusters')
     CLUSTER_RESIZE = ('resize cluster', requests.codes.accepted)
+    CLUSTER_UPGRADE_PLAN = ('get supported cluster upgrade paths')
     NODE_CREATE = ('create node', requests.codes.accepted)
     NODE_DELETE = ('delete node', requests.codes.accepted)
     NODE_INFO = ('get info of node')

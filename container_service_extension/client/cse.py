@@ -17,6 +17,7 @@ from container_service_extension.exceptions import CseResponseError
 from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
+from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.service import Service
 from container_service_extension.shared_constants import ComputePolicyAction
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
@@ -484,6 +485,52 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
             minor_error_code_to_error_message.get(
                 e.minor_error_code, e.error_message)
         stderr(e, ctx)
+    except Exception as e:
+        stderr(e, ctx)
+
+
+@cluster_group.command('upgrade-plan',
+                       short_help='Display templates that the specified '
+                                  'cluster can upgrade to')
+@click.pass_context
+@click.argument('cluster_name', required=True)
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    metavar='VDC_NAME',
+    help='Restrict cluster search to specific org VDC')
+@click.option(
+    '-o',
+    '--org',
+    'org_name',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help="Restrict cluster search to specific org")
+def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name):
+    """Display templates that the specified cluster can upgrade to."""
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        cluster = Cluster(client)
+        if not client.is_sysadmin() and org_name is None:
+            org_name = ctx.obj['profiles'].get('org_in_use')
+
+        templates = cluster.get_upgrade_plan(cluster_name, vdc=vdc,
+                                             org=org_name)
+        result = []
+        for template in templates:
+            result.append({
+                'Template Name': template[LocalTemplateKey.NAME],
+                'Template Revision': template[LocalTemplateKey.REVISION],
+                'Kubernetes': template[LocalTemplateKey.KUBERNETES_VERSION],
+                'Docker-CE': template[LocalTemplateKey.DOCKER_VERSION],
+                'CNI': f"{template[LocalTemplateKey.CNI]}-{template[LocalTemplateKey.CNI_VERSION]}" # noqa: E501
+            })
+        stdout(result, ctx, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
 

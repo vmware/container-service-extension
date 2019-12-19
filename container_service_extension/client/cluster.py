@@ -44,6 +44,17 @@ class Cluster:
             params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
         return process_response(response)
 
+    def get_upgrade_plan(self, cluster_name, org=None, vdc=None):
+        method = RequestMethod.GET
+        uri = f'{self._uri}/cluster/{cluster_name}/upgrade-plan'
+        response = self.client._do_request_prim(
+            method,
+            uri,
+            self.client._session,
+            accept_type='application/json',
+            params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
+        return process_response(response)
+
     def create_cluster(self,
                        vdc,
                        network_name,
