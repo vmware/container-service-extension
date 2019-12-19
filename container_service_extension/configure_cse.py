@@ -24,8 +24,6 @@ from container_service_extension.pyvcloud_utils import catalog_exists
 from container_service_extension.pyvcloud_utils import create_and_share_catalog
 from container_service_extension.pyvcloud_utils import get_org
 from container_service_extension.remote_template_manager import \
-    get_revisioned_template_name
-from container_service_extension.remote_template_manager import \
     RemoteTemplateManager
 from container_service_extension.server_constants import \
     CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY, CSE_NATIVE_DEPLOY_RIGHT_CATEGORY, \
@@ -587,7 +585,7 @@ def _install_template(client, remote_template_manager, template, org_name,
         template_name=template[RemoteTemplateKey.NAME],
         revision=template[RemoteTemplateKey.REVISION],
         force_overwrite=force_update)
-    catalog_item_name = get_revisioned_template_name(
+    catalog_item_name = ltm.get_revisioned_template_name(
         template[RemoteTemplateKey.NAME],
         template[RemoteTemplateKey.REVISION])
 

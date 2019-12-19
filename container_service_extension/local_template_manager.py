@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import ast
+import os
+import pathlib
 
 from pyvcloud.vcd.client import MetadataDomain
 from pyvcloud.vcd.client import MetadataVisibility
@@ -11,6 +13,8 @@ from pyvcloud.vcd.utils import metadata_to_dict
 
 from container_service_extension.pyvcloud_utils import get_org
 from container_service_extension.server_constants import LocalTemplateKey
+
+LOCAL_SCRIPTS_DIR = '.cse_scripts'
 
 
 def get_template_k8s_version(template_name):
@@ -24,6 +28,30 @@ def get_template_k8s_version(template_name):
         pass
 
     return "Unknown"
+
+
+def get_revisioned_template_name(template_name, revision):
+    """Construct name of a template to include it's revision number."""
+    return f"{template_name}_rev{revision}"
+
+
+def get_script_filepath(template_name, revision, script_file_name):
+    """Construct the absolute path to a given script.
+
+    :param str template_name:
+    :param str revision:
+    :param str script_file_name:
+
+    :rtype: str
+    """
+    template_dir = pathlib.Path.home() / LOCAL_SCRIPTS_DIR / \
+        get_revisioned_template_name(template_name, revision)
+    template_dir.mkdir(parents=True, exist_ok=True)
+
+    # pathlib '/' operator does not intuitively resolve Enums with str mixin
+    # Ex. ScriptFile.MASTER does not resolve to 'mstr'
+    # os.path.join is used instead
+    return os.path.join(template_dir, script_file_name)
 
 
 def get_all_k8s_local_template_definition(client, catalog_name, org=None,

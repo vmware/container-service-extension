@@ -27,8 +27,7 @@ from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.consumer import MessageConsumer
 from container_service_extension.exceptions import BadRequestError
 from container_service_extension.exceptions import UnauthorizedRequestError
-from container_service_extension.local_template_manager import \
-    get_all_k8s_local_template_definition
+import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import configure_server_logger
 from container_service_extension.logger import SERVER_DEBUG_LOG_FILEPATH
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
@@ -323,7 +322,7 @@ class Service(object, metaclass=Singleton):
 
             org_name = self.config['broker']['org']
             catalog_name = self.config['broker']['catalog']
-            k8_templates = get_all_k8s_local_template_definition(
+            k8_templates = ltm.get_all_k8s_local_template_definition(
                 client=client, catalog_name=catalog_name, org_name=org_name)
 
             if not k8_templates:

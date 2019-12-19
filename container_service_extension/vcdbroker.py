@@ -35,10 +35,9 @@ from container_service_extension.exceptions import NodeNotFoundError
 from container_service_extension.exceptions import NodeOperationError
 from container_service_extension.exceptions import ScriptExecutionError
 from container_service_extension.exceptions import WorkerNodeCreationError
-from container_service_extension.local_template_manager import get_template_k8s_version # noqa: E501
+import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
-from container_service_extension.remote_template_manager import get_local_script_filepath # noqa: E501
 import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_NAME # noqa: E501
@@ -1192,7 +1191,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
 
         # pre-2.6 clusters may not have kubernetes version metadata
         if clusters[vapp_id]['kubernetes_version'] == '':
-            clusters[vapp_id]['kubernetes_version'] = get_template_k8s_version(clusters[vapp_id]['template_name']) # noqa: E501
+            clusters[vapp_id]['kubernetes_version'] = ltm.get_template_k8s_version(clusters[vapp_id]['template_name']) # noqa: E501
 
     # api query can fetch only 8 metadata at a time
     # since we have more than 8 metadata, we need to use 2 queries
@@ -1332,7 +1331,7 @@ def add_nodes(client, num_nodes, node_type, org, vdc, vapp, catalog_name,
 
             if node_type == NodeType.NFS:
                 LOGGER.debug(f"Enabling NFS server on {vm_name}")
-                script_filepath = get_local_script_filepath(
+                script_filepath = ltm.get_script_filepath(
                     template[LocalTemplateKey.NAME],
                     template[LocalTemplateKey.REVISION],
                     ScriptFile.NFSD)
@@ -1392,9 +1391,9 @@ def get_master_ip(vapp):
 
 def init_cluster(vapp, template_name, template_revision):
     try:
-        script_filepath = get_local_script_filepath(template_name,
-                                                    template_revision,
-                                                    ScriptFile.MASTER)
+        script_filepath = ltm.get_script_filepath(template_name,
+                                                  template_revision,
+                                                  ScriptFile.MASTER)
         script = utils.read_data_file(script_filepath, logger=LOGGER)
         node_names = get_node_names(vapp, NodeType.MASTER)
         result = execute_script_in_nodes(vapp=vapp, node_names=node_names,
@@ -1429,9 +1428,9 @@ def join_cluster(vapp, template_name, template_revision, target_nodes=None):
     node_names = get_node_names(vapp, NodeType.WORKER)
     if target_nodes is not None:
         node_names = [name for name in node_names if name in target_nodes]
-    tmp_script_filepath = get_local_script_filepath(template_name,
-                                                    template_revision,
-                                                    ScriptFile.NODE)
+    tmp_script_filepath = ltm.get_script_filepath(template_name,
+                                                  template_revision,
+                                                  ScriptFile.NODE)
     tmp_script = utils.read_data_file(tmp_script_filepath, logger=LOGGER)
     script = tmp_script.format(token=init_info[0], ip=init_info[1])
     worker_results = execute_script_in_nodes(vapp=vapp, node_names=node_names,

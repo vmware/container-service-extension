@@ -31,8 +31,7 @@ from container_service_extension.encryption_engine import decrypt_file
 from container_service_extension.encryption_engine import encrypt_file
 from container_service_extension.encryption_engine import get_decrypted_file_contents # noqa: E501
 from container_service_extension.exceptions import AmqpConnectionError
-from container_service_extension.local_template_manager import get_all_k8s_local_template_definition # noqa: E501
-from container_service_extension.local_template_manager import get_k8s_and_docker_versions # noqa: E501
+import container_service_extension.local_template_manager as ltm
 from container_service_extension.remote_template_manager import RemoteTemplateManager # noqa: E501
 from container_service_extension.sample_generator import generate_sample_config
 from container_service_extension.server_constants import ClusterMetadataKey
@@ -708,7 +707,7 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
             template_revision = str(metadata_dict.get(ClusterMetadataKey.TEMPLATE_REVISION, '0')) # noqa: E501
 
             if template_name:
-                k8s_version, docker_version = get_k8s_and_docker_versions(template_name, template_revision=template_revision, cse_version=cse_version) # noqa: E501
+                k8s_version, docker_version = ltm.get_k8s_and_docker_versions(template_name, template_revision=template_revision, cse_version=cse_version) # noqa: E501
                 tokens = template_name.split('_')
                 new_metadata = {
                     ClusterMetadataKey.OS: tokens[0],
@@ -870,7 +869,7 @@ def list_template(ctx, config_file_name, skip_config_decryption,
                 org_name = config_dict['broker']['org']
                 catalog_name = config_dict['broker']['catalog']
                 local_template_definitions = \
-                    get_all_k8s_local_template_definition(
+                    ltm.get_all_k8s_local_template_definition(
                         client=client,
                         catalog_name=catalog_name,
                         org_name=org_name)
