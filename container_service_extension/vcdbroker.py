@@ -479,7 +479,7 @@ class VcdBroker(AbstractBroker):
               f"{template[LocalTemplateKey.KUBERNETES_VERSION]}, Docker-CE: " \
               f"{cluster['docker_version']} -> " \
               f"{template[LocalTemplateKey.DOCKER_VERSION]}, CNI: " \
-              f"{cluster['cni_version']} -> " \
+              f"{cluster['cni']} {cluster['cni_version']} -> " \
               f"{template[LocalTemplateKey.CNI_VERSION]}"
         self._update_task(TaskStatus.RUNNING, message=msg)
         LOGGER.info(f"{msg} ({cluster['vapp_href']})")

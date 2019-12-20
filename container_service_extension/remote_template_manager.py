@@ -29,7 +29,7 @@ def download_file_into_memory(url):
 
     :rtype: str
     """
-    response = requests.get(url)
+    response = requests.get(url, headers={'Cache-Control': 'no-cache'})
     if response.status_code == requests.codes.ok:
         return response.text
     else:
