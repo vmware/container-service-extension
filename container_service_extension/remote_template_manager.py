@@ -124,12 +124,14 @@ class RemoteTemplateManager():
 
             local_script_filepath = ltm.get_script_filepath(
                 template_name, revision, script_file)
-
-            download_file(url=remote_script_url,
-                          filepath=local_script_filepath,
-                          force_overwrite=force_overwrite,
-                          logger=self.logger,
-                          msg_update_callback=self.msg_update_callback)
+            try:
+                download_file(url=remote_script_url,
+                              filepath=local_script_filepath,
+                              force_overwrite=force_overwrite,
+                              logger=self.logger,
+                              msg_update_callback=self.msg_update_callback)
+            except requests.HTTPError:
+                continue
 
             # Set Read,Write permission only for the owner
             if os.name != 'nt':

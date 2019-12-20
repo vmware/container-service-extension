@@ -239,6 +239,8 @@ def download_file(url, filepath, sha256=None, force_overwrite=False,
     :param logging.Logger logger: optional logger to log with.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback
         object that writes messages onto console.
+
+    :raises HTTPError: if the response has an error status code
     """
     path = pathlib.Path(filepath)
     if not force_overwrite and path.is_file() and \
@@ -258,6 +260,7 @@ def download_file(url, filepath, sha256=None, force_overwrite=False,
         msg_update_callback.info(msg)
     response = requests.get(url, stream=True,
                             headers={'Cache-Control': 'no-cache'})
+    response.raise_for_status()
     with path.open(mode='wb') as f:
         for chunk in response.iter_content(chunk_size=SIZE_1MB):
             f.write(chunk)
