@@ -18,6 +18,7 @@ from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
 import requests
+import semantic_version as semver
 
 from container_service_extension.abstract_broker import AbstractBroker
 from container_service_extension.authorization import secure
@@ -280,7 +281,7 @@ class VcdBroker(AbstractBroker):
             get_cluster(self.tenant_client, cluster_name,
                         org_name=data[RequestKey.ORG_NAME],
                         ovdc_name=data[RequestKey.OVDC_NAME])
-            raise ClusterAlreadyExistsError(f"Cluster {cluster_name} "
+            raise ClusterAlreadyExistsError(f"Cluster '{cluster_name}' "
                                             f"already exists.")
         except ClusterNotFoundError:
             pass
@@ -419,9 +420,70 @@ class VcdBroker(AbstractBroker):
         # call, session becomes None
         self._update_task(
             TaskStatus.RUNNING,
-            message=f"Deleting cluster {cluster_name} ({cluster_id})")
+            message=f"Deleting cluster '{cluster_name}' ({cluster_id})")
         self._delete_cluster_async(cluster_name=cluster_name,
                                    cluster_vdc_href=cluster['vdc_href'])
+
+        return {
+            'cluster_name': cluster_name,
+            'task_href': self.task_resource.get('href')
+        }
+
+    @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
+    def upgrade_cluster(self, data):
+        """Start the upgrade cluster operation.
+
+        Validates data for 'upgrade cluster' operation.
+        Upgrading cluster is an asynchronous task, so the returned
+        `result['task_href']` can be polled to get updates on task progress.
+
+        Required data: cluster_name, template_name, template_revision
+        Optional data and default values: org_name=None, ovdc_name=None
+        """
+        required = [
+            RequestKey.CLUSTER_NAME,
+            RequestKey.TEMPLATE_NAME,
+            RequestKey.TEMPLATE_REVISION
+        ]
+        defaults = {
+            RequestKey.ORG_NAME: None,
+            RequestKey.OVDC_NAME: None
+        }
+        validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
+
+        cluster_name = validated_data[RequestKey.CLUSTER_NAME]
+        template_name = validated_data[RequestKey.TEMPLATE_NAME]
+        template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
+
+        # check that the specified template is a valid upgrade target
+        template = {}
+        valid_templates = self.get_cluster_upgrade_plan(validated_data)
+        for t in valid_templates:
+            if t[LocalTemplateKey.NAME] == template_name and t[LocalTemplateKey.REVISION] == template_revision: # noqa: E501
+                template = t
+                break
+        if not template:
+            raise CseServerError(
+                f"Specified template/revision ({template_name} revision "
+                f"{template_revision}) is not a valid upgrade target for "
+                f"cluster '{cluster_name}'.")
+
+        # get cluster data (including node names) to pass to async function
+        cluster = self.get_cluster_info(validated_data)
+
+        msg = f"Upgrading cluster '{cluster_name}' " \
+              f"software to match template {template_name} (revision " \
+              f"{template_revision}): Kubernetes: " \
+              f"{cluster['kubernetes_version']} -> " \
+              f"{template[LocalTemplateKey.KUBERNETES_VERSION]}, Docker-CE: " \
+              f"{cluster['docker_version']} -> " \
+              f"{template[LocalTemplateKey.DOCKER_VERSION]}, CNI: " \
+              f"{cluster['cni_version']} -> " \
+              f"{template[LocalTemplateKey.CNI_VERSION]}"
+        self._update_task(TaskStatus.RUNNING, message=msg)
+        LOGGER.info(f"{msg} ({cluster['vapp_href']})")
+        self._upgrade_cluster_async(cluster=cluster, template=template)
 
         return {
             'cluster_name': cluster_name,
@@ -544,7 +606,7 @@ class VcdBroker(AbstractBroker):
             TaskStatus.RUNNING,
             message=f"Creating {num_workers} node(s) from template "
                     f"'{template_name}' (revision {template_revision}) and "
-                    f"adding to {cluster_name} ({cluster_id})")
+                    f"adding to cluster '{cluster_name}' ({cluster_id})")
         self._create_nodes_async(
             cluster_name=cluster_name,
             cluster_vdc_href=cluster['vdc_href'],
@@ -610,7 +672,7 @@ class VcdBroker(AbstractBroker):
         self._update_task(
             TaskStatus.RUNNING,
             message=f"Deleting {len(node_names_list)} node(s)"
-                    f" from cluster {cluster_name}({cluster_id})")
+                    f" from cluster '{cluster_name}'({cluster_id})")
 
         self._delete_nodes_async(
             cluster_name=cluster_name,
@@ -634,17 +696,17 @@ class VcdBroker(AbstractBroker):
         vdc = vcd_utils.get_vdc(
             self.tenant_client, vdc_name=ovdc_name, org=org)
 
-        LOGGER.debug(f"About to create cluster {cluster_name} on {ovdc_name}"
+        LOGGER.debug(f"About to create cluster '{cluster_name}' on {ovdc_name}"
                      f" with {num_workers} worker nodes, "
                      f"storage profile={storage_profile_name}")
         try:
             self._update_task(
                 TaskStatus.RUNNING,
-                message=f"Creating cluster vApp {cluster_name}({cluster_id})")
+                message=f"Creating cluster vApp {cluster_name} ({cluster_id})")
             try:
                 vapp_resource = \
                     vdc.create_vapp(cluster_name,
-                                    description=f"cluster {cluster_name}",
+                                    description=f"cluster '{cluster_name}'",
                                     network=network_name,
                                     fence_mode='bridged')
             except Exception as e:
@@ -674,7 +736,7 @@ class VcdBroker(AbstractBroker):
             self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Creating master node for "
-                        f"{cluster_name} ({cluster_id})")
+                        f"cluster '{cluster_name}' ({cluster_id})")
             vapp.reload()
             server_config = utils.get_server_runtime_config()
             catalog_name = server_config['broker']['catalog']
@@ -698,7 +760,8 @@ class VcdBroker(AbstractBroker):
 
             self._update_task(
                 TaskStatus.RUNNING,
-                message=f"Initializing cluster {cluster_name} ({cluster_id})")
+                message=f"Initializing cluster '{cluster_name}' "
+                        f"({cluster_id})")
             vapp.reload()
             init_cluster(vapp, template[LocalTemplateKey.NAME],
                          template[LocalTemplateKey.REVISION])
@@ -710,7 +773,7 @@ class VcdBroker(AbstractBroker):
             self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Creating {num_workers} node(s) for "
-                        f"{cluster_name}({cluster_id})")
+                        f"cluster '{cluster_name}' ({cluster_id})")
             try:
                 add_nodes(client=self.tenant_client,
                           num_nodes=num_workers,
@@ -732,7 +795,7 @@ class VcdBroker(AbstractBroker):
             self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Adding {num_workers} node(s) to "
-                        f"{cluster_name}({cluster_id})")
+                        f"cluster '{cluster_name}' ({cluster_id})")
             vapp.reload()
             join_cluster(vapp, template[LocalTemplateKey.NAME],
                          template[LocalTemplateKey.REVISION])
@@ -741,7 +804,7 @@ class VcdBroker(AbstractBroker):
                 self._update_task(
                     TaskStatus.RUNNING,
                     message=f"Creating NFS node for "
-                            f"{cluster_name} ({cluster_id})")
+                            f"cluster '{cluster_name}' ({cluster_id})")
                 try:
                     add_nodes(client=self.tenant_client,
                               num_nodes=1,
@@ -762,12 +825,12 @@ class VcdBroker(AbstractBroker):
 
             self._update_task(
                 TaskStatus.SUCCESS,
-                message=f"Created cluster {cluster_name} ({cluster_id})")
+                message=f"Created cluster '{cluster_name}' ({cluster_id})")
         except (MasterNodeCreationError, WorkerNodeCreationError,
                 NFSNodeCreationError, ClusterJoiningError,
                 ClusterInitializationError, ClusterOperationError) as e:
             if rollback:
-                msg = f"Error creating cluster {cluster_name}. " \
+                msg = f"Error creating cluster '{cluster_name}'. " \
                       f"Deleting cluster (rollback=True)"
                 self._update_task(TaskStatus.RUNNING, message=msg)
                 LOGGER.info(msg)
@@ -777,17 +840,17 @@ class VcdBroker(AbstractBroker):
                                           cluster_id=cluster_id,
                                           org_name=org_name,
                                           ovdc_name=ovdc_name)
-                    self._delete_cluster(cluster_name=cluster_name,
-                                         cluster_vdc_href=cluster['vdc_href'])
+                    delete_vapp(self.tenant_client, cluster['vdc_href'],
+                                cluster_name)
                 except Exception:
-                    LOGGER.error(f"Failed to delete cluster {cluster_name}",
+                    LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
-            LOGGER.error(f"Error creating cluster {cluster_name}",
+            LOGGER.error(f"Error creating cluster '{cluster_name}'",
                          exc_info=True)
             self._update_task(TaskStatus.ERROR, error_message=str(e))
             # raising an exception here prints a stacktrace to server console
         except Exception as e:
-            LOGGER.error(f"Unknown error creating cluster {cluster_name}",
+            LOGGER.error(f"Unknown error creating cluster '{cluster_name}'",
                          exc_info=True)
             self._update_task(TaskStatus.ERROR, error_message=str(e))
         finally:
@@ -807,7 +870,7 @@ class VcdBroker(AbstractBroker):
         template = get_template(name=template_name, revision=template_revision)
         msg = f"Creating {num_workers} node(s) from template " \
               f"'{template_name}' (revision {template_revision}) and " \
-              f"adding to {cluster_name} ({cluster_id})"
+              f"adding to cluster '{cluster_name}' ({cluster_id})"
         LOGGER.debug(msg)
         try:
             self._update_task(TaskStatus.RUNNING, message=msg)
@@ -837,7 +900,7 @@ class VcdBroker(AbstractBroker):
                 self._update_task(
                     TaskStatus.SUCCESS,
                     message=f"Created {num_workers} node(s) for "
-                            f"{cluster_name}({cluster_id})")
+                            f"cluster '{cluster_name}' ({cluster_id})")
             elif node_type == NodeType.WORKER:
                 self._update_task(
                     TaskStatus.RUNNING,
@@ -855,19 +918,19 @@ class VcdBroker(AbstractBroker):
                             f"{cluster_name}({cluster_id})")
         except NodeCreationError as e:
             if rollback:
-                msg = f"Error adding nodes to {cluster_name} {cluster_id}." \
-                      f" Deleting nodes: {e.node_names} (rollback=True)"
+                msg = f"Error adding nodes to cluster '{cluster_name}' " \
+                      f"({cluster_id}). Deleting nodes: {e.node_names} " \
+                      f"(rollback=True)"
                 self._update_task(TaskStatus.RUNNING, message=msg)
                 LOGGER.info(msg)
                 try:
-                    self._delete_nodes(cluster_name=cluster_name,
-                                       vapp_href=vapp_href,
-                                       node_names_list=e.node_names)
+                    delete_nodes(self.tenant_client, vapp_href, e.node_names,
+                                 cluster_name=cluster_name)
                 except Exception:
                     LOGGER.error(f"Failed to delete nodes {e.node_names} "
-                                 f"from cluster {cluster_name}",
+                                 f"from cluster '{cluster_name}'",
                                  exc_info=True)
-            LOGGER.error(f"Error adding nodes to {cluster_name}",
+            LOGGER.error(f"Error adding nodes to cluster '{cluster_name}'",
                          exc_info=True)
             LOGGER.error(str(e), exc_info=True)
             self._update_task(TaskStatus.ERROR, error_message=str(e))
@@ -886,31 +949,29 @@ class VcdBroker(AbstractBroker):
             self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Draining {len(node_names_list)} node(s) "
-                        f"from cluster {cluster_name}: {node_names_list}")
+                        f"from cluster '{cluster_name}': {node_names_list}")
 
             # if nodes fail to drain, continue with node deletion anyways
             try:
-                self._drain_nodes(cluster_name=cluster_name,
-                                  vapp_href=vapp_href,
-                                  node_names=node_names_list)
+                drain_nodes(self.tenant_client, vapp_href, node_names_list,
+                            cluster_name=cluster_name)
             except (NodeOperationError, ScriptExecutionError) as err:
                 LOGGER.warning(f"Failed to drain nodes: {node_names_list} in "
-                               f"cluster {cluster_name}. "
+                               f"cluster '{cluster_name}'. "
                                f"Continuing node delete...\nError: {err}")
 
             self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Deleting {len(node_names_list)} node(s)"
-                        f" from cluster {cluster_name}: {node_names_list}")
+                        f" from cluster '{cluster_name}': {node_names_list}")
 
-            self._delete_nodes(cluster_name=cluster_name,
-                               vapp_href=vapp_href,
-                               node_names_list=node_names_list)
+            delete_nodes(self.tenant_client, vapp_href, node_names_list,
+                         cluster_name=cluster_name)
 
             self._update_task(
                 TaskStatus.SUCCESS,
                 message=f"Deleted {len(node_names_list)} node(s)"
-                        f" to cluster {cluster_name}")
+                        f" to cluster '{cluster_name}'")
         except Exception as e:
             LOGGER.error(f"Unexpected error while deleting nodes "
                          f"{node_names_list}: {e}",
@@ -925,12 +986,11 @@ class VcdBroker(AbstractBroker):
         try:
             self._update_task(
                 TaskStatus.RUNNING,
-                message=f"Deleting cluster {cluster_name}")
-            self._delete_cluster(cluster_name=cluster_name,
-                                 cluster_vdc_href=cluster_vdc_href)
+                message=f"Deleting cluster '{cluster_name}'")
+            delete_vapp(self.tenant_client, cluster_vdc_href, cluster_name)
             self._update_task(
                 TaskStatus.SUCCESS,
-                message=f"Deleted cluster {cluster_name}")
+                message=f"Deleted cluster '{cluster_name}'")
         except Exception as e:
             LOGGER.error(f"Unexpected error while deleting cluster: {e}",
                          exc_info=True)
@@ -939,58 +999,173 @@ class VcdBroker(AbstractBroker):
             self.logout_sys_admin_client()
 
     # all parameters following '*args' are required and keyword-only
-    # synchronous cluster/node delete functions are required for rollback
-    def _delete_cluster(self, *args, cluster_name, cluster_vdc_href):
-        LOGGER.debug(f"About to delete cluster with name: {cluster_name}")
-        vdc = VDC(self.tenant_client, href=cluster_vdc_href)
-        task = vdc.delete_vapp(cluster_name, force=True)
-        self.tenant_client.get_task_monitor().wait_for_status(task)
-
-    # all parameters following '*args' are required and keyword-only
-    def _delete_nodes(self, *args,
-                      cluster_name, vapp_href, node_names_list):
-        LOGGER.debug(f"About to delete nodes {node_names_list} "
-                     f"from cluster {cluster_name}")
-
-        script = "#!/usr/bin/env bash\nkubectl delete node "
-        for node_name in node_names_list:
-            script += f' {node_name}'
-        script += '\n'
+    @utils.run_async
+    def _upgrade_cluster_async(self, *args, cluster, template):
         try:
-            run_script_in_master_vm(self.tenant_client, vapp_href, script)
-        except Exception:
-            LOGGER.error(f"Couldn't delete node {node_names_list} "
-                         f"from cluster {cluster_name}")
+            cluster_name = cluster['name']
+            master_node_names = [n['name'] for n in cluster['master_nodes']]
+            worker_node_names = [n['name'] for n in cluster['nodes']]
+            all_node_names = master_node_names + worker_node_names
+            vapp_href = cluster['vapp_href']
+            template_name = template[LocalTemplateKey.NAME]
+            template_revision = template[LocalTemplateKey.REVISION]
 
-        vapp = VApp(self.tenant_client, href=vapp_href)
-        for vm_name in node_names_list:
-            vm = VM(self.tenant_client, resource=vapp.get_vm(vm_name))
-            try:
-                task = vm.undeploy()
-                self.tenant_client.get_task_monitor().wait_for_status(task)
-            except Exception:
-                LOGGER.warning(f"Couldn't undeploy VM {vm_name}")
-        task = vapp.delete_vms(node_names_list)
-        self.tenant_client.get_task_monitor().wait_for_status(task)
+            # semantic version doesn't allow leading zeros
+            # docker's version format YY.MM.patch allows us to directly use
+            # lexicographical string comparison
+            c_docker = cluster['docker_version']
+            t_docker = template[LocalTemplateKey.DOCKER_VERSION]
+            c_k8s = semver.Version(cluster['kubernetes_version'])
+            t_k8s = semver.Version(template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
+            c_cni = semver.Version(cluster['cni_version'])
+            t_cni = semver.Version(template[LocalTemplateKey.CNI_VERSION])
 
-        LOGGER.debug(f"Deleted nodes {node_names_list} from cluster "
-                     f"{cluster_name}")
+            upgrade_docker = t_docker > c_docker
+            upgrade_k8s = t_k8s > c_k8s
+            upgrade_cni = t_cni > c_cni or t_k8s.major > c_k8s.major or t_k8s.minor > c_k8s.minor # noqa: E501
 
-    # all parameters following '*args' are required and keyword-only
-    def _drain_nodes(self, *args, cluster_name, vapp_href, node_names):
-        LOGGER.debug(f"Draining nodes {node_names} "
-                     f"from cluster {cluster_name}")
+            if upgrade_k8s:
+                self._update_task(
+                    TaskStatus.RUNNING,
+                    message=f"Draining master node {master_node_names}"
+                )
+                drain_nodes(self.tenant_client, vapp_href,
+                            master_node_names, cluster_name=cluster_name)
 
-        script = f"#!/usr/bin/env bash\n"
-        for node_name in node_names:
-            script += f"kubectl drain {node_name} " \
-                      f"--dry-run --ignore-daemonsets --timeout=60s\n" \
-                      f"kubectl drain {node_name} " \
-                      f"--ignore-daemonsets --timeout=60s\n"
-        run_script_in_master_vm(self.tenant_client, vapp_href, script)
+                self._update_task(
+                    TaskStatus.RUNNING,
+                    message=f"Upgrading Kubernetes ({c_k8s} -> {t_k8s}) "
+                            f"in master node {master_node_names}"
+                )
+                filepath = ltm.get_script_filepath(template_name,
+                                                   template_revision,
+                                                   ScriptFile.MASTER_K8S_UPGRADE) # noqa: E501
+                script = utils.read_data_file(filepath, logger=LOGGER)
+                run_script_in_nodes(self.tenant_client, vapp_href,
+                                    master_node_names, script)
 
-        LOGGER.debug(f"Drained nodes {node_names} "
-                     f"from cluster {cluster_name}")
+                self._update_task(
+                    TaskStatus.RUNNING,
+                    message=f"Uncordoning master node {master_node_names}"
+                )
+                uncordon_nodes(self.tenant_client, vapp_href,
+                               master_node_names,
+                               cluster_name=cluster_name)
+
+                filepath = ltm.get_script_filepath(template_name,
+                                                    template_revision,
+                                                    ScriptFile.WORKER_K8S_UPGRADE) # noqa: E501
+                script = utils.read_data_file(filepath, logger=LOGGER)
+                for node in worker_node_names:
+                    self._update_task(
+                        TaskStatus.RUNNING,
+                        message=f"Draining node {node}"
+                    )
+                    drain_nodes(self.tenant_client, vapp_href, [node],
+                                cluster_name=cluster_name)
+
+                    self._update_task(
+                        TaskStatus.RUNNING,
+                        message=f"Upgrading Kubernetes ({c_k8s} -> {t_k8s}) "
+                                f"in node {node}"
+                    )
+                    run_script_in_nodes(self.tenant_client, vapp_href, [node],
+                                        script)
+
+                    self._update_task(
+                        TaskStatus.RUNNING,
+                        message=f"Uncordoning node {node}"
+                    )
+                    uncordon_nodes(self.tenant_client, vapp_href, [node],
+                                   cluster_name=cluster_name)
+
+            if upgrade_docker or upgrade_cni:
+                self._update_task(
+                    TaskStatus.RUNNING,
+                    message=f"Draining all nodes {all_node_names}"
+                )
+                drain_nodes(self.tenant_client, vapp_href, all_node_names,
+                            cluster_name=cluster_name)
+
+            if upgrade_docker:
+                self._update_task(
+                    TaskStatus.RUNNING,
+                    message=f"Upgrading Docker-CE ({c_docker} -> {t_docker}) "
+                            f"in nodes {all_node_names}"
+                )
+                filepath = ltm.get_script_filepath(template_name,
+                                                   template_revision,
+                                                   ScriptFile.DOCKER_UPGRADE)
+                script = utils.read_data_file(filepath, logger=LOGGER)
+                LOGGER.info(f"Upgrading Docker-CE ({c_docker} -> {t_docker}) "
+                            f"in nodes {all_node_names}")
+                run_script_in_nodes(self.tenant_client, vapp_href,
+                                    all_node_names, script)
+
+            if upgrade_cni:
+                self._update_task(
+                    TaskStatus.RUNNING,
+                    message=f"Upgrading CNI ({cluster['cni']} {c_cni}"
+                            f" -> {t_cni}) in all nodes {all_node_names}"
+                )
+                filepath = ltm.get_script_filepath(template_name,
+                                                   template_revision,
+                                                   ScriptFile.CNI_UPGRADE)
+                script = utils.read_data_file(filepath, logger=LOGGER)
+                run_script_in_nodes(self.tenant_client, vapp_href,
+                                    all_node_names, script)
+                self._update_task(
+                    TaskStatus.RUNNING,
+                    message=f"Applying CNI ({cluster['cni']} {c_cni} -> "
+                            f"{t_cni}) in master node {master_node_names}"
+                )
+                filepath = ltm.get_script_filepath(template_name,
+                                                   template_revision,
+                                                   ScriptFile.MASTER_CNI_APPLY)
+                script = utils.read_data_file(filepath, logger=LOGGER)
+                run_script_in_nodes(self.tenant_client, vapp_href,
+                                    master_node_names, script)
+
+            # uncordon all nodes (sometimes redundant)
+            self._update_task(
+                TaskStatus.RUNNING,
+                message=f"Uncordoning all nodes {all_node_names}"
+            )
+            uncordon_nodes(self.tenant_client, vapp_href, all_node_names,
+                           cluster_name=cluster_name)
+
+            # update cluster metadata
+            LOGGER.info(f"Updating metadata for cluster '{cluster_name}'")
+            self._update_task(
+                TaskStatus.RUNNING,
+                message=f"Updating metadata for cluster '{cluster_name}'"
+            )
+            metadata = {
+                ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME], # noqa: E501
+                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION], # noqa: E501
+                ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION], # noqa: E501
+                ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION], # noqa: E501
+                ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
+                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION] # noqa: E501
+            }
+            vapp = VApp(self.tenant_client, href=vapp_href)
+            task = vapp.set_multiple_metadata(metadata)
+            self.tenant_client.get_task_monitor().wait_for_status(task)
+
+            msg = f"Successfully upgraded cluster '{cluster_name}' software " \
+                  f"to match template {template_name} (revision " \
+                  f"{template_revision}): Kubernetes: {c_k8s} -> {t_k8s}, " \
+                  f"Docker-CE: {c_docker} -> {t_docker}, " \
+                  f"CNI: {c_cni} -> {t_cni}"
+            self._update_task(TaskStatus.SUCCESS, message=msg)
+            LOGGER.info(f"{msg} ({vapp_href})")
+        except Exception as e:
+            msg = f"Unexpected error while upgrading cluster " \
+                  f"'{cluster_name}': {e}"
+            LOGGER.error(msg, exc_info=True)
+            self._update_task(TaskStatus.ERROR, error_message=msg)
+        finally:
+            self.logout_sys_admin_client()
 
     def _update_task(self, status, message='', error_message=None,
                      stack_trace=''):
@@ -1040,20 +1215,71 @@ class VcdBroker(AbstractBroker):
         )
 
 
-def run_script_in_master_vm(client, vapp_href, script):
+def drain_nodes(client, vapp_href, node_names, cluster_name=''):
+    LOGGER.debug(f"Draining nodes {node_names} in cluster '{cluster_name}' "
+                 f"(vapp: {vapp_href})")
+    script = f"#!/usr/bin/env bash\n"
+    for node_name in node_names:
+        script += f"kubectl drain {node_name} " \
+                  f"--ignore-daemonsets --timeout=60s --delete-local-data\n"
     vapp = VApp(client, href=vapp_href)
     master_node_names = get_node_names(vapp, NodeType.MASTER)
-    results = execute_script_in_nodes(vapp=vapp,
-                                      node_names=master_node_names,
-                                      script=script,
-                                      check_tools=False)
-    errors = get_script_execution_errors(results)
-    if errors:
-        raise ScriptExecutionError(f"Script execution failed on node "
-                                   f"{master_node_names}\nErrors: {errors}")
-    if results[0][0] != 0:
-        raise NodeOperationError(f"Error during node operation:\n"
-                                 f"{results[0][2].content.decode()}")
+    run_script_in_nodes(client, vapp_href, [master_node_names[0]], script)
+    LOGGER.debug(f"Successfully drained nodes {node_names} in cluster "
+                 f"'{cluster_name}' (vapp: {vapp_href})")
+
+
+def uncordon_nodes(client, vapp_href, node_names, cluster_name=''):
+    LOGGER.debug(f"Uncordoning nodes {node_names} in cluster '{cluster_name}' "
+                 f"(vapp: {vapp_href})")
+    script = f"#!/usr/bin/env bash\n"
+    for node_name in node_names:
+        script += f"kubectl uncordon {node_name}\n"
+    vapp = VApp(client, href=vapp_href)
+    master_node_names = get_node_names(vapp, NodeType.MASTER)
+    run_script_in_nodes(client, vapp_href, [master_node_names[0]], script)
+    LOGGER.debug(f"Successfully uncordoned nodes {node_names} in cluster "
+                 f"'{cluster_name}' (vapp: {vapp_href})")
+
+
+def delete_vapp(client, vdc_href, vapp_name):
+    LOGGER.debug(f"Deleting vapp {vapp_name} (vdc: {vdc_href})")
+    vdc = VDC(client, href=vdc_href)
+    task = vdc.delete_vapp(vapp_name, force=True)
+    client.get_task_monitor().wait_for_status(task)
+    LOGGER.debug(f"Deleted vapp {vapp_name} (vdc: {vdc_href})")
+
+
+def delete_nodes(client, vapp_href, node_names, cluster_name=''):
+    LOGGER.debug(f"Deleting node(s) {node_names} from cluster '{cluster_name}'"
+                 f" (vapp: {vapp_href})")
+    script = "#!/usr/bin/env bash\nkubectl delete node "
+    for node_name in node_names:
+        script += f' {node_name}'
+    script += '\n'
+
+    vapp = VApp(client, href=vapp_href)
+    try:
+        master_node_names = get_node_names(vapp, NodeType.MASTER)
+        run_script_in_nodes(client, vapp_href, [master_node_names[0]], script)
+    except Exception:
+        LOGGER.warning(f"Failed to delete node(s) {node_names} from cluster "
+                       f"'{cluster_name}' using kubectl (vapp: {vapp_href})")
+
+    vapp = VApp(client, href=vapp_href)
+    for vm_name in node_names:
+        vm = VM(client, resource=vapp.get_vm(vm_name))
+        try:
+            task = vm.undeploy()
+            client.get_task_monitor().wait_for_status(task)
+        except Exception:
+            LOGGER.warning(f"Failed to undeploy VM {vm_name} "
+                           f"(vapp: {vapp_href})")
+
+    task = vapp.delete_vms(node_names)
+    client.get_task_monitor().wait_for_status(task)
+    LOGGER.debug(f"Successfully deleted node(s) {node_names} from "
+                 f"cluster '{cluster_name}' (vapp: {vapp_href})")
 
 
 def get_nfs_exports(ip, vapp, vm_name):

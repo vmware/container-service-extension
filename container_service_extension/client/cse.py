@@ -530,6 +530,9 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name):
                 'Docker-CE': template[LocalTemplateKey.DOCKER_VERSION],
                 'CNI': f"{template[LocalTemplateKey.CNI]}-{template[LocalTemplateKey.CNI_VERSION]}" # noqa: E501
             })
+
+        if not templates:
+            result = f"No valid upgrade targets for cluster '{cluster_name}'"
         stdout(result, ctx, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
@@ -568,7 +571,9 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
         if not client.is_sysadmin() and org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
 
-        result = cluster.upgrade_cluster(cluster_name, vdc=vdc, org=org_name)
+        result = cluster.upgrade_cluster(cluster_name, template_name,
+                                         template_revision, ovdc_name=vdc,
+                                         org_name=org_name)
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
