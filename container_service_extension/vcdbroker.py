@@ -1135,7 +1135,6 @@ class VcdBroker(AbstractBroker):
                            cluster_name=cluster_name)
 
             # update cluster metadata
-            LOGGER.info(f"Updating metadata for cluster '{cluster_name}'")
             self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Updating metadata for cluster '{cluster_name}'"
