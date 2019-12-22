@@ -1097,23 +1097,10 @@ class VcdBroker(AbstractBroker):
                                                    template_revision,
                                                    ScriptFile.DOCKER_UPGRADE)
                 script = utils.read_data_file(filepath, logger=LOGGER)
-                LOGGER.info(f"Upgrading Docker-CE ({c_docker} -> {t_docker}) "
-                            f"in nodes {all_node_names}")
                 run_script_in_nodes(self.tenant_client, vapp_href,
                                     all_node_names, script)
 
             if upgrade_cni:
-                self._update_task(
-                    TaskStatus.RUNNING,
-                    message=f"Upgrading CNI ({cluster['cni']} {c_cni}"
-                            f" -> {t_cni}) in all nodes {all_node_names}"
-                )
-                filepath = ltm.get_script_filepath(template_name,
-                                                   template_revision,
-                                                   ScriptFile.CNI_UPGRADE)
-                script = utils.read_data_file(filepath, logger=LOGGER)
-                run_script_in_nodes(self.tenant_client, vapp_href,
-                                    all_node_names, script)
                 self._update_task(
                     TaskStatus.RUNNING,
                     message=f"Applying CNI ({cluster['cni']} {c_cni} -> "

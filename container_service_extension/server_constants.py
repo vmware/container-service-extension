@@ -76,7 +76,6 @@ class ScriptFile(str, Enum):
     NODE = 'node.sh'
 
     # cluster upgrade scripts
-    CNI_UPGRADE = 'cluster-upgrade/cni-upgrade.sh'
     DOCKER_UPGRADE = 'cluster-upgrade/docker-upgrade.sh'
     MASTER_CNI_APPLY = 'cluster-upgrade/master-cni-apply.sh'
     MASTER_K8S_UPGRADE = 'cluster-upgrade/master-k8s-upgrade.sh'
