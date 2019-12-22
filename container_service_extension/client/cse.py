@@ -146,6 +146,13 @@ Examples
         Display detailed information about cluster 'mycluster'.
         '--vdc' option can be used for faster command execution.
 \b
+    vcd cse cluster upgrade-plan mycluster
+        Display available templates to upgrade to.
+\b
+    vcd cse cluster upgrade mycluster my_template 1
+        Upgrade cluster 'mycluster' Docker-CE, Kubernetes, and CNI to match
+        template 'my_template' at revision 1.
+\b
     vcd cse cluster delete mycluster --yes
         Delete cluster 'mycluster' without prompting.
         '--vdc' option can be used for faster command execution.
@@ -563,7 +570,10 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name):
     help="Restrict cluster search to specific org")
 def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
                     vdc, org_name):
-    """Upgrade cluster software to specified template's software versions."""
+    """Upgrade cluster software to specified template's software versions.
+    
+    Upgraded software: Docker-CE, Kubernetes, CNI
+    """
     try:
         restore_session(ctx)
         client = ctx.obj['client']
