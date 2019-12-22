@@ -31,18 +31,20 @@ Procedures for creating and managing NFS nodes can be found at
 
 Here is a summary of commands available to view templates and manage clusters and nodes:
 
-| Command | Description |
-|-|-|
-| `vcd cse template list` | List available templates to create clusters |
-| `vcd cse cluster create CLUSTER_NAME` | Create a new Kubernetes cluster |
-| `vcd cse cluster resize CLUSTER_NAME` | Grow a Kubernetes cluster by adding new nodes |
-| `vcd cse cluster create CLUSTER_NAME --enable-nfs`| Create a new Kubernetes cluster with NFS Persistent Volume support.|
-| `vcd cse cluster list` | List available clusters. |
-| `vcd cse cluster delete CLUSTER_NAME` | Delete a Kubernetes cluster. |
-| `vcd cse node create CLUSTER_NAME --nodes n` | Add `n` nodes to a cluster. |
-| `vcd cse node create CLUSTER_NAME --type nfsd` | Add an NFS node to a cluster. |
-| `vcd cse node list CLUSTER_NAME` | List nodes of a cluster. |
-| `vcd cse node delete CLUSTER_NAME NODE_NAME` | Delete nodes from a cluster. |
+| Command                                                                | Description                                                              |
+|------------------------------------------------------------------------|--------------------------------------------------------------------------|
+| `vcd cse template list`                                                | List templates that a Kubernetes cluster can be deployed from.           |
+| `vcd cse cluster create CLUSTER_NAME`                                  | Create a new Kubernetes cluster.                                         |
+| `vcd cse cluster resize CLUSTER_NAME`                                  | Grow a Kubernetes cluster by adding new nodes.                           |
+| `vcd cse cluster create CLUSTER_NAME --enable-nfs`                     | Create a new Kubernetes cluster with NFS Persistent Volume support.      |
+| `vcd cse cluster list`                                                 | List available Kubernetes clusters.                                      |
+| `vcd cse cluster delete CLUSTER_NAME`                                  | Delete a Kubernetes cluster.                                             |
+| `vcd cse cluster upgrade-plan CLUSTER_NAME`                            | List templates that can be used to upgrade Kubernetes cluster software.  |
+| `vcd cse cluster upgrade CLUSTER_NAME TEMPLATE_NAME TEMPLATE_REVISION` | Upgrade a Kubernetes cluster's software to match the specified template. |
+| `vcd cse node create CLUSTER_NAME --nodes n`                           | Add `n` nodes to a Kubernetes cluster.                                   |
+| `vcd cse node create CLUSTER_NAME --type nfsd`                         | Add an NFS node to a Kubernetes cluster.                                 |
+| `vcd cse node list CLUSTER_NAME`                                       | List nodes of a cluster.                                                 |
+| `vcd cse node delete CLUSTER_NAME NODE_NAME`                           | Delete nodes from a cluster.                                             |
 
 By default, CSE Client will display the task progress until the
 task finishes or fails. The `--no-wait` flag can be used to skip waiting on the
@@ -119,6 +121,12 @@ client.logout()
 # '--network' is only applicable for clusters using native (vCD) Kubernetes provider.
 > vcd cse cluster resize mycluster --network mynetwork --nodes 8
 
+# list templates that can be used to upgrade cluster software.
+> vcd cse cluster upgrade-plan mycluster
+
+# upgrade cluster software (Docker-CE, Kubernetes, CNI) to match the specified template
+> vcd cse cluster upgrade mycluster mytemplate 1
+
 # info on a given node. If the node is of type nfsd, it displays info about Exports.
 > vcd cse node info mycluster nfsd-dj3s
 
@@ -152,4 +160,3 @@ client.logout()
 # delete cluster when no longer needed
 > vcd cse cluster delete mycluster --yes
 ```
-
