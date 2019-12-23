@@ -39,8 +39,6 @@ Here is a summary of commands available to view templates and manage clusters an
 | `vcd cse cluster create CLUSTER_NAME --enable-nfs`                     | Create a new Kubernetes cluster with NFS Persistent Volume support.      |
 | `vcd cse cluster list`                                                 | List available Kubernetes clusters.                                      |
 | `vcd cse cluster delete CLUSTER_NAME`                                  | Delete a Kubernetes cluster.                                             |
-| `vcd cse cluster upgrade-plan CLUSTER_NAME`                            | List templates that can be used to upgrade Kubernetes cluster software.  |
-| `vcd cse cluster upgrade CLUSTER_NAME TEMPLATE_NAME TEMPLATE_REVISION` | Upgrade a Kubernetes cluster's software to match the specified template. |
 | `vcd cse node create CLUSTER_NAME --nodes n`                           | Add `n` nodes to a Kubernetes cluster.                                   |
 | `vcd cse node create CLUSTER_NAME --type nfsd`                         | Add an NFS node to a Kubernetes cluster.                                 |
 | `vcd cse node list CLUSTER_NAME`                                       | List nodes of a cluster.                                                 |
@@ -120,12 +118,6 @@ client.logout()
 # resize the cluster to have 8 worker node. If resize fails, the cluster is returned to it's original size.
 # '--network' is only applicable for clusters using native (vCD) Kubernetes provider.
 > vcd cse cluster resize mycluster --network mynetwork --nodes 8
-
-# list templates that can be used to upgrade cluster software.
-> vcd cse cluster upgrade-plan mycluster
-
-# upgrade cluster software (Docker-CE, Kubernetes, CNI) to match the specified template
-> vcd cse cluster upgrade mycluster mytemplate 1
 
 # info on a given node. If the node is of type nfsd, it displays info about Exports.
 > vcd cse node info mycluster nfsd-dj3s
