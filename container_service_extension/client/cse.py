@@ -571,8 +571,8 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name):
 def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
                     vdc, org_name):
     """Upgrade cluster software to specified template's software versions.
-    
-    Upgraded software: Docker-CE, Kubernetes, CNI
+
+    Affected software: Docker-CE, Kubernetes, CNI
     """
     try:
         restore_session(ctx)
