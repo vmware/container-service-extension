@@ -99,10 +99,11 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
             continue
 
         # non-string metadata is written to the dictionary as a string
-        # 'upgrade_from' should be converted to an array if it is a string
-        # 'upgrade_from' should be converted to [] if it is ['']
+        # when 'upgrade_from' metadata is empty, vcd returns it as: "['']"
+        # when 'upgrade_from' metadata is not empty, vcd returns it as an array
+        # coerce "['']" to the more usable empty array []
         if LocalTemplateKey.UPGRADE_FROM in metadata_dict:
-            if isinstance(metadata_dict[LocalTemplateKey.UPGRADE_FROM], str): # noqa: E501
+            if isinstance(metadata_dict[LocalTemplateKey.UPGRADE_FROM], str):
                 metadata_dict[LocalTemplateKey.UPGRADE_FROM] = ast.literal_eval(metadata_dict[LocalTemplateKey.UPGRADE_FROM]) # noqa: E501
             if metadata_dict[LocalTemplateKey.UPGRADE_FROM] == ['']:
                 metadata_dict[LocalTemplateKey.UPGRADE_FROM] = []
