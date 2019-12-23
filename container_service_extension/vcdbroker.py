@@ -1208,9 +1208,16 @@ def drain_nodes(client, vapp_href, node_names, cluster_name=''):
     for node_name in node_names:
         script += f"kubectl drain {node_name} " \
                   f"--ignore-daemonsets --timeout=60s --delete-local-data\n"
-    vapp = VApp(client, href=vapp_href)
-    master_node_names = get_node_names(vapp, NodeType.MASTER)
-    run_script_in_nodes(client, vapp_href, [master_node_names[0]], script)
+
+    try:
+        vapp = VApp(client, href=vapp_href)
+        master_node_names = get_node_names(vapp, NodeType.MASTER)
+        run_script_in_nodes(client, vapp_href, [master_node_names[0]], script)
+    except Exception as e:
+        LOGGER.warning(f"Failed to drain nodes {node_names} in cluster "
+                       f"'{cluster_name}' (vapp: {vapp_href}) with error: {e}")
+        raise
+
     LOGGER.debug(f"Successfully drained nodes {node_names} in cluster "
                  f"'{cluster_name}' (vapp: {vapp_href})")
 
@@ -1221,18 +1228,32 @@ def uncordon_nodes(client, vapp_href, node_names, cluster_name=''):
     script = f"#!/usr/bin/env bash\n"
     for node_name in node_names:
         script += f"kubectl uncordon {node_name}\n"
-    vapp = VApp(client, href=vapp_href)
-    master_node_names = get_node_names(vapp, NodeType.MASTER)
-    run_script_in_nodes(client, vapp_href, [master_node_names[0]], script)
+
+    try:
+        vapp = VApp(client, href=vapp_href)
+        master_node_names = get_node_names(vapp, NodeType.MASTER)
+        run_script_in_nodes(client, vapp_href, [master_node_names[0]], script)
+    except Exception as e:
+        LOGGER.warning(f"Failed to uncordon nodes {node_names} in cluster "
+                       f"'{cluster_name}' (vapp: {vapp_href}) with error: {e}")
+        raise
+
     LOGGER.debug(f"Successfully uncordoned nodes {node_names} in cluster "
                  f"'{cluster_name}' (vapp: {vapp_href})")
 
 
 def delete_vapp(client, vdc_href, vapp_name):
     LOGGER.debug(f"Deleting vapp {vapp_name} (vdc: {vdc_href})")
-    vdc = VDC(client, href=vdc_href)
-    task = vdc.delete_vapp(vapp_name, force=True)
-    client.get_task_monitor().wait_for_status(task)
+
+    try:
+        vdc = VDC(client, href=vdc_href)
+        task = vdc.delete_vapp(vapp_name, force=True)
+        client.get_task_monitor().wait_for_status(task)
+    except Exception as e:
+        LOGGER.warning(f"Failed to delete vapp {vapp_name} "
+                       f"(vdc: {vdc_href}) with error: {e}")
+        raise
+
     LOGGER.debug(f"Deleted vapp {vapp_name} (vdc: {vdc_href})")
 
 
