@@ -460,7 +460,7 @@ class VcdBroker(AbstractBroker):
         template = {}
         valid_templates = self.get_cluster_upgrade_plan(validated_data)
         for t in valid_templates:
-            if t[LocalTemplateKey.NAME] == template_name and t[LocalTemplateKey.REVISION] == template_revision: # noqa: E501
+            if t[LocalTemplateKey.NAME] == template_name and t[LocalTemplateKey.REVISION] == str(template_revision): # noqa: E501
                 template = t
                 break
         if not template:
