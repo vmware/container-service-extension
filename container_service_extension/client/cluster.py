@@ -55,6 +55,26 @@ class Cluster:
             params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
         return process_response(response)
 
+    def upgrade_cluster(self, cluster_name, template_name, template_revision,
+                        org_name=None, ovdc_name=None):
+        method = RequestMethod.POST
+        uri = f'{self._uri}/cluster/{cluster_name}/action/upgrade'
+        data = {
+            RequestKey.CLUSTER_NAME: cluster_name,
+            RequestKey.TEMPLATE_NAME: template_name,
+            RequestKey.TEMPLATE_REVISION: template_revision,
+            RequestKey.ORG_NAME: org_name,
+            RequestKey.OVDC_NAME: ovdc_name,
+        }
+        response = self.client._do_request_prim(
+            method,
+            uri,
+            self.client._session,
+            contents=data,
+            media_type='application/json',
+            accept_type='application/json')
+        return process_response(response)
+
     def create_cluster(self,
                        vdc,
                        network_name,

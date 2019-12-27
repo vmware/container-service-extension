@@ -146,6 +146,13 @@ Examples
         Display detailed information about cluster 'mycluster'.
         '--vdc' option can be used for faster command execution.
 \b
+    vcd cse cluster upgrade-plan mycluster
+        Display available templates to upgrade to.
+\b
+    vcd cse cluster upgrade mycluster my_template 1
+        Upgrade cluster 'mycluster' Docker-CE, Kubernetes, and CNI to match
+        template 'my_template' at revision 1.
+\b
     vcd cse cluster delete mycluster --yes
         Delete cluster 'mycluster' without prompting.
         '--vdc' option can be used for faster command execution.
@@ -530,7 +537,54 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name):
                 'Docker-CE': template[LocalTemplateKey.DOCKER_VERSION],
                 'CNI': f"{template[LocalTemplateKey.CNI]}-{template[LocalTemplateKey.CNI_VERSION]}" # noqa: E501
             })
+
+        if not templates:
+            result = f"No valid upgrade targets for cluster '{cluster_name}'"
         stdout(result, ctx, sort_headers=False)
+    except Exception as e:
+        stderr(e, ctx)
+
+
+@cluster_group.command('upgrade',
+                       short_help="Upgrade cluster software to specified "
+                                  "template's software versions")
+@click.pass_context
+@click.argument('cluster_name', required=True)
+@click.argument('template_name', required=True)
+@click.argument('template_revision', required=True)
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    metavar='VDC_NAME',
+    help='Restrict cluster search to specific org VDC')
+@click.option(
+    '-o',
+    '--org',
+    'org_name',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help="Restrict cluster search to specific org")
+def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
+                    vdc, org_name):
+    """Upgrade cluster software to specified template's software versions.
+
+    Affected software: Docker-CE, Kubernetes, CNI
+    """
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        cluster = Cluster(client)
+        if not client.is_sysadmin() and org_name is None:
+            org_name = ctx.obj['profiles'].get('org_in_use')
+
+        result = cluster.upgrade_cluster(cluster_name, template_name,
+                                         template_revision, ovdc_name=vdc,
+                                         org_name=org_name)
+        stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
 

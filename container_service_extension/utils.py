@@ -132,12 +132,12 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
 
 
 def check_python_version(msg_update_callback=None):
-    """Ensure that user's Python version >= 3.6.
+    """Ensure that user's Python version >= 3.7.3.
 
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
         that writes messages onto console.
 
-    :raises Exception: if user's Python version < 3.6.
+    :raises Exception: if user's Python version < 3.7.3
     """
     if msg_update_callback:
         msg_update_callback.general_no_color(
@@ -239,6 +239,8 @@ def download_file(url, filepath, sha256=None, force_overwrite=False,
     :param logging.Logger logger: optional logger to log with.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback
         object that writes messages onto console.
+
+    :raises HTTPError: if the response has an error status code
     """
     path = pathlib.Path(filepath)
     if not force_overwrite and path.is_file() and \
@@ -256,7 +258,9 @@ def download_file(url, filepath, sha256=None, force_overwrite=False,
         logger.info(msg)
     if msg_update_callback:
         msg_update_callback.info(msg)
-    response = requests.get(url, stream=True)
+    response = requests.get(url, stream=True,
+                            headers={'Cache-Control': 'no-cache'})
+    response.raise_for_status()
     with path.open(mode='wb') as f:
         for chunk in response.iter_content(chunk_size=SIZE_1MB):
             f.write(chunk)
@@ -284,20 +288,23 @@ def read_data_file(filepath, logger=None, msg_update_callback=None):
         found.
     """
     path = pathlib.Path(filepath)
-    if not path.is_file():
-        msg = f"Requested data file at '{filepath}' not found"
+    contents = ''
+    try:
+        contents = path.read_text()
+    except FileNotFoundError as err:
         if msg_update_callback:
-            msg_update_callback.error(msg)
+            msg_update_callback.error(f"{err}")
         if logger:
-            logger.error(msg, exc_info=True)
-        raise FileNotFoundError(msg)
+            logger.error(f"{err}", exc_info=True)
+        raise
 
     msg = f"Found data file: {path}"
     if msg_update_callback:
         msg_update_callback.general(msg)
     if logger:
-        logger.info(msg)
-    return path.read_text()
+        logger.debug(msg)
+
+    return contents
 
 
 def run_async(func):

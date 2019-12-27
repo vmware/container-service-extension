@@ -8,14 +8,13 @@ from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 from pyvcloud.vcd.vapp import VApp
 
+import container_service_extension.local_template_manager as ltm
 from container_service_extension.pyvcloud_utils import catalog_item_exists
 from container_service_extension.pyvcloud_utils import get_org
 from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.pyvcloud_utils import upload_ova_to_catalog
 from container_service_extension.pyvcloud_utils import \
     wait_for_catalog_item_to_resolve
-from container_service_extension.remote_template_manager import \
-    get_local_script_filepath
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.utils import download_file
 from container_service_extension.utils import read_data_file
@@ -190,7 +189,7 @@ class TemplateBuilder():
 
         :rtype: str
         """
-        init_script_filepath = get_local_script_filepath(
+        init_script_filepath = ltm.get_script_filepath(
             self.template_name, self.template_revision, ScriptFile.INIT)
         init_script = read_data_file(
             init_script_filepath, logger=self.logger,
@@ -262,10 +261,10 @@ class TemplateBuilder():
         if self.logger:
             self.logger.info(msg)
 
-        cust_sctipt_filepath = get_local_script_filepath(
+        cust_script_filepath = ltm.get_script_filepath(
             self.template_name, self.template_revision, ScriptFile.CUST)
         cust_script = read_data_file(
-            cust_sctipt_filepath, logger=self.logger,
+            cust_script_filepath, logger=self.logger,
             msg_update_callback=self.msg_update_callback)
 
         vs = get_vsphere(self.sys_admin_client, vapp, vm_name,

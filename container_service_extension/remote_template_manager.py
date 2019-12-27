@@ -3,19 +3,18 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import os
-from pathlib import Path
 import stat
 
 import requests
 import yaml
 
+import container_service_extension.local_template_manager as ltm
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.utils import download_file
 
 
 REMOTE_TEMPLATE_COOKBOOK_FILENAME = 'template.yaml'
 REMOTE_SCRIPTS_DIR = 'scripts'
-LOCAL_SCRIPTS_DIR = '.cse_scripts'
 
 
 def download_file_into_memory(url):
@@ -30,32 +29,11 @@ def download_file_into_memory(url):
 
     :rtype: str
     """
-    response = requests.get(url)
+    response = requests.get(url, headers={'Cache-Control': 'no-cache'})
     if response.status_code == requests.codes.ok:
         return response.text
     else:
         return None
-
-
-def get_revisioned_template_name(template_name, revision):
-    """Construct name of a template to include it's revision number."""
-    return f"{template_name}_rev{revision}"
-
-
-def get_local_script_filepath(template_name, revision, script_file_name):
-    """Construct the absolute path to a given script.
-
-    :param str template_name:
-    :param str revision:
-    :param str script_file_name:
-    """
-    home_dir = os.path.expanduser('~')
-    cse_scripts_dir = os.path.join(
-        home_dir, LOCAL_SCRIPTS_DIR,
-        get_revisioned_template_name(template_name, revision))
-    Path(cse_scripts_dir).mkdir(parents=True, exist_ok=True)
-    script_abs_path = os.path.join(cse_scripts_dir, script_file_name)
-    return script_abs_path
 
 
 class RemoteTemplateManager():
@@ -108,7 +86,7 @@ class RemoteTemplateManager():
         base_url = self._get_base_url_from_remote_template_cookbook_url()
         url = base_url + \
             f"/{REMOTE_SCRIPTS_DIR}" \
-            f"/{get_revisioned_template_name(template_name, revision)}" \
+            f"/{ltm.get_revisioned_template_name(template_name, revision)}" \
             f"/{script_file_name}"
         return url
 
@@ -144,9 +122,8 @@ class RemoteTemplateManager():
                 self._get_remote_script_url(template_name, revision,
                                             script_file)
 
-            local_script_filepath = get_local_script_filepath(
+            local_script_filepath = ltm.get_script_filepath(
                 template_name, revision, script_file)
-
             download_file(url=remote_script_url,
                           filepath=local_script_filepath,
                           force_overwrite=force_overwrite,

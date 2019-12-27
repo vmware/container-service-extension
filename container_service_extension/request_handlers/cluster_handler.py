@@ -140,6 +140,17 @@ def cluster_upgrade_plan(request_data, tenant_auth_token):
     return broker.get_cluster_upgrade_plan(request_data)
 
 
+def cluster_upgrade(request_data, tenant_auth_token):
+    """Request handler for cluster upgrade operation.
+
+    data validation handled in broker
+
+    :return: Dict
+    """
+    broker = vcdbroker.VcdBroker(tenant_auth_token)
+    return broker.upgrade_cluster(request_data)
+
+
 def cluster_list(request_data, tenant_auth_token):
     """Request handler for cluster list operation.
 

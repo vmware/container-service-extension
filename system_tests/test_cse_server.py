@@ -13,8 +13,7 @@ from pyvcloud.vcd.vdc import VDC
 
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
-from container_service_extension.remote_template_manager import \
-    get_revisioned_template_name
+import container_service_extension.local_template_manager as ltm
 from container_service_extension.server_cli import cli
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
@@ -68,7 +67,7 @@ rights when CSE is unregistered.
 def _remove_cse_artifacts():
     for template in env.TEMPLATE_DEFINITIONS:
         env.delete_catalog_item(template['source_ova_name'])
-        catalog_item_name = get_revisioned_template_name(
+        catalog_item_name = ltm.get_revisioned_template_name(
             template['name'], template['revision'])
         env.delete_catalog_item(catalog_item_name)
         temp_vapp_name = testutils.get_temp_vapp_name(template['name'])
@@ -280,7 +279,7 @@ def test_0080_install_skip_template_creation(config,
             'Source ova file exists when it should not.'
 
         # check that k8s templates does not exist
-        catalog_item_name = get_revisioned_template_name(
+        catalog_item_name = ltm.get_revisioned_template_name(
             template_config['name'], template_config['revision'])
         assert not env.catalog_item_exists(catalog_item_name), \
             'k8s templates exist when they should not.'
@@ -330,7 +329,7 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
             'Source ova file does not exist when it should.'
 
         # check that k8s templates exist
-        catalog_item_name = get_revisioned_template_name(
+        catalog_item_name = ltm.get_revisioned_template_name(
             template_config['name'], template_config['revision'])
         assert env.catalog_item_exists(catalog_item_name), \
             'k8s template does not exist when it should.'
@@ -378,7 +377,7 @@ def test_0100_install_force_update(config, unregister_cse_before_test):
             'Source ova file does not exists when it should.'
 
         # check that k8s templates exist
-        catalog_item_name = get_revisioned_template_name(
+        catalog_item_name = ltm.get_revisioned_template_name(
             template_config['name'], template_config['revision'])
         assert env.catalog_item_exists(catalog_item_name), \
             'k8s template does not exist when it should.'

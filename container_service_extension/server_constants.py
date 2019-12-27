@@ -66,11 +66,20 @@ class K8sProvider(str, Enum):
 class ScriptFile(str, Enum):
     """Types of script for vApp template customizations in CSE."""
 
+    # vapp template creation scripts
     CUST = 'cust.sh'
     INIT = 'init.sh'
-    MASTER = 'mstr.sh'
     NFSD = 'nfsd.sh'
+
+    # cluster initialization scripts
+    MASTER = 'mstr.sh'
     NODE = 'node.sh'
+
+    # cluster upgrade scripts
+    DOCKER_UPGRADE = 'cluster-upgrade/docker-upgrade.sh'
+    MASTER_CNI_APPLY = 'cluster-upgrade/master-cni-apply.sh'
+    MASTER_K8S_UPGRADE = 'cluster-upgrade/master-k8s-upgrade.sh'
+    WORKER_K8S_UPGRADE = 'cluster-upgrade/worker-k8s-upgrade.sh'
 
 
 @unique
@@ -101,11 +110,9 @@ class RemoteTemplateKey(str, Enum):
     COMPUTE_POLICY = 'compute_policy'
     CPU = 'cpu'
     DEPRECATED = 'deprecated'
-    DEPRECATED_IN_CSE_VERSION = 'deprecated_in_cse_version'
     DESCRIPTION = 'description'
     MEMORY = 'mem'
     NAME = 'name'
-    MINIMUM_REQUIRED_CSE_VERSION = 'required_cse_version'
     REVISION = 'revision'
     SOURCE_OVA_HREF = 'source_ova'
     SOURCE_OVA_NAME = 'source_ova_name'
@@ -137,6 +144,7 @@ class CseOperation(Enum):
     CLUSTER_LIST = ('list clusters')
     CLUSTER_RESIZE = ('resize cluster', requests.codes.accepted)
     CLUSTER_UPGRADE_PLAN = ('get supported cluster upgrade paths')
+    CLUSTER_UPGRADE = ('upgrade cluster software', requests.codes.accepted)
     NODE_CREATE = ('create node', requests.codes.accepted)
     NODE_DELETE = ('delete node', requests.codes.accepted)
     NODE_INFO = ('get info of node')

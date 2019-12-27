@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import ast
+import os
+import pathlib
 
 from pyvcloud.vcd.client import MetadataDomain
 from pyvcloud.vcd.client import MetadataVisibility
@@ -11,6 +13,8 @@ from pyvcloud.vcd.utils import metadata_to_dict
 
 from container_service_extension.pyvcloud_utils import get_org
 from container_service_extension.server_constants import LocalTemplateKey
+
+LOCAL_SCRIPTS_DIR = '.cse_scripts'
 
 
 def get_template_k8s_version(template_name):
@@ -24,6 +28,30 @@ def get_template_k8s_version(template_name):
         pass
 
     return "Unknown"
+
+
+def get_revisioned_template_name(template_name, revision):
+    """Construct name of a template to include it's revision number."""
+    return f"{template_name}_rev{revision}"
+
+
+def get_script_filepath(template_name, revision, script_file_name):
+    """Construct the absolute path to a given script.
+
+    :param str template_name:
+    :param str revision:
+    :param str script_file_name:
+
+    :rtype: str
+    """
+    template_dir = pathlib.Path.home() / LOCAL_SCRIPTS_DIR / \
+        get_revisioned_template_name(template_name, revision)
+    template_dir.mkdir(parents=True, exist_ok=True)
+
+    # pathlib '/' operator does not intuitively resolve Enums with str mixin
+    # Ex. ScriptFile.MASTER does not resolve to 'mstr'
+    # os.path.join is used instead
+    return os.path.join(template_dir, script_file_name)
 
 
 def get_all_k8s_local_template_definition(client, catalog_name, org=None,
@@ -71,10 +99,11 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
             continue
 
         # non-string metadata is written to the dictionary as a string
-        # 'upgrade_from' should be converted to an array if it is a string
-        # 'upgrade_from' should be converted to [] if it is ['']
+        # when 'upgrade_from' metadata is empty, vcd returns it as: "['']"
+        # when 'upgrade_from' metadata is not empty, vcd returns it as an array
+        # coerce "['']" to the more usable empty array []
         if LocalTemplateKey.UPGRADE_FROM in metadata_dict:
-            if isinstance(metadata_dict[LocalTemplateKey.UPGRADE_FROM], str): # noqa: E501
+            if isinstance(metadata_dict[LocalTemplateKey.UPGRADE_FROM], str):
                 metadata_dict[LocalTemplateKey.UPGRADE_FROM] = ast.literal_eval(metadata_dict[LocalTemplateKey.UPGRADE_FROM]) # noqa: E501
             if metadata_dict[LocalTemplateKey.UPGRADE_FROM] == ['']:
                 metadata_dict[LocalTemplateKey.UPGRADE_FROM] = []
