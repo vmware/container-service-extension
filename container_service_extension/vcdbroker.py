@@ -464,6 +464,8 @@ class VcdBroker(AbstractBroker):
                 template = t
                 break
         if not template:
+            # TODO all of these CseServerError instances related to request
+            # should be changed to BadRequestError (400)
             raise CseServerError(
                 f"Specified template/revision ({template_name} revision "
                 f"{template_revision}) is not a valid upgrade target for "
@@ -840,8 +842,8 @@ class VcdBroker(AbstractBroker):
                                           cluster_id=cluster_id,
                                           org_name=org_name,
                                           ovdc_name=ovdc_name)
-                    delete_vapp(self.tenant_client, cluster['vdc_href'],
-                                cluster_name)
+                    _delete_vapp(self.tenant_client, cluster['vdc_href'],
+                                 cluster_name)
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
@@ -924,8 +926,8 @@ class VcdBroker(AbstractBroker):
                 self._update_task(TaskStatus.RUNNING, message=msg)
                 LOGGER.info(msg)
                 try:
-                    delete_nodes(self.tenant_client, vapp_href, e.node_names,
-                                 cluster_name=cluster_name)
+                    _delete_nodes(self.tenant_client, vapp_href, e.node_names,
+                                  cluster_name=cluster_name)
                 except Exception:
                     LOGGER.error(f"Failed to delete nodes {e.node_names} "
                                  f"from cluster '{cluster_name}'",
@@ -953,8 +955,8 @@ class VcdBroker(AbstractBroker):
 
             # if nodes fail to drain, continue with node deletion anyways
             try:
-                drain_nodes(self.tenant_client, vapp_href, node_names_list,
-                            cluster_name=cluster_name)
+                _drain_nodes(self.tenant_client, vapp_href, node_names_list,
+                             cluster_name=cluster_name)
             except (NodeOperationError, ScriptExecutionError) as err:
                 LOGGER.warning(f"Failed to drain nodes: {node_names_list} in "
                                f"cluster '{cluster_name}'. "
@@ -965,8 +967,8 @@ class VcdBroker(AbstractBroker):
                 message=f"Deleting {len(node_names_list)} node(s)"
                         f" from cluster '{cluster_name}': {node_names_list}")
 
-            delete_nodes(self.tenant_client, vapp_href, node_names_list,
-                         cluster_name=cluster_name)
+            _delete_nodes(self.tenant_client, vapp_href, node_names_list,
+                          cluster_name=cluster_name)
 
             self._update_task(
                 TaskStatus.SUCCESS,
@@ -987,7 +989,7 @@ class VcdBroker(AbstractBroker):
             self._update_task(
                 TaskStatus.RUNNING,
                 message=f"Deleting cluster '{cluster_name}'")
-            delete_vapp(self.tenant_client, cluster_vdc_href, cluster_name)
+            _delete_vapp(self.tenant_client, cluster_vdc_href, cluster_name)
             self._update_task(
                 TaskStatus.SUCCESS,
                 message=f"Deleted cluster '{cluster_name}'")
@@ -1029,8 +1031,8 @@ class VcdBroker(AbstractBroker):
                     TaskStatus.RUNNING,
                     message=f"Draining master node {master_node_names}"
                 )
-                drain_nodes(self.tenant_client, vapp_href,
-                            master_node_names, cluster_name=cluster_name)
+                _drain_nodes(self.tenant_client, vapp_href,
+                             master_node_names, cluster_name=cluster_name)
 
                 self._update_task(
                     TaskStatus.RUNNING,
@@ -1048,9 +1050,9 @@ class VcdBroker(AbstractBroker):
                     TaskStatus.RUNNING,
                     message=f"Uncordoning master node {master_node_names}"
                 )
-                uncordon_nodes(self.tenant_client, vapp_href,
-                               master_node_names,
-                               cluster_name=cluster_name)
+                _uncordon_nodes(self.tenant_client, vapp_href,
+                                master_node_names,
+                                cluster_name=cluster_name)
 
                 filepath = ltm.get_script_filepath(template_name,
                                                     template_revision,
@@ -1061,8 +1063,8 @@ class VcdBroker(AbstractBroker):
                         TaskStatus.RUNNING,
                         message=f"Draining node {node}"
                     )
-                    drain_nodes(self.tenant_client, vapp_href, [node],
-                                cluster_name=cluster_name)
+                    _drain_nodes(self.tenant_client, vapp_href, [node],
+                                 cluster_name=cluster_name)
 
                     self._update_task(
                         TaskStatus.RUNNING,
@@ -1076,16 +1078,16 @@ class VcdBroker(AbstractBroker):
                         TaskStatus.RUNNING,
                         message=f"Uncordoning node {node}"
                     )
-                    uncordon_nodes(self.tenant_client, vapp_href, [node],
-                                   cluster_name=cluster_name)
+                    _uncordon_nodes(self.tenant_client, vapp_href, [node],
+                                    cluster_name=cluster_name)
 
             if upgrade_docker or upgrade_cni:
                 self._update_task(
                     TaskStatus.RUNNING,
                     message=f"Draining all nodes {all_node_names}"
                 )
-                drain_nodes(self.tenant_client, vapp_href, all_node_names,
-                            cluster_name=cluster_name)
+                _drain_nodes(self.tenant_client, vapp_href, all_node_names,
+                             cluster_name=cluster_name)
 
             if upgrade_docker:
                 self._update_task(
@@ -1118,8 +1120,8 @@ class VcdBroker(AbstractBroker):
                 TaskStatus.RUNNING,
                 message=f"Uncordoning all nodes {all_node_names}"
             )
-            uncordon_nodes(self.tenant_client, vapp_href, all_node_names,
-                           cluster_name=cluster_name)
+            _uncordon_nodes(self.tenant_client, vapp_href, all_node_names,
+                            cluster_name=cluster_name)
 
             # update cluster metadata
             self._update_task(
@@ -1201,7 +1203,7 @@ class VcdBroker(AbstractBroker):
         )
 
 
-def drain_nodes(client, vapp_href, node_names, cluster_name=''):
+def _drain_nodes(client, vapp_href, node_names, cluster_name=''):
     LOGGER.debug(f"Draining nodes {node_names} in cluster '{cluster_name}' "
                  f"(vapp: {vapp_href})")
     script = f"#!/usr/bin/env bash\n"
@@ -1222,7 +1224,7 @@ def drain_nodes(client, vapp_href, node_names, cluster_name=''):
                  f"'{cluster_name}' (vapp: {vapp_href})")
 
 
-def uncordon_nodes(client, vapp_href, node_names, cluster_name=''):
+def _uncordon_nodes(client, vapp_href, node_names, cluster_name=''):
     LOGGER.debug(f"Uncordoning nodes {node_names} in cluster '{cluster_name}' "
                  f"(vapp: {vapp_href})")
     script = f"#!/usr/bin/env bash\n"
@@ -1242,7 +1244,7 @@ def uncordon_nodes(client, vapp_href, node_names, cluster_name=''):
                  f"'{cluster_name}' (vapp: {vapp_href})")
 
 
-def delete_vapp(client, vdc_href, vapp_name):
+def _delete_vapp(client, vdc_href, vapp_name):
     LOGGER.debug(f"Deleting vapp {vapp_name} (vdc: {vdc_href})")
 
     try:
@@ -1257,7 +1259,7 @@ def delete_vapp(client, vdc_href, vapp_name):
     LOGGER.debug(f"Deleted vapp {vapp_name} (vdc: {vdc_href})")
 
 
-def delete_nodes(client, vapp_href, node_names, cluster_name=''):
+def _delete_nodes(client, vapp_href, node_names, cluster_name=''):
     LOGGER.debug(f"Deleting node(s) {node_names} from cluster '{cluster_name}'"
                  f" (vapp: {vapp_href})")
     script = "#!/usr/bin/env bash\nkubectl delete node "
