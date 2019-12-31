@@ -4,11 +4,8 @@
 
 
 from pyvcloud.vcd.client import EntityType
-from pyvcloud.vcd.client import find_link
-from pyvcloud.vcd.client import RelationType
 from pyvcloud.vcd.client import TaskStatus
 from pyvcloud.vcd.exceptions import EntityNotFoundException
-from pyvcloud.vcd.exceptions import MissingLinkException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 from pyvcloud.vcd.task import Task
 from pyvcloud.vcd.utils import retrieve_compute_policy_id_from_href
@@ -54,25 +51,30 @@ class ComputePolicyManager:
                              "initialize ComputePolicyManager.")
 
         self._vcd_client = client
-        token = client.get_access_token()
+
+        token = self._vcd_client.get_access_token()
         is_jwt_token = True
         if not token:
-            token = client.get_xvcloud_authorization_token()
+            token = self._vcd_client.get_xvcloud_authorization_token()
             is_jwt_token = False
 
         self._session = self._vcd_client.get_vlcoud_session()
+        cloudapi_href = self._vcd_client.get_cloudapi_uri()
+
         try:
-            link = find_link(self._session, RelationType.OPENAPI,
-                             EntityType.JSON.value)
             self._cloudapi_client = CloudApiClient(
-                base_url=link.href,
+                base_url=cloudapi_href,
                 token=token,
                 is_jwt_token=is_jwt_token,
                 verify_ssl=self._vcd_client._verify_ssl_certs)
+            # Since the /cloudapi endpoint was added before the compute policy
+            # endpoint. Mere presence of the /cloudapi uri is not enough, we
+            # need to make sure that this cloud api client will be of actual
+            # use to us.
             self._cloudapi_client.do_request(
                 RequestMethod.GET,
                 f"{CloudApiResource.VDC_COMPUTE_POLICIES}")
-        except (MissingLinkException, requests.exceptions.HTTPError) as err:
+        except requests.exceptions.HTTPError as err:
             LOGGER.error(err)
             raise OperationNotSupportedException(
                 "Cloudapi endpoint unavailable at current api version.")
