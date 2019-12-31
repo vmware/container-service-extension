@@ -5,6 +5,7 @@
 
 from pyvcloud.vcd.client import EntityType
 from pyvcloud.vcd.client import find_link
+from pyvcloud.vcd.client import RelationType
 from pyvcloud.vcd.client import TaskStatus
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingLinkException
@@ -17,9 +18,6 @@ import requests
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.cloudapi.constants import CSE_COMPUTE_POLICY_PREFIX # noqa: E501
-# TODO move cloudapi.constants.EntityType to pyvcloud
-from container_service_extension.cloudapi.constants import EntityType as CloudAPIEntityType # noqa: E501
-from container_service_extension.cloudapi.constants import RelationType
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.pyvcloud_utils as pyvcd_utils
 from container_service_extension.shared_constants import RequestMethod
@@ -56,26 +54,26 @@ class ComputePolicyManager:
                              "initialize ComputePolicyManager.")
 
         self._vcd_client = client
-        # TODO: pyvcloud should expose methods to grab the session and token
-        # from a client object.
-        token = self._vcd_client._session.headers['x-vcloud-authorization']
-        # pyvcloud doesn't store the vCD session response in client. So we need
-        # to get it from vCD.
-        self._session = self._vcd_client.rehydrate_from_token(token)
-        # Ideally this information should be fetched from
-        # client._session_endpoints. However pyvcloud client doesn't store
-        # the cloudapi link, so we have to find it manually.
+        token = client.get_access_token()
+        is_jwt_token = True
+        if not token:
+            token = client.get_xvcloud_authorization_token()
+            is_jwt_token = False
+
+        self._session = self._vcd_client.get_vlcoud_session()
         try:
-            link = find_link(self._session, RelationType.OPEN_API,
-                             CloudAPIEntityType.APPLICATION_JSON)
+            link = find_link(self._session, RelationType.OPENAPI,
+                             EntityType.JSON.value)
             self._cloudapi_client = CloudApiClient(
                 base_url=link.href,
-                auth_token=token,
+                token=token,
+                is_jwt_token=is_jwt_token,
                 verify_ssl=self._vcd_client._verify_ssl_certs)
             self._cloudapi_client.do_request(
                 RequestMethod.GET,
                 f"{CloudApiResource.VDC_COMPUTE_POLICIES}")
-        except (MissingLinkException, requests.exceptions.HTTPError):
+        except (MissingLinkException, requests.exceptions.HTTPError) as err:
+            LOGGER.error(err)
             raise OperationNotSupportedException(
                 "Cloudapi endpoint unavailable at current api version.")
 

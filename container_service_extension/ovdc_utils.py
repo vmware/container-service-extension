@@ -83,12 +83,16 @@ def get_ovdc_k8s_provider_metadata(org_name=None, ovdc_name=None, ovdc_id=None,
             client.logout()
 
 
-def get_ovdc_list(client, list_pks_plans=False, tenant_auth_token=None):
+def get_ovdc_list(client,
+                  list_pks_plans=False,
+                  tenant_auth_token=None,
+                  is_jwt_token=False):
     """Get details for all client-visible org VDCs.
 
     :param pyvcloud.vcd.client.Client client:
     :param bool list_pks_plans:
     :param str tenant_auth_token:
+    :param bool is_jwt_token:
 
     :return: List of dict with str keys: ['name', 'org', 'k8s provider'].
         If @list_pks_plans is True, then dict will also have
@@ -104,7 +108,7 @@ def get_ovdc_list(client, list_pks_plans=False, tenant_auth_token=None):
     if list_pks_plans and not client.is_sysadmin():
         raise UnauthorizedRequestError('Operation Denied. Plans available '
                                        'only for System Administrator.')
-    if list_pks_plans and tenant_auth_token is None:
+    if list_pks_plans and not tenant_auth_token:
         raise ValueError("Missing required parameters for listing pks plans.")
 
     if client.is_sysadmin():
@@ -150,8 +154,8 @@ def get_ovdc_list(client, list_pks_plans=False, tenant_auth_token=None):
                         break
                     vc_name = ovdc_record['vcName']
 
-                    vc_to_pks_plans_map = \
-                        _get_vc_to_pks_plans_map(tenant_auth_token)
+                    vc_to_pks_plans_map = _get_vc_to_pks_plans_map(
+                        tenant_auth_token, is_jwt_token)
                     pks_plan_and_server_info = \
                         vc_to_pks_plans_map.get(vc_name, [])
                     if len(pks_plan_and_server_info) > 0:
@@ -207,14 +211,14 @@ def update_ovdc_k8s_provider_metadata(ovdc_id,
             client.logout()
 
 
-def _get_vc_to_pks_plans_map(tenant_auth_token):
+def _get_vc_to_pks_plans_map(tenant_auth_token, is_jwt_token):
     pks_vc_plans_map = {}
-    pks_ctx_list = pks_broker_manager.create_pks_context_for_all_accounts_in_org(tenant_auth_token) # noqa: E501
+    pks_ctx_list = pks_broker_manager.create_pks_context_for_all_accounts_in_org(tenant_auth_token, is_jwt_token) # noqa: E501
 
     for pks_ctx in pks_ctx_list:
         if pks_ctx['vc'] in pks_vc_plans_map:
             continue
-        pks_broker = PksBroker(pks_ctx, tenant_auth_token)
+        pks_broker = PksBroker(pks_ctx, tenant_auth_token, is_jwt_token)
         plans = pks_broker.list_plans()
         plan_names = [plan.get('name') for plan in plans]
         pks_vc_plans_map[pks_ctx['vc']] = [plan_names, pks_ctx['host']]
@@ -317,7 +321,10 @@ def _construct_pks_compute_profile_name(vdc_id):
             client.logout()
 
 
-def create_pks_compute_profile(pks_ctx, tenant_auth_token, request_data):
+def create_pks_compute_profile(pks_ctx,
+                               tenant_auth_token,
+                               is_jwt_token,
+                               request_data):
     ovdc_id = request_data.get(RequestKey.OVDC_ID)
     org_name = request_data.get(RequestKey.ORG_NAME)
     ovdc_name = request_data.get(RequestKey.OVDC_NAME)
@@ -340,7 +347,7 @@ def create_pks_compute_profile(pks_ctx, tenant_auth_token, request_data):
     LOGGER.debug(f"Creating PKS Compute Profile with name:"
                  f"{pks_compute_profile_name}")
 
-    pksbroker = PksBroker(pks_ctx, tenant_auth_token)
+    pksbroker = PksBroker(pks_ctx, tenant_auth_token, is_jwt_token)
     try:
         pksbroker.create_compute_profile(**compute_profile_params)
     except PksServerError as ex:

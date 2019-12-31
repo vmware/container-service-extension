@@ -23,7 +23,7 @@ from container_service_extension.vcdbroker import VcdBroker
 """Handles retrieving the correct broker/cluster to use during an operation."""
 
 
-def get_cluster_info(request_data, tenant_auth_token):
+def get_cluster_info(request_data, tenant_auth_token, is_jwt_token):
     """Get cluster details directly from cloud provider.
 
     Logic of the method is as follows.
@@ -53,15 +53,17 @@ def get_cluster_info(request_data, tenant_auth_token):
                                                       ovdc_name=ovdc_name,
                                                       include_credentials=True,
                                                       include_nsxt_info=True)
-        broker = get_broker_from_k8s_metadata(k8s_metadata, tenant_auth_token)
+        broker = get_broker_from_k8s_metadata(
+            k8s_metadata, tenant_auth_token, is_jwt_token)
         return broker.get_cluster_info(request_data), broker
 
-    return get_cluster_and_broker(request_data, tenant_auth_token)
+    return get_cluster_and_broker(
+        request_data, tenant_auth_token, is_jwt_token)
 
 
-def get_cluster_and_broker(request_data, tenant_auth_token):
+def get_cluster_and_broker(request_data, tenant_auth_token, is_jwt_token):
     cluster_name = request_data[RequestKey.CLUSTER_NAME]
-    vcd_broker = VcdBroker(tenant_auth_token)
+    vcd_broker = VcdBroker(tenant_auth_token, is_jwt_token)
     try:
         return vcd_broker.get_cluster_info(request_data), vcd_broker
     except ClusterNotFoundError as err:
@@ -77,12 +79,12 @@ def get_cluster_and_broker(request_data, tenant_auth_token):
         LOGGER.error(f"Unknown error: {err}", exc_info=True)
         raise
 
-    pks_ctx_list = \
-        create_pks_context_for_all_accounts_in_org(tenant_auth_token)
+    pks_ctx_list = create_pks_context_for_all_accounts_in_org(
+        tenant_auth_token, is_jwt_token)
     for pks_ctx in pks_ctx_list:
         debug_msg = f"Get cluster info for cluster '{cluster_name}' " \
                     f"failed on host '{pks_ctx['host']}' with error: "
-        pks_broker = PksBroker(pks_ctx, tenant_auth_token)
+        pks_broker = PksBroker(pks_ctx, tenant_auth_token, is_jwt_token)
         try:
             return pks_broker.get_cluster_info(request_data), pks_broker
         except (PksClusterNotFoundError, PksServerError) as err:
@@ -100,7 +102,9 @@ def get_cluster_and_broker(request_data, tenant_auth_token):
     raise ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")
 
 
-def get_broker_from_k8s_metadata(k8s_metadata, tenant_auth_token):
+def get_broker_from_k8s_metadata(k8s_metadata,
+                                 tenant_auth_token,
+                                 is_jwt_token):
     """Get broker from ovdc k8s metadata.
 
     If PKS is not enabled, always return VcdBroker
@@ -114,9 +118,6 @@ def get_broker_from_k8s_metadata(k8s_metadata, tenant_auth_token):
                                  "cluster deployment")
 
         if k8s_metadata.get(K8S_PROVIDER_KEY) == K8sProvider.PKS:
-            return PksBroker(k8s_metadata, tenant_auth_token)
+            return PksBroker(k8s_metadata, tenant_auth_token, is_jwt_token)
 
-        if k8s_metadata.get(K8S_PROVIDER_KEY) == K8sProvider.NATIVE:
-            return VcdBroker(tenant_auth_token)
-
-    return VcdBroker(tenant_auth_token)
+    return VcdBroker(tenant_auth_token, is_jwt_token)

@@ -11,7 +11,7 @@ import container_service_extension.pyvcloud_utils as vcd_utils
 
 class AbstractBroker(abc.ABC):
 
-    def __init__(self, tenant_auth_token):
+    def __init__(self, tenant_auth_token, is_jwt_token):
         self.tenant_client = None
         self.client_session = None
         self.tenant_user_name = None
@@ -19,8 +19,10 @@ class AbstractBroker(abc.ABC):
         self.tenant_org_name = None
         self.tenant_org_href = None
 
-        self.tenant_client, self.client_session = \
-            vcd_utils.connect_vcd_user_via_token(tenant_auth_token=tenant_auth_token) # noqa: E501
+        self.tenant_client = vcd_utils.connect_vcd_user_via_token(
+            tenant_auth_token=tenant_auth_token,
+            is_jwt_token=is_jwt_token)
+        self.client_session = self.tenant_client.get_vcloud_session()
         self.tenant_user_name = self.client_session.get('user')
         self.tenant_user_id = self.client_session.get('userId')
         self.tenant_org_name = self.client_session.get('org')

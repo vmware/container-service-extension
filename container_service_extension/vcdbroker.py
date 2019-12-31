@@ -61,7 +61,7 @@ import container_service_extension.vsphere_utils as vs_utils
 class VcdBroker(AbstractBroker):
     """Handles cluster operations for 'native' k8s provider."""
 
-    def __init__(self, tenant_auth_token):
+    def __init__(self, tenant_auth_token, is_jwt_token):
         self.tenant_client = None
         self.client_session = None
         self.tenant_user_name = None
@@ -69,7 +69,7 @@ class VcdBroker(AbstractBroker):
         self.tenant_org_name = None
         self.tenant_org_href = None
         # populates above attributes
-        super().__init__(tenant_auth_token)
+        super().__init__(tenant_auth_token, is_jwt_token)
 
         self._sys_admin_client = None # private: use sys_admin_client property
         self.task = None

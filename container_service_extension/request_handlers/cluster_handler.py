@@ -21,7 +21,7 @@ import container_service_extension.vcdbroker as vcdbroker
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_CREATE)
-def cluster_create(request_data, tenant_auth_token):
+def cluster_create(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for cluster create operation.
 
     Required data: org_name, ovdc_name, cluster_name
@@ -49,7 +49,8 @@ def cluster_create(request_data, tenant_auth_token):
     request_data['is_org_admin_search'] = True
 
     try:
-        broker_manager.get_cluster_and_broker(request_data, tenant_auth_token)
+        broker_manager.get_cluster_and_broker(
+            request_data, tenant_auth_token, is_jwt_token)
         raise ClusterAlreadyExistsError(f"Cluster {cluster_name} "
                                         f"already exists.")
     except ClusterNotFoundError:
@@ -66,11 +67,12 @@ def cluster_create(request_data, tenant_auth_token):
         request_data[RequestKey.PKS_EXT_HOST] = \
             f"{cluster_name}.{k8s_metadata[PKS_CLUSTER_DOMAIN_KEY]}"
     broker = broker_manager.get_broker_from_k8s_metadata(k8s_metadata,
-                                                         tenant_auth_token)
+                                                         tenant_auth_token,
+                                                         is_jwt_token)
     return broker.create_cluster(request_data)
 
 
-def cluster_resize(request_data, tenant_auth_token):
+def cluster_resize(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for cluster resize operation.
 
     Required data: cluster_name, num_nodes
@@ -84,11 +86,12 @@ def cluster_resize(request_data, tenant_auth_token):
     :return: Dict
     """
     _, broker = broker_manager.get_cluster_info(request_data,
-                                                tenant_auth_token)
+                                                tenant_auth_token,
+                                                is_jwt_token)
     return broker.resize_cluster(request_data)
 
 
-def cluster_delete(request_data, tenant_auth_token):
+def cluster_delete(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for cluster delete operation.
 
     Required data: cluster_name
@@ -99,11 +102,12 @@ def cluster_delete(request_data, tenant_auth_token):
     :return: Dict
     """
     _, broker = broker_manager.get_cluster_info(request_data,
-                                                tenant_auth_token)
+                                                tenant_auth_token,
+                                                is_jwt_token)
     return broker.delete_cluster(request_data)
 
 
-def cluster_info(request_data, tenant_auth_token):
+def cluster_info(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for cluster info operation.
 
     Required data: cluster_name
@@ -114,11 +118,12 @@ def cluster_info(request_data, tenant_auth_token):
     :return: Dict
     """
     cluster, _ = broker_manager.get_cluster_info(request_data,
-                                                 tenant_auth_token)
+                                                 tenant_auth_token,
+                                                 is_jwt_token)
     return cluster
 
 
-def cluster_config(request_data, tenant_auth_token):
+def cluster_config(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for cluster config operation.
 
     Required data: cluster_name
@@ -129,34 +134,35 @@ def cluster_config(request_data, tenant_auth_token):
     :return: Dict
     """
     _, broker = broker_manager.get_cluster_info(request_data,
-                                                tenant_auth_token)
+                                                tenant_auth_token,
+                                                is_jwt_token)
     return broker.get_cluster_config(request_data)
 
 
-def cluster_upgrade_plan(request_data, tenant_auth_token):
+def cluster_upgrade_plan(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for cluster upgrade-plan operation.
 
     data validation handled in broker
 
     :return: List[Tuple(str, str)]
     """
-    broker = vcdbroker.VcdBroker(tenant_auth_token)
+    broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
     return broker.get_cluster_upgrade_plan(request_data)
 
 
-def cluster_upgrade(request_data, tenant_auth_token):
+def cluster_upgrade(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for cluster upgrade operation.
 
     data validation handled in broker
 
     :return: Dict
     """
-    broker = vcdbroker.VcdBroker(tenant_auth_token)
+    broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
     return broker.upgrade_cluster(request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_LIST)
-def cluster_list(request_data, tenant_auth_token):
+def cluster_list(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for cluster list operation.
 
     All (vCD/PKS) brokers in the org do 'list cluster' operation.
@@ -169,13 +175,14 @@ def cluster_list(request_data, tenant_auth_token):
 
     :return: List
     """
-    vcd_broker = vcdbroker.VcdBroker(tenant_auth_token)
+    vcd_broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
     vcd_clusters_info = vcd_broker.list_clusters(request_data)
 
     pks_clusters_info = []
     if utils.is_pks_enabled():
         pks_clusters_info = pks_broker_manager.list_clusters(request_data,
-                                                             tenant_auth_token)
+                                                             tenant_auth_token,
+                                                             is_jwt_token)
     all_cluster_infos = vcd_clusters_info + pks_clusters_info
 
     common_cluster_properties = [
@@ -196,7 +203,7 @@ def cluster_list(request_data, tenant_auth_token):
     return result
 
 
-def node_create(request_data, tenant_auth_token):
+def node_create(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for node create operation.
 
     Required data: cluster_name, network_name
@@ -211,11 +218,11 @@ def node_create(request_data, tenant_auth_token):
     """
     # Currently node create is a vCD only operation.
     # Different from resize because this can create nfs nodes
-    broker = vcdbroker.VcdBroker(tenant_auth_token)
+    broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
     return broker.create_nodes(request_data)
 
 
-def node_delete(request_data, tenant_auth_token):
+def node_delete(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for node delete operation.
 
     Required data: cluster_name, node_names_list
@@ -227,11 +234,11 @@ def node_delete(request_data, tenant_auth_token):
     """
     # Currently node delete is a vCD only operation.
     # TODO remove once resize is able to scale down native clusters
-    broker = vcdbroker.VcdBroker(tenant_auth_token)
+    broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
     return broker.delete_nodes(request_data)
 
 
-def node_info(request_data, tenant_auth_token):
+def node_info(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for node info operation.
 
     Required data: cluster_name, node_name
@@ -242,5 +249,5 @@ def node_info(request_data, tenant_auth_token):
     :return: Dict
     """
     # Currently node info is a vCD only operation.
-    broker = vcdbroker.VcdBroker(tenant_auth_token)
+    broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
     return broker.get_node_info(request_data)
