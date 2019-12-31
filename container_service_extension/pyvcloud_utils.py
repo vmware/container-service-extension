@@ -33,7 +33,7 @@ ORG_ADMIN_RIGHTS = ['General: Administrator Control',
                     'General: Administrator View']
 
 
-def connect_vcd_user_via_token(tenant_auth_token):
+def connect_vcd_user_via_token(tenant_auth_token, is_jwt_token):
     server_config = get_server_runtime_config()
     vcd_uri = server_config['vcd']['host']
     version = server_config['vcd']['api_version']
@@ -50,8 +50,8 @@ def connect_vcd_user_via_token(tenant_auth_token):
         log_requests=log_wire,
         log_headers=log_wire,
         log_bodies=log_wire)
-    session = client_tenant.rehydrate_from_token(tenant_auth_token)
-    return (client_tenant, session)
+    client_tenant.rehydrate_from_token(tenant_auth_token, is_jwt_token)
+    return client_tenant
 
 
 def get_sys_admin_client():

@@ -81,7 +81,7 @@ class PksBroker(AbstractBroker):
     VERSION_V1 = 'v1'
     VERSION_V1BETA = 'v1beta1'
 
-    def __init__(self, pks_ctx, tenant_auth_token):
+    def __init__(self, pks_ctx, tenant_auth_token, is_jwt_token):
         """Initialize PKS broker.
 
         :param dict pks_ctx: A dictionary with which should atleast have the
@@ -97,7 +97,7 @@ class PksBroker(AbstractBroker):
         self.tenant_org_name = None
         self.tenant_org_href = None
         # populates above attributes
-        super().__init__(tenant_auth_token)
+        super().__init__(tenant_auth_token, is_jwt_token)
 
         if not pks_ctx:
             raise ValueError(

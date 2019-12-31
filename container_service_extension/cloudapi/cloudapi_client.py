@@ -15,7 +15,8 @@ class CloudApiClient(object):
 
     def __init__(self,
                  base_url,
-                 auth_token,
+                 token,
+                 is_jwt_token,
                  verify_ssl=True,
                  api_version=CLOUDAPI_DEFAULT_VERSION,
                  logger_instance=None,
@@ -24,7 +25,10 @@ class CloudApiClient(object):
                  log_body=False):
         self._base_url = base_url
         self._versioned_url = f"{self._base_url}/{api_version}/"
-        self._headers = {"x-vcloud-authorization": auth_token}
+        if is_jwt_token:
+            self._headers = {"Authorization": f"Bearer {token}"}
+        else:
+            self._headers = {"x-vcloud-authorization": token}
         self._verify_ssl = verify_ssl
         self.LOGGER = logger_instance
         self._log_requests = log_requests

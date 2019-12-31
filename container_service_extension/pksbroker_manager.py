@@ -12,13 +12,13 @@ from container_service_extension.server_constants import K8sProvider
 import container_service_extension.utils as utils
 
 
-def list_clusters(request_data, tenant_auth_token):
+def list_clusters(request_data, tenant_auth_token, is_jwt_token):
     request_data['is_admin_request'] = True
     pks_clusters = []
-    pks_ctx_list = \
-        create_pks_context_for_all_accounts_in_org(tenant_auth_token)
+    pks_ctx_list = create_pks_context_for_all_accounts_in_org(
+        tenant_auth_token, is_jwt_token)
     for pks_ctx in pks_ctx_list:
-        pks_broker = PksBroker(pks_ctx, tenant_auth_token)
+        pks_broker = PksBroker(pks_ctx, tenant_auth_token, is_jwt_token)
         # Get all cluster information to get vdc name from compute-profile-name
         for cluster in pks_broker.list_clusters(request_data):
             pks_cluster = \
@@ -27,7 +27,8 @@ def list_clusters(request_data, tenant_auth_token):
     return pks_clusters
 
 
-def create_pks_context_for_all_accounts_in_org(tenant_auth_token):
+def create_pks_context_for_all_accounts_in_org(tenant_auth_token,
+                                               is_jwt_token):
     """Create PKS context for accounts in a given Org.
 
     If user is Sysadmin
@@ -47,7 +48,8 @@ def create_pks_context_for_all_accounts_in_org(tenant_auth_token):
     pks_cache = utils.get_pks_cache()
     if pks_cache is None:
         return []
-    client, _ = connect_vcd_user_via_token(tenant_auth_token=tenant_auth_token)
+    client = connect_vcd_user_via_token(tenant_auth_token=tenant_auth_token,
+                                        is_jwt_token=is_jwt_token)
 
     if client.is_sysadmin():
         all_pks_account_info = pks_cache.get_all_pks_account_info_in_system()

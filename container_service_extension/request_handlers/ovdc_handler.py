@@ -19,7 +19,7 @@ import container_service_extension.utils as utils
 SYSTEM_DEFAULT_COMPUTE_POLICY_NAME = "System Default"
 
 
-def ovdc_update(request_data, tenant_auth_token):
+def ovdc_update(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for ovdc enable, disable operations.
 
     Required data: org_name, ovdc_name, k8s_provider
@@ -59,6 +59,7 @@ def ovdc_update(request_data, tenant_auth_token):
             k8s_provider=k8s_provider)
         ovdc_utils.create_pks_compute_profile(k8s_provider_info,
                                               tenant_auth_token,
+                                              is_jwt_token,
                                               validated_data)
 
     task = ovdc_utils.update_ovdc_k8s_provider_metadata(
@@ -69,7 +70,7 @@ def ovdc_update(request_data, tenant_auth_token):
     return {'task_href': task.get('href')}
 
 
-def ovdc_info(request_data, tenant_auth_token):
+def ovdc_info(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for ovdc info operation.
 
     Required data: org_name, ovdc_name
@@ -85,7 +86,7 @@ def ovdc_info(request_data, tenant_auth_token):
         ovdc_id=request_data[RequestKey.OVDC_ID])
 
 
-def ovdc_list(request_data, tenant_auth_token):
+def ovdc_list(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for ovdc list operation.
 
     :return: List of dictionaries with org VDC k8s provider metadata.
@@ -95,15 +96,17 @@ def ovdc_list(request_data, tenant_auth_token):
     }
     validated_data = {**defaults, **request_data}
 
-    client, _ = vcd_utils.connect_vcd_user_via_token(tenant_auth_token)
+    client = vcd_utils.connect_vcd_user_via_token(
+        tenant_auth_token, is_jwt_token)
     # TODO check if this is needed
     list_pks_plans = utils.str_to_bool(validated_data[RequestKey.LIST_PKS_PLANS]) # noqa: E501
 
     return ovdc_utils.get_ovdc_list(client, list_pks_plans=list_pks_plans,
-                                    tenant_auth_token=tenant_auth_token)
+                                    tenant_auth_token=tenant_auth_token,
+                                    is_jwt_token=is_jwt_token)
 
 
-def ovdc_compute_policy_list(request_data, tenant_auth_token):
+def ovdc_compute_policy_list(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for ovdc compute-policy list operation.
 
     Required data: ovdc_id
@@ -115,13 +118,14 @@ def ovdc_compute_policy_list(request_data, tenant_auth_token):
     ]
     req_utils.validate_payload(request_data, required)
 
-    client, _ = vcd_utils.connect_vcd_user_via_token(tenant_auth_token)
+    client = vcd_utils.connect_vcd_user_via_token(
+        tenant_auth_token, is_jwt_token)
 
     cpm = ComputePolicyManager(client)
     return cpm.list_compute_policies_on_vdc(request_data[RequestKey.OVDC_ID])
 
 
-def ovdc_compute_policy_update(request_data, tenant_auth_token):
+def ovdc_compute_policy_update(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for ovdc compute-policy update operation.
 
     Required data: ovdc_id, compute_policy_action, compute_policy_names
@@ -144,7 +148,8 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token):
     ovdc_id = validated_data[RequestKey.OVDC_ID]
     remove_compute_policy_from_vms = validated_data[RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS] # noqa: E501
 
-    client, _ = vcd_utils.connect_vcd_user_via_token(tenant_auth_token)
+    client = vcd_utils.connect_vcd_user_via_token(
+        tenant_auth_token, is_jwt_token)
 
     cpm = ComputePolicyManager(client)
     cp_href = None

@@ -116,9 +116,10 @@ class Service(object, metaclass=Singleton):
     def is_running(self):
         return self._state == ServerState.RUNNING
 
-    def info(self, tenant_auth_token):
-        tenant_client, _ = connect_vcd_user_via_token(
-            tenant_auth_token=tenant_auth_token)
+    def info(self, tenant_auth_token, is_jwt_token):
+        tenant_client = connect_vcd_user_via_token(
+            tenant_auth_token=tenant_auth_token,
+            is_jwt_token=is_jwt_token)
         result = Service.version()
         if tenant_client.is_sysadmin():
             result['consumer_threads'] = len(self.threads)
@@ -142,9 +143,10 @@ class Service(object, metaclass=Singleton):
         }
         return ver_obj
 
-    def update_status(self, tenant_auth_token, request_data):
-        tenant_client, _ = connect_vcd_user_via_token(
-            tenant_auth_token=tenant_auth_token)
+    def update_status(self, tenant_auth_token, is_jwt_token, request_data):
+        tenant_client = connect_vcd_user_via_token(
+            tenant_auth_token=tenant_auth_token,
+            is_jwt_token=is_jwt_token)
 
         if not tenant_client.is_sysadmin():
             raise UnauthorizedRequestError(
