@@ -1388,7 +1388,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
     for record in q.execute():
         vapp_id = record.get('id').split(':')[-1]
         vdc_id = record.get('vdc').split(':')[-1]
-        vapp_href = f'{client._uri}/vApp/vapp-{vapp_id}'
+        vapp_href = f'{client.get_api_uri()}/vApp/vapp-{vapp_id}'
 
         # TODO THIS CLUSTER DICTIONARY NEEDS TO BE MORE WELL-DEFINED
         clusters[vapp_id] = {
@@ -1396,7 +1396,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
             'vapp_id': vapp_id,
             'vapp_href': vapp_href,
             'vdc_name': record.get('vdcName'),
-            'vdc_href': f'{client._uri}/vdc/{vdc_id}',
+            'vdc_href': f'{client.get_api_uri()}/vdc/{vdc_id}',
             'vdc_id': vdc_id,
             'leader_endpoint': '',
             'master_nodes': [],

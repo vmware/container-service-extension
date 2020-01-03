@@ -167,7 +167,7 @@ def get_org_name_from_ovdc_id(vdc_id):
         client = None
         try:
             client = get_sys_admin_client()
-            vdc_href = f"{client._uri}/vdc/{vdc_id}"
+            vdc_href = f"{client.get_api_uri()}/vdc/{vdc_id}"
             vdc_resource = client.get_resource(get_admin_href(vdc_href))
             vdc_obj = VDC(client, resource=vdc_resource)
             link = find_link(vdc_obj.get_resource(), RelationType.UP,
