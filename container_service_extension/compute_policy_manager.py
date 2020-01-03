@@ -58,7 +58,7 @@ class ComputePolicyManager:
             token = self._vcd_client.get_xvcloud_authorization_token()
             is_jwt_token = False
 
-        self._session = self._vcd_client.get_vlcoud_session()
+        self._session = self._vcd_client.get_vcloud_session()
         cloudapi_href = self._vcd_client.get_cloudapi_uri()
 
         try:
