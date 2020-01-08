@@ -33,7 +33,7 @@ ORG_ADMIN_RIGHTS = ['General: Administrator Control',
                     'General: Administrator View']
 
 
-def connect_vcd_user_via_token(tenant_auth_token):
+def connect_vcd_user_via_token(tenant_auth_token, is_jwt_token):
     server_config = get_server_runtime_config()
     vcd_uri = server_config['vcd']['host']
     version = server_config['vcd']['api_version']
@@ -50,8 +50,8 @@ def connect_vcd_user_via_token(tenant_auth_token):
         log_requests=log_wire,
         log_headers=log_wire,
         log_bodies=log_wire)
-    session = client_tenant.rehydrate_from_token(tenant_auth_token)
-    return (client_tenant, session)
+    client_tenant.rehydrate_from_token(tenant_auth_token, is_jwt_token)
+    return client_tenant
 
 
 def get_sys_admin_client():
@@ -167,7 +167,7 @@ def get_org_name_from_ovdc_id(vdc_id):
         client = None
         try:
             client = get_sys_admin_client()
-            vdc_href = f"{client._uri}/vdc/{vdc_id}"
+            vdc_href = f"{client.get_api_uri()}/vdc/{vdc_id}"
             vdc_resource = client.get_resource(get_admin_href(vdc_href))
             vdc_obj = VDC(client, resource=vdc_resource)
             link = find_link(vdc_obj.get_resource(), RelationType.UP,

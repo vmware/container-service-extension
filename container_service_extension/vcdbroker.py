@@ -61,7 +61,7 @@ import container_service_extension.vsphere_utils as vs_utils
 class VcdBroker(AbstractBroker):
     """Handles cluster operations for 'native' k8s provider."""
 
-    def __init__(self, tenant_auth_token):
+    def __init__(self, tenant_auth_token, is_jwt_token):
         self.tenant_client = None
         self.client_session = None
         self.tenant_user_name = None
@@ -69,7 +69,7 @@ class VcdBroker(AbstractBroker):
         self.tenant_org_name = None
         self.tenant_org_href = None
         # populates above attributes
-        super().__init__(tenant_auth_token)
+        super().__init__(tenant_auth_token, is_jwt_token)
 
         self._sys_admin_client = None # private: use sys_admin_client property
         self.task = None
@@ -1411,7 +1411,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
     for record in q.execute():
         vapp_id = record.get('id').split(':')[-1]
         vdc_id = record.get('vdc').split(':')[-1]
-        vapp_href = f'{client._uri}/vApp/vapp-{vapp_id}'
+        vapp_href = f'{client.get_api_uri()}/vApp/vapp-{vapp_id}'
 
         # TODO THIS CLUSTER DICTIONARY NEEDS TO BE MORE WELL-DEFINED
         clusters[vapp_id] = {
@@ -1419,7 +1419,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
             'vapp_id': vapp_id,
             'vapp_href': vapp_href,
             'vdc_name': record.get('vdcName'),
-            'vdc_href': f'{client._uri}/vdc/{vdc_id}',
+            'vdc_href': f'{client.get_api_uri()}/vdc/{vdc_id}',
             'vdc_id': vdc_id,
             'leader_endpoint': '',
             'master_nodes': [],

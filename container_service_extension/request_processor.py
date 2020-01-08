@@ -109,10 +109,20 @@ def process_request(body):
     # remove None values from request payload
     data = {k: v for k, v in request_data.items() if v is not None}
 
+    # extract out the authorization token
+    auth_header = body['headers'].get('Authorization')
+    if auth_header:
+        tokens = auth_header.split(" ")
+        if len(tokens) == 2 and tokens[0].lower() == 'bearer':
+            tenant_auth_token = tokens[1]
+            is_jwt_token = True
+    if not auth_header:
+        tenant_auth_token = body['headers'].get('x-vcloud-authorization')
+        is_jwt_token = False
+
     # process the request
-    tenant_auth_token = body['headers']['x-vcloud-authorization']
     body_content = \
-        OPERATION_TO_HANDLER[operation](data, tenant_auth_token)
+        OPERATION_TO_HANDLER[operation](data, tenant_auth_token, is_jwt_token)
 
     if not (isinstance(body_content, (list, dict))):
         body_content = {RESPONSE_MESSAGE_KEY: str(body_content)}

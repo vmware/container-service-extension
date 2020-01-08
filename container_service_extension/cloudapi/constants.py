@@ -12,17 +12,3 @@ class CloudApiResource(str, Enum):
     """Keys that are used to get the cloudapi resource names."""
 
     VDC_COMPUTE_POLICIES = 'vdcComputePolicies'
-
-
-class RelationType(Enum):
-    """Keys to use to find the link relation type."""
-
-    # TODO should be moved to pyvcloud
-    OPEN_API = 'openapi'
-
-
-class EntityType(str, Enum):
-    """Media type."""
-
-    # TODO should be moved to pyvcloud
-    APPLICATION_JSON = 'application/json'

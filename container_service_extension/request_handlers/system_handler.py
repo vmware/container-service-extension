@@ -6,17 +6,17 @@ import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.shared_constants import RequestKey
 
 
-def system_info(request_data, tenant_auth_token):
+def system_info(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for system info operation.
 
     :return: Dictionary with system info data.
     """
     # TODO: circular dependency with request_processor.py
     import container_service_extension.service as service
-    return service.Service().info(tenant_auth_token)
+    return service.Service().info(tenant_auth_token, is_jwt_token)
 
 
-def system_update(request_data, tenant_auth_token):
+def system_update(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for system update operation.
 
     :return: Dictionary with system update status.
@@ -28,4 +28,5 @@ def system_update(request_data, tenant_auth_token):
 
     # TODO: circular dependency with request_processor.py
     import container_service_extension.service as service
-    return service.Service().update_status(tenant_auth_token, request_data)
+    return service.Service().update_status(
+        tenant_auth_token, is_jwt_token, request_data)
