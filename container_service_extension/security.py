@@ -12,7 +12,7 @@ class RedactingFilter(logging.Filter):
     This filter looks for certain sensitive keys and if a match is found, the
     value will be redacted. The value are expected to be strings. If they are
     dictionaries or iterables, resulting redaction will be partial. Normally
-    the value for a sesitive key will be a plain string.
+    the value for a sensitive key will be a plain string.
     """
 
     _SENSITIVE_KEYS = ['authorization',
