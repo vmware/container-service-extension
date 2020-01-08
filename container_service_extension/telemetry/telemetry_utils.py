@@ -8,6 +8,8 @@ from pyvcloud.vcd.client import Client
 from container_service_extension.server_constants import CSE_SERVICE_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.telemetry.constants import COLLECTOR_ID
+from container_service_extension.telemetry.constants import VAC_URL
 
 
 def get_telemetry_instance_id(vcd, logger_instance=None,
@@ -50,3 +52,18 @@ def get_telemetry_instance_id(vcd, logger_instance=None,
     finally:
         if client is not None:
             client.logout()
+
+
+def store_telemetry_settings(config_dict):
+    """Populate telemetry instance id, url and collector id in config.
+
+    :param dict config_dict: CSE configuration
+    """
+    if config_dict['service']['telemetry']['enable'] is True:
+        config_dict['service']['telemetry']['instance_id'] = \
+            get_telemetry_instance_id(config_dict['vcd'])
+
+    if 'vac_url' not in config_dict['service']['telemetry']:
+        config_dict['service']['telemetry']['vac_url'] = VAC_URL
+
+    config_dict['service']['telemetry']['collector_id'] = COLLECTOR_ID

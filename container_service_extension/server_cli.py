@@ -37,6 +37,15 @@ from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import RemoteTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.service import Service
+from container_service_extension.telemetry.constants import CseOperation
+from container_service_extension.telemetry.constants import OperationStatus
+from container_service_extension.telemetry.constants import PayloadKey
+from container_service_extension.telemetry.telemetry_handler \
+    import record_user_action
+from container_service_extension.telemetry.telemetry_handler import \
+    record_user_action_details
+from container_service_extension.telemetry.telemetry_utils \
+    import store_telemetry_settings
 from container_service_extension.utils import check_python_version
 from container_service_extension.utils import ConsoleMessagePrinter
 from container_service_extension.utils import prompt_text
@@ -327,6 +336,18 @@ def check(ctx, config, pks_config, skip_config_decryption, check_install):
             skip_config_decryption=skip_config_decryption,
             decryption_password=password,
             msg_update_callback=console_message_printer)
+
+        # Telemetry data construction
+        cse_params = {
+            PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(pks_config),
+            PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),
+            PayloadKey.WAS_INSTALLATION_CHECKED: bool(check_install)
+        }
+        # Record telemetry data
+        record_user_action_details(
+            cse_operation=CseOperation.CONFIG_CHECK,
+            cse_params=cse_params,
+            telemetry_settings=config_dict['service']['telemetry'])
     except AmqpConnectionError:
         console_message_printer.error(AMQP_ERROR_MSG)
         raise
@@ -343,14 +364,22 @@ def check(ctx, config, pks_config, skip_config_decryption, check_install):
         console_message_printer.error(str(err))
         sys.exit(1)
 
-    if check_install and config_dict:
-        try:
-            check_cse_installation(
-                config_dict, msg_update_callback=ConsoleMessagePrinter())
-        except Exception as err:
-            console_message_printer.error(f"Error : {err}")
-            console_message_printer.error("CSE installation is invalid.")
-            sys.exit(1)
+    if config_dict:
+        if check_install:
+            try:
+                check_cse_installation(config_dict, msg_update_callback=ConsoleMessagePrinter())  # noqa: E501
+            except Exception as err:
+                console_message_printer.error(f"Error : {err}")
+                console_message_printer.error("CSE installation is invalid.")
+                # Telemetry - Record failed install action
+                record_user_action(
+                    cse_operation=CseOperation.CONFIG_CHECK,
+                    telemetry_settings=config_dict['service']['telemetry'],
+                    status=OperationStatus.FAILED, message=str(err))
+                sys.exit(1)
+        # Telemetry - Record successful install action
+        record_user_action(cse_operation=CseOperation.CONFIG_CHECK,
+                           telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
 
 
 @cli.command(short_help='Decrypt the given file')
@@ -549,28 +578,55 @@ def run(ctx, config, pks_config, skip_check, skip_config_decryption):
             color='green', hide_input=True)
 
     try:
+        cse_run_complete = False
+        error_message = None
         service = Service(config, pks_config_file=pks_config,
                           should_check_config=not skip_check,
                           skip_config_decryption=skip_config_decryption,
                           decryption_password=password)
         service.run(msg_update_callback=console_message_printer)
+        cse_run_complete = True
+
+        # Record telemetry on user action and details of operation.
+        cse_params = {
+            PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),
+            PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(pks_config),
+            PayloadKey.WAS_INSTALLATION_CHECK_SKIPPED: bool(skip_check)
+        }
+        record_user_action_details(cse_operation=CseOperation.SERVICE_RUN,
+                                   cse_params=cse_params)
+        record_user_action(cse_operation=CseOperation.SERVICE_RUN)
     except AmqpConnectionError:
+        error_message = AMQP_ERROR_MSG
         console_message_printer.error(AMQP_ERROR_MSG)
         raise
     except requests.exceptions.ConnectionError as err:
-        console_message_printer.error(f"Cannot connect to {err.request.url}.")
+        error_message = f"Cannot connect to {err.request.url}."
+        console_message_printer.error(error_message)
         sys.exit(1)
     except vim.fault.InvalidLogin:
+        error_message = VCENTER_LOGIN_ERROR_MSG
         console_message_printer.error(VCENTER_LOGIN_ERROR_MSG)
         sys.exit(1)
     except cryptography.fernet.InvalidToken:
+        error_message = CONFIG_DECRYPTION_ERROR_MSG
         console_message_printer.error(CONFIG_DECRYPTION_ERROR_MSG)
         sys.exit(1)
     except Exception as err:
-        console_message_printer.error(str(err))
+        error_message = str(err)
+        console_message_printer.error(error_message)
         console_message_printer.error(
             "CSE Server failure. Please check the logs.")
         sys.exit(1)
+    finally:
+        if not cse_run_complete:
+            with open(config) as config_file:
+                config_dict = yaml.safe_load(config_file) or {}
+            store_telemetry_settings(config_dict)
+            record_user_action(cse_operation=CseOperation.SERVICE_RUN,
+                               status=OperationStatus.FAILED,
+                               telemetry_settings=config_dict['service']['telemetry'],  # noqa: E501
+                               message=error_message)
 
 
 @cli.command('convert-cluster', short_help='Converts pre CSE 2.5.2 clusters to CSE 2.5.2+ cluster format') # noqa: E501
@@ -634,6 +690,19 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
             config_file_name, skip_config_decryption=skip_config_decryption,
             decryption_password=decryption_password,
             msg_update_callback=console_message_printer)
+
+        # Record telemetry details
+        cse_params = {
+            PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),
+            PayloadKey.WAS_GC_WAIT_SKIPPED: bool(skip_wait_for_gc),
+            PayloadKey.WAS_OVDC_SPECIFIED: bool(vdc_name),
+            PayloadKey.WAS_ORG_SPECIFIED: bool(org_name),
+            PayloadKey.WAS_NEW_ADMIN_PASSWORD_PROVIDED: bool(admin_password)
+
+        }
+        record_user_action_details(cse_operation=CseOperation.CLUSTER_CONVERT,
+                                   cse_params=cse_params,
+                                   telemetry_settings=config['service']['telemetry'])  # noqa: E501
 
         log_filename = None
         log_wire = str_to_bool(config['service'].get('log_wire'))
@@ -789,6 +858,8 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
                 f"Successfully processed cluster '{cluster['name']}'")
 
         if skip_wait_for_gc:
+            # Record telemetry data on successful completion
+            record_user_action(cse_operation=CseOperation.CLUSTER_CONVERT, telemetry_settings=config['service']['telemetry'])  # noqa: E501
             return
 
         while True:
@@ -805,11 +876,17 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
                 time.sleep(5)
             else:
                 break
+        # # Record telemetry data on successful completion
+        record_user_action(cse_operation=CseOperation.CLUSTER_CONVERT, telemetry_settings=config['service']['telemetry'])  # noqa: E501
     except cryptography.fernet.InvalidToken:
         console_message_printer.error(CONFIG_DECRYPTION_ERROR_MSG)
         sys.exit(1)
     except Exception as err:
         console_message_printer.error(str(err))
+        # Record telemetry data on failed cluster convert
+        record_user_action(cse_operation=CseOperation.CLUSTER_CONVERT,
+                           status=OperationStatus.FAILED,
+                           telemetry_settings=config['service']['telemetry'])
         sys.exit(1)
     finally:
         if client:
@@ -846,6 +923,7 @@ def list_template(ctx, config_file_name, skip_config_decryption,
         # Not passing the console_message_printer, because we want to suppress
         # the python version check messages from being printed onto console.
         check_python_version()
+        requests.packages.urllib3.disable_warnings()
     except Exception as err:
         console_message_printer.error(str(err))
         sys.exit(1)
@@ -869,6 +947,15 @@ def list_template(ctx, config_file_name, skip_config_decryption,
             console_message_printer.info(f"Decrypting '{config_file_name}'")
             config_dict = yaml.safe_load(
                 get_decrypted_file_contents(config_file_name, password)) or {}
+
+        # Store telemetry instance id, url and collector id in config
+        store_telemetry_settings(config_dict)
+
+        # Record telemetry details
+        cse_params = {PayloadKey.DISPLAY_OPTION: display_option}
+        record_user_action_details(cse_operation=CseOperation.TEMPLATE_LIST,
+                                   cse_params=cse_params,
+                                   telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
 
         local_templates = []
         if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL):
@@ -981,11 +1068,17 @@ def list_template(ctx, config_file_name, skip_config_decryption,
             result = remote_templates
 
         stdout(result, ctx, sort_headers=False)
+        record_user_action(cse_operation=CseOperation.TEMPLATE_LIST,
+                           telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
     except cryptography.fernet.InvalidToken:
         console_message_printer.error(CONFIG_DECRYPTION_ERROR_MSG)
         sys.exit(1)
     except Exception as err:
         console_message_printer.error(str(err))
+        record_user_action(cse_operation=CseOperation.TEMPLATE_LIST,
+                           status=OperationStatus.FAILED,
+                           message=str(err),
+                           telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
         sys.exit(1)
 
 

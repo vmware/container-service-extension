@@ -72,6 +72,7 @@ def cluster_create(request_data, tenant_auth_token, is_jwt_token):
     return broker.create_cluster(request_data)
 
 
+@record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_RESIZE)
 def cluster_resize(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for cluster resize operation.
 
@@ -91,6 +92,7 @@ def cluster_resize(request_data, tenant_auth_token, is_jwt_token):
     return broker.resize_cluster(request_data)
 
 
+@record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_DELETE)
 def cluster_delete(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for cluster delete operation.
 
@@ -107,6 +109,7 @@ def cluster_delete(request_data, tenant_auth_token, is_jwt_token):
     return broker.delete_cluster(request_data)
 
 
+@record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_INFO)
 def cluster_info(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for cluster info operation.
 
@@ -123,6 +126,7 @@ def cluster_info(request_data, tenant_auth_token, is_jwt_token):
     return cluster
 
 
+@record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_CONFIG)
 def cluster_config(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for cluster config operation.
 
@@ -139,6 +143,7 @@ def cluster_config(request_data, tenant_auth_token, is_jwt_token):
     return broker.get_cluster_config(request_data)
 
 
+@record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_UPGRADE_PLAN)
 def cluster_upgrade_plan(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for cluster upgrade-plan operation.
 
@@ -150,6 +155,7 @@ def cluster_upgrade_plan(request_data, tenant_auth_token, is_jwt_token):
     return broker.get_cluster_upgrade_plan(request_data)
 
 
+@record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_UPGRADE)
 def cluster_upgrade(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for cluster upgrade operation.
 
@@ -203,6 +209,7 @@ def cluster_list(request_data, tenant_auth_token, is_jwt_token):
     return result
 
 
+@record_user_action_telemetry(cse_operation=CseOperation.NODE_CREATE)
 def node_create(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for node create operation.
 
@@ -222,6 +229,7 @@ def node_create(request_data, tenant_auth_token, is_jwt_token):
     return broker.create_nodes(request_data)
 
 
+@record_user_action_telemetry(cse_operation=CseOperation.NODE_DELETE)
 def node_delete(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for node delete operation.
 
@@ -238,6 +246,7 @@ def node_delete(request_data, tenant_auth_token, is_jwt_token):
     return broker.delete_nodes(request_data)
 
 
+@record_user_action_telemetry(cse_operation=CseOperation.NODE_INFO)
 def node_info(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for node info operation.
 

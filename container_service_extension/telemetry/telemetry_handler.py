@@ -19,7 +19,25 @@ from container_service_extension.utils import get_server_runtime_config
 OPERATION_TO_PAYLOAD_GENERATOR = {
     CseOperation.CLUSTER_LIST: payload_generator.get_payload_for_list_clusters,
     CseOperation.CLUSTER_CREATE: payload_generator.get_payload_for_create_cluster,  # noqa: E501
-    CseOperation.INSTALL_SERVER: payload_generator.get_payload_for_install_server   # noqa: E501
+    CseOperation.SERVICE_INSTALL: payload_generator.get_payload_for_install_server,   # noqa: E501
+    CseOperation.SERVICE_RUN: payload_generator.get_payload_for_run_server,
+    CseOperation.TEMPLATE_INSTALL: payload_generator.get_payload_for_install_template,  # noqa: E501
+    CseOperation.TEMPLATE_LIST: payload_generator.get_payload_for_template_list,  # noqa: E501
+    CseOperation.CLUSTER_CONVERT: payload_generator.get_payload_for_cluster_convert,  # noqa: E501
+    CseOperation.CONFIG_CHECK: payload_generator.get_payload_for_config_check,
+    CseOperation.CLUSTER_INFO: payload_generator.get_payload_for_cluster_info,
+    CseOperation.CLUSTER_RESIZE: payload_generator.get_payload_for_cluster_resize,  # noqa: E501
+    CseOperation.CLUSTER_DELETE: payload_generator.get_payload_for_cluster_delete,  # noqa: E501
+    CseOperation.CLUSTER_CONFIG: payload_generator.get_payload_for_cluster_config,  # noqa: E501
+    CseOperation.CLUSTER_UPGRADE: payload_generator.get_payload_for_cluster_upgrade,  # noqa: E501
+    CseOperation.CLUSTER_UPGRADE_PLAN: payload_generator.get_payload_for_cluster_upgrade_plan,  # noqa: E501
+    CseOperation.NODE_INFO: payload_generator.get_payload_for_node_info,
+    CseOperation.NODE_CREATE: payload_generator.get_payload_for_node_create,
+    CseOperation.NODE_DELETE: payload_generator.get_payload_for_node_delete,
+    CseOperation.OVDC_ENABLE: payload_generator.get_payload_for_ovdc_enable,
+    CseOperation.OVDC_DISABLE: payload_generator.get_payload_for_ovdc_disable,
+    CseOperation.OVDC_INFO: payload_generator.get_payload_for_ovdc_info,
+    CseOperation.OVDC_LIST: payload_generator.get_payload_for_ovdc_list
 }
 
 
