@@ -302,13 +302,12 @@ def install_cse(config_file_name, skip_template_creation, force_update,
 
         # Telemetry - Construct telemetry data
         telemetry_data = {
-            PayloadKey.WAS_DECRYPTION_SKIPPED: True if skip_config_decryption else False,  # noqa: E501
-            PayloadKey.WAS_PASSWORD_PROVIDED: True if decryption_password else False,  # noqa: E501
-            PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: True if pks_config_file_name else False,  # noqa: E501
-            PayloadKey.WERE_TEMPLATES_SKIPPED: True if skip_template_creation else False,  # noqa: E501
-            PayloadKey.WERE_TEMPLATES_FORCE_UPDATED: True if force_update else False,  # noqa: E501
-            PayloadKey.WAS_TEMP_VAPP_RETAINED: True if retain_temp_vapp else False,  # noqa: E501
-            PayloadKey.WAS_SSH_KEY_SPECIFIED: True if ssh_key else False  # noqa: E501
+            PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),  # noqa: E501
+            PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(pks_config_file_name),  # noqa: E501
+            PayloadKey.WERE_TEMPLATES_SKIPPED: bool(skip_template_creation),  # noqa: E501
+            PayloadKey.WERE_TEMPLATES_FORCE_UPDATED: bool(force_update),  # noqa: E501
+            PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(retain_temp_vapp),  # noqa: E501
+            PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(ssh_key)  # noqa: E501
         }
 
         # Telemetry - Store telemetry instance id in config.
@@ -317,7 +316,7 @@ def install_cse(config_file_name, skip_template_creation, force_update,
                 get_telemetry_instance_id(config['vcd'])
 
         # Telemetry - Record detailed telemetry data on install
-        record_user_action_details(CseOperation.INSTALL_SERVER,
+        record_user_action_details(CseOperation.SERVICE_INSTALL,
                                    telemetry_data,
                                    telemetry_settings=config['service']['telemetry'])  # noqa: E501
 
@@ -347,7 +346,7 @@ def install_cse(config_file_name, skip_template_creation, force_update,
                     pods_ip_block_id=nsxt_server.get('pods_ip_block_ids'),
                     ncp_boundary_firewall_section_anchor_id=nsxt_server.get('distributed_firewall_section_anchor_id')) # noqa: E501
         # Telemetry - Record successful install action
-        record_user_action(CseOperation.INSTALL_SERVER,
+        record_user_action(CseOperation.SERVICE_INSTALL,
                            telemetry_settings=config['service']['telemetry'])
 
     except Exception as err:
@@ -356,7 +355,7 @@ def install_cse(config_file_name, skip_template_creation, force_update,
                 "CSE Installation Error. Check CSE install logs")
         LOGGER.error("CSE Installation Error", exc_info=True)
         # Telemetry - Record failed install action
-        record_user_action(CseOperation.INSTALL_SERVER,
+        record_user_action(CseOperation.SERVICE_INSTALL,
                            status=OperationStatus.FAILED,
                            message=str(err),
                            telemetry_settings=config['service']['telemetry'])
@@ -394,6 +393,20 @@ def install_template(template_name, template_revision, config_file_name,
         config_file_name, skip_config_decryption=skip_config_decryption,
         decryption_password=decryption_password,
         msg_update_callback=msg_update_callback)
+
+    # Telemetry data construction
+    cse_params = {
+        PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),
+        PayloadKey.WERE_TEMPLATES_FORCE_UPDATED: bool(force_create),
+        PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(retain_temp_vapp),
+        PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(ssh_key)
+    }
+    # Record telemetry data
+    record_user_action_details(
+        cse_operation=CseOperation.TEMPLATE_INSTALL,
+        cse_params=cse_params,
+        telemetry_settings=config['service']['telemetry'])
+
     populate_vsphere_list(config['vcs'])
 
     msg = f"Installing template '{template_name}' at revision " \
@@ -461,11 +474,21 @@ def install_template(template_name, template_revision, config_file_name,
             if msg_update_callback:
                 msg_update_callback.error(msg)
             LOGGER.error(msg, exc_info=True)
-    except Exception:
+            raise Exception(msg)
+        # Record telemetry data on successful template install
+        record_user_action(cse_operation=CseOperation.TEMPLATE_INSTALL,
+                            status=OperationStatus.SUCCESS,
+                            telemetry_settings=config['service']['telemetry'])  # noqa: E501
+    except Exception as err:
         if msg_update_callback:
             msg_update_callback.error(
                 "Template Installation Error. Check CSE install logs")
         LOGGER.error("Template Installation Error", exc_info=True)
+        # Record telemetry data on template install failure
+        record_user_action(cse_operation=CseOperation.TEMPLATE_INSTALL,
+                           status=OperationStatus.FAILED,
+                           telemetry_settings=config['service']['telemetry'],
+                           message=str(err))
     finally:
         if client is not None:
             client.logout()
