@@ -13,8 +13,6 @@ import cryptography
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
-from pyvcloud.vcd.exceptions import NotAcceptableException
-from pyvcloud.vcd.exceptions import VcdException
 from pyvcloud.vcd.utils import metadata_to_dict
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
@@ -47,14 +45,23 @@ from container_service_extension.vcdbroker import get_all_clusters
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+# Template display options
 DISPLAY_ALL = "all"
 DISPLAY_DIFF = "diff"
 DISPLAY_LOCAL = "local"
 DISPLAY_REMOTE = "remote"
-CONFIG_DECRYPTION_ERROR_MSG = \
-    "Config file decryption failed: invalid decryption password"
+
+# Prompt messages
 PASSWORD_FOR_CONFIG_ENCRYPTION_MSG = "Password for config file encryption"
 PASSWORD_FOR_CONFIG_DECRYPTION_MSG = "Password for config file decryption"
+
+# Error messages
+AMQP_ERROR_MSG = "Check amqp section of the config file."
+CONFIG_DECRYPTION_ERROR_MSG = \
+    "Config file decryption failed: invalid decryption password"
+VCENTER_LOGIN_ERROR_MSG = "vCenter login failed (check config file for "\
+    "vCenter username/password)."
 
 
 @click.group(context_settings=CONTEXT_SETTINGS, invoke_without_command=True)
@@ -63,123 +70,115 @@ def cli(ctx):
     """Container Service Extension for VMware vCloud Director.
 
 \b
-    Examples
+    Examples, by default, following commands expect an encrypted CSE
+    configuration file. To use a plain-text configuration file instead, specify
+    the flag --skip-config-decryption.
 \b
-    By default, following commands expect an encrypted CSE configuration file.
-    To accept a plain-text configuration file, use --skip-config-decryption.
         cse version
-            Display CSE version.
+            Display the software version of the CSE server.
 \b
         cse sample
-            Generate sample CSE config as dict
-            and print it to the console.
+            Generate sample CSE configuration and print it to the console.
 \b
         cse sample --pks-config
-            Generate sample PKS config and print it to the console.
+            Generate sample PKS configuration and print it to the console.
 \b
         cse sample --output config.yaml
-            Generate and write sample CSE config to 'config.yaml'.
+            Generate sample CSE configuration, and write it to the file
+            'config.yaml'.
 \b
         cse sample --pks-config --output pks-config.yaml
-            Generate and write sample PKS config to 'pks-config.yaml'
+            Generate sample PKS configuration, and write it to the file
+            'pks-config.yaml'
 \b
         cse install config.yaml --skip-config-decryption
-            Install CSE using data from 'config.yaml'.
+            Install CSE using configuration specified in 'config.yaml'.
 \b
         cse install encrypted-config.yaml
-            Install CSE using data from 'encrypted-config.yaml' after running
-            decryption on the config file using the password provided by the
-            user via stdin.
+            Install CSE using configuration specified in 'encrypted-config.yaml'.
+            The configuration file will be decrypted in memory using a password
+            (user will be prompted for the password).
 \b
         cse install encrypted-config.yaml --pks-config encrypted-pks-config.yaml
-            Install CSE using data from 'encrypted-config.yaml' after running
-            decryption on both the encrypted-config.yaml and
-            encrypted-pks-config.yaml using the password provided by the user
-            via stdin.
+            Install CSE using configuration specified in 'encrypted-config.yaml'
+            and 'encrypted-pks-config.yaml'. Both these files will be decrypted
+            in memory using the same password (user will be prompted for the
+            password).
 \b
-        cse install config.yaml --template photon-v2 --skip-config-decryption
-            Install CSE using data from 'config.yaml' but only create
-            template 'photon-v2'.
-\b
-        cse install --force-update --skip-config-decryption config.yaml
+        cse install config.yaml --force-update --skip-config-decryption
             Install CSE, and if the templates already exist in vCD, create
             them again.
 \b
-        cse install --retain-temp-vapp --ssh-key ~/.ssh/id_rsa.pub config.yaml
-            Install CSE, retain the temporary vApp after the template has been
-            captured. Copy specified SSH key into all template VMs so users
-            with the corresponding private key have access (--ssh-key is
+        cse install config.yaml --retain-temp-vapp --ssh-key ~/.ssh/id_rsa.pub
+            Install CSE, retain the temporary vApp after the templates have
+            been captured. Copy specified SSH key into all template VMs so
+            users with the corresponding private key have access (--ssh-key is
             required when --retain-temp-vapp is used).
 \b
         cse check config.yaml --skip-config-decryption
-            Checks that 'config.yaml' is valid.
+            Checks validity of 'config.yaml'.
 \b
-        cse check config.yaml --pks-config pks-config.yaml
-            Checks that both config.yaml and 'pks-config.yaml' are valid.
+        cse check config.yaml --pks-config pks-config.yaml --skip-config-decryption
+            Checks validity of both config.yaml and 'pks-config.yaml'.
 \b
-        cse check myconfig.yaml --check-install --skip-config-decryption
-            Checks that 'myconfig.yaml' is valid. Also checks that CSE is
-            installed on vCD according to 'myconfig.yaml' (Checks that all
-            templates specified in 'myconfig.yaml' exist.)
+        cse check config.yaml --check-install --skip-config-decryption
+            Checks validity of 'config.yaml'.
+            Checks that CSE is installed on vCD according to 'config.yaml'
 \b
-        cse check --check-install --skip-config-decryption config.yaml
-            Checks that 'config.yaml' is valid. Also checks that CSE is
-            installed on vCD according to 'config.yaml'
+        cse run encrypted-config.yaml
+            Run CSE Server using configuration supplied via 'encrypted-config.yaml'.
+            Will first validate that CSE was installed according to
+            'encrypted-config.yaml'. User will be prompted for the password
+            required for decrypting 'encrypted-config.yaml'.
 \b
-        cse run config.yaml
-            Run CSE Server using data from encrypted 'config.yaml',
-            but first validate that CSE was installed according to 'config.yaml'.
-            This will prompt for password for decrypting the 'config.yaml'.
+        cse run encrypted-config.yaml --pks-config encrypted-pks-config.yaml
+            Run CSE Server using configuration specified in 'encrypted-config.yaml'
+            and 'encrypted-pks-config.yaml'. Also validate that CSE has been
+            installed according to 'encrypted-config.yaml' and PKS was installed
+            according to 'encrypted-pks-config.yaml'. User will be prompted for
+            the password required to decrypt both the configuration files.
 \b
-        cse run config.yaml --pks-config pks-config.yaml
-            Run CSE Server using data from encrypted 'config.yaml' and
-            encrypted pks-config.yaml, but first validate that CSE was
-            installed according to 'config.yaml' and PKS was installed
-            according to pks-config.yaml. Before validation, decryption will
-            be run on both of these configuration using password provided by
-            the user via stdin.
-\b
-        cse run config.yaml
-            Run CSE Server using data from encrypted 'config.yaml'. Decryption
-            of the config happens using the password provided by the user via
-            stdin. First validate that CSE was installed according to 'config.yaml'.
-\b
-        cse run config.yaml --skip-check
-            Run CSE Server using data from encrypted 'myconfig.yaml'
+        cse run encrypted-config.yaml --skip-check
+            Run CSE Server using configuration specified in 'encrypted-config.yaml'
             without first validating that CSE was installed according
-            to 'myconfig.yaml'. Decryption of the config happens using
-            password provided by the user via stdin.
+            to 'encrypted-config.yaml'. User will be prompted for the password
+            required to decrypt the configuration file.
 \b
-        cse run myconfig.yaml --skip-check --skip-config-decryption
-            Run CSE Server using data from plain text 'myconfig.yaml'
-            without first validating that CSE was installed according
-            to 'myconfig.yaml'. Skip decryption of the config file.
+        cse run config.yaml --skip-check --skip-config-decryption
+            Run CSE Server using configuration specified in plain text 'config.yaml'
+            without first validating that CSE was installed according to 'config.yaml'.
 \b
-        cse encrypt --output [encrypted-file-path] config.yaml
-            Encrypt the config.yaml in plain-text and save it in the given
-            output file. If no output file provided, defaults to stdout.
+        cse encrypt config.yaml --output ~/.configs/encrypted-config.yaml
+            Encrypt the plain text configuration file viz. config.yaml and save
+            it the encrypted version at the specified location. If --output
+            flag is not specified, the encrypted content will be displayed on
+            console. User will be prompted to provide a password for encryption.
 \b
-        cse decrypt --output [decrypted-file-path] cipher.txt
-            Decrypt the config file cipher.txt and save it in the given
-            output file. If no output file provided, defaults to stdout.
+        cse decrypt config.yaml --output ~./configs/encrypted-config.yaml
+            Decrypt the configuration file encrypted-config.yaml and save the
+            decrypted content in the file config.yaml. If --output flag is
+            not specified the decrypted content will be printed onto console.
+            User will be prompted for the password required for decryption.
 \b
     Environment Variables
         CSE_CONFIG
-            If this environment variable is set, the commands will use the file
-            indicated in the variable as CSE config file. The CSE config file
-            provided by the user in the command line will have preference over
-            the environment variable. If both are omitted, it defaults to file
-            'config.yaml' in the current directory.
+            If this environment variable is set, the CSE commands will use the
+            file specified in the environment variable as CSE configuration
+            file. However if user provides a configuration file along with the
+            command, it will override the environment variable. If neither the
+            environment variable is set nor user provides a configuration file,
+            CSE will try to read configuration from the file 'config.yaml' in
+            the current directory.
 \b
         CSE_CONFIG_PASSWORD
             If this environment variable is set, the commands will use the
-            value provided in this variable to encrypt/decrypt CSE config file.
-            If this variable is not set, then user will be prompted for
-            password to encrypt/decrypt the CSE config file.
-
+            value provided in this variable to encrypt/decrypt CSE
+            configuration file. If this variable is not set, then user will be
+            prompted for password to encrypt/decrypt the CSE configuration files.
     """  # noqa: E501
     if ctx.invoked_subcommand is None:
-        click.secho(ctx.get_help())
+        console_message_printer = ConsoleMessagePrinter()
+        console_message_printer.general_no_color(ctx.get_help())
         return
 
 
@@ -189,49 +188,50 @@ def template(ctx):
     """Manage native Kubernetes provider templates.
 
 \b
-Examples
-    By default, following commands expect an encrypted CSE configuration file
-    To accept a plain-text configuration file, use --skip-config-decryption.
+    Examples, by default, following commands expect an encrypted CSE
+    configuration file. To use a plain-text configuration file instead, specify
+    the flag --skip-config-decryption.
 \b
-    cse template list config.yaml
-        Display all templates, including that are currently in the local
-        catalog, and the ones that are defined in remote template cookbook.
-        config.yaml will be decrypted using the password provided by the user
-        via stdin.
+        cse template list encrypted-config.yaml
+            Display all templates, including that are currently in the local
+            catalog, and the ones that are defined in remote template repository.
+            'encrypted-config.yaml' will be decrypted with the password received
+            from user via a console prompt.
 \b
-    cse template list config.yaml --skip-config-decryption
-        Display all templates, including that are currently in the local
-        catalog, and the ones that are defined in remote template cookbook.
-        If config.yaml is in plain-text, use --skip-config-decryption.
+        cse template list config.yaml --skip-config-decryption
+            Display all templates, including that are currently in the local
+            catalog, and the ones that are defined in remote template repository.
 \b
-    cse template list --display local config.yaml --skip-config-decryption
-        Display templates that are currently in the local catalog.
+        cse template list config.yaml --display local --skip-config-decryption
+            Display templates that are currently in the local catalog.
 \b
-    cse template list --display remote config.yaml --skip-config-decryption
-        Display templates that are defined in the remote template cookbook.
+        cse template list config.yaml --display remote --skip-config-decryption
+            Display templates that are defined in the remote template repository.
 \b
-    cse template list --display diff config.yaml --skip-config-decryption
-        Display only templates that are defined in remote template cookbook but
-        not present in the local catalog.
+        cse template list config.yaml --display diff --skip-config-decryption
+            Display only templates that are defined in remote template repository
+            but not present in the local catalog.
 \b
-    cse template install config.yaml --skip-config-decryption
-        Install all templates defined in remote template cookbook that are
-        missing from the local catalog. Skip decryption of config file
+        cse template install config.yaml --skip-config-decryption
+            Install all templates defined in remote template repository that are
+            missing from the local catalog.
 \b
-    cse template install config.yaml
-        Install all templates defined in remote template cookbook that are
-        missing from the local catalog. Before that, config.yaml will
-        be decrypted using the password provided by the user via stdin.
+        cse template install encrypted-config.yaml
+            Install all templates defined in remote template repository that are
+            missing from the local catalog. 'encrypted-config.yaml' will be
+            decrypted with the password received from user via a console prompt.
 \b
-    cse template install [template name] [template revision] config.yaml
-        Install a particular template at a given revision defined in remote
-        template cookbook that is missing from the local catalog.
+        cse template install [template name] [template revision] encrypted-config.yaml
+            Install a particular template at a given revision defined in remote
+            template repository that is missing from the local catalog.
+            'encrypted-config.yaml' will be decrypted with the password received
+            from user via a console prompt.
 \b
-    cse template install config.yaml --force --skip-config-decryption
-        Install all templates defined in remote template cookbook. Tempaltes
-        already in the local catalog that match one in the remote catalog will
-        be recreated from scratch.
-    """
+        cse template install config.yaml --force --skip-config-decryption
+            Install all templates defined in remote template repository. Templates
+            already present in the local catalog that match with one in the remote
+            repository will be recreated from scratch.
+    """  # noqa: E501
     pass
 
 
@@ -246,7 +246,7 @@ def version(ctx):
     stdout(ver_obj, ctx, ver_str)
 
 
-@cli.command('sample', short_help='Generate sample CSE/PKS config')
+@cli.command('sample', short_help='Generate sample CSE/PKS configuration')
 @click.pass_context
 @click.option(
     '-o',
@@ -255,7 +255,7 @@ def version(ctx):
     required=False,
     default=None,
     metavar='OUTPUT_FILE_NAME',
-    help="Filepath to write config file to")
+    help="Filepath to write configuration file to")
 @click.option(
     '-p',
     '--pks-config',
@@ -263,19 +263,24 @@ def version(ctx):
     help='Generate only sample PKS config')
 def sample(ctx, output, pks_config):
     """Display sample CSE config file contents."""
+    console_message_printer = ConsoleMessagePrinter()
     try:
+        # Not passing the console_message_printer, because we want to suppress
+        # the python version check messages from being printed onto console,
+        # and pollute the sample.
         check_python_version()
     except Exception as err:
-        click.secho(str(err), fg='red')
+        console_message_printer.error(str(err))
         sys.exit(1)
 
-    click.secho(generate_sample_config(output=output,
-                                       generate_pks_config=pks_config))
+    console_message_printer.general_no_color(
+        generate_sample_config(output=output,
+                               generate_pks_config=pks_config))
 
 
-@cli.command(short_help="Checks that CSE/PKS config file is valid (Can also "
-                        "check that CSE/PKS"
-                        " is installed according to config file)")
+@cli.command(short_help="Checks that CSE/PKS configuration file is valid (Can "
+                        "also check that CSE/PKS is installed according to "
+                        "the configuration file(s))")
 @click.pass_context
 @click.argument('config', metavar='CONFIG_FILE_NAME',
                 envvar='CSE_CONFIG',
@@ -286,32 +291,34 @@ def sample(ctx, output, pks_config):
     type=click.Path(exists=True),
     metavar='PKS_CONFIG_FILE_NAME',
     required=False,
-    help='Filepath of PKS config file')
+    help='Filepath of the PKS configuration file')
 @click.option(
     '-s',
     '--skip-config-decryption',
     is_flag=True,
-    help='Skip decryption of CSE/PKS config file')
+    help='Skip decryption of CSE/PKS configuration file')
 @click.option(
     '-i',
     '--check-install',
     'check_install',
     is_flag=True,
     help='Checks that CSE/PKS is installed on vCD according '
-         'to the config file')
+         'to the configuration file')
 def check(ctx, config, pks_config, skip_config_decryption, check_install):
     """Validate CSE config file."""
+    console_message_printer = ConsoleMessagePrinter()
+    try:
+        check_python_version(ConsoleMessagePrinter())
+    except Exception as err:
+        console_message_printer.error(str(err))
+        sys.exit(1)
+
     if skip_config_decryption:
         password = None
     else:
         password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
-    try:
-        check_python_version(ConsoleMessagePrinter())
-    except Exception as err:
-        click.secho(str(err), fg='red')
-        sys.exit(1)
 
     config_dict = None
     try:
@@ -319,31 +326,34 @@ def check(ctx, config, pks_config, skip_config_decryption, check_install):
             config, pks_config_file_name=pks_config,
             skip_config_decryption=skip_config_decryption,
             decryption_password=password,
-            msg_update_callback=ConsoleMessagePrinter())
-    except (NotAcceptableException, VcdException, ValueError,
-            KeyError, TypeError) as err:
-        click.secho(str(err), fg='red')
-    except AmqpConnectionError as err:
-        click.secho(str(err), fg='red')
-        click.secho("check config file amqp section.", fg='red')
+            msg_update_callback=console_message_printer)
+    except AmqpConnectionError:
+        console_message_printer.error(AMQP_ERROR_MSG)
+        raise
     except requests.exceptions.ConnectionError as err:
-        click.secho(f"Cannot connect to {err.request.url}.", fg='red')
+        console_message_printer.error(f"Cannot connect to {err.request.url}.")
+        sys.exit(1)
     except cryptography.fernet.InvalidToken:
-        click.secho(CONFIG_DECRYPTION_ERROR_MSG, fg='red')
+        console_message_printer.error(CONFIG_DECRYPTION_ERROR_MSG)
+        sys.exit(1)
     except vim.fault.InvalidLogin:
-        click.secho("vCenter login failed (check config file vCenter "
-                    "username/password).", fg='red')
+        console_message_printer.error(VCENTER_LOGIN_ERROR_MSG)
+        sys.exit(1)
+    except Exception as err:
+        console_message_printer.error(str(err))
+        sys.exit(1)
 
     if check_install and config_dict:
         try:
             check_cse_installation(
                 config_dict, msg_update_callback=ConsoleMessagePrinter())
         except Exception as err:
-            click.secho(f"Error : {err}")
-            click.secho("CSE installation is invalid", fg='red')
+            console_message_printer.error(f"Error : {err}")
+            console_message_printer.error("CSE installation is invalid.")
+            sys.exit(1)
 
 
-@cli.command(short_help='Decrypt the given input file')
+@cli.command(short_help='Decrypt the given file')
 @click.pass_context
 @click.argument('input_file', metavar='INPUT_FILE',
                 type=click.Path(exists=True))
@@ -356,22 +366,23 @@ def check(ctx, config, pks_config, skip_config_decryption, check_install):
     metavar='OUTPUT_FILE',
     help='Filepath to write decrypted file to')
 def decrypt(ctx, input_file, output_file):
-    """Decrypt CSE config file."""
-    password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
-        PASSWORD_FOR_CONFIG_DECRYPTION_MSG, hide_input=True, color='green')
+    """Decrypt CSE configuration file."""
+    console_message_printer = ConsoleMessagePrinter()
     try:
-        check_python_version(ConsoleMessagePrinter())
+        check_python_version(console_message_printer)
+        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            PASSWORD_FOR_CONFIG_DECRYPTION_MSG, hide_input=True, color='green')
         decrypt_file(input_file, password, output_file)
     except cryptography.fernet.InvalidToken:
-        click.secho("Decryption failed: invalid password", fg='red')
+        console_message_printer.error("Decryption failed: Invalid password")
         sys.exit(1)
     except Exception as err:
-        click.secho(str(err), fg='red')
+        console_message_printer.error(str(err))
         sys.exit(1)
-    click.secho("\nDecryption is successfully completed", fg='green')
+    console_message_printer.general("\nDecryption successful")
 
 
-@cli.command(short_help='Encrypt the given input file')
+@cli.command(short_help='Encrypt the given file')
 @click.pass_context
 @click.argument('input_file', metavar='INPUT_FILE',
                 type=click.Path(exists=True))
@@ -383,27 +394,21 @@ def decrypt(ctx, input_file, output_file):
     default=None,
     metavar='OUTPUT_FILE',
     help='Filepath to write encrypted file to')
-@click.option(
-    '-p',
-    '--password',
-    'password',
-    default=None,
-    metavar='PASSWORD_FOR_ENCRYPTION',
-    help="password to use for encrypting the config file")
-def encrypt(ctx, input_file, password, output_file):
-    """Encrypt CSE config file."""
-    password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
-        PASSWORD_FOR_CONFIG_ENCRYPTION_MSG, hide_input=True, color='green')
+def encrypt(ctx, input_file, output_file):
+    """Encrypt CSE configuration file."""
+    console_message_printer = ConsoleMessagePrinter()
     try:
-        check_python_version(ConsoleMessagePrinter())
+        check_python_version(console_message_printer)
+        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            PASSWORD_FOR_CONFIG_ENCRYPTION_MSG, hide_input=True, color='green')
         encrypt_file(input_file, password, output_file)
     except cryptography.fernet.InvalidToken:
-        click.secho("Encryption failed: invalid password", fg='red')
+        console_message_printer.error("Encryption failed: Invalid password")
         sys.exit(1)
     except Exception as err:
-        click.secho(str(err), fg='red')
+        console_message_printer.error(str(err))
         sys.exit(1)
-    click.secho("\nEncryption is successfully completed", fg='green')
+    console_message_printer.general("\nEncryption successful")
 
 
 @cli.command(short_help='Install CSE on vCD')
@@ -453,22 +458,26 @@ def install(ctx, config, pks_config, skip_config_decryption,
             skip_template_creation, force_update,
             retain_temp_vapp, ssh_key_file):
     """Install CSE on vCloud Director."""
+    console_message_printer = ConsoleMessagePrinter()
+
+    try:
+        check_python_version(console_message_printer)
+    except Exception as err:
+        console_message_printer.error(str(err))
+        sys.exit(1)
+
     if skip_config_decryption:
         password = None
     else:
         password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
-    try:
-        check_python_version(ConsoleMessagePrinter())
-    except Exception as err:
-        click.secho(str(err), fg='red')
-        sys.exit(1)
 
     if retain_temp_vapp and not ssh_key_file:
-        click.echo('Must provide ssh-key file (using --ssh-key OR -k) if '
-                   '--retain-temp-vapp is provided, or else temporary vm will '
-                   'be inaccessible')
+        console_message_printer.error(
+            "Must provide ssh-key file (using --ssh-key OR -k) if "
+            "--retain-temp-vapp is provided, or else temporary vm will be "
+            "inaccessible")
         sys.exit(1)
 
     ssh_key = None
@@ -484,19 +493,21 @@ def install(ctx, config, pks_config, skip_config_decryption,
                     skip_config_decryption=skip_config_decryption,
                     decryption_password=password,
                     msg_update_callback=ConsoleMessagePrinter())
-    except (EntityNotFoundException, NotAcceptableException, VcdException,
-            ValueError, KeyError, TypeError) as err:
-        click.secho(str(err), fg='red')
-    except AmqpConnectionError as err:
-        click.secho(str(err), fg='red')
-        click.secho("check config file amqp section.", fg='red')
+    except AmqpConnectionError:
+        console_message_printer.error(AMQP_ERROR_MSG)
+        raise
     except requests.exceptions.ConnectionError as err:
-        click.secho(f"Cannot connect to {err.request.url}.", fg='red')
+        console_message_printer.error(f"Cannot connect to {err.request.url}.")
+        sys.exit(1)
     except vim.fault.InvalidLogin:
-        click.secho("vCenter login failed (check config file vCenter "
-                    "username/password).", fg='red')
+        console_message_printer.error(VCENTER_LOGIN_ERROR_MSG)
+        sys.exit(1)
     except cryptography.fernet.InvalidToken:
-        click.secho(CONFIG_DECRYPTION_ERROR_MSG, fg='red')
+        console_message_printer.error(CONFIG_DECRYPTION_ERROR_MSG)
+        sys.exit(1)
+    except Exception as err:
+        console_message_printer.error(str(err))
+        sys.exit(1)
 
 
 @cli.command(short_help='Run CSE service')
@@ -522,40 +533,44 @@ def install(ctx, config, pks_config, skip_config_decryption,
     help='Skip decryption of CSE/PKS config file')
 def run(ctx, config, pks_config, skip_check, skip_config_decryption):
     """Run CSE service."""
+    console_message_printer = ConsoleMessagePrinter()
+
+    try:
+        check_python_version(console_message_printer)
+    except Exception as err:
+        console_message_printer.error(str(err))
+        sys.exit(1)
+
     if skip_config_decryption:
         password = None
     else:
         password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
-    try:
-        check_python_version(ConsoleMessagePrinter())
-    except Exception as err:
-        click.secho(str(err), fg='red')
-        sys.exit(1)
 
     try:
         service = Service(config, pks_config_file=pks_config,
                           should_check_config=not skip_check,
                           skip_config_decryption=skip_config_decryption,
                           decryption_password=password)
-        service.run(msg_update_callback=ConsoleMessagePrinter())
-    except (NotAcceptableException, VcdException, ValueError, KeyError,
-            TypeError) as err:
-        click.secho(str(err), fg='red')
-    except AmqpConnectionError as err:
-        click.secho(str(err), fg='red')
-        click.secho("check config file amqp section.", fg='red')
+        service.run(msg_update_callback=console_message_printer)
+    except AmqpConnectionError:
+        console_message_printer.error(AMQP_ERROR_MSG)
+        raise
     except requests.exceptions.ConnectionError as err:
-        click.secho(f"Cannot connect to {err.request.url}.", fg='red')
+        console_message_printer.error(f"Cannot connect to {err.request.url}.")
+        sys.exit(1)
     except vim.fault.InvalidLogin:
-        click.secho("vCenter login failed (check config file vCenter "
-                    "username/password).", fg='red')
+        console_message_printer.error(VCENTER_LOGIN_ERROR_MSG)
+        sys.exit(1)
     except cryptography.fernet.InvalidToken:
-        click.secho(CONFIG_DECRYPTION_ERROR_MSG, fg='red')
+        console_message_printer.error(CONFIG_DECRYPTION_ERROR_MSG)
+        sys.exit(1)
     except Exception as err:
-        click.secho(str(err), fg='red')
-        click.secho("CSE Server failure. Please check the logs.", fg='red')
+        console_message_printer.error(str(err))
+        console_message_printer.error(
+            "CSE Server failure. Please check the logs.")
+        sys.exit(1)
 
 
 @cli.command('convert-cluster', short_help='Converts pre CSE 2.5.2 clusters to CSE 2.5.2+ cluster format') # noqa: E501
@@ -598,6 +613,14 @@ def run(ctx, config, pks_config, skip_check, skip_config_decryption):
 def convert_cluster(ctx, config_file_name, skip_config_decryption,
                     cluster_name, admin_password,
                     org_name, vdc_name, skip_wait_for_gc):
+    console_message_printer = ConsoleMessagePrinter()
+
+    try:
+        check_python_version(console_message_printer)
+    except Exception as err:
+        console_message_printer.error(str(err))
+        sys.exit(1)
+
     if skip_config_decryption:
         decryption_password = None
     else:
@@ -605,15 +628,8 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
 
-    try:
-        check_python_version()
-    except Exception as err:
-        click.secho(str(err), fg='red')
-        sys.exit(1)
-
     client = None
     try:
-        console_message_printer = ConsoleMessagePrinter()
         config = get_validated_config(
             config_file_name, skip_config_decryption=skip_config_decryption,
             decryption_password=decryption_password,
@@ -790,9 +806,11 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
             else:
                 break
     except cryptography.fernet.InvalidToken:
-        click.secho(CONFIG_DECRYPTION_ERROR_MSG, fg='red')
+        console_message_printer.error(CONFIG_DECRYPTION_ERROR_MSG)
+        sys.exit(1)
     except Exception as err:
-        click.secho(str(err), fg='red')
+        console_message_printer.error(str(err))
+        sys.exit(1)
     finally:
         if client:
             client.logout()
@@ -822,22 +840,26 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
 def list_template(ctx, config_file_name, skip_config_decryption,
                   display_option):
     """List CSE k8s templates."""
+    console_message_printer = ConsoleMessagePrinter()
+
+    try:
+        # Not passing the console_message_printer, because we want to suppress
+        # the python version check messages from being printed onto console.
+        check_python_version()
+    except Exception as err:
+        console_message_printer.error(str(err))
+        sys.exit(1)
+
     if skip_config_decryption:
         password = None
     else:
         password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
-    try:
-        console_message_printer = ConsoleMessagePrinter()
-        try:
-            check_python_version()
-        except Exception as err:
-            click.secho(str(err), fg='red')
-            sys.exit(1)
 
+    try:
         # We don't want to validate config file, because server startup or
-        # installation is not being perfomred. If values in config file are
+        # installation is not being performed. If values in config file are
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
         if skip_config_decryption:
@@ -960,9 +982,11 @@ def list_template(ctx, config_file_name, skip_config_decryption,
 
         stdout(result, ctx, sort_headers=False)
     except cryptography.fernet.InvalidToken:
-        click.secho(CONFIG_DECRYPTION_ERROR_MSG, fg='red')
+        console_message_printer.error(CONFIG_DECRYPTION_ERROR_MSG)
+        sys.exit(1)
     except Exception as err:
-        click.secho(str(err), fg='red')
+        console_message_printer.error(str(err))
+        sys.exit(1)
 
 
 @template.command('install', short_help='Create Kubernetes templates')
@@ -1004,23 +1028,27 @@ def install_cse_template(ctx, template_name, template_revision,
                          force_create, retain_temp_vapp,
                          ssh_key_file):
     """Create CSE k8s templates."""
+    console_message_printer = ConsoleMessagePrinter()
+
+    try:
+        check_python_version(ConsoleMessagePrinter())
+    except Exception as err:
+        console_message_printer.error(str(err))
+        sys.exit(1)
+
+    if retain_temp_vapp and not ssh_key_file:
+        console_message_printer.error(
+            "Must provide ssh-key file (using --ssh-key OR -k) if "
+            "--retain-temp-vapp is provided, or else temporary vm will be "
+            "inaccessible")
+        sys.exit(1)
+
     if skip_config_decryption:
         password = None
     else:
         password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
-    try:
-        check_python_version(ConsoleMessagePrinter())
-    except Exception as err:
-        click.secho(str(err), fg='red')
-        sys.exit(1)
-
-    if retain_temp_vapp and not ssh_key_file:
-        click.echo('Must provide ssh-key file (using --ssh-key OR -k) if '
-                   '--retain-temp-vapp is provided, or else temporary vm will '
-                   'be inaccessible')
-        sys.exit(1)
 
     ssh_key = None
     if ssh_key_file is not None:
@@ -1036,20 +1064,22 @@ def install_cse_template(ctx, template_name, template_revision,
             ssh_key=ssh_key,
             skip_config_decryption=skip_config_decryption,
             decryption_password=password,
-            msg_update_callback=ConsoleMessagePrinter())
-    except (EntityNotFoundException, NotAcceptableException, VcdException,
-            ValueError, KeyError, TypeError) as err:
-        click.secho(str(err), fg='red')
-    except AmqpConnectionError as err:
-        click.secho(str(err), fg='red')
-        click.secho("check config file amqp section.", fg='red')
+            msg_update_callback=console_message_printer)
+    except AmqpConnectionError:
+        console_message_printer.error(AMQP_ERROR_MSG)
+        raise
     except requests.exceptions.ConnectionError as err:
-        click.secho(f"Cannot connect to {err.request.url}.", fg='red')
+        console_message_printer.error(f"Cannot connect to {err.request.url}.")
+        sys.exit(1)
     except vim.fault.InvalidLogin:
-        click.secho("vCenter login failed (check config file vCenter "
-                    "username/password).", fg='red')
+        console_message_printer.error(VCENTER_LOGIN_ERROR_MSG)
+        sys.exit(1)
     except cryptography.fernet.InvalidToken:
-        click.secho(CONFIG_DECRYPTION_ERROR_MSG, fg='red')
+        console_message_printer.error(CONFIG_DECRYPTION_ERROR_MSG)
+        sys.exit(1)
+    except Exception as err:
+        console_message_printer.error(str(err))
+        sys.exit(1)
 
 
 if __name__ == '__main__':

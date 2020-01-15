@@ -40,7 +40,7 @@ Examples
 @cse.command(short_help='Display CSE version')
 @click.pass_context
 def version(ctx):
-    """Display CSE version."""
+    """Display version of CSE plug-in."""
     ver_obj = Service.version()
     ver_str = '%s, %s, version %s' % (ver_obj['product'],
                                       ver_obj['description'],
@@ -956,29 +956,29 @@ def delete_nodes(ctx, cluster_name, node_names, org, vdc):
 @cse.group('system', short_help='Manage CSE service (system daemon)')
 @click.pass_context
 def system_group(ctx):
-    """Manage CSE service (system daemon).
+    """Manage CSE server remotely.
 
 \b
 Examples
     vcd cse system info
-        Display detailed information about CSE.
+        Display detailed information of the CSE server.
 \b
     vcd cse system enable --yes
-        Enable CSE system daemon without prompting.
+        Enable CSE server without prompting.
 \b
     vcd cse system stop --yes
-        Stop CSE system daemon without prompting.
+        Stop CSE server without prompting.
 \b
     vcd cse system disable --yes
-        Disable CSE system daemon without prompting.
+        Disable CSE server without prompting.
     """
     pass
 
 
-@system_group.command('info', short_help='Display info about CSE')
+@system_group.command('info', short_help='Display info of CSE server')
 @click.pass_context
 def system_info(ctx):
-    """Display info about CSE."""
+    """Display CSE server info."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -989,11 +989,11 @@ def system_info(ctx):
         stderr(e, ctx)
 
 
-@system_group.command('stop', short_help='Gracefully stop CSE service')
+@system_group.command('stop', short_help='Gracefully stop CSE server')
 @click.pass_context
-@click.confirmation_option(prompt='Are you sure you want to stop the service?')
+@click.confirmation_option(prompt='Are you sure you want to stop the server?')
 def stop_service(ctx):
-    """Stop CSE system daemon."""
+    """Stop CSE server."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -1004,10 +1004,10 @@ def stop_service(ctx):
         stderr(e, ctx)
 
 
-@system_group.command('enable', short_help='Enable CSE service')
+@system_group.command('enable', short_help='Enable CSE server')
 @click.pass_context
 def enable_service(ctx):
-    """Enable CSE system daemon."""
+    """Enable CSE server."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -1018,10 +1018,10 @@ def enable_service(ctx):
         stderr(e, ctx)
 
 
-@system_group.command('disable', short_help='Disable CSE service')
+@system_group.command('disable', short_help='Disable CSE server')
 @click.pass_context
 def disable_service(ctx):
-    """Disable CSE system daemon."""
+    """Disable CSE server."""
     try:
         restore_session(ctx)
         client = ctx.obj['client']
