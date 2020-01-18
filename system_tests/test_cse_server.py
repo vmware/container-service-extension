@@ -165,8 +165,8 @@ def test_0030_cse_check(config):
     # cmd = f"check {env.ACTIVE_CONFIG_FILEPATH} -i --skip-config-decryption"
     # result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
     # assert result.exit_code == 0,\
-        testutils.format_command_info('cse', cmd, result.exit_code,
-                                      result.output)
+    #    testutils.format_command_info('cse', cmd, result.exit_code,
+    #                                  result.output)
 
 
 def test_0040_config_missing_keys(config):
