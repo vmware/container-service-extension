@@ -158,9 +158,13 @@ def test_0030_cse_check(config):
         testutils.format_command_info('cse', cmd, result.exit_code,
                                       result.output)
 
-    cmd = f"check {env.ACTIVE_CONFIG_FILEPATH} -i --skip-config-decryption"
-    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0,\
+    # This test makes no sense here, we know for sure that CSE is not
+    # installed at this point in time. This needs more discussion, commenting
+    # out the test for time being
+
+    # cmd = f"check {env.ACTIVE_CONFIG_FILEPATH} -i --skip-config-decryption"
+    # result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    # assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
                                       result.output)
 
