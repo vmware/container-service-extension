@@ -6,4 +6,4 @@ vcd-cli >= 22.0.1.dev3
 vsphere-guest-run >= 0.0.7
 pyvmomi >= 6.7.0
 cryptography >= 2.8
-semantic-version
+semantic-version >= 2.8.4
