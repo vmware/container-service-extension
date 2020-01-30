@@ -4,10 +4,10 @@ Wants=network-online.target,rabbitmq-server.service
 After=network-online.target,rabbitmq-server.service
 
 [Service]
-ExecStart=/home/vmware/cse.sh
+ExecStart=/root/cse.sh
+User=root
+WorkingDirectory=/root
 Type=simple
-User=vmware
-WorkingDirectory=/home/vmware
 Restart=always
 
 [Install]
