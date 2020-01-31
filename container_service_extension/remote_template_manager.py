@@ -59,8 +59,7 @@ class RemoteTemplateManager():
         tokens = self.url.split('/')
         if tokens[-1] == REMOTE_TEMPLATE_COOKBOOK_FILENAME:
             return '/'.join(tokens[:-1])
-        else:
-            raise ValueError("Inalid url for template cookbook.")
+        raise ValueError("Invalid url for template cookbook.")
 
     def _get_remote_script_url(self, template_name, revision,
                                script_file_name):
@@ -83,11 +82,10 @@ class RemoteTemplateManager():
         :param str script_file_name:
         """
         base_url = self._get_base_url_from_remote_template_cookbook_url()
-        url = base_url + \
+        return base_url + \
             f"/{REMOTE_SCRIPTS_DIR}" \
             f"/{ltm.get_revisioned_template_name(template_name, revision)}" \
             f"/{script_file_name}"
-        return url
 
     def get_remote_template_cookbook(self):
         """Get the remote template cookbook as a dictionary.
