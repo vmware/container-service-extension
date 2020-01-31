@@ -169,6 +169,14 @@ def cli(ctx):
             not specified the decrypted content will be printed onto console.
             User will be prompted for the password required for decryption.
 \b
+        cse template install mytemplate 1 myconfig.yaml
+            Installs mytemplate at revision 1 specified in the remote template
+            repository URL specified in myconfig.yaml
+\b
+        cse template install * * myconfig.yaml decrypt config.yaml --output ~./configs/encrypted-config.yaml
+            Installs all templates specified in the remote template
+            repository URL specified in myconfig.yaml
+\b
     Environment Variables
         CSE_CONFIG
             If this environment variable is set, the CSE commands will use the
@@ -629,7 +637,10 @@ def run(ctx, config, pks_config, skip_check, skip_config_decryption):
                                message=error_message)
 
 
-@cli.command('convert-cluster', short_help='Converts pre CSE 2.5.2 clusters to CSE 2.5.2+ cluster format') # noqa: E501
+@cli.command('convert-cluster',
+             short_help="Converts pre CSE 2.5.2 clusters to CSE 2.5.2+ "
+                        "cluster format. Use '*' as cluster name to "
+                        "convert all clusters.")
 @click.pass_context
 @click.argument('cluster_name', metavar='CLUSTER_NAME', default=None)
 @click.argument('config_file_name', metavar='CONFIG_FILE_NAME',
@@ -669,6 +680,8 @@ def run(ctx, config, pks_config, skip_check, skip_config_decryption):
 def convert_cluster(ctx, config_file_name, skip_config_decryption,
                     cluster_name, admin_password,
                     org_name, vdc_name, skip_wait_for_gc):
+    """Converts pre CSE 2.5.2 clusters to CSE 2.5.2+ cluster format.
+    Use '*' as cluster name to convert all clusters."""
     console_message_printer = ConsoleMessagePrinter()
 
     try:
@@ -1082,7 +1095,11 @@ def list_template(ctx, config_file_name, skip_config_decryption,
         sys.exit(1)
 
 
-@template.command('install', short_help='Create Kubernetes templates')
+@template.command('install',
+                  short_help="Create Kubernetes templates listed in remote "
+                             "template repository. Use '*' for TEMPLATE_NAME "
+                             "and TEMPLATE_REVISION to install all listed "
+                             "templates.")
 @click.pass_context
 @click.argument('template_name', metavar='TEMPLATE_NAME', default='*')
 @click.argument('template_revision', metavar='TEMPLATE_REVISION', default='*')
@@ -1120,7 +1137,9 @@ def install_cse_template(ctx, template_name, template_revision,
                          config_file_name, skip_config_decryption,
                          force_create, retain_temp_vapp,
                          ssh_key_file):
-    """Create CSE k8s templates."""
+    """Create Kubernetes templates listed in remote template repository.
+    Use '*' for TEMPLATE_NAME and TEMPLATE_REVISION to install
+    all listed templates."""
     console_message_printer = ConsoleMessagePrinter()
 
     try:
