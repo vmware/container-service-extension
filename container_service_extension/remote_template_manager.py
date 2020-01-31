@@ -32,8 +32,7 @@ def download_file_into_memory(url):
     response = requests.get(url, headers={'Cache-Control': 'no-cache'})
     if response.status_code == requests.codes.ok:
         return response.text
-    else:
-        return None
+    response.raise_for_status()
 
 
 class RemoteTemplateManager():
