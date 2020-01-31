@@ -12,7 +12,6 @@ import click
 import cryptography
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
-from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.utils import metadata_to_dict
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
@@ -733,7 +732,7 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
             console_message_printer.info(f"No clusters were found.")
             return
 
-        vms = []
+        href_of_vms_to_verify = []
         for cluster in cluster_records:
             console_message_printer.info(
                 f"Processing cluster '{cluster['name']}'.")
@@ -808,19 +807,38 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
             console_message_printer.general(
                 "Finished processing metadata of cluster.")
 
-            reset_admin_pw = False
+            # Update admin password of all VMs that are not set properly
+            vm_hrefs_for_password_update = []
             vm_resources = vapp.get_all_vms()
             for vm_resource in vm_resources:
-                try:
-                    vapp.get_admin_password(vm_resource.get('name'))
-                except EntityNotFoundException:
-                    reset_admin_pw = True
-                    break
+                vm = VM(client, href=vm_resource.get('href'))
+                console_message_printer.info(f"Determining if vm '{vm.get_resource().get('name')} needs processing'.") # noqa: E501
 
-            if reset_admin_pw:
+                gc_section = vm.get_guest_customization_section()
+                admin_password_enabled = False
+                if hasattr(gc_section, 'AdminPasswordEnabled'):
+                    admin_password_enabled = str_to_bool(gc_section.AdminPasswordEnabled) # noqa: E501
+                admin_password_on_vm = None
+                if hasattr(gc_section, 'AdminPassword'):
+                    admin_password_on_vm = gc_section.AdminPassword.text
+
+                skip_vm = False
+                if admin_password_enabled:
+                    if admin_password:
+                        if admin_password == admin_password_on_vm:
+                            skip_vm = True
+                    else:
+                        if admin_password_on_vm:
+                            skip_vm = True
+                if not skip_vm:
+                    href_of_vms_to_verify.append(vm.href)
+                    vm_hrefs_for_password_update.append(vm.href)
+
+            # At least one vm in the vApp needs a password update
+            if len(vm_hrefs_for_password_update) > 0:
                 try:
                     console_message_printer.info(
-                        f"Undeploying the vApp '{cluster['name']}'")
+                        f"Undeploying the cluster '{cluster['name']}'")
                     task = vapp.undeploy()
                     client.get_task_monitor().wait_for_success(task)
                     console_message_printer.general(
@@ -828,12 +846,10 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
                 except Exception as err:
                     console_message_printer.error(str(err))
 
-                for vm_resource in vm_resources:
+                for href in vm_hrefs_for_password_update:
+                    vm = VM(client=client, href=href)
                     console_message_printer.info(
-                        f"Processing vm '{vm_resource.get('name')}'.")
-                    vm = VM(client, href=vm_resource.get('href'))
-                    vms.append(vm)
-
+                        f"Processing vm '{vm.get_resource().get('name')}'.")
                     console_message_printer.info("Updating vm admin password")
                     task = vm.update_guest_customization_section(
                         enabled=True,
@@ -862,20 +878,29 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
             record_user_action(cse_operation=CseOperation.CLUSTER_CONVERT, telemetry_settings=config['service']['telemetry'])  # noqa: E501
             return
 
-        while True:
+        while len(href_of_vms_to_verify) != 0:
+            console_message_printer.info(f"Waiting on guest customization to finish on {len(href_of_vms_to_verify)} vms.") # noqa: E501
             to_remove = []
-            for vm in vms:
-                status = vm.get_guest_customization_status()
-                if status != 'GC_PENDING':
-                    to_remove.append(vm)
-            for vm in to_remove:
-                vms.remove(vm)
-            console_message_printer.info(
-                f"Waiting on guest customization to finish on {len(vms)} vms.")
-            if not len(vms) == 0:
-                time.sleep(5)
-            else:
-                break
+            for href in href_of_vms_to_verify:
+                vm = VM(client=client, href=href)
+                gc_section = vm.get_guest_customization_section()
+                admin_password_enabled = False
+                if hasattr(gc_section, 'AdminPasswordEnabled'):
+                    admin_password_enabled = str_to_bool(gc_section.AdminPasswordEnabled) # noqa: E501
+                admin_password = None
+                if hasattr(gc_section, 'AdminPassword'):
+                    admin_password = gc_section.AdminPassword.text
+
+                if admin_password_enabled and admin_password:
+                    to_remove.append(vm.href)
+
+            for href in to_remove:
+                href_of_vms_to_verify.remove(href)
+
+            time.sleep(5)
+
+        console_message_printer.info("Finished Guest customization on all vms.") # noqa: E501
+
         # # Record telemetry data on successful completion
         record_user_action(cse_operation=CseOperation.CLUSTER_CONVERT, telemetry_settings=config['service']['telemetry'])  # noqa: E501
     except cryptography.fernet.InvalidToken:
