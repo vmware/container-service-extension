@@ -680,8 +680,10 @@ def run(ctx, config, pks_config, skip_check, skip_config_decryption):
 def convert_cluster(ctx, config_file_name, skip_config_decryption,
                     cluster_name, admin_password,
                     org_name, vdc_name, skip_wait_for_gc):
-    """Converts pre CSE 2.5.2 clusters to CSE 2.5.2+ cluster format.
-    Use '*' as cluster name to convert all clusters."""
+    """Convert pre CSE 2.5.2 clusters to CSE 2.5.2+ cluster format.
+
+    Use '*' as cluster name to convert all clusters.
+    """
     console_message_printer = ConsoleMessagePrinter()
 
     try:
@@ -1138,8 +1140,10 @@ def install_cse_template(ctx, template_name, template_revision,
                          force_create, retain_temp_vapp,
                          ssh_key_file):
     """Create Kubernetes templates listed in remote template repository.
+
     Use '*' for TEMPLATE_NAME and TEMPLATE_REVISION to install
-    all listed templates."""
+    all listed templates.
+    """
     console_message_printer = ConsoleMessagePrinter()
 
     try:
