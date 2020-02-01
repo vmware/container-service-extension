@@ -173,7 +173,7 @@ def cli(ctx):
             Installs mytemplate at revision 1 specified in the remote template
             repository URL specified in myconfig.yaml
 \b
-        cse template install * * myconfig.yaml decrypt config.yaml --output ~./configs/encrypted-config.yaml
+        cse template install * * myconfig.yaml
             Installs all templates specified in the remote template
             repository URL specified in myconfig.yaml
 \b
