@@ -1,4 +1,5 @@
 cachetools >= 2.0.1
+click >= 6.7
 humanfriendly >= 4.8
 pika >= 0.11.2, < 1.0.0
 pyvcloud >= 21.0.1.dev7
