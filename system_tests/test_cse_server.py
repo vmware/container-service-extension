@@ -24,9 +24,9 @@ PASSWORD_FOR_CONFIG_ENCRYPTION = "vmware"
 CSE server tests to test validity and functionality of `cse` CLI commands.
 
 Tests these following commands:
-$ cse check --config cse_test_config.yaml --skip-config-decryption (missing/invalid keys)
-$ cse check --config cse_test_config.yaml --skip-config-decryption (incorrect value types)
-$ cse check --config cse_test_config.yaml -i --skip-config-decryption (cse not installed yet)
+$ cse check cse_test_config.yaml --skip-config-decryption (missing/invalid keys)
+$ cse check cse_test_config.yaml --skip-config-decryption (incorrect value types)
+$ cse check cse_test_config.yaml -i --skip-config-decryption (cse not installed yet)
 
 $ cse install --config cse_test_config.yaml --template photon-v2 --skip-config-decryption
     --ssh-key ~/.ssh/id_rsa.pub --no-capture
@@ -36,7 +36,7 @@ $ cse install --config cse_test_config.yaml --ssh-key ~/.ssh/id_rsa.pub
     --update --no-capture --skip-config-decryption 
 $ cse install --config cse_test_config.yaml --skip-config-decryption 
 
-$ cse check --config cse_test_config.yaml -i --skip-config-decryption 
+$ cse check cse_test_config.yaml -i --skip-config-decryption 
 
 $ cse run --config cse_test_config.yaml --skip-config-decryption 
 $ cse run --config cse_test_config.yaml --skip-check --skip-config-decryption
@@ -259,14 +259,16 @@ def test_0080_install_skip_template_creation(config,
     Tests that installation:
     - registers CSE, without installing the templates
 
-    command: cse install cse_test_config.yaml
-        --ssh-key ~/.ssh/id_rsa.pub --skip-config-decryption --skip-create-templates # noqa: E501
+    command: cse install --config cse_test_config.yaml
+        --ssh-key ~/.ssh/id_rsa.pub --skip-config-decryption
+        --skip-create-templates
     required files: ~/.ssh/id_rsa.pub, cse_test_config.yaml,
     expected: cse registered, catalog exists, source ovas do not exist,
         temp vapps do not exist, k8s templates do not exist.
     """
-    cmd = f"install {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-          f"{env.SSH_KEY_FILEPATH} --skip-template-creation --skip-config-decryption"  # noqa: E501
+    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
+          f"{env.SSH_KEY_FILEPATH} --skip-template-creation " \
+          f"--skip-config-decryption"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
@@ -307,13 +309,13 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
     - skips deleting the temp vapp
     - checks that proper packages are installed in the vm in temp vApp
 
-    command: cse install cse_test_config.yaml --retain-temp-vapp --skip-config-decryption  # noqa: E501
-        --ssh-key ~/.ssh/id_rsa.pub
+    command: cse install --config cse_test_config.yaml --retain-temp-vapp
+        --skip-config-decryption --ssh-key ~/.ssh/id_rsa.pub
     required files: ~/.ssh/id_rsa.pub, cse_test_config.yaml
     expected: cse registered, catalog exists, source ovas exist,
         temp vapps exist, k8s templates exist.
     """
-    cmd = f"install {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
+    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
           f"{env.SSH_KEY_FILEPATH} --retain-temp-vapp --skip-config-decryption"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(),
                                    catch_exceptions=False)
@@ -355,14 +357,14 @@ def test_0100_install_force_update(config, unregister_cse_before_test):
     - creates all templates correctly,
     - customizes temp vapps correctly.
 
-    command: cse install cse_test_config.yaml
+    command: cse install --config cse_test_config.yaml
         --ssh-key ~/.ssh/id_rsa.pub --force-update --skip-config-decryption
     required files: cse_test_config.yaml, ~/.ssh/id_rsa.pub,
         ubuntu/photon init/cust scripts
     expected: cse registered, source ovas exist, k8s templates exist and
         temp vapps don't exist.
     """
-    cmd = f"install {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
+    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
           f"{env.SSH_KEY_FILEPATH} --force-update --skip-config-decryption"
     result = env.CLI_RUNNER.invoke(
         cli, cmd.split(), catch_exceptions=False)
@@ -396,7 +398,7 @@ def test_0100_install_force_update(config, unregister_cse_before_test):
 def test_0110_cse_check_valid_installation(config):
     """Tests that `cse check` passes for a valid installation.
 
-    command: cse check -c cse_test_config.yaml -i
+    command: cse check cse_test_config.yaml -i
     expected: check passes
     """
     try:
