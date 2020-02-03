@@ -1253,8 +1253,20 @@ Examples
 
 @compute_policy_group.command('list', short_help='')
 @click.pass_context
-@click.argument('org_name', metavar='ORG_NAME')
-@click.argument('ovdc_name', metavar='OVDC_NAME')
+@click.option(
+    '-o',
+    '--org',
+    'org_name',
+    metavar='ORG_NAME',
+    required=True,
+    help="(Required) Organization name")
+@click.option(
+    '-v',
+    '--vdc',
+    'ovdc_name',
+    metavar='ORG_VDC_NAME',
+    required=True,
+    help="(Required) Organization VDC name")
 def compute_policy_list(ctx, org_name, ovdc_name):
     try:
         restore_session(ctx)
@@ -1271,9 +1283,21 @@ def compute_policy_list(ctx, org_name, ovdc_name):
 
 @compute_policy_group.command('add', short_help='')
 @click.pass_context
-@click.argument('org_name', metavar='ORG_NAME')
-@click.argument('ovdc_name', metavar='OVDC_NAME')
 @click.argument('compute_policy_name', metavar='COMPUTE_POLICY_NAME')
+@click.option(
+    '-o',
+    '--org',
+    'org_name',
+    metavar='ORG_NAME',
+    required=True,
+    help="(Required) Organization name")
+@click.option(
+    '-v',
+    '--vdc',
+    'ovdc_name',
+    metavar='ORG_VDC_NAME',
+    required=True,
+    help="(Required) Organization VDC name")
 def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
     try:
         restore_session(ctx)
@@ -1294,9 +1318,21 @@ def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
 
 @compute_policy_group.command('remove', short_help='')
 @click.pass_context
-@click.argument('org_name', metavar='ORG_NAME')
-@click.argument('ovdc_name', metavar='OVDC_NAME')
 @click.argument('compute_policy_name', metavar='COMPUTE_POLICY_NAME')
+@click.option(
+    '-o',
+    '--org',
+    'org_name',
+    metavar='ORG_NAME',
+    required=True,
+    help="(Required) Organization name")
+@click.option(
+    '-v',
+    '--vdc',
+    'ovdc_name',
+    metavar='ORG_VDC_NAME',
+    required=True,
+    help="(Required) Organization VDC name")
 @click.option(
     '-f',
     '--force',

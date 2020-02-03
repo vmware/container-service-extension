@@ -99,60 +99,60 @@ def cli(ctx):
             Generate sample PKS configuration, and write it to the file
             'pks-config.yaml'
 \b
-        cse install config.yaml --skip-config-decryption
+        cse install --config config.yaml --skip-config-decryption
             Install CSE using configuration specified in 'config.yaml'.
 \b
-        cse install encrypted-config.yaml
+        cse install -c encrypted-config.yaml
             Install CSE using configuration specified in 'encrypted-config.yaml'.
             The configuration file will be decrypted in memory using a password
             (user will be prompted for the password).
 \b
-        cse install encrypted-config.yaml --pks-config encrypted-pks-config.yaml
+        cse install -c encrypted-config.yaml --pks-config encrypted-pks-config.yaml
             Install CSE using configuration specified in 'encrypted-config.yaml'
             and 'encrypted-pks-config.yaml'. Both these files will be decrypted
             in memory using the same password (user will be prompted for the
             password).
 \b
-        cse install config.yaml --force-update --skip-config-decryption
+        cse install -c config.yaml --force-update --skip-config-decryption
             Install CSE, and if the templates already exist in vCD, create
             them again.
 \b
-        cse install config.yaml --retain-temp-vapp --ssh-key ~/.ssh/id_rsa.pub
+        cse install -c config.yaml --retain-temp-vapp --ssh-key ~/.ssh/id_rsa.pub
             Install CSE, retain the temporary vApp after the templates have
             been captured. Copy specified SSH key into all template VMs so
             users with the corresponding private key have access (--ssh-key is
             required when --retain-temp-vapp is used).
 \b
-        cse check config.yaml --skip-config-decryption
+        cse check -c config.yaml --skip-config-decryption
             Checks validity of 'config.yaml'.
 \b
-        cse check config.yaml --pks-config pks-config.yaml --skip-config-decryption
+        cse check -c config.yaml --pks-config pks-config.yaml --skip-config-decryption
             Checks validity of both config.yaml and 'pks-config.yaml'.
 \b
-        cse check config.yaml --check-install --skip-config-decryption
+        cse check -c config.yaml --check-install --skip-config-decryption
             Checks validity of 'config.yaml'.
             Checks that CSE is installed on vCD according to 'config.yaml'
 \b
-        cse run encrypted-config.yaml
+        cse run -c encrypted-config.yaml
             Run CSE Server using configuration supplied via 'encrypted-config.yaml'.
             Will first validate that CSE was installed according to
             'encrypted-config.yaml'. User will be prompted for the password
             required for decrypting 'encrypted-config.yaml'.
 \b
-        cse run encrypted-config.yaml --pks-config encrypted-pks-config.yaml
+        cse run -c encrypted-config.yaml --pks-config encrypted-pks-config.yaml
             Run CSE Server using configuration specified in 'encrypted-config.yaml'
             and 'encrypted-pks-config.yaml'. Also validate that CSE has been
             installed according to 'encrypted-config.yaml' and PKS was installed
             according to 'encrypted-pks-config.yaml'. User will be prompted for
             the password required to decrypt both the configuration files.
 \b
-        cse run encrypted-config.yaml --skip-check
+        cse run -c encrypted-config.yaml --skip-check
             Run CSE Server using configuration specified in 'encrypted-config.yaml'
             without first validating that CSE was installed according
             to 'encrypted-config.yaml'. User will be prompted for the password
             required to decrypt the configuration file.
 \b
-        cse run config.yaml --skip-check --skip-config-decryption
+        cse run -c config.yaml --skip-check --skip-config-decryption
             Run CSE Server using configuration specified in plain text 'config.yaml'
             without first validating that CSE was installed according to 'config.yaml'.
 \b
@@ -168,11 +168,11 @@ def cli(ctx):
             not specified the decrypted content will be printed onto console.
             User will be prompted for the password required for decryption.
 \b
-        cse template install mytemplate 1 myconfig.yaml
+        cse template install mytemplate 1 -c myconfig.yaml
             Installs mytemplate at revision 1 specified in the remote template
             repository URL specified in myconfig.yaml
 \b
-        cse template install * * myconfig.yaml
+        cse template install * * -c myconfig.yaml
             Installs all templates specified in the remote template
             repository URL specified in myconfig.yaml
 \b
@@ -294,33 +294,36 @@ def sample(ctx, output, pks_config):
                                generate_pks_config=pks_config))
 
 
-@cli.command(short_help="Checks that CSE/PKS configuration file is valid (Can "
+@cli.command(short_help="Checks that CSE/PKS config file is valid. Can "
                         "also check that CSE/PKS is installed according to "
-                        "the configuration file(s))")
+                        "the config file(s)")
 @click.pass_context
-@click.argument('config', metavar='CONFIG_FILE_NAME',
+@click.argument('config_file_path', metavar='CONFIG_FILE_NAME',
                 envvar='CSE_CONFIG',
                 default='config.yaml',
                 type=click.Path(exists=True))
 @click.option(
-    '--pks-config',
+    '-p',
+    '--pks-config-file',
+    'pks_config_file_path',
     type=click.Path(exists=True),
-    metavar='PKS_CONFIG_FILE_NAME',
+    metavar='PKS_CONFIG_FILE_PATH',
     required=False,
-    help='Filepath of the PKS configuration file')
+    help='Filepath to PKS config file')
 @click.option(
     '-s',
     '--skip-config-decryption',
     is_flag=True,
-    help='Skip decryption of CSE/PKS configuration file')
+    help='Skip decryption of CSE/PKS config file')
 @click.option(
     '-i',
     '--check-install',
     'check_install',
     is_flag=True,
     help='Checks that CSE/PKS is installed on vCD according '
-         'to the configuration file')
-def check(ctx, config, pks_config, skip_config_decryption, check_install):
+         'to the config file')
+def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
+          check_install):
     """Validate CSE config file."""
     console_message_printer = ConsoleMessagePrinter()
     try:
@@ -339,14 +342,14 @@ def check(ctx, config, pks_config, skip_config_decryption, check_install):
     config_dict = None
     try:
         config_dict = get_validated_config(
-            config, pks_config_file_name=pks_config,
+            config_file_path, pks_config_file_name=pks_config_file_path,
             skip_config_decryption=skip_config_decryption,
             decryption_password=password,
             msg_update_callback=console_message_printer)
 
         # Telemetry data construction
         cse_params = {
-            PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(pks_config),
+            PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(pks_config_file_path), # noqa: E501
             PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),
             PayloadKey.WAS_INSTALLATION_CHECKED: bool(check_install)
         }
@@ -449,16 +452,23 @@ def encrypt(ctx, input_file, output_file):
 
 @cli.command(short_help='Install CSE on vCD')
 @click.pass_context
-@click.argument('config', metavar='CONFIG_FILE_NAME',
-                envvar='CSE_CONFIG',
-                default='config.yaml',
-                type=click.Path(exists=True))
 @click.option(
-    '--pks-config',
+    '-c',
+    '--config',
+    'config_file_path',
+    metavar='CONFIG_FILE_PATH',
     type=click.Path(exists=True),
-    metavar='PKS_CONFIG_FILE_NAME',
+    envvar='CSE_CONFIG',
+    required=True,
+    help="(Required) Filepath to CSE config file")
+@click.option(
+    '-p',
+    '--pks-config-file',
+    'pks_config_file_path',
+    type=click.Path(exists=True),
+    metavar='PKS_CONFIG_FILE_PATH',
     required=False,
-    help='Filepath of PKS config file')
+    help='Filepath to PKS config file')
 @click.option(
     '-s',
     '--skip-config-decryption',
@@ -490,8 +500,8 @@ def encrypt(ctx, input_file, output_file):
     default=None,
     type=click.File('r'),
     help='Filepath of SSH public key to add to vApp template')
-def install(ctx, config, pks_config, skip_config_decryption,
-            skip_template_creation, force_update,
+def install(ctx, config_file_path, pks_config_file_path,
+            skip_config_decryption, skip_template_creation, force_update,
             retain_temp_vapp, ssh_key_file):
     """Install CSE on vCloud Director."""
     console_message_printer = ConsoleMessagePrinter()
@@ -521,8 +531,8 @@ def install(ctx, config, pks_config, skip_config_decryption,
         ssh_key = ssh_key_file.read()
 
     try:
-        install_cse(config_file_name=config,
-                    pks_config_file_name=pks_config,
+        install_cse(config_file_name=config_file_path,
+                    pks_config_file_name=pks_config_file_path,
                     skip_template_creation=skip_template_creation,
                     force_update=force_update, ssh_key=ssh_key,
                     retain_temp_vapp=retain_temp_vapp,
@@ -548,16 +558,23 @@ def install(ctx, config, pks_config, skip_config_decryption,
 
 @cli.command(short_help='Run CSE service')
 @click.pass_context
-@click.argument('config', metavar='CONFIG_FILE_NAME',
-                envvar='CSE_CONFIG',
-                default='config.yaml',
-                type=click.Path(exists=True))
 @click.option(
-    '--pks-config',
+    '-c',
+    '--config',
+    'config_file_path',
+    metavar='CONFIG_FILE_PATH',
     type=click.Path(exists=True),
-    metavar='PKS_CONFIG_FILE_NAME',
+    envvar='CSE_CONFIG',
+    required=True,
+    help="(Required) Filepath to CSE config file")
+@click.option(
+    '-p',
+    '--pks-config-file',
+    'pks_config_file_path',
+    type=click.Path(exists=True),
+    metavar='PKS_CONFIG_FILE_PATH',
     required=False,
-    help='Filepath of PKS config file')
+    help='Filepath to PKS config file')
 @click.option(
     '--skip-check',
     is_flag=True,
@@ -567,7 +584,8 @@ def install(ctx, config, pks_config, skip_config_decryption,
     '--skip-config-decryption',
     is_flag=True,
     help='Skip decryption of CSE/PKS config file')
-def run(ctx, config, pks_config, skip_check, skip_config_decryption):
+def run(ctx, config_file_path, pks_config_file_path, skip_check,
+        skip_config_decryption):
     """Run CSE service."""
     console_message_printer = ConsoleMessagePrinter()
 
@@ -587,7 +605,8 @@ def run(ctx, config, pks_config, skip_check, skip_config_decryption):
     try:
         cse_run_complete = False
         error_message = None
-        service = Service(config, pks_config_file=pks_config,
+        service = Service(config_file_path,
+                          pks_config_file=pks_config_file_path,
                           should_check_config=not skip_check,
                           skip_config_decryption=skip_config_decryption,
                           decryption_password=password)
@@ -597,7 +616,7 @@ def run(ctx, config, pks_config, skip_check, skip_config_decryption):
         # Record telemetry on user action and details of operation.
         cse_params = {
             PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),
-            PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(pks_config),
+            PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(pks_config_file_path), # noqa: E501
             PayloadKey.WAS_INSTALLATION_CHECK_SKIPPED: bool(skip_check)
         }
         record_user_action_details(cse_operation=CseOperation.SERVICE_RUN,
@@ -627,7 +646,7 @@ def run(ctx, config, pks_config, skip_check, skip_config_decryption):
         sys.exit(1)
     finally:
         if not cse_run_complete:
-            with open(config) as config_file:
+            with open(config_file_path) as config_file:
                 config_dict = yaml.safe_load(config_file) or {}
             store_telemetry_settings(config_dict)
             record_user_action(cse_operation=CseOperation.SERVICE_RUN,
@@ -642,10 +661,15 @@ def run(ctx, config, pks_config, skip_check, skip_config_decryption):
                         "convert all clusters.")
 @click.pass_context
 @click.argument('cluster_name', metavar='CLUSTER_NAME', default=None)
-@click.argument('config_file_name', metavar='CONFIG_FILE_NAME',
-                envvar='CSE_CONFIG',
-                default='config.yaml',
-                type=click.Path(exists=True))
+@click.option(
+    '-c',
+    '--config',
+    'config_file_path',
+    metavar='CONFIG_FILE_PATH',
+    type=click.Path(exists=True),
+    envvar='CSE_CONFIG',
+    required=True,
+    help="(Required) Filepath to CSE config file")
 @click.option(
     '--admin-password',
     default=None,
@@ -676,7 +700,7 @@ def run(ctx, config, pks_config, skip_check, skip_config_decryption):
     '--skip-config-decryption',
     is_flag=True,
     help='Skip decryption of CSE config file')
-def convert_cluster(ctx, config_file_name, skip_config_decryption,
+def convert_cluster(ctx, config_file_path, skip_config_decryption,
                     cluster_name, admin_password,
                     org_name, vdc_name, skip_wait_for_gc):
     """Convert pre CSE 2.6.0 clusters to CSE 2.6.0 cluster format.
@@ -701,7 +725,7 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
     client = None
     try:
         config = get_validated_config(
-            config_file_name, skip_config_decryption=skip_config_decryption,
+            config_file_path, skip_config_decryption=skip_config_decryption,
             decryption_password=decryption_password,
             msg_update_callback=console_message_printer)
 
@@ -937,10 +961,15 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
     'list',
     short_help='List Kubernetes templates')
 @click.pass_context
-@click.argument('config_file_name', metavar='CONFIG_FILE_NAME',
-                envvar='CSE_CONFIG',
-                default='config.yaml',
-                type=click.Path(exists=True))
+@click.option(
+    '-c',
+    '--config',
+    'config_file_path',
+    metavar='CONFIG_FILE_PATH',
+    type=click.Path(exists=True),
+    envvar='CSE_CONFIG',
+    required=True,
+    help="(Required) Filepath to CSE config file")
 @click.option(
     '-s',
     '--skip-config-decryption',
@@ -954,7 +983,7 @@ def convert_cluster(ctx, config_file_name, skip_config_decryption,
         [DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL, DISPLAY_REMOTE]),
     default=DISPLAY_ALL,
     help='Choose templates to display.')
-def list_template(ctx, config_file_name, skip_config_decryption,
+def list_template(ctx, config_file_path, skip_config_decryption,
                   display_option):
     """List CSE k8s templates."""
     console_message_printer = ConsoleMessagePrinter()
@@ -981,12 +1010,12 @@ def list_template(ctx, config_file_name, skip_config_decryption,
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
         if skip_config_decryption:
-            with open(config_file_name) as config_file:
+            with open(config_file_path) as config_file:
                 config_dict = yaml.safe_load(config_file) or {}
         else:
-            console_message_printer.info(f"Decrypting '{config_file_name}'")
+            console_message_printer.info(f"Decrypting '{config_file_path}'")
             config_dict = yaml.safe_load(
-                get_decrypted_file_contents(config_file_name, password)) or {}
+                get_decrypted_file_contents(config_file_path, password)) or {}
 
         # Store telemetry instance id, url and collector id in config
         store_telemetry_settings(config_dict)
@@ -1130,10 +1159,15 @@ def list_template(ctx, config_file_name, skip_config_decryption,
 @click.pass_context
 @click.argument('template_name', metavar='TEMPLATE_NAME', default='*')
 @click.argument('template_revision', metavar='TEMPLATE_REVISION', default='*')
-@click.argument('config_file_name', metavar='CONFIG_FILE_NAME',
-                envvar='CSE_CONFIG',
-                default='config.yaml',
-                type=click.Path(exists=True))
+@click.option(
+    '-c',
+    '--config',
+    'config_file_path',
+    metavar='CONFIG_FILE_PATH',
+    type=click.Path(exists=True),
+    envvar='CSE_CONFIG',
+    required=True,
+    help="(Required) Filepath to CSE config file")
 @click.option(
     '-s',
     '--skip-config-decryption',
@@ -1161,7 +1195,7 @@ def list_template(ctx, config_file_name, skip_config_decryption,
     type=click.File('r'),
     help='Filepath of SSH public key to add to vApp template')
 def install_cse_template(ctx, template_name, template_revision,
-                         config_file_name, skip_config_decryption,
+                         config_file_path, skip_config_decryption,
                          force_create, retain_temp_vapp,
                          ssh_key_file):
     """Create Kubernetes templates listed in remote template repository.
@@ -1199,7 +1233,7 @@ def install_cse_template(ctx, template_name, template_revision,
         install_template(
             template_name=template_name,
             template_revision=template_revision,
-            config_file_name=config_file_name,
+            config_file_name=config_file_path,
             force_create=force_create,
             retain_temp_vapp=retain_temp_vapp,
             ssh_key=ssh_key,
