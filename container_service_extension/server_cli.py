@@ -680,7 +680,7 @@ def run(ctx, config, pks_config, skip_check, skip_config_decryption):
 def convert_cluster(ctx, config_file_name, skip_config_decryption,
                     cluster_name, admin_password,
                     org_name, vdc_name, skip_wait_for_gc):
-    """Convert pre CSE 2.5.2 clusters to CSE 2.5.2+ cluster format.
+    """Convert pre CSE 2.6.0 clusters to CSE 2.6.0 cluster format.
 
     Use '*' as cluster name to convert all clusters.
     """
