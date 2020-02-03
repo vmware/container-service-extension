@@ -84,7 +84,8 @@ def cse_server():
     - Stop CSE server
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
-    install_cmd = ['install', env.ACTIVE_CONFIG_FILEPATH,
+    install_cmd = ['install',
+                   '--config', env.ACTIVE_CONFIG_FILEPATH,
                    '--ssh-key', env.SSH_KEY_FILEPATH,
                    '--skip-config-decryption']
     env.setup_active_config()
