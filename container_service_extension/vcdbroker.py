@@ -156,6 +156,7 @@ class VcdBroker(AbstractBroker):
         record_user_action_details(cse_operation=CseOperation.CLUSTER_LIST,
                                    cse_params=copy.deepcopy(validated_data))
 
+        # "raw clusters" do not have well-defined cluster data keys
         raw_clusters = get_all_clusters(
             self.tenant_client,
             org_name=validated_data[RequestKey.ORG_NAME],
@@ -168,7 +169,7 @@ class VcdBroker(AbstractBroker):
                 'IP master': c['leader_endpoint'],
                 'template_name': c.get('template_name'),
                 'template_revision': c.get('template_revision'),
-                'k8s_version': c.get('k8s_version'),
+                'k8s_version': c.get('kubernetes_version'),
                 'VMs': c['number_of_vms'],
                 'vdc': c['vdc_name'],
                 'status': c['status'],

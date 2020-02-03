@@ -535,7 +535,7 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name):
                 'Template Revision': template[LocalTemplateKey.REVISION],
                 'Kubernetes': template[LocalTemplateKey.KUBERNETES_VERSION],
                 'Docker-CE': template[LocalTemplateKey.DOCKER_VERSION],
-                'CNI': f"{template[LocalTemplateKey.CNI]}-{template[LocalTemplateKey.CNI_VERSION]}" # noqa: E501
+                'CNI': f"{template[LocalTemplateKey.CNI]} {template[LocalTemplateKey.CNI_VERSION]}" # noqa: E501
             })
 
         if not templates:
