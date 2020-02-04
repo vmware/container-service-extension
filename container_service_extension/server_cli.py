@@ -123,13 +123,13 @@ def cli(ctx):
             users with the corresponding private key have access (--ssh-key is
             required when --retain-temp-vapp is used).
 \b
-        cse check -c config.yaml --skip-config-decryption
+        cse check config.yaml --skip-config-decryption
             Checks validity of 'config.yaml'.
 \b
-        cse check -c config.yaml --pks-config pks-config.yaml --skip-config-decryption
+        cse check config.yaml --pks-config pks-config.yaml --skip-config-decryption
             Checks validity of both config.yaml and 'pks-config.yaml'.
 \b
-        cse check -c config.yaml --check-install --skip-config-decryption
+        cse check config.yaml --check-install --skip-config-decryption
             Checks validity of 'config.yaml'.
             Checks that CSE is installed on vCD according to 'config.yaml'
 \b
@@ -208,42 +208,42 @@ def template(ctx):
     configuration file. To use a plain-text configuration file instead, specify
     the flag --skip-config-decryption.
 \b
-        cse template list encrypted-config.yaml
+        cse template list -c encrypted-config.yaml
             Display all templates, including that are currently in the local
             catalog, and the ones that are defined in remote template repository.
             'encrypted-config.yaml' will be decrypted with the password received
             from user via a console prompt.
 \b
-        cse template list config.yaml --skip-config-decryption
+        cse template list -c config.yaml --skip-config-decryption
             Display all templates, including that are currently in the local
             catalog, and the ones that are defined in remote template repository.
 \b
-        cse template list config.yaml --display local --skip-config-decryption
+        cse template list -c config.yaml --display local --skip-config-decryption
             Display templates that are currently in the local catalog.
 \b
-        cse template list config.yaml --display remote --skip-config-decryption
+        cse template list -c config.yaml --display remote --skip-config-decryption
             Display templates that are defined in the remote template repository.
 \b
-        cse template list config.yaml --display diff --skip-config-decryption
+        cse template list -c config.yaml --display diff --skip-config-decryption
             Display only templates that are defined in remote template repository
             but not present in the local catalog.
 \b
-        cse template install config.yaml --skip-config-decryption
+        cse template install -c config.yaml --skip-config-decryption
             Install all templates defined in remote template repository that are
             missing from the local catalog.
 \b
-        cse template install encrypted-config.yaml
+        cse template install -c encrypted-config.yaml
             Install all templates defined in remote template repository that are
             missing from the local catalog. 'encrypted-config.yaml' will be
             decrypted with the password received from user via a console prompt.
 \b
-        cse template install [template name] [template revision] encrypted-config.yaml
+        cse template install [template name] [template revision] -c encrypted-config.yaml
             Install a particular template at a given revision defined in remote
             template repository that is missing from the local catalog.
             'encrypted-config.yaml' will be decrypted with the password received
             from user via a console prompt.
 \b
-        cse template install config.yaml --force --skip-config-decryption
+        cse template install -c config.yaml --force --skip-config-decryption
             Install all templates defined in remote template repository. Templates
             already present in the local catalog that match with one in the remote
             repository will be recreated from scratch.

@@ -415,12 +415,12 @@ def test_0120_cse_run(config):
     process before then means that server run failed somehow.
 
     commands:
-    $ cse run cse_test_config
-    $ cse run cse_test_config --skip-check --skip-config-decryption
+    $ cse run -c cse_test_config
+    $ cse run -c cse_test_config --skip-check --skip-config-decryption
     """
     cmds = [
-        f"cse run {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption",
-        f"cse run {env.ACTIVE_CONFIG_FILEPATH} --skip-check --skip-config-decryption"  # noqa: E501
+        f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption",
+        f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} --skip-check --skip-config-decryption"  # noqa: E501
     ]
 
     for cmd in cmds:
