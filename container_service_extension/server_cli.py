@@ -1030,18 +1030,19 @@ def list_template(ctx, config_file_name, skip_config_decryption,
                 for definition in local_template_definitions:
                     template = {}
                     template['name'] = definition[LocalTemplateKey.NAME]
+                    # Any metadata read from vCD is sting due to how pyvcloud
+                    # is coded, so we need to cast it back to int.
                     template['revision'] = \
-                        definition[LocalTemplateKey.REVISION]
+                        int(definition[LocalTemplateKey.REVISION])
                     template['compute_policy'] = \
                         definition[LocalTemplateKey.COMPUTE_POLICY]
-                    template['local'] = True
-                    template['remote'] = False
-                    if str(definition[LocalTemplateKey.REVISION]) == default_template_revision and definition[LocalTemplateKey.NAME] == default_template_name: # noqa: E501
-                        template['default'] = True
+                    template['local'] = 'Yes'
+                    template['remote'] = 'No'
+                    if (definition[LocalTemplateKey.NAME], str(definition[LocalTemplateKey.REVISION])) == (default_template_name, default_template_revision): # noqa: E501
+                        template['default'] = 'Yes'
                     else:
-                        template['default'] = False
-                    template['deprecated'] = \
-                        str_to_bool(definition[LocalTemplateKey.DEPRECATED])
+                        template['default'] = 'No'
+                    template['deprecated'] = 'Yes' if str_to_bool(definition[LocalTemplateKey.DEPRECATED]) else 'No' # noqa: E501
                     template['cpu'] = definition[LocalTemplateKey.CPU]
                     template['memory'] = definition[LocalTemplateKey.MEMORY]
                     template['description'] = \
@@ -1064,11 +1065,11 @@ def list_template(ctx, config_file_name, skip_config_decryption,
                 template['revision'] = definition[RemoteTemplateKey.REVISION]
                 template['compute_policy'] = \
                     definition[RemoteTemplateKey.COMPUTE_POLICY]
-                template['local'] = False
-                template['remote'] = True
-                template['default'] = False
-                template['deprecated'] = \
-                    str_to_bool(definition[RemoteTemplateKey.DEPRECATED])
+                template['local'] = 'No'
+                template['remote'] = 'Yes'
+                if display_option is DISPLAY_ALL:
+                    template['default'] = 'No'
+                template['deprecated'] = 'Yes' if str_to_bool(definition[RemoteTemplateKey.DEPRECATED]) else 'No' # noqa: E501
                 template['cpu'] = definition[RemoteTemplateKey.CPU]
                 template['memory'] = definition[RemoteTemplateKey.MEMORY]
                 template['description'] = \
@@ -1084,7 +1085,7 @@ def list_template(ctx, config_file_name, skip_config_decryption,
             for local_template in local_templates:
                 found = False
                 for remote_template in remote_templates:
-                    if str(local_template[LocalTemplateKey.REVISION]) == str(remote_template[RemoteTemplateKey.REVISION]) and local_template[LocalTemplateKey.NAME] == remote_template[RemoteTemplateKey.NAME]: # noqa: E501
+                    if (local_template[LocalTemplateKey.NAME], local_template[LocalTemplateKey.REVISION]) == (remote_template[RemoteTemplateKey.NAME], remote_template[RemoteTemplateKey.REVISION]): # noqa: E501
                         remote_template['compute_policy'] = \
                             local_template['compute_policy']
                         remote_template['local'] = local_template['local']
@@ -1097,7 +1098,7 @@ def list_template(ctx, config_file_name, skip_config_decryption,
             for remote_template in remote_templates:
                 found = False
                 for local_template in local_templates:
-                    if str(local_template[LocalTemplateKey.REVISION]) == str(remote_template[RemoteTemplateKey.REVISION]) and local_template[LocalTemplateKey.NAME] == remote_template[RemoteTemplateKey.NAME]: # noqa: E501
+                    if (local_template[LocalTemplateKey.NAME], local_template[LocalTemplateKey.REVISION]) == (remote_template[RemoteTemplateKey.NAME], remote_template[RemoteTemplateKey.REVISION]): # noqa: E501
                         found = True
                         break
                 if not found:
@@ -1107,6 +1108,7 @@ def list_template(ctx, config_file_name, skip_config_decryption,
         elif display_option in DISPLAY_REMOTE:
             result = remote_templates
 
+        result = sorted(result, key=lambda t: (t['name'], t['revision']), reverse=True)  # noqa: E501
         stdout(result, ctx, sort_headers=False)
         record_user_action(cse_operation=CseOperation.TEMPLATE_LIST,
                            telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
