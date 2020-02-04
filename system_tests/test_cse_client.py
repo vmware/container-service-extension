@@ -97,7 +97,7 @@ def cse_server():
                                       result.output)
 
     # start cse server as subprocess
-    cmd = f"cse run {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption"
+    cmd = f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption"
     p = None
     if os.name == 'nt':
         p = subprocess.Popen(cmd, shell=True)
