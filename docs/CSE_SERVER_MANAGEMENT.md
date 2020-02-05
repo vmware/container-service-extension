@@ -85,6 +85,7 @@ The validity and integrity of just the CSE config file can be checked using the
 following command.
 ```sh
 cse check config.yaml
+cse check config.yaml --pks-config-file pks.yaml
 ```
 
 The `cse check` command supports the following options:

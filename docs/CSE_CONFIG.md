@@ -194,6 +194,7 @@ Each rule comprises of the following attributes
 Please refer to [Restricting Kubernetes templates](/container-service-extension/TEMPLATE_MANAGEMENT.html#restrict_templates)
 for further details on compute policies.
 
+<a name="ent_pks_config"></a>
 ## Enterprise PKS Configuration File for CSE
 Sample Enterprise PKS configuration file for CSE can be generated via the
 following command

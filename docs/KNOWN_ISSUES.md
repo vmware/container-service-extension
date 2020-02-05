@@ -5,8 +5,25 @@ title: Known Issues
 # Known Issues
 
 <a name="general"></a>
-
+## General Issues
 ---
+
+### Frresh CSE 2.5.1 or below installation via `pip install` is broken
+CSE depends on two libraries `pyvcloud` and `vcd-cli` to communicate with vCD.
+These projects are pretty active and have frequent releases. The older version
+of CSE has an open ended dependency on these projects, which allows `pip` to
+pull and install  latest available versions of `pyvcloud` and `vcd-cli` against older
+incompatible version(s) of CSE. This is a short coming on CSE's way of expressing
+dependency on external libraries. This will be fixed in near future. In the interim
+as a work around the following can be attempted.
+
+```sh
+# Uninstall pyvcloud and vcd-cli
+pip3 uninstall pyvcloud vcd-cli --user --yes
+
+#Install specific version of the libraries which are compatible with CSE 2.5.1 and CSE 2.0.0
+pip3 install pyvcloud==21.0.0 vcd-cli==22.0.0 --upgrade --user
+```
 
 ### `vcd cse ovdc list` operation will timeout when a large number of organization VDCs exist
 
