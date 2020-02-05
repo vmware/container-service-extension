@@ -79,22 +79,22 @@ The upgrade matrix is built on the CSE native templates (read more about them
 [here](/container-service-extension/TEMPLATE_MANAGEMENT.html)). The template
 originally used to deploy a cluster determines the valid target templates for
 upgrade. The supported upgrade paths can be discovered using the following command
+
 ```sh
 vcd cse cluster upgrade-plan 'mycluster'
 ```
-To qualify as a target template for upgrade, it must satisfy at least one of
-the following restrictions, the template needs to be 
-* A later revision of the template from which the cluster was deployed. E.g.
-    * ubuntu-16.04_k8-1.15_weave-2.5.2 (rev 2) -> ubuntu-16.04_k8-1.15_weave-2.5.2 (rev 3)
-* A template that has the same base OS, and a Kubernetes distribution at
-most +1 minor release away from the template from which the cluster was originally
-deployed. E.g.
-    * ubuntu-16.04_k8-1.15_weave-2.5.2 (rev 2) -> ubuntu-16.04_k8-1.16_weave-2.6.0 (rev 1)
 
-Do note, all templates that satisfy atleast one of the two criteria mentioned
-above might still be disqualified by VMware from being a valid upgrade target.
-It's always a good idea to check the supported upgrade paths using
-`vcd cse cluster upgrade-plan`.
+Let's say our cluster was deployed using template T1 which is based off
+Kubernetes version `x.y.z`. Our potential target templates for upgrade will
+satisfy at least one of the following criteria:
+* A later revision of the template T1, which is based off Kubernetes version
+  `x.y.`**`w`**, where `w` > `z`.
+* A template T2 that has the same base OS, and is based off Kubernetes
+  distribution `x.`**`(y+1)`**`.v`, where `v` can be anything.
+
+If you don't see a desired target template for upgrading your cluster, please
+feel free to file a GitHub [issue ](https://github.com/vmware/container-service-extension/issues).
+
 
 The actual upgrade of the cluster is done via the following command.
 ```sh
