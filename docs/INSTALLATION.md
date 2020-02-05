@@ -11,11 +11,11 @@ How much of CSE you need to install varies on the user type and what part
 of CSE and Kubernetes you will interact with.  Here's a short table
 to help decide what to install.
 
-| User Type | Task(s)
-|-----------|--------
-| Kubernetes user | Install kubectl on laptop or workstation
-| Org admin managing K8s clusters | Install CSE and configure CSE client on laptop or VM
-| Cloud admin installing CSE in vCD | Install CSE on server host
+| User Type                         | Task(s)                                              |
+|-----------------------------------|------------------------------------------------------|
+| Kubernetes user                   | Install kubectl on laptop or workstation             |
+| Org admin managing K8s clusters   | Install CSE and configure CSE client on laptop or VM |
+| Cloud admin installing CSE in vCD | Install CSE on server host                           |
 
 Naturally a cloud admin may install the CSE client to test cluster
 creation after CSE server setup. Similarly a tenant org administrator

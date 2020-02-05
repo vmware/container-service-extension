@@ -337,4 +337,22 @@ nsxt_servers:
   verify: true
 ```
 
-## Config file Encryption/Decyrption
+<a name="encrypt_decrypt"></a>
+## Configuration file Encryption/Decyrption
+Starting with CSE 2.6.0, CSE server will accept only encrypted configuration
+files by default (both regular CSE configuration file and Enterprise PKS
+configuration file). However CSE can be forced to accept plain text configuration
+files by using the flag `--skip-config-decryption` with any CSE command that
+accepts a configuration file. CSE also exposes two server side cli command to
+help CSE server administrators to encrypt/decrypt the configuration files easily.
+
+```sh
+cse encrypt config.yaml --output encrypted-config.yaml
+cse decrypt encrypted-config.yaml --output decrypted-config.yaml
+```
+
+CSE uses industry standard symmetric encryption algorithm [Fernet](https://cryptography.io/en/latest/fernet/).
+Since the encrytion is dependent on user provided password, it is imperitive that
+CSE server admins don't share/store or lose the password provided during encryption process.
+CSE can not under any circumstance recover the password or decrypt the files
+without the correct password.
