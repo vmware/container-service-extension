@@ -58,7 +58,7 @@ The `cse install` command supports the following options:
 | \--force-update           | -f    | n/a                                | Recreate CSE k8s templates on vCD even if they already exist                                                     | False         |
 | \--pks-config-file        | -p    | path to Enterprise PKS config file | Filepath of Enterprise PKS config file to use for installation                                                   | -             |
 | \--retain-temp-vapp       | -d    | n/a                                | Retain the temporary vApp after the template has been captured --ssh-key option is required if this flag is used | False         |
-| \--skip-config-decryption | -s    | n/a                                | Skips decrypting the configuration file and pks configuration file, and assumes them to be plain text            |               |
+| \--skip-config-decryption | -s    | n/a                                | Skips decrypting the configuration file and pks configuration file, and assumes them to be plain text            | -             |
 | \--skip-template-creation | -t    | n/a                                | Skips creating CSE k8s template during installation                                                              | False         |
 | \--ssh-key                | -k    | path to public ssh key file        | ssh-key file to use for VM access (root password ssh access is disabled for security reasons)                    | -             |
 
@@ -93,7 +93,7 @@ The `cse check` command supports the following options:
 |---------------------------|-------|------------------------------------|-------------------------------------------------------------------------------------------------------|---------|
 | \--check-install          | -i    | n/a                                | Check CSE installation on vCD                                                                         | False   |
 | \--pks-config-file        | -p    | path to Enterprise PKS config file | Enterprise PKS config file to validate along with CSE config file                                     | -       |
-| \--skip-config-decryption | -s    | n/a                                | Skips decrypting the configuration file and PKS configuration file, and assumes them to be plain text |         |
+| \--skip-config-decryption | -s    | n/a                                | Skips decrypting the configuration file and PKS configuration file, and assumes them to be plain text | -       |
 
 Validate that CSE has been registered with vCD as an extension, via vcd-cli:
 ```sh
@@ -154,12 +154,12 @@ vcd org use myorg
 vcd role add-right <role name> 'Catalog: View Published Catalogs'
 
 # built-in roles can't be edited and needs to be cloned first
-# vcd role clone <built role e.g. "vApp Author"> 'New Role'
-# vcd role add-right 'New Role' 'Catalog: View Published Catalogs'
+vcd role clone <built role e.g. "vApp Author"> 'New Role'
+vcd role add-right 'New Role' 'Catalog: View Published Catalogs'
 
 # Assign this new role to the user in question via vCD UI or
 # create a new user in the organization with the new role
-# vcd user create <new user name> <password> 'New Role' --enabled
+vcd user create <new user name> <password> 'New Role' --enabled
 ```
 
 ---
@@ -271,14 +271,15 @@ Upgrading CSE server is no different than installing it for the first time.
 1. Gracefully stop CSE Server.
 2. Reinstall `container-service-extension` from PyPI:
    * `pip3 install --user --upgrade container-service-extension`
-3. Check the release notes at the end of this document for version compatibility.
+3. Check the [release notes](/container-service-extension/RELEASE_NOTES.html) for version compatibility.
 4. Use `cse sample` command to generate a new sample config file and fill in
    the relevant values from the previous config file.
 5. If the previously generated templates are no longer supported by the new version,
    delete the old templates (from vCD UI / vcd-cli) and generate new ones via
    * `cse install -c myconfig.yaml`
+   Check [here](/container-service-extension/TEMPLATE_ANNOUNCEMENTS.html) for available templates.
 6. If CSE is being run as a service, start the new version of the service with
-   `systemctl start cse`.
+   * `systemctl start cse`.
 
 ### Uninstalling CSE Server
 
