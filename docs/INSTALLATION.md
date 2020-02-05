@@ -66,8 +66,8 @@ To discover available CSE source versions on GitHub see the following URL:
 <a name="enable_cse_vcd_cli"></a>
 ## Enable CSE Client
 
-After initial installation of CSE, while running `vcd cse` commands, you'll
-probably notice an error like the the following.
+After initial installation of CSE, if you try running `vcd cse` commands,
+you'll probably notice an error like the the following:
 ```sh
 > vcd cse version
 Error: No such command "cse".
