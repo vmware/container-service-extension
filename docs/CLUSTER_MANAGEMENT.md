@@ -72,13 +72,13 @@ between those minor releases. To keep already deployed clusters up to date, in
 CSE 2.6.0 we have added support for in place software upgrade for Kubernetes
 clusters. The softwares that can be upgraded to a newer version are
 * Kuberenetes components e.g. kube-server, kubelet, kubedns etc.
-* CNI software - weave in case of CSE
+* Weave (CNI)
 * Docker engine
 
 The upgrade matrix is built on the CSE native templates (read more about them
-[here](/container-service-extension/TEMPLATE_MANAGEMENT.html)). The template originally
-used to deploy a cluster determines the valid target templates. The supported upgrade
-paths can be discovered using the following command
+[here](/container-service-extension/TEMPLATE_MANAGEMENT.html)). The template
+originally used to deploy a cluster determines the valid target templates for
+upgrade. The supported upgrade paths can be discovered using the following command
 ```sh
 vcd cse cluster upgrade-plan 'mycluster'
 ```
@@ -101,11 +101,11 @@ The actual upgrade of the cluster is done via the following command.
 vcd cse cluster upgrade 'mycluster'
 ```
 
-The upgrade process needs next to no zero downtime if the following conditions
+The upgrade process needs little to zero downtime, if the following conditions
 are met,
 1. Docker is not being upgraded.
-2. Kubernetes version upgrade is restricted to just patch version upgrade.
-3. The CNI (weave) is not being upgraded.
+2. Weave (CNI) is not being upgraded.
+3. Kubernetes version upgrade is restricted to patch version only.
 
 If any of the conditions mentioned above is not met, the cluster will go down
 for about a minute or more (depends on the actual upgrade process).

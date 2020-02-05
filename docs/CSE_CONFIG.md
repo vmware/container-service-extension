@@ -150,7 +150,7 @@ The service section contains properties that define CSE server behavior.
 | listeners             | Number of threads that CSE server should use                                                                                                               |
 | enforce_authorization | If True, CSE server will use role-based access control, where users without the correct CSE right will not be able to deploy clusters (Added in CSE 1.2.6) |
 | log_wire              | If True, will log all REST calls initiated by CSE to vCD. (Added in CSE 2.5.0)                                                                             |
-| telemetry             | If enabled, will send back anonymized diagnostic/telemetry data back to VMware (Added in CSE 2.6.0)                                                        |
+| telemetry             | If enabled, will send back anonymized usage data back to VMware (Added in CSE 2.6.0)                                                                       |
 
 <a name="broker"></a>
 ### `broker` Section
@@ -339,27 +339,29 @@ nsxt_servers:
 ```
 
 <a name="encrypt_decrypt"></a>
-## Configuration file Encryption/Decryption
-Starting with CSE 2.6.0, CSE server cli commands will accept only encrypted
-configuration files by default (both regular CSE configuration file and
-Enterprise PKS configuration file). CSE will prompt the user to provide the
-password to decrypt them. The password can also be passed to CSE via the
-environment variable `CSE_CONFIG_PASSWORD`. If both CSE configuration file and
-Enterprise PKS configuration files are provided to a CSE command, it's expected
-that both of them were encrypted using the same password.
-
-However CSE can be forced to accept plain text configuration files by using the
-flag `--skip-config-decryption` with any CSE command that accepts a configuration
-file. CSE also exposes two server side cli commands to help CSE server
-administrators to encrypt/decrypt the configuration files easily.
+## Encryption and Decryption of the Configuration Files
+Starting with CSE 2.6.0, CSE server commands will accept only encrypted
+configuration files by default. As of now, these are CSE configuration file and
+Enterprise PKS configuration file. CSE exposes two server CLI commands to help
+CSE server administrators encrypt and decrypt the configuration files.
 
 ```sh
 cse encrypt config.yaml --output encrypted-config.yaml
-cse decrypt encrypted-config.yaml --output decrypted-config.yaml
+cse decrypt encrypted-config.yaml -o decrypted-config.yaml
 ```
 
-CSE uses industry standard symmetric encryption algorithm [Fernet](https://cryptography.io/en/latest/fernet/).
-Since the encrytion is dependent on user provided password, it is imperitive that
-CSE server admins don't share/store or lose the password provided during encryption process.
-CSE can not under any circumstance recover the password or decrypt the files
-without the correct password.
+CSE uses industry standard symmetric encryption algorithm [Fernet](https://cryptography.io/en/latest/fernet/)
+and the encryption is dependent on user provided passwords. It is imperative that
+CSE server administrators who participate in the encryption process do not lose
+the password under any circumstances. CSE will not be able to recover the
+password or permit decryption in such cases. CSE expects all configuration files
+to be encrypted with the same password.
+
+Whenever an encrypted configuration file is used with CSE server CLI commands,
+CSE will prompt the user to provide the password to decrypt them. User can also
+propagate the password to CSE via the environment variable `CSE_CONFIG_PASSWORD`.
+
+The default behavior can be changed to keep CSE Server accept plain text
+configuration files using the flag `--skip-config-decryption` with any CSE
+command that accepts a configuration file. 
+
