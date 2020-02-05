@@ -33,6 +33,7 @@ version of CSE - 2.5.1. Specify the above mentioned exact version to install
 CSE 2.6.0 beta.
 
 **New Features**
+
 * New Templates with updated Kubernetes and Weave
   * [Template Announcements](/container-service-extension/TEMPLATE_ANNOUNCEMENTS.html)
 * In place K8s upgrade for clusters
@@ -44,6 +45,7 @@ CSE 2.6.0 beta.
   [here](/container-service-extension/CSE_CONFIG.html#encrypt_decrypt).
 
 **Notes to System Administrator**
+
 If you are upgrading to CSE 2.6.0.0b1 and you have pre-existing K8s clusters
 deployed from CSE 2.5.1 or below, you must run the following command to
 preserve manageability of those clusters in CSE 2.6.0.0b1.
