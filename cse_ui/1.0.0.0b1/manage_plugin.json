@@ -1,0 +1,6 @@
+{
+  "username": "[Fill in username of a vCD System Administrator account]",
+  "org": "System",
+  "password": "[Fill in password of the System Administrator account]",
+  "vcdUrlBase": "[Fill in the vCD public endpoint e.g. https://vcd.mydomain.com]"
+}
