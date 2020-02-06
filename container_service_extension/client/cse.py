@@ -716,8 +716,7 @@ Examples
     default=None,
     required=False,
     metavar='ORG_NAME',
-    help='Org to use. Defaults to currently logged-in org only for '
-         'non sys-admin')
+    help='Restrict cluster search to specified org')
 @click.option(
     '-v',
     '--vdc',
@@ -725,7 +724,7 @@ Examples
     required=False,
     default=None,
     metavar='VDC_NAME',
-    help='Org VDC to use.')
+    help='Restrict cluster search to specified org VDC')
 def node_info(ctx, cluster_name, node_name, org_name, vdc):
     """Display info about a node in a native Kubernetes provider cluster."""
     try:
@@ -886,8 +885,7 @@ def create_node(ctx, cluster_name, node_count, org, vdc, cpu, memory,
     default=None,
     required=False,
     metavar='ORG_NAME',
-    help='Org to use. Defaults to currently logged-in org only for '
-         'non sys-admin')
+    help='Restrict cluster search to specified org')
 @click.option(
     '-v',
     '--vdc',
@@ -895,7 +893,7 @@ def create_node(ctx, cluster_name, node_count, org, vdc, cpu, memory,
     required=False,
     default=None,
     metavar='VDC_NAME',
-    help='Org VDC to use.')
+    help='Restrict cluster search to specified org VDC')
 def list_nodes(ctx, name, org, vdc):
     """Display nodes of a cluster that uses native Kubernetes provider."""
     try:
@@ -1133,8 +1131,7 @@ def list_ovdcs(ctx, list_pks_plans):
     default=None,
     required=False,
     metavar='ORG_NAME',
-    help="Use the specified org to look for the org VDC. Defaults to current "
-         "org in use")
+    help="Org to use. Defaults to currently logged-in org")
 def ovdc_enable(ctx, ovdc_name, k8s_provider, pks_plan,
                 pks_cluster_domain, org_name):
     """Set Kubernetes provider for an org VDC."""
@@ -1177,8 +1174,7 @@ def ovdc_enable(ctx, ovdc_name, k8s_provider, pks_plan,
     default=None,
     required=False,
     metavar='ORG_NAME',
-    help="Use the specified org to look for the org VDC. Defaults to current "
-         "org in use")
+    help="Org to use. Defaults to currently logged-in org")
 def ovdc_disable(ctx, ovdc_name, org_name):
     """Disable Kubernetes cluster deployment for an org VDC."""
     try:
@@ -1210,8 +1206,7 @@ def ovdc_disable(ctx, ovdc_name, org_name):
     default=None,
     required=False,
     metavar='ORG_NAME',
-    help="Use the specified org to look for the org VDC. Defaults to current"
-         "org in use")
+    help="Org to use. Defaults to currently logged-in org")
 def ovdc_info(ctx, ovdc_name, org_name):
     """Display information about Kubernetes provider for an org VDC."""
     try:
@@ -1239,15 +1234,15 @@ System administrator operations.
 
 \b
 Examples
-    vcd cse ovdc compute-policy list ORG_NAME OVDC_NAME
-        List all compute policies on an org VDC.
+    vcd cse ovdc compute-policy list --org ORG_NAME --vdc VDC_NAME
+        List all compute policies for a specific ovdc in a specific org.
 \b
-    vcd cse ovdc compute-policy add ORG_NAME OVDC_NAME POLICY_NAME
-        Add a compute policy to an org VDC.
+    vcd cse ovdc compute-policy add POLICY_NAME --org ORG_NAME --vdc VDC_NAME
+        Add a compute policy to a specific ovdc in a specific org.
 \b
-    vcd cse ovdc compute-policy remove ORG_NAME OVDC_NAME POLICY_NAME
-        Remove a compute policy from an org VDC.
-    """
+    vcd cse ovdc compute-policy remove POLICY_NAME --org ORG_NAME --vdc VDC_NAME
+        Remove a compute policy from a specific ovdc in a specific org.
+    """ # noqa: E501
     pass
 
 
@@ -1259,14 +1254,14 @@ Examples
     'org_name',
     metavar='ORG_NAME',
     required=True,
-    help="(Required) Organization name")
+    help="(Required) Org to use")
 @click.option(
     '-v',
     '--vdc',
     'ovdc_name',
-    metavar='ORG_VDC_NAME',
+    metavar='VDC_NAME',
     required=True,
-    help="(Required) Organization VDC name")
+    help="(Required) Org VDC to use")
 def compute_policy_list(ctx, org_name, ovdc_name):
     try:
         restore_session(ctx)
@@ -1290,14 +1285,14 @@ def compute_policy_list(ctx, org_name, ovdc_name):
     'org_name',
     metavar='ORG_NAME',
     required=True,
-    help="(Required) Organization name")
+    help="(Required) Org to use")
 @click.option(
     '-v',
     '--vdc',
     'ovdc_name',
-    metavar='ORG_VDC_NAME',
+    metavar='VDC_NAME',
     required=True,
-    help="(Required) Organization VDC name")
+    help="(Required) Org VDC to use")
 def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
     try:
         restore_session(ctx)
@@ -1325,14 +1320,14 @@ def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
     'org_name',
     metavar='ORG_NAME',
     required=True,
-    help="(Required) Organization name")
+    help="(Required) Org to use")
 @click.option(
     '-v',
     '--vdc',
     'ovdc_name',
-    metavar='ORG_VDC_NAME',
+    metavar='VDC_NAME',
     required=True,
-    help="(Required) Organization VDC name")
+    help="(Required) Org VDC to use")
 @click.option(
     '-f',
     '--force',
