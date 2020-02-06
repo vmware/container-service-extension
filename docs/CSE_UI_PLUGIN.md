@@ -10,14 +10,15 @@ CSE users would be able to interact with CSE Kubernetes clusters directly from
 vCD UI.
 
 ## Getting the plugin
-The plugin binary can be downloaded from [here]().
+The plugin binary can be downloaded from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.0.0b1/container-ui-plugin.zip).
 
 ## Setting up the plugin
 ### Registering and publishing the plugin
 **Method 1:** Via `manage_plugin` script.
 
-Download the plugin registration script from [here]().
-Extract the plugin zip viz. `container-ui-plugin.zip`
+Extract the CSE UI plugin zip viz. `container-ui-plugin.zip`.
+Download the plugin registration script from [here](https://raw.githubusercontent.com/vmware/container-service-extension/master/cse_ui/1.0.0.0b1/manage_plugin.py).
+Save the script content as `manage_plugin.py`.
 
 Fill up the following json template and save it as `manage_plugin.json`, keep
 it adjacent to the plugin binary and the registration script.
@@ -39,7 +40,7 @@ all installed plugins, and get ID of the CSE UI Plugin, by running
 ```sh
 python manage_plugin.py list
 ```
-Run the following command to remove the plugin.
+Run the following command to remove the plugin from vCD.
 ```sh
 python manage_plugin.py unregister [ID]
 ```

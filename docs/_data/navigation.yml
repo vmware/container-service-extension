@@ -22,6 +22,13 @@
   link: CSE_INSTALL_PREREQUISITES.html
 - name: "CSE Server Configuration File"
   link: CSE_CONFIG.html
+  subtoc:
+    - name: "CSE Server Configuration File"
+      sublink: cse_config
+    - name: "Enterprise PKS Configuration File for CSE"
+      sublink: ent_pks_config
+    - name: "Encryption and Decryption of the Configuration Files"
+      sublink: encrypt_decrypt
 - name: "CSE Server Management"
   link: CSE_SERVER_MANAGEMENT.html
   subtoc:
@@ -66,10 +73,14 @@
     sublink: overview
   - name: Useful Commands
     sublink: useful_commands
+  - name: Upgrading software installed on Kubernetes clusters
+    sublink: k8s_upgrade
   - name: Automation
     sublink: automation
   - name: Example Use Case
     sublink: example
+- name: "CSE UI Plugin"
+  link: CSE_UI_PLUGIN.html
 - name: "Enterprise PKS enablement"
   link: ENT_PKS.html
   subtoc:

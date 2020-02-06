@@ -40,7 +40,7 @@ CSE 2.6.0 beta.
   * CSE now supports encrypted configuration files. More details
   [here](/container-service-extension/CSE_CONFIG.html#encrypt_decrypt).
 * CSE UI Plugin for vCD
-  * Read more about it [here](http://todo) **ToDo**
+  * Read more about it [here](/container-service-extension/CSE_UI_PLUGIN.html)
 * Interoperability with vCD 10.1.0 Beta
 
 **Notes to System Administrator**
