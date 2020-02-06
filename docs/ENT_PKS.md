@@ -70,18 +70,38 @@ Below timeline diagram depicts infrastructure set-up and tenant
       PKS K8 deployments only.
  5. Install, configure and start CSE
     * Follow instructions to install CSE 2.0 beta [here](/container-service-extension/RELEASE_NOTES.html)
-    * Use `cse sample` command to generate `config.yaml` and `pks.yaml` template files.
-    * Configure `config.yaml` with vCD and K8 template details.
+    * Use `cse sample` command to generate `config.yaml` and `pks.yaml` skeleton config files.
+    * Configure `config.yaml` with vCD details.
     * Configure `pks.yaml` with Enterprise PKS details. This file is necessary
       only if there is an intention to leverage Enterprise PKS for K8
-      deployments. Refer [pks_config key](/container-service-extension/CSE_CONFIG.html#pksconfig)
-      in `config.yaml` for more details on how to fill in `pks.yaml` and how
-      it's presence changes the CSE's default behavior on user's ability to
-      deploy (Native/Enterprise PKS) K8 clusters in any given organization vdc.
-    * Run `CSE install` command. It prepares NSX-T(s) of Enterprise PKS
-      instances for tenant isolation. Ensure this command is run for
-      on-boarding of new Enterprise PKS instances at later point of time.
-    * Start the CSE service.
+      deployments. Refer [here](/container-service-extension/CSE_CONFIG.html#ent_pks_config)
+      for more details on how to fill in `pks.yaml`.
+    * Run `cse install` command. Specify the Enterprise PKS configuration file
+      along with regular CSE configuration file via the flag --pks-config-file
+      and --config respectively. The install process will prepare NSX-T(s) of
+      Enterprise PKS instances for tenant isolation. Ensure this command is run
+      again for on-boarding of new Enterprise PKS instances at later point of time.
+    * Start the CSE service. Specify the Enterprise PKS configuration file
+      along with regular CSE configuration file via the flag --pks-config-file
+      and --config respectively.
+
+Enabling Enterprise PKS as a K8s provider changes the default behavior of CSE
+as described below. Presence of option `--pks-config <pks-config-file> ` while
+executing `cse run` gives an indication to CSE that Enterprise PKS is enabled
+(in addition to Native vCD) as a K8s provider in the system.
+
+* CSE begins to mandate that all `ovdc` has to be enabled for either Native or
+Enterprise PKS as a backing K8s provider. Cloud Administrators can do so via
+`vcd cse ovdc enable` command. This step is mandatory for ovdc(s) with
+pre-existing native K8s clusters as well i.e., if CSE is upgraded from 1.2.x
+to 2.0.0 and CSE is started with `--pks-config-file` option, then it becomes
+mandatory to enable those ovdc(s) with pre-existing native K8s clusters.
+* In other words, if CSE runs with `--pks-config-file PKS_CONFIG_FILE_PATH` and
+if an ovdc is not enabled for either of the supported K8s providers, users will
+not be able to do any further K8s deployments on that ovdc.
+
+If CSE runs without `--pks-config-file` option, there will not be any change in
+CSE's default behavior i.e., all ovdc-s are open for native K8s cluster deployments.
 
  <a name="tenant-onboarding"></a>
 ### Tenant on-boarding

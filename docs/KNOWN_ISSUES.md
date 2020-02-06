@@ -5,8 +5,26 @@ title: Known Issues
 # Known Issues
 
 <a name="general"></a>
-
+## General Issues
 ---
+
+### Fresh installation of CSE 2.5.1 or below via `pip install` is broken
+CSE 2.5.1 or below versions have an open-ended dependencies, which permit `pip`
+to pull and install latest versions of the dependencies. Two such dependencies
+are `pyvcloud` and `vcd-cli`, and their latest available versions are
+incompatible with CSE 2.5.1 or below. We are reviewing our design on
+dependencies, and hope to bring improvements in near future. 
+
+*Workaround:* - Uninstall incompatible `pyvcloud` and `vcd-cli` libraries, and
+manually install compatible versions.
+
+```sh
+# Un-install pyvcloud and vcd-cli
+pip3 uninstall pyvcloud vcd-cli --user --yes
+
+#Install specific version of the libraries which are compatible with CSE 2.5.1 and CSE 2.0.0
+pip3 install pyvcloud==21.0.0 vcd-cli==22.0.0 --upgrade --user
+```
 
 ### `vcd cse ovdc list` operation will timeout when a large number of organization VDCs exist
 

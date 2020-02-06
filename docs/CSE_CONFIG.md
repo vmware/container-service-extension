@@ -3,6 +3,7 @@ layout: default
 title: CSE Server Configuration File
 ---
 
+<a name="cse_config"></a>
 ## CSE Server Configuration File
 
 The CSE server installation as well runtime is controlled by a yaml
@@ -50,8 +51,10 @@ vcs:
 
 service:
   enforce_authorization: false
-  listeners: 5
+  listeners: 10
   log_wire: false
+  telemetry:
+    enable: true
 
 broker:
   catalog: cse
@@ -94,7 +97,6 @@ broker:
 #  action:
 #    cpu: 2
 #    mem: 1024
-
 ```
 
 The config file has 5 mandatory sections (`amqp`, `vcd`, `vcs`, `service`,
@@ -111,7 +113,7 @@ properties will need to be set for all deployments.
 
 | Property | Value                                                                                        |
 |----------|----------------------------------------------------------------------------------------------|
-| exchange | Exchange name unique to CSE (CSE will create and use this exchange to communicate to vCD)    |
+| exchange | Exchange name unique to CSE (CSE will create and use this exchange to communicate with vCD)  |
 | host     | IP or hostname of the vCloud Director AMQP server (may be different from the vCD cell hosts) |
 | username | AMQP username                                                                                |
 | password | AMQP password                                                                                |
@@ -130,11 +132,11 @@ Properties in this section supply credentials necessary for the following operat
 
 Each `vc` under the `vcs` section has the following properties:
 
-| Property | Value |
-|-|-|
-| name | Name of the vCenter registered in vCD |
-| username | Username of the vCenter service account with minimum of guest-operation privileges |
-| password | Password of the vCenter service account |
+| Property | Value                                                                             |
+|----------|-----------------------------------------------------------------------------------|
+| name     | Name of the vCenter as registered in vCD                                          |
+| username | User name of the vCenter service account with at least guest-operation privileges |
+| password | Password of the vCenter service account                                           |
 
 Note : All VCs registered in vCD must be listed here, otherwise CSE server
 installation will fail during pre-check phase.
@@ -144,11 +146,12 @@ installation will fail during pre-check phase.
 
 The service section contains properties that define CSE server behavior.
 
-| Property | Value |
-|-|-|
-| listeners | Number of threads that CSE server should use |
+| Property              | Value                                                                                                                                                      |
+|-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| listeners             | Number of threads that CSE server should use                                                                                                               |
 | enforce_authorization | If True, CSE server will use role-based access control, where users without the correct CSE right will not be able to deploy clusters (Added in CSE 1.2.6) |
-| log_wire | If True, will log all REST calls initiated by CSE to vCD. (Added in CSE 2.5.0) |
+| log_wire              | If True, will log all REST calls initiated by CSE to vCD. (Added in CSE 2.5.0)                                                                             |
+| telemetry             | If enabled, will send back anonymized usage data back to VMware (Added in CSE 2.6.0)                                                                       |
 
 <a name="broker"></a>
 ### `broker` Section
@@ -157,21 +160,22 @@ The `broker` section contains properties to define resources used by
 the CSE server including org and VDC as well as template repository location.
 The following table summarizes key parameters.
 
-| Property | Value |
-|-|-|
-| catalog | Publicly shared catalog within `org` where K8s templates will be published |
-| default_template_name | Name of the default template to use if none is specified during cluster and node operations. CSE server won't start up if this value is invalid. (Added in CSE 2.5.0) |
-| default_template_revision | Revision of the default template to use if none is specified during cluster and node operations.  CSE server won't start up if this value is invalid. (Added in CSE 2.5.0) |
-| ip_allocation_mode | IP allocation mode to be used during the install process to build the template. Possible values are `dhcp` or `pool`. During creation of clusters for tenants, `pool` IP allocation mode is always used |
-| network | Org Network within `vdc` that will be used during the install process to build the template. It should have outbound access to the public Internet. The `CSE` appliance doesn't need to be connected to this network |
-| org | vCD organization that contains the shared catalog where the K8s templates will be stored |
-| remote_template_cookbook_url | URL of the template repository where all template definitions and associated script files are hosted. (Added in CSE 2.5.0) |
-| storage_profile | Name of the storage profile to use when creating the temporary vApp used to build the template |
-| vdc | Virtual data-center within `org` that will be used during the install process to build the template |
+| Property                     | Value                                                                                                                                                                                                                |
+|------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| catalog                      | Publicly shared catalog within `org` where K8s templates will be stored                                                                                                                                              |
+| default_template_name        | Name of the default template to use if one is not specified during cluster and node operations. CSE server won't start up if this value is invalid. (Added in CSE 2.5.0)                                             |
+| default_template_revision    | Revision of the default template to use if one is not is specified during cluster and node operations. CSE server won't start up if this value is invalid. (Added in CSE 2.5.0)                                      |
+| ip_allocation_mode           | IP allocation mode to be used during the install process to build the template. Possible values are `dhcp` or `pool`. During creation of clusters for tenants, `pool` IP allocation mode is always used              |
+| network                      | Org Network within `vdc` that will be used during the install process to build the template. It should have outbound access to the public Internet. The `CSE` appliance doesn't need to be connected to this network |
+| org                          | vCD organization that contains the shared catalog where the K8s templates will be stored                                                                                                                             |
+| remote_template_cookbook_url | URL of the template repository where all template definitions and associated script files are hosted. (Added in CSE 2.5.0)                                                                                           |
+| storage_profile              | Name of the storage profile to use when creating the temporary vApp used to build the template                                                                                                                       |
+| vdc                          | Virtual data-center within `org` that will be used during the install process to build the template                                                                                                                  |
 
 <a name="templte_rules"></a>
 ### `template_rules` Section
-(Added in CSE 2.5.0)\
+#### (Added in CSE 2.5.0)
+
 Rules can be created to override some of the default attributes of templates
 defined by the remote template repository.
 
@@ -182,30 +186,27 @@ processed.
 
 Each rule comprises of the following attributes
 
-| Property | Value |
-|-|-|
-| name | Name of the rule |
-| target | Name and revision of the template on which the rule will be applied |
-| action | Template properties that will be overridden. Only supported properties are `compute_policy`, `cpu`, and `memory` |
+| Property | Value                                                                                                            |
+|--------  |------------------------------------------------------------------------------------------------------------------|
+| name     | Name of the rule                                                                                                 |
+| target   | Name and revision of the template on which the rule will be applied                                              |
+| action   | Template properties that will be overridden. Only supported properties are `compute_policy`, `cpu`, and `memory` |
 
 Please refer to [Restricting Kubernetes templates](/container-service-extension/TEMPLATE_MANAGEMENT.html#restrict_templates)
 for further details on compute policies.
 
-Enabling Enterprise PKS as a K8s provider changes the default behavior of CSE as described below.
-Presence of option `--pks-config <pks-config-file> ` while executing `cse run` gives an indication to CSE that
-Enterprise PKS is enabled (in addition to Native vCD) as a K8s provider in the system.
+<a name="ent_pks_config"></a>
+## Enterprise PKS Configuration File for CSE
+Sample Enterprise PKS configuration file for CSE can be generated via the
+following command
 
-- CSE begins to mandate any given `ovdc` to be enabled for either Native or Enterprise PKS as a backing K8s provider.
-Cloud Administrators can do so via `vcd cse ovdc enable` command. This step is mandatory for ovdc(s) with
-preexisting native K8s clusters as well i.e., if CSE is upgraded from 1.2.x to 2.0 and CSE is started with `--pks-config`
-option, then it becomes mandatory to enable those ovdc(s) with pre-existing native K8s clusters.
-- In other words, if CSE runs with `--pks-config <pks-config-file>` and if an ovdc is not enabled for either of the supported
-K8s providers, users will not be able to do any further K8s deployments in that ovdc.
+```sh
+cse sample --pks-config -o pks.yaml
+```
 
-If CSE runs with no `--pks-config` option, there will not be any change in CSE's default behavior i.e.,
-any ovdc is open for native K8s cluster deployments.
+Edit this file to add values from your Enterprise PKS installation. The
+following example shows a file with sample values filled out.
 
-#### Enterprise PKS Config file
 ```yaml
 # Enterprise PKS config file to enable Enterprise PKS functionality on CSE
 # Please fill out the following four sections:
@@ -337,3 +338,31 @@ nsxt_servers:
   username: admin
   verify: true
 ```
+
+<a name="encrypt_decrypt"></a>
+## Encryption and Decryption of the Configuration Files
+Starting with CSE 2.6.0, CSE server commands will accept only encrypted
+configuration files by default. As of now, these are CSE configuration file and
+Enterprise PKS configuration file. CSE exposes two server CLI commands to help
+CSE server administrators encrypt and decrypt the configuration files.
+
+```sh
+cse encrypt config.yaml --output encrypted-config.yaml
+cse decrypt encrypted-config.yaml -o decrypted-config.yaml
+```
+
+CSE uses industry standard symmetric encryption algorithm [Fernet](https://cryptography.io/en/latest/fernet/)
+and the encryption is dependent on user provided passwords. It is imperative that
+CSE server administrators who participate in the encryption process do not lose
+the password under any circumstances. CSE will not be able to recover the
+password or permit decryption in such cases. CSE expects all configuration files
+to be encrypted with the same password.
+
+Whenever an encrypted configuration file is used with CSE server CLI commands,
+CSE will prompt the user to provide the password to decrypt them. User can also
+propagate the password to CSE via the environment variable `CSE_CONFIG_PASSWORD`.
+
+The default behavior can be changed to keep CSE Server accept plain text
+configuration files using the flag `--skip-config-decryption` with any CSE
+command that accepts a configuration file. 
+

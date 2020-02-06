@@ -62,12 +62,12 @@ Cloud Administrator turns on the role based access control for CSE
 Cloud administrator propagates the new right to Tenants, in order to grant
 access for CSE operations.
 ```sh
-vcd right add -o 'org name' "{cse}:CSE NATIVE DEPLOY RIGHT"
+vcd right add -o 'org name' '{cse}:CSE NATIVE DEPLOY RIGHT'
 ```
 Cloud administrator can revoke access by removal of the right from the
 concerned Tenants.
 ```sh
-vcd right remove -o 'org name' "{cse}:CSE NATIVE DEPLOY RIGHT"
+vcd right remove -o 'org name' '{cse}:CSE NATIVE DEPLOY RIGHT'
 ```
 At this point, a user can't access restrictive operations, if the required
 right is not propagated to his/her role.
@@ -77,7 +77,7 @@ to existing roles in the organization, or create new roles with the new right.
 Subsequently, they assign new or updated roles to users whom they wish to grant
 access to the restricted CSE operations.
 ```sh
-vcd role add-right 'role name' "{cse}:CSE NATIVE DEPLOY RIGHT"
+vcd role add-right 'role name' '{cse}:CSE NATIVE DEPLOY RIGHT'
 ```
 There is no action required to be taken by tenant users.
 

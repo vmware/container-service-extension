@@ -31,18 +31,23 @@ Procedures for creating and managing NFS nodes can be found at
 
 Here is a summary of commands available to view templates and manage clusters and nodes:
 
-| Command                                                                | Description                                                              |
-|------------------------------------------------------------------------|--------------------------------------------------------------------------|
-| `vcd cse template list`                                                | List templates that a Kubernetes cluster can be deployed from.           |
-| `vcd cse cluster create CLUSTER_NAME`                                  | Create a new Kubernetes cluster.                                         |
-| `vcd cse cluster resize CLUSTER_NAME`                                  | Grow a Kubernetes cluster by adding new nodes.                           |
-| `vcd cse cluster create CLUSTER_NAME --enable-nfs`                     | Create a new Kubernetes cluster with NFS Persistent Volume support.      |
-| `vcd cse cluster list`                                                 | List available Kubernetes clusters.                                      |
-| `vcd cse cluster delete CLUSTER_NAME`                                  | Delete a Kubernetes cluster.                                             |
-| `vcd cse node create CLUSTER_NAME --nodes n`                           | Add `n` nodes to a Kubernetes cluster.                                   |
-| `vcd cse node create CLUSTER_NAME --type nfsd`                         | Add an NFS node to a Kubernetes cluster.                                 |
-| `vcd cse node list CLUSTER_NAME`                                       | List nodes of a cluster.                                                 |
-| `vcd cse node delete CLUSTER_NAME NODE_NAME`                           | Delete nodes from a cluster.                                             |
+| Command                                                                | Description                                                                |
+|------------------------------------------------------------------------|----------------------------------------------------------------------------|
+| `vcd cse template list`                                                | List templates that a Kubernetes cluster can be deployed from.             |
+| `vcd cse cluster create CLUSTER_NAME`                                  | Create a new Kubernetes cluster.                                           |
+| `vcd cse cluster create CLUSTER_NAME --enable-nfs`                     | Create a new Kubernetes cluster with NFS Persistent Volume support.        |
+| `vcd cse cluster list`                                                 | List available Kubernetes clusters.                                        |
+| `vcd cse cluster info CLUSTER_NAME`                                    | Retrieve detailed information of a Kubernetes cluster.                     |
+| `vcd cse cluster resize CLUSTER_NAME`                                  | Grow a Kubernetes cluster by adding new nodes.                             |
+| `vcd cse cluster config CLUSTER_NAME`                                  | Retrieve the kubectl configuration file of the Kubernetes cluster.         |
+| `vcd cse cluster upgrade-plan CLUSTER_NAME`                            | Retrieve the allowed path for upgrading Kubernetes software on the custer. |
+| `vcd cse cluster upgrade CLUSTER_NAME TEMPLATE_NAME TEMPLATE_REVISION` | Upgrade cluster software to specified template's software versions.        |
+| `vcd cse cluster delete CLUSTER_NAME`                                  | Delete a Kubernetes cluster.                                               |
+| `vcd cse node create CLUSTER_NAME --nodes n`                           | Add `n` nodes to a Kubernetes cluster.                                     |
+| `vcd cse node create CLUSTER_NAME --type nfsd`                         | Add an NFS node to a Kubernetes cluster.                                   |
+| `vcd cse node list CLUSTER_NAME`                                       | List nodes of a cluster.                                                   |
+| `vcd cse node info CLUSTER_NAME NODE_NAME`                             | Retrieve detailed information of a node in a Kubernetes cluster.           |
+| `vcd cse node delete CLUSTER_NAME NODE_NAME`                           | Delete nodes from a cluster.                                               |
 
 By default, CSE Client will display the task progress until the
 task finishes or fails. The `--no-wait` flag can be used to skip waiting on the
@@ -58,6 +63,52 @@ can choose to monitor the task progress manually.
 # lists the current running tasks in the organization
 > vcd task list running
 ```
+
+<a name="k8s_upgrade"></a>
+## Upgrading software installed on Kubernetes clusters
+Kubernetes is a fast paced piece of software, which gets a new minor release
+every three months and numerous patch releases (including security patches) in
+between those minor releases. To keep already deployed clusters up to date, in
+CSE 2.6.0 we have added support for in place software upgrade for Kubernetes
+clusters. The softwares that can be upgraded to a newer version are
+* Kuberenetes components e.g. kube-server, kubelet, kubedns etc.
+* Weave (CNI)
+* Docker engine
+
+The upgrade matrix is built on the CSE native templates (read more about them
+[here](/container-service-extension/TEMPLATE_MANAGEMENT.html)). The template
+originally used to deploy a cluster determines the valid target templates for
+upgrade. The supported upgrade paths can be discovered using the following command
+
+```sh
+vcd cse cluster upgrade-plan 'mycluster'
+```
+
+Let's say our cluster was deployed using template T1 which is based off
+Kubernetes version `x.y.z`. Our potential target templates for upgrade will
+satisfy at least one of the following criteria:
+* A later revision of the template T1, which is based off Kubernetes version
+  `x.y.`**`w`**, where `w` > `z`.
+* A template T2 that has the same base OS, and is based off Kubernetes
+  distribution `x.`**`(y+1)`**`.v`, where `v` can be anything.
+
+If you don't see a desired target template for upgrading your cluster, please
+feel free to file a GitHub [issue ](https://github.com/vmware/container-service-extension/issues).
+
+
+The actual upgrade of the cluster is done via the following command.
+```sh
+vcd cse cluster upgrade 'mycluster'
+```
+
+The upgrade process needs little to zero downtime, if the following conditions
+are met,
+1. Docker is not being upgraded.
+2. Weave (CNI) is not being upgraded.
+3. Kubernetes version upgrade is restricted to patch version only.
+
+If any of the conditions mentioned above is not met, the cluster will go down
+for about a minute or more (depends on the actual upgrade process).
 
 <a name="automation"></a>
 ## Automation

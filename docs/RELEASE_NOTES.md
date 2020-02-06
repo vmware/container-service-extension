@@ -5,6 +5,60 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 2.6.0 Beta (2.6.0.0b1)
+Release Date: 2020-02-05
+
+Supported vCD versions: 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0
+
+Enterprise PKS compatibility matrix
+
+|CSE       | vCD                                     | Enterprise PKS | NSX-T    |
+|----------|-----------------------------------------|----------------|----------|
+|2.6.0.0b1 | 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0-Beta | 1.4            | 2.3, 2.4 |
+
+**Installation of binaries**
+
+```sh
+pip install container-service-extension==2.6.0.0b1
+# or
+pip install container-service-extension --pre
+```
+
+Note: `pip install container-service-extension` installs previous official
+version of CSE viz. 2.5.1. Specify the above mentioned exact version to install
+CSE 2.6.0 beta.
+
+**New Features**
+
+* New Templates with updated Kubernetes and Weave
+  * [Template Announcements](/container-service-extension/TEMPLATE_ANNOUNCEMENTS.html)
+* In place Kubernetes upgrade for clusters
+  * CSE offers the new capability to do in place upgrade of Kubernetes
+    related software in Native clusters. More details
+    [here](/container-service-extension/CLUSTER_MANAGEMENT.html#k8s_upgrade).
+* Secure Configuration files
+  * CSE now supports encrypted configuration files. More details
+  [here](/container-service-extension/CSE_CONFIG.html#encrypt_decrypt).
+* CSE UI Plugin for vCD
+  * Read more about it [here](/container-service-extension/CSE_UI_PLUGIN.html)
+* Interoperability with vCD 10.1.0 Beta
+
+**Notes to System Administrator**
+
+If you are upgrading to CSE 2.6.0.0b1 and you have pre-existing K8s clusters
+deployed from CSE 2.5.1 or below, you must run the following command to
+preserve manageability of those clusters in CSE 2.6.0.0b1.
+```sh
+cse convert-cluster
+```
+This command resets the admin password of all nodes in the clusters deployed by
+CSE 2.0.0 and below. The command also formats the metadata on the cluster to
+match CSE 2.6.0.0b1's cluster metadata format. If nodes in the cluster are setup
+with ssh keys for root login, those key pairings will be preserved. The command
+does a force reboot of the cluster deployed by CSE 2.0.0 and below.
+
+---
+
 ## CSE 2.5.1
 
 Release Date: 2019-10-23
