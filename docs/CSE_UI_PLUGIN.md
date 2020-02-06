@@ -56,10 +56,10 @@ To unregister the plugin, select the plugin in `Customize Portal` and click on
 `DELETE` button.
 
 ### Access Control
-Tenant users themselves does not have the authority to register/unregister
-the plugin. They can only use the plugin once access to it has been granted by
-Service Provider. Service Provider have the authority to enable or disable the
-UI Plugin and manage access control to the plugin.
+Tenant users themselves do not have the authority to register/unregister the
+plugin. They can only use the plugin once access to it has been granted by
+Service Provider. Service Provider has the authority to enable or disable and
+manage access control to the UI Plugin.
 
 #### Enable/Disable plugin
 From `Customize Portal`, choose the plugin to be enabled/disabled, then click on
