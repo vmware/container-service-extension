@@ -1,3 +1,5 @@
+# flake8: noqa
+
 import argparse, json, os, requests, sys, time
 from pathlib import Path
 
