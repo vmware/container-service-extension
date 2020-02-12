@@ -1111,7 +1111,7 @@ class VcdBroker(AbstractBroker):
             t_cni = semver.Version(template[LocalTemplateKey.CNI_VERSION])
 
             upgrade_docker = t_docker > c_docker
-            upgrade_k8s = t_k8s > c_k8s
+            upgrade_k8s = t_k8s >= c_k8s
             upgrade_cni = t_cni > c_cni or t_k8s.major > c_k8s.major or t_k8s.minor > c_k8s.minor # noqa: E501
 
             if upgrade_k8s:
