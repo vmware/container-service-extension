@@ -2,12 +2,10 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from copy import deepcopy
 import json
 
 import requests
-
-from container_service_extension.cloudapi.constants \
-    import CLOUDAPI_DEFAULT_VERSION
 
 
 class CloudApiClient(object):
@@ -17,37 +15,60 @@ class CloudApiClient(object):
                  base_url,
                  token,
                  is_jwt_token,
+                 api_version,
                  verify_ssl=True,
-                 api_version=CLOUDAPI_DEFAULT_VERSION,
                  logger_instance=None,
                  log_requests=False,
                  log_headers=False,
                  log_body=False):
+        if not base_url.endswith('/'):
+            base_url += '/'
         self._base_url = base_url
-        self._versioned_url = f"{self._base_url}/{api_version}/"
+
+        self._headers = {}
         if is_jwt_token:
-            self._headers = {"Authorization": f"Bearer {token}"}
+            self._headers["Authorization"] = f"Bearer {token}"
         else:
-            self._headers = {"x-vcloud-authorization": token}
+            self._headers["x-vcloud-authorization"] = token
+        self._headers["Accept"] = f"application/json;version={api_version}"
+
         self._verify_ssl = verify_ssl
         self.LOGGER = logger_instance
         self._log_requests = log_requests
         self._log_headers = log_headers
         self._log_body = log_body
+        self._last_response = None
 
-    def get_versioned_url(self):
-        return self._versioned_url
+    def get_base_uri(self):
+        return self._base_uri
 
-    def do_request(self, method, resource_url_relative_path=None,
-                   payload=None):
+    def get_last_response(self):
+        return self._last_response
+
+    def get_last_response_headers(self):
+        if self._last_response:
+            return self._last_response.headers
+        else:
+            return None
+
+    def do_request(self,
+                   method,
+                   cloudapi_version=None,
+                   resource_url_relative_path=None,
+                   resource_url_absolute_path=None,
+                   payload=None,
+                   content_type=None):
         """Make a request to cloudpai server.
 
         :param shared_constants.RequestMethod method: One of the HTTP verb
-        defined in the enum.
+            defined in the enum.
+        :param str cloudapi_version:
         :param str resource_url_relative_path: part of the url that identifies
-        just the resource (the host and the common /cloudapi/1.0.0 should be
-        omitted). E.g .vdcComputePolicies,
-        vdcComputePolicies/urn:vcloud:vdcComputePolicy:ac313b07-21df-45d2 etc.
+            just the resource (the host and the common /cloudapi/ should be
+            omitted). E.g .vdcComputePolicies,
+            vdcComputePolicies/urn:vcloud:vdcComputePolicy:ac313b07-21df-45d2
+            etc.
+        :param str resource_url_absolute_path:
         :param dict payload: JSON payload for the REST call.
 
         :return: body of the response text (JSON) in form of a dictionary.
@@ -56,16 +77,32 @@ class CloudApiClient(object):
 
         :raises HTTPError: if the underlying REST call fails.
         """
-        # TODO this only sends a request to the first page found.
-        # TODO this should instead be able to deal with pagination
-        url = f"{self._versioned_url}{resource_url_relative_path}"
+        # TODO pagination support in relative resource path
+        if resource_url_absolute_path:
+            url = resource_url_absolute_path
+        else:
+            url = self._base_url
+            if cloudapi_version:
+                url += f"{cloudapi_version}/"
+            url += f"{resource_url_relative_path}"
 
-        response = requests.request(
-            method.value,
-            url,
-            headers=self._headers,
-            json=payload,
-            verify=self._verify_ssl)
+        headers = deepcopy(self._headers)
+        if content_type and 'json' not in content_type:
+            headers['Content-type'] = content_type
+            response = requests.request(
+                method.value,
+                url,
+                headers=headers,
+                data=payload,
+                verify=self._verify_ssl)
+        else:
+            response = requests.request(
+                method.value,
+                url,
+                headers=headers,
+                json=payload,
+                verify=self._verify_ssl)
+        self._last_response = response
 
         if self._log_requests:
             self.LOGGER.debug(f"Request uri : {(method.value).upper()} {url}")

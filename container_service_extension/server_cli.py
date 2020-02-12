@@ -4,9 +4,13 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import json
 import os
+import shutil
 import sys
+import tempfile
 import time
+from zipfile import ZipFile
 
 import click
 import cryptography
@@ -20,6 +24,8 @@ import requests
 from vcd_cli.utils import stdout
 import yaml
 
+from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
+from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.configure_cse import install_cse
@@ -36,6 +42,7 @@ from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import RemoteTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.service import Service
+from container_service_extension.shared_constants import RequestMethod
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
 from container_service_extension.telemetry.constants import PayloadKey
@@ -248,6 +255,28 @@ def template(ctx):
             already present in the local catalog that match with one in the remote
             repository will be recreated from scratch.
     """  # noqa: E501
+    pass
+
+
+@cli.group('ui-plugin', short_help='Manage CSE UI plugin')
+@click.pass_context
+def uiplugin(ctx):
+    """Manage CSE UI plugin.
+
+\b
+    Examples below. By default the following commands expect an encrypted CSE
+    configuration file. To use a plain-text configuration file instead, specify
+    the flag --skip-config-decryption.
+\b
+        cse ui-plugin register './container-ui-plugin.zip`
+            --config myconfig.yaml -s
+\b
+        cse ui-plugin list --config myconfig.yaml -s
+\b
+        cse ui-plugin deregister
+            'urn:vcloud:uiPlugin:6cae8802-35fb-4cc7-b143-9898b65c3adb'
+            --config myconfig.yaml -s
+    """ # noqa: E501
     pass
 
 
@@ -1262,6 +1291,360 @@ def install_cse_template(ctx, template_name, template_revision,
     except Exception as err:
         console_message_printer.error(str(err))
         sys.exit(1)
+
+
+@uiplugin.command('register', short_help="Register UI plugin with vCD.")
+@click.pass_context
+@click.argument('plugin_filepath',
+                metavar='PLUGIN_FILE_PATH',
+                type=click.Path(exists=True))
+@click.option(
+    '-c',
+    '--config',
+    'config_file_path',
+    default='config.yaml',
+    metavar='CONFIG_FILE_PATH',
+    type=click.Path(exists=True),
+    envvar='CSE_CONFIG',
+    required=True,
+    help="(Required) Filepath to CSE config file")
+@click.option(
+    '-s',
+    '--skip-config-decryption',
+    is_flag=True,
+    help='Skip decryption of CSE config file')
+def register_ui_plugin(ctx, plugin_filepath, config_file_path,
+                       skip_config_decryption):
+    """."""
+    console_message_printer = ConsoleMessagePrinter()
+
+    try:
+        check_python_version()
+    except Exception as err:
+        console_message_printer.error(str(err))
+        sys.exit(1)
+
+    if skip_config_decryption:
+        password = None
+    else:
+        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+            color='green', hide_input=True)
+
+    client = None
+    tempdir = None
+    try:
+        # We don't want to validate config file, because server startup or
+        # installation is not being performed. If values in config file are
+        # missing or bad, appropriate exception will be raised while accessing
+        # or using them.
+        if skip_config_decryption:
+            with open(config_file_path) as config_file:
+                config_dict = yaml.safe_load(config_file) or {}
+        else:
+            console_message_printer.info(f"Decrypting '{config_file_path}'")
+            config_dict = yaml.safe_load(
+                get_decrypted_file_contents(config_file_path, password)) or {}
+
+        # To suppress the warning message that pyvcloud prints if
+        # ssl_cert verification is skipped.
+        if not config_dict['vcd']['verify']:
+            requests.packages.urllib3.disable_warnings()
+
+        tempdir = tempfile.mkdtemp(dir='.')
+        plugin_zip = ZipFile(plugin_filepath, 'r')
+        plugin_zip.extractall(path=tempdir)
+        plugin_zip.close()
+        manifest_file = None
+        extracted_files = os.listdir(tempdir)
+        for filename in extracted_files:
+            if filename == 'manifest.json':
+                manifest_file = os.path.join(tempdir, filename)
+                break
+        if manifest_file is None:
+            raise Exception('Invalid plugin zip. Manifest file not found.')
+
+        manifest = json.load(open(manifest_file, 'r'))
+        registerRequest = {
+            'pluginName': manifest['name'],
+            'vendor': manifest['vendor'],
+            'description': manifest['description'],
+            'version': manifest['version'],
+            'license': manifest['license'],
+            'link': manifest['link'],
+            'tenant_scoped': "tenant" in manifest['scope'],
+            'provider_scoped': "service-provider" in manifest['scope'],
+            'enabled': True
+        }
+
+        client = Client(config_dict['vcd']['host'],
+                        api_version=config_dict['vcd']['api_version'],
+                        verify_ssl_certs=config_dict['vcd']['verify'])
+        credentials = BasicLoginCredentials(
+            config_dict['vcd']['username'],
+            SYSTEM_ORG_NAME,
+            config_dict['vcd']['password'])
+        client.set_credentials(credentials)
+
+        token = client.get_access_token()
+        is_jwt_token = True
+        if not token:
+            token = client.get_xvcloud_authorization_token()
+            is_jwt_token = False
+
+        cloudapi_client = CloudApiClient(
+            base_url=client.get_cloudapi_uri(),
+            token=token,
+            is_jwt_token=is_jwt_token,
+            api_version=client.get_api_version(),
+            verify_ssl=client._verify_ssl_certs)
+
+        console_message_printer.info("Registering plugin with vCD.")
+        try:
+            response_body = cloudapi_client.do_request(
+                method=RequestMethod.POST,
+                resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}",
+                payload=registerRequest)
+            pluginId = response_body.get('id')
+        except requests.exceptions.HTTPError as err:
+            if err.response.status_code == requests.codes.bad_request and \
+                    'VCD_50012' in err.response.text:
+                raise Exception('Plugin is already registered.')
+            else:
+                raise
+
+        console_message_printer.info("Preparing to upload plugin to vCD.")
+        transferRequest = {
+            "fileName": os.path.split(plugin_filepath)[1],
+            "size": os.stat(plugin_filepath).st_size
+        }
+        response_body = cloudapi_client.do_request(
+            method=RequestMethod.POST,
+            resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{pluginId}/plugin", # noqa: E501
+            payload=transferRequest)
+
+        console_message_printer.info("Uploading plugin to vCD.")
+        transfer_url = None
+        content_type = None
+        response_headers = cloudapi_client.get_last_response_headers()
+        # E.g. Link Header - <https://bos1-vcd-sp-static-199-101.eng.vmware.com/transfer/f7fd8885-1fdb-4e3c-90cc-9411363abdcb/container-ui-plugin.zip>;rel="upload:default";type="application/octet-stream" # noqa: E501
+        tokens = response_headers.get("Link").split(";")
+        for token in tokens:
+            if token.startswith("<"):
+                transfer_url = token[1:-2] # get rid of the < and >
+            if token.startswith("type"):
+                fragments = token.split("\"")
+                content_type = fragments[1]
+        transfer_url = response_headers.get("Link").split('>')[0][1:]
+        file_content = open(plugin_filepath, 'rb')
+        cloudapi_client.do_request(
+            method=RequestMethod.PUT,
+            resource_url_absolute_path=transfer_url,
+            payload=file_content,
+            content_type=content_type)
+        console_message_printer.general("Plugin upload complete.")
+
+        console_message_printer.info("Waiting for plugin to be ready.")
+        while True:
+            response_body = cloudapi_client.do_request(
+                method=RequestMethod.GET,
+                resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{pluginId}") # noqa: E501
+            plugin_status = response_body.get('plugin_status')
+            console_message_printer.info(f"Plugin status : {plugin_status}")
+            if plugin_status == 'ready':
+                break
+        console_message_printer.general("Plugin registration complete.")
+    except Exception as err:
+        console_message_printer.error(str(err))
+    finally:
+        if client:
+            client.logout()
+        if tempdir:
+            shutil.rmtree(tempdir)
+
+
+@uiplugin.command('deregister', short_help="De-register UI plugin from vCD.")
+@click.pass_context
+@click.argument('plugin_id', metavar='PLUGIN_ID')
+@click.option(
+    '-c',
+    '--config',
+    'config_file_path',
+    default='config.yaml',
+    metavar='CONFIG_FILE_PATH',
+    type=click.Path(exists=True),
+    envvar='CSE_CONFIG',
+    required=True,
+    help="(Required) Filepath to CSE config file")
+@click.option(
+    '-s',
+    '--skip-config-decryption',
+    is_flag=True,
+    help='Skip decryption of CSE config file')
+def deregister_ui_plugin(ctx, plugin_id, config_file_path,
+                         skip_config_decryption):
+    """."""
+    console_message_printer = ConsoleMessagePrinter()
+
+    try:
+        check_python_version(console_message_printer)
+    except Exception as err:
+        console_message_printer.error(str(err))
+        sys.exit(1)
+
+    if skip_config_decryption:
+        password = None
+    else:
+        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+            color='green', hide_input=True)
+
+    client = None
+    try:
+        # We don't want to validate config file, because server startup or
+        # installation is not being performed. If values in config file are
+        # missing or bad, appropriate exception will be raised while accessing
+        # or using them.
+        if skip_config_decryption:
+            with open(config_file_path) as config_file:
+                config_dict = yaml.safe_load(config_file) or {}
+        else:
+            console_message_printer.info(f"Decrypting '{config_file_path}'")
+            config_dict = yaml.safe_load(
+                get_decrypted_file_contents(config_file_path, password)) or {}
+
+        # To suppress the warning message that pyvcloud prints if
+        # ssl_cert verification is skipped.
+        if not config_dict['vcd']['verify']:
+            requests.packages.urllib3.disable_warnings()
+
+        client = Client(config_dict['vcd']['host'],
+                        api_version=config_dict['vcd']['api_version'],
+                        verify_ssl_certs=config_dict['vcd']['verify'])
+        credentials = BasicLoginCredentials(
+            config_dict['vcd']['username'],
+            SYSTEM_ORG_NAME,
+            config_dict['vcd']['password'])
+        client.set_credentials(credentials)
+
+        token = client.get_access_token()
+        is_jwt_token = True
+        if not token:
+            token = client.get_xvcloud_authorization_token()
+            is_jwt_token = False
+
+        cloudapi_client = CloudApiClient(
+            base_url=client.get_cloudapi_uri(),
+            token=token,
+            is_jwt_token=is_jwt_token,
+            api_version=client.get_api_version(),
+            verify_ssl=client._verify_ssl_certs)
+
+        cloudapi_client.do_request(
+            method=RequestMethod.DELETE,
+            resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{plugin_id}") # noqa: E501
+
+        console_message_printer.general(
+            f"Removed plugin with id : {plugin_id}.")
+    finally:
+        if client:
+            client.logout()
+
+@uiplugin.command('list',
+                  short_help="List all UI plugins registered with vCD.")
+@click.pass_context
+@click.option(
+    '-c',
+    '--config',
+    'config_file_path',
+    default='config.yaml',
+    metavar='CONFIG_FILE_PATH',
+    type=click.Path(exists=True),
+    envvar='CSE_CONFIG',
+    required=True,
+    help="(Required) Filepath to CSE config file")
+@click.option(
+    '-s',
+    '--skip-config-decryption',
+    is_flag=True,
+    help='Skip decryption of CSE config file')
+def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
+    """."""
+    console_message_printer = ConsoleMessagePrinter()
+
+    try:
+        # Suppress the python version check message from being printed on
+        # console
+        check_python_version()
+    except Exception as err:
+        console_message_printer.error(str(err))
+        sys.exit(1)
+
+    if skip_config_decryption:
+        password = None
+    else:
+        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+            color='green', hide_input=True)
+
+    client = None
+    try:
+        # We don't want to validate config file, because server startup or
+        # installation is not being performed. If values in config file are
+        # missing or bad, appropriate exception will be raised while accessing
+        # or using them.
+        if skip_config_decryption:
+            with open(config_file_path) as config_file:
+                config_dict = yaml.safe_load(config_file) or {}
+        else:
+            console_message_printer.info(f"Decrypting '{config_file_path}'")
+            config_dict = yaml.safe_load(
+                get_decrypted_file_contents(config_file_path, password)) or {}
+
+        # To suppress the warning message that pyvcloud prints if
+        # ssl_cert verification is skipped.
+        if not config_dict['vcd']['verify']:
+            requests.packages.urllib3.disable_warnings()
+
+        client = Client(config_dict['vcd']['host'],
+                        api_version=config_dict['vcd']['api_version'],
+                        verify_ssl_certs=config_dict['vcd']['verify'])
+        credentials = BasicLoginCredentials(
+            config_dict['vcd']['username'],
+            SYSTEM_ORG_NAME,
+            config_dict['vcd']['password'])
+        client.set_credentials(credentials)
+
+        token = client.get_access_token()
+        is_jwt_token = True
+        if not token:
+            token = client.get_xvcloud_authorization_token()
+            is_jwt_token = False
+
+        cloudapi_client = CloudApiClient(
+            base_url=client.get_cloudapi_uri(),
+            token=token,
+            is_jwt_token=is_jwt_token,
+            api_version=client.get_api_version(),
+            verify_ssl=client._verify_ssl_certs)
+
+        result = []
+        response_body = cloudapi_client.do_request(
+            method=RequestMethod.GET,
+            resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}") # noqa: E501
+        if len(response_body) > 0:
+            for plugin in response_body:
+                ui_plugin = {}
+                ui_plugin['name'] = plugin['pluginName']
+                ui_plugin['vendor'] = plugin['vendor']
+                ui_plugin['version'] = plugin['version']
+                ui_plugin['id'] = plugin['id']
+                result.append(ui_plugin)
+
+        stdout(result, ctx, sort_headers=False, show_id=True)
+    finally:
+        if client:
+            client.logout()
 
 
 if __name__ == '__main__':
