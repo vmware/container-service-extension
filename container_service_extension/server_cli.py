@@ -261,22 +261,22 @@ def template(ctx):
 @cli.group('ui-plugin', short_help='Manage CSE UI plugin')
 @click.pass_context
 def uiplugin(ctx):
-    """Manage CSE UI plugin.
+    """Manage vCD UI plugin lifecycle.
 
 \b
     Examples below. By default the following commands expect an encrypted CSE
     configuration file. To use a plain-text configuration file instead, specify
-    the flag --skip-config-decryption.
+    the flag --skip-config-decryption/-s.
 \b
         cse ui-plugin register './container-ui-plugin.zip`
-            --config myconfig.yaml -s
+            --config my_config.yaml -s
 \b
-        cse ui-plugin list --config myconfig.yaml -s
+        cse ui-plugin list --config my_config.yaml -s
 \b
         cse ui-plugin deregister
             'urn:vcloud:uiPlugin:6cae8802-35fb-4cc7-b143-9898b65c3adb'
-            --config myconfig.yaml -s
-    """ # noqa: E501
+            --config my_config.yaml -s
+    """
     pass
 
 
@@ -291,7 +291,7 @@ def version(ctx):
     stdout(ver_obj, ctx, ver_str)
 
 
-@cli.command('sample', short_help='Generate sample CSE/PKS configuration')
+@cli.command(short_help='Generate sample CSE/PKS configuration')
 @click.pass_context
 @click.option(
     '-o',
@@ -309,18 +309,12 @@ def version(ctx):
 def sample(ctx, output, pks_config):
     """Display sample CSE config file contents."""
     console_message_printer = ConsoleMessagePrinter()
-    try:
-        # Not passing the console_message_printer, because we want to suppress
-        # the python version check messages from being printed onto console,
-        # and pollute the sample.
-        check_python_version()
-    except Exception as err:
-        console_message_printer.error(str(err))
-        sys.exit(1)
-
+    # The console_message_printer is not being passed to the python version
+    # check, because we want to suppress the version check messages from being
+    # printed onto console, and pollute the sample config.
+    check_python_version()
     console_message_printer.general_no_color(
-        generate_sample_config(output=output,
-                               generate_pks_config=pks_config))
+        generate_sample_config(output=output, generate_pks_config=pks_config))
 
 
 @cli.command(short_help="Checks that CSE/PKS config file is valid. Can "
@@ -355,25 +349,14 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
           check_install):
     """Validate CSE config file."""
     console_message_printer = ConsoleMessagePrinter()
-    try:
-        check_python_version(ConsoleMessagePrinter())
-    except Exception as err:
-        console_message_printer.error(str(err))
-        sys.exit(1)
-
-    if skip_config_decryption:
-        password = None
-    else:
-        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
-            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
-            color='green', hide_input=True)
+    check_python_version(console_message_printer)
 
     config_dict = None
     try:
-        config_dict = get_validated_config(
-            config_file_path, pks_config_file_name=pks_config_file_path,
+        config_dict = _construct_config_dict(
+            config_file_path=config_file_path,
+            pks_config_file_path=pks_config_file_path,
             skip_config_decryption=skip_config_decryption,
-            decryption_password=password,
             msg_update_callback=console_message_printer)
 
         # Telemetry data construction
@@ -387,18 +370,6 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
             cse_operation=CseOperation.CONFIG_CHECK,
             cse_params=cse_params,
             telemetry_settings=config_dict['service']['telemetry'])
-    except AmqpConnectionError:
-        console_message_printer.error(AMQP_ERROR_MSG)
-        raise
-    except requests.exceptions.ConnectionError as err:
-        console_message_printer.error(f"Cannot connect to {err.request.url}.")
-        sys.exit(1)
-    except cryptography.fernet.InvalidToken:
-        console_message_printer.error(CONFIG_DECRYPTION_ERROR_MSG)
-        sys.exit(1)
-    except vim.fault.InvalidLogin:
-        console_message_printer.error(VCENTER_LOGIN_ERROR_MSG)
-        sys.exit(1)
     except Exception as err:
         console_message_printer.error(str(err))
         sys.exit(1)
@@ -406,19 +377,21 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
     if config_dict:
         if check_install:
             try:
-                check_cse_installation(config_dict, msg_update_callback=ConsoleMessagePrinter())  # noqa: E501
+                check_cse_installation(
+                    config_dict, msg_update_callback=console_message_printer)
             except Exception as err:
                 console_message_printer.error(f"Error : {err}")
                 console_message_printer.error("CSE installation is invalid.")
-                # Telemetry - Record failed install action
+                # Telemetry - Record failed config check action
                 record_user_action(
                     cse_operation=CseOperation.CONFIG_CHECK,
                     telemetry_settings=config_dict['service']['telemetry'],
                     status=OperationStatus.FAILED, message=str(err))
                 sys.exit(1)
         # Telemetry - Record successful install action
-        record_user_action(cse_operation=CseOperation.CONFIG_CHECK,
-                           telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
+        record_user_action(
+            cse_operation=CseOperation.CONFIG_CHECK,
+            telemetry_settings=config_dict['service']['telemetry'])
 
 
 @cli.command(short_help='Decrypt the given file')
@@ -436,18 +409,18 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
 def decrypt(ctx, input_file, output_file):
     """Decrypt CSE configuration file."""
     console_message_printer = ConsoleMessagePrinter()
+    check_python_version(console_message_printer)
+
     try:
-        check_python_version(console_message_printer)
         password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG, hide_input=True, color='green')
         decrypt_file(input_file, password, output_file)
+        console_message_printer.general("Decryption successful.")
     except cryptography.fernet.InvalidToken:
-        console_message_printer.error("Decryption failed: Invalid password")
-        sys.exit(1)
+        raise Exception("Decryption failed: Invalid password")
     except Exception as err:
         console_message_printer.error(str(err))
         sys.exit(1)
-    console_message_printer.general("\nDecryption successful")
 
 
 @cli.command(short_help='Encrypt the given file')
@@ -465,18 +438,18 @@ def decrypt(ctx, input_file, output_file):
 def encrypt(ctx, input_file, output_file):
     """Encrypt CSE configuration file."""
     console_message_printer = ConsoleMessagePrinter()
+    check_python_version(console_message_printer)
+
     try:
-        check_python_version(console_message_printer)
         password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
             PASSWORD_FOR_CONFIG_ENCRYPTION_MSG, hide_input=True, color='green')
         encrypt_file(input_file, password, output_file)
+        console_message_printer.general("Encryption successful")
     except cryptography.fernet.InvalidToken:
-        console_message_printer.error("Encryption failed: Invalid password")
-        sys.exit(1)
+        raise Exception("Encryption failed: Invalid password")
     except Exception as err:
         console_message_printer.error(str(err))
         sys.exit(1)
-    console_message_printer.general("\nEncryption successful")
 
 
 @cli.command(short_help='Install CSE on vCD')
@@ -535,19 +508,7 @@ def install(ctx, config_file_path, pks_config_file_path,
             retain_temp_vapp, ssh_key_file):
     """Install CSE on vCloud Director."""
     console_message_printer = ConsoleMessagePrinter()
-
-    try:
-        check_python_version(console_message_printer)
-    except Exception as err:
-        console_message_printer.error(str(err))
-        sys.exit(1)
-
-    if skip_config_decryption:
-        password = None
-    else:
-        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
-            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
-            color='green', hide_input=True)
+    check_python_version(console_message_printer)
 
     if retain_temp_vapp and not ssh_key_file:
         console_message_printer.error(
@@ -560,6 +521,13 @@ def install(ctx, config_file_path, pks_config_file_path,
     if ssh_key_file is not None:
         ssh_key = ssh_key_file.read()
 
+    if skip_config_decryption:
+        password = None
+    else:
+        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+            color='green', hide_input=True)
+
     try:
         install_cse(config_file_name=config_file_path,
                     pks_config_file_name=pks_config_file_path,
@@ -568,19 +536,15 @@ def install(ctx, config_file_path, pks_config_file_path,
                     retain_temp_vapp=retain_temp_vapp,
                     skip_config_decryption=skip_config_decryption,
                     decryption_password=password,
-                    msg_update_callback=ConsoleMessagePrinter())
+                    msg_update_callback=console_message_printer)
     except AmqpConnectionError:
-        console_message_printer.error(AMQP_ERROR_MSG)
-        raise
+        raise Exception(AMQP_ERROR_MSG)
     except requests.exceptions.ConnectionError as err:
-        console_message_printer.error(f"Cannot connect to {err.request.url}.")
-        sys.exit(1)
+        raise Exception(f"Cannot connect to {err.request.url}.")
     except vim.fault.InvalidLogin:
-        console_message_printer.error(VCENTER_LOGIN_ERROR_MSG)
-        sys.exit(1)
+        raise Exception(VCENTER_LOGIN_ERROR_MSG)
     except cryptography.fernet.InvalidToken:
-        console_message_printer.error(CONFIG_DECRYPTION_ERROR_MSG)
-        sys.exit(1)
+        raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
     except Exception as err:
         console_message_printer.error(str(err))
         sys.exit(1)
@@ -619,12 +583,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
         skip_config_decryption):
     """Run CSE service."""
     console_message_printer = ConsoleMessagePrinter()
-
-    try:
-        check_python_version(console_message_printer)
-    except Exception as err:
-        console_message_printer.error(str(err))
-        sys.exit(1)
+    check_python_version(console_message_printer)
 
     if skip_config_decryption:
         password = None
@@ -654,31 +613,26 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
                                    cse_params=cse_params)
         record_user_action(cse_operation=CseOperation.SERVICE_RUN)
     except AmqpConnectionError:
-        error_message = AMQP_ERROR_MSG
-        console_message_printer.error(AMQP_ERROR_MSG)
-        raise
+        raise Exception(AMQP_ERROR_MSG)
     except requests.exceptions.ConnectionError as err:
-        error_message = f"Cannot connect to {err.request.url}."
-        console_message_printer.error(error_message)
-        sys.exit(1)
+        raise Exception(f"Cannot connect to {err.request.url}.")
     except vim.fault.InvalidLogin:
-        error_message = VCENTER_LOGIN_ERROR_MSG
-        console_message_printer.error(VCENTER_LOGIN_ERROR_MSG)
-        sys.exit(1)
+        raise Exception(VCENTER_LOGIN_ERROR_MSG)
     except cryptography.fernet.InvalidToken:
-        error_message = CONFIG_DECRYPTION_ERROR_MSG
-        console_message_printer.error(CONFIG_DECRYPTION_ERROR_MSG)
-        sys.exit(1)
+        raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
     except Exception as err:
         error_message = str(err)
         console_message_printer.error(error_message)
-        console_message_printer.error(
-            "CSE Server failure. Please check the logs.")
+        console_message_printer.error("CSE Server failure. Please check the logs.") # noqa: E501
         sys.exit(1)
     finally:
         if not cse_run_complete:
-            with open(config_file_path) as config_file:
-                config_dict = yaml.safe_load(config_file) or {}
+            config_dict = _construct_config_dict(
+                config_file_path=config_file_path,
+                pks_config_file_path=None,
+                skip_config_decryption=skip_config_decryption,
+                msg_update_callback=None,
+                validate=False)
             store_telemetry_settings(config_dict)
             record_user_action(cse_operation=CseOperation.SERVICE_RUN,
                                status=OperationStatus.FAILED,
@@ -740,25 +694,14 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
     Use '*' as cluster name to convert all clusters.
     """
     console_message_printer = ConsoleMessagePrinter()
-
-    try:
-        check_python_version(console_message_printer)
-    except Exception as err:
-        console_message_printer.error(str(err))
-        sys.exit(1)
-
-    if skip_config_decryption:
-        decryption_password = None
-    else:
-        decryption_password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
-            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
-            color='green', hide_input=True)
+    check_python_version(console_message_printer)
 
     client = None
     try:
-        config = get_validated_config(
-            config_file_path, skip_config_decryption=skip_config_decryption,
-            decryption_password=decryption_password,
+        config = _construct_config_dict(
+            config_file_path=config_file_path,
+            pks_config_file_path=None,
+            skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer)
 
         # Record telemetry details
@@ -768,7 +711,6 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
             PayloadKey.WAS_OVDC_SPECIFIED: bool(vdc_name),
             PayloadKey.WAS_ORG_SPECIFIED: bool(org_name),
             PayloadKey.WAS_NEW_ADMIN_PASSWORD_PROVIDED: bool(admin_password)
-
         }
         record_user_action_details(cse_operation=CseOperation.CLUSTER_CONVERT,
                                    cse_params=cse_params,
@@ -777,19 +719,10 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
         log_filename = None
         log_wire = str_to_bool(config['service'].get('log_wire'))
         if log_wire:
-            log_filename = 'cluster_convert_wire.log'
+            log_filename = 'cluster_convert.log'
 
-        client = Client(config['vcd']['host'],
-                        api_version=config['vcd']['api_version'],
-                        verify_ssl_certs=config['vcd']['verify'],
-                        log_file=log_filename,
-                        log_requests=log_wire,
-                        log_headers=log_wire,
-                        log_bodies=log_wire)
-        credentials = BasicLoginCredentials(config['vcd']['username'],
-                                            SYSTEM_ORG_NAME,
-                                            config['vcd']['password'])
-        client.set_credentials(credentials)
+        client, _ = _get_clients_from_config(config, log_filename, log_wire)
+
         msg = f"Connected to vCD as system administrator: " \
               f"{config['vcd']['host']}:{config['vcd']['port']}"
         console_message_printer.general(msg)
@@ -944,39 +877,32 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
             console_message_printer.general(
                 f"Successfully processed cluster '{cluster['name']}'")
 
-        if skip_wait_for_gc:
-            # Record telemetry data on successful completion
-            record_user_action(cse_operation=CseOperation.CLUSTER_CONVERT, telemetry_settings=config['service']['telemetry'])  # noqa: E501
-            return
+        if not skip_wait_for_gc:
+            while len(href_of_vms_to_verify) != 0:
+                console_message_printer.info(f"Waiting on guest customization to finish on {len(href_of_vms_to_verify)} vms.") # noqa: E501
+                to_remove = []
+                for href in href_of_vms_to_verify:
+                    vm = VM(client=client, href=href)
+                    gc_section = vm.get_guest_customization_section()
+                    admin_password_enabled = False
+                    if hasattr(gc_section, 'AdminPasswordEnabled'):
+                        admin_password_enabled = str_to_bool(gc_section.AdminPasswordEnabled) # noqa: E501
+                    admin_password = None
+                    if hasattr(gc_section, 'AdminPassword'):
+                        admin_password = gc_section.AdminPassword.text
 
-        while len(href_of_vms_to_verify) != 0:
-            console_message_printer.info(f"Waiting on guest customization to finish on {len(href_of_vms_to_verify)} vms.") # noqa: E501
-            to_remove = []
-            for href in href_of_vms_to_verify:
-                vm = VM(client=client, href=href)
-                gc_section = vm.get_guest_customization_section()
-                admin_password_enabled = False
-                if hasattr(gc_section, 'AdminPasswordEnabled'):
-                    admin_password_enabled = str_to_bool(gc_section.AdminPasswordEnabled) # noqa: E501
-                admin_password = None
-                if hasattr(gc_section, 'AdminPassword'):
-                    admin_password = gc_section.AdminPassword.text
+                    if admin_password_enabled and admin_password:
+                        to_remove.append(vm.href)
 
-                if admin_password_enabled and admin_password:
-                    to_remove.append(vm.href)
+                for href in to_remove:
+                    href_of_vms_to_verify.remove(href)
 
-            for href in to_remove:
-                href_of_vms_to_verify.remove(href)
+                time.sleep(5)
 
-            time.sleep(5)
+            console_message_printer.info("Finished Guest customization on all vms.") # noqa: E501
 
-        console_message_printer.info("Finished Guest customization on all vms.") # noqa: E501
-
-        # # Record telemetry data on successful completion
+        # Record telemetry data on successful completion
         record_user_action(cse_operation=CseOperation.CLUSTER_CONVERT, telemetry_settings=config['service']['telemetry'])  # noqa: E501
-    except cryptography.fernet.InvalidToken:
-        console_message_printer.error(CONFIG_DECRYPTION_ERROR_MSG)
-        sys.exit(1)
     except Exception as err:
         console_message_printer.error(str(err))
         # Record telemetry data on failed cluster convert
@@ -1020,35 +946,21 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                   display_option):
     """List CSE k8s templates."""
     console_message_printer = ConsoleMessagePrinter()
-
-    try:
-        # Not passing the console_message_printer, because we want to suppress
-        # the python version check messages from being printed onto console.
-        check_python_version()
-        requests.packages.urllib3.disable_warnings()
-    except Exception as err:
-        console_message_printer.error(str(err))
-        sys.exit(1)
-
-    if skip_config_decryption:
-        password = None
-    else:
-        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
-            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
-            color='green', hide_input=True)
+    # Not passing the console_message_printer, because we want to suppress
+    # the python version check messages from being printed onto console.
+    check_python_version()
 
     try:
         # We don't want to validate config file, because server startup or
         # installation is not being performed. If values in config file are
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
-        if skip_config_decryption:
-            with open(config_file_path) as config_file:
-                config_dict = yaml.safe_load(config_file) or {}
-        else:
-            console_message_printer.info(f"Decrypting '{config_file_path}'")
-            config_dict = yaml.safe_load(
-                get_decrypted_file_contents(config_file_path, password)) or {}
+        config_dict = _construct_config_dict(
+            config_file_path=config_file_path,
+            pks_config_file_path=None,
+            skip_config_decryption=skip_config_decryption,
+            msg_update_callback=console_message_printer,
+            validate=False)
 
         # Store telemetry instance id, url and collector id in config
         store_telemetry_settings(config_dict)
@@ -1063,19 +975,8 @@ def list_template(ctx, config_file_path, skip_config_decryption,
         if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL):
             client = None
             try:
-                # To suppress the warning message that pyvcloud prints if
-                # ssl_cert verification is skipped.
-                if not config_dict['vcd']['verify']:
-                    requests.packages.urllib3.disable_warnings()
-
-                client = Client(config_dict['vcd']['host'],
-                                api_version=config_dict['vcd']['api_version'],
-                                verify_ssl_certs=config_dict['vcd']['verify'])
-                credentials = BasicLoginCredentials(
-                    config_dict['vcd']['username'],
-                    SYSTEM_ORG_NAME,
-                    config_dict['vcd']['password'])
-                client.set_credentials(credentials)
+                client, _ = _get_clients_from_config(
+                    config_dict, log_filename=None, log_wire=False)
 
                 org_name = config_dict['broker']['org']
                 catalog_name = config_dict['broker']['catalog']
@@ -1118,7 +1019,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
         if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_REMOTE):
             rtm = RemoteTemplateManager(
                 remote_template_cookbook_url=config_dict['broker']['remote_template_cookbook_url'], # noqa: E501
-                msg_update_callback=ConsoleMessagePrinter())
+                msg_update_callback=console_message_printer)
             remote_template_cookbook = rtm.get_remote_template_cookbook()
             remote_template_definitions = remote_template_cookbook['templates']
             for definition in remote_template_definitions:
@@ -1174,15 +1075,16 @@ def list_template(ctx, config_file_path, skip_config_decryption,
         stdout(result, ctx, sort_headers=False)
         record_user_action(cse_operation=CseOperation.TEMPLATE_LIST,
                            telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
-    except cryptography.fernet.InvalidToken:
-        console_message_printer.error(CONFIG_DECRYPTION_ERROR_MSG)
-        sys.exit(1)
     except Exception as err:
         console_message_printer.error(str(err))
+        telemetry_settings = None
+        if config_dict and config_dict.get('service') and \
+                config_dict['service'].get('telemetry'):
+            telemetry_settings = config_dict['service']['telemetry']
         record_user_action(cse_operation=CseOperation.TEMPLATE_LIST,
                            status=OperationStatus.FAILED,
                            message=str(err),
-                           telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
+                           telemetry_settings=telemetry_settings)
         sys.exit(1)
 
 
@@ -1240,12 +1142,7 @@ def install_cse_template(ctx, template_name, template_revision,
     all listed templates.
     """
     console_message_printer = ConsoleMessagePrinter()
-
-    try:
-        check_python_version(ConsoleMessagePrinter())
-    except Exception as err:
-        console_message_printer.error(str(err))
-        sys.exit(1)
+    check_python_version(console_message_printer)
 
     if retain_temp_vapp and not ssh_key_file:
         console_message_printer.error(
@@ -1277,17 +1174,13 @@ def install_cse_template(ctx, template_name, template_revision,
             decryption_password=password,
             msg_update_callback=console_message_printer)
     except AmqpConnectionError:
-        console_message_printer.error(AMQP_ERROR_MSG)
-        raise
+        raise Exception(AMQP_ERROR_MSG)
     except requests.exceptions.ConnectionError as err:
-        console_message_printer.error(f"Cannot connect to {err.request.url}.")
-        sys.exit(1)
+        raise Exception(f"Cannot connect to {err.request.url}.")
     except vim.fault.InvalidLogin:
-        console_message_printer.error(VCENTER_LOGIN_ERROR_MSG)
-        sys.exit(1)
+        raise Exception(VCENTER_LOGIN_ERROR_MSG)
     except cryptography.fernet.InvalidToken:
-        console_message_printer.error(CONFIG_DECRYPTION_ERROR_MSG)
-        sys.exit(1)
+        raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
     except Exception as err:
         console_message_printer.error(str(err))
         sys.exit(1)
@@ -1295,7 +1188,7 @@ def install_cse_template(ctx, template_name, template_revision,
 
 @uiplugin.command('register', short_help="Register UI plugin with vCD.")
 @click.pass_context
-@click.argument('plugin_filepath',
+@click.argument('plugin_file_path',
                 metavar='PLUGIN_FILE_PATH',
                 type=click.Path(exists=True))
 @click.option(
@@ -1313,23 +1206,11 @@ def install_cse_template(ctx, template_name, template_revision,
     '--skip-config-decryption',
     is_flag=True,
     help='Skip decryption of CSE config file')
-def register_ui_plugin(ctx, plugin_filepath, config_file_path,
+def register_ui_plugin(ctx, plugin_file_path, config_file_path,
                        skip_config_decryption):
     """."""
     console_message_printer = ConsoleMessagePrinter()
-
-    try:
-        check_python_version()
-    except Exception as err:
-        console_message_printer.error(str(err))
-        sys.exit(1)
-
-    if skip_config_decryption:
-        password = None
-    else:
-        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
-            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
-            color='green', hide_input=True)
+    check_python_version(console_message_printer)
 
     client = None
     tempdir = None
@@ -1338,21 +1219,15 @@ def register_ui_plugin(ctx, plugin_filepath, config_file_path,
         # installation is not being performed. If values in config file are
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
-        if skip_config_decryption:
-            with open(config_file_path) as config_file:
-                config_dict = yaml.safe_load(config_file) or {}
-        else:
-            console_message_printer.info(f"Decrypting '{config_file_path}'")
-            config_dict = yaml.safe_load(
-                get_decrypted_file_contents(config_file_path, password)) or {}
-
-        # To suppress the warning message that pyvcloud prints if
-        # ssl_cert verification is skipped.
-        if not config_dict['vcd']['verify']:
-            requests.packages.urllib3.disable_warnings()
+        config_dict = _construct_config_dict(
+            config_file_path=config_file_path,
+            pks_config_file_path=None,
+            skip_config_decryption=skip_config_decryption,
+            msg_update_callback=console_message_printer,
+            validate=False)
 
         tempdir = tempfile.mkdtemp(dir='.')
-        plugin_zip = ZipFile(plugin_filepath, 'r')
+        plugin_zip = ZipFile(plugin_file_path, 'r')
         plugin_zip.extractall(path=tempdir)
         plugin_zip.close()
         manifest_file = None
@@ -1377,27 +1252,8 @@ def register_ui_plugin(ctx, plugin_filepath, config_file_path,
             'enabled': True
         }
 
-        client = Client(config_dict['vcd']['host'],
-                        api_version=config_dict['vcd']['api_version'],
-                        verify_ssl_certs=config_dict['vcd']['verify'])
-        credentials = BasicLoginCredentials(
-            config_dict['vcd']['username'],
-            SYSTEM_ORG_NAME,
-            config_dict['vcd']['password'])
-        client.set_credentials(credentials)
-
-        token = client.get_access_token()
-        is_jwt_token = True
-        if not token:
-            token = client.get_xvcloud_authorization_token()
-            is_jwt_token = False
-
-        cloudapi_client = CloudApiClient(
-            base_url=client.get_cloudapi_uri(),
-            token=token,
-            is_jwt_token=is_jwt_token,
-            api_version=client.get_api_version(),
-            verify_ssl=client._verify_ssl_certs)
+        client, cloudapi_client = _get_clients_from_config(
+            config_dict, log_filename=None, log_wire=False)
 
         console_message_printer.info("Registering plugin with vCD.")
         try:
@@ -1409,14 +1265,16 @@ def register_ui_plugin(ctx, plugin_filepath, config_file_path,
         except requests.exceptions.HTTPError as err:
             if err.response.status_code == requests.codes.bad_request and \
                     'VCD_50012' in err.response.text:
-                raise Exception('Plugin is already registered.')
+                raise Exception("Plugin is already registered. Please "
+                                "de-register it first if you wish to register "
+                                "it again.")
             else:
                 raise
 
         console_message_printer.info("Preparing to upload plugin to vCD.")
         transferRequest = {
-            "fileName": os.path.split(plugin_filepath)[1],
-            "size": os.stat(plugin_filepath).st_size
+            "fileName": os.path.split(plugin_file_path)[1],
+            "size": os.stat(plugin_file_path).st_size
         }
         response_body = cloudapi_client.do_request(
             method=RequestMethod.POST,
@@ -1431,12 +1289,11 @@ def register_ui_plugin(ctx, plugin_filepath, config_file_path,
         tokens = response_headers.get("Link").split(";")
         for token in tokens:
             if token.startswith("<"):
-                transfer_url = token[1:-2] # get rid of the < and >
+                transfer_url = token[1:-1] # get rid of the < and >
             if token.startswith("type"):
                 fragments = token.split("\"")
                 content_type = fragments[1]
-        transfer_url = response_headers.get("Link").split('>')[0][1:]
-        file_content = open(plugin_filepath, 'rb')
+        file_content = open(plugin_file_path, 'rb')
         cloudapi_client.do_request(
             method=RequestMethod.PUT,
             resource_url_absolute_path=transfer_url,
@@ -1456,6 +1313,7 @@ def register_ui_plugin(ctx, plugin_filepath, config_file_path,
         console_message_printer.general("Plugin registration complete.")
     except Exception as err:
         console_message_printer.error(str(err))
+        sys.exit(1)
     finally:
         if client:
             client.logout()
@@ -1485,19 +1343,7 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
                          skip_config_decryption):
     """."""
     console_message_printer = ConsoleMessagePrinter()
-
-    try:
-        check_python_version(console_message_printer)
-    except Exception as err:
-        console_message_printer.error(str(err))
-        sys.exit(1)
-
-    if skip_config_decryption:
-        password = None
-    else:
-        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
-            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
-            color='green', hide_input=True)
+    check_python_version(console_message_printer)
 
     client = None
     try:
@@ -1505,40 +1351,15 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
         # installation is not being performed. If values in config file are
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
-        if skip_config_decryption:
-            with open(config_file_path) as config_file:
-                config_dict = yaml.safe_load(config_file) or {}
-        else:
-            console_message_printer.info(f"Decrypting '{config_file_path}'")
-            config_dict = yaml.safe_load(
-                get_decrypted_file_contents(config_file_path, password)) or {}
+        config_dict = _construct_config_dict(
+            config_file_path=config_file_path,
+            pks_config_file_path=None,
+            skip_config_decryption=skip_config_decryption,
+            msg_update_callback=console_message_printer,
+            validate=False)
 
-        # To suppress the warning message that pyvcloud prints if
-        # ssl_cert verification is skipped.
-        if not config_dict['vcd']['verify']:
-            requests.packages.urllib3.disable_warnings()
-
-        client = Client(config_dict['vcd']['host'],
-                        api_version=config_dict['vcd']['api_version'],
-                        verify_ssl_certs=config_dict['vcd']['verify'])
-        credentials = BasicLoginCredentials(
-            config_dict['vcd']['username'],
-            SYSTEM_ORG_NAME,
-            config_dict['vcd']['password'])
-        client.set_credentials(credentials)
-
-        token = client.get_access_token()
-        is_jwt_token = True
-        if not token:
-            token = client.get_xvcloud_authorization_token()
-            is_jwt_token = False
-
-        cloudapi_client = CloudApiClient(
-            base_url=client.get_cloudapi_uri(),
-            token=token,
-            is_jwt_token=is_jwt_token,
-            api_version=client.get_api_version(),
-            verify_ssl=client._verify_ssl_certs)
+        client, cloudapi_client = _get_clients_from_config(
+            config_dict, log_filename=None, log_wire=False)
 
         cloudapi_client.do_request(
             method=RequestMethod.DELETE,
@@ -1546,9 +1367,13 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
 
         console_message_printer.general(
             f"Removed plugin with id : {plugin_id}.")
+    except Exception as err:
+        console_message_printer.error(str(err))
+        sys.exit(1)
     finally:
         if client:
             client.logout()
+
 
 @uiplugin.command('list',
                   short_help="List all UI plugins registered with vCD.")
@@ -1571,21 +1396,9 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
 def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
     """."""
     console_message_printer = ConsoleMessagePrinter()
-
-    try:
-        # Suppress the python version check message from being printed on
-        # console
-        check_python_version()
-    except Exception as err:
-        console_message_printer.error(str(err))
-        sys.exit(1)
-
-    if skip_config_decryption:
-        password = None
-    else:
-        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
-            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
-            color='green', hide_input=True)
+    # Suppress the python version check message from being printed on
+    # console
+    check_python_version()
 
     client = None
     try:
@@ -1593,40 +1406,15 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
         # installation is not being performed. If values in config file are
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
-        if skip_config_decryption:
-            with open(config_file_path) as config_file:
-                config_dict = yaml.safe_load(config_file) or {}
-        else:
-            console_message_printer.info(f"Decrypting '{config_file_path}'")
-            config_dict = yaml.safe_load(
-                get_decrypted_file_contents(config_file_path, password)) or {}
+        config_dict = _construct_config_dict(
+            config_file_path=config_file_path,
+            pks_config_file_path=None,
+            skip_config_decryption=skip_config_decryption,
+            msg_update_callback=console_message_printer,
+            validate=False)
 
-        # To suppress the warning message that pyvcloud prints if
-        # ssl_cert verification is skipped.
-        if not config_dict['vcd']['verify']:
-            requests.packages.urllib3.disable_warnings()
-
-        client = Client(config_dict['vcd']['host'],
-                        api_version=config_dict['vcd']['api_version'],
-                        verify_ssl_certs=config_dict['vcd']['verify'])
-        credentials = BasicLoginCredentials(
-            config_dict['vcd']['username'],
-            SYSTEM_ORG_NAME,
-            config_dict['vcd']['password'])
-        client.set_credentials(credentials)
-
-        token = client.get_access_token()
-        is_jwt_token = True
-        if not token:
-            token = client.get_xvcloud_authorization_token()
-            is_jwt_token = False
-
-        cloudapi_client = CloudApiClient(
-            base_url=client.get_cloudapi_uri(),
-            token=token,
-            is_jwt_token=is_jwt_token,
-            api_version=client.get_api_version(),
-            verify_ssl=client._verify_ssl_certs)
+        client, cloudapi_client = _get_clients_from_config(
+            config_dict, log_filename=None, log_wire=False)
 
         result = []
         response_body = cloudapi_client.do_request(
@@ -1642,9 +1430,93 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
                 result.append(ui_plugin)
 
         stdout(result, ctx, sort_headers=False, show_id=True)
+    except Exception as err:
+        console_message_printer.error(str(err))
+        sys.exit(1)
     finally:
         if client:
             client.logout()
+
+
+def _construct_config_dict(config_file_path,
+                           pks_config_file_path,
+                           skip_config_decryption,
+                           msg_update_callback,
+                           validate=True):
+    if skip_config_decryption:
+        password = None
+    else:
+        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+            color='green', hide_input=True)
+
+    try:
+        if validate:
+            config_dict = get_validated_config(
+                config_file_path, pks_config_file_name=pks_config_file_path,
+                skip_config_decryption=skip_config_decryption,
+                decryption_password=password,
+                msg_update_callback=msg_update_callback)
+        else:
+            if skip_config_decryption:
+                with open(config_file_path) as config_file:
+                    config_dict = yaml.safe_load(config_file) or {}
+            else:
+                if msg_update_callback:
+                    msg_update_callback.info(
+                        f"Decrypting '{config_file_path}'")
+                config_dict = yaml.safe_load(
+                    get_decrypted_file_contents(
+                        config_file_path, password)) or {}
+
+        # To suppress the warning message that pyvcloud prints if
+        # ssl_cert verification is skipped.
+        if config_dict and config_dict.get('vcd') and \
+                not config_dict['vcd'].get('verify'):
+            requests.packages.urllib3.disable_warnings()
+
+        return config_dict
+    except AmqpConnectionError:
+        raise Exception(AMQP_ERROR_MSG)
+    except requests.exceptions.ConnectionError as err:
+        raise Exception(f"Cannot connect to {err.request.url}.")
+    except cryptography.fernet.InvalidToken:
+        raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
+    except vim.fault.InvalidLogin:
+        raise Exception(VCENTER_LOGIN_ERROR_MSG)
+
+
+def _get_clients_from_config(config, log_filename, log_wire):
+    client = Client(config['vcd']['host'],
+                    api_version=config['vcd']['api_version'],
+                    verify_ssl_certs=config['vcd']['verify'],
+                    log_file=log_filename,
+                    log_requests=log_wire,
+                    log_headers=log_wire,
+                    log_bodies=log_wire)
+    credentials = BasicLoginCredentials(config['vcd']['username'],
+                                        SYSTEM_ORG_NAME,
+                                        config['vcd']['password'])
+    client.set_credentials(credentials)
+
+    token = client.get_access_token()
+    is_jwt_token = True
+    if not token:
+        token = client.get_xvcloud_authorization_token()
+        is_jwt_token = False
+
+    cloudapi_client = CloudApiClient(
+        base_url=client.get_cloudapi_uri(),
+        token=token,
+        is_jwt_token=is_jwt_token,
+        api_version=client.get_api_version(),
+        verify_ssl=client._verify_ssl_certs,
+        logger_instance=None,  # TODO: Fix cloud api logging!
+        log_requests=log_wire,
+        log_headers=log_wire,
+        log_body=log_wire)
+
+    return (client, cloudapi_client)
 
 
 if __name__ == '__main__':
