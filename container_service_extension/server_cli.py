@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import json
+import logging
 import os
 import shutil
 import sys
@@ -37,6 +38,7 @@ from container_service_extension.exceptions import AmqpConnectionError
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.remote_template_manager import RemoteTemplateManager # noqa: E501
 from container_service_extension.sample_generator import generate_sample_config
+from container_service_extension.security import RedactingFilter
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import RemoteTemplateKey
@@ -719,7 +721,7 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
         log_filename = None
         log_wire = str_to_bool(config['service'].get('log_wire'))
         if log_wire:
-            log_filename = 'cluster_convert.log'
+            log_filename = 'cse_server_cli.log'
 
         client, _ = _get_clients_from_config(config, log_filename, log_wire)
 
@@ -975,8 +977,13 @@ def list_template(ctx, config_file_path, skip_config_decryption,
         if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL):
             client = None
             try:
+                log_filename = None
+                log_wire = str_to_bool(config_dict['service'].get('log_wire'))
+                if log_wire:
+                    log_filename = 'cse_server_cli.log'
+
                 client, _ = _get_clients_from_config(
-                    config_dict, log_filename=None, log_wire=False)
+                    config_dict, log_filename=log_filename, log_wire=log_wire)
 
                 org_name = config_dict['broker']['org']
                 catalog_name = config_dict['broker']['catalog']
@@ -1252,8 +1259,13 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
             'enabled': True
         }
 
+        log_filename = None
+        log_wire = str_to_bool(config_dict['service'].get('log_wire'))
+        if log_wire:
+            log_filename = 'cse_server_cli.log'
+
         client, cloudapi_client = _get_clients_from_config(
-            config_dict, log_filename=None, log_wire=False)
+            config_dict, log_filename=log_filename, log_wire=log_wire)
 
         console_message_printer.info("Registering plugin with vCD.")
         try:
@@ -1358,8 +1370,13 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
             msg_update_callback=console_message_printer,
             validate=False)
 
+        log_filename = None
+        log_wire = str_to_bool(config_dict['service'].get('log_wire'))
+        if log_wire:
+            log_filename = 'cse_server_cli.log'
+
         client, cloudapi_client = _get_clients_from_config(
-            config_dict, log_filename=None, log_wire=False)
+            config_dict, log_filename=log_filename, log_wire=log_wire)
 
         cloudapi_client.do_request(
             method=RequestMethod.DELETE,
@@ -1413,8 +1430,13 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
             msg_update_callback=console_message_printer,
             validate=False)
 
+        log_filename = None
+        log_wire = str_to_bool(config_dict['service'].get('log_wire'))
+        if log_wire:
+            log_filename = 'cse_server_cli.log'
+
         client, cloudapi_client = _get_clients_from_config(
-            config_dict, log_filename=None, log_wire=False)
+            config_dict, log_filename=log_filename, log_wire=log_wire)
 
         result = []
         response_body = cloudapi_client.do_request(
@@ -1505,13 +1527,27 @@ def _get_clients_from_config(config, log_filename, log_wire):
         token = client.get_xvcloud_authorization_token()
         is_jwt_token = False
 
+    # TODO : Remove this later
+    LOGGER=None
+    if log_filename:
+        LOGGER = logging.getLogger('CSE server CLI cloudapi request logger')
+        LOGGER.addFilter(RedactingFilter())
+        LOGGER.setLevel(logging.DEBUG)
+        file_handler = logging.FileHandler(f"cloudapi.{log_filename}")
+        DEBUG_LOG_FORMATTER = logging.Formatter(
+            fmt="%(asctime)s | %(module)s:%(lineno)s - %(funcName)s | %(levelname)s :: %(message)s", # noqa : E501
+            datefmt='%y-%m-%d %H:%M:%S')
+        file_handler.setFormatter(DEBUG_LOG_FORMATTER)
+        LOGGER.addHandler(file_handler)
+    # end TODO
+
     cloudapi_client = CloudApiClient(
         base_url=client.get_cloudapi_uri(),
         token=token,
         is_jwt_token=is_jwt_token,
         api_version=client.get_api_version(),
         verify_ssl=client._verify_ssl_certs,
-        logger_instance=None,  # TODO: Fix cloud api logging!
+        logger_instance=LOGGER,
         log_requests=log_wire,
         log_headers=log_wire,
         log_body=log_wire)
