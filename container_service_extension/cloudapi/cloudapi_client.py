@@ -39,8 +39,8 @@ class CloudApiClient(object):
         self._log_body = log_body
         self._last_response = None
 
-    def get_base_uri(self):
-        return self._base_uri
+    def get_base_url(self):
+        return self._base_url
 
     def get_last_response(self):
         return self._last_response
@@ -62,13 +62,15 @@ class CloudApiClient(object):
 
         :param shared_constants.RequestMethod method: One of the HTTP verb
             defined in the enum.
-        :param str cloudapi_version:
+        :param str cloudapi_version: cloudapi version that's part of the url
+            e.g. 1.0.0 in /cloudapi/1.0.0/vdcComputePolicies
         :param str resource_url_relative_path: part of the url that identifies
             just the resource (the host and the common /cloudapi/ should be
             omitted). E.g .vdcComputePolicies,
             vdcComputePolicies/urn:vcloud:vdcComputePolicy:ac313b07-21df-45d2
             etc.
-        :param str resource_url_absolute_path:
+        :param str resource_url_absolute_path: absolute path for a resource,
+            e.g. https://<vcd fqdn>/transfer/{id}/{file name}
         :param dict payload: JSON payload for the REST call.
 
         :return: body of the response text (JSON) in form of a dictionary.
