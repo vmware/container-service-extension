@@ -1523,7 +1523,7 @@ def _get_clients_from_config(config, log_filename, log_wire):
         is_jwt_token = False
 
     # TODO : Remove this later
-    LOGGER=None
+    LOGGER = None
     if log_filename:
         LOGGER = logging.getLogger('CSE server CLI cloudapi request logger')
         LOGGER.addFilter(RedactingFilter())
