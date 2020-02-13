@@ -48,8 +48,6 @@ class CloudApiClient(object):
     def get_last_response_headers(self):
         if self._last_response:
             return self._last_response.headers
-        else:
-            return None
 
     def do_request(self,
                    method,

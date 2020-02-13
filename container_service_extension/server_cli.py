@@ -355,7 +355,7 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
 
     config_dict = None
     try:
-        config_dict = _construct_config_dict(
+        config_dict = _get_config_dict(
             config_file_path=config_file_path,
             pks_config_file_path=pks_config_file_path,
             skip_config_decryption=skip_config_decryption,
@@ -523,9 +523,8 @@ def install(ctx, config_file_path, pks_config_file_path,
     if ssh_key_file is not None:
         ssh_key = ssh_key_file.read()
 
-    if skip_config_decryption:
-        password = None
-    else:
+    password = None
+    if not skip_config_decryption:
         password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
@@ -587,9 +586,8 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
-    if skip_config_decryption:
-        password = None
-    else:
+    password = None
+    if not skip_config_decryption:
         password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
@@ -629,7 +627,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
         sys.exit(1)
     finally:
         if not cse_run_complete:
-            config_dict = _construct_config_dict(
+            config_dict = _get_config_dict(
                 config_file_path=config_file_path,
                 pks_config_file_path=None,
                 skip_config_decryption=skip_config_decryption,
@@ -700,7 +698,7 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
 
     client = None
     try:
-        config = _construct_config_dict(
+        config = _get_config_dict(
             config_file_path=config_file_path,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
@@ -957,7 +955,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
         # installation is not being performed. If values in config file are
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
-        config_dict = _construct_config_dict(
+        config_dict = _get_config_dict(
             config_file_path=config_file_path,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
@@ -1158,9 +1156,8 @@ def install_cse_template(ctx, template_name, template_revision,
             "inaccessible")
         sys.exit(1)
 
-    if skip_config_decryption:
-        password = None
-    else:
+    password = None
+    if not skip_config_decryption:
         password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
@@ -1226,7 +1223,7 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
         # installation is not being performed. If values in config file are
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
-        config_dict = _construct_config_dict(
+        config_dict = _get_config_dict(
             config_file_path=config_file_path,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
@@ -1363,7 +1360,7 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
         # installation is not being performed. If values in config file are
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
-        config_dict = _construct_config_dict(
+        config_dict = _get_config_dict(
             config_file_path=config_file_path,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
@@ -1423,7 +1420,7 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
         # installation is not being performed. If values in config file are
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
-        config_dict = _construct_config_dict(
+        config_dict = _get_config_dict(
             config_file_path=config_file_path,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
@@ -1460,14 +1457,13 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
             client.logout()
 
 
-def _construct_config_dict(config_file_path,
-                           pks_config_file_path,
-                           skip_config_decryption,
-                           msg_update_callback,
-                           validate=True):
-    if skip_config_decryption:
-        password = None
-    else:
+def _get_config_dict(config_file_path,
+                     pks_config_file_path,
+                     skip_config_decryption,
+                     msg_update_callback,
+                     validate=True):
+    password = None
+    if not skip_config_decryption:
         password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
