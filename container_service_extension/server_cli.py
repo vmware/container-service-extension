@@ -1277,8 +1277,7 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
                 raise Exception("Plugin is already registered. Please "
                                 "de-register it first if you wish to register "
                                 "it again.")
-            else:
-                raise
+            raise
 
         console_message_printer.info("Preparing to upload plugin to vCD.")
         transferRequest = {
