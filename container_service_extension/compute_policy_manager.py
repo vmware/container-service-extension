@@ -13,6 +13,7 @@ from pyvcloud.vcd.vm import VM
 import requests
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
+from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0 # noqa: E501
 from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.cloudapi.constants import CSE_COMPUTE_POLICY_PREFIX # noqa: E501
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
@@ -59,21 +60,22 @@ class ComputePolicyManager:
             is_jwt_token = False
 
         self._session = self._vcd_client.get_vcloud_session()
-        cloudapi_href = self._vcd_client.get_cloudapi_uri()
 
         try:
             self._cloudapi_client = CloudApiClient(
-                base_url=cloudapi_href,
+                base_url=self._vcd_client.get_cloudapi_uri(),
                 token=token,
                 is_jwt_token=is_jwt_token,
+                api_version=self._vcd_client.get_api_version(),
                 verify_ssl=self._vcd_client._verify_ssl_certs)
             # Since the /cloudapi endpoint was added before the compute policy
             # endpoint. Mere presence of the /cloudapi uri is not enough, we
             # need to make sure that this cloud api client will be of actual
             # use to us.
             self._cloudapi_client.do_request(
-                RequestMethod.GET,
-                f"{CloudApiResource.VDC_COMPUTE_POLICIES}")
+                method=RequestMethod.GET,
+                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+                resource_url_relative_path=f"{CloudApiResource.VDC_COMPUTE_POLICIES}") # noqa: E501
         except requests.exceptions.HTTPError as err:
             LOGGER.error(err)
             raise OperationNotSupportedException(
@@ -91,21 +93,22 @@ class ComputePolicyManager:
         :rtype: Generator[Dict, None, None]
         """
         # TODO we can make this function take in filter query parameters
-        page_num = 1
-        # without the &sortAsc parameter, vCD returns unpredictable results
-        response_body = self._cloudapi_client.do_request(
-            RequestMethod.GET,
-            f"{CloudApiResource.VDC_COMPUTE_POLICIES}?page={page_num}&sortAsc=name") # noqa: E501
-        while len(response_body['values']) > 0:
-            for policy in response_body['values']:
-                cp_name = policy['name']
-                policy['display_name'] = self._get_policy_display_name(cp_name)
-                yield policy
-
+        page_num = 0
+        while True:
             page_num += 1
+            # without the &sortAsc parameter, vCD returns unpredictable results
             response_body = self._cloudapi_client.do_request(
-                RequestMethod.GET,
-                f"{CloudApiResource.VDC_COMPUTE_POLICIES}?page={page_num}&sortAsc=name") # noqa: E501
+                method=RequestMethod.GET,
+                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+                resource_url_relative_path=f"{CloudApiResource.VDC_COMPUTE_POLICIES}?page={page_num}&sortAsc=name") # noqa: E501
+
+            if len(response_body['values']) > 0:
+                for policy in response_body['values']:
+                    cp_name = policy['name']
+                    policy['display_name'] = self._get_policy_display_name(cp_name) # noqa: E501
+                    yield policy
+            else:
+                break
 
     def get_policy(self, policy_name):
         """Get the compute policy information for the given policy name.
@@ -145,10 +148,13 @@ class ComputePolicyManager:
         policy_info['name'] = self._get_cse_policy_name(policy_name)
         if description:
             policy_info['description'] = description
+
         created_policy = self._cloudapi_client.do_request(
-            RequestMethod.POST,
+            method=RequestMethod.POST,
+            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=CloudApiResource.VDC_COMPUTE_POLICIES,
             payload=policy_info)
+
         created_policy['display_name'] = self._get_policy_display_name(
             created_policy['name'])
         created_policy['href'] = self._get_policy_href(created_policy['id'])
@@ -167,7 +173,8 @@ class ComputePolicyManager:
         resource_url_relative_path = \
             f"{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_info['id']}"
         return self._cloudapi_client.do_request(
-            RequestMethod.DELETE,
+            method=RequestMethod.DELETE,
+            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=resource_url_relative_path)
 
     def update_policy(self, policy_name, new_policy_info):
@@ -186,14 +193,17 @@ class ComputePolicyManager:
             payload = {}
             payload['name'] = \
                 self._get_cse_policy_name(new_policy_info['name'])
-            if new_policy_info.get('description'):
+            if 'description' in new_policy_info:
                 payload['description'] = new_policy_info['description']
             resource_url_relative_path = \
                 f"{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_info['id']}"
+
             updated_policy = self._cloudapi_client.do_request(
-                RequestMethod.PUT,
+                method=RequestMethod.PUT,
+                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
                 resource_url_relative_path=resource_url_relative_path,
                 payload=payload)
+
             updated_policy['display_name'] = \
                 self._get_policy_display_name(updated_policy['name'])
             updated_policy['href'] = policy_info['href']
@@ -336,8 +346,7 @@ class ComputePolicyManager:
         :return: policy href
         :rtype: str
         """
-        return f"{self._cloudapi_client.get_versioned_url()}" \
-               f"{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_id}"
+        return f"{self._cloudapi_client.get_base_url()}{CLOUDAPI_VERSION_1_0_0}/{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_id}" # noqa: E501
 
     def remove_compute_policy_from_vdc(self, ovdc_id, compute_policy_href,
                                        remove_compute_policy_from_vms=False):

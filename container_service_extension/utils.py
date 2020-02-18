@@ -134,17 +134,22 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
 def check_python_version(msg_update_callback=None):
     """Ensure that user's Python version >= 3.7.3.
 
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
-        that writes messages onto console.
+    If the check fails, will exit the python interpretor with error status.
 
-    :raises Exception: if user's Python version < 3.7.3
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
+        that sends back error messages.
     """
-    if msg_update_callback:
-        msg_update_callback.general_no_color(
-            "Required Python version: >= 3.7.3\n"
-            f"Installed Python version: {sys.version}")
-    if sys.version_info < (3, 7, 3):
-        raise Exception("Python version should be 3.7.3 or greater")
+    try:
+        if msg_update_callback:
+            msg_update_callback.general_no_color(
+                "Required Python version: >= 3.7.3\n"
+                f"Installed Python version: {sys.version}")
+        if sys.version_info < (3, 7, 3):
+            raise Exception("Python version should be 3.7.3 or greater")
+    except Exception as err:
+        if msg_update_callback:
+            msg_update_callback.error(str(err))
+        sys.exit(1)
 
 
 def str_to_bool(s):
