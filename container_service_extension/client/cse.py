@@ -904,8 +904,8 @@ def list_nodes(ctx, name, org, vdc):
         cluster = Cluster(client)
         cluster_info = cluster.get_cluster_info(name, org=org, vdc=vdc)
         if cluster_info.get(K8S_PROVIDER_KEY) != K8sProvider.NATIVE:
-            raise Exception('Node commands are not supported by non native '
-                            'clusters.')
+            raise Exception("'node list' operation is not supported by non "
+                            "native clusters.")
         all_nodes = cluster_info['master_nodes'] + cluster_info['nodes']
         stdout(all_nodes, ctx, show_id=True)
     except Exception as e:
