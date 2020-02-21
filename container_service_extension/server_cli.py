@@ -602,16 +602,6 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
                           decryption_password=password)
         service.run(msg_update_callback=console_message_printer)
         cse_run_complete = True
-
-        # Record telemetry on user action and details of operation.
-        cse_params = {
-            PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),
-            PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(pks_config_file_path), # noqa: E501
-            PayloadKey.WAS_INSTALLATION_CHECK_SKIPPED: bool(skip_check)
-        }
-        record_user_action_details(cse_operation=CseOperation.SERVICE_RUN,
-                                   cse_params=cse_params)
-        record_user_action(cse_operation=CseOperation.SERVICE_RUN)
     except AmqpConnectionError:
         raise Exception(AMQP_ERROR_MSG)
     except requests.exceptions.ConnectionError as err:
