@@ -39,6 +39,12 @@ from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import ServerAction
+from container_service_extension.telemetry.constants import CseOperation
+from container_service_extension.telemetry.constants import PayloadKey
+from container_service_extension.telemetry.telemetry_handler \
+    import record_user_action
+from container_service_extension.telemetry.telemetry_handler import \
+    record_user_action_details
 from container_service_extension.template_rule import TemplateRule
 import container_service_extension.utils as utils
 from container_service_extension.vsphere_utils import populate_vsphere_list
@@ -268,6 +274,16 @@ class Service(object, metaclass=Singleton):
         if msg_update_callback:
             msg_update_callback.general_no_color(message)
         LOGGER.info(message)
+
+        # Record telemetry on user action and details of operation.
+        cse_params = {
+            PayloadKey.WAS_DECRYPTION_SKIPPED: bool(self.skip_config_decryption), # noqa: E501
+            PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(self.pks_config_file),  # noqa: E501
+            PayloadKey.WAS_INSTALLATION_CHECK_SKIPPED: bool(self.should_check_config)  # noqa: E501
+        }
+        record_user_action_details(cse_operation=CseOperation.SERVICE_RUN,
+                                   cse_params=cse_params)
+        record_user_action(cse_operation=CseOperation.SERVICE_RUN)
 
         while True:
             try:

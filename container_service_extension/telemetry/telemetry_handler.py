@@ -13,6 +13,7 @@ from container_service_extension.telemetry.payload_generator \
     import get_payload_for_user_action
 from container_service_extension.telemetry.vac_client import VacClient
 from container_service_extension.utils import get_server_runtime_config
+from container_service_extension.utils import run_async
 
 # Payload generator function mappings for CSE operations
 # Each command has its own payload generator
@@ -119,6 +120,7 @@ def record_user_action_details(cse_operation, cse_params,
             LOGGER.warning(f"Error in recording CSE operation details :{str(err)}")  # noqa: E501
 
 
+@run_async
 def _send_data_to_telemetry_server(payload, telemetry_settings):
     """Send the given payload to telemetry server.
 

@@ -63,7 +63,7 @@ class VacClient(object):
         try:
             response = self._do_request(RequestMethod.POST, payload)
         except RequestException as err:
-            msg = f"{err.response.text}.{SEND_FAILED_MSG}:{payload}"
+            msg = f"{err}.{SEND_FAILED_MSG}:{payload}"
             self.LOGGER.error(msg)
         except Exception as err:
             msg = f"{err}.{SEND_FAILED_MSG}:{payload}"
