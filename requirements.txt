@@ -1,8 +1,8 @@
 cachetools >= 2.0.1
 humanfriendly >= 4.8
 pika >= 0.11.2, < 1.0.0
-pyvcloud >= 21.0.1
-vcd-cli >= 22.0.2
+pyvcloud >= 22.0.0, < 23.0.0
+vcd-cli >= 23.0.0, < 24.0.0
 vsphere-guest-run >= 0.0.7
 pyvmomi >= 6.7.0
 cryptography >= 2.8
