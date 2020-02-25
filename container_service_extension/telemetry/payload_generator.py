@@ -32,6 +32,25 @@ def get_payload_for_user_action(cse_operation, status, message=None):
     }
 
 
+def get_payload_for_cluster_convert(params):
+    """Construct telemetry payload of cluster convert operation.
+
+    :param params: parameters provided to the operation
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.CLUSTER_CONVERT.telemetry_table,
+        PayloadKey.WAS_DECRYPTION_SKIPPED: params.get(PayloadKey.WAS_DECRYPTION_SKIPPED),  # noqa: E501
+        PayloadKey.WAS_GC_WAIT_SKIPPED: params.get(PayloadKey.WAS_GC_WAIT_SKIPPED),  # noqa: E501
+        PayloadKey.WAS_OVDC_SPECIFIED: params.get(PayloadKey.WAS_OVDC_SPECIFIED),  # noqa: E501
+        PayloadKey.WAS_ORG_SPECIFIED: params.get(PayloadKey.WAS_ORG_SPECIFIED),  # noqa: E501
+        PayloadKey.WAS_NEW_ADMIN_PASSWORD_PROVIDED: params.get(PayloadKey.WAS_NEW_ADMIN_PASSWORD_PROVIDED)  # noqa: E501
+    }
+
+
 def get_payload_for_config_check(params):
     """Construct telemetry payload of config check operation.
 
@@ -136,25 +155,6 @@ def get_payload_for_cluster_config(params):
         PayloadKey.TEMPLATE_REVISION: params.get(RequestKey.TEMPLATE_REVISION),
         PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
         PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME))
-    }
-
-
-def get_payload_for_cluster_convert(params):
-    """Construct telemetry payload of cluster convert operation.
-
-    :param params: parameters provided to the operation
-
-    :return: json telemetry data for the operation
-
-    :type: dict
-    """
-    return {
-        PayloadKey.TYPE: CseOperation.CLUSTER_CONVERT.telemetry_table,
-        PayloadKey.WAS_DECRYPTION_SKIPPED: params.get(PayloadKey.WAS_DECRYPTION_SKIPPED),  # noqa: E501
-        PayloadKey.WAS_GC_WAIT_SKIPPED: params.get(PayloadKey.WAS_GC_WAIT_SKIPPED),  # noqa: E501
-        PayloadKey.WAS_OVDC_SPECIFIED: params.get(PayloadKey.WAS_OVDC_SPECIFIED),  # noqa: E501
-        PayloadKey.WAS_ORG_SPECIFIED: params.get(PayloadKey.WAS_ORG_SPECIFIED),  # noqa: E501
-        PayloadKey.WAS_NEW_ADMIN_PASSWORD_PROVIDED: params.get(PayloadKey.WAS_NEW_ADMIN_PASSWORD_PROVIDED)  # noqa: E501
     }
 
 
@@ -271,6 +271,8 @@ def get_payload_for_cluster_upgrade(params):
     return {
         PayloadKey.TYPE: CseOperation.CLUSTER_UPGRADE.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(params.get(PayloadKey.CLUSTER_ID)),
+        PayloadKey.TEMPLATE_NAME: params.get(RequestKey.TEMPLATE_NAME),
+        PayloadKey.TEMPLATE_REVISION: params.get(RequestKey.TEMPLATE_REVISION),
         PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
         PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME))
     }

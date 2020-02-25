@@ -67,7 +67,7 @@ def get_telemetry_instance_id(vcd, logger_instance=None,
                                           namespace=CSE_SERVICE_NAMESPACE)
         if logger_instance:
             logger_instance.info("Retrieved telemetry instance id")
-        return uuid_hash(cse_info.get('id'))
+        return cse_info.get('id')
     except Exception as err:
         msg = f"Cannot retrieve telemetry instance id:{err}"
         if msg_update_callback:

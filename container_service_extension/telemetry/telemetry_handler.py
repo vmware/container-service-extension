@@ -19,6 +19,8 @@ from container_service_extension.utils import run_async
 # Each command has its own payload generator
 OPERATION_TO_PAYLOAD_GENERATOR = {
     # CSE server CLI commands
+    CseOperation.CLUSTER_CONVERT: payload_generator.get_payload_for_cluster_convert,  # noqa: E501
+
     CseOperation.CONFIG_CHECK: payload_generator.get_payload_for_config_check,
 
     CseOperation.SERVICE_INSTALL: payload_generator.get_payload_for_install_server,   # noqa: E501
@@ -29,7 +31,6 @@ OPERATION_TO_PAYLOAD_GENERATOR = {
 
     # vcd-cli CSE client commands
     CseOperation.CLUSTER_CONFIG: payload_generator.get_payload_for_cluster_config,  # noqa: E501
-    CseOperation.CLUSTER_CONVERT: payload_generator.get_payload_for_cluster_convert,  # noqa: E501
     CseOperation.CLUSTER_CREATE: payload_generator.get_payload_for_create_cluster,  # noqa: E501
     CseOperation.CLUSTER_DELETE: payload_generator.get_payload_for_cluster_delete,  # noqa: E501
     CseOperation.CLUSTER_INFO: payload_generator.get_payload_for_cluster_info,
