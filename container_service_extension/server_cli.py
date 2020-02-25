@@ -623,7 +623,6 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
                 skip_config_decryption=skip_config_decryption,
                 msg_update_callback=None,
                 validate=False)
-            store_telemetry_settings(config_dict)
             record_user_action(cse_operation=CseOperation.SERVICE_RUN,
                                status=OperationStatus.FAILED,
                                telemetry_settings=config_dict['service']['telemetry'],  # noqa: E501
@@ -951,9 +950,6 @@ def list_template(ctx, config_file_path, skip_config_decryption,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
             validate=False)
-
-        # Store telemetry instance id, url and collector id in config
-        store_telemetry_settings(config_dict)
 
         # Record telemetry details
         cse_params = {PayloadKey.DISPLAY_OPTION: display_option}
@@ -1475,6 +1471,9 @@ def _get_config_dict(config_file_path,
                 config_dict = yaml.safe_load(
                     get_decrypted_file_contents(
                         config_file_path, password)) or {}
+
+        # Store telemetry instance id, url and collector id in config
+        store_telemetry_settings(config_dict)
 
         # To suppress the warning message that pyvcloud prints if
         # ssl_cert verification is skipped.
