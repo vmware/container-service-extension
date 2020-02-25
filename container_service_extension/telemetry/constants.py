@@ -42,38 +42,41 @@ class CseOperation(Enum):
     def telemetry_table(self):
         return self._telemetry_table
 
+    # CSE server CLI commands
     CONFIG_CHECK = ('config check', 'CONFIG', 'CHECK', 'CSE_CONFIG_CHECK')
-    TEMPLATE_INSTALL = ('template install', 'TEMPLATE', 'INSTALL', 'CSE_TEMPLATE_INSTALL')  # noqa: E501
-    TEMPLATE_LIST = ('template list', 'TEMPLATE', 'LIST', 'CSE_TEMPLATE_LIST')  # noqa: E501
-    CLUSTER_CONVERT = ('cluster convert', 'CLUSTER', 'CONVERT', 'CSE_CLUSTER_CONVERT')  # noqa: E501
     SERVICE_INSTALL = ('install server', 'SERVER', 'INSTALL', 'CSE_SERVICE_INSTALL')  # noqa: E501
     SERVICE_RUN = ('run server', 'SERVER', 'RUN', 'CSE_SERVICE_RUN')
-    CLUSTER_LIST = ('cluster list', 'CLUSTER', 'LIST', 'CSE_CLUSTER_LIST')
-    CLUSTER_CREATE = ('cluster create', 'CLUSTER', 'CREATE', 'CSE_CLUSTER_CREATE')  # noqa: E501
-    CLUSTER_INFO = ('cluster info', 'CLUSTER', 'INFO', 'CSE_CLUSTER_INFO')
-    CLUSTER_RESIZE = ('cluster resize', 'CLUSTER', 'RESIZE', 'CSE_CLUSTER_RESIZE')  # noqa: E501
-    CLUSTER_DELETE = ('cluster delete', 'CLUSTER', 'DELETE', 'CSE_CLUSTER_DELETE')  # noqa: E501
+    TEMPLATE_INSTALL = ('template install', 'TEMPLATE', 'INSTALL', 'CSE_TEMPLATE_INSTALL')  # noqa: E501
+    TEMPLATE_LIST = ('template list', 'TEMPLATE', 'LIST', 'CSE_TEMPLATE_LIST')  # noqa: E501
+
+    # vcd-cli CSE client commands
     CLUSTER_CONFIG = ('cluster config', 'CLUSTER', 'CONFIG', 'CSE_CLUSTER_CONFIG')  # noqa: E501
+    CLUSTER_CONVERT = ('cluster convert', 'CLUSTER', 'CONVERT', 'CSE_CLUSTER_CONVERT')  # noqa: E501
+    CLUSTER_CREATE = ('cluster create', 'CLUSTER', 'CREATE', 'CSE_CLUSTER_CREATE')  # noqa: E501
+    CLUSTER_DELETE = ('cluster delete', 'CLUSTER', 'DELETE', 'CSE_CLUSTER_DELETE')  # noqa: E501
+    CLUSTER_INFO = ('cluster info', 'CLUSTER', 'INFO', 'CSE_CLUSTER_INFO')
+    CLUSTER_LIST = ('cluster list', 'CLUSTER', 'LIST', 'CSE_CLUSTER_LIST')
+    CLUSTER_RESIZE = ('cluster resize', 'CLUSTER', 'RESIZE', 'CSE_CLUSTER_RESIZE')  # noqa: E501
     CLUSTER_UPGRADE = ('cluster upgrade', 'CLUSTER', 'UPGRADE', 'CSE_CLUSTER_UPGRADE')  # noqa: E501
     CLUSTER_UPGRADE_PLAN = ('cluster upgrade plan', 'CLUSTER', 'UPGRADE_PLAN', 'CSE_CLUSTER_UPGRADE_PLAN')  # noqa: E501
-    NODE_INFO = ('node info', 'NODE', 'INFO', 'CSE_NODE_INFO')
     NODE_CREATE = ('node create', 'NODE', 'CREATE', 'CSE_NODE_CREATE')
     NODE_DELETE = ('node delete', 'NODE', 'DELETE', 'CSE_NODE_DELETE')
-    OVDC_ENABLE = ('ovdc enable', 'OVDC', 'ENABLE', 'CSE_OVDC_ENABLE')
+    NODE_INFO = ('node info', 'NODE', 'INFO', 'CSE_NODE_INFO')
     OVDC_DISABLE = ('ovdc disable', 'OVDC', 'DISABLE', 'CSE_OVDC_DISABLE')
-    OVDC_LIST = ('ovdc list', 'OVDC', 'LIST', 'CSE_OVDC_LIST')
+    OVDC_ENABLE = ('ovdc enable', 'OVDC', 'ENABLE', 'CSE_OVDC_ENABLE')
     OVDC_INFO = ('ovdc_info', 'OVDC', 'INFO', 'CSE_OVDC_INFO')
+    OVDC_LIST = ('ovdc list', 'OVDC', 'LIST', 'CSE_OVDC_LIST')
 
     # Following operations do not require telemetry details. Hence the payload
     # generator functions are empty.
-    OVDC_COMPUTE_POLICY_LIST = ('ovdc compute policy', 'COMPUTE_POLICY', 'LIST', '')  # noqa: E501
     OVDC_COMPUTE_POLICY_ADD = ('ovdc compute policy', 'COMPUTE_POLICY', 'ADD', '')  # noqa: E501
+    OVDC_COMPUTE_POLICY_LIST = ('ovdc compute policy', 'COMPUTE_POLICY', 'LIST', '')  # noqa: E501
     OVDC_COMPUTE_POLICY_REMOVE = ('ovdc compute policy', 'COMPUTE_POLICY', 'REMOVE', '')  # noqa: E501
-    SYSTEM_INFO = ('system info', 'SYSTEM', 'INFO', '')
-    SYSTEM_ENABLE = ('system enable', 'SYSTEM', 'ENABLE', '')
     SYSTEM_DISABLE = ('system disable', 'SYSTEM', 'DISABLE', '')
+    SYSTEM_ENABLE = ('system enable', 'SYSTEM', 'ENABLE', '')
+    SYSTEM_INFO = ('system info', 'SYSTEM', 'INFO', '')
     SYSTEM_STOP = ('system stop', 'SYSTEM', 'STOP', '')
-    SYSTEM_UNKNOWN = ('system unknown', 'SYSTEM', 'UNKNOWN', '')
+    TEMPLATE_LIST_CLIENT_SIDE = ('template list (client side)', 'TEMPLATE', 'LIST (CLIENT SIDE)', '')  # noqa: E501
 
 
 @unique

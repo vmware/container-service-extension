@@ -1,6 +1,8 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import hashlib
+
 from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
@@ -10,6 +12,29 @@ from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.telemetry.constants import COLLECTOR_ID
 from container_service_extension.telemetry.constants import VAC_URL
+
+
+def uuid_hash(uuid):
+    """Return SHA1 hash as hex digest of an uuid.
+
+    Requirement from VAC team : You should apply SHA1 hashing over the data as
+    a text. More specifically you should have the text data as a UTF8 encoded
+    string then convert the string to byte array and digest it into a SHA1
+    hash. The resulting SHA1 hash must be converted to text by displaying each
+    byte of the hashcode as a HEX char (first byte displayed leftmost in the
+    output). The hash must be lowercase.
+
+    No checks are made to determine if the input uuid is valid or not. Dashes
+    in the uuid are ignored while computing the hash.
+
+    :param str uuid: uuid to be hashed
+
+    :returns: SHA1 hash as hex digest of the provided uuid.
+    """
+    uuid_no_dash = uuid.replace('-', '')
+    m = hashlib.sha1()
+    m.update(uuid_no_dash)
+    return m.hexdigest()
 
 
 def get_telemetry_instance_id(vcd, logger_instance=None,
@@ -42,7 +67,7 @@ def get_telemetry_instance_id(vcd, logger_instance=None,
                                           namespace=CSE_SERVICE_NAMESPACE)
         if logger_instance:
             logger_instance.info("Retrieved telemetry instance id")
-        return cse_info.get('id')
+        return uuid_hash(cse_info.get('id'))
     except Exception as err:
         msg = f"Cannot retrieve telemetry instance id:{err}"
         if msg_update_callback:

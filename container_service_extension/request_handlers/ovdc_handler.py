@@ -18,8 +18,7 @@ from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
 from container_service_extension.telemetry.telemetry_handler import record_user_action  # noqa: E501
-from container_service_extension.telemetry.telemetry_handler import \
-    record_user_action_details
+from container_service_extension.telemetry.telemetry_handler import record_user_action_details  # noqa: E501
 from container_service_extension.telemetry.telemetry_handler import record_user_action_telemetry  # noqa: E501
 import container_service_extension.utils as utils
 
