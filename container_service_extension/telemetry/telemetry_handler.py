@@ -78,8 +78,7 @@ def record_user_action_telemetry(cse_operation):
                 return ret_value
             except Exception as err:
                 record_user_action(cse_operation,
-                                   status=OperationStatus.FAILED,
-                                   message=str(err))
+                                   status=OperationStatus.FAILED)
                 raise err
         return wrapper
     return decorator_logger

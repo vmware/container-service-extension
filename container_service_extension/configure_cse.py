@@ -357,7 +357,6 @@ def install_cse(config_file_name, skip_template_creation, force_update,
         # Telemetry - Record failed install action
         record_user_action(CseOperation.SERVICE_INSTALL,
                            status=OperationStatus.FAILED,
-                           message=str(err),
                            telemetry_settings=config['service']['telemetry'])
         raise  # TODO() need installation relevant exceptions for rollback
     finally:
@@ -487,8 +486,7 @@ def install_template(template_name, template_revision, config_file_name,
         # Record telemetry data on template install failure
         record_user_action(cse_operation=CseOperation.TEMPLATE_INSTALL,
                            status=OperationStatus.FAILED,
-                           telemetry_settings=config['service']['telemetry'],
-                           message=str(err))
+                           telemetry_settings=config['service']['telemetry'])
     finally:
         if client is not None:
             client.logout()

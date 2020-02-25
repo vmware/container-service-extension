@@ -33,7 +33,7 @@ def uuid_hash(uuid):
     """
     uuid_no_dash = uuid.replace('-', '')
     m = hashlib.sha1()
-    m.update(uuid_no_dash)
+    m.update(bytes(uuid_no_dash, 'utf-8'))
     return m.hexdigest()
 
 

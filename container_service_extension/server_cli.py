@@ -388,7 +388,7 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
                 record_user_action(
                     cse_operation=CseOperation.CONFIG_CHECK,
                     telemetry_settings=config_dict['service']['telemetry'],
-                    status=OperationStatus.FAILED, message=str(err))
+                    status=OperationStatus.FAILED)
                 sys.exit(1)
         # Telemetry - Record successful install action
         record_user_action(
@@ -611,8 +611,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     except cryptography.fernet.InvalidToken:
         raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
     except Exception as err:
-        error_message = str(err)
-        console_message_printer.error(error_message)
+        console_message_printer.error(str(err))
         console_message_printer.error("CSE Server failure. Please check the logs.") # noqa: E501
         sys.exit(1)
     finally:
@@ -625,8 +624,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
                 validate=False)
             record_user_action(cse_operation=CseOperation.SERVICE_RUN,
                                status=OperationStatus.FAILED,
-                               telemetry_settings=config_dict['service']['telemetry'],  # noqa: E501
-                               message=error_message)
+                               telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
 
 
 @cli.command('convert-cluster',
@@ -1074,7 +1072,6 @@ def list_template(ctx, config_file_path, skip_config_decryption,
             telemetry_settings = config_dict['service']['telemetry']
         record_user_action(cse_operation=CseOperation.TEMPLATE_LIST,
                            status=OperationStatus.FAILED,
-                           message=str(err),
                            telemetry_settings=telemetry_settings)
         sys.exit(1)
 

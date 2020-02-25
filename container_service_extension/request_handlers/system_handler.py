@@ -55,6 +55,5 @@ def system_update(request_data, tenant_auth_token, is_jwt_token):
     except Exception as err:
         # Record telemetry data on failure
         record_user_action(cse_operation=cse_operation,
-                           status=OperationStatus.FAILED,
-                           message=str(err))
+                           status=OperationStatus.FAILED)
         raise err
