@@ -349,7 +349,7 @@ def install_cse(config_file_name, skip_template_creation, force_update,
         record_user_action(CseOperation.SERVICE_INSTALL,
                            telemetry_settings=config['service']['telemetry'])
 
-    except Exception as err:
+    except Exception:
         if msg_update_callback:
             msg_update_callback.error(
                 "CSE Installation Error. Check CSE install logs")
@@ -478,7 +478,7 @@ def install_template(template_name, template_revision, config_file_name,
         record_user_action(cse_operation=CseOperation.TEMPLATE_INSTALL,
                             status=OperationStatus.SUCCESS,
                             telemetry_settings=config['service']['telemetry'])  # noqa: E501
-    except Exception as err:
+    except Exception:
         if msg_update_callback:
             msg_update_callback.error(
                 "Template Installation Error. Check CSE install logs")

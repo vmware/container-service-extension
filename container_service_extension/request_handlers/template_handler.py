@@ -8,8 +8,7 @@ from container_service_extension.telemetry.telemetry_handler import record_user_
 import container_service_extension.utils as utils
 
 
-
-@record_user_action_telemetry(cse_operation=CseOperation.TEMPLATE_LIST_CLIENT_SIDE)  #noqa: E501
+@record_user_action_telemetry(cse_operation=CseOperation.TEMPLATE_LIST_CLIENT_SIDE)  # noqa: E501
 def template_list(request_data, tenant_auth_token, is_jwt_token):
     """Request handler for template list operation.
 

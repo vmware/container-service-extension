@@ -594,7 +594,6 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
 
     try:
         cse_run_complete = False
-        error_message = None
         service = Service(config_file_path,
                           pks_config_file=pks_config_file_path,
                           should_check_config=not skip_check,
