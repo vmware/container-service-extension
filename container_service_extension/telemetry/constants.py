@@ -43,6 +43,7 @@ class CseOperation(Enum):
         return self._telemetry_table
 
     # CSE server CLI commands
+    CLUSTER_CONVERT = ('cluster convert', 'CLUSTER', 'CONVERT', 'CSE_CLUSTER_CONVERT')  # noqa: E501
     CONFIG_CHECK = ('config check', 'CONFIG', 'CHECK', 'CSE_CONFIG_CHECK')
     SERVICE_INSTALL = ('install server', 'SERVER', 'INSTALL', 'CSE_SERVICE_INSTALL')  # noqa: E501
     SERVICE_RUN = ('run server', 'SERVER', 'RUN', 'CSE_SERVICE_RUN')
@@ -51,7 +52,6 @@ class CseOperation(Enum):
 
     # vcd-cli CSE client commands
     CLUSTER_CONFIG = ('cluster config', 'CLUSTER', 'CONFIG', 'CSE_CLUSTER_CONFIG')  # noqa: E501
-    CLUSTER_CONVERT = ('cluster convert', 'CLUSTER', 'CONVERT', 'CSE_CLUSTER_CONVERT')  # noqa: E501
     CLUSTER_CREATE = ('cluster create', 'CLUSTER', 'CREATE', 'CSE_CLUSTER_CREATE')  # noqa: E501
     CLUSTER_DELETE = ('cluster delete', 'CLUSTER', 'DELETE', 'CSE_CLUSTER_DELETE')  # noqa: E501
     CLUSTER_INFO = ('cluster info', 'CLUSTER', 'INFO', 'CSE_CLUSTER_INFO')
@@ -67,8 +67,8 @@ class CseOperation(Enum):
     OVDC_INFO = ('ovdc_info', 'OVDC', 'INFO', 'CSE_OVDC_INFO')
     OVDC_LIST = ('ovdc list', 'OVDC', 'LIST', 'CSE_OVDC_LIST')
 
-    # Following operations do not require telemetry details. Hence the payload
-    # generator functions are empty.
+    # Following operations do not require telemetry details. Hence the VAC
+    # table name field is empty
     OVDC_COMPUTE_POLICY_ADD = ('ovdc compute policy', 'COMPUTE_POLICY', 'ADD', '')  # noqa: E501
     OVDC_COMPUTE_POLICY_LIST = ('ovdc compute policy', 'COMPUTE_POLICY', 'LIST', '')  # noqa: E501
     OVDC_COMPUTE_POLICY_REMOVE = ('ovdc compute policy', 'COMPUTE_POLICY', 'REMOVE', '')  # noqa: E501
