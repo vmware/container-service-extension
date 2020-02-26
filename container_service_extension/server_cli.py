@@ -1468,14 +1468,16 @@ def _get_config_dict(config_file_path,
                     get_decrypted_file_contents(
                         config_file_path, password)) or {}
 
-        # Store telemetry instance id, url and collector id in config
-        store_telemetry_settings(config_dict)
-
         # To suppress the warning message that pyvcloud prints if
         # ssl_cert verification is skipped.
         if config_dict and config_dict.get('vcd') and \
                 not config_dict['vcd'].get('verify'):
             requests.packages.urllib3.disable_warnings()
+
+        # Store telemetry instance id, url and collector id in config
+        # This step should be done after suppressing the cert validation
+        # warnings
+        store_telemetry_settings(config_dict)
 
         return config_dict
     except AmqpConnectionError:
