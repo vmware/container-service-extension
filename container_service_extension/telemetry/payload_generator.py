@@ -116,6 +116,8 @@ def get_payload_for_install_template(params):
     """
     return {
         PayloadKey.TYPE: CseOperation.TEMPLATE_INSTALL.telemetry_table,
+        PayloadKey.TEMPLATE_NAME: params.get(RequestKey.TEMPLATE_NAME),
+        PayloadKey.TEMPLATE_REVISION: params.get(RequestKey.TEMPLATE_REVISION),
         PayloadKey.WAS_DECRYPTION_SKIPPED: bool(params.get(PayloadKey.WAS_DECRYPTION_SKIPPED)),  # noqa: E501
         PayloadKey.WERE_TEMPLATES_FORCE_UPDATED: bool(params.get(PayloadKey.WERE_TEMPLATES_FORCE_UPDATED)),  # noqa: E501
         PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(params.get(PayloadKey.WAS_TEMP_VAPP_RETAINED)),  # noqa: E501
