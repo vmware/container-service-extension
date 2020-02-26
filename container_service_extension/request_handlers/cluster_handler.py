@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import container_service_extension.broker_manager as broker_manager
+from container_service_extension.exceptions import BadRequestError
 from container_service_extension.exceptions import ClusterAlreadyExistsError
 from container_service_extension.exceptions import ClusterNotFoundError
 import container_service_extension.ovdc_utils as ovdc_utils
@@ -151,8 +152,15 @@ def cluster_upgrade_plan(request_data, tenant_auth_token, is_jwt_token):
 
     :return: List[Tuple(str, str)]
     """
-    broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
-    return broker.get_cluster_upgrade_plan(request_data)
+    _, broker = broker_manager.get_cluster_info(request_data,
+                                                tenant_auth_token,
+                                                is_jwt_token)
+    if isinstance(broker, vcdbroker.VcdBroker):
+        return broker.get_cluster_upgrade_plan(request_data)
+
+    raise BadRequestError(
+        error_message="'cluster upgrade-plan' operation is not supported by "
+                      "non native clusters.")
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_UPGRADE)
@@ -163,8 +171,15 @@ def cluster_upgrade(request_data, tenant_auth_token, is_jwt_token):
 
     :return: Dict
     """
-    broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
-    return broker.upgrade_cluster(request_data)
+    _, broker = broker_manager.get_cluster_info(request_data,
+                                                tenant_auth_token,
+                                                is_jwt_token)
+    if isinstance(broker, vcdbroker.VcdBroker):
+        return broker.upgrade_cluster(request_data)
+
+    raise BadRequestError(
+        error_message="'cluster upgrade' operation is not supported by non "
+                      "native clusters.")
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_LIST)
@@ -225,8 +240,15 @@ def node_create(request_data, tenant_auth_token, is_jwt_token):
     """
     # Currently node create is a vCD only operation.
     # Different from resize because this can create nfs nodes
-    broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
-    return broker.create_nodes(request_data)
+    _, broker = broker_manager.get_cluster_info(request_data,
+                                                tenant_auth_token,
+                                                is_jwt_token)
+    if isinstance(broker, vcdbroker.VcdBroker):
+        return broker.create_nodes(request_data)
+
+    raise BadRequestError(
+        error_message="'node create' operation is not supported by non native "
+                      "clusters.")
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.NODE_DELETE)
@@ -240,10 +262,15 @@ def node_delete(request_data, tenant_auth_token, is_jwt_token):
 
     :return: Dict
     """
-    # Currently node delete is a vCD only operation.
-    # TODO remove once resize is able to scale down native clusters
-    broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
-    return broker.delete_nodes(request_data)
+    _, broker = broker_manager.get_cluster_info(request_data,
+                                                tenant_auth_token,
+                                                is_jwt_token)
+    if isinstance(broker, vcdbroker.VcdBroker):
+        return broker.delete_nodes(request_data)
+
+    raise BadRequestError(
+        error_message="'node delete' operation is not supported by non native "
+                      "clusters.")
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.NODE_INFO)
@@ -258,5 +285,12 @@ def node_info(request_data, tenant_auth_token, is_jwt_token):
     :return: Dict
     """
     # Currently node info is a vCD only operation.
-    broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
-    return broker.get_node_info(request_data)
+    _, broker = broker_manager.get_cluster_info(request_data,
+                                                tenant_auth_token,
+                                                is_jwt_token)
+    if isinstance(broker, vcdbroker.VcdBroker):
+        return broker.get_node_info(request_data)
+
+    raise BadRequestError(
+        error_message="'node info' operation is not supported by non native "
+                      "clusters.")
