@@ -1,11 +1,11 @@
 LICENSE
 
-container-service-extension 2.6 Beta
+container-service-extension 2.6 GA
 
 Copyright 2018-2020 VMware, Inc.  All rights reserved.
 
 The BSD-2 license (the “License”) set forth below applies to all parts of the container-service-extension 2.6
-project. You may not use this file except in compliance with the License. 
+project.  You may not use this file except in compliance with the License. 
 
 BSD-2 License 
 
@@ -834,4 +834,4 @@ Source Files is valid for three years from the date you acquired this
 Software product. Alternatively, the Source Files may accompany the
 VMware service.
 
-[CONTAINERSERVICEEXTENSION26BAB012420]
+[CONTAINERSERVICEEXTENSION26GAAB012420]
