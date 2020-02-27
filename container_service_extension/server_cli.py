@@ -359,7 +359,8 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
             config_file_path=config_file_path,
             pks_config_file_path=pks_config_file_path,
             skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer)
+            msg_update_callback=console_message_printer,
+            validate=True)
 
         # Telemetry data construction
         cse_params = {
@@ -688,7 +689,8 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
             config_file_path=config_file_path,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer)
+            msg_update_callback=console_message_printer,
+            validate=True)
 
         # Record telemetry details
         cse_params = {
@@ -1065,13 +1067,9 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                            telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
     except Exception as err:
         console_message_printer.error(str(err))
-        telemetry_settings = None
-        if config_dict and config_dict.get('service') and \
-                config_dict['service'].get('telemetry'):
-            telemetry_settings = config_dict['service']['telemetry']
         record_user_action(cse_operation=CseOperation.TEMPLATE_LIST,
                            status=OperationStatus.FAILED,
-                           telemetry_settings=telemetry_settings)
+                           telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
         sys.exit(1)
 
 

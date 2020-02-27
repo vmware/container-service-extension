@@ -88,22 +88,22 @@ def record_user_action(cse_operation, status=OperationStatus.SUCCESS,
                        message=None, telemetry_settings=None):
     """Record CSE user action information in telemetry server.
 
-    No exception should be leaked. Catch all exceptions and log them.
+    No exceptions should be leaked. Catch all exceptions and log them.
 
     :param CseOperation cse_operation:
     :param OperationStatus status: SUCCESS/FAILURE of the user action
     :param str message: any information about failure or custom message
     :param dict telemetry_settings: telemetry section CSE config->service
     """
-    if not telemetry_settings:
-        telemetry_settings = get_server_runtime_config()['service']['telemetry']  # noqa: E501
+    try:
+        if not telemetry_settings:
+            telemetry_settings = get_server_runtime_config()['service']['telemetry']  # noqa: E501
 
-    if telemetry_settings['enable']:
-        try:
+        if telemetry_settings['enable']:
             payload = get_payload_for_user_action(cse_operation, status, message)  # noqa: E501
             _send_data_to_telemetry_server(payload, telemetry_settings)
-        except Exception as err:
-            LOGGER.warning(f"Error in recording user action information:{str(err)}")  # noqa: E501
+    except Exception as err:
+        LOGGER.warning(f"Error in recording user action information:{str(err)}")  # noqa: E501
 
 
 def record_user_action_details(cse_operation, cse_params,
@@ -116,15 +116,15 @@ def record_user_action_details(cse_operation, cse_params,
     :param dict cse_params: CSE operation parameters
     :param dict telemetry_settings: telemetry section of config->service
     """
-    if not telemetry_settings:
-        telemetry_settings = get_server_runtime_config()['service']['telemetry']  # noqa: E501
+    try:
+        if not telemetry_settings:
+            telemetry_settings = get_server_runtime_config()['service']['telemetry']  # noqa: E501
 
-    if telemetry_settings['enable']:
-        try:
+        if telemetry_settings['enable']:
             payload = OPERATION_TO_PAYLOAD_GENERATOR[cse_operation](cse_params)
             _send_data_to_telemetry_server(payload, telemetry_settings)
-        except Exception as err:
-            LOGGER.warning(f"Error in recording CSE operation details :{str(err)}")  # noqa: E501
+    except Exception as err:
+        LOGGER.warning(f"Error in recording CSE operation details :{str(err)}")  # noqa: E501
 
 
 @run_async

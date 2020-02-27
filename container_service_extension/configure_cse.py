@@ -40,7 +40,7 @@ from container_service_extension.telemetry.telemetry_handler \
 from container_service_extension.telemetry.telemetry_handler import \
     record_user_action_details
 from container_service_extension.telemetry.telemetry_utils import \
-    get_telemetry_instance_id
+    store_telemetry_settings
 from container_service_extension.template_builder import TemplateBuilder
 from container_service_extension.utils import str_to_bool
 from container_service_extension.vsphere_utils import populate_vsphere_list
@@ -252,6 +252,13 @@ def install_cse(config_file_name, skip_template_creation, force_update,
         _register_cse(client, amqp['routing_key'], amqp['exchange'],
                       msg_update_callback=msg_update_callback)
 
+        # Since we use CSE extension id as our telemetry instance_id, the
+        # validated config won't have the instance_id yet. Now that CSE has
+        # been registered as an extension, we should update the telemetry
+        # config with the correct instance_id
+        if config['service']['telemetry']['enable']:
+            store_telemetry_settings(config)
+
         # register rights to vCD
         # TODO() should also remove rights when unregistering CSE
         _register_right(client, right_name=CSE_NATIVE_DEPLOY_RIGHT_NAME,
@@ -310,11 +317,6 @@ def install_cse(config_file_name, skip_template_creation, force_update,
             PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(ssh_key)  # noqa: E501
         }
 
-        # Telemetry - Store telemetry instance id in config.
-        if config['service']['telemetry']['enable'] is True:
-            config['service']['telemetry']['instance_id'] = \
-                get_telemetry_instance_id(config['vcd'])
-
         # Telemetry - Record detailed telemetry data on install
         record_user_action_details(CseOperation.SERVICE_INSTALL,
                                    telemetry_data,
@@ -345,10 +347,10 @@ def install_cse(config_file_name, skip_template_creation, force_update,
                     nodes_ip_block_id=nsxt_server.get('nodes_ip_block_ids'),
                     pods_ip_block_id=nsxt_server.get('pods_ip_block_ids'),
                     ncp_boundary_firewall_section_anchor_id=nsxt_server.get('distributed_firewall_section_anchor_id')) # noqa: E501
+
         # Telemetry - Record successful install action
         record_user_action(CseOperation.SERVICE_INSTALL,
                            telemetry_settings=config['service']['telemetry'])
-
     except Exception:
         if msg_update_callback:
             msg_update_callback.error(
@@ -395,6 +397,8 @@ def install_template(template_name, template_revision, config_file_name,
 
     # Telemetry data construction
     cse_params = {
+        PayloadKey.TEMPLATE_NAME: template_name,
+        PayloadKey.TEMPLATE_REVISION: template_revision,
         PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),
         PayloadKey.WERE_TEMPLATES_FORCE_UPDATED: bool(force_create),
         PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(retain_temp_vapp),

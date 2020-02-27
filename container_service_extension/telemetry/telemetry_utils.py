@@ -84,11 +84,12 @@ def store_telemetry_settings(config_dict):
 
     :param dict config_dict: CSE configuration
     """
-    if config_dict['service']['telemetry']['enable'] is True:
-        config_dict['service']['telemetry']['instance_id'] = \
-            get_telemetry_instance_id(config_dict['vcd'])
-
     if 'vac_url' not in config_dict['service']['telemetry']:
         config_dict['service']['telemetry']['vac_url'] = VAC_URL
 
     config_dict['service']['telemetry']['collector_id'] = COLLECTOR_ID
+
+    instance_id = None
+    if config_dict['service']['telemetry']['enable']:
+        instance_id = get_telemetry_instance_id(config_dict['vcd'])
+    config_dict['service']['telemetry']['instance_id'] = instance_id
