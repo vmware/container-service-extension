@@ -43,11 +43,11 @@ def get_payload_for_cluster_convert(params):
     """
     return {
         PayloadKey.TYPE: CseOperation.CLUSTER_CONVERT.telemetry_table,
-        PayloadKey.WAS_DECRYPTION_SKIPPED: params.get(PayloadKey.WAS_DECRYPTION_SKIPPED),  # noqa: E501
-        PayloadKey.WAS_GC_WAIT_SKIPPED: params.get(PayloadKey.WAS_GC_WAIT_SKIPPED),  # noqa: E501
-        PayloadKey.WAS_OVDC_SPECIFIED: params.get(PayloadKey.WAS_OVDC_SPECIFIED),  # noqa: E501
-        PayloadKey.WAS_ORG_SPECIFIED: params.get(PayloadKey.WAS_ORG_SPECIFIED),  # noqa: E501
-        PayloadKey.WAS_NEW_ADMIN_PASSWORD_PROVIDED: params.get(PayloadKey.WAS_NEW_ADMIN_PASSWORD_PROVIDED)  # noqa: E501
+        PayloadKey.WAS_DECRYPTION_SKIPPED: bool(params.get(PayloadKey.WAS_DECRYPTION_SKIPPED)),  # noqa: E501
+        PayloadKey.WAS_GC_WAIT_SKIPPED: bool(params.get(PayloadKey.WAS_GC_WAIT_SKIPPED)),  # noqa: E501
+        PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(PayloadKey.WAS_OVDC_SPECIFIED)),  # noqa: E501
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(PayloadKey.WAS_ORG_SPECIFIED)),  # noqa: E501
+        PayloadKey.WAS_NEW_ADMIN_PASSWORD_PROVIDED: bool(params.get(PayloadKey.WAS_NEW_ADMIN_PASSWORD_PROVIDED))  # noqa: E501
     }
 
 
@@ -116,8 +116,8 @@ def get_payload_for_install_template(params):
     """
     return {
         PayloadKey.TYPE: CseOperation.TEMPLATE_INSTALL.telemetry_table,
-        PayloadKey.TEMPLATE_NAME: params.get(RequestKey.TEMPLATE_NAME),
-        PayloadKey.TEMPLATE_REVISION: params.get(RequestKey.TEMPLATE_REVISION),
+        PayloadKey.TEMPLATE_NAME: params.get(PayloadKey.TEMPLATE_NAME),
+        PayloadKey.TEMPLATE_REVISION: params.get(PayloadKey.TEMPLATE_REVISION),
         PayloadKey.WAS_DECRYPTION_SKIPPED: bool(params.get(PayloadKey.WAS_DECRYPTION_SKIPPED)),  # noqa: E501
         PayloadKey.WERE_TEMPLATES_FORCE_UPDATED: bool(params.get(PayloadKey.WERE_TEMPLATES_FORCE_UPDATED)),  # noqa: E501
         PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(params.get(PayloadKey.WAS_TEMP_VAPP_RETAINED)),  # noqa: E501
