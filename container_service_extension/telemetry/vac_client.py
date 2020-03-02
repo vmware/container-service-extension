@@ -8,6 +8,7 @@ import requests
 from requests.exceptions import RequestException
 
 from container_service_extension.shared_constants import RequestMethod
+from container_service_extension.telemetry.constants import PayloadKey
 
 SEND_FAILED_MSG = "Failed to send telemetry payload"
 
@@ -28,6 +29,7 @@ class VacClient(object):
                  base_url,
                  collector_id,
                  instance_id,
+                 vcd_ceip_id,
                  verify_ssl=True,
                  logger_instance=None,
                  log_requests=False,
@@ -36,6 +38,7 @@ class VacClient(object):
         self._base_url = base_url
         self._collector_id = collector_id
         self._instance_id = instance_id
+        self._vcd_ceip_id = vcd_ceip_id
         self._verify_ssl = verify_ssl
         self.LOGGER = logger_instance
         self._log_requests = log_requests
@@ -58,6 +61,9 @@ class VacClient(object):
             msg = f"Invalid instance id.{SEND_FAILED_MSG}:{payload}"
             self.LOGGER.error(msg)
             return
+
+        if self._vcd_ceip_id:
+            payload[PayloadKey.VCD_CEIP_ID] = self._vcd_ceip_id
 
         response = None
         try:

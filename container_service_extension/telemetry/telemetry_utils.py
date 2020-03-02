@@ -6,12 +6,16 @@ import hashlib
 from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
+import requests
 
 from container_service_extension.server_constants import CSE_SERVICE_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.telemetry.constants import COLLECTOR_ID
 from container_service_extension.telemetry.constants import VAC_URL
+
+
+CEIP_HEADER_NAME = "x-vmware-vcloud-ceip-id"
 
 
 def uuid_hash(uuid):
@@ -35,6 +39,23 @@ def uuid_hash(uuid):
     m = hashlib.sha1()
     m.update(bytes(uuid_no_dash, 'utf-8'))
     return m.hexdigest()
+
+
+def get_vcd_ceip_id(vcd_host, verify_ssl=True, logger_instance=None):
+    """."""
+    response = None
+    try:
+        if not verify_ssl:
+            requests.packages.urllib3.disable_warnings()
+        uri = f"https://{vcd_host}"
+        response = requests.get(uri, verify=verify_ssl)
+        return response.headers.get(CEIP_HEADER_NAME)
+    except Exception as err:
+        if logger_instance:
+            logger_instance.error(f"Unable to get vCD CEIP id : {str(err)}")
+    finally:
+        if response:
+            response.close()
 
 
 def get_telemetry_instance_id(vcd, logger_instance=None,
@@ -89,7 +110,11 @@ def store_telemetry_settings(config_dict):
 
     config_dict['service']['telemetry']['collector_id'] = COLLECTOR_ID
 
+    vcd_ceip_id = None
     instance_id = None
     if config_dict['service']['telemetry']['enable']:
+        vcd_ceip_id = get_vcd_ceip_id(config_dict['vcd']['host'],
+                                      verify_ssl=config_dict['vcd']['verify'])
         instance_id = get_telemetry_instance_id(config_dict['vcd'])
+    config_dict['service']['telemetry']['vcd_ceip_id'] = vcd_ceip_id
     config_dict['service']['telemetry']['instance_id'] = instance_id

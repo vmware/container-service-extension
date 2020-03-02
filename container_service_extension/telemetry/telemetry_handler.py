@@ -137,5 +137,6 @@ def _send_data_to_telemetry_server(payload, telemetry_settings):
     vac_client = VacClient(base_url=telemetry_settings['vac_url'],
                            collector_id=telemetry_settings['collector_id'],
                            instance_id=telemetry_settings['instance_id'],
+                           vcd_ceip_id=telemetry_settings['vcd_ceip_id'],
                            logger_instance=LOGGER)
     vac_client.send_data(payload)
