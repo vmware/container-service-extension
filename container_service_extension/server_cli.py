@@ -390,7 +390,7 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
         # VAC. HACK!!
         time.sleep(5)
     except Exception as err:
-        # Record telemetry data on failed cluster convert
+        # Record telemetry data on failed operation
         if config_dict:
             record_user_action(
                 cse_operation=CseOperation.CONFIG_CHECK,
