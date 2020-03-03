@@ -362,6 +362,15 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
             msg_update_callback=console_message_printer,
             validate=True)
 
+        if check_install:
+            try:
+                check_cse_installation(
+                    config_dict, msg_update_callback=console_message_printer)
+            except Exception as err:
+                console_message_printer.error(f"Error : {err}")
+                console_message_printer.error("CSE installation is invalid.")
+                raise
+
         # Record telemetry data on successful completion
         record_user_action(
             cse_operation=CseOperation.CONFIG_CHECK,
@@ -377,33 +386,18 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
             cse_operation=CseOperation.CONFIG_CHECK,
             cse_params=cse_params,
             telemetry_settings=config_dict['service']['telemetry'])
+        # block the process to let telemetry handler to finish posting data to
+        # VAC. HACK!!
+        time.sleep(5)
     except Exception as err:
         # Record telemetry data on failed cluster convert
-        record_user_action(
-            cse_operation=CseOperation.CONFIG_CHECK,
-            status=OperationStatus.FAILED,
-            telemetry_settings=config_dict['service']['telemetry'])
+        if config_dict:
+            record_user_action(
+                cse_operation=CseOperation.CONFIG_CHECK,
+                status=OperationStatus.FAILED,
+                telemetry_settings=config_dict['service']['telemetry'])
         console_message_printer.error(str(err))
         sys.exit(1)
-
-    if config_dict:
-        if check_install:
-            try:
-                check_cse_installation(
-                    config_dict, msg_update_callback=console_message_printer)
-            except Exception as err:
-                console_message_printer.error(f"Error : {err}")
-                console_message_printer.error("CSE installation is invalid.")
-                # Telemetry - Record failed config check action
-                record_user_action(
-                    cse_operation=CseOperation.CONFIG_CHECK,
-                    telemetry_settings=config_dict['service']['telemetry'],
-                    status=OperationStatus.FAILED)
-                sys.exit(1)
-        # Telemetry - Record successful install action
-        record_user_action(
-            cse_operation=CseOperation.CONFIG_CHECK,
-            telemetry_settings=config_dict['service']['telemetry'])
 
 
 @cli.command(short_help='Decrypt the given file')

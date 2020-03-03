@@ -1,6 +1,7 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import time
 
 import pika
 from pyvcloud.vcd.api_extension import APIExtension
@@ -351,6 +352,10 @@ def install_cse(config_file_name, skip_template_creation, force_update,
         # Telemetry - Record successful install action
         record_user_action(CseOperation.SERVICE_INSTALL,
                            telemetry_settings=config['service']['telemetry'])
+
+        # block the process to let telemetry handler to finish posting data to
+        # VAC. HACK!!!
+        time.sleep(5)
     except Exception:
         if msg_update_callback:
             msg_update_callback.error(
