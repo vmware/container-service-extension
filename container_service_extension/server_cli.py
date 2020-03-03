@@ -362,6 +362,10 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
             msg_update_callback=console_message_printer,
             validate=True)
 
+        # Record telemetry data on successful completion
+        record_user_action(
+            cse_operation=CseOperation.CONFIG_CHECK,
+            telemetry_settings=config_dict['service']['telemetry'])
         # Telemetry data construction
         cse_params = {
             PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(pks_config_file_path), # noqa: E501
@@ -374,6 +378,11 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
             cse_params=cse_params,
             telemetry_settings=config_dict['service']['telemetry'])
     except Exception as err:
+        # Record telemetry data on failed cluster convert
+        record_user_action(
+            cse_operation=CseOperation.CONFIG_CHECK,
+            status=OperationStatus.FAILED,
+            telemetry_settings=config_dict['service']['telemetry'])
         console_message_printer.error(str(err))
         sys.exit(1)
 
