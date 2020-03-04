@@ -18,8 +18,7 @@ from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
 from container_service_extension.telemetry.telemetry_handler import record_user_action  # noqa: E501
-from container_service_extension.telemetry.telemetry_handler import \
-    record_user_action_details
+from container_service_extension.telemetry.telemetry_handler import record_user_action_details  # noqa: E501
 from container_service_extension.telemetry.telemetry_handler import record_user_action_telemetry  # noqa: E501
 import container_service_extension.utils as utils
 
@@ -87,7 +86,7 @@ def ovdc_update(request_data, tenant_auth_token, is_jwt_token):
         return {'task_href': task.get('href')}
     except Exception as err:
         # Telemetry - Record failed enabling/disabling of ovdc
-        record_user_action(cse_operation, status=OperationStatus.FAILED, message=str(err))  # noqa: E501
+        record_user_action(cse_operation, status=OperationStatus.FAILED)
         raise err
 
 
@@ -225,7 +224,7 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token, is_jwt_token):
     except Exception as err:
         # Record telemetry data failure
         if action == ComputePolicyAction.ADD:
-            record_user_action(CseOperation.OVDC_COMPUTE_POLICY_ADD, status=OperationStatus.FAILED, message=str(err))  # noqa: E501
+            record_user_action(CseOperation.OVDC_COMPUTE_POLICY_ADD, status=OperationStatus.FAILED)  # noqa: E501
         elif action == ComputePolicyAction.REMOVE:
-            record_user_action(CseOperation.OVDC_COMPUTE_POLICY_REMOVE, status=OperationStatus.FAILED, message=str(err))  # noqa: E501
+            record_user_action(CseOperation.OVDC_COMPUTE_POLICY_REMOVE, status=OperationStatus.FAILED)  # noqa: E501
         raise err

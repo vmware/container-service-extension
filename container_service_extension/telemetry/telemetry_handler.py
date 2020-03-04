@@ -18,25 +18,33 @@ from container_service_extension.utils import run_async
 # Payload generator function mappings for CSE operations
 # Each command has its own payload generator
 OPERATION_TO_PAYLOAD_GENERATOR = {
-    CseOperation.CLUSTER_LIST: payload_generator.get_payload_for_list_clusters,
-    CseOperation.CLUSTER_CREATE: payload_generator.get_payload_for_create_cluster,  # noqa: E501
+    # CSE server CLI commands
+    CseOperation.CLUSTER_CONVERT: payload_generator.get_payload_for_cluster_convert,  # noqa: E501
+
+    CseOperation.CONFIG_CHECK: payload_generator.get_payload_for_config_check,
+
     CseOperation.SERVICE_INSTALL: payload_generator.get_payload_for_install_server,   # noqa: E501
     CseOperation.SERVICE_RUN: payload_generator.get_payload_for_run_server,
+
     CseOperation.TEMPLATE_INSTALL: payload_generator.get_payload_for_install_template,  # noqa: E501
     CseOperation.TEMPLATE_LIST: payload_generator.get_payload_for_template_list,  # noqa: E501
-    CseOperation.CLUSTER_CONVERT: payload_generator.get_payload_for_cluster_convert,  # noqa: E501
-    CseOperation.CONFIG_CHECK: payload_generator.get_payload_for_config_check,
-    CseOperation.CLUSTER_INFO: payload_generator.get_payload_for_cluster_info,
-    CseOperation.CLUSTER_RESIZE: payload_generator.get_payload_for_cluster_resize,  # noqa: E501
-    CseOperation.CLUSTER_DELETE: payload_generator.get_payload_for_cluster_delete,  # noqa: E501
+
+    # vcd-cli CSE client commands
     CseOperation.CLUSTER_CONFIG: payload_generator.get_payload_for_cluster_config,  # noqa: E501
+    CseOperation.CLUSTER_CREATE: payload_generator.get_payload_for_create_cluster,  # noqa: E501
+    CseOperation.CLUSTER_DELETE: payload_generator.get_payload_for_cluster_delete,  # noqa: E501
+    CseOperation.CLUSTER_INFO: payload_generator.get_payload_for_cluster_info,
+    CseOperation.CLUSTER_LIST: payload_generator.get_payload_for_list_clusters,
+    CseOperation.CLUSTER_RESIZE: payload_generator.get_payload_for_cluster_resize,  # noqa: E501
     CseOperation.CLUSTER_UPGRADE: payload_generator.get_payload_for_cluster_upgrade,  # noqa: E501
     CseOperation.CLUSTER_UPGRADE_PLAN: payload_generator.get_payload_for_cluster_upgrade_plan,  # noqa: E501
-    CseOperation.NODE_INFO: payload_generator.get_payload_for_node_info,
+
     CseOperation.NODE_CREATE: payload_generator.get_payload_for_node_create,
     CseOperation.NODE_DELETE: payload_generator.get_payload_for_node_delete,
-    CseOperation.OVDC_ENABLE: payload_generator.get_payload_for_ovdc_enable,
+    CseOperation.NODE_INFO: payload_generator.get_payload_for_node_info,
+
     CseOperation.OVDC_DISABLE: payload_generator.get_payload_for_ovdc_disable,
+    CseOperation.OVDC_ENABLE: payload_generator.get_payload_for_ovdc_enable,
     CseOperation.OVDC_INFO: payload_generator.get_payload_for_ovdc_info,
     CseOperation.OVDC_LIST: payload_generator.get_payload_for_ovdc_list
 }
@@ -70,8 +78,7 @@ def record_user_action_telemetry(cse_operation):
                 return ret_value
             except Exception as err:
                 record_user_action(cse_operation,
-                                   status=OperationStatus.FAILED,
-                                   message=str(err))
+                                   status=OperationStatus.FAILED)
                 raise err
         return wrapper
     return decorator_logger
@@ -81,22 +88,22 @@ def record_user_action(cse_operation, status=OperationStatus.SUCCESS,
                        message=None, telemetry_settings=None):
     """Record CSE user action information in telemetry server.
 
-    No exception should be leaked. Catch all exceptions and log them.
+    No exceptions should be leaked. Catch all exceptions and log them.
 
     :param CseOperation cse_operation:
     :param OperationStatus status: SUCCESS/FAILURE of the user action
     :param str message: any information about failure or custom message
     :param dict telemetry_settings: telemetry section CSE config->service
     """
-    if not telemetry_settings:
-        telemetry_settings = get_server_runtime_config()['service']['telemetry']  # noqa: E501
+    try:
+        if not telemetry_settings:
+            telemetry_settings = get_server_runtime_config()['service']['telemetry']  # noqa: E501
 
-    if telemetry_settings['enable']:
-        try:
+        if telemetry_settings['enable']:
             payload = get_payload_for_user_action(cse_operation, status, message)  # noqa: E501
             _send_data_to_telemetry_server(payload, telemetry_settings)
-        except Exception as err:
-            LOGGER.warning(f"Error in recording user action information:{str(err)}")  # noqa: E501
+    except Exception as err:
+        LOGGER.warning(f"Error in recording user action information:{str(err)}")  # noqa: E501
 
 
 def record_user_action_details(cse_operation, cse_params,
@@ -109,15 +116,15 @@ def record_user_action_details(cse_operation, cse_params,
     :param dict cse_params: CSE operation parameters
     :param dict telemetry_settings: telemetry section of config->service
     """
-    if not telemetry_settings:
-        telemetry_settings = get_server_runtime_config()['service']['telemetry']  # noqa: E501
+    try:
+        if not telemetry_settings:
+            telemetry_settings = get_server_runtime_config()['service']['telemetry']  # noqa: E501
 
-    if telemetry_settings['enable']:
-        try:
-            payload = OPERATION_TO_PAYLOAD_GENERATOR[cse_operation](cse_operation, cse_params)  # noqa: E501
+        if telemetry_settings['enable']:
+            payload = OPERATION_TO_PAYLOAD_GENERATOR[cse_operation](cse_params)
             _send_data_to_telemetry_server(payload, telemetry_settings)
-        except Exception as err:
-            LOGGER.warning(f"Error in recording CSE operation details :{str(err)}")  # noqa: E501
+    except Exception as err:
+        LOGGER.warning(f"Error in recording CSE operation details :{str(err)}")  # noqa: E501
 
 
 @run_async
@@ -130,5 +137,6 @@ def _send_data_to_telemetry_server(payload, telemetry_settings):
     vac_client = VacClient(base_url=telemetry_settings['vac_url'],
                            collector_id=telemetry_settings['collector_id'],
                            instance_id=telemetry_settings['instance_id'],
+                           vcd_ceip_id=telemetry_settings['vcd_ceip_id'],
                            logger_instance=LOGGER)
     vac_client.send_data(payload)

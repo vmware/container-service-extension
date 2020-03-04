@@ -359,8 +359,22 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
             config_file_path=config_file_path,
             pks_config_file_path=pks_config_file_path,
             skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer)
+            msg_update_callback=console_message_printer,
+            validate=True)
 
+        if check_install:
+            try:
+                check_cse_installation(
+                    config_dict, msg_update_callback=console_message_printer)
+            except Exception as err:
+                console_message_printer.error(f"Error : {err}")
+                console_message_printer.error("CSE installation is invalid.")
+                raise
+
+        # Record telemetry data on successful completion
+        record_user_action(
+            cse_operation=CseOperation.CONFIG_CHECK,
+            telemetry_settings=config_dict['service']['telemetry'])
         # Telemetry data construction
         cse_params = {
             PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(pks_config_file_path), # noqa: E501
@@ -373,27 +387,18 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
             cse_params=cse_params,
             telemetry_settings=config_dict['service']['telemetry'])
     except Exception as err:
+        # Record telemetry data on failed operation
+        if config_dict:
+            record_user_action(
+                cse_operation=CseOperation.CONFIG_CHECK,
+                status=OperationStatus.FAILED,
+                telemetry_settings=config_dict['service']['telemetry'])
         console_message_printer.error(str(err))
         sys.exit(1)
-
-    if config_dict:
-        if check_install:
-            try:
-                check_cse_installation(
-                    config_dict, msg_update_callback=console_message_printer)
-            except Exception as err:
-                console_message_printer.error(f"Error : {err}")
-                console_message_printer.error("CSE installation is invalid.")
-                # Telemetry - Record failed config check action
-                record_user_action(
-                    cse_operation=CseOperation.CONFIG_CHECK,
-                    telemetry_settings=config_dict['service']['telemetry'],
-                    status=OperationStatus.FAILED, message=str(err))
-                sys.exit(1)
-        # Telemetry - Record successful install action
-        record_user_action(
-            cse_operation=CseOperation.CONFIG_CHECK,
-            telemetry_settings=config_dict['service']['telemetry'])
+    finally:
+        # block the process to let telemetry handler to finish posting data to
+        # VAC. HACK!!!
+        time.sleep(3)
 
 
 @cli.command(short_help='Decrypt the given file')
@@ -414,12 +419,15 @@ def decrypt(ctx, input_file, output_file):
     check_python_version(console_message_printer)
 
     try:
-        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
-            PASSWORD_FOR_CONFIG_DECRYPTION_MSG, hide_input=True, color='green')
-        decrypt_file(input_file, password, output_file)
-        console_message_printer.general("Decryption successful.")
-    except cryptography.fernet.InvalidToken:
-        raise Exception("Decryption failed: Invalid password")
+        try:
+            password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+                PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+                hide_input=True,
+                color='green')
+            decrypt_file(input_file, password, output_file)
+            console_message_printer.general("Decryption successful.")
+        except cryptography.fernet.InvalidToken:
+            raise Exception("Decryption failed: Invalid password")
     except Exception as err:
         console_message_printer.error(str(err))
         sys.exit(1)
@@ -443,12 +451,15 @@ def encrypt(ctx, input_file, output_file):
     check_python_version(console_message_printer)
 
     try:
-        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
-            PASSWORD_FOR_CONFIG_ENCRYPTION_MSG, hide_input=True, color='green')
-        encrypt_file(input_file, password, output_file)
-        console_message_printer.general("Encryption successful")
-    except cryptography.fernet.InvalidToken:
-        raise Exception("Encryption failed: Invalid password")
+        try:
+            password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+                PASSWORD_FOR_CONFIG_ENCRYPTION_MSG,
+                hide_input=True,
+                color='green')
+            encrypt_file(input_file, password, output_file)
+            console_message_printer.general("Encryption successful")
+        except cryptography.fernet.InvalidToken:
+            raise Exception("Encryption failed: Invalid password")
     except Exception as err:
         console_message_printer.error(str(err))
         sys.exit(1)
@@ -530,25 +541,30 @@ def install(ctx, config_file_path, pks_config_file_path,
             color='green', hide_input=True)
 
     try:
-        install_cse(config_file_name=config_file_path,
-                    pks_config_file_name=pks_config_file_path,
-                    skip_template_creation=skip_template_creation,
-                    force_update=force_update, ssh_key=ssh_key,
-                    retain_temp_vapp=retain_temp_vapp,
-                    skip_config_decryption=skip_config_decryption,
-                    decryption_password=password,
-                    msg_update_callback=console_message_printer)
-    except AmqpConnectionError:
-        raise Exception(AMQP_ERROR_MSG)
-    except requests.exceptions.ConnectionError as err:
-        raise Exception(f"Cannot connect to {err.request.url}.")
-    except vim.fault.InvalidLogin:
-        raise Exception(VCENTER_LOGIN_ERROR_MSG)
-    except cryptography.fernet.InvalidToken:
-        raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
+        try:
+            install_cse(config_file_name=config_file_path,
+                        pks_config_file_name=pks_config_file_path,
+                        skip_template_creation=skip_template_creation,
+                        force_update=force_update, ssh_key=ssh_key,
+                        retain_temp_vapp=retain_temp_vapp,
+                        skip_config_decryption=skip_config_decryption,
+                        decryption_password=password,
+                        msg_update_callback=console_message_printer)
+        except AmqpConnectionError:
+            raise Exception(AMQP_ERROR_MSG)
+        except requests.exceptions.ConnectionError as err:
+            raise Exception(f"Cannot connect to {err.request.url}.")
+        except vim.fault.InvalidLogin:
+            raise Exception(VCENTER_LOGIN_ERROR_MSG)
+        except cryptography.fernet.InvalidToken:
+            raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
     except Exception as err:
         console_message_printer.error(str(err))
         sys.exit(1)
+    finally:
+        # block the process to let telemetry handler to finish posting data to
+        # VAC. HACK!!!
+        time.sleep(3)
 
 
 @cli.command(short_help='Run CSE service')
@@ -593,26 +609,25 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
             color='green', hide_input=True)
 
     try:
-        cse_run_complete = False
-        error_message = None
-        service = Service(config_file_path,
-                          pks_config_file=pks_config_file_path,
-                          should_check_config=not skip_check,
-                          skip_config_decryption=skip_config_decryption,
-                          decryption_password=password)
-        service.run(msg_update_callback=console_message_printer)
-        cse_run_complete = True
-    except AmqpConnectionError:
-        raise Exception(AMQP_ERROR_MSG)
-    except requests.exceptions.ConnectionError as err:
-        raise Exception(f"Cannot connect to {err.request.url}.")
-    except vim.fault.InvalidLogin:
-        raise Exception(VCENTER_LOGIN_ERROR_MSG)
-    except cryptography.fernet.InvalidToken:
-        raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
+        try:
+            cse_run_complete = False
+            service = Service(config_file_path,
+                              pks_config_file=pks_config_file_path,
+                              should_check_config=not skip_check,
+                              skip_config_decryption=skip_config_decryption,
+                              decryption_password=password)
+            service.run(msg_update_callback=console_message_printer)
+            cse_run_complete = True
+        except AmqpConnectionError:
+            raise Exception(AMQP_ERROR_MSG)
+        except requests.exceptions.ConnectionError as err:
+            raise Exception(f"Cannot connect to {err.request.url}.")
+        except vim.fault.InvalidLogin:
+            raise Exception(VCENTER_LOGIN_ERROR_MSG)
+        except cryptography.fernet.InvalidToken:
+            raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
     except Exception as err:
-        error_message = str(err)
-        console_message_printer.error(error_message)
+        console_message_printer.error(str(err))
         console_message_printer.error("CSE Server failure. Please check the logs.") # noqa: E501
         sys.exit(1)
     finally:
@@ -623,11 +638,12 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
                 skip_config_decryption=skip_config_decryption,
                 msg_update_callback=None,
                 validate=False)
-            store_telemetry_settings(config_dict)
             record_user_action(cse_operation=CseOperation.SERVICE_RUN,
                                status=OperationStatus.FAILED,
-                               telemetry_settings=config_dict['service']['telemetry'],  # noqa: E501
-                               message=error_message)
+                               telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
+            # block the process to let telemetry handler to finish posting
+            # data to VAC. HACK!!!
+            time.sleep(3)
 
 
 @cli.command('convert-cluster',
@@ -692,7 +708,8 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
             config_file_path=config_file_path,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer)
+            msg_update_callback=console_message_printer,
+            validate=True)
 
         # Record telemetry details
         cse_params = {
@@ -901,6 +918,9 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
                            telemetry_settings=config['service']['telemetry'])
         sys.exit(1)
     finally:
+        # block the process to let telemetry handler to finish posting data to
+        # VAC. HACK!!!
+        time.sleep(3)
         if client:
             client.logout()
 
@@ -951,9 +971,6 @@ def list_template(ctx, config_file_path, skip_config_decryption,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
             validate=False)
-
-        # Store telemetry instance id, url and collector id in config
-        store_telemetry_settings(config_dict)
 
         # Record telemetry details
         cse_params = {PayloadKey.DISPLAY_OPTION: display_option}
@@ -1072,15 +1089,14 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                            telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
     except Exception as err:
         console_message_printer.error(str(err))
-        telemetry_settings = None
-        if config_dict and config_dict.get('service') and \
-                config_dict['service'].get('telemetry'):
-            telemetry_settings = config_dict['service']['telemetry']
         record_user_action(cse_operation=CseOperation.TEMPLATE_LIST,
                            status=OperationStatus.FAILED,
-                           message=str(err),
-                           telemetry_settings=telemetry_settings)
+                           telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
         sys.exit(1)
+    finally:
+        # block the process to let telemetry handler to finish posting data to
+        # VAC. HACK!!!
+        time.sleep(3)
 
 
 @template.command('install',
@@ -1157,27 +1173,32 @@ def install_cse_template(ctx, template_name, template_revision,
         ssh_key = ssh_key_file.read()
 
     try:
-        install_template(
-            template_name=template_name,
-            template_revision=template_revision,
-            config_file_name=config_file_path,
-            force_create=force_create,
-            retain_temp_vapp=retain_temp_vapp,
-            ssh_key=ssh_key,
-            skip_config_decryption=skip_config_decryption,
-            decryption_password=password,
-            msg_update_callback=console_message_printer)
-    except AmqpConnectionError:
-        raise Exception(AMQP_ERROR_MSG)
-    except requests.exceptions.ConnectionError as err:
-        raise Exception(f"Cannot connect to {err.request.url}.")
-    except vim.fault.InvalidLogin:
-        raise Exception(VCENTER_LOGIN_ERROR_MSG)
-    except cryptography.fernet.InvalidToken:
-        raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
+        try:
+            install_template(
+                template_name=template_name,
+                template_revision=template_revision,
+                config_file_name=config_file_path,
+                force_create=force_create,
+                retain_temp_vapp=retain_temp_vapp,
+                ssh_key=ssh_key,
+                skip_config_decryption=skip_config_decryption,
+                decryption_password=password,
+                msg_update_callback=console_message_printer)
+        except AmqpConnectionError:
+            raise Exception(AMQP_ERROR_MSG)
+        except requests.exceptions.ConnectionError as err:
+            raise Exception(f"Cannot connect to {err.request.url}.")
+        except vim.fault.InvalidLogin:
+            raise Exception(VCENTER_LOGIN_ERROR_MSG)
+        except cryptography.fernet.InvalidToken:
+            raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
     except Exception as err:
         console_message_printer.error(str(err))
         sys.exit(1)
+    finally:
+        # block the process to let telemetry handler to finish posting data to
+        # VAC. HACK!!!
+        time.sleep(3)
 
 
 @uiplugin.command('register', short_help="Register UI plugin with vCD.")
@@ -1481,6 +1502,11 @@ def _get_config_dict(config_file_path,
         if config_dict and config_dict.get('vcd') and \
                 not config_dict['vcd'].get('verify'):
             requests.packages.urllib3.disable_warnings()
+
+        # Store telemetry instance id, url and collector id in config
+        # This step should be done after suppressing the cert validation
+        # warnings
+        store_telemetry_settings(config_dict)
 
         return config_dict
     except AmqpConnectionError:
