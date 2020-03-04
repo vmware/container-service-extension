@@ -1,8 +1,6 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-import time
-
 import pika
 from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
@@ -220,6 +218,21 @@ def install_cse(config_file_name, skip_template_creation, force_update,
 
     client = None
     try:
+        # Telemetry - Construct telemetry data
+        telemetry_data = {
+            PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),  # noqa: E501
+            PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(pks_config_file_name),  # noqa: E501
+            PayloadKey.WERE_TEMPLATES_SKIPPED: bool(skip_template_creation),  # noqa: E501
+            PayloadKey.WERE_TEMPLATES_FORCE_UPDATED: bool(force_update),  # noqa: E501
+            PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(retain_temp_vapp),  # noqa: E501
+            PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(ssh_key)  # noqa: E501
+        }
+
+        # Telemetry - Record detailed telemetry data on install
+        record_user_action_details(CseOperation.SERVICE_INSTALL,
+                                   telemetry_data,
+                                   telemetry_settings=config['service']['telemetry'])  # noqa: E501
+
         log_filename = None
         log_wire = str_to_bool(config['service'].get('log_wire'))
         if log_wire:
@@ -308,21 +321,6 @@ def install_cse(config_file_name, skip_template_creation, force_update,
                     ssh_key=ssh_key,
                     msg_update_callback=msg_update_callback)
 
-        # Telemetry - Construct telemetry data
-        telemetry_data = {
-            PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),  # noqa: E501
-            PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(pks_config_file_name),  # noqa: E501
-            PayloadKey.WERE_TEMPLATES_SKIPPED: bool(skip_template_creation),  # noqa: E501
-            PayloadKey.WERE_TEMPLATES_FORCE_UPDATED: bool(force_update),  # noqa: E501
-            PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(retain_temp_vapp),  # noqa: E501
-            PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(ssh_key)  # noqa: E501
-        }
-
-        # Telemetry - Record detailed telemetry data on install
-        record_user_action_details(CseOperation.SERVICE_INSTALL,
-                                   telemetry_data,
-                                   telemetry_settings=config['service']['telemetry'])  # noqa: E501
-
         # if it's a PKS setup, setup NSX-T constructs
         if config.get('pks_config'):
             nsxt_servers = config.get('pks_config')['nsxt_servers']
@@ -352,10 +350,6 @@ def install_cse(config_file_name, skip_template_creation, force_update,
         # Telemetry - Record successful install action
         record_user_action(CseOperation.SERVICE_INSTALL,
                            telemetry_settings=config['service']['telemetry'])
-
-        # block the process to let telemetry handler to finish posting data to
-        # VAC. HACK!!!
-        time.sleep(5)
     except Exception:
         if msg_update_callback:
             msg_update_callback.error(
@@ -400,21 +394,6 @@ def install_template(template_name, template_revision, config_file_name,
         decryption_password=decryption_password,
         msg_update_callback=msg_update_callback)
 
-    # Telemetry data construction
-    cse_params = {
-        PayloadKey.TEMPLATE_NAME: template_name,
-        PayloadKey.TEMPLATE_REVISION: template_revision,
-        PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),
-        PayloadKey.WERE_TEMPLATES_FORCE_UPDATED: bool(force_create),
-        PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(retain_temp_vapp),
-        PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(ssh_key)
-    }
-    # Record telemetry data
-    record_user_action_details(
-        cse_operation=CseOperation.TEMPLATE_INSTALL,
-        cse_params=cse_params,
-        telemetry_settings=config['service']['telemetry'])
-
     populate_vsphere_list(config['vcs'])
 
     msg = f"Installing template '{template_name}' at revision " \
@@ -426,6 +405,21 @@ def install_template(template_name, template_revision, config_file_name,
 
     client = None
     try:
+        # Telemetry data construction
+        cse_params = {
+            PayloadKey.TEMPLATE_NAME: template_name,
+            PayloadKey.TEMPLATE_REVISION: template_revision,
+            PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),
+            PayloadKey.WERE_TEMPLATES_FORCE_UPDATED: bool(force_create),
+            PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(retain_temp_vapp),
+            PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(ssh_key)
+        }
+        # Record telemetry data
+        record_user_action_details(
+            cse_operation=CseOperation.TEMPLATE_INSTALL,
+            cse_params=cse_params,
+            telemetry_settings=config['service']['telemetry'])
+
         log_filename = None
         log_wire = str_to_bool(config['service'].get('log_wire'))
         if log_wire:
@@ -483,15 +477,17 @@ def install_template(template_name, template_revision, config_file_name,
                 msg_update_callback.error(msg)
             LOGGER.error(msg, exc_info=True)
             raise Exception(msg)
+
         # Record telemetry data on successful template install
         record_user_action(cse_operation=CseOperation.TEMPLATE_INSTALL,
-                            status=OperationStatus.SUCCESS,
-                            telemetry_settings=config['service']['telemetry'])  # noqa: E501
+                           status=OperationStatus.SUCCESS,
+                           telemetry_settings=config['service']['telemetry'])  # noqa: E501
     except Exception:
         if msg_update_callback:
             msg_update_callback.error(
                 "Template Installation Error. Check CSE install logs")
         LOGGER.error("Template Installation Error", exc_info=True)
+
         # Record telemetry data on template install failure
         record_user_action(cse_operation=CseOperation.TEMPLATE_INSTALL,
                            status=OperationStatus.FAILED,
