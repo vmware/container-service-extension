@@ -7,7 +7,8 @@ title: Template Announcements
 ## March 09, 2020
 
 All templates currently available:
-* Updated/new templates are highlighted
+* New templates are highlighted
+* Updated template revisions are highlighted
 * Removed templates are striked out
 
 | Template Name                        | Revision | Operating System  | Kubernetes  | Weave     | Docker                  |
