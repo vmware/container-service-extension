@@ -55,6 +55,8 @@ endpoint is not disabled in vCloud Director.
 
 [More details](https://docs.vmware.com/en/vCloud-Director/10.0/com.vmware.vcloud.install.doc/GUID-84390C8F-E8C5-4137-A1A5-53EC27FE0024.html)
 
+**Update** : CSE 2.6.0 has resolved this issue.
+
 ---
 
 ### Failures during template creation or installation
