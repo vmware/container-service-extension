@@ -10,39 +10,25 @@ CSE users would be able to interact with CSE Kubernetes clusters directly from
 vCD UI.
 
 ## Getting the plugin
+**TODO: Update plugin location to final GA build of plugin.**
 The plugin binary can be downloaded from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.0.0b1/container-ui-plugin.zip).
 
 ## Setting up the plugin
 ### Registering and publishing the plugin
-**Method 1:** Via `manage_plugin` script.
-
-Extract the CSE UI plugin zip viz. `container-ui-plugin.zip`.
-Download the plugin registration script from [here](https://raw.githubusercontent.com/vmware/container-service-extension/master/cse_ui/1.0.0.0b1/manage_plugin.py).
-Save the script content as `manage_plugin.py`.
-
-Fill up the following json template and save it as `manage_plugin.json`, keep
-it adjacent to the plugin binary and the registration script.
-```json
-{
-  "username": "[Fill in username of a vCD System Administrator account]",
-  "org": "System",
-  "password": "[Fill in password of the System Administrator account]",
-  "vcdUrlBase": "[Fill in the vCD public endpoint e.g. https://vcd.mydomain.com]"
-}
-```
+**Method 1:** Via CSE server cli
 
 To register the plugin, run
 ```sh
-python manage_plugin.py register
+cse ui-plugin register [path to plugin zip file] -c [path to CSE config file] -s
 ```
-To unregister the plugin, first you need to figure out the ID of the plugin. List
-all installed plugins, and get ID of the CSE UI Plugin, by running
+To unregister the plugin, first we need to figure out the ID of the plugin.
+List all installed plugins, and get ID of the CSE UI Plugin, by running
 ```sh
-python manage_plugin.py list
+cse ui-plugin list -c [path to CSE config file] -s
 ```
 Run the following command to remove the plugin from vCD.
 ```sh
-python manage_plugin.py unregister [ID]
+cse deregister [ID]
 ```
 
 **Method 2:** Via vCD UI portal

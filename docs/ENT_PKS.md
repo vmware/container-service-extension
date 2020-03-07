@@ -230,12 +230,12 @@ Below steps of granting rights are required only if [RBAC feature](/container-se
 <a name="compatibility-matrix"></a>
 ## Compatibility matrix
 
-|CSE      | Supported vCD Versions |Enterprise PKS| NSX-T |
-|---------|------------------------|--------------|-------|
-|2.0 Beta | 9.5, 9.7               | 1.4          | 2.3   |
-|2.0.0    | 9.5, 9.7               | 1.4          | 2.3   |
-|2.0.0    | 9.5, 9.7               | 1.4          | 2.4   |
-|2.5.0    | 9.5, 9.7, 10.0         | 1.4          | 2.3   |
-|2.5.0    | 9.5, 9.7, 10.0         | 1.4          | 2.4   |
+|CSE        | Supported vCD Versions |Enterprise PKS| NSX-T    |
+|-----------|------------------------|--------------|----------|
+|2.0.0 Beta | 9.5, 9.7               | 1.4          | 2.3      |
+|2.0.0      | 9.5, 9.7               | 1.4          | 2.3, 2.4 |
+|2.5.0      | 9.5, 9.7, 10.0         | 1.4          | 2.3, 2.4 |
+|2.6.0 Beta | 9.5, 9.7, 10.0, 10.1   | 1.4          | 2.3, 2.4 |
+|2.6.0      | 9.5, 9.7, 10.0, 10.1   | 1.4          | 2.3, 2.4 |
 
 

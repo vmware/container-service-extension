@@ -5,6 +5,51 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 2.6.0 GA(2.6.0)
+Release Date: 2020-04-?? **TODO**
+
+Supported vCD versions: 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0
+
+Enterprise PKS compatibility matrix
+
+|CSE       | vCD                                     | Enterprise PKS | NSX-T    |
+|----------|-----------------------------------------|----------------|----------|
+|2.6.0     | 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0-Beta | 1.4            | 2.3, 2.4 |
+
+**New Features**
+* New Templates with updated Kubernetes and Weave
+  * [Template Announcements](/container-service-extension/TEMPLATE_ANNOUNCEMENTS.html)
+* In place Kubernetes upgrade for clusters
+  * CSE offers the new capability to do in place upgrade of Kubernetes
+    related software in Native clusters. More details
+    [here](/container-service-extension/CLUSTER_MANAGEMENT.html#k8s_upgrade).
+* Secure Configuration files
+  * CSE now supports encrypted configuration files. More details
+  [here](/container-service-extension/CSE_CONFIG.html#encrypt_decrypt).
+* CSE UI Plugin for vCD
+  * Read more about it [here](/container-service-extension/CSE_UI_PLUGIN.html)
+* Interoperability with vCD 10.1.0
+
+**Notes to System Administrator**
+
+Upgrade from CSE 2.6.0.0b1 is not supported.
+
+If you are upgrading to CSE 2.6.0 from an older version of CSE, and you have
+pre-existing deployed K8s clusters, you must run the following command to
+be able to upgrade the cluster. Additionally if those clusters were deployed
+by CSE version below 2.5.0, then the following command should be run to
+preserve managablilty of the clusters.
+```sh
+cse convert-cluster
+```
+This command adds new metadata to the cluster. If the cluster was deployed by 
+CSE version below 2.5.0, the command will also reset the admin password of all
+nodes in the cluster. If nodes in the cluster are setup with ssh keys for root
+login, those key pairings will be preserved. The command also does a force
+reboot of the cluster, if admin password is reset.
+
+---
+
 ## CSE 2.6.0 Beta (2.6.0.0b1)
 Release Date: 2020-02-05
 
