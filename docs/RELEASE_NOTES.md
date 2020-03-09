@@ -26,7 +26,7 @@ Enterprise PKS compatibility matrix
 * Secure Configuration files
   * CSE now supports encrypted configuration files. More details
   [here](/container-service-extension/CSE_CONFIG.html#encrypt_decrypt).
-* CSE UI Plugin for vCD
+* CSE UI Plugin for vCD with capability to do CRUD on native clusters
   * Read more about it [here](/container-service-extension/CSE_UI_PLUGIN.html)
 * Interoperability with vCD 10.1.0
 

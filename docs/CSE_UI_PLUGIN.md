@@ -61,9 +61,12 @@ certain tenants, just un-select them from the scope and then publish.
 ## Functionality
 ### Landing Page
 After selecting `Kubernetes Container Clusters` option in the navigation menu,
-users can access the landing page. Landing page displays a list of Kubernetes
-container clusters created from Container Service Extension (CSE) and their
-basic information.
+users can access the landing page. Landing page displays
+* A list of Kubernetes container clusters created from
+Container Service Extension (CSE) and their basic information.
+* Option to Create a new native Kubernetes cluster.
+* Option to Delete an existing Kuberentes cluster (both native and
+Enterprise PKS based).
 
 **Provider View**
 
@@ -91,3 +94,7 @@ functionalities:
 * Download `kubectl` configuration from the button to the right of cluster title.
 * View General and Nodes information of native cluster. Info and Details are sub-sections containing cluster-centric and vCD/CSE related attributes.
 * View General information of Enterprise PKS cluster.
+* Add new nodes to an existing native cluster
+
+**Note** : Currently, removing nodes from an existing native cluster and
+resizing Enterprise PKS clusters is not supported via UI.
