@@ -110,15 +110,14 @@ def process_request(body):
     data = {k: v for k, v in request_data.items() if v is not None}
 
     # extract out the authorization token
+    tenant_auth_token = body['headers'].get('x-vcloud-authorization')
+    is_jwt_token = False
     auth_header = body['headers'].get('Authorization')
     if auth_header:
         tokens = auth_header.split(" ")
         if len(tokens) == 2 and tokens[0].lower() == 'bearer':
             tenant_auth_token = tokens[1]
             is_jwt_token = True
-    if not auth_header:
-        tenant_auth_token = body['headers'].get('x-vcloud-authorization')
-        is_jwt_token = False
 
     # process the request
     body_content = \
