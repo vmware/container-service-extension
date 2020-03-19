@@ -5,9 +5,8 @@
 from enum import Enum
 from enum import unique
 
-# End point of Vmware telemetry staging server
-# TODO() : This URL should reflect production server during release
-VAC_URL = "https://vcsa.vmware.com/ph-stg/api/hyper/send/"
+# End point of Vmware telemetry production server
+VAC_URL = "https://vcsa.vmware.com/ph/api/hyper/send"
 
 # Value of collector id that is required as part of HTTP request
 # to post sample data to telemetry server
