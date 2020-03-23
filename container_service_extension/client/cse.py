@@ -500,7 +500,7 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
             org_name = ctx.obj['profiles'].get('org_in_use')
 
         ssh_key = None
-        if ssh_key_file is not None:
+        if ssh_key_file:
             ssh_key = ssh_key_file.read()
         cluster = Cluster(client)
         result = cluster.resize_cluster(
