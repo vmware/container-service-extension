@@ -676,6 +676,7 @@ def _install_template(client, remote_template_manager, template, org_name,
         'catalog_item_name': catalog_item_name,
         'catalog_item_description': template[RemoteTemplateKey.DESCRIPTION], # noqa: E501
         'temp_vapp_name': template[RemoteTemplateKey.NAME] + '_temp', # noqa: E501
+        'temp_vm_name': template[RemoteTemplateKey.OS].replace('.', '-') + '-vm', # noqa: E501
         'cpu': template[RemoteTemplateKey.CPU],
         'memory': template[RemoteTemplateKey.MEMORY],
         'network_name': network_name,

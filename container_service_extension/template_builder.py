@@ -26,8 +26,6 @@ from container_service_extension.vsphere_utils import wait_until_tools_ready
 # used for creating temp vapp
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = NetworkAdapterType.VMXNET3.value
 TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
-TEMP_VAPP_VM_NAME = 'Temp-vm'
-
 
 class TemplateBuilder():
     """Builder calls for K8 templates."""
@@ -89,6 +87,7 @@ class TemplateBuilder():
             build_params.get('catalog_item_description')
 
         self.temp_vapp_name = build_params.get('temp_vapp_name')
+        self.temp_vm_name = build_params.get('temp_vm_name')
         self.cpu = build_params.get('cpu')
         self.memory = build_params.get('memory')
         self.network_name = build_params.get('network_name')
@@ -231,8 +230,8 @@ class TemplateBuilder():
             password=None,
             cust_script=init_script,
             accept_all_eulas=True,
-            vm_name=TEMP_VAPP_VM_NAME,
-            hostname=TEMP_VAPP_VM_NAME,
+            vm_name=self.temp_vm_name,
+            hostname=self.temp_vm_name,
             storage_profile=self.storage_profile)
         task = vapp_sparse_resource.Tasks.Task[0]
         self.client.get_task_monitor().wait_for_success(task)
@@ -445,7 +444,7 @@ class TemplateBuilder():
 
         self._upload_source_ova()
         vapp = self._create_temp_vapp()
-        self._customize_vm(vapp, TEMP_VAPP_VM_NAME)
+        self._customize_vm(vapp, self.temp_vm_name)
         self._capture_temp_vapp(vapp)
         if not retain_temp_vapp:
             self._delete_temp_vapp()
