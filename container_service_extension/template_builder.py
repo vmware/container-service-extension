@@ -27,6 +27,7 @@ from container_service_extension.vsphere_utils import wait_until_tools_ready
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = NetworkAdapterType.VMXNET3.value
 TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
 
+
 class TemplateBuilder():
     """Builder calls for K8 templates."""
 
