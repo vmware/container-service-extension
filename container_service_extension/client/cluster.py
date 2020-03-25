@@ -156,7 +156,10 @@ class Cluster:
                        vdc=None,
                        rollback=True,
                        template_name=None,
-                       template_revision=None):
+                       template_revision=None,
+                       cpu=None,
+                       memory=None,
+                       ssh_key=None):
         method = RequestMethod.PUT
         uri = f"{self._uri}/cluster/{cluster_name}"
         data = {
@@ -168,6 +171,9 @@ class Cluster:
             RequestKey.ROLLBACK: rollback,
             RequestKey.TEMPLATE_NAME: template_name,
             RequestKey.TEMPLATE_REVISION: template_revision,
+            RequestKey.NUM_CPU: cpu,
+            RequestKey.MB_MEMORY: memory,
+            RequestKey.SSH_KEY: ssh_key
         }
         response = self.client._do_request_prim(
             method,

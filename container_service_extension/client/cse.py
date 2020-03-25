@@ -454,9 +454,35 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
          'If not specified, server default will be used '
          '(Exclusive to native Kubernetes provider) '
          '(Must be used with --template-revision).')
+@click.option(
+    '-c',
+    '--cpu',
+    'cpu',
+    required=False,
+    default=None,
+    type=click.INT,
+    help='Number of virtual CPUs on each node '
+         '(Exclusive to native Kubernetes provider)')
+@click.option(
+    '-m',
+    '--memory',
+    'memory',
+    required=False,
+    default=None,
+    type=click.INT,
+    help='Megabytes of memory on each node '
+         '(Exclusive to native Kubernetes provider)')
+@click.option(
+    '-k',
+    '--ssh-key',
+    'ssh_key_file',
+    required=False,
+    default=None,
+    type=click.File('r'),
+    help='SSH public key filepath (Exclusive to native Kubernetes provider)')
 def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
                    vdc_name, disable_rollback, template_name,
-                   template_revision):
+                   template_revision, cpu, memory, ssh_key_file):
     """Resize the cluster to contain the specified number of worker nodes.
 
     Clusters that use native Kubernetes provider can not be sized down
@@ -472,6 +498,10 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
         client = ctx.obj['client']
         if not client.is_sysadmin() and org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
+
+        ssh_key = None
+        if ssh_key_file:
+            ssh_key = ssh_key_file.read()
         cluster = Cluster(client)
         result = cluster.resize_cluster(
             network_name,
@@ -481,7 +511,10 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
             vdc=vdc_name,
             rollback=not disable_rollback,
             template_name=template_name,
-            template_revision=template_revision)
+            template_revision=template_revision,
+            cpu=cpu,
+            memory=memory,
+            ssh_key=ssh_key)
         stdout(result, ctx)
     except CseResponseError as e:
         minor_error_code_to_error_message = {

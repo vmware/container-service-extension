@@ -659,6 +659,14 @@ class VcdBroker(AbstractBroker):
         template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
         num_workers = validated_data[RequestKey.NUM_WORKERS]
 
+        num_cpu = template.get(LocalTemplateKey.CPU)
+        if validated_data[RequestKey.NUM_CPU]:
+            num_cpu = validated_data[RequestKey.NUM_CPU]
+
+        mb_memory = template.get(LocalTemplateKey.MEMORY)
+        if validated_data[RequestKey.MB_MEMORY]:
+            mb_memory = validated_data[RequestKey.MB_MEMORY]
+
         if num_workers < 1:
             raise CseServerError(f"Worker node count must be > 0 "
                                  f"(received {num_workers}).")
@@ -671,8 +679,8 @@ class VcdBroker(AbstractBroker):
         # Record the data for telemetry
         cse_params = copy.deepcopy(validated_data)
         cse_params[PayloadKey.CLUSTER_ID] = cluster_id
-        cse_params[LocalTemplateKey.MEMORY] = template.get(LocalTemplateKey.MEMORY)  # noqa: E501
-        cse_params[LocalTemplateKey.CPU] = template.get(LocalTemplateKey.CPU)
+        cse_params[LocalTemplateKey.MEMORY] = mb_memory
+        cse_params[LocalTemplateKey.CPU] = num_cpu
         cse_params[LocalTemplateKey.KUBERNETES] = template.get(LocalTemplateKey.KUBERNETES)  # noqa: E501
         cse_params[LocalTemplateKey.KUBERNETES_VERSION] = template.get(LocalTemplateKey.KUBERNETES_VERSION)  # noqa: E501
         cse_params[LocalTemplateKey.OS] = template.get(LocalTemplateKey.OS)
@@ -698,8 +706,8 @@ class VcdBroker(AbstractBroker):
             template_revision=template_revision,
             num_workers=validated_data[RequestKey.NUM_WORKERS],
             network_name=validated_data[RequestKey.NETWORK_NAME],
-            num_cpu=validated_data[RequestKey.NUM_CPU],
-            mb_memory=validated_data[RequestKey.MB_MEMORY],
+            num_cpu=num_cpu,
+            mb_memory=mb_memory,
             storage_profile_name=validated_data[RequestKey.STORAGE_PROFILE_NAME], # noqa: E501
             ssh_key=validated_data[RequestKey.SSH_KEY],
             enable_nfs=validated_data[RequestKey.ENABLE_NFS],
