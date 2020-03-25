@@ -15,7 +15,8 @@ from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.pyvcloud_utils import upload_ova_to_catalog
 from container_service_extension.pyvcloud_utils import \
     wait_for_catalog_item_to_resolve
-from container_service_extension.server_constants import ScriptFile
+from container_service_extension.server_constants import ScriptFile, \
+    TemplateBuildParametersKey
 from container_service_extension.utils import download_file
 from container_service_extension.utils import read_data_file
 from container_service_extension.vsphere_utils import get_vsphere
@@ -62,46 +63,46 @@ class TemplateBuilder():
             return
 
         # validate and populate required fields
-        self.template_name = build_params.get('template_name')
-        self.template_revision = build_params.get('template_revision')
-        self.ova_name = build_params.get('source_ova_name')
-        self.ova_href = build_params.get('source_ova_href')
-        self.ova_sha256 = build_params.get('source_ova_sha256')
+        self.template_name = build_params.get(TemplateBuildParametersKey.TEMPLATE_NAME)
+        self.template_revision = build_params.get(TemplateBuildParametersKey.TEMPLATE_REVISION)
+        self.ova_name = build_params.get(TemplateBuildParametersKey.SOURCE_OVA_NAME)
+        self.ova_href = build_params.get(TemplateBuildParametersKey.SOURCE_OVA_HREF)
+        self.ova_sha256 = build_params.get(TemplateBuildParametersKey.SOURCE_OVA_SHA256)
 
         if org:
             self.org = org
             self.org_name = org.get_name()
         else:
-            self.org_name = build_params.get('org_name')
+            self.org_name = build_params.get(TemplateBuildParametersKey.ORG_NAME)
             self.org = get_org(self.client, org_name=self.org_name)
         if vdc:
             self.vdc = vdc
             self.vdc.get_resource()  # to make sure vdc.resource is populated
             self.vdc_name = vdc.name
         else:
-            self.vdc_name = build_params.get('vdc_name')
+            self.vdc_name = build_params.get(TemplateBuildParametersKey.VDC_NAME)
             self.vdc = get_vdc(self.client, vdc_name=self.vdc_name,
                                org=self.org)
-        self.catalog_name = build_params.get('catalog_name')
-        self.catalog_item_name = build_params.get('catalog_item_name')
+        self.catalog_name = build_params.get(TemplateBuildParametersKey.CATALOG_NAME)
+        self.catalog_item_name = build_params.get(TemplateBuildParametersKey.CATALOG_ITEM_NAME)
         self.catalog_item_description = \
-            build_params.get('catalog_item_description')
+            build_params.get(TemplateBuildParametersKey.CATALOG_ITEM_DESCRIPTION)
 
-        self.temp_vapp_name = build_params.get('temp_vapp_name')
-        self.temp_vm_name = build_params.get('temp_vm_name')
-        self.cpu = build_params.get('cpu')
-        self.memory = build_params.get('memory')
-        self.network_name = build_params.get('network_name')
-        self.ip_allocation_mode = build_params.get('ip_allocation_mode')
-        self.storage_profile = build_params.get('storage_profile')
+        self.temp_vapp_name = build_params.get(TemplateBuildParametersKey.TEMP_VAPP_NAME)
+        self.temp_vm_name = build_params.get(TemplateBuildParametersKey.TEMP_VM_NAME)
+        self.cpu = build_params.get(TemplateBuildParametersKey.CPU)
+        self.memory = build_params.get(TemplateBuildParametersKey.MEMORY)
+        self.network_name = build_params.get(TemplateBuildParametersKey.NETWORK_NAME)
+        self.ip_allocation_mode = build_params.get(TemplateBuildParametersKey.IP_ALLOCATION_MODE)
+        self.storage_profile = build_params.get(TemplateBuildParametersKey.STORAGE_PROFILE)
 
         if self.template_name and self.template_revision and \
                 self.ova_name and self.ova_href and self.ova_sha256 and \
                 self.org and self.org_name and self.vdc and self.vdc_name and \
                 self.catalog_name and self.catalog_item_name and \
                 self.catalog_item_description and self.temp_vapp_name and \
-                self.cpu and self.memory and self.network_name and \
-                self.ip_allocation_mode and self.storage_profile:
+                self.temp_vm_name and self.cpu and self.memory and \
+                self.network_name and self.ip_allocation_mode and self.storage_profile:
             self._is_valid = True
 
     def _cleanup_old_artifacts(self):
