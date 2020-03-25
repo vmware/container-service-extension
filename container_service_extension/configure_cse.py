@@ -30,7 +30,7 @@ from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY, CSE_PKS_DEPLOY_RIGHT_CATEGORY, \
     CSE_PKS_DEPLOY_RIGHT_DESCRIPTION, CSE_PKS_DEPLOY_RIGHT_NAME, \
     CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, EXCHANGE_TYPE, LocalTemplateKey, \
-    RemoteTemplateKey, SYSTEM_ORG_NAME # noqa: H301
+    RemoteTemplateKey, SYSTEM_ORG_NAME, TemplateBuildParametersKey # noqa: E501
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
 from container_service_extension.telemetry.constants import PayloadKey
@@ -664,24 +664,28 @@ def _install_template(client, remote_template_manager, template, org_name,
     if len(missing_keys) > 0:
         raise ValueError(f"Invalid template data. Missing keys: {missing_keys}") # noqa: E501
 
+    temp_vm_name = \
+        f"{template[RemoteTemplateKey.OS].replace('.','')}-k8s" \
+        f"{template[RemoteTemplateKey.KUBERNETES_VERSION].replace('.', '')}" \
+        f"-{template[RemoteTemplateKey.CNI]}{template[RemoteTemplateKey.CNI_VERSION].replace('.','')}-vm" # noqa: E501
     build_params = {
-        'template_name': template[RemoteTemplateKey.NAME],
-        'template_revision': template[RemoteTemplateKey.REVISION],
-        'source_ova_name': template[RemoteTemplateKey.SOURCE_OVA_NAME], # noqa: E501
-        'source_ova_href': template[RemoteTemplateKey.SOURCE_OVA_HREF], # noqa: E501
-        'source_ova_sha256': template[RemoteTemplateKey.SOURCE_OVA_SHA256], # noqa: E501
-        'org_name': org_name,
-        'vdc_name': vdc_name,
-        'catalog_name': catalog_name,
-        'catalog_item_name': catalog_item_name,
-        'catalog_item_description': template[RemoteTemplateKey.DESCRIPTION], # noqa: E501
-        'temp_vapp_name': template[RemoteTemplateKey.NAME] + '_temp', # noqa: E501
-        'temp_vm_name': template[RemoteTemplateKey.OS].replace('.', '-') + '-vm', # noqa: E501
-        'cpu': template[RemoteTemplateKey.CPU],
-        'memory': template[RemoteTemplateKey.MEMORY],
-        'network_name': network_name,
-        'ip_allocation_mode': ip_allocation_mode, # noqa: E501
-        'storage_profile': storage_profile
+        TemplateBuildParametersKey.TEMPLATE_NAME: template[RemoteTemplateKey.NAME], # noqa: E501
+        TemplateBuildParametersKey.TEMPLATE_REVISION: template[RemoteTemplateKey.REVISION], # noqa: E501
+        TemplateBuildParametersKey.SOURCE_OVA_NAME: template[RemoteTemplateKey.SOURCE_OVA_NAME], # noqa: E501
+        TemplateBuildParametersKey.SOURCE_OVA_HREF: template[RemoteTemplateKey.SOURCE_OVA_HREF], # noqa: E501
+        TemplateBuildParametersKey.SOURCE_OVA_SHA256: template[RemoteTemplateKey.SOURCE_OVA_SHA256], # noqa: E501
+        TemplateBuildParametersKey.ORG_NAME: org_name,
+        TemplateBuildParametersKey.VDC_NAME: vdc_name,
+        TemplateBuildParametersKey.CATALOG_NAME: catalog_name,
+        TemplateBuildParametersKey.CATALOG_ITEM_NAME: catalog_item_name,
+        TemplateBuildParametersKey.CATALOG_ITEM_DESCRIPTION: template[RemoteTemplateKey.DESCRIPTION], # noqa: E501
+        TemplateBuildParametersKey.TEMP_VAPP_NAME: template[RemoteTemplateKey.NAME] + '_temp', # noqa: E501
+        TemplateBuildParametersKey.TEMP_VM_NAME: temp_vm_name,
+        TemplateBuildParametersKey.CPU: template[RemoteTemplateKey.CPU],
+        TemplateBuildParametersKey.MEMORY: template[RemoteTemplateKey.MEMORY],
+        TemplateBuildParametersKey.NETWORK_NAME: network_name,
+        TemplateBuildParametersKey.IP_ALLOCATION_MODE: ip_allocation_mode, # noqa: E501
+        TemplateBuildParametersKey.STORAGE_PROFILE: storage_profile
     }
     builder = TemplateBuilder(client, client, build_params, ssh_key=ssh_key,
                               logger=LOGGER,
