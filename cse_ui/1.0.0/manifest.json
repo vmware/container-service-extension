@@ -1,0 +1,14 @@
+{
+    "urn": "vmware:vcloud:plugin:container-ui-plugin",
+    "name": "Container UI Plugin",
+    "containerVersion": "9.7.0",
+    "version": "1.0.0",
+    "scope": ["service-provider", "tenant"],
+    "permissions": [],
+    "description": "Container UI Plugin for CSE",
+    "vendor": "VMware",
+    "license": "Copyright (C) VMware 2019.  All rights reserved.",
+    "link": "http://www.vmware.com/support",
+    "module": "CsePluginModule",
+    "route": "cse"
+}
