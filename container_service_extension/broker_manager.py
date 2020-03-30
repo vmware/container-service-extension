@@ -55,7 +55,7 @@ def get_cluster_info(request_data, tenant_auth_token, is_jwt_token):
                                                       include_nsxt_info=True)
         broker = get_broker_from_k8s_metadata(
             k8s_metadata, tenant_auth_token, is_jwt_token)
-        return broker.get_cluster_info(request_data), broker
+        return broker.cluster_info(request_data), broker
 
     return get_cluster_and_broker(
         request_data, tenant_auth_token, is_jwt_token)
@@ -65,7 +65,7 @@ def get_cluster_and_broker(request_data, tenant_auth_token, is_jwt_token):
     cluster_name = request_data[RequestKey.CLUSTER_NAME]
     vcd_broker = VcdBroker(tenant_auth_token, is_jwt_token)
     try:
-        return vcd_broker.get_cluster_info(request_data), vcd_broker
+        return vcd_broker.cluster_info(request_data), vcd_broker
     except ClusterNotFoundError as err:
         # continue searching using PksBrokers
         LOGGER.debug(f"{err}")

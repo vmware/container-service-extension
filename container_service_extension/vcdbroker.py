@@ -105,10 +105,7 @@ class VcdBroker(AbstractBroker):
         validated_data = {**defaults, **data}
         req_utils.validate_payload(validated_data, required)
 
-        cluster_name = validated_data[RequestKey.CLUSTER_NAME]
-        cluster = get_cluster(self.tenant_client, cluster_name,
-                              org_name=validated_data[RequestKey.ORG_NAME],
-                              ovdc_name=validated_data[RequestKey.OVDC_NAME])
+        cluster = self.cluster_info(validated_data)
 
         # Record the telemetry data
         cse_params = copy.deepcopy(validated_data)
@@ -116,6 +113,24 @@ class VcdBroker(AbstractBroker):
         record_user_action_details(cse_operation=CseOperation.CLUSTER_INFO,
                                    cse_params=cse_params)
 
+        return cluster
+
+    def cluster_info(self, data):
+        required = [
+            RequestKey.CLUSTER_NAME
+        ]
+        defaults = {
+            RequestKey.ORG_NAME: None,
+            RequestKey.OVDC_NAME: None
+        }
+
+        validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
+
+        cluster_name = validated_data[RequestKey.CLUSTER_NAME]
+        cluster = get_cluster(self.tenant_client, cluster_name,
+                              org_name=validated_data[RequestKey.ORG_NAME],
+                              ovdc_name=validated_data[RequestKey.OVDC_NAME])
         cluster[K8S_PROVIDER_KEY] = K8sProvider.NATIVE
         vapp = VApp(self.tenant_client, href=cluster['vapp_href'])
         vms = vapp.get_all_vms()
@@ -260,11 +275,16 @@ class VcdBroker(AbstractBroker):
                               org_name=validated_data[RequestKey.ORG_NAME],
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
 
+        upgrades = self.cluster_upgrade_plan(cluster)
+
         # Record the telemetry data
         cse_params = copy.deepcopy(validated_data)
         cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
         record_user_action_details(cse_operation=CseOperation.CLUSTER_UPGRADE_PLAN, cse_params=cse_params)  # noqa: E501
 
+        return upgrades
+
+    def cluster_upgrade_plan(self, cluster):
         src_name = cluster['template_name']
         src_rev = cluster['template_revision']
 
@@ -397,14 +417,28 @@ class VcdBroker(AbstractBroker):
         Optional data and default values: org_name=None, ovdc_name=None,
             rollback=True, template_name=None, template_revision=None
         """
-        # TODO default template for resizing should be master's template
+        template = get_template(
+            name=data.get(RequestKey.TEMPLATE_NAME),
+            revision=data.get(RequestKey.TEMPLATE_REVISION))
         required = [
             RequestKey.CLUSTER_NAME,
             RequestKey.NUM_WORKERS,
             RequestKey.NETWORK_NAME
         ]
-        # default data values are taken care of in self.create_nodes()
-        validated_data = data
+        defaults = {
+            RequestKey.ORG_NAME: None,
+            RequestKey.OVDC_NAME: None,
+            RequestKey.NUM_WORKERS: 1,
+            RequestKey.NUM_CPU: None,
+            RequestKey.MB_MEMORY: None,
+            RequestKey.STORAGE_PROFILE_NAME: None,
+            RequestKey.SSH_KEY: None,
+            RequestKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME],
+            RequestKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION],
+            RequestKey.ENABLE_NFS: False,
+            RequestKey.ROLLBACK: True,
+        }
+        validated_data = {**defaults, **data}
         req_utils.validate_payload(validated_data, required)
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
@@ -417,7 +451,7 @@ class VcdBroker(AbstractBroker):
         # cluster_handler.py already makes a cluster info API call to vCD, but
         # that call does not return any node info, so this additional
         # cluster info call must be made
-        cluster_info = self.get_cluster_info(validated_data)
+        cluster_info = self.cluster_info(validated_data)
         num_workers = len(cluster_info['nodes'])
         if num_workers > num_workers_wanted:
             raise CseServerError(f"Automatic scale down is not supported for "
@@ -434,7 +468,7 @@ class VcdBroker(AbstractBroker):
                                    cse_params=cse_params)
 
         validated_data[RequestKey.NUM_WORKERS] = num_workers_wanted - num_workers # noqa: E501
-        return self.create_nodes(validated_data)
+        return self.create_nodes_for_cluster(cluster_info, validated_data)
 
     @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def delete_cluster(self, data):
@@ -511,9 +545,12 @@ class VcdBroker(AbstractBroker):
         template_name = validated_data[RequestKey.TEMPLATE_NAME]
         template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
 
+        # get cluster data (including node names) to pass to async function
+        cluster = self.cluster_info(validated_data)
+
         # check that the specified template is a valid upgrade target
         template = {}
-        valid_templates = self.get_cluster_upgrade_plan(validated_data)
+        valid_templates = self.cluster_upgrade_plan(cluster)
         for t in valid_templates:
             if t[LocalTemplateKey.NAME] == template_name and t[LocalTemplateKey.REVISION] == str(template_revision): # noqa: E501
                 template = t
@@ -525,9 +562,6 @@ class VcdBroker(AbstractBroker):
                 f"Specified template/revision ({template_name} revision "
                 f"{template_revision}) is not a valid upgrade target for "
                 f"cluster '{cluster_name}'.")
-
-        # get cluster data (including node names) to pass to async function
-        cluster = self.get_cluster_info(validated_data)
 
         # Record the telemetry data
         cse_params = copy.deepcopy(validated_data)
@@ -655,18 +689,12 @@ class VcdBroker(AbstractBroker):
         req_utils.validate_payload(validated_data, required)
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
-        template_name = validated_data[RequestKey.TEMPLATE_NAME]
-        template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
-        num_workers = validated_data[RequestKey.NUM_WORKERS]
-
-        if num_workers < 1:
-            raise CseServerError(f"Worker node count must be > 0 "
-                                 f"(received {num_workers}).")
-
         cluster = get_cluster(self.tenant_client, cluster_name,
                               org_name=validated_data[RequestKey.ORG_NAME],
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
+
         cluster_id = cluster['cluster_id']
+        result = self.create_nodes_for_cluster(cluster, validated_data)
 
         # Record the data for telemetry
         cse_params = copy.deepcopy(validated_data)
@@ -680,6 +708,42 @@ class VcdBroker(AbstractBroker):
         cse_params[LocalTemplateKey.CNI_VERSION] = template.get(LocalTemplateKey.CNI_VERSION)  # noqa: E501
         record_user_action_details(cse_operation=CseOperation.NODE_CREATE,
                                    cse_params=cse_params)
+
+        return result
+
+    def create_nodes_for_cluster(self, cluster, data):
+        required = [
+            RequestKey.NETWORK_NAME
+        ]
+        template = get_template(
+            name=data.get(RequestKey.TEMPLATE_NAME),
+            revision=data.get(RequestKey.TEMPLATE_REVISION))
+        defaults = {
+            RequestKey.ORG_NAME: None,
+            RequestKey.OVDC_NAME: None,
+            RequestKey.NUM_WORKERS: 1,
+            RequestKey.NUM_CPU: None,
+            RequestKey.MB_MEMORY: None,
+            RequestKey.STORAGE_PROFILE_NAME: None,
+            RequestKey.SSH_KEY: None,
+            RequestKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME],
+            RequestKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION],
+            RequestKey.ENABLE_NFS: False,
+            RequestKey.ROLLBACK: True,
+        }
+        validated_data = {**defaults, **data}
+        req_utils.validate_payload(validated_data, required)
+
+        template_name = validated_data[RequestKey.TEMPLATE_NAME]
+        template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
+        num_workers = validated_data[RequestKey.NUM_WORKERS]
+
+        if num_workers < 1:
+            raise CseServerError(f"Worker node count must be > 0 "
+                                 f"(received {num_workers}).")
+
+        cluster_name = cluster['name']
+        cluster_id = cluster['cluster_id']
 
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()

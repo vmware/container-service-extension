@@ -364,6 +364,9 @@ class PksBroker(AbstractBroker):
         return cluster_dict
 
     def get_cluster_info(self, data):
+        return self.cluster_info(data)
+
+    def cluster_info(self, data):
         """Get the details of a cluster with a given name in PKS environment.
 
         System administrator gets the given cluster information regardless of
@@ -398,8 +401,6 @@ class PksBroker(AbstractBroker):
         self._restore_original_name(cluster_info)
         if not data.get('is_admin_request'):
             self._filter_pks_properties(cluster_info)
-
-        return cluster_info
 
     # this function is still being used by _list_clusters for some reason
     # ideally we would like to merge this function with the above function
