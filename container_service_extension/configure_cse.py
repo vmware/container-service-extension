@@ -16,9 +16,9 @@ from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
 from container_service_extension.logger import INSTALL_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
-# from container_service_extension.nsxt.cse_nsxt_setup_utils import \
-#    setup_nsxt_constructs
-# from container_service_extension.nsxt.nsxt_client import NSXTClient
+from container_service_extension.nsxt.cse_nsxt_setup_utils import \
+    setup_nsxt_constructs
+from container_service_extension.nsxt.nsxt_client import NSXTClient
 from container_service_extension.pyvcloud_utils import catalog_exists
 from container_service_extension.pyvcloud_utils import create_and_share_catalog
 from container_service_extension.pyvcloud_utils import get_org
@@ -322,30 +322,30 @@ def install_cse(config_file_name, skip_template_creation, force_update,
                     msg_update_callback=msg_update_callback)
 
         # if it's a PKS setup, setup NSX-T constructs
-        # if config.get('pks_config'):
-        #    nsxt_servers = config.get('pks_config')['nsxt_servers']
-        #   for nsxt_server in nsxt_servers:
-        #        msg = f"Configuring NSX-T server ({nsxt_server.get('name')})" \ # noqa: E501
-        #              " for CSE. Please check install logs for details."
-        #        if msg_update_callback:
-        #            msg_update_callback.general(msg)
-        #        LOGGER.info(msg)
-        #        nsxt_client = NSXTClient(
-        #            host=nsxt_server.get('host'),
-        #            username=nsxt_server.get('username'),
-        #            password=nsxt_server.get('password'),
-        #            http_proxy=nsxt_server.get('proxy'),
-        #            https_proxy=nsxt_server.get('proxy'),
-        #            verify_ssl=nsxt_server.get('verify'),
-        #            logger_instance=LOGGER,
-        #            log_requests=True,
-        #            log_headers=True,
-        #            log_body=True)
-        #        setup_nsxt_constructs(
-        #            nsxt_client=nsxt_client,
-        #            nodes_ip_block_id=nsxt_server.get('nodes_ip_block_ids'),
-        #            pods_ip_block_id=nsxt_server.get('pods_ip_block_ids'),
-        #            ncp_boundary_firewall_section_anchor_id=nsxt_server.get('distributed_firewall_section_anchor_id')) # noqa: E501
+        if config.get('pks_config'):
+            nsxt_servers = config.get('pks_config')['nsxt_servers']
+            for nsxt_server in nsxt_servers:
+                msg = f"Configuring NSX-T server ({nsxt_server.get('name')})" \
+                      " for CSE. Please check install logs for details."
+                if msg_update_callback:
+                    msg_update_callback.general(msg)
+                LOGGER.info(msg)
+                nsxt_client = NSXTClient(
+                    host=nsxt_server.get('host'),
+                    username=nsxt_server.get('username'),
+                    password=nsxt_server.get('password'),
+                    http_proxy=nsxt_server.get('proxy'),
+                    https_proxy=nsxt_server.get('proxy'),
+                    verify_ssl=nsxt_server.get('verify'),
+                    logger_instance=LOGGER,
+                    log_requests=True,
+                    log_headers=True,
+                    log_body=True)
+                setup_nsxt_constructs(
+                    nsxt_client=nsxt_client,
+                    nodes_ip_block_id=nsxt_server.get('nodes_ip_block_ids'),
+                    pods_ip_block_id=nsxt_server.get('pods_ip_block_ids'),
+                    ncp_boundary_firewall_section_anchor_id=nsxt_server.get('distributed_firewall_section_anchor_id')) # noqa: E501
 
         # Telemetry - Record successful install action
         record_user_action(CseOperation.SERVICE_INSTALL,

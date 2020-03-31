@@ -18,7 +18,7 @@ from container_service_extension.exceptions import PksServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.nsxt.cluster_network_isolater import \
     ClusterNetworkIsolater
-# from container_service_extension.nsxt.nsxt_client import NSXTClient
+from container_service_extension.nsxt.nsxt_client import NSXTClient
 from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE_KEY
 from container_service_extension.pksclient.api.cluster_api import ClusterApi
 from container_service_extension.pksclient.api.plans_api import PlansApi
@@ -107,17 +107,17 @@ class PksBroker(AbstractBroker):
         self.nsxt_server = \
             utils.get_pks_cache().get_nsxt_info(pks_ctx.get('vc'))
         self.nsxt_client = None
-        # if self.nsxt_server:
-        #    self.nsxt_client = NSXTClient(
-        #        host=self.nsxt_server.get('host'),
-        #        username=self.nsxt_server.get('username'),
-        #        password=self.nsxt_server.get('password'),
-        #        http_proxy=self.nsxt_server.get('proxy'),
-        #        https_proxy=self.nsxt_server.get('proxy'),
-        #        verify_ssl=self.nsxt_server.get('verify'),
-        #        log_requests=True,
-        #        log_headers=True,
-        #        log_body=True)
+        if self.nsxt_server:
+            self.nsxt_client = NSXTClient(
+                host=self.nsxt_server.get('host'),
+                username=self.nsxt_server.get('username'),
+                password=self.nsxt_server.get('password'),
+                http_proxy=self.nsxt_server.get('proxy'),
+                https_proxy=self.nsxt_server.get('proxy'),
+                verify_ssl=self.nsxt_server.get('verify'),
+                log_requests=True,
+                log_headers=True,
+                log_body=True)
         # TODO: Add support in pyvcloud to send metadata values with their
         # types intact.
         verify_ssl = pks_ctx.get('verify')
@@ -267,10 +267,10 @@ class PksBroker(AbstractBroker):
         qualified_cluster_name = self._append_user_id(cluster_name)
         data[RequestKey.CLUSTER_NAME] = qualified_cluster_name
 
-        # if not self.nsxt_server:
-        #    raise CseServerError(
-        #        "NSX-T server details not found for PKS server selected for "
-        #        f"cluster : {cluster_name}. Aborting creation of cluster.")
+        if not self.nsxt_server:
+            raise CseServerError(
+                "NSX-T server details not found for PKS server selected for "
+                f"cluster : {cluster_name}. Aborting creation of cluster.")
 
         # this needs to be refactored
         # when num_workers==None, PKS creates however many the plan specifies
@@ -280,8 +280,8 @@ class PksBroker(AbstractBroker):
             pks_plan_name=data[RequestKey.PKS_PLAN_NAME],
             pks_ext_host=data[RequestKey.PKS_EXT_HOST])
 
-        # self._isolate_cluster(cluster_name, qualified_cluster_name,
-        #                      cluster.get('uuid'))
+        self._isolate_cluster(cluster_name, qualified_cluster_name,
+                              cluster.get('uuid'))
 
         self._restore_original_name(cluster)
         if not self.tenant_client.is_sysadmin():
@@ -471,19 +471,19 @@ class PksBroker(AbstractBroker):
         result['task_status'] = 'in progress'
 
         # remove cluster network isolation
-        # LOGGER.debug("Removing network isolation of cluster "
-        #             f"{qualified_cluster_name}.")
-        # try:
-        #    cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client) # noqa: E501
-        #    cluster_network_isolater.remove_cluster_isolation(
-        #        qualified_cluster_name)
-        # except Exception as err:
-        #    # NSX-T oprations are idempotent so they should not cause erros
-        #    # if say NSGroup is missing. But for any other exception, simply
-        #    # catch them and ignore.
-        #    LOGGER.debug(f"Error {err} occured while deleting cluster "
-        #                 "isolation rules for cluster "
-        #                 f"{qualified_cluster_name}")
+        LOGGER.debug("Removing network isolation of cluster "
+                     f"{qualified_cluster_name}.")
+        try:
+            cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client)
+            cluster_network_isolater.remove_cluster_isolation(
+                qualified_cluster_name)
+        except Exception as err:
+            # NSX-T oprations are idempotent so they should not cause erros
+            # if say NSGroup is missing. But for any other exception, simply
+            # catch them and ignore.
+            LOGGER.debug(f"Error {err} occured while deleting cluster "
+                         "isolation rules for cluster "
+                         f"{qualified_cluster_name}")
 
         return result
 
@@ -630,20 +630,18 @@ class PksBroker(AbstractBroker):
         result['status_code'] = requests.codes.ok
         profile_api = ProfileApi(api_client=self.client)
 
-        LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to get the "
-                     f"compute profile: {cp_name}")
-
         try:
+            LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to get "
+                         f"the compute profile: {cp_name}")
             compute_profile = \
                 profile_api.get_compute_profile(profile_name=cp_name)
+            LOGGER.debug(f"Received response from PKS: {self.pks_host_uri} on "
+                         f"compute-profile: {cp_name} with details: "
+                         f"{compute_profile.to_dict()}")
         except ApiException as err:
             LOGGER.debug(f"Creating compute-profile {cp_name} in PKS failed "
                          f"with error:\n {err}")
             raise PksServerError(err.status, err.body)
-
-        LOGGER.debug(f"Received response from PKS: {self.pks_host_uri} on "
-                     f"compute-profile: {cp_name} with details: "
-                     f"{compute_profile.to_dict()}")
 
         result['body'] = compute_profile.to_dict()
         return result
