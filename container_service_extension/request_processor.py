@@ -17,6 +17,7 @@ import container_service_extension.request_handlers.ovdc_handler as ovdc_handler
 import container_service_extension.request_handlers.system_handler as system_handler # noqa: E501
 import container_service_extension.request_handlers.template_handler as template_handler # noqa: E501
 from container_service_extension.server_constants import CseOperation
+from container_service_extension.server_constants import PKS_SERVICE_NAME
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
@@ -152,7 +153,8 @@ def _get_url_data(method, url):
     tokens = url.split('/')
     num_tokens = len(tokens)
 
-    if num_tokens < 4:
+    # TODO() - Throw error until PKS Server Side Changes are complete.
+    if num_tokens < 4 or tokens[2] == PKS_SERVICE_NAME:
         raise NotFoundRequestError()
 
     operation_type = tokens[3].lower()
