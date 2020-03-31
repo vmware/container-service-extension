@@ -18,35 +18,25 @@ from container_service_extension.exceptions import PksServerError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.nsxt.cluster_network_isolater import \
     ClusterNetworkIsolater
-from container_service_extension.nsxt.nsxt_client import NSXTClient
+# from container_service_extension.nsxt.nsxt_client import NSXTClient
 from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE_KEY
-from container_service_extension.pksclient.api.v1 import PlansApi
-from container_service_extension.pksclient.api.v1.cluster_api \
-    import ClusterApi as ClusterApiV1
-from container_service_extension.pksclient.api.v1beta.cluster_api \
-    import ClusterApi as ClusterApiV1Beta
-from container_service_extension.pksclient.api.v1beta.profile_api \
-    import ProfileApi
-from container_service_extension.pksclient.client.v1.api_client \
-    import ApiClient as ApiClientV1
-from container_service_extension.pksclient.client.v1.rest\
-    import ApiException as v1Exception
-from container_service_extension.pksclient.client.v1beta.api_client \
-    import ApiClient as ApiClientV1Beta
-from container_service_extension.pksclient.client.v1beta.rest\
-    import ApiException as v1BetaException
+from container_service_extension.pksclient.api.cluster_api import ClusterApi
+from container_service_extension.pksclient.api.plans_api import PlansApi
+from container_service_extension.pksclient.api.profile_api import ProfileApi
+from container_service_extension.pksclient.api_client import ApiClient
 from container_service_extension.pksclient.configuration import Configuration
-from container_service_extension.pksclient.models.v1.\
-    update_cluster_parameters import UpdateClusterParameters
-from container_service_extension.pksclient.models.v1beta.az import AZ
-from container_service_extension.pksclient.models.v1beta.cluster_parameters \
+from container_service_extension.pksclient.models.az import AZ
+from container_service_extension.pksclient.models.cluster_parameters \
     import ClusterParameters
-from container_service_extension.pksclient.models.v1beta.cluster_request \
+from container_service_extension.pksclient.models.cluster_request \
     import ClusterRequest
-from container_service_extension.pksclient.models.v1beta.\
-    compute_profile_parameters import ComputeProfileParameters
-from container_service_extension.pksclient.models.v1beta.\
-    compute_profile_request import ComputeProfileRequest
+from container_service_extension.pksclient.models.compute_profile_parameters \
+    import ComputeProfileParameters
+from container_service_extension.pksclient.models.compute_profile_request \
+    import ComputeProfileRequest
+from container_service_extension.pksclient.models.update_cluster_parameters \
+    import UpdateClusterParameters
+from container_service_extension.pksclient.rest import ApiException
 from container_service_extension.pyvcloud_utils import \
     get_org_name_from_ovdc_id
 from container_service_extension.pyvcloud_utils import is_org_admin
@@ -64,11 +54,12 @@ import container_service_extension.utils as utils
 USER_ID_SEPARATOR = "---"
 # Properties that need to be excluded from cluster info before sending
 # to the client for reasons: security, too big that runs thru lines
-EXCLUDE_KEYS = ['authorization_mode', 'compute_profile', 'pks_cluster_name',
-                'uuid', 'plan_name', 'compute_profile_name',
-                'network_profile_name', 'nsxt_network_profile']
+SENSITIVE_PKS_KEYS = [
+    'authorization_mode', 'compute_profile', 'pks_cluster_name',
+    'uuid', 'plan_name', 'compute_profile_name',
+    'network_profile_name', 'nsxt_network_profile']
 
-# TODO() Filtering of cluster results should be processed in
+# TODO: Filtering of cluster results should be processed in
 #  different layer.
 
 
@@ -79,7 +70,6 @@ class PksBroker(AbstractBroker):
     """
 
     VERSION_V1 = 'v1'
-    VERSION_V1BETA = 'v1beta1'
 
     def __init__(self, pks_ctx, tenant_auth_token, is_jwt_token):
         """Initialize PKS broker.
@@ -114,18 +104,18 @@ class PksBroker(AbstractBroker):
         self.nsxt_server = \
             utils.get_pks_cache().get_nsxt_info(pks_ctx.get('vc'))
         self.nsxt_client = None
-        if self.nsxt_server:
-            self.nsxt_client = NSXTClient(
-                host=self.nsxt_server.get('host'),
-                username=self.nsxt_server.get('username'),
-                password=self.nsxt_server.get('password'),
-                http_proxy=self.nsxt_server.get('proxy'),
-                https_proxy=self.nsxt_server.get('proxy'),
-                verify_ssl=self.nsxt_server.get('verify'),
-                log_requests=True,
-                log_headers=True,
-                log_body=True)
-        # TODO() Add support in pyvcloud to send metadata values with their
+        # if self.nsxt_server:
+        #    self.nsxt_client = NSXTClient(
+        #        host=self.nsxt_server.get('host'),
+        #        username=self.nsxt_server.get('username'),
+        #        password=self.nsxt_server.get('password'),
+        #        http_proxy=self.nsxt_server.get('proxy'),
+        #        https_proxy=self.nsxt_server.get('proxy'),
+        #        verify_ssl=self.nsxt_server.get('verify'),
+        #        log_requests=True,
+        #        log_headers=True,
+        #        log_body=True)
+        # TODO: Add support in pyvcloud to send metadata values with their
         # types intact.
         verify_ssl = pks_ctx.get('verify')
         self.verify = True
@@ -135,8 +125,7 @@ class PksBroker(AbstractBroker):
             self.verify = utils.str_to_bool(verify_ssl)
 
         token = self._get_token()
-        self.client_v1 = self._get_pks_client(token, self.VERSION_V1)
-        self.client_v1beta = self._get_pks_client(token, self.VERSION_V1BETA)
+        self.client = self._get_pks_client(token)
 
     def _get_token(self):
         """Connect to UAA server, authenticate and get token.
@@ -152,7 +141,7 @@ class PksBroker(AbstractBroker):
                                      f'Connection establishment to PKS host'
                                      f' {self.uaac_uri} failed: {err}')
 
-    def _get_pks_config(self, token, version):
+    def _get_pks_config(self, token):
         """Construct PKS configuration.
 
         (PKS configuration is required to construct pksclient)
@@ -164,25 +153,22 @@ class PksBroker(AbstractBroker):
         """
         pks_config = Configuration()
         pks_config.proxy = self.proxy_uri
-        pks_config.host = f"{self.pks_host_uri}/{version}"
+        pks_config.host = f"{self.pks_host_uri}/{self.VERSION_V1}"
         pks_config.access_token = token
         pks_config.username = self.username
         pks_config.verify_ssl = self.verify
 
         return pks_config
 
-    def _get_pks_client(self, token, version):
+    def _get_pks_client(self, token):
         """Get PKS client.
 
         :return: PKS client
 
         :rtype: ApiClient
         """
-        pks_config = self._get_pks_config(token, version)
-        if version == self.VERSION_V1:
-            client = ApiClientV1(configuration=pks_config)
-        else:
-            client = ApiClientV1Beta(configuration=pks_config)
+        pks_config = self._get_pks_config(token)
+        client = ApiClient(configuration=pks_config)
         return client
 
     def list_plans(self):
@@ -192,18 +178,19 @@ class PksBroker(AbstractBroker):
 
         :rtype: list
         """
-        plan_api = PlansApi(api_client=self.client_v1)
+        plan_api = PlansApi(api_client=self.client)
         LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} "
                      f"to list all available plans")
         try:
-            plans = plan_api.list_plans()
-        except v1Exception as err:
+            pks_plans = plan_api.list_plans()
+        except ApiException as err:
             LOGGER.debug(f"Listing PKS plans failed with error:\n {err}")
             raise PksServerError(err.status, err.body)
-        pks_plans_list = []
-        for plan in plans:
-            pks_plans_list.append(plan.to_dict())
-        return pks_plans_list
+
+        result = []
+        for pks_plan in pks_plans:
+            result.append(pks_plan.to_dict())
+        return result
 
     def list_clusters(self, data):
         """Get list of clusters in PKS environment.
@@ -215,55 +202,39 @@ class PksBroker(AbstractBroker):
 
         :rtype: list
         """
-        cluster_list = self._list_clusters()
+        result = self._list_clusters(data)
+        if not self.tenant_client.is_sysadmin():
+            for cluster in result:
+                self._filter_sensitive_pks_properties(cluster)
+        return result
 
-        # Required for all personae
-        for cluster in cluster_list:
-            self._restore_original_name(cluster)
-
-        return self._filter_clusters(cluster_list, **data)
-
-    def _list_clusters(self):
-        """Get list of clusters in PKS environment.
-
-        :return: a list of cluster-dictionaries
-
-        :rtype: list
-        """
-        cluster_api = ClusterApiV1(api_client=self.client_v1)
-
-        LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} "
-                     f"to list all clusters")
+    def _list_clusters(self, data):
+        """."""
+        result = []
         try:
-            clusters = cluster_api.list_clusters()
-        except v1Exception as err:
+            cluster_api = ClusterApi(api_client=self.client)
+
+            LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} "
+                         f"to list all clusters")
+            pks_clusters = cluster_api.list_clusters()
+
+            LOGGER.debug(f"Received response from PKS: {self.pks_host_uri} "
+                         f"on the list of clusters: {pks_clusters}")
+
+            for pks_cluster in pks_clusters:
+                cluster_info = pks_cluster.to_dict()
+                cluster_info[K8S_PROVIDER_KEY] = K8sProvider.PKS
+                self._restore_original_name(cluster_info)
+                # Flatten the nested 'parameters' dict
+                cluster_params_dict = cluster_info.pop('parameters')
+                cluster_info.update(cluster_params_dict)
+                self.update_cluster_with_vcd_info(cluster_info)
+                result.append(cluster_info)
+        except ApiException as err:
             LOGGER.debug(f"Listing PKS clusters failed with error:\n {err}")
             raise PksServerError(err.status, err.body)
 
-        list_of_cluster_dicts = []
-        for cluster in clusters:
-            # TODO() Below is a temporary fix to retrieve compute_profile_name.
-            #  Expensive _get_cluster_info() call must be removed once PKS team
-            #  moves list_clusters to v1beta endpoint.
-            v1_beta_cluster = self._get_cluster_info(cluster_name=cluster.name)
-            v1_beta_cluster[K8S_PROVIDER_KEY] = K8sProvider.PKS
-            # cluster_dict = {
-            #     'name': cluster.name,
-            #     'plan_name': cluster.plan_name,
-            #     'uuid': cluster.uuid,
-            #     'status': cluster.last_action_state,
-            #     'last_action': cluster.last_action,
-            #     'k8_master_ips': cluster.kubernetes_master_ips,
-            #     'compute_profile_name': cluster.compute_profile_name,
-            #     'worker_count':
-            #     cluster.parameters.kubernetes_worker_instances
-            # }
-            # list_of_cluster_dicts.append(cluster_dict)
-            list_of_cluster_dicts.append(v1_beta_cluster)
-
-        LOGGER.debug(f"Received response from PKS: {self.pks_host_uri} on the"
-                     f" list of clusters: {list_of_cluster_dicts}")
-        return list_of_cluster_dicts
+        return self._filter_clusters(result, **data)
 
     @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
     def create_cluster(self, data):
@@ -293,27 +264,27 @@ class PksBroker(AbstractBroker):
         qualified_cluster_name = self._append_user_id(cluster_name)
         data[RequestKey.CLUSTER_NAME] = qualified_cluster_name
 
-        if not self.nsxt_server:
-            raise CseServerError(
-                "NSX-T server details not found for PKS server selected for "
-                f"cluster : {cluster_name}. Aborting creation of cluster.")
+        # if not self.nsxt_server:
+        #    raise CseServerError(
+        #        "NSX-T server details not found for PKS server selected for "
+        #        f"cluster : {cluster_name}. Aborting creation of cluster.")
 
         # this needs to be refactored
         # when num_workers==None, PKS creates however many the plan specifies
-        cluster_info = self._create_cluster(
+        cluster = self._create_cluster(
             cluster_name=data[RequestKey.CLUSTER_NAME],
             num_workers=data.get(RequestKey.NUM_WORKERS),
             pks_plan_name=data[RequestKey.PKS_PLAN_NAME],
             pks_ext_host=data[RequestKey.PKS_EXT_HOST])
 
-        self._isolate_cluster(cluster_name, qualified_cluster_name,
-                              cluster_info.get('uuid'))
+        # self._isolate_cluster(cluster_name, qualified_cluster_name,
+        #                      cluster.get('uuid'))
 
-        self._restore_original_name(cluster_info)
+        self._restore_original_name(cluster)
         if not self.tenant_client.is_sysadmin():
-            self._filter_pks_properties(cluster_info)
+            self._filter_sensitive_pks_properties(cluster)
 
-        return cluster_info
+        return cluster
 
     # all parameters following '*args' are required and keyword-only
     def _create_cluster(self, *args,
@@ -334,7 +305,7 @@ class PksBroker(AbstractBroker):
 
         :rtype: dict
         """
-        cluster_api = ClusterApiV1Beta(api_client=self.client_v1beta)
+        cluster_api = ClusterApi(api_client=self.client)
         cluster_params = \
             ClusterParameters(kubernetes_master_host=pks_ext_host,
                               kubernetes_worker_instances=num_workers)
@@ -344,11 +315,17 @@ class PksBroker(AbstractBroker):
                            parameters=cluster_params,
                            compute_profile_name=self.compute_profile)
 
-        LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to create "
-                     f"cluster of name: {cluster_name}")
         try:
+            LOGGER.debug(
+                f"Sending request to PKS: {self.pks_host_uri} to create "
+                f"cluster of name: {cluster_name}")
+
             cluster = cluster_api.add_cluster(cluster_request)
-        except v1BetaException as err:
+
+            LOGGER.debug(
+                f"PKS: {self.pks_host_uri} accepted the request to create"
+                f" cluster: {cluster_name}")
+        except ApiException as err:
             LOGGER.debug(f"Creating cluster {cluster_name} in PKS failed with "
                          f"error:\n {err}")
             raise PksServerError(err.status, err.body)
@@ -358,12 +335,18 @@ class PksBroker(AbstractBroker):
         cluster_params_dict = cluster_dict.pop('parameters')
         cluster_dict.update(cluster_params_dict)
 
-        LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to create"
-                     f" cluster: {cluster_name}")
-
         return cluster_dict
 
     def get_cluster_info(self, data):
+        """."""
+        result = self._get_cluster_info(data)
+
+        if not data.get('is_admin_request'):
+            self._filter_sensitive_pks_properties(result)
+
+        return result
+
+    def _get_cluster_info(self, data):
         """Get the details of a cluster with a given name in PKS environment.
 
         System administrator gets the given cluster information regardless of
@@ -376,60 +359,36 @@ class PksBroker(AbstractBroker):
         :rtype: dict
         """
         cluster_name = data[RequestKey.CLUSTER_NAME]
-
+        # The structure of info returned by list_cluster and get_cluster is
+        # identical, hence using list_cluster and filtering by name in memory
+        # to retrieve info of the requested cluster.
+        cluster_info_list = self._list_clusters(data)
+        result = {}
         if self.tenant_client.is_sysadmin() \
                 or is_org_admin(self.client_session) \
                 or data.get('is_org_admin_search'):
-            cluster_list = self.list_clusters(data)
-            filtered_cluster_list = \
-                self._filter_list_by_cluster_name(cluster_list, cluster_name)
-            LOGGER.debug(f"filtered Cluster List:{filtered_cluster_list}")
-            if len(filtered_cluster_list) > 1:
+            filtered_cluster_info_list = []
+            for cluster_info in cluster_info_list:
+                if cluster_info['name'] == cluster_name:
+                    filtered_cluster_info_list.append(cluster_info)
+            LOGGER.debug(
+                f"Filtered list of clusters:{filtered_cluster_info_list}")
+            if len(filtered_cluster_info_list) > 1:
                 raise PksDuplicateClusterError(
                     requests.codes.bad_request,
                     f"Multiple clusters with name '{cluster_name}' exists.")
-            if len(filtered_cluster_list) == 0:
+            if len(filtered_cluster_info_list) == 0:
                 raise PksServerError(requests.codes.not_found,
                                      f"cluster {cluster_name} not found.")
-            return filtered_cluster_list[0]
+            result = filtered_cluster_info_list[0]
+        else:
+            qualified_cluster_name = self._append_user_id(cluster_name)
+            for cluster_info in cluster_info_list:
+                if cluster_info['pks_cluster_name'] == qualified_cluster_name:
+                    result = cluster_info
+                    break
 
-        cluster_info = \
-            self._get_cluster_info(self._append_user_id(cluster_name))
-        self._restore_original_name(cluster_info)
-        if not data.get('is_admin_request'):
-            self._filter_pks_properties(cluster_info)
-
-        return cluster_info
-
-    # this function is still being used by _list_clusters for some reason
-    # ideally we would like to merge this function with the above function
-    def _get_cluster_info(self, cluster_name):
-        """Get the details of a cluster with a given name in PKS environment.
-
-        :param str cluster_name: Name of the cluster
-        :return: Details of the cluster.
-
-        :rtype: dict
-        """
-        cluster_api = ClusterApiV1Beta(api_client=self.client_v1beta)
-
-        LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to get "
-                     f"details of cluster with name: {cluster_name}")
-        try:
-            cluster = cluster_api.get_cluster(cluster_name=cluster_name)
-        except v1BetaException as err:
-            LOGGER.debug(f"Getting cluster info on {cluster_name} failed with "
-                         f"error:\n {err}")
-            raise PksServerError(err.status, err.body)
-        cluster_dict = cluster.to_dict()
-        cluster_dict[K8S_PROVIDER_KEY] = K8sProvider.PKS
-        cluster_params_dict = cluster_dict.pop('parameters')
-        cluster_dict.update(cluster_params_dict)
-
-        LOGGER.debug(f"Received response from PKS: {self.pks_host_uri} on "
-                     f"cluster: {cluster_name} with details: {cluster_dict}")
-
-        return cluster_dict
+        return result
 
     def get_cluster_config(self, data):
         """Get the configuration of the cluster with the given name in PKS.
@@ -446,21 +405,22 @@ class PksBroker(AbstractBroker):
 
         if self.tenant_client.is_sysadmin() or \
                 is_org_admin(self.client_session):
-            cluster_info = self.get_cluster_info(data)
+            cluster_info = self._get_cluster_info(data)
             qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
             qualified_cluster_name = self._append_user_id(cluster_name)
 
         self._check_cluster_isolation(cluster_name, qualified_cluster_name)
 
-        cluster_api = ClusterApiV1(api_client=self.client_v1)
+        cluster_api = ClusterApi(api_client=self.client)
 
         LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to get"
-                     f" detailed configuration of cluster with name: "
-                     f"{cluster_name}")
+                     f" kubectl configuration of cluster with name: "
+                     f"{qualified_cluster_name}")
         config = cluster_api.create_user(cluster_name=qualified_cluster_name)
         LOGGER.debug(f"Received response from PKS: {self.pks_host_uri} on "
-                     f"cluster: {cluster_name} with details: {config}")
+                     f"cluster: {qualified_cluster_name} with details: "
+                     f"{config}")
         cluster_config = yaml.safe_dump(config, default_flow_style=False)
 
         return self.filter_traces_of_user_context(cluster_config)
@@ -479,41 +439,46 @@ class PksBroker(AbstractBroker):
 
         if self.tenant_client.is_sysadmin() \
                 or is_org_admin(self.client_session):
-            cluster_info = self.get_cluster_info(data)
+            cluster_info = self._get_cluster_info(data)
             qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
             qualified_cluster_name = self._append_user_id(cluster_name)
 
         result = {}
-        cluster_api = ClusterApiV1(api_client=self.client_v1)
-        LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} to delete "
-                     f"the cluster with name: {qualified_cluster_name}")
+        cluster_api = ClusterApi(api_client=self.client)
+
         try:
+            LOGGER.debug(
+                f"Sending request to PKS: {self.pks_host_uri} to delete "
+                f"the cluster with name: {qualified_cluster_name}")
             cluster_api.delete_cluster(cluster_name=qualified_cluster_name)
-        except v1Exception as err:
+
+            LOGGER.debug(
+                f"PKS: {self.pks_host_uri} accepted the request to delete"
+                f" the cluster: {qualified_cluster_name}")
+        except ApiException as err:
             LOGGER.debug(f"Deleting cluster {qualified_cluster_name} failed"
                          f" with error:\n {err}")
             raise PksServerError(err.status, err.body)
-        LOGGER.debug(f"PKS: {self.pks_host_uri} accepted the request to delete"
-                     f" the cluster: {qualified_cluster_name}")
+
         result['name'] = qualified_cluster_name
         result['task_status'] = 'in progress'
 
         # remove cluster network isolation
-        LOGGER.debug(f"Removing network isolation of cluster {cluster_name}.")
-        try:
-            cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client)
-            cluster_network_isolater.remove_cluster_isolation(
-                qualified_cluster_name)
-        except Exception as err:
-            # NSX-T oprations are idempotent so they should not cause erros
-            # if say NSGroup is missing. But for any other exception, simply
-            # catch them and ignore.
-            LOGGER.debug(f"Error {err} occured while deleting cluster "
-                         f"isolation rules for cluster {cluster_name}")
+        # LOGGER.debug("Removing network isolation of cluster "
+        #             f"{qualified_cluster_name}.")
+        # try:
+        #    cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client) # noqa: E501
+        #    cluster_network_isolater.remove_cluster_isolation(
+        #        qualified_cluster_name)
+        # except Exception as err:
+        #    # NSX-T oprations are idempotent so they should not cause erros
+        #    # if say NSGroup is missing. But for any other exception, simply
+        #    # catch them and ignore.
+        #    LOGGER.debug(f"Error {err} occured while deleting cluster "
+        #                 "isolation rules for cluster "
+        #                 f"{qualified_cluster_name}")
 
-        self._restore_original_name(result)
-        self._filter_pks_properties(result)
         return result
 
     @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
@@ -535,7 +500,7 @@ class PksBroker(AbstractBroker):
 
         if self.tenant_client.is_sysadmin() \
                 or is_org_admin(self.client_session):
-            cluster_info = self.get_cluster_info(data)
+            cluster_info = self._get_cluster_info(data)
             qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
             qualified_cluster_name = self._append_user_id(cluster_name)
@@ -543,7 +508,7 @@ class PksBroker(AbstractBroker):
         self._check_cluster_isolation(cluster_name, qualified_cluster_name)
 
         result = {}
-        cluster_api = ClusterApiV1(api_client=self.client_v1)
+        cluster_api = ClusterApi(api_client=self.client)
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to resize "
                      f"the cluster with name: {qualified_cluster_name} to "
                      f"{num_workers} worker nodes")
@@ -552,7 +517,7 @@ class PksBroker(AbstractBroker):
         try:
             cluster_api.update_cluster(qualified_cluster_name,
                                        body=resize_params)
-        except v1Exception as err:
+        except ApiException as err:
             LOGGER.debug(f"Resizing cluster {qualified_cluster_name} failed"
                          f" with error:\n {err}")
             raise PksServerError(err.status, err.body)
@@ -562,7 +527,7 @@ class PksBroker(AbstractBroker):
         result['name'] = qualified_cluster_name
         result['task_status'] = 'in progress'
         self._restore_original_name(result)
-        self._filter_pks_properties(result)
+        self._filter_sensitive_pks_properties(result)
         return result
 
     def _check_cluster_isolation(self, cluster_name, qualified_cluster_name):
@@ -579,7 +544,7 @@ class PksBroker(AbstractBroker):
             raise ValueError(
                 f"Invalid cluster_id for cluster : '{cluster_name}'")
 
-        LOGGER.debug(f"Isolating network of cluster {cluster_name}.")
+        LOGGER.debug(f"Isolating network of cluster {qualified_cluster_name}.")
         try:
             cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client)
             cluster_network_isolater.isolate_cluster(qualified_cluster_name,
@@ -608,7 +573,7 @@ class PksBroker(AbstractBroker):
         result = {}
         result['body'] = []
         result['status_code'] = requests.codes.ok
-        profile_api = ProfileApi(api_client=self.client_v1beta)
+        profile_api = ProfileApi(api_client=self.client)
 
         resource_pool = {
             'resource_pool': ovdc_rp_name
@@ -629,15 +594,14 @@ class PksBroker(AbstractBroker):
 
         az = AZ(name=az_name, cpi=cpi, cloud_properties=cloud_properties)
         cp_params = ComputeProfileParameters(azs=[az])
-        cp_request = ComputeProfileRequest(name=cp_name,
-                                           description=description,
-                                           parameters=cp_params)
+        cp_request = ComputeProfileRequest(
+            name=cp_name, description=description, parameters=cp_params)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to create "
                      f"the compute profile: {cp_name} for ovdc {ovdc_rp_name}")
         try:
             profile_api.add_compute_profile(body=cp_request)
-        except v1BetaException as err:
+        except ApiException as err:
             LOGGER.debug(f"Creating compute-profile {cp_name} in PKS failed "
                          f"with error:\n {err}")
             raise PksServerError(err.status, err.body)
@@ -657,7 +621,7 @@ class PksBroker(AbstractBroker):
         result = {}
         result['body'] = []
         result['status_code'] = requests.codes.ok
-        profile_api = ProfileApi(api_client=self.client_v1beta)
+        profile_api = ProfileApi(api_client=self.client)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to get the "
                      f"compute profile: {cp_name}")
@@ -665,7 +629,7 @@ class PksBroker(AbstractBroker):
         try:
             compute_profile = \
                 profile_api.get_compute_profile(profile_name=cp_name)
-        except v1BetaException as err:
+        except ApiException as err:
             LOGGER.debug(f"Creating compute-profile {cp_name} in PKS failed "
                          f"with error:\n {err}")
             raise PksServerError(err.status, err.body)
@@ -687,13 +651,13 @@ class PksBroker(AbstractBroker):
         result = {}
         result['body'] = []
         result['status_code'] = requests.codes.ok
-        profile_api = ProfileApi(api_client=self.client_v1beta)
+        profile_api = ProfileApi(api_client=self.client)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to get the "
                      f"list of compute profiles")
         try:
             cp_list = profile_api.list_compute_profiles()
-        except v1BetaException as err:
+        except ApiException as err:
             LOGGER.debug(f"Listing compute-profiles in PKS failed "
                          f"with error:\n {err}")
             raise PksServerError(err.status, err.body)
@@ -716,14 +680,14 @@ class PksBroker(AbstractBroker):
         result = {}
         result['body'] = []
         result['status_code'] = requests.codes.ok
-        profile_api = ProfileApi(api_client=self.client_v1beta)
+        profile_api = ProfileApi(api_client=self.client)
 
         LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to delete "
                      f"the compute profile: {cp_name}")
 
         try:
             profile_api.delete_compute_profile(profile_name=cp_name)
-        except v1BetaException as err:
+        except ApiException as err:
             LOGGER.debug(f"Deleting compute-profile {cp_name} in PKS failed "
                          f"with error:\n {err}")
             raise PksServerError(err.status, err.body)
@@ -732,6 +696,19 @@ class PksBroker(AbstractBroker):
                      f" it deleted the compute profile: {cp_name}")
 
         return result
+
+    def _append_user_id(self, name):
+        user_id = self._get_vcd_userid()
+        return f"{name}{USER_ID_SEPARATOR}{user_id}"
+
+    def _restore_original_name(self, cluster_info):
+        # From the given cluster information, transforms the
+        # PKS cluster name to its original name as named by the
+        # vCD user, and include that name in the cluster information
+
+        cluster_info['pks_cluster_name'] = cluster_info['name']
+        original_name_info = cluster_info['name'].split(USER_ID_SEPARATOR)
+        cluster_info['name'] = original_name_info[0]
 
     def _filter_clusters(self, cluster_list, **kwargs):
         """Filter the cluster list based on vdc, org by personae.
@@ -780,21 +757,8 @@ class PksBroker(AbstractBroker):
             # information.
             if not kwargs.get('is_admin_request'):
                 for cluster in cluster_list:
-                    self._filter_pks_properties(cluster)
+                    self._filter_sensitive_pks_properties(cluster)
         return cluster_list
-
-    def _append_user_id(self, name):
-        user_id = self._get_vcd_userid()
-        return f"{name}{USER_ID_SEPARATOR}{user_id}"
-
-    def _restore_original_name(self, cluster_info):
-        # From the given cluster information, transforms the
-        # PKS cluster name to its original name as named by the
-        # vCD user, and include that name in the cluster information
-
-        cluster_info['pks_cluster_name'] = cluster_info['name']
-        original_name_info = cluster_info['name'].split(USER_ID_SEPARATOR)
-        cluster_info['name'] = original_name_info[0]
 
     def _is_cluster_visible_to_org_admin(self, cluster_info):
         # Returns True if org-admin is the cluster owner, or
@@ -893,17 +857,11 @@ class PksBroker(AbstractBroker):
         return vdc_of_cluster == vdc_name
 
     # TODO() Should be moved to filtering layer
-    def _filter_list_by_cluster_name(self, cluster_list, cluster_name):
-        # Return those clusters which have the given cluster name
-        return [cluster for cluster in cluster_list
-                if cluster['name'] == cluster_name]
-
-    # TODO() Should be moved to filtering layer
-    def _filter_pks_properties(self, cluster_info):
+    def _filter_sensitive_pks_properties(self, cluster_info):
         # Remove selective properties from the given cluster
         # information.
-        for entry in EXCLUDE_KEYS:
-            cluster_info.pop(entry, None)
+        for sensitive_key in SENSITIVE_PKS_KEYS:
+            cluster_info.pop(sensitive_key, None)
 
     # TODO() Should be moved to filtering layer
     @staticmethod
@@ -927,10 +885,8 @@ class PksBroker(AbstractBroker):
             raise CseServerError(f"Unsupported operation {name}")
         return unsupported_method
 
-    def generate_cluster_subset_with_given_keys(self, cluster):
-        pks_cluster = cluster
-
-        compute_profile_name = cluster.get('compute_profile_name', '')
+    def update_cluster_with_vcd_info(self, pks_cluster):
+        compute_profile_name = pks_cluster.get('compute_profile_name', '')
         pks_cluster['vdc'] = ''
         if compute_profile_name:
             vdc_id = self._extract_vdc_id_from_pks_compute_profile_name(compute_profile_name)  # noqa: E501
@@ -938,7 +894,7 @@ class PksBroker(AbstractBroker):
             pks_cluster['vdc'] = self._extract_vdc_name_from_pks_compute_profile_name(compute_profile_name)  # noqa: E501
 
         pks_cluster['status'] = \
-            cluster.get('last_action', '').lower() + ' ' + \
-            cluster.get('last_action_state', '').lower()
+            pks_cluster.get('last_action', '').lower() + ' ' + \
+            pks_cluster.get('last_action_state', '').lower()
 
         return pks_cluster

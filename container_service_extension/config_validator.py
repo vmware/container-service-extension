@@ -9,19 +9,18 @@ from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.platform import Platform
 import requests
-from requests.exceptions import HTTPError
+# from requests.exceptions import HTTPError
 from vsphere_guest_run.vsphere import VSphere
 import yaml
 
 from container_service_extension.encryption_engine import \
     get_decrypted_file_contents
 from container_service_extension.exceptions import AmqpConnectionError
-from container_service_extension.nsxt.dfw_manager import DFWManager
-from container_service_extension.nsxt.ipset_manager import IPSetManager
-from container_service_extension.nsxt.nsxt_client import NSXTClient
+# from container_service_extension.nsxt.dfw_manager import DFWManager
+# from container_service_extension.nsxt.ipset_manager import IPSetManager
+# from container_service_extension.nsxt.nsxt_client import NSXTClient
 from container_service_extension.pks_cache import Credentials
-from container_service_extension.pksclient.client.v1.api_client \
-    import ApiClient as ApiClientV1
+from container_service_extension.pksclient.api_client import ApiClient
 from container_service_extension.pksclient.configuration import Configuration
 from container_service_extension.remote_template_manager import \
     RemoteTemplateManager
@@ -445,7 +444,7 @@ def _validate_pks_config_data_integrity(pks_config, msg_update_callback=None):
                 f"{pks_server.get('name')} ({pks_server.get('host')})")
 
         pks_configuration.token = token
-        client = ApiClientV1(configuration=pks_configuration)
+        client = ApiClient(configuration=pks_configuration)
 
         if client and msg_update_callback:
             msg_update_callback.general(
@@ -462,53 +461,53 @@ def _validate_pks_config_data_integrity(pks_config, msg_update_callback=None):
                 f"{PKS_NSXT_SERVERS_SECTION_KEY}")
 
         # Create a NSX-T client and verify connection
-        nsxt_client = NSXTClient(
-            host=nsxt_server.get('host'),
-            username=nsxt_server.get('username'),
-            password=nsxt_server.get('password'),
-            http_proxy=nsxt_server.get('proxy'),
-            https_proxy=nsxt_server.get('proxy'),
-            verify_ssl=nsxt_server.get('verify'))
-        if not nsxt_client.test_connectivity():
-            raise ValueError(
-                "Unable to connect to NSX-T server : "
-                f"{nsxt_server.get('name')} ({nsxt_server.get('host')})")
+        # nsxt_client = NSXTClient(
+        #    host=nsxt_server.get('host'),
+        #    username=nsxt_server.get('username'),
+        #    password=nsxt_server.get('password'),
+        #    http_proxy=nsxt_server.get('proxy'),
+        #    https_proxy=nsxt_server.get('proxy'),
+        #    verify_ssl=nsxt_server.get('verify'))
+        # if not nsxt_client.test_connectivity():
+        #    raise ValueError(
+        #        "Unable to connect to NSX-T server : "
+        #        f"{nsxt_server.get('name')} ({nsxt_server.get('host')})")
 
-        if msg_update_callback:
-            msg_update_callback.general(
-                f"Connected to NSX-T server ({nsxt_server.get('host')})")
+        # if msg_update_callback:
+        #    msg_update_callback.general(
+        #        f"Connected to NSX-T server ({nsxt_server.get('host')})")
 
-        ipset_manager = IPSetManager(nsxt_client)
-        if nsxt_server.get('nodes_ip_block_ids'):
-            block_not_found = False
-            try:
-                for ip_block_id in nsxt_server.get('nodes_ip_block_ids'):
-                    if not ipset_manager.get_ip_block_by_id(ip_block_id):
-                        block_not_found = True
-            except HTTPError:
-                block_not_found = True
-            if block_not_found:
-                raise ValueError(
-                    f"Unknown Node IP Block : {ip_block_id} referenced by "
-                    f"NSX-T server : {nsxt_server.get('name')}.")
-        if nsxt_server.get('pods_ip_block_ids'):
-            try:
-                block_not_found = False
-                for ip_block_id in nsxt_server.get('pods_ip_block_ids'):
-                    if not ipset_manager.get_ip_block_by_id(ip_block_id):
-                        block_not_found = True
-            except HTTPError:
-                block_not_found = True
-            if block_not_found:
-                raise ValueError(
-                    f"Unknown Pod IP Block : {ip_block_id} referenced by "
-                    f"NSX-T server : {nsxt_server.get('name')}.")
+        # ipset_manager = IPSetManager(nsxt_client)
+        # if nsxt_server.get('nodes_ip_block_ids'):
+        #    block_not_found = False
+        #    try:
+        #        for ip_block_id in nsxt_server.get('nodes_ip_block_ids'):
+        #            if not ipset_manager.get_ip_block_by_id(ip_block_id):
+        #                block_not_found = True
+        #    except HTTPError:
+        #        block_not_found = True
+        #    if block_not_found:
+        #        raise ValueError(
+        #            f"Unknown Node IP Block : {ip_block_id} referenced by "
+        #            f"NSX-T server : {nsxt_server.get('name')}.")
+        # if nsxt_server.get('pods_ip_block_ids'):
+        #    try:
+        #        block_not_found = False
+        #        for ip_block_id in nsxt_server.get('pods_ip_block_ids'):
+        #            if not ipset_manager.get_ip_block_by_id(ip_block_id):
+        #                block_not_found = True
+        #    except HTTPError:
+        #        block_not_found = True
+        #    if block_not_found:
+        #        raise ValueError(
+        #            f"Unknown Pod IP Block : {ip_block_id} referenced by "
+        #            f"NSX-T server : {nsxt_server.get('name')}.")
 
-        dfw_manager = DFWManager(nsxt_client)
-        fw_section_id = \
-            nsxt_server.get('distributed_firewall_section_anchor_id')
-        section = dfw_manager.get_firewall_section(id=fw_section_id)
-        if not section:
-            raise ValueError(
-                f"Unknown Firewall section : {fw_section_id} referenced by "
-                f"NSX-T server : {nsxt_server.get('name')}.")
+        # dfw_manager = DFWManager(nsxt_client)
+        # fw_section_id = \
+        #    nsxt_server.get('distributed_firewall_section_anchor_id')
+        # section = dfw_manager.get_firewall_section(id=fw_section_id)
+        # if not section:
+        #    raise ValueError(
+        #        f"Unknown Firewall section : {fw_section_id} referenced by "
+        #        f"NSX-T server : {nsxt_server.get('name')}.")
