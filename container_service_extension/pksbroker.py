@@ -55,9 +55,12 @@ USER_ID_SEPARATOR = "---"
 # Properties that need to be excluded from cluster info before sending
 # to the client for reasons: security, too big that runs thru lines
 SENSITIVE_PKS_KEYS = [
-    'authorization_mode', 'compute_profile', 'pks_cluster_name',
-    'uuid', 'plan_name', 'compute_profile_name',
-    'network_profile_name', 'nsxt_network_profile']
+    'authorization_mode', 'available_upgrades', 'cluster_tags',
+    'compute_profile', 'compute_profile_name', 'custom_ca_certs',
+    'k8s_customization_parameters', 'kubernetes_profile_name',
+    'kubernetes_setting_cluster_details', 'kubernetes_setting_plan_details',
+    'network_profile_name', 'nsxt_network_details', 'nsxt_network_profile',
+    'pks_cluster_name', 'plan_name', 'uuid']
 
 # TODO: Filtering of cluster results should be processed in
 #  different layer.
@@ -330,18 +333,18 @@ class PksBroker(AbstractBroker):
                          f"error:\n {err}")
             raise PksServerError(err.status, err.body)
 
-        cluster_dict = cluster.to_dict()
+        cluster_info = cluster.to_dict()
         # Flattening the dictionary
-        cluster_params_dict = cluster_dict.pop('parameters')
-        cluster_dict.update(cluster_params_dict)
+        cluster_params_dict = cluster_info.pop('parameters')
+        cluster_info.update(cluster_params_dict)
 
-        return cluster_dict
+        return cluster_info
 
     def get_cluster_info(self, data):
         """."""
         result = self._get_cluster_info(data)
 
-        if not data.get('is_admin_request'):
+        if not self.tenant_client.is_sysadmin():
             self._filter_sensitive_pks_properties(result)
 
         return result
@@ -387,6 +390,9 @@ class PksBroker(AbstractBroker):
                 if cluster_info['pks_cluster_name'] == qualified_cluster_name:
                     result = cluster_info
                     break
+            if not result:
+                raise PksServerError(requests.codes.not_found,
+                                     f"cluster {cluster_name} not found.")
 
         return result
 
@@ -527,7 +533,8 @@ class PksBroker(AbstractBroker):
         result['name'] = qualified_cluster_name
         result['task_status'] = 'in progress'
         self._restore_original_name(result)
-        self._filter_sensitive_pks_properties(result)
+        if not self.tenant_client.is_sysadmin():
+            self._filter_sensitive_pks_properties(result)
         return result
 
     def _check_cluster_isolation(self, cluster_name, qualified_cluster_name):
@@ -745,19 +752,12 @@ class PksBroker(AbstractBroker):
         if is_org_admin(self.client_session) or kwargs.get('is_org_admin_search'): # noqa: E501
             # TODO() - Service accounts for exclusive org does not
             #  require the following filtering.
-            cluster_list = [cluster_dict for cluster_dict in cluster_list
+            cluster_list = [cluster_info for cluster_info in cluster_list
                             if self._is_cluster_visible_to_org_admin(
-                                cluster_dict)]
+                                cluster_info)]
         else:
-            cluster_list = [cluster_dict for cluster_dict in cluster_list
-                            if self._is_user_cluster_owner(cluster_dict)]
-
-            # 'is_admin_request' is a flag that is used to restrict access to
-            # user context and other secured information on pks cluster
-            # information.
-            if not kwargs.get('is_admin_request'):
-                for cluster in cluster_list:
-                    self._filter_sensitive_pks_properties(cluster)
+            cluster_list = [cluster_info for cluster_info in cluster_list
+                            if self._is_user_cluster_owner(cluster_info)]
         return cluster_list
 
     def _is_cluster_visible_to_org_admin(self, cluster_info):
@@ -833,15 +833,15 @@ class PksBroker(AbstractBroker):
         return org_name == get_org_name_from_ovdc_id(vdc_id)
 
     def _apply_vdc_filter(self, cluster_list, vdc_name):
-        cluster_list = [cluster_dict for cluster_dict in cluster_list
+        cluster_list = [cluster_info for cluster_info in cluster_list
                         if self._does_cluster_belong_to_vdc
-                        (cluster_dict, vdc_name)]
+                        (cluster_info, vdc_name)]
         return cluster_list
 
     def _apply_org_filter(self, cluster_list, org_name):
-        cluster_list = [cluster_dict for cluster_dict in cluster_list
+        cluster_list = [cluster_info for cluster_info in cluster_list
                         if self._does_cluster_belong_to_org
-                        (cluster_dict, org_name)]
+                        (cluster_info, org_name)]
         return cluster_list
 
     def _does_cluster_belong_to_vdc(self, cluster_info, vdc_name):
