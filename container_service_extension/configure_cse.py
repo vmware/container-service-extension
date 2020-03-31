@@ -30,7 +30,7 @@ from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY, CSE_PKS_DEPLOY_RIGHT_CATEGORY, \
     CSE_PKS_DEPLOY_RIGHT_DESCRIPTION, CSE_PKS_DEPLOY_RIGHT_NAME, \
     CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, EXCHANGE_TYPE, LocalTemplateKey, \
-    RemoteTemplateKey, SYSTEM_ORG_NAME # noqa: H301
+    PKS_SERVICE_NAME, RemoteTemplateKey, SYSTEM_ORG_NAME # noqa: H301
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
 from container_service_extension.telemetry.constants import PayloadKey
@@ -559,7 +559,10 @@ def _register_cse(client, routing_key, exchange, msg_update_callback=None):
     patterns = [
         f'/api/{CSE_SERVICE_NAME}',
         f'/api/{CSE_SERVICE_NAME}/.*',
-        f'/api/{CSE_SERVICE_NAME}/.*/.*'
+        f'/api/{CSE_SERVICE_NAME}/.*/.*',
+        f'/api/{PKS_SERVICE_NAME}',
+        f'/api/{PKS_SERVICE_NAME}/.*',
+        f'/api/{PKS_SERVICE_NAME}/.*/.*'
     ]
 
     cse_info = None

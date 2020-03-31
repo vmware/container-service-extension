@@ -10,6 +10,7 @@ from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
 from vcd_cli.vcd import vcd
 
+from container_service_extension.client import pks
 from container_service_extension.client.cluster import Cluster
 from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.system import System
@@ -24,10 +25,10 @@ from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 from container_service_extension.shared_constants import ServerAction
 
 
-@vcd.group(short_help='Manage Kubernetes clusters')
+@vcd.group(short_help='Manage Native Kubernetes clusters')
 @click.pass_context
 def cse(ctx):
-    """Manage Kubernetes clusters.
+    """Manage Native Kubernetes clusters.
 
 \b
 Examples
@@ -76,7 +77,7 @@ def list_templates(ctx):
         stderr(e, ctx)
 
 
-@cse.group('cluster', short_help='Manage Kubernetes clusters')
+@cse.group('cluster', short_help='Manage Native Kubernetes clusters')
 @click.pass_context
 def cluster_group(ctx):
     """Manage Kubernetes clusters.
@@ -99,8 +100,6 @@ Examples
         The cluster will be connected to org VDC network 'mynetwork'.
         All VMs will use the default template.
         On create failure, the invalid cluster is deleted.
-        '--network' is only applicable for clusters using native (vCD)
-        Kubernetes provider.
 \b
     vcd cse cluster create mycluster --nodes 1 --enable-nfs \\
     --network mynetwork --template-name photon-v2 --template-revision 1 \\
@@ -116,26 +115,18 @@ Examples
         VMs for user accessibility.
         On create failure, cluster will be left cluster in error state for
         troubleshooting.
-        All of these options except for '--nodes' and '--vdc' are only
-        applicable for clusters using native (vCD) Kubernetes provider.
 \b
     vcd cse cluster resize mycluster --nodes 5 --network mynetwork
         Resize the cluster to have 5 worker nodes. On resize failure,
         returns cluster to original size.
-        If cluster is using native (vCD) Kubernetes provider, nodes will be
-        created from server default template and revision.
-        '--network' is only applicable for clusters using
-        native (vCD) Kubernetes provider.
+        Nodes will be created from server default template at default revision.
         '--vdc' option can be used for faster command execution.
 \b
     vcd cse cluster resize mycluster -N 10 --template-name my_template \\
     --template-revision 2 --disable-rollback
         Resize the cluster size to 10 worker nodes. On resize failure,
         cluster will be left cluster in error state for troubleshooting.
-        If cluster is using native (vCD) Kubernetes provider, nodes will be
-        created from template 'my_template' revision 2.
-        '--template-name and --template-revision' are only applicable for
-        clusters using native (vCD) Kubernetes provider.
+        Nodes will be created from template 'my_template' revision 2.
 \b
     vcd cse cluster config mycluster > ~/.kube/config
         Write cluster config details into '~/.kube/config' to manage cluster
@@ -240,13 +231,6 @@ def cluster_delete(ctx, name, vdc, org):
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
         result = cluster.delete_cluster(name, org, vdc)
-        # result is empty for delete cluster operation on PKS-managed clusters.
-        # In that specific case, below check helps to print out a meaningful
-        # message to users.
-        if len(result) == 0:
-            click.secho(f"Delete cluster operation has been initiated on "
-                        f"{name}, please check the status using"
-                        f" 'vcd cse cluster info {name}'.", fg='yellow')
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -278,8 +262,7 @@ def cluster_delete(ctx, name, vdc, org):
     required=False,
     default=None,
     type=click.INT,
-    help='Number of virtual CPUs on each node '
-         '(Exclusive to native Kubernetes provider)')
+    help='Number of virtual CPUs on each node ')
 @click.option(
     '-m',
     '--memory',
@@ -287,24 +270,21 @@ def cluster_delete(ctx, name, vdc, org):
     required=False,
     default=None,
     type=click.INT,
-    help='Megabytes of memory on each node '
-         '(Exclusive to native Kubernetes provider)')
+    help='Megabytes of memory on each node ')
 @click.option(
     '-n',
     '--network',
     'network_name',
     default=None,
     required=False,
-    help='Org vDC network name (Exclusive to native Kubernetes provider) '
-         '(Required)')
+    help='Org vDC network name (Required)')
 @click.option(
     '-s',
     '--storage-profile',
     'storage_profile',
     required=False,
     default=None,
-    help='Name of the storage profile for the nodes '
-         '(Exclusive to native Kubernetes provider)')
+    help='Name of the storage profile for the nodes ')
 @click.option(
     '-k',
     '--ssh-key',
@@ -312,7 +292,7 @@ def cluster_delete(ctx, name, vdc, org):
     required=False,
     default=None,
     type=click.File('r'),
-    help='SSH public key filepath (Exclusive to native Kubernetes provider)')
+    help='SSH public key filepath')
 @click.option(
     '-t',
     '--template-name',
@@ -321,7 +301,6 @@ def cluster_delete(ctx, name, vdc, org):
     default=None,
     help='Name of the template to create new nodes from. '
          'If not specified, server default will be used '
-         '(Exclusive to native Kubernetes provider) '
          '(Must be used with --template-revision).')
 @click.option(
     '-r',
@@ -331,21 +310,18 @@ def cluster_delete(ctx, name, vdc, org):
     default=None,
     help='Revision number of the template to create new nodes from. '
          'If not specified, server default will be used '
-         '(Exclusive to native Kubernetes provider) '
          '(Must be used with --template-revision).')
 @click.option(
     '--enable-nfs',
     'enable_nfs',
     is_flag=True,
     help='Create 1 additional NFS node (if --nodes=2, then CSE will create '
-         '2 worker nodes and 1 NFS node) '
-         '(Exclusive to native Kubernetes provider)')
+         '2 worker nodes and 1 NFS node) ')
 @click.option(
     '--disable-rollback',
     'disable_rollback',
     is_flag=True,
-    help='Disable rollback on cluster creation failure '
-         '(Exclusive to native Kubernetes provider)')
+    help='Disable rollback on cluster creation failure ')
 @click.option(
     '-o',
     '--org',
@@ -1402,3 +1378,7 @@ def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name,
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
+
+
+# Add-on CLI support for PKS container provider
+cse.add_command(pks.pks_group)
