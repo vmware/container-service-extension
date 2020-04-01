@@ -15,6 +15,7 @@ SYSTEM_ORG_NAME = 'system'
 
 # CSE SERVICE; used for registering CSE to vCD as an api extension service.
 CSE_SERVICE_NAME = 'cse'
+PKS_SERVICE_NAME = 'pks'
 CSE_SERVICE_NAMESPACE = 'cse'
 EXCHANGE_TYPE = 'direct'
 SYSTEM_ORG_NAME = 'system'
@@ -175,7 +176,7 @@ class ClusterMetadataKey(str, Enum):
 
 
 @unique
-class TemplateBuildParametersKey(str, Enum):
+class TemplateBuildKey(str, Enum):
     TEMPLATE_NAME = 'template_name'
     TEMPLATE_REVISION = 'template_revision'
     SOURCE_OVA_NAME = 'source_ova_name'

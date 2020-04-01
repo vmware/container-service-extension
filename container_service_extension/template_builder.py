@@ -16,7 +16,7 @@ from container_service_extension.pyvcloud_utils import upload_ova_to_catalog
 from container_service_extension.pyvcloud_utils import \
     wait_for_catalog_item_to_resolve
 from container_service_extension.server_constants import ScriptFile, \
-    TemplateBuildParametersKey
+    TemplateBuildKey
 from container_service_extension.utils import download_file
 from container_service_extension.utils import read_data_file
 from container_service_extension.vsphere_utils import get_vsphere
@@ -63,38 +63,38 @@ class TemplateBuilder():
             return
 
         # validate and populate required fields
-        self.template_name = build_params.get(TemplateBuildParametersKey.TEMPLATE_NAME) # noqa: E501
-        self.template_revision = build_params.get(TemplateBuildParametersKey.TEMPLATE_REVISION) # noqa: E501
-        self.ova_name = build_params.get(TemplateBuildParametersKey.SOURCE_OVA_NAME) # noqa: E501
-        self.ova_href = build_params.get(TemplateBuildParametersKey.SOURCE_OVA_HREF) # noqa: E501
-        self.ova_sha256 = build_params.get(TemplateBuildParametersKey.SOURCE_OVA_SHA256) # noqa: E501
+        self.template_name = build_params.get(TemplateBuildKey.TEMPLATE_NAME) # noqa: E501
+        self.template_revision = build_params.get(TemplateBuildKey.TEMPLATE_REVISION) # noqa: E501
+        self.ova_name = build_params.get(TemplateBuildKey.SOURCE_OVA_NAME) # noqa: E501
+        self.ova_href = build_params.get(TemplateBuildKey.SOURCE_OVA_HREF) # noqa: E501
+        self.ova_sha256 = build_params.get(TemplateBuildKey.SOURCE_OVA_SHA256) # noqa: E501
 
         if org:
             self.org = org
             self.org_name = org.get_name()
         else:
-            self.org_name = build_params.get(TemplateBuildParametersKey.ORG_NAME) # noqa: E501
+            self.org_name = build_params.get(TemplateBuildKey.ORG_NAME) # noqa: E501
             self.org = get_org(self.client, org_name=self.org_name)
         if vdc:
             self.vdc = vdc
             self.vdc.get_resource()  # to make sure vdc.resource is populated
             self.vdc_name = vdc.name
         else:
-            self.vdc_name = build_params.get(TemplateBuildParametersKey.VDC_NAME) # noqa: E501
+            self.vdc_name = build_params.get(TemplateBuildKey.VDC_NAME) # noqa: E501
             self.vdc = get_vdc(self.client, vdc_name=self.vdc_name,
                                org=self.org)
-        self.catalog_name = build_params.get(TemplateBuildParametersKey.CATALOG_NAME) # noqa: E501
-        self.catalog_item_name = build_params.get(TemplateBuildParametersKey.CATALOG_ITEM_NAME) # noqa: E501
+        self.catalog_name = build_params.get(TemplateBuildKey.CATALOG_NAME) # noqa: E501
+        self.catalog_item_name = build_params.get(TemplateBuildKey.CATALOG_ITEM_NAME) # noqa: E501
         self.catalog_item_description = \
-            build_params.get(TemplateBuildParametersKey.CATALOG_ITEM_DESCRIPTION) # noqa: E501
+            build_params.get(TemplateBuildKey.CATALOG_ITEM_DESCRIPTION) # noqa: E501
 
-        self.temp_vapp_name = build_params.get(TemplateBuildParametersKey.TEMP_VAPP_NAME) # noqa: E501
-        self.temp_vm_name = build_params.get(TemplateBuildParametersKey.TEMP_VM_NAME) # noqa: E501
-        self.cpu = build_params.get(TemplateBuildParametersKey.CPU)
-        self.memory = build_params.get(TemplateBuildParametersKey.MEMORY)
-        self.network_name = build_params.get(TemplateBuildParametersKey.NETWORK_NAME) # noqa: E501
-        self.ip_allocation_mode = build_params.get(TemplateBuildParametersKey.IP_ALLOCATION_MODE) # noqa: E501
-        self.storage_profile = build_params.get(TemplateBuildParametersKey.STORAGE_PROFILE) # noqa: E501
+        self.temp_vapp_name = build_params.get(TemplateBuildKey.TEMP_VAPP_NAME) # noqa: E501
+        self.temp_vm_name = build_params.get(TemplateBuildKey.TEMP_VM_NAME) # noqa: E501
+        self.cpu = build_params.get(TemplateBuildKey.CPU)
+        self.memory = build_params.get(TemplateBuildKey.MEMORY)
+        self.network_name = build_params.get(TemplateBuildKey.NETWORK_NAME) # noqa: E501
+        self.ip_allocation_mode = build_params.get(TemplateBuildKey.IP_ALLOCATION_MODE) # noqa: E501
+        self.storage_profile = build_params.get(TemplateBuildKey.STORAGE_PROFILE) # noqa: E501
 
         if self.template_name and self.template_revision and \
                 self.ova_name and self.ova_href and self.ova_sha256 and \
