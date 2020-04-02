@@ -173,3 +173,24 @@ class ClusterMetadataKey(str, Enum):
     KUBERNETES_VERSION = "cse.kubernetes.version"
     CNI = "cse.cni"
     CNI_VERSION = 'cse.cni.version'
+
+
+@unique
+class TemplateBuildKey(str, Enum):
+    TEMPLATE_NAME = 'template_name'
+    TEMPLATE_REVISION = 'template_revision'
+    SOURCE_OVA_NAME = 'source_ova_name'
+    SOURCE_OVA_HREF = 'source_ova_href'
+    SOURCE_OVA_SHA256 = 'source_ova_sha256'
+    ORG_NAME = 'org_name'
+    VDC_NAME = 'vdc_name'
+    CATALOG_NAME = 'catalog_name'
+    CATALOG_ITEM_NAME = 'catalog_item_name'
+    CATALOG_ITEM_DESCRIPTION = 'catalog_item_description'
+    TEMP_VAPP_NAME = 'temp_vapp_name'
+    TEMP_VM_NAME = 'temp_vm_name'
+    CPU = 'cpu'
+    MEMORY = 'memory'
+    NETWORK_NAME = 'network_name'
+    IP_ALLOCATION_MODE = 'ip_allocation_mode'
+    STORAGE_PROFILE = 'storage_profile'
