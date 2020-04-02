@@ -370,8 +370,8 @@ class VcdBroker(AbstractBroker):
         # Record the data for telemetry
         cse_params = copy.deepcopy(validated_data)
         cse_params[PayloadKey.CLUSTER_ID] = cluster_id
-        cse_params[LocalTemplateKey.MEMORY] = template.get(LocalTemplateKey.MEMORY)  # noqa: E501
-        cse_params[LocalTemplateKey.CPU] = template.get(LocalTemplateKey.CPU)
+        cse_params[LocalTemplateKey.MEMORY] = validated_data.get(RequestKey.MB_MEMORY)  # noqa: E501
+        cse_params[LocalTemplateKey.CPU] = validated_data.get(RequestKey.NUM_CPU) # noqa: E501
         cse_params[LocalTemplateKey.KUBERNETES] = template.get(LocalTemplateKey.KUBERNETES)  # noqa: E501
         cse_params[LocalTemplateKey.KUBERNETES_VERSION] = template.get(LocalTemplateKey.KUBERNETES_VERSION)  # noqa: E501
         cse_params[LocalTemplateKey.OS] = template.get(LocalTemplateKey.OS)
