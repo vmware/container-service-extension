@@ -15,7 +15,8 @@ from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.pyvcloud_utils import upload_ova_to_catalog
 from container_service_extension.pyvcloud_utils import \
     wait_for_catalog_item_to_resolve
-from container_service_extension.server_constants import ScriptFile
+from container_service_extension.server_constants import ScriptFile, \
+    TemplateBuildKey
 from container_service_extension.utils import download_file
 from container_service_extension.utils import read_data_file
 from container_service_extension.vsphere_utils import get_vsphere
@@ -26,7 +27,6 @@ from container_service_extension.vsphere_utils import wait_until_tools_ready
 # used for creating temp vapp
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = NetworkAdapterType.VMXNET3.value
 TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
-TEMP_VAPP_VM_NAME = 'Temp-vm'
 
 
 class TemplateBuilder():
@@ -63,45 +63,47 @@ class TemplateBuilder():
             return
 
         # validate and populate required fields
-        self.template_name = build_params.get('template_name')
-        self.template_revision = build_params.get('template_revision')
-        self.ova_name = build_params.get('source_ova_name')
-        self.ova_href = build_params.get('source_ova_href')
-        self.ova_sha256 = build_params.get('source_ova_sha256')
+        self.template_name = build_params.get(TemplateBuildKey.TEMPLATE_NAME) # noqa: E501
+        self.template_revision = build_params.get(TemplateBuildKey.TEMPLATE_REVISION) # noqa: E501
+        self.ova_name = build_params.get(TemplateBuildKey.SOURCE_OVA_NAME) # noqa: E501
+        self.ova_href = build_params.get(TemplateBuildKey.SOURCE_OVA_HREF) # noqa: E501
+        self.ova_sha256 = build_params.get(TemplateBuildKey.SOURCE_OVA_SHA256) # noqa: E501
 
         if org:
             self.org = org
             self.org_name = org.get_name()
         else:
-            self.org_name = build_params.get('org_name')
+            self.org_name = build_params.get(TemplateBuildKey.ORG_NAME) # noqa: E501
             self.org = get_org(self.client, org_name=self.org_name)
         if vdc:
             self.vdc = vdc
             self.vdc.get_resource()  # to make sure vdc.resource is populated
             self.vdc_name = vdc.name
         else:
-            self.vdc_name = build_params.get('vdc_name')
+            self.vdc_name = build_params.get(TemplateBuildKey.VDC_NAME) # noqa: E501
             self.vdc = get_vdc(self.client, vdc_name=self.vdc_name,
                                org=self.org)
-        self.catalog_name = build_params.get('catalog_name')
-        self.catalog_item_name = build_params.get('catalog_item_name')
+        self.catalog_name = build_params.get(TemplateBuildKey.CATALOG_NAME) # noqa: E501
+        self.catalog_item_name = build_params.get(TemplateBuildKey.CATALOG_ITEM_NAME) # noqa: E501
         self.catalog_item_description = \
-            build_params.get('catalog_item_description')
+            build_params.get(TemplateBuildKey.CATALOG_ITEM_DESCRIPTION) # noqa: E501
 
-        self.temp_vapp_name = build_params.get('temp_vapp_name')
-        self.cpu = build_params.get('cpu')
-        self.memory = build_params.get('memory')
-        self.network_name = build_params.get('network_name')
-        self.ip_allocation_mode = build_params.get('ip_allocation_mode')
-        self.storage_profile = build_params.get('storage_profile')
+        self.temp_vapp_name = build_params.get(TemplateBuildKey.TEMP_VAPP_NAME) # noqa: E501
+        self.temp_vm_name = build_params.get(TemplateBuildKey.TEMP_VM_NAME) # noqa: E501
+        self.cpu = build_params.get(TemplateBuildKey.CPU)
+        self.memory = build_params.get(TemplateBuildKey.MEMORY)
+        self.network_name = build_params.get(TemplateBuildKey.NETWORK_NAME) # noqa: E501
+        self.ip_allocation_mode = build_params.get(TemplateBuildKey.IP_ALLOCATION_MODE) # noqa: E501
+        self.storage_profile = build_params.get(TemplateBuildKey.STORAGE_PROFILE) # noqa: E501
 
         if self.template_name and self.template_revision and \
                 self.ova_name and self.ova_href and self.ova_sha256 and \
                 self.org and self.org_name and self.vdc and self.vdc_name and \
                 self.catalog_name and self.catalog_item_name and \
                 self.catalog_item_description and self.temp_vapp_name and \
-                self.cpu and self.memory and self.network_name and \
-                self.ip_allocation_mode and self.storage_profile:
+                self.temp_vm_name and self.cpu and self.memory and \
+                self.network_name and self.ip_allocation_mode and \
+                self.storage_profile:
             self._is_valid = True
 
     def _cleanup_old_artifacts(self):
@@ -231,8 +233,8 @@ class TemplateBuilder():
             password=None,
             cust_script=init_script,
             accept_all_eulas=True,
-            vm_name=TEMP_VAPP_VM_NAME,
-            hostname=TEMP_VAPP_VM_NAME,
+            vm_name=self.temp_vm_name,
+            hostname=self.temp_vm_name,
             storage_profile=self.storage_profile)
         task = vapp_sparse_resource.Tasks.Task[0]
         self.client.get_task_monitor().wait_for_success(task)
@@ -445,7 +447,7 @@ class TemplateBuilder():
 
         self._upload_source_ova()
         vapp = self._create_temp_vapp()
-        self._customize_vm(vapp, TEMP_VAPP_VM_NAME)
+        self._customize_vm(vapp, self.temp_vm_name)
         self._capture_temp_vapp(vapp)
         if not retain_temp_vapp:
             self._delete_temp_vapp()
