@@ -148,7 +148,7 @@ class PksBroker(AbstractBroker):
                                   proxy_uri=self.proxy_uri)
             return uaaClient.getToken()
         except Exception as err:
-            raise PksConnectionError(requests.code.bad_gateway,
+            raise PksConnectionError(requests.codes.bad_gateway,
                                      f'Connection establishment to PKS host'
                                      f' {self.uaac_uri} failed: {err}')
 
