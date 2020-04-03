@@ -3,21 +3,18 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import base64
+import importlib
 import json
 import sys
 from urllib.parse import parse_qsl
 
 from container_service_extension.exception_handler import handle_exception
 from container_service_extension.exceptions import BadRequestError
+from container_service_extension.exceptions import HandlerNotFoundError
 from container_service_extension.exceptions import MethodNotAllowedRequestError
 from container_service_extension.exceptions import NotFoundRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-import container_service_extension.request_handlers.cluster_handler as cluster_handler # noqa: E501
-import container_service_extension.request_handlers.ovdc_handler as ovdc_handler # noqa: E501
-import container_service_extension.request_handlers.system_handler as system_handler # noqa: E501
-import container_service_extension.request_handlers.template_handler as template_handler # noqa: E501
 from container_service_extension.server_constants import CseOperation
-from container_service_extension.server_constants import PKS_SERVICE_NAME
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
@@ -51,31 +48,56 @@ GET /cse/system
 PUT /cse/system
 
 GET /cse/template
-""" # noqa: E501
 
-OPERATION_TO_HANDLER = {
-    CseOperation.CLUSTER_CONFIG: cluster_handler.cluster_config,
-    CseOperation.CLUSTER_CREATE: cluster_handler.cluster_create,
-    CseOperation.CLUSTER_DELETE: cluster_handler.cluster_delete,
-    CseOperation.CLUSTER_INFO: cluster_handler.cluster_info,
-    CseOperation.CLUSTER_LIST: cluster_handler.cluster_list,
-    CseOperation.CLUSTER_RESIZE: cluster_handler.cluster_resize,
-    CseOperation.CLUSTER_UPGRADE_PLAN: cluster_handler.cluster_upgrade_plan,
-    CseOperation.CLUSTER_UPGRADE: cluster_handler.cluster_upgrade,
-    CseOperation.NODE_CREATE: cluster_handler.node_create,
-    CseOperation.NODE_DELETE: cluster_handler.node_delete,
-    CseOperation.NODE_INFO: cluster_handler.node_info,
-    CseOperation.OVDC_UPDATE: ovdc_handler.ovdc_update,
-    CseOperation.OVDC_INFO: ovdc_handler.ovdc_info,
-    CseOperation.OVDC_LIST: ovdc_handler.ovdc_list,
-    CseOperation.OVDC_COMPUTE_POLICY_LIST: ovdc_handler.ovdc_compute_policy_list, # noqa: E501
-    CseOperation.OVDC_COMPUTE_POLICY_UPDATE: ovdc_handler.ovdc_compute_policy_update, # noqa: E501
-    CseOperation.SYSTEM_INFO: system_handler.system_info,
-    CseOperation.SYSTEM_UPDATE: system_handler.system_update,
-    CseOperation.TEMPLATE_LIST: template_handler.template_list,
+GET /pks/clusters?org={org name}&vdc={vdc name}
+POST /pks/clusters
+GET /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
+PUT /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
+DELETE /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
+GET /pks/cluster/{cluster name}/config?org={org name}&vdc={vdc name}
+"""  # noqa: E501
+
+# Map each operation type (cluster, node, ovdc..) to corresponding handler module  # noqa: E501
+OPERATION_TYPE_TO_HANDLER_MODULE = {
+    'cluster': {
+        'cse': 'container_service_extension.request_handlers.vcd_cluster_handler',  # noqa: E501
+        'pks': 'container_service_extension.request_handlers.pks_cluster_handler'   # noqa: E501
+    },
+    'node': {
+        'cse': 'container_service_extension.request_handlers.vcd_cluster_handler'  # noqa: E501
+    },
+    'ovdc': 'container_service_extension.request_handlers.ovdc_handler',
+    'system': 'container_service_extension.request_handlers.system_handler',
+    'template': 'container_service_extension.request_handlers.template_handler'
 }
 
+# Map each CSE operation to corresponding handler method
+OPERATION_TO_HANDLER_METHOD = {
+    CseOperation.CLUSTER_CONFIG: 'cluster_config',
+    CseOperation.CLUSTER_CREATE: 'cluster_create',
+    CseOperation.CLUSTER_DELETE: 'cluster_delete',
+    CseOperation.CLUSTER_INFO: 'cluster_info',
+    CseOperation.CLUSTER_LIST: 'cluster_list',
+    CseOperation.CLUSTER_RESIZE: 'cluster_resize',
+    CseOperation.CLUSTER_UPGRADE_PLAN: 'cluster_upgrade_plan',
+    CseOperation.CLUSTER_UPGRADE: 'cluster_upgrade',
+    CseOperation.NODE_CREATE: 'node_create',
+    CseOperation.NODE_DELETE: 'node_delete',
+    CseOperation.NODE_INFO: 'node_info',
+    CseOperation.OVDC_UPDATE: 'ovdc_update',
+    CseOperation.OVDC_INFO: 'ovdc_info',
+    CseOperation.OVDC_LIST: 'ovdc_list',
+    CseOperation.OVDC_COMPUTE_POLICY_LIST: 'ovdc_compute_policy_list',
+    CseOperation.OVDC_COMPUTE_POLICY_UPDATE: 'ovdc_compute_policy_update',
+    CseOperation.SYSTEM_INFO: 'system_info',
+    CseOperation.SYSTEM_UPDATE: 'system_update',
+    CseOperation.TEMPLATE_LIST: 'template_list',
+}
+
+
 _OPERATION_KEY = 'operation'
+_OPERATION_TYPE = 'operation_type'
+_SERVICE_NAME = 'service_name'
 
 
 @handle_exception
@@ -120,9 +142,15 @@ def process_request(body):
             tenant_auth_token = tokens[1]
             is_jwt_token = True
 
-    # process the request
-    body_content = \
-        OPERATION_TO_HANDLER[operation](data, tenant_auth_token, is_jwt_token)
+    # select the right module and method to process the request
+    operation_type = url_data[_OPERATION_TYPE]
+    service_name = url_data.get(_SERVICE_NAME)
+    handler_method = _get_handler_method(operation_type=operation_type,
+                                         service_name=service_name,
+                                         operation=operation)
+
+    # Process the request
+    body_content = handler_method(data, tenant_auth_token, is_jwt_token)
 
     if not (isinstance(body_content, (list, dict))):
         body_content = {RESPONSE_MESSAGE_KEY: str(body_content)}
@@ -153,116 +181,143 @@ def _get_url_data(method, url):
     tokens = url.split('/')
     num_tokens = len(tokens)
 
-    # TODO() - Throw error until PKS Server Side Changes are complete.
-    if num_tokens < 4 or tokens[2] == PKS_SERVICE_NAME:
+    if num_tokens < 4:
         raise NotFoundRequestError()
 
     operation_type = tokens[3].lower()
     if operation_type.endswith('s'):
         operation_type = operation_type[:-1]
 
+    url_data = {_OPERATION_TYPE: operation_type}
     if operation_type == 'cluster':
+        url_data[_SERVICE_NAME] = tokens[2]
         if num_tokens == 4:
             if method == RequestMethod.GET:
-                return {_OPERATION_KEY: CseOperation.CLUSTER_LIST}
+                url_data[_OPERATION_KEY] = CseOperation.CLUSTER_LIST
+                return url_data
             if method == RequestMethod.POST:
-                return {_OPERATION_KEY: CseOperation.CLUSTER_CREATE}
+                url_data[_OPERATION_KEY] = CseOperation.CLUSTER_CREATE
+                return url_data
             raise MethodNotAllowedRequestError()
         if num_tokens == 5:
             if method == RequestMethod.GET:
-                return {
-                    _OPERATION_KEY: CseOperation.CLUSTER_INFO,
-                    RequestKey.CLUSTER_NAME: tokens[4]
-                }
+                url_data[_OPERATION_KEY] = CseOperation.CLUSTER_INFO
+                url_data[RequestKey.CLUSTER_NAME] = tokens[4]
+                return url_data
             if method == RequestMethod.PUT:
-                return {
-                    _OPERATION_KEY: CseOperation.CLUSTER_RESIZE,
-                    RequestKey.CLUSTER_NAME: tokens[4]
-                }
+                url_data[_OPERATION_KEY] = CseOperation.CLUSTER_RESIZE
+                url_data[RequestKey.CLUSTER_NAME] = tokens[4]
+                return url_data
             if method == RequestMethod.DELETE:
-                return {
-                    _OPERATION_KEY: CseOperation.CLUSTER_DELETE,
-                    RequestKey.CLUSTER_NAME: tokens[4]
-                }
+                url_data[_OPERATION_KEY] = CseOperation.CLUSTER_DELETE
+                url_data[RequestKey.CLUSTER_NAME] = tokens[4]
+                return url_data
             raise MethodNotAllowedRequestError()
         if num_tokens == 6:
             if method == RequestMethod.GET:
                 if tokens[5] == 'config':
-                    return {
-                        _OPERATION_KEY: CseOperation.CLUSTER_CONFIG,
-                        RequestKey.CLUSTER_NAME: tokens[4]
-                    }
+                    url_data[_OPERATION_KEY] = CseOperation.CLUSTER_CONFIG
+                    url_data[RequestKey.CLUSTER_NAME] = tokens[4]
+                    return url_data
                 if tokens[5] == 'upgrade-plan':
-                    return {
-                        _OPERATION_KEY: CseOperation.CLUSTER_UPGRADE_PLAN,
-                        RequestKey.CLUSTER_NAME: tokens[4]
-                    }
+                    url_data[_OPERATION_KEY] = CseOperation.CLUSTER_UPGRADE_PLAN  # noqa: E501
+                    url_data[RequestKey.CLUSTER_NAME] = tokens[4]
+                    return url_data
             raise MethodNotAllowedRequestError()
         if num_tokens == 7:
             if method == RequestMethod.POST:
                 if tokens[5] == 'action' and tokens[6] == 'upgrade':
-                    return {
-                        _OPERATION_KEY: CseOperation.CLUSTER_UPGRADE,
-                        RequestKey.CLUSTER_NAME: tokens[4]
-                    }
+                    url_data[_OPERATION_KEY] = CseOperation.CLUSTER_UPGRADE
+                    url_data[RequestKey.CLUSTER_NAME] = tokens[4]
+                    return url_data
             raise MethodNotAllowedRequestError()
     elif operation_type == 'node':
+        url_data[_SERVICE_NAME] = tokens[2]
         if num_tokens == 4:
             if method == RequestMethod.POST:
-                return {_OPERATION_KEY: CseOperation.NODE_CREATE}
+                url_data[_OPERATION_KEY] = CseOperation.NODE_CREATE
+                return url_data
             if method == RequestMethod.DELETE:
-                return {_OPERATION_KEY: CseOperation.NODE_DELETE}
+                url_data[_OPERATION_KEY] = CseOperation.NODE_DELETE
+                return url_data
             raise MethodNotAllowedRequestError()
         if num_tokens == 5:
             if method == RequestMethod.GET:
-                return {
-                    _OPERATION_KEY: CseOperation.NODE_INFO,
-                    RequestKey.NODE_NAME: tokens[4]
-                }
+                url_data[_OPERATION_KEY] = CseOperation.NODE_INFO
+                url_data[RequestKey.NODE_NAME] = tokens[4]
+                return url_data
+
             raise MethodNotAllowedRequestError()
 
     elif operation_type == 'ovdc':
         if num_tokens == 4:
             if method == RequestMethod.GET:
-                return {_OPERATION_KEY: CseOperation.OVDC_LIST}
+                url_data[_OPERATION_KEY] = CseOperation.OVDC_LIST
+                return url_data
             raise MethodNotAllowedRequestError()
         if num_tokens == 5:
             if method == RequestMethod.GET:
-                return {
-                    _OPERATION_KEY: CseOperation.OVDC_INFO,
-                    RequestKey.OVDC_ID: tokens[4]
-                }
+                url_data[_OPERATION_KEY] = CseOperation.OVDC_INFO
+                url_data[RequestKey.OVDC_ID] = tokens[4]
+                return url_data
             if method == RequestMethod.PUT:
-                return {
-                    _OPERATION_KEY: CseOperation.OVDC_UPDATE,
-                    RequestKey.OVDC_ID: tokens[4]
-                }
+                url_data[_OPERATION_KEY] = CseOperation.OVDC_UPDATE
+                url_data[RequestKey.OVDC_ID] = tokens[4]
+                return url_data
+
             raise MethodNotAllowedRequestError()
         if num_tokens == 6 and tokens[5] == 'compute-policies':
             if method == RequestMethod.GET:
-                return {
-                    _OPERATION_KEY: CseOperation.OVDC_COMPUTE_POLICY_LIST,
-                    RequestKey.OVDC_ID: tokens[4]
-                }
+                url_data[_OPERATION_KEY] = CseOperation.OVDC_COMPUTE_POLICY_LIST  # noqa: E501
+                url_data[RequestKey.OVDC_ID] = tokens[4]
+                return url_data
             if method == RequestMethod.PUT:
-                return {
-                    _OPERATION_KEY: CseOperation.OVDC_COMPUTE_POLICY_UPDATE,
-                    RequestKey.OVDC_ID: tokens[4]
-                }
+                url_data[_OPERATION_KEY] = CseOperation.OVDC_COMPUTE_POLICY_UPDATE  # noqa: E501
+                url_data[RequestKey.OVDC_ID] = tokens[4]
+                return url_data
+
             raise MethodNotAllowedRequestError()
 
     elif operation_type == 'system':
         if num_tokens == 4:
             if method == RequestMethod.GET:
-                return {_OPERATION_KEY: CseOperation.SYSTEM_INFO}
+                url_data[_OPERATION_KEY] = CseOperation.SYSTEM_INFO
+                return url_data
             if method == RequestMethod.PUT:
-                return {_OPERATION_KEY: CseOperation.SYSTEM_UPDATE}
+                url_data[_OPERATION_KEY] = CseOperation.SYSTEM_UPDATE
+                return url_data
             raise MethodNotAllowedRequestError()
 
     elif operation_type == 'template':
         if num_tokens == 4:
             if method == RequestMethod.GET:
-                return {_OPERATION_KEY: CseOperation.TEMPLATE_LIST}
+                url_data[_OPERATION_KEY] = CseOperation.TEMPLATE_LIST
+                return url_data
             raise MethodNotAllowedRequestError()
 
     raise NotFoundRequestError()
+
+
+def _get_handler_method(operation_type, service_name, operation):
+    """Get the handler method for given operation_type, service and operation.
+
+    :param str operation_type: type of operation like cluster, node, ovdc
+    :param str service_name: name of service like cse, pks
+    :param <enum 'CseOperation'> operation: key that defines the operation
+
+    :return: reference to the handler method
+    :rtype: <class 'function'>
+
+    :raises: NotFoundRequestError
+    """
+    try:
+        if service_name:
+            handler_module_name = OPERATION_TYPE_TO_HANDLER_MODULE[operation_type][service_name]  # noqa: E501
+        else:
+            handler_module_name = OPERATION_TYPE_TO_HANDLER_MODULE[operation_type]  # noqa: E501
+        handler_module = importlib.import_module(handler_module_name)
+        handler_method = getattr(handler_module, OPERATION_TO_HANDLER_METHOD[operation])  # noqa: E501
+        return handler_method
+    except Exception as err:
+        LOGGER.debug(f"Error on getting handler method: {str(err)}")
+        raise HandlerNotFoundError()

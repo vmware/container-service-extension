@@ -66,6 +66,12 @@ class CseOperation(Enum):
     OVDC_ENABLE = ('ovdc enable', 'OVDC', 'ENABLE', 'CSE_OVDC_ENABLE')
     OVDC_INFO = ('ovdc_info', 'OVDC', 'INFO', 'CSE_OVDC_INFO')
     OVDC_LIST = ('ovdc list', 'OVDC', 'LIST', 'CSE_OVDC_LIST')
+    PKS_CLUSTER_CONFIG = ('pks-cluster config', 'PKS_CLUSTER', 'CONFIG', 'PKS_CLUSTER_CONFIG')  # noqa: E501
+    PKS_CLUSTER_CREATE = ('pks-cluster create', 'PKS_CLUSTER', 'CREATE', 'PKS_CLUSTER_CREATE')  # noqa: E501
+    PKS_CLUSTER_DELETE = ('pks-cluster delete', 'PKS_CLUSTER', 'DELETE', 'PKS_CLUSTER_DELETE')  # noqa: E501
+    PKS_CLUSTER_INFO = ('pks-cluster info', 'PKS_CLUSTER', 'INFO', 'PKS_CLUSTER_INFO')  # noqa: E501
+    PKS_CLUSTER_LIST = ('pks-cluster list', 'PKS_CLUSTER', 'LIST', 'PKS_CLUSTER_LIST')  # noqa: E501
+    PKS_CLUSTER_RESIZE = ('cluster resize', 'PKS_CLUSTER', 'RESIZE', 'PKS_CLUSTER_RESIZE')  # noqa: E501
 
     # Following operations do not require telemetry details. Hence the VAC
     # table name field is empty
