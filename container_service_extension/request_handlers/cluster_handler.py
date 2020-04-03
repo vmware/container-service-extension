@@ -211,8 +211,9 @@ def cluster_list(request_data, tenant_auth_token, is_jwt_token):
         'vdc',
         'status',
         'org_name',
+        'k8s_type',
         'k8s_version',
-        K8S_PROVIDER_KEY
+        K8S_PROVIDER_KEY,
     ]
 
     result = []
