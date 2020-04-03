@@ -28,7 +28,7 @@ cse ui-plugin list -c [path to CSE config file] -s
 ```
 Run the following command to remove the plugin from vCD.
 ```sh
-cse deregister [ID]
+cse ui-plugin deregister [ID] -c [path to CSE config file] -s
 ```
 
 **Method 2:** Via vCD UI portal
@@ -81,6 +81,16 @@ For Tenants, it shows clusters created in current organization.
 All columns can be sorted and filtered. Upon clicking on the cluster name, users
 can view the details page of the corresponding cluster.
 
+**Cluster Creation**
+
+Users can also create new Kubernetes clusters by clicking on the `Add` link on
+the top left. Clicking on this link will open up the `Create New Cluster`
+wizard.
+
+**Cluster Deletion**
+Selecting a cluster on the landing page, displays an option to delete it on
+top left.
+
 ### Details Page
 Upon clicking on a container cluster, it takes you to it's details page.
 Details page shows more specific information based on the Kubernetes provider
@@ -89,5 +99,6 @@ functionalities:
 
 * Navigate back to landing page from the top navigation bar.
 * Download `kubectl` configuration from the button to the right of cluster title.
-* View General and Nodes information of native cluster. Info and Details are sub-sections containing cluster-centric and vCD/CSE related attributes.
-* View General information of Enterprise PKS cluster.
+* View General information of Enterprise PKS clusters.
+* View General and Nodes information of native clusters. Info and Details are sub-sections containing cluster-centric and vCD/CSE related attributes.
+* Add new worker nodes to native clusters. Removing worker nodes from native clusters is currently not supported via UI.

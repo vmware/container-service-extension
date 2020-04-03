@@ -8,6 +8,20 @@ title: Known Issues
 ## General Issues
 ---
 
+### CSE UI plugin grays out some OrgVDC(s) in the Create Cluster Wizard
+If Enterprise PKS integartion with CSE is enabled then the OrgVDCs need to be
+explicitly enabled for native cluster deployment. Unfortunately CSE UI is
+unable to figure out whether Enterprise PKS is enabled or not in the system and
+falls back to the displayed behavior even if there is no Enterprise PKS in the
+stack.
+
+*Workaround:* - Enable the OrgVDC explicitly for native k8 cluster depliyment
+via the following command
+```sh
+>vcd cse ovdc enable [ovdc name] -k 'native' -o [Org Name]
+```
+
+---
 ### Fresh installation of CSE 2.5.1 or below via `pip install` is broken
 CSE 2.5.1 or below versions have an open-ended dependencies, which permit `pip`
 to pull and install latest versions of the dependencies. Two such dependencies
@@ -25,7 +39,7 @@ pip3 uninstall pyvcloud vcd-cli --user --yes
 #Install specific version of the libraries which are compatible with CSE 2.5.1 and CSE 2.0.0
 pip3 install pyvcloud==21.0.0 vcd-cli==22.0.0 --upgrade --user
 ```
-
+---
 ### `vcd cse ovdc list` operation will timeout when a large number of organization VDCs exist
 
 CSE makes an API call per organization VDC in order to access required metadata, and that can timeout with large number of VDCs.
