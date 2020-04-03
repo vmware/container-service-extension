@@ -9,17 +9,25 @@ title: Known Issues
 ---
 
 ### CSE UI plugin grays out some OrgVDC(s) in the Create Cluster Wizard
-If Enterprise PKS integartion with CSE is enabled then the OrgVDCs need to be
-explicitly enabled for native cluster deployment. Unfortunately CSE UI is
-unable to figure out whether Enterprise PKS is enabled or not in the system and
-falls back to the displayed behavior even if there is no Enterprise PKS in the
-stack.
+By default, OrgVDCs are available for Native cluster deployment in the absence
+of Enterprise PKS in CSE. Unfortunately, CSE UI Plugin exhibits a behavior
+where it expects OrgVDCs to be explicitly enabled for Native cluster
+deployment.
 
-*Workaround:* - Enable the OrgVDC explicitly for native k8 cluster depliyment
+*Workaround:* - Enable the OrgVDC explicitly for nativecluster deployment
 via the following command
 ```sh
 >vcd cse ovdc enable [ovdc name] -k 'native' -o [Org Name]
 ```
+---
+### Re-registering 2.6.0 GA CSE UI plugin with vCD doens't work properly
+If the beta version of CSE UI plugin is already registered with vCD, trying to
+upgrade it via `cse` cli or vCD UI will fail. Right now, the only way to update
+the UI plugin is to deregister/delete it and then re-install using the new
+zip file.
+
+Additionally, the provider will need to re-publish the plugin to all the
+tenants that were given access to the CSE UI plugin.
 
 ---
 ### Fresh installation of CSE 2.5.1 or below via `pip install` is broken
