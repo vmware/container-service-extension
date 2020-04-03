@@ -164,11 +164,13 @@ class VcdBroker(AbstractBroker):
 
         clusters = []
         for c in raw_clusters:
+            # TODO update these strings once cluster api keys are well defined
             clusters.append({
                 'name': c['name'],
                 'IP master': c['leader_endpoint'],
                 'template_name': c.get('template_name'),
                 'template_revision': c.get('template_revision'),
+                'k8s_type': c.get('kubernetes'),
                 'k8s_version': c.get('kubernetes_version'),
                 'VMs': c['number_of_vms'],
                 'vdc': c['vdc_name'],
