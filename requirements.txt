@@ -1,5 +1,5 @@
 # Commented versions are the versions being picked up for CSE 2.6 by default
-# as of 2020-02-27
+# as of 2020-04-01
 
 # cachetools 3.1.1
 cachetools >= 2.0.1, < 4.0.0
@@ -13,8 +13,8 @@ humanfriendly >= 4.8, < 5.0
 # pika 0.13.1
 pika >= 0.11.2, < 1.0.0
 
-# pyvcloud 22.0.0
-pyvcloud >= 22.0.0, < 23.0.0
+# pyvcloud 22.0.1
+pyvcloud >= 22.0.1, < 23.0.0
 
 # pyvmomi 6.7.3
 pyvmomi >= 6.7.0 , < 7.0.0
