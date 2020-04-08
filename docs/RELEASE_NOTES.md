@@ -6,7 +6,7 @@ title: Release Notes
 # Release Notes
 
 ## CSE 2.6.0 GA(2.6.0)
-Release Date: 2020-04-?? **TODO**
+Release Date: 2020-04-09
 
 Supported vCD versions: 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0
 

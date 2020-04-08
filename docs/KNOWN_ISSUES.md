@@ -7,7 +7,6 @@ title: Known Issues
 <a name="general"></a>
 ## General Issues
 ---
-
 ### CSE UI plugin grays out some OrgVDC(s) in the Create Cluster Wizard
 By default, OrgVDCs are available for Native cluster deployment in the absence
 of Enterprise PKS in CSE. Unfortunately, CSE UI Plugin exhibits a behavior
@@ -28,6 +27,19 @@ zip file.
 
 Additionally, the provider will need to re-publish the plugin to all the
 tenants that were given access to the CSE UI plugin.
+
+---
+### If CSE server is inaccessible, on vCD UI user only sees the loading spinner instead of an error display
+
+There is no workaround for this at present. We will fix this in a future release
+
+---
+### Some of the cluster operation errors are not shown in UI
+The `Create Cluster` wizard's field validation needs to be made stronger.
+Sometimes bad input from end user can make it's way to the CSE server, and the
+error returned by server is not reflected in UI.
+Example: entering wrong storage profile will result in a server-side error that
+will not be reflected in the UI.
 
 ---
 ### Fresh installation of CSE 2.5.1 or below via `pip install` is broken
@@ -65,7 +77,6 @@ Error: Unknown error. Please contact your System Administrator
 Workaround: extend the cell timeout to be able to wait for the required amount of time. See the section 'Setting the API Extension Timeout' under [CSE Server Management](https://vmware.github.io/container-service-extension/CSE_SERVER_MANAGEMENT.html#extension-timeout).
 
 ---
-
 ### CSE server fails to start up after disabling the Service Provider Access to the Legacy API Endpoint
 
 Workaround: Don't disable Service Provider Access to the Legacy API Endpoint
@@ -80,7 +91,6 @@ endpoint is not disabled in vCloud Director.
 **Update** : CSE 2.6.0 has resolved this issue.
 
 ---
-
 ### Failures during template creation or installation
 
 - One of the template creation scripts may have exited with an error
@@ -89,19 +99,16 @@ endpoint is not disabled in vCloud Director.
 - Check CSE logs for script outputs, to determine the cause behind the observed failure
 
 ---
-
 ### CSE service fails to start
 
 - Workaround: rebooting the VM starts the service
 
 ---
-
 ### CSE 1.2.6 and up are incompatible with vCD 9.0
 
 - CSE installation fails with MissingLinkException
 
 ---
-
 ### Cluster creation fails when vCD external network has a DNS suffix and the DNS server resolves `localhost.my.suffix` to a valid IP
 
 This is due to a bug in **etcd** (More detail [HERE](https://github.com/kubernetes/kubernetes/issues/57709),
@@ -132,7 +139,6 @@ Kubernetes version has to be specified within the configuration file itself,
 since `--kubernetes-version` and `--config` are incompatible.
 
 ---
-
 <a name="nfs"></a>
 ### NFS Limitations
 
@@ -167,7 +173,6 @@ avert this problem if the need arises.
       * https://gist.github.com/proudlygeek/5721498
 
 ---
-
 <a name="ent-pks"></a>
 ## Enterprise PKS Limitations
 

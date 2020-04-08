@@ -10,8 +10,7 @@ CSE users would be able to interact with CSE Kubernetes clusters directly from
 vCD UI.
 
 ## Getting the plugin
-**TODO: Update plugin location to final GA build of plugin.**
-The plugin binary can be downloaded from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.0.0b1/container-ui-plugin.zip).
+The plugin binary can be downloaded from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.0/container-ui-plugin.zip).
 
 ## Setting up the plugin
 ### Registering and publishing the plugin
