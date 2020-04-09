@@ -7,9 +7,9 @@ title: Known Issues
 <a name="general"></a>
 ## General Issues
 ---
-### Re-registering 2.6.0 GA CSE UI plugin with VCD doens't work properly
+### Re-registering 2.6.0 GA CSE UI plugin with VCD doesn't work properly
 If the beta version of CSE UI plugin is already registered with VCD, trying to
-upgrade it via `cse` cli or VCD UI will fail. Right now, the only way to update
+upgrade it via CSE cli or VCD UI will fail. Right now, the only way to update
 the UI plugin is to de-register/delete it and then re-install using the new
 zip file. Additionally, the provider will need to re-publish the plugin to all
 the tenants that were previously given access to the CSE UI plugin.
@@ -17,27 +17,25 @@ the tenants that were previously given access to the CSE UI plugin.
 ---
 ### CSE landing page on VCD UI perpetually shows a spinning wheel
 If CSE server is inaccessible/down, on VCD UI's CSE landing page, user only
-sees the loading spinner instead of an error message. Currently, there is no
-workaround for this.
+sees the loading spinner instead of an error message. Workaround: Make sure CSE
+server is up and running.
 
 ---
 ### Cluster operations fail silently on UI
 On clicking `confirm` in cluster creation/deletion wizards/confirmation message
-boxes, user does not immediately get to know if the plugin succeeded/failed to
-send the request or whether CSE server accepted/rejected the request. Form
-validation and http error display has not been implemented in CSE UI plugin
-yet. Currently, there is no workaround.
+boxes, user does not immediately get to know if the plugin successfully sent
+the request, or if CSE Server successfully received the same. Form validation
+and HTTP error display has not been implemented in CSE UI plugin yet.
 
 ---
 ### Never ending CSE tasks in VCD UI / Failed CSE tasks without proper error message
 If CSE server encounters any error during cluster/node creation, users may see
 CSE tasks in VCD never reach to completion, or the tasks may show up as failed
-but without a proper error message. Currently, UI has no way to expose the
-stacktrace or specific error message on why that particular operation might
-have failed. A user input parameter may have been invalid, or an unexpected
-error (network connection/outage/etc) may have occurred. Server-side logs should be
-inspected in these cases, or an issue can be filed
-[here](https://github.com/vmware/container-service-extension/issues).
+without a proper error message. Currently, UI lacks the ability to properly
+express error messages upon operation failures. Some examples might be - A user
+input parameter was invalid, or an unexpected error (network connection/outage)
+occurred. Please inspect CSE server logs in these cases, or file a github
+[issue](https://github.com/vmware/container-service-extension/issues).
 
 ---
 ### Enterprise PKS cluster creation fails from UI
@@ -70,7 +68,7 @@ pip3 uninstall pyvcloud vcd-cli --user --yes
 pip3 install pyvcloud==21.0.0 vcd-cli==22.0.0 --upgrade --user
 ```
 ---
-### `vcd cse ovdc list` operation will timeout when a large number of OrgVDCs exist
+### `vcd cse ovdc list` operation will timeout when numerous OrgVDCs exist
 
 CSE makes an API call per OrgVDC in order to access required metadata, and that
 can timeout with large number of OrgVDCs.
