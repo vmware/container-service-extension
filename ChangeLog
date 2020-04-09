@@ -1,6 +1,28 @@
 CHANGES
 =======
 
+2.6.0
+-----
+
+* Update pyvcloud requirement to 22.0.1 (#556)
+* [VCDA-1424]Change default Telemetry end point to VAC Production (#547)
+* Fix bug where auth token can be referenced before assignment (#543)
+* Update Template announcement page (#537)
+* remote template url set to master template repo (#523)
+* [VCDA-1394] Telemetry Fixes (#530)
+* [VCDA-1384] Update dependency for CSE 2.6.0 (#531)
+* [VCDA-1365] Update OSL files of 2.6.0 GA (#526)
+* [VCDA-1381] Fix error message on triggering invalid operation on non native clusters. (#525)
+* Change cluster upgrade k8s version check to >= to accomodate photon's k8s versioning (#521)
+* Post the telemetry data in a separate async thread (#528)
+* [VCDA-1382] Expose CSE server CLI commands to manage life-cycle of CSE UI plugin (#524)
+* Add flake8 ignore to manage\_plugin.py (#520)
+* Fix docstring consistency (#517)
+
+2.6.0.0b1
+---------
+
+* Update AUTHORS and Changelog (#516)
 * Fixing some small mistakes in CSE\_UI\_PLUGIN doc page (#515)
 * Update docs for CSE 2.6.0 beta (#513)
 * Adding 1.0.0.0b1 CSE UI plugin (#514)
