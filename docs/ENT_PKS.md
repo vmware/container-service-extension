@@ -63,15 +63,15 @@ Below timeline diagram depicts infrastructure set-up and tenant
  2. Ensure [OpenID Connect](https://openid.net/connect/) feature is disabled on
   each Enterprise-PKS instance. Refer [FAQ](#faq) for more details.
  3. Create [Enterprise PKS service accounts](#faq) per each Enterprise PKS instance.
- 4. On-board Enterprise PKS instance(s) in vCD
-    * Attach Enterprise PKS' corresponding vSphere in vCD through vCD UI.
-    * Create provider-vdc(s) in vCD from underlying resources of newly attached
+ 4. On-board Enterprise PKS instance(s) in VCD
+    * Attach Enterprise PKS' corresponding vSphere in VCD through VCD UI.
+    * Create provider-vdc(s) in VCD from underlying resources of newly attached
       Enterprise PKS' vSphere(s). Ensure these pvdc(s) are dedicated for Enterprise
       PKS K8 deployments only.
  5. Install, configure and start CSE
     * Follow instructions to install CSE 2.0 beta [here](/container-service-extension/RELEASE_NOTES.html)
     * Use `cse sample` command to generate `config.yaml` and `pks.yaml` skeleton config files.
-    * Configure `config.yaml` with vCD details.
+    * Configure `config.yaml` with VCD details.
     * Configure `pks.yaml` with Enterprise PKS details. This file is necessary
       only if there is an intention to leverage Enterprise PKS for K8
       deployments. Refer [here](/container-service-extension/CSE_CONFIG.html#ent_pks_config)
@@ -88,7 +88,7 @@ Below timeline diagram depicts infrastructure set-up and tenant
 Enabling Enterprise PKS as a K8s provider changes the default behavior of CSE
 as described below. Presence of option `--pks-config <pks-config-file> ` while
 executing `cse run` gives an indication to CSE that Enterprise PKS is enabled
-(in addition to Native vCD) as a K8s provider in the system.
+(in addition to Native VCD) as a K8s provider in the system.
 
 * CSE begins to mandate that all `ovdc` has to be enabled for either Native or
 Enterprise PKS as a backing K8s provider. Cloud Administrators can do so via
@@ -105,7 +105,7 @@ CSE's default behavior i.e., all ovdc-s are open for native K8s cluster deployme
 
  <a name="tenant-onboarding"></a>
 ### Tenant on-boarding
-1. Create ovdc(s) in tenant organization from newly created provider-vdc(s) above via vCD UI.
+1. Create ovdc(s) in tenant organization from newly created provider-vdc(s) above via VCD UI.
 Do not choose Pay-as-you-go model for ovdc(s). Refer [FAQ](#faq) for more details.
 2. Use these [CSE commands](#cse-commands) to grant K8 deployment rights to chosen tenants and tenant-users. Refer
 [RBAC feature](/container-service-extension/RBAC.html) for more details
@@ -118,7 +118,7 @@ Below diagram illustrates a time sequence view of setting up the infrastructure 
 ![provider-setup](img/ent-pks/04-provider-setup-2.png)
 
 <a name="communication-view"></a>
-## CSE, vCD, Enterprise PKS Component Illustration
+## CSE, VCD, Enterprise PKS Component Illustration
 Below diagram outlines the communication flow between components for the tenant's
 work-flow to create a new K8 cluster.
 
@@ -203,7 +203,7 @@ Below steps of granting rights are required only if [RBAC feature](/container-se
 * What allocation models are supported for organizational vdc(s) powered by Enterprise PKS?
     * Allocation model and reservation models only. Pay-as-you-go is unsupported.
      Elasticity with other models is also not supported.
-* Are Enterprise PKS based clusters visible in vCD UI?
+* Are Enterprise PKS based clusters visible in VCD UI?
     * This functionality is not available yet.
      Enterprise PKS based clusters can only be managed via CSE-CLI as of today.
 * Do Enterprise PKS based clusters adhere to their parent organization-vdc compute settings?
@@ -224,18 +224,18 @@ Below steps of granting rights are required only if [RBAC feature](/container-se
     Enterprise PKS based K8 cluster deployments have some performance implications.
     The performance optimizations will be coming in near future
 * If there are Extension time out errors while executing commands, how can they be remedied?
-    * Increase the vCD extension timeout to a higher value. Refer to
+    * Increase the VCD extension timeout to a higher value. Refer to
       [Setting the API Extension Timeout](/container-service-extension/CSE_SERVER_MANAGEMENT.html#extension-timeout)
 
 <a name="compatibility-matrix"></a>
 ## Compatibility matrix
 
-|CSE      | Supported vCD Versions |Enterprise PKS| NSX-T |
-|---------|------------------------|--------------|-------|
-|2.0 Beta | 9.5, 9.7               | 1.4          | 2.3   |
-|2.0.0    | 9.5, 9.7               | 1.4          | 2.3   |
-|2.0.0    | 9.5, 9.7               | 1.4          | 2.4   |
-|2.5.0    | 9.5, 9.7, 10.0         | 1.4          | 2.3   |
-|2.5.0    | 9.5, 9.7, 10.0         | 1.4          | 2.4   |
+|CSE        | Supported VCD Versions |Enterprise PKS| NSX-T    |
+|-----------|------------------------|--------------|----------|
+|2.0.0 Beta | 9.5, 9.7               | 1.4          | 2.3      |
+|2.0.0      | 9.5, 9.7               | 1.4          | 2.3, 2.4 |
+|2.5.0      | 9.5, 9.7, 10.0         | 1.4          | 2.3, 2.4 |
+|2.6.0 Beta | 9.5, 9.7, 10.0, 10.1   | 1.4          | 2.3, 2.4 |
+|2.6.0      | 9.5, 9.7, 10.0, 10.1   | 1.4          | 2.3, 2.4 |
 
 

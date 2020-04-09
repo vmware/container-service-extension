@@ -158,7 +158,7 @@ Edit `~/.vcd-cli/profiles.yaml` to include this section:
 extensions:
 - container_service_extension.client.cse
 ```
-If `~/.vcd-cli/profiles.yaml` doesn't exist, logging in to vCD via **vcd-cli** will create it
+If `~/.vcd-cli/profiles.yaml` doesn't exist, logging in to VCD via **vcd-cli** will create it
 ```bash
 > vcd login IP ORGNAME USERNAME -iwp PASSWORD
 ```
@@ -170,7 +170,7 @@ If `~/.vcd-cli/profiles.yaml` doesn't exist, logging in to vCD via **vcd-cli** w
 > vcd cse -h
 > cse -h
 
-### Most 'vcd cse ...' commands require you to be logged in to vCD
+### Most 'vcd cse ...' commands require you to be logged in to VCD
 # login as system administrator
 > vcd login ip system USERNAME -iwp PASSWORD
 
@@ -184,8 +184,8 @@ If `~/.vcd-cli/profiles.yaml` doesn't exist, logging in to vCD via **vcd-cli** w
 > vcd pwd
 ```
 ---
-### Set up vCD for Testing
-*In a vCD instance where you are system administrator. Assume default settings unless stated otherwise*
+### Set up VCD for Testing
+*In a VCD instance where you are system administrator. Assume default settings unless stated otherwise*
 - Create External Network with internet connection
     - May need static IP pool
 - Create org
@@ -212,7 +212,7 @@ cse sample > config.yaml
 - Configure broker settings
   - Set **catalog** to public shared catalog within org where the template will be published to (usually cse)
   - Set **network** to org VDC network that will be used during the install process. Should have outbound access to the public internet
-  - Set **org** to the vCD org that will store the kubernetes templates
+  - Set **org** to the VCD org that will store the kubernetes templates
   - Set **vdc** to VDC for the org that will be used during the install process
 - Adjust config file permissions with: `chmod 600 path/to/config.yaml` (unsure how to do this step on windows)
 

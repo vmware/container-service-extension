@@ -72,7 +72,7 @@ starting from CSE 2.5, service providers have the option to selectively
 restrict Kubernetes templates from being used by tenants in order to prohibit
 them from deploying Kubernetes Clusters.
 
-This is accomplished with the use of VDC Compute Policies feature of vCD 10.0.
+This is accomplished with the use of VDC Compute Policies feature of VCD 10.0.
 CSE 2.5 offers the capability to service providers to tag selected templates
 and organization VDCs with compute policy which restricts Kubernetes cluster
 deployments from tagged templates to only tagged organization VDCs.
@@ -95,7 +95,7 @@ template_rules:
     compute_policy: "Photon Template Policy"
 ```
 Service providers select the name of the compute policy per their choice, and
-CSE creates that compute policy in vCD, if it's not already present. During CSE
+CSE creates that compute policy in VCD, if it's not already present. During CSE
 server startup, the template rule "Photon Template Rule" is processed and the
 defined Kubernetes template is tagged with the compute policy. At this point,
 the Kubernetes template is restricted from further use, until tenant

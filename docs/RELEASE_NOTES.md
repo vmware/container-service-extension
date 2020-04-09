@@ -5,14 +5,59 @@ title: Release Notes
 
 # Release Notes
 
-## CSE 2.6.0 Beta (2.6.0.0b1)
-Release Date: 2020-02-05
+## CSE 2.6.0 GA(2.6.0)
+Release Date: 2020-04-09
 
-Supported vCD versions: 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0
+Supported VCD versions: 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0
 
 Enterprise PKS compatibility matrix
 
-|CSE       | vCD                                     | Enterprise PKS | NSX-T    |
+|CSE       | VCD                                     | Enterprise PKS | NSX-T    |
+|----------|-----------------------------------------|----------------|----------|
+|2.6.0     | 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0-Beta | 1.4            | 2.3, 2.4 |
+
+**New Features**
+* New Templates with updated Kubernetes and Weave
+  * [Template Announcements](/container-service-extension/TEMPLATE_ANNOUNCEMENTS.html)
+* In place Kubernetes upgrade for clusters
+  * CSE offers the new capability to do in place upgrade of Kubernetes
+    related software in Native clusters. More details
+    [here](/container-service-extension/CLUSTER_MANAGEMENT.html#k8s_upgrade).
+* Secure Configuration files
+  * CSE now supports encrypted configuration files. More details
+  [here](/container-service-extension/CSE_CONFIG.html#encrypt_decrypt).
+* CSE UI Plugin for VCD
+  * Read more about it [here](/container-service-extension/CSE_UI_PLUGIN.html)
+* Interoperability with VCD 10.1.0
+
+**Notes to System Administrator**
+
+Upgrade from CSE 2.6.0.0b1 is not supported.
+
+If you are upgrading to CSE 2.6.0 from an older version of CSE, and you have
+pre-existing deployed K8s clusters, you must run the following command:
+```sh
+cse convert-cluster
+```
+* From CSE 2.5.0 or above - To be able to upgrade the cluster.
+* From CSE older than 2.5.0 - To preserve managablilty of the clusters.
+
+This command adds new metadata to the cluster. If the cluster was deployed by 
+CSE version below 2.5.0, the command will also reset the admin password of all
+nodes in the cluster. If nodes in the cluster are setup with ssh keys for root
+login, those key pairings will be preserved. The command will force a
+reboot of the cluster, if admin password is reset.
+
+---
+
+## CSE 2.6.0 Beta (2.6.0.0b1)
+Release Date: 2020-02-05
+
+Supported VCD versions: 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0
+
+Enterprise PKS compatibility matrix
+
+|CSE       | VCD                                     | Enterprise PKS | NSX-T    |
 |----------|-----------------------------------------|----------------|----------|
 |2.6.0.0b1 | 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0-Beta | 1.4            | 2.3, 2.4 |
 
@@ -39,9 +84,9 @@ CSE 2.6.0 beta.
 * Secure Configuration files
   * CSE now supports encrypted configuration files. More details
   [here](/container-service-extension/CSE_CONFIG.html#encrypt_decrypt).
-* CSE UI Plugin for vCD
+* CSE UI Plugin for VCD
   * Read more about it [here](/container-service-extension/CSE_UI_PLUGIN.html)
-* Interoperability with vCD 10.1.0 Beta
+* Interoperability with VCD 10.1.0 Beta
 
 **Notes to System Administrator**
 
@@ -63,11 +108,11 @@ does a force reboot of the cluster deployed by CSE 2.0.0 and below.
 
 Release Date: 2019-10-23
 
-Supported vCD versions: 9.1, 9.5, 9.7, 10.0
+Supported VCD versions: 9.1, 9.5, 9.7, 10.0
 
 Enterprise PKS compatibility matrix
 
-|CSE | vCD |Enterprise PKS| NSX-T |
+|CSE | VCD |Enterprise PKS| NSX-T |
 |-|-|-|-|
 |2.5.0 | 9.1, 9.5, 9.7, 10.0  | 1.4 | 2.3, 2.4 |
 
@@ -85,11 +130,11 @@ Enterprise PKS compatibility matrix
 
 Release Date: 2019-10-03
 
-Supported vCD versions: 9.1, 9.5, 9.7, 10.0
+Supported VCD versions: 9.1, 9.5, 9.7, 10.0
 
 Enterprise PKS compatibility matrix
 
-|CSE | vCD |Enterprise PKS| NSX-T |
+|CSE | VCD |Enterprise PKS| NSX-T |
 |-|-|-|-|
 |2.5.0 | 9.1, 9.5, 9.7, 10.0  | 1.4 | 2.3, 2.4 |
 
@@ -130,7 +175,7 @@ a force reboot of the cluster.
 
 Release Date: 2019-09-06
 
-Supported vCD versions: 9.1, 9.5, 9.7
+Supported VCD versions: 9.1, 9.5, 9.7
 
 | Template OS | Docker | Kubernetes | Pod Network |
 |-|-|-|-|
@@ -160,7 +205,7 @@ CSE 2.5.0 beta.
 
 **Compatibility matrix**
 
-|CSE | vCD |Enterprise PKS| NSX-T |
+|CSE | VCD |Enterprise PKS| NSX-T |
 |-|-|-|-|
 |2.5.0 Beta | 9.1, 9.5, 9.7  | 1.4 | 2.3, 2.4 |
 
@@ -183,11 +228,11 @@ a force reboot of the cluster.
 
 Release Date: 2019-05-24
 
-Supported vCD versions: 9.1, 9.5, 9.7.
+Supported VCD versions: 9.1, 9.5, 9.7.
 
-**Native vCD Templates**
+**Native VCD Templates**
 
-Native vCD templates need to be updated to avail below versions of K8 distributions.
+Native VCD templates need to be updated to avail below versions of K8 distributions.
 
 | Template OS        | Docker                 | Kubernetes | Pod Network |
 |--------------------|------------------------|------------|-------------|
@@ -197,7 +242,7 @@ Native vCD templates need to be updated to avail below versions of K8 distributi
 **New Updates**
 
 - [Enterprise PKS enablement](/container-service-extension/ENT_PKS.html) - CSE
-now supports new K8 provider Enterprise PKS in addition to Native vCD as K8 provider.
+now supports new K8 provider Enterprise PKS in addition to Native VCD as K8 provider.
 - [Role based access control](/container-service-extension/RBAC.html) - Enabling
  this feature allows users granted with specific K8 rights only to deploy K8 clusters.
 - Python version has to be >= 3.7.3. This change has been made in order to address
@@ -205,7 +250,7 @@ now supports new K8 provider Enterprise PKS in addition to Native vCD as K8 prov
 
 **Enterprise PKS Compatibility matrix**
 
-|CSE      | Supported vCD Versions |Enterprise PKS| NSX-T |
+|CSE      | Supported VCD Versions |Enterprise PKS| NSX-T |
 |---------|------------------------|--------------|-------|
 |2.0.0    | 9.5, 9.7               | 1.4          | 2.3   |
 |2.0.0    | 9.5, 9.7               | 1.4          | 2.4   |
@@ -223,7 +268,7 @@ organization vdc(s) enabled either for Native (or) Enterprise PKS.
 
 Click [here](/container-service-extension/CSE_CONFIG.html#pksconfig) for more details.
 
-**vCD Native templates patching**
+**VCD Native templates patching**
 
 Action required (by Admins and Users)
 
@@ -244,7 +289,7 @@ Action required (by Admins and Users)
 
 Release Date: 2019-04-26
 
-Supported vCD versions: 9.5, 9.7
+Supported VCD versions: 9.5, 9.7
 
 | Template OS        | Docker                 | Kubernetes | Pod Network |
 |--------------------|------------------------|------------|-------------|
@@ -266,7 +311,7 @@ Note: `pip install container-service-extension` installs previous official
 
 **Compatibility matrix**
 
-|CSE      | vCD       |Enterprise PKS| NSX-T |
+|CSE      | VCD       |Enterprise PKS| NSX-T |
 |---------|-----------|--------------|-------|
 |2.0 Beta | 9.5, 9.7  | 1.4          | 2.3   |
 
@@ -276,7 +321,7 @@ Note: `pip install container-service-extension` installs previous official
 
 Release Date: 2019-02-15
 
-Supported vCD versions: 9.1, 9.5
+Supported VCD versions: 9.1, 9.5
 
 | Template OS        | Docker                 | Kubernetes | Pod Network |
 |--------------------|------------------------|------------|-------------|
@@ -303,7 +348,7 @@ Action required (by Admins and Users)
 
 **Known Issues:**
 
-* CSE installation fails on vCD 9.0 with MissingLinkException. No known fix yet.
+* CSE installation fails on VCD 9.0 with MissingLinkException. No known fix yet.
 
 ---
 
@@ -311,7 +356,7 @@ Action required (by Admins and Users)
 
 Release Date : 2019-02-04
 
-Supported vCD versions: 9.1, 9.5
+Supported VCD versions: 9.1, 9.5
 
 | Template OS        | Docker     | Kubernetes | Pod Network |
 |:-------------------|:-----------|:-----------|:------------|
@@ -326,12 +371,12 @@ Supported vCD versions: 9.1, 9.5
 
 **Bug Fixes:**
 
-* Changed default AMQP exchange to cse-ext. CSE will no longer use or update vCD's global exchange settings.
+* Changed default AMQP exchange to cse-ext. CSE will no longer use or update VCD's global exchange settings.
 * A user can delete a partially deployed cluster which resulted from a failed cluster deployment operation.
 
 **Known Issues:**
 
-* CSE installation fails on vCD 9.0 with MissingLinkException.
+* CSE installation fails on VCD 9.0 with MissingLinkException.
 * No known fix yet.
 
 ---
@@ -342,7 +387,7 @@ Release date: 2018-12-03
 
 This is a security release to address Kubernetes CVE-2018-1002105
 
-Supported vCD versions: 9.0, 9.1, 9.5
+Supported VCD versions: 9.0, 9.1, 9.5
 
 | Template OS        | Docker     | Kubernetes | Pod Network |
 |:-------------------|:-----------|:-----------|:------------|
@@ -372,7 +417,7 @@ Supported vCD versions: 9.0, 9.1, 9.5
 
 Release date: 2018-11-26
 
-Supported vCD versions: 9.0, 9.1, 9.5
+Supported VCD versions: 9.0, 9.1, 9.5
 
 | Template OS        | Docker     | Kubernetes | Pod Network |
 |:-------------------|:-----------|:-----------|:------------|
@@ -408,7 +453,7 @@ Replaced with 1.2.4 due to bug where master node creation fails during cluster c
 
 Release date: 2018-10-29
 
-Supported vCD versions: 9.0, 9.1, 9.5
+Supported VCD versions: 9.0, 9.1, 9.5
 
 | Template OS        | Docker     | Kubernetes | Pod Network |
 |:-------------------|:-----------|:-----------|:------------|
@@ -426,7 +471,7 @@ Supported vCD versions: 9.0, 9.1, 9.5
 
 Release date: 2018-10-23
 
-Supported vCD versions: 9.0, 9.1, 9.5
+Supported VCD versions: 9.0, 9.1, 9.5
 
 | Template OS        | Docker     | Kubernetes | Pod Network |
 |:-------------------|:-----------|:-----------|:------------|
@@ -438,7 +483,7 @@ Supported vCD versions: 9.0, 9.1, 9.5
 * Add `status` display for `vcd cse cluster list`
 * Updated pyvcloud requirement to >= 20.0.1 (#138)
 * Fixed bug in setup files where CSE script files would not be downloaded properly to Windows systems from PyPI.
-* Fixed bug where AMQP exchange would not be created if vCD and config file settings were the same.
+* Fixed bug where AMQP exchange would not be created if VCD and config file settings were the same.
 
 **Documentation:**
 
@@ -452,7 +497,7 @@ Supported vCD versions: 9.0, 9.1, 9.5
 
 Release date: 2018-10-02
 
-Supported vCD versions: 9.0, 9.1, 9.5
+Supported VCD versions: 9.0, 9.1, 9.5
 
 | Template OS        | Docker     | Kubernetes | Pod Network |
 |:-------------------|:-----------|:-----------|:------------|
@@ -469,7 +514,7 @@ Supported vCD versions: 9.0, 9.1, 9.5
 
 **Usability Improvements and Bug Fixes:**
 
-* Fixed AMQP settings display bug, where settings that were different between vCD and config file were displayed out of order.
+* Fixed AMQP settings display bug, where settings that were different between VCD and config file were displayed out of order.
 * If current vcd settings are same as config file, AMQP configuration is skipped.
 * Fixed grub issue in ubuntu customization script, where user would be prompted with a selection menu, causing installation to hang.
 * CSE installation now always shares templates.
@@ -480,7 +525,7 @@ Supported vCD versions: 9.0, 9.1, 9.5
 * CSE License files uploaded
 * Updated known issues section
 * Listed required privileges for VCD service account
-* Updated CSE-vCD compatibility matrix (#109)
+* Updated CSE-VCD compatibility matrix (#109)
 
 ---
 
@@ -488,7 +533,7 @@ Supported vCD versions: 9.0, 9.1, 9.5
 
 Release date: 2018-06-15
 
-| vCD         | OS                 | Docker     | Kubernetes | Pod Network |
+| VCD         | OS                 | Docker     | Kubernetes | Pod Network |
 |:------------|:-------------------|:-----------|:-----------|:------------|
 | 8.10 and up | Photon OS 2.0 GA   | 17.06.4-ce | 1.9.1      | Weave 2.3.0 |
 | 8.10 and up | Ubuntu 16.04.4 LTS | 18.03.0-ce | 1.10.1     | Weave 2.3.0 |
@@ -500,7 +545,7 @@ Maintenance release:
 * added NFS Persistent volume support.
 
 **Usibility Improvements and Bug Fixes:**
-* vCD 8.20 requires pyvcloud 19.3.0 and vcd_cli 20.3.0 versions.
+* VCD 8.20 requires pyvcloud 19.3.0 and vcd_cli 20.3.0 versions.
 
 ---
 
@@ -508,7 +553,7 @@ Maintenance release:
 
 Release date: 2018-03-09
 
-| vCD         | OS                 | Docker     | Kubernetes | Pod Network |
+| VCD         | OS                 | Docker     | Kubernetes | Pod Network |
 |:------------|:-------------------|:-----------|:-----------|:------------|
 | 8.10 and up | Photon OS 2.0 GA   | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
 | 8.10 and up | Ubuntu 16.04.3 LTS | 17.12.0-ce | 1.9.3      | Weave 2.1.3 |
@@ -525,7 +570,7 @@ CSE General Availability (GA), improvements and bug fixes:
 
 Release date: 2018-02-15
 
-| vCD         | OS                 | Docker     | Kubernetes | Pod Network |
+| VCD         | OS                 | Docker     | Kubernetes | Pod Network |
 |:------------|:-------------------|:-----------|:-----------|:------------|
 | 8.10 and up | Photon OS 2.0 GA   | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
 | 8.10 and up | Ubuntu 16.04.3 LTS | 17.12.0-ce | 1.9.3      | Weave 2.1.3 |
@@ -557,14 +602,14 @@ Maintenance release, improvements and bug fixes:
 
 Release date: 2018-01-26
 
-| vCD         | OS                 | Docker     | Kubernetes | Pod Network |
+| VCD         | OS                 | Docker     | Kubernetes | Pod Network |
 |:------------|:-------------------|:-----------|:-----------|:------------|
 | 8.10 and up | Photon OS 2.0 GA   | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
 | 8.10 and up | Ubuntu 16.04.3 LTS | 17.12.0-ce | 1.9.1      | Weave 2.1.3 |
 
 New features:
 
-* support multiple vCenters per vCD installation (new format of the `vcs` section in `config.yaml`)
+* support multiple vCenters per VCD installation (new format of the `vcs` section in `config.yaml`)
 * upgraded PhotonOS template to version 2.0
 * upgraded Ubuntu template to Kubernetes 1.9.1
 * support templates from versions `0.2.0` and up, but re-creating the templates is recommended
@@ -577,7 +622,7 @@ New features:
 
 Release date: 2018-01-10
 
-| vCD         | OS                   | Docker     | Kubernetes | Pod Network |
+| VCD         | OS                   | Docker     | Kubernetes | Pod Network |
 |:------------|:---------------------|:-----------|:-----------|:------------|
 | 8.10 and up | Photon OS 1.0, Rev 2 | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
 | 8.10 and up | Ubuntu 16.04.3 LTS   | 17.09.0-ce | 1.8.2      | Weave 2.0.5 |
@@ -594,7 +639,7 @@ New features:
 
 Release date: 2017-12-29
 
-| vCD         | OS                   | Docker     | Kubernetes | Pod Network |
+| VCD         | OS                   | Docker     | Kubernetes | Pod Network |
 |:------------|:---------------------|:-----------|:-----------|:------------|
 | 8.10 and up | Photon OS 1.0, Rev 2 | 17.06.0-ce | 1.8.1      | Weave 2.0.5 |
 | 8.10 and up | Ubuntu 16.04.3 LTS   | 17.09.0-ce | 1.8.2      | Weave 2.0.5 |
@@ -617,7 +662,7 @@ New features:
 
 Release date: 2017-11-10
 
-| vCD         | OS                   | Kubernetes | Pod Network |
+| VCD         | OS                   | Kubernetes | Pod Network |
 |:------------|:---------------------|:-----------|:------------|
 | 8.10 and up | Photon OS 1.0, Rev 2 | 1.7.7      | Weave 2.0.5 |
 | 8.10 and up | Ubuntu 16.04.3 LTS   | 1.8.2      | Weave 2.0.5 |
@@ -632,7 +677,7 @@ Features:
 
 Release date: 2017-10-03
 
-| vCD         | OS                   | Kubernetes | Pod Network |
+| VCD         | OS                   | Kubernetes | Pod Network |
 |:------------|:---------------------|:-----------|:------------|
 | 8.10 and up | Photon OS 1.0, Rev 2 | 1.7.7      | Weave 2.0.4 |
 

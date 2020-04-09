@@ -107,20 +107,20 @@ how they are used.
 ### `amqp` Section
 
 During CSE Server installation, CSE will set up AMQP to ensure
-communication between vCD and the running CSE server. The `amqp`
+communication between VCD and the running CSE server. The `amqp`
 section controls the AMQP communication parameters. The following
 properties will need to be set for all deployments.
 
 | Property | Value                                                                                        |
 |----------|----------------------------------------------------------------------------------------------|
-| exchange | Exchange name unique to CSE (CSE will create and use this exchange to communicate with vCD)  |
-| host     | IP or hostname of the vCloud Director AMQP server (may be different from the vCD cell hosts) |
+| exchange | Exchange name unique to CSE (CSE will create and use this exchange to communicate with VCD)  |
+| host     | IP or hostname of the vCloud Director AMQP server (may be different from the VCD cell hosts) |
 | username | AMQP username                                                                                |
 | password | AMQP password                                                                                |
 
 Other properties may be left as is or edited to match site conventions.
 
-For more information on AMQP settings, see the [vCD API documentation on AMQP](https://code.vmware.com/apis/442/vcloud#/doc/doc/types/AmqpSettingsType.html).
+For more information on AMQP settings, see the [VCD API documentation on AMQP](https://code.vmware.com/apis/442/vcloud#/doc/doc/types/AmqpSettingsType.html).
 
 ### `vcs` Section
 
@@ -134,11 +134,11 @@ Each `vc` under the `vcs` section has the following properties:
 
 | Property | Value                                                                             |
 |----------|-----------------------------------------------------------------------------------|
-| name     | Name of the vCenter as registered in vCD                                          |
+| name     | Name of the vCenter as registered in VCD                                          |
 | username | User name of the vCenter service account with at least guest-operation privileges |
 | password | Password of the vCenter service account                                           |
 
-Note : All VCs registered in vCD must be listed here, otherwise CSE server
+Note : All VCs registered in VCD must be listed here, otherwise CSE server
 installation will fail during pre-check phase.
 
 <a name="service_section"></a>
@@ -150,7 +150,7 @@ The service section contains properties that define CSE server behavior.
 |-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | listeners             | Number of threads that CSE server should use                                                                                                               |
 | enforce_authorization | If True, CSE server will use role-based access control, where users without the correct CSE right will not be able to deploy clusters (Added in CSE 1.2.6) |
-| log_wire              | If True, will log all REST calls initiated by CSE to vCD. (Added in CSE 2.5.0)                                                                             |
+| log_wire              | If True, will log all REST calls initiated by CSE to VCD. (Added in CSE 2.5.0)                                                                             |
 | telemetry             | If enabled, will send back anonymized usage data back to VMware (Added in CSE 2.6.0)                                                                       |
 
 <a name="broker"></a>
@@ -167,7 +167,7 @@ The following table summarizes key parameters.
 | default_template_revision    | Revision of the default template to use if one is not is specified during cluster and node operations. CSE server won't start up if this value is invalid. (Added in CSE 2.5.0)                                      |
 | ip_allocation_mode           | IP allocation mode to be used during the install process to build the template. Possible values are `dhcp` or `pool`. During creation of clusters for tenants, `pool` IP allocation mode is always used              |
 | network                      | Org Network within `vdc` that will be used during the install process to build the template. It should have outbound access to the public Internet. The `CSE` appliance doesn't need to be connected to this network |
-| org                          | vCD organization that contains the shared catalog where the K8s templates will be stored                                                                                                                             |
+| org                          | VCD organization that contains the shared catalog where the K8s templates will be stored                                                                                                                             |
 | remote_template_cookbook_url | URL of the template repository where all template definitions and associated script files are hosted. (Added in CSE 2.5.0)                                                                                           |
 | storage_profile              | Name of the storage profile to use when creating the temporary vApp used to build the template                                                                                                                       |
 | vdc                          | Virtual data-center within `org` that will be used during the install process to build the template                                                                                                                  |
@@ -218,7 +218,7 @@ following example shows a file with sample values filled out.
 #          server, it's used to tie in various segments of the config file
 #          together.
 #       c. The field 'vc' represents the name with which the Enterprise PKS
-#          vCenter is registered in vCD.
+#          vCenter is registered in VCD.
 #       d. The field 'cpi' needs to be retrieved by executing
 #          'bosh cpi-config' on Enterprise PKS set up.
 #   2. pks_accounts:
@@ -233,10 +233,10 @@ following example shows a file with sample values filled out.
 #          value of the field 'name' of the corresponding Enterprise PKS api
 #          server.
 #   3. pvdcs:
-#       a. Each entry in the list represents a Provider VDC in vCD that is
+#       a. Each entry in the list represents a Provider VDC in VCD that is
 #          backed by a cluster of the Enterprise PKS managed vCenter server.
 #       b. The field 'name' in each entry should be the name of the
-#          Provider VDC as it appears in vCD.
+#          Provider VDC as it appears in VCD.
 #       c. The field 'pks_api_server' is a reference to the Enterprise PKS
 #          api server which owns this account. Its value should be equal to
 #          value of the field 'name' of the corresponding Enterprise PKS api
