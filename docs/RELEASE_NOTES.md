@@ -36,15 +36,16 @@ Upgrade from CSE 2.6.0.0b1 is not supported.
 
 If you are upgrading to CSE 2.6.0 from an older version of CSE, and you have
 pre-existing deployed K8s clusters, you must run the following command:
-* From CSE 2.5.0 or above - To be able to upgrade the cluster. 
-* From CSE older than 2.5.0 - To preserve managablilty of the clusters.
 ```sh
 cse convert-cluster
 ```
+* From CSE 2.5.0 or above - To be able to upgrade the cluster.
+* From CSE older than 2.5.0 - To preserve managablilty of the clusters.
+
 This command adds new metadata to the cluster. If the cluster was deployed by 
 CSE version below 2.5.0, the command will also reset the admin password of all
 nodes in the cluster. If nodes in the cluster are setup with ssh keys for root
-login, those key pairings will be preserved. The command also does a force
+login, those key pairings will be preserved. The command will force a
 reboot of the cluster, if admin password is reset.
 
 ---

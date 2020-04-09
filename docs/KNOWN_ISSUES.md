@@ -7,40 +7,50 @@ title: Known Issues
 <a name="general"></a>
 ## General Issues
 ---
-### CSE UI plugin grays out some OrgVDC(s) in the Create Cluster Wizard
-By default, OrgVDCs are available for Native cluster deployment in the absence
-of Enterprise PKS in CSE. Unfortunately, CSE UI Plugin exhibits a behavior
-where it expects OrgVDCs to be explicitly enabled for Native cluster
-deployment.
-
-*Workaround:* - Enable the OrgVDC explicitly for nativecluster deployment
-via the following command
-```sh
->vcd cse ovdc enable [ovdc name] -k 'native' -o [Org Name]
-```
----
 ### Re-registering 2.6.0 GA CSE UI plugin with VCD doens't work properly
 If the beta version of CSE UI plugin is already registered with VCD, trying to
 upgrade it via `cse` cli or VCD UI will fail. Right now, the only way to update
-the UI plugin is to deregister/delete it and then re-install using the new
-zip file.
-
-Additionally, the provider will need to re-publish the plugin to all the
-tenants that were given access to the CSE UI plugin.
+the UI plugin is to de-register/delete it and then re-install using the new
+zip file. Additionally, the provider will need to re-publish the plugin to all
+the tenants that were previously given access to the CSE UI plugin.
 
 ---
-### If CSE server is inaccessible, on VCD UI user only sees the loading spinner instead of an error display
-
-There is no workaround for this at present. We will fix this in a future release
+### CSE landing page on VCD UI perpetually shows a spinning wheel
+If CSE server is inaccessible/down, on VCD UI's CSE landing page, user only
+sees the loading spinner instead of an error message. Currently, there is no
+workaround for this.
 
 ---
-### Some of the cluster operation errors are not shown in UI
-The `Create Cluster` wizard's field validation needs to be made stronger.
-Sometimes bad input from end user can make it's way to the CSE server, and the
-error returned by server is not reflected in UI.
-Example: entering wrong storage profile will result in a server-side error that
-will not be reflected in the UI.
+### Cluster operations fail silently on UI
+On clicking `confirm` in cluster creation/deletion wizards/confirmation message
+boxes, user does not immediately get to know if the plugin succeeded/failed to
+send the request or whether CSE server accepted/rejected the request. Form
+validation and http error display has not been implemented in CSE UI plugin
+yet. Currently, there is no workaround.
 
+---
+### Never ending CSE tasks in VCD UI / Failed CSE tasks without proper error message
+If CSE server encounters any error during cluster/node creation, users may see
+CSE tasks in VCD never reach to completion, or the tasks may show up as failed
+but without a proper error message. Currently, UI has no way to expose the
+stacktrace or specific error message on why that particular operation might
+have failed. A user input parameter may have been invalid, or an unexpected
+error (network connection/outage/etc) may have occurred. Server-side logs should be
+inspected in these cases, or an issue can be filed
+[here](https://github.com/vmware/container-service-extension/issues).
+
+---
+### Enterprise PKS cluster creation fails from UI
+If CSE is enabled with Enterprise PKS but OrgVDCs are not enabled with
+Enterprise PKS as their k8s provider, UI will allow cluster creation operation
+on that OrgVDC, but the operation will eventually fail. This behavior is as
+designed.
+
+*Workaround:* - Enable the OrgVDC explicitly for Enterprise PKS cluster
+deployment via the following command
+```sh
+>vcd cse ovdc enable [ovdc name] -k 'ent-pks' -o [Org Name] -d [domain name] -p [plan name]
+```
 ---
 ### Fresh installation of CSE 2.5.1 or below via `pip install` is broken
 CSE 2.5.1 or below versions have an open-ended dependencies, which permit `pip`
@@ -49,7 +59,7 @@ are `pyvcloud` and `vcd-cli`, and their latest available versions are
 incompatible with CSE 2.5.1 or below. We are reviewing our design on
 dependencies, and hope to bring improvements in near future. 
 
-*Workaround:* - Uninstall incompatible `pyvcloud` and `vcd-cli` libraries, and
+*Workaround:* - Un-install incompatible `pyvcloud` and `vcd-cli` libraries, and
 manually install compatible versions.
 
 ```sh
@@ -60,9 +70,10 @@ pip3 uninstall pyvcloud vcd-cli --user --yes
 pip3 install pyvcloud==21.0.0 vcd-cli==22.0.0 --upgrade --user
 ```
 ---
-### `vcd cse ovdc list` operation will timeout when a large number of organization VDCs exist
+### `vcd cse ovdc list` operation will timeout when a large number of OrgVDCs exist
 
-CSE makes an API call per organization VDC in order to access required metadata, and that can timeout with large number of VDCs.
+CSE makes an API call per OrgVDC in order to access required metadata, and that
+can timeout with large number of OrgVDCs.
 
 Example - Trying to use `vcd cse ovdc list` with 250+ VDCs:
 
@@ -144,7 +155,7 @@ since `--kubernetes-version` and `--config` are incompatible.
 
 Currently, NFS servers in a Kubernetes cluster are not only accessible
 by nodes of that cluster but also by any VM (outside of the cluster)
-residing in the same orgVdc. Ideal solution is to have vApp network
+residing in the same OrgVDC. Ideal solution is to have vApp network
 created for each Kubernetes cluster, which is in our road-map to
 implement. Until then, please choose one of below workarounds to
 avert this problem if the need arises.
@@ -187,6 +198,6 @@ clusters will begin to fail with errors.
 * Once `vcd cse cluster resize` is run on Enterprise PKS based clusters, commands
 `vcd cse cluster info` and `vcd cse cluster list` on those resized clusters will begin to display
 incomplete results.
-* Once a given organization vdc is enabled for Enterprise PKS,
-renaming that organization vdc in VCD will cause further K8 cluster deployment
-failures in that organization vdc.
+* Once a given OrgVDC is enabled for Enterprise PKS,
+renaming that OrgVDC in VCD will cause further K8 cluster deployment
+failures in that OrgVDC.
