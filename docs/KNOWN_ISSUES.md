@@ -19,9 +19,9 @@ via the following command
 >vcd cse ovdc enable [ovdc name] -k 'native' -o [Org Name]
 ```
 ---
-### Re-registering 2.6.0 GA CSE UI plugin with vCD doens't work properly
-If the beta version of CSE UI plugin is already registered with vCD, trying to
-upgrade it via `cse` cli or vCD UI will fail. Right now, the only way to update
+### Re-registering 2.6.0 GA CSE UI plugin with VCD doens't work properly
+If the beta version of CSE UI plugin is already registered with VCD, trying to
+upgrade it via `cse` cli or VCD UI will fail. Right now, the only way to update
 the UI plugin is to deregister/delete it and then re-install using the new
 zip file.
 
@@ -29,7 +29,7 @@ Additionally, the provider will need to re-publish the plugin to all the
 tenants that were given access to the CSE UI plugin.
 
 ---
-### If CSE server is inaccessible, on vCD UI user only sees the loading spinner instead of an error display
+### If CSE server is inaccessible, on VCD UI user only sees the loading spinner instead of an error display
 
 There is no workaround for this at present. We will fix this in a future release
 
@@ -81,8 +81,8 @@ Workaround: extend the cell timeout to be able to wait for the required amount o
 
 Workaround: Don't disable Service Provider Access to the Legacy API Endpoint
 
-vCD 10.0 deprecates the `/api/sessions` REST end point, and introduces a new
-`/cloudapi/` based REST endpoint for authenticating vCD users. CSE relies on
+VCD 10.0 deprecates the `/api/sessions` REST end point, and introduces a new
+`/cloudapi/` based REST endpoint for authenticating VCD users. CSE relies on
 the '/api' end point for operations, so it is necessary that the legacy API
 endpoint is not disabled in vCloud Director.
 
@@ -104,12 +104,12 @@ endpoint is not disabled in vCloud Director.
 - Workaround: rebooting the VM starts the service
 
 ---
-### CSE 1.2.6 and up are incompatible with vCD 9.0
+### CSE 1.2.6 and up are incompatible with VCD 9.0
 
 - CSE installation fails with MissingLinkException
 
 ---
-### Cluster creation fails when vCD external network has a DNS suffix and the DNS server resolves `localhost.my.suffix` to a valid IP
+### Cluster creation fails when VCD external network has a DNS suffix and the DNS server resolves `localhost.my.suffix` to a valid IP
 
 This is due to a bug in **etcd** (More detail [HERE](https://github.com/kubernetes/kubernetes/issues/57709),
 with the kubeadm config file contents necessary for the workaround specified in
@@ -156,7 +156,7 @@ avert this problem if the need arises.
     ```sh
        /home 203.0.113.256(rw,sync,no_root_squash,no_subtree_check) 203.0.113.257(rw,sync,no_root_squash,no_subtree_check)
     ```
-* Administrator can manually add a vApp network for each Kubernetes cluster in vCD.
+* Administrator can manually add a vApp network for each Kubernetes cluster in VCD.
 * Create a ssh tunnel from each worker node (using ssh local port forwarding) and then
   use `127.0.0.1:<port>` in the Kubernetes declarative specs as IP of the NFS server.
     * In NFS server, for any given shared directory, add below line to `/etc/exports` file.
@@ -177,7 +177,7 @@ avert this problem if the need arises.
 ## Enterprise PKS Limitations
 
 * When attaching an NSX-T-backed vCenter (such as Enterprise PKS vCenter) to a
-MicrosoftSQL-backed vCD, the vCenter can fail to connect. Refer to this
+MicrosoftSQL-backed VCD, the vCenter can fail to connect. Refer to this
 [work around](https://docs.vmware.com/en/vCloud-Director/9.7/rn/vmware-vcloud-director-for-service-providers-97-release-notes.html)
 * Command `vcd cse node info` on native K8 clusters is broken when
 Enterprise PKS is part of CSE set-up
@@ -188,5 +188,5 @@ clusters will begin to fail with errors.
 `vcd cse cluster info` and `vcd cse cluster list` on those resized clusters will begin to display
 incomplete results.
 * Once a given organization vdc is enabled for Enterprise PKS,
-renaming that organization vdc in vCD will cause further K8 cluster deployment
+renaming that organization vdc in VCD will cause further K8 cluster deployment
 failures in that organization vdc.

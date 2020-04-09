@@ -116,7 +116,7 @@ for about a minute or more (depends on the actual upgrade process).
 of Kubernetes clusters and nodes.
 
 Users can interact with CSE via the Python package (container-service-extension)
-or the CSE REST API exposed via vCD.
+or the CSE REST API exposed via VCD.
 
 This following Python script creates a Kubernetes cluster on vCloud Director:
 ```python
@@ -167,7 +167,7 @@ client.logout()
 > vcd cse node create mycluster --nodes 1 --type nfsd --network intranet --ssh-key ~/.ssh/id_rsa.pub --memory 4096 --cpu 4 --template-name sample_photon_template --template-revision 1 --storage-profile sample_storage_profile
 
 # resize the cluster to have 8 worker node. If resize fails, the cluster is returned to it's original size.
-# '--network' is only applicable for clusters using native (vCD) Kubernetes provider.
+# '--network' is only applicable for clusters using native (VCD) Kubernetes provider.
 > vcd cse cluster resize mycluster --network mynetwork --nodes 8
 
 # info on a given node. If the node is of type nfsd, it displays info about Exports.

@@ -9,9 +9,9 @@ title: CSE Server Management
 ## Overview
 
 This page contains procedures to install and manage Container Service
-Extension (CSE) on vCloud Director (vCD). Users who perform these procedures
+Extension (CSE) on vCloud Director (VCD). Users who perform these procedures
 are cloud administrators with `sysadmin` access and a solid understanding
-of vCD management.
+of VCD management.
 
 Procedures on this page make regular use of vcd-cli commands to
 perform administrative operations. Please refer to the [vcd-cli
@@ -25,15 +25,15 @@ yourself with vcd-cli.
 
 ### Installing CSE Server
 
-`CSE` Server should be installed by the vCD System/Cloud Administrator on a
-new VM or one of the existing servers that are part of vCD. This CSE VM is the
+`CSE` Server should be installed by the VCD System/Cloud Administrator on a
+new VM or one of the existing servers that are part of VCD. This CSE VM is the
 **CSE appliance**.
 
-The CSE appliance requires network access to the vCD cell, vCenter(s),
+The CSE appliance requires network access to the VCD cell, vCenter(s),
 and AMQP server. It does not require access to the network(s) that powers the
 org VDC where the Kubernetes templates will be created nor the tenant network(s)
 that powers that org VDC where the clusters will be deployed. Please find more
-details on the vCD prerequisites for CSE installation [here](/container-service-extension/CSE_INSTALL_PREREQUISITES.html).
+details on the VCD prerequisites for CSE installation [here](/container-service-extension/CSE_INSTALL_PREREQUISITES.html).
 
 The CSE software should be installed on the CSE appliance as described [here](/container-service-extension/INSTALLATION.html).
 
@@ -55,7 +55,7 @@ The `cse install` command supports the following options:
 | Option                    | Short | Argument(s)                        | Description                                                                                                      | Default Value |
 |---------------------------|-------|------------------------------------|------------------------------------------------------------------------------------------------------------------|---------------|
 | \--config                 | -c    | path to config file                | Filepath of CSE config file to use for installation                                                              | config.yaml   |
-| \--force-update           | -f    | n/a                                | Recreate CSE k8s templates on vCD even if they already exist                                                     | False         |
+| \--force-update           | -f    | n/a                                | Recreate CSE k8s templates on VCD even if they already exist                                                     | False         |
 | \--pks-config-file        | -p    | path to Enterprise PKS config file | Filepath of Enterprise PKS config file to use for installation                                                   | -             |
 | \--retain-temp-vapp       | -d    | n/a                                | Retain the temporary vApp after the template has been captured --ssh-key option is required if this flag is used | False         |
 | \--skip-config-decryption | -s    | n/a                                | Skips decrypting the configuration file and pks configuration file, and assumes them to be plain text            | -             |
@@ -92,11 +92,11 @@ The `cse check` command supports the following options:
 
 | Option                    | Short | Argument(s)                        | Description                                                                                           | Default |
 |---------------------------|-------|------------------------------------|-------------------------------------------------------------------------------------------------------|---------|
-| \--check-install          | -i    | n/a                                | Check CSE installation on vCD                                                                         | False   |
+| \--check-install          | -i    | n/a                                | Check CSE installation on VCD                                                                         | False   |
 | \--pks-config-file        | -p    | path to Enterprise PKS config file | Enterprise PKS config file to validate along with CSE config file                                     | -       |
 | \--skip-config-decryption | -s    | n/a                                | Skips decrypting the configuration file and PKS configuration file, and assumes them to be plain text | -       |
 
-Validate that CSE has been registered with vCD as an extension, via vcd-cli:
+Validate that CSE has been registered with VCD as an extension, via vcd-cli:
 ```sh
 # login as system administrator
 vcd login vcd.serviceprovider.com system <administrator user name> --password <password> -w -i
@@ -110,12 +110,12 @@ vcd system extension info cse
 <a name="extension-timeout"></a>
 ### Setting the API Extension Timeout
 
-The API extension timeout is the duration (in seconds) that vCD waits for
+The API extension timeout is the duration (in seconds) that VCD waits for
 a response from the CSE server extension. The default value is 10 seconds,
 which may be too short for some environments. To alter the timeout value,
 follow the steps below.
 
-Configure the API extension timeout on the vCD cell:
+Configure the API extension timeout on the VCD cell:
 
 ```sh
 cd /opt/vmware/vcloud-director/bin
@@ -158,7 +158,7 @@ vcd role add-right <role name> 'Catalog: View Published Catalogs'
 vcd role clone <built role e.g. "vApp Author"> 'New Role'
 vcd role add-right 'New Role' 'Catalog: View Published Catalogs'
 
-# Assign this new role to the user in question via vCD UI or
+# Assign this new role to the user in question via VCD UI or
 # create a new user in the organization with the new role
 vcd user create <new user name> <password> 'New Role' --enabled
 ```
@@ -242,7 +242,7 @@ KillUserProcesses=no
 
 ### Monitoring CSE
 
-vCD System Administrators can monitor CSE service status via CSE client:
+VCD System Administrators can monitor CSE service status via CSE client:
 
 ```sh
 $ vcd cse system info
@@ -276,7 +276,7 @@ Upgrading CSE server is no different than installing it for the first time.
 4. Use `cse sample` command to generate a new sample config file and fill in
    the relevant values from the previous config file.
 5. If the previously generated templates are no longer supported by the new version,
-   delete the old templates (from vCD UI / vcd-cli) and generate new ones via
+   delete the old templates (from VCD UI / vcd-cli) and generate new ones via
    * `cse install -c myconfig.yaml`
    Check [here](/container-service-extension/TEMPLATE_ANNOUNCEMENTS.html) for available templates.
 6. If CSE is being run as a service, start the new version of the service with
@@ -285,11 +285,11 @@ Upgrading CSE server is no different than installing it for the first time.
 ### Uninstalling CSE Server
 
 1. Gracefully stop CSE Server
-2. As System Administrator, unregister CSE from vCD:
+2. As System Administrator, unregister CSE from VCD:
    * `vcd system extension delete cse`
-3. Review vCD AMQP settings. Generally no modifications are necessary in AMQP.
+3. Review VCD AMQP settings. Generally no modifications are necessary in AMQP.
    * `vcd system amqp info`
-4. (Optional) Delete Kubernetes templates and the CSE catalog from vCD.
+4. (Optional) Delete Kubernetes templates and the CSE catalog from VCD.
 
 ---
 
@@ -322,8 +322,8 @@ cse run --config config.yaml -h
 # Show all available vcd cse commands.
 vcd cse -h
 
-# Login to vCD to use vcd-cli commands.
-vcd login <vCD HOSTNAME> system <USERNAME> -iwp <PASSWORD>
+# Login to VCD to use vcd-cli commands.
+vcd login <VCD HOSTNAME> system <USERNAME> -iwp <PASSWORD>
 
 # Let SAMPLE_ORG_NAME be active org for this session.
 vcd org use SAMPLE_ORG_NAME

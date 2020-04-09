@@ -15,7 +15,7 @@ to help decide what to install.
 |-----------------------------------|------------------------------------------------------|
 | Kubernetes user                   | Install kubectl on laptop or workstation             |
 | Org admin managing K8s clusters   | Install CSE and configure CSE client on laptop or VM |
-| Cloud admin installing CSE in vCD | Install CSE on server host                           |
+| Cloud admin installing CSE in VCD | Install CSE on server host                           |
 
 Naturally a cloud admin may install the CSE client to test cluster
 creation after CSE server setup. Similarly a tenant org administrator

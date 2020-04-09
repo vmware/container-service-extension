@@ -25,11 +25,11 @@ the restricted operations.
 
 | Operation | Container Provider | Right | Introduced in |
 | -| -| -| -|
-| cluster create | Native(vCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
-| cluster delete | Native(vCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
-| cluster resize | Native(vCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
-| node create | Native(vCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
-| node delete | Native(vCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
+| cluster create | Native(VCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
+| cluster delete | Native(VCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
+| cluster resize | Native(VCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
+| node create | Native(VCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
+| node delete | Native(VCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
 | cluster create | Enterprise PKS | {cse}:PKS DEPLOY RIGHT | CSE 2.0.0b1 |
 | cluster delete | Enterprise PKS | {cse}:PKS DEPLOY RIGHT | CSE 2.0.0b1 |
 | cluster resize | Enterprise PKS | {cse}:PKS DEPLOY RIGHT | CSE 2.0.0b1 |

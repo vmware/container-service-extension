@@ -1,13 +1,13 @@
 ---
 layout: default
-title: CSE UI Plugin for vCD
+title: CSE UI Plugin for VCD
 ---
-# CSE UI plugin for vCD
+# CSE UI plugin for VCD
 
 ## Overview
-Along with CSE 2.6.0, we are releasing CSE UI plugin for vCD. Using this plugin,
+Along with CSE 2.6.0, we are releasing CSE UI plugin for VCD. Using this plugin,
 CSE users would be able to interact with CSE Kubernetes clusters directly from
-vCD UI.
+VCD UI.
 
 ## Getting the plugin
 The plugin binary can be downloaded from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.0/container-ui-plugin.zip).
@@ -25,15 +25,15 @@ List all installed plugins, and get ID of the CSE UI Plugin, by running
 ```sh
 cse ui-plugin list -c [path to CSE config file] -s
 ```
-Run the following command to remove the plugin from vCD.
+Run the following command to remove the plugin from VCD.
 ```sh
 cse ui-plugin deregister [ID] -c [path to CSE config file] -s
 ```
 
-**Method 2:** Via vCD UI portal
+**Method 2:** Via VCD UI portal
 
-To register the plugin, upload `container-ui-plugin.zip` to vCD through `Customize Portal`
-option in the navigation menu of vCD Service Provider view. Then follow the
+To register the plugin, upload `container-ui-plugin.zip` to VCD through `Customize Portal`
+option in the navigation menu of VCD Service Provider view. Then follow the
 standard steps of publishing an UI plugin. After registration, refresh the page.
 There should be a `Kubernetes Container Clusters` option in the navigation menu.
 
@@ -99,5 +99,5 @@ functionalities:
 * Navigate back to landing page from the top navigation bar.
 * Download `kubectl` configuration from the button to the right of cluster title.
 * View General information of Enterprise PKS clusters.
-* View General and Nodes information of native clusters. Info and Details are sub-sections containing cluster-centric and vCD/CSE related attributes.
+* View General and Nodes information of native clusters. Info and Details are sub-sections containing cluster-centric and VCD/CSE related attributes.
 * Add new worker nodes to native clusters. Removing worker nodes from native clusters is currently not supported via UI.
