@@ -39,7 +39,6 @@ def get_cluster_info(request_data, tenant_auth_token, is_jwt_token, **kwargs):
 
     :rtype: tuple
     """
-    telemetry = kwargs.get('telemetry', True)
     required = [
         RequestKey.CLUSTER_NAME
     ]
@@ -56,22 +55,19 @@ def get_cluster_info(request_data, tenant_auth_token, is_jwt_token, **kwargs):
                                                       include_nsxt_info=True)
         broker = get_broker_from_k8s_metadata(
             k8s_metadata, tenant_auth_token, is_jwt_token)
-        return broker.get_cluster_info(data=request_data,
-                                       telemetry=telemetry), \
+        return broker.get_cluster_info(data=request_data, **kwargs), \
             broker
 
     return get_cluster_and_broker(
-        request_data, tenant_auth_token, is_jwt_token, telemetry=telemetry)
+        request_data, tenant_auth_token, is_jwt_token, **kwargs)
 
 
 def get_cluster_and_broker(request_data, tenant_auth_token, is_jwt_token,
                            **kwargs):
-    telemetry = kwargs.get('telemetry', True)
     cluster_name = request_data[RequestKey.CLUSTER_NAME]
     vcd_broker = VcdBroker(tenant_auth_token, is_jwt_token)
     try:
-        return vcd_broker.get_cluster_info(data=request_data,
-                                           telemetry=telemetry), \
+        return vcd_broker.get_cluster_info(data=request_data, **kwargs), \
             vcd_broker
     except ClusterNotFoundError as err:
         # continue searching using PksBrokers

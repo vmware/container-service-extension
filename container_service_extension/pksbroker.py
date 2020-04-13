@@ -55,6 +55,7 @@ from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
+from container_service_extension.server_constants import KwargKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.uaaclient.uaaclient import UaaClient
@@ -215,7 +216,7 @@ class PksBroker(AbstractBroker):
 
         :rtype: list
         """
-        data = kwargs['data']
+        data = kwargs[KwargKey.DATA]
         cluster_list = self._list_clusters()
 
         # Required for all personae
@@ -282,7 +283,7 @@ class PksBroker(AbstractBroker):
 
         :rtype: dict
         """
-        data = kwargs['data']
+        data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME,
             RequestKey.PKS_PLAN_NAME,
@@ -379,7 +380,7 @@ class PksBroker(AbstractBroker):
 
         :rtype: dict
         """
-        data = kwargs['data']
+        data = kwargs[KwargKey.DATA]
         cluster_name = data[RequestKey.CLUSTER_NAME]
 
         if self.tenant_client.is_sysadmin() \
@@ -447,7 +448,7 @@ class PksBroker(AbstractBroker):
 
         :rtype: str
         """
-        data = kwargs['data']
+        data = kwargs[KwargKey.DATA]
         cluster_name = data[RequestKey.CLUSTER_NAME]
 
         if self.tenant_client.is_sysadmin() or \
@@ -481,7 +482,7 @@ class PksBroker(AbstractBroker):
         :param **data
             :param str cluster_name: Name of the cluster
         """
-        data = kwargs['data']
+        data = kwargs[KwargKey.DATA]
         cluster_name = data[RequestKey.CLUSTER_NAME]
 
         if self.tenant_client.is_sysadmin() \
@@ -537,7 +538,7 @@ class PksBroker(AbstractBroker):
         :rtype: dict
 
         """
-        data = kwargs['data']
+        data = kwargs[KwargKey.DATA]
         cluster_name = data[RequestKey.CLUSTER_NAME]
         num_workers = data[RequestKey.NUM_WORKERS]
 
