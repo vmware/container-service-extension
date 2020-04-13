@@ -189,7 +189,24 @@ def list_clusters(ctx, vdc, org_name):
         if not client.is_sysadmin() and org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
         result = cluster.get_clusters(vdc=vdc, org=org_name)
-        stdout(result, ctx, show_id=True, sort_headers=False)
+
+        clusters = []
+        for c in result:
+            # TODO cluster api response keys need to be more well defined
+            kubernetes = 'N/A'
+            if c.get('k8s_type') and c.get('k8s_version'):
+                kubernetes = f"{c.get('k8s_type')} {c['k8s_version']}"
+            cluster = {
+                'Name': c.get('name') or 'N/A',
+                'VDC': c.get('vdc') or 'N/A',
+                'Org': c.get('org_name') or 'N/A',
+                'Kubernetes': kubernetes,
+                'Status': c.get('status') or 'N/A',
+                'Provider': c.get('k8s_provider') or 'N/A',
+            }
+            clusters.append(cluster)
+
+        stdout(clusters, ctx, show_id=True, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
 
