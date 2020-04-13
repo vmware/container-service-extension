@@ -1,6 +1,7 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+
 from collections import namedtuple
 
 from pyvcloud.vcd.client import MetadataDomain
@@ -137,11 +138,11 @@ def get_ovdc_list(client,
     for record in get_all_ovdc_with_metadata():
         if client.is_sysadmin() or record.get('orgName') in org_name_set:
             ovdc_dict = to_dict(record, resource_type=ResourceType.ADMIN_ORG_VDC.value) # noqa: E501
-            k8s_provider = 'none'
+            k8s_provider = K8sProvider.NONE
             if hasattr(record, 'Metadata'):
-                for element in record.Metadata.MetadataEntry:
-                    if element.Key == K8S_PROVIDER_KEY:
-                        k8s_provider = str(element.TypedValue.Value)
+                for entry in record.Metadata.MetadataEntry:
+                    if entry.Key == K8S_PROVIDER_KEY:
+                        k8s_provider = str(entry.TypedValue.Value)
                         break
             ovdc_info = {
                 'name': ovdc_dict.get('name'),
