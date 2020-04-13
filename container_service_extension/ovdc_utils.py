@@ -8,8 +8,6 @@ from pyvcloud.vcd.client import MetadataDomain
 from pyvcloud.vcd.client import MetadataVisibility
 from pyvcloud.vcd.client import QueryResultFormat
 from pyvcloud.vcd.client import ResourceType
-from pyvcloud.vcd.exceptions import EntityNotFoundException
-from pyvcloud.vcd.org import Org
 import pyvcloud.vcd.utils as pyvcd_utils
 from pyvcloud.vcd.utils import to_dict
 import requests
@@ -83,6 +81,21 @@ def get_ovdc_k8s_provider_metadata(org_name=None, ovdc_name=None, ovdc_id=None,
             client.logout()
 
 
+def get_all_ovdc_with_metadata():
+    client = None
+    try:
+        client = vcd_utils.get_sys_admin_client()
+        q = client.get_typed_query(
+            ResourceType.ADMIN_ORG_VDC.value,
+            query_result_format=QueryResultFormat.RECORDS,
+            fields='metadata@SYSTEM:k8s_provider')
+        ovdc_records = q.execute()
+        return ovdc_records
+    finally:
+        if client is not None:
+            client.logout()
+
+
 def get_ovdc_list(client,
                   list_pks_plans=False,
                   tenant_auth_token=None,
@@ -116,43 +129,32 @@ def get_ovdc_list(client,
     else:
         org_resource_list = list(client.get_org())
 
-    ovdc_list = []
-    for org_resource in org_resource_list:
-        org = Org(client, resource=org_resource)
-        vdc_list = org.list_vdcs()
-        for vdc_sparse in vdc_list:
-            ovdc_name = vdc_sparse['name']
-            org_name = org.get_name()
+    org_name_set = set(map(lambda resource: to_dict(resource,
+                           resource_type=ResourceType.ORGANIZATION)['name'],
+                       org_resource_list))
 
-            k8s_metadata = get_ovdc_k8s_provider_metadata(ovdc_name=ovdc_name,
-                                                          org_name=org_name)
-            k8s_provider = k8s_metadata[K8S_PROVIDER_KEY]
+    ovdc_list = []
+
+    for record in get_all_ovdc_with_metadata():
+        if client.is_sysadmin() or record.get('orgName') in org_name_set:
+            ovdc_dict = to_dict(record, resource_type=ResourceType.ADMIN_ORG_VDC.value) # noqa: E501
+            k8s_provider = K8sProvider.NONE
+            if hasattr(record, 'Metadata'):
+                for entry in record.Metadata.MetadataEntry:
+                    if entry.Key == K8S_PROVIDER_KEY:
+                        k8s_provider = str(entry.TypedValue.Value)
+                        break
             ovdc_info = {
-                'name': ovdc_name,
-                'org': org_name,
+                'name': ovdc_dict.get('name'),
+                'org': ovdc_dict.get('orgName'),
                 'k8s provider': k8s_provider
             }
-
             if list_pks_plans:
                 # client is sys admin if we're here
                 pks_plans = ''
                 pks_server = ''
                 if k8s_provider == K8sProvider.PKS:
-                    # vc name for vdc can only be found using typed query
-                    q = \
-                        client.get_typed_query(
-                            ResourceType.ADMIN_ORG_VDC.value,
-                            query_result_format=QueryResultFormat.RECORDS,
-                            qfilter=f"name=={ovdc_name};orgName=={org_name}")
-                    ovdc_records = list(q.execute())
-                    if len(ovdc_records) == 0:
-                        raise EntityNotFoundException(f"Org VDC {ovdc_name} not found in org {org_name}") # noqa: E501
-                    ovdc_record = None
-                    # there should only ever be one element in the generator
-                    for record in ovdc_records:
-                        ovdc_record = to_dict(record, resource_type=ResourceType.ADMIN_ORG_VDC.value) # noqa: E501
-                        break
-                    vc_name = ovdc_record['vcName']
+                    vc_name = record['vcName']
 
                     vc_to_pks_plans_map = _get_vc_to_pks_plans_map(
                         tenant_auth_token, is_jwt_token)
@@ -166,7 +168,6 @@ def get_ovdc_list(client,
                 ovdc_info['available pks plans'] = pks_plans
 
             ovdc_list.append(ovdc_info)
-
     return ovdc_list
 
 
