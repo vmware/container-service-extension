@@ -139,9 +139,9 @@ def get_ovdc_list(client,
             ovdc_dict = to_dict(record, resource_type=ResourceType.ADMIN_ORG_VDC.value) # noqa: E501
             k8s_provider = 'none'
             if hasattr(record, 'Metadata'):
-                for element in record.Metadata.MetadataEntry:
-                    if element.Key == K8S_PROVIDER_KEY:
-                        k8s_provider = str(element.TypedValue.Value)
+                for entry in record.Metadata.MetadataEntry:
+                    if entry.Key == K8S_PROVIDER_KEY:
+                        k8s_provider = str(entry.TypedValue.Value)
                         break
             ovdc_info = {
                 'name': ovdc_dict.get('name'),
