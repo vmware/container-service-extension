@@ -15,6 +15,7 @@ from container_service_extension.pksbroker_manager import create_pks_context_for
 import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
+from container_service_extension.server_constants import KwargKey
 from container_service_extension.shared_constants import RequestKey
 import container_service_extension.utils as utils
 from container_service_extension.vcdbroker import VcdBroker
@@ -39,7 +40,7 @@ def get_cluster_info(request_data, tenant_auth_token, is_jwt_token, **kwargs):
 
     :rtype: tuple
     """
-    telemetry = kwargs.get('telemetry', True)
+    telemetry = kwargs.get(KwargKey.TELEMETRY, True)
     required = [
         RequestKey.CLUSTER_NAME
     ]
@@ -66,7 +67,7 @@ def get_cluster_info(request_data, tenant_auth_token, is_jwt_token, **kwargs):
 
 def get_cluster_and_broker(request_data, tenant_auth_token, is_jwt_token,
                            **kwargs):
-    telemetry = kwargs.get('telemetry', True)
+    telemetry = kwargs.get(KwargKey.TELEMETRY, True)
     cluster_name = request_data[RequestKey.CLUSTER_NAME]
     vcd_broker = VcdBroker(tenant_auth_token, is_jwt_token)
     try:

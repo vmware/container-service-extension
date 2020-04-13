@@ -45,6 +45,7 @@ from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_NAME # noqa: E501
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
+from container_service_extension.server_constants import KwargKey
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
@@ -97,8 +98,7 @@ class VcdBroker(AbstractBroker):
             Optional data and default values: org_name=None, ovdc_name=None
         **telemetry: Optional
         """
-        data = kwargs['data']
-        telemetry = kwargs.get('telemetry', True)
+        data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME
         ]
@@ -114,7 +114,7 @@ class VcdBroker(AbstractBroker):
                               org_name=validated_data[RequestKey.ORG_NAME],
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
 
-        if telemetry:
+        if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
@@ -153,19 +153,17 @@ class VcdBroker(AbstractBroker):
             Optional data and default values: org_name=None, ovdc_name=None
         **telemetry: Optional
         """
-        data = kwargs.get('data', {})
-        telemetry = kwargs.get('telemetry', True)
+        data = kwargs.get(KwargKey.DATA, {})
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
         }
         validated_data = {**defaults, **data}
 
-        if telemetry:
+        if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the data for telemetry
             record_user_action_details(cse_operation=CseOperation.CLUSTER_LIST,
-                                       cse_params=copy.deepcopy(validated_data)
-                                       )
+                                       cse_params=copy.deepcopy(validated_data)) # noqa: E501
 
         # "raw clusters" do not have well-defined cluster data keys
         raw_clusters = get_all_clusters(
@@ -202,8 +200,7 @@ class VcdBroker(AbstractBroker):
             Optional data and default values: org_name=None, ovdc_name=None
         **telemetry: Optional
         """
-        data = kwargs['data']
-        telemetry = kwargs.get('telemetry', True)
+        data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME
         ]
@@ -223,7 +220,7 @@ class VcdBroker(AbstractBroker):
 
         all_results = []
 
-        if telemetry:
+        if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
@@ -263,8 +260,7 @@ class VcdBroker(AbstractBroker):
 
         :rtype: List[Dict]
         """
-        data = kwargs['data']
-        telemetry = kwargs.get('telemetry', True)
+        data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME
         ]
@@ -280,7 +276,7 @@ class VcdBroker(AbstractBroker):
                               org_name=validated_data[RequestKey.ORG_NAME],
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
 
-        if telemetry:
+        if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
@@ -317,8 +313,7 @@ class VcdBroker(AbstractBroker):
                 enable_nfs=False,rollback=True
         **telemetry: Optional
         """
-        data = kwargs["data"]
-        telemetry = kwargs.get('telemetry', True)
+        data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME,
             RequestKey.ORG_NAME,
@@ -390,7 +385,7 @@ class VcdBroker(AbstractBroker):
             enable_nfs=validated_data[RequestKey.ENABLE_NFS],
             rollback=validated_data[RequestKey.ROLLBACK])
 
-        if telemetry:
+        if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the data for telemetry
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster_id
@@ -425,8 +420,7 @@ class VcdBroker(AbstractBroker):
                 rollback=True, template_name=None, template_revision=None
         **telemetry: Optional
         """
-        data = kwargs['data']
-        telemetry = kwargs.get('telemetry', True)
+        data = kwargs[KwargKey.DATA]
         # TODO default template for resizing should be master's template
         required = [
             RequestKey.CLUSTER_NAME,
@@ -468,7 +462,7 @@ class VcdBroker(AbstractBroker):
             raise CseServerError(f"Cluster '{cluster_name}' already has "
                                  f"{num_workers} worker nodes.")
 
-        if telemetry:
+        if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster_info[PayloadKey.CLUSTER_ID] # noqa: E501
@@ -492,8 +486,7 @@ class VcdBroker(AbstractBroker):
             Optional data and default values: org_name=None, ovdc_name=None
         **telemetry: Optional
         """
-        data = kwargs['data']
-        telemetry = kwargs.get('telemetry', True)
+        data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME
         ]
@@ -511,7 +504,7 @@ class VcdBroker(AbstractBroker):
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
         cluster_id = cluster['cluster_id']
 
-        if telemetry:
+        if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster_id
@@ -545,8 +538,7 @@ class VcdBroker(AbstractBroker):
             Optional data and default values: org_name=None, ovdc_name=None
         **telemetry: Optional
         """
-        data = kwargs['data']
-        telemetry = kwargs.get('telemetry', True)
+        data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME,
             RequestKey.TEMPLATE_NAME,
@@ -582,7 +574,7 @@ class VcdBroker(AbstractBroker):
         # get cluster data (including node names) to pass to async function
         cluster = self.get_cluster_info(data=validated_data, telemetry=False)
 
-        if telemetry:
+        if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
@@ -615,8 +607,7 @@ class VcdBroker(AbstractBroker):
             Optional data and default values: org_name=None, ovdc_name=None
         **telemetry: Optional
         """
-        data = kwargs['data']
-        telemetry = kwargs.get('telemetry', True)
+        data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME,
             RequestKey.NODE_NAME
@@ -635,7 +626,7 @@ class VcdBroker(AbstractBroker):
                               org_name=validated_data[RequestKey.ORG_NAME],
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
 
-        if telemetry:
+        if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
@@ -691,8 +682,7 @@ class VcdBroker(AbstractBroker):
                 enable_nfs=False, rollback=True
         **telemetry: Optional
         """
-        data = kwargs['data']
-        telemetry = kwargs.get('telemetry', True)
+        data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME,
             RequestKey.NETWORK_NAME
@@ -731,7 +721,7 @@ class VcdBroker(AbstractBroker):
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
         cluster_id = cluster['cluster_id']
 
-        if telemetry:
+        if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the data for telemetry
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster_id
@@ -787,8 +777,7 @@ class VcdBroker(AbstractBroker):
             Optional data and default values: org_name=None, ovdc_name=None
         **telemetry: Optional
         """
-        data = kwargs['data']
-        telemetry = kwargs.get('telemetry', True)
+        data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME,
             RequestKey.NODE_NAMES_LIST
@@ -817,7 +806,7 @@ class VcdBroker(AbstractBroker):
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
         cluster_id = cluster['cluster_id']
 
-        if telemetry:
+        if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data; record separate data for each node
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
