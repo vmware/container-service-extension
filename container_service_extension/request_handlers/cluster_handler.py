@@ -51,7 +51,7 @@ def cluster_create(request_data, tenant_auth_token, is_jwt_token):
 
     try:
         broker_manager.get_cluster_and_broker(
-            request_data, tenant_auth_token, is_jwt_token)
+            request_data, tenant_auth_token, is_jwt_token, telemetry=False)
         raise ClusterAlreadyExistsError(f"Cluster {cluster_name} "
                                         f"already exists.")
     except ClusterNotFoundError:
@@ -70,7 +70,7 @@ def cluster_create(request_data, tenant_auth_token, is_jwt_token):
     broker = broker_manager.get_broker_from_k8s_metadata(k8s_metadata,
                                                          tenant_auth_token,
                                                          is_jwt_token)
-    return broker.create_cluster(request_data)
+    return broker.create_cluster(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_RESIZE)
@@ -89,8 +89,9 @@ def cluster_resize(request_data, tenant_auth_token, is_jwt_token):
     """
     _, broker = broker_manager.get_cluster_info(request_data,
                                                 tenant_auth_token,
-                                                is_jwt_token)
-    return broker.resize_cluster(request_data)
+                                                is_jwt_token,
+                                                telemetry=False)
+    return broker.resize_cluster(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_DELETE)
@@ -106,8 +107,9 @@ def cluster_delete(request_data, tenant_auth_token, is_jwt_token):
     """
     _, broker = broker_manager.get_cluster_info(request_data,
                                                 tenant_auth_token,
-                                                is_jwt_token)
-    return broker.delete_cluster(request_data)
+                                                is_jwt_token,
+                                                telemetry=False)
+    return broker.delete_cluster(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_INFO)
@@ -140,8 +142,9 @@ def cluster_config(request_data, tenant_auth_token, is_jwt_token):
     """
     _, broker = broker_manager.get_cluster_info(request_data,
                                                 tenant_auth_token,
-                                                is_jwt_token)
-    return broker.get_cluster_config(request_data)
+                                                is_jwt_token,
+                                                telemetry=False)
+    return broker.get_cluster_config(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_UPGRADE_PLAN)
@@ -154,9 +157,10 @@ def cluster_upgrade_plan(request_data, tenant_auth_token, is_jwt_token):
     """
     _, broker = broker_manager.get_cluster_info(request_data,
                                                 tenant_auth_token,
-                                                is_jwt_token)
+                                                is_jwt_token,
+                                                telemetry=False)
     if isinstance(broker, vcdbroker.VcdBroker):
-        return broker.get_cluster_upgrade_plan(request_data)
+        return broker.get_cluster_upgrade_plan(data=request_data)
 
     raise BadRequestError(
         error_message="'cluster upgrade-plan' operation is not supported by "
@@ -173,9 +177,10 @@ def cluster_upgrade(request_data, tenant_auth_token, is_jwt_token):
     """
     _, broker = broker_manager.get_cluster_info(request_data,
                                                 tenant_auth_token,
-                                                is_jwt_token)
+                                                is_jwt_token,
+                                                telemetry=False)
     if isinstance(broker, vcdbroker.VcdBroker):
-        return broker.upgrade_cluster(request_data)
+        return broker.upgrade_cluster(data=request_data)
 
     raise BadRequestError(
         error_message="'cluster upgrade' operation is not supported by non "
@@ -197,7 +202,7 @@ def cluster_list(request_data, tenant_auth_token, is_jwt_token):
     :return: List
     """
     vcd_broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
-    vcd_clusters_info = vcd_broker.list_clusters(request_data)
+    vcd_clusters_info = vcd_broker.list_clusters(data=request_data)
 
     pks_clusters_info = []
     if utils.is_pks_enabled():
@@ -243,9 +248,10 @@ def node_create(request_data, tenant_auth_token, is_jwt_token):
     # Different from resize because this can create nfs nodes
     _, broker = broker_manager.get_cluster_info(request_data,
                                                 tenant_auth_token,
-                                                is_jwt_token)
+                                                is_jwt_token,
+                                                telemetry=False)
     if isinstance(broker, vcdbroker.VcdBroker):
-        return broker.create_nodes(request_data)
+        return broker.create_nodes(data=request_data)
 
     raise BadRequestError(
         error_message="'node create' operation is not supported by non native "
@@ -265,9 +271,10 @@ def node_delete(request_data, tenant_auth_token, is_jwt_token):
     """
     _, broker = broker_manager.get_cluster_info(request_data,
                                                 tenant_auth_token,
-                                                is_jwt_token)
+                                                is_jwt_token,
+                                                telemetry=False)
     if isinstance(broker, vcdbroker.VcdBroker):
-        return broker.delete_nodes(request_data)
+        return broker.delete_nodes(data=request_data)
 
     raise BadRequestError(
         error_message="'node delete' operation is not supported by non native "
@@ -288,9 +295,10 @@ def node_info(request_data, tenant_auth_token, is_jwt_token):
     # Currently node info is a vCD only operation.
     _, broker = broker_manager.get_cluster_info(request_data,
                                                 tenant_auth_token,
-                                                is_jwt_token)
+                                                is_jwt_token,
+                                                telemetry=False)
     if isinstance(broker, vcdbroker.VcdBroker):
-        return broker.get_node_info(request_data)
+        return broker.get_node_info(data=request_data)
 
     raise BadRequestError(
         error_message="'node info' operation is not supported by non native "

@@ -23,7 +23,7 @@ from container_service_extension.vcdbroker import VcdBroker
 """Handles retrieving the correct broker/cluster to use during an operation."""
 
 
-def get_cluster_info(request_data, tenant_auth_token, is_jwt_token):
+def get_cluster_info(request_data, tenant_auth_token, is_jwt_token, **kwargs):
     """Get cluster details directly from cloud provider.
 
     Logic of the method is as follows.
@@ -55,17 +55,20 @@ def get_cluster_info(request_data, tenant_auth_token, is_jwt_token):
                                                       include_nsxt_info=True)
         broker = get_broker_from_k8s_metadata(
             k8s_metadata, tenant_auth_token, is_jwt_token)
-        return broker.get_cluster_info(request_data), broker
+        return broker.get_cluster_info(data=request_data, **kwargs), \
+            broker
 
     return get_cluster_and_broker(
-        request_data, tenant_auth_token, is_jwt_token)
+        request_data, tenant_auth_token, is_jwt_token, **kwargs)
 
 
-def get_cluster_and_broker(request_data, tenant_auth_token, is_jwt_token):
+def get_cluster_and_broker(request_data, tenant_auth_token, is_jwt_token,
+                           **kwargs):
     cluster_name = request_data[RequestKey.CLUSTER_NAME]
     vcd_broker = VcdBroker(tenant_auth_token, is_jwt_token)
     try:
-        return vcd_broker.get_cluster_info(request_data), vcd_broker
+        return vcd_broker.get_cluster_info(data=request_data, **kwargs), \
+            vcd_broker
     except ClusterNotFoundError as err:
         # continue searching using PksBrokers
         LOGGER.debug(f"{err}")
@@ -86,7 +89,7 @@ def get_cluster_and_broker(request_data, tenant_auth_token, is_jwt_token):
                     f"failed on host '{pks_ctx['host']}' with error: "
         pks_broker = PksBroker(pks_ctx, tenant_auth_token, is_jwt_token)
         try:
-            return pks_broker.get_cluster_info(request_data), pks_broker
+            return pks_broker.get_cluster_info(data=request_data), pks_broker
         except (PksClusterNotFoundError, PksServerError) as err:
             # continue searching using other PksBrokers
             LOGGER.debug(f"{debug_msg}{err}")

@@ -252,12 +252,14 @@ def get_payload_for_cluster_resize(params):
     return {
         PayloadKey.TYPE: CseOperation.CLUSTER_RESIZE.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(params.get(PayloadKey.CLUSTER_ID)),
+        PayloadKey.CPU: params.get(LocalTemplateKey.CPU),
+        PayloadKey.MEMORY: params.get(LocalTemplateKey.MEMORY),
         PayloadKey.NUMBER_OF_WORKER_NODES: params.get(RequestKey.NUM_WORKERS),
         PayloadKey.TEMPLATE_NAME: params.get(RequestKey.TEMPLATE_NAME),
         PayloadKey.TEMPLATE_REVISION: params.get(RequestKey.TEMPLATE_REVISION),
         PayloadKey.WAS_ROLLBACK_ENABLED: bool(params.get(RequestKey.ROLLBACK)),
         PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
-        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME))
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
     }
 
 
