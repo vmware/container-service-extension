@@ -125,15 +125,6 @@ class NotFoundRequestError(CseRequestError):
                          minor_error_code)
 
 
-class HandlerNotFoundError(CseRequestError):
-    """Raised when error in getting the handler to process the request."""
-
-    def __init__(self, error_message="Request handler - not found",
-                 minor_error_code=None):
-        super().__init__(requests.codes.not_found, error_message,
-                         minor_error_code)
-
-
 class UnauthorizedRequestError(CseRequestError):
     """Raised when an action is attempted by an unauthorized user."""
 

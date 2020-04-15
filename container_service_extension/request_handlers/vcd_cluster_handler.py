@@ -8,7 +8,7 @@ from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.telemetry_handler import \
     record_user_action_telemetry
-import container_service_extension.vcdbroker as vcdbroker
+from container_service_extension.vcdbroker import VcdBroker
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_CREATE)
@@ -31,7 +31,7 @@ def cluster_create(request_data, tenant_auth_token, is_jwt_token):
     ]
     req_utils.validate_payload(request_data, required)
 
-    vcd_broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
+    vcd_broker = VcdBroker(tenant_auth_token, is_jwt_token)
     return vcd_broker.create_cluster(request_data)
 
 
@@ -48,7 +48,7 @@ def cluster_resize(request_data, tenant_auth_token, is_jwt_token):
 
     :return: Dict
     """
-    vcd_broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
+    vcd_broker = VcdBroker(tenant_auth_token, is_jwt_token)
     return vcd_broker.resize_cluster(request_data)
 
 
@@ -63,7 +63,7 @@ def cluster_delete(request_data, tenant_auth_token, is_jwt_token):
 
     :return: Dict
     """
-    vcd_broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
+    vcd_broker = VcdBroker(tenant_auth_token, is_jwt_token)
     return vcd_broker.delete_cluster(request_data)
 
 
@@ -78,7 +78,7 @@ def cluster_info(request_data, tenant_auth_token, is_jwt_token):
 
     :return: Dict
     """
-    vcd_broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
+    vcd_broker = VcdBroker(tenant_auth_token, is_jwt_token)
     return vcd_broker.get_cluster_info(request_data)
 
 
@@ -93,7 +93,7 @@ def cluster_config(request_data, tenant_auth_token, is_jwt_token):
 
     :return: Dict
     """
-    vcd_broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
+    vcd_broker = VcdBroker(tenant_auth_token, is_jwt_token)
     return vcd_broker.get_cluster_config(request_data)
 
 
@@ -105,7 +105,7 @@ def cluster_upgrade_plan(request_data, tenant_auth_token, is_jwt_token):
 
     :return: List[Tuple(str, str)]
     """
-    vcd_broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
+    vcd_broker = VcdBroker(tenant_auth_token, is_jwt_token)
     return vcd_broker.get_cluster_upgrade_plan(request_data)
 
 
@@ -117,7 +117,7 @@ def cluster_upgrade(request_data, tenant_auth_token, is_jwt_token):
 
     :return: Dict
     """
-    vcd_broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
+    vcd_broker = VcdBroker(tenant_auth_token, is_jwt_token)
     return vcd_broker.upgrade_cluster(request_data)
 
 
@@ -131,7 +131,7 @@ def cluster_list(request_data, tenant_auth_token, is_jwt_token):
 
     :return: List
     """
-    vcd_broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
+    vcd_broker = VcdBroker(tenant_auth_token, is_jwt_token)
     vcd_clusters_info = vcd_broker.list_clusters(request_data)
 
     common_cluster_properties = [
@@ -166,7 +166,7 @@ def node_create(request_data, tenant_auth_token, is_jwt_token):
 
     :return: Dict
     """
-    vcd_broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
+    vcd_broker = VcdBroker(tenant_auth_token, is_jwt_token)
     return vcd_broker.create_nodes(request_data)
 
 
@@ -181,7 +181,7 @@ def node_delete(request_data, tenant_auth_token, is_jwt_token):
 
     :return: Dict
     """
-    vcd_broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
+    vcd_broker = VcdBroker(tenant_auth_token, is_jwt_token)
     return vcd_broker.delete_nodes(request_data)
 
 
@@ -196,5 +196,5 @@ def node_info(request_data, tenant_auth_token, is_jwt_token):
 
     :return: Dict
     """
-    vcd_broker = vcdbroker.VcdBroker(tenant_auth_token, is_jwt_token)
+    vcd_broker = VcdBroker(tenant_auth_token, is_jwt_token)
     return vcd_broker.get_node_info(request_data)
