@@ -127,11 +127,10 @@ def cluster_create(request_data, tenant_auth_token, is_jwt_token):
             ovdc_name=request_data[RequestKey.OVDC_NAME],
             include_credentials=True,
             include_nsxt_info=True)
-    if k8s_metadata.get(K8S_PROVIDER_KEY) == K8sProvider.PKS:
-        request_data[RequestKey.PKS_PLAN_NAME] = k8s_metadata[PKS_PLANS_KEY][0]
-        request_data[RequestKey.PKS_EXT_HOST] = \
-            f"{cluster_name}.{k8s_metadata[PKS_CLUSTER_DOMAIN_KEY]}"
     broker = _get_broker_from_k8s_metadata(k8s_metadata, tenant_auth_token, is_jwt_token)  # noqa: E501
+    request_data[RequestKey.PKS_PLAN_NAME] = k8s_metadata[PKS_PLANS_KEY][0]
+    request_data[RequestKey.PKS_EXT_HOST] = \
+        f"{cluster_name}.{k8s_metadata[PKS_CLUSTER_DOMAIN_KEY]}"
     return broker.create_cluster(request_data)
 
 
@@ -226,7 +225,7 @@ def _get_cluster_and_broker(request_data, tenant_auth_token, is_jwt_token):
             LOGGER.error(f"Unknown error: {err}", exc_info=True)
             raise
 
-    # only raised if cluster was not found in VcdBroker or PksBrokers
+    # raised if cluster was not found in PksBrokers
     raise ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")
 
 
