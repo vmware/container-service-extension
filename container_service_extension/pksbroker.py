@@ -45,6 +45,7 @@ from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
+from container_service_extension.server_constants import KwargKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.uaaclient.uaaclient import UaaClient
@@ -195,7 +196,7 @@ class PksBroker(AbstractBroker):
             result.append(pks_plan.to_dict())
         return result
 
-    def list_clusters(self, data):
+    def list_clusters(self, **kwargs):
         """Get list of clusters in PKS environment.
 
         System administrator gets all the clusters for the given service
@@ -205,14 +206,24 @@ class PksBroker(AbstractBroker):
 
         :rtype: list
         """
-        result = self._list_clusters(data)
-        if not self.tenant_client.is_sysadmin():
-            for cluster in result:
-                self._filter_sensitive_pks_properties(cluster)
-        return result
+        data = kwargs[KwargKey.DATA]
+        cluster_list = self._list_clusters()
 
-    def _list_clusters(self, data):
-        """."""
+        # Required for all personae
+        for cluster in cluster_list:
+            self._restore_original_name(cluster)
+
+        return self._filter_clusters(cluster_list, **data)
+
+    def _list_clusters(self):
+        """Get list of clusters in PKS environment.
+
+        :return: a list of cluster-dictionaries
+
+        :rtype: list
+        """
+        cluster_api = ClusterApiV1(api_client=self.client_v1)
+
         result = []
         try:
             cluster_api = ClusterApi(api_client=self.client)
@@ -240,20 +251,22 @@ class PksBroker(AbstractBroker):
         return self._filter_clusters(result, **data)
 
     @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
-    def create_cluster(self, data):
+    def create_cluster(self, **kwargs):
         """Create cluster in PKS environment.
 
         To retain the user context, user-id of the logged-in user is appended
         to the original cluster name before the actual cluster creation.
 
-        :param dict cluster_spec: named parameters necessary to create
-        cluster (cluster_name, node_count, pks_plan, pks_ext_host, compute-
-        profile_name)
+        :param **data:
+            dict cluster_spec: named parameters necessary to create
+            cluster (cluster_name, node_count, pks_plan, pks_ext_host, compute-
+            profile_name)
 
         :return: Details of the cluster
 
         :rtype: dict
         """
+        data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME,
             RequestKey.PKS_PLAN_NAME,
@@ -340,27 +353,20 @@ class PksBroker(AbstractBroker):
 
         return cluster_info
 
-    def get_cluster_info(self, data):
-        """."""
-        result = self._get_cluster_info(data)
-
-        if not self.tenant_client.is_sysadmin():
-            self._filter_sensitive_pks_properties(result)
-
-        return result
-
-    def _get_cluster_info(self, data):
+    def get_cluster_info(self, **kwargs):
         """Get the details of a cluster with a given name in PKS environment.
 
         System administrator gets the given cluster information regardless of
         who is the owner of the cluster. Other users get info only on
         the cluster they own.
 
-        :param str cluster_name: Name of the cluster
+        :param **data dict
+            :str cluster_name: Name of the cluster
         :return: Details of the cluster.
 
         :rtype: dict
         """
+        data = kwargs[KwargKey.DATA]
         cluster_name = data[RequestKey.CLUSTER_NAME]
         # The structure of info returned by list_cluster and get_cluster is
         # identical, hence using list_cluster and filtering by name in memory
@@ -396,7 +402,7 @@ class PksBroker(AbstractBroker):
 
         return result
 
-    def get_cluster_config(self, data):
+    def get_cluster_config(self, **kwargs):
         """Get the configuration of the cluster with the given name in PKS.
 
         System administrator gets the given cluster config regardless of
@@ -407,11 +413,12 @@ class PksBroker(AbstractBroker):
 
         :rtype: str
         """
+        data = kwargs[KwargKey.DATA]
         cluster_name = data[RequestKey.CLUSTER_NAME]
 
         if self.tenant_client.is_sysadmin() or \
                 is_org_admin(self.client_session):
-            cluster_info = self._get_cluster_info(data)
+            cluster_info = self.get_cluster_info(data=data)
             qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
             qualified_cluster_name = self._append_user_id(cluster_name)
@@ -432,20 +439,21 @@ class PksBroker(AbstractBroker):
         return self.filter_traces_of_user_context(cluster_config)
 
     @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
-    def delete_cluster(self, data):
+    def delete_cluster(self, **kwargs):
         """Delete the cluster with a given name in PKS environment.
 
         System administrator can delete the given cluster regardless of
         who is the owner of the cluster. Other users can only delete
         the cluster they own.
-
-        :param str cluster_name: Name of the cluster
+        :param **data
+            :param str cluster_name: Name of the cluster
         """
+        data = kwargs[KwargKey.DATA]
         cluster_name = data[RequestKey.CLUSTER_NAME]
 
         if self.tenant_client.is_sysadmin() \
                 or is_org_admin(self.client_session):
-            cluster_info = self._get_cluster_info(data)
+            cluster_info = self.get_cluster_info(data=data)
             qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
             qualified_cluster_name = self._append_user_id(cluster_name)
@@ -488,7 +496,7 @@ class PksBroker(AbstractBroker):
         return result
 
     @secure(required_rights=[CSE_PKS_DEPLOY_RIGHT_NAME])
-    def resize_cluster(self, data):
+    def resize_cluster(self, **kwargs):
         """Resize the cluster of a given name to given number of worker nodes.
 
         System administrator can resize the given cluster regardless of
@@ -501,12 +509,13 @@ class PksBroker(AbstractBroker):
         :rtype: dict
 
         """
+        data = kwargs[KwargKey.DATA]
         cluster_name = data[RequestKey.CLUSTER_NAME]
         num_workers = data[RequestKey.NUM_WORKERS]
 
         if self.tenant_client.is_sysadmin() \
                 or is_org_admin(self.client_session):
-            cluster_info = self._get_cluster_info(data)
+            cluster_info = self.get_cluster_info(data=data)
             qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
             qualified_cluster_name = self._append_user_id(cluster_name)

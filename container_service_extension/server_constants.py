@@ -64,6 +64,14 @@ class K8sProvider(str, Enum):
 
 
 @unique
+class KwargKey(str, Enum):
+    """Types of keyword arguments for cluster brokers."""
+
+    DATA = 'data'
+    TELEMETRY = 'telemetry'
+
+
+@unique
 class ScriptFile(str, Enum):
     """Types of script for vApp template customizations in CSE."""
 
