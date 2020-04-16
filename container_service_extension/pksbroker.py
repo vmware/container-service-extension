@@ -386,7 +386,7 @@ class PksBroker(AbstractBroker):
         if self.tenant_client.is_sysadmin() \
                 or is_org_admin(self.client_session) \
                 or data.get('is_org_admin_search'):
-            cluster_list = self.list_clusters(data)
+            cluster_list = self.list_clusters(data=data)
             filtered_cluster_list = \
                 self._filter_list_by_cluster_name(cluster_list, cluster_name)
             LOGGER.debug(f"filtered Cluster List:{filtered_cluster_list}")

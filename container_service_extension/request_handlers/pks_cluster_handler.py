@@ -91,8 +91,8 @@ def cluster_config(request_data, tenant_auth_token, is_jwt_token):
     :return: Dict
     """
     _raise_error_if_pks_not_enabled()
-    _, broker = _get_cluster_info(request_data, tenant_auth_token, is_jwt_token)  # noqa: E501
-    return broker.get_cluster_config(request_data)
+    _, broker = _get_cluster_info(request_data, tenant_auth_token, is_jwt_token, telemetry=False)  # noqa: E501
+    return broker.get_cluster_config(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.PKS_CLUSTER_CREATE)
@@ -115,7 +115,7 @@ def cluster_create(request_data, tenant_auth_token, is_jwt_token):
     request_data['is_org_admin_search'] = True
 
     try:
-        _get_cluster_and_broker(request_data, tenant_auth_token, is_jwt_token)
+        _get_cluster_and_broker(request_data, tenant_auth_token, is_jwt_token, telemetry=False)  # noqa: E501
         raise ClusterAlreadyExistsError(f"Cluster {cluster_name} "
                                         f"already exists.")
     except ClusterNotFoundError:
@@ -146,7 +146,7 @@ def cluster_delete(request_data, tenant_auth_token, is_jwt_token):
     :return: Dict
     """
     _raise_error_if_pks_not_enabled()
-    _, broker = _get_cluster_info(request_data, tenant_auth_token, is_jwt_token)  # noqa: E501
+    _, broker = _get_cluster_info(request_data, tenant_auth_token, is_jwt_token, telemetry=False)  # noqa: E501
     return broker.delete_cluster(request_data)
 
 
@@ -162,11 +162,11 @@ def cluster_resize(request_data, tenant_auth_token, is_jwt_token):
     :return: Dict
     """
     _raise_error_if_pks_not_enabled()
-    _, broker = _get_cluster_info(request_data, tenant_auth_token, is_jwt_token)  # noqa: E501
+    _, broker = _get_cluster_info(request_data, tenant_auth_token, is_jwt_token, telemetry=False)  # noqa: E501
     return broker.resize_cluster(request_data)
 
 
-def _get_cluster_info(request_data, tenant_auth_token, is_jwt_token):
+def _get_cluster_info(request_data, tenant_auth_token, is_jwt_token, **kwargs):
     """Get cluster details directly from cloud provider.
 
     Logic of the method is as follows.
@@ -197,13 +197,14 @@ def _get_cluster_info(request_data, tenant_auth_token, is_jwt_token):
                                                       include_nsxt_info=True)
         broker = _get_broker_from_k8s_metadata(
             k8s_metadata, tenant_auth_token, is_jwt_token)
-        return broker.get_cluster_info(request_data), broker
+        return broker.get_cluster_info(data=request_data, **kwargs), broker
 
     return _get_cluster_and_broker(
-        request_data, tenant_auth_token, is_jwt_token)
+        request_data, tenant_auth_token, is_jwt_token, **kwargs)
 
 
-def _get_cluster_and_broker(request_data, tenant_auth_token, is_jwt_token):
+def _get_cluster_and_broker(request_data, tenant_auth_token,
+                            is_jwt_token, **kwargs):
     cluster_name = request_data[RequestKey.CLUSTER_NAME]
 
     pks_ctx_list = create_pks_context_for_all_accounts_in_org(
@@ -213,7 +214,7 @@ def _get_cluster_and_broker(request_data, tenant_auth_token, is_jwt_token):
             f"failed on host '{pks_ctx['host']}' with error: "
         pks_broker = PksBroker(pks_ctx, tenant_auth_token, is_jwt_token)
         try:
-            return pks_broker.get_cluster_info(request_data), pks_broker
+            return pks_broker.get_cluster_info(data=request_data, **kwargs), pks_broker  # noqa: E501
         except (PksClusterNotFoundError, PksServerError) as err:
             # continue searching using other PksBrokers
             LOGGER.debug(f"{debug_msg}{err}")
