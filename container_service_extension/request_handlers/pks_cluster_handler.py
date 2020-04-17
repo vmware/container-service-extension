@@ -131,7 +131,7 @@ def cluster_create(request_data, tenant_auth_token, is_jwt_token):
     request_data[RequestKey.PKS_PLAN_NAME] = k8s_metadata[PKS_PLANS_KEY][0]
     request_data[RequestKey.PKS_EXT_HOST] = \
         f"{cluster_name}.{k8s_metadata[PKS_CLUSTER_DOMAIN_KEY]}"
-    return broker.create_cluster(request_data)
+    return broker.create_cluster(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.PKS_CLUSTER_DELETE)
@@ -147,7 +147,7 @@ def cluster_delete(request_data, tenant_auth_token, is_jwt_token):
     """
     _raise_error_if_pks_not_enabled()
     _, broker = _get_cluster_info(request_data, tenant_auth_token, is_jwt_token, telemetry=False)  # noqa: E501
-    return broker.delete_cluster(request_data)
+    return broker.delete_cluster(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.PKS_CLUSTER_RESIZE)
@@ -163,7 +163,7 @@ def cluster_resize(request_data, tenant_auth_token, is_jwt_token):
     """
     _raise_error_if_pks_not_enabled()
     _, broker = _get_cluster_info(request_data, tenant_auth_token, is_jwt_token, telemetry=False)  # noqa: E501
-    return broker.resize_cluster(request_data)
+    return broker.resize_cluster(data=request_data)
 
 
 def _get_cluster_info(request_data, tenant_auth_token, is_jwt_token, **kwargs):

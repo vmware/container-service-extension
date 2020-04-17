@@ -31,7 +31,7 @@ Examples
 \b
     vcd cse pks-cluster create mycluster
         Create an Ent-PKS cluster named 'mycluster'.
-        The cluster will have 2 worker nodes.
+        The cluster will have number of worker nodes defined by the plan.
 \b
     vcd cse pks-cluster create mycluster --nodes 1 --vdc othervdc
         Create an Ent-PKS cluster named 'mycluster' on org VDC 'othervdc'.
@@ -41,12 +41,12 @@ Examples
 \b
     vcd cse pks-cluster resize mycluster --nodes 5
         Resize the cluster to have 5 worker nodes. On resize failure,
-        returns cluster to original size.
+        cluster will be left in error state for troubleshooting.
         '--vdc' option can be used for faster command execution.
 \b
     vcd cse pks-cluster resize mycluster -N 10
         Resize the cluster size to 10 worker nodes. On resize failure,
-        cluster will be left cluster in error state for troubleshooting.
+        cluster will be left in error state for troubleshooting.
 \b
     vcd cse pks-cluster config mycluster > ~/.kube/config
         Write cluster config details into '~/.kube/config' to manage cluster
