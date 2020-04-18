@@ -195,5 +195,11 @@ def get_k8s_and_docker_versions(template_name, template_revision='0',
             k8s_version = '1.15.3'
             if template_revision == '2':
                 k8s_version = '1.15.5'
+        elif '1.16' in template_name:
+            docker_version = '18.09.7'
+            k8s_version = '1.16.6'
+        elif '1.17' in template_name:
+            docker_version = '19.03.5'
+            k8s_version = '1.17.2'
 
     return k8s_version, docker_version
