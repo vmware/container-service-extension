@@ -4,53 +4,22 @@
 
 import functools
 
-from container_service_extension.logger import SERVER_LOGGER
-from container_service_extension.pyvcloud_utils import get_sys_admin_client
-from container_service_extension.pyvcloud_utils import get_user_rights
+import pyvcloud.vcd.client as vcd_client
+
+import container_service_extension.abstract_broker as abstract_broker
+from container_service_extension.logger import SERVER_LOGGER as LOGGER
+import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
-from container_service_extension.utils import get_server_runtime_config
+import container_service_extension.utils as utils
 
 
-def _is_authorized(sys_admin_client, user_session, required_rights):
-    """Verify if a given user role has all the required rights or not.
-
-    :param pyvcloud.vcd.client.Client sys_admin_client: the sys admin cilent
-        that will be used to query vCD about the rights and roles of the
-        concerned user.
-    :param lxml.objectify.ObjectifiedElement user_session:
-    :param list required_rights: a list of str representing the rights that
-        we want the user to have.
-
-    :return: True, if the user has all the required rights, else False.
-
-    :rtype: bool
-    """
-    if required_rights is None or len(required_rights) == 0:
-        return True
-
-    user_rights = get_user_rights(sys_admin_client, user_session)
-
-    missing_rights = []
-    for right in required_rights:
-        qualified_right_name = '{' + CSE_SERVICE_NAMESPACE + '}:' + right
-        if qualified_right_name not in user_rights:
-            missing_rights.append(qualified_right_name)
-
-    if len(missing_rights) == 0:
-        return True
-
-    SERVER_LOGGER.debug(f"Authorization failed for user: {user_session.get('user')}." # noqa: E501
-                        f" Missing rights:{missing_rights}.")
-    return False
-
-
-def secure(required_rights=[]):
+def secure(required_rights=[], sysadmin_client: vcd_client.Client = None):
     """Secure methods against unauthorized access using this decorator.
 
-    Is compatible with methods in classes that derive from abstract_broker.
+    Only compatible with methods in AbstractBroker-derived classes.
 
     :param list required_rights: a list of rights (as str). The right name
-        shouldn't be qualified with by namespace.
+        shouldn't be namespaced.
 
     :return: a method reference to the decorating method.
 
@@ -59,24 +28,40 @@ def secure(required_rights=[]):
     def decorator_secure(func):
         @functools.wraps(func)
         def decorator_wrapper(*args, **kwargs):
-            sys_admin_client = None
-            try:
-                is_authorized = True
-                server_config = get_server_runtime_config()
-                if server_config['service']['enforce_authorization']:
-                    sys_admin_client = get_sys_admin_client()
-                    broker_instance = args[0]  # self
-                    user_session = broker_instance.client_session
-                    is_authorized = _is_authorized(sys_admin_client,
-                                                   user_session,
-                                                   required_rights)
-                if is_authorized:
-                    return func(*args, **kwargs)
-                else:
-                    raise Exception(
-                        'Access Forbidden. Missing required rights.')
-            finally:
-                if sys_admin_client is not None:
-                    sys_admin_client.logout()
+            nonlocal sysadmin_client
+            server_config = utils.get_server_runtime_config()
+            # only logout if this function needs to create sysadmin
+            logout = not bool(sysadmin_client)
+
+            if (server_config['service']['enforce_authorization']
+                    and required_rights is not None
+                    and len(required_rights) > 0):
+                try:
+                    if sysadmin_client is None:
+                        sysadmin_client = vcd_utils.get_sys_admin_client()
+                    # dev guard: should never occur in production
+                    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+                    class_instance: abstract_broker.AbstractBroker = args[0]
+                    user_rights = class_instance.context.user.rights
+
+                    missing_rights = []
+                    for right_name in required_rights:
+                        namespaced_name = f'{{{CSE_SERVICE_NAMESPACE}}}' \
+                                          f':{right_name}'
+                        if namespaced_name not in user_rights:
+                            missing_rights.append(namespaced_name)
+
+                    if len(missing_rights) > 0:
+                        LOGGER.debug(f"Authorization failed for user "
+                                     f"'{class_instance.context.user.name}'. "
+                                     f"Missing required rights: "
+                                     f"{missing_rights}")
+                        raise Exception(f'Access forbidden. Missing required '
+                                        f'rights: {missing_rights}')
+                finally:
+                    if logout and sysadmin_client is not None:
+                        sysadmin_client.logout()
+
+            return func(*args, **kwargs)
         return decorator_wrapper
     return decorator_secure

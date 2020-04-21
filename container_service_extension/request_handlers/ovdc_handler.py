@@ -3,13 +3,17 @@
 # SPDX-License-Identifier: BSD-2-Clause
 import copy
 
-from pyvcloud.vcd.exceptions import EntityNotFoundException
+import pyvcloud.vcd.client as vcd_client
+import pyvcloud.vcd.exceptions as vcd_e
+import pyvcloud.vcd.org as vcd_org
+import pyvcloud.vcd.utils as pyvcd_utils
 
 from container_service_extension.compute_policy_manager import ComputePolicyManager # noqa: E501
-from container_service_extension.exceptions import BadRequestError
-from container_service_extension.exceptions import CseServerError
+import container_service_extension.exceptions as e
 import container_service_extension.ovdc_utils as ovdc_utils
-import container_service_extension.pyvcloud_utils as vcd_utils
+import container_service_extension.pksbroker as pksbroker
+import container_service_extension.pksbroker_manager as pksbroker_manager
+import container_service_extension.request_context as ctx
 import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
@@ -22,11 +26,10 @@ from container_service_extension.telemetry.telemetry_handler import record_user_
 from container_service_extension.telemetry.telemetry_handler import record_user_action_telemetry  # noqa: E501
 import container_service_extension.utils as utils
 
-
 SYSTEM_DEFAULT_COMPUTE_POLICY_NAME = "System Default"
 
 
-def ovdc_update(request_data, tenant_auth_token, is_jwt_token):
+def ovdc_update(request_data, request_context: ctx.RequestContext):
     """Request handler for ovdc enable, disable operations.
 
     Required data: org_name, ovdc_name, k8s_provider
@@ -57,7 +60,8 @@ def ovdc_update(request_data, tenant_auth_token, is_jwt_token):
     try:
         if k8s_provider == K8sProvider.PKS:
             if not utils.is_pks_enabled():
-                raise CseServerError('CSE is not configured to work with PKS.')
+                raise e.CseServerError('CSE server is not '
+                                       'configured to work with PKS.')
             required = [
                 RequestKey.PKS_PLAN_NAME,
                 RequestKey.PKS_CLUSTER_DOMAIN
@@ -69,21 +73,22 @@ def ovdc_update(request_data, tenant_auth_token, is_jwt_token):
             ovdc_k8_provider = ovdc_metadata.get(K8S_PROVIDER_KEY)
             if ovdc_k8_provider != K8sProvider.NONE and \
                     ovdc_k8_provider != k8s_provider:
-                raise CseServerError("Ovdc already enabled for different K8 provider")  # noqa: E501
+                raise e.CseServerError("Ovdc already enabled for different K8 provider")  # noqa: E501
 
             k8s_provider_info = ovdc_utils.construct_k8s_metadata_from_pks_cache(  # noqa: E501
+                request_context.sysadmin_client,
                 ovdc_id=validated_data[RequestKey.OVDC_ID],
                 org_name=validated_data[RequestKey.ORG_NAME],
                 pks_plans=validated_data[RequestKey.PKS_PLAN_NAME],
                 pks_cluster_domain=validated_data[RequestKey.PKS_CLUSTER_DOMAIN],  # noqa: E501
                 k8s_provider=k8s_provider)
-            ovdc_utils.create_pks_compute_profile(k8s_provider_info,
-                                                  tenant_auth_token,
-                                                  is_jwt_token,
-                                                  validated_data)
+            ovdc_utils.create_pks_compute_profile(validated_data,
+                                                  request_context,
+                                                  k8s_provider_info)
 
         task = ovdc_utils.update_ovdc_k8s_provider_metadata(
-            ovdc_id=validated_data[RequestKey.OVDC_ID],
+            request_context.sysadmin_client,
+            validated_data[RequestKey.OVDC_ID],
             k8s_provider_data=k8s_provider_info,
             k8s_provider=k8s_provider)
 
@@ -98,7 +103,7 @@ def ovdc_update(request_data, tenant_auth_token, is_jwt_token):
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_INFO)
-def ovdc_info(request_data, tenant_auth_token, is_jwt_token):
+def ovdc_info(request_data, request_context: ctx.RequestContext):
     """Request handler for ovdc info operation.
 
     Required data: org_name, ovdc_name
@@ -112,14 +117,16 @@ def ovdc_info(request_data, tenant_auth_token, is_jwt_token):
 
     # Record telemetry data
     cse_params = copy.deepcopy(request_data)
-    record_user_action_details(cse_operation=CseOperation.OVDC_INFO, cse_params=cse_params)  # noqa: E501
+    record_user_action_details(cse_operation=CseOperation.OVDC_INFO,
+                               cse_params=cse_params)
 
     return ovdc_utils.get_ovdc_k8s_provider_metadata(
+        request_context.sysadmin_client,
         ovdc_id=request_data[RequestKey.OVDC_ID])
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_LIST)
-def ovdc_list(request_data, tenant_auth_token, is_jwt_token):
+def ovdc_list(request_data, request_context: ctx.RequestContext):
     """Request handler for ovdc list operation.
 
     :return: List of dictionaries with org VDC k8s provider metadata.
@@ -129,23 +136,95 @@ def ovdc_list(request_data, tenant_auth_token, is_jwt_token):
     }
     validated_data = {**defaults, **request_data}
 
-    client = vcd_utils.connect_vcd_user_via_token(
-        tenant_auth_token, is_jwt_token)
-    # TODO check if this is needed
     list_pks_plans = utils.str_to_bool(validated_data[RequestKey.LIST_PKS_PLANS]) # noqa: E501
 
     # Record telemetry data
     cse_params = copy.deepcopy(validated_data)
     cse_params[RequestKey.LIST_PKS_PLANS] = list_pks_plans
-    record_user_action_details(cse_operation=CseOperation.OVDC_LIST, cse_params=cse_params)  # noqa: E501
+    record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
+                               cse_params=cse_params)
 
-    return ovdc_utils.get_ovdc_list(client, list_pks_plans=list_pks_plans,
-                                    tenant_auth_token=tenant_auth_token,
-                                    is_jwt_token=is_jwt_token)
+    if list_pks_plans and not request_context.client.is_sysadmin():
+        raise e.UnauthorizedRequestError(
+            'Operation denied. Enterprise PKS plans visible only '
+            'to System Administrators.')
+
+    # Ideally this should be extracted out to ovdc_utils, but the mandatory
+    # usage of sysadmin client along with a potentially non-sysadmin client
+    # means that the function signature would be awkward and require
+    # both tenant client and sysadmin client
+    if request_context.client.is_sysadmin():
+        org_resource_list = request_context.client.get_org_list()
+    else:
+        org_resource_list = list(request_context.client.get_org())
+    ovdcs = []
+    for org_resource in org_resource_list:
+        org = vcd_org.Org(request_context.client, resource=org_resource)
+        for vdc_sparse in org.list_vdcs():
+            ovdc_name = vdc_sparse['name']
+            org_name = org.get_name()
+
+            k8s_metadata = ovdc_utils.get_ovdc_k8s_provider_metadata(
+                request_context.sysadmin_client,
+                ovdc_name=ovdc_name,
+                org_name=org_name)
+            k8s_provider = k8s_metadata[K8S_PROVIDER_KEY]
+            ovdc_dict = {
+                'name': ovdc_name,
+                'org': org_name,
+                'k8s provider': k8s_provider
+            }
+
+            if list_pks_plans:
+                pks_plans = ''
+                pks_server = ''
+                if k8s_provider == K8sProvider.PKS:
+                    # vc name for vdc can only be found using typed query
+                    q = request_context.client.get_typed_query(
+                            vcd_client.ResourceType.ADMIN_ORG_VDC.value,
+                            query_result_format=vcd_client.QueryResultFormat.RECORDS, # noqa: E501
+                            qfilter=f"name=={ovdc_name};orgName=={org_name}")
+                    # should only ever be one element in the generator
+                    ovdc_records = list(q.execute())
+                    if len(ovdc_records) == 0:
+                        raise vcd_e.EntityNotFoundException(
+                            f"Org VDC {ovdc_name} not found in org {org_name}")
+                    ovdc_record = None
+                    for record in ovdc_records:
+                        ovdc_record = pyvcd_utils.to_dict(
+                            record, resource_type=vcd_client.ResourceType.ADMIN_ORG_VDC.value) # noqa: E501
+                        break
+
+                    vc_to_pks_plans_map = {}
+                    pks_contexts = pksbroker_manager.create_pks_context_for_all_accounts_in_org(request_context)  # noqa: E501
+
+                    for pks_context in pks_contexts:
+                        if pks_context['vc'] in vc_to_pks_plans_map:
+                            continue
+                        pks_broker = pksbroker.PksBroker(pks_context,
+                                                         request_context)
+                        plans = pks_broker.list_plans()
+                        plan_names = [plan.get('name') for plan in plans]
+                        vc_to_pks_plans_map[pks_context['vc']] = \
+                            [plan_names, pks_context['host']]
+
+                    pks_plan_and_server_info = vc_to_pks_plans_map.get(
+                        ovdc_record['vcName'], [])
+                    if len(pks_plan_and_server_info) > 0:
+                        pks_plans = pks_plan_and_server_info[0]
+                        pks_server = pks_plan_and_server_info[1]
+
+                ovdc_dict['pks api server'] = pks_server
+                ovdc_dict['available pks plans'] = pks_plans
+
+            ovdcs.append(ovdc_dict)
+
+    return ovdcs
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_COMPUTE_POLICY_LIST)  # noqa: E501
-def ovdc_compute_policy_list(request_data, tenant_auth_token, is_jwt_token):
+def ovdc_compute_policy_list(request_data,
+                             request_context: ctx.RequestContext):
     """Request handler for ovdc compute-policy list operation.
 
     Required data: ovdc_id
@@ -157,16 +236,13 @@ def ovdc_compute_policy_list(request_data, tenant_auth_token, is_jwt_token):
     ]
     req_utils.validate_payload(request_data, required)
 
-    client = vcd_utils.connect_vcd_user_via_token(
-        tenant_auth_token, is_jwt_token)
-
     config = utils.get_server_runtime_config()
-    cpm = ComputePolicyManager(client,
-                               log_wire=utils.str_to_bool(config['server'].get('log_wire'))) # noqa: E501
+    cpm = ComputePolicyManager(request_context.client, log_wire=utils.str_to_bool(config['server'].get('log_wire')))
     return cpm.list_compute_policies_on_vdc(request_data[RequestKey.OVDC_ID])
 
 
-def ovdc_compute_policy_update(request_data, tenant_auth_token, is_jwt_token):
+def ovdc_compute_policy_update(request_data,
+                               request_context: ctx.RequestContext):
     """Request handler for ovdc compute-policy update operation.
 
     Required data: ovdc_id, compute_policy_action, compute_policy_names
@@ -189,13 +265,8 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token, is_jwt_token):
     ovdc_id = validated_data[RequestKey.OVDC_ID]
     remove_compute_policy_from_vms = validated_data[RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS] # noqa: E501
     try:
-
-        client = vcd_utils.connect_vcd_user_via_token(
-            tenant_auth_token, is_jwt_token)
-
         config = utils.get_server_runtime_config()
-        cpm = ComputePolicyManager(client,
-                                   log_wire=utils.str_to_bool(config['server'].get('log_wire'))) # noqa: E501
+        cpm = ComputePolicyManager(request_context.client, log_wire=utils.str_to_bool(config['server'].get('log_wire')))
         cp_href = None
         cp_id = None
         if cp_name == SYSTEM_DEFAULT_COMPUTE_POLICY_NAME:
@@ -208,11 +279,11 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token, is_jwt_token):
                 _cp = cpm.get_policy(cp_name)
                 cp_href = _cp['href']
                 cp_id = _cp['id']
-            except EntityNotFoundException:
+            except vcd_e.EntityNotFoundException:
                 pass
 
         if cp_href is None:
-            raise BadRequestError(f"Compute policy '{cp_name}' not found.")
+            raise e.BadRequestError(f"Compute policy '{cp_name}' not found.")
 
         if action == ComputePolicyAction.ADD:
             cpm.add_compute_policy_to_vdc(ovdc_id, cp_href)
@@ -230,12 +301,14 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token, is_jwt_token):
             record_user_action(CseOperation.OVDC_COMPUTE_POLICY_REMOVE)
             return task_href
 
-        raise BadRequestError("Unsupported compute policy action")
+        raise e.BadRequestError("Unsupported compute policy action")
 
     except Exception as err:
         # Record telemetry data failure
         if action == ComputePolicyAction.ADD:
-            record_user_action(CseOperation.OVDC_COMPUTE_POLICY_ADD, status=OperationStatus.FAILED)  # noqa: E501
+            record_user_action(CseOperation.OVDC_COMPUTE_POLICY_ADD,
+                               status=OperationStatus.FAILED)
         elif action == ComputePolicyAction.REMOVE:
-            record_user_action(CseOperation.OVDC_COMPUTE_POLICY_REMOVE, status=OperationStatus.FAILED)  # noqa: E501
+            record_user_action(CseOperation.OVDC_COMPUTE_POLICY_REMOVE,
+                               status=OperationStatus.FAILED)
         raise err
