@@ -10,36 +10,22 @@ import time
 import uuid
 
 import pkg_resources
-from pyvcloud.vcd.client import QueryResultFormat
-from pyvcloud.vcd.client import TaskStatus
-from pyvcloud.vcd.client import VCLOUD_STATUS_MAP
-from pyvcloud.vcd.org import Org
-from pyvcloud.vcd.task import Task
-from pyvcloud.vcd.vapp import VApp
-from pyvcloud.vcd.vdc import VDC
-from pyvcloud.vcd.vm import VM
+import pyvcloud.vcd.client as vcd_client
+import pyvcloud.vcd.org as vcd_org
+import pyvcloud.vcd.task as vcd_task
+import pyvcloud.vcd.vapp as vcd_vapp
+import pyvcloud.vcd.vdc as vcd_vdc
+import pyvcloud.vcd.vm as vcd_vm
 import requests
 import semantic_version as semver
 
-from container_service_extension.abstract_broker import AbstractBroker
-from container_service_extension.authorization import secure
-from container_service_extension.exceptions import ClusterAlreadyExistsError
-from container_service_extension.exceptions import ClusterInitializationError
-from container_service_extension.exceptions import ClusterJoiningError
-from container_service_extension.exceptions import ClusterNotFoundError
-from container_service_extension.exceptions import ClusterOperationError
-from container_service_extension.exceptions import CseDuplicateClusterError
-from container_service_extension.exceptions import CseServerError
-from container_service_extension.exceptions import MasterNodeCreationError
-from container_service_extension.exceptions import NFSNodeCreationError
-from container_service_extension.exceptions import NodeCreationError
-from container_service_extension.exceptions import NodeNotFoundError
-from container_service_extension.exceptions import NodeOperationError
-from container_service_extension.exceptions import ScriptExecutionError
-from container_service_extension.exceptions import WorkerNodeCreationError
+import container_service_extension.abstract_broker as abstract_broker
+import container_service_extension.authorization as auth
+import container_service_extension.exceptions as e
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
+import container_service_extension.request_context as ctx
 import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_NAME # noqa: E501
@@ -58,33 +44,16 @@ import container_service_extension.utils as utils
 import container_service_extension.vsphere_utils as vs_utils
 
 
-class VcdBroker(AbstractBroker):
+class VcdBroker(abstract_broker.AbstractBroker):
     """Handles cluster operations for 'native' k8s provider."""
 
-    def __init__(self, tenant_auth_token, is_jwt_token):
-        self.tenant_client = None
-        self.client_session = None
-        self.tenant_user_name = None
-        self.tenant_user_id = None
-        self.tenant_org_name = None
-        self.tenant_org_href = None
+    def __init__(self, request_context: ctx.RequestContext):
+        self.context: ctx.RequestContext = None
         # populates above attributes
-        super().__init__(tenant_auth_token, is_jwt_token)
+        super().__init__(request_context)
 
-        self._sys_admin_client = None # private: use sys_admin_client property
         self.task = None
         self.task_resource = None
-
-    @property
-    def sys_admin_client(self):
-        if self._sys_admin_client is None:
-            self._sys_admin_client = vcd_utils.get_sys_admin_client()
-        return self._sys_admin_client
-
-    def logout_sys_admin_client(self):
-        if self._sys_admin_client is not None:
-            self._sys_admin_client.logout()
-        self._sys_admin_client = None
 
     def get_cluster_info(self, data):
         """Get cluster metadata as well as node data.
@@ -106,7 +75,7 @@ class VcdBroker(AbstractBroker):
         req_utils.validate_payload(validated_data, required)
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
-        cluster = get_cluster(self.tenant_client, cluster_name,
+        cluster = get_cluster(self.context.client, cluster_name,
                               org_name=validated_data[RequestKey.ORG_NAME],
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
 
@@ -117,7 +86,7 @@ class VcdBroker(AbstractBroker):
                                    cse_params=cse_params)
 
         cluster[K8S_PROVIDER_KEY] = K8sProvider.NATIVE
-        vapp = VApp(self.tenant_client, href=cluster['vapp_href'])
+        vapp = vcd_vapp.VApp(self.context.client, href=cluster['vapp_href'])
         vms = vapp.get_all_vms()
         for vm in vms:
             node_info = {
@@ -158,13 +127,14 @@ class VcdBroker(AbstractBroker):
 
         # "raw clusters" do not have well-defined cluster data keys
         raw_clusters = get_all_clusters(
-            self.tenant_client,
+            self.context.client,
             org_name=validated_data[RequestKey.ORG_NAME],
             ovdc_name=validated_data[RequestKey.OVDC_NAME])
 
         clusters = []
         for c in raw_clusters:
-            # TODO update these strings once cluster api keys are well defined
+            org_name = vcd_utils.get_org_name_from_ovdc_id(
+                self.context.sysadmin_client, c['vdc_id'])
             clusters.append({
                 'name': c['name'],
                 'IP master': c['leader_endpoint'],
@@ -176,7 +146,7 @@ class VcdBroker(AbstractBroker):
                 'vdc': c['vdc_name'],
                 'status': c['status'],
                 'vdc_id': c['vdc_id'],
-                'org_name': vcd_utils.get_org_name_from_ovdc_id(c['vdc_id']),
+                'org_name': org_name,
                 K8S_PROVIDER_KEY: K8sProvider.NATIVE
             })
         return clusters
@@ -202,10 +172,10 @@ class VcdBroker(AbstractBroker):
         req_utils.validate_payload(validated_data, required)
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
-        cluster = get_cluster(self.tenant_client, cluster_name,
+        cluster = get_cluster(self.context.client, cluster_name,
                               org_name=validated_data[RequestKey.ORG_NAME],
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
-        vapp = VApp(self.tenant_client, href=cluster['vapp_href'])
+        vapp = vcd_vapp.VApp(self.context.client, href=cluster['vapp_href'])
         node_names = get_node_names(vapp, NodeType.MASTER)
 
         all_results = []
@@ -216,25 +186,21 @@ class VcdBroker(AbstractBroker):
         record_user_action_details(cse_operation=CseOperation.CLUSTER_CONFIG,
                                    cse_params=cse_params)
 
-        try:
-            for node_name in node_names:
-                LOGGER.debug(f"getting file from node {node_name}")
-                password = vapp.get_admin_password(node_name)
-                vs = vs_utils.get_vsphere(self.sys_admin_client, vapp,
-                                          vm_name=node_name, logger=LOGGER)
-                vs.connect()
-                moid = vapp.get_vm_moid(node_name)
-                vm = vs.get_vm_by_moid(moid)
-                filename = '/root/.kube/config'
-                result = vs.download_file_from_guest(vm, 'root',
-                                                     password,
-                                                     filename)
-                all_results.append(result)
-        finally:
-            self.logout_sys_admin_client()
+        for node_name in node_names:
+            LOGGER.debug(f"getting file from node {node_name}")
+            password = vapp.get_admin_password(node_name)
+            vs = vs_utils.get_vsphere(self.context.sysadmin_client, vapp,
+                                      vm_name=node_name, logger=LOGGER)
+            vs.connect()
+            moid = vapp.get_vm_moid(node_name)
+            vm = vs.get_vm_by_moid(moid)
+            filename = '/root/.kube/config'
+            result = vs.download_file_from_guest(vm, 'root', password,
+                                                 filename)
+            all_results.append(result)
 
         if len(all_results) == 0 or all_results[0].status_code != requests.codes.ok: # noqa: E501
-            raise ClusterOperationError("Couldn't get cluster configuration")
+            raise e.ClusterOperationError("Couldn't get cluster configuration")
         return all_results[0].content.decode()
 
     def get_cluster_upgrade_plan(self, data):
@@ -257,7 +223,7 @@ class VcdBroker(AbstractBroker):
         validated_data = {**defaults, **data}
         req_utils.validate_payload(validated_data, required)
 
-        cluster = get_cluster(self.tenant_client,
+        cluster = get_cluster(self.context.client,
                               validated_data[RequestKey.CLUSTER_NAME],
                               org_name=validated_data[RequestKey.ORG_NAME],
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
@@ -280,7 +246,7 @@ class VcdBroker(AbstractBroker):
 
         return upgrades
 
-    @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
+    @auth.secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def create_cluster(self, data):
         """Start the cluster creation operation.
 
@@ -305,15 +271,15 @@ class VcdBroker(AbstractBroker):
         cluster_name = data[RequestKey.CLUSTER_NAME]
         # check that cluster name is syntactically valid
         if not is_valid_cluster_name(cluster_name):
-            raise CseServerError(f"Invalid cluster name '{cluster_name}'")
+            raise e.CseServerError(f"Invalid cluster name '{cluster_name}'")
         # check that cluster name doesn't already exist
         try:
-            get_cluster(self.tenant_client, cluster_name,
+            get_cluster(self.context.client, cluster_name,
                         org_name=data[RequestKey.ORG_NAME],
                         ovdc_name=data[RequestKey.OVDC_NAME])
-            raise ClusterAlreadyExistsError(f"Cluster '{cluster_name}' "
-                                            f"already exists.")
-        except ClusterNotFoundError:
+            raise e.ClusterAlreadyExistsError(
+                f"Cluster '{cluster_name}' already exists.")
+        except e.ClusterNotFoundError:
             pass
         # check that requested/default template is valid
         template = get_template(
@@ -338,19 +304,17 @@ class VcdBroker(AbstractBroker):
 
         # check that requested number of worker nodes is at least more than 1
         if num_workers < 0:
-            raise CseServerError(f"Worker node count must be >= 0 "
-                                 f"(received {num_workers}).")
+            raise e.CseServerError(
+                f"Worker node count must be >= 0 (received {num_workers}).")
 
         cluster_id = str(uuid.uuid4())
 
         # must _update_task or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
         # call, session becomes None
-        self._update_task(
-            TaskStatus.RUNNING,
-            message=f"Creating cluster vApp '{cluster_name}' ({cluster_id})"
-                    f" from template '{template_name}' "
-                    f"(revision {template_revision})")
+        msg = f"Creating cluster vApp '{cluster_name}' ({cluster_id}) " \
+              f"from template '{template_name}' (revision {template_revision})"
+        self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         self._create_cluster_async(
             org_name=validated_data[RequestKey.ORG_NAME],
             ovdc_name=validated_data[RequestKey.OVDC_NAME],
@@ -386,7 +350,7 @@ class VcdBroker(AbstractBroker):
             'task_href': self.task_resource.get('href')
         }
 
-    @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
+    @auth.secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def resize_cluster(self, data):
         """Start the resize cluster operation.
 
@@ -413,8 +377,8 @@ class VcdBroker(AbstractBroker):
         num_workers_wanted = validated_data[RequestKey.NUM_WORKERS]
 
         if num_workers_wanted < 1:
-            raise CseServerError(f"Worker node count must be > 0 "
-                                 f"(received {num_workers_wanted}).")
+            raise e.CseServerError(f"Worker node count must be > 0 (received"
+                                   f" {num_workers_wanted}).")
 
         # cluster_handler.py already makes a cluster info API call to vCD, but
         # that call does not return any node info, so this additional
@@ -422,12 +386,11 @@ class VcdBroker(AbstractBroker):
         cluster_info = self.get_cluster_info(validated_data)
         num_workers = len(cluster_info['nodes'])
         if num_workers > num_workers_wanted:
-            raise CseServerError(f"Automatic scale down is not supported for "
-                                 f"vCD powered Kubernetes clusters. Use "
-                                 f"'vcd cse delete node' command.")
+            raise e.CseServerError(f"Scaling down native Kubernetes "
+                                   f"clusters is not supported.")
         elif num_workers == num_workers_wanted:
-            raise CseServerError(f"Cluster '{cluster_name}' already has "
-                                 f"{num_workers} worker nodes.")
+            raise e.CseServerError(f"Cluster '{cluster_name}' already has "
+                                   f"{num_workers} worker nodes.")
 
         # Record the telemetry data
         cse_params = copy.deepcopy(validated_data)
@@ -438,7 +401,7 @@ class VcdBroker(AbstractBroker):
         validated_data[RequestKey.NUM_WORKERS] = num_workers_wanted - num_workers # noqa: E501
         return self.create_nodes(validated_data)
 
-    @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
+    @auth.secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def delete_cluster(self, data):
         """Start the delete cluster operation.
 
@@ -461,7 +424,7 @@ class VcdBroker(AbstractBroker):
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
 
-        cluster = get_cluster(self.tenant_client, cluster_name,
+        cluster = get_cluster(self.context.client, cluster_name,
                               org_name=validated_data[RequestKey.ORG_NAME],
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
         cluster_id = cluster['cluster_id']
@@ -475,9 +438,8 @@ class VcdBroker(AbstractBroker):
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
         # call, session becomes None
-        self._update_task(
-            TaskStatus.RUNNING,
-            message=f"Deleting cluster '{cluster_name}' ({cluster_id})")
+        msg = f"Deleting cluster '{cluster_name}' ({cluster_id})"
+        self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         self._delete_cluster_async(cluster_name=cluster_name,
                                    cluster_vdc_href=cluster['vdc_href'])
 
@@ -486,7 +448,7 @@ class VcdBroker(AbstractBroker):
             'task_href': self.task_resource.get('href')
         }
 
-    @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
+    @auth.secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def upgrade_cluster(self, data):
         """Start the upgrade cluster operation.
 
@@ -521,9 +483,9 @@ class VcdBroker(AbstractBroker):
                 template = t
                 break
         if not template:
-            # TODO all of these CseServerError instances related to request
+            # TODO all of these e.CseServerError instances related to request
             # should be changed to BadRequestError (400)
-            raise CseServerError(
+            raise e.CseServerError(
                 f"Specified template/revision ({template_name} revision "
                 f"{template_revision}) is not a valid upgrade target for "
                 f"cluster '{cluster_name}'.")
@@ -546,7 +508,7 @@ class VcdBroker(AbstractBroker):
               f"{template[LocalTemplateKey.DOCKER_VERSION]}, CNI: " \
               f"{cluster['cni']} {cluster['cni_version']} -> " \
               f"{template[LocalTemplateKey.CNI_VERSION]}"
-        self._update_task(TaskStatus.RUNNING, message=msg)
+        self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         LOGGER.info(f"{msg} ({cluster['vapp_href']})")
         self._upgrade_cluster_async(cluster=cluster, template=template)
 
@@ -575,16 +537,17 @@ class VcdBroker(AbstractBroker):
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         node_name = validated_data[RequestKey.NODE_NAME]
 
-        cluster = get_cluster(self.tenant_client, cluster_name,
+        cluster = get_cluster(self.context.client, cluster_name,
                               org_name=validated_data[RequestKey.ORG_NAME],
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
 
         # Record the telemetry data
         cse_params = copy.deepcopy(validated_data)
         cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
-        record_user_action_details(cse_operation=CseOperation.NODE_INFO, cse_params=cse_params)  # noqa: E501
+        record_user_action_details(cse_operation=CseOperation.NODE_INFO,
+                                   cse_params=cse_params)
 
-        vapp = VApp(self.tenant_client, href=cluster['vapp_href'])
+        vapp = vcd_vapp.VApp(self.context.client, href=cluster['vapp_href'])
         vms = vapp.get_all_vms()
         node_info = None
         for vm in vms:
@@ -596,7 +559,7 @@ class VcdBroker(AbstractBroker):
                 'name': vm_name,
                 'numberOfCpus': '',
                 'memoryMB': '',
-                'status': VCLOUD_STATUS_MAP.get(int(vm.get('status'))),
+                'status': vcd_client.VCLOUD_STATUS_MAP.get(int(vm.get('status'))), # noqa: E501
                 'ipAddress': ''
             }
             if hasattr(vm, 'VmSpecSection'):
@@ -612,13 +575,13 @@ class VcdBroker(AbstractBroker):
                 node_info['node_type'] = 'worker'
             elif vm_name.startswith(NodeType.NFS):
                 node_info['node_type'] = 'nfs'
-                node_info['exports'] = get_nfs_exports(node_info['ipAddress'], vapp, vm_name) # noqa: E501
+                node_info['exports'] = get_nfs_exports(self.context.sysadmin_client, node_info['ipAddress'], vapp, vm_name) # noqa: E501
         if node_info is None:
-            raise NodeNotFoundError(f"Node '{node_name}' not found in "
-                                    f"cluster '{cluster_name}'")
+            raise e.NodeNotFoundError(f"Node '{node_name}' not found in "
+                                      f"cluster '{cluster_name}'")
         return node_info
 
-    @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
+    @auth.secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def create_nodes(self, data):
         """Start the create nodes operation.
 
@@ -670,10 +633,10 @@ class VcdBroker(AbstractBroker):
             mb_memory = validated_data[RequestKey.MB_MEMORY]
 
         if num_workers < 1:
-            raise CseServerError(f"Worker node count must be > 0 "
-                                 f"(received {num_workers}).")
+            raise e.CseServerError(f"Worker node count must be > 0 "
+                                   f"(received {num_workers}).")
 
-        cluster = get_cluster(self.tenant_client, cluster_name,
+        cluster = get_cluster(self.context.client, cluster_name,
                               org_name=validated_data[RequestKey.ORG_NAME],
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
         cluster_id = cluster['cluster_id']
@@ -694,11 +657,10 @@ class VcdBroker(AbstractBroker):
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
         # call, session becomes None
-        self._update_task(
-            TaskStatus.RUNNING,
-            message=f"Creating {num_workers} node(s) from template "
-                    f"'{template_name}' (revision {template_revision}) and "
-                    f"adding to cluster '{cluster_name}' ({cluster_id})")
+        msg = f"Creating {num_workers} node(s) from template " \
+              f"'{template_name}' (revision {template_revision}) and " \
+              f"adding to cluster '{cluster_name}' ({cluster_id})"
+        self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         self._create_nodes_async(
             cluster_name=cluster_name,
             cluster_vdc_href=cluster['vdc_href'],
@@ -720,7 +682,7 @@ class VcdBroker(AbstractBroker):
             'task_href': self.task_resource.get('href')
         }
 
-    @secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
+    @auth.secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def delete_nodes(self, data):
         """Start the delete nodes operation.
 
@@ -752,9 +714,9 @@ class VcdBroker(AbstractBroker):
         # check that master node is not in specified nodes
         for node in node_names_list:
             if node.startswith(NodeType.MASTER):
-                raise CseServerError(f"Can't delete a master node: '{node}'.")
+                raise e.CseServerError(f"Can't delete master node: '{node}'.")
 
-        cluster = get_cluster(self.tenant_client, cluster_name,
+        cluster = get_cluster(self.context.client, cluster_name,
                               org_name=validated_data[RequestKey.ORG_NAME],
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
         cluster_id = cluster['cluster_id']
@@ -764,15 +726,15 @@ class VcdBroker(AbstractBroker):
         cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
         for node in node_names_list:
             cse_params[PayloadKey.NODE_NAME] = node
-            record_user_action_details(cse_operation=CseOperation.NODE_DELETE, cse_params=cse_params)  # noqa: E501
+            record_user_action_details(cse_operation=CseOperation.NODE_DELETE,
+                                       cse_params=cse_params)
 
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
         # call, session becomes None
-        self._update_task(
-            TaskStatus.RUNNING,
-            message=f"Deleting {len(node_names_list)} node(s)"
-                    f" from cluster '{cluster_name}'({cluster_id})")
+        msg = f"Deleting {len(node_names_list)} node(s) " \
+              f"from cluster '{cluster_name}'({cluster_id})"
+        self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
 
         self._delete_nodes_async(
             cluster_name=cluster_name,
@@ -792,28 +754,28 @@ class VcdBroker(AbstractBroker):
                               network_name, num_cpu, mb_memory,
                               storage_profile_name, ssh_key, enable_nfs,
                               rollback):
-        org = vcd_utils.get_org(self.tenant_client, org_name=org_name)
-        vdc = vcd_utils.get_vdc(
-            self.tenant_client, vdc_name=ovdc_name, org=org)
+        org = vcd_utils.get_org(self.context.client, org_name=org_name)
+        vdc = vcd_utils.get_vdc(self.context.client,
+                                vdc_name=ovdc_name,
+                                org=org)
 
         LOGGER.debug(f"About to create cluster '{cluster_name}' on {ovdc_name}"
                      f" with {num_workers} worker nodes, "
                      f"storage profile={storage_profile_name}")
         try:
-            self._update_task(
-                TaskStatus.RUNNING,
-                message=f"Creating cluster vApp {cluster_name} ({cluster_id})")
+            msg = f"Creating cluster vApp {cluster_name} ({cluster_id})"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             try:
-                vapp_resource = \
-                    vdc.create_vapp(cluster_name,
-                                    description=f"cluster '{cluster_name}'",
-                                    network=network_name,
-                                    fence_mode='bridged')
-            except Exception as e:
-                msg = f"Error while creating vApp: {e}"
-                LOGGER.debug(str(e))
-                raise ClusterOperationError(msg)
-            self.tenant_client.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0]) # noqa: E501
+                vapp_resource = vdc.create_vapp(
+                    cluster_name,
+                    description=f"cluster '{cluster_name}'",
+                    network=network_name,
+                    fence_mode='bridged')
+            except Exception as err:
+                msg = f"Error while creating vApp: {err}"
+                LOGGER.debug(str(err))
+                raise e.ClusterOperationError(msg)
+            self.context.client.get_task_monitor().wait_for_status(vapp_resource.Tasks.vcd_task.Task[0]) # noqa: E501
 
             template = get_template(template_name, template_revision)
 
@@ -829,19 +791,19 @@ class VcdBroker(AbstractBroker):
                 ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
                 ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION] # noqa: E501
             }
-            vapp = VApp(self.tenant_client, href=vapp_resource.get('href'))
+            vapp = vcd_vapp.VApp(self.context.client,
+                                 href=vapp_resource.get('href'))
             task = vapp.set_multiple_metadata(tags)
-            self.tenant_client.get_task_monitor().wait_for_status(task)
+            self.context.client.get_task_monitor().wait_for_status(task)
 
-            self._update_task(
-                TaskStatus.RUNNING,
-                message=f"Creating master node for "
-                        f"cluster '{cluster_name}' ({cluster_id})")
+            msg = f"Creating master node for cluster '{cluster_name}' " \
+                  f"({cluster_id})"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
             server_config = utils.get_server_runtime_config()
             catalog_name = server_config['broker']['catalog']
             try:
-                add_nodes(client=self.tenant_client,
+                add_nodes(self.context.sysadmin_client,
                           num_nodes=1,
                           node_type=NodeType.MASTER,
                           org=org,
@@ -854,28 +816,27 @@ class VcdBroker(AbstractBroker):
                           memory_in_mb=mb_memory,
                           storage_profile=storage_profile_name,
                           ssh_key=ssh_key)
-            except Exception as e:
-                raise MasterNodeCreationError("Error adding master node:",
-                                              str(e))
+            except Exception as err:
+                raise e.MasterNodeCreationError("Error adding master node:",
+                                                str(err))
 
-            self._update_task(
-                TaskStatus.RUNNING,
-                message=f"Initializing cluster '{cluster_name}' "
-                        f"({cluster_id})")
+            msg = f"Initializing cluster '{cluster_name}' ({cluster_id})"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
-            init_cluster(vapp, template[LocalTemplateKey.NAME],
+            init_cluster(self.context.sysadmin_client,
+                         vapp,
+                         template[LocalTemplateKey.NAME],
                          template[LocalTemplateKey.REVISION])
-            master_ip = get_master_ip(vapp)
+            master_ip = get_master_ip(self.context.sysadmin_client, vapp)
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      master_ip)
-            self.tenant_client.get_task_monitor().wait_for_status(task)
+            self.context.client.get_task_monitor().wait_for_status(task)
 
-            self._update_task(
-                TaskStatus.RUNNING,
-                message=f"Creating {num_workers} node(s) for "
-                        f"cluster '{cluster_name}' ({cluster_id})")
+            msg = f"Creating {num_workers} node(s) for cluster " \
+                  f"'{cluster_name}' ({cluster_id})"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             try:
-                add_nodes(client=self.tenant_client,
+                add_nodes(self.context.sysadmin_client,
                           num_nodes=num_workers,
                           node_type=NodeType.WORKER,
                           org=org,
@@ -888,25 +849,25 @@ class VcdBroker(AbstractBroker):
                           memory_in_mb=mb_memory,
                           storage_profile=storage_profile_name,
                           ssh_key=ssh_key)
-            except Exception as e:
-                raise WorkerNodeCreationError("Error creating worker node:",
-                                              str(e))
+            except Exception as err:
+                raise e.WorkerNodeCreationError("Error creating worker node:",
+                                                str(err))
 
-            self._update_task(
-                TaskStatus.RUNNING,
-                message=f"Adding {num_workers} node(s) to "
-                        f"cluster '{cluster_name}' ({cluster_id})")
+            msg = f"Adding {num_workers} node(s) to cluster " \
+                  f"'{cluster_name}' ({cluster_id})"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
-            join_cluster(vapp, template[LocalTemplateKey.NAME],
+            join_cluster(self.context.sysadmin_client,
+                         vapp,
+                         template[LocalTemplateKey.NAME],
                          template[LocalTemplateKey.REVISION])
 
             if enable_nfs:
-                self._update_task(
-                    TaskStatus.RUNNING,
-                    message=f"Creating NFS node for "
-                            f"cluster '{cluster_name}' ({cluster_id})")
+                msg = f"Creating NFS node for cluster " \
+                      f"'{cluster_name}' ({cluster_id})"
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 try:
-                    add_nodes(client=self.tenant_client,
+                    add_nodes(self.context.sysadmin_client,
                               num_nodes=1,
                               node_type=NodeType.NFS,
                               org=org,
@@ -919,42 +880,41 @@ class VcdBroker(AbstractBroker):
                               memory_in_mb=mb_memory,
                               storage_profile=storage_profile_name,
                               ssh_key=ssh_key)
-                except Exception as e:
-                    raise NFSNodeCreationError("Error creating NFS node:",
-                                               str(e))
+                except Exception as err:
+                    raise e.NFSNodeCreationError("Error creating NFS node:",
+                                                 str(err))
 
-            self._update_task(
-                TaskStatus.SUCCESS,
-                message=f"Created cluster '{cluster_name}' ({cluster_id})")
-        except (MasterNodeCreationError, WorkerNodeCreationError,
-                NFSNodeCreationError, ClusterJoiningError,
-                ClusterInitializationError, ClusterOperationError) as e:
+            msg = f"Created cluster '{cluster_name}' ({cluster_id})"
+            self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+        except (e.MasterNodeCreationError, e.WorkerNodeCreationError,
+                e.NFSNodeCreationError, e.ClusterJoiningError,
+                e.ClusterInitializationError, e.ClusterOperationError) as err:
             if rollback:
                 msg = f"Error creating cluster '{cluster_name}'. " \
                       f"Deleting cluster (rollback=True)"
-                self._update_task(TaskStatus.RUNNING, message=msg)
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 LOGGER.info(msg)
                 try:
-                    cluster = get_cluster(self.tenant_client,
+                    cluster = get_cluster(self.context.client,
                                           cluster_name,
                                           cluster_id=cluster_id,
                                           org_name=org_name,
                                           ovdc_name=ovdc_name)
-                    _delete_vapp(self.tenant_client, cluster['vdc_href'],
+                    _delete_vapp(self.context.client, cluster['vdc_href'],
                                  cluster_name)
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
             LOGGER.error(f"Error creating cluster '{cluster_name}'",
                          exc_info=True)
-            self._update_task(TaskStatus.ERROR, error_message=str(e))
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              error_message=str(err))
             # raising an exception here prints a stacktrace to server console
-        except Exception as e:
+        except Exception as err:
             LOGGER.error(f"Unknown error creating cluster '{cluster_name}'",
                          exc_info=True)
-            self._update_task(TaskStatus.ERROR, error_message=str(e))
-        finally:
-            self.logout_sys_admin_client()
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              error_message=str(err))
 
     # all parameters following '*args' are required and keyword-only
     @utils.run_async
@@ -964,25 +924,24 @@ class VcdBroker(AbstractBroker):
                             num_workers, network_name, num_cpu, mb_memory,
                             storage_profile_name, ssh_key, enable_nfs,
                             rollback):
-        org = vcd_utils.get_org(self.tenant_client)
-        vdc = VDC(self.tenant_client, href=cluster_vdc_href)
-        vapp = VApp(self.tenant_client, href=vapp_href)
+        org = vcd_utils.get_org(self.context.client)
+        vdc = vcd_vdc.VDC(self.context.client, href=cluster_vdc_href)
+        vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
         template = get_template(name=template_name, revision=template_revision)
+        server_config = utils.get_server_runtime_config()
+        catalog_name = server_config['broker']['catalog']
+
+        node_type = NodeType.WORKER
+        if enable_nfs:
+            node_type = NodeType.NFS
+
         msg = f"Creating {num_workers} node(s) from template " \
               f"'{template_name}' (revision {template_revision}) and " \
               f"adding to cluster '{cluster_name}' ({cluster_id})"
         LOGGER.debug(msg)
+        self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         try:
-            self._update_task(TaskStatus.RUNNING, message=msg)
-
-            node_type = NodeType.WORKER
-            if enable_nfs:
-                node_type = NodeType.NFS
-
-            server_config = utils.get_server_runtime_config()
-            catalog_name = server_config['broker']['catalog']
-
-            new_nodes = add_nodes(client=self.tenant_client,
+            new_nodes = add_nodes(self.context.sysadmin_client,
                                   num_nodes=num_workers,
                                   node_type=node_type,
                                   org=org,
@@ -997,106 +956,104 @@ class VcdBroker(AbstractBroker):
                                   ssh_key=ssh_key)
 
             if node_type == NodeType.NFS:
-                self._update_task(
-                    TaskStatus.SUCCESS,
-                    message=f"Created {num_workers} node(s) for "
-                            f"cluster '{cluster_name}' ({cluster_id})")
+                msg = f"Created {num_workers} node(s) for cluster " \
+                      f"'{cluster_name}' ({cluster_id})"
+                self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
             elif node_type == NodeType.WORKER:
-                self._update_task(
-                    TaskStatus.RUNNING,
-                    message=f"Adding {num_workers} node(s) to cluster "
-                            f"{cluster_name}({cluster_id})")
+                msg = f"Adding {num_workers} node(s) to cluster " \
+                      f"{cluster_name}({cluster_id})"
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 target_nodes = []
                 for spec in new_nodes['specs']:
                     target_nodes.append(spec['target_vm_name'])
                 vapp.reload()
-                join_cluster(vapp, template[LocalTemplateKey.NAME],
+                join_cluster(self.context.sysadmin_client,
+                             vapp,
+                             template[LocalTemplateKey.NAME],
                              template[LocalTemplateKey.REVISION], target_nodes)
-                self._update_task(
-                    TaskStatus.SUCCESS,
-                    message=f"Added {num_workers} node(s) to cluster "
-                            f"{cluster_name}({cluster_id})")
-        except NodeCreationError as e:
+                msg = f"Added {num_workers} node(s) to cluster " \
+                      f"{cluster_name}({cluster_id})"
+                self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+        except e.NodeCreationError as err:
             if rollback:
                 msg = f"Error adding nodes to cluster '{cluster_name}' " \
-                      f"({cluster_id}). Deleting nodes: {e.node_names} " \
+                      f"({cluster_id}). Deleting nodes: {err.node_names} " \
                       f"(rollback=True)"
-                self._update_task(TaskStatus.RUNNING, message=msg)
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 LOGGER.info(msg)
                 try:
-                    _delete_nodes(self.tenant_client, vapp_href, e.node_names,
+                    _delete_nodes(self.context.sysadmin_client,
+                                  vapp_href,
+                                  err.node_names,
                                   cluster_name=cluster_name)
                 except Exception:
-                    LOGGER.error(f"Failed to delete nodes {e.node_names} "
+                    LOGGER.error(f"Failed to delete nodes {err.node_names} "
                                  f"from cluster '{cluster_name}'",
                                  exc_info=True)
             LOGGER.error(f"Error adding nodes to cluster '{cluster_name}'",
                          exc_info=True)
-            LOGGER.error(str(e), exc_info=True)
-            self._update_task(TaskStatus.ERROR, error_message=str(e))
+            LOGGER.error(str(err), exc_info=True)
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              error_message=str(err))
             # raising an exception here prints a stacktrace to server console
-        except Exception as e:
-            LOGGER.error(str(e), exc_info=True)
-            self._update_task(TaskStatus.ERROR, error_message=str(e))
-        finally:
-            self.logout_sys_admin_client()
+        except Exception as err:
+            LOGGER.error(str(err), exc_info=True)
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              error_message=str(err))
 
     # all parameters following '*args' are required and keyword-only
     @utils.run_async
     def _delete_nodes_async(self, *args,
                             cluster_name, vapp_href, node_names_list):
         try:
-            self._update_task(
-                TaskStatus.RUNNING,
-                message=f"Draining {len(node_names_list)} node(s) "
-                        f"from cluster '{cluster_name}': {node_names_list}")
+            msg = f"Draining {len(node_names_list)} node(s) from cluster " \
+                  f"'{cluster_name}': {node_names_list}"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
 
             # if nodes fail to drain, continue with node deletion anyways
             try:
-                _drain_nodes(self.tenant_client, vapp_href, node_names_list,
+                _drain_nodes(self.context.sysadmin_client,
+                             vapp_href,
+                             node_names_list,
                              cluster_name=cluster_name)
-            except (NodeOperationError, ScriptExecutionError) as err:
+            except (e.NodeOperationError, e.ScriptExecutionError) as err:
                 LOGGER.warning(f"Failed to drain nodes: {node_names_list} in "
                                f"cluster '{cluster_name}'. "
                                f"Continuing node delete...\nError: {err}")
 
-            self._update_task(
-                TaskStatus.RUNNING,
-                message=f"Deleting {len(node_names_list)} node(s)"
-                        f" from cluster '{cluster_name}': {node_names_list}")
+            msg = f"Deleting {len(node_names_list)} node(s) from cluster " \
+                  f"'{cluster_name}': {node_names_list}"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
 
-            _delete_nodes(self.tenant_client, vapp_href, node_names_list,
+            _delete_nodes(self.context.sysadmin_client,
+                          vapp_href,
+                          node_names_list,
                           cluster_name=cluster_name)
 
-            self._update_task(
-                TaskStatus.SUCCESS,
-                message=f"Deleted {len(node_names_list)} node(s)"
-                        f" to cluster '{cluster_name}'")
-        except Exception as e:
+            msg = f"Deleted {len(node_names_list)} node(s)" \
+                  f" to cluster '{cluster_name}'"
+            self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+        except Exception as err:
             LOGGER.error(f"Unexpected error while deleting nodes "
-                         f"{node_names_list}: {e}",
+                         f"{node_names_list}: {err}",
                          exc_info=True)
-            self._update_task(TaskStatus.ERROR, error_message=str(e))
-        finally:
-            self.logout_sys_admin_client()
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              error_message=str(err))
 
     # all parameters following '*args' are required and keyword-only
     @utils.run_async
     def _delete_cluster_async(self, *args, cluster_name, cluster_vdc_href):
         try:
-            self._update_task(
-                TaskStatus.RUNNING,
-                message=f"Deleting cluster '{cluster_name}'")
-            _delete_vapp(self.tenant_client, cluster_vdc_href, cluster_name)
-            self._update_task(
-                TaskStatus.SUCCESS,
-                message=f"Deleted cluster '{cluster_name}'")
-        except Exception as e:
-            LOGGER.error(f"Unexpected error while deleting cluster: {e}",
+            msg = f"Deleting cluster '{cluster_name}'"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            _delete_vapp(self.context.client, cluster_vdc_href, cluster_name)
+            msg = f"Deleted cluster '{cluster_name}'"
+            self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+        except Exception as err:
+            LOGGER.error(f"Unexpected error while deleting cluster: {err}",
                          exc_info=True)
-            self._update_task(TaskStatus.ERROR, error_message=str(e))
-        finally:
-            self.logout_sys_admin_client()
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              error_message=str(err))
 
     # all parameters following '*args' are required and keyword-only
     @utils.run_async
@@ -1125,30 +1082,25 @@ class VcdBroker(AbstractBroker):
             upgrade_cni = t_cni > c_cni or t_k8s.major > c_k8s.major or t_k8s.minor > c_k8s.minor # noqa: E501
 
             if upgrade_k8s:
-                self._update_task(
-                    TaskStatus.RUNNING,
-                    message=f"Draining master node {master_node_names}"
-                )
-                _drain_nodes(self.tenant_client, vapp_href,
+                msg = f"Draining master node {master_node_names}"
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                _drain_nodes(self.context.sysadmin_client, vapp_href,
                              master_node_names, cluster_name=cluster_name)
 
-                self._update_task(
-                    TaskStatus.RUNNING,
-                    message=f"Upgrading Kubernetes ({c_k8s} -> {t_k8s}) "
-                            f"in master node {master_node_names}"
-                )
+                msg = f"Upgrading Kubernetes ({c_k8s} -> {t_k8s}) " \
+                      f"in master node {master_node_names}"
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
                                                    ScriptFile.MASTER_K8S_UPGRADE) # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
-                run_script_in_nodes(self.tenant_client, vapp_href,
+                run_script_in_nodes(self.context.sysadmin_client, vapp_href,
                                     master_node_names, script)
 
-                self._update_task(
-                    TaskStatus.RUNNING,
-                    message=f"Uncordoning master node {master_node_names}"
-                )
-                _uncordon_nodes(self.tenant_client, vapp_href,
+                msg = f"Uncordoning master node {master_node_names}"
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                _uncordon_nodes(self.context.sysadmin_client,
+                                vapp_href,
                                 master_node_names,
                                 cluster_name=cluster_name)
 
@@ -1157,75 +1109,66 @@ class VcdBroker(AbstractBroker):
                                                     ScriptFile.WORKER_K8S_UPGRADE) # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
                 for node in worker_node_names:
-                    self._update_task(
-                        TaskStatus.RUNNING,
-                        message=f"Draining node {node}"
-                    )
-                    _drain_nodes(self.tenant_client, vapp_href, [node],
+                    msg = f"Draining node {node}"
+                    self._update_task(vcd_client.TaskStatus.RUNNING,
+                                      message=msg)
+                    _drain_nodes(self.context.sysadmin_client,
+                                 vapp_href,
+                                 [node],
                                  cluster_name=cluster_name)
 
-                    self._update_task(
-                        TaskStatus.RUNNING,
-                        message=f"Upgrading Kubernetes ({c_k8s} -> {t_k8s}) "
-                                f"in node {node}"
-                    )
-                    run_script_in_nodes(self.tenant_client, vapp_href, [node],
-                                        script)
+                    msg = f"Upgrading Kubernetes ({c_k8s} " \
+                          f"-> {t_k8s}) in node {node}"
+                    self._update_task(vcd_client.TaskStatus.RUNNING,
+                                      message=msg)
+                    run_script_in_nodes(self.context.sysadmin_client,
+                                        vapp_href, [node], script)
 
-                    self._update_task(
-                        TaskStatus.RUNNING,
-                        message=f"Uncordoning node {node}"
-                    )
-                    _uncordon_nodes(self.tenant_client, vapp_href, [node],
+                    msg = f"Uncordoning node {node}"
+                    self._update_task(vcd_client.TaskStatus.RUNNING,
+                                      message=msg)
+                    _uncordon_nodes(self.context.sysadmin_client,
+                                    vapp_href, [node],
                                     cluster_name=cluster_name)
 
             if upgrade_docker or upgrade_cni:
-                self._update_task(
-                    TaskStatus.RUNNING,
-                    message=f"Draining all nodes {all_node_names}"
-                )
-                _drain_nodes(self.tenant_client, vapp_href, all_node_names,
+                msg = f"Draining all nodes {all_node_names}"
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                _drain_nodes(self.context.sysadmin_client,
+                             vapp_href, all_node_names,
                              cluster_name=cluster_name)
 
             if upgrade_docker:
-                self._update_task(
-                    TaskStatus.RUNNING,
-                    message=f"Upgrading Docker-CE ({c_docker} -> {t_docker}) "
-                            f"in nodes {all_node_names}"
-                )
+                msg = f"Upgrading Docker-CE ({c_docker} -> {t_docker}) " \
+                      f"in nodes {all_node_names}"
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
                                                    ScriptFile.DOCKER_UPGRADE)
                 script = utils.read_data_file(filepath, logger=LOGGER)
-                run_script_in_nodes(self.tenant_client, vapp_href,
+                run_script_in_nodes(self.context.sysadmin_client, vapp_href,
                                     all_node_names, script)
 
             if upgrade_cni:
-                self._update_task(
-                    TaskStatus.RUNNING,
-                    message=f"Applying CNI ({cluster['cni']} {c_cni} -> "
-                            f"{t_cni}) in master node {master_node_names}"
-                )
+                msg = f"Applying CNI ({cluster['cni']} {c_cni} -> {t_cni}) " \
+                      f"in master node {master_node_names}"
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
                                                    ScriptFile.MASTER_CNI_APPLY)
                 script = utils.read_data_file(filepath, logger=LOGGER)
-                run_script_in_nodes(self.tenant_client, vapp_href,
+                run_script_in_nodes(self.context.sysadmin_client, vapp_href,
                                     master_node_names, script)
 
             # uncordon all nodes (sometimes redundant)
-            self._update_task(
-                TaskStatus.RUNNING,
-                message=f"Uncordoning all nodes {all_node_names}"
-            )
-            _uncordon_nodes(self.tenant_client, vapp_href, all_node_names,
-                            cluster_name=cluster_name)
+            msg = f"Uncordoning all nodes {all_node_names}"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            _uncordon_nodes(self.context.sysadmin_client, vapp_href,
+                            all_node_names, cluster_name=cluster_name)
 
             # update cluster metadata
-            self._update_task(
-                TaskStatus.RUNNING,
-                message=f"Updating metadata for cluster '{cluster_name}'"
-            )
+            msg = f"Updating metadata for cluster '{cluster_name}'"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             metadata = {
                 ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME], # noqa: E501
                 ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION], # noqa: E501
@@ -1234,24 +1177,22 @@ class VcdBroker(AbstractBroker):
                 ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
                 ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION] # noqa: E501
             }
-            vapp = VApp(self.tenant_client, href=vapp_href)
+            vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
             task = vapp.set_multiple_metadata(metadata)
-            self.tenant_client.get_task_monitor().wait_for_status(task)
+            self.context.client.get_task_monitor().wait_for_status(task)
 
             msg = f"Successfully upgraded cluster '{cluster_name}' software " \
                   f"to match template {template_name} (revision " \
                   f"{template_revision}): Kubernetes: {c_k8s} -> {t_k8s}, " \
                   f"Docker-CE: {c_docker} -> {t_docker}, " \
                   f"CNI: {c_cni} -> {t_cni}"
-            self._update_task(TaskStatus.SUCCESS, message=msg)
+            self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
             LOGGER.info(f"{msg} ({vapp_href})")
-        except Exception as e:
+        except Exception as err:
             msg = f"Unexpected error while upgrading cluster " \
-                  f"'{cluster_name}': {e}"
+                  f"'{cluster_name}': {err}"
             LOGGER.error(msg, exc_info=True)
-            self._update_task(TaskStatus.ERROR, error_message=msg)
-        finally:
-            self.logout_sys_admin_client()
+            self._update_task(vcd_client.TaskStatus.ERROR, error_message=msg)
 
     def _update_task(self, status, message='', error_message=None,
                      stack_trace=''):
@@ -1269,18 +1210,19 @@ class VcdBroker(AbstractBroker):
         because if any unknown errors occur during an operation, there should
         be a finally clause that takes care of logging out.
         """
-        if not self.tenant_client.is_sysadmin():
+        if not self.context.client.is_sysadmin():
             stack_trace = ''
 
         if self.task is None:
-            self.task = Task(self.sys_admin_client)
+            self.task = vcd_task.Task(self.context.sysadmin_client)
 
         task_href = None
         if self.task_resource is not None:
             task_href = self.task_resource.get('href')
 
-        org = vcd_utils.get_org(self.tenant_client)
-        user_href = org.get_user(self.client_session.get('user')).get('href')
+        org = vcd_utils.get_org(self.context.client)
+        # TODO find difference between this user_href and the user ID
+        user_href = org.get_user(self.context.user.name).get('href')
 
         self.task_resource = self.task.update(
             status=status.value,
@@ -1289,19 +1231,20 @@ class VcdBroker(AbstractBroker):
             operation_name='cluster operation',
             details='',
             progress=None,
-            owner_href=self.tenant_org_href,
-            owner_name=self.tenant_org_name,
+            owner_href=self.context.user.org_href,
+            owner_name=self.context.user.org_name,
             owner_type='application/vnd.vmware.vcloud.org+xml',
             user_href=user_href,
-            user_name=self.tenant_user_name,
-            org_href=self.tenant_org_href,
+            user_name=self.context.user.name,
+            org_href=self.context.user.org_href,
             task_href=task_href,
             error_message=error_message,
             stack_trace=stack_trace
         )
 
 
-def _drain_nodes(client, vapp_href, node_names, cluster_name=''):
+def _drain_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
+                 cluster_name=''):
     LOGGER.debug(f"Draining nodes {node_names} in cluster '{cluster_name}' "
                  f"(vapp: {vapp_href})")
     script = f"#!/usr/bin/env bash\n"
@@ -1310,19 +1253,25 @@ def _drain_nodes(client, vapp_href, node_names, cluster_name=''):
                   f"--ignore-daemonsets --timeout=60s --delete-local-data\n"
 
     try:
-        vapp = VApp(client, href=vapp_href)
+        vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
         master_node_names = get_node_names(vapp, NodeType.MASTER)
-        run_script_in_nodes(client, vapp_href, [master_node_names[0]], script)
-    except Exception as e:
+        run_script_in_nodes(sysadmin_client, vapp_href, [master_node_names[0]],
+                            script)
+    except Exception as err:
         LOGGER.warning(f"Failed to drain nodes {node_names} in cluster "
-                       f"'{cluster_name}' (vapp: {vapp_href}) with error: {e}")
+                       f"'{cluster_name}' (vapp: {vapp_href}) with "
+                       f"error: {err}")
         raise
 
     LOGGER.debug(f"Successfully drained nodes {node_names} in cluster "
                  f"'{cluster_name}' (vapp: {vapp_href})")
 
 
-def _uncordon_nodes(client, vapp_href, node_names, cluster_name=''):
+def _uncordon_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
+                    cluster_name=''):
+    # dev guard: should never occur in production
+    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+
     LOGGER.debug(f"Uncordoning nodes {node_names} in cluster '{cluster_name}' "
                  f"(vapp: {vapp_href})")
     script = f"#!/usr/bin/env bash\n"
@@ -1330,12 +1279,14 @@ def _uncordon_nodes(client, vapp_href, node_names, cluster_name=''):
         script += f"kubectl uncordon {node_name}\n"
 
     try:
-        vapp = VApp(client, href=vapp_href)
+        vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
         master_node_names = get_node_names(vapp, NodeType.MASTER)
-        run_script_in_nodes(client, vapp_href, [master_node_names[0]], script)
-    except Exception as e:
+        run_script_in_nodes(sysadmin_client, vapp_href, [master_node_names[0]],
+                            script)
+    except Exception as err:
         LOGGER.warning(f"Failed to uncordon nodes {node_names} in cluster "
-                       f"'{cluster_name}' (vapp: {vapp_href}) with error: {e}")
+                       f"'{cluster_name}' (vapp: {vapp_href}) "
+                       f"with error: {err}")
         raise
 
     LOGGER.debug(f"Successfully uncordoned nodes {node_names} in cluster "
@@ -1346,18 +1297,22 @@ def _delete_vapp(client, vdc_href, vapp_name):
     LOGGER.debug(f"Deleting vapp {vapp_name} (vdc: {vdc_href})")
 
     try:
-        vdc = VDC(client, href=vdc_href)
+        vdc = vcd_vdc.VDC(client, href=vdc_href)
         task = vdc.delete_vapp(vapp_name, force=True)
         client.get_task_monitor().wait_for_status(task)
-    except Exception as e:
+    except Exception as err:
         LOGGER.warning(f"Failed to delete vapp {vapp_name} "
-                       f"(vdc: {vdc_href}) with error: {e}")
+                       f"(vdc: {vdc_href}) with error: {err}")
         raise
 
     LOGGER.debug(f"Deleted vapp {vapp_name} (vdc: {vdc_href})")
 
 
-def _delete_nodes(client, vapp_href, node_names, cluster_name=''):
+def _delete_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
+                  cluster_name=''):
+    # dev guard: should never occur in production
+    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+
     LOGGER.debug(f"Deleting node(s) {node_names} from cluster '{cluster_name}'"
                  f" (vapp: {vapp_href})")
     script = "#!/usr/bin/env bash\nkubectl delete node "
@@ -1365,43 +1320,45 @@ def _delete_nodes(client, vapp_href, node_names, cluster_name=''):
         script += f' {node_name}'
     script += '\n'
 
-    vapp = VApp(client, href=vapp_href)
+    vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
     try:
         master_node_names = get_node_names(vapp, NodeType.MASTER)
-        run_script_in_nodes(client, vapp_href, [master_node_names[0]], script)
+        run_script_in_nodes(sysadmin_client, vapp_href, [master_node_names[0]],
+                            script)
     except Exception:
         LOGGER.warning(f"Failed to delete node(s) {node_names} from cluster "
                        f"'{cluster_name}' using kubectl (vapp: {vapp_href})")
 
-    vapp = VApp(client, href=vapp_href)
+    vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
     for vm_name in node_names:
-        vm = VM(client, resource=vapp.get_vm(vm_name))
+        vm = vcd_vm.VM(sysadmin_client, resource=vapp.get_vm(vm_name))
         try:
             task = vm.undeploy()
-            client.get_task_monitor().wait_for_status(task)
+            sysadmin_client.get_task_monitor().wait_for_status(task)
         except Exception:
             LOGGER.warning(f"Failed to undeploy VM {vm_name} "
                            f"(vapp: {vapp_href})")
 
     task = vapp.delete_vms(node_names)
-    client.get_task_monitor().wait_for_status(task)
+    sysadmin_client.get_task_monitor().wait_for_status(task)
     LOGGER.debug(f"Successfully deleted node(s) {node_names} from "
                  f"cluster '{cluster_name}' (vapp: {vapp_href})")
 
 
-def get_nfs_exports(ip, vapp, vm_name):
-    """Get the exports from remote NFS server (helper method).
+def get_nfs_exports(sysadmin_client: vcd_client.Client, ip, vapp, vm_name):
+    """Get the exports from remote NFS server.
 
-    :param ip: (str): IP address of the NFS server
-    :param vapp: (pyvcloud.vcd.vapp.VApp): The vApp or cluster
-        to which node belongs
-    :param vm_name: name of node's VM
+    :param pyvcloud.vcd.client.Client sysadmin_client:
+    :param str ip: IP address of the NFS server
+    :param pyvcloud.vcd.vapp.vcd_vapp.VApp vapp:
+    :param str vm_name:
 
     :return: (List): List of exports
     """
     script = f"#!/usr/bin/env bash\nshowmount -e {ip}"
-    result = execute_script_in_nodes(vapp=vapp, node_names=[vm_name],
-                                     script=script, check_tools=False)
+    result = execute_script_in_nodes(sysadmin_client, vapp=vapp,
+                                     node_names=[vm_name], script=script,
+                                     check_tools=False)
     lines = result[0][1].content.decode().split('\n')
     exports = []
     for index in range(1, len(lines) - 1):
@@ -1443,13 +1400,13 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
         resource_type = 'adminVApp'
         if org_name is not None and org_name.lower() != SYSTEM_ORG_NAME.lower(): # noqa: E501
             org_resource = client.get_org_by_name(org_name)
-            org = Org(client, resource=org_resource)
+            org = vcd_org.Org(client, resource=org_resource)
             query_filter += f";org=={org.resource.get('id')}"
 
     # 2 queries are required because each query can only return 8 metadata
     q = client.get_typed_query(
         resource_type,
-        query_result_format=QueryResultFormat.ID_RECORDS,
+        query_result_format=vcd_client.QueryResultFormat.ID_RECORDS,
         qfilter=query_filter,
         fields=f'metadata:{ClusterMetadataKey.CLUSTER_ID}'
                f',metadata:{ClusterMetadataKey.MASTER_IP}'
@@ -1460,7 +1417,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
                f',metadata:{ClusterMetadataKey.OS}')
     q2 = client.get_typed_query(
         resource_type,
-        query_result_format=QueryResultFormat.ID_RECORDS,
+        query_result_format=vcd_client.QueryResultFormat.ID_RECORDS,
         qfilter=query_filter,
         fields=f'metadata:{ClusterMetadataKey.DOCKER_VERSION}'
                f',metadata:{ClusterMetadataKey.KUBERNETES}'
@@ -1488,7 +1445,6 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
         vdc_id = record.get('vdc').split(':')[-1]
         vapp_href = f'{client.get_api_uri()}/vApp/vapp-{vapp_id}'
 
-        # TODO THIS CLUSTER DICTIONARY NEEDS TO BE MORE WELL-DEFINED
         clusters[vapp_id] = {
             'name': record.get('name'),
             'vapp_id': vapp_id,
@@ -1547,10 +1503,10 @@ def get_cluster(client, cluster_name, cluster_id=None, org_name=None,
                                 cluster_id=cluster_id, org_name=org_name,
                                 ovdc_name=ovdc_name)
     if len(clusters) > 1:
-        raise CseDuplicateClusterError(f"Found multiple clusters named"
-                                       f" '{cluster_name}'.")
+        raise e.CseDuplicateClusterError(f"Found multiple clusters named"
+                                         f" '{cluster_name}'.")
     if len(clusters) == 0:
-        raise ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")
+        raise e.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")
 
     return clusters[0]
 
@@ -1568,14 +1524,14 @@ def get_template(name=None, revision=None):
     raise Exception(f"Template '{name}' at revision {revision} not found.")
 
 
-def add_nodes(client, num_nodes, node_type, org, vdc, vapp, catalog_name,
-              template, network_name, num_cpu=None, memory_in_mb=None,
-              storage_profile=None, ssh_key=None):
+def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
+              catalog_name, template, network_name, num_cpu=None,
+              memory_in_mb=None, storage_profile=None, ssh_key=None):
+    # dev guard: should never occur in production
+    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+
     specs = []
     try:
-        if num_nodes < 1:
-            return None
-
         # DEV NOTE: With api v33.0 and onwards, get_catalog operation will fail
         # for non admin users of an an org which is not hosting the catalog,
         # even if the catalog is explicitly shared with the org in question.
@@ -1587,20 +1543,14 @@ def add_nodes(client, num_nodes, node_type, org, vdc, vapp, catalog_name,
         # accessed by these non admin users, just that they can't find by the
         # href on their own.
 
-        sys_admin_client = None
-        try:
-            sys_admin_client = vcd_utils.get_sys_admin_client()
-            org_name = org.get_name()
-            org_resource = sys_admin_client.get_org_by_name(org_name)
-            org_sa = Org(sys_admin_client, resource=org_resource)
-            catalog_item = org_sa.get_catalog_item(
-                catalog_name, template[LocalTemplateKey.CATALOG_ITEM_NAME])
-            catalog_item_href = catalog_item.Entity.get('href')
-        finally:
-            if sys_admin_client:
-                sys_admin_client.logout()
+        org_name = org.get_name()
+        org_resource = sysadmin_client.get_org_by_name(org_name)
+        org_sa = vcd_org.Org(sysadmin_client, resource=org_resource)
+        catalog_item = org_sa.get_catalog_item(
+            catalog_name, template[LocalTemplateKey.CATALOG_ITEM_NAME])
+        catalog_item_href = catalog_item.Entity.get('href')
 
-        source_vapp = VApp(client, href=catalog_item_href)
+        source_vapp = vcd_vapp.VApp(sysadmin_client, href=catalog_item_href)
         source_vm = source_vapp.get_all_vms()[0].get('name')
         if storage_profile is not None:
             storage_profile = vdc.get_storage_profile(storage_profile)
@@ -1616,6 +1566,7 @@ def add_nodes(client, num_nodes, node_type, org, vdc, vapp, catalog_name,
                 "chmod -R go-rwx /root/.ssh\n" \
                 "fi"
 
+        vapp.reload()
         for n in range(num_nodes):
             name = None
             while True:
@@ -1640,7 +1591,7 @@ def add_nodes(client, num_nodes, node_type, org, vdc, vapp, catalog_name,
             specs.append(spec)
 
         task = vapp.add_vms(specs, power_on=False)
-        client.get_task_monitor().wait_for_status(task)
+        sysadmin_client.get_task_monitor().wait_for_status(task)
         vapp.reload()
 
         if not num_cpu:
@@ -1650,16 +1601,16 @@ def add_nodes(client, num_nodes, node_type, org, vdc, vapp, catalog_name,
         for spec in specs:
             vm_name = spec['target_vm_name']
             vm_resource = vapp.get_vm(vm_name)
-            vm = VM(client, resource=vm_resource)
+            vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
 
             task = vm.modify_cpu(num_cpu)
-            client.get_task_monitor().wait_for_status(task)
+            sysadmin_client.get_task_monitor().wait_for_status(task)
 
             task = vm.modify_memory(memory_in_mb)
-            client.get_task_monitor().wait_for_status(task)
+            sysadmin_client.get_task_monitor().wait_for_status(task)
 
             task = vm.power_on()
-            client.get_task_monitor().wait_for_status(task)
+            sysadmin_client.get_task_monitor().wait_for_status(task)
             vapp.reload()
 
             if node_type == NodeType.NFS:
@@ -1670,17 +1621,18 @@ def add_nodes(client, num_nodes, node_type, org, vdc, vapp, catalog_name,
                     ScriptFile.NFSD)
                 script = utils.read_data_file(script_filepath, logger=LOGGER)
                 exec_results = execute_script_in_nodes(
-                    vapp=vapp, node_names=[vm_name], script=script)
+                    sysadmin_client, vapp=vapp, node_names=[vm_name],
+                    script=script)
                 errors = get_script_execution_errors(exec_results)
                 if errors:
-                    raise ScriptExecutionError(
-                        f"VM customization script execution failed on node "
-                        f"{vm_name}:{errors}")
-    except Exception as e:
+                    raise e.ScriptExecutionError(
+                        f"VM customization script execution failed "
+                        f"on node {vm_name}:{errors}")
+    except Exception as err:
         # TODO: get details of the exception to determine cause of failure,
         # e.g. not enough resources available.
         node_list = [entry.get('target_vm_name') for entry in specs]
-        raise NodeCreationError(node_list, str(e))
+        raise e.NodeCreationError(node_list, str(err))
 
     vapp.reload()
     return {'task': task, 'specs': specs}
@@ -1702,60 +1654,70 @@ def _wait_for_guest_execution_callback(message, exception=None):
         LOGGER.error(f"exception: {str(exception)}")
 
 
-def get_master_ip(vapp):
+def get_master_ip(sysadmin_client: vcd_client.Client, vapp):
+    # dev guard: should never occur in production
+    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+
     LOGGER.debug(f"Getting master IP for vapp: "
                  f"{vapp.get_resource().get('name')}")
     script = "#!/usr/bin/env bash\n" \
              "ip route get 1 | awk '{print $NF;exit}'\n" \
 
     node_names = get_node_names(vapp, NodeType.MASTER)
-    result = execute_script_in_nodes(vapp=vapp, node_names=node_names,
-                                     script=script, check_tools=False)
+    result = execute_script_in_nodes(sysadmin_client, vapp=vapp,
+                                     node_names=node_names, script=script,
+                                     check_tools=False)
     errors = get_script_execution_errors(result)
     if errors:
-        raise ScriptExecutionError(
-            f"Get master IP script execution failed on master node "
-            f"{node_names}:{errors}")
+        raise e.ScriptExecutionError(f"Get master IP script execution failed "
+                                     f"on master node {node_names}:{errors}")
     master_ip = result[0][1].content.decode().split()[0]
     LOGGER.debug(f"Retrieved master IP for vapp: "
                  f"{vapp.get_resource().get('name')}, ip: {master_ip}")
     return master_ip
 
 
-def init_cluster(vapp, template_name, template_revision):
+def init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
+                 template_revision):
+    # dev guard: should never occur in production
+    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+
     try:
         script_filepath = ltm.get_script_filepath(template_name,
                                                   template_revision,
                                                   ScriptFile.MASTER)
         script = utils.read_data_file(script_filepath, logger=LOGGER)
         node_names = get_node_names(vapp, NodeType.MASTER)
-        result = execute_script_in_nodes(vapp=vapp, node_names=node_names,
-                                         script=script)
+        result = execute_script_in_nodes(sysadmin_client, vapp=vapp,
+                                         node_names=node_names, script=script)
         errors = get_script_execution_errors(result)
         if errors:
-            raise ScriptExecutionError(
+            raise e.ScriptExecutionError(
                 f"Initialize cluster script execution failed on node "
                 f"{node_names}:{errors}")
         if result[0][0] != 0:
-            raise ClusterInitializationError(f"Couldn't initialize cluster:\n{result[0][2].content.decode()}") # noqa: E501
-    except Exception as e:
-        LOGGER.error(e, exc_info=True)
-        raise ClusterInitializationError(
-            f"Couldn't initialize cluster: {str(e)}")
+            raise e.ClusterInitializationError(f"Couldn't initialize cluster:\n{result[0][2].content.decode()}") # noqa: E501
+    except Exception as err:
+        LOGGER.error(err, exc_info=True)
+        raise e.ClusterInitializationError(
+            f"Couldn't initialize cluster: {str(err)}")
 
 
-def join_cluster(vapp, template_name, template_revision, target_nodes=None):
+def join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
+                 template_revision, target_nodes=None):
+    # dev guard: should never occur in production
+    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
     script = "#!/usr/bin/env bash\n" \
              "kubeadm token create\n" \
              "ip route get 1 | awk '{print $NF;exit}'\n"
     node_names = get_node_names(vapp, NodeType.MASTER)
-    master_result = execute_script_in_nodes(vapp=vapp, node_names=node_names,
+    master_result = execute_script_in_nodes(sysadmin_client, vapp=vapp,
+                                            node_names=node_names,
                                             script=script)
     errors = get_script_execution_errors(master_result)
     if errors:
-        raise ScriptExecutionError(
-            f"Join cluster script execution failed on master node "
-            f"{node_names}:{errors}")
+        raise e.ScriptExecutionError(f"Join cluster script execution failed "
+                                     f"on master node {node_names}:{errors}")
     init_info = master_result[0][1].content.decode().split()
 
     node_names = get_node_names(vapp, NodeType.WORKER)
@@ -1766,17 +1728,17 @@ def join_cluster(vapp, template_name, template_revision, target_nodes=None):
                                                   ScriptFile.NODE)
     tmp_script = utils.read_data_file(tmp_script_filepath, logger=LOGGER)
     script = tmp_script.format(token=init_info[0], ip=init_info[1])
-    worker_results = execute_script_in_nodes(vapp=vapp, node_names=node_names,
+    worker_results = execute_script_in_nodes(sysadmin_client, vapp=vapp,
+                                             node_names=node_names,
                                              script=script)
     errors = get_script_execution_errors(worker_results)
     if errors:
-        raise ScriptExecutionError(
-            f"Join cluster script execution failed on worker node "
-            f"{node_names}:{errors}")
+        raise e.ScriptExecutionError(f"Join cluster script execution failed "
+                                     f"on worker node  {node_names}:{errors}")
     for result in worker_results:
         if result[0] != 0:
-            raise ClusterJoiningError(f"Couldn't join cluster:"
-                                      f"\n{result[2].content.decode()}")
+            raise e.ClusterJoiningError(f"Couldn't join cluster:"
+                                        f"\n{result[2].content.decode()}")
 
 
 def _wait_until_ready_to_exec(vs, vm, password, tries=30):
@@ -1800,92 +1762,90 @@ def _wait_until_ready_to_exec(vs, vm, password, tries=30):
         time.sleep(2)
 
     if not ready:
-        raise CseServerError('VM is not ready to execute scripts')
+        raise e.CseServerError('VM is not ready to execute scripts')
 
 
-def execute_script_in_nodes(vapp, node_names, script, check_tools=True,
-                            wait=True):
+def execute_script_in_nodes(sysadmin_client: vcd_client.Client,
+                            vapp, node_names, script,
+                            check_tools=True, wait=True):
+    # dev guard: should never occur in production
+    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
     all_results = []
-    sys_admin_client = None
-    try:
-        sys_admin_client = vcd_utils.get_sys_admin_client()
-        for node_name in node_names:
-            LOGGER.debug(f"will try to execute script on {node_name}:\n"
-                         f"{script}")
+    for node_name in node_names:
+        LOGGER.debug(f"will try to execute script on {node_name}:\n"
+                     f"{script}")
 
-            vs = vs_utils.get_vsphere(sys_admin_client, vapp,
-                                      vm_name=node_name, logger=LOGGER)
-            vs.connect()
-            moid = vapp.get_vm_moid(node_name)
-            vm = vs.get_vm_by_moid(moid)
-            password = vapp.get_admin_password(node_name)
-            if check_tools:
-                LOGGER.debug(f"waiting for tools on {node_name}")
-                vs.wait_until_tools_ready(
-                    vm,
-                    sleep=5,
-                    callback=_wait_for_tools_ready_callback)
-                _wait_until_ready_to_exec(vs, vm, password)
-            LOGGER.debug(f"about to execute script on {node_name} "
-                         f"(vm={vm}), wait={wait}")
-            if wait:
-                result = \
-                    vs.execute_script_in_guest(
-                        vm, 'root', password, script,
-                        target_file=None,
-                        wait_for_completion=True,
-                        wait_time=10,
-                        get_output=True,
-                        delete_script=True,
-                        callback=_wait_for_guest_execution_callback)
-                result_stdout = result[1].content.decode()
-                result_stderr = result[2].content.decode()
-            else:
-                result = [
-                    vs.execute_program_in_guest(vm,
-                                                'root',
-                                                password,
-                                                script,
-                                                wait_for_completion=False,
-                                                get_output=False)
-                ]
-                result_stdout = ''
-                result_stderr = ''
-            LOGGER.debug(result[0])
-            LOGGER.debug(result_stderr)
-            LOGGER.debug(result_stdout)
-            all_results.append(result)
-    finally:
-        if sys_admin_client:
-            sys_admin_client.logout()
+        vs = vs_utils.get_vsphere(sysadmin_client, vapp, vm_name=node_name,
+                                  logger=LOGGER)
+        vs.connect()
+        moid = vapp.get_vm_moid(node_name)
+        vm = vs.get_vm_by_moid(moid)
+        password = vapp.get_admin_password(node_name)
+        if check_tools:
+            LOGGER.debug(f"waiting for tools on {node_name}")
+            vs.wait_until_tools_ready(
+                vm,
+                sleep=5,
+                callback=_wait_for_tools_ready_callback)
+            _wait_until_ready_to_exec(vs, vm, password)
+        LOGGER.debug(f"about to execute script on {node_name} "
+                     f"(vm={vm}), wait={wait}")
+        if wait:
+            result = vs.execute_script_in_guest(
+                vm, 'root', password, script,
+                target_file=None,
+                wait_for_completion=True,
+                wait_time=10,
+                get_output=True,
+                delete_script=True,
+                callback=_wait_for_guest_execution_callback)
+            result_stdout = result[1].content.decode()
+            result_stderr = result[2].content.decode()
+        else:
+            result = [
+                vs.execute_program_in_guest(vm, 'root', password, script,
+                                            wait_for_completion=False,
+                                            get_output=False)
+            ]
+            result_stdout = ''
+            result_stderr = ''
+        LOGGER.debug(result[0])
+        LOGGER.debug(result_stderr)
+        LOGGER.debug(result_stdout)
+        all_results.append(result)
 
     return all_results
 
 
-def run_script_in_nodes(client, vapp_href, node_names, script):
+def run_script_in_nodes(sysadmin_client: vcd_client.Client, vapp_href,
+                        node_names, script):
     """Run script in all specified nodes.
 
     Wrapper around `execute_script_in_nodes()`. Use when we don't care about
     preserving script results
 
-    :param pyvcloud.vcd.client.Client client:
+    :param pyvcloud.vcd.client.Client sysadmin_client:
     :param str vapp_href:
     :param List[str] node_names:
     :param str script:
     """
+    # dev guard: should never occur in production
+    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+
     # when is tools checking necessary?
-    vapp = VApp(client, href=vapp_href)
-    results = execute_script_in_nodes(vapp=vapp,
+    vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
+    results = execute_script_in_nodes(sysadmin_client,
+                                      vapp=vapp,
                                       node_names=node_names,
                                       script=script,
                                       check_tools=False)
     errors = get_script_execution_errors(results)
     if errors:
-        raise ScriptExecutionError(f"Script execution failed on node "
-                                   f"{node_names}\nErrors: {errors}")
+        raise e.ScriptExecutionError(f"Script execution failed on node "
+                                     f"{node_names}\nErrors: {errors}")
     if results[0][0] != 0:
-        raise NodeOperationError(f"Error during node operation:\n"
-                                 f"{results[0][2].content.decode()}")
+        raise e.NodeOperationError(f"Error during node operation:\n"
+                                   f"{results[0][2].content.decode()}")
 
 
 def get_script_execution_errors(results):
