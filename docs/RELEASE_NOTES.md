@@ -12,9 +12,15 @@ Supported VCD versions: 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0
 
 Enterprise PKS compatibility matrix
 
-|CSE       | VCD                                     | Enterprise PKS | NSX-T |
-|----------|-----------------------------------------|----------------|-------|
-|2.6.0     | 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0      | 1.7            | 2.5.1 |
+|CSE   | VCD                                | Enterprise PKS | NSX-T |
+|------|------------------------------------|----------------|-------|
+|2.6.1 | 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0 | 1.7            | 2.5.1 |
+
+CSE UI plugin compatibility matrix
+
+|CSE   | VCD    | CSE UI plugin |
+|------|--------|---------------|
+|2.6.1 | 10.1.0 | 1.0.0         |
 
 **New Features**
 * Support for Enterprise PKS 1.7 (and NSX-T 2.5.1).
@@ -36,6 +42,8 @@ all nodes in the clusters. If nodes in the clusters were setup with ssh keys
 for root login, those key pairings will be preserved. The command will force a
 reboot of the clusters, if admin password is reset.
 
+***Enterprise PKS***
+
 Existing Enterprise PKS clusters deployed via CSE will continue to function
 when PKS is upgraded to version 1.7. The cluster network isolation will also
 remain intact when NSX-T is upgraded to version 2.5.1. Please follow PKS and
@@ -50,9 +58,16 @@ Supported VCD versions: 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0
 
 Enterprise PKS compatibility matrix
 
-|CSE       | VCD                                     | Enterprise PKS | NSX-T    |
-|----------|-----------------------------------------|----------------|----------|
-|2.6.0     | 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0-Beta | 1.4            | 2.3, 2.4 |
+|CSE   | VCD                                | Enterprise PKS | NSX-T    |
+|------|------------------------------------|----------------|----------|
+|2.6.0 | 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0 | 1.4            | 2.3, 2.4 |
+
+CSE UI plugin compatibility matrix
+
+|CSE   | VCD    | CSE UI plugin |
+|------|--------|---------------|
+|2.6.0 | 10.1.0 | 1.0.0         |
+
 
 **New Features**
 * New Templates with updated Kubernetes and Weave
