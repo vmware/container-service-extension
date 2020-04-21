@@ -27,7 +27,6 @@ from container_service_extension.consumer import MessageConsumer
 from container_service_extension.exceptions import BadRequestError
 from container_service_extension.exceptions import UnauthorizedRequestError
 import container_service_extension.local_template_manager as ltm
-from container_service_extension.logger import configure_server_logger
 from container_service_extension.logger import SERVER_DEBUG_LOG_FILEPATH
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_INFO_LOG_FILEPATH
@@ -198,8 +197,6 @@ class Service(object, metaclass=Singleton):
         return message
 
     def run(self, msg_update_callback=None):
-        configure_server_logger()
-
         self.config = get_validated_config(
             self.config_file,
             pks_config_file_name=self.pks_config_file,

@@ -2,6 +2,7 @@
 # Copyright (c) 2018 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from collections import namedtuple
 import datetime
 import logging
 from logging.handlers import RotatingFileHandler
@@ -29,7 +30,7 @@ DEBUG_LOG_FORMATTER = logging.Formatter(fmt='%(asctime)s | '
                                         datefmt='%y-%m-%d %H:%M:%S')
 
 # create directory for all cse logs
-LOGS_DIR_NAME = 'cse-logs'
+LOGS_DIR_NAME = Path.home() / '.cse-logs'
 
 
 def run_once(f):
@@ -43,42 +44,67 @@ def run_once(f):
 
 
 # cse install logger and config
-# cse installation logs to: cse-logs/cse-install_year-mo-day_hr-min-sec.log
+# cse installation logs to: ~/.cse-logs/cse-install_year-mo-day_hr-min-sec.log
 INSTALL_LOGGER_NAME = 'container_service_extension.install'
 INSTALL_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-install_{_TIMESTAMP}.log"
 INSTALL_LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
 
+# logfile for pyvcloud
 INSTALL_WIRELOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-install-wire_{_TIMESTAMP}.log"
 
 # cse client logger and config
 # cse client logs info level and debug level logs to:
-# cse-logs/cse-client-info.log
-# cse-logs/cse-client-debug.log
+# ~/.cse-logs/cse-client-info.log
+# ~/.cse-logs/cse-client-debug.log
 # .log files are always the most current, with .log.9 being the oldest
 CLIENT_LOGGER_NAME = 'container_service_extension.client'
 CLIENT_INFO_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-client-info.log"
 CLIENT_DEBUG_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-client-debug.log"
 CLIENT_LOGGER = logging.getLogger(CLIENT_LOGGER_NAME)
 
+CLIENT_WIRE_LOGGER_NAME = 'container_service_extension.client.wire'
+CLIENT_WIRE_LOGGER_FILEPATH = f"{LOGS_DIR_NAME}/cse-client-wire_{_TIMESTAMP}.log" # noqa: E501
+CLIENT_WIRE_LOGGER = logging.getLogger(CLIENT_WIRE_LOGGER_NAME)
+
 # cse server logger and config
 # cse server logs info level and debug level logs to:
-# cse-logs/cse-server-info.log
-# cse-logs/cse-server-debug.log
+# ~/.cse-logs/cse-server-info.log
+# ~/.cse-logs/cse-server-debug.log
 # cse - vCD wire logs are logged to:
-# cse-logs/cse-server-wire-debug.log
-# cse - nsxt logs are logged to:
-# cse-logs/cse-nsxt-debug.log
+# ~/.cse-logs/cse-server-wire-debug.log
+# cse - nsxt wire logs are logged to:
+# ~/.cse-logs/nsxt-wire.log
+# cse - pks wire logs are logged to:
+# ~/.cse-logs/pks-wire.log
+# cse - cloudapi wire logs are logged to:
+# ~/.cse-logs/cloudapi-wire.log
 # .log files are always the most current, with .log.9 being the oldest
+SERVER_ClI_LOGGER_NAME = 'container_service_extension.server-cli'
+SERVER_CLI_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-server-cli.log"
+SERVER_CLI_LOGGER = logging.getLogger(SERVER_ClI_LOGGER_NAME)
+
 SERVER_LOGGER_NAME = 'container_service_extension.server'
 SERVER_INFO_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-server-info.log"
 SERVER_DEBUG_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-server-debug.log"
 SERVER_LOGGER = logging.getLogger(SERVER_LOGGER_NAME)
 
+# logfile for pyvcloud
 SERVER_DEBUG_WIRELOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-server-wire-debug.log"
 
-SERVER_NSXT_LOGGER_NAME = 'container_service_extension.server-nsxt'
-SERVER_NSXT_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-nsxt-debug.log"
-SERVER_NSXT_LOGGER = logging.getLogger(SERVER_NSXT_LOGGER_NAME)
+SERVER_NSXT_WIRE_LOGGER_NAME = 'container_service_extension.server-nsxt.wire'
+SERVER_NSXT_WIRE_LOG_FILEPATH = f"{LOGS_DIR_NAME}/nsxt-wire.log"
+SERVER_NSXT_WIRE_LOGGER = logging.getLogger(SERVER_NSXT_WIRE_LOGGER_NAME)
+
+SERVER_PKS_WIRE_LOGGER_NAME = 'container_service_extension.server-pks.wire'
+SERVER_PKS_WIRE_LOG_FILEPATH = f"{LOGS_DIR_NAME}/pks-wire.log"
+SERVER_PKS_WIRE_LOGGER = logging.getLogger(SERVER_PKS_WIRE_LOGGER_NAME)
+
+SERVER_CLOUDAPI_WIRE_LOGGER_NAME = 'container_service_extension.server-cloudapi.wire' # noqa: E501
+SERVER_CLOUDAPI_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cloudapi-wire.log"
+SERVER_CLOUDAPI_WIRE_LOGGER = logging.getLogger(SERVER_CLOUDAPI_WIRE_LOGGER_NAME) # noqa: E501
+
+# NullLogger doesn't perform logging.
+NULL_LOGGER = logging.getLogger('container_service_extension.null-logger')
 
 
 @run_once
@@ -88,70 +114,52 @@ def setup_log_file_directory():
 
 
 @run_once
-def configure_install_logger():
-    """Configure cse install logger if it is not configured."""
+def configure_all_file_loggers():
+    """Configure all loggers if not configured."""
     setup_log_file_directory()
-    INSTALL_LOGGER.addFilter(RedactingFilter())
-    INSTALL_LOGGER.setLevel(logging.DEBUG)
-    file_handler = logging.FileHandler(INSTALL_LOG_FILEPATH)
-    file_handler.setFormatter(DEBUG_LOG_FORMATTER)
-    INSTALL_LOGGER.addHandler(file_handler)
+    LoggerConfig = namedtuple('LoggerConfig', 'name filepath formatter logger')
+    configs = [
+        LoggerConfig(INSTALL_LOG_FILEPATH, INSTALL_LOG_FILEPATH,
+                     DEBUG_LOG_FORMATTER, INSTALL_LOGGER),
+        LoggerConfig(CLIENT_LOGGER_NAME, CLIENT_INFO_LOG_FILEPATH,
+                     INFO_LOG_FORMATTER, CLIENT_LOGGER),
+        LoggerConfig(CLIENT_LOGGER_NAME, CLIENT_DEBUG_LOG_FILEPATH,
+                     DEBUG_LOG_FORMATTER, CLIENT_LOGGER),
+        LoggerConfig(CLIENT_WIRE_LOGGER_NAME, CLIENT_WIRE_LOGGER_FILEPATH,
+                     DEBUG_LOG_FORMATTER, CLIENT_WIRE_LOGGER),
+        LoggerConfig(SERVER_ClI_LOGGER_NAME, SERVER_CLI_LOG_FILEPATH,
+                     DEBUG_LOG_FORMATTER, SERVER_CLI_LOGGER),
+        LoggerConfig(SERVER_LOGGER_NAME, SERVER_INFO_LOG_FILEPATH,
+                     INFO_LOG_FORMATTER, SERVER_LOGGER),
+        LoggerConfig(SERVER_LOGGER_NAME, SERVER_DEBUG_LOG_FILEPATH,
+                     DEBUG_LOG_FORMATTER, SERVER_LOGGER),
+        LoggerConfig(SERVER_NSXT_WIRE_LOGGER_NAME, SERVER_NSXT_WIRE_LOG_FILEPATH, # noqa: E501
+                     DEBUG_LOG_FORMATTER, SERVER_NSXT_WIRE_LOGGER),
+        LoggerConfig(SERVER_PKS_WIRE_LOGGER_NAME, SERVER_PKS_WIRE_LOG_FILEPATH,
+                     DEBUG_LOG_FORMATTER, SERVER_PKS_WIRE_LOGGER),
+        LoggerConfig(SERVER_CLOUDAPI_WIRE_LOGGER_NAME, SERVER_CLOUDAPI_LOG_FILEPATH, # noqa: E501
+                     DEBUG_LOG_FORMATTER, SERVER_CLOUDAPI_WIRE_LOGGER)
+    ]
+
+    for logger_config in configs:
+        file_handler = RotatingFileHandler(logger_config.filepath,
+                                           maxBytes=_MAX_BYTES,
+                                           backupCount=_BACKUP_COUNT,
+                                           delay=True)
+        logger_config.logger.addFilter(RedactingFilter())
+        if logger_config.formatter == INFO_LOG_FORMATTER:
+            logger_config.logger.setLevel(logging.INFO)
+            file_handler.setLevel(logging.INFO)
+            file_handler.setFormatter(INFO_LOG_FORMATTER)
+        elif logger_config.formatter == DEBUG_LOG_FORMATTER:
+            logger_config.logger.setLevel(logging.DEBUG)
+            file_handler.setLevel(logging.DEBUG)
+            file_handler.setFormatter(DEBUG_LOG_FORMATTER)
+        logger_config.logger.addHandler(file_handler)
 
 
 @run_once
-def configure_client_logger():
-    """Configure cse client logger if it is not configured."""
-    setup_log_file_directory()
-    info_file_handler = RotatingFileHandler(CLIENT_INFO_LOG_FILEPATH,
-                                            maxBytes=_MAX_BYTES,
-                                            backupCount=_BACKUP_COUNT)
-    info_file_handler.setLevel(logging.INFO)
-    info_file_handler.setFormatter(INFO_LOG_FORMATTER)
-    debug_file_handler = RotatingFileHandler(CLIENT_DEBUG_LOG_FILEPATH,
-                                             maxBytes=_MAX_BYTES,
-                                             backupCount=_BACKUP_COUNT)
-    debug_file_handler.setFormatter(DEBUG_LOG_FORMATTER)
-
-    CLIENT_LOGGER.addFilter(RedactingFilter())
-    CLIENT_LOGGER.setLevel(logging.DEBUG)
-    CLIENT_LOGGER.addHandler(info_file_handler)
-    CLIENT_LOGGER.addHandler(debug_file_handler)
-
-
-@run_once
-def configure_server_logger():
-    """Configure cse server & pika loggers if they are not configured."""
-    setup_log_file_directory()
-
-    nsxt_file_handler = RotatingFileHandler(SERVER_NSXT_LOG_FILEPATH,
-                                            maxBytes=_MAX_BYTES,
-                                            backupCount=_BACKUP_COUNT)
-    nsxt_file_handler.setLevel(logging.DEBUG)
-    nsxt_file_handler.setFormatter(DEBUG_LOG_FORMATTER)
-
-    SERVER_NSXT_LOGGER.setLevel(logging.DEBUG)
-    SERVER_NSXT_LOGGER.addFilter(RedactingFilter())
-    SERVER_NSXT_LOGGER.addHandler(nsxt_file_handler)
-
-    info_file_handler = RotatingFileHandler(SERVER_INFO_LOG_FILEPATH,
-                                            maxBytes=_MAX_BYTES,
-                                            backupCount=_BACKUP_COUNT)
-    info_file_handler.setLevel(logging.INFO)
-    info_file_handler.setFormatter(INFO_LOG_FORMATTER)
-
-    debug_file_handler = RotatingFileHandler(SERVER_DEBUG_LOG_FILEPATH,
-                                             maxBytes=_MAX_BYTES,
-                                             backupCount=_BACKUP_COUNT)
-    debug_file_handler.setLevel(logging.DEBUG)
-    debug_file_handler.setFormatter(DEBUG_LOG_FORMATTER)
-
-    SERVER_LOGGER.addFilter(RedactingFilter())
-    SERVER_LOGGER.setLevel(logging.DEBUG)
-    SERVER_LOGGER.addHandler(info_file_handler)
-    SERVER_LOGGER.addHandler(debug_file_handler)
-
-    pika_logger = logging.getLogger('pika')
-    pika_logger.addFilter(RedactingFilter())
-    pika_logger.setLevel(logging.WARNING)
-    pika_logger.addHandler(info_file_handler)
-    pika_logger.addHandler(debug_file_handler)
+def configure_null_logger():
+    """Configure null logger if it is not configured."""
+    nullhandler = logging.NullHandler()
+    NULL_LOGGER.addHandler(nullhandler)
