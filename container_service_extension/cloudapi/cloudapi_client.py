@@ -16,9 +16,9 @@ class CloudApiClient(object):
                  token,
                  is_jwt_token,
                  api_version,
+                 logger_instance,
+                 logger_wire,
                  verify_ssl=True,
-                 logger_instance=None,
-                 log_requests=False,
                  log_headers=False,
                  log_body=False):
         if not base_url.endswith('/'):
@@ -34,7 +34,7 @@ class CloudApiClient(object):
 
         self._verify_ssl = verify_ssl
         self.LOGGER = logger_instance
-        self._log_requests = log_requests
+        self.LOGGER_WIRE = logger_wire
         self._log_headers = log_headers
         self._log_body = log_body
         self._last_response = None
@@ -104,20 +104,18 @@ class CloudApiClient(object):
                 verify=self._verify_ssl)
         self._last_response = response
 
-        if self._log_requests:
-            self.LOGGER.debug(f"Request uri : {(method.value).upper()} {url}")
-            if self._log_headers:
-                self.LOGGER.debug("Request hedears : "
-                                  f"{response.request.headers}")
-            if self._log_body and payload:
-                self.LOGGER.debug(f"Request body : {response.request.body}")
+        self.LOGGER_WIRE.debug(f"Request uri : {(method.value).upper()} {url}")
+        if self._log_headers:
+            self.LOGGER_WIRE.debug("Request hedears : "
+                                   f"{response.request.headers}")
+        if self._log_body and payload:
+            self.LOGGER_WIRE.debug(f"Request body : {response.request.body}")
 
-        if self._log_requests:
-            self.LOGGER.debug(f"Response status code: {response.status_code}")
-            if self._log_headers:
-                self.LOGGER.debug(f"Response hedears : {response.headers}")
-            if self._log_body:
-                self.LOGGER.debug(f"Response body : {response.text}")
+        self.LOGGER_WIRE.debug(f"Response status code: {response.status_code}")
+        if self._log_headers:
+            self.LOGGER_WIRE.debug(f"Response hedears : {response.headers}")
+        if self._log_body:
+            self.LOGGER_WIRE.debug(f"Response body : {response.text}")
 
         response.raise_for_status()
 

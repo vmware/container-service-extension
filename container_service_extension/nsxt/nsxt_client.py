@@ -19,11 +19,11 @@ class NSXTClient(object):
                  host,
                  username,
                  password,
+                 logger_instance,
+                 logger_wire,
                  http_proxy=None,
                  https_proxy=None,
                  verify_ssl=True,
-                 logger_instance=None,
-                 log_requests=False,
                  log_headers=False,
                  log_body=False):
         """Initialize a NSXTClient object.
@@ -32,20 +32,20 @@ class NSXTClient(object):
         :param str username: username of a NSX-T user with Enterprise
             Administrator role.
         :param str password: password of the afore-mentioned user.
+        :param logging.Logger logger_instance: logger instance that will be
+            used to log debugging messages.
+        :param logging.Logger logger_wire: logger instance that will be
+            used to log REST requests and responses
         :param str http_proxy: http proxy to use for unsecured REST calls to
             the NSX-T server. e.g. proxy.example.com:80
         :param str https_proxy: https proxy to use for secured REST calls to
             the.NSX_T server. e.g. proxy.example.com:443
         :param bool verify_ssl: if True, verify SSL certificates of remote
             host, else ignore verification.
-        :param logging.Logger logger_instance: logger instance that will be
-            used to log the REST calls.
-        :param bool log_requests: if True, log REST request and responses
-            else don't.
         :param bool log_headers: if True, log REST request and response headers
-            else don't. Won't override flag 'log_requests'.
+            else don't.
         :param bool log_body: if True, log REST request and response bodies
-            else don't. Won't overwrite the flag 'log_requests'.
+            else don't.
         """
         self._base_url = f"https://{host}/api/v1/"
         self._auth = HTTPBasicAuth(username, password)
@@ -55,12 +55,8 @@ class NSXTClient(object):
         if https_proxy:
             self._proxies['https'] = "https://" + https_proxy
         self._verify_ssl = verify_ssl
-        if logger_instance:
-            self.LOGGER = logger_instance
-        else:
-            from container_service_extension.logger import SERVER_NSXT_LOGGER
-            self.LOGGER = SERVER_NSXT_LOGGER
-        self._log_requests = log_requests
+        self.LOGGER = logger_instance
+        self.LOGGER_WIRE = logger_wire
         self._log_headers = log_headers
         self._log_body = log_body
 
@@ -108,20 +104,18 @@ class NSXTClient(object):
             proxies=self._proxies,
             verify=self._verify_ssl)
 
-        if self._log_requests:
-            self.LOGGER.debug(f"Request uri : {(method.value).upper()} {url}")
-            if self._log_headers:
-                self.LOGGER.debug("Request hedears : "
-                                  f"{response.request.headers}")
-            if self._log_body and payload:
-                self.LOGGER.debug(f"Request body : {response.request.body}")
+        self.LOGGER_WIRE.debug(f"Request uri : {(method.value).upper()} {url}")
+        if self._log_headers:
+            self.LOGGER_WIRE.debug("Request hedears : "
+                                   f"{response.request.headers}")
+        if self._log_body and payload:
+            self.LOGGER_WIRE.debug(f"Request body : {response.request.body}")
 
-        if self._log_requests:
-            self.LOGGER.debug(f"Response status code: {response.status_code}")
-            if self._log_headers:
-                self.LOGGER.debug(f"Response hedears : {response.headers}")
-            if self._log_body:
-                self.LOGGER.debug(f"Response body : {response.text}")
+        self.LOGGER_WIRE.debug(f"Response status code: {response.status_code}")
+        if self._log_headers:
+            self.LOGGER_WIRE.debug(f"Response hedears : {response.headers}")
+        if self._log_body:
+            self.LOGGER_WIRE.debug(f"Response body : {response.text}")
 
         response.raise_for_status()
 
