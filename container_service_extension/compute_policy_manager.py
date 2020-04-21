@@ -16,6 +16,7 @@ from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0 # noqa: E501
 from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.cloudapi.constants import CSE_COMPUTE_POLICY_PREFIX # noqa: E501
+from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.pyvcloud_utils as pyvcd_utils
 from container_service_extension.shared_constants import RequestMethod
@@ -67,6 +68,8 @@ class ComputePolicyManager:
                 token=token,
                 is_jwt_token=is_jwt_token,
                 api_version=self._vcd_client.get_api_version(),
+                logger_instance=LOGGER,
+                logger_wire=NULL_LOGGER,
                 verify_ssl=self._vcd_client._verify_ssl_certs)
             # Since the /cloudapi endpoint was added before the compute policy
             # endpoint. Mere presence of the /cloudapi uri is not enough, we
