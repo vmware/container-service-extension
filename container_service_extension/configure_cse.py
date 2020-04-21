@@ -12,10 +12,11 @@ from pyvcloud.vcd.org import Org
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.exceptions import AmqpError
 import container_service_extension.local_template_manager as ltm
-from container_service_extension.logger import configure_install_logger
 from container_service_extension.logger import INSTALL_LOGGER as LOGGER
 from container_service_extension.logger import INSTALL_WIRELOG_FILEPATH
+from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
+from container_service_extension.logger import SERVER_NSXT_WIRE_LOGGER
 from container_service_extension.nsxt.cse_nsxt_setup_utils import \
     setup_nsxt_constructs
 from container_service_extension.nsxt.nsxt_client import NSXTClient
@@ -201,8 +202,6 @@ def install_cse(config_file_name, skip_template_creation, force_update,
 
     :raises AmqpError: if AMQP exchange could not be created.
     """
-    configure_install_logger()
-
     config = get_validated_config(
         config_file_name, pks_config_file_name=pks_config_file_name,
         skip_config_decryption=skip_config_decryption,
@@ -325,6 +324,10 @@ def install_cse(config_file_name, skip_template_creation, force_update,
         # if it's a PKS setup, setup NSX-T constructs
         if config.get('pks_config'):
             nsxt_servers = config.get('pks_config')['nsxt_servers']
+            wire_logger = NULL_LOGGER
+            if log_wire:
+                wire_logger = SERVER_NSXT_WIRE_LOGGER
+
             for nsxt_server in nsxt_servers:
                 msg = f"Configuring NSX-T server ({nsxt_server.get('name')})" \
                       " for CSE. Please check install logs for details."
@@ -335,11 +338,11 @@ def install_cse(config_file_name, skip_template_creation, force_update,
                     host=nsxt_server.get('host'),
                     username=nsxt_server.get('username'),
                     password=nsxt_server.get('password'),
+                    logger_instance=LOGGER,
+                    logger_wire=wire_logger,
                     http_proxy=nsxt_server.get('proxy'),
                     https_proxy=nsxt_server.get('proxy'),
                     verify_ssl=nsxt_server.get('verify'),
-                    logger_instance=LOGGER,
-                    log_requests=True,
                     log_headers=True,
                     log_body=True)
                 setup_nsxt_constructs(
@@ -388,8 +391,6 @@ def install_template(template_name, template_revision, config_file_name,
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
         that writes messages onto console.
     """
-    configure_install_logger()
-
     config = get_validated_config(
         config_file_name, skip_config_decryption=skip_config_decryption,
         decryption_password=decryption_password,

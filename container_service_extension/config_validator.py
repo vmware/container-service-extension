@@ -16,6 +16,7 @@ import yaml
 from container_service_extension.encryption_engine import \
     get_decrypted_file_contents
 from container_service_extension.exceptions import AmqpConnectionError
+from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.nsxt.dfw_manager import DFWManager
 from container_service_extension.nsxt.ipset_manager import IPSetManager
 from container_service_extension.nsxt.nsxt_client import NSXTClient
@@ -465,6 +466,8 @@ def _validate_pks_config_data_integrity(pks_config, msg_update_callback=None):
             host=nsxt_server.get('host'),
             username=nsxt_server.get('username'),
             password=nsxt_server.get('password'),
+            logger_instance=NULL_LOGGER,
+            logger_wire=NULL_LOGGER,
             http_proxy=nsxt_server.get('proxy'),
             https_proxy=nsxt_server.get('proxy'),
             verify_ssl=nsxt_server.get('verify'))
