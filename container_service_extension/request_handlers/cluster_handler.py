@@ -35,7 +35,6 @@ def cluster_create(request_data, request_context: ctx.RequestContext):
 
     :return: Dict
     """
-
     # return {
     #     'name': 'asdf',
     #     'cluster_id': 'asdf',

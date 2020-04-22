@@ -39,6 +39,7 @@ from container_service_extension.pksclient.models.update_cluster_parameters \
 from container_service_extension.pksclient.rest import ApiException
 from container_service_extension.pyvcloud_utils import \
     get_org_name_from_ovdc_id
+import container_service_extension.request_context as ctx
 import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
@@ -49,7 +50,6 @@ from container_service_extension.shared_constants import RequestKey
 from container_service_extension.uaaclient.uaaclient import UaaClient
 import container_service_extension.utils as utils
 
-import container_service_extension.request_context as ctx
 
 # Delimiter to append with user id context
 USER_ID_SEPARATOR = "---"
