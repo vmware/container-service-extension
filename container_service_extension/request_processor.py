@@ -139,7 +139,8 @@ def process_request(body):
     try:
         body_content = OPERATION_TO_HANDLER[operation](data, context)
     finally:
-        context.end()
+        if not context.is_async:
+            context.end()
 
     if not isinstance(body_content, (list, dict)):
         body_content = {RESPONSE_MESSAGE_KEY: str(body_content)}

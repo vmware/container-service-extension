@@ -151,8 +151,8 @@ def ovdc_list(request_data, request_context: ctx.RequestContext):
 
     # Ideally this should be extracted out to ovdc_utils, but the mandatory
     # usage of sysadmin client along with a potentially non-sysadmin client
-    # means that the function signature would be awkward and require
-    # both tenant client and sysadmin client
+    # means that the function signature require both tenant client and
+    # sysadmin client, which is very awkward
     if request_context.client.is_sysadmin():
         org_resource_list = request_context.client.get_org_list()
     else:
@@ -237,7 +237,7 @@ def ovdc_compute_policy_list(request_data,
     req_utils.validate_payload(request_data, required)
 
     config = utils.get_server_runtime_config()
-    cpm = ComputePolicyManager(request_context.client, log_wire=utils.str_to_bool(config['server'].get('log_wire')))
+    cpm = ComputePolicyManager(request_context, log_wire=utils.str_to_bool(config['server'].get('log_wire')))
     return cpm.list_compute_policies_on_vdc(request_data[RequestKey.OVDC_ID])
 
 
@@ -266,7 +266,7 @@ def ovdc_compute_policy_update(request_data,
     remove_compute_policy_from_vms = validated_data[RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS] # noqa: E501
     try:
         config = utils.get_server_runtime_config()
-        cpm = ComputePolicyManager(request_context.client, log_wire=utils.str_to_bool(config['server'].get('log_wire')))
+        cpm = ComputePolicyManager(request_context, log_wire=utils.str_to_bool(config['server'].get('log_wire')))
         cp_href = None
         cp_id = None
         if cp_name == SYSTEM_DEFAULT_COMPUTE_POLICY_NAME:

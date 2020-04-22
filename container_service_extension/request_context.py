@@ -14,10 +14,11 @@ class RequestContext:
         # vCD API client from user auth token
         self._client: vcd_client.Client = None
 
-        self._sysadmin_client: vcd_client.Client = None
-
         # User contest
         self._user: user_context.UserContext = None
+
+        # async operations should call end() when they are finished
+        self.is_async: bool = False
 
         # Request cache; keys defined in CacheKey enum
         self.cache = {}
@@ -38,16 +39,10 @@ class RequestContext:
 
     @property
     def sysadmin_client(self):
-        if self._sysadmin_client is None:
-            self._sysadmin_client = vcd_utils.get_sys_admin_client()
-        return self._sysadmin_client
+        return self.user.sysadmin_client
 
     def end(self):
         self.user.end()
-        try:
-            self._sysadmin_client.logout()
-        except Exception:
-            pass
 
 
 @enum.unique

@@ -30,7 +30,6 @@ def secure(required_rights=[]):
             if (server_config['service']['enforce_authorization']
                     and required_rights is not None
                     and len(required_rights) > 0):
-                # dev guard: should never occur in production
                 class_instance: abstract_broker.AbstractBroker = args[0]
                 user_rights = class_instance.context.user.rights
 

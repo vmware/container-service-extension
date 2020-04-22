@@ -19,7 +19,8 @@ from container_service_extension.cloudapi.constants import CSE_COMPUTE_POLICY_PR
 from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 from container_service_extension.logger import SERVER_LOGGER
-import container_service_extension.pyvcloud_utils as pyvcd_utils
+import container_service_extension.pyvcloud_utils as vcd_utils
+import container_service_extension.request_context as ctx
 from container_service_extension.shared_constants import RequestMethod
 import container_service_extension.utils as utils
 
@@ -39,44 +40,22 @@ class ComputePolicyManager:
     original names when returned back to the caller.
     """
 
-    def __init__(self, client, log_wire=True):
-        """Initialize ComputePolicyManager Object.
-
-        :param pyvcloud.vcd.client client:
-        :param bool log_wire:
-
-        :raises: OperationNotSupportedException: If cloudapi endpoint is not
-            found in session.
-        :raises: ValueError: If non sys admin client is passed during
-            initialization.
-
-        """
-        if not client.is_sysadmin():
-            raise ValueError("Only Sys admin clients should be used to "
-                             "initialize ComputePolicyManager.")
-
-        self._vcd_client = client
-
-        token = self._vcd_client.get_access_token()
-        is_jwt_token = True
-        if not token:
-            token = self._vcd_client.get_xvcloud_authorization_token()
-            is_jwt_token = False
-
-        self._session = self._vcd_client.get_vcloud_session()
+    def __init__(self, request_context: ctx.RequestContext, log_wire=True):
+        self.context: ctx.RequestContext = request_context
+        self._cloudapi_client: CloudApiClient = None
 
         try:
             wire_logger = NULL_LOGGER
             if log_wire:
                 wire_logger = SERVER_CLOUDAPI_WIRE_LOGGER
             self._cloudapi_client = CloudApiClient(
-                base_url=self._vcd_client.get_cloudapi_uri(),
-                token=token,
-                is_jwt_token=is_jwt_token,
-                api_version=self._vcd_client.get_api_version(),
+                base_url=self.context.client.get_cloudapi_uri(),
+                token=self.context._auth_token,
+                is_jwt_token=self.context._is_jwt,
+                api_version=self.context.client.get_api_version(),
                 logger_debug=SERVER_LOGGER,
                 logger_wire=wire_logger,
-                verify_ssl=self._vcd_client._verify_ssl_certs)
+                verify_ssl=self.context.client._verify_ssl_certs)
             # Since the /cloudapi endpoint was added before the compute policy
             # endpoint. Mere presence of the /cloudapi uri is not enough, we
             # need to make sure that this cloud api client will be of actual
@@ -229,9 +208,8 @@ class ComputePolicyManager:
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
-        vdc = pyvcd_utils.get_vdc(self._vcd_client,
-                                  vdc_id=vdc_id,
-                                  is_admin_operation=True)
+        vdc = vcd_utils.get_vdc(self.context.client, vdc_id=vdc_id,
+                                is_admin_operation=True)
         return vdc.add_compute_policy(compute_policy_href)
 
     def list_compute_policies_on_vdc(self, vdc_id):
@@ -243,9 +221,8 @@ class ComputePolicyManager:
         :return: A list of dictionaries with the keys 'name', 'href', and 'id'
         :rtype: List
         """
-        vdc = pyvcd_utils.get_vdc(self._vcd_client,
-                                  vdc_id=vdc_id,
-                                  is_admin_operation=True)
+        vdc = vcd_utils.get_vdc(self.context.client, vdc_id=vdc_id,
+                                is_admin_operation=True)
 
         result = []
         cp_list = vdc.list_compute_policies()
@@ -275,7 +252,7 @@ class ComputePolicyManager:
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
-        org = pyvcd_utils.get_org(self._vcd_client, org_name=org_name)
+        org = vcd_utils.get_org(self.context.client, org_name=org_name)
         return org.assign_compute_policy_to_vapp_template_vms(
             catalog_name=catalog_name,
             catalog_item_name=catalog_item_name,
@@ -299,7 +276,7 @@ class ComputePolicyManager:
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
-        org = pyvcd_utils.get_org(self._vcd_client, org_name=org_name)
+        org = vcd_utils.get_org(self.context.client, org_name=org_name)
         return org.remove_compute_policy_from_vapp_template_vms(
             catalog_name,
             catalog_item_name,
@@ -321,7 +298,7 @@ class ComputePolicyManager:
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
-        org = pyvcd_utils.get_org(self._vcd_client, org_name=org_name)
+        org = vcd_utils.get_org(self.context.client, org_name=org_name)
         return org.remove_all_compute_policies_from_vapp_template_vms(
             catalog_name, catalog_item_name)
 
@@ -368,15 +345,14 @@ class ComputePolicyManager:
 
         :return: dictionary containing 'task_href'.
         """
-        vdc = pyvcd_utils.get_vdc(self._vcd_client, vdc_id=ovdc_id)
+        vdc = vcd_utils.get_vdc(self.context.client, vdc_id=ovdc_id)
 
-        # TODO is there no better way to get the client href?
-        org = pyvcd_utils.get_org(self._vcd_client)
+        org = vcd_utils.get_org(self.context.client)
         org.reload()
-        user_name = self._session.get('user')
+        user_name = self.context.user.name
         user_href = org.get_user(user_name).get('href')
 
-        task = Task(self._vcd_client)
+        task = Task(self.context.client)
         task_resource = task.update(
             status=TaskStatus.RUNNING.value,
             namespace='vcloud.cse',
@@ -393,6 +369,7 @@ class ComputePolicyManager:
             org_href=org.href)
 
         task_href = task_resource.get('href')
+        self.context.is_async = True
         self._remove_compute_policy_from_vdc_async(
             task=task,
             task_href=task_href,
@@ -415,12 +392,10 @@ class ComputePolicyManager:
                                               ovdc_id,
                                               compute_policy_href,
                                               remove_compute_policy_from_vms):
-        user_name = self._session.get('user')
-        vdc = pyvcd_utils.get_vdc(self._vcd_client,
-                                  vdc_id=ovdc_id,
-                                  is_admin_operation=True)
-
         try:
+            user_name = self.context.user.name
+            vdc = vcd_utils.get_vdc(self.context.client, vdc_id=ovdc_id,
+                                    is_admin_operation=True)
             if remove_compute_policy_from_vms:
                 cp_list = self.list_compute_policies_on_vdc(ovdc_id)
                 system_default_href = None
@@ -433,8 +408,8 @@ class ComputePolicyManager:
                         f"compute policy not found")
 
                 compute_policy_id = retrieve_compute_policy_id_from_href(compute_policy_href) # noqa: E501
-                vapps = pyvcd_utils.get_all_vapps_in_ovdc(self._vcd_client,
-                                                          ovdc_id)
+                vapps = vcd_utils.get_all_vapps_in_ovdc(self.context.client,
+                                                        ovdc_id)
                 target_vms = []
                 for vapp in vapps:
                     vm_resources = vapp.get_all_vms()
@@ -461,9 +436,9 @@ class ComputePolicyManager:
                     org_href=org_href,
                 )
 
-                task_monitor = self._vcd_client.get_task_monitor()
+                task_monitor = self.context.client.get_task_monitor()
                 for vm_resource in target_vms:
-                    vm = VM(self._vcd_client, href=vm_resource.get('href'))
+                    vm = VM(self.context.client, href=vm_resource.get('href'))
                     _task = vm.update_compute_policy(system_default_href)
 
                     task.update(
@@ -536,5 +511,6 @@ class ComputePolicyManager:
                 user_name=user_name,
                 task_href=task_href,
                 org_href=org_href,
-                error_message=f"{err}"
-            )
+                error_message=f"{err}")
+        finally:
+            self.context.end()

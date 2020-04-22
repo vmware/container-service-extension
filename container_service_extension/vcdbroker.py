@@ -335,6 +335,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         msg = f"Creating cluster vApp '{cluster_name}' ({cluster_id}) " \
               f"from template '{template_name}' (revision {template_revision})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+        self.context.is_async = True
         self._create_cluster_async(
             org_name=validated_data[RequestKey.ORG_NAME],
             ovdc_name=validated_data[RequestKey.OVDC_NAME],
@@ -481,6 +482,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         # call, session becomes None
         msg = f"Deleting cluster '{cluster_name}' ({cluster_id})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+        self.context.is_async = True
         self._delete_cluster_async(cluster_name=cluster_name,
                                    cluster_vdc_href=cluster['vdc_href'])
 
@@ -556,6 +558,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
               f"{template[LocalTemplateKey.CNI_VERSION]}"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         LOGGER.info(f"{msg} ({cluster['vapp_href']})")
+        self.context.is_async = True
         self._upgrade_cluster_async(cluster=cluster, template=template)
 
         return {
@@ -714,6 +717,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
               f"'{template_name}' (revision {template_revision}) and " \
               f"adding to cluster '{cluster_name}' ({cluster_id})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+        self.context.is_async = True
         self._create_nodes_async(
             cluster_name=cluster_name,
             cluster_vdc_href=cluster['vdc_href'],
@@ -791,7 +795,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         msg = f"Deleting {len(node_names_list)} node(s) " \
               f"from cluster '{cluster_name}'({cluster_id})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-
+        self.context.is_async = True
         self._delete_nodes_async(
             cluster_name=cluster_name,
             vapp_href=cluster['vapp_href'],
@@ -810,15 +814,15 @@ class VcdBroker(abstract_broker.AbstractBroker):
                               network_name, num_cpu, mb_memory,
                               storage_profile_name, ssh_key, enable_nfs,
                               rollback):
-        org = vcd_utils.get_org(self.context.client, org_name=org_name)
-        vdc = vcd_utils.get_vdc(self.context.client,
-                                vdc_name=ovdc_name,
-                                org=org)
-
-        LOGGER.debug(f"About to create cluster '{cluster_name}' on {ovdc_name}"
-                     f" with {num_workers} worker nodes, "
-                     f"storage profile={storage_profile_name}")
         try:
+            org = vcd_utils.get_org(self.context.client, org_name=org_name)
+            vdc = vcd_utils.get_vdc(self.context.client,
+                                    vdc_name=ovdc_name,
+                                    org=org)
+
+            LOGGER.debug(f"About to create cluster '{cluster_name}' on "
+                         f"{ovdc_name} with {num_workers} worker nodes, "
+                         f"storage profile={storage_profile_name}")
             msg = f"Creating cluster vApp {cluster_name} ({cluster_id})"
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             try:
@@ -971,6 +975,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
                          exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
+        finally:
+            self.context.end()
 
     # all parameters following '*args' are required and keyword-only
     @utils.run_async
@@ -980,23 +986,25 @@ class VcdBroker(abstract_broker.AbstractBroker):
                             num_workers, network_name, num_cpu, mb_memory,
                             storage_profile_name, ssh_key, enable_nfs,
                             rollback):
-        org = vcd_utils.get_org(self.context.client)
-        vdc = vcd_vdc.VDC(self.context.client, href=cluster_vdc_href)
-        vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
-        template = get_template(name=template_name, revision=template_revision)
-        server_config = utils.get_server_runtime_config()
-        catalog_name = server_config['broker']['catalog']
-
-        node_type = NodeType.WORKER
-        if enable_nfs:
-            node_type = NodeType.NFS
-
-        msg = f"Creating {num_workers} node(s) from template " \
-              f"'{template_name}' (revision {template_revision}) and " \
-              f"adding to cluster '{cluster_name}' ({cluster_id})"
-        LOGGER.debug(msg)
-        self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         try:
+            org = vcd_utils.get_org(self.context.client)
+            vdc = vcd_vdc.VDC(self.context.client, href=cluster_vdc_href)
+            vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
+            template = get_template(name=template_name,
+                                    revision=template_revision)
+            server_config = utils.get_server_runtime_config()
+            catalog_name = server_config['broker']['catalog']
+
+            node_type = NodeType.WORKER
+            if enable_nfs:
+                node_type = NodeType.NFS
+
+            msg = f"Creating {num_workers} node(s) from template " \
+                f"'{template_name}' (revision {template_revision}) and " \
+                f"adding to cluster '{cluster_name}' ({cluster_id})"
+            LOGGER.debug(msg)
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+
             new_nodes = add_nodes(self.context.sysadmin_client,
                                   num_nodes=num_workers,
                                   node_type=node_type,
@@ -1056,6 +1064,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
             LOGGER.error(str(err), exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
+        finally:
+            self.context.end()
 
     # all parameters following '*args' are required and keyword-only
     @utils.run_async
@@ -1095,6 +1105,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
                          exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
+        finally:
+            self.context.end()
 
     # all parameters following '*args' are required and keyword-only
     @utils.run_async
@@ -1110,6 +1122,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
                          exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
+        finally:
+            self.context.end()
 
     # all parameters following '*args' are required and keyword-only
     @utils.run_async
@@ -1249,6 +1263,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
                   f"'{cluster_name}': {err}"
             LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR, error_message=msg)
+        finally:
+            self.context.end()
 
     def _update_task(self, status, message='', error_message=None,
                      stack_trace=''):
