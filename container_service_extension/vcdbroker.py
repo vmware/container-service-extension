@@ -775,7 +775,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 msg = f"Error while creating vApp: {err}"
                 LOGGER.debug(str(err))
                 raise e.ClusterOperationError(msg)
-            self.context.client.get_task_monitor().wait_for_status(vapp_resource.Tasks.vcd_task.Task[0]) # noqa: E501
+            self.context.client.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0]) # noqa: E501
 
             template = get_template(template_name, template_revision)
 
