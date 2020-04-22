@@ -32,6 +32,8 @@ from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_INFO_LOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PksCache
+import container_service_extension.pyvcloud_utils as vcd_utils
+import container_service_extension.request_context as ctx
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import ServerAction
@@ -411,75 +413,69 @@ class Service(object, metaclass=Singleton):
         if msg_update_callback:
             msg_update_callback.general_no_color(msg)
 
-        log_filename = None
-        log_wire = utils.str_to_bool(self.config['service'].get('log_wire'))
-        if log_wire:
-            log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
-
         org_name = self.config['broker']['org']
         catalog_name = self.config['broker']['catalog']
-        client = None
+        sysadmin_client = None
+        request_context = None
         try:
-            client = Client(self.config['vcd']['host'],
-                            api_version=self.config['vcd']['api_version'],
-                            verify_ssl_certs=self.config['vcd']['verify'],
-                            log_file=log_filename,
-                            log_requests=log_wire,
-                            log_headers=log_wire,
-                            log_bodies=log_wire)
+            sysadmin_client = vcd_utils.get_sys_admin_client()
 
-            credentials = BasicLoginCredentials(self.config['vcd']['username'],
-                                                SYSTEM_ORG_NAME,
-                                                self.config['vcd']['password'])
-            client.set_credentials(credentials)
+            # extra work to initialize a sysadmin request context here because
+            # on server start we don't have an auth token to use
+            token = sysadmin_client.get_access_token()
+            is_jwt = True
+            if not token:
+                token = sysadmin_client.get_xvcloud_authorization_token()
+                is_jwt = False
+            request_context = ctx.RequestContext(token, is_jwt=is_jwt)
+            cpm = ComputePolicyManager(request_context)
 
-            try:
-                cpm = ComputePolicyManager(client)
-                for template in self.config['broker']['templates']:
-                    policy_name = template[LocalTemplateKey.COMPUTE_POLICY]
-                    catalog_item_name = template[LocalTemplateKey.CATALOG_ITEM_NAME] # noqa: E501
-                    # if policy name is not empty, stamp it on the template
-                    if policy_name:
-                        try:
-                            policy = cpm.get_policy(policy_name=policy_name)
-                        except EntityNotFoundException:
-                            # create the policy if it does not exist
-                            msg = f"Creating missing compute policy " \
-                                  f"'{policy_name}'."
-                            if msg_update_callback:
-                                msg_update_callback.info(msg)
-                            LOGGER.debug(msg)
-                            policy = cpm.add_policy(policy_name=policy_name)
-
-                        msg = f"Assigning compute policy '{policy_name}' to " \
-                              f"template '{catalog_item_name}'."
+            for template in self.config['broker']['templates']:
+                policy_name = template[LocalTemplateKey.COMPUTE_POLICY]
+                catalog_item_name = template[LocalTemplateKey.CATALOG_ITEM_NAME] # noqa: E501
+                # if policy name is not empty, stamp it on the template
+                if policy_name:
+                    try:
+                        policy = cpm.get_policy(policy_name=policy_name)
+                    except EntityNotFoundException:
+                        # create the policy if it does not exist
+                        msg = f"Creating compute policy '{policy_name}'."
                         if msg_update_callback:
-                            msg_update_callback.general(msg)
+                            msg_update_callback.info(msg)
                         LOGGER.debug(msg)
-                        cpm.assign_compute_policy_to_vapp_template_vms(
-                            compute_policy_href=policy['href'],
-                            org_name=org_name,
-                            catalog_name=catalog_name,
-                            catalog_item_name=catalog_item_name)
-                    else:
-                        # empty policy name means we should remove policy from
-                        # template
-                        msg = f"Removing compute policy from template " \
-                              f"'{catalog_item_name}'."
-                        if msg_update_callback:
-                            msg_update_callback.general(msg)
-                        LOGGER.debug(msg)
+                        policy = cpm.add_policy(policy_name=policy_name)
 
-                        cpm.remove_all_compute_policies_from_vapp_template_vms(
-                            org_name=org_name,
-                            catalog_name=catalog_name,
-                            catalog_item_name=catalog_item_name)
-            except OperationNotSupportedException:
-                msg = "Compute policy not supported by vCD. Skipping " \
-                    "assigning/removing it to/from templates."
-                if msg_update_callback:
-                    msg_update_callback.info(msg)
-                LOGGER.debug(msg)
+                    msg = f"Assigning compute policy '{policy_name}' to " \
+                          f"template '{catalog_item_name}'."
+                    if msg_update_callback:
+                        msg_update_callback.general(msg)
+                    LOGGER.debug(msg)
+                    cpm.assign_compute_policy_to_vapp_template_vms(
+                        compute_policy_href=policy['href'],
+                        org_name=org_name,
+                        catalog_name=catalog_name,
+                        catalog_item_name=catalog_item_name)
+                else:
+                    # empty policy name means we should remove policy from
+                    # template
+                    msg = f"Removing compute policy from template " \
+                          f"'{catalog_item_name}'."
+                    if msg_update_callback:
+                        msg_update_callback.general(msg)
+                    LOGGER.debug(msg)
+
+                    cpm.remove_all_compute_policies_from_vapp_template_vms(
+                        org_name=org_name,
+                        catalog_name=catalog_name,
+                        catalog_item_name=catalog_item_name)
+        except OperationNotSupportedException:
+            msg = "Compute policy not supported by vCD. Skipping " \
+                  "assigning/removing it to/from templates."
+            if msg_update_callback:
+                msg_update_callback.info(msg)
+            LOGGER.debug(msg)
         finally:
-            if client:
-                client.logout()
+            if sysadmin_client is not None:
+                sysadmin_client.logout()
+            if request_context is not None:
+                request_context.end()

@@ -230,7 +230,6 @@ def get_pvdc_id_from_pvdc_name(name, vc_name_in_vcd):
     finally:
         if client:
             client.logout()
-    return None
 
 
 def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
