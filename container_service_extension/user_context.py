@@ -93,7 +93,3 @@ class UserContext:
             self._sysadmin_client.logout()
         except Exception:
             pass
-        try:
-            self.client.logout()
-        except Exception:
-            pass
