@@ -166,6 +166,13 @@ class CseOperation(Enum):
     SYSTEM_UPDATE = ('update system status')
     TEMPLATE_LIST = ('list all templates')
 
+    PKS_CLUSTER_CONFIG = ('get config of PKS cluster')
+    PKS_CLUSTER_CREATE = ('create PKS cluster', requests.codes.accepted)
+    PKS_CLUSTER_DELETE = ('delete PKS cluster', requests.codes.accepted)
+    PKS_CLUSTER_INFO = ('get info of PKS cluster')
+    PKS_CLUSTER_LIST = ('list PKS clusters')
+    PKS_CLUSTER_RESIZE = ('resize PKS cluster', requests.codes.accepted)
+
 
 @unique
 class ClusterMetadataKey(str, Enum):
