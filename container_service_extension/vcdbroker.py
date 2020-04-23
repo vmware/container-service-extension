@@ -1293,7 +1293,6 @@ class VcdBroker(abstract_broker.AbstractBroker):
             task_href = self.task_resource.get('href')
 
         org = vcd_utils.get_org(self.context.client)
-        # TODO find difference between this user_href and the user ID
         user_href = org.get_user(self.context.user.name).get('href')
 
         self.task_resource = self.task.update(
