@@ -17,12 +17,12 @@ from container_service_extension.server_constants import LocalTemplateKey
 LOCAL_SCRIPTS_DIR = '.cse_scripts'
 
 
-def get_template_k8s_version(template_name):
+def get_k8s_version_from_template_name(template_name):
     try:
         tokens = template_name.split('_')
         if len(tokens) == 3:
             k8s_info = tokens[1].split('-')
-            if len(k8s_info) == 2 and k8s_info[0] in ('k8', 'esspks'):
+            if len(k8s_info) == 2 and k8s_info[0] in ('k8', 'tkg'):
                 return k8s_info[1]
     except Exception:
         pass
@@ -158,7 +158,7 @@ def save_metadata(client, org_name, catalog_name, catalog_item_name,
 def get_k8s_and_docker_versions(template_name, template_revision='0',
                                 cse_version=None):
     docker_version = '0.0.0'
-    k8s_version = get_template_k8s_version(template_name)
+    k8s_version = get_k8s_version_from_template_name(template_name)
     if 'photon' in template_name:
         docker_version = '17.06.0'
         if template_revision == '1':

@@ -1572,7 +1572,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
 
         # pre-2.6 clusters may not have kubernetes version metadata
         if clusters[vapp_id]['kubernetes_version'] == '':
-            clusters[vapp_id]['kubernetes_version'] = ltm.get_template_k8s_version(clusters[vapp_id]['template_name']) # noqa: E501
+            clusters[vapp_id]['kubernetes_version'] = ltm.get_k8s_version_from_template_name(clusters[vapp_id]['template_name']) # noqa: E501
 
     # api query can fetch only 8 metadata at a time
     # since we have more than 8 metadata, we need to use 2 queries
