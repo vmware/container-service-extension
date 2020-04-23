@@ -12,12 +12,14 @@ from container_service_extension.exceptions import BadRequestError
 from container_service_extension.exceptions import MethodNotAllowedRequestError
 from container_service_extension.exceptions import NotFoundRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-import container_service_extension.request_handlers.cluster_handler as cluster_handler # noqa: E501
+import container_service_extension.request_handlers.native_cluster_handler as native_cluster_handler # noqa: E501
 import container_service_extension.request_handlers.ovdc_handler as ovdc_handler # noqa: E501
+import container_service_extension.request_handlers.pks_cluster_handler as pks_cluster_handler  # noqa: E501
 import container_service_extension.request_handlers.system_handler as system_handler # noqa: E501
-import container_service_extension.request_handlers.template_handler as template_handler # noqa: E501
+import container_service_extension.request_handlers.template_handler as template_handler # noqa: E501 E501
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import PKS_SERVICE_NAME
+from container_service_extension.shared_constants import OperationType
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
@@ -51,20 +53,27 @@ GET /cse/system
 PUT /cse/system
 
 GET /cse/template
+
+GET /pks/clusters?org={org name}&vdc={vdc name}
+POST /pks/clusters
+GET /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
+PUT /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
+DELETE /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
+GET /pks/cluster/{cluster name}/config?org={org name}&vdc={vdc name}
 """ # noqa: E501
 
 OPERATION_TO_HANDLER = {
-    CseOperation.CLUSTER_CONFIG: cluster_handler.cluster_config,
-    CseOperation.CLUSTER_CREATE: cluster_handler.cluster_create,
-    CseOperation.CLUSTER_DELETE: cluster_handler.cluster_delete,
-    CseOperation.CLUSTER_INFO: cluster_handler.cluster_info,
-    CseOperation.CLUSTER_LIST: cluster_handler.cluster_list,
-    CseOperation.CLUSTER_RESIZE: cluster_handler.cluster_resize,
-    CseOperation.CLUSTER_UPGRADE_PLAN: cluster_handler.cluster_upgrade_plan,
-    CseOperation.CLUSTER_UPGRADE: cluster_handler.cluster_upgrade,
-    CseOperation.NODE_CREATE: cluster_handler.node_create,
-    CseOperation.NODE_DELETE: cluster_handler.node_delete,
-    CseOperation.NODE_INFO: cluster_handler.node_info,
+    CseOperation.CLUSTER_CONFIG: native_cluster_handler.cluster_config,
+    CseOperation.CLUSTER_CREATE: native_cluster_handler.cluster_create,
+    CseOperation.CLUSTER_DELETE: native_cluster_handler.cluster_delete,
+    CseOperation.CLUSTER_INFO: native_cluster_handler.cluster_info,
+    CseOperation.CLUSTER_LIST: native_cluster_handler.cluster_list,
+    CseOperation.CLUSTER_RESIZE: native_cluster_handler.cluster_resize,
+    CseOperation.CLUSTER_UPGRADE_PLAN: native_cluster_handler.cluster_upgrade_plan,  # noqa: E501
+    CseOperation.CLUSTER_UPGRADE: native_cluster_handler.cluster_upgrade,
+    CseOperation.NODE_CREATE: native_cluster_handler.node_create,
+    CseOperation.NODE_DELETE: native_cluster_handler.node_delete,
+    CseOperation.NODE_INFO: native_cluster_handler.node_info,
     CseOperation.OVDC_UPDATE: ovdc_handler.ovdc_update,
     CseOperation.OVDC_INFO: ovdc_handler.ovdc_info,
     CseOperation.OVDC_LIST: ovdc_handler.ovdc_list,
@@ -73,6 +82,13 @@ OPERATION_TO_HANDLER = {
     CseOperation.SYSTEM_INFO: system_handler.system_info,
     CseOperation.SYSTEM_UPDATE: system_handler.system_update,
     CseOperation.TEMPLATE_LIST: template_handler.template_list,
+
+    CseOperation.PKS_CLUSTER_CONFIG: pks_cluster_handler.cluster_config,
+    CseOperation.PKS_CLUSTER_CREATE: pks_cluster_handler.cluster_create,
+    CseOperation.PKS_CLUSTER_DELETE: pks_cluster_handler.cluster_delete,
+    CseOperation.PKS_CLUSTER_INFO: pks_cluster_handler.cluster_info,
+    CseOperation.PKS_CLUSTER_LIST: pks_cluster_handler.cluster_list,
+    CseOperation.PKS_CLUSTER_RESIZE: pks_cluster_handler.cluster_resize
 }
 
 _OPERATION_KEY = 'operation'
@@ -153,15 +169,17 @@ def _get_url_data(method, url):
     tokens = url.split('/')
     num_tokens = len(tokens)
 
-    # TODO() - Throw error until PKS Server Side Changes are complete.
-    if num_tokens < 4 or tokens[2] == PKS_SERVICE_NAME:
+    if num_tokens < 4:
         raise NotFoundRequestError()
+
+    if tokens[2] == PKS_SERVICE_NAME:
+        return _get_pks_url_data(method, url)
 
     operation_type = tokens[3].lower()
     if operation_type.endswith('s'):
         operation_type = operation_type[:-1]
 
-    if operation_type == 'cluster':
+    if operation_type == OperationType.CLUSTER:
         if num_tokens == 4:
             if method == RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.CLUSTER_LIST}
@@ -206,7 +224,7 @@ def _get_url_data(method, url):
                         RequestKey.CLUSTER_NAME: tokens[4]
                     }
             raise MethodNotAllowedRequestError()
-    elif operation_type == 'node':
+    elif operation_type == OperationType.NODE:
         if num_tokens == 4:
             if method == RequestMethod.POST:
                 return {_OPERATION_KEY: CseOperation.NODE_CREATE}
@@ -221,7 +239,7 @@ def _get_url_data(method, url):
                 }
             raise MethodNotAllowedRequestError()
 
-    elif operation_type == 'ovdc':
+    elif operation_type == OperationType.OVDC:
         if num_tokens == 4:
             if method == RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.OVDC_LIST}
@@ -251,7 +269,7 @@ def _get_url_data(method, url):
                 }
             raise MethodNotAllowedRequestError()
 
-    elif operation_type == 'system':
+    elif operation_type == OperationType.SYSTEM:
         if num_tokens == 4:
             if method == RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.SYSTEM_INFO}
@@ -259,10 +277,62 @@ def _get_url_data(method, url):
                 return {_OPERATION_KEY: CseOperation.SYSTEM_UPDATE}
             raise MethodNotAllowedRequestError()
 
-    elif operation_type == 'template':
+    elif operation_type == OperationType.TEMPLATE:
         if num_tokens == 4:
             if method == RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.TEMPLATE_LIST}
             raise MethodNotAllowedRequestError()
 
     raise NotFoundRequestError()
+
+
+def _get_pks_url_data(method, url):
+    """Parse url and http method to get desired PKS operation and url data.
+
+    Returns a data dictionary with 'operation' key and also any relevant url
+    data.
+
+    :param RequestMethod method:
+    :param str url:
+
+    :rtype: dict
+    """
+    tokens = url.split('/')
+    num_tokens = len(tokens)
+    operation_type = tokens[3].lower()
+    if operation_type.endswith('s'):
+        operation_type = operation_type[:-1]
+
+    if operation_type == OperationType.CLUSTER:
+        if num_tokens == 4:
+            if method == RequestMethod.GET:
+                return {_OPERATION_KEY: CseOperation.PKS_CLUSTER_LIST}
+            if method == RequestMethod.POST:
+                return {_OPERATION_KEY: CseOperation.PKS_CLUSTER_CREATE}
+            raise MethodNotAllowedRequestError()
+        if num_tokens == 5:
+            if method == RequestMethod.GET:
+                return {
+                    _OPERATION_KEY: CseOperation.PKS_CLUSTER_INFO,
+                    RequestKey.CLUSTER_NAME: tokens[4]
+                }
+            if method == RequestMethod.PUT:
+                return {
+                    _OPERATION_KEY: CseOperation.PKS_CLUSTER_RESIZE,
+                    RequestKey.CLUSTER_NAME: tokens[4]
+                }
+            if method == RequestMethod.DELETE:
+                return {
+                    _OPERATION_KEY: CseOperation.PKS_CLUSTER_DELETE,
+                    RequestKey.CLUSTER_NAME: tokens[4]
+                }
+            raise MethodNotAllowedRequestError()
+        if num_tokens == 6:
+            if method == RequestMethod.GET:
+                if tokens[5] == 'config':
+                    return {
+                        _OPERATION_KEY: CseOperation.PKS_CLUSTER_CONFIG,
+                        RequestKey.CLUSTER_NAME: tokens[4]
+                    }
+            raise MethodNotAllowedRequestError()
+    raise MethodNotAllowedRequestError()

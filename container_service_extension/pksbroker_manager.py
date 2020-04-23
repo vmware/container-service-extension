@@ -20,7 +20,7 @@ def list_clusters(request_data, tenant_auth_token, is_jwt_token):
     for pks_ctx in pks_ctx_list:
         pks_broker = PksBroker(pks_ctx, tenant_auth_token, is_jwt_token)
         # Get all cluster information to get vdc name from compute-profile-name
-        pks_clusters.extend(pks_broker.list_clusters(request_data))
+        pks_clusters.extend(pks_broker.list_clusters(data=request_data))
     return pks_clusters
 
 
