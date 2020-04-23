@@ -14,6 +14,15 @@ RESPONSE_MESSAGE_KEY = "message"
 
 
 @unique
+class OperationType(str, Enum):
+    CLUSTER = 'cluster'
+    NODE = 'node'
+    OVDC = 'ovdc'
+    SYSTEM = 'system'
+    TEMPLATE = 'template'
+
+
+@unique
 class ServerAction(str, Enum):
     DISABLE = 'disable'
     ENABLE = 'enable'
