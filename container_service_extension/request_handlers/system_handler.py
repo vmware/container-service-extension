@@ -37,12 +37,13 @@ def system_update(request_data, request_context: ctx.RequestContext):
     req_utils.validate_payload(request_data, required)
 
     # Telemetry data preparation
-    cse_operation = CseOperation.SYSTEM_UNKNOWN
-    if request_data.get(RequestKey.SERVER_ACTION) == 'enable':
+    cse_operation = None
+    server_action = request_data.get(RequestKey.SERVER_ACTION)
+    if server_action == 'enable':
         cse_operation = CseOperation.SYSTEM_ENABLE
-    elif request_data.get(RequestKey.SERVER_ACTION) == 'disable':
+    elif server_action == 'disable':
         cse_operation = CseOperation.SYSTEM_DISABLE
-    elif request_data.get(RequestKey.SERVER_ACTION) == 'stop':
+    elif server_action == 'stop':
         cse_operation = CseOperation.SYSTEM_STOP
 
     status = OperationStatus.FAILED
