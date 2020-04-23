@@ -157,8 +157,8 @@ def save_metadata(client, org_name, catalog_name, catalog_item_name,
 
 def get_k8s_and_docker_versions(template_name, template_revision='0',
                                 cse_version=None):
-    k8s_version = '0.0.0'
     docker_version = '0.0.0'
+    k8s_version = get_template_k8s_version(template_name)
     if 'photon' in template_name:
         docker_version = '17.06.0'
         if template_revision == '1':
@@ -195,11 +195,5 @@ def get_k8s_and_docker_versions(template_name, template_revision='0',
             k8s_version = '1.15.3'
             if template_revision == '2':
                 k8s_version = '1.15.5'
-        elif '1.16' in template_name:
-            docker_version = '18.09.7'
-            k8s_version = '1.16.6'
-        elif '1.17' in template_name:
-            docker_version = '19.03.5'
-            k8s_version = '1.17.2'
 
     return k8s_version, docker_version
