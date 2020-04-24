@@ -47,6 +47,4 @@ class RequestContext:
 
 @enum.unique
 class CacheKey(str, enum.Enum):
-    TargetOrgName = 'target_org_name'
-    TargetOvdcName = 'target_ovdc_name'
-    TargetClusterName = 'target_cluster_name'
+    pass
