@@ -802,7 +802,15 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
             template_revision = str(metadata_dict.get(ClusterMetadataKey.TEMPLATE_REVISION, '0')) # noqa: E501
 
             if template_name:
-                k8s_version, docker_version = ltm.get_k8s_and_docker_versions(template_name, template_revision=template_revision, cse_version=cse_version) # noqa: E501
+                org_name = config['broker']['org']
+                catalog_name = config['broker']['catalog']
+                k8_templates = ltm.get_all_k8s_local_template_definition(
+                    client=client, catalog_name=catalog_name, org_name=org_name)  # noqa: E501
+                k8s_version, docker_version = '0.0.0', '0.0.0'
+                for k8_template in k8_templates:
+                    if (str(k8_template[LocalTemplateKey.REVISION]), k8_template[LocalTemplateKey.NAME]) == (template_revision, template_name):  # noqa: E501
+                        k8s_version, docker_version = k8_template[LocalTemplateKey.KUBERNETES_VERSION], k8_template[LocalTemplateKey.DOCKER_VERSION]  # noqa: E501
+                        break
                 tokens = template_name.split('_')
                 new_metadata = {
                     ClusterMetadataKey.OS: tokens[0],
