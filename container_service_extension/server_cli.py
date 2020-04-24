@@ -987,7 +987,6 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                 log_filename = None
                 log_wire = str_to_bool(config_dict['service'].get('log_wire'))
                 if log_wire:
-                    console_message_printer
                     log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
 
                 client, _ = _get_clients_from_config(

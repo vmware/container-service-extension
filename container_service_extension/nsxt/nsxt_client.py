@@ -106,14 +106,14 @@ class NSXTClient(object):
 
         self.LOGGER_WIRE.debug(f"Request uri : {(method.value).upper()} {url}")
         if self._log_headers:
-            self.LOGGER_WIRE.debug("Request hedears : "
+            self.LOGGER_WIRE.debug("Request headers : "
                                    f"{response.request.headers}")
         if self._log_body and payload:
             self.LOGGER_WIRE.debug(f"Request body : {response.request.body}")
 
         self.LOGGER_WIRE.debug(f"Response status code: {response.status_code}")
         if self._log_headers:
-            self.LOGGER_WIRE.debug(f"Response hedears : {response.headers}")
+            self.LOGGER_WIRE.debug(f"Response headers : {response.headers}")
         if self._log_body:
             self.LOGGER_WIRE.debug(f"Response body : {response.text}")
 
