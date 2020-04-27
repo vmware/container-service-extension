@@ -64,6 +64,13 @@ def ovdc_update(request_data, tenant_auth_token, is_jwt_token):
             ]
             req_utils.validate_payload(validated_data, required)
 
+            # Check if target ovdc is not already enabled for other non PKS k8 providers # noqa: E501
+            ovdc_metadata = ovdc_utils.get_ovdc_k8s_provider_metadata(ovdc_id=validated_data[RequestKey.OVDC_ID])  # noqa: E501
+            ovdc_k8_provider = ovdc_metadata.get(K8S_PROVIDER_KEY)
+            if ovdc_k8_provider != K8sProvider.NONE and \
+                    ovdc_k8_provider != k8s_provider:
+                raise CseServerError("Ovdc already enabled for different K8 provider")  # noqa: E501
+
             k8s_provider_info = ovdc_utils.construct_k8s_metadata_from_pks_cache(  # noqa: E501
                 ovdc_id=validated_data[RequestKey.OVDC_ID],
                 org_name=validated_data[RequestKey.ORG_NAME],
