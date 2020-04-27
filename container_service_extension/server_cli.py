@@ -1396,7 +1396,7 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
         log_filename = None
         log_wire = str_to_bool(config_dict['service'].get('log_wire'))
         if log_wire:
-            log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
+            log_filename = SERVER_CLI_WIRELOG_FILEPATH
 
         client, cloudapi_client = _get_clients_from_config(
             config_dict, log_filename=log_filename, log_wire=log_wire)
