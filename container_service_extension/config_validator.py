@@ -107,6 +107,8 @@ def get_validated_config(config_file_name,
         **SAMPLE_BROKER_CONFIG
     }
     log_wire = str_to_bool(config['service'].get('log_wire'))
+    if not log_wire:
+        log_wire_file = None
     check_keys_and_value_types(config, sample_config, location='config file',
                                msg_update_callback=msg_update_callback)
     _validate_amqp_config(config['amqp'], msg_update_callback)
@@ -204,8 +206,8 @@ def _validate_amqp_config(amqp_dict, msg_update_callback=NullPrinter()):
 def _validate_vcd_and_vcs_config(vcd_dict,
                                  vcs,
                                  msg_update_callback=NullPrinter(),
-                                 log_wire=False,
-                                 log_file=None):
+                                 log_file=None,
+                                 log_wire=False):
     """Ensure that 'vcd' and vcs' section of config are correct.
 
     Checks that 'vcd' and 'vcs' section of config have correct keys and value
@@ -214,8 +216,8 @@ def _validate_vcd_and_vcs_config(vcd_dict,
     :param dict vcd_dict: 'vcd' section of config file as a dict.
     :param list vcs: 'vcs' section of config file as a list of dicts.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
-    :param bool log_wire: If pyvcloud requests should be logged.
     :param str log_file: log_file for pyvcloud wire log.
+    :param bool log_wire: If pyvcloud requests should be logged.
 
     :raises KeyError: if @vcd_dict or a vc in @vcs has missing or
         extra properties.
