@@ -37,8 +37,10 @@ from container_service_extension.exceptions import AmqpConnectionError
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_CLI_LOGGER
+from container_service_extension.logger import SERVER_CLI_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
+from container_service_extension.logger import SERVER_LOGGER
 from container_service_extension.remote_template_manager import RemoteTemplateManager # noqa: E501
 from container_service_extension.sample_generator import generate_sample_config
 from container_service_extension.server_constants import ClusterMetadataKey
@@ -58,6 +60,7 @@ from container_service_extension.telemetry.telemetry_utils \
     import store_telemetry_settings
 from container_service_extension.utils import check_python_version
 from container_service_extension.utils import ConsoleMessagePrinter
+from container_service_extension.utils import NullPrinter
 from container_service_extension.utils import prompt_text
 from container_service_extension.utils import str_to_bool
 from container_service_extension.vcdbroker import get_all_clusters
@@ -362,7 +365,9 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
             pks_config_file_path=pks_config_file_path,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
-            validate=True)
+            validate=True,
+            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
+            logger_instance=SERVER_CLI_LOGGER)
 
         if check_install:
             try:
@@ -638,8 +643,9 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
                 config_file_path=config_file_path,
                 pks_config_file_path=None,
                 skip_config_decryption=skip_config_decryption,
-                msg_update_callback=None,
-                validate=False)
+                validate=False,
+                log_wire_file=SERVER_DEBUG_WIRELOG_FILEPATH,
+                logger_instance=SERVER_LOGGER)
             record_user_action(cse_operation=CseOperation.SERVICE_RUN,
                                status=OperationStatus.FAILED,
                                telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
@@ -711,7 +717,9 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
-            validate=True)
+            validate=True,
+            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
+            logger_instance=SERVER_CLI_LOGGER)
 
         # Record telemetry details
         cse_params = {
@@ -726,7 +734,6 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
                                    telemetry_settings=config['service']['telemetry'])  # noqa: E501
         log_filename = None
         log_wire = str_to_bool(config['service'].get('log_wire'))
-        console_message_printer.general(f"The value of logwire is {log_wire}")
         if log_wire:
             log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
 
@@ -972,7 +979,9 @@ def list_template(ctx, config_file_path, skip_config_decryption,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
-            validate=False)
+            validate=False,
+            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
+            logger_instance=SERVER_CLI_LOGGER)
 
         # Record telemetry details
         cse_params = {PayloadKey.DISPLAY_OPTION: display_option}
@@ -1033,6 +1042,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
         if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_REMOTE):
             rtm = RemoteTemplateManager(
                 remote_template_cookbook_url=config_dict['broker']['remote_template_cookbook_url'], # noqa: E501
+                logger=SERVER_CLI_LOGGER,
                 msg_update_callback=console_message_printer)
             remote_template_cookbook = rtm.get_remote_template_cookbook()
             remote_template_definitions = remote_template_cookbook['templates']
@@ -1241,7 +1251,9 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
-            validate=False)
+            validate=False,
+            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
+            logger_instance=SERVER_CLI_LOGGER)
 
         tempdir = tempfile.mkdtemp(dir='.')
         plugin_zip = ZipFile(plugin_file_path, 'r')
@@ -1377,7 +1389,9 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
-            validate=False)
+            validate=False,
+            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
+            logger_instance=SERVER_CLI_LOGGER)
 
         log_filename = None
         log_wire = str_to_bool(config_dict['service'].get('log_wire'))
@@ -1437,7 +1451,9 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
-            validate=False)
+            validate=False,
+            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
+            logger_instance=SERVER_CLI_LOGGER)
 
         log_filename = None
         log_wire = str_to_bool(config_dict['service'].get('log_wire'))
@@ -1472,8 +1488,10 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
 def _get_config_dict(config_file_path,
                      pks_config_file_path,
                      skip_config_decryption,
-                     msg_update_callback,
-                     validate=True):
+                     msg_update_callback=NullPrinter(),
+                     validate=True,
+                     log_wire_file=None,
+                     logger_instance=NULL_LOGGER):
     password = None
     if not skip_config_decryption:
         password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
@@ -1486,15 +1504,16 @@ def _get_config_dict(config_file_path,
                 config_file_path, pks_config_file_name=pks_config_file_path,
                 skip_config_decryption=skip_config_decryption,
                 decryption_password=password,
+                log_wire_file=log_wire_file,
+                logger_instance=logger_instance,
                 msg_update_callback=msg_update_callback)
         else:
             if skip_config_decryption:
                 with open(config_file_path) as config_file:
                     config_dict = yaml.safe_load(config_file) or {}
             else:
-                if msg_update_callback:
-                    msg_update_callback.info(
-                        f"Decrypting '{config_file_path}'")
+                msg_update_callback.info(
+                    f"Decrypting '{config_file_path}'")
                 config_dict = yaml.safe_load(
                     get_decrypted_file_contents(
                         config_file_path, password)) or {}
@@ -1551,9 +1570,7 @@ def _get_clients_from_config(config, log_filename, log_wire):
         api_version=client.get_api_version(),
         logger_instance=SERVER_CLI_LOGGER,
         logger_wire=LOGGER,
-        verify_ssl=client._verify_ssl_certs,
-        log_headers=log_wire,
-        log_body=log_wire)
+        verify_ssl=client._verify_ssl_certs)
 
     return (client, cloudapi_client)
 

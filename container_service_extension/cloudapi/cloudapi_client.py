@@ -18,9 +18,7 @@ class CloudApiClient(object):
                  api_version,
                  logger_instance,
                  logger_wire,
-                 verify_ssl=True,
-                 log_headers=False,
-                 log_body=False):
+                 verify_ssl=True):
         if not base_url.endswith('/'):
             base_url += '/'
         self._base_url = base_url
@@ -35,8 +33,6 @@ class CloudApiClient(object):
         self._verify_ssl = verify_ssl
         self.LOGGER = logger_instance
         self.LOGGER_WIRE = logger_wire
-        self._log_headers = log_headers
-        self._log_body = log_body
         self._last_response = None
 
     def get_base_url(self):
@@ -86,6 +82,7 @@ class CloudApiClient(object):
                 url += f"{cloudapi_version}/"
             url += f"{resource_url_relative_path}"
 
+        self.LOGGER_WIRE.debug(f"Request uri : {(method.value).upper()} {url}")
         headers = deepcopy(self._headers)
         if content_type and 'json' not in content_type:
             headers['Content-type'] = content_type
@@ -104,18 +101,13 @@ class CloudApiClient(object):
                 verify=self._verify_ssl)
         self._last_response = response
 
-        self.LOGGER_WIRE.debug(f"Request uri : {(method.value).upper()} {url}")
-        if self._log_headers:
-            self.LOGGER_WIRE.debug("Request headers : "
-                                   f"{response.request.headers}")
-        if self._log_body and payload:
-            self.LOGGER_WIRE.debug(f"Request body : {response.request.body}")
+        self.LOGGER_WIRE.debug("Request headers :"
+                               f" {response.request.headers}")
+        self.LOGGER_WIRE.debug(f"Request body : {response.request.body}")
 
         self.LOGGER_WIRE.debug(f"Response status code: {response.status_code}")
-        if self._log_headers:
-            self.LOGGER_WIRE.debug(f"Response headers : {response.headers}")
-        if self._log_body:
-            self.LOGGER_WIRE.debug(f"Response body : {response.text}")
+        self.LOGGER_WIRE.debug(f"Response headers : {response.headers}")
+        self.LOGGER_WIRE.debug(f"Response body : {response.text}")
 
         response.raise_for_status()
 

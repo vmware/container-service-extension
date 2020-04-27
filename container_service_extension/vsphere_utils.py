@@ -10,6 +10,8 @@ from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
 from vsphere_guest_run.vsphere import VSphere
 
+from container_service_extension.logger import NULL_LOGGER
+from container_service_extension.utils import NullPrinter
 
 cache = LRUCache(maxsize=1024)
 vsphere_list = []
@@ -27,12 +29,12 @@ def populate_vsphere_list(vcs):
     vsphere_list = vcs
 
 
-def get_vsphere(sys_admin_client, vapp, vm_name, logger=None):
+def get_vsphere(sys_admin_client, vapp, vm_name, logger=NULL_LOGGER):
     """Get the VSphere object for a specific VM inside a VApp.
 
     :param pyvcloud.vcd.vapp.VApp vapp: VApp used to get the VM ID.
     :param str vm_name:
-    :param logging.Logger logger: optional logger to log with.
+    :param logging.Logger logger: logger to log with.
 
     :return: VSphere object for a specific VM inside a VApp
 
@@ -66,21 +68,20 @@ def get_vsphere(sys_admin_client, vapp, vm_name, logger=None):
                 break
         cache[vm_id] = cache_item
 
-    if logger:
-        logger.debug(f"VM ID: {vm_id}, Hostname: {cache[vm_id]['hostname']}")
+    logger.debug(f"VM ID: {vm_id}, Hostname: {cache[vm_id]['hostname']}")
 
     return VSphere(cache[vm_id]['hostname'], cache[vm_id]['username'],
                    cache[vm_id]['password'], cache[vm_id]['port'])
 
 
-def vgr_callback(prepend_msg='', logger=None, msg_update_callback=None):
+def vgr_callback(prepend_msg='',
+                 logger=NULL_LOGGER, msg_update_callback=NullPrinter()):
     """Create a callback function to use for vsphere-guest-run functions.
 
     :param str prepend_msg: string to prepend to all messages received from
         vsphere-guest-run function.
     :param logging.Logger logger: logger to use in case of error.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
-        that writes messages onto console.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :return: callback function to print messages received
         from vsphere-guest-run
@@ -89,16 +90,12 @@ def vgr_callback(prepend_msg='', logger=None, msg_update_callback=None):
     """
     def callback(message, exception=None):
         msg = f"{prepend_msg}{message}"
-        if msg_update_callback:
-            msg_update_callback.general_no_color(msg)
-        if logger:
-            logger.info(msg)
+        msg_update_callback.general_no_color(msg)
+        logger.info(msg)
         if exception is not None:
-            if msg_update_callback:
-                msg_update_callback.error(
-                    f"vsphere-guest-run error: {exception}")
-            if logger:
-                logger.error("vsphere-guest-run error", exc_info=True)
+            msg_update_callback.error(
+                f"vsphere-guest-run error: {exception}")
+            logger.error("vsphere-guest-run error", exc_info=True)
     return callback
 
 

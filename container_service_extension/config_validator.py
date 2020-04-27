@@ -17,6 +17,7 @@ from container_service_extension.encryption_engine import \
     get_decrypted_file_contents
 from container_service_extension.exceptions import AmqpConnectionError
 from container_service_extension.logger import NULL_LOGGER
+from container_service_extension.logger import SERVER_NSXT_WIRE_LOGGER
 from container_service_extension.nsxt.dfw_manager import DFWManager
 from container_service_extension.nsxt.ipset_manager import IPSetManager
 from container_service_extension.nsxt.nsxt_client import NSXTClient
@@ -41,13 +42,17 @@ from container_service_extension.uaaclient.uaaclient import UaaClient
 from container_service_extension.utils import check_file_permissions
 from container_service_extension.utils import check_keys_and_value_types
 from container_service_extension.utils import get_duplicate_items_in_list
+from container_service_extension.utils import NullPrinter
+from container_service_extension.utils import str_to_bool
 
 
 def get_validated_config(config_file_name,
                          pks_config_file_name=None,
                          skip_config_decryption=False,
                          decryption_password=None,
-                         msg_update_callback=None):
+                         log_wire_file=None,
+                         logger_instance=NULL_LOGGER,
+                         msg_update_callback=NullPrinter()):
     """Get the config file as a dictionary and check for validity.
 
     Ensures that all properties exist and all values are the expected type.
@@ -59,8 +64,10 @@ def get_validated_config(config_file_name,
     :param str pks_config_file_name: path to PKS config file.
     :param bool skip_config_decryption: do not decrypt the config file.
     :param str decryption_password: password to decrypt the config file.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
-        that writes messages onto console.
+    :param str log_wire_file: log_wire_file to use if needed to wire log
+        pyvcloud requests and responses
+    :param logging.Logger logger: logger to log with.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :return: CSE config
 
@@ -86,28 +93,30 @@ def get_validated_config(config_file_name,
         with open(config_file_name) as config_file:
             config = yaml.safe_load(config_file) or {}
     else:
-        if msg_update_callback:
-            msg_update_callback.info(
-                f"Decrypting '{config_file_name}'")
+        msg_update_callback.info(
+            f"Decrypting '{config_file_name}'")
         config = yaml.safe_load(
             get_decrypted_file_contents(config_file_name,
                                         decryption_password)) or {}
 
-    if msg_update_callback:
-        msg_update_callback.info(
-            f"Validating config file '{config_file_name}'")
+    msg_update_callback.info(
+        f"Validating config file '{config_file_name}'")
     # This allows us to compare top-level config keys and value types
     sample_config = {
         **SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
         **SAMPLE_VCS_CONFIG, **SAMPLE_SERVICE_CONFIG,
         **SAMPLE_BROKER_CONFIG
     }
+    log_wire = str_to_bool(config['service'].get('log_wire'))
     check_keys_and_value_types(config, sample_config, location='config file',
                                msg_update_callback=msg_update_callback)
     _validate_amqp_config(config['amqp'], msg_update_callback)
     _validate_vcd_and_vcs_config(config['vcd'], config['vcs'],
-                                 msg_update_callback)
-    _validate_broker_config(config['broker'], msg_update_callback)
+                                 msg_update_callback,
+                                 log_file=log_wire_file,
+                                 log_wire=log_wire)
+    _validate_broker_config(config['broker'], msg_update_callback,
+                            logger_instance)
     check_keys_and_value_types(config['service'],
                                SAMPLE_SERVICE_CONFIG['service'],
                                location="config file 'service' section",
@@ -118,9 +127,8 @@ def get_validated_config(config_file_name,
                                location="config file 'service->telemetry' "
                                         "section",
                                msg_update_callback=msg_update_callback)
-    if msg_update_callback:
-        msg_update_callback.general(
-            f"Config file '{config_file_name}' is valid")
+    msg_update_callback.general(
+        f"Config file '{config_file_name}' is valid")
     if pks_config_file_name:
         check_file_permissions(pks_config_file_name,
                                msg_update_callback=msg_update_callback)
@@ -128,20 +136,22 @@ def get_validated_config(config_file_name,
             with open(pks_config_file_name) as f:
                 pks_config = yaml.safe_load(f) or {}
         else:
-            if msg_update_callback:
-                msg_update_callback.info(
-                    f"Decrypting '{pks_config_file_name}'")
+            msg_update_callback.info(
+                f"Decrypting '{pks_config_file_name}'")
             pks_config = yaml.safe_load(
                 get_decrypted_file_contents(pks_config_file_name,
                                             decryption_password)) or {}
-        if msg_update_callback:
-            msg_update_callback.info(
-                f"Validating PKS config file '{pks_config_file_name}'")
+        msg_update_callback.info(
+            f"Validating PKS config file '{pks_config_file_name}'")
+        logger_wire = NULL_LOGGER
+        if str_to_bool(config['service'].get('log_wire')):
+            logger_wire = SERVER_NSXT_WIRE_LOGGER
         _validate_pks_config_structure(pks_config, msg_update_callback)
-        _validate_pks_config_data_integrity(pks_config, msg_update_callback)
-        if msg_update_callback:
-            msg_update_callback.general(
-                f"PKS Config file '{pks_config_file_name}' is valid")
+        _validate_pks_config_data_integrity(pks_config,
+                                            msg_update_callback,
+                                            logger_wire=logger_wire)
+        msg_update_callback.general(
+            f"PKS Config file '{pks_config_file_name}' is valid")
         config['pks_config'] = pks_config
     else:
         config['pks_config'] = None
@@ -152,15 +162,14 @@ def get_validated_config(config_file_name,
     return config
 
 
-def _validate_amqp_config(amqp_dict, msg_update_callback=None):
+def _validate_amqp_config(amqp_dict, msg_update_callback=NullPrinter()):
     """Ensure that 'amqp' section of config is correct.
 
     Checks that 'amqp' section of config has correct keys and value types.
     Also ensures that connection to AMQP server is valid.
 
     :param dict amqp_dict: 'amqp' section of config file as a dict.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
-        that writes messages onto console.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :raises KeyError: if @amqp_dict has missing or extra properties.
     :raises TypeError: if the value type for an @amqp_dict property
@@ -183,10 +192,9 @@ def _validate_amqp_config(amqp_dict, msg_update_callback=None):
     connection = None
     try:
         connection = pika.BlockingConnection(parameters)
-        if msg_update_callback:
-            msg_update_callback.general(
-                "Connected to AMQP server "
-                f"({amqp_dict['host']}:{amqp_dict['port']})")
+        msg_update_callback.general(
+            "Connected to AMQP server "
+            f"({amqp_dict['host']}:{amqp_dict['port']})")
     except Exception as err:
         raise AmqpConnectionError("Amqp connection failed:", str(err))
     finally:
@@ -194,7 +202,11 @@ def _validate_amqp_config(amqp_dict, msg_update_callback=None):
             connection.close()
 
 
-def _validate_vcd_and_vcs_config(vcd_dict, vcs, msg_update_callback=None):
+def _validate_vcd_and_vcs_config(vcd_dict,
+                                 vcs,
+                                 msg_update_callback=NullPrinter(),
+                                 log_wire=False,
+                                 log_file=None):
     """Ensure that 'vcd' and vcs' section of config are correct.
 
     Checks that 'vcd' and 'vcs' section of config have correct keys and value
@@ -202,8 +214,9 @@ def _validate_vcd_and_vcs_config(vcd_dict, vcs, msg_update_callback=None):
 
     :param dict vcd_dict: 'vcd' section of config file as a dict.
     :param list vcs: 'vcs' section of config file as a list of dicts.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
-        that writes messages onto console.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param bool log_wire: If pyvcloud requests should be logged.
+    :param str log_file: log_file for pyvcloud wire log.
 
     :raises KeyError: if @vcd_dict or a vc in @vcs has missing or
         extra properties.
@@ -215,25 +228,27 @@ def _validate_vcd_and_vcs_config(vcd_dict, vcs, msg_update_callback=None):
                                location="config file 'vcd' section",
                                msg_update_callback=msg_update_callback)
     if not vcd_dict['verify']:
-        if msg_update_callback:
-            msg_update_callback.general(
-                'InsecureRequestWarning: Unverified HTTPS request is '
-                'being made. Adding certificate verification is '
-                'strongly advised.')
+        msg_update_callback.general(
+            'InsecureRequestWarning: Unverified HTTPS request is '
+            'being made. Adding certificate verification is '
+            'strongly advised.')
         requests.packages.urllib3.disable_warnings()
 
     client = None
     try:
         client = Client(vcd_dict['host'],
                         api_version=vcd_dict['api_version'],
-                        verify_ssl_certs=vcd_dict['verify'])
+                        verify_ssl_certs=vcd_dict['verify'],
+                        log_file=log_file,
+                        log_requests=log_wire,
+                        log_headers=log_wire,
+                        log_bodies=log_wire)
         client.set_credentials(BasicLoginCredentials(vcd_dict['username'],
                                                      SYSTEM_ORG_NAME,
                                                      vcd_dict['password']))
-        if msg_update_callback:
-            msg_update_callback.general(
-                "Connected to vCloud Director "
-                f"({vcd_dict['host']}:{vcd_dict['port']})")
+        msg_update_callback.general(
+            "Connected to vCloud Director "
+            f"({vcd_dict['host']}:{vcd_dict['port']})")
 
         for index, vc in enumerate(vcs, 1):
             check_keys_and_value_types(
@@ -257,25 +272,25 @@ def _validate_vcd_and_vcs_config(vcd_dict, vcs, msg_update_callback=None):
             v = VSphere(vsphere_url.hostname, vc['username'],
                         vc['password'], vsphere_url.port)
             v.connect()
-            if msg_update_callback:
-                msg_update_callback.general(
-                    f"Connected to vCenter Server '{vc['name']}' as "
-                    f"'{vc['username']}' ({vsphere_url.hostname}:"
-                    f"{vsphere_url.port})")
+            msg_update_callback.general(
+                f"Connected to vCenter Server '{vc['name']}' as "
+                f"'{vc['username']}' ({vsphere_url.hostname}:"
+                f"{vsphere_url.port})")
     finally:
         if client is not None:
             client.logout()
 
 
-def _validate_broker_config(broker_dict, msg_update_callback=None):
+def _validate_broker_config(broker_dict,
+                            msg_update_callback=NullPrinter(),
+                            logger_instance=NULL_LOGGER):
     """Ensure that 'broker' section of config is correct.
 
     Checks that 'broker' section of config has correct keys and value
     types. Also checks that 'default_broker' property is a valid template.
 
     :param dict broker_dict: 'broker' section of config file as a dict.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
-        that writes messages onto console.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :raises KeyError: if @broker_dict has missing or extra properties.
     :raises TypeError: if the value type for a @broker_dict property is
@@ -296,14 +311,16 @@ def _validate_broker_config(broker_dict, msg_update_callback=None):
                          f"'{broker_dict['ip_allocation_mode']}' when it "
                          f"should be either 'dhcp' or 'pool'")
 
-    rtm = RemoteTemplateManager(remote_template_cookbook_url=broker_dict['remote_template_cookbook_url']) # noqa: E501
+    rtm = RemoteTemplateManager(remote_template_cookbook_url=broker_dict['remote_template_cookbook_url'], # noqa: E501
+                                logger=logger_instance)
     remote_template_cookbook = rtm.get_remote_template_cookbook()
 
     if not remote_template_cookbook:
         raise Exception("Remote template cookbook is invalid.")
 
 
-def _validate_pks_config_structure(pks_config, msg_update_callback=None):
+def _validate_pks_config_structure(pks_config,
+                                   msg_update_callback=NullPrinter()):
     sample_config = {
         **SAMPLE_PKS_SERVERS_SECTION, **SAMPLE_PKS_ACCOUNTS_SECTION,
         **SAMPLE_PKS_ORGS_SECTION, **SAMPLE_PKS_PVDCS_SECTION,
@@ -359,7 +376,9 @@ def _validate_pks_config_structure(pks_config, msg_update_callback=None):
             msg_update_callback=msg_update_callback)
 
 
-def _validate_pks_config_data_integrity(pks_config, msg_update_callback=None):
+def _validate_pks_config_data_integrity(pks_config,
+                                        msg_update_callback=NullPrinter(),
+                                        logger_wire=NULL_LOGGER):
     all_pks_servers = \
         [entry['name'] for entry in pks_config[PKS_SERVERS_SECTION_KEY]]
     all_pks_accounts = \
@@ -448,7 +467,7 @@ def _validate_pks_config_data_integrity(pks_config, msg_update_callback=None):
         pks_configuration.token = token
         client = ApiClientV1(configuration=pks_configuration)
 
-        if client and msg_update_callback:
+        if client:
             msg_update_callback.general(
                 "Connected to PKS server ("
                 f"{pks_server.get('name')} : {pks_server.get('host')})")
@@ -463,6 +482,7 @@ def _validate_pks_config_data_integrity(pks_config, msg_update_callback=None):
                 f"{PKS_NSXT_SERVERS_SECTION_KEY}")
 
         # Create a NSX-T client and verify connection
+        # server
         nsxt_client = NSXTClient(
             host=nsxt_server.get('host'),
             username=nsxt_server.get('username'),
@@ -477,9 +497,8 @@ def _validate_pks_config_data_integrity(pks_config, msg_update_callback=None):
                 "Unable to connect to NSX-T server : "
                 f"{nsxt_server.get('name')} ({nsxt_server.get('host')})")
 
-        if msg_update_callback:
-            msg_update_callback.general(
-                f"Connected to NSX-T server ({nsxt_server.get('host')})")
+        msg_update_callback.general(
+            f"Connected to NSX-T server ({nsxt_server.get('host')})")
 
         ipset_manager = IPSetManager(nsxt_client)
         if nsxt_server.get('nodes_ip_block_ids'):
