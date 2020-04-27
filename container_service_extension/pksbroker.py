@@ -16,7 +16,7 @@ from container_service_extension.exceptions import PksConnectionError
 from container_service_extension.exceptions import PksDuplicateClusterError
 from container_service_extension.exceptions import PksServerError
 from container_service_extension.logger import NULL_LOGGER
-from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.logger import SERVER_LOGGER
 from container_service_extension.logger import SERVER_NSXT_WIRE_LOGGER
 from container_service_extension.logger import SERVER_PKS_WIRE_LOGGER
 from container_service_extension.nsxt.cluster_network_isolater import \
@@ -122,14 +122,12 @@ class PksBroker(AbstractBroker):
                 host=self.nsxt_server.get('host'),
                 username=self.nsxt_server.get('username'),
                 password=self.nsxt_server.get('password'),
-                logger_instance=LOGGER,
+                logger_instance=SERVER_LOGGER,
                 logger_wire=nsxt_wire_logger,
                 http_proxy=self.nsxt_server.get('proxy'),
                 https_proxy=self.nsxt_server.get('proxy'),
-                verify_ssl=self.nsxt_server.get('verify'),
-                log_headers=True,
-                log_body=True)
-        # TODO: Add support in pyvcloud to send metadata values with their
+                verify_ssl=self.nsxt_server.get('verify'))
+        # TODO() Add support in pyvcloud to send metadata values with their
         # types intact.
         verify_ssl = pks_ctx.get('verify')
         self.verify = True
@@ -198,7 +196,7 @@ class PksBroker(AbstractBroker):
         try:
             pks_plans = plan_api.list_plans()
         except ApiException as err:
-            LOGGER.debug(f"Listing PKS plans failed with error:\n {err}")
+            SERVER_LOGGER.debug(f"Listing PKS plans failed with error:\n {err}")
             raise PksServerError(err.status, err.body)
 
         result = []
@@ -231,12 +229,10 @@ class PksBroker(AbstractBroker):
         try:
             cluster_api = ClusterApi(api_client=self.client)
 
-            LOGGER.debug(f"Sending request to PKS: {self.pks_host_uri} "
-                         f"to list all clusters")
             pks_clusters = cluster_api.list_clusters()
 
-            LOGGER.debug(f"Received response from PKS: {self.pks_host_uri} "
-                         f"on the list of clusters: {pks_clusters}")
+            SERVER_LOGGER.debug(f"Received response from PKS: {self.pks_host_uri} "
+                                f"on the list of clusters: {pks_clusters}")
 
             for pks_cluster in pks_clusters:
                 cluster_info = pks_cluster.to_dict()
@@ -248,7 +244,7 @@ class PksBroker(AbstractBroker):
                 self.update_cluster_with_vcd_info(cluster_info)
                 result.append(cluster_info)
         except ApiException as err:
-            LOGGER.debug(f"Listing PKS clusters failed with error:\n {err}")
+            SERVER_LOGGER.debug(f"Listing PKS clusters failed with error:\n {err}")
             raise PksServerError(err.status, err.body)
 
         self.pks_wire_logger.debug(f"Received response from PKS: {self.pks_host_uri} on the" # noqa: E501
@@ -339,17 +335,12 @@ class PksBroker(AbstractBroker):
         self.pks_wire_logger.debug(f"Sending request to PKS: {self.pks_host_uri} to create " # noqa: E501
                                      f"cluster of name: {cluster_name}")
         try:
-            LOGGER.debug(
-                f"Sending request to PKS: {self.pks_host_uri} to create "
-                f"cluster of name: {cluster_name}")
-
             cluster = cluster_api.add_cluster(cluster_request)
-
-            LOGGER.debug(
+            SERVER_LOGGER.debug(
                 f"PKS: {self.pks_host_uri} accepted the request to create"
                 f" cluster: {cluster_name}")
         except ApiException as err:
-            LOGGER.debug(f"Creating cluster {cluster_name} in PKS failed with "
+            SERVER_LOGGER.debug(f"Creating cluster {cluster_name} in PKS failed with "
                          f"error:\n {err}")
             raise PksServerError(err.status, err.body)
 
@@ -398,7 +389,7 @@ class PksBroker(AbstractBroker):
             for cluster_info in cluster_info_list:
                 if cluster_info['name'] == cluster_name:
                     filtered_cluster_info_list.append(cluster_info)
-            LOGGER.debug(
+            SERVER_LOGGER.debug(
                 f"Filtered list of clusters:{filtered_cluster_info_list}")
             if len(filtered_cluster_info_list) > 1:
                 raise PksDuplicateClusterError(
@@ -483,16 +474,12 @@ class PksBroker(AbstractBroker):
                                    f" the cluster with name:"
                                    f" {qualified_cluster_name}")
         try:
-            LOGGER.debug(
-                f"Sending request to PKS: {self.pks_host_uri} to delete "
-                f"the cluster with name: {qualified_cluster_name}")
             cluster_api.delete_cluster(cluster_name=qualified_cluster_name)
-
-            LOGGER.debug(
+            SERVER_LOGGER.debug(
                 f"PKS: {self.pks_host_uri} accepted the request to delete"
                 f" the cluster: {qualified_cluster_name}")
         except ApiException as err:
-            LOGGER.debug(f"Deleting cluster {qualified_cluster_name} failed"
+            SERVER_LOGGER.debug(f"Deleting cluster {qualified_cluster_name} failed"
                          f" with error:\n {err}")
             raise PksServerError(err.status, err.body)
         self.pks_wire_logger.debug(f"PKS: {self.pks_host_uri} accepted"
@@ -502,8 +489,8 @@ class PksBroker(AbstractBroker):
         result['task_status'] = 'in progress'
 
         # remove cluster network isolation
-        LOGGER.debug("Removing network isolation of cluster "
-                     f"{qualified_cluster_name}.")
+        SERVER_LOGGER.debug("Removing network isolation of cluster "
+                            f"{qualified_cluster_name}.")
         try:
             cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client)
             cluster_network_isolater.remove_cluster_isolation(
@@ -512,9 +499,9 @@ class PksBroker(AbstractBroker):
             # NSX-T oprations are idempotent so they should not cause erros
             # if say NSGroup is missing. But for any other exception, simply
             # catch them and ignore.
-            LOGGER.debug(f"Error {err} occured while deleting cluster "
-                         "isolation rules for cluster "
-                         f"{qualified_cluster_name}")
+            SERVER_LOGGER.debug(f"Error {err} occured while deleting cluster "
+                                "isolation rules for cluster "
+                                f"{qualified_cluster_name}")
 
         return result
 
@@ -558,8 +545,8 @@ class PksBroker(AbstractBroker):
             cluster_api.update_cluster(qualified_cluster_name,
                                        body=resize_params)
         except ApiException as err:
-            LOGGER.debug(f"Resizing cluster {qualified_cluster_name} failed"
-                         f" with error:\n {err}")
+            SERVER_LOGGER.debug(f"Resizing cluster {qualified_cluster_name} failed"
+                                f" with error:\n {err}")
             raise PksServerError(err.status, err.body)
         self.pks_wire_logger.debug(f"PKS: {self.pks_host_uri} accepted the"
                                    f" request to resize the cluster: "
@@ -586,7 +573,7 @@ class PksBroker(AbstractBroker):
             raise ValueError(
                 f"Invalid cluster_id for cluster : '{cluster_name}'")
 
-        LOGGER.debug(f"Isolating network of cluster {qualified_cluster_name}.")
+        SERVER_LOGGER.debug(f"Isolating network of cluster {qualified_cluster_name}.")
         try:
             cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client)
             cluster_network_isolater.isolate_cluster(qualified_cluster_name,
@@ -646,8 +633,8 @@ class PksBroker(AbstractBroker):
         try:
             profile_api.add_compute_profile(body=cp_request)
         except ApiException as err:
-            LOGGER.debug(f"Creating compute-profile {cp_name} in PKS failed "
-                         f"with error:\n {err}")
+            SERVER_LOGGER.debug(f"Creating compute-profile {cp_name} in PKS failed "
+                                f"with error:\n {err}")
             raise PksServerError(err.status, err.body)
 
         self.pks_wire_logger.debug(f"PKS: {self.pks_host_uri} created the"
@@ -673,16 +660,14 @@ class PksBroker(AbstractBroker):
                                    f" compute profile: {cp_name}")
 
         try:
-            LOGGER.debug(f"Sending request to PKS:{self.pks_host_uri} to get "
-                         f"the compute profile: {cp_name}")
             compute_profile = \
                 profile_api.get_compute_profile(profile_name=cp_name)
-            LOGGER.debug(f"Received response from PKS: {self.pks_host_uri} on "
-                         f"compute-profile: {cp_name} with details: "
-                         f"{compute_profile.to_dict()}")
+            SERVER_LOGGER.debug(f"Received response from PKS: {self.pks_host_uri} on "
+                                f"compute-profile: {cp_name} with details: "
+                                f"{compute_profile.to_dict()}")
         except ApiException as err:
-            LOGGER.debug(f"Creating compute-profile {cp_name} in PKS failed "
-                         f"with error:\n {err}")
+            SERVER_LOGGER.debug(f"Creating compute-profile {cp_name} in PKS failed "
+                                f"with error:\n {err}")
             raise PksServerError(err.status, err.body)
 
         self.pks_wire_logger.debug(f"Received response from"
@@ -711,8 +696,8 @@ class PksBroker(AbstractBroker):
         try:
             cp_list = profile_api.list_compute_profiles()
         except ApiException as err:
-            LOGGER.debug(f"Listing compute-profiles in PKS failed "
-                         f"with error:\n {err}")
+            SERVER_LOGGER.debug(f"Listing compute-profiles in PKS failed "
+                                f"with error:\n {err}")
             raise PksServerError(err.status, err.body)
 
         list_of_cp_dicts = [cp.to_dict() for cp in cp_list]
@@ -743,8 +728,8 @@ class PksBroker(AbstractBroker):
         try:
             profile_api.delete_compute_profile(profile_name=cp_name)
         except ApiException as err:
-            LOGGER.debug(f"Deleting compute-profile {cp_name} in PKS failed "
-                         f"with error:\n {err}")
+            SERVER_LOGGER.debug(f"Deleting compute-profile {cp_name} in PKS failed "
+                                f"with error:\n {err}")
             raise PksServerError(err.status, err.body)
 
         self.pks_wire_logger.debug(f"Received response from PKS:"
@@ -874,8 +859,8 @@ class PksBroker(AbstractBroker):
 
         compute_profile_name = cluster_info.get('compute_profile_name')
         if compute_profile_name is None:
-            LOGGER.debug(f"compute-profile-name of {cluster_info.get('name')}"
-                         f" is not found")
+            SERVER_LOGGER.debug("compute-profile-name of"
+                                f" {cluster_info.get('name')} is not found")
             return False
         vdc_id = self._extract_vdc_id_from_pks_compute_profile_name(
             compute_profile_name)
@@ -898,8 +883,8 @@ class PksBroker(AbstractBroker):
         # Else False (this also includes missing compute profile name)
         compute_profile_name = cluster_info.get('compute_profile_name')
         if compute_profile_name is None:
-            LOGGER.debug(f"compute-profile-name of {cluster_info.get('name')}"
-                         f" is not found")
+            SERVER_LOGGER.debug("compute-profile-name of"
+                                f" {cluster_info.get('name')} is not found")
             return False
         vdc_of_cluster = self._extract_vdc_name_from_pks_compute_profile_name(
             compute_profile_name)

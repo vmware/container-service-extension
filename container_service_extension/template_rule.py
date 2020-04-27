@@ -2,7 +2,9 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.server_constants import LocalTemplateKey
+from container_service_extension.utils import NullPrinter
 
 
 class TemplateRule:
@@ -19,8 +21,8 @@ class TemplateRule:
         * memory
     """
 
-    def __init__(self, name, target, action, logger=None,
-                 msg_update_callback=None):
+    def __init__(self, name, target, action, logger=NULL_LOGGER,
+                 msg_update_callback=NullPrinter()):
         """Initialize TemplateRule object.
 
         :param str name: name of the rule.
@@ -28,9 +30,8 @@ class TemplateRule:
             'revision' should be present in the dictionary.
         :param dict action: attributes of the target template to update,
             accepted keys are 'compute_policy', 'cpu' and 'memory'.
-        :param logging.Logger logger: optional logger to log with.
-        :param utils.ConsoleMessagePrinter msg_update_callback: Callback
-            object that writes messages onto console.
+        :param logging.Logger logger: logger to log with.
+        :param utils.ConsoleMessagePrinter msg_update_callback: Callback.
         """
         self.name = name
         self.target = target
@@ -48,52 +49,40 @@ class TemplateRule:
             target_revision = self.target.get('revision')
         else:
             msg = f"Rule : {self.name}'s target is not defined."
-            if self.logger:
-                self.logger.warning(msg)
-            if self.msg_update_callback:
-                self.msg_update_callback.error(msg)
+            self.logger.warning(msg)
+            self.msg_update_callback.error(msg)
             return False
 
         if not target_name:
             msg = f"Rule : {self.name}'s target name is not defined."
-            if self.logger:
-                self.logger.warning(msg)
-            if self.msg_update_callback:
-                self.msg_update_callback.error(msg)
+            self.logger.warning(msg)
+            self.msg_update_callback.error(msg)
             return False
 
         if not target_revision:
             msg = f"Rule : {self.name}'s target revision is not defined."
-            if self.logger:
-                self.logger.warning(msg)
-            if self.msg_update_callback:
-                self.msg_update_callback.error(msg)
+            self.logger.warning(msg)
+            self.msg_update_callback.error(msg)
             return False
 
         if target_name not in template_table:
             msg = f"Rule : {self.name}'s target template : {target_name} is " \
                   "not a known k8s template."
-            if self.logger:
-                self.logger.warning(msg)
-            if self.msg_update_callback:
-                self.msg_update_callback.error(msg)
+            self.logger.warning(msg)
+            self.msg_update_callback.error(msg)
             return False
 
         if str(target_revision) not in template_table[target_name]:
             msg = f"Rule : {self.name}'s target template : {target_name} at " \
                   f"revision : {target_revision} is not a known k8s template."
-            if self.logger:
-                self.logger.warning(msg)
-            if self.msg_update_callback:
-                self.msg_update_callback.error(msg)
+            self.logger.warning(msg)
+            self.msg_update_callback.error(msg)
             return False
 
         if not self.action:
             msg = f"Rule : {self.name} has no action"
-            if self.logger:
-                self.logger.warning(msg)
-            if self.msg_update_callback:
-                self.msg_update_callback.error(msg)
+            self.logger.warning(msg)
+            self.msg_update_callback.error(msg)
             return False
 
         all_actions = set(self.action.keys())
@@ -107,10 +96,8 @@ class TemplateRule:
         if invalid_actions:
             msg = f"Rule : {self.name}'s specifies invalid action(s) : " \
                   f"{invalid_actions}"
-            if self.logger:
-                self.logger.warning(msg)
-            if self.msg_update_callback:
-                self.msg_update_callback.error(msg)
+            self.logger.warning(msg)
+            self.msg_update_callback.error(msg)
             # the rule is still valid, so don't fail the validation.
 
         return True

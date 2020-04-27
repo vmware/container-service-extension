@@ -66,6 +66,18 @@ CLIENT_WIRE_LOGGER_NAME = 'container_service_extension.client.wire'
 CLIENT_WIRE_LOGGER_FILEPATH = f"{LOGS_DIR_NAME}/cse-client-wire_{_TIMESTAMP}.log" # noqa: E501
 CLIENT_WIRE_LOGGER = logging.getLogger(CLIENT_WIRE_LOGGER_NAME)
 
+# cse server cli logger and config
+# cse cli logs to:
+# ~/.cse-logs/cse-server-cli.log
+# cse server cli wire logs are written to:
+# ~/.cse-logs/cse-server-cli-wire.log
+SERVER_ClI_LOGGER_NAME = 'container_service_extension.server-cli'
+SERVER_CLI_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-server-cli.log"
+SERVER_CLI_LOGGER = logging.getLogger(SERVER_ClI_LOGGER_NAME)
+
+# logfile for pyvcloud
+SERVER_CLI_WIRELOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-server-cli-wire.log"
+
 # cse server logger and config
 # cse server logs info level and debug level logs to:
 # ~/.cse-logs/cse-server-info.log
@@ -79,10 +91,6 @@ CLIENT_WIRE_LOGGER = logging.getLogger(CLIENT_WIRE_LOGGER_NAME)
 # cse - cloudapi wire logs are logged to:
 # ~/.cse-logs/cloudapi-wire.log
 # .log files are always the most current, with .log.9 being the oldest
-SERVER_ClI_LOGGER_NAME = 'container_service_extension.server-cli'
-SERVER_CLI_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-server-cli.log"
-SERVER_CLI_LOGGER = logging.getLogger(SERVER_ClI_LOGGER_NAME)
-
 SERVER_LOGGER_NAME = 'container_service_extension.server'
 SERVER_INFO_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-server-info.log"
 SERVER_DEBUG_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-server-debug.log"

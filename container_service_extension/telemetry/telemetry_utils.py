@@ -8,11 +8,13 @@ from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 import requests
 
+from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.server_constants import CSE_SERVICE_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.telemetry.constants import COLLECTOR_ID
 from container_service_extension.telemetry.constants import VAC_URL
+from container_service_extension.utils import NullPrinter
 
 
 CEIP_HEADER_NAME = "x-vmware-vcloud-ceip-id"
@@ -41,7 +43,7 @@ def uuid_hash(uuid):
     return m.hexdigest()
 
 
-def get_vcd_ceip_id(vcd_host, verify_ssl=True, logger_instance=None):
+def get_vcd_ceip_id(vcd_host, verify_ssl=True, logger_instance=NULL_LOGGER):
     """."""
     response = None
     try:
@@ -51,15 +53,14 @@ def get_vcd_ceip_id(vcd_host, verify_ssl=True, logger_instance=None):
         response = requests.get(uri, verify=verify_ssl)
         return response.headers.get(CEIP_HEADER_NAME)
     except Exception as err:
-        if logger_instance:
-            logger_instance.error(f"Unable to get vCD CEIP id : {str(err)}")
+        logger_instance.error(f"Unable to get vCD CEIP id : {str(err)}")
     finally:
         if response:
             response.close()
 
 
-def get_telemetry_instance_id(vcd, logger_instance=None,
-                              msg_update_callback=None):
+def get_telemetry_instance_id(vcd, logger_instance=NULL_LOGGER,
+                              msg_update_callback=NullPrinter()):
     """Get CSE extension id which is used as instance id.
 
     Any exception is logged as error. No exception is leaked out
@@ -68,8 +69,7 @@ def get_telemetry_instance_id(vcd, logger_instance=None,
     :param dict vcd: 'vcd' section of config file as a dict.
     :param logging.logger logger_instance: logger instance to log any error
     in retrieving CSE extension id.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
-    that writes messages onto console.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :return instance id to use for sending data to Vmware telemetry server
 
@@ -86,15 +86,12 @@ def get_telemetry_instance_id(vcd, logger_instance=None,
         ext = APIExtension(client)
         cse_info = ext.get_extension_info(CSE_SERVICE_NAME,
                                           namespace=CSE_SERVICE_NAMESPACE)
-        if logger_instance:
-            logger_instance.info("Retrieved telemetry instance id")
+        logger_instance.info("Retrieved telemetry instance id")
         return cse_info.get('id')
     except Exception as err:
         msg = f"Cannot retrieve telemetry instance id:{err}"
-        if msg_update_callback:
-            msg_update_callback.general(msg)
-        if logger_instance:
-            logger_instance.error(msg)
+        msg_update_callback.general(msg)
+        logger_instance.error(msg)
     finally:
         if client is not None:
             client.logout()

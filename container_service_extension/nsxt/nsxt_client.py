@@ -23,9 +23,7 @@ class NSXTClient(object):
                  logger_wire,
                  http_proxy=None,
                  https_proxy=None,
-                 verify_ssl=True,
-                 log_headers=False,
-                 log_body=False):
+                 verify_ssl=True):
         """Initialize a NSXTClient object.
 
         :param str host: fully qualified domain name of the NSX-T server.
@@ -42,10 +40,6 @@ class NSXTClient(object):
             the.NSX_T server. e.g. proxy.example.com:443
         :param bool verify_ssl: if True, verify SSL certificates of remote
             host, else ignore verification.
-        :param bool log_headers: if True, log REST request and response headers
-            else don't.
-        :param bool log_body: if True, log REST request and response bodies
-            else don't.
         """
         self._base_url = f"https://{host}/api/v1/"
         self._auth = HTTPBasicAuth(username, password)
@@ -57,8 +51,6 @@ class NSXTClient(object):
         self._verify_ssl = verify_ssl
         self.LOGGER = logger_instance
         self.LOGGER_WIRE = logger_wire
-        self._log_headers = log_headers
-        self._log_body = log_body
 
     def test_connectivity(self):
         """Test connectivity to the NSX-T server.
@@ -96,6 +88,7 @@ class NSXTClient(object):
         """
         url = self._base_url + resource_url_fragment
 
+        self.LOGGER_WIRE.debug(f"Request uri : {(method.value).upper()} {url}")
         response = requests.request(
             method.value,
             url,
@@ -104,18 +97,13 @@ class NSXTClient(object):
             proxies=self._proxies,
             verify=self._verify_ssl)
 
-        self.LOGGER_WIRE.debug(f"Request uri : {(method.value).upper()} {url}")
-        if self._log_headers:
-            self.LOGGER_WIRE.debug("Request headers : "
-                                   f"{response.request.headers}")
-        if self._log_body and payload:
-            self.LOGGER_WIRE.debug(f"Request body : {response.request.body}")
+        self.LOGGER_WIRE.debug("Request headers : "
+                               f"{response.request.headers}")
+        self.LOGGER_WIRE.debug(f"Request body : {response.request.body}")
 
         self.LOGGER_WIRE.debug(f"Response status code: {response.status_code}")
-        if self._log_headers:
-            self.LOGGER_WIRE.debug(f"Response headers : {response.headers}")
-        if self._log_body:
-            self.LOGGER_WIRE.debug(f"Response body : {response.text}")
+        self.LOGGER_WIRE.debug(f"Response headers : {response.headers}")
+        self.LOGGER_WIRE.debug(f"Response body : {response.text}")
 
         response.raise_for_status()
 
