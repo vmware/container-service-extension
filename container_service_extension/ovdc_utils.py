@@ -130,7 +130,8 @@ def get_ovdc_list(client,
             ovdc_info = {
                 'name': ovdc_name,
                 'org': org_name,
-                'k8s provider': k8s_provider
+                'k8s provider': k8s_provider,
+                'href': vdc_sparse['href'],
             }
 
             if list_pks_plans:

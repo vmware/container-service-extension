@@ -1140,9 +1140,18 @@ def list_ovdcs(ctx, list_pks_plans):
     try:
         restore_session(ctx)
         client = ctx.obj['client']
-        ovdc = Ovdc(client)
-        result = ovdc.list_ovdc_for_k8s(list_pks_plans=list_pks_plans)
-        stdout(result, ctx, sort_headers=False)
+        vdc = Ovdc(client)
+        result = vdc.list_ovdc_for_k8s(list_pks_plans=list_pks_plans)
+
+        to_display_key = {
+            'name': 'Name',
+            'org': 'Org',
+            'k8s provider': 'K8s Provider',
+            'href': 'VDC href', # vcd-cli stdout breaks when sending in href
+        }
+
+        ovdcs = [{to_display_key[k]: v for k, v in r.items()} for r in result]
+        stdout(ovdcs, ctx, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
 
