@@ -553,7 +553,7 @@ class PksBroker(AbstractBroker):
                          cluster_id):
         if not cluster_id:
             raise ValueError(f"Invalid cluster_id for cluster "
-                             f"'{cluster_name}': {cluster_id}")
+                             f"'{cluster_name}'")
 
         SERVER_LOGGER.debug(f"Isolating network of cluster {qualified_cluster_name}.") # noqa: E501
         try:
