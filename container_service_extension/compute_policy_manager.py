@@ -39,7 +39,7 @@ class ComputePolicyManager:
     original names when returned back to the caller.
     """
 
-    def __init__(self, client, log_wire):
+    def __init__(self, client, log_wire=True):
         """Initialize ComputePolicyManager Object.
 
         :param pyvcloud.vcd.client client:
