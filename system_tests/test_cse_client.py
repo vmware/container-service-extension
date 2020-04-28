@@ -127,8 +127,7 @@ def cse_server():
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
-    cmd = f"cse ovdc enable {config['broker']['vdc']} -k " \
-          f"{constants.K8sProvider.NATIVE}"
+    cmd = f"cse ovdc enable {config['broker']['vdc']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
