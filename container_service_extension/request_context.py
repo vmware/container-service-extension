@@ -7,7 +7,7 @@ import container_service_extension.user_context as user_context
 
 
 class RequestContext:
-    def __init__(self, auth_token, is_jwt=True):
+    def __init__(self, auth_token, is_jwt=True, id=None):
         self._auth_token: str = auth_token
         self._is_jwt: bool = is_jwt
 
@@ -22,6 +22,10 @@ class RequestContext:
 
         # Request cache; keys defined in CacheKey enum
         self.cache = {}
+
+        # Request ID; may be None if RequestContext is initialized outside of
+        # request_processor.py
+        self.request_id = id
 
     @property
     def client(self):
