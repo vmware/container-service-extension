@@ -1009,7 +1009,7 @@ def disable_service(ctx):
 @cse.group('ovdc', short_help='Manage Kubernetes provider for org VDCs')
 @click.pass_context
 def ovdc_group(ctx):
-    """Manage Kubernetes provider to be native for org VDCs.
+    """Manage Kubernetes provider for org VDCs.
 
 All commands execute in the context of user's currently logged-in
 organization. Use a different organization by using the '--org' option.
