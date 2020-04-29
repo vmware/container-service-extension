@@ -1150,7 +1150,7 @@ def list_ovdcs(ctx, list_pks_plans):
             'href': 'VDC href', # vcd-cli stdout breaks when sending in href
         }
 
-        ovdcs = [{to_display_key[k]: v for k, v in r.items()} for r in result]
+        ovdcs = [{to_display_key.get(k, k): v for k, v in r.items()} for r in result] # noqa: E501
         stdout(ovdcs, ctx, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
