@@ -15,7 +15,8 @@ import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import INSTALL_LOGGER
 from container_service_extension.logger import INSTALL_WIRELOG_FILEPATH
 from container_service_extension.logger import NULL_LOGGER
-from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
+from container_service_extension.logger import SERVER_CLI_LOGGER
+from container_service_extension.logger import SERVER_CLI_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_NSXT_WIRE_LOGGER
 from container_service_extension.nsxt.cse_nsxt_setup_utils import \
     setup_nsxt_constructs
@@ -71,7 +72,7 @@ def check_cse_installation(config, msg_update_callback=NullPrinter()):
         log_filename = None
         log_wire = str_to_bool(config['service'].get('log_wire'))
         if log_wire:
-            log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
+            log_filename = SERVER_CLI_WIRELOG_FILEPATH
 
         client = Client(config['vcd']['host'],
                         api_version=config['vcd']['api_version'],
@@ -103,15 +104,18 @@ def check_cse_installation(config, msg_update_callback=NullPrinter()):
                                          durable=True,
                                          passive=True,
                                          auto_delete=False)
-                msg_update_callback.general(
-                    f"AMQP exchange '{amqp['exchange']}' exists")
+                msg = f"AMQP exchange '{amqp['exchange']}' exists"
+                msg_update_callback.general(msg)
+                SERVER_CLI_LOGGER.debug(msg)
             except pika.exceptions.ChannelClosed:
                 msg = f"AMQP exchange '{amqp['exchange']}' does not exist"
                 msg_update_callback.error(msg)
+                SERVER_CLI_LOGGER.error(msg)
                 err_msgs.append(msg)
         except Exception:  # TODO() replace raw exception with specific
             msg = f"Could not connect to AMQP exchange '{amqp['exchange']}'"
             msg_update_callback.error(msg)
+            SERVER_CLI_LOGGER.error(msg)
             err_msgs.append(msg)
         finally:
             if connection is not None:
@@ -134,16 +138,20 @@ def check_cse_installation(config, msg_update_callback=NullPrinter()):
                     msg += f"\nvCD-CSE exchange: {cse_info['exchange']}" \
                            f"\nCSE config exchange: {amqp['exchange']}"
                 msg_update_callback.info(msg)
+                SERVER_CLI_LOGGER.debug(msg)
                 err_msgs.append(msg)
             if cse_info['enabled'] == 'true':
-                msg_update_callback.general(
-                    "CSE on vCD is currently enabled")
+                msg = "CSE on vCD is currently enabled"
+                msg_update_callback.general(msg)
+                SERVER_CLI_LOGGER.debug(msg)
             else:
-                msg_update_callback.info(
-                    "CSE on vCD is currently disabled")
+                msg = "CSE on vCD is currently disabled"
+                msg_update_callback.info(msg)
+                SERVER_CLI_LOGGER.debug(msg)
         except MissingRecordException:
             msg = "CSE is not registered to vCD"
             msg_update_callback.error(msg)
+            SERVER_CLI_LOGGER.error(msg)
             err_msgs.append(msg)
 
         # check that catalog exists in vCD
@@ -151,10 +159,13 @@ def check_cse_installation(config, msg_update_callback=NullPrinter()):
         org = get_org(client, org_name=org_name)
         catalog_name = config['broker']['catalog']
         if catalog_exists(org, catalog_name):
-            msg_update_callback.general(f"Found catalog '{catalog_name}'")
+            msg = f"Found catalog '{catalog_name}'"
+            msg_update_callback.general(msg)
+            SERVER_CLI_LOGGER.debug(msg)
         else:
             msg = f"Catalog '{catalog_name}' not found"
             msg_update_callback.error(msg)
+            SERVER_CLI_LOGGER.error(msg)
             err_msgs.append(msg)
     finally:
         if client:
@@ -162,7 +173,9 @@ def check_cse_installation(config, msg_update_callback=NullPrinter()):
 
     if err_msgs:
         raise Exception(err_msgs)
-    msg_update_callback.general("CSE installation is valid")
+    msg = "CSE installation is valid"
+    msg_update_callback.general(msg)
+    SERVER_CLI_LOGGER.debug(msg)
 
 
 def install_cse(config_file_name, skip_template_creation, force_update,
@@ -278,7 +291,7 @@ def install_cse(config_file_name, skip_template_creation, force_update,
         org = get_org(client, org_name=config['broker']['org'])
         create_and_share_catalog(
             org, config['broker']['catalog'], catalog_desc='CSE templates',
-            msg_update_callback=msg_update_callback)
+            logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
 
         if skip_template_creation:
             msg = "Skipping creation of templates."
