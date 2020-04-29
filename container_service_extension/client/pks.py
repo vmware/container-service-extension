@@ -10,6 +10,7 @@ from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
 
 from container_service_extension.client.pks_cluster import PksCluster
+from container_service_extension.logger import CLIENT_LOGGER
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 
 
@@ -94,8 +95,10 @@ def list_clusters(ctx, vdc, org_name):
             org_name = ctx.obj['profiles'].get('org_in_use')
         result = cluster.get_clusters(vdc=vdc, org=org_name)
         stdout(result, ctx, show_id=True, sort_headers=False)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @pks_group.command('delete',
@@ -133,12 +136,16 @@ def cluster_delete(ctx, cluster_name, vdc, org):
         # In that specific case, below check helps to print out a meaningful
         # message to users.
         if len(result) == 0:
-            click.secho(f"Delete cluster operation has been initiated on "
-                        f"{cluster_name}, please check the status using"
-                        f" 'vcd cse pks-cluster info {cluster_name}'.", fg='yellow')  # noqa: E501
+            msg = f"Delete cluster operation has been initiated on " \
+                  f"{cluster_name}, please check the status using" \
+                  f" 'vcd cse pks-cluster info {cluster_name}'."
+            click.secho(msg, fg='yellow')
+            CLIENT_LOGGER.debug(msg)
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @pks_group.command('create', short_help='Create an Ent-PKS cluster')
@@ -189,8 +196,10 @@ def cluster_create(ctx, cluster_name, vdc, node_count, org_name):
             node_count=node_count,
             org=org_name)
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @pks_group.command('resize',
@@ -240,8 +249,10 @@ def cluster_resize(ctx, cluster_name, node_count, org_name, vdc_name):
             org=org_name,
             vdc=vdc_name)
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @pks_group.command('config', short_help='Display Ent-PKS cluster configuration')  # noqa: E501
@@ -281,8 +292,10 @@ def cluster_config(ctx, cluster_name, vdc, org):
             cluster_config = str.replace(cluster_config, '\n', '\r\n')
 
         click.secho(cluster_config)
+        CLIENT_LOGGER.debug(cluster_config)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @pks_group.command('info',
@@ -315,5 +328,7 @@ def cluster_info(ctx, cluster_name, org, vdc):
             org = ctx.obj['profiles'].get('org_in_use')
         cluster_info = cluster.get_cluster_info(cluster_name, org=org, vdc=vdc)
         stdout(cluster_info, ctx, show_id=True)
+        CLIENT_LOGGER.debug(cluster_info)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
