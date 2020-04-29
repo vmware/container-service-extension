@@ -231,6 +231,13 @@ def cluster_delete(ctx, name, vdc, org):
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
         result = cluster.delete_cluster(name, org, vdc)
+        # result is empty for delete cluster operation on PKS-managed clusters.
+        # In that specific case, below check helps to print out a meaningful
+        # message to users.
+        if len(result) == 0:
+            click.secho(f"Delete cluster operation has been initiated on "
+                        f"{name}, please check the status using"
+                        f" 'vcd cse cluster info {name}'.", fg='yellow')
         stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
@@ -262,7 +269,7 @@ def cluster_delete(ctx, name, vdc, org):
     required=False,
     default=None,
     type=click.INT,
-    help='Number of virtual CPUs on each node ')
+    help='Number of virtual CPUs on each node')
 @click.option(
     '-m',
     '--memory',
@@ -270,7 +277,7 @@ def cluster_delete(ctx, name, vdc, org):
     required=False,
     default=None,
     type=click.INT,
-    help='Megabytes of memory on each node ')
+    help='Megabytes of memory on each node')
 @click.option(
     '-n',
     '--network',
@@ -284,7 +291,7 @@ def cluster_delete(ctx, name, vdc, org):
     'storage_profile',
     required=False,
     default=None,
-    help='Name of the storage profile for the nodes ')
+    help='Name of the storage profile for the nodes')
 @click.option(
     '-k',
     '--ssh-key',
@@ -316,12 +323,12 @@ def cluster_delete(ctx, name, vdc, org):
     'enable_nfs',
     is_flag=True,
     help='Create 1 additional NFS node (if --nodes=2, then CSE will create '
-         '2 worker nodes and 1 NFS node) ')
+         '2 worker nodes and 1 NFS node)')
 @click.option(
     '--disable-rollback',
     'disable_rollback',
     is_flag=True,
-    help='Disable rollback on cluster creation failure ')
+    help='Disable rollback on cluster creation failure')
 @click.option(
     '-o',
     '--org',
