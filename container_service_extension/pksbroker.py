@@ -207,23 +207,14 @@ class PksBroker(AbstractBroker):
         :rtype: list
         """
         data = kwargs[KwargKey.DATA]
-        cluster_list = self._list_clusters()
+        result = self._list_clusters(data)
+        if not self.tenant_client.is_sysadmin():
+            for cluster in result:
+                self._filter_sensitive_pks_properties(cluster)
+        return result
 
-        # Required for all personae
-        for cluster in cluster_list:
-            self._restore_original_name(cluster)
-
-        return self._filter_clusters(cluster_list, **data)
-
-    def _list_clusters(self):
-        """Get list of clusters in PKS environment.
-
-        :return: a list of cluster-dictionaries
-
-        :rtype: list
-        """
-        cluster_api = ClusterApiV1(api_client=self.client_v1)
-
+    def _list_clusters(self, data):
+        """."""
         result = []
         try:
             cluster_api = ClusterApi(api_client=self.client)
@@ -354,6 +345,16 @@ class PksBroker(AbstractBroker):
         return cluster_info
 
     def get_cluster_info(self, **kwargs):
+        """."""
+        data = kwargs[KwargKey.DATA]
+        result = self._get_cluster_info(data)
+
+        if not self.tenant_client.is_sysadmin():
+            self._filter_sensitive_pks_properties(result)
+
+        return result
+
+    def _get_cluster_info(self, data):
         """Get the details of a cluster with a given name in PKS environment.
 
         System administrator gets the given cluster information regardless of
@@ -366,7 +367,6 @@ class PksBroker(AbstractBroker):
 
         :rtype: dict
         """
-        data = kwargs[KwargKey.DATA]
         cluster_name = data[RequestKey.CLUSTER_NAME]
         # The structure of info returned by list_cluster and get_cluster is
         # identical, hence using list_cluster and filtering by name in memory
@@ -418,7 +418,7 @@ class PksBroker(AbstractBroker):
 
         if self.tenant_client.is_sysadmin() or \
                 is_org_admin(self.client_session):
-            cluster_info = self.get_cluster_info(data=data)
+            cluster_info = self._get_cluster_info(data)
             qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
             qualified_cluster_name = self._append_user_id(cluster_name)
@@ -453,7 +453,7 @@ class PksBroker(AbstractBroker):
 
         if self.tenant_client.is_sysadmin() \
                 or is_org_admin(self.client_session):
-            cluster_info = self.get_cluster_info(data=data)
+            cluster_info = self._get_cluster_info(data)
             qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
             qualified_cluster_name = self._append_user_id(cluster_name)
@@ -515,7 +515,7 @@ class PksBroker(AbstractBroker):
 
         if self.tenant_client.is_sysadmin() \
                 or is_org_admin(self.client_session):
-            cluster_info = self.get_cluster_info(data=data)
+            cluster_info = self._get_cluster_info(data)
             qualified_cluster_name = cluster_info['pks_cluster_name']
         else:
             qualified_cluster_name = self._append_user_id(cluster_name)
