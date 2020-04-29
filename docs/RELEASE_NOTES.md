@@ -20,21 +20,23 @@ CSE UI plugin compatibility matrix
 
 |CSE   | VCD    | CSE UI plugin |
 |------|--------|---------------|
-|2.6.1 | 10.1.0 | 1.0.0         |
+|2.6.1 | 10.1.0 | 1.0.0         | # Todo update plugin version
 
 **New Features**
 * Support for Enterprise PKS 1.7 (and NSX-T 2.5.1).
-    * Enterprise PKS 1.4 and NSX-T 2.3/2.4 are no longer supported.
+  * Enterprise PKS 1.4 and NSX-T 2.3/2.4 are no longer supported.
 
 **Notes to System Administrator**
 
 If you are upgrading to CSE 2.6.1 from an older version of CSE, and you have
-pre-existing deployed native K8s clusters, you must run the following command:
-```sh
-cse convert-cluster [cluster name]
-```
-* From CSE 2.5.x - To be able to upgrade the clusters.
-* From CSE older than 2.5.0 - To preserve manageability of the clusters.
+* Kubernetes 1.15, 1.16 or 1.17 based template created by CSE 2.5.x:
+  * You must recreate/replace those templates with their latest version available.
+* Pre-existing deployed native K8s clusters, you must run the following command:
+  ```sh
+  cse convert-cluster [cluster name]
+  ```
+  * From CSE 2.5.x - To be able to upgrade the clusters.
+  * From CSE older than 2.5.0 - To preserve manageability of the clusters.
 
 This command adds new metadata to the clusters. If the clusters were deployed
 by CSE version below 2.5.0, the command will also reset the admin password of

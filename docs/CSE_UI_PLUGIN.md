@@ -11,6 +11,7 @@ VCD UI.
 
 ## Getting the plugin
 The plugin binary can be downloaded from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.0/container-ui-plugin.zip).
+#ToDo update plugin link
 
 ## Setting up the plugin
 ### Registering and publishing the plugin
