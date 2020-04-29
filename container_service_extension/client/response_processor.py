@@ -3,19 +3,31 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import json
+import os
 
 import requests
 
 from container_service_extension.exceptions import CseResponseError
+from container_service_extension.logger import CLIENT_WIRE_LOGGER
+from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.shared_constants import ERROR_DESCRIPTION_KEY
 from container_service_extension.shared_constants import ERROR_MINOR_CODE_KEY
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 from container_service_extension.shared_constants import UNKNOWN_ERROR_MESSAGE
+from container_service_extension.utils import str_to_bool
+
+ENV_CSE_CLIENT_WIRE_LOGGING = 'CSE_CLIENT_WIRE_LOGGING'
+
+wire_logger = NULL_LOGGER
+if str_to_bool(os.getenv(ENV_CSE_CLIENT_WIRE_LOGGING)):
+    wire_logger = CLIENT_WIRE_LOGGER
 
 
 def process_response(response):
     """Process the given response dictionary with following keys.
+
+    Log the response if wire logging is enabled.
 
     If the value of status code is 2xx, return the response content, else
     raise exception with proper error message
@@ -36,7 +48,9 @@ def process_response(response):
         requests.codes.created,
         requests.codes.accepted
     ]:
-        return deserialize_response_content(response)
+        response = deserialize_response_content(response)
+        wire_logger.debug(f"Response received: {response}")
+        return response
 
     raise response_to_exception(response)
 

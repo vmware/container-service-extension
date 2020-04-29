@@ -63,7 +63,7 @@ CLIENT_DEBUG_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-client-debug.log"
 CLIENT_LOGGER = logging.getLogger(CLIENT_LOGGER_NAME)
 
 CLIENT_WIRE_LOGGER_NAME = 'container_service_extension.client.wire'
-CLIENT_WIRE_LOGGER_FILEPATH = f"{LOGS_DIR_NAME}/cse-client-wire_{_TIMESTAMP}.log" # noqa: E501
+CLIENT_WIRE_LOGGER_FILEPATH = f"{LOGS_DIR_NAME}/cse-client-wire.log" # noqa: E501
 CLIENT_WIRE_LOGGER = logging.getLogger(CLIENT_WIRE_LOGGER_NAME)
 
 # cse server cli logger and config

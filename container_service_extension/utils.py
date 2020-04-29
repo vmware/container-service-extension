@@ -318,9 +318,3 @@ def run_async(func):
         return t
 
     return wrapper
-
-
-def write_to_log_and_console(message, logger_func=NULL_LOGGER.debug,
-                             callback_func=NullPrinter().general):
-    logger_func(message)
-    callback_func(message)

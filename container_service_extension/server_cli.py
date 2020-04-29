@@ -62,7 +62,6 @@ from container_service_extension.utils import ConsoleMessagePrinter
 from container_service_extension.utils import NullPrinter
 from container_service_extension.utils import prompt_text
 from container_service_extension.utils import str_to_bool
-from container_service_extension.utils import write_to_log_and_console
 from container_service_extension.vcdbroker import get_all_clusters
 
 
@@ -322,9 +321,9 @@ def sample(ctx, output, pks_config):
     check_python_version()
     sample_config = generate_sample_config(output=output,
                                            generate_pks_config=pks_config)
-    write_to_log_and_console(sample_config,
-                             console_message_printer.general_no_color,
-                             SERVER_CLI_LOGGER.debug)
+
+    console_message_printer.general_no_color(sample_config)
+    SERVER_CLI_LOGGER.debug(sample_config)
 
 
 @cli.command(short_help="Checks that CSE/PKS config file is valid. Can "
@@ -377,9 +376,9 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
                 check_cse_installation(
                     config_dict, msg_update_callback=console_message_printer)
             except Exception as err:
-                write_to_log_and_console(f"Error : {err}\nCSE installation is invalid", # noqa: E501
-                                         SERVER_CLI_LOGGER.error,
-                                         console_message_printer.error)
+                msg = f"Error : {err}\nCSE installation is invalid"
+                SERVER_CLI_LOGGER.error(msg)
+                console_message_printer.error(msg)
                 raise
 
         # Record telemetry data on successful completion
@@ -405,6 +404,7 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
                 status=OperationStatus.FAILED,
                 telemetry_settings=config_dict['service']['telemetry'])
         console_message_printer.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err))
         sys.exit(1)
     finally:
         # block the process to let telemetry handler to finish posting data to
@@ -436,9 +436,9 @@ def decrypt(ctx, input_file, output_file):
                 hide_input=True,
                 color='green')
             decrypt_file(input_file, password, output_file)
-            write_to_log_and_console("Decryption successful.",
-                                     console_message_printer.general,
-                                     SERVER_CLI_LOGGER.debug)
+            msg = "Decryption successful."
+            console_message_printer.general(msg)
+            SERVER_CLI_LOGGER.debug(msg)
         except cryptography.fernet.InvalidToken:
             raise Exception("Decryption failed: Invalid password")
     except Exception as err:
@@ -471,9 +471,9 @@ def encrypt(ctx, input_file, output_file):
                 hide_input=True,
                 color='green')
             encrypt_file(input_file, password, output_file)
-            write_to_log_and_console("Encryption successful.",
-                                     console_message_printer.general,
-                                     SERVER_CLI_LOGGER.debug)
+            msg = "Encryption successful."
+            console_message_printer.general(msg)
+            SERVER_CLI_LOGGER.debug(msg)
         except cryptography.fernet.InvalidToken:
             raise Exception("Encryption failed: Invalid password")
     except Exception as err:
@@ -544,8 +544,8 @@ def install(ctx, config_file_path, pks_config_file_path,
         msg = "Must provide ssh-key file (using --ssh-key OR -k) if " \
               "--retain-temp-vapp is provided, or else temporary vm will be " \
               "inaccessible"
-        write_to_log_and_console(msg, console_message_printer.error,
-                                 SERVER_CLI_LOGGER.error)
+        console_message_printer.error(msg)
+        SERVER_CLI_LOGGER.error(msg)
         sys.exit(1)
 
     ssh_key = None
@@ -577,8 +577,8 @@ def install(ctx, config_file_path, pks_config_file_path,
         except cryptography.fernet.InvalidToken:
             raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
     except Exception as err:
-        write_to_log_and_console(str(err), SERVER_CLI_LOGGER.error,
-                                 console_message_printer.error)
+        SERVER_CLI_LOGGER.error(str(err))
+        console_message_printer.error(str(err))
         sys.exit(1)
     finally:
         # block the process to let telemetry handler to finish posting data to
@@ -646,8 +646,8 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
         except cryptography.fernet.InvalidToken:
             raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
     except Exception as err:
-        write_to_log_and_console(str(err), SERVER_CLI_LOGGER.error,
-                                 console_message_printer.error)
+        SERVER_CLI_LOGGER.error(str(err))
+        console_message_printer.error(str(err))
         console_message_printer.error("CSE Server failure. Please check the logs.") # noqa: E501
         sys.exit(1)
     finally:
@@ -754,8 +754,8 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
 
         msg = f"Connected to vCD as system administrator: " \
               f"{config['vcd']['host']}:{config['vcd']['port']}"
-        write_to_log_and_console(msg, SERVER_CLI_LOGGER.debug,
-                                 console_message_printer.general)
+        SERVER_CLI_LOGGER.debug(msg)
+        console_message_printer.general(msg)
 
         cluster_records = get_all_clusters(client=client,
                                            cluster_name=cluster_name,
@@ -763,34 +763,34 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
                                            ovdc_name=vdc_name)
 
         if len(cluster_records) == 0:
-            write_to_log_and_console("No clusters were found.",
-                                     SERVER_CLI_LOGGER.debug,
-                                     console_message_printer.info)
+            msg = "No clusters were found."
+            SERVER_CLI_LOGGER.debug(msg)
+            console_message_printer.info(msg)
             return
 
         href_of_vms_to_verify = []
         for cluster in cluster_records:
-            write_to_log_and_console(f"Processing cluster '{cluster['name']}'.", # noqa: E501
-                                     SERVER_CLI_LOGGER.debug,
-                                     console_message_printer.info)
+            msg = f"Processing cluster '{cluster['name']}'."
+            SERVER_CLI_LOGGER.debug(msg)
+            console_message_printer.info(msg)
             vapp_href = cluster['vapp_href']
             vapp = VApp(client, href=vapp_href)
 
             # this step removes the old 'cse.template' metadata and adds
             # cse.template.name and cse.template.revision metadata
             # using hard-coded values taken from github history
-            write_to_log_and_console("Processing metadata of cluster.",
-                                     SERVER_CLI_LOGGER.debug,
-                                     console_message_printer.info)
+            msg = "Processing metadata of cluster."
+            SERVER_CLI_LOGGER.debug(msg)
+            console_message_printer.info(msg)
 
             metadata_dict = metadata_to_dict(vapp.get_metadata())
             old_template_name = metadata_dict.get(ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME) # noqa: E501
             new_template_name = None
             cse_version = metadata_dict.get(ClusterMetadataKey.CSE_VERSION)
             if old_template_name:
-                write_to_log_and_console("Determining k8s version on cluster.",
-                                         SERVER_CLI_LOGGER.debug,
-                                         console_message_printer.info)
+                msg = "Determining k8s version on cluster."
+                SERVER_CLI_LOGGER.debug(msg)
+                console_message_printer.info(msg)
                 if 'photon' in old_template_name:
                     new_template_name = 'photon-v2'
                     if cse_version in ('1.0.0'):
@@ -811,9 +811,9 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
                         new_template_name += '_k8s-1.13_weave-2.3.0'
 
             if new_template_name:
-                write_to_log_and_console("Updating metadata of cluster.",
-                                         SERVER_CLI_LOGGER.debug,
-                                         console_message_printer.info)
+                msg = "Updating metadata of cluster."
+                SERVER_CLI_LOGGER.debug(msg)
+                console_message_printer.info(msg)
                 task = vapp.remove_metadata(ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME) # noqa: E501
                 client.get_task_monitor().wait_for_success(task)
                 new_metadata_to_add = {
@@ -855,10 +855,9 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
                 task = vapp.set_multiple_metadata(new_metadata)
                 client.get_task_monitor().wait_for_success(task)
 
-            write_to_log_and_console(
-                "Finished processing metadata of cluster.",
-                SERVER_CLI_LOGGER.debug,
-                console_message_printer.general)
+                msg = "Finished processing metadata of cluster."
+                SERVER_CLI_LOGGER.debug(msg)
+                console_message_printer.general(msg)
 
             # Update admin password of all VMs that are not set properly
             vm_hrefs_for_password_update = []
@@ -867,8 +866,8 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
                 vm = VM(client, href=vm_resource.get('href'))
                 msg = f"Determining if vm '{vm.get_resource().get('name')}" \
                       "needs processing'."
-                write_to_log_and_console(msg, SERVER_CLI_LOGGER.debug,
-                                         console_message_printer.info)
+                SERVER_CLI_LOGGER.debug(msg)
+                console_message_printer.info(msg)
 
                 gc_section = vm.get_guest_customization_section()
                 admin_password_enabled = False
@@ -893,27 +892,24 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
             # At least one vm in the vApp needs a password update
             if len(vm_hrefs_for_password_update) > 0:
                 try:
-                    write_to_log_and_console(
-                        f"Undeploying the cluster '{cluster['name']}'",
-                        SERVER_CLI_LOGGER.debug,
-                        console_message_printer.info)
+                    msg = f"Undeploying the cluster '{cluster['name']}'"
+                    SERVER_CLI_LOGGER.debug(msg)
+                    console_message_printer.info(msg)
 
                     task = vapp.undeploy()
                     client.get_task_monitor().wait_for_success(task)
-                    write_to_log_and_console(
-                        "Successfully undeployed the vApp.",
-                        SERVER_CLI_LOGGER.debug,
-                        console_message_printer.general)
+                    msg = "Successfully undeployed the vApp."
+                    SERVER_CLI_LOGGER.debug(msg)
+                    console_message_printer.general(msg)
                 except Exception as err:
                     console_message_printer.error(str(err))
 
                 for href in vm_hrefs_for_password_update:
                     vm = VM(client=client, href=href)
-                    write_to_log_and_console(
-                        f"Processing vm {vm.get_resource().get('name')}'.\n"
-                        "Updating vm admin password",
-                        SERVER_CLI_LOGGER.debug,
-                        console_message_printer.info)
+                    msg = f"Processing vm {vm.get_resource().get('name')}'." \
+                          "\nUpdating vm admin password"
+                    SERVER_CLI_LOGGER.debug(msg)
+                    console_message_printer.info(msg)
                     task = vm.update_guest_customization_section(
                         enabled=True,
                         admin_password_enabled=True,
@@ -921,39 +917,37 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
                         admin_password=admin_password,
                     )
                     client.get_task_monitor().wait_for_success(task)
-                    write_to_log_and_console("Successfully updated vm",
-                                             SERVER_CLI_LOGGER.debug,
-                                             console_message_printer.general)
+                    msg = "Successfully updated vm"
+                    SERVER_CLI_LOGGER.debug(msg)
+                    console_message_printer.general(msg)
 
-                    write_to_log_and_console("Deploying vm.",
-                                             SERVER_CLI_LOGGER.debug,
-                                             console_message_printer.info)
+                    msg = "Deploying vm."
+                    SERVER_CLI_LOGGER.debug(msg)
+                    console_message_printer.info(msg)
                     task = vm.power_on_and_force_recustomization()
                     client.get_task_monitor().wait_for_success(task)
-                    write_to_log_and_console("Successfully deployed vm",
-                                             SERVER_CLI_LOGGER.debug,
-                                             console_message_printer.general)
+                    msg = "Successfully deployed vm"
+                    SERVER_CLI_LOGGER.debug(msg)
+                    console_message_printer.general(msg)
 
-                write_to_log_and_console("Deploying cluster",
-                                         SERVER_CLI_LOGGER.debug,
-                                         console_message_printer.info)
+                msg = "Deploying cluster"
+                SERVER_CLI_LOGGER.debug(msg)
+                console_message_printer.info(msg)
                 task = vapp.deploy(power_on=True)
                 client.get_task_monitor().wait_for_success(task)
-                write_to_log_and_console("Successfully deployed cluster",
-                                         SERVER_CLI_LOGGER.debug,
-                                         console_message_printer.general)
+                msg = "Successfully deployed cluster"
+                SERVER_CLI_LOGGER.debug(msg)
+                console_message_printer.general(msg)
 
-            write_to_log_and_console(
-                f"Successfully processed cluster '{cluster['name']}'",
-                SERVER_CLI_LOGGER.debug,
-                console_message_printer.general)
+                msg = f"Successfully processed cluster '{cluster['name']}'"
+                SERVER_CLI_LOGGER.debug(msg)
+                console_message_printer.general(msg)
 
         if not skip_wait_for_gc:
             while len(href_of_vms_to_verify) != 0:
-                write_to_log_and_console(
-                    f"Waiting on guest customization to finish on {len(href_of_vms_to_verify)} vms.", # noqa: E501
-                    SERVER_CLI_LOGGER.debug,
-                    console_message_printer.info) # noqa: E501
+                msg = f"Waiting on guest customization to finish on {len(href_of_vms_to_verify)} vms." # noqa: E501
+                SERVER_CLI_LOGGER.debug(msg)
+                console_message_printer.info(msg)
                 to_remove = []
                 for href in href_of_vms_to_verify:
                     vm = VM(client=client, href=href)
@@ -973,16 +967,15 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
 
                 time.sleep(5)
 
-            write_to_log_and_console(
-                "Finished Guest customization on all vms.",
-                SERVER_CLI_LOGGER.debug,
-                console_message_printer.info) # noqa: E501
+                msg = "Finished Guest customization on all vms."
+                SERVER_CLI_LOGGER.debug(msg)
+                console_message_printer.info(msg)
 
         # Record telemetry data on successful completion
         record_user_action(cse_operation=CseOperation.CLUSTER_CONVERT, telemetry_settings=config['service']['telemetry'])  # noqa: E501
     except Exception as err:
-        write_to_log_and_console(str(err), SERVER_CLI_LOGGER.error,
-                                 console_message_printer.error)
+        SERVER_CLI_LOGGER.error(str(err))
+        console_message_printer.error(str(err))
         # Record telemetry data on failed cluster convert
         record_user_action(cse_operation=CseOperation.CLUSTER_CONVERT,
                            status=OperationStatus.FAILED,
@@ -1162,8 +1155,8 @@ def list_template(ctx, config_file_path, skip_config_decryption,
         record_user_action(cse_operation=CseOperation.TEMPLATE_LIST,
                            telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
     except Exception as err:
-        write_to_log_and_console(str(err), SERVER_CLI_LOGGER.error,
-                                 console_message_printer.error)
+        SERVER_CLI_LOGGER.error(str(err))
+        console_message_printer.error(str(err))
         record_user_action(cse_operation=CseOperation.TEMPLATE_LIST,
                            status=OperationStatus.FAILED,
                            telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
@@ -1231,12 +1224,11 @@ def install_cse_template(ctx, template_name, template_revision,
     check_python_version(console_message_printer)
 
     if retain_temp_vapp and not ssh_key_file:
-        write_to_log_and_console(
-            "Must provide ssh-key file (using --ssh-key OR -k) if "
-            "--retain-temp-vapp is provided, or else temporary vm will be "
-            "inaccessible",
-            SERVER_CLI_LOGGER.error,
-            console_message_printer.error)
+        msg = "Must provide ssh-key file (using --ssh-key OR -k) if " \
+              "--retain-temp-vapp is provided, or else temporary vm will be " \
+              "inaccessible"
+        SERVER_CLI_LOGGER.error(msg)
+        console_message_printer.error(msg)
         sys.exit(1)
 
     password = None
@@ -1270,8 +1262,8 @@ def install_cse_template(ctx, template_name, template_revision,
         except cryptography.fernet.InvalidToken:
             raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
     except Exception as err:
-        write_to_log_and_console(str(err), SERVER_CLI_LOGGER.error,
-                                 console_message_printer.error)
+        SERVER_CLI_LOGGER.error(str(err))
+        console_message_printer.error(str(err))
         sys.exit(1)
     finally:
         # block the process to let telemetry handler to finish posting data to
@@ -1355,8 +1347,9 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
         client, cloudapi_client = _get_clients_from_config(
             config_dict, log_filename=log_filename, log_wire=log_wire)
 
-        write_to_log_and_console("Registering plugin with vCD.", SERVER_CLI_LOGGER.debug, # noqa: E501
-                                 console_message_printer.info)
+        msg = "Registering plugin with vCD."
+        SERVER_CLI_LOGGER.debug(msg)
+        console_message_printer.info(msg)
         try:
             response_body = cloudapi_client.do_request(
                 method=RequestMethod.POST,
@@ -1371,8 +1364,9 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
                                 "it again.")
             raise
 
-        write_to_log_and_console("Preparing to upload plugin to vCD.", SERVER_CLI_LOGGER.debug, # noqa: E501
-                                 console_message_printer.info)
+        msg = "Preparing to upload plugin to vCD."
+        SERVER_CLI_LOGGER.debug(msg)
+        console_message_printer.info(msg)
         transferRequest = {
             "fileName": os.path.split(plugin_file_path)[1],
             "size": os.stat(plugin_file_path).st_size
@@ -1382,8 +1376,9 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
             resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{pluginId}/plugin", # noqa: E501
             payload=transferRequest)
 
-        write_to_log_and_console("Uploading plugin to vCD.", SERVER_CLI_LOGGER.debug, # noqa: E501
-                                 console_message_printer.info)
+        msg = "Uploading plugin to vCD."
+        SERVER_CLI_LOGGER.debug(msg)
+        console_message_printer.info(msg)
         transfer_url = None
         content_type = None
         response_headers = cloudapi_client.get_last_response_headers()
@@ -1401,25 +1396,29 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
             resource_url_absolute_path=transfer_url,
             payload=file_content,
             content_type=content_type)
-        write_to_log_and_console("Plugin upload complete.",
-                                 SERVER_CLI_LOGGER.debug,
-                                 console_message_printer.general)
+        msg = "Plugin upload complete."
+        SERVER_CLI_LOGGER.debug(msg)
+        console_message_printer.general(msg)
 
-        console_message_printer.info("Waiting for plugin to be ready.")
+        msg = "Waiting for plugin to be ready."
+        console_message_printer.info(msg)
+        SERVER_CLI_LOGGER.debug(msg)
         while True:
             response_body = cloudapi_client.do_request(
                 method=RequestMethod.GET,
                 resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{pluginId}") # noqa: E501
             plugin_status = response_body.get('plugin_status')
-            console_message_printer.info(f"Plugin status : {plugin_status}")
+            msg = f"Plugin status : {plugin_status}"
+            console_message_printer.info(msg)
+            SERVER_CLI_LOGGER.debug(msg)
             if plugin_status == 'ready':
                 break
-        write_to_log_and_console("Plugin registration complete.",
-                                 SERVER_CLI_LOGGER.debug,
-                                 console_message_printer.general)
+        msg = "Plugin registration complete."
+        SERVER_CLI_LOGGER.debug(msg)
+        console_message_printer.general(msg)
     except Exception as err:
-        write_to_log_and_console(str(err), SERVER_CLI_LOGGER.error,
-                                 console_message_printer.error)
+        SERVER_CLI_LOGGER.error(str(err))
+        console_message_printer.error(str(err))
         sys.exit(1)
     finally:
         if client:
@@ -1479,10 +1478,9 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
             method=RequestMethod.DELETE,
             resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{plugin_id}") # noqa: E501
 
-        write_to_log_and_console(
-            f"Removed plugin with id : {plugin_id}.",
-            SERVER_CLI_LOGGER.debug,
-            console_message_printer.general)
+        msg = f"Removed plugin with id : {plugin_id}."
+        SERVER_CLI_LOGGER.debug(msg)
+        console_message_printer.general(msg)
     except Exception as err:
         console_message_printer.error(str(err))
         sys.exit(1)
@@ -1554,8 +1552,8 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
 
         stdout(result, ctx, sort_headers=False, show_id=True)
     except Exception as err:
-        write_to_log_and_console(str(err), SERVER_CLI_LOGGER.error,
-                                 console_message_printer.error)
+        SERVER_CLI_LOGGER.error(str(err))
+        console_message_printer.error(str(err))
         sys.exit(1)
     finally:
         if client:

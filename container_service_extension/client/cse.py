@@ -15,6 +15,7 @@ from container_service_extension.client.cluster import Cluster
 from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.system import System
 from container_service_extension.exceptions import CseResponseError
+from container_service_extension.logger import CLIENT_LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
@@ -47,6 +48,7 @@ def version(ctx):
                                       ver_obj['description'],
                                       ver_obj['version'])
     stdout(ver_obj, ctx, ver_str)
+    CLIENT_LOGGER.debug(ver_str)
 
 
 @cse.group(short_help='Manage native Kubernetes provider templates')
@@ -73,8 +75,10 @@ def list_templates(ctx):
         cluster = Cluster(client)
         result = cluster.get_templates()
         stdout(result, ctx, sort_headers=False)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @cse.group('cluster', short_help='Manage Native Kubernetes clusters')
@@ -180,7 +184,6 @@ def list_clusters(ctx, vdc, org_name):
         if not client.is_sysadmin() and org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
         result = cluster.get_clusters(vdc=vdc, org=org_name)
-
         clusters = []
         for c in result:
             # TODO cluster api response keys need to be more well defined
@@ -196,8 +199,10 @@ def list_clusters(ctx, vdc, org_name):
             clusters.append(cluster)
 
         stdout(clusters, ctx, show_id=True, sort_headers=False)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @cluster_group.command('delete',
@@ -239,8 +244,10 @@ def cluster_delete(ctx, name, vdc, org):
                         f"{name}, please check the status using"
                         f" 'vcd cse cluster info {name}'.", fg='yellow')
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @cluster_group.command('create', short_help='Create a Kubernetes cluster')
@@ -377,6 +384,7 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
             rollback=not disable_rollback,
             org=org_name)
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except CseResponseError as e:
         minor_error_code_to_error_message = {
             MinorErrorCode.REQUEST_KEY_NETWORK_NAME_MISSING: 'Missing option "-n" / "--network".', # noqa: E501
@@ -386,8 +394,10 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
             minor_error_code_to_error_message.get(
                 e.minor_error_code, e.error_message)
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @cluster_group.command('resize',
@@ -514,6 +524,7 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
             memory=memory,
             ssh_key=ssh_key)
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except CseResponseError as e:
         minor_error_code_to_error_message = {
             MinorErrorCode.REQUEST_KEY_NETWORK_NAME_MISSING: 'Missing option "-n" / "--network".', # noqa: E501
@@ -523,8 +534,10 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
             minor_error_code_to_error_message.get(
                 e.minor_error_code, e.error_message)
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @cluster_group.command('upgrade-plan',
@@ -572,8 +585,10 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name):
         if not templates:
             result = f"No valid upgrade targets for cluster '{cluster_name}'"
         stdout(result, ctx, sort_headers=False)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @cluster_group.command('upgrade',
@@ -616,8 +631,10 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
                                          template_revision, ovdc_name=vdc,
                                          org_name=org_name)
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @cluster_group.command('config', short_help='Display cluster configuration')
@@ -655,8 +672,10 @@ def cluster_config(ctx, name, vdc, org):
             cluster_config = str.replace(cluster_config, '\n', '\r\n')
 
         click.secho(cluster_config)
+        CLIENT_LOGGER.debug(cluster_config)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @cluster_group.command('info',
@@ -689,8 +708,10 @@ def cluster_info(ctx, name, org, vdc):
             org = ctx.obj['profiles'].get('org_in_use')
         cluster_info = cluster.get_cluster_info(name, org=org, vdc=vdc)
         stdout(cluster_info, ctx, show_id=True)
+        CLIENT_LOGGER.debug(cluster_info)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @cse.group('node',
@@ -768,8 +789,10 @@ def node_info(ctx, cluster_name, node_name, org_name, vdc):
         node_info = cluster.get_node_info(cluster_name, node_name,
                                           org_name, vdc)
         stdout(node_info, ctx, show_id=True)
+        CLIENT_LOGGER.debug(node_info)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @node_group.command('create',
@@ -900,8 +923,10 @@ def create_node(ctx, cluster_name, node_count, org, vdc, cpu, memory,
             enable_nfs=enable_nfs,
             rollback=not disable_rollback)
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @node_group.command('list',
@@ -939,8 +964,10 @@ def list_nodes(ctx, name, org, vdc):
                             "native clusters.")
         all_nodes = cluster_info['master_nodes'] + cluster_info['nodes']
         stdout(all_nodes, ctx, show_id=True)
+        CLIENT_LOGGER.debug(all_nodes)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @node_group.command('delete',
@@ -978,8 +1005,10 @@ def delete_nodes(ctx, cluster_name, node_names, org, vdc):
         result = cluster.delete_nodes(cluster_name, list(node_names), org=org,
                                       vdc=vdc)
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @cse.group('system', short_help='Manage CSE service (system daemon)')
@@ -1014,8 +1043,10 @@ def system_info(ctx):
         system = System(client)
         result = system.get_info()
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @system_group.command('stop', short_help='Gracefully stop CSE server')
@@ -1029,8 +1060,10 @@ def stop_service(ctx):
         system = System(client)
         result = system.update_service_status(action=ServerAction.STOP)
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @system_group.command('enable', short_help='Enable CSE server')
@@ -1043,8 +1076,10 @@ def enable_service(ctx):
         system = System(client)
         result = system.update_service_status(action=ServerAction.ENABLE)
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @system_group.command('disable', short_help='Disable CSE server')
@@ -1057,8 +1092,10 @@ def disable_service(ctx):
         system = System(client)
         result = system.update_service_status(action=ServerAction.DISABLE)
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @cse.group('ovdc', short_help='Manage Kubernetes provider for org VDCs')
@@ -1114,8 +1151,10 @@ def list_ovdcs(ctx, list_pks_plans):
         ovdc = Ovdc(client)
         result = ovdc.list_ovdc_for_k8s(list_pks_plans=list_pks_plans)
         stdout(result, ctx, sort_headers=False)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @ovdc_group.command('enable',
@@ -1145,10 +1184,14 @@ def ovdc_enable(ctx, ovdc_name, org_name):
                 org_name=org_name,
                 k8s_provider=K8sProvider.NATIVE)
             stdout(result, ctx)
+            CLIENT_LOGGER.debug(result)
         else:
-            stderr("Insufficient permission to perform operation.", ctx)
+            msg = "Insufficient permission to perform operation."
+            stderr(msg, ctx)
+            CLIENT_LOGGER.error(msg)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @ovdc_group.command('disable',
@@ -1177,10 +1220,14 @@ def ovdc_disable(ctx, ovdc_name, org_name):
                                               ovdc_name=ovdc_name,
                                               org_name=org_name)
             stdout(result, ctx)
+            CLIENT_LOGGER.debug(result)
         else:
-            stderr("Insufficient permission to perform operation.", ctx)
+            msg = "Insufficient permission to perform operation."
+            stderr(msg, ctx)
+            CLIENT_LOGGER.error(msg)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @ovdc_group.command('info',
@@ -1207,10 +1254,14 @@ def ovdc_info(ctx, ovdc_name, org_name):
                 org_name = ctx.obj['profiles'].get('org_in_use')
             result = ovdc.info_ovdc_for_k8s(ovdc_name, org_name)
             stdout(result, ctx)
+            CLIENT_LOGGER.debug(result)
         else:
-            stderr("Insufficient permission to perform operation", ctx)
+            msg = "Insufficient permission to perform operation"
+            stderr(msg, ctx)
+            CLIENT_LOGGER.error(msg)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @ovdc_group.group('compute-policy',
@@ -1261,8 +1312,10 @@ def compute_policy_list(ctx, org_name, ovdc_name):
         ovdc = Ovdc(client)
         result = ovdc.list_ovdc_compute_policies(ovdc_name, org_name)
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @compute_policy_group.command('add', short_help='')
@@ -1296,8 +1349,10 @@ def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
                                                    ComputePolicyAction.ADD,
                                                    False)
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @compute_policy_group.command('remove', short_help='')
@@ -1341,8 +1396,10 @@ def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name,
                                                    ComputePolicyAction.REMOVE,
                                                    remove_compute_policy_from_vms) # noqa: E501
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 # Add-on CLI support for PKS container provider
