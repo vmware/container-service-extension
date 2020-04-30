@@ -16,7 +16,7 @@ class CloudApiClient(object):
                  token,
                  is_jwt_token,
                  api_version,
-                 logger_instance,
+                 logger_debug,
                  logger_wire,
                  verify_ssl=True):
         if not base_url.endswith('/'):
@@ -31,7 +31,7 @@ class CloudApiClient(object):
         self._headers["Accept"] = f"application/json;version={api_version}"
 
         self._verify_ssl = verify_ssl
-        self.LOGGER = logger_instance
+        self.LOGGER = logger_debug
         self.LOGGER_WIRE = logger_wire
         self._last_response = None
 

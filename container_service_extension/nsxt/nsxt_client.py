@@ -19,7 +19,7 @@ class NSXTClient(object):
                  host,
                  username,
                  password,
-                 logger_instance,
+                 logger_debug,
                  logger_wire,
                  http_proxy=None,
                  https_proxy=None,
@@ -30,7 +30,7 @@ class NSXTClient(object):
         :param str username: username of a NSX-T user with Enterprise
             Administrator role.
         :param str password: password of the afore-mentioned user.
-        :param logging.Logger logger_instance: logger instance that will be
+        :param logging.Logger logger_debug: logger instance that will be
             used to log debugging messages.
         :param logging.Logger logger_wire: logger instance that will be
             used to log REST requests and responses
@@ -49,7 +49,7 @@ class NSXTClient(object):
         if https_proxy:
             self._proxies['https'] = "https://" + https_proxy
         self._verify_ssl = verify_ssl
-        self.LOGGER = logger_instance
+        self.LOGGER = logger_debug
         self.LOGGER_WIRE = logger_wire
 
     def test_connectivity(self):

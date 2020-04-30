@@ -208,7 +208,7 @@ def install_cse(config_file_name, skip_template_creation, force_update,
         skip_config_decryption=skip_config_decryption,
         decryption_password=decryption_password,
         log_wire_file=INSTALL_WIRELOG_FILEPATH,
-        logger_instance=INSTALL_LOGGER,
+        logger_debug=INSTALL_LOGGER,
         msg_update_callback=msg_update_callback)
 
     populate_vsphere_list(config['vcs'])
@@ -337,7 +337,7 @@ def install_cse(config_file_name, skip_template_creation, force_update,
                     host=nsxt_server.get('host'),
                     username=nsxt_server.get('username'),
                     password=nsxt_server.get('password'),
-                    logger_instance=INSTALL_LOGGER,
+                    logger_debug=INSTALL_LOGGER,
                     logger_wire=wire_logger,
                     http_proxy=nsxt_server.get('proxy'),
                     https_proxy=nsxt_server.get('proxy'),
@@ -390,7 +390,7 @@ def install_template(template_name, template_revision, config_file_name,
         config_file_name, skip_config_decryption=skip_config_decryption,
         decryption_password=decryption_password,
         log_wire_file=INSTALL_WIRELOG_FILEPATH,
-        logger_instance=INSTALL_LOGGER,
+        logger_debug=INSTALL_LOGGER,
         msg_update_callback=msg_update_callback)
 
     populate_vsphere_list(config['vcs'])

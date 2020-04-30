@@ -122,7 +122,7 @@ class PksBroker(AbstractBroker):
                 host=self.nsxt_server.get('host'),
                 username=self.nsxt_server.get('username'),
                 password=self.nsxt_server.get('password'),
-                logger_instance=SERVER_LOGGER,
+                logger_debug=SERVER_LOGGER,
                 logger_wire=nsxt_wire_logger,
                 http_proxy=self.nsxt_server.get('proxy'),
                 https_proxy=self.nsxt_server.get('proxy'),

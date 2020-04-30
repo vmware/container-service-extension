@@ -74,7 +74,7 @@ class ComputePolicyManager:
                 token=token,
                 is_jwt_token=is_jwt_token,
                 api_version=self._vcd_client.get_api_version(),
-                logger_instance=SERVER_LOGGER,
+                logger_debug=SERVER_LOGGER,
                 logger_wire=wire_logger,
                 verify_ssl=self._vcd_client._verify_ssl_certs)
             # Since the /cloudapi endpoint was added before the compute policy

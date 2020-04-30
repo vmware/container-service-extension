@@ -43,7 +43,7 @@ def uuid_hash(uuid):
     return m.hexdigest()
 
 
-def get_vcd_ceip_id(vcd_host, verify_ssl=True, logger_instance=NULL_LOGGER):
+def get_vcd_ceip_id(vcd_host, verify_ssl=True, logger_debug=NULL_LOGGER):
     """."""
     response = None
     try:
@@ -53,13 +53,13 @@ def get_vcd_ceip_id(vcd_host, verify_ssl=True, logger_instance=NULL_LOGGER):
         response = requests.get(uri, verify=verify_ssl)
         return response.headers.get(CEIP_HEADER_NAME)
     except Exception as err:
-        logger_instance.error(f"Unable to get vCD CEIP id : {str(err)}")
+        logger_debug.error(f"Unable to get vCD CEIP id : {str(err)}")
     finally:
         if response:
             response.close()
 
 
-def get_telemetry_instance_id(vcd, logger_instance=NULL_LOGGER,
+def get_telemetry_instance_id(vcd, logger_debug=NULL_LOGGER,
                               msg_update_callback=NullPrinter()):
     """Get CSE extension id which is used as instance id.
 
@@ -67,7 +67,7 @@ def get_telemetry_instance_id(vcd, logger_instance=NULL_LOGGER,
     of this method and does not affect the server startup.
 
     :param dict vcd: 'vcd' section of config file as a dict.
-    :param logging.logger logger_instance: logger instance to log any error
+    :param logging.logger logger_debug: logger instance to log any error
     in retrieving CSE extension id.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
@@ -86,12 +86,12 @@ def get_telemetry_instance_id(vcd, logger_instance=NULL_LOGGER,
         ext = APIExtension(client)
         cse_info = ext.get_extension_info(CSE_SERVICE_NAME,
                                           namespace=CSE_SERVICE_NAMESPACE)
-        logger_instance.info("Retrieved telemetry instance id")
+        logger_debug.info("Retrieved telemetry instance id")
         return cse_info.get('id')
     except Exception as err:
         msg = f"Cannot retrieve telemetry instance id:{err}"
         msg_update_callback.general(msg)
-        logger_instance.error(msg)
+        logger_debug.error(msg)
     finally:
         if client is not None:
             client.logout()

@@ -50,7 +50,7 @@ def get_validated_config(config_file_name,
                          skip_config_decryption=False,
                          decryption_password=None,
                          log_wire_file=None,
-                         logger_instance=NULL_LOGGER,
+                         logger_debug=NULL_LOGGER,
                          msg_update_callback=NullPrinter()):
     """Get the config file as a dictionary and check for validity.
 
@@ -117,7 +117,7 @@ def get_validated_config(config_file_name,
                                  log_file=log_wire_file,
                                  log_wire=log_wire)
     _validate_broker_config(config['broker'], msg_update_callback,
-                            logger_instance)
+                            logger_debug)
     check_keys_and_value_types(config['service'],
                                SAMPLE_SERVICE_CONFIG['service'],
                                location="config file 'service' section",
@@ -284,7 +284,7 @@ def _validate_vcd_and_vcs_config(vcd_dict,
 
 def _validate_broker_config(broker_dict,
                             msg_update_callback=NullPrinter(),
-                            logger_instance=NULL_LOGGER):
+                            logger_debug=NULL_LOGGER):
     """Ensure that 'broker' section of config is correct.
 
     Checks that 'broker' section of config has correct keys and value
@@ -313,7 +313,7 @@ def _validate_broker_config(broker_dict,
                          f"should be either 'dhcp' or 'pool'")
 
     rtm = RemoteTemplateManager(remote_template_cookbook_url=broker_dict['remote_template_cookbook_url'], # noqa: E501
-                                logger=logger_instance)
+                                logger=logger_debug)
     remote_template_cookbook = rtm.get_remote_template_cookbook()
 
     if not remote_template_cookbook:
@@ -488,7 +488,7 @@ def _validate_pks_config_data_integrity(pks_config,
             host=nsxt_server.get('host'),
             username=nsxt_server.get('username'),
             password=nsxt_server.get('password'),
-            logger_instance=NULL_LOGGER,
+            logger_debug=NULL_LOGGER,
             logger_wire=NULL_LOGGER,
             http_proxy=nsxt_server.get('proxy'),
             https_proxy=nsxt_server.get('proxy'),

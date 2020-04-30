@@ -369,7 +369,7 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
             msg_update_callback=console_message_printer,
             validate=True,
             log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-            logger_instance=SERVER_CLI_LOGGER)
+            logger_debug=SERVER_CLI_LOGGER)
 
         if check_install:
             try:
@@ -658,7 +658,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
                 skip_config_decryption=skip_config_decryption,
                 validate=False,
                 log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-                logger_instance=SERVER_CLI_LOGGER)
+                logger_debug=SERVER_CLI_LOGGER)
             record_user_action(cse_operation=CseOperation.SERVICE_RUN,
                                status=OperationStatus.FAILED,
                                telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
@@ -732,7 +732,7 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
             msg_update_callback=console_message_printer,
             validate=True,
             log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-            logger_instance=SERVER_CLI_LOGGER)
+            logger_debug=SERVER_CLI_LOGGER)
 
         # Record telemetry details
         cse_params = {
@@ -1036,7 +1036,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
             msg_update_callback=console_message_printer,
             validate=False,
             log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-            logger_instance=SERVER_CLI_LOGGER)
+            logger_debug=SERVER_CLI_LOGGER)
 
         # Record telemetry details
         cse_params = {PayloadKey.DISPLAY_OPTION: display_option}
@@ -1311,7 +1311,7 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
             msg_update_callback=console_message_printer,
             validate=False,
             log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-            logger_instance=SERVER_CLI_LOGGER)
+            logger_debug=SERVER_CLI_LOGGER)
 
         tempdir = tempfile.mkdtemp(dir='.')
         plugin_zip = ZipFile(plugin_file_path, 'r')
@@ -1464,7 +1464,7 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
             msg_update_callback=console_message_printer,
             validate=False,
             log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-            logger_instance=SERVER_CLI_LOGGER)
+            logger_debug=SERVER_CLI_LOGGER)
 
         log_filename = None
         log_wire = str_to_bool(config_dict['service'].get('log_wire'))
@@ -1527,7 +1527,7 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
             msg_update_callback=console_message_printer,
             validate=False,
             log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-            logger_instance=SERVER_CLI_LOGGER)
+            logger_debug=SERVER_CLI_LOGGER)
 
         log_filename = None
         log_wire = str_to_bool(config_dict['service'].get('log_wire'))
@@ -1566,7 +1566,7 @@ def _get_config_dict(config_file_path,
                      msg_update_callback=NullPrinter(),
                      validate=True,
                      log_wire_file=None,
-                     logger_instance=NULL_LOGGER):
+                     logger_debug=NULL_LOGGER):
     password = None
     if not skip_config_decryption:
         password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
@@ -1580,7 +1580,7 @@ def _get_config_dict(config_file_path,
                 skip_config_decryption=skip_config_decryption,
                 decryption_password=password,
                 log_wire_file=log_wire_file,
-                logger_instance=logger_instance,
+                logger_debug=logger_debug,
                 msg_update_callback=msg_update_callback)
         else:
             if skip_config_decryption:
@@ -1643,7 +1643,7 @@ def _get_clients_from_config(config, log_filename, log_wire):
         token=token,
         is_jwt_token=is_jwt_token,
         api_version=client.get_api_version(),
-        logger_instance=SERVER_CLI_LOGGER,
+        logger_debug=SERVER_CLI_LOGGER,
         logger_wire=LOGGER,
         verify_ssl=client._verify_ssl_certs)
 

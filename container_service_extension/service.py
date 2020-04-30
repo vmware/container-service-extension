@@ -203,7 +203,7 @@ class Service(object, metaclass=Singleton):
             skip_config_decryption=self.skip_config_decryption,
             decryption_password=self.decryption_password,
             log_wire_file=SERVER_DEBUG_WIRELOG_FILEPATH,
-            logger_instance=SERVER_LOGGER,
+            logger_debug=SERVER_LOGGER,
             msg_update_callback=msg_update_callback)
 
         populate_vsphere_list(self.config['vcs'])

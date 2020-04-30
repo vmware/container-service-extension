@@ -31,7 +31,7 @@ class VacClient(object):
                  instance_id,
                  vcd_ceip_id,
                  verify_ssl=True,
-                 logger_instance=None,
+                 logger_debug=None,
                  log_requests=False,
                  log_headers=False,
                  log_body=False):
@@ -40,7 +40,7 @@ class VacClient(object):
         self._instance_id = instance_id
         self._vcd_ceip_id = vcd_ceip_id
         self._verify_ssl = verify_ssl
-        self.LOGGER = logger_instance
+        self.LOGGER = logger_debug
         self._log_requests = log_requests
         self._log_headers = log_headers
         self._log_body = log_body
