@@ -193,14 +193,12 @@ def list_clusters(ctx, vdc, org_name):
         clusters = []
         for c in result:
             # TODO cluster api response keys need to be more well defined
-            kubernetes = 'N/A'
-            if c.get('k8s_type') and c.get('k8s_version'):
-                kubernetes = f"{c.get('k8s_type')} {c['k8s_version']}"
             cluster = {
                 'Name': c.get('name') or 'N/A',
                 'VDC': c.get('vdc') or 'N/A',
                 'Org': c.get('org_name') or 'N/A',
-                'Kubernetes': kubernetes,
+                'K8s Runtime': c.get('k8s_type') or 'N/A',
+                'K8s Version': c.get('k8s_version') or 'N/A',
                 'Status': c.get('status') or 'N/A',
                 'Provider': c.get('k8s_provider') or 'N/A',
             }
