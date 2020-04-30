@@ -406,8 +406,11 @@ def ovdc_enable(ctx, ovdc_name, pks_plan,
                 pks_plan=pks_plan,
                 pks_cluster_domain=pks_cluster_domain)
             stdout(result, ctx)
+            CLIENT_LOGGER.debug(result)
         else:
-            stderr("Insufficient permission to perform operation.", ctx)
+            msg = "Insufficient permission to perform operation."
+            stderr(msg, ctx)
+            CLIENT_LOGGER.error(msg)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
