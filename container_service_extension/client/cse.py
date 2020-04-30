@@ -1069,22 +1069,12 @@ def ovdc_group(ctx):
 All commands execute in the context of user's currently logged-in
 organization. Use a different organization by using the '--org' option.
 
-Currently supported Kubernetes-providers:
-
-- native (vCD)
-
-- ent-pks (Enterprise PKS)
 
 \b
 Examples
-    vcd cse ovdc enable ovdc1 --k8s-provider native
+    vcd cse ovdc enable ovdc1
         Set 'ovdc1' Kubernetes provider to be native (vCD).
-\b
-    vcd cse ovdc enable ovdc2 --k8s-provider ent-pks \\
-    --pks-plan 'plan1' --pks-cluster-domain 'myorg.com'
-        Set 'ovdc2' Kubernetes provider to be ent-pks.
-        Use pks plan 'plan1' for 'ovdc2'.
-        Set cluster domain to be 'myorg.com'.
+
 \b
     vcd cse ovdc disable ovdc3
         Set 'ovdc3' Kubernetes provider to be none,
@@ -1129,32 +1119,9 @@ def list_ovdcs(ctx, list_pks_plans):
 
 
 @ovdc_group.command('enable',
-                    short_help='Set Kubernetes provider for an org VDC')
+                    short_help='Set Kubernetes provider to be Native for an org VDC')  # noqa: E501
 @click.pass_context
 @click.argument('ovdc_name', required=True, metavar='VDC_NAME')
-@click.option(
-    '-k',
-    '--k8s-provider',
-    'k8s_provider',
-    required=True,
-    type=click.Choice([K8sProvider.NATIVE, K8sProvider.PKS]),
-    help="Name of the Kubernetes provider to use for this org VDC")
-@click.option(
-    '-p',
-    '--pks-plan',
-    'pks_plan',
-    required=False,
-    metavar='PLAN_NAME',
-    help=f"PKS plan to use for all cluster deployments in this org VDC "
-         f"(Exclusive to --k8s-provider={K8sProvider.PKS}) (Required)")
-@click.option(
-    '-d',
-    '--pks-cluster-domain',
-    'pks_cluster_domain',
-    required=False,
-    help=f"Domain name suffix used to construct FQDN of deployed clusters "
-         f"in this org VDC "
-         f"(Exclusive to --k8s-provider={K8sProvider.PKS}) (Required)")
 @click.option(
     '-o',
     '--org',
@@ -1163,15 +1130,8 @@ def list_ovdcs(ctx, list_pks_plans):
     required=False,
     metavar='ORG_NAME',
     help="Org to use. Defaults to currently logged-in org")
-def ovdc_enable(ctx, ovdc_name, k8s_provider, pks_plan,
-                pks_cluster_domain, org_name):
+def ovdc_enable(ctx, ovdc_name, org_name):
     """Set Kubernetes provider for an org VDC."""
-    if k8s_provider == K8sProvider.PKS and \
-            (pks_plan is None or pks_cluster_domain is None):
-        click.secho("One or both of the required params (--pks-plan,"
-                    " --pks-cluster-domain) are missing", fg='yellow')
-        return
-
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -1183,9 +1143,7 @@ def ovdc_enable(ctx, ovdc_name, k8s_provider, pks_plan,
                 enable=True,
                 ovdc_name=ovdc_name,
                 org_name=org_name,
-                k8s_provider=k8s_provider,
-                pks_plan=pks_plan,
-                pks_cluster_domain=pks_cluster_domain)
+                k8s_provider=K8sProvider.NATIVE)
             stdout(result, ctx)
         else:
             stderr("Insufficient permission to perform operation.", ctx)

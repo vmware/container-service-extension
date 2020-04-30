@@ -9,64 +9,72 @@ from vcd_cli.utils import restore_session
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
 
+from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.pks_cluster import PksCluster
+from container_service_extension.server_constants import K8sProvider
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 
 
-@click.group(name='pks-cluster', short_help='Manage Ent-PKS clusters')
+@click.group(name='pks', short_help='Manage Ent-PKS clusters')
 @click.pass_context
 def pks_group(ctx):
-    """Manage Enterprise PKS Kubernetes clusters.
+    """Manage Enterprise PKS Kubernetes clusters."""
+
+
+@pks_group.group('cluster', short_help='Manage Ent-PKS Kubernetes clusters')
+@click.pass_context
+def cluster_group(ctx):
+    """Manage Kubernetes clusters.
 
 \b
 Cluster names should follow the syntax for valid names and can have
 up to 25 characters .
 \b
 Examples
-    vcd cse pks-cluster list
+    vcd cse pks cluster list
         Display clusters in Ent-PKS that are visible to the logged in user.
 \b
-    vcd cse pks-cluster list --vdc ovdc1
+    vcd cse pks cluster list --vdc ovdc1
         Display clusters in Ent-PKS backed by 'ovdc1'.
 \b
-    vcd cse pks-cluster create mycluster
+    vcd cse pks cluster create mycluster
         Create an Ent-PKS cluster named 'mycluster'.
         The cluster will have number of worker nodes defined by the plan.
 \b
-    vcd cse pks-cluster create mycluster --nodes 1 --vdc othervdc
+    vcd cse pks cluster create mycluster --nodes 1 --vdc othervdc
         Create an Ent-PKS cluster named 'mycluster' on org VDC 'othervdc'.
         The cluster will have 1 worker node.
         On create failure, cluster will be left cluster in error state for
         troubleshooting.
 \b
-    vcd cse pks-cluster resize mycluster --nodes 5
+    vcd cse pks cluster resize mycluster --nodes 5
         Resize the cluster to have 5 worker nodes. On resize failure,
         cluster will be left in error state for troubleshooting.
         '--vdc' option can be used for faster command execution.
 \b
-    vcd cse pks-cluster resize mycluster -N 10
+    vcd cse pks cluster resize mycluster -N 10
         Resize the cluster size to 10 worker nodes. On resize failure,
         cluster will be left in error state for troubleshooting.
 \b
-    vcd cse pks-cluster config mycluster > ~/.kube/config
+    vcd cse pks cluster config mycluster > ~/.kube/config
         Write cluster config details into '~/.kube/config' to manage cluster
         using kubectl.
         '--vdc' option can be used for faster command execution.
 \b
-    vcd cse pks-cluster info mycluster
+    vcd cse pks cluster info mycluster
         Display detailed information about cluster 'mycluster'.
         '--vdc' option can be used for faster command execution.
 \b
-    vcd cse pks-cluster delete mycluster --yes
+    vcd cse pks cluster delete mycluster --yes
         Delete cluster 'mycluster' without prompting.
         '--vdc' option can be used for faster command execution.
     """
     pass
 
 
-@pks_group.command('list',
-                   short_help='Display clusters in Ent-PKS that are visible '
-                              'to the logged in user')
+@cluster_group.command('list',
+                       short_help='Display clusters in Ent-PKS '
+                                  'that are visible to the logged in user')
 @click.pass_context
 @click.option(
     '-v',
@@ -98,8 +106,7 @@ def list_clusters(ctx, vdc, org_name):
         stderr(e, ctx)
 
 
-@pks_group.command('delete',
-                   short_help='Delete an Ent-PKS cluster')
+@cluster_group.command('delete', short_help='Delete an Ent-PKS cluster')
 @click.pass_context
 @click.argument('cluster_name', required=True)
 @click.confirmation_option(prompt='Are you sure you want to delete the '
@@ -141,7 +148,7 @@ def cluster_delete(ctx, cluster_name, vdc, org):
         stderr(e, ctx)
 
 
-@pks_group.command('create', short_help='Create an Ent-PKS cluster')
+@cluster_group.command('create', short_help='Create an Ent-PKS cluster')
 @click.pass_context
 @click.argument('cluster_name', required=True)
 @click.option(
@@ -193,9 +200,9 @@ def cluster_create(ctx, cluster_name, vdc, node_count, org_name):
         stderr(e, ctx)
 
 
-@pks_group.command('resize',
-                   short_help='Resize the Ent-PKS cluster to contain the '
-                              'specified number of worker nodes')
+@cluster_group.command('resize',
+                       short_help='Resize the Ent-PKS cluster to contain the '
+                                  'specified number of worker nodes')
 @click.pass_context
 @click.argument('cluster_name', required=True)
 @click.option(
@@ -244,7 +251,7 @@ def cluster_resize(ctx, cluster_name, node_count, org_name, vdc_name):
         stderr(e, ctx)
 
 
-@pks_group.command('config', short_help='Display Ent-PKS cluster configuration')  # noqa: E501
+@cluster_group.command('config', short_help='Display Ent-PKS cluster configuration')  # noqa: E501
 @click.pass_context
 @click.argument('cluster_name', required=True)
 @click.option(
@@ -285,8 +292,8 @@ def cluster_config(ctx, cluster_name, vdc, org):
         stderr(e, ctx)
 
 
-@pks_group.command('info',
-                   short_help='Display info about an Ent-PKS K8 cluster')
+@cluster_group.command('info',
+                       short_help='Display info about an Ent-PKS K8 cluster')
 @click.pass_context
 @click.argument('cluster_name', required=True)
 @click.option(
@@ -315,5 +322,76 @@ def cluster_info(ctx, cluster_name, org, vdc):
             org = ctx.obj['profiles'].get('org_in_use')
         cluster_info = cluster.get_cluster_info(cluster_name, org=org, vdc=vdc)
         stdout(cluster_info, ctx, show_id=True)
+    except Exception as e:
+        stderr(e, ctx)
+
+
+@pks_group.group('ovdc',
+                 short_help='Manage Kubernetes provider '
+                            'to be Ent-PKS for org VDCs')
+@click.pass_context
+def ovdc_group(ctx):
+    """Manage Kubernetes provider to be Ent-PKS for org VDCs.
+
+All commands execute in the context of user's currently logged-in
+organization. Use a different organization by using the '--org' option.
+
+\b
+Examples
+    vcd cse ovdc enable ovdc2 --pks-plan 'plan1' \\
+     --pks-cluster-domain 'myorg.com'
+        Set 'ovdc2' Kubernetes provider to be ent-pks.
+        Use pks plan 'plan1' for 'ovdc2'.
+        Set cluster domain to be 'myorg.com'.
+    """
+    pass
+
+
+@ovdc_group.command('enable',
+                    short_help='Set Kubernetes provider to be Ent-PKS for an org VDC')  # noqa: E501
+@click.pass_context
+@click.argument('ovdc_name', required=True, metavar='VDC_NAME')
+@click.option(
+    '-p',
+    '--pks-plan',
+    'pks_plan',
+    required=True,
+    metavar='PLAN_NAME',
+    help="PKS plan to use for all cluster deployments in this org VDC ")
+@click.option(
+    '-d',
+    '--pks-cluster-domain',
+    'pks_cluster_domain',
+    required=True,
+    help=f"Domain name suffix used to construct FQDN of deployed clusters "
+    f"in this org VDC ")
+@click.option(
+    '-o',
+    '--org',
+    'org_name',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help="Org to use. Defaults to currently logged-in org")
+def ovdc_enable(ctx, ovdc_name, pks_plan,
+                pks_cluster_domain, org_name):
+    """Set Kubernetes provider to be Ent-PKS for an org VDC."""
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        if client.is_sysadmin():
+            ovdc = Ovdc(client)
+            if org_name is None:
+                org_name = ctx.obj['profiles'].get('org_in_use')
+            result = ovdc.update_ovdc_for_k8s(
+                enable=True,
+                ovdc_name=ovdc_name,
+                org_name=org_name,
+                k8s_provider=K8sProvider.PKS,
+                pks_plan=pks_plan,
+                pks_cluster_domain=pks_cluster_domain)
+            stdout(result, ctx)
+        else:
+            stderr("Insufficient permission to perform operation.", ctx)
     except Exception as e:
         stderr(e, ctx)
