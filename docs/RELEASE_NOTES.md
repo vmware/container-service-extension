@@ -22,10 +22,13 @@ CSE UI plugin compatibility matrix
 |------|--------|---------------|
 |2.6.1 | 10.1.0 | 1.0.1         |
 
-**New Features**
+**What's New**
 * Support for Enterprise PKS 1.7 (and NSX-T 2.5.1).
   * Enterprise PKS 1.4 and NSX-T 2.3/2.4 are no longer supported.
 * New patch version of CSE UI Plugin (v1.0.1) is now available
+  * Fixed bug where network gateway CIDR shows netmask instead of gateway IP
+  * Fixed bug where cluster/node creation wizard does not show shared ovdc networks
+  * PKS clusters now display Kubernetes version
   * Read more about it [here](/container-service-extension/CSE_UI_PLUGIN.html)
 
 **Notes to System Administrator**
