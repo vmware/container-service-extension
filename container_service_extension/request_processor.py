@@ -119,7 +119,7 @@ def process_request(body):
 
     # process the request
     context = ctx.RequestContext(tenant_auth_token, is_jwt=is_jwt_token,
-                                 id=body['id'])
+                                 request_id=body['id'])
     try:
         body_content = OPERATION_TO_HANDLER[operation](data, context)
     finally:
