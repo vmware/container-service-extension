@@ -91,6 +91,7 @@ class UserContext:
     def end(self):
         try:
             self._sysadmin_client.logout()
-            self._sysadmin_client = None
         except Exception:
             pass
+        finally:
+            self._sysadmin_client = None

@@ -7,14 +7,14 @@ import container_service_extension.user_context as user_context
 
 
 class RequestContext:
-    def __init__(self, auth_token, is_jwt=True, id=None):
+    def __init__(self, auth_token, is_jwt=True, request_id=None):
         self._auth_token: str = auth_token
         self._is_jwt: bool = is_jwt
 
         # vCD API client from user auth token
         self._client: vcd_client.Client = None
 
-        # User contest
+        # User context
         self._user: user_context.UserContext = None
 
         # async operations should call end() when they are finished
@@ -25,7 +25,7 @@ class RequestContext:
 
         # Request ID; may be None if RequestContext is initialized outside of
         # request_processor.py
-        self.request_id = id
+        self.request_id: str = request_id
 
     @property
     def client(self):
