@@ -6,7 +6,7 @@ title: Release Notes
 # Release Notes
 
 ## CSE 2.6.1 GA(2.6.1)
-Release Date: 2020-04-30 ## TBD ##
+Release Date: 2020-04-30
 
 Supported VCD versions: 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0
 
@@ -20,11 +20,13 @@ CSE UI plugin compatibility matrix
 
 |CSE   | VCD    | CSE UI plugin |
 |------|--------|---------------|
-|2.6.1 | 10.1.0 | 1.0.0         | # Todo update plugin version
+|2.6.1 | 10.1.0 | 1.0.1         |
 
 **New Features**
 * Support for Enterprise PKS 1.7 (and NSX-T 2.5.1).
   * Enterprise PKS 1.4 and NSX-T 2.3/2.4 are no longer supported.
+* New patch version of CSE UI Plugin (v1.0.1) is now available
+  * Read more about it [here](/container-service-extension/CSE_UI_PLUGIN.html)
 
 **Notes to System Administrator**
 
@@ -44,7 +46,7 @@ all nodes in the clusters. If nodes in the clusters were setup with ssh keys
 for root login, those key pairings will be preserved. The command will force a
 reboot of the clusters, if admin password is reset.
 
-***Enterprise PKS***
+**Enterprise PKS**
 
 Existing Enterprise PKS clusters deployed via CSE will continue to function
 when PKS is upgraded to version 1.7. The cluster network isolation will also
