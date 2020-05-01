@@ -20,9 +20,6 @@ class RequestContext:
         # async operations should call end() when they are finished
         self.is_async: bool = False
 
-        # Request cache; keys defined in CacheKey enum
-        self.cache = {}
-
         # Request ID; may be None if RequestContext is initialized outside of
         # request_processor.py
         self.request_id: str = request_id
@@ -47,8 +44,3 @@ class RequestContext:
 
     def end(self):
         self.user.end()
-
-
-@enum.unique
-class CacheKey(str, enum.Enum):
-    pass
