@@ -162,7 +162,7 @@ def ovdc_compute_policy_list(request_data, tenant_auth_token, is_jwt_token):
 
     config = utils.get_server_runtime_config()
     cpm = ComputePolicyManager(client,
-                               utils.str_to_bool(config['server'].get('log_wire'))) # noqa: E501
+                               log_wire=utils.str_to_bool(config['server'].get('log_wire'))) # noqa: E501
     return cpm.list_compute_policies_on_vdc(request_data[RequestKey.OVDC_ID])
 
 
@@ -195,7 +195,7 @@ def ovdc_compute_policy_update(request_data, tenant_auth_token, is_jwt_token):
 
         config = utils.get_server_runtime_config()
         cpm = ComputePolicyManager(client,
-                                   utils.str_to_bool(config['server'].get('log_wire'))) # noqa: E501
+                                   log_wire=utils.str_to_bool(config['server'].get('log_wire'))) # noqa: E501
         cp_href = None
         cp_id = None
         if cp_name == SYSTEM_DEFAULT_COMPUTE_POLICY_NAME:
