@@ -5,6 +5,59 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 2.6.1 GA(2.6.1)
+Release Date: 2020-04-30
+
+Supported VCD versions: 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0
+
+Enterprise PKS compatibility matrix
+
+|CSE   | VCD                                | Enterprise PKS | NSX-T |
+|------|------------------------------------|----------------|-------|
+|2.6.1 | 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0 | 1.7            | 2.5.1 |
+
+CSE UI plugin compatibility matrix
+
+|CSE   | VCD    | CSE UI plugin |
+|------|--------|---------------|
+|2.6.1 | 10.1.0 | 1.0.1         |
+
+**What's New**
+* Support for Enterprise PKS 1.7 (and NSX-T 2.5.1).
+  * Enterprise PKS 1.4 and NSX-T 2.3/2.4 are no longer supported.
+* New patch version of CSE UI Plugin (v1.0.1) is now available
+  * Fixed bug where network gateway CIDR shows netmask instead of gateway IP
+  * Fixed bug where cluster/node creation wizard does not show shared ovdc networks
+  * PKS clusters now display Kubernetes version
+  * Read more about it [here](/container-service-extension/CSE_UI_PLUGIN.html)
+
+**Notes to System Administrator**
+
+If you are upgrading to CSE 2.6.1 from an older version of CSE, and you have
+* Kubernetes 1.15, 1.16 or 1.17 based template created by CSE 2.5.x:
+  * You must recreate/replace those templates with their latest version available.
+* Pre-existing deployed native K8s clusters, you must run the following command:
+  ```sh
+  cse convert-cluster [cluster name]
+  ```
+  * From CSE 2.5.x - To be able to upgrade the clusters.
+  * From CSE older than 2.5.0 - To preserve manageability of the clusters.
+
+This command adds new metadata to the clusters. If the clusters were deployed
+by CSE version below 2.5.0, the command will also reset the admin password of
+all nodes in the clusters. If nodes in the clusters were setup with ssh keys
+for root login, those key pairings will be preserved. The command will force a
+reboot of the clusters, if admin password is reset.
+
+**Enterprise PKS**
+
+Existing Enterprise PKS clusters deployed via CSE will continue to function
+when PKS is upgraded to version 1.7. The cluster network isolation will also
+remain intact when NSX-T is upgraded to version 2.5.1. Please follow PKS and
+NSX-T manual(s) to perform the respective upgrades.
+
+---
+
 ## CSE 2.6.0 GA(2.6.0)
 Release Date: 2020-04-09
 
@@ -12,9 +65,16 @@ Supported VCD versions: 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0
 
 Enterprise PKS compatibility matrix
 
-|CSE       | VCD                                     | Enterprise PKS | NSX-T    |
-|----------|-----------------------------------------|----------------|----------|
-|2.6.0     | 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0-Beta | 1.4            | 2.3, 2.4 |
+|CSE   | VCD                                | Enterprise PKS | NSX-T    |
+|------|------------------------------------|----------------|----------|
+|2.6.0 | 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0 | 1.4            | 2.3, 2.4 |
+
+CSE UI plugin compatibility matrix
+
+|CSE   | VCD    | CSE UI plugin |
+|------|--------|---------------|
+|2.6.0 | 10.1.0 | 1.0.0         |
+
 
 **New Features**
 * New Templates with updated Kubernetes and Weave

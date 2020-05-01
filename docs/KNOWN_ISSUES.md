@@ -7,6 +7,42 @@ title: Known Issues
 <a name="general"></a>
 ## General Issues
 ---
+
+### Existing clusters show Kubernetes version as 0.0.0 after CSE is upgraded to 2.6.0
+The way Kubernetes version of a cluster is determined, changed between
+CSE 2.5.x and 2.6.0. If the cluster metadata is not properly updated, then
+CSE 2.6.0 defaults the version to 0.0.0.
+
+*Workaround:* CSE 2.6.1 takes care of this issue and defaults to the Kubernetes
+version of the template from which the cluster is deployed. However, please note
+that if the template itself was created by CSE 2.5.x, then this approach is not
+foolproof. In such cases it's better to recreate the template in CSE 2.6.1, and
+then run `cse convert-cluster` command against the affected cluster to fix its
+metadata. Possible error messages if the template is not recreated and 
+`cse convert-cluster` is not run are as follows (but not limited to):
+
+N/A or patch version missing in/from Kubernetes version field
+```sh
+$ vcd cse cluster list
+Name                        VDC          Org      Kubernetes      Status      Provider
+--------------------------  -----------  -------  --------------  ----------  ----------
+used_old_tempalte           new-org-vdc  new-org  upstream 1.16   POWERED_ON  native
+didn_t_run_cluster_convert  new-org-vdc  new-org  N/A             POWERED_ON  native
+```
+
+Kubernetes upgrade operation fails
+```sh
+$ vcd cse cluster upgrade "used_old_tempalte" ubuntu-16.04_k8-1.17_weave-2.6.0 1
+cluster operation: Upgrading cluster 'used_old_tempalte' software to match template
+ubuntu-16.04_k8-1.17_weave-2.6.0 (revision 1): Kubernetes: 1.16 -> 1.17.2,
+Docker-CE: 18.09.7 -> 19.03.5, CNI: weave 2.6.0 -> 2.6.0,
+.
+.
+task: [REDACTED uuid], result: error, message: Unexpected error while upgrading
+cluster 'used_old_tempalte': Invalid version string: '1.16'
+```
+
+---
 ### Re-registering 2.6.0 GA CSE UI plugin with VCD doesn't work properly
 If the beta version of CSE UI plugin is already registered with VCD, trying to
 upgrade it via CSE cli or VCD UI will fail. Right now, the only way to update
