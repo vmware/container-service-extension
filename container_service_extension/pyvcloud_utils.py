@@ -21,10 +21,12 @@ from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 import requests
 
+from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
-from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.logger import SERVER_LOGGER
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.utils import get_server_runtime_config
+from container_service_extension.utils import NullPrinter
 from container_service_extension.utils import str_to_bool
 
 # Cache to keep ovdc_id to org_name mapping for vcd cse cluster list
@@ -57,9 +59,9 @@ def connect_vcd_user_via_token(tenant_auth_token, is_jwt_token):
 def get_sys_admin_client():
     server_config = get_server_runtime_config()
     if not server_config['vcd']['verify']:
-        LOGGER.warning("InsecureRequestWarning: Unverified HTTPS "
-                       "request is being made. Adding certificate "
-                       "verification is strongly advised.")
+        SERVER_LOGGER.warning("InsecureRequestWarning: Unverified HTTPS "
+                              "request is being made. Adding certificate "
+                              "verification is strongly advised.")
         requests.packages.urllib3.disable_warnings()
     log_filename = None
     log_wire = str_to_bool(server_config['service'].get('log_wire'))
@@ -288,8 +290,8 @@ def get_pvdc_id_from_pvdc_name(name, vc_name_in_vcd):
 
 
 def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
-                          org=None, org_name=None, logger=None,
-                          msg_update_callback=None):
+                          org=None, org_name=None, logger=NULL_LOGGER,
+                          msg_update_callback=NullPrinter()):
     """Upload local ova file to vCD catalog.
 
     :param pyvcloud.vcd.client.Client client:
@@ -301,8 +303,7 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
     :param str org_name: specific org to use if @org is not given.
         If None, uses currently logged-in org from @client.
     :param logging.Logger logger: optional logger to log with.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
-        that writes messages onto console.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
 
     :raises pyvcloud.vcd.exceptions.EntityNotFoundException if catalog
@@ -316,10 +317,8 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
         try:
             msg = f"Update flag set. Checking catalog '{catalog_name}' for " \
                   f"'{catalog_item_name}'"
-            if msg_update_callback:
-                msg_update_callback.info(msg)
-            if logger:
-                logger.info(msg)
+            msg_update_callback.info(msg)
+            logger.info(msg)
 
             org.delete_catalog_item(catalog_name, catalog_item_name)
             org.reload()
@@ -328,10 +327,8 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
 
             msg = f"Update flag set. Checking catalog '{catalog_name}' for " \
                   f"'{catalog_item_name}'"
-            if msg_update_callback:
-                msg_update_callback.info(msg)
-            if logger:
-                logger.info(msg)
+            msg_update_callback.info(msg)
+            logger.info(msg)
         except EntityNotFoundException:
             pass
     else:
@@ -344,30 +341,24 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
             org.get_catalog_item(catalog_name, catalog_item_name)
             msg = f"'{catalog_item_name}' already exists in catalog " \
                   f"'{catalog_name}'"
-            if msg_update_callback:
-                msg_update_callback.general(msg)
-            if logger:
-                logger.info(msg)
+            msg_update_callback.general(msg)
+            logger.info(msg)
 
             return
         except EntityNotFoundException:
             pass
 
     msg = f"Uploading '{catalog_item_name}' to catalog '{catalog_name}'"
-    if msg_update_callback:
-        msg_update_callback.info(msg)
-    if logger:
-        logger.info(msg)
+    msg_update_callback.info(msg)
+    logger.info(msg)
 
     org.upload_ovf(catalog_name, filepath)
     org.reload()
     wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
                                      org=org)
     msg = f"Uploaded '{catalog_item_name}' to catalog '{catalog_name}'"
-    if msg_update_callback:
-        msg_update_callback.general(msg)
-    if logger:
-        logger.info(msg)
+    msg_update_callback.general(msg)
+    logger.info(msg)
 
 
 def catalog_exists(org, catalog_name):
@@ -414,7 +405,7 @@ def catalog_item_exists(org, catalog_name, catalog_item_name):
 
 
 def create_and_share_catalog(org, catalog_name, catalog_desc='', logger=None,
-                             msg_update_callback=None):
+                             msg_update_callback=NullPrinter()):
     """Create and share specified catalog.
 
     If catalog does not exist in vCD, create it. Share the specified catalog
@@ -424,8 +415,7 @@ def create_and_share_catalog(org, catalog_name, catalog_desc='', logger=None,
     :param str catalog_name:
     :param str catalog_desc:
     :param logging.Logger logger: optional logger to log with.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
-        that writes messages onto console.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :return: XML representation of specified catalog.
 
@@ -436,22 +426,19 @@ def create_and_share_catalog(org, catalog_name, catalog_desc='', logger=None,
     """
     if catalog_exists(org, catalog_name):
         msg = f"Found catalog '{catalog_name}'"
-        if msg_update_callback:
-            msg_update_callback.general(msg)
+        msg_update_callback.general(msg)
         if logger:
             logger.info(msg)
     else:
         msg = f"Creating catalog '{catalog_name}'"
-        if msg_update_callback:
-            msg_update_callback.info(msg)
+        msg_update_callback.info(msg)
         if logger:
             logger.info(msg)
 
         org.create_catalog(catalog_name, catalog_desc)
 
         msg = f"Created catalog '{catalog_name}'"
-        if msg_update_callback:
-            msg_update_callback.general(msg)
+        msg_update_callback.general(msg)
         if logger:
             logger.info(msg)
         org.reload()

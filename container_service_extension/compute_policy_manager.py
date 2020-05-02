@@ -16,7 +16,9 @@ from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0 # noqa: E501
 from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.cloudapi.constants import CSE_COMPUTE_POLICY_PREFIX # noqa: E501
-from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.logger import NULL_LOGGER
+from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
+from container_service_extension.logger import SERVER_LOGGER
 import container_service_extension.pyvcloud_utils as pyvcd_utils
 from container_service_extension.shared_constants import RequestMethod
 import container_service_extension.utils as utils
@@ -37,15 +39,17 @@ class ComputePolicyManager:
     original names when returned back to the caller.
     """
 
-    def __init__(self, client):
+    def __init__(self, client, log_wire=True):
         """Initialize ComputePolicyManager Object.
 
         :param pyvcloud.vcd.client client:
+        :param bool log_wire:
 
         :raises: OperationNotSupportedException: If cloudapi endpoint is not
             found in session.
         :raises: ValueError: If non sys admin client is passed during
             initialization.
+
         """
         if not client.is_sysadmin():
             raise ValueError("Only Sys admin clients should be used to "
@@ -62,11 +66,16 @@ class ComputePolicyManager:
         self._session = self._vcd_client.get_vcloud_session()
 
         try:
+            wire_logger = NULL_LOGGER
+            if log_wire:
+                wire_logger = SERVER_CLOUDAPI_WIRE_LOGGER
             self._cloudapi_client = CloudApiClient(
                 base_url=self._vcd_client.get_cloudapi_uri(),
                 token=token,
                 is_jwt_token=is_jwt_token,
                 api_version=self._vcd_client.get_api_version(),
+                logger_debug=SERVER_LOGGER,
+                logger_wire=wire_logger,
                 verify_ssl=self._vcd_client._verify_ssl_certs)
             # Since the /cloudapi endpoint was added before the compute policy
             # endpoint. Mere presence of the /cloudapi uri is not enough, we
@@ -77,7 +86,7 @@ class ComputePolicyManager:
                 cloudapi_version=CLOUDAPI_VERSION_1_0_0,
                 resource_url_relative_path=f"{CloudApiResource.VDC_COMPUTE_POLICIES}") # noqa: E501
         except requests.exceptions.HTTPError as err:
-            LOGGER.error(err)
+            SERVER_LOGGER.error(err)
             raise OperationNotSupportedException(
                 "Cloudapi endpoint unavailable at current api version.")
 
@@ -512,7 +521,7 @@ class ComputePolicyManager:
                 org_href=org_href,
             )
         except Exception as err:
-            LOGGER.error(err, exc_info=True)
+            SERVER_LOGGER.error(err, exc_info=True)
             task.update(
                 status=TaskStatus.ERROR.value,
                 namespace='vcloud.cse',
