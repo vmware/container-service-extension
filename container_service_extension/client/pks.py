@@ -11,6 +11,7 @@ from vcd_cli.utils import stdout
 
 from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.pks_cluster import PksCluster
+from container_service_extension.logger import CLIENT_LOGGER
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 
@@ -94,6 +95,7 @@ Examples
     help="Filter list to show clusters from a specific org")
 def list_clusters(ctx, vdc, org_name):
     """Display clusters in Ent-PKS that are visible to the logged in user."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -102,8 +104,10 @@ def list_clusters(ctx, vdc, org_name):
             org_name = ctx.obj['profiles'].get('org_in_use')
         result = cluster.get_clusters(vdc=vdc, org=org_name)
         stdout(result, ctx, show_id=True, sort_headers=False)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @cluster_group.command('delete', short_help='Delete an Ent-PKS cluster')
@@ -129,6 +133,7 @@ def list_clusters(ctx, vdc, org_name):
     help='Restrict cluster search to specified org')
 def cluster_delete(ctx, cluster_name, vdc, org):
     """Delete an Ent-PKS cluster."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -140,12 +145,16 @@ def cluster_delete(ctx, cluster_name, vdc, org):
         # In that specific case, below check helps to print out a meaningful
         # message to users.
         if len(result) == 0:
-            click.secho(f"Delete cluster operation has been initiated on "
-                        f"{cluster_name}, please check the status using"
-                        f" 'vcd cse pks-cluster info {cluster_name}'.", fg='yellow')  # noqa: E501
+            msg = f"Delete cluster operation has been initiated on " \
+                  f"{cluster_name}, please check the status using" \
+                  f" 'vcd cse pks-cluster info {cluster_name}'."
+            click.secho(msg, fg='yellow')
+            CLIENT_LOGGER.debug(msg)
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @cluster_group.command('create', short_help='Create an Ent-PKS cluster')
@@ -177,6 +186,7 @@ def cluster_delete(ctx, cluster_name, vdc, org):
     help='Org to use. Defaults to currently logged-in org')
 def cluster_create(ctx, cluster_name, vdc, node_count, org_name):
     """Create an Ent-PKS Kubernetes cluster (max name length is 25 characters)."""  # noqa: E501
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
 
         restore_session(ctx)
@@ -196,8 +206,10 @@ def cluster_create(ctx, cluster_name, vdc, node_count, org_name):
             node_count=node_count,
             org=org_name)
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @cluster_group.command('resize',
@@ -235,6 +247,7 @@ def cluster_resize(ctx, cluster_name, node_count, org_name, vdc_name):
     Clusters that use native Kubernetes provider can not be sized down
     (use 'vcd cse node delete' command to do so).
     """
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -247,8 +260,10 @@ def cluster_resize(ctx, cluster_name, node_count, org_name, vdc_name):
             org=org_name,
             vdc=vdc_name)
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @cluster_group.command('config', short_help='Display Ent-PKS cluster configuration')  # noqa: E501
@@ -275,6 +290,7 @@ def cluster_config(ctx, cluster_name, vdc, org):
 
     To write to a file: `vcd cse pks-cluster config mycluster > ~/.kube/my_config`  # noqa: E501
     """
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -288,8 +304,10 @@ def cluster_config(ctx, cluster_name, vdc, org):
             cluster_config = str.replace(cluster_config, '\n', '\r\n')
 
         click.secho(cluster_config)
+        CLIENT_LOGGER.debug(cluster_config)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @cluster_group.command('info',
@@ -314,6 +332,7 @@ def cluster_config(ctx, cluster_name, vdc, org):
     help='Restrict cluster search to specified org')
 def cluster_info(ctx, cluster_name, org, vdc):
     """Display info about an Ent-PKS K8 cluster."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -322,8 +341,10 @@ def cluster_info(ctx, cluster_name, org, vdc):
             org = ctx.obj['profiles'].get('org_in_use')
         cluster_info = cluster.get_cluster_info(cluster_name, org=org, vdc=vdc)
         stdout(cluster_info, ctx, show_id=True)
+        CLIENT_LOGGER.debug(cluster_info)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @pks_group.group('ovdc',
@@ -376,6 +397,7 @@ Examples
 def ovdc_enable(ctx, ovdc_name, pks_plan,
                 pks_cluster_domain, org_name):
     """Set Kubernetes provider to be Ent-PKS for an org VDC."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -391,7 +413,11 @@ def ovdc_enable(ctx, ovdc_name, pks_plan,
                 pks_plan=pks_plan,
                 pks_cluster_domain=pks_cluster_domain)
             stdout(result, ctx)
+            CLIENT_LOGGER.debug(result)
         else:
-            stderr("Insufficient permission to perform operation.", ctx)
+            msg = "Insufficient permission to perform operation."
+            stderr(msg, ctx)
+            CLIENT_LOGGER.error(msg)
     except Exception as e:
         stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
