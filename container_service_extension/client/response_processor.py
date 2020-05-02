@@ -43,6 +43,8 @@ def process_response(response):
 
     :raises CseResponseError: if response http status code is not 2xx
     """
+    wire_logger.debug(f"Made request to: {response.request.method} {response.request.path_url}") # noqa: E501
+    wire_logger.debug(f"Request body: {response.request.body}")
     if response.status_code in [
         requests.codes.ok,
         requests.codes.created,

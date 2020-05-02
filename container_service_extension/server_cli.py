@@ -290,6 +290,7 @@ def uiplugin(ctx):
 @click.pass_context
 def version(ctx):
     """Display CSE version."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     ver_obj = Service.version()
     ver_str = '%s, %s, version %s' % (ver_obj['product'],
                                       ver_obj['description'],
@@ -314,6 +315,7 @@ def version(ctx):
     help='Generate only sample PKS config')
 def sample(ctx, output, pks_config):
     """Display sample CSE config file contents."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     # The console_message_printer is not being passed to the python version
     # check, because we want to suppress the version check messages from being
@@ -357,6 +359,7 @@ def sample(ctx, output, pks_config):
 def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
           check_install):
     """Validate CSE config file."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
@@ -426,6 +429,7 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
     help='Filepath to write decrypted file to')
 def decrypt(ctx, input_file, output_file):
     """Decrypt CSE configuration file."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
@@ -461,6 +465,7 @@ def decrypt(ctx, input_file, output_file):
     help='Filepath to write encrypted file to')
 def encrypt(ctx, input_file, output_file):
     """Encrypt CSE configuration file."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
@@ -537,6 +542,7 @@ def install(ctx, config_file_path, pks_config_file_path,
             skip_config_decryption, skip_template_creation, force_update,
             retain_temp_vapp, ssh_key_file):
     """Install CSE on vCloud Director."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
@@ -618,6 +624,7 @@ def install(ctx, config_file_path, pks_config_file_path,
 def run(ctx, config_file_path, pks_config_file_path, skip_check,
         skip_config_decryption):
     """Run CSE service."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
@@ -720,6 +727,7 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
 
     Use '*' as cluster name to convert all clusters.
     """
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
@@ -745,12 +753,12 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
         record_user_action_details(cse_operation=CseOperation.CLUSTER_CONVERT,
                                    cse_params=cse_params,
                                    telemetry_settings=config['service']['telemetry'])  # noqa: E501
-        log_filename = None
+        log_wire_file = None
         log_wire = str_to_bool(config['service'].get('log_wire'))
         if log_wire:
-            log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
+            log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
 
-        client, _ = _get_clients_from_config(config, log_filename, log_wire)
+        client, _ = _get_clients_from_config(config, log_wire_file, log_wire)
 
         msg = f"Connected to vCD as system administrator: " \
               f"{config['vcd']['host']}:{config['vcd']['port']}"
@@ -1019,6 +1027,7 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
 def list_template(ctx, config_file_path, skip_config_decryption,
                   display_option):
     """List CSE k8s templates."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     # Not passing the console_message_printer, because we want to suppress
     # the python version check messages from being printed onto console.
@@ -1048,13 +1057,14 @@ def list_template(ctx, config_file_path, skip_config_decryption,
         if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL):
             client = None
             try:
-                log_filename = None
+                log_wire_file = None
                 log_wire = str_to_bool(config_dict['service'].get('log_wire'))
                 if log_wire:
-                    log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
+                    log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
 
-                client, _ = _get_clients_from_config(
-                    config_dict, log_filename=log_filename, log_wire=log_wire)
+                client, _ = _get_clients_from_config(config_dict,
+                                                     log_wire_file=log_wire_file, # noqa: E501
+                                                     log_wire=log_wire)
 
                 org_name = config_dict['broker']['org']
                 catalog_name = config_dict['broker']['catalog']
@@ -1152,6 +1162,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
 
         result = sorted(result, key=lambda t: (t['name'], t['revision']), reverse=True)  # noqa: E501
         stdout(result, ctx, sort_headers=False)
+        SERVER_CLI_LOGGER.debug(result)
         record_user_action(cse_operation=CseOperation.TEMPLATE_LIST,
                            telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
     except Exception as err:
@@ -1220,6 +1231,7 @@ def install_cse_template(ctx, template_name, template_revision,
     Use '*' for TEMPLATE_NAME and TEMPLATE_REVISION to install
     all listed templates.
     """
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
@@ -1294,6 +1306,7 @@ def install_cse_template(ctx, template_name, template_revision,
 def register_ui_plugin(ctx, plugin_file_path, config_file_path,
                        skip_config_decryption):
     """."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
@@ -1339,13 +1352,13 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
             'enabled': True
         }
 
-        log_filename = None
+        log_wire_file = None
         log_wire = str_to_bool(config_dict['service'].get('log_wire'))
         if log_wire:
-            log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
+            log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
 
         client, cloudapi_client = _get_clients_from_config(
-            config_dict, log_filename=log_filename, log_wire=log_wire)
+            config_dict, log_wire_file=log_wire_file, log_wire=log_wire)
 
         msg = "Registering plugin with vCD."
         SERVER_CLI_LOGGER.debug(msg)
@@ -1448,6 +1461,7 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
 def deregister_ui_plugin(ctx, plugin_id, config_file_path,
                          skip_config_decryption):
     """."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
@@ -1472,7 +1486,7 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
             log_filename = SERVER_CLI_WIRELOG_FILEPATH
 
         client, cloudapi_client = _get_clients_from_config(
-            config_dict, log_filename=log_filename, log_wire=log_wire)
+            config_dict, log_wire_file=log_filename, log_wire=log_wire)
 
         cloudapi_client.do_request(
             method=RequestMethod.DELETE,
@@ -1482,6 +1496,7 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
         SERVER_CLI_LOGGER.debug(msg)
         console_message_printer.general(msg)
     except Exception as err:
+        SERVER_CLI_LOGGER.debug(str(err))
         console_message_printer.error(str(err))
         sys.exit(1)
     finally:
@@ -1509,6 +1524,7 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
     help='Skip decryption of CSE config file')
 def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
     """."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     # Suppress the python version check message from being printed on
     # console
@@ -1535,7 +1551,7 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
             log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
 
         client, cloudapi_client = _get_clients_from_config(
-            config_dict, log_filename=log_filename, log_wire=log_wire)
+            config_dict, log_wire_file=log_filename, log_wire=log_wire)
 
         result = []
         response_body = cloudapi_client.do_request(
@@ -1551,6 +1567,7 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
                 result.append(ui_plugin)
 
         stdout(result, ctx, sort_headers=False, show_id=True)
+        SERVER_CLI_LOGGER.debug(result)
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
@@ -1615,11 +1632,11 @@ def _get_config_dict(config_file_path,
         raise Exception(VCENTER_LOGIN_ERROR_MSG)
 
 
-def _get_clients_from_config(config, log_filename, log_wire):
+def _get_clients_from_config(config, log_wire_file, log_wire):
     client = Client(config['vcd']['host'],
                     api_version=config['vcd']['api_version'],
                     verify_ssl_certs=config['vcd']['verify'],
-                    log_file=log_filename,
+                    log_file=log_wire_file,
                     log_requests=log_wire,
                     log_headers=log_wire,
                     log_bodies=log_wire)

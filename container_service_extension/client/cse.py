@@ -43,6 +43,7 @@ Examples
 @click.pass_context
 def version(ctx):
     """Display version of CSE plug-in."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     ver_obj = Service.version()
     ver_str = '%s, %s, version %s' % (ver_obj['product'],
                                       ver_obj['description'],
@@ -69,6 +70,7 @@ Examples
 @click.pass_context
 def list_templates(ctx):
     """Display templates that can be used by native Kubernetes provider."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -177,6 +179,7 @@ Examples
     help="Filter list to show clusters from a specific org")
 def list_clusters(ctx, vdc, org_name):
     """Display clusters in vCD that are visible to the logged in user."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -229,6 +232,7 @@ def list_clusters(ctx, vdc, org_name):
     help='Restrict cluster search to specified org')
 def cluster_delete(ctx, name, vdc, org):
     """Delete a Kubernetes cluster."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -348,6 +352,7 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
                    storage_profile, ssh_key_file, template_name,
                    template_revision, enable_nfs, disable_rollback, org_name):
     """Create a Kubernetes cluster (max name length is 25 characters)."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         if (template_name and not template_revision) or \
                 (not template_name and template_revision):
@@ -496,6 +501,7 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
     Clusters that use native Kubernetes provider can not be sized down
     (use 'vcd cse node delete' command to do so).
     """
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         if (template_name and not template_revision) or \
                 (not template_name and template_revision):
@@ -563,6 +569,7 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
     help="Restrict cluster search to specific org")
 def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name):
     """Display templates that the specified cluster can upgrade to."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -620,6 +627,7 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
 
     Affected software: Docker-CE, Kubernetes, CNI
     """
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -661,6 +669,7 @@ def cluster_config(ctx, name, vdc, org):
 
     To write to a file: `vcd cse cluster config mycluster > ~/.kube/my_config`
     """
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -700,6 +709,7 @@ def cluster_config(ctx, name, vdc, org):
     help='Restrict cluster search to specified org')
 def cluster_info(ctx, name, org, vdc):
     """Display info about a Kubernetes cluster."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -779,6 +789,7 @@ Examples
     help='Restrict cluster search to specified org VDC')
 def node_info(ctx, cluster_name, node_name, org_name, vdc):
     """Display info about a node in a native Kubernetes provider cluster."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -894,6 +905,7 @@ def create_node(ctx, cluster_name, node_count, org, vdc, cpu, memory,
                 network_name, storage_profile, ssh_key_file, template_name,
                 template_revision, enable_nfs, disable_rollback):
     """Add node(s) to a cluster that uses native Kubernetes provider."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         if (template_name and not template_revision) or \
                 (not template_name and template_revision):
@@ -952,6 +964,7 @@ def create_node(ctx, cluster_name, node_count, org, vdc, cpu, memory,
     help='Restrict cluster search to specified org VDC')
 def list_nodes(ctx, name, org, vdc):
     """Display nodes of a cluster that uses native Kubernetes provider."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -996,6 +1009,7 @@ def list_nodes(ctx, name, org, vdc):
     help='Restrict cluster search to specified org')
 def delete_nodes(ctx, cluster_name, node_names, org, vdc):
     """Delete node(s) in a cluster that uses native Kubernetes provider."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -1037,6 +1051,7 @@ Examples
 @click.pass_context
 def system_info(ctx):
     """Display CSE server info."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -1054,6 +1069,7 @@ def system_info(ctx):
 @click.confirmation_option(prompt='Are you sure you want to stop the server?')
 def stop_service(ctx):
     """Stop CSE server."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -1070,6 +1086,7 @@ def stop_service(ctx):
 @click.pass_context
 def enable_service(ctx):
     """Enable CSE server."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -1086,6 +1103,7 @@ def enable_service(ctx):
 @click.pass_context
 def disable_service(ctx):
     """Disable CSE server."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -1145,6 +1163,7 @@ Examples
 @click.pass_context
 def list_ovdcs(ctx, list_pks_plans):
     """Display org VDCs in vCD that are visible to the logged in user."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -1171,6 +1190,7 @@ def list_ovdcs(ctx, list_pks_plans):
     help="Org to use. Defaults to currently logged-in org")
 def ovdc_enable(ctx, ovdc_name, org_name):
     """Set Kubernetes provider for an org VDC."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -1209,6 +1229,7 @@ def ovdc_enable(ctx, ovdc_name, org_name):
     help="Org to use. Defaults to currently logged-in org")
 def ovdc_disable(ctx, ovdc_name, org_name):
     """Disable Kubernetes cluster deployment for an org VDC."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -1245,6 +1266,7 @@ def ovdc_disable(ctx, ovdc_name, org_name):
     help="Org to use. Defaults to currently logged-in org")
 def ovdc_info(ctx, ovdc_name, org_name):
     """Display information about Kubernetes provider for an org VDC."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -1303,6 +1325,7 @@ Examples
     required=True,
     help="(Required) Org VDC to use")
 def compute_policy_list(ctx, org_name, ovdc_name):
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -1336,6 +1359,7 @@ def compute_policy_list(ctx, org_name, ovdc_name):
     required=True,
     help="(Required) Org VDC to use")
 def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -1383,6 +1407,7 @@ def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
          "This VM compute policy update is irreversible.")
 def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name,
                           remove_compute_policy_from_vms):
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']

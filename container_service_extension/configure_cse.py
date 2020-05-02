@@ -323,7 +323,7 @@ def install_cse(config_file_name, skip_template_creation, force_update,
 
         # if it's a PKS setup, setup NSX-T constructs
         if config.get('pks_config'):
-            nsxt_servers = config.get('pks_config')['nsxt_servers']
+            nsxt_servers = config['pks_config']['nsxt_servers']
             wire_logger = NULL_LOGGER
             if log_wire:
                 wire_logger = SERVER_NSXT_WIRE_LOGGER

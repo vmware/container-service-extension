@@ -106,7 +106,7 @@ def get_validated_config(config_file_name,
         **SAMPLE_VCS_CONFIG, **SAMPLE_SERVICE_CONFIG,
         **SAMPLE_BROKER_CONFIG
     }
-    log_wire = str_to_bool(config['service'].get('log_wire'))
+    log_wire = str_to_bool(config.get('service', {}).get('log_wire'))
     if not log_wire:
         log_wire_file = None
     check_keys_and_value_types(config, sample_config, location='config file',
