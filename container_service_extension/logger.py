@@ -62,7 +62,7 @@ CLIENT_INFO_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-client-info.log"
 CLIENT_DEBUG_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-client-debug.log"
 CLIENT_LOGGER = logging.getLogger(CLIENT_LOGGER_NAME)
 
-CLIENT_WIRE_LOGGER_NAME = 'container_service_extension.client.wire'
+CLIENT_WIRE_LOGGER_NAME = 'container_service_extension.client-wire'
 CLIENT_WIRE_LOGGER_FILEPATH = f"{LOGS_DIR_NAME}/cse-client-wire.log" # noqa: E501
 CLIENT_WIRE_LOGGER = logging.getLogger(CLIENT_WIRE_LOGGER_NAME)
 
@@ -99,15 +99,15 @@ SERVER_LOGGER = logging.getLogger(SERVER_LOGGER_NAME)
 # logfile for pyvcloud
 SERVER_DEBUG_WIRELOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-server-wire-debug.log"
 
-SERVER_NSXT_WIRE_LOGGER_NAME = 'container_service_extension.server-nsxt.wire'
+SERVER_NSXT_WIRE_LOGGER_NAME = 'container_service_extension.server-nsxt-wire'
 SERVER_NSXT_WIRE_LOG_FILEPATH = f"{LOGS_DIR_NAME}/nsxt-wire.log"
 SERVER_NSXT_WIRE_LOGGER = logging.getLogger(SERVER_NSXT_WIRE_LOGGER_NAME)
 
-SERVER_PKS_WIRE_LOGGER_NAME = 'container_service_extension.server-pks.wire'
+SERVER_PKS_WIRE_LOGGER_NAME = 'container_service_extension.server-pks-wire'
 SERVER_PKS_WIRE_LOG_FILEPATH = f"{LOGS_DIR_NAME}/pks-wire.log"
 SERVER_PKS_WIRE_LOGGER = logging.getLogger(SERVER_PKS_WIRE_LOGGER_NAME)
 
-SERVER_CLOUDAPI_WIRE_LOGGER_NAME = 'container_service_extension.server-cloudapi.wire' # noqa: E501
+SERVER_CLOUDAPI_WIRE_LOGGER_NAME = 'container_service_extension.server-cloudapi-wire' # noqa: E501
 SERVER_CLOUDAPI_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cloudapi-wire.log"
 SERVER_CLOUDAPI_WIRE_LOGGER = logging.getLogger(SERVER_CLOUDAPI_WIRE_LOGGER_NAME) # noqa: E501
 

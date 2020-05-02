@@ -95,6 +95,7 @@ Examples
     help="Filter list to show clusters from a specific org")
 def list_clusters(ctx, vdc, org_name):
     """Display clusters in Ent-PKS that are visible to the logged in user."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -132,6 +133,7 @@ def list_clusters(ctx, vdc, org_name):
     help='Restrict cluster search to specified org')
 def cluster_delete(ctx, cluster_name, vdc, org):
     """Delete an Ent-PKS cluster."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -184,6 +186,7 @@ def cluster_delete(ctx, cluster_name, vdc, org):
     help='Org to use. Defaults to currently logged-in org')
 def cluster_create(ctx, cluster_name, vdc, node_count, org_name):
     """Create an Ent-PKS Kubernetes cluster (max name length is 25 characters)."""  # noqa: E501
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
 
         restore_session(ctx)
@@ -244,6 +247,7 @@ def cluster_resize(ctx, cluster_name, node_count, org_name, vdc_name):
     Clusters that use native Kubernetes provider can not be sized down
     (use 'vcd cse node delete' command to do so).
     """
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -286,6 +290,7 @@ def cluster_config(ctx, cluster_name, vdc, org):
 
     To write to a file: `vcd cse pks-cluster config mycluster > ~/.kube/my_config`  # noqa: E501
     """
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -327,6 +332,7 @@ def cluster_config(ctx, cluster_name, vdc, org):
     help='Restrict cluster search to specified org')
 def cluster_info(ctx, cluster_name, org, vdc):
     """Display info about an Ent-PKS K8 cluster."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
@@ -391,6 +397,7 @@ Examples
 def ovdc_enable(ctx, ovdc_name, pks_plan,
                 pks_cluster_domain, org_name):
     """Set Kubernetes provider to be Ent-PKS for an org VDC."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']

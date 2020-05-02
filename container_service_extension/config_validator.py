@@ -106,9 +106,11 @@ def get_validated_config(config_file_name,
         **SAMPLE_VCS_CONFIG, **SAMPLE_SERVICE_CONFIG,
         **SAMPLE_BROKER_CONFIG
     }
-    log_wire = str_to_bool(config['service'].get('log_wire'))
+    log_wire = str_to_bool(config.get('service', {}).get('log_wire'))
+    nsxt_wire_logger = NULL_LOGGER
     if not log_wire:
         log_wire_file = None
+        nsxt_wire_logger = SERVER_NSXT_WIRE_LOGGER
     check_keys_and_value_types(config, sample_config, location='config file',
                                msg_update_callback=msg_update_callback)
     _validate_amqp_config(config['amqp'], msg_update_callback)
@@ -144,13 +146,11 @@ def get_validated_config(config_file_name,
                                             decryption_password)) or {}
         msg_update_callback.info(
             f"Validating PKS config file '{pks_config_file_name}'")
-        logger_wire = NULL_LOGGER
-        if str_to_bool(config['service'].get('log_wire')):
-            logger_wire = SERVER_NSXT_WIRE_LOGGER
         _validate_pks_config_structure(pks_config, msg_update_callback)
         _validate_pks_config_data_integrity(pks_config,
                                             msg_update_callback,
-                                            logger_wire=logger_wire)
+                                            logger_debug=logger_debug,
+                                            logger_wire=nsxt_wire_logger)
         msg_update_callback.general(
             f"PKS Config file '{pks_config_file_name}' is valid")
         config['pks_config'] = pks_config
@@ -379,6 +379,7 @@ def _validate_pks_config_structure(pks_config,
 
 def _validate_pks_config_data_integrity(pks_config,
                                         msg_update_callback=NullPrinter(),
+                                        logger_debug=NULL_LOGGER,
                                         logger_wire=NULL_LOGGER):
     all_pks_servers = \
         [entry['name'] for entry in pks_config[PKS_SERVERS_SECTION_KEY]]
@@ -488,8 +489,8 @@ def _validate_pks_config_data_integrity(pks_config,
             host=nsxt_server.get('host'),
             username=nsxt_server.get('username'),
             password=nsxt_server.get('password'),
-            logger_debug=NULL_LOGGER,
-            logger_wire=NULL_LOGGER,
+            logger_debug=logger_debug,
+            logger_wire=logger_wire,
             http_proxy=nsxt_server.get('proxy'),
             https_proxy=nsxt_server.get('proxy'),
             verify_ssl=nsxt_server.get('verify'))
