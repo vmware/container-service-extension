@@ -4,7 +4,7 @@
 
 import functools
 
-from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.logger import SERVER_LOGGER
 from container_service_extension.pyvcloud_utils import get_sys_admin_client
 from container_service_extension.pyvcloud_utils import get_user_rights
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
@@ -39,8 +39,8 @@ def _is_authorized(sys_admin_client, user_session, required_rights):
     if len(missing_rights) == 0:
         return True
 
-    LOGGER.debug(f"Authorization failed for user: {user_session.get('user')}."
-                 f" Missing rights:{missing_rights}.")
+    SERVER_LOGGER.debug(f"Authorization failed for user: {user_session.get('user')}." # noqa: E501
+                        f" Missing rights:{missing_rights}.")
     return False
 
 

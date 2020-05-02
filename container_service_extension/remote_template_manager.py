@@ -9,8 +9,10 @@ import requests
 import yaml
 
 import container_service_extension.local_template_manager as ltm
+from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.utils import download_file
+from container_service_extension.utils import NullPrinter
 
 
 REMOTE_TEMPLATE_COOKBOOK_FILENAME = 'template.yaml'
@@ -41,14 +43,14 @@ class RemoteTemplateManager():
     Exposes methods to download template cookbook and associated scripts.
     """
 
-    def __init__(self, remote_template_cookbook_url, logger=None,
-                 msg_update_callback=None):
+    def __init__(self, remote_template_cookbook_url, logger=NULL_LOGGER,
+                 msg_update_callback=NullPrinter()):
         """.
 
         :param str remote_template_cookbook_url:
-        :param logging.Logger logger: optional logger to log with.
-        :param utils.ConsoleMessagePrinter msg_update_callback: Callback
-            object that writes messages onto console.
+        :param logging.Logger logger: logger to log with.
+        :param utils.ConsoleMessagePrinter msg_update_callback:
+            Callback object.
         """
         self.url = remote_template_cookbook_url
         self.logger = logger
@@ -95,14 +97,12 @@ class RemoteTemplateManager():
         :rtype: dict
         """
         if self.cookbook:
-            if self.logger:
-                self.logger.debug("Re-using cached copy of template cookbook.")
+            self.logger.debug("Re-using cached copy of template cookbook.")
         else:
             template_cookbook_as_str = download_file_into_memory(self.url)
             self.cookbook = yaml.safe_load(template_cookbook_as_str)
-            if self.logger:
-                self.logger.debug("Downloaded remote template cookbook from "
-                                  f"{self.url}")
+            self.logger.debug("Downloaded remote template cookbook from"
+                              f" {self.url}")
         return self.cookbook
 
     def download_template_scripts(self, template_name, revision,
