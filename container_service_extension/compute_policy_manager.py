@@ -2,9 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-
-from pyvcloud.vcd.client import EntityType
-from pyvcloud.vcd.client import TaskStatus
+import pyvcloud.vcd.client as vcd_client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 from pyvcloud.vcd.task import Task
@@ -20,7 +18,6 @@ from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 from container_service_extension.logger import SERVER_LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
-import container_service_extension.request_context as ctx
 from container_service_extension.shared_constants import RequestMethod
 import container_service_extension.utils as utils
 
@@ -40,22 +37,30 @@ class ComputePolicyManager:
     original names when returned back to the caller.
     """
 
-    def __init__(self, request_context: ctx.RequestContext, log_wire=True):
-        self.context: ctx.RequestContext = request_context
+    def __init__(self, sysadmin_client, log_wire=True):
+        vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+        self._sysadmin_client: vcd_client.Client = sysadmin_client
         self._cloudapi_client: CloudApiClient = None
+        self._session = self._sysadmin_client.get_vcloud_session()
+
+        token = self._sysadmin_client.get_access_token()
+        is_jwt = True
+        if not token:
+            token = self._sysadmin_client.get_xvcloud_authorization_token()
+            is_jwt = False
 
         try:
             wire_logger = NULL_LOGGER
             if log_wire:
                 wire_logger = SERVER_CLOUDAPI_WIRE_LOGGER
             self._cloudapi_client = CloudApiClient(
-                base_url=self.context.client.get_cloudapi_uri(),
-                token=self.context._auth_token,
-                is_jwt_token=self.context._is_jwt,
-                api_version=self.context.client.get_api_version(),
+                base_url=self._sysadmin_client.get_cloudapi_uri(),
+                token=token,
+                is_jwt_token=is_jwt,
+                api_version=self._sysadmin_client.get_api_version(),
                 logger_debug=SERVER_LOGGER,
                 logger_wire=wire_logger,
-                verify_ssl=self.context.client._verify_ssl_certs)
+                verify_ssl=self._sysadmin_client._verify_ssl_certs)
             # Since the /cloudapi endpoint was added before the compute policy
             # endpoint. Mere presence of the /cloudapi uri is not enough, we
             # need to make sure that this cloud api client will be of actual
@@ -208,7 +213,7 @@ class ComputePolicyManager:
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
-        vdc = vcd_utils.get_vdc(self.context.client, vdc_id=vdc_id,
+        vdc = vcd_utils.get_vdc(self._sysadmin_client, vdc_id=vdc_id,
                                 is_admin_operation=True)
         return vdc.add_compute_policy(compute_policy_href)
 
@@ -221,7 +226,7 @@ class ComputePolicyManager:
         :return: A list of dictionaries with the keys 'name', 'href', and 'id'
         :rtype: List
         """
-        vdc = vcd_utils.get_vdc(self.context.client, vdc_id=vdc_id,
+        vdc = vcd_utils.get_vdc(self._sysadmin_client, vdc_id=vdc_id,
                                 is_admin_operation=True)
 
         result = []
@@ -247,12 +252,12 @@ class ComputePolicyManager:
         :param str catalog_name: name of the catalog
         :param str catalog_item_name: name of the catalog item that has vms
 
-        :return: an object of type EntityType.TASK XML which represents
+        :return: an object of type vcd_client.TASK XML which represents
         the asynchronous task that is updating virtual application template.
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
-        org = vcd_utils.get_org(self.context.client, org_name=org_name)
+        org = vcd_utils.get_org(self._sysadmin_client, org_name=org_name)
         return org.assign_compute_policy_to_vapp_template_vms(
             catalog_name=catalog_name,
             catalog_item_name=catalog_item_name,
@@ -270,13 +275,13 @@ class ComputePolicyManager:
         :param str catalog_name: name of the catalog.
         :param str catalog_item_name: name of the catalog item that has vms.
 
-        :return: an object of type EntityType.TASK XML which represents
+        :return: an object of type vcd_client.TASK XML which represents
             the asynchronous task that is updating virtual application
             template.
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
-        org = vcd_utils.get_org(self.context.client, org_name=org_name)
+        org = vcd_utils.get_org(self._sysadmin_client, org_name=org_name)
         return org.remove_compute_policy_from_vapp_template_vms(
             catalog_name,
             catalog_item_name,
@@ -298,7 +303,7 @@ class ComputePolicyManager:
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
-        org = vcd_utils.get_org(self.context.client, org_name=org_name)
+        org = vcd_utils.get_org(self._sysadmin_client, org_name=org_name)
         return org.remove_all_compute_policies_from_vapp_template_vms(
             catalog_name, catalog_item_name)
 
@@ -345,16 +350,16 @@ class ComputePolicyManager:
 
         :return: dictionary containing 'task_href'.
         """
-        vdc = vcd_utils.get_vdc(self.context.client, vdc_id=ovdc_id)
+        vdc = vcd_utils.get_vdc(self._sysadmin_client, vdc_id=ovdc_id)
 
-        org = vcd_utils.get_org(self.context.client)
+        org = vcd_utils.get_org(self._sysadmin_client)
         org.reload()
-        user_name = self.context.user.name
+        user_name = self._session.get('user')
         user_href = org.get_user(user_name).get('href')
 
-        task = Task(self.context.client)
+        task = Task(self._sysadmin_client)
         task_resource = task.update(
-            status=TaskStatus.RUNNING.value,
+            status=vcd_client.TaskStatus.RUNNING.value,
             namespace='vcloud.cse',
             operation=f"Removing compute policy (href: {compute_policy_href})"
                       f" from org VDC (vdc id: {ovdc_id})",
@@ -363,13 +368,12 @@ class ComputePolicyManager:
             progress=None,
             owner_href=vdc.href,
             owner_name=vdc.name,
-            owner_type=EntityType.VDC.value,
+            owner_type=vcd_client.vcd_client.EntityType.VDC.value,
             user_href=user_href,
             user_name=user_name,
             org_href=org.href)
 
         task_href = task_resource.get('href')
-        self.context.is_async = True
         self._remove_compute_policy_from_vdc_async(
             task=task,
             task_href=task_href,
@@ -392,10 +396,10 @@ class ComputePolicyManager:
                                               ovdc_id,
                                               compute_policy_href,
                                               remove_compute_policy_from_vms):
+        user_name = self._session.get('user')
+        vdc = vcd_utils.get_vdc(self._sysadmin_client, vdc_id=ovdc_id,
+                                is_admin_operation=True)
         try:
-            user_name = self.context.user.name
-            vdc = vcd_utils.get_vdc(self.context.client, vdc_id=ovdc_id,
-                                    is_admin_operation=True)
             if remove_compute_policy_from_vms:
                 cp_list = self.list_compute_policies_on_vdc(ovdc_id)
                 system_default_href = None
@@ -408,7 +412,7 @@ class ComputePolicyManager:
                         f"compute policy not found")
 
                 compute_policy_id = retrieve_compute_policy_id_from_href(compute_policy_href) # noqa: E501
-                vapps = vcd_utils.get_all_vapps_in_ovdc(self.context.client,
+                vapps = vcd_utils.get_all_vapps_in_ovdc(self._sysadmin_client,
                                                         ovdc_id)
                 target_vms = []
                 for vapp in vapps:
@@ -419,7 +423,7 @@ class ComputePolicyManager:
                 vm_names = [vm.get('name') for vm in target_vms]
 
                 task.update(
-                    status=TaskStatus.RUNNING.value,
+                    status=vcd_client.TaskStatus.RUNNING.value,
                     namespace='vcloud.cse',
                     operation=f"Setting compute policy to "
                               f"'{_SYSTEM_DEFAULT_COMPUTE_POLICY}' on "
@@ -429,20 +433,21 @@ class ComputePolicyManager:
                     progress=None,
                     owner_href=vdc.href,
                     owner_name=vdc.name,
-                    owner_type=EntityType.VDC.value,
+                    owner_type=vcd_client.EntityType.VDC.value,
                     user_href=user_href,
                     user_name=user_name,
                     task_href=task_href,
                     org_href=org_href,
                 )
 
-                task_monitor = self.context.client.get_task_monitor()
+                task_monitor = self._sysadmin_client.get_task_monitor()
                 for vm_resource in target_vms:
-                    vm = VM(self.context.client, href=vm_resource.get('href'))
+                    vm = VM(self._sysadmin_client,
+                            href=vm_resource.get('href'))
                     _task = vm.update_compute_policy(system_default_href)
 
                     task.update(
-                        status=TaskStatus.RUNNING.value,
+                        status=vcd_client.TaskStatus.RUNNING.value,
                         namespace='vcloud.cse',
                         operation=f"Setting compute policy to "
                                   f"'{_SYSTEM_DEFAULT_COMPUTE_POLICY}' on VM "
@@ -452,7 +457,7 @@ class ComputePolicyManager:
                         progress=None,
                         owner_href=vdc.href,
                         owner_name=vdc.name,
-                        owner_type=EntityType.VDC.value,
+                        owner_type=vcd_client.EntityType.VDC.value,
                         user_href=user_href,
                         user_name=user_name,
                         task_href=task_href,
@@ -461,7 +466,7 @@ class ComputePolicyManager:
                     task_monitor.wait_for_success(_task)
 
             task.update(
-                status=TaskStatus.RUNNING.value,
+                status=vcd_client.TaskStatus.RUNNING.value,
                 namespace='vcloud.cse',
                 operation=f"Removing compute policy (href:"
                           f"{compute_policy_href}) from org VDC '{vdc.name}'",
@@ -470,7 +475,7 @@ class ComputePolicyManager:
                 progress=None,
                 owner_href=vdc.href,
                 owner_name=vdc.name,
-                owner_type=EntityType.VDC.value,
+                owner_type=vcd_client.EntityType.VDC.value,
                 user_href=user_href,
                 user_name=user_name,
                 task_href=task_href,
@@ -480,7 +485,7 @@ class ComputePolicyManager:
             vdc.remove_compute_policy(compute_policy_href)
 
             task.update(
-                status=TaskStatus.SUCCESS.value,
+                status=vcd_client.TaskStatus.SUCCESS.value,
                 namespace='vcloud.cse',
                 operation=f"Removed compute policy (href: "
                           f"{compute_policy_href}) from org VDC '{vdc.name}'",
@@ -489,7 +494,7 @@ class ComputePolicyManager:
                 progress=None,
                 owner_href=vdc.href,
                 owner_name=vdc.name,
-                owner_type=EntityType.VDC.value,
+                owner_type=vcd_client.EntityType.VDC.value,
                 user_href=user_href,
                 user_name=user_name,
                 task_href=task_href,
@@ -498,7 +503,7 @@ class ComputePolicyManager:
         except Exception as err:
             SERVER_LOGGER.error(err, exc_info=True)
             task.update(
-                status=TaskStatus.ERROR.value,
+                status=vcd_client.TaskStatus.ERROR.value,
                 namespace='vcloud.cse',
                 operation='',
                 operation_name='Remove org VDC compute policy',
@@ -506,11 +511,9 @@ class ComputePolicyManager:
                 progress=None,
                 owner_href=vdc.href,
                 owner_name=vdc.name,
-                owner_type=EntityType.VDC.value,
+                owner_type=vcd_client.EntityType.VDC.value,
                 user_href=user_href,
                 user_name=user_name,
                 task_href=task_href,
                 org_href=org_href,
                 error_message=f"{err}")
-        finally:
-            self.context.end()

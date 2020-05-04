@@ -32,12 +32,14 @@ class UserContext:
 
     @property
     def name(self):
+        """User name from vCD session."""
         if self._name is None:
             self._name = self.session.get('user')
         return self._name
 
     @property
     def id(self):
+        """User ID from vCD session."""
         if self._id is None:
             self._id = self.session.get('userId')
         return self._id

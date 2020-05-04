@@ -37,8 +37,8 @@ def system_update(request_data, request_context: ctx.RequestContext):
     req_utils.validate_payload(request_data, required)
 
     # Telemetry data preparation
-    cse_operation = None
     server_action = request_data.get(RequestKey.SERVER_ACTION)
+    cse_operation = server_action or 'invalid server action'
     if server_action == 'enable':
         cse_operation = CseOperation.SYSTEM_ENABLE
     elif server_action == 'disable':
