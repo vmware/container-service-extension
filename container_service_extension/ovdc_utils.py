@@ -38,7 +38,6 @@ def get_ovdc_k8s_provider_metadata(sysadmin_client: vcd_client.Client,
     :param include_nsxt_info:
     :return:  Dictionary with k8s provider metadata
     """
-    # dev guard: should never occur in production
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
 
     ovdc = vcd_utils.get_vdc(client=sysadmin_client, vdc_name=ovdc_name,
@@ -100,7 +99,6 @@ def update_ovdc_k8s_provider_metadata(sysadmin_client: vcd_client.Client,
     :param K8sProvider k8s_provider:
     :return:
     """
-    # dev guard: should never occur in production
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
 
     ovdc = vcd_utils.get_vdc(sysadmin_client, vdc_id=ovdc_id)
@@ -165,7 +163,6 @@ def construct_k8s_metadata_from_pks_cache(sysadmin_client: vcd_client.Client,
                                           ovdc_id, org_name, pks_plans,
                                           pks_cluster_domain,
                                           k8s_provider):
-    # dev guard: should never occur in production
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
 
     ctr_prov_context = {
@@ -214,7 +211,6 @@ def _construct_pks_compute_profile_name(sysadmin_client: vcd_client.Client,
 
     :rtype: str
     """
-    # dev guard: should never occur in production
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
 
     vdc = vcd_utils.get_vdc(client=sysadmin_client, vdc_id=vdc_id)

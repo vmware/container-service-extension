@@ -1340,7 +1340,6 @@ def _drain_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
 
 def _uncordon_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
                     cluster_name=''):
-    # dev guard: should never occur in production
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
 
     LOGGER.debug(f"Uncordoning nodes {node_names} in cluster '{cluster_name}' "
@@ -1381,7 +1380,6 @@ def _delete_vapp(client, vdc_href, vapp_name):
 
 def _delete_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
                   cluster_name=''):
-    # dev guard: should never occur in production
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
 
     LOGGER.debug(f"Deleting node(s) {node_names} from cluster '{cluster_name}'"
@@ -1598,7 +1596,6 @@ def get_template(name=None, revision=None):
 def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
               catalog_name, template, network_name, num_cpu=None,
               memory_in_mb=None, storage_profile=None, ssh_key=None):
-    # dev guard: should never occur in production
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
 
     specs = []
@@ -1726,7 +1723,6 @@ def _wait_for_guest_execution_callback(message, exception=None):
 
 
 def get_master_ip(sysadmin_client: vcd_client.Client, vapp):
-    # dev guard: should never occur in production
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
 
     LOGGER.debug(f"Getting master IP for vapp: "
@@ -1750,7 +1746,6 @@ def get_master_ip(sysadmin_client: vcd_client.Client, vapp):
 
 def init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                  template_revision):
-    # dev guard: should never occur in production
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
 
     try:
@@ -1776,7 +1771,6 @@ def init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
 
 def join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                  template_revision, target_nodes=None):
-    # dev guard: should never occur in production
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
     script = "#!/usr/bin/env bash\n" \
              "kubeadm token create\n" \
@@ -1839,7 +1833,6 @@ def _wait_until_ready_to_exec(vs, vm, password, tries=30):
 def execute_script_in_nodes(sysadmin_client: vcd_client.Client,
                             vapp, node_names, script,
                             check_tools=True, wait=True):
-    # dev guard: should never occur in production
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
     all_results = []
     for node_name in node_names:
@@ -1900,7 +1893,6 @@ def run_script_in_nodes(sysadmin_client: vcd_client.Client, vapp_href,
     :param List[str] node_names:
     :param str script:
     """
-    # dev guard: should never occur in production
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
 
     # when is tools checking necessary?
