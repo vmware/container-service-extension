@@ -35,15 +35,6 @@ def cluster_create(request_data, request_context: ctx.RequestContext):
 
     :return: Dict
     """
-    # return {
-    #     'name': 'asdf',
-    #     'cluster_id': 'asdf',
-    #     'task_href': 'asdf',
-    # }
-    # raise BadRequestError(
-    #     error_message="'cluster upgrade-plan' operation is not supported by "
-    #                 "non native clusters.")
-
     required = [
         RequestKey.CLUSTER_NAME
     ]

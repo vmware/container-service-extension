@@ -1,5 +1,3 @@
-import enum
-
 import pyvcloud.vcd.client as vcd_client
 
 import container_service_extension.pyvcloud_utils as vcd_utils

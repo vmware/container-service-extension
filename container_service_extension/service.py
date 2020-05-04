@@ -33,7 +33,6 @@ from container_service_extension.logger import SERVER_INFO_LOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PksCache
 import container_service_extension.pyvcloud_utils as vcd_utils
-import container_service_extension.request_context as ctx
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import ServerAction
@@ -416,19 +415,9 @@ class Service(object, metaclass=Singleton):
         org_name = self.config['broker']['org']
         catalog_name = self.config['broker']['catalog']
         sysadmin_client = None
-        request_context = None
         try:
             sysadmin_client = vcd_utils.get_sys_admin_client()
-
-            # extra work to initialize a sysadmin request context here because
-            # on server start we don't have an auth token to use
-            token = sysadmin_client.get_access_token()
-            is_jwt = True
-            if not token:
-                token = sysadmin_client.get_xvcloud_authorization_token()
-                is_jwt = False
-            request_context = ctx.RequestContext(token, is_jwt=is_jwt)
-            cpm = ComputePolicyManager(request_context)
+            cpm = ComputePolicyManager(sysadmin_client)
 
             for template in self.config['broker']['templates']:
                 policy_name = template[LocalTemplateKey.COMPUTE_POLICY]
@@ -477,5 +466,3 @@ class Service(object, metaclass=Singleton):
         finally:
             if sysadmin_client is not None:
                 sysadmin_client.logout()
-            if request_context is not None:
-                request_context.end()
