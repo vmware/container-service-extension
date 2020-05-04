@@ -142,7 +142,6 @@ class Service(object, metaclass=Singleton):
 
     def update_status(self, server_action: ServerAction):
         def graceful_shutdown():
-            # to avoid duplicating graceful shutdown code
             message = 'Shutting down CSE'
             n = self.active_requests_count()
             if n > 0:
@@ -152,7 +151,6 @@ class Service(object, metaclass=Singleton):
 
         if self._state == ServerState.RUNNING:
             if server_action == ServerAction.ENABLE:
-                # should we make this idempotent?
                 return 'CSE is already enabled and running.'
             if server_action == ServerAction.DISABLE:
                 self._state = ServerState.DISABLED
