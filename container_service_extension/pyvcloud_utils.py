@@ -160,7 +160,6 @@ def get_org_name_from_ovdc_id(sysadmin_client: vcd_client.Client, vdc_id):
 
     :rtype: str
     """
-    # dev guard: should never occur in production
     raise_error_if_not_sysadmin(sysadmin_client)
 
     if vdc_id in OVDC_TO_ORG_MAP:
@@ -188,7 +187,6 @@ def get_pvdc_id(sysadmin_client: vcd_client.Client, ovdc: VDC):
 
     :rtype: str
     """
-    # dev guard: should never occur in production
     raise_error_if_not_sysadmin(sysadmin_client)
 
     pvdc_element = ovdc.get_resource().ProviderVdcReference
