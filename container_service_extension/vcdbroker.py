@@ -14,7 +14,7 @@ import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.task as vcd_task
 import pyvcloud.vcd.vapp as vcd_vapp
-import pyvcloud.vcd.vdc as vcd_vdc
+from pyvcloud.vcd.vdc import VDC
 import pyvcloud.vcd.vm as vcd_vm
 import requests
 import semantic_version as semver
@@ -988,7 +988,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                             rollback):
         try:
             org = vcd_utils.get_org(self.context.client)
-            vdc = vcd_vdc.VDC(self.context.client, href=cluster_vdc_href)
+            vdc = VDC(self.context.client, href=cluster_vdc_href)
             vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
             template = get_template(name=template_name,
                                     revision=template_revision)
@@ -1368,7 +1368,7 @@ def _delete_vapp(client, vdc_href, vapp_name):
     LOGGER.debug(f"Deleting vapp {vapp_name} (vdc: {vdc_href})")
 
     try:
-        vdc = vcd_vdc.VDC(client, href=vdc_href)
+        vdc = VDC(client, href=vdc_href)
         task = vdc.delete_vapp(vapp_name, force=True)
         client.get_task_monitor().wait_for_status(task)
     except Exception as err:
