@@ -6,7 +6,7 @@ from collections import namedtuple
 
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.utils as pyvcd_utils
-import pyvcloud.vcd.vdc as vcd_vdc
+from pyvcloud.vcd.vdc import VDC
 import requests
 
 import container_service_extension.exceptions as e
@@ -241,7 +241,7 @@ def create_pks_compute_profile(request_data,
             raise
 
 
-def _remove_metadata_from_ovdc(ovdc: vcd_vdc.VDC, keys=[]):
+def _remove_metadata_from_ovdc(ovdc: VDC, keys=[]):
     metadata = pyvcd_utils.metadata_to_dict(ovdc.get_all_metadata())
     for k in keys:
         if k in metadata:

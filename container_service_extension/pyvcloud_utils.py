@@ -10,7 +10,7 @@ import pyvcloud.vcd.org as vcd_org
 from pyvcloud.vcd.utils import extract_id
 from pyvcloud.vcd.utils import get_admin_href
 import pyvcloud.vcd.vapp as vcd_vapp
-import pyvcloud.vcd.vdc as vcd_vdc
+from pyvcloud.vcd.vdc import VDC
 import requests
 
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
@@ -131,7 +131,7 @@ def get_vdc(client, vdc_id=None, vdc_name=None, org=None, org_name=None,
         if is_admin_operation:
             base_url = get_admin_href(base_url)
         vdc_href = f'{base_url}vdc/{vdc_id}'
-        vdc = vcd_vdc.VDC(client, href=vdc_href)
+        vdc = VDC(client, href=vdc_href)
         vdc.reload()
         return vdc
 
@@ -146,7 +146,7 @@ def get_vdc(client, vdc_id=None, vdc_name=None, org=None, org_name=None,
     if resource is None:
         raise EntityNotFoundException(f"VDC '{vdc_name}' not found in ORG "
                                       f"'{org.get_name()}'")
-    return vcd_vdc.VDC(client, resource=resource)
+    return VDC(client, resource=resource)
 
 
 def get_org_name_from_ovdc_id(sysadmin_client: vcd_client.Client, vdc_id):
@@ -168,7 +168,7 @@ def get_org_name_from_ovdc_id(sysadmin_client: vcd_client.Client, vdc_id):
 
     vdc_href = f"{sysadmin_client.get_api_uri()}/vdc/{vdc_id}"
     vdc_resource = sysadmin_client.get_resource(get_admin_href(vdc_href))
-    vdc_obj = vcd_vdc.VDC(sysadmin_client, resource=vdc_resource)
+    vdc_obj = VDC(sysadmin_client, resource=vdc_resource)
     link = vcd_client.find_link(
         vdc_obj.get_resource(),
         vcd_client.RelationType.UP,
@@ -178,7 +178,7 @@ def get_org_name_from_ovdc_id(sysadmin_client: vcd_client.Client, vdc_id):
     return org.get_name()
 
 
-def get_pvdc_id(sysadmin_client: vcd_client.Client, ovdc: vcd_vdc.VDC):
+def get_pvdc_id(sysadmin_client: vcd_client.Client, ovdc: VDC):
     """Get id of pvdc backing an ovdc.
 
     :param pyvcloud.vcd.VDC ovdc: This ovdc object has to be created with a
