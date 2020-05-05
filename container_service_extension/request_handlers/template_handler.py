@@ -9,7 +9,7 @@ import container_service_extension.utils as utils
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.TEMPLATE_LIST_CLIENT_SIDE)  # noqa: E501
-def template_list(request_data, tenant_auth_token, is_jwt_token):
+def template_list(request_data, request_context):
     """Request handler for template list operation.
 
     :return: List of dictionaries with template info.

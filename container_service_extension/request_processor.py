@@ -8,10 +8,9 @@ import sys
 from urllib.parse import parse_qsl
 
 from container_service_extension.exception_handler import handle_exception
-from container_service_extension.exceptions import BadRequestError
-from container_service_extension.exceptions import MethodNotAllowedRequestError
-from container_service_extension.exceptions import NotFoundRequestError
+import container_service_extension.exceptions as e
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+import container_service_extension.request_context as ctx
 import container_service_extension.request_handlers.native_cluster_handler as native_cluster_handler # noqa: E501
 import container_service_extension.request_handlers.ovdc_handler as ovdc_handler # noqa: E501
 import container_service_extension.request_handlers.pks_cluster_handler as pks_cluster_handler  # noqa: E501
@@ -97,18 +96,17 @@ _OPERATION_KEY = 'operation'
 @handle_exception
 def process_request(body):
     from container_service_extension.service import Service
-    LOGGER.debug(f"body: {json.dumps(body)}")
-    url = body['requestUri']
+    LOGGER.debug(f"Incoming request body: {json.dumps(body)}")
 
-    # url_data = _parse_request_url(method=body['method'], url=body['requestUri']) # noqa: E501
-    url_data = _get_url_data(body['method'], url)
+    url_data = _get_url_data(body['method'], body['requestUri'])
     operation = url_data[_OPERATION_KEY]
 
     # check if server is disabled
     if operation not in (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE)\
             and not Service().is_running():
-        raise BadRequestError(error_message='CSE service is disabled. Contact'
-                                            ' the System Administrator.')
+        raise e.BadRequestError(
+            error_message='CSE service is disabled. '
+                          'Contact the System Administrator.')
 
     # create request data dict from request body data
     request_data = {}
@@ -137,18 +135,22 @@ def process_request(body):
             is_jwt_token = True
 
     # process the request
-    body_content = \
-        OPERATION_TO_HANDLER[operation](data, tenant_auth_token, is_jwt_token)
+    context = ctx.RequestContext(tenant_auth_token, is_jwt=is_jwt_token,
+                                 request_id=body['id'])
+    try:
+        body_content = OPERATION_TO_HANDLER[operation](data, context)
+    finally:
+        if not context.is_async:
+            context.end()
 
-    if not (isinstance(body_content, (list, dict))):
+    if not isinstance(body_content, (list, dict)):
         body_content = {RESPONSE_MESSAGE_KEY: str(body_content)}
-
-    reply = {
+    response = {
         'status_code': operation.ideal_response_code,
-        'body': body_content
+        'body': body_content,
     }
-    LOGGER.debug(f"reply: {str(reply)}")
-    return reply
+    LOGGER.debug(f"Outgoing response: {str(response)}")
+    return response
 
 
 def _get_url_data(method, url):
@@ -170,7 +172,7 @@ def _get_url_data(method, url):
     num_tokens = len(tokens)
 
     if num_tokens < 4:
-        raise NotFoundRequestError()
+        raise e.NotFoundRequestError()
 
     if tokens[2] == PKS_SERVICE_NAME:
         return _get_pks_url_data(method, url)
@@ -185,7 +187,7 @@ def _get_url_data(method, url):
                 return {_OPERATION_KEY: CseOperation.CLUSTER_LIST}
             if method == RequestMethod.POST:
                 return {_OPERATION_KEY: CseOperation.CLUSTER_CREATE}
-            raise MethodNotAllowedRequestError()
+            raise e.MethodNotAllowedRequestError()
         if num_tokens == 5:
             if method == RequestMethod.GET:
                 return {
@@ -202,7 +204,7 @@ def _get_url_data(method, url):
                     _OPERATION_KEY: CseOperation.CLUSTER_DELETE,
                     RequestKey.CLUSTER_NAME: tokens[4]
                 }
-            raise MethodNotAllowedRequestError()
+            raise e.MethodNotAllowedRequestError()
         if num_tokens == 6:
             if method == RequestMethod.GET:
                 if tokens[5] == 'config':
@@ -215,7 +217,7 @@ def _get_url_data(method, url):
                         _OPERATION_KEY: CseOperation.CLUSTER_UPGRADE_PLAN,
                         RequestKey.CLUSTER_NAME: tokens[4]
                     }
-            raise MethodNotAllowedRequestError()
+            raise e.MethodNotAllowedRequestError()
         if num_tokens == 7:
             if method == RequestMethod.POST:
                 if tokens[5] == 'action' and tokens[6] == 'upgrade':
@@ -223,27 +225,27 @@ def _get_url_data(method, url):
                         _OPERATION_KEY: CseOperation.CLUSTER_UPGRADE,
                         RequestKey.CLUSTER_NAME: tokens[4]
                     }
-            raise MethodNotAllowedRequestError()
+            raise e.MethodNotAllowedRequestError()
     elif operation_type == OperationType.NODE:
         if num_tokens == 4:
             if method == RequestMethod.POST:
                 return {_OPERATION_KEY: CseOperation.NODE_CREATE}
             if method == RequestMethod.DELETE:
                 return {_OPERATION_KEY: CseOperation.NODE_DELETE}
-            raise MethodNotAllowedRequestError()
+            raise e.MethodNotAllowedRequestError()
         if num_tokens == 5:
             if method == RequestMethod.GET:
                 return {
                     _OPERATION_KEY: CseOperation.NODE_INFO,
                     RequestKey.NODE_NAME: tokens[4]
                 }
-            raise MethodNotAllowedRequestError()
+            raise e.MethodNotAllowedRequestError()
 
     elif operation_type == OperationType.OVDC:
         if num_tokens == 4:
             if method == RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.OVDC_LIST}
-            raise MethodNotAllowedRequestError()
+            raise e.MethodNotAllowedRequestError()
         if num_tokens == 5:
             if method == RequestMethod.GET:
                 return {
@@ -255,7 +257,7 @@ def _get_url_data(method, url):
                     _OPERATION_KEY: CseOperation.OVDC_UPDATE,
                     RequestKey.OVDC_ID: tokens[4]
                 }
-            raise MethodNotAllowedRequestError()
+            raise e.MethodNotAllowedRequestError()
         if num_tokens == 6 and tokens[5] == 'compute-policies':
             if method == RequestMethod.GET:
                 return {
@@ -267,7 +269,7 @@ def _get_url_data(method, url):
                     _OPERATION_KEY: CseOperation.OVDC_COMPUTE_POLICY_UPDATE,
                     RequestKey.OVDC_ID: tokens[4]
                 }
-            raise MethodNotAllowedRequestError()
+            raise e.MethodNotAllowedRequestError()
 
     elif operation_type == OperationType.SYSTEM:
         if num_tokens == 4:
@@ -275,15 +277,15 @@ def _get_url_data(method, url):
                 return {_OPERATION_KEY: CseOperation.SYSTEM_INFO}
             if method == RequestMethod.PUT:
                 return {_OPERATION_KEY: CseOperation.SYSTEM_UPDATE}
-            raise MethodNotAllowedRequestError()
+            raise e.MethodNotAllowedRequestError()
 
     elif operation_type == OperationType.TEMPLATE:
         if num_tokens == 4:
             if method == RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.TEMPLATE_LIST}
-            raise MethodNotAllowedRequestError()
+            raise e.MethodNotAllowedRequestError()
 
-    raise NotFoundRequestError()
+    raise e.NotFoundRequestError()
 
 
 def _get_pks_url_data(method, url):
@@ -309,7 +311,7 @@ def _get_pks_url_data(method, url):
                 return {_OPERATION_KEY: CseOperation.PKS_CLUSTER_LIST}
             if method == RequestMethod.POST:
                 return {_OPERATION_KEY: CseOperation.PKS_CLUSTER_CREATE}
-            raise MethodNotAllowedRequestError()
+            raise e.MethodNotAllowedRequestError()
         if num_tokens == 5:
             if method == RequestMethod.GET:
                 return {
@@ -326,7 +328,7 @@ def _get_pks_url_data(method, url):
                     _OPERATION_KEY: CseOperation.PKS_CLUSTER_DELETE,
                     RequestKey.CLUSTER_NAME: tokens[4]
                 }
-            raise MethodNotAllowedRequestError()
+            raise e.MethodNotAllowedRequestError()
         if num_tokens == 6:
             if method == RequestMethod.GET:
                 if tokens[5] == 'config':
@@ -334,5 +336,5 @@ def _get_pks_url_data(method, url):
                         _OPERATION_KEY: CseOperation.PKS_CLUSTER_CONFIG,
                         RequestKey.CLUSTER_NAME: tokens[4]
                     }
-            raise MethodNotAllowedRequestError()
-    raise MethodNotAllowedRequestError()
+            raise e.MethodNotAllowedRequestError()
+    raise e.MethodNotAllowedRequestError()
