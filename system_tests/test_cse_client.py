@@ -513,10 +513,11 @@ def generate_validate_node_count_func(expected_nodes):
     :return validator: function(output, test_user)
     """
     node_pattern = r'(node-\S+)'
+
     def validator(output, test_runner_username):
         cmd_binder = collections.namedtuple('UserCmdBinder',
-                                        'cmd exit_code validate_output_func '
-                                        'test_user')
+                                            'cmd exit_code validate_output_func ' # noqa: E501
+                                            'test_user')
         print(f"Running cluster info operation for {test_runner_username}")
         cmd_list = [
             cmd_binder(cmd=f"cse cluster info {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}",   # noqa
@@ -525,9 +526,9 @@ def generate_validate_node_count_func(expected_nodes):
                     test_user=test_runner_username)
         ]
         cmd_results = execute_commands(cmd_list)
-        
+
         return len(re.findall(node_pattern, cmd_results[0].output)) == expected_nodes # noqa
-    
+
     return validator
 
 
@@ -564,15 +565,15 @@ def test_0110_vcd_cse_cluster_resize(test_runner_username, config):
 
     cmd_list = [
         cmd_binder(cmd=f"cse cluster resize -N {num_nodes+1} -n {config['broker']['network']}"  # noqa
-                       f" {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}",
+                       f" {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}", # noqa: E501
                    exit_code=0, validate_output_func=generate_validate_node_count_func(num_nodes+1), # noqa
                    test_user=test_runner_username),
         cmd_binder(cmd=f"cse cluster resize -N 0 -n {config['broker']['network']}" # noqa
-                       f" {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}",
+                       f" {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}", # noqa: E501
                    exit_code=2, validate_output_func=generate_validate_node_count_func(num_nodes+1), # noqa
                    test_user=test_runner_username),
         cmd_binder(cmd=f"cse cluster resize -N {num_nodes} -n {config['broker']['network']}" # noqa
-                       f" {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}",
+                       f" {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}", # noqa: E501
                    exit_code=2, validate_output_func=generate_validate_node_count_func(num_nodes+1), # noqa
                    test_user=test_runner_username)
     ]
