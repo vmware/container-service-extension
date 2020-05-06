@@ -185,7 +185,7 @@ class PksBroker(AbstractBroker):
 
         :rtype: list
         """
-        plan_api = PlansApi(api_client=self.client)
+        plan_api = PlansApi(api_client=self.pks_client)
         self.pks_wire_logger.debug(f"Sending request to PKS: {self.pks_host_uri} " # noqa: E501
                                    f"to list all available plans")
         try:
@@ -454,14 +454,14 @@ class PksBroker(AbstractBroker):
             qualified_cluster_name = cluster_info['pks_cluster_name']
 
         result = {}
-        cluster_api = ClusterApi(api_client=self.client)
+        cluster_api = ClusterApi(api_client=self.pks_client)
         self.pks_wire_logger.debug(f"Sending request to"
                                    f" PKS: {self.pks_host_uri} to delete"
                                    f" the cluster with name:"
                                    f" {qualified_cluster_name}")
         try:
             cluster_api.delete_cluster(cluster_name=qualified_cluster_name)
-            self.pks_wire_logger(
+            self.pks_wire_logger.debug(
                 f"PKS: {self.pks_host_uri} accepted the request to delete"
                 f" the cluster: {qualified_cluster_name}")
         except ApiException as err:
