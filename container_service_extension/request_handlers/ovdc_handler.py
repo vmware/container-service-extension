@@ -69,7 +69,9 @@ def ovdc_update(request_data, request_context: ctx.RequestContext):
             req_utils.validate_payload(validated_data, required)
 
             # Check if target ovdc is not already enabled for other non PKS k8 providers # noqa: E501
-            ovdc_metadata = ovdc_utils.get_ovdc_k8s_provider_metadata(ovdc_id=validated_data[RequestKey.OVDC_ID])  # noqa: E501
+            ovdc_metadata = ovdc_utils.get_ovdc_k8s_provider_metadata(
+                request_context.sysadmin_client,
+                ovdc_id=validated_data[RequestKey.OVDC_ID])
             ovdc_k8_provider = ovdc_metadata.get(K8S_PROVIDER_KEY)
             if ovdc_k8_provider != K8sProvider.NONE and \
                     ovdc_k8_provider != k8s_provider:
