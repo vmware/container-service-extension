@@ -878,16 +878,6 @@ class PksBroker(AbstractBroker):
         """
         return re.sub(rf"{USER_ID_SEPARATOR}\S+", '', cluster_info)
 
-    def __getattr__(self, name):
-        """Handle unknown operations.
-
-        Example: This broker does
-        not support individual node operations.
-        """
-        def unsupported_method(*args):
-            raise CseServerError(f"Unsupported operation {name}")
-        return unsupported_method
-
     def update_cluster_with_vcd_info(self, pks_cluster):
         compute_profile_name = pks_cluster.get('compute_profile_name', '')
         pks_cluster['vdc'] = ''
