@@ -123,6 +123,7 @@ def cluster_create(request_data, request_context: ctx.RequestContext):
 
     k8s_metadata = \
         ovdc_utils.get_ovdc_k8s_provider_metadata(
+            request_context.sysadmin_client,
             org_name=request_data[RequestKey.ORG_NAME],
             ovdc_name=request_data[RequestKey.OVDC_NAME],
             include_credentials=True,
@@ -191,7 +192,8 @@ def _get_cluster_info(request_data, request_context, **kwargs):
 
     if ovdc_name is not None and org_name is not None:
         k8s_metadata = \
-            ovdc_utils.get_ovdc_k8s_provider_metadata(org_name=org_name,
+            ovdc_utils.get_ovdc_k8s_provider_metadata(request_context.sysadmin_client,  # noqa: E501
+                                                      org_name=org_name,
                                                       ovdc_name=ovdc_name,
                                                       include_credentials=True,
                                                       include_nsxt_info=True)

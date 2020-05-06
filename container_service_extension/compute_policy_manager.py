@@ -368,7 +368,7 @@ class ComputePolicyManager:
             progress=None,
             owner_href=vdc.href,
             owner_name=vdc.name,
-            owner_type=vcd_client.vcd_client.EntityType.VDC.value,
+            owner_type=vcd_client.EntityType.VDC.value,
             user_href=user_href,
             user_name=user_name,
             org_href=org.href)

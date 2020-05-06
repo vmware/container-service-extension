@@ -69,7 +69,9 @@ def ovdc_update(request_data, request_context: ctx.RequestContext):
             req_utils.validate_payload(validated_data, required)
 
             # Check if target ovdc is not already enabled for other non PKS k8 providers # noqa: E501
-            ovdc_metadata = ovdc_utils.get_ovdc_k8s_provider_metadata(ovdc_id=validated_data[RequestKey.OVDC_ID])  # noqa: E501
+            ovdc_metadata = ovdc_utils.get_ovdc_k8s_provider_metadata(
+                request_context.sysadmin_client,
+                ovdc_id=validated_data[RequestKey.OVDC_ID])
             ovdc_k8_provider = ovdc_metadata.get(K8S_PROVIDER_KEY)
             if ovdc_k8_provider != K8sProvider.NONE and \
                     ovdc_k8_provider != k8s_provider:
@@ -237,7 +239,7 @@ def ovdc_compute_policy_list(request_data,
     req_utils.validate_payload(request_data, required)
 
     config = utils.get_server_runtime_config()
-    cpm = ComputePolicyManager(request_context, log_wire=utils.str_to_bool(config['server'].get('log_wire')))  # noqa: E501
+    cpm = ComputePolicyManager(request_context.sysadmin_client, log_wire=utils.str_to_bool(config['service'].get('log_wire')))  # noqa: E501
     return cpm.list_compute_policies_on_vdc(request_data[RequestKey.OVDC_ID])
 
 
@@ -266,7 +268,7 @@ def ovdc_compute_policy_update(request_data,
     remove_compute_policy_from_vms = validated_data[RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS] # noqa: E501
     try:
         config = utils.get_server_runtime_config()
-        cpm = ComputePolicyManager(request_context, log_wire=utils.str_to_bool(config['server'].get('log_wire'))) # noqa: E501
+        cpm = ComputePolicyManager(request_context.sysadmin_client, log_wire=utils.str_to_bool(config['service'].get('log_wire'))) # noqa: E501
         cp_href = None
         cp_id = None
         if cp_name == SYSTEM_DEFAULT_COMPUTE_POLICY_NAME:
