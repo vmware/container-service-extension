@@ -3,26 +3,25 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
-
 from requests.exceptions import HTTPError
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0 # noqa: E501
-from container_service_extension.cloudapi.constants import DEF_ENTITY_TYPE_ID_PREFIX
+from container_service_extension.cloudapi.constants import CloudApiResource
+from container_service_extension.cloudapi.constants import DEF_CSE_VENDOR
+from container_service_extension.cloudapi.constants import DEF_ENTITY_TYPE_ID_PREFIX # noqa: E501
 from container_service_extension.cloudapi.constants import DEF_INTERFACE_ID_PREFIX # noqa: E501
 from container_service_extension.cloudapi.constants import DEF_NATIVE_ENTITY_TYPE_NSS # noqa: E501
 from container_service_extension.cloudapi.constants import DEF_NATIVE_ENTITY_TYPE_VERSION # noqa: E501
-from container_service_extension.cloudapi.constants import DEF_NATIVE_INTERFACE_VERSION # noqa: E501
 from container_service_extension.cloudapi.constants import DEF_NATIVE_INTERFACE_NSS # noqa: E501
-from container_service_extension.cloudapi.constants import DEF_CSE_VENDOR
-from container_service_extension.cloudapi.constants import CloudApiResource
-from container_service_extension.def_modules.models import DefInterface, DefEntityType # noqa: E501
+from container_service_extension.cloudapi.constants import DEF_NATIVE_INTERFACE_VERSION # noqa: E501
+from container_service_extension.def_modules.models import DefEntityType, DefInterface # noqa: E501
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.shared_constants import RequestMethod
 
 
-class DEFSchemaSvc():
-    """Manages defined entity interfaces and entity types."""
+class DefSchemaSvc():
+    """Manages lifecycle of defined entity interfaces and entity types."""
 
     def __init__(self, client):
         """Initialize DEFSchemaSvc Object.
@@ -30,10 +29,10 @@ class DEFSchemaSvc():
         :param pyvcloud.vcd.client client:
 
         :raises: OperationNotSupportedException: If cloudapi endpoint is not
-                    found in session.
+        found in session.
         :raises: ValueError: If non sys admin client is passed during
-                    initialization.
-         """
+        initialization.
+        """
         if not client.is_sysadmin():
             raise ValueError("Only Sys admin clients should be used to "
                              "initialize ComputePolicyManager.")
@@ -54,7 +53,7 @@ class DEFSchemaSvc():
                 is_jwt_token=is_jwt_token,
                 api_version=self._vcd_client.get_api_version(),
                 verify_ssl=self._vcd_client._verify_ssl_certs)
-            # Since the /cloudapi endpoint was added before the compute policy
+            # Since the /cloudapi endpoint was added before the defined entity
             # endpoint. Mere presence of the /cloudapi uri is not enough, we
             # need to make sure that this cloud api client will be of actual
             # use to us.
@@ -140,7 +139,8 @@ class DEFSchemaSvc():
         response_body = self._cloudapi_client.do_request(
             method=RequestMethod.PUT,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-            resource_url_relative_path=f"{CloudApiResource.INTERFACES}/{interface.id}",
+            resource_url_relative_path=f"{CloudApiResource.INTERFACES}/"
+            f"{interface.id}",
             payload=interface._asdict())
         return DefInterface(**response_body)
 
@@ -169,7 +169,7 @@ class DEFSchemaSvc():
         return DefEntityType(**response_body)
 
     def list_entity_types(self) -> list:
-        """List the Entity types.
+        """List Entity types.
 
         :return: List of entity types
         :rtype: list of DefEntityType
@@ -183,7 +183,7 @@ class DEFSchemaSvc():
     def update_entity_type(self, entity_type: DefEntityType) -> DefEntityType:
         """Update the entity type.
 
-        As of May 5, 2020, only name and schema of the entity type can be
+        As of May 2020, only name and schema of the entity type can be
         updated.
 
         :param entity_type: Entity type to be updated.
@@ -193,8 +193,8 @@ class DEFSchemaSvc():
         response_body = self._cloudapi_client.do_request(
             method=RequestMethod.PUT,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-            resource_url_relative_path=
-            f"{CloudApiResource.ENTITY_TYPES}/{entity_type.id}",
+            resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/"
+            f"{entity_type.id}",
             payload=entity_type._asdict())
         return DefEntityType(**response_body)
 
@@ -208,14 +208,3 @@ class DEFSchemaSvc():
             method=RequestMethod.DELETE,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/{id}")
-
-
-
-
-
-
-
-
-
-
-
