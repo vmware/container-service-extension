@@ -4,6 +4,8 @@
 
 from collections import namedtuple
 
+# TODO Below models will not be needed once we integrate new pythonSDK into CSE
+
 # DefInterface represents the schema of the defined entity interface
 # https://<vcd>/cloudapi/1.0.0/interfaces
 DefInterface = namedtuple('DefInterface', ['name', 'id', 'vendor', 'nss',

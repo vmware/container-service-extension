@@ -102,17 +102,6 @@ class DefSchemaSvc():
         return f"{DEF_INTERFACE_ID_PREFIX}:{DEF_CSE_VENDOR}:" \
             f"{DEF_NATIVE_INTERFACE_NSS}:{DEF_NATIVE_INTERFACE_VERSION}"
 
-    def construct_native_entity_type_id(self) -> str:
-        """Return the entity type Id of CSE's Native cluster.
-
-        example: "urn:vcloud:type:cse.nativeCluster:1.0.0"
-
-        :return: Id of the interface
-        :rtype: str
-        """
-        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{DEF_CSE_VENDOR}:" \
-            f"{DEF_NATIVE_ENTITY_TYPE_NSS}:{DEF_NATIVE_ENTITY_TYPE_VERSION}"
-
     def create_interface(self, interface: DefInterface) -> DefInterface:
         """Create the Defined entity interface.
 
@@ -154,6 +143,31 @@ class DefSchemaSvc():
             method=RequestMethod.DELETE,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.INTERFACES}/{id}")
+
+    def create_entity_type(self, entity_type: DefEntityType) -> DefEntityType:
+        """Create the Defined entity type.
+
+        :param DefEntityType interface: body of the entity type
+        :return: DefEntityType that is just created
+        :rtype: DefEntityType
+        """
+        response_body = self._cloudapi_client.do_request(
+            method=RequestMethod.POST,
+            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}",
+            payload=entity_type._asdict())
+        return DefEntityType(**response_body)
+
+    def construct_native_entity_type_id(self) -> str:
+        """Return the entity type Id of CSE's Native cluster.
+
+        example: "urn:vcloud:type:cse.nativeCluster:1.0.0"
+
+        :return: Id of the interface
+        :rtype: str
+        """
+        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{DEF_CSE_VENDOR}:" \
+            f"{DEF_NATIVE_ENTITY_TYPE_NSS}:{DEF_NATIVE_ENTITY_TYPE_VERSION}"
 
     def get_entity_type(self, id: str) -> DefEntityType:
         """Get the entity type given an id.
