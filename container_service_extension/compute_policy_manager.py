@@ -18,6 +18,7 @@ from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 from container_service_extension.logger import SERVER_LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
+import container_service_extension.request_context as ctx
 from container_service_extension.shared_constants import RequestMethod
 import container_service_extension.utils as utils
 
@@ -37,10 +38,13 @@ class ComputePolicyManager:
     original names when returned back to the caller.
     """
 
-    def __init__(self, sysadmin_client, log_wire=True):
+    def __init__(self,
+                 sysadmin_client: vcd_client.Client,
+                 cloudapi_client: CloudApiClient = None,
+                 log_wire=True):
         vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
         self._sysadmin_client: vcd_client.Client = sysadmin_client
-        self._cloudapi_client: CloudApiClient = None
+        self._cloudapi_client: CloudApiClient = cloudapi_client
         self._session = self._sysadmin_client.get_vcloud_session()
 
         token = self._sysadmin_client.get_access_token()
@@ -50,17 +54,18 @@ class ComputePolicyManager:
             is_jwt = False
 
         try:
-            wire_logger = NULL_LOGGER
-            if log_wire:
-                wire_logger = SERVER_CLOUDAPI_WIRE_LOGGER
-            self._cloudapi_client = CloudApiClient(
-                base_url=self._sysadmin_client.get_cloudapi_uri(),
-                token=token,
-                is_jwt_token=is_jwt,
-                api_version=self._sysadmin_client.get_api_version(),
-                logger_debug=SERVER_LOGGER,
-                logger_wire=wire_logger,
-                verify_ssl=self._sysadmin_client._verify_ssl_certs)
+            if self._cloudapi_client is None:
+                wire_logger = NULL_LOGGER
+                if log_wire:
+                    wire_logger = SERVER_CLOUDAPI_WIRE_LOGGER
+                self._cloudapi_client = CloudApiClient(
+                    base_url=self._sysadmin_client.get_cloudapi_uri(),
+                    token=token,
+                    is_jwt_token=is_jwt,
+                    api_version=self._sysadmin_client.get_api_version(),
+                    logger_debug=SERVER_LOGGER,
+                    logger_wire=wire_logger,
+                    verify_ssl=self._sysadmin_client._verify_ssl_certs)
             # Since the /cloudapi endpoint was added before the compute policy
             # endpoint. Mere presence of the /cloudapi uri is not enough, we
             # need to make sure that this cloud api client will be of actual
@@ -339,7 +344,8 @@ class ComputePolicyManager:
         """
         return f"{self._cloudapi_client.get_base_url()}{CLOUDAPI_VERSION_1_0_0}/{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_id}" # noqa: E501
 
-    def remove_compute_policy_from_vdc(self, ovdc_id, compute_policy_href,
+    def remove_compute_policy_from_vdc(self, request_context: ctx.RequestContext, # noqa: E501
+                                       ovdc_id, compute_policy_href,
                                        remove_compute_policy_from_vms=False):
         """Delete the compute policy from the specified vdc.
 
@@ -374,7 +380,9 @@ class ComputePolicyManager:
             org_href=org.href)
 
         task_href = task_resource.get('href')
+        request_context.is_async = True
         self._remove_compute_policy_from_vdc_async(
+            request_context=request_context,
             task=task,
             task_href=task_href,
             user_href=user_href,
@@ -389,6 +397,7 @@ class ComputePolicyManager:
 
     @utils.run_async
     def _remove_compute_policy_from_vdc_async(self, *args,
+                                              request_context: ctx.RequestContext, # noqa: E501
                                               task,
                                               task_href,
                                               user_href,
@@ -517,3 +526,5 @@ class ComputePolicyManager:
                 task_href=task_href,
                 org_href=org_href,
                 error_message=f"{err}")
+        finally:
+            request_context.end()

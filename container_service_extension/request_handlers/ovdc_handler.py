@@ -239,7 +239,9 @@ def ovdc_compute_policy_list(request_data,
     req_utils.validate_payload(request_data, required)
 
     config = utils.get_server_runtime_config()
-    cpm = ComputePolicyManager(request_context.sysadmin_client, log_wire=utils.str_to_bool(config['service'].get('log_wire')))  # noqa: E501
+    cpm = ComputePolicyManager(request_context.sysadmin_client,
+                               request_context.sysadmin_cloudapi_client,
+                               log_wire=utils.str_to_bool(config['service'].get('log_wire')))  # noqa: E501
     return cpm.list_compute_policies_on_vdc(request_data[RequestKey.OVDC_ID])
 
 
@@ -268,7 +270,9 @@ def ovdc_compute_policy_update(request_data,
     remove_compute_policy_from_vms = validated_data[RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS] # noqa: E501
     try:
         config = utils.get_server_runtime_config()
-        cpm = ComputePolicyManager(request_context.sysadmin_client, log_wire=utils.str_to_bool(config['service'].get('log_wire'))) # noqa: E501
+        cpm = ComputePolicyManager(request_context.sysadmin_client,
+                                   request_context.sysadmin_cloudapi_client,
+                                   log_wire=utils.str_to_bool(config['service'].get('log_wire'))) # noqa: E501
         cp_href = None
         cp_id = None
         if cp_name == SYSTEM_DEFAULT_COMPUTE_POLICY_NAME:
@@ -296,6 +300,7 @@ def ovdc_compute_policy_update(request_data,
 
         if action == ComputePolicyAction.REMOVE:
             task_href = cpm.remove_compute_policy_from_vdc(
+                request_context,
                 ovdc_id,
                 cp_href,
                 remove_compute_policy_from_vms=remove_compute_policy_from_vms)

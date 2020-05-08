@@ -404,7 +404,7 @@ class Service(object, metaclass=Singleton):
         sysadmin_client = None
         try:
             sysadmin_client = vcd_utils.get_sys_admin_client()
-            cpm = ComputePolicyManager(sysadmin_client)
+            cpm = ComputePolicyManager(sysadmin_client, log_wire=self.config['service'].get('log_wire')) # noqa: E501
 
             for template in self.config['broker']['templates']:
                 policy_name = template[LocalTemplateKey.COMPUTE_POLICY]
