@@ -2,6 +2,7 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import pyvcloud.vcd.client as vcd_client
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 from requests.exceptions import HTTPError
 
@@ -16,29 +17,23 @@ from container_service_extension.cloudapi.constants import DEF_NATIVE_ENTITY_TYP
 from container_service_extension.cloudapi.constants import DEF_NATIVE_INTERFACE_NSS # noqa: E501
 from container_service_extension.cloudapi.constants import DEF_NATIVE_INTERFACE_VERSION # noqa: E501
 from container_service_extension.def_modules.models import DefEntityType, DefInterface # noqa: E501
-from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.logger import NULL_LOGGER
+from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
+from container_service_extension.logger import SERVER_LOGGER
+import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.shared_constants import RequestMethod
 
 
 class DefSchemaSvc():
     """Manages lifecycle of defined entity interfaces and entity types."""
 
-    def __init__(self, client):
-        """Initialize DefSchemaSvc Object.
+    def __init__(self, sysadmin_client, log_wire=True):
+        vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+        self._sysadmin_client: vcd_client.Client = sysadmin_client
+        self._cloudapi_client: CloudApiClient = None
+        self._session = self._sysadmin_client.get_vcloud_session()
 
-        :param pyvcloud.vcd.client client:
-
-        :raises: OperationNotSupportedException: If cloudapi endpoint is not
-        found in session.
-        :raises: ValueError: If non sys admin client is passed during
-        initialization.
-        """
-        if not client.is_sysadmin():
-            raise ValueError("Only Sys admin clients should be used to "
-                             "initialize ComputePolicyManager.")
-        self._vcd_client = client
-
-        token = self._vcd_client.get_access_token()
+        token = self._sysadmin_client.get_access_token()
         is_jwt_token = True
         if not token:
             token = self._vcd_client.get_xvcloud_authorization_token()
@@ -47,11 +42,16 @@ class DefSchemaSvc():
         self._session = self._vcd_client.get_vcloud_session()
 
         try:
+            wire_logger = NULL_LOGGER
+            if log_wire:
+                wire_logger = SERVER_CLOUDAPI_WIRE_LOGGER
             self._cloudapi_client = CloudApiClient(
                 base_url=self._vcd_client.get_cloudapi_uri(),
                 token=token,
                 is_jwt_token=is_jwt_token,
                 api_version=self._vcd_client.get_api_version(),
+                logger_debug=SERVER_LOGGER,
+                logger_wire=wire_logger,
                 verify_ssl=self._vcd_client._verify_ssl_certs)
             # Since the /cloudapi endpoint was added before the defined entity
             # endpoint. Mere presence of the /cloudapi uri is not enough, we
@@ -62,7 +62,7 @@ class DefSchemaSvc():
                 cloudapi_version=CLOUDAPI_VERSION_1_0_0,
                 resource_url_relative_path=f"{CloudApiResource.INTERFACES}")  # noqa: E501
         except HTTPError as err:
-            LOGGER.error(err)
+            SERVER_LOGGER.error(err)
             raise OperationNotSupportedException(
                 "Cloudapi endpoint unavailable at current api version.")
 
