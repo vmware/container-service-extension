@@ -4,33 +4,15 @@
 
 import abc
 
-from pyvcloud.vcd.client import _WellKnownEndpoint
-
-import container_service_extension.pyvcloud_utils as vcd_utils
+import container_service_extension.request_context as ctx
 
 
 class AbstractBroker(abc.ABC):
-
-    def __init__(self, tenant_auth_token, is_jwt_token):
-        self.tenant_client = None
-        self.client_session = None
-        self.tenant_user_name = None
-        self.tenant_user_id = None
-        self.tenant_org_name = None
-        self.tenant_org_href = None
-
-        self.tenant_client = vcd_utils.connect_vcd_user_via_token(
-            tenant_auth_token=tenant_auth_token,
-            is_jwt_token=is_jwt_token)
-        self.client_session = self.tenant_client.get_vcloud_session()
-        self.tenant_user_name = self.client_session.get('user')
-        self.tenant_user_id = self.client_session.get('userId')
-        self.tenant_org_name = self.client_session.get('org')
-        self.tenant_org_href = \
-            self.tenant_client._get_wk_endpoint(_WellKnownEndpoint.LOGGED_IN_ORG) # noqa: E501
+    def __init__(self, request_context: ctx.RequestContext):
+        self.context: ctx.RequestContext = request_context
 
     @abc.abstractmethod
-    def create_cluster(self, data):
+    def create_cluster(self, **kwargs):
         """Create cluster.
 
         :return: response object
@@ -40,7 +22,7 @@ class AbstractBroker(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def delete_cluster(self, data):
+    def delete_cluster(self, **kwargs):
         """Delete the given cluster.
 
         :return: response object
@@ -50,7 +32,7 @@ class AbstractBroker(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_cluster_info(self, data):
+    def get_cluster_info(self, **kwargs):
         """Get the information about the cluster.
 
         :return: response object
@@ -60,7 +42,7 @@ class AbstractBroker(abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_cluster_config(self, data):
+    def get_cluster_config(self, **kwargs):
         """Get the configuration for the cluster.
 
         :return: Configuration of cluster
@@ -70,7 +52,7 @@ class AbstractBroker(abc.ABC):
         """
 
     @abc.abstractmethod
-    def list_clusters(self, data):
+    def list_clusters(self, **kwargs):
         """Get the list of clusters.
 
         :return: response object
@@ -81,7 +63,7 @@ class AbstractBroker(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def resize_cluster(self, data):
+    def resize_cluster(self, **kwargs):
         """Scale the cluster.
 
         :return: response object

@@ -24,7 +24,7 @@ class DefSchemaSvc():
     """Manages lifecycle of defined entity interfaces and entity types."""
 
     def __init__(self, client):
-        """Initialize DEFSchemaSvc Object.
+        """Initialize DefSchemaSvc Object.
 
         :param pyvcloud.vcd.client client:
 

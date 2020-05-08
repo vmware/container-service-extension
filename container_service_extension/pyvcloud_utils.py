@@ -4,33 +4,33 @@
 
 import pathlib
 
-from pyvcloud.vcd.client import ApiVersion
-from pyvcloud.vcd.client import BasicLoginCredentials
-from pyvcloud.vcd.client import Client
-from pyvcloud.vcd.client import EntityType
-from pyvcloud.vcd.client import find_link
-from pyvcloud.vcd.client import QueryResultFormat
-from pyvcloud.vcd.client import RelationType
-from pyvcloud.vcd.client import ResourceType
+import pyvcloud.vcd.client as vcd_client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
-from pyvcloud.vcd.org import Org
-from pyvcloud.vcd.role import Role
+import pyvcloud.vcd.org as vcd_org
 from pyvcloud.vcd.utils import extract_id
 from pyvcloud.vcd.utils import get_admin_href
-from pyvcloud.vcd.vapp import VApp
+import pyvcloud.vcd.vapp as vcd_vapp
 from pyvcloud.vcd.vdc import VDC
 import requests
 
+from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
-from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.logger import SERVER_LOGGER
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.utils import get_server_runtime_config
+from container_service_extension.utils import NullPrinter
 from container_service_extension.utils import str_to_bool
+
 
 # Cache to keep ovdc_id to org_name mapping for vcd cse cluster list
 OVDC_TO_ORG_MAP = {}
 ORG_ADMIN_RIGHTS = ['General: Administrator Control',
                     'General: Administrator View']
+
+
+def raise_error_if_not_sysadmin(client: vcd_client.Client):
+    if not client.is_sysadmin():
+        raise ValueError("Client should be sysadmin.")
 
 
 def connect_vcd_user_via_token(tenant_auth_token, is_jwt_token):
@@ -42,7 +42,7 @@ def connect_vcd_user_via_token(tenant_auth_token, is_jwt_token):
     log_wire = str_to_bool(server_config['service'].get('log_wire'))
     if log_wire:
         log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
-    client_tenant = Client(
+    client_tenant = vcd_client.Client(
         uri=vcd_uri,
         api_version=version,
         verify_ssl_certs=verify_ssl_certs,
@@ -57,15 +57,15 @@ def connect_vcd_user_via_token(tenant_auth_token, is_jwt_token):
 def get_sys_admin_client():
     server_config = get_server_runtime_config()
     if not server_config['vcd']['verify']:
-        LOGGER.warning("InsecureRequestWarning: Unverified HTTPS "
-                       "request is being made. Adding certificate "
-                       "verification is strongly advised.")
+        SERVER_LOGGER.warning("InsecureRequestWarning: Unverified HTTPS "
+                              "request is being made. Adding certificate "
+                              "verification is strongly advised.")
         requests.packages.urllib3.disable_warnings()
     log_filename = None
     log_wire = str_to_bool(server_config['service'].get('log_wire'))
     if log_wire:
         log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
-    client = Client(
+    client = vcd_client.Client(
         uri=server_config['vcd']['host'],
         api_version=server_config['vcd']['api_version'],
         verify_ssl_certs=server_config['vcd']['verify'],
@@ -73,9 +73,10 @@ def get_sys_admin_client():
         log_requests=log_wire,
         log_headers=log_wire,
         log_bodies=log_wire)
-    credentials = BasicLoginCredentials(server_config['vcd']['username'],
-                                        SYSTEM_ORG_NAME,
-                                        server_config['vcd']['password'])
+    credentials = vcd_client.BasicLoginCredentials(
+        server_config['vcd']['username'],
+        SYSTEM_ORG_NAME,
+        server_config['vcd']['password'])
     client.set_credentials(credentials)
     return client
 
@@ -95,9 +96,9 @@ def get_org(client, org_name=None):
     """
     if not org_name:
         org_sparse_resource = client.get_org()
-        org = Org(client, href=org_sparse_resource.get('href'))
+        org = vcd_org.Org(client, href=org_sparse_resource.get('href'))
     else:
-        org = Org(client, resource=client.get_org_by_name(org_name))
+        org = vcd_org.Org(client, resource=client.get_org_by_name(org_name))
     return org
 
 
@@ -150,7 +151,7 @@ def get_vdc(client, vdc_id=None, vdc_name=None, org=None, org_name=None,
     return VDC(client, resource=resource)
 
 
-def get_org_name_from_ovdc_id(vdc_id):
+def get_org_name_from_ovdc_id(sysadmin_client: vcd_client.Client, vdc_id):
     """Get org_name from vdc_id using OVDC_TO_ORG_MAP.
 
     Update OVDC_TO_ORG_MAP for new {org_name:vdc_id} pair
@@ -161,76 +162,24 @@ def get_org_name_from_ovdc_id(vdc_id):
 
     :rtype: str
     """
+    raise_error_if_not_sysadmin(sysadmin_client)
+
     if vdc_id in OVDC_TO_ORG_MAP:
-        org_name = OVDC_TO_ORG_MAP.get(vdc_id)
-    else:
-        client = None
-        try:
-            client = get_sys_admin_client()
-            vdc_href = f"{client.get_api_uri()}/vdc/{vdc_id}"
-            vdc_resource = client.get_resource(get_admin_href(vdc_href))
-            vdc_obj = VDC(client, resource=vdc_resource)
-            link = find_link(vdc_obj.get_resource(), RelationType.UP,
-                             EntityType.ADMIN_ORG.value)
-            org = Org(client, href=link.href)
-            OVDC_TO_ORG_MAP[vdc_id] = org.get_name()
-            org_name = org.get_name()
-        finally:
-            if client:
-                client.logout
+        return OVDC_TO_ORG_MAP.get(vdc_id)
 
-    return org_name
+    vdc_href = f"{sysadmin_client.get_api_uri()}/vdc/{vdc_id}"
+    vdc_resource = sysadmin_client.get_resource(get_admin_href(vdc_href))
+    vdc_obj = VDC(sysadmin_client, resource=vdc_resource)
+    link = vcd_client.find_link(
+        vdc_obj.get_resource(),
+        vcd_client.RelationType.UP,
+        vcd_client.EntityType.ADMIN_ORG.value)
+    org = vcd_org.Org(sysadmin_client, href=link.href)
+    OVDC_TO_ORG_MAP[vdc_id] = org.get_name()
+    return org.get_name()
 
 
-def get_user_rights(sys_admin_client, user_session):
-    """Return rights associated with the role of an user.
-
-    :param pyvcloud.vcd.client.Client sys_admin_client: the sys admin cilent
-        that will be used to query vCD about the rights and roles of the
-        concerned user.
-    :param lxml.objectify.ObjectifiedElement user_session:
-
-    :return: the list of rights contained in the role of the user
-        (corresponding to the user_session).
-
-    :rtype: list of str
-    """
-    user_org_link = find_link(resource=user_session,
-                              rel=RelationType.DOWN,
-                              media_type=EntityType.ORG.value)
-    user_org_href = user_org_link.href
-    org = Org(sys_admin_client, href=user_org_href)
-    user_role_name = user_session.get('roles')
-    role = Role(sys_admin_client,
-                resource=org.get_role_resource(user_role_name))
-
-    user_rights = []
-    user_rights_as_list_of_dict = role.list_rights()
-    for right_dict in user_rights_as_list_of_dict:
-        user_rights.append(right_dict.get('name'))
-    return user_rights
-
-
-def is_org_admin(user_session):
-    """Deduce if the logged-in user is an org-admin or not.
-
-    :param lxml.objectify.ObjectifiedElement user_session:
-
-    :return True if the user is an Org Admin else False
-
-    :rtype: bool
-    """
-    client = None
-    try:
-        client = get_sys_admin_client()
-        user_rights = get_user_rights(client, user_session)
-    finally:
-        if client:
-            client.logout()
-    return all(right in user_rights for right in ORG_ADMIN_RIGHTS)
-
-
-def get_pvdc_id(ovdc):
+def get_pvdc_id(sysadmin_client: vcd_client.Client, ovdc: VDC):
     """Get id of pvdc backing an ovdc.
 
     :param pyvcloud.vcd.VDC ovdc: This ovdc object has to be created with a
@@ -240,23 +189,18 @@ def get_pvdc_id(ovdc):
 
     :rtype: str
     """
-    client = None
-    try:
-        client = get_sys_admin_client()
-        pvdc_element = ovdc.get_resource().ProviderVdcReference
-        # To support <= VCD 9.1 where no 'id' is present in pvdc
-        # element, it has to be extracted from href. Once VCD 9.1 support
-        # is discontinued, this code is not required.
-        if float(client.get_api_version()) < \
-                float(ApiVersion.VERSION_31.value):
-            pvdc_href = pvdc_element.get('href')
-            return pvdc_href.split("/")[-1]
-        else:
-            pvdc_id = pvdc_element.get('id')
-            return extract_id(pvdc_id)
-    finally:
-        if client:
-            client.logout()
+    raise_error_if_not_sysadmin(sysadmin_client)
+
+    pvdc_element = ovdc.get_resource().ProviderVdcReference
+    # To support <= VCD 9.1 where no 'id' is present in pvdc
+    # element, it has to be extracted from href. Once VCD 9.1 support
+    # is discontinued, this code is not required.
+    if float(sysadmin_client.get_api_version()) < float(vcd_client.ApiVersion.VERSION_31.value): # noqa: E501
+        pvdc_href = pvdc_element.get('href')
+        return pvdc_href.split("/")[-1]
+    else:
+        pvdc_id = pvdc_element.get('id')
+        return extract_id(pvdc_id)
 
 
 def get_pvdc_id_from_pvdc_name(name, vc_name_in_vcd):
@@ -269,12 +213,14 @@ def get_pvdc_id_from_pvdc_name(name, vc_name_in_vcd):
 
     :rtype: str
     """
+    # cannot remove this instance of get_sys_admin_client
+    # this is used only by PksCache, which is initialized on server start
     client = None
     try:
         client = get_sys_admin_client()
         query = client.get_typed_query(
-            ResourceType.PROVIDER_VDC.value,
-            query_result_format=QueryResultFormat.RECORDS,
+            vcd_client.ResourceType.PROVIDER_VDC.value,
+            query_result_format=vcd_client.QueryResultFormat.RECORDS,
             qfilter=f'vcName=={vc_name_in_vcd}',
             equality_filter=('name', name))
         for pvdc_record in list(query.execute()):
@@ -284,12 +230,11 @@ def get_pvdc_id_from_pvdc_name(name, vc_name_in_vcd):
     finally:
         if client:
             client.logout()
-    return None
 
 
 def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
-                          org=None, org_name=None, logger=None,
-                          msg_update_callback=None):
+                          org=None, org_name=None, logger=NULL_LOGGER,
+                          msg_update_callback=NullPrinter()):
     """Upload local ova file to vCD catalog.
 
     :param pyvcloud.vcd.client.Client client:
@@ -301,8 +246,7 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
     :param str org_name: specific org to use if @org is not given.
         If None, uses currently logged-in org from @client.
     :param logging.Logger logger: optional logger to log with.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
-        that writes messages onto console.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
 
     :raises pyvcloud.vcd.exceptions.EntityNotFoundException if catalog
@@ -316,10 +260,8 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
         try:
             msg = f"Update flag set. Checking catalog '{catalog_name}' for " \
                   f"'{catalog_item_name}'"
-            if msg_update_callback:
-                msg_update_callback.info(msg)
-            if logger:
-                logger.info(msg)
+            msg_update_callback.info(msg)
+            logger.info(msg)
 
             org.delete_catalog_item(catalog_name, catalog_item_name)
             org.reload()
@@ -328,10 +270,8 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
 
             msg = f"Update flag set. Checking catalog '{catalog_name}' for " \
                   f"'{catalog_item_name}'"
-            if msg_update_callback:
-                msg_update_callback.info(msg)
-            if logger:
-                logger.info(msg)
+            msg_update_callback.info(msg)
+            logger.info(msg)
         except EntityNotFoundException:
             pass
     else:
@@ -344,30 +284,24 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
             org.get_catalog_item(catalog_name, catalog_item_name)
             msg = f"'{catalog_item_name}' already exists in catalog " \
                   f"'{catalog_name}'"
-            if msg_update_callback:
-                msg_update_callback.general(msg)
-            if logger:
-                logger.info(msg)
+            msg_update_callback.general(msg)
+            logger.info(msg)
 
             return
         except EntityNotFoundException:
             pass
 
     msg = f"Uploading '{catalog_item_name}' to catalog '{catalog_name}'"
-    if msg_update_callback:
-        msg_update_callback.info(msg)
-    if logger:
-        logger.info(msg)
+    msg_update_callback.info(msg)
+    logger.info(msg)
 
     org.upload_ovf(catalog_name, filepath)
     org.reload()
     wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
                                      org=org)
     msg = f"Uploaded '{catalog_item_name}' to catalog '{catalog_name}'"
-    if msg_update_callback:
-        msg_update_callback.general(msg)
-    if logger:
-        logger.info(msg)
+    msg_update_callback.general(msg)
+    logger.info(msg)
 
 
 def catalog_exists(org, catalog_name):
@@ -414,7 +348,7 @@ def catalog_item_exists(org, catalog_name, catalog_item_name):
 
 
 def create_and_share_catalog(org, catalog_name, catalog_desc='', logger=None,
-                             msg_update_callback=None):
+                             msg_update_callback=NullPrinter()):
     """Create and share specified catalog.
 
     If catalog does not exist in vCD, create it. Share the specified catalog
@@ -424,8 +358,7 @@ def create_and_share_catalog(org, catalog_name, catalog_desc='', logger=None,
     :param str catalog_name:
     :param str catalog_desc:
     :param logging.Logger logger: optional logger to log with.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
-        that writes messages onto console.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :return: XML representation of specified catalog.
 
@@ -436,22 +369,19 @@ def create_and_share_catalog(org, catalog_name, catalog_desc='', logger=None,
     """
     if catalog_exists(org, catalog_name):
         msg = f"Found catalog '{catalog_name}'"
-        if msg_update_callback:
-            msg_update_callback.general(msg)
+        msg_update_callback.general(msg)
         if logger:
             logger.info(msg)
     else:
         msg = f"Creating catalog '{catalog_name}'"
-        if msg_update_callback:
-            msg_update_callback.info(msg)
+        msg_update_callback.info(msg)
         if logger:
             logger.info(msg)
 
         org.create_catalog(catalog_name, catalog_desc)
 
         msg = f"Created catalog '{catalog_name}'"
-        if msg_update_callback:
-            msg_update_callback.general(msg)
+        msg_update_callback.general(msg)
         if logger:
             logger.info(msg)
         org.reload()
@@ -490,19 +420,19 @@ def wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
 
 
 def get_all_vapps_in_ovdc(client, ovdc_id):
-    resource_type = ResourceType.VAPP.value
+    resource_type = vcd_client.ResourceType.VAPP.value
     if client.is_sysadmin():
-        resource_type = ResourceType.ADMIN_VAPP.value
+        resource_type = vcd_client.ResourceType.ADMIN_VAPP.value
 
     q = client.get_typed_query(
         resource_type,
-        query_result_format=QueryResultFormat.RECORDS,
+        query_result_format=vcd_client.QueryResultFormat.RECORDS,
         equality_filter=('vdc', f"{client.get_api_uri()}/vdc/{ovdc_id}")
     )
 
     vapps = []
     for record in q.execute():
-        vapp = VApp(client, href=record.get('href'))
+        vapp = vcd_vapp.VApp(client, href=record.get('href'))
         vapp.reload()
         vapps.append(vapp)
 

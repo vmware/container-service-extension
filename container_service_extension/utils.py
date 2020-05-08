@@ -13,6 +13,7 @@ import threading
 import click
 import requests
 
+from container_service_extension.logger import NULL_LOGGER
 
 # chunk size in bytes for file reading
 BUF_SIZE = 65536
@@ -42,6 +43,22 @@ class ConsoleMessagePrinter():
 
     def error(self, msg):
         click.secho(msg, fg='red')
+
+
+class NullPrinter():
+    """Callback object which does nothing."""
+
+    def general_no_color(self, msg):
+        pass
+
+    def general(self, msg):
+        pass
+
+    def info(self, msg):
+        pass
+
+    def error(self, msg):
+        pass
 
 
 def prompt_text(text, color='black', hide_input=False):
@@ -86,7 +103,8 @@ def get_duplicate_items_in_list(items):
 
 
 def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
-                               excluded_keys=[], msg_update_callback=None):
+                               excluded_keys=[],
+                               msg_update_callback=NullPrinter()):
     """Compare a dictionary with a reference dictionary.
 
     The method ensures that  all keys and value types are the same in the
@@ -98,9 +116,7 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
         can be more descriptive.
     :param list excluded_keys: list of str, representing the list of key which
         if missing won't raise an exception.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback
-        object that writes messages onto console.
-
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     :raises KeyError: if @dikt has missing or invalid keys
     :raises TypeError: if the value of a property in @dikt does not match with
         the value of the same property in @ref_dict
@@ -110,7 +126,7 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
 
     missing_keys = ref_keys - keys - set(excluded_keys)
 
-    if missing_keys and msg_update_callback:
+    if missing_keys:
         msg_update_callback.error(
             f"Missing keys in {location}: {missing_keys}")
     bad_value = False
@@ -119,10 +135,9 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
             continue
         value_type = type(ref_dict[k])
         if not isinstance(dikt[k], value_type):
-            if msg_update_callback:
-                msg_update_callback.error(
-                    f"{location} key '{k}': value type should be "
-                    f"'{_type_to_string[value_type]}'")
+            msg_update_callback.error(
+                f"{location} key '{k}': value type should be "
+                f"'{_type_to_string[value_type]}'")
             bad_value = True
 
     if missing_keys:
@@ -131,24 +146,21 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
         raise TypeError(f"Incorrect type for property value(s) in {location}")
 
 
-def check_python_version(msg_update_callback=None):
+def check_python_version(msg_update_callback=NullPrinter()):
     """Ensure that user's Python version >= 3.7.3.
 
     If the check fails, will exit the python interpretor with error status.
 
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
-        that sends back error messages.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     """
     try:
-        if msg_update_callback:
-            msg_update_callback.general_no_color(
-                "Required Python version: >= 3.7.3\n"
-                f"Installed Python version: {sys.version}")
+        msg_update_callback.general_no_color(
+            "Required Python version: >= 3.7.3\n"
+            f"Installed Python version: {sys.version}")
         if sys.version_info < (3, 7, 3):
             raise Exception("Python version should be 3.7.3 or greater")
     except Exception as err:
-        if msg_update_callback:
-            msg_update_callback.error(str(err))
+        msg_update_callback.error(str(err))
         sys.exit(1)
 
 
@@ -183,7 +195,7 @@ def get_sha256(filepath):
     return sha256.hexdigest()
 
 
-def check_file_permissions(filename, msg_update_callback=None):
+def check_file_permissions(filename, msg_update_callback=NullPrinter()):
     """Ensure that the file has correct permissions.
 
     Unix based system:
@@ -193,8 +205,7 @@ def check_file_permissions(filename, msg_update_callback=None):
         No check
 
     :param str filename: path to file.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback
-        object that writes messages onto console.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :raises Exception: if file has 'x' permissions for Owner or 'rwx'
         permissions for 'Others' or 'Group'.
@@ -205,22 +216,19 @@ def check_file_permissions(filename, msg_update_callback=None):
     file_mode = os.stat(filename).st_mode
     if file_mode & stat.S_IXUSR:
         msg = f"Remove execute permission of the Owner for the file {filename}"
-        if msg_update_callback:
-            msg_update_callback.error(msg)
+        msg_update_callback.error(msg)
         err_msgs.append(msg)
     if file_mode & stat.S_IROTH or file_mode & stat.S_IWOTH \
             or file_mode & stat.S_IXOTH:
         msg = f"Remove read, write and execute permissions of Others for " \
               f"the file {filename}"
-        if msg_update_callback:
-            msg_update_callback.error(msg)
+        msg_update_callback.error(msg)
         err_msgs.append(msg)
     if file_mode & stat.S_IRGRP or file_mode & stat.S_IWGRP \
             or file_mode & stat.S_IXGRP:
         msg = f"Remove read, write and execute permissions of Group for the " \
               f"file {filename}"
-        if msg_update_callback:
-            msg_update_callback.error(msg)
+        msg_update_callback.error(msg)
         err_msgs.append(msg)
 
     if err_msgs:
@@ -228,7 +236,7 @@ def check_file_permissions(filename, msg_update_callback=None):
 
 
 def download_file(url, filepath, sha256=None, force_overwrite=False,
-                  logger=None, msg_update_callback=None):
+                  logger=NULL_LOGGER, msg_update_callback=NullPrinter()):
     """Download a file from a url to local filepath.
 
     Will not overwrite files unless @sha256 is given.
@@ -241,9 +249,8 @@ def download_file(url, filepath, sha256=None, force_overwrite=False,
         sha256, download will be skipped.
     :param bool force_overwrite: if True, will download the file even if it
         already exists or its SHA hasn't changed.
-    :param logging.Logger logger: optional logger to log with.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback
-        object that writes messages onto console.
+    :param logging.Logger logger: logger to log with.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :raises HTTPError: if the response has an error status code
     """
@@ -251,18 +258,14 @@ def download_file(url, filepath, sha256=None, force_overwrite=False,
     if not force_overwrite and path.is_file() and \
             (sha256 is None or get_sha256(filepath) == sha256):
         msg = f"Skipping download to '{filepath}' (file already exists)"
-        if logger:
-            logger.info(msg)
-        if msg_update_callback:
-            msg_update_callback.general(msg)
+        logger.info(msg)
+        msg_update_callback.general(msg)
         return
 
     path.parent.mkdir(parents=True, exist_ok=True)
     msg = f"Downloading file from '{url}' to '{filepath}'..."
-    if logger:
-        logger.info(msg)
-    if msg_update_callback:
-        msg_update_callback.info(msg)
+    logger.info(msg)
+    msg_update_callback.info(msg)
     response = requests.get(url, stream=True,
                             headers={'Cache-Control': 'no-cache'})
     response.raise_for_status()
@@ -270,20 +273,18 @@ def download_file(url, filepath, sha256=None, force_overwrite=False,
         for chunk in response.iter_content(chunk_size=SIZE_1MB):
             f.write(chunk)
     msg = f"Download complete"
-    if logger:
-        logger.info(msg)
-    if msg_update_callback:
-        msg_update_callback.general(msg)
+    logger.info(msg)
+    msg_update_callback.general(msg)
 
 
-def read_data_file(filepath, logger=None, msg_update_callback=None):
+def read_data_file(filepath, logger=NULL_LOGGER,
+                   msg_update_callback=NullPrinter()):
     """Retrieve file content from local disk as a string.
 
     :param str filepath: absolute filepath of the file, whose content we want
         to read.
-    :param logging.Logger logger: optional logger to log with.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback
-        object that writes messages onto console.
+    :param logging.Logger logger: logger to log with.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :return: the contents of the file.
 
@@ -297,17 +298,13 @@ def read_data_file(filepath, logger=None, msg_update_callback=None):
     try:
         contents = path.read_text()
     except FileNotFoundError as err:
-        if msg_update_callback:
-            msg_update_callback.error(f"{err}")
-        if logger:
-            logger.error(f"{err}", exc_info=True)
+        msg_update_callback.error(f"{err}")
+        logger.error(f"{err}", exc_info=True)
         raise
 
     msg = f"Found data file: {path}"
-    if msg_update_callback:
-        msg_update_callback.general(msg)
-    if logger:
-        logger.debug(msg)
+    msg_update_callback.general(msg)
+    logger.debug(msg)
 
     return contents
 

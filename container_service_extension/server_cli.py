@@ -5,7 +5,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import json
-import logging
 import os
 import shutil
 import sys
@@ -36,9 +35,13 @@ from container_service_extension.encryption_engine import encrypt_file
 from container_service_extension.encryption_engine import get_decrypted_file_contents # noqa: E501
 from container_service_extension.exceptions import AmqpConnectionError
 import container_service_extension.local_template_manager as ltm
+from container_service_extension.logger import NULL_LOGGER
+from container_service_extension.logger import SERVER_CLI_LOGGER
+from container_service_extension.logger import SERVER_CLI_WIRELOG_FILEPATH
+from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
+from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.remote_template_manager import RemoteTemplateManager # noqa: E501
 from container_service_extension.sample_generator import generate_sample_config
-from container_service_extension.security import RedactingFilter
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import RemoteTemplateKey
@@ -56,6 +59,7 @@ from container_service_extension.telemetry.telemetry_utils \
     import store_telemetry_settings
 from container_service_extension.utils import check_python_version
 from container_service_extension.utils import ConsoleMessagePrinter
+from container_service_extension.utils import NullPrinter
 from container_service_extension.utils import prompt_text
 from container_service_extension.utils import str_to_bool
 from container_service_extension.vcdbroker import get_all_clusters
@@ -286,6 +290,7 @@ def uiplugin(ctx):
 @click.pass_context
 def version(ctx):
     """Display CSE version."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     ver_obj = Service.version()
     ver_str = '%s, %s, version %s' % (ver_obj['product'],
                                       ver_obj['description'],
@@ -310,13 +315,17 @@ def version(ctx):
     help='Generate only sample PKS config')
 def sample(ctx, output, pks_config):
     """Display sample CSE config file contents."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     # The console_message_printer is not being passed to the python version
     # check, because we want to suppress the version check messages from being
     # printed onto console, and pollute the sample config.
     check_python_version()
-    console_message_printer.general_no_color(
-        generate_sample_config(output=output, generate_pks_config=pks_config))
+    sample_config = generate_sample_config(output=output,
+                                           generate_pks_config=pks_config)
+
+    console_message_printer.general_no_color(sample_config)
+    SERVER_CLI_LOGGER.debug(sample_config)
 
 
 @cli.command(short_help="Checks that CSE/PKS config file is valid. Can "
@@ -350,6 +359,7 @@ def sample(ctx, output, pks_config):
 def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
           check_install):
     """Validate CSE config file."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
@@ -360,15 +370,18 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
             pks_config_file_path=pks_config_file_path,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
-            validate=True)
+            validate=True,
+            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
+            logger_debug=SERVER_CLI_LOGGER)
 
         if check_install:
             try:
                 check_cse_installation(
                     config_dict, msg_update_callback=console_message_printer)
             except Exception as err:
-                console_message_printer.error(f"Error : {err}")
-                console_message_printer.error("CSE installation is invalid.")
+                msg = f"Error : {err}\nCSE installation is invalid"
+                SERVER_CLI_LOGGER.error(msg)
+                console_message_printer.error(msg)
                 raise
 
         # Record telemetry data on successful completion
@@ -394,6 +407,7 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
                 status=OperationStatus.FAILED,
                 telemetry_settings=config_dict['service']['telemetry'])
         console_message_printer.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err))
         sys.exit(1)
     finally:
         # block the process to let telemetry handler to finish posting data to
@@ -415,6 +429,7 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
     help='Filepath to write decrypted file to')
 def decrypt(ctx, input_file, output_file):
     """Decrypt CSE configuration file."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
@@ -425,11 +440,14 @@ def decrypt(ctx, input_file, output_file):
                 hide_input=True,
                 color='green')
             decrypt_file(input_file, password, output_file)
-            console_message_printer.general("Decryption successful.")
+            msg = "Decryption successful."
+            console_message_printer.general(msg)
+            SERVER_CLI_LOGGER.debug(msg)
         except cryptography.fernet.InvalidToken:
             raise Exception("Decryption failed: Invalid password")
     except Exception as err:
         console_message_printer.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err))
         sys.exit(1)
 
 
@@ -447,6 +465,7 @@ def decrypt(ctx, input_file, output_file):
     help='Filepath to write encrypted file to')
 def encrypt(ctx, input_file, output_file):
     """Encrypt CSE configuration file."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
@@ -457,11 +476,14 @@ def encrypt(ctx, input_file, output_file):
                 hide_input=True,
                 color='green')
             encrypt_file(input_file, password, output_file)
-            console_message_printer.general("Encryption successful")
+            msg = "Encryption successful."
+            console_message_printer.general(msg)
+            SERVER_CLI_LOGGER.debug(msg)
         except cryptography.fernet.InvalidToken:
             raise Exception("Encryption failed: Invalid password")
     except Exception as err:
         console_message_printer.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err))
         sys.exit(1)
 
 
@@ -520,14 +542,16 @@ def install(ctx, config_file_path, pks_config_file_path,
             skip_config_decryption, skip_template_creation, force_update,
             retain_temp_vapp, ssh_key_file):
     """Install CSE on vCloud Director."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
     if retain_temp_vapp and not ssh_key_file:
-        console_message_printer.error(
-            "Must provide ssh-key file (using --ssh-key OR -k) if "
-            "--retain-temp-vapp is provided, or else temporary vm will be "
-            "inaccessible")
+        msg = "Must provide ssh-key file (using --ssh-key OR -k) if " \
+              "--retain-temp-vapp is provided, or else temporary vm will be " \
+              "inaccessible"
+        console_message_printer.error(msg)
+        SERVER_CLI_LOGGER.error(msg)
         sys.exit(1)
 
     ssh_key = None
@@ -559,6 +583,7 @@ def install(ctx, config_file_path, pks_config_file_path,
         except cryptography.fernet.InvalidToken:
             raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
     except Exception as err:
+        SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
         sys.exit(1)
     finally:
@@ -599,6 +624,7 @@ def install(ctx, config_file_path, pks_config_file_path,
 def run(ctx, config_file_path, pks_config_file_path, skip_check,
         skip_config_decryption):
     """Run CSE service."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
@@ -627,6 +653,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
         except cryptography.fernet.InvalidToken:
             raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
     except Exception as err:
+        SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
         console_message_printer.error("CSE Server failure. Please check the logs.") # noqa: E501
         sys.exit(1)
@@ -636,8 +663,9 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
                 config_file_path=config_file_path,
                 pks_config_file_path=None,
                 skip_config_decryption=skip_config_decryption,
-                msg_update_callback=None,
-                validate=False)
+                validate=False,
+                log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
+                logger_debug=SERVER_CLI_LOGGER)
             record_user_action(cse_operation=CseOperation.SERVICE_RUN,
                                status=OperationStatus.FAILED,
                                telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
@@ -699,6 +727,7 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
 
     Use '*' as cluster name to convert all clusters.
     """
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
@@ -709,7 +738,9 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
-            validate=True)
+            validate=True,
+            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
+            logger_debug=SERVER_CLI_LOGGER)
 
         # Record telemetry details
         cse_params = {
@@ -722,16 +753,16 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
         record_user_action_details(cse_operation=CseOperation.CLUSTER_CONVERT,
                                    cse_params=cse_params,
                                    telemetry_settings=config['service']['telemetry'])  # noqa: E501
-
-        log_filename = None
+        log_wire_file = None
         log_wire = str_to_bool(config['service'].get('log_wire'))
         if log_wire:
-            log_filename = 'cse_server_cli.log'
+            log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
 
-        client, _ = _get_clients_from_config(config, log_filename, log_wire)
+        client, _ = _get_clients_from_config(config, log_wire_file, log_wire)
 
         msg = f"Connected to vCD as system administrator: " \
               f"{config['vcd']['host']}:{config['vcd']['port']}"
+        SERVER_CLI_LOGGER.debug(msg)
         console_message_printer.general(msg)
 
         cluster_records = get_all_clusters(client=client,
@@ -740,27 +771,34 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
                                            ovdc_name=vdc_name)
 
         if len(cluster_records) == 0:
-            console_message_printer.info(f"No clusters were found.")
+            msg = "No clusters were found."
+            SERVER_CLI_LOGGER.debug(msg)
+            console_message_printer.info(msg)
             return
 
         href_of_vms_to_verify = []
         for cluster in cluster_records:
-            console_message_printer.info(
-                f"Processing cluster '{cluster['name']}'.")
+            msg = f"Processing cluster '{cluster['name']}'."
+            SERVER_CLI_LOGGER.debug(msg)
+            console_message_printer.info(msg)
             vapp_href = cluster['vapp_href']
             vapp = VApp(client, href=vapp_href)
 
             # this step removes the old 'cse.template' metadata and adds
             # cse.template.name and cse.template.revision metadata
             # using hard-coded values taken from github history
-            console_message_printer.info("Processing metadata of cluster.")
+            msg = "Processing metadata of cluster."
+            SERVER_CLI_LOGGER.debug(msg)
+            console_message_printer.info(msg)
+
             metadata_dict = metadata_to_dict(vapp.get_metadata())
             old_template_name = metadata_dict.get(ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME) # noqa: E501
             new_template_name = None
             cse_version = metadata_dict.get(ClusterMetadataKey.CSE_VERSION)
             if old_template_name:
-                console_message_printer.info(
-                    "Determining k8s version on cluster.")
+                msg = "Determining k8s version on cluster."
+                SERVER_CLI_LOGGER.debug(msg)
+                console_message_printer.info(msg)
                 if 'photon' in old_template_name:
                     new_template_name = 'photon-v2'
                     if cse_version in ('1.0.0'):
@@ -781,7 +819,9 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
                         new_template_name += '_k8s-1.13_weave-2.3.0'
 
             if new_template_name:
-                console_message_printer.info("Updating metadata of cluster.")
+                msg = "Updating metadata of cluster."
+                SERVER_CLI_LOGGER.debug(msg)
+                console_message_printer.info(msg)
                 task = vapp.remove_metadata(ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME) # noqa: E501
                 client.get_task_monitor().wait_for_success(task)
                 new_metadata_to_add = {
@@ -823,15 +863,19 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
                 task = vapp.set_multiple_metadata(new_metadata)
                 client.get_task_monitor().wait_for_success(task)
 
-            console_message_printer.general(
-                "Finished processing metadata of cluster.")
+                msg = "Finished processing metadata of cluster."
+                SERVER_CLI_LOGGER.debug(msg)
+                console_message_printer.general(msg)
 
             # Update admin password of all VMs that are not set properly
             vm_hrefs_for_password_update = []
             vm_resources = vapp.get_all_vms()
             for vm_resource in vm_resources:
                 vm = VM(client, href=vm_resource.get('href'))
-                console_message_printer.info(f"Determining if vm '{vm.get_resource().get('name')} needs processing'.") # noqa: E501
+                msg = f"Determining if vm '{vm.get_resource().get('name')}" \
+                      "needs processing'."
+                SERVER_CLI_LOGGER.debug(msg)
+                console_message_printer.info(msg)
 
                 gc_section = vm.get_guest_customization_section()
                 admin_password_enabled = False
@@ -856,20 +900,24 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
             # At least one vm in the vApp needs a password update
             if len(vm_hrefs_for_password_update) > 0:
                 try:
-                    console_message_printer.info(
-                        f"Undeploying the cluster '{cluster['name']}'")
+                    msg = f"Undeploying the cluster '{cluster['name']}'"
+                    SERVER_CLI_LOGGER.debug(msg)
+                    console_message_printer.info(msg)
+
                     task = vapp.undeploy()
                     client.get_task_monitor().wait_for_success(task)
-                    console_message_printer.general(
-                        "Successfully undeployed the vApp.")
+                    msg = "Successfully undeployed the vApp."
+                    SERVER_CLI_LOGGER.debug(msg)
+                    console_message_printer.general(msg)
                 except Exception as err:
                     console_message_printer.error(str(err))
 
                 for href in vm_hrefs_for_password_update:
                     vm = VM(client=client, href=href)
-                    console_message_printer.info(
-                        f"Processing vm '{vm.get_resource().get('name')}'.")
-                    console_message_printer.info("Updating vm admin password")
+                    msg = f"Processing vm {vm.get_resource().get('name')}'." \
+                          "\nUpdating vm admin password"
+                    SERVER_CLI_LOGGER.debug(msg)
+                    console_message_printer.info(msg)
                     task = vm.update_guest_customization_section(
                         enabled=True,
                         admin_password_enabled=True,
@@ -877,24 +925,37 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
                         admin_password=admin_password,
                     )
                     client.get_task_monitor().wait_for_success(task)
-                    console_message_printer.general("Successfully updated vm")
+                    msg = "Successfully updated vm"
+                    SERVER_CLI_LOGGER.debug(msg)
+                    console_message_printer.general(msg)
 
-                    console_message_printer.info("Deploying vm.")
+                    msg = "Deploying vm."
+                    SERVER_CLI_LOGGER.debug(msg)
+                    console_message_printer.info(msg)
                     task = vm.power_on_and_force_recustomization()
                     client.get_task_monitor().wait_for_success(task)
-                    console_message_printer.general("Successfully deployed vm")
+                    msg = "Successfully deployed vm"
+                    SERVER_CLI_LOGGER.debug(msg)
+                    console_message_printer.general(msg)
 
-                console_message_printer.info("Deploying cluster")
+                msg = "Deploying cluster"
+                SERVER_CLI_LOGGER.debug(msg)
+                console_message_printer.info(msg)
                 task = vapp.deploy(power_on=True)
                 client.get_task_monitor().wait_for_success(task)
-                console_message_printer.general("Successfully deployed cluster") # noqa: E501
+                msg = "Successfully deployed cluster"
+                SERVER_CLI_LOGGER.debug(msg)
+                console_message_printer.general(msg)
 
-            console_message_printer.general(
-                f"Successfully processed cluster '{cluster['name']}'")
+                msg = f"Successfully processed cluster '{cluster['name']}'"
+                SERVER_CLI_LOGGER.debug(msg)
+                console_message_printer.general(msg)
 
         if not skip_wait_for_gc:
             while len(href_of_vms_to_verify) != 0:
-                console_message_printer.info(f"Waiting on guest customization to finish on {len(href_of_vms_to_verify)} vms.") # noqa: E501
+                msg = f"Waiting on guest customization to finish on {len(href_of_vms_to_verify)} vms." # noqa: E501
+                SERVER_CLI_LOGGER.debug(msg)
+                console_message_printer.info(msg)
                 to_remove = []
                 for href in href_of_vms_to_verify:
                     vm = VM(client=client, href=href)
@@ -914,11 +975,14 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
 
                 time.sleep(5)
 
-            console_message_printer.info("Finished Guest customization on all vms.") # noqa: E501
+                msg = "Finished Guest customization on all vms."
+                SERVER_CLI_LOGGER.debug(msg)
+                console_message_printer.info(msg)
 
         # Record telemetry data on successful completion
         record_user_action(cse_operation=CseOperation.CLUSTER_CONVERT, telemetry_settings=config['service']['telemetry'])  # noqa: E501
     except Exception as err:
+        SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
         # Record telemetry data on failed cluster convert
         record_user_action(cse_operation=CseOperation.CLUSTER_CONVERT,
@@ -963,6 +1027,7 @@ def convert_cluster(ctx, config_file_path, skip_config_decryption,
 def list_template(ctx, config_file_path, skip_config_decryption,
                   display_option):
     """List CSE k8s templates."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     # Not passing the console_message_printer, because we want to suppress
     # the python version check messages from being printed onto console.
@@ -978,7 +1043,9 @@ def list_template(ctx, config_file_path, skip_config_decryption,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
-            validate=False)
+            validate=False,
+            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
+            logger_debug=SERVER_CLI_LOGGER)
 
         # Record telemetry details
         cse_params = {PayloadKey.DISPLAY_OPTION: display_option}
@@ -990,13 +1057,14 @@ def list_template(ctx, config_file_path, skip_config_decryption,
         if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL):
             client = None
             try:
-                log_filename = None
+                log_wire_file = None
                 log_wire = str_to_bool(config_dict['service'].get('log_wire'))
                 if log_wire:
-                    log_filename = 'cse_server_cli.log'
+                    log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
 
-                client, _ = _get_clients_from_config(
-                    config_dict, log_filename=log_filename, log_wire=log_wire)
+                client, _ = _get_clients_from_config(config_dict,
+                                                     log_wire_file=log_wire_file, # noqa: E501
+                                                     log_wire=log_wire)
 
                 org_name = config_dict['broker']['org']
                 catalog_name = config_dict['broker']['catalog']
@@ -1039,6 +1107,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
         if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_REMOTE):
             rtm = RemoteTemplateManager(
                 remote_template_cookbook_url=config_dict['broker']['remote_template_cookbook_url'], # noqa: E501
+                logger=SERVER_CLI_LOGGER,
                 msg_update_callback=console_message_printer)
             remote_template_cookbook = rtm.get_remote_template_cookbook()
             remote_template_definitions = remote_template_cookbook['templates']
@@ -1093,9 +1162,11 @@ def list_template(ctx, config_file_path, skip_config_decryption,
 
         result = sorted(result, key=lambda t: (t['name'], t['revision']), reverse=True)  # noqa: E501
         stdout(result, ctx, sort_headers=False)
+        SERVER_CLI_LOGGER.debug(result)
         record_user_action(cse_operation=CseOperation.TEMPLATE_LIST,
                            telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
     except Exception as err:
+        SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
         record_user_action(cse_operation=CseOperation.TEMPLATE_LIST,
                            status=OperationStatus.FAILED,
@@ -1160,14 +1231,16 @@ def install_cse_template(ctx, template_name, template_revision,
     Use '*' for TEMPLATE_NAME and TEMPLATE_REVISION to install
     all listed templates.
     """
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
     if retain_temp_vapp and not ssh_key_file:
-        console_message_printer.error(
-            "Must provide ssh-key file (using --ssh-key OR -k) if "
-            "--retain-temp-vapp is provided, or else temporary vm will be "
-            "inaccessible")
+        msg = "Must provide ssh-key file (using --ssh-key OR -k) if " \
+              "--retain-temp-vapp is provided, or else temporary vm will be " \
+              "inaccessible"
+        SERVER_CLI_LOGGER.error(msg)
+        console_message_printer.error(msg)
         sys.exit(1)
 
     password = None
@@ -1201,6 +1274,7 @@ def install_cse_template(ctx, template_name, template_revision,
         except cryptography.fernet.InvalidToken:
             raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
     except Exception as err:
+        SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
         sys.exit(1)
     finally:
@@ -1232,6 +1306,7 @@ def install_cse_template(ctx, template_name, template_revision,
 def register_ui_plugin(ctx, plugin_file_path, config_file_path,
                        skip_config_decryption):
     """."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
@@ -1247,7 +1322,9 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
-            validate=False)
+            validate=False,
+            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
+            logger_debug=SERVER_CLI_LOGGER)
 
         tempdir = tempfile.mkdtemp(dir='.')
         plugin_zip = ZipFile(plugin_file_path, 'r')
@@ -1275,15 +1352,17 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
             'enabled': True
         }
 
-        log_filename = None
+        log_wire_file = None
         log_wire = str_to_bool(config_dict['service'].get('log_wire'))
         if log_wire:
-            log_filename = 'cse_server_cli.log'
+            log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
 
         client, cloudapi_client = _get_clients_from_config(
-            config_dict, log_filename=log_filename, log_wire=log_wire)
+            config_dict, log_wire_file=log_wire_file, log_wire=log_wire)
 
-        console_message_printer.info("Registering plugin with vCD.")
+        msg = "Registering plugin with vCD."
+        SERVER_CLI_LOGGER.debug(msg)
+        console_message_printer.info(msg)
         try:
             response_body = cloudapi_client.do_request(
                 method=RequestMethod.POST,
@@ -1298,7 +1377,9 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
                                 "it again.")
             raise
 
-        console_message_printer.info("Preparing to upload plugin to vCD.")
+        msg = "Preparing to upload plugin to vCD."
+        SERVER_CLI_LOGGER.debug(msg)
+        console_message_printer.info(msg)
         transferRequest = {
             "fileName": os.path.split(plugin_file_path)[1],
             "size": os.stat(plugin_file_path).st_size
@@ -1308,7 +1389,9 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
             resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{pluginId}/plugin", # noqa: E501
             payload=transferRequest)
 
-        console_message_printer.info("Uploading plugin to vCD.")
+        msg = "Uploading plugin to vCD."
+        SERVER_CLI_LOGGER.debug(msg)
+        console_message_printer.info(msg)
         transfer_url = None
         content_type = None
         response_headers = cloudapi_client.get_last_response_headers()
@@ -1326,19 +1409,28 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
             resource_url_absolute_path=transfer_url,
             payload=file_content,
             content_type=content_type)
-        console_message_printer.general("Plugin upload complete.")
+        msg = "Plugin upload complete."
+        SERVER_CLI_LOGGER.debug(msg)
+        console_message_printer.general(msg)
 
-        console_message_printer.info("Waiting for plugin to be ready.")
+        msg = "Waiting for plugin to be ready."
+        console_message_printer.info(msg)
+        SERVER_CLI_LOGGER.debug(msg)
         while True:
             response_body = cloudapi_client.do_request(
                 method=RequestMethod.GET,
                 resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{pluginId}") # noqa: E501
             plugin_status = response_body.get('plugin_status')
-            console_message_printer.info(f"Plugin status : {plugin_status}")
+            msg = f"Plugin status : {plugin_status}"
+            console_message_printer.info(msg)
+            SERVER_CLI_LOGGER.debug(msg)
             if plugin_status == 'ready':
                 break
-        console_message_printer.general("Plugin registration complete.")
+        msg = "Plugin registration complete."
+        SERVER_CLI_LOGGER.debug(msg)
+        console_message_printer.general(msg)
     except Exception as err:
+        SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
         sys.exit(1)
     finally:
@@ -1369,6 +1461,7 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
 def deregister_ui_plugin(ctx, plugin_id, config_file_path,
                          skip_config_decryption):
     """."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
@@ -1383,23 +1476,27 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
-            validate=False)
+            validate=False,
+            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
+            logger_debug=SERVER_CLI_LOGGER)
 
         log_filename = None
         log_wire = str_to_bool(config_dict['service'].get('log_wire'))
         if log_wire:
-            log_filename = 'cse_server_cli.log'
+            log_filename = SERVER_CLI_WIRELOG_FILEPATH
 
         client, cloudapi_client = _get_clients_from_config(
-            config_dict, log_filename=log_filename, log_wire=log_wire)
+            config_dict, log_wire_file=log_filename, log_wire=log_wire)
 
         cloudapi_client.do_request(
             method=RequestMethod.DELETE,
             resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{plugin_id}") # noqa: E501
 
-        console_message_printer.general(
-            f"Removed plugin with id : {plugin_id}.")
+        msg = f"Removed plugin with id : {plugin_id}."
+        SERVER_CLI_LOGGER.debug(msg)
+        console_message_printer.general(msg)
     except Exception as err:
+        SERVER_CLI_LOGGER.debug(str(err))
         console_message_printer.error(str(err))
         sys.exit(1)
     finally:
@@ -1427,6 +1524,7 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
     help='Skip decryption of CSE config file')
 def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
     """."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     # Suppress the python version check message from being printed on
     # console
@@ -1443,15 +1541,17 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
-            validate=False)
+            validate=False,
+            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
+            logger_debug=SERVER_CLI_LOGGER)
 
         log_filename = None
         log_wire = str_to_bool(config_dict['service'].get('log_wire'))
         if log_wire:
-            log_filename = 'cse_server_cli.log'
+            log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
 
         client, cloudapi_client = _get_clients_from_config(
-            config_dict, log_filename=log_filename, log_wire=log_wire)
+            config_dict, log_wire_file=log_filename, log_wire=log_wire)
 
         result = []
         response_body = cloudapi_client.do_request(
@@ -1467,7 +1567,9 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
                 result.append(ui_plugin)
 
         stdout(result, ctx, sort_headers=False, show_id=True)
+        SERVER_CLI_LOGGER.debug(result)
     except Exception as err:
+        SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
         sys.exit(1)
     finally:
@@ -1478,8 +1580,10 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
 def _get_config_dict(config_file_path,
                      pks_config_file_path,
                      skip_config_decryption,
-                     msg_update_callback,
-                     validate=True):
+                     msg_update_callback=NullPrinter(),
+                     validate=True,
+                     log_wire_file=None,
+                     logger_debug=NULL_LOGGER):
     password = None
     if not skip_config_decryption:
         password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
@@ -1492,15 +1596,16 @@ def _get_config_dict(config_file_path,
                 config_file_path, pks_config_file_name=pks_config_file_path,
                 skip_config_decryption=skip_config_decryption,
                 decryption_password=password,
+                log_wire_file=log_wire_file,
+                logger_debug=logger_debug,
                 msg_update_callback=msg_update_callback)
         else:
             if skip_config_decryption:
                 with open(config_file_path) as config_file:
                     config_dict = yaml.safe_load(config_file) or {}
             else:
-                if msg_update_callback:
-                    msg_update_callback.info(
-                        f"Decrypting '{config_file_path}'")
+                msg_update_callback.info(
+                    f"Decrypting '{config_file_path}'")
                 config_dict = yaml.safe_load(
                     get_decrypted_file_contents(
                         config_file_path, password)) or {}
@@ -1527,11 +1632,11 @@ def _get_config_dict(config_file_path,
         raise Exception(VCENTER_LOGIN_ERROR_MSG)
 
 
-def _get_clients_from_config(config, log_filename, log_wire):
+def _get_clients_from_config(config, log_wire_file, log_wire):
     client = Client(config['vcd']['host'],
                     api_version=config['vcd']['api_version'],
                     verify_ssl_certs=config['vcd']['verify'],
-                    log_file=log_filename,
+                    log_file=log_wire_file,
                     log_requests=log_wire,
                     log_headers=log_wire,
                     log_bodies=log_wire)
@@ -1546,30 +1651,18 @@ def _get_clients_from_config(config, log_filename, log_wire):
         token = client.get_xvcloud_authorization_token()
         is_jwt_token = False
 
-    # TODO : Remove this later
-    LOGGER = None
-    if log_filename:
-        LOGGER = logging.getLogger('CSE server CLI cloudapi request logger')
-        LOGGER.addFilter(RedactingFilter())
-        LOGGER.setLevel(logging.DEBUG)
-        file_handler = logging.FileHandler(f"cloudapi.{log_filename}")
-        DEBUG_LOG_FORMATTER = logging.Formatter(
-            fmt="%(asctime)s | %(module)s:%(lineno)s - %(funcName)s | %(levelname)s :: %(message)s", # noqa : E501
-            datefmt='%y-%m-%d %H:%M:%S')
-        file_handler.setFormatter(DEBUG_LOG_FORMATTER)
-        LOGGER.addHandler(file_handler)
-    # end TODO
+    LOGGER = NULL_LOGGER
+    if log_wire:
+        LOGGER = SERVER_CLOUDAPI_WIRE_LOGGER
 
     cloudapi_client = CloudApiClient(
         base_url=client.get_cloudapi_uri(),
         token=token,
         is_jwt_token=is_jwt_token,
         api_version=client.get_api_version(),
-        verify_ssl=client._verify_ssl_certs,
-        logger_instance=LOGGER,
-        log_requests=log_wire,
-        log_headers=log_wire,
-        log_body=log_wire)
+        logger_debug=SERVER_CLI_LOGGER,
+        logger_wire=LOGGER,
+        verify_ssl=client._verify_ssl_certs)
 
     return (client, cloudapi_client)
 

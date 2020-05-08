@@ -6,26 +6,24 @@ from pyvcloud.vcd.org import Org
 
 import container_service_extension.ovdc_utils as ovdc_utils
 from container_service_extension.pksbroker import PksBroker
-from container_service_extension.pyvcloud_utils import connect_vcd_user_via_token # noqa: E501
+import container_service_extension.request_context as ctx
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 import container_service_extension.utils as utils
 
 
-def list_clusters(request_data, tenant_auth_token, is_jwt_token):
+def list_clusters(request_data, request_context: ctx.RequestContext):
     request_data['is_admin_request'] = True
     pks_clusters = []
-    pks_ctx_list = create_pks_context_for_all_accounts_in_org(
-        tenant_auth_token, is_jwt_token)
-    for pks_ctx in pks_ctx_list:
-        pks_broker = PksBroker(pks_ctx, tenant_auth_token, is_jwt_token)
+    pks_contexts = create_pks_context_for_all_accounts_in_org(request_context)
+    for pks_context in pks_contexts:
+        pks_broker = PksBroker(pks_context, request_context)
         # Get all cluster information to get vdc name from compute-profile-name
-        pks_clusters.extend(pks_broker.list_clusters(request_data))
+        pks_clusters.extend(pks_broker.list_clusters(data=request_data))
     return pks_clusters
 
 
-def create_pks_context_for_all_accounts_in_org(tenant_auth_token,
-                                               is_jwt_token):
+def create_pks_context_for_all_accounts_in_org(request_context: ctx.RequestContext): # noqa: E501
     """Create PKS context for accounts in a given Org.
 
     If user is Sysadmin
@@ -45,27 +43,19 @@ def create_pks_context_for_all_accounts_in_org(tenant_auth_token,
     pks_cache = utils.get_pks_cache()
     if pks_cache is None:
         return []
-    client = connect_vcd_user_via_token(tenant_auth_token=tenant_auth_token,
-                                        is_jwt_token=is_jwt_token)
 
-    if client.is_sysadmin():
+    if request_context.client.is_sysadmin():
         all_pks_account_info = pks_cache.get_all_pks_account_info_in_system()
-        pks_ctx_list = [
-            ovdc_utils.construct_pks_context(pks_account_info, credentials_required=True) for pks_account_info in all_pks_account_info # noqa: E501
-        ]
+        pks_ctx_list = [ovdc_utils.construct_pks_context(pks_account_info, credentials_required=True) for pks_account_info in all_pks_account_info] # noqa: E501
         return pks_ctx_list
 
-    org_resource = client.get_org()
-    org_name = org_resource.get('name')
     if pks_cache.do_orgs_have_exclusive_pks_account():
-        pks_account_infos = \
-            pks_cache.get_exclusive_pks_accounts_info_for_org(org_name)
-        pks_ctx_list = [
-            ovdc_utils.construct_pks_context(pks_account_info, credentials_required=True) for pks_account_info in pks_account_infos # noqa: E501
-        ]
+        pks_account_infos = pks_cache.get_exclusive_pks_accounts_info_for_org(request_context.user.org_name) # noqa: E501
+        pks_ctx_list = [ovdc_utils.construct_pks_context(pks_account_info, credentials_required=True) for pks_account_info in pks_account_infos] # noqa: E501
         return pks_ctx_list
 
-    org = Org(client, resource=org_resource)
+    org_resource = request_context.client.get_org()
+    org = Org(request_context.client, resource=org_resource)
     vdc_names = [vdc['name'] for vdc in org.list_vdcs()]
     # Constructing dict instead of list to avoid duplicates
     # TODO() figure out a way to add pks contexts to a set directly
@@ -73,10 +63,11 @@ def create_pks_context_for_all_accounts_in_org(tenant_auth_token,
     for vdc_name in vdc_names:
         # this is a full blown pks_account_info + pvdc_info +
         # compute_profile_name dictionary
-        k8s_metadata = \
-            ovdc_utils.get_ovdc_k8s_provider_metadata(ovdc_name=vdc_name,
-                                                      org_name=org_name,
-                                                      include_credentials=True)
+        k8s_metadata = ovdc_utils.get_ovdc_k8s_provider_metadata(
+            request_context.sysadmin_client,
+            ovdc_name=vdc_name,
+            org_name=request_context.user.org_name,
+            include_credentials=True)
         if k8s_metadata[K8S_PROVIDER_KEY] == K8sProvider.PKS:
             pks_ctx_dict[k8s_metadata['vc']] = k8s_metadata
 

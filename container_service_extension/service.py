@@ -24,20 +24,16 @@ from container_service_extension.compute_policy_manager import \
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.consumer import MessageConsumer
-from container_service_extension.exceptions import BadRequestError
-from container_service_extension.exceptions import UnauthorizedRequestError
+import container_service_extension.exceptions as e
 import container_service_extension.local_template_manager as ltm
-from container_service_extension.logger import configure_server_logger
 from container_service_extension.logger import SERVER_DEBUG_LOG_FILEPATH
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_INFO_LOG_FILEPATH
-from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.logger import SERVER_LOGGER
 from container_service_extension.pks_cache import PksCache
-from container_service_extension.pyvcloud_utils import \
-    connect_vcd_user_via_token
+import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
-from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import ServerAction
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import PayloadKey
@@ -67,11 +63,11 @@ def signal_handler(signal, frame):
 
 def consumer_thread(c):
     try:
-        LOGGER.info(f"About to start consumer_thread {c}.")
+        SERVER_LOGGER.info(f"About to start consumer_thread {c}.")
         c.run()
     except Exception:
         click.echo("About to stop consumer_thread.")
-        LOGGER.error(traceback.format_exc())
+        SERVER_LOGGER.error(traceback.format_exc())
         c.stop()
 
 
@@ -122,12 +118,9 @@ class Service(object, metaclass=Singleton):
     def is_running(self):
         return self._state == ServerState.RUNNING
 
-    def info(self, tenant_auth_token, is_jwt_token):
-        tenant_client = connect_vcd_user_via_token(
-            tenant_auth_token=tenant_auth_token,
-            is_jwt_token=is_jwt_token)
+    def info(self, get_sysadmin_info=False):
         result = Service.version()
-        if tenant_client.is_sysadmin():
+        if get_sysadmin_info:
             result['consumer_threads'] = len(self.threads)
             result['all_threads'] = threading.activeCount()
             result['requests_in_progress'] = self.active_requests_count()
@@ -139,72 +132,65 @@ class Service(object, metaclass=Singleton):
 
     @classmethod
     def version(cls):
-        ver = pkg_resources.require('container-service-extension')[0].version
-        ver_obj = {
+        return {
             'product': 'CSE',
             'description': 'Container Service Extension for VMware vCloud '
                            'Director',
-            'version': ver,
+            'version': pkg_resources.require('container-service-extension')[0].version,  # noqa: E501
             'python': platform.python_version()
         }
-        return ver_obj
 
-    def update_status(self, tenant_auth_token, is_jwt_token, request_data):
-        tenant_client = connect_vcd_user_via_token(
-            tenant_auth_token=tenant_auth_token,
-            is_jwt_token=is_jwt_token)
+    def update_status(self, server_action: ServerAction):
+        def graceful_shutdown():
+            message = 'Shutting down CSE'
+            n = self.active_requests_count()
+            if n > 0:
+                message += f" CSE will finish processing {n} requests."
+            self._state = ServerState.STOPPING
+            return message
 
-        if not tenant_client.is_sysadmin():
-            raise UnauthorizedRequestError(
-                error_message='Unauthorized to update CSE')
-
-        action = request_data.get(RequestKey.SERVER_ACTION)
         if self._state == ServerState.RUNNING:
-            if action == ServerAction.ENABLE:
-                raise BadRequestError(
-                    error_message='CSE is already enabled and running.')
-            elif action == ServerAction.DISABLE:
+            if server_action == ServerAction.ENABLE:
+                return 'CSE is already enabled and running.'
+            if server_action == ServerAction.DISABLE:
                 self._state = ServerState.DISABLED
-                message = 'CSE has been disabled.'
-            elif action == ServerAction.STOP:
-                raise BadRequestError(
-                    error_message='Cannot stop CSE while it is enabled. '
-                                  'Disable the service first')
-        elif self._state == ServerState.DISABLED:
-            if action == ServerAction.ENABLE:
+                return 'CSE has been disabled.'
+            if server_action == ServerAction.STOP:
+                raise e.BadRequestError(
+                    error_message='CSE must be disabled before '
+                                  'it can be stopped.')
+            raise e.BadRequestError(
+                error_message=f"Invalid server action: '{server_action}'")
+        if self._state == ServerState.DISABLED:
+            if server_action == ServerAction.ENABLE:
                 self._state = ServerState.RUNNING
-                message = 'CSE has been enabled and is running.'
-            elif action == ServerAction.DISABLE:
-                raise BadRequestError(
-                    error_message='CSE is already disabled.')
-            elif action == 'stop':
-                message = 'CSE graceful shutdown started.'
-                n = self.active_requests_count()
-                if n > 0:
-                    message += f" CSE will finish processing {n} requests."
-                self._state = ServerState.STOPPING
-        elif self._state == ServerState.STOPPING:
-            if action == ServerAction.ENABLE:
-                raise BadRequestError(
+                return 'CSE has been enabled and is running.'
+            if server_action == ServerAction.DISABLE:
+                return 'CSE is already disabled.'
+            if server_action == ServerAction.STOP:
+                return graceful_shutdown()
+        if self._state == ServerState.STOPPING:
+            if server_action == ServerAction.ENABLE:
+                raise e.BadRequestError(
                     error_message='Cannot enable CSE while it is being'
                                   'stopped.')
-            elif action == ServerAction.DISABLE:
-                raise BadRequestError(
+            if server_action == ServerAction.DISABLE:
+                raise e.BadRequestError(
                     error_message='Cannot disable CSE while it is being'
                                   ' stopped.')
-            elif action == ServerAction.STOP:
-                message = 'CSE graceful shutdown is in progress.'
+            if server_action == ServerAction.STOP:
+                return graceful_shutdown()
 
-        return message
+        raise e.CseServerError(f"Invalid server state: '{self._state}'")
 
-    def run(self, msg_update_callback=None):
-        configure_server_logger()
-
+    def run(self, msg_update_callback=utils.NullPrinter()):
         self.config = get_validated_config(
             self.config_file,
             pks_config_file_name=self.pks_config_file,
             skip_config_decryption=self.skip_config_decryption,
             decryption_password=self.decryption_password,
+            log_wire_file=SERVER_DEBUG_WIRELOG_FILEPATH,
+            logger_debug=SERVER_LOGGER,
             msg_update_callback=msg_update_callback)
 
         populate_vsphere_list(self.config['vcs'])
@@ -249,18 +235,17 @@ class Service(object, metaclass=Singleton):
                 t.daemon = True
                 t.start()
                 msg = f"Started thread '{name} ({t.ident})'"
-                if msg_update_callback:
-                    msg_update_callback.general(msg)
-                LOGGER.info(msg)
+                msg_update_callback.general(msg)
+                SERVER_LOGGER.info(msg)
                 self.threads.append(t)
                 self.consumers.append(c)
                 time.sleep(0.25)
             except KeyboardInterrupt:
                 break
             except Exception:
-                LOGGER.error(traceback.format_exc())
+                SERVER_LOGGER.error(traceback.format_exc())
 
-        LOGGER.info(f"Number of threads started: {len(self.threads)}")
+        SERVER_LOGGER.info(f"Number of threads started: {len(self.threads)}")
 
         self._state = ServerState.RUNNING
 
@@ -271,9 +256,8 @@ class Service(object, metaclass=Singleton):
                   f"\nwaiting for requests (ctrl+c to close)"
 
         signal.signal(signal.SIGINT, signal_handler)
-        if msg_update_callback:
-            msg_update_callback.general_no_color(message)
-        LOGGER.info(message)
+        msg_update_callback.general_no_color(message)
+        SERVER_LOGGER.info(message)
 
         # Record telemetry on user action and details of operation.
         cse_params = {
@@ -294,28 +278,27 @@ class Service(object, metaclass=Singleton):
             except KeyboardInterrupt:
                 break
             except Exception:
-                if msg_update_callback:
-                    msg_update_callback.general_no_color(
-                        traceback.format_exc())
-                LOGGER.error(traceback.format_exc())
+                msg_update_callback.general_no_color(
+                    traceback.format_exc())
+                SERVER_LOGGER.error(traceback.format_exc())
                 sys.exit(1)
 
-        LOGGER.info("Stop detected")
-        LOGGER.info("Closing connections...")
+        SERVER_LOGGER.info("Stop detected")
+        SERVER_LOGGER.info("Closing connections...")
         for c in self.consumers:
             try:
                 c.stop()
             except Exception:
-                LOGGER.error(traceback.format_exc())
+                SERVER_LOGGER.error(traceback.format_exc())
 
         self._state = ServerState.STOPPED
-        LOGGER.info("Done")
+        SERVER_LOGGER.info("Done")
 
-    def _load_template_definition_from_catalog(self, msg_update_callback=None):
+    def _load_template_definition_from_catalog(self,
+                                               msg_update_callback=utils.NullPrinter()): # noqa: E501
         msg = "Loading k8s template definition from catalog"
-        LOGGER.info(msg)
-        if msg_update_callback:
-            msg_update_callback.general_no_color(msg)
+        SERVER_LOGGER.info(msg)
+        msg_update_callback.general_no_color(msg)
 
         client = None
         try:
@@ -345,9 +328,8 @@ class Service(object, metaclass=Singleton):
             if not k8_templates:
                 msg = "No valid K8 templates were found in catalog " \
                       f"'{catalog_name}'. Unable to start CSE server."
-                if msg_update_callback:
-                    msg_update_callback.error(msg)
-                LOGGER.error(msg)
+                msg_update_callback.error(msg)
+                SERVER_LOGGER.error(msg)
                 sys.exit(1)
 
             # Check that default k8s template exists in vCD at the correct
@@ -363,17 +345,15 @@ class Service(object, metaclass=Singleton):
 
                 msg = f"Found K8 template '{template['name']}' at revision " \
                       f"{template['revision']} in catalog '{catalog_name}'"
-                if msg_update_callback:
-                    msg_update_callback.general(msg)
-                LOGGER.info(msg)
+                msg_update_callback.general(msg)
+                SERVER_LOGGER.info(msg)
 
             if not found_default_template:
                 msg = f"Default template {default_template_name} with " \
                       f"revision {default_template_revision} not found." \
                       " Unable to start CSE server."
-                if msg_update_callback:
-                    msg_update_callback.error(msg)
-                LOGGER.error(msg)
+                msg_update_callback.error(msg)
+                SERVER_LOGGER.error(msg)
                 sys.exit(1)
 
             self.config['broker']['templates'] = k8_templates
@@ -381,7 +361,7 @@ class Service(object, metaclass=Singleton):
             if client:
                 client.logout()
 
-    def _process_template_rules(self, msg_update_callback=None):
+    def _process_template_rules(self, msg_update_callback=utils.NullPrinter()):
         if 'template_rules' not in self.config:
             return
         rules = self.config['template_rules']
@@ -392,106 +372,81 @@ class Service(object, metaclass=Singleton):
 
         # process rules
         msg = f"Processing template rules."
-        LOGGER.debug(msg)
-        if msg_update_callback:
-            msg_update_callback.general_no_color(msg)
+        SERVER_LOGGER.debug(msg)
+        msg_update_callback.general_no_color(msg)
 
         for rule_def in rules:
             rule = TemplateRule(
                 name=rule_def.get('name'), target=rule_def.get('target'),
-                action=rule_def.get('action'), logger=LOGGER,
+                action=rule_def.get('action'), logger=SERVER_LOGGER,
                 msg_update_callback=msg_update_callback)
 
             msg = f"Processing rule : {rule}."
-            LOGGER.debug(msg)
-            if msg_update_callback:
-                msg_update_callback.general_no_color(msg)
+            SERVER_LOGGER.debug(msg)
+            msg_update_callback.general_no_color(msg)
 
             # Since the patching is in-place, the changes will reflect back on
             # the dictionary holding the server runtime configuration.
             rule.apply(templates)
 
             msg = f"Finished processing rule : '{rule.name}'"
-            LOGGER.debug(msg)
-            if msg_update_callback:
-                msg_update_callback.general(msg)
+            SERVER_LOGGER.debug(msg)
+            msg_update_callback.general(msg)
 
     def _process_template_compute_policy_compliance(self,
-                                                    msg_update_callback=None):
+                                                    msg_update_callback=utils.NullPrinter()): # noqa: E501
         msg = "Processing compute policy for k8s templates."
-        LOGGER.info(msg)
-        if msg_update_callback:
-            msg_update_callback.general_no_color(msg)
-
-        log_filename = None
-        log_wire = utils.str_to_bool(self.config['service'].get('log_wire'))
-        if log_wire:
-            log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
+        SERVER_LOGGER.info(msg)
+        msg_update_callback.general_no_color(msg)
 
         org_name = self.config['broker']['org']
         catalog_name = self.config['broker']['catalog']
-        client = None
+        sysadmin_client = None
         try:
-            client = Client(self.config['vcd']['host'],
-                            api_version=self.config['vcd']['api_version'],
-                            verify_ssl_certs=self.config['vcd']['verify'],
-                            log_file=log_filename,
-                            log_requests=log_wire,
-                            log_headers=log_wire,
-                            log_bodies=log_wire)
+            sysadmin_client = vcd_utils.get_sys_admin_client()
+            cpm = ComputePolicyManager(sysadmin_client)
 
-            credentials = BasicLoginCredentials(self.config['vcd']['username'],
-                                                SYSTEM_ORG_NAME,
-                                                self.config['vcd']['password'])
-            client.set_credentials(credentials)
+            for template in self.config['broker']['templates']:
+                policy_name = template[LocalTemplateKey.COMPUTE_POLICY]
+                catalog_item_name = template[LocalTemplateKey.CATALOG_ITEM_NAME] # noqa: E501
+                # if policy name is not empty, stamp it on the template
+                if policy_name:
+                    try:
+                        policy = cpm.get_policy(policy_name=policy_name)
+                    except EntityNotFoundException:
+                        # create the policy if it does not exist
+                        msg = f"Creating missing compute policy " \
+                              f"'{policy_name}'."
+                        msg_update_callback.info(msg)
+                        SERVER_LOGGER.debug(msg)
+                        policy = cpm.add_policy(policy_name=policy_name)
 
-            try:
-                cpm = ComputePolicyManager(client)
-                for template in self.config['broker']['templates']:
-                    policy_name = template[LocalTemplateKey.COMPUTE_POLICY]
-                    catalog_item_name = template[LocalTemplateKey.CATALOG_ITEM_NAME] # noqa: E501
-                    # if policy name is not empty, stamp it on the template
-                    if policy_name:
-                        try:
-                            policy = cpm.get_policy(policy_name=policy_name)
-                        except EntityNotFoundException:
-                            # create the policy if it does not exist
-                            msg = f"Creating missing compute policy " \
-                                  f"'{policy_name}'."
-                            if msg_update_callback:
-                                msg_update_callback.info(msg)
-                            LOGGER.debug(msg)
-                            policy = cpm.add_policy(policy_name=policy_name)
+                    msg = f"Assigning compute policy '{policy_name}' to " \
+                          f"template '{catalog_item_name}'."
+                    msg_update_callback.general(msg)
+                    SERVER_LOGGER.debug(msg)
+                    cpm.assign_compute_policy_to_vapp_template_vms(
+                        compute_policy_href=policy['href'],
+                        org_name=org_name,
+                        catalog_name=catalog_name,
+                        catalog_item_name=catalog_item_name)
+                else:
+                    # empty policy name means we should remove policy from
+                    # template
+                    msg = f"Removing compute policy from template " \
+                          f"'{catalog_item_name}'."
+                    msg_update_callback.general(msg)
+                    SERVER_LOGGER.debug(msg)
 
-                        msg = f"Assigning compute policy '{policy_name}' to " \
-                              f"template '{catalog_item_name}'."
-                        if msg_update_callback:
-                            msg_update_callback.general(msg)
-                        LOGGER.debug(msg)
-                        cpm.assign_compute_policy_to_vapp_template_vms(
-                            compute_policy_href=policy['href'],
-                            org_name=org_name,
-                            catalog_name=catalog_name,
-                            catalog_item_name=catalog_item_name)
-                    else:
-                        # empty policy name means we should remove policy from
-                        # template
-                        msg = f"Removing compute policy from template " \
-                              f"'{catalog_item_name}'."
-                        if msg_update_callback:
-                            msg_update_callback.general(msg)
-                        LOGGER.debug(msg)
-
-                        cpm.remove_all_compute_policies_from_vapp_template_vms(
-                            org_name=org_name,
-                            catalog_name=catalog_name,
-                            catalog_item_name=catalog_item_name)
-            except OperationNotSupportedException:
-                msg = "Compute policy not supported by vCD. Skipping " \
-                    "assigning/removing it to/from templates."
-                if msg_update_callback:
-                    msg_update_callback.info(msg)
-                LOGGER.debug(msg)
+                    cpm.remove_all_compute_policies_from_vapp_template_vms(
+                        org_name=org_name,
+                        catalog_name=catalog_name,
+                        catalog_item_name=catalog_item_name)
+        except OperationNotSupportedException:
+            msg = "Compute policy not supported by vCD. Skipping " \
+                  "assigning/removing it to/from templates."
+            msg_update_callback.info(msg)
+            SERVER_LOGGER.debug(msg)
         finally:
-            if client:
-                client.logout()
+            if sysadmin_client is not None:
+                sysadmin_client.logout()

@@ -9,14 +9,17 @@ from pyvcloud.vcd.exceptions import OperationNotSupportedException
 from pyvcloud.vcd.vapp import VApp
 
 import container_service_extension.local_template_manager as ltm
+from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.pyvcloud_utils import catalog_item_exists
 from container_service_extension.pyvcloud_utils import get_org
 from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.pyvcloud_utils import upload_ova_to_catalog
 from container_service_extension.pyvcloud_utils import \
     wait_for_catalog_item_to_resolve
-from container_service_extension.server_constants import ScriptFile
+from container_service_extension.server_constants import ScriptFile, \
+    TemplateBuildKey
 from container_service_extension.utils import download_file
+from container_service_extension.utils import NullPrinter
 from container_service_extension.utils import read_data_file
 from container_service_extension.vsphere_utils import get_vsphere
 from container_service_extension.vsphere_utils import vgr_callback
@@ -26,15 +29,14 @@ from container_service_extension.vsphere_utils import wait_until_tools_ready
 # used for creating temp vapp
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = NetworkAdapterType.VMXNET3.value
 TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
-TEMP_VAPP_VM_NAME = 'Temp-vm'
 
 
 class TemplateBuilder():
     """Builder calls for K8 templates."""
 
     def __init__(self, client, sys_admin_client, build_params, org=None,
-                 vdc=None, ssh_key=None, logger=None,
-                 msg_update_callback=None):
+                 vdc=None, ssh_key=None, logger=NULL_LOGGER,
+                 msg_update_callback=NullPrinter()):
         """.
 
         :param pyvcloud.vcd.Client client:
@@ -47,9 +49,9 @@ class TemplateBuilder():
             vdc_name specified in build_params, can be used to save few vCD
             calls to create the Vdc object.
         :param str ssh_key: public ssh key to place into the template vApp(s).
-        :param logging.Logger logger: optional logger to log with.
-        :param utils.ConsoleMessagePrinter msg_update_callback: Callback object
-            that writes messages onto console.
+        :param logging.Logger logger: logger object.
+        :param utils.ConsoleMessagePrinter msg_update_callback:
+            Callback object.
         """
         self._is_valid = False
 
@@ -63,55 +65,55 @@ class TemplateBuilder():
             return
 
         # validate and populate required fields
-        self.template_name = build_params.get('template_name')
-        self.template_revision = build_params.get('template_revision')
-        self.ova_name = build_params.get('source_ova_name')
-        self.ova_href = build_params.get('source_ova_href')
-        self.ova_sha256 = build_params.get('source_ova_sha256')
+        self.template_name = build_params.get(TemplateBuildKey.TEMPLATE_NAME) # noqa: E501
+        self.template_revision = build_params.get(TemplateBuildKey.TEMPLATE_REVISION) # noqa: E501
+        self.ova_name = build_params.get(TemplateBuildKey.SOURCE_OVA_NAME) # noqa: E501
+        self.ova_href = build_params.get(TemplateBuildKey.SOURCE_OVA_HREF) # noqa: E501
+        self.ova_sha256 = build_params.get(TemplateBuildKey.SOURCE_OVA_SHA256) # noqa: E501
 
         if org:
             self.org = org
             self.org_name = org.get_name()
         else:
-            self.org_name = build_params.get('org_name')
+            self.org_name = build_params.get(TemplateBuildKey.ORG_NAME) # noqa: E501
             self.org = get_org(self.client, org_name=self.org_name)
         if vdc:
             self.vdc = vdc
             self.vdc.get_resource()  # to make sure vdc.resource is populated
             self.vdc_name = vdc.name
         else:
-            self.vdc_name = build_params.get('vdc_name')
+            self.vdc_name = build_params.get(TemplateBuildKey.VDC_NAME) # noqa: E501
             self.vdc = get_vdc(self.client, vdc_name=self.vdc_name,
                                org=self.org)
-        self.catalog_name = build_params.get('catalog_name')
-        self.catalog_item_name = build_params.get('catalog_item_name')
+        self.catalog_name = build_params.get(TemplateBuildKey.CATALOG_NAME) # noqa: E501
+        self.catalog_item_name = build_params.get(TemplateBuildKey.CATALOG_ITEM_NAME) # noqa: E501
         self.catalog_item_description = \
-            build_params.get('catalog_item_description')
+            build_params.get(TemplateBuildKey.CATALOG_ITEM_DESCRIPTION) # noqa: E501
 
-        self.temp_vapp_name = build_params.get('temp_vapp_name')
-        self.cpu = build_params.get('cpu')
-        self.memory = build_params.get('memory')
-        self.network_name = build_params.get('network_name')
-        self.ip_allocation_mode = build_params.get('ip_allocation_mode')
-        self.storage_profile = build_params.get('storage_profile')
+        self.temp_vapp_name = build_params.get(TemplateBuildKey.TEMP_VAPP_NAME) # noqa: E501
+        self.temp_vm_name = build_params.get(TemplateBuildKey.TEMP_VM_NAME) # noqa: E501
+        self.cpu = build_params.get(TemplateBuildKey.CPU)
+        self.memory = build_params.get(TemplateBuildKey.MEMORY)
+        self.network_name = build_params.get(TemplateBuildKey.NETWORK_NAME) # noqa: E501
+        self.ip_allocation_mode = build_params.get(TemplateBuildKey.IP_ALLOCATION_MODE) # noqa: E501
+        self.storage_profile = build_params.get(TemplateBuildKey.STORAGE_PROFILE) # noqa: E501
 
         if self.template_name and self.template_revision and \
                 self.ova_name and self.ova_href and self.ova_sha256 and \
                 self.org and self.org_name and self.vdc and self.vdc_name and \
                 self.catalog_name and self.catalog_item_name and \
                 self.catalog_item_description and self.temp_vapp_name and \
-                self.cpu and self.memory and self.network_name and \
-                self.ip_allocation_mode and self.storage_profile:
+                self.temp_vm_name and self.cpu and self.memory and \
+                self.network_name and self.ip_allocation_mode and \
+                self.storage_profile:
             self._is_valid = True
 
     def _cleanup_old_artifacts(self):
         """Delete source ova, K8 template and temp vApp."""
         msg = "If K8 template, source ova file, and temporary vApp exists, " \
               "they will be deleted"
-        if self.msg_update_callback:
-            self.msg_update_callback.info(msg)
-        if self.logger:
-            self.logger.info(msg)
+        self.msg_update_callback.info(msg)
+        self.logger.info(msg)
 
         self._delete_catalog_item(item_name=self.catalog_item_name)
         self._delete_catalog_item(item_name=self.ova_name)
@@ -135,10 +137,8 @@ class TemplateBuilder():
             self.org.reload()
 
             msg = f"Deleted '{item_name}' from catalog '{self.catalog_name}'"
-            if self.msg_update_callback:
-                self.msg_update_callback.general(msg)
-            if self.logger:
-                self.logger.info(msg)
+            self.msg_update_callback.general(msg)
+            self.logger.info(msg)
         except EntityNotFoundException:
             pass
 
@@ -146,20 +146,16 @@ class TemplateBuilder():
         """Delete the temp vApp for the K8 template."""
         try:
             msg = f"Deleting temporary vApp '{self.temp_vapp_name}'"
-            if self.msg_update_callback:
-                self.msg_update_callback.general(msg)
-            if self.logger:
-                self.logger.info(msg)
+            self.msg_update_callback.general(msg)
+            self.logger.info(msg)
 
             task = self.vdc.delete_vapp(self.temp_vapp_name, force=True)
             self.client.get_task_monitor().wait_for_success(task)
             self.vdc.reload()
 
             msg = f"Deleted temporary vApp '{self.temp_vapp_name}'"
-            if self.msg_update_callback:
-                self.msg_update_callback.general(msg)
-            if self.logger:
-                self.logger.info(msg)
+            self.msg_update_callback.general(msg)
+            self.logger.info(msg)
         except EntityNotFoundException:
             pass
 
@@ -169,10 +165,8 @@ class TemplateBuilder():
                                catalog_item_name=self.ova_name):
             msg = f"Found ova file '{self.ova_name}' in catalog " \
                   f"'{self.catalog_name}'"
-            if self.msg_update_callback:
-                self.msg_update_callback.general(msg)
-            if self.logger:
-                self.logger.info(msg)
+            self.msg_update_callback.general(msg)
+            self.logger.info(msg)
         else:
             ova_filepath = f"cse_cache/{self.ova_name}"
             download_file(url=self.ova_href, filepath=ova_filepath,
@@ -211,10 +205,8 @@ class TemplateBuilder():
         init_script = self._get_init_script()
 
         msg = f"Creating vApp '{self.temp_vapp_name}'"
-        if self.msg_update_callback:
-            self.msg_update_callback.info(msg)
-        if self.logger:
-            self.logger.info(msg)
+        self.msg_update_callback.info(msg)
+        self.logger.info(msg)
 
         vapp_sparse_resource = self.vdc.instantiate_vapp(
             self.temp_vapp_name,
@@ -231,18 +223,16 @@ class TemplateBuilder():
             password=None,
             cust_script=init_script,
             accept_all_eulas=True,
-            vm_name=TEMP_VAPP_VM_NAME,
-            hostname=TEMP_VAPP_VM_NAME,
+            vm_name=self.temp_vm_name,
+            hostname=self.temp_vm_name,
             storage_profile=self.storage_profile)
         task = vapp_sparse_resource.Tasks.Task[0]
         self.client.get_task_monitor().wait_for_success(task)
         self.vdc.reload()
 
         msg = f"Created vApp '{self.temp_vapp_name}'"
-        if self.msg_update_callback:
-            self.msg_update_callback.general(msg)
-        if self.logger:
-            self.logger.info(msg)
+        self.msg_update_callback.general(msg)
+        self.logger.info(msg)
 
         return VApp(self.client, href=vapp_sparse_resource.get('href'))
 
@@ -256,10 +246,8 @@ class TemplateBuilder():
             the vm.
         """
         msg = f"Customizing vApp '{self.temp_vapp_name}', vm '{vm_name}'"
-        if self.msg_update_callback:
-            self.msg_update_callback.general(msg)
-        if self.logger:
-            self.logger.info(msg)
+        self.msg_update_callback.general(msg)
+        self.logger.info(msg)
 
         cust_script_filepath = ltm.get_script_filepath(
             self.template_name, self.template_revision, ScriptFile.CUST)
@@ -294,54 +282,40 @@ class TemplateBuilder():
             # TODO() replace raw exception with specific exception
             # unsure all errors execute_script_in_guest can result in
             # Docker TLS handshake timeout can occur when internet is slow
-            if self.msg_update_callback:
-                self.msg_update_callback.error(
-                    "Failed VM customization. Check CSE install log")
-            if self.logger:
-                self.logger.error(f"Failed VM customization with error: {err}",
-                                  exc_info=True)
+            self.msg_update_callback.error(
+                "Failed VM customization. Check CSE install log")
+            self.logger.error(f"Failed VM customization with error: {err}",
+                              exc_info=True)
             raise
 
         if len(result) > 0:
             msg = f'Result: {result}'
-            if self.msg_update_callback:
-                self.msg_update_callback.general_no_color(msg)
-            if self.logger:
-                self.logger.debug(msg)
+            self.msg_update_callback.general_no_color(msg)
+            self.logger.debug(msg)
 
             result_stdout = result[1].content.decode()
             result_stderr = result[2].content.decode()
 
             msg = 'stderr:'
-            if self.msg_update_callback:
-                self.msg_update_callback.general_no_color(msg)
-            if self.logger:
-                self.logger.debug(msg)
+            self.msg_update_callback.general_no_color(msg)
+            self.logger.debug(msg)
             if len(result_stderr) > 0:
-                if self.msg_update_callback:
-                    self.msg_update_callback.general_no_color(result_stderr)
-                if self.logger:
-                    self.logger.debug(result_stderr)
+                self.msg_update_callback.general_no_color(result_stderr)
+                self.logger.debug(result_stderr)
 
             msg = 'stdout:'
-            if self.msg_update_callback:
-                self.msg_update_callback.general_no_color(msg)
-            if self.logger:
-                self.logger.debug(msg)
+            self.msg_update_callback.general_no_color(msg)
+            self.logger.debug(msg)
             if len(result_stdout) > 0:
-                if self.msg_update_callback:
-                    self.msg_update_callback.general_no_color(result_stdout)
-                if self.logger:
-                    self.logger.debug(result_stdout)
+                self.msg_update_callback.general_no_color(result_stdout)
+                self.logger.debug(result_stdout)
 
         if len(result) == 0 or result[0] != 0:
             msg = "Failed VM customization"
-            if self.msg_update_callback:
-                self.msg_update_callback.error(f"{msg}. Please check logs.")
-            if self.logger:
-                self.logger.error(
-                    f"{msg}\nResult start===\n{result}\n===Result end",
-                    exc_info=True)
+            self.msg_update_callback.error(f"{msg}. Please check logs.")
+            self.logger.error(
+                f"{msg}\nResult start===\n{result}\n===Result end",
+                exc_info=True)
             # TODO: replace raw exception with specific exception
             raise Exception(f"{msg}; Result: {result}")
 
@@ -351,10 +325,8 @@ class TemplateBuilder():
         # unpredictable behavior
 
         msg = f"Customized vApp '{self.temp_vapp_name}', vm '{vm_name}'"
-        if self.msg_update_callback:
-            self.msg_update_callback.general(msg)
-        if self.logger:
-            self.logger.info(msg)
+        self.msg_update_callback.general(msg)
+        self.logger.info(msg)
 
     def _capture_temp_vapp(self, vapp):
         """Capture a vapp as a template.
@@ -363,10 +335,8 @@ class TemplateBuilder():
         """
         msg = f"Creating K8 template '{self.catalog_item_name}' from vApp " \
               f"'{self.temp_vapp_name}'"
-        if self.msg_update_callback:
-            self.msg_update_callback.info(msg)
-        if self.logger:
-            self.logger.info(msg)
+        self.msg_update_callback.info(msg)
+        self.logger.info(msg)
 
         # DEV NOTE: With api v33.0 and onwards, get_catalog operation will fail
         # for non admin users of an org which is not hosting the catalog, even
@@ -375,10 +345,8 @@ class TemplateBuilder():
         catalog = self.org.get_catalog(self.catalog_name)
         try:
             msg = f"Shutting down vApp '{self.temp_vapp_name}'"
-            if self.msg_update_callback:
-                self.msg_update_callback.info(msg)
-            if self.logger:
-                self.logger.info(msg)
+            self.msg_update_callback.info(msg)
+            self.logger.info(msg)
 
             vapp.reload()
             task = vapp.shutdown()
@@ -386,10 +354,8 @@ class TemplateBuilder():
             vapp.reload()
 
             msg = f"Successfully shut down vApp '{self.temp_vapp_name}'"
-            if self.msg_update_callback:
-                self.msg_update_callback.general(msg)
-            if self.logger:
-                self.logger.info(msg)
+            self.msg_update_callback.general(msg)
+            self.logger.info(msg)
         except OperationNotSupportedException as err:
             if self.logger:
                 self.logger.debug("Encountered error with shutting down vApp "
@@ -397,10 +363,8 @@ class TemplateBuilder():
 
         msg = f"Capturing template '{self.catalog_item_name}' from vApp " \
               f"'{self.temp_vapp_name}'"
-        if self.msg_update_callback:
-            self.msg_update_callback.info(msg)
-        if self.logger:
-            self.logger.info(msg)
+        self.msg_update_callback.info(msg)
+        self.logger.info(msg)
 
         task = self.org.capture_vapp(catalog, vapp.href,
                                      self.catalog_item_name,
@@ -412,10 +376,8 @@ class TemplateBuilder():
 
         msg = f"Created K8 template '{self.catalog_item_name}' from vApp " \
               f"'{self.temp_vapp_name}'"
-        if self.msg_update_callback:
-            self.msg_update_callback.general(msg)
-        if self.logger:
-            self.logger.info(msg)
+        self.msg_update_callback.general(msg)
+        self.logger.info(msg)
 
     def build(self, force_recreate=False, retain_temp_vapp=False):
         """Create a K8 template.
@@ -435,17 +397,15 @@ class TemplateBuilder():
                 msg = f"Found template '{self.template_name}' at revision " \
                       f"{self.template_revision} in catalog " \
                       f"'{self.catalog_name}.'"
-                if self.msg_update_callback:
-                    self.msg_update_callback.general(msg)
-                if self.logger:
-                    self.logger.info(msg)
+                self.msg_update_callback.general(msg)
+                self.logger.info(msg)
                 return
         else:
             self._cleanup_old_artifacts()
 
         self._upload_source_ova()
         vapp = self._create_temp_vapp()
-        self._customize_vm(vapp, TEMP_VAPP_VM_NAME)
+        self._customize_vm(vapp, self.temp_vm_name)
         self._capture_temp_vapp(vapp)
         if not retain_temp_vapp:
             self._delete_temp_vapp()
