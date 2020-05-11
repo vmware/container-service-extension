@@ -527,4 +527,5 @@ class ComputePolicyManager:
                 org_href=org_href,
                 error_message=f"{err}")
         finally:
-            request_context.end()
+            if request_context:
+                request_context.end()
