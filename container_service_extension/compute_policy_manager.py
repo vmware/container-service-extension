@@ -38,6 +38,7 @@ class ComputePolicyManager:
         self._sysadmin_client: vcd_client.Client = sysadmin_client
         self._cloudapi_client = None
         self._session = self._sysadmin_client.get_vcloud_session()
+        self._is_operation_supported = True
 
         token = self._sysadmin_client.get_access_token()
         is_jwt = True
@@ -67,8 +68,7 @@ class ComputePolicyManager:
                 resource_url_relative_path=f"{cloudApiConstants.CloudApiResource.VDC_COMPUTE_POLICIES}") # noqa: E501
         except requests.exceptions.HTTPError as err:
             logger.SERVER_LOGGER.error(err)
-            raise OperationNotSupportedException(
-                "Cloudapi endpoint unavailable at current api version.")
+            self._is_operation_supported = False
 
     def get_all_policies(self):
         """Get all compute policies in vCD that were created by CSE.
@@ -82,6 +82,7 @@ class ComputePolicyManager:
         :rtype: Generator[Dict, None, None]
         """
         # TODO we can make this function take in filter query parameters
+        self._raise_error_if_not_supported()
         page_num = 0
         while True:
             page_num += 1
@@ -116,6 +117,7 @@ class ComputePolicyManager:
         # TODO filter query parameter
         # `cloudapi/1.0.0/vdcComputePolicies?filter=` can be used to reduce
         # number of api calls
+        self._raise_error_if_not_supported()
         for policy_dict in self.get_all_policies():
             if policy_dict.get('display_name') == policy_name:
                 policy_dict['href'] = self._get_policy_href(policy_dict['id'])
@@ -134,6 +136,7 @@ class ComputePolicyManager:
         :rtype: dict
         :raises: HTTPError 400 if policy already exists
         """
+        self._raise_error_if_not_supported()
         policy_info = {}
         policy_info['name'] = self._get_cse_policy_name(policy_name)
         if description:
@@ -159,6 +162,7 @@ class ComputePolicyManager:
         :rtype: dict
         :raises: EntityNotFoundException: if compute policy is not found
         """
+        self._raise_error_if_not_supported()
         policy_info = self.get_policy(policy_name)
         resource_url_relative_path = \
             f"{cloudApiConstants.CloudApiResource.VDC_COMPUTE_POLICIES}/" \
@@ -179,6 +183,7 @@ class ComputePolicyManager:
         :rtype: dict
         :raises: EntityNotFoundException: if compute policy is not found
         """
+        self._raise_error_if_not_supported()
         policy_info = self.get_policy(policy_name)
         if new_policy_info.get('name'):
             payload = {}
@@ -212,6 +217,7 @@ class ComputePolicyManager:
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
+        self._raise_error_if_not_supported()
         vdc = vcd_utils.get_vdc(self._sysadmin_client, vdc_id=vdc_id,
                                 is_admin_operation=True)
         return vdc.add_compute_policy(compute_policy_href)
@@ -225,6 +231,7 @@ class ComputePolicyManager:
         :return: A list of dictionaries with the keys 'name', 'href', and 'id'
         :rtype: List
         """
+        self._raise_error_if_not_supported()
         vdc = vcd_utils.get_vdc(self._sysadmin_client, vdc_id=vdc_id,
                                 is_admin_operation=True)
 
@@ -256,6 +263,7 @@ class ComputePolicyManager:
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
+        self._raise_error_if_not_supported()
         org = vcd_utils.get_org(self._sysadmin_client, org_name=org_name)
         return org.assign_compute_policy_to_vapp_template_vms(
             catalog_name=catalog_name,
@@ -280,6 +288,7 @@ class ComputePolicyManager:
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
+        self._raise_error_if_not_supported()
         org = vcd_utils.get_org(self._sysadmin_client, org_name=org_name)
         return org.remove_compute_policy_from_vapp_template_vms(
             catalog_name,
@@ -302,9 +311,17 @@ class ComputePolicyManager:
 
         :rtype: lxml.objectify.ObjectifiedElement
         """
+        self._raise_error_if_not_supported()
         org = vcd_utils.get_org(self._sysadmin_client, org_name=org_name)
         return org.remove_all_compute_policies_from_vapp_template_vms(
             catalog_name, catalog_item_name)
+
+    def _raise_error_if_not_supported(self):
+        """Raise exception if operation is not supported."""
+        if not self._is_operation_supported:
+            msg = "Cloudapi endpoint unavailable at current api version."
+            logger.SERVER_LOGGER.error(msg)
+            raise OperationNotSupportedException(msg) # noqa: E501
 
     def _get_cse_policy_name(self, policy_name):
         """Add cse specific prefix to the policy name.
