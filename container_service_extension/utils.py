@@ -272,7 +272,7 @@ def download_file(url, filepath, sha256=None, force_overwrite=False,
     with path.open(mode='wb') as f:
         for chunk in response.iter_content(chunk_size=SIZE_1MB):
             f.write(chunk)
-    msg = f"Download complete"
+    msg = "Download complete"
     logger.info(msg)
     msg_update_callback.general(msg)
 

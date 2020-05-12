@@ -183,10 +183,10 @@ def ovdc_list(request_data, request_context: ctx.RequestContext):
                 if k8s_provider == K8sProvider.PKS:
                     # vc name for vdc can only be found using typed query
                     q = request_context.client.get_typed_query(
-                            vcd_client.ResourceType.ADMIN_ORG_VDC.value,
-                            query_result_format=vcd_client.QueryResultFormat.RECORDS, # noqa: E501
-                            qfilter=f"name=={ovdc_name};orgName=={org_name}")
-                    # should only ever be one element in the generator
+                        vcd_client.ResourceType.ADMIN_ORG_VDC.value,
+                        query_result_format=vcd_client.QueryResultFormat.RECORDS, # noqa: E501
+                        qfilter=f"name=={ovdc_name};orgName=={org_name}")
+                # should only ever be one element in the generator
                     ovdc_records = list(q.execute())
                     if len(ovdc_records) == 0:
                         raise vcd_e.EntityNotFoundException(

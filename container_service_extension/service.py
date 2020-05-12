@@ -368,7 +368,7 @@ class Service(object, metaclass=Singleton):
         templates = self.config['broker']['templates']
 
         # process rules
-        msg = f"Processing template rules."
+        msg = "Processing template rules."
         logger.SERVER_LOGGER.debug(msg)
         msg_update_callback.general_no_color(msg)
 
