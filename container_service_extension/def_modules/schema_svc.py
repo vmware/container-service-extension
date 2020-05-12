@@ -3,8 +3,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import pyvcloud.vcd.client as vcd_client
-from pyvcloud.vcd.exceptions import OperationNotSupportedException
-from requests.exceptions import HTTPError
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0 # noqa: E501
@@ -25,7 +23,11 @@ from container_service_extension.shared_constants import RequestMethod
 
 
 class DefSchemaSvc():
-    """Manages lifecycle of defined entity interfaces and entity types."""
+    """Manages lifecycle of defined entity interfaces and entity types.
+
+    TODO Add API version check at the appropriate place. This class needs to
+    be used if and only if vCD API version >= 35
+    """
 
     def __init__(self, sysadmin_client, log_wire=True):
         vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
@@ -40,31 +42,17 @@ class DefSchemaSvc():
             is_jwt_token = False
 
         self._session = self._vcd_client.get_vcloud_session()
-
-        try:
-            wire_logger = NULL_LOGGER
-            if log_wire:
-                wire_logger = SERVER_CLOUDAPI_WIRE_LOGGER
-            self._cloudapi_client = CloudApiClient(
-                base_url=self._vcd_client.get_cloudapi_uri(),
-                token=token,
-                is_jwt_token=is_jwt_token,
-                api_version=self._vcd_client.get_api_version(),
-                logger_debug=SERVER_LOGGER,
-                logger_wire=wire_logger,
-                verify_ssl=self._vcd_client._verify_ssl_certs)
-            # Since the /cloudapi endpoint was added before the defined entity
-            # endpoint. Mere presence of the /cloudapi uri is not enough, we
-            # need to make sure that this cloud api client will be of actual
-            # use to us.
-            self._cloudapi_client.do_request(
-                method=RequestMethod.GET,
-                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-                resource_url_relative_path=f"{CloudApiResource.INTERFACES}")  # noqa: E501
-        except HTTPError as err:
-            SERVER_LOGGER.error(err)
-            raise OperationNotSupportedException(
-                "Cloudapi endpoint unavailable at current api version.")
+        wire_logger = NULL_LOGGER
+        if log_wire:
+            wire_logger = SERVER_CLOUDAPI_WIRE_LOGGER
+        self._cloudapi_client = CloudApiClient(
+            base_url=self._sysadmin_client.get_cloudapi_uri(),
+            token=token,
+            is_jwt_token=is_jwt_token,
+            api_version=self._sysadmin_client.get_api_version(),
+            logger_debug=SERVER_LOGGER,
+            logger_wire=wire_logger,
+            verify_ssl=self._sysadmin_client._verify_ssl_certs)
 
     def list_interfaces(self) -> list:
         """List defined entity interfaces.
