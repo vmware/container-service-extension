@@ -1,9 +1,7 @@
 import pyvcloud.vcd.client as vcd_client
 
-from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
-from container_service_extension.logger import NULL_LOGGER
-from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
-from container_service_extension.logger import SERVER_LOGGER
+import container_service_extension.cloudapi.cloudapi_client as cloudApiClient
+import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.user_context as user_context
 import container_service_extension.utils as utils
@@ -18,7 +16,7 @@ class RequestContext:
         self._client: vcd_client.Client = None
 
         # vCD CloudAPI client from user client
-        self._cloudapi_client: CloudApiClient = None
+        self._cloudapi_client: cloudApiClient.CloudApiClient = None
 
         # User context
         self._user: user_context.UserContext = None
@@ -43,20 +41,20 @@ class RequestContext:
         if self._cloudapi_client is None:
             log_wire = utils.get_server_runtime_config() \
                             .get('service', {}).get('log_wire', False)
-            logger_wire = NULL_LOGGER
+            logger_wire = logger.NULL_LOGGER
             if log_wire:
-                logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
+                logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
             token = self.client.get_access_token()
             is_jwt_token = True
             if not token:
                 token = self.client.get_xvcloud_authorization_token()
                 is_jwt_token = False
-            self._cloudapi_client = CloudApiClient(
+            self._cloudapi_client = cloudApiClient.CloudApiClient(
                 self.client.get_cloudapi_uri(),
                 token=token,
                 is_jwt_token=is_jwt_token,
                 api_version=self.client.get_api_version(),
-                logger_debug=SERVER_LOGGER,
+                logger_debug=logger.SERVER_LOGGER,
                 logger_wire=logger_wire,
                 verify_ssl=self.client._verify_ssl_certs)
         return self._cloudapi_client

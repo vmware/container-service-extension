@@ -10,15 +10,10 @@ from pyvcloud.vcd.utils import retrieve_compute_policy_id_from_href
 from pyvcloud.vcd.vm import VM
 import requests
 
-from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
-from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0 # noqa: E501
-from container_service_extension.cloudapi.constants import CloudApiResource
-from container_service_extension.cloudapi.constants import CSE_COMPUTE_POLICY_PREFIX # noqa: E501
-from container_service_extension.logger import NULL_LOGGER
-from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
-from container_service_extension.logger import SERVER_LOGGER
+import container_service_extension.cloudapi.cloudapi_client as cloudApiClient
+import container_service_extension.cloudapi.constants as cloudApiConstants
+import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
-import container_service_extension.request_context as ctx
 from container_service_extension.shared_constants import RequestMethod
 import container_service_extension.utils as utils
 
@@ -38,13 +33,10 @@ class ComputePolicyManager:
     original names when returned back to the caller.
     """
 
-    def __init__(self,
-                 sysadmin_client: vcd_client.Client,
-                 cloudapi_client: CloudApiClient = None,
-                 log_wire=True):
+    def __init__(self, sysadmin_client: vcd_client.Client, log_wire=True):
         vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
         self._sysadmin_client: vcd_client.Client = sysadmin_client
-        self._cloudapi_client: CloudApiClient = cloudapi_client
+        self._cloudapi_client = None
         self._session = self._sysadmin_client.get_vcloud_session()
 
         token = self._sysadmin_client.get_access_token()
@@ -54,28 +46,27 @@ class ComputePolicyManager:
             is_jwt = False
 
         try:
-            if self._cloudapi_client is None:
-                wire_logger = NULL_LOGGER
-                if log_wire:
-                    wire_logger = SERVER_CLOUDAPI_WIRE_LOGGER
-                self._cloudapi_client = CloudApiClient(
-                    base_url=self._sysadmin_client.get_cloudapi_uri(),
-                    token=token,
-                    is_jwt_token=is_jwt,
-                    api_version=self._sysadmin_client.get_api_version(),
-                    logger_debug=SERVER_LOGGER,
-                    logger_wire=wire_logger,
-                    verify_ssl=self._sysadmin_client._verify_ssl_certs)
+            wire_logger = logger.NULL_LOGGER
+            if log_wire:
+                wire_logger = logger.SERVER_CLOUDAPI_WIRE_LOGGER
+            self._cloudapi_client = cloudApiClient.CloudApiClient(
+                base_url=self._sysadmin_client.get_cloudapi_uri(),
+                token=token,
+                is_jwt_token=is_jwt,
+                api_version=self._sysadmin_client.get_api_version(),
+                logger_debug=logger.SERVER_LOGGER,
+                logger_wire=wire_logger,
+                verify_ssl=self._sysadmin_client._verify_ssl_certs)
             # Since the /cloudapi endpoint was added before the compute policy
             # endpoint. Mere presence of the /cloudapi uri is not enough, we
             # need to make sure that this cloud api client will be of actual
             # use to us.
             self._cloudapi_client.do_request(
                 method=RequestMethod.GET,
-                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-                resource_url_relative_path=f"{CloudApiResource.VDC_COMPUTE_POLICIES}") # noqa: E501
+                cloudapi_version=cloudApiConstants.CLOUDAPI_VERSION_1_0_0,
+                resource_url_relative_path=f"{cloudApiConstants.CloudApiResource.VDC_COMPUTE_POLICIES}") # noqa: E501
         except requests.exceptions.HTTPError as err:
-            SERVER_LOGGER.error(err)
+            logger.SERVER_LOGGER.error(err)
             raise OperationNotSupportedException(
                 "Cloudapi endpoint unavailable at current api version.")
 
@@ -97,8 +88,9 @@ class ComputePolicyManager:
             # without the &sortAsc parameter, vCD returns unpredictable results
             response_body = self._cloudapi_client.do_request(
                 method=RequestMethod.GET,
-                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-                resource_url_relative_path=f"{CloudApiResource.VDC_COMPUTE_POLICIES}?page={page_num}&sortAsc=name") # noqa: E501
+                cloudapi_version=cloudApiConstants.CLOUDAPI_VERSION_1_0_0,
+                resource_url_relative_path=f"{cloudApiConstants.CloudApiResource.VDC_COMPUTE_POLICIES}?" # noqa: E501
+                                           f"page={page_num}&sortAsc=name") # noqa: E501
 
             if len(response_body['values']) > 0:
                 for policy in response_body['values']:
@@ -149,8 +141,8 @@ class ComputePolicyManager:
 
         created_policy = self._cloudapi_client.do_request(
             method=RequestMethod.POST,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-            resource_url_relative_path=CloudApiResource.VDC_COMPUTE_POLICIES,
+            cloudapi_version=cloudApiConstants.CLOUDAPI_VERSION_1_0_0,
+            resource_url_relative_path=cloudApiConstants.CloudApiResource.VDC_COMPUTE_POLICIES, # noqa: E501
             payload=policy_info)
 
         created_policy['display_name'] = self._get_policy_display_name(
@@ -169,10 +161,11 @@ class ComputePolicyManager:
         """
         policy_info = self.get_policy(policy_name)
         resource_url_relative_path = \
-            f"{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_info['id']}"
+            f"{cloudApiConstants.CloudApiResource.VDC_COMPUTE_POLICIES}/" \
+            f"{policy_info['id']}"
         return self._cloudapi_client.do_request(
             method=RequestMethod.DELETE,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=cloudApiConstants.CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=resource_url_relative_path)
 
     def update_policy(self, policy_name, new_policy_info):
@@ -194,11 +187,12 @@ class ComputePolicyManager:
             if 'description' in new_policy_info:
                 payload['description'] = new_policy_info['description']
             resource_url_relative_path = \
-                f"{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_info['id']}"
+                f"{cloudApiConstants.CloudApiResource.VDC_COMPUTE_POLICIES}/" \
+                f"{policy_info['id']}"
 
             updated_policy = self._cloudapi_client.do_request(
                 method=RequestMethod.PUT,
-                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+                cloudapi_version=cloudApiConstants.CLOUDAPI_VERSION_1_0_0,
                 resource_url_relative_path=resource_url_relative_path,
                 payload=payload)
 
@@ -320,7 +314,7 @@ class ComputePolicyManager:
         :return: policy name unique to cse
         :rtype: str
         """
-        return f"{CSE_COMPUTE_POLICY_PREFIX}{policy_name}"
+        return f"{cloudApiConstants.CSE_COMPUTE_POLICY_PREFIX}{policy_name}"
 
     def _get_policy_display_name(self, policy_name):
         """Remove cse specific prefix from the given policy name.
@@ -330,8 +324,9 @@ class ComputePolicyManager:
         :return: policy name after removing cse specific prefix
         :rtype: str
         """
-        if policy_name and policy_name.startswith(CSE_COMPUTE_POLICY_PREFIX):
-            return policy_name.replace(CSE_COMPUTE_POLICY_PREFIX, '', 1)
+        if policy_name and \
+           policy_name.startswith(cloudApiConstants.CSE_COMPUTE_POLICY_PREFIX):
+            return policy_name.replace(cloudApiConstants.CSE_COMPUTE_POLICY_PREFIX, '', 1) # noqa: E501
         return policy_name
 
     def _get_policy_href(self, policy_id):
@@ -342,10 +337,13 @@ class ComputePolicyManager:
         :return: policy href
         :rtype: str
         """
-        return f"{self._cloudapi_client.get_base_url()}{CLOUDAPI_VERSION_1_0_0}/{CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_id}" # noqa: E501
+        return f"{self._cloudapi_client.get_base_url()}" \
+               f"{cloudApiConstants.CLOUDAPI_VERSION_1_0_0}/" \
+               f"{cloudApiConstants.CloudApiResource.VDC_COMPUTE_POLICIES}/" \
+               f"{policy_id}"
 
-    def remove_compute_policy_from_vdc(self, request_context: ctx.RequestContext, # noqa: E501
-                                       ovdc_id, compute_policy_href,
+    def remove_compute_policy_from_vdc(self, ovdc_id,
+                                       compute_policy_href,
                                        remove_compute_policy_from_vms=False):
         """Delete the compute policy from the specified vdc.
 
@@ -380,9 +378,7 @@ class ComputePolicyManager:
             org_href=org.href)
 
         task_href = task_resource.get('href')
-        request_context.is_async = True
         self._remove_compute_policy_from_vdc_async(
-            request_context=request_context,
             task=task,
             task_href=task_href,
             user_href=user_href,
@@ -397,7 +393,6 @@ class ComputePolicyManager:
 
     @utils.run_async
     def _remove_compute_policy_from_vdc_async(self, *args,
-                                              request_context: ctx.RequestContext, # noqa: E501
                                               task,
                                               task_href,
                                               user_href,
@@ -510,7 +505,7 @@ class ComputePolicyManager:
                 org_href=org_href,
             )
         except Exception as err:
-            SERVER_LOGGER.error(err, exc_info=True)
+            logger.SERVER_LOGGER.error(err, exc_info=True)
             task.update(
                 status=vcd_client.TaskStatus.ERROR.value,
                 namespace='vcloud.cse',
@@ -526,6 +521,3 @@ class ComputePolicyManager:
                 task_href=task_href,
                 org_href=org_href,
                 error_message=f"{err}")
-        finally:
-            if request_context:
-                request_context.end()

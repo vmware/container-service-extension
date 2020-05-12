@@ -19,17 +19,14 @@ from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 
-from container_service_extension.compute_policy_manager import \
-    ComputePolicyManager
+import container_service_extension.compute_policy_manager \
+    as compute_policy_manager
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.consumer import MessageConsumer
 import container_service_extension.exceptions as e
 import container_service_extension.local_template_manager as ltm
-from container_service_extension.logger import SERVER_DEBUG_LOG_FILEPATH
-from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
-from container_service_extension.logger import SERVER_INFO_LOG_FILEPATH
-from container_service_extension.logger import SERVER_LOGGER
+import container_service_extension.logger as logger
 from container_service_extension.pks_cache import PksCache
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.server_constants import LocalTemplateKey
@@ -63,11 +60,11 @@ def signal_handler(signal, frame):
 
 def consumer_thread(c):
     try:
-        SERVER_LOGGER.info(f"About to start consumer_thread {c}.")
+        logger.SERVER_LOGGER.info(f"About to start consumer_thread {c}.")
         c.run()
     except Exception:
         click.echo("About to stop consumer_thread.")
-        SERVER_LOGGER.error(traceback.format_exc())
+        logger.SERVER_LOGGER.error(traceback.format_exc())
         c.stop()
 
 
@@ -189,8 +186,8 @@ class Service(object, metaclass=Singleton):
             pks_config_file_name=self.pks_config_file,
             skip_config_decryption=self.skip_config_decryption,
             decryption_password=self.decryption_password,
-            log_wire_file=SERVER_DEBUG_WIRELOG_FILEPATH,
-            logger_debug=SERVER_LOGGER,
+            log_wire_file=logger.SERVER_DEBUG_WIRELOG_FILEPATH,
+            logger_debug=logger.SERVER_LOGGER,
             msg_update_callback=msg_update_callback)
 
         populate_vsphere_list(self.config['vcs'])
@@ -236,28 +233,28 @@ class Service(object, metaclass=Singleton):
                 t.start()
                 msg = f"Started thread '{name} ({t.ident})'"
                 msg_update_callback.general(msg)
-                SERVER_LOGGER.info(msg)
+                logger.SERVER_LOGGER.info(msg)
                 self.threads.append(t)
                 self.consumers.append(c)
                 time.sleep(0.25)
             except KeyboardInterrupt:
                 break
             except Exception:
-                SERVER_LOGGER.error(traceback.format_exc())
+                logger.SERVER_LOGGER.error(traceback.format_exc())
 
-        SERVER_LOGGER.info(f"Number of threads started: {len(self.threads)}")
+        logger.SERVER_LOGGER.info(f"Number of threads started: {len(self.threads)}") # noqa: E501
 
         self._state = ServerState.RUNNING
 
         message = f"Container Service Extension for vCloud Director" \
                   f"\nServer running using config file: {self.config_file}" \
-                  f"\nLog files: {SERVER_INFO_LOG_FILEPATH}, " \
-                  f"{SERVER_DEBUG_LOG_FILEPATH}" \
+                  f"\nLog files: {logger.SERVER_INFO_LOG_FILEPATH}, " \
+                  f"{logger.SERVER_DEBUG_LOG_FILEPATH}" \
                   f"\nwaiting for requests (ctrl+c to close)"
 
         signal.signal(signal.SIGINT, signal_handler)
         msg_update_callback.general_no_color(message)
-        SERVER_LOGGER.info(message)
+        logger.SERVER_LOGGER.info(message)
 
         # Record telemetry on user action and details of operation.
         cse_params = {
@@ -280,24 +277,24 @@ class Service(object, metaclass=Singleton):
             except Exception:
                 msg_update_callback.general_no_color(
                     traceback.format_exc())
-                SERVER_LOGGER.error(traceback.format_exc())
+                logger.SERVER_LOGGER.error(traceback.format_exc())
                 sys.exit(1)
 
-        SERVER_LOGGER.info("Stop detected")
-        SERVER_LOGGER.info("Closing connections...")
+        logger.SERVER_LOGGER.info("Stop detected")
+        logger.SERVER_LOGGER.info("Closing connections...")
         for c in self.consumers:
             try:
                 c.stop()
             except Exception:
-                SERVER_LOGGER.error(traceback.format_exc())
+                logger.SERVER_LOGGER.error(traceback.format_exc())
 
         self._state = ServerState.STOPPED
-        SERVER_LOGGER.info("Done")
+        logger.SERVER_LOGGER.info("Done")
 
     def _load_template_definition_from_catalog(self,
                                                msg_update_callback=utils.NullPrinter()): # noqa: E501
         msg = "Loading k8s template definition from catalog"
-        SERVER_LOGGER.info(msg)
+        logger.SERVER_LOGGER.info(msg)
         msg_update_callback.general_no_color(msg)
 
         client = None
@@ -306,7 +303,7 @@ class Service(object, metaclass=Singleton):
             log_wire = \
                 utils.str_to_bool(self.config['service'].get('log_wire'))
             if log_wire:
-                log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
+                log_filename = logger.SERVER_DEBUG_WIRELOG_FILEPATH
 
             client = Client(self.config['vcd']['host'],
                             api_version=self.config['vcd']['api_version'],
@@ -329,7 +326,7 @@ class Service(object, metaclass=Singleton):
                 msg = "No valid K8 templates were found in catalog " \
                       f"'{catalog_name}'. Unable to start CSE server."
                 msg_update_callback.error(msg)
-                SERVER_LOGGER.error(msg)
+                logger.SERVER_LOGGER.error(msg)
                 sys.exit(1)
 
             # Check that default k8s template exists in vCD at the correct
@@ -346,14 +343,14 @@ class Service(object, metaclass=Singleton):
                 msg = f"Found K8 template '{template['name']}' at revision " \
                       f"{template['revision']} in catalog '{catalog_name}'"
                 msg_update_callback.general(msg)
-                SERVER_LOGGER.info(msg)
+                logger.SERVER_LOGGER.info(msg)
 
             if not found_default_template:
                 msg = f"Default template {default_template_name} with " \
                       f"revision {default_template_revision} not found." \
                       " Unable to start CSE server."
                 msg_update_callback.error(msg)
-                SERVER_LOGGER.error(msg)
+                logger.SERVER_LOGGER.error(msg)
                 sys.exit(1)
 
             self.config['broker']['templates'] = k8_templates
@@ -372,17 +369,17 @@ class Service(object, metaclass=Singleton):
 
         # process rules
         msg = f"Processing template rules."
-        SERVER_LOGGER.debug(msg)
+        logger.SERVER_LOGGER.debug(msg)
         msg_update_callback.general_no_color(msg)
 
         for rule_def in rules:
             rule = TemplateRule(
                 name=rule_def.get('name'), target=rule_def.get('target'),
-                action=rule_def.get('action'), logger=SERVER_LOGGER,
+                action=rule_def.get('action'), logger=logger.SERVER_LOGGER,
                 msg_update_callback=msg_update_callback)
 
             msg = f"Processing rule : {rule}."
-            SERVER_LOGGER.debug(msg)
+            logger.SERVER_LOGGER.debug(msg)
             msg_update_callback.general_no_color(msg)
 
             # Since the patching is in-place, the changes will reflect back on
@@ -390,13 +387,13 @@ class Service(object, metaclass=Singleton):
             rule.apply(templates)
 
             msg = f"Finished processing rule : '{rule.name}'"
-            SERVER_LOGGER.debug(msg)
+            logger.SERVER_LOGGER.debug(msg)
             msg_update_callback.general(msg)
 
     def _process_template_compute_policy_compliance(self,
                                                     msg_update_callback=utils.NullPrinter()): # noqa: E501
         msg = "Processing compute policy for k8s templates."
-        SERVER_LOGGER.info(msg)
+        logger.SERVER_LOGGER.info(msg)
         msg_update_callback.general_no_color(msg)
 
         org_name = self.config['broker']['org']
@@ -404,7 +401,8 @@ class Service(object, metaclass=Singleton):
         sysadmin_client = None
         try:
             sysadmin_client = vcd_utils.get_sys_admin_client()
-            cpm = ComputePolicyManager(sysadmin_client, log_wire=self.config['service'].get('log_wire')) # noqa: E501
+            cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
+                                                              log_wire=self.config['service'].get('log_wire')) # noqa: E501
 
             for template in self.config['broker']['templates']:
                 policy_name = template[LocalTemplateKey.COMPUTE_POLICY]
@@ -418,13 +416,13 @@ class Service(object, metaclass=Singleton):
                         msg = f"Creating missing compute policy " \
                               f"'{policy_name}'."
                         msg_update_callback.info(msg)
-                        SERVER_LOGGER.debug(msg)
+                        logger.SERVER_LOGGER.debug(msg)
                         policy = cpm.add_policy(policy_name=policy_name)
 
                     msg = f"Assigning compute policy '{policy_name}' to " \
                           f"template '{catalog_item_name}'."
                     msg_update_callback.general(msg)
-                    SERVER_LOGGER.debug(msg)
+                    logger.SERVER_LOGGER.debug(msg)
                     cpm.assign_compute_policy_to_vapp_template_vms(
                         compute_policy_href=policy['href'],
                         org_name=org_name,
@@ -436,7 +434,7 @@ class Service(object, metaclass=Singleton):
                     msg = f"Removing compute policy from template " \
                           f"'{catalog_item_name}'."
                     msg_update_callback.general(msg)
-                    SERVER_LOGGER.debug(msg)
+                    logger.SERVER_LOGGER.debug(msg)
 
                     cpm.remove_all_compute_policies_from_vapp_template_vms(
                         org_name=org_name,
@@ -446,7 +444,7 @@ class Service(object, metaclass=Singleton):
             msg = "Compute policy not supported by vCD. Skipping " \
                   "assigning/removing it to/from templates."
             msg_update_callback.info(msg)
-            SERVER_LOGGER.debug(msg)
+            logger.SERVER_LOGGER.debug(msg)
         finally:
             if sysadmin_client is not None:
                 sysadmin_client.logout()

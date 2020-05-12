@@ -384,8 +384,8 @@ Examples
     '--pks-cluster-domain',
     'pks_cluster_domain',
     required=True,
-    help=f"Domain name suffix used to construct FQDN of deployed clusters "
-    f"in this org VDC ")
+    help="Domain name suffix used to construct FQDN of deployed clusters "
+    "in this org VDC ")
 @click.option(
     '-o',
     '--org',
