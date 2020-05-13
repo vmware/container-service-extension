@@ -364,7 +364,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             cse_params[LocalTemplateKey.CNI] = template.get(LocalTemplateKey.CNI) # noqa: E501
             cse_params[LocalTemplateKey.CNI_VERSION] = template.get(LocalTemplateKey.CNI_VERSION)  # noqa: E501
             record_user_action_details(cse_operation=CseOperation.CLUSTER_CREATE, # noqa: E501
-                                    cse_params=cse_params)
+                                       cse_params=cse_params)
 
         return {
             'name': cluster_name,
@@ -422,8 +422,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
                                              telemetry=False)
         num_workers = len(cluster_info['nodes'])
         if num_workers > num_workers_wanted:
-            raise e.CseServerError(f"Scaling down native Kubernetes "
-                                   f"clusters is not supported.")
+            raise e.CseServerError("Scaling down native Kubernetes "
+                                   "clusters is not supported.")
         elif num_workers == num_workers_wanted:
             raise e.CseServerError(f"Cluster '{cluster_name}' already has "
                                    f"{num_workers} worker nodes.")
@@ -475,7 +475,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster_id
             record_user_action_details(cse_operation=CseOperation.CLUSTER_DELETE, # noqa: E501
-                                    cse_params=cse_params)
+                                       cse_params=cse_params)
 
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
@@ -545,7 +545,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
             record_user_action_details(cse_operation=CseOperation.CLUSTER_UPGRADE, # noqa: E501
-                                    cse_params=cse_params)
+                                       cse_params=cse_params)
 
         msg = f"Upgrading cluster '{cluster_name}' " \
               f"software to match template {template_name} (revision " \
@@ -1175,8 +1175,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
                                 cluster_name=cluster_name)
 
                 filepath = ltm.get_script_filepath(template_name,
-                                                    template_revision,
-                                                    ScriptFile.WORKER_K8S_UPGRADE) # noqa: E501
+                                                   template_revision,
+                                                   ScriptFile.WORKER_K8S_UPGRADE) # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
                 for node in worker_node_names:
                     msg = f"Draining node {node}"
@@ -1318,7 +1318,7 @@ def _drain_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
                  cluster_name=''):
     LOGGER.debug(f"Draining nodes {node_names} in cluster '{cluster_name}' "
                  f"(vapp: {vapp_href})")
-    script = f"#!/usr/bin/env bash\n"
+    script = "#!/usr/bin/env bash\n"
     for node_name in node_names:
         script += f"kubectl drain {node_name} " \
                   f"--ignore-daemonsets --timeout=60s --delete-local-data\n"
@@ -1344,7 +1344,7 @@ def _uncordon_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
 
     LOGGER.debug(f"Uncordoning nodes {node_names} in cluster '{cluster_name}' "
                  f"(vapp: {vapp_href})")
-    script = f"#!/usr/bin/env bash\n"
+    script = "#!/usr/bin/env bash\n"
     for node_name in node_names:
         script += f"kubectl uncordon {node_name}\n"
 
@@ -1582,8 +1582,8 @@ def get_cluster(client, cluster_name, cluster_id=None, org_name=None,
 
 def get_template(name=None, revision=None):
     if (name is None and revision is not None) or (name is not None and revision is None): # noqa: E501
-        raise ValueError(f"If template revision is specified, then template "
-                         f"name must also be specified (and vice versa).")
+        raise ValueError("If template revision is specified, then template "
+                         "name must also be specified (and vice versa).")
     server_config = utils.get_server_runtime_config()
     name = name or server_config['broker']['default_template_name']
     revision = revision or server_config['broker']['default_template_revision']
