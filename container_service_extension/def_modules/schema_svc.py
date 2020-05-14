@@ -7,13 +7,6 @@ import pyvcloud.vcd.client as vcd_client
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0 # noqa: E501
 from container_service_extension.cloudapi.constants import CloudApiResource
-from container_service_extension.cloudapi.constants import DEF_CSE_VENDOR
-from container_service_extension.cloudapi.constants import DEF_ENTITY_TYPE_ID_PREFIX # noqa: E501
-from container_service_extension.cloudapi.constants import DEF_INTERFACE_ID_PREFIX # noqa: E501
-from container_service_extension.cloudapi.constants import DEF_NATIVE_ENTITY_TYPE_NSS # noqa: E501
-from container_service_extension.cloudapi.constants import DEF_NATIVE_ENTITY_TYPE_VERSION # noqa: E501
-from container_service_extension.cloudapi.constants import DEF_NATIVE_INTERFACE_NSS # noqa: E501
-from container_service_extension.cloudapi.constants import DEF_NATIVE_INTERFACE_VERSION # noqa: E501
 from container_service_extension.def_modules.models import DefEntityType, DefInterface # noqa: E501
 from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
@@ -22,7 +15,7 @@ import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.shared_constants import RequestMethod
 
 
-class DefSchemaSvc():
+class DefSchemaService():
     """Manages lifecycle of defined entity interfaces and entity types.
 
     TODO Add API version check at the appropriate place. This class needs to
@@ -38,10 +31,9 @@ class DefSchemaSvc():
         token = self._sysadmin_client.get_access_token()
         is_jwt_token = True
         if not token:
-            token = self._vcd_client.get_xvcloud_authorization_token()
+            token = self._sysadmin_client.get_xvcloud_authorization_token()
             is_jwt_token = False
 
-        self._session = self._vcd_client.get_vcloud_session()
         wire_logger = NULL_LOGGER
         if log_wire:
             wire_logger = SERVER_CLOUDAPI_WIRE_LOGGER
@@ -78,17 +70,6 @@ class DefSchemaSvc():
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.INTERFACES}/{id}")
         return DefInterface(**response_body)
-
-    def construct_native_interface_id(self) -> str:
-        """Return the interface Id of CSE's interface.
-
-        example: "urn:vcloud:interface:cse.native:1.0.0"
-
-        :return: Id of the interface
-        :rtype: str
-        """
-        return f"{DEF_INTERFACE_ID_PREFIX}:{DEF_CSE_VENDOR}:" \
-            f"{DEF_NATIVE_INTERFACE_NSS}:{DEF_NATIVE_INTERFACE_VERSION}"
 
     def create_interface(self, interface: DefInterface) -> DefInterface:
         """Create the Defined entity interface.
@@ -145,17 +126,6 @@ class DefSchemaSvc():
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}",
             payload=entity_type._asdict())
         return DefEntityType(**response_body)
-
-    def construct_native_entity_type_id(self) -> str:
-        """Return the entity type Id of CSE's Native cluster.
-
-        example: "urn:vcloud:type:cse.nativeCluster:1.0.0"
-
-        :return: Id of the interface
-        :rtype: str
-        """
-        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{DEF_CSE_VENDOR}:" \
-            f"{DEF_NATIVE_ENTITY_TYPE_NSS}:{DEF_NATIVE_ENTITY_TYPE_VERSION}"
 
     def get_entity_type(self, id: str) -> DefEntityType:
         """Get the entity type given an id.

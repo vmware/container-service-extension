@@ -3,5 +3,5 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 
-class DefEntitySvc():
+class DefEntityService():
     """Manages lifecycle of entities."""
