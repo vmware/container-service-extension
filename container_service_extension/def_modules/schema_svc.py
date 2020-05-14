@@ -22,29 +22,11 @@ class DefSchemaService():
     be used if and only if vCD API version >= 35
     """
 
-    def __init__(self, sysadmin_client, log_wire=True):
-        vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
-        self._sysadmin_client: vcd_client.Client = sysadmin_client
-        self._cloudapi_client: CloudApiClient = None
-        self._session = self._sysadmin_client.get_vcloud_session()
+    def __init__(self, sysadmin_cloudapi_client: CloudApiClient):
+        if not sysadmin_cloudapi_client.is_sys_admin:
+            raise ValueError("Cloud API Client should be sysadmin.")
 
-        token = self._sysadmin_client.get_access_token()
-        is_jwt_token = True
-        if not token:
-            token = self._sysadmin_client.get_xvcloud_authorization_token()
-            is_jwt_token = False
-
-        wire_logger = NULL_LOGGER
-        if log_wire:
-            wire_logger = SERVER_CLOUDAPI_WIRE_LOGGER
-        self._cloudapi_client = CloudApiClient(
-            base_url=self._sysadmin_client.get_cloudapi_uri(),
-            token=token,
-            is_jwt_token=is_jwt_token,
-            api_version=self._sysadmin_client.get_api_version(),
-            logger_debug=SERVER_LOGGER,
-            logger_wire=wire_logger,
-            verify_ssl=self._sysadmin_client._verify_ssl_certs)
+        self._cloudapi_client = sysadmin_cloudapi_client
 
     def list_interfaces(self) -> list:
         """List defined entity interfaces.

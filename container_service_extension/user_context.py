@@ -30,6 +30,7 @@ class UserContext:
 
         self._sysadmin_client: vcd_client.Client = None
         self._sysadmin_cloudapi_client: cloudApiClient.CloudApiClient = None
+        self._is_sys_admin: bool = None
 
     @property
     def session(self):
@@ -50,6 +51,12 @@ class UserContext:
         if self._id is None:
             self._id = self.session.get('userId')
         return self._id
+
+    @property
+    def is_sys_admin(self):
+        if self._is_sys_admin is None:
+            self._is_sys_admin = self.client.is_sysadmin()
+        return self._is_sys_admin
 
     @property
     def org_name(self):
@@ -117,7 +124,8 @@ class UserContext:
                 api_version=self._sysadmin_client.get_api_version(),
                 logger_debug=logger.SERVER_LOGGER,
                 logger_wire=logger_wire,
-                verify_ssl=self._sysadmin_client._verify_ssl_certs)
+                verify_ssl=self._sysadmin_client._verify_ssl_certs,
+                is_sys_admin=True)
         return self._sysadmin_cloudapi_client
 
     def end(self):

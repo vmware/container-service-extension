@@ -18,7 +18,8 @@ class CloudApiClient(object):
                  api_version,
                  logger_debug,
                  logger_wire,
-                 verify_ssl=True):
+                 verify_ssl=True,
+                 is_sys_admin=False):
         if not base_url.endswith('/'):
             base_url += '/'
         self._base_url = base_url
@@ -34,6 +35,7 @@ class CloudApiClient(object):
         self.LOGGER = logger_debug
         self.LOGGER_WIRE = logger_wire
         self._last_response = None
+        self.is_sys_admin = is_sys_admin
 
     def get_base_url(self):
         return self._base_url
