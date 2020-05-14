@@ -576,6 +576,8 @@ def install(ctx, config_file_path, pks_config_file_path,
                         msg_update_callback=console_message_printer)
         except AmqpConnectionError:
             raise Exception(AMQP_ERROR_MSG)
+        except requests.exceptions.SSLError as err:
+            raise Exception(f"SSL verification failed: {str(err)}")
         except requests.exceptions.ConnectionError as err:
             raise Exception(f"Cannot connect to {err.request.url}.")
         except vim.fault.InvalidLogin:
@@ -646,6 +648,8 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
             cse_run_complete = True
         except AmqpConnectionError:
             raise Exception(AMQP_ERROR_MSG)
+        except requests.exceptions.SSLError as err:
+            raise Exception(f"SSL verification failed: {str(err)}")
         except requests.exceptions.ConnectionError as err:
             raise Exception(f"Cannot connect to {err.request.url}.")
         except vim.fault.InvalidLogin:
@@ -1267,6 +1271,8 @@ def install_cse_template(ctx, template_name, template_revision,
                 msg_update_callback=console_message_printer)
         except AmqpConnectionError:
             raise Exception(AMQP_ERROR_MSG)
+        except requests.exceptions.SSLError as err:
+            raise Exception(f"SSL verification failed: {str(err)}")
         except requests.exceptions.ConnectionError as err:
             raise Exception(f"Cannot connect to {err.request.url}.")
         except vim.fault.InvalidLogin:
@@ -1624,6 +1630,8 @@ def _get_config_dict(config_file_path,
         return config_dict
     except AmqpConnectionError:
         raise Exception(AMQP_ERROR_MSG)
+    except requests.exceptions.SSLError as err:
+        raise Exception(f"SSL verification failed: {str(err)}")
     except requests.exceptions.ConnectionError as err:
         raise Exception(f"Cannot connect to {err.request.url}.")
     except cryptography.fernet.InvalidToken:

@@ -8,7 +8,7 @@ import pyvcloud.vcd.exceptions as vcd_e
 import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.utils as pyvcd_utils
 
-from container_service_extension.compute_policy_manager import ComputePolicyManager # noqa: E501
+import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
 import container_service_extension.exceptions as e
 import container_service_extension.ovdc_utils as ovdc_utils
 import container_service_extension.pksbroker as pksbroker
@@ -183,10 +183,10 @@ def ovdc_list(request_data, request_context: ctx.RequestContext):
                 if k8s_provider == K8sProvider.PKS:
                     # vc name for vdc can only be found using typed query
                     q = request_context.client.get_typed_query(
-                            vcd_client.ResourceType.ADMIN_ORG_VDC.value,
-                            query_result_format=vcd_client.QueryResultFormat.RECORDS, # noqa: E501
-                            qfilter=f"name=={ovdc_name};orgName=={org_name}")
-                    # should only ever be one element in the generator
+                        vcd_client.ResourceType.ADMIN_ORG_VDC.value,
+                        query_result_format=vcd_client.QueryResultFormat.RECORDS, # noqa: E501
+                        qfilter=f"name=={ovdc_name};orgName=={org_name}")
+                # should only ever be one element in the generator
                     ovdc_records = list(q.execute())
                     if len(ovdc_records) == 0:
                         raise vcd_e.EntityNotFoundException(
@@ -239,7 +239,9 @@ def ovdc_compute_policy_list(request_data,
     req_utils.validate_payload(request_data, required)
 
     config = utils.get_server_runtime_config()
-    cpm = ComputePolicyManager(request_context.sysadmin_client, log_wire=utils.str_to_bool(config['service'].get('log_wire')))  # noqa: E501
+    cpm = compute_policy_manager.ComputePolicyManager(
+        request_context.sysadmin_client,
+        log_wire=utils.str_to_bool(config['service'].get('log_wire')))
     return cpm.list_compute_policies_on_vdc(request_data[RequestKey.OVDC_ID])
 
 
@@ -268,7 +270,9 @@ def ovdc_compute_policy_update(request_data,
     remove_compute_policy_from_vms = validated_data[RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS] # noqa: E501
     try:
         config = utils.get_server_runtime_config()
-        cpm = ComputePolicyManager(request_context.sysadmin_client, log_wire=utils.str_to_bool(config['service'].get('log_wire'))) # noqa: E501
+        cpm = compute_policy_manager.ComputePolicyManager(
+            request_context.sysadmin_client,
+            log_wire=utils.str_to_bool(config['service'].get('log_wire'))) # noqa: E501
         cp_href = None
         cp_id = None
         if cp_name == SYSTEM_DEFAULT_COMPUTE_POLICY_NAME:
@@ -295,6 +299,9 @@ def ovdc_compute_policy_update(request_data,
                    f"({ovdc_id})"
 
         if action == ComputePolicyAction.REMOVE:
+            # TODO: fix remove_compute_policy by implementing a proper way
+            # for calling async methods without having to pass request_context
+            # outside handlers.
             task_href = cpm.remove_compute_policy_from_vdc(
                 ovdc_id,
                 cp_href,

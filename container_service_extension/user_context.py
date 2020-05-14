@@ -3,7 +3,11 @@ import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.role as vcd_role
 
+import container_service_extension.cloudapi.cloudapi_client as cloudApiClient
+import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
+import container_service_extension.utils as utils
+
 
 ORG_ADMIN_RIGHTS = [
     'General: Administrator Control',
@@ -12,8 +16,10 @@ ORG_ADMIN_RIGHTS = [
 
 
 class UserContext:
-    def __init__(self, client: vcd_client.Client):
+    def __init__(self, client: vcd_client.Client,
+                 cloudapi_client: cloudApiClient.CloudApiClient):
         self.client: vcd_client.Client = client
+        self._cloudapi_client: cloudApiClient.CloudApiClient = cloudapi_client
         self._session: lxml.ObjectifiedElement = None
         self._name: str = None
         self._id: str = None
@@ -23,6 +29,7 @@ class UserContext:
         self._rights: [str] = None
 
         self._sysadmin_client: vcd_client.Client = None
+        self._sysadmin_cloudapi_client: cloudApiClient.CloudApiClient = None
 
     @property
     def session(self):
@@ -90,6 +97,29 @@ class UserContext:
             self._sysadmin_client = vcd_utils.get_sys_admin_client()
         return self._sysadmin_client
 
+    @property
+    def sysadmin_cloudapi_client(self):
+        if self._sysadmin_cloudapi_client is None:
+            log_wire = utils.get_server_runtime_config() \
+                            .get('service', {}).get('log_wire', False)
+            logger_wire = logger.NULL_LOGGER
+            if log_wire:
+                logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
+            token = self._sysadmin_client.get_access_token()
+            is_jwt_token = True
+            if not token:
+                token = self._sysadmin_client.get_xvcloud_authorization_token()
+                is_jwt_token = False
+            self._sysadmin_cloudapi_client = cloudApiClient.CloudApiClient(
+                self._sysadmin_client.get_cloudapi_uri(),
+                token=token,
+                is_jwt_token=is_jwt_token,
+                api_version=self._sysadmin_client.get_api_version(),
+                logger_debug=logger.SERVER_LOGGER,
+                logger_wire=logger_wire,
+                verify_ssl=self._sysadmin_client._verify_ssl_certs)
+        return self._sysadmin_cloudapi_client
+
     def end(self):
         try:
             self._sysadmin_client.logout()
@@ -97,3 +127,4 @@ class UserContext:
             pass
         finally:
             self._sysadmin_client = None
+            self._cloudapi_client = None

@@ -18,11 +18,11 @@ DEF_ENTITY_TYPE_ID_PREFIX = 'urn:vcloud:type'
 
 # Native interface id : "urn:vcloud:interface:cse.native:1.0.0"
 DEF_NATIVE_INTERFACE_ID = f"{DEF_INTERFACE_ID_PREFIX}:{DEF_CSE_VENDOR}:" \
-            f"{DEF_NATIVE_INTERFACE_NSS}:{DEF_NATIVE_INTERFACE_VERSION}"
+    f"{DEF_NATIVE_INTERFACE_NSS}:{DEF_NATIVE_INTERFACE_VERSION}"
 
 # Native Entity Type id: "urn:vcloud:type:cse.nativeCluster:1.0.0"
 DEF_NATIVE_ENTITY_TYPE_ID = f"{DEF_ENTITY_TYPE_ID_PREFIX}:{DEF_CSE_VENDOR}:" \
-            f"{DEF_NATIVE_ENTITY_TYPE_NSS}:{DEF_NATIVE_ENTITY_TYPE_VERSION}"
+    f"{DEF_NATIVE_ENTITY_TYPE_NSS}:{DEF_NATIVE_ENTITY_TYPE_VERSION}"
 
 
 class CloudApiResource(str, Enum):
