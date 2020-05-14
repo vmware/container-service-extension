@@ -360,7 +360,7 @@ def test_0050_vcd_cse_system_toggle(config, test_runner_username,
     cmd_list = [
         cmd_binder(cmd=env.SYS_ADMIN_LOGIN_CMD, exit_code=0,
                    validate_output_func=None, test_user='sys_admin'),
-        cmd_binder(cmd=f"cse system disable", exit_code=0,
+        cmd_binder(cmd="cse system disable", exit_code=0,
                    validate_output_func=None, test_user='sys_admin'),
         cmd_binder(cmd=env.USERNAME_TO_LOGIN_CMD[test_runner_username],
                    exit_code=0, validate_output_func=None,
@@ -446,7 +446,7 @@ def test_0080_vcd_cse_cluster_list(test_runner_username):
         cmd_binder(cmd=env.USERNAME_TO_LOGIN_CMD[test_runner_username],
                    exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
-        cmd_binder(cmd=f"cse cluster list", exit_code=0,
+        cmd_binder(cmd="cse cluster list", exit_code=0,
                    validate_output_func=list_cluster_output_validator,
                    test_user=test_runner_username),
         cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
@@ -506,8 +506,8 @@ def test_0100_vcd_cse_cluster_config(test_runner_username):
 
 
 def generate_validate_node_count_func(expected_nodes):
-    """Generates a validator function to validate the number of nodes in the
-    cluster
+    """Generate validator function to verify the number of nodes in the cluster.
+
     :param expected_nodes: Expected number of nodes in the cluster
 
     :return validator: function(output, test_user)
@@ -536,8 +536,7 @@ def generate_validate_node_count_func(expected_nodes):
                                                   env.ORG_ADMIN_NAME,
                                                   env.VAPP_AUTHOR_NAME])
 def test_0110_vcd_cse_cluster_resize(test_runner_username, config):
-    """Test 'vcd cse cluster resize ...' commands.
-    """
+    """Test 'vcd cse cluster resize ...' commands."""
     node_pattern = r'(node-\S+)'
     cmd_binder = collections.namedtuple('UserCmdBinder',
                                         'cmd exit_code validate_output_func '
