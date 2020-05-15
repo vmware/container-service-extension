@@ -14,6 +14,7 @@ import container_service_extension.cloudapi.cloudapi_client as cloudApiClient
 import container_service_extension.cloudapi.constants as cloudApiConstants
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
+import container_service_extension.request_context as ctx
 from container_service_extension.shared_constants import RequestMethod
 import container_service_extension.utils as utils
 
@@ -359,11 +360,14 @@ class ComputePolicyManager:
                f"{cloudApiConstants.CloudApiResource.VDC_COMPUTE_POLICIES}/" \
                f"{policy_id}"
 
-    def remove_compute_policy_from_vdc(self, ovdc_id,
+    def remove_compute_policy_from_vdc(self, request_context: ctx.RequestContext, # noqa: E501
+                                       ovdc_id,
                                        compute_policy_href,
                                        remove_compute_policy_from_vms=False):
         """Delete the compute policy from the specified vdc.
 
+        :param request_context: request context of remove compute policy
+            request
         :param str ovdc_id: id of the vdc to assign the policy
         :param compute_policy_href: policy href to remove
         :param bool remove_compute_policy_from_vms: If True, will set affected
@@ -371,6 +375,7 @@ class ComputePolicyManager:
 
         :return: dictionary containing 'task_href'.
         """
+        # TODO find an efficient way without passing in request context
         vdc = vcd_utils.get_vdc(self._sysadmin_client, vdc_id=ovdc_id)
 
         org = vcd_utils.get_org(self._sysadmin_client)
@@ -395,7 +400,9 @@ class ComputePolicyManager:
             org_href=org.href)
 
         task_href = task_resource.get('href')
+        request_context.is_async = True
         self._remove_compute_policy_from_vdc_async(
+            request_context=request_context,
             task=task,
             task_href=task_href,
             user_href=user_href,
@@ -410,6 +417,7 @@ class ComputePolicyManager:
 
     @utils.run_async
     def _remove_compute_policy_from_vdc_async(self, *args,
+                                              request_context: ctx.RequestContext, # noqa: E501
                                               task,
                                               task_href,
                                               user_href,
@@ -538,3 +546,6 @@ class ComputePolicyManager:
                 task_href=task_href,
                 org_href=org_href,
                 error_message=f"{err}")
+        finally:
+            if request_context.sysadmin_client:
+                request_context.end()
