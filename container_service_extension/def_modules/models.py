@@ -4,22 +4,25 @@
 
 from dataclasses import dataclass
 
-from container_service_extension.cloudapi.constants import DEF_ENTITY_TYPE_ID_PREFIX # noqa: E501
-from container_service_extension.cloudapi.constants import DEF_INTERFACE_ID_PREFIX # noqa: E501
+# Defined Entity Framework related constants
+DEF_CSE_VENDOR = 'cse'
+DEF_NATIVE_INTERFACE_NSS = 'native'
+DEF_NATIVE_INTERFACE_VERSION = '1.0.0'
+DEF_INTERFACE_ID_PREFIX = 'urn:vcloud:interface'
+DEF_NATIVE_ENTITY_TYPE_NSS = 'nativeCluster'
+DEF_NATIVE_ENTITY_TYPE_VERSION = '1.0.0'
+DEF_ENTITY_TYPE_ID_PREFIX = 'urn:vcloud:type'
 
-# TODO Below models will not be needed once we integrate new pythonSDK into CSE
 
-
-@dataclass(init=True, repr=True, eq=True, order=False, unsafe_hash=False,
-           frozen=True)
-class DefInterface():
+@dataclass(frozen=True)
+class DefInterface:
     """Provides interface for the defined entity type."""
 
     name: str
-    id: str
-    vendor: str
-    nss: str
-    version: str
+    vendor: str = DEF_CSE_VENDOR
+    nss: str = DEF_NATIVE_INTERFACE_NSS
+    version: str = DEF_NATIVE_INTERFACE_VERSION
+    id: str = None
     readonly: bool = False
 
     def get_id(self):
@@ -37,19 +40,18 @@ class DefInterface():
             return self.id
 
 
-@dataclass(init=True, repr=True, eq=True, order=False, unsafe_hash=False,
-           frozen=True)
-class DefEntityType():
+@dataclass(frozen=True)
+class DefEntityType:
     """Represents the schema for Defined Entities."""
 
     name: str
     description: str
-    id: str
-    vendor: str
-    nss: str
-    version: str
     schema: dict
     interfaces: list
+    vendor: str = DEF_CSE_VENDOR
+    nss: str = DEF_NATIVE_ENTITY_TYPE_NSS
+    version: str = DEF_NATIVE_ENTITY_TYPE_VERSION
+    id: str = None
     externalId: str = None
     readonly: bool = False
 
@@ -78,3 +80,4 @@ class DefEntity:
     entityType: str = None
     externalId: str = None
     state: str = None
+
