@@ -23,7 +23,13 @@ class DefInterface(init=True, repr=True, eq=True, order=False,
     readonly: bool = False
 
     def get_id(self):
-        """Get interface id : "urn:vcloud:interface:cse.native:1.0.0."""
+        """Get or generate interface id.
+
+        Example: urn:vcloud:interface:cse.native:1.0.0.
+
+        By no means, id generation in this method, guarantees the actual
+        interface registration with vCD.
+        """
         if self.id is None:
             return f"{DEF_INTERFACE_ID_PREFIX}:{self.vendor}.{self.nss}:" \
                 f"{self.version}"
@@ -48,7 +54,13 @@ class DefEntityType(init=True, repr=True, eq=True, order=False,
     readonly: bool = False
 
     def get_id(self):
-        """Get Entity type id : "urn:vcloud:interface:cse.native:1.0.0."""
+        """Get or generate entity type id.
+
+        Example : "urn:vcloud:interface:cse.native:1.0.0
+
+        By no means, id generation in this method, guarantees the actual
+        entity type registration with vCD.
+        """
         if self.id is None:
             return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{self.vendor}.{self.nss}:" \
                 f"{self.version}"

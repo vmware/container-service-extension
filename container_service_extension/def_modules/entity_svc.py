@@ -19,10 +19,10 @@ class DefEntityService():
      be used if and only if vCD API version >= 35.
     """
 
-    def __init__(self, sysadmin_cloudapi_client: CloudApiClient):
-        if not sysadmin_cloudapi_client.is_sys_admin:
+    def __init__(self, cloudapi_client: CloudApiClient):
+        if not cloudapi_client.is_sys_admin:
             raise ValueError("Cloud API Client should be sysadmin.")
-        self._cloudapi_client = sysadmin_cloudapi_client
+        self._cloudapi_client = cloudapi_client
 
     def create_entity(self, entity_type_id: str, entity: DefEntity) -> None:
         """Create defined entity instance of an entity type.
