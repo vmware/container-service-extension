@@ -2,16 +2,13 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import pyvcloud.vcd.client as vcd_client
+from dataclasses import asdict
+from typing import List
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0 # noqa: E501
 from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.def_modules.models import DefEntityType, DefInterface # noqa: E501
-from container_service_extension.logger import NULL_LOGGER
-from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
-from container_service_extension.logger import SERVER_LOGGER
-import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.shared_constants import RequestMethod
 
 
@@ -19,16 +16,15 @@ class DefSchemaService():
     """Manages lifecycle of defined entity interfaces and entity types.
 
     TODO Add API version check at the appropriate place. This class needs to
-    be used if and only if vCD API version >= 35
+     be used if and only if vCD API version >= 35
     """
 
     def __init__(self, sysadmin_cloudapi_client: CloudApiClient):
         if not sysadmin_cloudapi_client.is_sys_admin:
             raise ValueError("Cloud API Client should be sysadmin.")
-
         self._cloudapi_client = sysadmin_cloudapi_client
 
-    def list_interfaces(self) -> list:
+    def list_interfaces(self) -> List[DefInterface]:
         """List defined entity interfaces.
 
         :return: list of interfaces
@@ -64,7 +60,7 @@ class DefSchemaService():
             method=RequestMethod.POST,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.INTERFACES}",
-            payload=interface._asdict())
+            payload=asdict(interface))
         return DefInterface(**response_body)
 
     def update_interface(self, interface: DefInterface) -> DefInterface:
@@ -81,7 +77,7 @@ class DefSchemaService():
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.INTERFACES}/"
             f"{interface.id}",
-            payload=interface._asdict())
+            payload=asdict(interface))
         return DefInterface(**response_body)
 
     def delete_interface(self, id: str) -> None:
@@ -106,7 +102,7 @@ class DefSchemaService():
             method=RequestMethod.POST,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}",
-            payload=entity_type._asdict())
+            payload=asdict(entity_type))
         return DefEntityType(**response_body)
 
     def get_entity_type(self, id: str) -> DefEntityType:
@@ -122,7 +118,7 @@ class DefSchemaService():
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/{id}")
         return DefEntityType(**response_body)
 
-    def list_entity_types(self) -> list:
+    def list_entity_types(self) -> List[DefEntityType]:
         """List Entity types.
 
         :return: List of entity types
@@ -149,7 +145,7 @@ class DefSchemaService():
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/"
             f"{entity_type.id}",
-            payload=entity_type._asdict())
+            payload=asdict(entity_type))
         return DefEntityType(**response_body)
 
     def delete_entity_type(self, id: str) -> None:
