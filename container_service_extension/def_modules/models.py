@@ -24,8 +24,11 @@ class DefInterface(init=True, repr=True, eq=True, order=False,
 
     def get_id(self):
         """Get interface id : "urn:vcloud:interface:cse.native:1.0.0."""
-        return f"{DEF_INTERFACE_ID_PREFIX}:{self.vendor}.{self.nss}:" \
-            f"{self.version}"
+        if self.id is None:
+            return f"{DEF_INTERFACE_ID_PREFIX}:{self.vendor}.{self.nss}:" \
+                f"{self.version}"
+        else:
+            return self.id
 
 
 @dataclass()
@@ -46,8 +49,11 @@ class DefEntityType(init=True, repr=True, eq=True, order=False,
 
     def get_id(self):
         """Get Entity type id : "urn:vcloud:interface:cse.native:1.0.0."""
-        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{self.vendor}.{self.nss}:" \
-            f"{self.version}"
+        if self.id is None:
+            return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{self.vendor}.{self.nss}:" \
+                f"{self.version}"
+        else:
+            return self.id
 
 
 @dataclass
