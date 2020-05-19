@@ -10,9 +10,9 @@ from container_service_extension.cloudapi.constants import DEF_INTERFACE_ID_PREF
 # TODO Below models will not be needed once we integrate new pythonSDK into CSE
 
 
-@dataclass()
-class DefInterface(init=True, repr=True, eq=True, order=False,
-                   unsafe_hash=False, frozen=True):
+@dataclass(init=True, repr=True, eq=True, order=False, unsafe_hash=False,
+           frozen=True)
+class DefInterface():
     """Provides interface for the defined entity type."""
 
     name: str
@@ -37,9 +37,9 @@ class DefInterface(init=True, repr=True, eq=True, order=False,
             return self.id
 
 
-@dataclass()
-class DefEntityType(init=True, repr=True, eq=True, order=False,
-                    unsafe_hash=False, frozen=True):
+@dataclass(init=True, repr=True, eq=True, order=False, unsafe_hash=False,
+           frozen=True)
+class DefEntityType():
     """Represents the schema for Defined Entities."""
 
     name: str
@@ -68,7 +68,7 @@ class DefEntityType(init=True, repr=True, eq=True, order=False,
             return self.id
 
 
-@dataclass
+@dataclass()
 class DefEntity:
     """Represents defined entity instances."""
 
