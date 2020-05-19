@@ -521,9 +521,9 @@ def generate_validate_node_count_func(expected_nodes):
         print(f"Running cluster info operation for {test_runner_username}")
         cmd_list = [
             cmd_binder(cmd=f"cse cluster info {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}",   # noqa
-                    exit_code=0,
-                    validate_output_func=None,
-                    test_user=test_runner_username)
+                       exit_code=0,
+                       validate_output_func=None,
+                       test_user=test_runner_username)
         ]
         cmd_results = execute_commands(cmd_list)
 
@@ -686,7 +686,7 @@ def test_0130_vcd_cse_cluster_delete(config):
     cmd_binder = collections.namedtuple('UserCmdBinder',
                                         'cmd exit_code validate_output_func '
                                         'test_user')
-    print(f"Running cluster delete operations")
+    print("Running cluster delete operations")
     cmd_list = [
         cmd_binder(cmd=env.VAPP_AUTHOR_LOGIN_CMD,
                    exit_code=0,
@@ -727,7 +727,7 @@ def test_0130_vcd_cse_cluster_delete(config):
     for cluster_name in env.USERNAME_TO_CLUSTER_NAME.values():
         assert not env.vapp_exists(cluster_name), \
             f"Cluster {cluster_name} exists when it should not"
-    print(f"Successfully deleted clusters.")
+    print("Successfully deleted clusters.")
 
 
 def test_9999_vcd_cse_system_stop(vcd_sys_admin):
