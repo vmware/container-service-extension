@@ -2,16 +2,12 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import pyvcloud.vcd.client as vcd_client
+from dataclasses import asdict
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0 # noqa: E501
 from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.def_modules.models import DefEntityType, DefInterface # noqa: E501
-from container_service_extension.logger import NULL_LOGGER
-from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
-from container_service_extension.logger import SERVER_LOGGER
-import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.shared_constants import RequestMethod
 
 
@@ -19,44 +15,33 @@ class DefSchemaService():
     """Manages lifecycle of defined entity interfaces and entity types.
 
     TODO Add API version check at the appropriate place. This class needs to
-    be used if and only if vCD API version >= 35
+     be used if and only if vCD API version >= 35
     """
 
-    def __init__(self, sysadmin_client, log_wire=True):
-        vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
-        self._sysadmin_client: vcd_client.Client = sysadmin_client
-        self._cloudapi_client: CloudApiClient = None
-        self._session = self._sysadmin_client.get_vcloud_session()
+    def __init__(self, cloudapi_client: CloudApiClient):
+        if not cloudapi_client.is_sys_admin:
+            raise ValueError("Cloud API Client should be sysadmin.")
+        self._cloudapi_client = cloudapi_client
 
-        token = self._sysadmin_client.get_access_token()
-        is_jwt_token = True
-        if not token:
-            token = self._sysadmin_client.get_xvcloud_authorization_token()
-            is_jwt_token = False
-
-        wire_logger = NULL_LOGGER
-        if log_wire:
-            wire_logger = SERVER_CLOUDAPI_WIRE_LOGGER
-        self._cloudapi_client = CloudApiClient(
-            base_url=self._sysadmin_client.get_cloudapi_uri(),
-            token=token,
-            is_jwt_token=is_jwt_token,
-            api_version=self._sysadmin_client.get_api_version(),
-            logger_debug=SERVER_LOGGER,
-            logger_wire=wire_logger,
-            verify_ssl=self._sysadmin_client._verify_ssl_certs)
-
-    def list_interfaces(self) -> list:
+    def list_interfaces(self):
         """List defined entity interfaces.
 
-        :return: list of interfaces
-        :rtype: list
+        :return: Generator of interfaces
+        :rtype: Generator
         """
-        response_body = self._cloudapi_client.do_request(
-            method=RequestMethod.GET,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-            resource_url_relative_path=f"{CloudApiResource.INTERFACES}")
-        return [DefInterface(**value) for value in response_body['values']]
+        page_num = 0
+        while True:
+            page_num += 1
+            response_body = self._cloudapi_client.do_request(
+                method=RequestMethod.GET,
+                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+                resource_url_relative_path=f"{CloudApiResource.INTERFACES}?"
+                f"page={page_num}")
+            if len(response_body['values']) > 0:
+                for interface in response_body['values']:
+                    yield DefInterface(**interface)
+            else:
+                break
 
     def get_interface(self, id: str) -> DefInterface:
         """Get the interface given an id.
@@ -82,7 +67,7 @@ class DefSchemaService():
             method=RequestMethod.POST,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.INTERFACES}",
-            payload=interface._asdict())
+            payload=asdict(interface))
         return DefInterface(**response_body)
 
     def update_interface(self, interface: DefInterface) -> DefInterface:
@@ -99,7 +84,7 @@ class DefSchemaService():
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.INTERFACES}/"
             f"{interface.id}",
-            payload=interface._asdict())
+            payload=asdict(interface))
         return DefInterface(**response_body)
 
     def delete_interface(self, id: str) -> None:
@@ -124,7 +109,7 @@ class DefSchemaService():
             method=RequestMethod.POST,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}",
-            payload=entity_type._asdict())
+            payload=asdict(entity_type))
         return DefEntityType(**response_body)
 
     def get_entity_type(self, id: str) -> DefEntityType:
@@ -140,17 +125,25 @@ class DefSchemaService():
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/{id}")
         return DefEntityType(**response_body)
 
-    def list_entity_types(self) -> list:
+    def list_entity_types(self):
         """List Entity types.
 
-        :return: List of entity types
-        :rtype: list of DefEntityType
+        :return: Generator of entity types
+        :rtype: Generator[DefEntityType]
         """
-        response_body = self._cloudapi_client.do_request(
-            method=RequestMethod.GET,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-            resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}")
-        return [DefEntityType(**value) for value in response_body['values']]
+        page_num = 0
+        while True:
+            page_num += 1
+            response_body = self._cloudapi_client.do_request(
+                method=RequestMethod.GET,
+                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+                resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}?"
+                f"page={page_num}")
+            if len(response_body['values']) > 0:
+                for entityType in response_body['values']:
+                    yield DefEntityType(**entityType)
+            else:
+                break
 
     def update_entity_type(self, entity_type: DefEntityType) -> DefEntityType:
         """Update the entity type.
@@ -167,7 +160,7 @@ class DefSchemaService():
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/"
             f"{entity_type.id}",
-            payload=entity_type._asdict())
+            payload=asdict(entity_type))
         return DefEntityType(**response_body)
 
     def delete_entity_type(self, id: str) -> None:

@@ -56,7 +56,8 @@ class RequestContext:
                 api_version=self.client.get_api_version(),
                 logger_debug=logger.SERVER_LOGGER,
                 logger_wire=logger_wire,
-                verify_ssl=self.client._verify_ssl_certs)
+                verify_ssl=self.client._verify_ssl_certs,
+                is_sys_admin=self.client.is_sysadmin())
         return self._cloudapi_client
 
     @property
