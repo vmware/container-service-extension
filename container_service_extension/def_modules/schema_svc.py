@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from dataclasses import asdict
-from typing import List
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0 # noqa: E501

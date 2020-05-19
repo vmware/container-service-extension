@@ -80,4 +80,3 @@ class DefEntity:
     entityType: str = None
     externalId: str = None
     state: str = None
-

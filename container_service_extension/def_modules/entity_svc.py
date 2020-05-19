@@ -50,7 +50,8 @@ class DefEntityService():
             response_body = self._cloudapi_client.do_request(
                 method=RequestMethod.GET,
                 cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-                resource_url_relative_path=f"{CloudApiResource.ENTITIES}?page={page_num}")
+                resource_url_relative_path=f"{CloudApiResource.ENTITIES}?"
+                f"page={page_num}")
             if len(response_body['values']) > 0:
                 for entity in response_body['values']:
                     yield DefEntity(**entity)
