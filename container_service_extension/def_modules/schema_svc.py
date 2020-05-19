@@ -24,17 +24,25 @@ class DefSchemaService():
             raise ValueError("Cloud API Client should be sysadmin.")
         self._cloudapi_client = cloudapi_client
 
-    def list_interfaces(self) -> List[DefInterface]:
+    def list_interfaces(self):
         """List defined entity interfaces.
 
-        :return: list of interfaces
-        :rtype: list
+        :return: Generator of interfaces
+        :rtype: Generator
         """
-        response_body = self._cloudapi_client.do_request(
-            method=RequestMethod.GET,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-            resource_url_relative_path=f"{CloudApiResource.INTERFACES}")
-        return [DefInterface(**value) for value in response_body['values']]
+        page_num = 0
+        while True:
+            page_num += 1
+            response_body = self._cloudapi_client.do_request(
+                method=RequestMethod.GET,
+                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+                resource_url_relative_path=f"{CloudApiResource.INTERFACES}?"
+                f"page={page_num}")
+            if len(response_body['values']) > 0:
+                for interface in response_body['values']:
+                    yield DefInterface(**interface)
+            else:
+                break
 
     def get_interface(self, id: str) -> DefInterface:
         """Get the interface given an id.
@@ -118,17 +126,25 @@ class DefSchemaService():
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/{id}")
         return DefEntityType(**response_body)
 
-    def list_entity_types(self) -> List[DefEntityType]:
+    def list_entity_types(self):
         """List Entity types.
 
-        :return: List of entity types
-        :rtype: list of DefEntityType
+        :return: Generator of entity types
+        :rtype: Generator[DefEntityType]
         """
-        response_body = self._cloudapi_client.do_request(
-            method=RequestMethod.GET,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-            resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}")
-        return [DefEntityType(**value) for value in response_body['values']]
+        page_num = 0
+        while True:
+            page_num += 1
+            response_body = self._cloudapi_client.do_request(
+                method=RequestMethod.GET,
+                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+                resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}?"
+                f"page={page_num}")
+            if len(response_body['values']) > 0:
+                for entityType in response_body['values']:
+                    yield DefEntityType(**entityType)
+            else:
+                break
 
     def update_entity_type(self, entity_type: DefEntityType) -> DefEntityType:
         """Update the entity type.

@@ -38,20 +38,26 @@ class DefEntityService():
             f"{entity_type_id}",
             payload=asdict(entity))
 
-    def list_entities(self) -> List[DefEntity]:
+    def list_entities(self):
         """List all defined entities of all entity types.
 
-        :return: list of defined entities
-        :rtype: List[DefEntity]
+        :return: Generator of defined entities
+        :rtype: Generator[DefEntity]
         """
-        response_body = self._cloudapi_client.do_request(
-            method=RequestMethod.GET,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-            resource_url_relative_path=f"{CloudApiResource.ENTITIES}")
-        return [DefEntity(**value) for value in response_body['values']]
+        page_num = 0
+        while True:
+            page_num += 1
+            response_body = self._cloudapi_client.do_request(
+                method=RequestMethod.GET,
+                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+                resource_url_relative_path=f"{CloudApiResource.ENTITIES}?page={page_num}")
+            if len(response_body['values']) > 0:
+                for entity in response_body['values']:
+                    yield DefEntity(**entity)
+            else:
+                break
 
-    def list_entities_by_interface(self, vendor: str, nss: str, version: str)\
-            -> List[DefEntity]:
+    def list_entities_by_interface(self, vendor: str, nss: str, version: str):
         """List entities of a given interface.
 
         An interface is uniquely identified by properties vendor, nss and
@@ -60,17 +66,25 @@ class DefEntityService():
         :param str vendor: Vendor of the interface
         :param str nss: nss of the interface
         :param str version: version of the interface
-        :return: List of entities of that interface type
-        :rtype: List[DefEntity]
+        :return: Generator of entities of that interface type
+        :rtype: Generator[DefEntity]
         """
         # TODO Yet to be verified. Waiting for the build from Extensibility
         #  team.
-        response_body = self._cloudapi_client.do_request(
-            method=RequestMethod.GET,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-            resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
-            f"{CloudApiResource.INTERFACES}/{vendor}/{nss}/{version}")
-        return [DefEntity(**value) for value in response_body['values']]
+        page_num = 0
+        while True:
+            page_num += 1
+            response_body = self._cloudapi_client.do_request(
+                method=RequestMethod.GET,
+                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+                resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
+                f"{CloudApiResource.INTERFACES}/{vendor}/{nss}/{version}?"
+                f"page={page_num}")
+            if len(response_body['values']) > 0:
+                for entity in response_body['values']:
+                    yield DefEntity(**entity)
+            else:
+                break
 
     def list_entities_by_entity_type(self, vendor: str, nss: str,
                                      version: str) -> List[DefEntity]:
@@ -87,12 +101,19 @@ class DefEntityService():
         """
         # TODO Yet to be verified. Waiting for the build from
         #  Extensibility team.
-        response_body = self._cloudapi_client.do_request(
-            method=RequestMethod.GET,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-            resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
-            f"{vendor}/{nss}/{version}")
-        return [DefEntity(**value) for value in response_body['values']]
+        page_num = 0
+        while True:
+            page_num += 1
+            response_body = self._cloudapi_client.do_request(
+                method=RequestMethod.GET,
+                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+                resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
+                f"{vendor}/{nss}/{version}?page={page_num}")
+            if len(response_body['values']) > 0:
+                for entity in response_body['values']:
+                    yield DefEntity(**entity)
+            else:
+                break
 
     def update_entity(self, entity_id: str, entity: DefEntity) -> DefEntity:
         """Update entity instance.
