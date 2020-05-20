@@ -13,6 +13,7 @@ import pyvcloud.vcd.vapp as vcd_vapp
 from pyvcloud.vcd.vdc import VDC
 import requests
 
+import container_service_extension.cloudapi.cloudapi_client as cloudApiClient
 from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER
@@ -437,3 +438,21 @@ def get_all_vapps_in_ovdc(client, ovdc_id):
         vapps.append(vapp)
 
     return vapps
+
+
+def get_cloudapi_client_from_vcd_client(client: vcd_client.Client,
+                                        logger_debug=NULL_LOGGER,
+                                        logger_wire=NULL_LOGGER):
+    token = client.get_access_token()
+    is_jwt = True
+    if not token:
+        token = client.get_xvcloud_authorization_token()
+        is_jwt = False
+    return cloudApiClient.CloudApiClient(base_url=client.get_cloudapi_uri(),
+                                         token=token,
+                                         is_jwt_token=is_jwt,
+                                         api_version=client.get_api_version(),
+                                         logger_debug=logger_debug,
+                                         logger_wire=logger_wire,
+                                         verify_ssl=client._verify_ssl_certs,
+                                         is_sys_admin=client.is_sysadmin())
