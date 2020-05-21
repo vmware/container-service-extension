@@ -594,7 +594,7 @@ def _register_def_entity_interface_and_type(client: Client,
         INSTALL_LOGGER.debug(msg)
 
         native_cluster_entity_type = def_models.DefEntityType(
-            name='nativeCluster',
+            name='nativeClusterEntityType',
             description='',
             vendor=def_models.DEF_CSE_VENDOR,
             nss=def_models.DEF_NATIVE_ENTITY_TYPE_NSS,
@@ -607,7 +607,7 @@ def _register_def_entity_interface_and_type(client: Client,
             def_service_client.get_entity_type(native_cluster_entity_type.get_id()) # noqa: E501
             msg = "DEF entity type already exists. Skipping DEF entity creation" # noqa: E501
         except HTTPError:
-            # TODO handle this part only if the interface was not found
+            # TODO handle this part only if the entity type was not found
             native_cluster_entity_type = def_service_client.create_entity_type(native_cluster_entity_type) # noqa: E501
             msg = "Successfully registered DEF schema"
         msg_update_callback.general(msg)
