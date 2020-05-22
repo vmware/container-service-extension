@@ -24,6 +24,8 @@ import container_service_extension.compute_policy_manager \
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.consumer import MessageConsumer
+import container_service_extension.def_modules.models as def_models
+import container_service_extension.def_modules.schema_svc as def_schema_service
 import container_service_extension.exceptions as e
 import container_service_extension.local_template_manager as ltm
 import container_service_extension.logger as logger
@@ -192,6 +194,9 @@ class Service(object, metaclass=Singleton):
 
         populate_vsphere_list(self.config['vcs'])
 
+        # Load def entity-type and interface
+        self._load_def_schema(msg_update_callback=msg_update_callback)
+
         # Read k8s catalog definition from catalog item metadata and append
         # the same to to server run-time config
         self._load_template_definition_from_catalog(
@@ -290,6 +295,48 @@ class Service(object, metaclass=Singleton):
 
         self._state = ServerState.STOPPED
         logger.SERVER_LOGGER.info("Done")
+
+    def _load_def_schema(self, msg_update_callback=utils.NullPrinter()):
+        sysadmin_client = None
+        try:
+            sysadmin_client = vcd_utils.get_sys_admin_client()
+            if float(sysadmin_client.get_api_version()) < def_models.DEF_API_MIN_VERSION: # noqa: E501
+                msg = "Skipping initialization of DEF entity type and interface" # noqa: E501
+                msg_update_callback.info(msg)
+                logger.SERVER_LOGGER.debug(msg)
+                return
+            logger_wire = logger.NULL_LOGGER
+            if utils.str_to_bool(utils.str_to_bool(self.config['service'].get('log_wire', False))): # noqa: E501
+                logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
+
+            cloudapi_client = \
+                vcd_utils.get_cloudapi_client_from_vcd_client(sysadmin_client,
+                                                              logger.SERVER_LOGGER, # noqa: E501
+                                                              logger_wire)
+            def_service_client = def_schema_service.DefSchemaService(cloudapi_client) # noqa: E501
+            def_api_constants = def_models.DEF_VERSION_TO_CONSTANTS_MAP[float(sysadmin_client.get_api_version())] # noqa: E501
+            def_constant_keys = def_models.DefConstantKeys
+            interface = def_models.DefInterface(
+                vendor=def_api_constants[def_constant_keys.VENDOR],
+                nss=def_api_constants[def_constant_keys.INTERFACE_NSS],
+                version=def_api_constants[def_constant_keys.INTERFACE_VERSION])
+            entity_type = def_models.DefEntityType(
+                vendor=def_api_constants[def_constant_keys.VENDOR],
+                nss=def_api_constants[def_constant_keys.ENTITY_TYPE_NSS],
+                version=def_api_constants[def_constant_keys.ENTITY_TYPE_VERSION]) # noqa: E501
+            def_models.NativeClusterEntityType = def_service_client.get_interface(interface.get_id()) # noqa: E501
+            def_models.NativeClusterInterface = def_service_client.get_entity_type(entity_type.get_id()) # noqa: E501
+            msg = "Successfully loaded def schema"
+            msg_update_callback.general(msg)
+            logger.SERVER_LOGGER.debug(msg)
+        except Exception as e:
+            msg = f"Failed to load def schema {str(e)}"
+            msg_update_callback.error(e)
+            logger.SERVER_LOGGER.error(e)
+            raise(e)
+        finally:
+            if sysadmin_client:
+                sysadmin_client.logout()
 
     def _load_template_definition_from_catalog(self,
                                                msg_update_callback=utils.NullPrinter()): # noqa: E501

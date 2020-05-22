@@ -2,7 +2,6 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 import json
-from pathlib import Path
 
 import pika
 from pyvcloud.vcd.api_extension import APIExtension
@@ -51,10 +50,6 @@ from container_service_extension.telemetry.telemetry_utils import \
 from container_service_extension.template_builder import TemplateBuilder
 import container_service_extension.utils as utils
 from container_service_extension.vsphere_utils import populate_vsphere_list
-
-DEF_SCHEMA_VERSION = '1.0.0'
-DEF_SCHEMA_FILEPATH = Path.home() / \
-    f".cse-def-schema-{DEF_SCHEMA_VERSION.replace('.', '_')}.json"
 
 
 def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
@@ -277,10 +272,11 @@ def install_cse(config_file_name, skip_template_creation, force_update,
         _register_cse(client, amqp['routing_key'], amqp['exchange'],
                       msg_update_callback=msg_update_callback)
 
-        # register cse DEF schema on VCD
-        _register_def_entity_interface_and_type(client,
-                                                msg_update_callback,
-                                                log_wire)
+        # register cse def schema on VCD
+        # schema should be located at
+        # ~/.cse-schema/api-v<API VERSION>/schema.json
+        _register_def_schema(client, msg_update_callback=msg_update_callback,
+                             log_wire=log_wire)
 
         # Since we use CSE extension id as our telemetry instance_id, the
         # validated config won't have the instance_id yet. Now that CSE has
@@ -552,17 +548,22 @@ def _create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
     INSTALL_LOGGER.info(msg)
 
 
-def _register_def_entity_interface_and_type(client: Client,
-                                            msg_update_callback=utils.NullPrinter(), # noqa: E501
-                                            log_wire=False):
-    """Register the schema present in ~/.cse-schema with vcd.
+def _register_def_schema(client: Client,
+                         msg_update_callback=utils.NullPrinter(),
+                         log_wire=False):
+    """Register def interface and def entity type.
 
     :param pyvcloud.vcd.client.Client client:
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     :param bool log_wire: wire logging enabled
-
-    TODO check for API version >= 35.0
     """
+    msg_update_callback.info("Using api version:"
+                             f" {float(client.get_api_version())}")
+    if float(client.get_api_version()) < def_models.DEF_API_MIN_VERSION:
+        msg = "Skipping def schema registration"
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.debug(msg)
+        return
     msg = "Registering DEF schema"
     msg_update_callback.info(msg)
     INSTALL_LOGGER.debug(msg)
@@ -572,15 +573,16 @@ def _register_def_entity_interface_and_type(client: Client,
             client=client,
             logger_debug=INSTALL_LOGGER,
             logger_wire=logger_wire)
+
+    def_constants = def_models.DEF_VERSION_TO_CONSTANTS_MAP[float(client.get_api_version())] # noqa: E501
+    def_constants_keys = def_models.DefConstantKeys
     try:
-        # TODO check if entity type and interface already exists
-        # TODO add logger to the call
         def_service_client = def_schema_service.DefSchemaService(cloudapi_client) # noqa: E501
         native_cluster_interface = def_models.DefInterface(
-            name='nativeClusterInterface',
-            vendor=def_models.DEF_CSE_VENDOR,
-            nss=def_models.DEF_NATIVE_INTERFACE_NSS,
-            version=def_models.DEF_NATIVE_INTERFACE_VERSION,
+            name=def_constants[def_constants_keys.INTERFACE_NAME],
+            vendor=def_constants[def_constants_keys.VENDOR],
+            nss=def_constants[def_constants_keys.INTERFACE_NSS],
+            version=def_constants[def_constants_keys.INTERFACE_VERSION],
             readonly=False)
         msg = ""
         try:
@@ -594,26 +596,26 @@ def _register_def_entity_interface_and_type(client: Client,
         INSTALL_LOGGER.debug(msg)
 
         native_cluster_entity_type = def_models.DefEntityType(
-            name='nativeClusterEntityType',
+            name=def_constants[def_constants_keys.ENTITY_TYPE_NAME],
             description='',
-            vendor=def_models.DEF_CSE_VENDOR,
-            nss=def_models.DEF_NATIVE_ENTITY_TYPE_NSS,
-            version=def_models.DEF_NATIVE_ENTITY_TYPE_VERSION,
-            schema=json.load(open(DEF_SCHEMA_FILEPATH)),
+            vendor=def_constants[def_constants_keys.VENDOR],
+            nss=def_constants[def_constants_keys.ENTITY_TYPE_NSS],
+            version=def_constants[def_constants_keys.ENTITY_TYPE_VERSION],
+            schema=json.load(open(def_constants[def_constants_keys.ENTITY_TYPE_SCHEMA_FILEPATH])), # noqa: E501
             interfaces=[native_cluster_interface.get_id()],
             readonly=False)
         msg = ""
         try:
             def_service_client.get_entity_type(native_cluster_entity_type.get_id()) # noqa: E501
-            msg = "DEF entity type already exists. Skipping DEF entity creation" # noqa: E501
+            msg = "def entity-type already exists. Skipping def entity-type creation" # noqa: E501
         except HTTPError:
             # TODO handle this part only if the entity type was not found
             native_cluster_entity_type = def_service_client.create_entity_type(native_cluster_entity_type) # noqa: E501
-            msg = "Successfully registered DEF schema"
+            msg = "Successfully registered def entity-type"
         msg_update_callback.general(msg)
         INSTALL_LOGGER.debug(msg)
     except Exception as e:
-        msg = f"Error occured while registering DEF schema: {str(e)}"
+        msg = f"Error occured while registering def schema: {str(e)}"
         msg_update_callback.error(msg)
         INSTALL_LOGGER.error(msg)
 
