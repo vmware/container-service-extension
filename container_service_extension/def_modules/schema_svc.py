@@ -7,7 +7,8 @@ from dataclasses import asdict
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0 # noqa: E501
 from container_service_extension.cloudapi.constants import CloudApiResource
-from container_service_extension.def_modules.models import DefEntityType, DefInterface # noqa: E501
+from container_service_extension.def_modules.utils import DefEntityType, DefInterface # noqa: E501
+from container_service_extension.def_modules.utils import raise_error_if_def_not_supported # noqa: E501
 from container_service_extension.shared_constants import RequestMethod
 
 
@@ -21,6 +22,7 @@ class DefSchemaService():
     def __init__(self, cloudapi_client: CloudApiClient):
         if not cloudapi_client.is_sys_admin:
             raise ValueError("Cloud API Client should be sysadmin.")
+        raise_error_if_def_not_supported(cloudapi_client)
         self._cloudapi_client = cloudapi_client
 
     def list_interfaces(self):

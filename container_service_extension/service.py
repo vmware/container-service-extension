@@ -24,8 +24,14 @@ import container_service_extension.compute_policy_manager \
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.consumer import MessageConsumer
-import container_service_extension.def_modules.models as def_models
-import container_service_extension.def_modules.schema_svc as def_schema_service
+from container_service_extension.def_modules.schema_svc import DefSchemaService
+from container_service_extension.def_modules.utils import DefEntityType
+from container_service_extension.def_modules.utils import DefInterface
+from container_service_extension.def_modules.utils import DefKeys
+from container_service_extension.def_modules.utils import DefNotSupportedException # noqa: E501
+from container_service_extension.def_modules.utils import generate_entity_type_id # noqa: E501
+from container_service_extension.def_modules.utils import generate_interface_id
+from container_service_extension.def_modules.utils import MAP_API_VERSION_TO_KEYS # noqa: E501
 import container_service_extension.exceptions as e
 import container_service_extension.local_template_manager as ltm
 import container_service_extension.logger as logger
@@ -92,6 +98,8 @@ class Service(object, metaclass=Singleton):
         self.threads = []
         self.pks_cache = None
         self._state = ServerState.STOPPED
+        self._nativeInterface: DefInterface = None
+        self._nativeEntityType: DefEntityType = None
 
     def get_service_config(self):
         return self.config
@@ -128,6 +136,12 @@ class Service(object, metaclass=Singleton):
         else:
             del result['python']
         return result
+
+    def get_native_cluster_interface(self):
+        return self._nativeInterface
+
+    def get_native_cluster_entity_type(self):
+        return self._nativeEntityType
 
     @classmethod
     def version(cls):
@@ -297,14 +311,17 @@ class Service(object, metaclass=Singleton):
         logger.SERVER_LOGGER.info("Done")
 
     def _load_def_schema(self, msg_update_callback=utils.NullPrinter()):
+        """Load cluster interface and cluster entity type to global context.
+
+        If defined entity framework is supported by vCD api version, load
+        defined entity interface and defined entity type registered during
+        server install
+
+        :param utils.ConsoleMessagePrinter msg_update_callback
+        """
         sysadmin_client = None
         try:
             sysadmin_client = vcd_utils.get_sys_admin_client()
-            if float(sysadmin_client.get_api_version()) < def_models.DEF_API_MIN_VERSION: # noqa: E501
-                msg = "Skipping initialization of DEF entity type and interface" # noqa: E501
-                msg_update_callback.info(msg)
-                logger.SERVER_LOGGER.debug(msg)
-                return
             logger_wire = logger.NULL_LOGGER
             if utils.str_to_bool(utils.str_to_bool(self.config['service'].get('log_wire', False))): # noqa: E501
                 logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
@@ -313,24 +330,26 @@ class Service(object, metaclass=Singleton):
                 vcd_utils.get_cloudapi_client_from_vcd_client(sysadmin_client,
                                                               logger.SERVER_LOGGER, # noqa: E501
                                                               logger_wire)
-            def_service_client = def_schema_service.DefSchemaService(cloudapi_client) # noqa: E501
-            def_api_constants = def_models.DEF_VERSION_TO_CONSTANTS_MAP[float(sysadmin_client.get_api_version())] # noqa: E501
-            def_constant_keys = def_models.DefConstantKeys
-            interface = def_models.DefInterface(
-                vendor=def_api_constants[def_constant_keys.VENDOR],
-                nss=def_api_constants[def_constant_keys.INTERFACE_NSS],
-                version=def_api_constants[def_constant_keys.INTERFACE_VERSION])
-            entity_type = def_models.DefEntityType(
-                vendor=def_api_constants[def_constant_keys.VENDOR],
-                nss=def_api_constants[def_constant_keys.ENTITY_TYPE_NSS],
-                version=def_api_constants[def_constant_keys.ENTITY_TYPE_VERSION]) # noqa: E501
-            def_models.NativeClusterEntityType = def_service_client.get_interface(interface.get_id()) # noqa: E501
-            def_models.NativeClusterInterface = def_service_client.get_entity_type(entity_type.get_id()) # noqa: E501
-            msg = "Successfully loaded def schema"
+            schema_svc = DefSchemaService(cloudapi_client)
+            keys_map = MAP_API_VERSION_TO_KEYS[float(sysadmin_client.get_api_version())] # noqa: E501
+            interface_id = generate_interface_id(vendor=keys_map[DefKeys.VENDOR], # noqa: E501
+                                                 nss=keys_map[DefKeys.INTERFACE_NSS], # noqa: E501
+                                                 version=keys_map[DefKeys.INTERFACE_VERSION]) # noqa: E501
+            entity_type_id = generate_entity_type_id(vendor=keys_map[DefKeys.VENDOR], # noqa: E501
+                                                     nss=keys_map[DefKeys.ENTITY_TYPE_NSS], # noqa: E501
+                                                     version=keys_map[DefKeys.ENTITY_TYPE_VERSION]) # noqa: E501
+            self._nativeInterface = schema_svc.get_interface(interface_id)
+            self._nativeEntityType = schema_svc.get_entity_type(entity_type_id)
+            msg = "Successfully loaded defined entity schema to global context"
             msg_update_callback.general(msg)
             logger.SERVER_LOGGER.debug(msg)
+        except DefNotSupportedException:
+            msg = "Skipping initialization of defined entity type" \
+                  " and defined entity interface"
+            msg_update_callback.info(msg)
+            logger.SERVER_LOGGER.debug(msg)
         except Exception as e:
-            msg = f"Failed to load def schema {str(e)}"
+            msg = f"Failed to load defined entity schema to global context: {str(e)}" # noqa: E501
             msg_update_callback.error(e)
             logger.SERVER_LOGGER.error(e)
             raise(e)

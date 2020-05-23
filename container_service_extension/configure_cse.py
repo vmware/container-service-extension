@@ -13,8 +13,12 @@ from pyvcloud.vcd.org import Org
 from requests.exceptions import HTTPError
 
 from container_service_extension.config_validator import get_validated_config
-import container_service_extension.def_modules.models as def_models
-import container_service_extension.def_modules.schema_svc as def_schema_service
+from container_service_extension.def_modules.schema_svc import DefSchemaService
+from container_service_extension.def_modules.utils import DefEntityType
+from container_service_extension.def_modules.utils import DefInterface
+from container_service_extension.def_modules.utils import DefKeys
+from container_service_extension.def_modules.utils import DefNotSupportedException # noqa: E501
+from container_service_extension.def_modules.utils import MAP_API_VERSION_TO_KEYS # noqa: E501
 from container_service_extension.exceptions import AmqpError
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import INSTALL_LOGGER
@@ -189,8 +193,8 @@ def install_cse(config_file_name, skip_template_creation, force_update,
     """Handle logistics for CSE installation.
 
     Handles decision making for configuring AMQP exchange/settings,
-    schema registration, extension registration, catalog setup, and
-    template creation.
+    defined entity schema registration for vCD api version >= 35,
+    extension registration, catalog setup and template creation.
 
     Also records telemetry data on installation details.
 
@@ -551,73 +555,74 @@ def _create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
 def _register_def_schema(client: Client,
                          msg_update_callback=utils.NullPrinter(),
                          log_wire=False):
-    """Register def interface and def entity type.
+    """Register defined entity interface and defined entity type.
+
+    If vCD api version is >= 35, register the vCD api version based
+    defined entity interface and defined entity type. Read the schema present
+    in the location dictated by api version to register the
+    defined entity type.
 
     :param pyvcloud.vcd.client.Client client:
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     :param bool log_wire: wire logging enabled
     """
-    msg_update_callback.info("Using api version:"
-                             f" {float(client.get_api_version())}")
-    if float(client.get_api_version()) < def_models.DEF_API_MIN_VERSION:
-        msg = "Skipping def schema registration"
-        msg_update_callback.general(msg)
-        INSTALL_LOGGER.debug(msg)
-        return
-    msg = "Registering DEF schema"
+    msg = "Registering defined entity schema"
     msg_update_callback.info(msg)
     INSTALL_LOGGER.debug(msg)
     logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
-    cloudapi_client = \
-        vcd_utils.get_cloudapi_client_from_vcd_client(
-            client=client,
-            logger_debug=INSTALL_LOGGER,
-            logger_wire=logger_wire)
+    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(client=client, # noqa: E501
+                                                                    logger_debug=INSTALL_LOGGER, # noqa: E501
+                                                                    logger_wire=logger_wire) # noqa: E501
 
-    def_constants = def_models.DEF_VERSION_TO_CONSTANTS_MAP[float(client.get_api_version())] # noqa: E501
-    def_constants_keys = def_models.DefConstantKeys
     try:
-        def_service_client = def_schema_service.DefSchemaService(cloudapi_client) # noqa: E501
-        native_cluster_interface = def_models.DefInterface(
-            name=def_constants[def_constants_keys.INTERFACE_NAME],
-            vendor=def_constants[def_constants_keys.VENDOR],
-            nss=def_constants[def_constants_keys.INTERFACE_NSS],
-            version=def_constants[def_constants_keys.INTERFACE_VERSION],
-            readonly=False)
+        schema_svc = DefSchemaService(cloudapi_client)
+        keys_map = MAP_API_VERSION_TO_KEYS[float(client.get_api_version())]
+        native_interface = DefInterface(name=keys_map[DefKeys.INTERFACE_NAME],
+                                        vendor=keys_map[DefKeys.VENDOR],
+                                        nss=keys_map[DefKeys.INTERFACE_NSS],
+                                        version=keys_map[DefKeys.INTERFACE_VERSION], # noqa: E501
+                                        readonly=False)
         msg = ""
         try:
-            def_service_client.get_interface(native_cluster_interface.get_id())
-            msg = "DEF interface already exists. Skipping DEF interface creation" # noqa: E501
+            schema_svc.get_interface(native_interface.get_id())
+            msg = "defined entity interface already exists." \
+                  " Skipping defined entity interface creation"
         except HTTPError:
             # TODO handle this part only if the interface was not found
-            native_cluster_interface = def_service_client.create_interface(native_cluster_interface) # noqa: E501
-            msg = "Successfully created DEF interface"
+            native_interface = schema_svc.create_interface(native_interface)
+            msg = "Successfully created defined enity interface"
         msg_update_callback.general(msg)
         INSTALL_LOGGER.debug(msg)
 
-        native_cluster_entity_type = def_models.DefEntityType(
-            name=def_constants[def_constants_keys.ENTITY_TYPE_NAME],
-            description='',
-            vendor=def_constants[def_constants_keys.VENDOR],
-            nss=def_constants[def_constants_keys.ENTITY_TYPE_NSS],
-            version=def_constants[def_constants_keys.ENTITY_TYPE_VERSION],
-            schema=json.load(open(def_constants[def_constants_keys.ENTITY_TYPE_SCHEMA_FILEPATH])), # noqa: E501
-            interfaces=[native_cluster_interface.get_id()],
-            readonly=False)
+        native_entity_type = DefEntityType(name=keys_map[DefKeys.ENTITY_TYPE_NAME], # noqa: E501
+                                           description='',
+                                           vendor=keys_map[DefKeys.VENDOR],
+                                           nss=keys_map[DefKeys.ENTITY_TYPE_NSS], # noqa: E501
+                                           version=keys_map[DefKeys.ENTITY_TYPE_VERSION], # noqa: E501
+                                           schema=json.load(open(keys_map[DefKeys.ENTITY_TYPE_SCHEMA_FILEPATH])), # noqa: E501
+                                           interfaces=[native_interface.get_id()], # noqa: E501
+                                           readonly=False)
         msg = ""
         try:
-            def_service_client.get_entity_type(native_cluster_entity_type.get_id()) # noqa: E501
-            msg = "def entity-type already exists. Skipping def entity-type creation" # noqa: E501
+            schema_svc.get_entity_type(native_entity_type.get_id())
+            msg = "defined entity type already exists." \
+                  " Skipping defined entity type creation"
         except HTTPError:
             # TODO handle this part only if the entity type was not found
-            native_cluster_entity_type = def_service_client.create_entity_type(native_cluster_entity_type) # noqa: E501
-            msg = "Successfully registered def entity-type"
+            native_entity_type = schema_svc.create_entity_type(native_entity_type) # noqa: E501
+            msg = "Successfully registered defined entity type"
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.debug(msg)
+    except DefNotSupportedException:
+        msg = "Skipping defined entity type and defined entity interface" \
+              " registration"
         msg_update_callback.general(msg)
         INSTALL_LOGGER.debug(msg)
     except Exception as e:
-        msg = f"Error occured while registering def schema: {str(e)}"
+        msg = f"Error occured while registering defined enitty schema: {str(e)}" # noqa: E501
         msg_update_callback.error(msg)
         INSTALL_LOGGER.error(msg)
+        raise(e)
 
 
 def _register_cse(client, routing_key, exchange,
