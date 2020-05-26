@@ -16,9 +16,10 @@ from container_service_extension.config_validator import get_validated_config
 from container_service_extension.def_modules.schema_svc import DefSchemaService
 from container_service_extension.def_modules.utils import DefEntityType
 from container_service_extension.def_modules.utils import DefInterface
-from container_service_extension.def_modules.utils import DefKeys
+from container_service_extension.def_modules.utils import DefKey
 from container_service_extension.def_modules.utils import DefNotSupportedException # noqa: E501
 from container_service_extension.def_modules.utils import MAP_API_VERSION_TO_KEYS # noqa: E501
+from container_service_extension.def_modules.utils import raise_error_if_def_not_supported # noqa: E501
 from container_service_extension.exceptions import AmqpError
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import INSTALL_LOGGER
@@ -573,14 +574,15 @@ def _register_def_schema(client: Client,
     cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(client=client, # noqa: E501
                                                                     logger_debug=INSTALL_LOGGER, # noqa: E501
                                                                     logger_wire=logger_wire) # noqa: E501
-
+    schema_file = None
     try:
+        raise_error_if_def_not_supported(cloudapi_client)
         schema_svc = DefSchemaService(cloudapi_client)
         keys_map = MAP_API_VERSION_TO_KEYS[float(client.get_api_version())]
-        native_interface = DefInterface(name=keys_map[DefKeys.INTERFACE_NAME],
-                                        vendor=keys_map[DefKeys.VENDOR],
-                                        nss=keys_map[DefKeys.INTERFACE_NSS],
-                                        version=keys_map[DefKeys.INTERFACE_VERSION], # noqa: E501
+        native_interface = DefInterface(name=keys_map[DefKey.INTERFACE_NAME],
+                                        vendor=keys_map[DefKey.VENDOR],
+                                        nss=keys_map[DefKey.INTERFACE_NSS],
+                                        version=keys_map[DefKey.INTERFACE_VERSION], # noqa: E501
                                         readonly=False)
         msg = ""
         try:
@@ -590,16 +592,16 @@ def _register_def_schema(client: Client,
         except HTTPError:
             # TODO handle this part only if the interface was not found
             native_interface = schema_svc.create_interface(native_interface)
-            msg = "Successfully created defined enity interface"
+            msg = "Successfully created defined entity interface"
         msg_update_callback.general(msg)
         INSTALL_LOGGER.debug(msg)
-
-        native_entity_type = DefEntityType(name=keys_map[DefKeys.ENTITY_TYPE_NAME], # noqa: E501
+        schema_file = open(keys_map[DefKey.ENTITY_TYPE_SCHEMA_FILEPATH])
+        native_entity_type = DefEntityType(name=keys_map[DefKey.ENTITY_TYPE_NAME], # noqa: E501
                                            description='',
-                                           vendor=keys_map[DefKeys.VENDOR],
-                                           nss=keys_map[DefKeys.ENTITY_TYPE_NSS], # noqa: E501
-                                           version=keys_map[DefKeys.ENTITY_TYPE_VERSION], # noqa: E501
-                                           schema=json.load(open(keys_map[DefKeys.ENTITY_TYPE_SCHEMA_FILEPATH])), # noqa: E501
+                                           vendor=keys_map[DefKey.VENDOR],
+                                           nss=keys_map[DefKey.ENTITY_TYPE_NSS], # noqa: E501
+                                           version=keys_map[DefKey.ENTITY_TYPE_VERSION], # noqa: E501
+                                           schema=json.load(schema_file),
                                            interfaces=[native_interface.get_id()], # noqa: E501
                                            readonly=False)
         msg = ""
@@ -619,10 +621,13 @@ def _register_def_schema(client: Client,
         msg_update_callback.general(msg)
         INSTALL_LOGGER.debug(msg)
     except Exception as e:
-        msg = f"Error occured while registering defined enitty schema: {str(e)}" # noqa: E501
+        msg = f"Error occured while registering defined entity schema: {str(e)}" # noqa: E501
         msg_update_callback.error(msg)
         INSTALL_LOGGER.error(msg)
         raise(e)
+    finally:
+        if schema_file:
+            schema_file.close()
 
 
 def _register_cse(client, routing_key, exchange,

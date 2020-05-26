@@ -27,11 +27,12 @@ from container_service_extension.consumer import MessageConsumer
 from container_service_extension.def_modules.schema_svc import DefSchemaService
 from container_service_extension.def_modules.utils import DefEntityType
 from container_service_extension.def_modules.utils import DefInterface
-from container_service_extension.def_modules.utils import DefKeys
+from container_service_extension.def_modules.utils import DefKey
 from container_service_extension.def_modules.utils import DefNotSupportedException # noqa: E501
 from container_service_extension.def_modules.utils import generate_entity_type_id # noqa: E501
 from container_service_extension.def_modules.utils import generate_interface_id
 from container_service_extension.def_modules.utils import MAP_API_VERSION_TO_KEYS # noqa: E501
+from container_service_extension.def_modules.utils import raise_error_if_def_not_supported # noqa: E501
 import container_service_extension.exceptions as e
 import container_service_extension.local_template_manager as ltm
 import container_service_extension.logger as logger
@@ -330,14 +331,15 @@ class Service(object, metaclass=Singleton):
                 vcd_utils.get_cloudapi_client_from_vcd_client(sysadmin_client,
                                                               logger.SERVER_LOGGER, # noqa: E501
                                                               logger_wire)
+            raise_error_if_def_not_supported(cloudapi_client)
             schema_svc = DefSchemaService(cloudapi_client)
             keys_map = MAP_API_VERSION_TO_KEYS[float(sysadmin_client.get_api_version())] # noqa: E501
-            interface_id = generate_interface_id(vendor=keys_map[DefKeys.VENDOR], # noqa: E501
-                                                 nss=keys_map[DefKeys.INTERFACE_NSS], # noqa: E501
-                                                 version=keys_map[DefKeys.INTERFACE_VERSION]) # noqa: E501
-            entity_type_id = generate_entity_type_id(vendor=keys_map[DefKeys.VENDOR], # noqa: E501
-                                                     nss=keys_map[DefKeys.ENTITY_TYPE_NSS], # noqa: E501
-                                                     version=keys_map[DefKeys.ENTITY_TYPE_VERSION]) # noqa: E501
+            interface_id = generate_interface_id(vendor=keys_map[DefKey.VENDOR], # noqa: E501
+                                                 nss=keys_map[DefKey.INTERFACE_NSS], # noqa: E501
+                                                 version=keys_map[DefKey.INTERFACE_VERSION]) # noqa: E501
+            entity_type_id = generate_entity_type_id(vendor=keys_map[DefKey.VENDOR], # noqa: E501
+                                                     nss=keys_map[DefKey.ENTITY_TYPE_NSS], # noqa: E501
+                                                     version=keys_map[DefKey.ENTITY_TYPE_VERSION]) # noqa: E501
             self._nativeInterface = schema_svc.get_interface(interface_id)
             self._nativeEntityType = schema_svc.get_entity_type(entity_type_id)
             msg = "Successfully loaded defined entity schema to global context"

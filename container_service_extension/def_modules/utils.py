@@ -25,7 +25,7 @@ DEF_SCHEMA_PATH_PREFIX = Path.home() / '.cse-def-schema'
 
 
 @unique
-class DefKeys(str, Enum):
+class DefKey(str, Enum):
     VENDOR = 'vendor'
     INTERFACE_NSS = 'interface_nss'
     INTERFACE_VERSION = 'interface_version'
@@ -38,15 +38,15 @@ class DefKeys(str, Enum):
 
 MAP_API_VERSION_TO_KEYS = {
     35.0: {
-        DefKeys.VENDOR: DEF_CSE_VENDOR,
-        DefKeys.INTERFACE_NSS: DEF_NATIVE_INTERFACE_NSS,
-        DefKeys.INTERFACE_VERSION: DEF_NATIVE_INTERFACE_VERSION,
-        DefKeys.INTERFACE_NAME: DEF_NATIVE_INTERFACE_NAME,
-        DefKeys.ENTITY_TYPE_NSS: DEF_NATIVE_ENTITY_TYPE_NSS,
-        DefKeys.ENTITY_TYPE_VERSION: DEF_NATIVE_ENTITY_TYPE_VERSION,
-        DefKeys.ENTITY_TYPE_NAME: DEF_NATIVE_ENTITY_TYPE_NAME,
-        DefKeys.ENTITY_TYPE_SCHEMA_FILEPATH: f"{DEF_SCHEMA_PATH_PREFIX}"
-                                             '/api-v35/schema.json'
+        DefKey.VENDOR: DEF_CSE_VENDOR,
+        DefKey.INTERFACE_NSS: DEF_NATIVE_INTERFACE_NSS,
+        DefKey.INTERFACE_VERSION: DEF_NATIVE_INTERFACE_VERSION,
+        DefKey.INTERFACE_NAME: DEF_NATIVE_INTERFACE_NAME,
+        DefKey.ENTITY_TYPE_NSS: DEF_NATIVE_ENTITY_TYPE_NSS,
+        DefKey.ENTITY_TYPE_VERSION: DEF_NATIVE_ENTITY_TYPE_VERSION,
+        DefKey.ENTITY_TYPE_NAME: DEF_NATIVE_ENTITY_TYPE_NAME,
+        DefKey.ENTITY_TYPE_SCHEMA_FILEPATH: f"{DEF_SCHEMA_PATH_PREFIX}"
+                                            '/api-v35/schema.json'
     }
 }
 
@@ -127,7 +127,9 @@ def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
     :param cloudapi_client CloudApiClient
     """
     if float(cloudapi_client.get_api_version()) < DEF_API_MIN_VERSION:
-        raise DefNotSupportedException("Defined entity framework is not supported") # noqa: E501
+        raise DefNotSupportedException("Defined entity framework is"
+                                       " not supported for"
+                                       f" {cloudapi_client.get_api_version()}")
 
 
 def get_registered_def_interface():
