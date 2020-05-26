@@ -11,6 +11,7 @@ from container_service_extension.exception_handler import handle_exception
 import container_service_extension.exceptions as e
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.request_context as ctx
+import container_service_extension.request_handlers.def_cluster_handler as def_handler
 import container_service_extension.request_handlers.native_cluster_handler as native_cluster_handler # noqa: E501
 import container_service_extension.request_handlers.ovdc_handler as ovdc_handler # noqa: E501
 import container_service_extension.request_handlers.pks_cluster_handler as pks_cluster_handler  # noqa: E501
@@ -98,7 +99,12 @@ def process_request(body):
     from container_service_extension.service import Service
     LOGGER.debug(f"Incoming request body: {json.dumps(body)}")
 
-    url_data = _get_url_data(body['method'], body['requestUri'])
+    url = body['requestUri']
+    tokens = url.split('/')
+    if tokens[3] =='def':
+        is_def_request = True
+
+    url_data = _get_url_data(body['method'], body['requestUri'], is_def_request)
     operation = url_data[_OPERATION_KEY]
 
     # check if server is disabled
@@ -138,7 +144,10 @@ def process_request(body):
     context = ctx.RequestContext(tenant_auth_token, is_jwt=is_jwt_token,
                                  request_id=body['id'])
     try:
-        body_content = OPERATION_TO_HANDLER[operation](data, context)
+        if is_def_request:
+            body_content = def_handler.invoke(data, context)
+        else:
+            body_content = OPERATION_TO_HANDLER[operation](data, context)
     finally:
         if not context.is_async:
             context.end()
@@ -153,7 +162,7 @@ def process_request(body):
     return response
 
 
-def _get_url_data(method, url):
+def _get_url_data(method, url, is_def_request=False):
     """Parse url and http method to get desired CSE operation and url data.
 
     Url is processed like a tree to find the desired operation as fast as
@@ -176,6 +185,14 @@ def _get_url_data(method, url):
 
     if tokens[2] == PKS_SERVICE_NAME:
         return _get_pks_url_data(method, url)
+
+    if is_def_request:
+        temp_url = url.replace('/def','')
+
+    tokens = temp_url.split('/')
+    num_tokens = len(tokens)
+    if num_tokens < 4:
+        raise e.NotFoundRequestError()
 
     operation_type = tokens[3].lower()
     if operation_type.endswith('s'):

@@ -69,13 +69,22 @@ class DefEntityType:
         else:
             return self.id
 
+@dataclass()
+class ClusterEntity:
+    # Sample ClusterEntity - Yet to be done
+    name: str
+    control_plane: {'count':None, 'sizing_class':None}
+    workers: {'count':None, 'sizing_class':None}
+    k8_dist: {'template':None, 'version':None}
+    settings: {'enable_nfs':False, 'ssh_key':None}
+    state: {'master_ip':None}
 
 @dataclass()
 class DefEntity:
-    """Represents defined entity instances."""
+    """Represents defined entity instance."""
 
     name: str
-    entity: dict
+    entity: ClusterEntity
     id: str = None
     entityType: str = None
     externalId: str = None
