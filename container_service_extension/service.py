@@ -24,14 +24,8 @@ import container_service_extension.compute_policy_manager \
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.consumer import MessageConsumer
-from container_service_extension.def_modules.schema_svc import DefSchemaService
-from container_service_extension.def_modules.utils import DefEntityType
-from container_service_extension.def_modules.utils import DefInterface
-from container_service_extension.def_modules.utils import DefKey
-from container_service_extension.def_modules.utils import DefNotSupportedException # noqa: E501
-from container_service_extension.def_modules.utils import generate_entity_type_id # noqa: E501
-from container_service_extension.def_modules.utils import generate_interface_id
-from container_service_extension.def_modules.utils import MAP_API_VERSION_TO_KEYS # noqa: E501
+import container_service_extension.def_modules.schema_svc as def_schema_svc
+import container_service_extension.def_modules.utils as def_utils
 from container_service_extension.def_modules.utils import raise_error_if_def_not_supported # noqa: E501
 import container_service_extension.exceptions as e
 import container_service_extension.local_template_manager as ltm
@@ -99,8 +93,8 @@ class Service(object, metaclass=Singleton):
         self.threads = []
         self.pks_cache = None
         self._state = ServerState.STOPPED
-        self._nativeInterface: DefInterface = None
-        self._nativeEntityType: DefEntityType = None
+        self._nativeInterface: def_utils.DefInterface = None
+        self._nativeEntityType: def_utils.DefEntityType = None
 
     def get_service_config(self):
         return self.config
@@ -332,20 +326,21 @@ class Service(object, metaclass=Singleton):
                                                               logger.SERVER_LOGGER, # noqa: E501
                                                               logger_wire)
             raise_error_if_def_not_supported(cloudapi_client)
-            schema_svc = DefSchemaService(cloudapi_client)
-            keys_map = MAP_API_VERSION_TO_KEYS[float(sysadmin_client.get_api_version())] # noqa: E501
-            interface_id = generate_interface_id(vendor=keys_map[DefKey.VENDOR], # noqa: E501
-                                                 nss=keys_map[DefKey.INTERFACE_NSS], # noqa: E501
-                                                 version=keys_map[DefKey.INTERFACE_VERSION]) # noqa: E501
-            entity_type_id = generate_entity_type_id(vendor=keys_map[DefKey.VENDOR], # noqa: E501
-                                                     nss=keys_map[DefKey.ENTITY_TYPE_NSS], # noqa: E501
-                                                     version=keys_map[DefKey.ENTITY_TYPE_VERSION]) # noqa: E501
+            schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
+            defKey = def_utils.DefKey
+            keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(sysadmin_client.get_api_version())] # noqa: E501
+            interface_id = def_utils.generate_interface_id(vendor=keys_map[defKey.VENDOR], # noqa: E501
+                                                           nss=keys_map[defKey.INTERFACE_NSS], # noqa: E501
+                                                           version=keys_map[defKey.INTERFACE_VERSION]) # noqa: E501
+            entity_type_id = def_utils.generate_entity_type_id(vendor=keys_map[defKey.VENDOR], # noqa: E501
+                                                               nss=keys_map[defKey.ENTITY_TYPE_NSS], # noqa: E501
+                                                               version=keys_map[defKey.ENTITY_TYPE_VERSION]) # noqa: E501
             self._nativeInterface = schema_svc.get_interface(interface_id)
             self._nativeEntityType = schema_svc.get_entity_type(entity_type_id)
             msg = "Successfully loaded defined entity schema to global context"
             msg_update_callback.general(msg)
             logger.SERVER_LOGGER.debug(msg)
-        except DefNotSupportedException:
+        except def_utils.DefNotSupportedException:
             msg = "Skipping initialization of defined entity type" \
                   " and defined entity interface"
             msg_update_callback.info(msg)

@@ -13,13 +13,8 @@ from pyvcloud.vcd.org import Org
 from requests.exceptions import HTTPError
 
 from container_service_extension.config_validator import get_validated_config
-from container_service_extension.def_modules.schema_svc import DefSchemaService
-from container_service_extension.def_modules.utils import DefEntityType
-from container_service_extension.def_modules.utils import DefInterface
-from container_service_extension.def_modules.utils import DefKey
-from container_service_extension.def_modules.utils import DefNotSupportedException # noqa: E501
-from container_service_extension.def_modules.utils import MAP_API_VERSION_TO_KEYS # noqa: E501
-from container_service_extension.def_modules.utils import raise_error_if_def_not_supported # noqa: E501
+import container_service_extension.def_modules.schema_svc as def_schema_svc
+import container_service_extension.def_modules.utils as def_utils
 from container_service_extension.exceptions import AmqpError
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import INSTALL_LOGGER
@@ -576,14 +571,16 @@ def _register_def_schema(client: Client,
                                                                     logger_wire=logger_wire) # noqa: E501
     schema_file = None
     try:
-        raise_error_if_def_not_supported(cloudapi_client)
-        schema_svc = DefSchemaService(cloudapi_client)
-        keys_map = MAP_API_VERSION_TO_KEYS[float(client.get_api_version())]
-        native_interface = DefInterface(name=keys_map[DefKey.INTERFACE_NAME],
-                                        vendor=keys_map[DefKey.VENDOR],
-                                        nss=keys_map[DefKey.INTERFACE_NSS],
-                                        version=keys_map[DefKey.INTERFACE_VERSION], # noqa: E501
-                                        readonly=False)
+        def_utils.raise_error_if_def_not_supported(cloudapi_client)
+        schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
+        keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(client.get_api_version())] # noqa: E501
+        defKey = def_utils.DefKey
+        native_interface = \
+            def_utils.DefInterface(name=keys_map[defKey.INTERFACE_NAME],
+                                   vendor=keys_map[defKey.VENDOR],
+                                   nss=keys_map[defKey.INTERFACE_NSS],
+                                   version=keys_map[defKey.INTERFACE_VERSION],
+                                   readonly=False)
         msg = ""
         try:
             schema_svc.get_interface(native_interface.get_id())
@@ -595,15 +592,16 @@ def _register_def_schema(client: Client,
             msg = "Successfully created defined entity interface"
         msg_update_callback.general(msg)
         INSTALL_LOGGER.debug(msg)
-        schema_file = open(keys_map[DefKey.ENTITY_TYPE_SCHEMA_FILEPATH])
-        native_entity_type = DefEntityType(name=keys_map[DefKey.ENTITY_TYPE_NAME], # noqa: E501
-                                           description='',
-                                           vendor=keys_map[DefKey.VENDOR],
-                                           nss=keys_map[DefKey.ENTITY_TYPE_NSS], # noqa: E501
-                                           version=keys_map[DefKey.ENTITY_TYPE_VERSION], # noqa: E501
-                                           schema=json.load(schema_file),
-                                           interfaces=[native_interface.get_id()], # noqa: E501
-                                           readonly=False)
+        schema_file = open(keys_map[defKey.ENTITY_TYPE_SCHEMA_FILEPATH])
+        native_entity_type = \
+            def_utils.DefEntityType(name=keys_map[defKey.ENTITY_TYPE_NAME],
+                                    description='',
+                                    vendor=keys_map[defKey.VENDOR],
+                                    nss=keys_map[defKey.ENTITY_TYPE_NSS],
+                                    version=keys_map[defKey.ENTITY_TYPE_VERSION], # noqa: E501
+                                    schema=json.load(schema_file),
+                                    interfaces=[native_interface.get_id()],
+                                    readonly=False)
         msg = ""
         try:
             schema_svc.get_entity_type(native_entity_type.get_id())
@@ -615,7 +613,7 @@ def _register_def_schema(client: Client,
             msg = "Successfully registered defined entity type"
         msg_update_callback.general(msg)
         INSTALL_LOGGER.debug(msg)
-    except DefNotSupportedException:
+    except def_utils.DefNotSupportedException:
         msg = "Skipping defined entity type and defined entity interface" \
               " registration"
         msg_update_callback.general(msg)
