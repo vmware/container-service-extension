@@ -101,7 +101,7 @@ def process_request(body):
 
     url = body['requestUri']
     tokens = url.split('/')
-    if tokens[3] =='def':
+    if tokens[3] =='def' or api_version >=35.0:
         is_def_request = True
 
     url_data = _get_url_data(body['method'], body['requestUri'], is_def_request)
