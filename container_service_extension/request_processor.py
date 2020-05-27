@@ -145,7 +145,7 @@ def process_request(body):
                                  request_id=body['id'])
     try:
         if is_def_request:
-            body_content = def_handler.invoke(data, context)
+            body_content = def_handler.OPERATION_TO_METHOD[operation](data, context)
         else:
             body_content = OPERATION_TO_HANDLER[operation](data, context)
     finally:

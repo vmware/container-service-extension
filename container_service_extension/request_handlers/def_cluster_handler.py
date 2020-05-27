@@ -211,11 +211,6 @@ OPERATION_TO_METHOD = {
     CseOperation.NODE_DELETE: node_delete,
     CseOperation.NODE_INFO: node_info,
 }
-
-
-def invoke(data: dict, req_ctx: RequestContext):
-    operation = data[_OPERATION_KEY]
-    return OPERATION_TO_METHOD[operation](data, req_ctx)
     
     
     
