@@ -17,7 +17,7 @@ class DefEntityService():
     """Manages lifecycle of entities.
 
     TODO Add API version check at the appropriate place. This class needs to
-     be used if and only if vCD API version >= 35.
+     be used if and only if vCD API version >= v35.
     """
 
     def __init__(self, cloudapi_client: CloudApiClient):

@@ -189,7 +189,7 @@ def install_cse(config_file_name, skip_template_creation, force_update,
     """Handle logistics for CSE installation.
 
     Handles decision making for configuring AMQP exchange/settings,
-    defined entity schema registration for vCD api version >= 35,
+    defined entity schema registration for vCD api version >= v35,
     extension registration, catalog setup and template creation.
 
     Also records telemetry data on installation details.
@@ -553,7 +553,7 @@ def _register_def_schema(client: Client,
                          log_wire=False):
     """Register defined entity interface and defined entity type.
 
-    If vCD api version is >= 35, register the vCD api version based
+    If vCD api version is >= v35, register the vCD api version based
     defined entity interface and defined entity type. Read the schema present
     in the location dictated by api version to register the
     defined entity type.

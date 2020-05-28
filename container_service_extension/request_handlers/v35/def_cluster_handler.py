@@ -1,8 +1,9 @@
 
 
 import container_service_extension.exceptions as e
+
 from container_service_extension.def_modules.entity_svc import DefEntityService
-from container_service_extension.def_modules.models import ClusterEntity
+from container_service_extension.def_modules.utils import ClusterEntity
 from container_service_extension.request_context import RequestContext
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.telemetry.telemetry_handler import \
