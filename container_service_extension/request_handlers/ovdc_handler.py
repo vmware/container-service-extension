@@ -303,6 +303,7 @@ def ovdc_compute_policy_update(request_data,
             # for calling async methods without having to pass request_context
             # outside handlers.
             task_href = cpm.remove_compute_policy_from_vdc(
+                request_context,
                 ovdc_id,
                 cp_href,
                 remove_compute_policy_from_vms=remove_compute_policy_from_vms)
