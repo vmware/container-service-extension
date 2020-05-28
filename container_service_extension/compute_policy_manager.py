@@ -10,7 +10,6 @@ from pyvcloud.vcd.utils import retrieve_compute_policy_id_from_href
 from pyvcloud.vcd.vm import VM
 import requests
 
-import container_service_extension.cloudapi.cloudapi_client as cloudApiClient
 import container_service_extension.cloudapi.constants as cloudApiConstants
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
@@ -41,24 +40,14 @@ class ComputePolicyManager:
         self._session = self._sysadmin_client.get_vcloud_session()
         self._is_operation_supported = True
 
-        token = self._sysadmin_client.get_access_token()
-        is_jwt = True
-        if not token:
-            token = self._sysadmin_client.get_xvcloud_authorization_token()
-            is_jwt = False
-
         try:
             wire_logger = logger.NULL_LOGGER
             if log_wire:
                 wire_logger = logger.SERVER_CLOUDAPI_WIRE_LOGGER
-            self._cloudapi_client = cloudApiClient.CloudApiClient(
-                base_url=self._sysadmin_client.get_cloudapi_uri(),
-                token=token,
-                is_jwt_token=is_jwt,
-                api_version=self._sysadmin_client.get_api_version(),
-                logger_debug=logger.SERVER_LOGGER,
-                logger_wire=wire_logger,
-                verify_ssl=self._sysadmin_client._verify_ssl_certs)
+            self._cloudapi_client = \
+                vcd_utils.get_cloudapi_client_from_vcd_client(self._sysadmin_client, # noqa: E501
+                                                              logger.SERVER_LOGGER, # noqa: E501
+                                                              wire_logger)
             # Since the /cloudapi endpoint was added before the compute policy
             # endpoint. Mere presence of the /cloudapi uri is not enough, we
             # need to make sure that this cloud api client will be of actual

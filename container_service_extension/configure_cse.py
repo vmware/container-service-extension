@@ -1,6 +1,8 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import json
+
 import pika
 from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
@@ -8,8 +10,11 @@ from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
+from requests.exceptions import HTTPError
 
 from container_service_extension.config_validator import get_validated_config
+import container_service_extension.def_modules.schema_svc as def_schema_svc
+import container_service_extension.def_modules.utils as def_utils
 from container_service_extension.exceptions import AmqpError
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import INSTALL_LOGGER
@@ -17,13 +22,12 @@ from container_service_extension.logger import INSTALL_WIRELOG_FILEPATH
 from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_CLI_LOGGER
 from container_service_extension.logger import SERVER_CLI_WIRELOG_FILEPATH
+from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 from container_service_extension.logger import SERVER_NSXT_WIRE_LOGGER
 from container_service_extension.nsxt.cse_nsxt_setup_utils import \
     setup_nsxt_constructs
 from container_service_extension.nsxt.nsxt_client import NSXTClient
-from container_service_extension.pyvcloud_utils import catalog_exists
-from container_service_extension.pyvcloud_utils import create_and_share_catalog
-from container_service_extension.pyvcloud_utils import get_org
+import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.remote_template_manager import \
     RemoteTemplateManager
 from container_service_extension.server_constants import \
@@ -44,12 +48,11 @@ from container_service_extension.telemetry.telemetry_handler import \
 from container_service_extension.telemetry.telemetry_utils import \
     store_telemetry_settings
 from container_service_extension.template_builder import TemplateBuilder
-from container_service_extension.utils import NullPrinter
-from container_service_extension.utils import str_to_bool
+import container_service_extension.utils as utils
 from container_service_extension.vsphere_utils import populate_vsphere_list
 
 
-def check_cse_installation(config, msg_update_callback=NullPrinter()):
+def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
     """Ensure that CSE is installed on vCD according to the config file.
 
     Checks,
@@ -70,7 +73,7 @@ def check_cse_installation(config, msg_update_callback=NullPrinter()):
     client = None
     try:
         log_filename = None
-        log_wire = str_to_bool(config['service'].get('log_wire'))
+        log_wire = utils.str_to_bool(config['service'].get('log_wire'))
         if log_wire:
             log_filename = SERVER_CLI_WIRELOG_FILEPATH
 
@@ -156,9 +159,9 @@ def check_cse_installation(config, msg_update_callback=NullPrinter()):
 
         # check that catalog exists in vCD
         org_name = config['broker']['org']
-        org = get_org(client, org_name=org_name)
+        org = vcd_utils.get_org(client, org_name=org_name)
         catalog_name = config['broker']['catalog']
-        if catalog_exists(org, catalog_name):
+        if vcd_utils.catalog_exists(org, catalog_name):
             msg = f"Found catalog '{catalog_name}'"
             msg_update_callback.general(msg)
             SERVER_CLI_LOGGER.debug(msg)
@@ -181,11 +184,13 @@ def check_cse_installation(config, msg_update_callback=NullPrinter()):
 def install_cse(config_file_name, skip_template_creation, force_update,
                 ssh_key, retain_temp_vapp, pks_config_file_name=None,
                 skip_config_decryption=False,
-                decryption_password=None, msg_update_callback=NullPrinter()):
+                decryption_password=None,
+                msg_update_callback=utils.NullPrinter()):
     """Handle logistics for CSE installation.
 
     Handles decision making for configuring AMQP exchange/settings,
-    extension registration, catalog setup, and template creation.
+    defined entity schema registration for vCD api version >= 35,
+    extension registration, catalog setup and template creation.
 
     Also records telemetry data on installation details.
 
@@ -236,7 +241,7 @@ def install_cse(config_file_name, skip_template_creation, force_update,
                                    telemetry_settings=config['service']['telemetry'])  # noqa: E501
 
         log_filename = None
-        log_wire = str_to_bool(config['service'].get('log_wire'))
+        log_wire = utils.str_to_bool(config['service'].get('log_wire'))
         if log_wire:
             log_filename = INSTALL_WIRELOG_FILEPATH
 
@@ -267,6 +272,12 @@ def install_cse(config_file_name, skip_template_creation, force_update,
         _register_cse(client, amqp['routing_key'], amqp['exchange'],
                       msg_update_callback=msg_update_callback)
 
+        # register cse def schema on VCD
+        # schema should be located at
+        # ~/.cse-schema/api-v<API VERSION>/schema.json
+        _register_def_schema(client, msg_update_callback=msg_update_callback,
+                             log_wire=log_wire)
+
         # Since we use CSE extension id as our telemetry instance_id, the
         # validated config won't have the instance_id yet. Now that CSE has
         # been registered as an extension, we should update the telemetry
@@ -288,8 +299,8 @@ def install_cse(config_file_name, skip_template_creation, force_update,
                         msg_update_callback=msg_update_callback)
 
         # set up cse catalog
-        org = get_org(client, org_name=config['broker']['org'])
-        create_and_share_catalog(
+        org = vcd_utils.get_org(client, org_name=config['broker']['org'])
+        vcd_utils.create_and_share_catalog(
             org, config['broker']['catalog'], catalog_desc='CSE templates',
             logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
 
@@ -368,7 +379,7 @@ def install_cse(config_file_name, skip_template_creation, force_update,
 def install_template(template_name, template_revision, config_file_name,
                      force_create, retain_temp_vapp, ssh_key,
                      skip_config_decryption=False, decryption_password=None,
-                     msg_update_callback=NullPrinter()):
+                     msg_update_callback=utils.NullPrinter()):
     """Install a particular template in CSE.
 
     If template_name and revision are wild carded to *, all templates defined
@@ -419,7 +430,7 @@ def install_template(template_name, template_revision, config_file_name,
             telemetry_settings=config['service']['telemetry'])
 
         log_filename = None
-        log_wire = str_to_bool(config['service'].get('log_wire'))
+        log_wire = utils.str_to_bool(config['service'].get('log_wire'))
         if log_wire:
             log_filename = INSTALL_WIRELOG_FILEPATH
 
@@ -494,7 +505,7 @@ def install_template(template_name, template_revision, config_file_name,
 
 def _create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
                           username, password,
-                          msg_update_callback=NullPrinter()):
+                          msg_update_callback=utils.NullPrinter()):
     """Create the specified AMQP exchange if it does not exist.
 
     If specified AMQP exchange exists already, does nothing.
@@ -537,8 +548,90 @@ def _create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
     INSTALL_LOGGER.info(msg)
 
 
+def _register_def_schema(client: Client,
+                         msg_update_callback=utils.NullPrinter(),
+                         log_wire=False):
+    """Register defined entity interface and defined entity type.
+
+    If vCD api version is >= 35, register the vCD api version based
+    defined entity interface and defined entity type. Read the schema present
+    in the location dictated by api version to register the
+    defined entity type.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param bool log_wire: wire logging enabled
+    """
+    msg = "Registering defined entity schema"
+    msg_update_callback.info(msg)
+    INSTALL_LOGGER.debug(msg)
+    logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
+    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(client=client, # noqa: E501
+                                                                    logger_debug=INSTALL_LOGGER, # noqa: E501
+                                                                    logger_wire=logger_wire) # noqa: E501
+    schema_file = None
+    try:
+        def_utils.raise_error_if_def_not_supported(cloudapi_client)
+        schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
+        keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(client.get_api_version())] # noqa: E501
+        defKey = def_utils.DefKey
+        native_interface = \
+            def_utils.DefInterface(name=keys_map[defKey.INTERFACE_NAME],
+                                   vendor=keys_map[defKey.VENDOR],
+                                   nss=keys_map[defKey.INTERFACE_NSS],
+                                   version=keys_map[defKey.INTERFACE_VERSION],
+                                   readonly=False)
+        msg = ""
+        try:
+            schema_svc.get_interface(native_interface.get_id())
+            msg = "defined entity interface already exists." \
+                  " Skipping defined entity interface creation"
+        except HTTPError:
+            # TODO handle this part only if the interface was not found
+            native_interface = schema_svc.create_interface(native_interface)
+            msg = "Successfully created defined entity interface"
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.debug(msg)
+        schema_file = open(keys_map[defKey.ENTITY_TYPE_SCHEMA_FILEPATH])
+        native_entity_type = \
+            def_utils.DefEntityType(name=keys_map[defKey.ENTITY_TYPE_NAME],
+                                    description='',
+                                    vendor=keys_map[defKey.VENDOR],
+                                    nss=keys_map[defKey.ENTITY_TYPE_NSS],
+                                    version=keys_map[defKey.ENTITY_TYPE_VERSION], # noqa: E501
+                                    schema=json.load(schema_file),
+                                    interfaces=[native_interface.get_id()],
+                                    readonly=False)
+        msg = ""
+        try:
+            schema_svc.get_entity_type(native_entity_type.get_id())
+            msg = "defined entity type already exists." \
+                  " Skipping defined entity type creation"
+        except HTTPError:
+            # TODO handle this part only if the entity type was not found
+            native_entity_type = schema_svc.create_entity_type(native_entity_type) # noqa: E501
+            msg = "Successfully registered defined entity type"
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.debug(msg)
+    except def_utils.DefNotSupportedException:
+        msg = "Skipping defined entity type and defined entity interface" \
+              " registration"
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.debug(msg)
+    except Exception as e:
+        msg = f"Error occured while registering defined entity schema: {str(e)}" # noqa: E501
+        msg_update_callback.error(msg)
+        INSTALL_LOGGER.error(msg)
+        raise(e)
+    finally:
+        try:
+            schema_file.close()
+        except Exception:
+            pass
+
+
 def _register_cse(client, routing_key, exchange,
-                  msg_update_callback=NullPrinter()):
+                  msg_update_callback=utils.NullPrinter()):
     """Register or update CSE on vCD.
 
     :param pyvcloud.vcd.client.Client client:
@@ -578,7 +671,7 @@ def _register_cse(client, routing_key, exchange,
 
 
 def _register_right(client, right_name, description, category, bundle_key,
-                    msg_update_callback=NullPrinter()):
+                    msg_update_callback=utils.NullPrinter()):
     """Register a right for CSE.
 
     :param pyvcloud.vcd.client.Client client:
@@ -635,7 +728,7 @@ def _register_right(client, right_name, description, category, bundle_key,
 def _install_template(client, remote_template_manager, template, org_name,
                       vdc_name, catalog_name, network_name, ip_allocation_mode,
                       storage_profile, force_update, retain_temp_vapp,
-                      ssh_key, msg_update_callback=NullPrinter()):
+                      ssh_key, msg_update_callback=utils.NullPrinter()):
     remote_template_manager.download_template_scripts(
         template_name=template[RemoteTemplateKey.NAME],
         revision=template[RemoteTemplateKey.REVISION],

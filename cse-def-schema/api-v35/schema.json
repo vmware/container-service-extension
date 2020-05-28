@@ -1,0 +1,19 @@
+{
+        "properties": {
+            "name": {
+                "type": "string"
+            },
+            "status": {
+                "type": "string"
+            },
+            "master_ip": {
+                "type": "string"
+            },
+            "worker_count": {
+                "type": "string"
+            },
+            "template_name": {
+                "type": "string"
+            }
+        }
+    }

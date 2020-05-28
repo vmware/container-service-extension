@@ -112,20 +112,11 @@ class UserContext:
             logger_wire = logger.NULL_LOGGER
             if log_wire:
                 logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
-            token = self._sysadmin_client.get_access_token()
-            is_jwt_token = True
-            if not token:
-                token = self._sysadmin_client.get_xvcloud_authorization_token()
-                is_jwt_token = False
-            self._sysadmin_cloudapi_client = cloudApiClient.CloudApiClient(
-                self._sysadmin_client.get_cloudapi_uri(),
-                token=token,
-                is_jwt_token=is_jwt_token,
-                api_version=self._sysadmin_client.get_api_version(),
-                logger_debug=logger.SERVER_LOGGER,
-                logger_wire=logger_wire,
-                verify_ssl=self._sysadmin_client._verify_ssl_certs,
-                is_sys_admin=True)
+            self._sysadmin_cloudapi_client = \
+                vcd_utils.get_cloudapi_client_from_vcd_client(
+                    self._sysadmin_client,
+                    logger.SERVER_LOGGER,
+                    logger_wire)
         return self._sysadmin_cloudapi_client
 
     def end(self):
