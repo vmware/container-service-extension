@@ -24,6 +24,9 @@ import container_service_extension.compute_policy_manager \
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.consumer import MessageConsumer
+import container_service_extension.def_modules.schema_svc as def_schema_svc
+import container_service_extension.def_modules.utils as def_utils
+from container_service_extension.def_modules.utils import raise_error_if_def_not_supported # noqa: E501
 import container_service_extension.exceptions as e
 import container_service_extension.local_template_manager as ltm
 import container_service_extension.logger as logger
@@ -90,6 +93,8 @@ class Service(object, metaclass=Singleton):
         self.threads = []
         self.pks_cache = None
         self._state = ServerState.STOPPED
+        self._nativeInterface: def_utils.DefInterface = None
+        self._nativeEntityType: def_utils.DefEntityType = None
 
     def get_service_config(self):
         return self.config
@@ -126,6 +131,12 @@ class Service(object, metaclass=Singleton):
         else:
             del result['python']
         return result
+
+    def get_native_cluster_interface(self):
+        return self._nativeInterface
+
+    def get_native_cluster_entity_type(self):
+        return self._nativeEntityType
 
     @classmethod
     def version(cls):
@@ -191,6 +202,9 @@ class Service(object, metaclass=Singleton):
             msg_update_callback=msg_update_callback)
 
         populate_vsphere_list(self.config['vcs'])
+
+        # Load def entity-type and interface
+        self._load_def_schema(msg_update_callback=msg_update_callback)
 
         # Read k8s catalog definition from catalog item metadata and append
         # the same to to server run-time config
@@ -290,6 +304,55 @@ class Service(object, metaclass=Singleton):
 
         self._state = ServerState.STOPPED
         logger.SERVER_LOGGER.info("Done")
+
+    def _load_def_schema(self, msg_update_callback=utils.NullPrinter()):
+        """Load cluster interface and cluster entity type to global context.
+
+        If defined entity framework is supported by vCD api version, load
+        defined entity interface and defined entity type registered during
+        server install
+
+        :param utils.ConsoleMessagePrinter msg_update_callback
+        """
+        sysadmin_client = None
+        try:
+            sysadmin_client = vcd_utils.get_sys_admin_client()
+            logger_wire = logger.NULL_LOGGER
+            if utils.str_to_bool(utils.str_to_bool(self.config['service'].get('log_wire', False))): # noqa: E501
+                logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
+
+            cloudapi_client = \
+                vcd_utils.get_cloudapi_client_from_vcd_client(sysadmin_client,
+                                                              logger.SERVER_LOGGER, # noqa: E501
+                                                              logger_wire)
+            raise_error_if_def_not_supported(cloudapi_client)
+            schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
+            defKey = def_utils.DefKey
+            keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(sysadmin_client.get_api_version())] # noqa: E501
+            interface_id = def_utils.generate_interface_id(vendor=keys_map[defKey.VENDOR], # noqa: E501
+                                                           nss=keys_map[defKey.INTERFACE_NSS], # noqa: E501
+                                                           version=keys_map[defKey.INTERFACE_VERSION]) # noqa: E501
+            entity_type_id = def_utils.generate_entity_type_id(vendor=keys_map[defKey.VENDOR], # noqa: E501
+                                                               nss=keys_map[defKey.ENTITY_TYPE_NSS], # noqa: E501
+                                                               version=keys_map[defKey.ENTITY_TYPE_VERSION]) # noqa: E501
+            self._nativeInterface = schema_svc.get_interface(interface_id)
+            self._nativeEntityType = schema_svc.get_entity_type(entity_type_id)
+            msg = "Successfully loaded defined entity schema to global context"
+            msg_update_callback.general(msg)
+            logger.SERVER_LOGGER.debug(msg)
+        except def_utils.DefNotSupportedException:
+            msg = "Skipping initialization of defined entity type" \
+                  " and defined entity interface"
+            msg_update_callback.info(msg)
+            logger.SERVER_LOGGER.debug(msg)
+        except Exception as e:
+            msg = f"Failed to load defined entity schema to global context: {str(e)}" # noqa: E501
+            msg_update_callback.error(e)
+            logger.SERVER_LOGGER.error(e)
+            raise(e)
+        finally:
+            if sysadmin_client:
+                sysadmin_client.logout()
 
     def _load_template_definition_from_catalog(self,
                                                msg_update_callback=utils.NullPrinter()): # noqa: E501

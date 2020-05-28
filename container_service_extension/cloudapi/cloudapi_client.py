@@ -36,6 +36,10 @@ class CloudApiClient(object):
         self.LOGGER_WIRE = logger_wire
         self._last_response = None
         self.is_sys_admin = is_sys_admin
+        self._api_version = api_version
+
+    def get_api_version(self):
+        return self._api_version
 
     def get_base_url(self):
         return self._base_url

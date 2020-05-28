@@ -24,7 +24,6 @@ import requests
 from vcd_cli.utils import stdout
 import yaml
 
-from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
@@ -40,6 +39,7 @@ from container_service_extension.logger import SERVER_CLI_LOGGER
 from container_service_extension.logger import SERVER_CLI_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
+import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.remote_template_manager import RemoteTemplateManager # noqa: E501
 from container_service_extension.sample_generator import generate_sample_config
 from container_service_extension.server_constants import ClusterMetadataKey
@@ -1653,24 +1653,14 @@ def _get_clients_from_config(config, log_wire_file, log_wire):
                                         config['vcd']['password'])
     client.set_credentials(credentials)
 
-    token = client.get_access_token()
-    is_jwt_token = True
-    if not token:
-        token = client.get_xvcloud_authorization_token()
-        is_jwt_token = False
-
-    LOGGER = NULL_LOGGER
+    logger_wire = NULL_LOGGER
     if log_wire:
-        LOGGER = SERVER_CLOUDAPI_WIRE_LOGGER
+        logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
 
-    cloudapi_client = CloudApiClient(
-        base_url=client.get_cloudapi_uri(),
-        token=token,
-        is_jwt_token=is_jwt_token,
-        api_version=client.get_api_version(),
-        logger_debug=SERVER_CLI_LOGGER,
-        logger_wire=LOGGER,
-        verify_ssl=client._verify_ssl_certs)
+    cloudapi_client = \
+        vcd_utils.get_cloudapi_client_from_vcd_client(client,
+                                                      SERVER_CLI_LOGGER,
+                                                      logger_wire)
 
     return (client, cloudapi_client)
 

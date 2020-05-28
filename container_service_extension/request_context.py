@@ -44,20 +44,10 @@ class RequestContext:
             logger_wire = logger.NULL_LOGGER
             if log_wire:
                 logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
-            token = self.client.get_access_token()
-            is_jwt_token = True
-            if not token:
-                token = self.client.get_xvcloud_authorization_token()
-                is_jwt_token = False
-            self._cloudapi_client = cloudApiClient.CloudApiClient(
-                self.client.get_cloudapi_uri(),
-                token=token,
-                is_jwt_token=is_jwt_token,
-                api_version=self.client.get_api_version(),
-                logger_debug=logger.SERVER_LOGGER,
-                logger_wire=logger_wire,
-                verify_ssl=self.client._verify_ssl_certs,
-                is_sys_admin=self.client.is_sysadmin())
+            self._cloudapi_client = \
+                vcd_utils.get_cloudapi_client_from_vcd_client(self.client,
+                                                              logger.SERVER_LOGGER, # noqa: E501
+                                                              logger_wire)
         return self._cloudapi_client
 
     @property
