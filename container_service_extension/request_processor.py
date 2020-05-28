@@ -99,9 +99,10 @@ def process_request(body):
     from container_service_extension.service import Service
     LOGGER.debug(f"Incoming request body: {json.dumps(body)}")
 
+    url = ""
     url = body['requestUri']
     tokens = url.split('/')
-    if tokens[3] =='def' or api_version >=35.0:
+    if api_version >=35.0 and (tokens[3] =='def' or 'clusters' in url or 'cluster' in url or 'node' in url or 'nodes' in url):
         is_def_request = True
 
     url_data = _get_url_data(body['method'], body['requestUri'], is_def_request)
