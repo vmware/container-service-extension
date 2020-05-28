@@ -624,8 +624,10 @@ def _register_def_schema(client: Client,
         INSTALL_LOGGER.error(msg)
         raise(e)
     finally:
-        if schema_file:
+        try:
             schema_file.close()
+        except Exception:
+            pass
 
 
 def _register_cse(client, routing_key, exchange,
