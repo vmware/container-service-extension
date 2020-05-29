@@ -4,7 +4,6 @@
 from dataclasses import dataclass, asdict
 from enum import Enum
 from enum import unique
-from pathlib import Path
 
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 
@@ -20,9 +19,9 @@ DEF_NATIVE_ENTITY_TYPE_NSS = 'nativeCluster1'
 DEF_NATIVE_ENTITY_TYPE_VERSION = '1.0.0'
 DEF_NATIVE_ENTITY_TYPE_NAME = 'nativeClusterEntityType1'
 DEF_ENTITY_TYPE_ID_PREFIX = 'urn:vcloud:type'
-
 DEF_API_MIN_VERSION = 35.0
-DEF_SCHEMA_PATH_PREFIX = Path.home() / 'cse-def-schema'
+DEF_SCHEMA_DIRECTORY = 'cse_def_schema'
+DEF_ENTITY_TYPE_SCHEMA_FILE = 'schema.json'
 
 
 @unique
@@ -34,7 +33,7 @@ class DefKey(str, Enum):
     ENTITY_TYPE_NAME = 'entity_type_name'
     ENTITY_TYPE_NSS = 'entity_type_nss'
     ENTITY_TYPE_VERSION = 'entity_type_version'
-    ENTITY_TYPE_SCHEMA_FILEPATH = 'schema_filepath'
+    ENTITY_TYPE_SCHEMA_VERSION = 'schema_version'
 
 
 MAP_API_VERSION_TO_KEYS = {
@@ -46,8 +45,7 @@ MAP_API_VERSION_TO_KEYS = {
         DefKey.ENTITY_TYPE_NSS: DEF_NATIVE_ENTITY_TYPE_NSS,
         DefKey.ENTITY_TYPE_VERSION: DEF_NATIVE_ENTITY_TYPE_VERSION,
         DefKey.ENTITY_TYPE_NAME: DEF_NATIVE_ENTITY_TYPE_NAME,
-        DefKey.ENTITY_TYPE_SCHEMA_FILEPATH: f"{DEF_SCHEMA_PATH_PREFIX}"
-                                            '/api-v35/schema.json'
+        DefKey.ENTITY_TYPE_SCHEMA_VERSION: 'api_v35',
     }
 }
 
@@ -75,6 +73,7 @@ class DefInterface:
             return generate_interface_id(self.vendor, self.nss, self.version)
         else:
             return self.id
+
 
 @dataclass(frozen=True)
 class DefEntityType:

@@ -592,7 +592,14 @@ def _register_def_schema(client: Client,
             msg = "Successfully created defined entity interface"
         msg_update_callback.general(msg)
         INSTALL_LOGGER.debug(msg)
-        schema_file = open(keys_map[defKey.ENTITY_TYPE_SCHEMA_FILEPATH])
+
+        # TODO stop-gap fix - find efficient way to import schema
+        import importlib
+        import importlib.resources as pkg_resources
+        schema_module = importlib.import_module(
+            f'{def_utils.DEF_SCHEMA_DIRECTORY}.{keys_map[defKey.ENTITY_TYPE_SCHEMA_VERSION]}') # noqa: E501
+        schema_file = pkg_resources.open_text(schema_module, def_utils.DEF_ENTITY_TYPE_SCHEMA_FILE) # noqa: E501
+
         native_entity_type = \
             def_utils.DefEntityType(name=keys_map[defKey.ENTITY_TYPE_NAME],
                                     description='',
