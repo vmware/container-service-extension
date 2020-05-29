@@ -103,17 +103,127 @@ class DefEntityType:
         else:
             return self.id
 
+@dataclass()
+class Metadata:
+    cluster_name: str
+    org_name: str
+    ovdc_name: str
+
+@dataclass()
+class ControlPlane:
+    sizing_class: str = None
+    storage_profile: str = None
+    count: int = 1
+
+
+@dataclass()
+class Workers:
+    sizing_class: str = None
+    storage_profile: str = None
+    count: int = 2
+
+
+@dataclass()
+class Distribution:
+    template_name: str
+    template_revision: int
+
+
+@dataclass()
+class Settings:
+    network: str
+    ssh_key: str = None
+    enable_nfs: bool = False
+    cleanup_on_failure = True
+
+
+@dataclass()
+class Status:
+    master_ip: str = None
+    phase: str = None
+    cni: str = None
+    id: str = None
+
+@dataclass()
+class ClusterSpec:
+    control_plane: ControlPlane
+    workers: Workers
+    k8_distribution: Distribution
+    settings: Settings
+
+    def __init__(self, control_plane: ControlPlane, workers: Workers,
+                 k8_distribution: Distribution, settings: Settings):
+        if isinstance(control_plane, {}.__class__):
+            self.control_plane = ControlPlane(**control_plane)
+        else:
+            self.control_plane = control_plane
+
+        if isinstance(workers, {}.__class__):
+            self.workers = Workers(**workers)
+        else:
+            self.workers = workers
+
+        if isinstance(k8_distribution, {}.__class__):
+            self.k8_distribution = Distribution(**k8_distribution)
+        else:
+            self.k8_distribution = k8_distribution
+
+        if isinstance(settings, {}.__class__):
+            self.settings = Settings(**settings)
+        else:
+            self.settings = settings
+
+@dataclass()
+class ClusterEntity:
+    metadata: Metadata
+    spec: ClusterSpec
+    status: Status = Status()
+    kind: str = DEF_NATIVE_INTERFACE_NSS
+    api_version: str = ''
+
+    def __init__(self, metadata: Metadata, spec: ClusterSpec, status=Status(),
+                 kind: str = DEF_NATIVE_INTERFACE_NSS, api_version: str = ''):
+        if isinstance(metadata, {}.__class__):
+            self.metadata = Metadata(**metadata)
+        else:
+            self.metadata = metadata
+
+        if isinstance(spec, {}.__class__):
+            self.spec = ClusterSpec(**spec)
+        else:
+            self.spec = spec
+
+        if isinstance(status, {}.__class__):
+            self.status = Status(**status)
+        else:
+            self.status = status
+
+        self.kind = kind
+        self.api_version = api_version
 
 @dataclass()
 class DefEntity:
-    """Represents defined entity instances."""
+    """Represents defined entity instance."""
 
     name: str
-    entity: dict
+    entity: ClusterEntity
     id: str = None
     entityType: str = None
     externalId: str = None
     state: str = None
+
+    def __init__(self, name: str, entity: ClusterEntity, id: str = None,
+                 entityType: str = None, externalId: str = None,
+                 state: str = None):
+        self.name = name
+        if isinstance(entity, {}.__class__):
+            self.entity = ClusterEntity(**entity)
+        else:
+            self.entity= entity
+        self.id = id
+        self.entityType = entityType
+        self.externalId = externalId
+        self.state = state
 
 
 class DefNotSupportedException(OperationNotSupportedException):

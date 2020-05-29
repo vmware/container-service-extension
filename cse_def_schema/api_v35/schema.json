@@ -1,19 +1,116 @@
 {
+        "type": "object",
         "properties": {
-            "name": {
+            "kind": {
+                "enum": [
+                    "nativeCluster",
+                    "TanzuK8Cluster",
+                    "TanzuPlus"
+                ],
                 "type": "string"
+            },
+            "spec": {
+                "type": "object",
+                "properties": {
+                    "workers": {
+                        "type": "object",
+                        "properties": {
+                            "count": {
+                                "type": "integer",
+                                "maximum": 100,
+                                "minimum": 1
+                            },
+                            "sizing_class": {
+                                "type": "string"
+                            },
+                            "storage_profile": {
+                                "type": "string"
+                            }
+                        },
+                        "required":["count","sizing_class","storage_profile"]
+                    },
+                    "control_plane": {
+                        "type": "object",
+                        "properties": {
+                            "count": {
+                                "type": "integer",
+                                "maximum": 1,
+                                "minimum": 1
+                            },
+                            "sizing_class": {
+                                "type": "string"
+                            },
+                            "storage_profile": {
+                                "type": "string"
+                            }
+                        },
+                        "required":["count","sizing_class","storage_profile"]
+                    },
+                    "k8_distribution": {
+                        "type": "object",
+                        "properties": {
+                            "template_name": {
+                                "type": "string"
+                            },
+                            "template_revision": {
+                                "type": "integer"
+                            }
+                        },
+                        "required":["template_name","template_revision"]
+                    }
+                }
             },
             "status": {
-                "type": "string"
+                "type": "object",
+                "required": [
+                    "master_ip"
+                ],
+                "properties": {
+                    "phase": {
+                        "type": "string"
+                    },
+                    "master_ip": {
+                        "type": "string"
+                    }
+                },
+                "additionalproperties": true
             },
-            "master_ip": {
-                "type": "string"
+            "metadata": {
+                "type": "object",
+                "properties": {
+                    "org_name": {
+                        "type": "string"
+                    },
+                    "ovdc_name": {
+                        "type": "string"
+                    },
+                    "cluster_name": {
+                        "type": "string"
+                    }
+                },
+                "required":["org_name","ovdc_name","cluster_name"]
             },
-            "worker_count": {
-                "type": "string"
+            "settings": {
+                "type": "object",
+                "properties": {
+                    "network": {
+                        "type": "boolean"
+                    },
+                    "ssh_key": {
+                        "type": "string"
+                    },
+                    "enable_nfs": {
+                        "type": "boolean"
+                    },
+                    "rollback_on_failure": {
+                        "type": "boolean"
+                    }
+                },
+                "required":["network"]
             },
-            "template_name": {
+            "apiversion": {
                 "type": "string"
             }
-        }
+        },
+        "additionalproperties": false
     }
