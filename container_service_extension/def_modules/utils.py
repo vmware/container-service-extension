@@ -134,7 +134,7 @@ class Settings:
     network: str
     ssh_key: str = None
     enable_nfs: bool = False
-    cleanup_on_failure = True
+    rollback_on_failure = True
 
 
 @dataclass()
@@ -178,7 +178,7 @@ class ClusterEntity:
     metadata: Metadata
     spec: ClusterSpec
     status: Status = Status()
-    kind: str = DEF_NATIVE_INTERFACE_NSS
+    kind: str = DEF_NATIVE_ENTITY_TYPE_NSS
     api_version: str = ''
 
     def __init__(self, metadata: Metadata, spec: ClusterSpec, status=Status(),
