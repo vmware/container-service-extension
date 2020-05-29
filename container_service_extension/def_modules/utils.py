@@ -12,16 +12,17 @@ from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 
 # Defined Entity Framework related constants
 DEF_CSE_VENDOR = 'cse'
-DEF_NATIVE_INTERFACE_NSS = 'native'
+DEF_NATIVE_INTERFACE_NSS = 'native1'
 DEF_NATIVE_INTERFACE_VERSION = '1.0.0'
-DEF_NATIVE_INTERFACE_NAME = 'nativeClusterInterface'
+DEF_NATIVE_INTERFACE_NAME = 'nativeClusterInterface1'
 DEF_INTERFACE_ID_PREFIX = 'urn:vcloud:interface'
-DEF_NATIVE_ENTITY_TYPE_NSS = 'nativeCluster'
+DEF_NATIVE_ENTITY_TYPE_NSS = 'nativeCluster1'
 DEF_NATIVE_ENTITY_TYPE_VERSION = '1.0.0'
-DEF_NATIVE_ENTITY_TYPE_NAME = 'nativeClusterEntityType'
+DEF_NATIVE_ENTITY_TYPE_NAME = 'nativeClusterEntityType1'
 DEF_ENTITY_TYPE_ID_PREFIX = 'urn:vcloud:type'
+
 DEF_API_MIN_VERSION = 35.0
-DEF_SCHEMA_PATH_PREFIX = Path.home() / '.cse-def-schema'
+DEF_SCHEMA_PATH_PREFIX = Path.home() / 'cse-def-schema'
 
 
 @unique
@@ -152,7 +153,7 @@ class ClusterSpec:
     settings: Settings
 
     def __init__(self, control_plane: ControlPlane, workers: Workers,
-                 distribution: Distribution, settings: Settings):
+                 k8_distribution: Distribution, settings: Settings):
         if isinstance(control_plane, {}.__class__):
             self.control_plane = ControlPlane(**control_plane)
         else:
@@ -163,10 +164,10 @@ class ClusterSpec:
         else:
             self.workers = workers
 
-        if isinstance(distribution, {}.__class__):
-            self.k8_distribution = Distribution(**distribution)
+        if isinstance(k8_distribution, {}.__class__):
+            self.k8_distribution = Distribution(**k8_distribution)
         else:
-            self.k8_distribution = distribution
+            self.k8_distribution = k8_distribution
 
         if isinstance(settings, {}.__class__):
             self.settings = Settings(**settings)
@@ -225,17 +226,6 @@ class DefEntity:
         self.externalId = externalId
         self.state = state
 
-
-
-dist = Distribution('k81.17',1)
-settings = Settings('net')
-spec = ClusterSpec(control_plane=ControlPlane(), workers=Workers(), distribution=dist, settings=settings)
-metadata = Metadata(cluster_name='myCluster', org_name='org1', ovdc_name='ovdc1')
-cluster_entity = ClusterEntity(metadata=metadata, spec=spec)
-def_entity = DefEntity(name=cluster_entity.metadata.cluster_name, entity=cluster_entity)
-print(def_entity)
-def_dict = asdict(def_entity)
-print(def_dict)
 
 class DefNotSupportedException(OperationNotSupportedException):
     """Defined entity framework is not supported."""

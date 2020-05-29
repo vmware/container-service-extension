@@ -11,7 +11,7 @@ from container_service_extension.exception_handler import handle_exception
 import container_service_extension.exceptions as e
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.request_context as ctx
-import container_service_extension.request_handlers.def_cluster_handler as def_handler
+import container_service_extension.request_handlers.v35.def_cluster_handler as def_handler
 import container_service_extension.request_handlers.native_cluster_handler as native_cluster_handler # noqa: E501
 import container_service_extension.request_handlers.ovdc_handler as ovdc_handler # noqa: E501
 import container_service_extension.request_handlers.pks_cluster_handler as pks_cluster_handler  # noqa: E501
