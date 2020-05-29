@@ -1,3 +1,7 @@
+# container-service-extension
+# Copyright (c) 2017 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
 from dataclasses import dataclass
 
 from container_service_extension.def_modules.utils import DEF_CSE_VENDOR, \
@@ -149,7 +153,7 @@ class ClusterEntity:
 
     Sample representation in JSON format
     {
-        "kind": "nativeCluster",
+        "kind": "native",
         "spec": {
             "workers": {
                 "count": 2,
