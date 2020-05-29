@@ -175,6 +175,46 @@ class ClusterSpec:
 
 @dataclass()
 class ClusterEntity:
+    """Represents the Native Cluster entity.
+
+    Sample representation in JSON format
+    {
+        "kind": "nativeCluster",
+        "spec": {
+            "workers": {
+                "count": 2,
+                "sizing_class": "small",
+                "storage_profile": "Any"
+            },
+            "control_plane": {
+                "count": 1,
+                "sizing_class": "Large",
+                "storage_profile": "Any"
+            },
+            "k8_distribution": {
+                "template_name": "k81.17",
+                "template_revision": 1
+            }
+        },
+        "status": {
+            "id": null,
+            "cni": null,
+            "phase": null,
+            "master_ip": "10.150.23.45"
+        },
+        "metadata": {
+            "org_name": "org1",
+            "ovdc_name": "ovdc1",
+            "cluster_name": "myCluster"
+        },
+        "settings": {
+            "network": "net",
+            "ssh_key": null,
+            "enable_nfs": false
+        },
+        "api_version": ""
+    }
+    """
     metadata: Metadata
     spec: ClusterSpec
     status: Status = Status()
