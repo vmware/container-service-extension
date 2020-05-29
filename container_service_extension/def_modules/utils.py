@@ -33,7 +33,7 @@ class DefKey(str, Enum):
     ENTITY_TYPE_NAME = 'entity_type_name'
     ENTITY_TYPE_NSS = 'entity_type_nss'
     ENTITY_TYPE_VERSION = 'entity_type_version'
-    ENTITY_TYPE_SCHEMA_VERSION = 'api_v35'
+    ENTITY_TYPE_SCHEMA_VERSION = 'schema_version'
 
 
 MAP_API_VERSION_TO_KEYS = {
