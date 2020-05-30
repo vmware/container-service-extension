@@ -24,8 +24,7 @@ import container_service_extension.compute_policy_manager \
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.consumer import MessageConsumer
-from container_service_extension.def_modules.models import DefEntityType
-from container_service_extension.def_modules.models import DefInterface
+import container_service_extension.def_modules.models as def_models
 import container_service_extension.def_modules.schema_svc as def_schema_svc
 import container_service_extension.def_modules.utils as def_utils
 from container_service_extension.def_modules.utils import raise_error_if_def_not_supported # noqa: E501
@@ -95,8 +94,8 @@ class Service(object, metaclass=Singleton):
         self.threads = []
         self.pks_cache = None
         self._state = ServerState.STOPPED
-        self._nativeInterface: DefInterface = None
-        self._nativeEntityType: DefEntityType = None
+        self._nativeInterface: def_models.DefInterface = None
+        self._nativeEntityType: def_models.DefEntityType = None
 
     def get_service_config(self):
         return self.config

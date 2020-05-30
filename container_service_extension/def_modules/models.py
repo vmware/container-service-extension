@@ -4,10 +4,7 @@
 
 from dataclasses import dataclass
 
-from container_service_extension.def_modules.utils import DEF_CSE_VENDOR, \
-    DEF_NATIVE_ENTITY_TYPE_NSS, DEF_NATIVE_ENTITY_TYPE_VERSION, \
-    DEF_NATIVE_INTERFACE_NSS, DEF_NATIVE_INTERFACE_VERSION, \
-    generate_entity_type_id, generate_interface_id
+import container_service_extension.def_modules.utils as def_utils
 
 
 @dataclass(frozen=True)
@@ -15,9 +12,9 @@ class DefInterface:
     """Provides interface for the defined entity type."""
 
     name: str
-    vendor: str = DEF_CSE_VENDOR
-    nss: str = DEF_NATIVE_INTERFACE_NSS
-    version: str = DEF_NATIVE_INTERFACE_VERSION
+    vendor: str = def_utils.DEF_CSE_VENDOR
+    nss: str = def_utils.DEF_NATIVE_INTERFACE_NSS
+    version: str = def_utils.DEF_NATIVE_INTERFACE_VERSION
     id: str = None
     readonly: bool = False
 
@@ -30,7 +27,7 @@ class DefInterface:
         interface registration with vCD.
         """
         if self.id is None:
-            return generate_interface_id(self.vendor, self.nss, self.version)
+            return def_utils.generate_interface_id(self.vendor, self.nss, self.version)
         else:
             return self.id
 
@@ -43,9 +40,9 @@ class DefEntityType:
     description: str
     schema: dict
     interfaces: list
-    vendor: str = DEF_CSE_VENDOR
-    nss: str = DEF_NATIVE_ENTITY_TYPE_NSS
-    version: str = DEF_NATIVE_ENTITY_TYPE_VERSION
+    vendor: str = def_utils.DEF_CSE_VENDOR
+    nss: str = def_utils.DEF_NATIVE_ENTITY_TYPE_NSS
+    version: str = def_utils.DEF_NATIVE_ENTITY_TYPE_VERSION
     id: str = None
     externalId: str = None
     readonly: bool = False
@@ -59,7 +56,7 @@ class DefEntityType:
         entity type registration with vCD.
         """
         if self.id is None:
-            return generate_entity_type_id(self.vendor, self.nss, self.version)
+            return def_utils.generate_entity_type_id(self.vendor, self.nss, self.version)
         else:
             return self.id
 
@@ -113,7 +110,6 @@ class ClusterSpec:
 
     If dictionaries are passed as arguments, the constructor auto-converts
     them into the expected class instances.
-
     """
 
     control_plane: ControlPlane
@@ -123,25 +119,15 @@ class ClusterSpec:
 
     def __init__(self, control_plane: ControlPlane, workers: Workers,
                  k8_distribution: Distribution, settings: Settings):
-        if isinstance(control_plane, {}.__class__):
-            self.control_plane = ControlPlane(**control_plane)
-        else:
-            self.control_plane = control_plane
 
-        if isinstance(workers, {}.__class__):
-            self.workers = Workers(**workers)
-        else:
-            self.workers = workers
-
-        if isinstance(k8_distribution, {}.__class__):
-            self.k8_distribution = Distribution(**k8_distribution)
-        else:
-            self.k8_distribution = k8_distribution
-
-        if isinstance(settings, {}.__class__):
-            self.settings = Settings(**settings)
-        else:
-            self.settings = settings
+        self.control_plane = ControlPlane(**control_plane) \
+            if isinstance(control_plane, dict) else control_plane
+        self.workers = Workers(**workers) \
+            if isinstance(workers, dict) else workers
+        self.k8_distribution = Distribution(**k8_distribution)\
+            if isinstance(k8_distribution, dict) else k8_distribution
+        self.settings = Settings(**settings) \
+            if isinstance(settings, dict) else settings
 
 
 @dataclass()
@@ -193,26 +179,16 @@ class ClusterEntity:
     metadata: Metadata
     spec: ClusterSpec
     status: Status = Status()
-    kind: str = DEF_NATIVE_ENTITY_TYPE_NSS
+    kind: str = def_utils.DEF_NATIVE_ENTITY_TYPE_NSS
     api_version: str = ''
 
     def __init__(self, metadata: Metadata, spec: ClusterSpec, status=Status(),
-                 kind: str = DEF_NATIVE_INTERFACE_NSS, api_version: str = ''):
-        if isinstance(metadata, dict.__class__):
-            self.metadata = Metadata(**metadata)
-        else:
-            self.metadata = metadata
+                 kind: str = def_utils.DEF_NATIVE_INTERFACE_NSS, api_version: str = ''):
 
-        if isinstance(spec, dict.__class__):
-            self.spec = ClusterSpec(**spec)
-        else:
-            self.spec = spec
-
-        if isinstance(status, dict.__class__):
-            self.status = Status(**status)
-        else:
-            self.status = status
-
+        self.metadata = Metadata(**metadata) \
+            if isinstance(metadata, dict) else metadata
+        self.spec = ClusterSpec(**spec) if isinstance(spec, dict) else spec
+        self.status = Status(**status) if isinstance(status, dict) else status
         self.kind = kind
         self.api_version = api_version
 
@@ -236,10 +212,7 @@ class DefEntity:
                  entityType: str = None, externalId: str = None,
                  state: str = None):
         self.name = name
-        if isinstance(entity, dict.__class__):
-            self.entity = ClusterEntity(**entity)
-        else:
-            self.entity = entity
+        self.entity = ClusterEntity(**entity) if isinstance(entity, dict) else entity # noqa: E501
         self.id = id
         self.entityType = entityType
         self.externalId = externalId

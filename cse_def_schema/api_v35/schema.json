@@ -9,8 +9,8 @@
         "properties": {
             "kind": {
                 "enum": [
-                    "nativeCluster",
-                    "TanzuK8Cluster",
+                    "native",
+                    "TanzuK8",
                     "TanzuPlus"
                 ],
                 "type": "string"

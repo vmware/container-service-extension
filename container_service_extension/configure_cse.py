@@ -13,8 +13,7 @@ from pyvcloud.vcd.org import Org
 from requests.exceptions import HTTPError
 
 from container_service_extension.config_validator import get_validated_config
-from container_service_extension.def_modules.models import DefEntityType
-from container_service_extension.def_modules.models import DefInterface
+import container_service_extension.def_modules.models as def_models
 import container_service_extension.def_modules.schema_svc as def_schema_svc
 import container_service_extension.def_modules.utils as def_utils
 from container_service_extension.exceptions import AmqpError
@@ -577,11 +576,12 @@ def _register_def_schema(client: Client,
         schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
         keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(client.get_api_version())] # noqa: E501
         defKey = def_utils.DefKey
-        native_interface = DefInterface(name=keys_map[defKey.INTERFACE_NAME],
-                                        vendor=keys_map[defKey.VENDOR],
-                                        nss=keys_map[defKey.INTERFACE_NSS],
-                                        version=keys_map[defKey.INTERFACE_VERSION], # noqa: E501
-                                        readonly=False)
+        native_interface = def_models.\
+            DefInterface(name=keys_map[defKey.INTERFACE_NAME],
+                         vendor=keys_map[defKey.VENDOR],
+                         nss=keys_map[defKey.INTERFACE_NSS],
+                         version=keys_map[defKey.INTERFACE_VERSION], # noqa: E501
+                         readonly=False)
         msg = ""
         try:
             schema_svc.get_interface(native_interface.get_id())
@@ -601,14 +601,15 @@ def _register_def_schema(client: Client,
             f'{def_utils.DEF_SCHEMA_DIRECTORY}.{keys_map[defKey.ENTITY_TYPE_SCHEMA_VERSION]}') # noqa: E501
         schema_file = pkg_resources.open_text(schema_module, def_utils.DEF_ENTITY_TYPE_SCHEMA_FILE) # noqa: E501
 
-        native_entity_type = DefEntityType(name=keys_map[defKey.ENTITY_TYPE_NAME], # noqa: E501
-                                           description='',
-                                           vendor=keys_map[defKey.VENDOR],
-                                           nss=keys_map[defKey.ENTITY_TYPE_NSS], # noqa: E501
-                                           version=keys_map[defKey.ENTITY_TYPE_VERSION],  # noqa: E501
-                                           schema=json.load(schema_file),
-                                           interfaces=[native_interface.get_id()], # noqa: E501
-                                           readonly=False)
+        native_entity_type = def_models.\
+            DefEntityType(name=keys_map[defKey.ENTITY_TYPE_NAME],
+                          description='',
+                          vendor=keys_map[defKey.VENDOR],
+                          nss=keys_map[defKey.ENTITY_TYPE_NSS],
+                          version=keys_map[defKey.ENTITY_TYPE_VERSION],
+                          schema=json.load(schema_file),
+                          interfaces=[native_interface.get_id()],
+                          readonly=False)
         msg = ""
         try:
             schema_svc.get_entity_type(native_entity_type.get_id())
