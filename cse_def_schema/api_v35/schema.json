@@ -1,10 +1,16 @@
 {
         "type": "object",
+        "required": [
+            "kind",
+            "spec",
+            "metadata",
+            "settings"
+        ],
         "properties": {
             "kind": {
                 "enum": [
-                    "nativeCluster",
-                    "TanzuK8Cluster",
+                    "native",
+                    "TanzuK8",
                     "TanzuPlus"
                 ],
                 "type": "string"
@@ -14,6 +20,11 @@
                 "properties": {
                     "workers": {
                         "type": "object",
+                        "required": [
+                            "count",
+                            "sizing_class",
+                            "storage_profile"
+                        ],
                         "properties": {
                             "count": {
                                 "type": "integer",
@@ -26,11 +37,15 @@
                             "storage_profile": {
                                 "type": "string"
                             }
-                        },
-                        "required":["count","sizing_class","storage_profile"]
+                        }
                     },
                     "control_plane": {
                         "type": "object",
+                        "required": [
+                            "count",
+                            "sizing_class",
+                            "storage_profile"
+                        ],
                         "properties": {
                             "count": {
                                 "type": "integer",
@@ -43,11 +58,14 @@
                             "storage_profile": {
                                 "type": "string"
                             }
-                        },
-                        "required":["count","sizing_class","storage_profile"]
+                        }
                     },
                     "k8_distribution": {
                         "type": "object",
+                        "required": [
+                            "template_name",
+                            "template_revision"
+                        ],
                         "properties": {
                             "template_name": {
                                 "type": "string"
@@ -55,8 +73,7 @@
                             "template_revision": {
                                 "type": "integer"
                             }
-                        },
-                        "required":["template_name","template_revision"]
+                        }
                     }
                 }
             },
@@ -77,6 +94,11 @@
             },
             "metadata": {
                 "type": "object",
+                "required": [
+                    "org_name",
+                    "ovdc_name",
+                    "cluster_name"
+                ],
                 "properties": {
                     "org_name": {
                         "type": "string"
@@ -87,14 +109,16 @@
                     "cluster_name": {
                         "type": "string"
                     }
-                },
-                "required":["org_name","ovdc_name","cluster_name"]
+                }
             },
             "settings": {
                 "type": "object",
+                "required": [
+                    "network"
+                ],
                 "properties": {
                     "network": {
-                        "type": "boolean"
+                        "type": "string"
                     },
                     "ssh_key": {
                         "type": "string"
@@ -105,8 +129,7 @@
                     "rollback_on_failure": {
                         "type": "boolean"
                     }
-                },
-                "required":["network"]
+                }
             },
             "apiversion": {
                 "type": "string"

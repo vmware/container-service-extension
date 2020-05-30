@@ -8,7 +8,7 @@ from typing import List
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0 # noqa: E501
 from container_service_extension.cloudapi.constants import CloudApiResource
-from container_service_extension.def_modules.utils import DefEntity
+from container_service_extension.def_modules.models import DefEntity
 from container_service_extension.def_modules.utils import raise_error_if_def_not_supported # noqa: E501
 from container_service_extension.shared_constants import RequestMethod
 
