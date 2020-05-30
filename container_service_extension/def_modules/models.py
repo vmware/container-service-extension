@@ -27,7 +27,8 @@ class DefInterface:
         interface registration with vCD.
         """
         if self.id is None:
-            return def_utils.generate_interface_id(self.vendor, self.nss, self.version)
+            return def_utils.\
+                generate_interface_id(self.vendor, self.nss, self.version)
         else:
             return self.id
 
@@ -56,7 +57,8 @@ class DefEntityType:
         entity type registration with vCD.
         """
         if self.id is None:
-            return def_utils.generate_entity_type_id(self.vendor, self.nss, self.version)
+            return def_utils.\
+                generate_entity_type_id(self.vendor, self.nss, self.version)
         else:
             return self.id
 
@@ -183,7 +185,8 @@ class ClusterEntity:
     api_version: str = ''
 
     def __init__(self, metadata: Metadata, spec: ClusterSpec, status=Status(),
-                 kind: str = def_utils.DEF_NATIVE_INTERFACE_NSS, api_version: str = ''):
+                 kind: str = def_utils.DEF_NATIVE_INTERFACE_NSS,
+                 api_version: str = ''):
 
         self.metadata = Metadata(**metadata) \
             if isinstance(metadata, dict) else metadata
