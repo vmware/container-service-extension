@@ -41,6 +41,9 @@ PKS_COMPUTE_PROFILE_KEY = 'pks_compute_profile_name'
 # PKS API endpoint version
 VERSION_V1 = 'v1'
 
+# vCD API versions supported by CSE
+SUPPORTED_VCD_API_VERSIONS = ['33.0', '34.0', '35.0']
+
 
 @unique
 class NodeType(str, Enum):
