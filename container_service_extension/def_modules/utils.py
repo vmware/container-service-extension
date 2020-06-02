@@ -7,6 +7,7 @@ from enum import unique
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
+import container_service_extension.utils as utils
 
 # Defined Entity Framework related constants
 DEF_CSE_VENDOR = 'cse'
@@ -14,13 +15,14 @@ DEF_NATIVE_INTERFACE_NSS = 'native'
 DEF_NATIVE_INTERFACE_VERSION = '1.0.0'
 DEF_NATIVE_INTERFACE_NAME = 'nativeClusterInterface'
 DEF_INTERFACE_ID_PREFIX = 'urn:vcloud:interface'
-DEF_NATIVE_ENTITY_TYPE_NSS = 'nativeCluster'
+DEF_NATIVE_ENTITY_TYPE_NSS = 'nativeCluster1'
 DEF_NATIVE_ENTITY_TYPE_VERSION = '1.0.0'
 DEF_NATIVE_ENTITY_TYPE_NAME = 'nativeClusterEntityType'
 DEF_ENTITY_TYPE_ID_PREFIX = 'urn:vcloud:type'
 DEF_API_MIN_VERSION = 35.0
 DEF_SCHEMA_DIRECTORY = 'cse_def_schema'
 DEF_ENTITY_TYPE_SCHEMA_FILE = 'schema.json'
+DEF_END_POINT_DESCRIMINATOR = 'internal'
 
 
 @unique
@@ -104,3 +106,33 @@ def generate_entity_type_id(vendor, nss, version):
     :rtype str
     """
     return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{vendor}.{nss}:{version}"
+
+
+def get_native_cluster_interface():
+    """Get the registered native cluster interface.
+
+    :return: Native cluster interface
+    :rtype: DefInterface
+    """
+    from container_service_extension.service import Service
+    return Service().get_native_cluster_interface()
+
+
+def get_native_cluster_entity_type():
+    """Get the native cluster entity type.
+
+    :return: Native cluster entity type
+    :rtype: DefEntityType
+    """
+    from container_service_extension.service import Service
+    return Service().get_native_cluster_entity_type()
+
+
+def is_def_supported_by_cse_server():
+    """Return true if CSE server is qualified to invoke Defined Entity API
+
+    :rtype: bool
+    """
+    api_version = utils.get_server_api_version()
+    return float(api_version) >= DEF_API_MIN_VERSION
+

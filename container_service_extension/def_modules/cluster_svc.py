@@ -24,8 +24,8 @@ import container_service_extension.authorization as auth
 import container_service_extension.exceptions as e
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.def_modules.entity_svc import DefEntityService
-from container_service_extension.def_modules.utils import ClusterEntity
-from container_service_extension.def_modules.utils import DefEntity
+from container_service_extension.def_modules.models import ClusterEntity
+from container_service_extension.def_modules.models import DefEntity
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.request_context as ctx

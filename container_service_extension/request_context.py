@@ -8,7 +8,9 @@ import container_service_extension.utils as utils
 
 
 class RequestContext:
-    def __init__(self, auth_token, is_jwt=True, request_id=None):
+    def __init__(self, auth_token, is_jwt=True, request_url=None,
+                 request_body=None, request_query_params=None,
+                 request_url_data = None, request_id=None):
         self._auth_token: str = auth_token
         self._is_jwt: bool = is_jwt
 
@@ -27,6 +29,13 @@ class RequestContext:
         # Request ID; may be None if RequestContext is initialized outside of
         # request_processor.py
         self.request_id: str = request_id
+
+        self.request_url: str = request_url
+        # TODO "request_url_data" is a redundant piece of info; It can be
+        #  removed if we decide to process urls within the handlers.
+        self.request_url_data: dict = request_url_data
+        self.request_body: dict = request_body
+        self.request_query_params: dict = request_query_params
 
     @property
     def client(self):

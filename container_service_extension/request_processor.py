@@ -7,23 +7,29 @@ import json
 import sys
 from urllib.parse import parse_qsl
 
+import container_service_extension.def_modules.utils as def_utils
 from container_service_extension.exception_handler import handle_exception
 import container_service_extension.exceptions as e
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.request_context as ctx
-import container_service_extension.request_handlers.v35.def_cluster_handler as def_handler
-import container_service_extension.request_handlers.native_cluster_handler as native_cluster_handler # noqa: E501
-import container_service_extension.request_handlers.ovdc_handler as ovdc_handler # noqa: E501
-import container_service_extension.request_handlers.pks_cluster_handler as pks_cluster_handler  # noqa: E501
-import container_service_extension.request_handlers.system_handler as system_handler # noqa: E501
-import container_service_extension.request_handlers.template_handler as template_handler # noqa: E501 E501
+import \
+    container_service_extension.request_handlers.v35.def_cluster_handler as def_handler
+import \
+    container_service_extension.request_handlers.native_cluster_handler as native_cluster_handler  # noqa: E501
+import \
+    container_service_extension.request_handlers.ovdc_handler as ovdc_handler  # noqa: E501
+import \
+    container_service_extension.request_handlers.pks_cluster_handler as pks_cluster_handler  # noqa: E501
+import \
+    container_service_extension.request_handlers.system_handler as system_handler  # noqa: E501
+import \
+    container_service_extension.request_handlers.template_handler as template_handler  # noqa: E501 E501
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import PKS_SERVICE_NAME
 from container_service_extension.shared_constants import OperationType
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
-
 
 """Process incoming requests
 
@@ -38,10 +44,22 @@ GET /cse/cluster/{cluster name}/config?org={org name}&vdc={vdc name}
 GET /cse/cluster/{cluster name}/upgrade-plan?org={org name}&vdc={vdc name}
 POST /cse/cluster/{cluster name}/action/upgrade
 
-
 POST /cse/nodes
 DELETE /cse/nodes
 GET /cse/node/{node name}?cluster_name={cluster name}&org={org name}&vdc={vdc name}
+
+GET /cse/internal/clusters
+POST /cse/internal/clusters
+GET /cse/internal/cluster/{cluster name}?org={org name}&vdc={vdc name}
+PUT /cse/internal/cluster/{cluster name}?org={org name}&vdc={vdc name}
+DELETE /cse/internal/cluster/{cluster name}?org={org name}&vdc={vdc name}
+GET /cse/internal/cluster/{cluster name}/config?org={org name}&vdc={vdc name}
+GET /cse/internal/cluster/{cluster name}/upgrade-plan?org={org name}&vdc={vdc name}
+POST /cse/internal/cluster/{cluster name}/action/upgrade
+
+POST /cse/internal/nodes
+DELETE /cse/internal/nodes
+GET /cse/internal/node/{node name}?cluster_name={cluster name}&org={org name}&vdc={vdc name}
 
 GET /cse/ovdcs
 GET /cse/ovdc/{ovdc id}
@@ -60,7 +78,7 @@ GET /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
 PUT /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
 DELETE /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
 GET /pks/cluster/{cluster name}/config?org={org name}&vdc={vdc name}
-""" # noqa: E501
+"""  # noqa: E501
 
 OPERATION_TO_HANDLER = {
     CseOperation.CLUSTER_CONFIG: native_cluster_handler.cluster_config,
@@ -69,7 +87,8 @@ OPERATION_TO_HANDLER = {
     CseOperation.CLUSTER_INFO: native_cluster_handler.cluster_info,
     CseOperation.CLUSTER_LIST: native_cluster_handler.cluster_list,
     CseOperation.CLUSTER_RESIZE: native_cluster_handler.cluster_resize,
-    CseOperation.CLUSTER_UPGRADE_PLAN: native_cluster_handler.cluster_upgrade_plan,  # noqa: E501
+    CseOperation.CLUSTER_UPGRADE_PLAN: native_cluster_handler.cluster_upgrade_plan,
+    # noqa: E501
     CseOperation.CLUSTER_UPGRADE: native_cluster_handler.cluster_upgrade,
     CseOperation.NODE_CREATE: native_cluster_handler.node_create,
     CseOperation.NODE_DELETE: native_cluster_handler.node_delete,
@@ -77,8 +96,10 @@ OPERATION_TO_HANDLER = {
     CseOperation.OVDC_UPDATE: ovdc_handler.ovdc_update,
     CseOperation.OVDC_INFO: ovdc_handler.ovdc_info,
     CseOperation.OVDC_LIST: ovdc_handler.ovdc_list,
-    CseOperation.OVDC_COMPUTE_POLICY_LIST: ovdc_handler.ovdc_compute_policy_list, # noqa: E501
-    CseOperation.OVDC_COMPUTE_POLICY_UPDATE: ovdc_handler.ovdc_compute_policy_update, # noqa: E501
+    CseOperation.OVDC_COMPUTE_POLICY_LIST: ovdc_handler.ovdc_compute_policy_list,
+    # noqa: E501
+    CseOperation.OVDC_COMPUTE_POLICY_UPDATE: ovdc_handler.ovdc_compute_policy_update,
+    # noqa: E501
     CseOperation.SYSTEM_INFO: system_handler.system_info,
     CseOperation.SYSTEM_UPDATE: system_handler.system_update,
     CseOperation.TEMPLATE_LIST: template_handler.template_list,
@@ -94,22 +115,21 @@ OPERATION_TO_HANDLER = {
 _OPERATION_KEY = 'operation'
 
 
+def _is_def_endpoint(url: str):
+    tokens = url.split('/')
+    return tokens[3] == def_utils.DEF_END_POINT_DESCRIMINATOR
+
+
 @handle_exception
 def process_request(body):
     from container_service_extension.service import Service
     LOGGER.debug(f"Incoming request body: {json.dumps(body)}")
 
-    url = ""
-    url = body['requestUri']
-    tokens = url.split('/')
-    if api_version >=35.0 and (tokens[3] =='def' or 'clusters' in url or 'cluster' in url or 'node' in url or 'nodes' in url):
-        is_def_request = True
-
-    url_data = _get_url_data(body['method'], body['requestUri'], is_def_request)
+    url_data = _get_url_data(body['method'], body['requestUri'])
     operation = url_data[_OPERATION_KEY]
 
     # check if server is disabled
-    if operation not in (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE)\
+    if operation not in (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE) \
             and not Service().is_running():
         raise e.BadRequestError(
             error_message='CSE service is disabled. '
@@ -118,8 +138,10 @@ def process_request(body):
     # create request data dict from request body data
     request_data = {}
     if len(body['body']) > 0:
-        raw_body = base64.b64decode(body['body']).decode(sys.getfilesystemencoding()) # noqa: E501
-        request_data = json.loads(raw_body)
+        raw_body = base64.b64decode(body['body']).decode(
+            sys.getfilesystemencoding())  # noqa: E501
+        request_body = json.loads(raw_body)
+        request_data.update(request_body)
         LOGGER.debug(f"request body: {request_data}")
     # update request data dict with query params data
     if body['queryString']:
@@ -143,10 +165,18 @@ def process_request(body):
 
     # process the request
     context = ctx.RequestContext(tenant_auth_token, is_jwt=is_jwt_token,
+                                 request_body=request_body,
+                                 request_url_data=url_data,
+                                 request_query_params=query_params,
                                  request_id=body['id'])
+
+    is_def_request = True if def_utils.is_def_supported_by_cse_server() and\
+        _is_def_endpoint(body['requestUri']) else False
+
     try:
         if is_def_request:
-            body_content = def_handler.OPERATION_TO_METHOD[operation](data, context)
+            body_content = def_handler.OPERATION_TO_METHOD[operation](data,
+                                                                      context)
         else:
             body_content = OPERATION_TO_HANDLER[operation](data, context)
     finally:
@@ -163,7 +193,7 @@ def process_request(body):
     return response
 
 
-def _get_url_data(method, url, is_def_request=False):
+def _get_url_data(method, url):
     """Parse url and http method to get desired CSE operation and url data.
 
     Url is processed like a tree to find the desired operation as fast as
@@ -178,6 +208,7 @@ def _get_url_data(method, url, is_def_request=False):
 
     :rtype: dict
     """
+    url = url.replace(f"/{def_utils.DEF_END_POINT_DESCRIMINATOR}", '')
     tokens = url.split('/')
     num_tokens = len(tokens)
 
@@ -186,14 +217,6 @@ def _get_url_data(method, url, is_def_request=False):
 
     if tokens[2] == PKS_SERVICE_NAME:
         return _get_pks_url_data(method, url)
-
-    if is_def_request:
-        temp_url = url.replace('/def','')
-
-    tokens = temp_url.split('/')
-    num_tokens = len(tokens)
-    if num_tokens < 4:
-        raise e.NotFoundRequestError()
 
     operation_type = tokens[3].lower()
     if operation_type.endswith('s'):

@@ -1,17 +1,13 @@
+# container-service-extension
+# Copyright (c) 2020 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
 
-
-import container_service_extension.exceptions as e
-
-from container_service_extension.def_modules.entity_svc import DefEntityService
-from container_service_extension.def_modules.utils import ClusterEntity
 from container_service_extension.request_context import RequestContext
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.telemetry.telemetry_handler import \
     record_user_action_telemetry
 from container_service_extension.def_modules.cluster_svc import DefClusterService
-from container_service_extension.shared_constants import OperationType, \
-    RequestMethod
-from container_service_extension.shared_constants import RequestKey
+
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_CREATE)
 def cluster_create(request_data, request_context: RequestContext):
@@ -29,7 +25,8 @@ def cluster_create(request_data, request_context: RequestContext):
     :return: Dict
     """
     cluster_svc = DefClusterService(request_context)
-    return cluster_svc.create_cluster(data=request_data)
+    return {'hey':'cluster'}
+    #return cluster_svc.create_cluster(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_RESIZE)
@@ -195,9 +192,6 @@ def node_info(request_data, request_context: RequestContext):
     cluster_svc = DefClusterService(request_context)
     return cluster_svc.get_node_info(data=request_data)
 
-
-
-_OPERATION_KEY = 'operation'
 
 OPERATION_TO_METHOD = {
     CseOperation.CLUSTER_CONFIG: cluster_config,

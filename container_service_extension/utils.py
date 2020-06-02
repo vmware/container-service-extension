@@ -71,6 +71,15 @@ def get_server_runtime_config():
     return Service().get_service_config()
 
 
+def get_server_api_version():
+    """Get the API version with which CSE server is running.
+
+    :return: api version
+    """
+    config = get_server_runtime_config()
+    return config['vcd']['api_version']
+
+
 def get_pks_cache():
     from container_service_extension.service import Service
     return Service().get_pks_cache()

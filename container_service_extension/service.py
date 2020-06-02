@@ -205,21 +205,21 @@ class Service(object, metaclass=Singleton):
         populate_vsphere_list(self.config['vcs'])
 
         # Load def entity-type and interface
-        #self._load_def_schema(msg_update_callback=msg_update_callback)
+        self._load_def_schema(msg_update_callback=msg_update_callback)
 
-        # # Read k8s catalog definition from catalog item metadata and append
-        # # the same to to server run-time config
-        # self._load_template_definition_from_catalog(
-        #     msg_update_callback=msg_update_callback)
-        #
-        # # Read templates rules from config and update template deinfition in
-        # # server run-time config
-        # self._process_template_rules(msg_update_callback=msg_update_callback)
-        #
-        # # Make sure that all vms in templates are compliant with the compute
-        # # policy specified in template definition (can be affected by rules).
-        # self._process_template_compute_policy_compliance(
-        #     msg_update_callback=msg_update_callback)
+        # Read k8s catalog definition from catalog item metadata and append
+        # the same to to server run-time config
+        self._load_template_definition_from_catalog(
+            msg_update_callback=msg_update_callback)
+
+        # Read templates rules from config and update template deinfition in
+        # server run-time config
+        self._process_template_rules(msg_update_callback=msg_update_callback)
+
+        # Make sure that all vms in templates are compliant with the compute
+        # policy specified in template definition (can be affected by rules).
+        self._process_template_compute_policy_compliance(
+            msg_update_callback=msg_update_callback)
 
         if self.should_check_config:
             check_cse_installation(
@@ -281,7 +281,7 @@ class Service(object, metaclass=Singleton):
                                    cse_params=cse_params)
         record_user_action(cse_operation=CseOperation.SERVICE_RUN)
 
-        self.defTest(msg_update_callback)
+        #self.defTest(msg_update_callback)
 
         while True:
             try:
@@ -317,9 +317,9 @@ class Service(object, metaclass=Singleton):
             DefEntityService
         from container_service_extension.def_modules.schema_svc import \
             DefSchemaService
-        from container_service_extension.def_modules.utils import DefInterface
+        from container_service_extension.def_modules.models import DefInterface
         import container_service_extension.cloudapi.constants as c
-        from container_service_extension.def_modules.utils import \
+        from container_service_extension.def_modules.models import \
             DefEntityType
         from container_service_extension.utils import ConsoleMessagePrinter
         from container_service_extension.configure_cse import _register_def_schema
