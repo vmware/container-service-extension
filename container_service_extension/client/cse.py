@@ -10,10 +10,12 @@ from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
 from vcd_cli.vcd import vcd
 
+
 from container_service_extension.client import pks
 from container_service_extension.client.cluster import Cluster
 from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.system import System
+from container_service_extension.client.utils import GroupCommandFilter
 from container_service_extension.exceptions import CseResponseError
 from container_service_extension.logger import CLIENT_LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
@@ -83,7 +85,8 @@ def list_templates(ctx):
         CLIENT_LOGGER.error(str(e))
 
 
-@cse.group('cluster', short_help='Manage Native Kubernetes clusters')
+@cse.group('cluster', cls=GroupCommandFilter,
+           short_help='Manage Native Kubernetes clusters')
 @click.pass_context
 def cluster_group(ctx):
     """Manage Kubernetes clusters.
@@ -541,6 +544,26 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
                 e.minor_error_code, e.error_message)
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
+    except Exception as e:
+        stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
+
+
+@cluster_group.command('apply',
+                       short_help='apply the configuration to Defined Entity'
+                                  'Resource by filename; create resource if'
+                                  ' doesn\'t exist')
+@click.pass_context
+@click.argument('resource_config_file_path',
+                metavar='RESOURCE_CONFIG_FILE_NAME',
+                type=click.Path(exists=True))
+def apply(ctx, resource_config_file_path):
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
+    try:
+        restore_session(ctx)
+        client = ctx.obj['client']
+        cluster = Cluster(client)
+        cluster.apply(resource_config_file_path)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
