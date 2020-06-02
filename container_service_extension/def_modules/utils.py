@@ -6,8 +6,8 @@ from enum import unique
 
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 
+import container_service_extension.def_modules.models as def_models
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
-import container_service_extension.utils as utils
 
 # Defined Entity Framework related constants
 DEF_CSE_VENDOR = 'cse'
@@ -66,13 +66,13 @@ def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
                                        f" {cloudapi_client.get_api_version()}")
 
 
-def get_registered_def_interface():
+def get_registered_def_interface() -> def_models.DefInterface:
     """Fetch the native cluster interface loaded during server startup."""
     from container_service_extension.service import Service
     return Service().get_native_cluster_interface()
 
 
-def get_registered_def_entity_type():
+def get_registered_def_entity_type() -> def_models.DefEntityType:
     """Fetch the native cluster entity type loaded during server startup."""
     from container_service_extension.service import Service
     return Service().get_native_cluster_entity_type()
@@ -108,31 +108,14 @@ def generate_entity_type_id(vendor, nss, version):
     return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{vendor}.{nss}:{version}"
 
 
-def get_native_cluster_interface():
-    """Get the registered native cluster interface.
-
-    :return: Native cluster interface
-    :rtype: DefInterface
-    """
-    from container_service_extension.service import Service
-    return Service().get_native_cluster_interface()
-
-
-def get_native_cluster_entity_type():
-    """Get the native cluster entity type.
-
-    :return: Native cluster entity type
-    :rtype: DefEntityType
-    """
-    from container_service_extension.service import Service
-    return Service().get_native_cluster_entity_type()
-
-
 def is_def_supported_by_cse_server():
     """Return true if CSE server is qualified to invoke Defined Entity API
 
     :rtype: bool
     """
+    import container_service_extension.utils as utils
     api_version = utils.get_server_api_version()
     return float(api_version) >= DEF_API_MIN_VERSION
+
+
 

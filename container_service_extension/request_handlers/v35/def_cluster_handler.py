@@ -1,7 +1,7 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-
+from container_service_extension.def_modules.models import ClusterEntity
 from container_service_extension.request_context import RequestContext
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.telemetry.telemetry_handler import \
@@ -25,8 +25,8 @@ def cluster_create(request_data, request_context: RequestContext):
     :return: Dict
     """
     cluster_svc = DefClusterService(request_context)
-    return {'hey':'cluster'}
-    #return cluster_svc.create_cluster(data=request_data)
+    cluster_entity_spec = ClusterEntity(**request_context.request_body)
+    return cluster_svc.create_cluster(cluster_entity_spec)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_RESIZE)

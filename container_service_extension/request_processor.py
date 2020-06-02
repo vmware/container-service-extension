@@ -137,6 +137,7 @@ def process_request(body):
 
     # create request data dict from request body data
     request_data = {}
+    request_body = None
     if len(body['body']) > 0:
         raw_body = base64.b64decode(body['body']).decode(
             sys.getfilesystemencoding())  # noqa: E501
@@ -144,6 +145,7 @@ def process_request(body):
         request_data.update(request_body)
         LOGGER.debug(f"request body: {request_data}")
     # update request data dict with query params data
+    query_params = None
     if body['queryString']:
         query_params = dict(parse_qsl(body['queryString']))
         request_data.update(query_params)
@@ -170,13 +172,11 @@ def process_request(body):
                                  request_query_params=query_params,
                                  request_id=body['id'])
 
-    is_def_request = True if def_utils.is_def_supported_by_cse_server() and\
-        _is_def_endpoint(body['requestUri']) else False
+    is_def_request = def_utils.is_def_supported_by_cse_server() and _is_def_endpoint(body['requestUri'])  # noqa: E501
 
     try:
         if is_def_request:
-            body_content = def_handler.OPERATION_TO_METHOD[operation](data,
-                                                                      context)
+            body_content = def_handler.OPERATION_TO_METHOD[operation](data, context)  # noqa: E501
         else:
             body_content = OPERATION_TO_HANDLER[operation](data, context)
     finally:

@@ -26,6 +26,7 @@ import container_service_extension.local_template_manager as ltm
 from container_service_extension.def_modules.entity_svc import DefEntityService
 from container_service_extension.def_modules.models import ClusterEntity
 from container_service_extension.def_modules.models import DefEntity
+import container_service_extension.def_modules.utils as def_utils
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.request_context as ctx
@@ -159,7 +160,7 @@ class DefClusterService(abstract_broker.AbstractBroker):
         return upgrades
 
     @auth.secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
-    def create_cluster(self, **kwargs):
+    def create_cluster(self, cluster_spec: ClusterEntity, **kwargs):
         """Start the cluster creation operation.
 
         Common broker function that validates data for the 'create cluster'
@@ -177,50 +178,29 @@ class DefClusterService(abstract_broker.AbstractBroker):
         **telemetry: Optional
         """
         data = kwargs[KwargKey.DATA]
-        required = [
-            RequestKey.CLUSTER_NAME,
-            RequestKey.ORG_NAME,
-            RequestKey.OVDC_NAME,
-            RequestKey.NETWORK_NAME
-        ]
-        cluster_name = data[RequestKey.CLUSTER_NAME]
+        cluster_name = cluster_spec.metadata.cluster_name
+        org_name = cluster_spec.metadata.org_name
+        ovdc_name = cluster_spec.metadata.ovdc_name
+
         # check that cluster name is syntactically valid
         if not is_valid_cluster_name(cluster_name):
             raise e.CseServerError(f"Invalid cluster name '{cluster_name}'")
         # check that cluster name doesn't already exist
         try:
             get_cluster(self.context.client, cluster_name,
-                        org_name=data[RequestKey.ORG_NAME],
-                        ovdc_name=data[RequestKey.OVDC_NAME])
+                        org_name=org_name,
+                        ovdc_name=ovdc_name)
             raise e.ClusterAlreadyExistsError(
                 f"Cluster '{cluster_name}' already exists.")
         except e.ClusterNotFoundError:
             pass
         # check that requested/default template is valid
         template = get_template(
-            name=data.get(RequestKey.TEMPLATE_NAME),
-            revision=data.get(RequestKey.TEMPLATE_REVISION))
-        defaults = {
-            RequestKey.NUM_WORKERS: 2,
-            RequestKey.NUM_CPU: None,
-            RequestKey.MB_MEMORY: None,
-            RequestKey.STORAGE_PROFILE_NAME: None,
-            RequestKey.SSH_KEY: None,
-            RequestKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME],
-            RequestKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION],
-            RequestKey.ENABLE_NFS: False,
-            RequestKey.ROLLBACK: True,
-        }
-        validated_data = {**defaults, **data}
-        req_utils.validate_payload(validated_data, required)
-        template_name = validated_data[RequestKey.TEMPLATE_NAME]
-        template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
-        num_workers = validated_data[RequestKey.NUM_WORKERS]
+            name=cluster_spec.spec.k8_distribution.template_name,
+            revision=cluster_spec.spec.k8_distribution.template_revision)
 
-        # check that requested number of worker nodes is at least more than 1
-        if num_workers < 0:
-            raise e.CseServerError(
-                f"Worker node count must be >= 0 (received {num_workers}).")
+        template_name = cluster_spec.spec.k8_distribution.template_name
+        template_revision = cluster_spec.spec.k8_distribution.template_revision
 
         cluster_id = str(uuid.uuid4())
 
@@ -233,43 +213,41 @@ class DefClusterService(abstract_broker.AbstractBroker):
         self.context.is_async = True
 
         # Create Defined entity
-        cluster_entity = ClusterEntity(name=cluster_name,
-                                       control_plane={'count':1},
-                                       workers={'count':5, 'sizing_class':'small'},
-                                       k8_dist={'template':'K8_1.17', 'revision':1})
-        entity = DefEntity(name=cluster_name, entity=cluster_entity)
-        self.entity_svc.create_entity('entity_type_id', entity=entity)
+        def_entity = DefEntity(name=cluster_name, entity=cluster_spec)
+        self.entity_svc.create_entity(def_utils.get_registered_def_entity_type().id, entity=def_entity)
+        # TODO Below method is yet to be implemented
+        def_entity: DefEntity = self.entity_svc.filter_entities_by_property(cluster_name,org_name, ovdc_name)
 
-        self._create_cluster_async(
-            org_name=validated_data[RequestKey.ORG_NAME],
-            ovdc_name=validated_data[RequestKey.OVDC_NAME],
-            cluster_name=cluster_name,
-            cluster_id=cluster_id,
-            template_name=template_name,
-            template_revision=template_revision,
-            num_workers=validated_data[RequestKey.NUM_WORKERS],
-            network_name=validated_data[RequestKey.NETWORK_NAME],
-            num_cpu=validated_data[RequestKey.NUM_CPU],
-            mb_memory=validated_data[RequestKey.MB_MEMORY],
-            storage_profile_name=validated_data[RequestKey.STORAGE_PROFILE_NAME], # noqa: E501
-            ssh_key=validated_data[RequestKey.SSH_KEY],
-            enable_nfs=validated_data[RequestKey.ENABLE_NFS],
-            rollback=validated_data[RequestKey.ROLLBACK],
-            def_entity=entity)
+        self._create_cluster_async(def_entity)
+            # org_name=org_name,
+            # ovdc_name=ovdc_name,
+            # cluster_name=cluster_name,
+            # cluster_id=cluster_id,
+            # template_name=template_name,
+            # template_revision=template_revision,
+            # num_workers=num_workers,
+            # network_name=network_name,
+            # num_cpu=validated_data[RequestKey.NUM_CPU],
+            # mb_memory=validated_data[RequestKey.MB_MEMORY],
+            # storage_profile_name=validated_data[RequestKey.STORAGE_PROFILE_NAME], # noqa: E501
+            # ssh_key=validated_data[RequestKey.SSH_KEY],
+            # enable_nfs=validated_data[RequestKey.ENABLE_NFS],
+            # rollback=validated_data[RequestKey.ROLLBACK])
 
-        if kwargs.get(KwargKey.TELEMETRY, True):
-            # Record the data for telemetry
-            cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster_id
-            cse_params[LocalTemplateKey.MEMORY] = validated_data.get(RequestKey.MB_MEMORY)  # noqa: E501
-            cse_params[LocalTemplateKey.CPU] = validated_data.get(RequestKey.NUM_CPU) # noqa: E501
-            cse_params[LocalTemplateKey.KUBERNETES] = template.get(LocalTemplateKey.KUBERNETES)  # noqa: E501
-            cse_params[LocalTemplateKey.KUBERNETES_VERSION] = template.get(LocalTemplateKey.KUBERNETES_VERSION)  # noqa: E501
-            cse_params[LocalTemplateKey.OS] = template.get(LocalTemplateKey.OS)
-            cse_params[LocalTemplateKey.CNI] = template.get(LocalTemplateKey.CNI) # noqa: E501
-            cse_params[LocalTemplateKey.CNI_VERSION] = template.get(LocalTemplateKey.CNI_VERSION)  # noqa: E501
-            record_user_action_details(cse_operation=CseOperation.CLUSTER_CREATE, # noqa: E501
-                                       cse_params=cse_params)
+        # TODO design and implement telemetry for defined entity based clusters
+        # if kwargs.get(KwargKey.TELEMETRY, True):
+        #     # Record the data for telemetry
+        #     cse_params = copy.deepcopy(validated_data)
+        #     cse_params[PayloadKey.CLUSTER_ID] = cluster_id
+        #     cse_params[LocalTemplateKey.MEMORY] = validated_data.get(RequestKey.MB_MEMORY)  # noqa: E501
+        #     cse_params[LocalTemplateKey.CPU] = validated_data.get(RequestKey.NUM_CPU) # noqa: E501
+        #     cse_params[LocalTemplateKey.KUBERNETES] = template.get(LocalTemplateKey.KUBERNETES)  # noqa: E501
+        #     cse_params[LocalTemplateKey.KUBERNETES_VERSION] = template.get(LocalTemplateKey.KUBERNETES_VERSION)  # noqa: E501
+        #     cse_params[LocalTemplateKey.OS] = template.get(LocalTemplateKey.OS)
+        #     cse_params[LocalTemplateKey.CNI] = template.get(LocalTemplateKey.CNI) # noqa: E501
+        #     cse_params[LocalTemplateKey.CNI_VERSION] = template.get(LocalTemplateKey.CNI_VERSION)  # noqa: E501
+        #     record_user_action_details(cse_operation=CseOperation.CLUSTER_CREATE, # noqa: E501
+        #                                cse_params=cse_params)
 
         return {
             'name': cluster_name,
@@ -713,13 +691,28 @@ class DefClusterService(abstract_broker.AbstractBroker):
 
     # all parameters following '*args' are required and keyword-only
     @utils.run_async
-    def _create_cluster_async(self, *args,
-                              org_name, ovdc_name, cluster_name, cluster_id,
-                              template_name, template_revision, num_workers,
-                              network_name, num_cpu, mb_memory,
-                              storage_profile_name, ssh_key, enable_nfs,
-                              rollback, def_entity=None):
+    def _create_cluster_async(self, def_entity: DefEntity):
+                              # org_name, ovdc_name, cluster_name, cluster_id,
+                              # template_name, template_revision, num_workers,
+                              # network_name, num_cpu, mb_memory,
+                              # storage_profile_name, ssh_key, enable_nfs,
+                              # rollback):
         try:
+            cluster_entity = def_entity.entity
+            cluster_id = def_entity.id
+            cluster_name = cluster_entity.metadata.cluster_name
+            org_name = cluster_entity.metadata.org_name
+            ovdc_name = cluster_entity.metadata.ovdc_name
+            num_workers = cluster_entity.spec.workers.count
+            master_storage_profile = cluster_entity.spec.control_plane.storage_profile
+            worker_storage_profile = cluster_entity.spec.workers.storage_profile
+            network_name = cluster_entity.spec.settings.network
+            template_name = cluster_entity.spec.k8_distribution.template_name
+            template_revision = cluster_entity.spec.k8_distribution.template_revision
+            ssh_key = cluster_entity.spec.settings.ssh_key
+            enable_nfs = cluster_entity.spec.settings.enable_nfs
+            rollback = cluster_entity.spec.settings.rollback_on_failure
+
             org = vcd_utils.get_org(self.context.client, org_name=org_name)
             vdc = vcd_utils.get_vdc(self.context.client,
                                     vdc_name=ovdc_name,
@@ -727,7 +720,7 @@ class DefClusterService(abstract_broker.AbstractBroker):
 
             LOGGER.debug(f"About to create cluster '{cluster_name}' on "
                          f"{ovdc_name} with {num_workers} worker nodes, "
-                         f"storage profile={storage_profile_name}")
+                         f"storage profile={worker_storage_profile}")
             msg = f"Creating cluster vApp {cluster_name} ({cluster_id})"
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             try:
@@ -777,9 +770,9 @@ class DefClusterService(abstract_broker.AbstractBroker):
                           catalog_name=catalog_name,
                           template=template,
                           network_name=network_name,
-                          num_cpu=num_cpu,
-                          memory_in_mb=mb_memory,
-                          storage_profile=storage_profile_name,
+                          num_cpu=None,
+                          memory_in_mb=None,
+                          storage_profile=master_storage_profile,
                           ssh_key=ssh_key)
             except Exception as err:
                 raise e.MasterNodeCreationError("Error adding master node:",
@@ -810,9 +803,9 @@ class DefClusterService(abstract_broker.AbstractBroker):
                           catalog_name=catalog_name,
                           template=template,
                           network_name=network_name,
-                          num_cpu=num_cpu,
-                          memory_in_mb=mb_memory,
-                          storage_profile=storage_profile_name,
+                          num_cpu=None,
+                          memory_in_mb=None,
+                          storage_profile=worker_storage_profile,
                           ssh_key=ssh_key)
             except Exception as err:
                 raise e.WorkerNodeCreationError("Error creating worker node:",
@@ -841,9 +834,9 @@ class DefClusterService(abstract_broker.AbstractBroker):
                               catalog_name=catalog_name,
                               template=template,
                               network_name=network_name,
-                              num_cpu=num_cpu,
-                              memory_in_mb=mb_memory,
-                              storage_profile=storage_profile_name,
+                              num_cpu=None,
+                              memory_in_mb=None,
+                              storage_profile=worker_storage_profile,
                               ssh_key=ssh_key)
                 except Exception as err:
                     raise e.NFSNodeCreationError("Error creating NFS node:",

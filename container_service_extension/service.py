@@ -133,10 +133,10 @@ class Service(object, metaclass=Singleton):
             del result['python']
         return result
 
-    def get_native_cluster_interface(self):
+    def get_native_cluster_interface(self) -> def_models.DefInterface:
         return self._nativeInterface
 
-    def get_native_cluster_entity_type(self):
+    def get_native_cluster_entity_type(self) -> def_models.DefEntityType:
         return self._nativeEntityType
 
     @classmethod

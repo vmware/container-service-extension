@@ -5,6 +5,7 @@
 from dataclasses import dataclass
 
 import container_service_extension.def_modules.utils as def_utils
+import container_service_extension.utils as utils
 
 
 @dataclass(frozen=True)
@@ -76,6 +77,11 @@ class ControlPlane:
     storage_profile: str = None
     count: int = 1
 
+    def __init__(self, sizing_class: str = None, storage_profile: str = None, count: int = 1): # noqa: E501
+        self.sizing_class = sizing_class
+        self.storage_profile = storage_profile or utils.get_default_storage_profile()  # noqa: E501
+        self.count = count
+
 
 @dataclass()
 class Workers:
@@ -83,11 +89,22 @@ class Workers:
     storage_profile: str = None
     count: int = 2
 
+    def __init__(self, sizing_class: str = None, storage_profile: str = None, count: int = 2):  # noqa: E501
+        self.sizing_class = sizing_class
+        self.storage_profile = storage_profile or utils.get_default_storage_profile()  # noqa: E501
+        self.count = count
+
 
 @dataclass()
 class Distribution:
-    template_name: str
-    template_revision: int
+    template_name: str = None
+    template_revision: int = 1
+
+    def __init__(self, template_name: str = None, template_revision: int = None):
+        if not template_name:
+            default_dist = utils.get_default_k8_distribution()
+        self.template_name = template_name or default_dist.template_name
+        self.template_revision = template_revision or default_dist.template_revision  # noqa: E501
 
 
 @dataclass()
@@ -113,23 +130,21 @@ class ClusterSpec:
     If dictionaries are passed as arguments, the constructor auto-converts
     them into the expected class instances.
     """
-
     control_plane: ControlPlane
     workers: Workers
     k8_distribution: Distribution
     settings: Settings
 
-    def __init__(self, control_plane: ControlPlane, workers: Workers,
-                 k8_distribution: Distribution, settings: Settings):
-
-        self.control_plane = ControlPlane(**control_plane) \
-            if isinstance(control_plane, dict) else control_plane
-        self.workers = Workers(**workers) \
-            if isinstance(workers, dict) else workers
-        self.k8_distribution = Distribution(**k8_distribution)\
-            if isinstance(k8_distribution, dict) else k8_distribution
+    def __init__(self, settings: Settings, k8_distribution: Distribution = None,
+                 control_plane: ControlPlane = None, workers: Workers = None):
         self.settings = Settings(**settings) \
             if isinstance(settings, dict) else settings
+        self.control_plane = ControlPlane(**control_plane) \
+            if isinstance(control_plane, dict) else control_plane or ControlPlane()  # noqa: E501
+        self.workers = Workers(**workers) \
+            if isinstance(workers, dict) else workers or Workers()
+        self.k8_distribution = Distribution(**k8_distribution) \
+            if isinstance(k8_distribution, dict) else k8_distribution or Distribution()  # noqa: E501
 
 
 @dataclass()
@@ -153,6 +168,11 @@ class ClusterEntity:
                 "sizing_class": "Large",
                 "storage_profile": "Any"
             },
+            "settings": {
+                "network": "net",
+                "ssh_key": null,
+                "enable_nfs": false
+            },
             "k8_distribution": {
                 "template_name": "k81.17",
                 "template_revision": 1
@@ -168,11 +188,6 @@ class ClusterEntity:
             "org_name": "org1",
             "ovdc_name": "ovdc1",
             "cluster_name": "myCluster"
-        },
-        "settings": {
-            "network": "net",
-            "ssh_key": null,
-            "enable_nfs": false
         },
         "api_version": ""
     }
@@ -215,8 +230,9 @@ class DefEntity:
                  entityType: str = None, externalId: str = None,
                  state: str = None):
         self.name = name
-        self.entity = ClusterEntity(**entity) if isinstance(entity, dict) else entity # noqa: E501
+        self.entity = ClusterEntity(**entity) if isinstance(entity, dict) else entity  # noqa: E501
         self.id = id
         self.entityType = entityType
         self.externalId = externalId
         self.state = state
+
