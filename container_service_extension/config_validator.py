@@ -212,8 +212,10 @@ def _validate_vcd_and_vcs_config(vcd_dict,
                                  log_wire=False):
     """Ensure that 'vcd' and vcs' section of config are correct.
 
-    Checks that 'vcd' and 'vcs' section of config have correct keys and value
-    types. Also checks that vCD and all registered VCs in vCD are accessible.
+    Checks that 
+        * 'vcd' and 'vcs' section of config have correct keys and value types.
+        * vCD and all registered VCs in vCD are accessible.
+        * api version specified for vcd is supported by CSE.
 
     :param dict vcd_dict: 'vcd' section of config file as a dict.
     :param list vcs: 'vcs' section of config file as a list of dicts.
