@@ -33,6 +33,8 @@ from container_service_extension.sample_generator import \
     SAMPLE_PKS_NSXT_SERVERS_SECTION, SAMPLE_PKS_ORGS_SECTION, \
     SAMPLE_PKS_PVDCS_SECTION, SAMPLE_PKS_SERVERS_SECTION, \
     SAMPLE_SERVICE_CONFIG, SAMPLE_VCD_CONFIG, SAMPLE_VCS_CONFIG # noqa: H301
+from container_service_extension.server_constants import \
+    SUPPORTED_VCD_API_VERSIONS
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.server_constants import VERSION_V1
 from container_service_extension.telemetry.telemetry_utils import\
@@ -197,7 +199,7 @@ def _validate_amqp_config(amqp_dict, msg_update_callback=NullPrinter()):
             "Connected to AMQP server "
             f"({amqp_dict['host']}:{amqp_dict['port']})")
     except Exception as err:
-        raise AmqpConnectionError("Amqp connection failed:", str(err))
+        raise AmqpConnectionError(f"AMQP server error : {str(err)}")
     finally:
         if connection is not None:
             connection.close()
@@ -210,8 +212,10 @@ def _validate_vcd_and_vcs_config(vcd_dict,
                                  log_wire=False):
     """Ensure that 'vcd' and vcs' section of config are correct.
 
-    Checks that 'vcd' and 'vcs' section of config have correct keys and value
-    types. Also checks that vCD and all registered VCs in vCD are accessible.
+    Checks that
+        * 'vcd' and 'vcs' section of config have correct keys and value types.
+        * vCD and all registered VCs in vCD are accessible.
+        * api version specified for vcd is supported by CSE.
 
     :param dict vcd_dict: 'vcd' section of config file as a dict.
     :param list vcs: 'vcs' section of config file as a list of dicts.
@@ -237,8 +241,13 @@ def _validate_vcd_and_vcs_config(vcd_dict,
 
     client = None
     try:
+        api_version = vcd_dict['api_version']
+        if str(api_version) not in SUPPORTED_VCD_API_VERSIONS:
+            raise ValueError(f"vCD api version {api_version} is not supported "
+                             "by CSE. Supported api versions are "
+                             f"{SUPPORTED_VCD_API_VERSIONS}.")
         client = Client(vcd_dict['host'],
-                        api_version=vcd_dict['api_version'],
+                        api_version=api_version,
                         verify_ssl_certs=vcd_dict['verify'],
                         log_file=log_file,
                         log_requests=log_wire,

@@ -32,7 +32,6 @@ from container_service_extension.configure_cse import install_template
 from container_service_extension.encryption_engine import decrypt_file
 from container_service_extension.encryption_engine import encrypt_file
 from container_service_extension.encryption_engine import get_decrypted_file_contents # noqa: E501
-from container_service_extension.exceptions import AmqpConnectionError
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_CLI_LOGGER
@@ -78,7 +77,6 @@ PASSWORD_FOR_CONFIG_ENCRYPTION_MSG = "Password for config file encryption"
 PASSWORD_FOR_CONFIG_DECRYPTION_MSG = "Password for config file decryption"
 
 # Error messages
-AMQP_ERROR_MSG = "Check amqp section of the config file."
 CONFIG_DECRYPTION_ERROR_MSG = \
     "Config file decryption failed: invalid decryption password"
 VCENTER_LOGIN_ERROR_MSG = "vCenter login failed (check config file for "\
@@ -574,8 +572,6 @@ def install(ctx, config_file_path, pks_config_file_path,
                         skip_config_decryption=skip_config_decryption,
                         decryption_password=password,
                         msg_update_callback=console_message_printer)
-        except AmqpConnectionError:
-            raise Exception(AMQP_ERROR_MSG)
         except requests.exceptions.SSLError as err:
             raise Exception(f"SSL verification failed: {str(err)}")
         except requests.exceptions.ConnectionError as err:
@@ -646,8 +642,6 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
                               decryption_password=password)
             service.run(msg_update_callback=console_message_printer)
             cse_run_complete = True
-        except AmqpConnectionError:
-            raise Exception(AMQP_ERROR_MSG)
         except requests.exceptions.SSLError as err:
             raise Exception(f"SSL verification failed: {str(err)}")
         except requests.exceptions.ConnectionError as err:
@@ -1269,8 +1263,6 @@ def install_cse_template(ctx, template_name, template_revision,
                 skip_config_decryption=skip_config_decryption,
                 decryption_password=password,
                 msg_update_callback=console_message_printer)
-        except AmqpConnectionError:
-            raise Exception(AMQP_ERROR_MSG)
         except requests.exceptions.SSLError as err:
             raise Exception(f"SSL verification failed: {str(err)}")
         except requests.exceptions.ConnectionError as err:
@@ -1628,8 +1620,6 @@ def _get_config_dict(config_file_path,
         store_telemetry_settings(config_dict)
 
         return config_dict
-    except AmqpConnectionError:
-        raise Exception(AMQP_ERROR_MSG)
     except requests.exceptions.SSLError as err:
         raise Exception(f"SSL verification failed: {str(err)}")
     except requests.exceptions.ConnectionError as err:
