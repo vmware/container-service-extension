@@ -14,6 +14,7 @@ import traceback
 
 import click
 import pkg_resources
+from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -212,14 +213,22 @@ class Service(object, metaclass=Singleton):
         self._load_template_definition_from_catalog(
             msg_update_callback=msg_update_callback)
 
-        # Read templates rules from config and update template deinfition in
-        # server run-time config
-        self._process_template_rules(msg_update_callback=msg_update_callback)
+        if float(self.config['vcd']['api_version']) < float(vCDApiVersion.VERSION_35.value): # noqa: E501
+            # Read templates rules from config and update template deinfition
+            # in server run-time config
+            self._process_template_rules(
+                msg_update_callback=msg_update_callback)
 
-        # Make sure that all vms in templates are compliant with the compute
-        # policy specified in template definition (can be affected by rules).
-        self._process_template_compute_policy_compliance(
-            msg_update_callback=msg_update_callback)
+            # Make sure that all vms in templates are compliant with the
+            # compute policy specified in template definition (can be affected
+            # by rules).
+            self._process_template_compute_policy_compliance(
+                msg_update_callback=msg_update_callback)
+        else:
+            msg = "Template rules are not supported by this version of CSE." \
+                  " Skipping template rule processing."
+            msg_update_callback.info(msg)
+            logger.SERVER_LOGGER.debug(msg)
 
         if self.should_check_config:
             check_cse_installation(
