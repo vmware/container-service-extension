@@ -12,15 +12,15 @@ Supported VCD versions: 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0
 
 Enterprise PKS compatibility matrix
 
-|CSE   | VCD                                | Enterprise PKS | NSX-T |
-|------|------------------------------------|----------------|-------|
-|2.6.1 | 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0 | 1.7            | 2.5.1 |
+|CSE   | VCD                                     | Enterprise PKS | NSX-T |
+|------|-----------------------------------------|----------------|-------|
+|2.6.1 | 9.5.0.4+, 9.7.0.4+, 10.0.0.1+, 10.1.0.x | 1.7            | 2.5.1 |
 
 CSE UI plugin compatibility matrix
 
-|CSE   | VCD    | CSE UI plugin |
-|------|--------|---------------|
-|2.6.1 | 10.1.0 | 1.0.1         |
+|CSE   | VCD      | CSE UI plugin |
+|------|----------|---------------|
+|2.6.1 | 10.1.0.x | 1.0.1         |
 
 **What's New**
 * Support for Enterprise PKS 1.7 (and NSX-T 2.5.1).
