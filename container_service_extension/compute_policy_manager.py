@@ -11,6 +11,7 @@ from pyvcloud.vcd.vm import VM
 import requests
 
 import container_service_extension.cloudapi.constants as cloudApiConstants
+import container_service_extension.exceptions as CseExceptions
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.request_context as ctx
@@ -19,6 +20,7 @@ import container_service_extension.utils as utils
 
 
 _SYSTEM_DEFAULT_COMPUTE_POLICY = 'System Default'
+PVDC_GLOBAL_COMPUTE_POLICY_VERSION = 35.0
 
 
 class ComputePolicyManager:
@@ -60,28 +62,38 @@ class ComputePolicyManager:
             logger.SERVER_LOGGER.error(err)
             self._is_operation_supported = False
 
-    def get_all_policies(self):
-        """Get all compute policies in vCD that were created by CSE.
+    def get_all_pvdc_compute_policies(self, filters=None):
+        """Get all pvdc compute policies in vCD that were created by CSE.
 
-        Returns a generator that when iterated over will yield all CSE compute
-        policies in vCD, making multiple requests when necessary.
-        This is implemented with a generator because cloudapi paginates
-        the `GET /vdcComputePolicies` endpoint.
+        Returns a generator that when iterated over will yield all pvdc compute
+        policies in VCD according to the filter if provided or else returns all
+        the pvdc compute policies, making multiple requests when necessary.
+        This is implemented with a generator because cloudapi paginates the
+        'GET /pvdcComputePolicies' endpoint.
 
-        :return: Generator that yields all CSE compute policies in vCD
+        :param dict filters: key and value pairs which represents a filter
+
+        :return: Generator that yields all pvdc compute policies in vCD after
+            filtering
         :rtype: Generator[Dict, None, None]
         """
-        # TODO we can make this function take in filter query parameters
         self._raise_error_if_not_supported()
+        filter_string = None
+        if filters:
+            filter_string = ";".join([f"{key}=={value}" for (key, value) in filters.items()]) # noqa: E501
+        cloudapiResource = cloudApiConstants.CloudApiResource
         page_num = 0
         while True:
             page_num += 1
+            filter_string = ""
             # without the &sortAsc parameter, vCD returns unpredictable results
+            query_string = f"page={page_num}&sortAsc=name"
+            if filter_string:
+                query_string = f"filter={filter_string}&{query_string}"
             response_body = self._cloudapi_client.do_request(
                 method=RequestMethod.GET,
                 cloudapi_version=cloudApiConstants.CLOUDAPI_VERSION_1_0_0,
-                resource_url_relative_path=f"{cloudApiConstants.CloudApiResource.VDC_COMPUTE_POLICIES}?" # noqa: E501
-                                           f"page={page_num}&sortAsc=name") # noqa: E501
+                resource_url_relative_path=f"{cloudapiResource.PVDC_COMPUTE_POLICIES}?{query_string}") # noqa: E501
 
             if len(response_body['values']) > 0:
                 for policy in response_body['values']:
@@ -91,7 +103,68 @@ class ComputePolicyManager:
             else:
                 break
 
-    def get_policy(self, policy_name):
+    def get_all_vdc_compute_policies(self, filters=None):
+        """Get all compute policies in vCD that were created by CSE.
+
+        Returns a generator that when iterated over will yield all compute
+        policies in vCD, making multiple requests when necessary.
+        This is implemented with a generator because cloudapi paginates
+        the `GET /vdcComputePolicies` endpoint.
+
+        :param dict filters: key and value pairs to filter the results
+
+        :return: Generator that yields all CSE compute policies in vCD
+        :rtype: Generator[Dict, None, None]
+        """
+        self._raise_error_if_not_supported()
+        filter_string = None
+        if filters:
+            filter_string = ";".join([f"{key}=={value}" for (key, value) in filters.items()]) # noqa: E501
+        cloudapiResource = cloudApiConstants.CloudApiResource
+        page_num = 0
+        while True:
+            page_num += 1
+            # without the &sortAsc parameter, vCD returns unpredictable results
+            query_string = f"page={page_num}&sortAsc=name"
+            if filter_string:
+                query_string = f"filter={filter_string}&{query_string}"
+            # without the &sortAsc parameter, vCD returns unpredictable results
+            response_body = self._cloudapi_client.do_request(
+                method=RequestMethod.GET,
+                cloudapi_version=cloudApiConstants.CLOUDAPI_VERSION_1_0_0,
+                resource_url_relative_path=f"{cloudapiResource.VDC_COMPUTE_POLICIES}?{query_string}") # noqa: E501
+
+            if len(response_body['values']) > 0:
+                for policy in response_body['values']:
+                    cp_name = policy['name']
+                    policy['display_name'] = self._get_policy_display_name(cp_name) # noqa: E501
+                    yield policy
+            else:
+                break
+
+    def get_pvdc_compute_policy(self, policy_name):
+        """Search pvdc compute policy by name.
+
+        :param str policy_name: name of the pvdc compute policy
+
+        :return pvdc compute policy details
+        :rtype: dict
+        :raises: EntityNotFoundException if pvdc compute policy is not found
+        """
+        # NOTE if multiple pvdc compute policy exists, this function returns
+        # the first one found.
+        self._raise_error_if_not_supported()
+        filters = {'name': policy_name}
+        for policy_dict in self.get_all_pvdc_compute_policies(filters=filters):
+            if policy_dict.get('display_name') == policy_name:
+                policy_dict['href'] = self._get_policy_href(policy_dict['id'],
+                                                            is_pvdc_compute_policy=True) # noqa: E501
+                return policy_dict
+
+        raise EntityNotFoundException(f"Compute policy '{policy_name}'"
+                                      f" does not exist.")
+
+    def get_vdc_compute_policy(self, policy_name):
         """Get the compute policy information for the given policy name.
 
         :param str policy_name: name of the compute policy
@@ -104,11 +177,9 @@ class ComputePolicyManager:
         # returns the first found.
         # 'System Default' is the only case where multiple compute
         # policies with the same name may exist.
-        # TODO filter query parameter
-        # `cloudapi/1.0.0/vdcComputePolicies?filter=` can be used to reduce
-        # number of api calls
         self._raise_error_if_not_supported()
-        for policy_dict in self.get_all_policies():
+        filters = {'name': policy_name}
+        for policy_dict in self.get_all_vdc_compute_policies(filters=filters):
             if policy_dict.get('display_name') == policy_name:
                 policy_dict['href'] = self._get_policy_href(policy_dict['id'])
                 return policy_dict
@@ -116,11 +187,59 @@ class ComputePolicyManager:
         raise EntityNotFoundException(f"Compute policy '{policy_name}'"
                                       f" does not exist.")
 
-    def add_policy(self, policy_name, description=None):
-        """Add policy with the given name and description.
+    def add_pvdc_compute_policy(self, name, description):
+        """Add PVDC compute policy with given name and description.
 
-        :param str policy_name: name of the compute policy
-        :param str description: description about the policy
+        :param str name: name of the PVDC compute policy
+        :param str description: description for the PVDC compute policy
+
+        :return created PVDC compute policy information
+        :rtype dict
+        :raises: HTTPError 400 Bad Request if policy already exists
+        """
+        self._raise_error_if_not_supported()
+        self._raise_error_if_global_pvdc_compute_policy_not_supported()
+        policy_info = {"name": name, "description": description}
+        resource = cloudApiConstants.CloudApiResource
+
+        pvdc_policy = self._cloudapi_client.do_request(
+            method=RequestMethod.POST,
+            cloudapi_version=cloudApiConstants.CLOUDAPI_VERSION_1_0_0,
+            resource_url_relative_path=resource.PVDC_COMPUTE_POLICIES,
+            payload=policy_info)
+        pvdc_policy['display_name'] = self._get_policy_display_name(pvdc_policy['name']) # noqa: E501
+        pvdc_policy['href'] = self._get_policy_href(pvdc_policy['id'],
+                                                    is_pvdc_compute_policy=True) # noqa: E501
+        return pvdc_policy
+
+    def delete_pvdc_compute_policy(self, policy_name):
+        """Remove a pvdc compute policy with given name.
+
+        :param str policy_name: name of the pvdc compute policy
+
+        :return dictionary containing response text
+        :rtype: dict
+        :raises: EntityNotFoundException: if compute policy is not found
+        """
+        self._raise_error_if_not_supported()
+        policy_info = self.get_pvdc_compute_policy(policy_name)
+        resource_url_relative_path = \
+            f"{cloudApiConstants.CloudApiResource.PVDC_COMPUTE_POLICIES}/" \
+            f"{policy_info['id']}"
+        return self._cloudapi_client.do_request(
+            method=RequestMethod.DELETE,
+            cloudapi_version=cloudApiConstants.CLOUDAPI_VERSION_1_0_0,
+            resource_url_relative_path=resource_url_relative_path)
+
+    def add_vdc_compute_policy(self, policy_name,
+                               description=None, pvdc_compute_policy_id=None):
+        """Add vdc compute policy with the given name and description.
+
+        :param str policy_name: name of the vdc compute policy
+        :param str description: description about the vdc compute policy
+        :param str pvdc_compute_policy_id: pvdc compute policy id associated
+            with the vdc compute policy (Provided if the policy is a
+            placement policy)
 
         :return: created policy information
         :rtype: dict
@@ -128,23 +247,27 @@ class ComputePolicyManager:
         """
         self._raise_error_if_not_supported()
         policy_info = {}
-        policy_info['name'] = self._get_cse_policy_name(policy_name)
+        resource = cloudApiConstants.CloudApiResource
+        policy_info['name'] = policy_name
         if description:
             policy_info['description'] = description
+        if pvdc_compute_policy_id:
+            policy_info['pvdcComputePolicy'] = {
+                'id': pvdc_compute_policy_id
+            }
 
         created_policy = self._cloudapi_client.do_request(
             method=RequestMethod.POST,
             cloudapi_version=cloudApiConstants.CLOUDAPI_VERSION_1_0_0,
-            resource_url_relative_path=cloudApiConstants.CloudApiResource.VDC_COMPUTE_POLICIES, # noqa: E501
+            resource_url_relative_path=resource.VDC_COMPUTE_POLICIES,
             payload=policy_info)
 
-        created_policy['display_name'] = self._get_policy_display_name(
-            created_policy['name'])
+        created_policy['display_name'] = self._get_policy_display_name(created_policy['name']) # noqa: E501
         created_policy['href'] = self._get_policy_href(created_policy['id'])
         return created_policy
 
-    def delete_policy(self, policy_name):
-        """Delete the compute policy with the given name.
+    def delete_vdc_compute_policy(self, policy_name):
+        """Delete the vdc compute policy with the given name.
 
         :param str policy_name: name of the compute policy
 
@@ -153,7 +276,7 @@ class ComputePolicyManager:
         :raises: EntityNotFoundException: if compute policy is not found
         """
         self._raise_error_if_not_supported()
-        policy_info = self.get_policy(policy_name)
+        policy_info = self.get_vdc_compute_policy(policy_name)
         resource_url_relative_path = \
             f"{cloudApiConstants.CloudApiResource.VDC_COMPUTE_POLICIES}/" \
             f"{policy_info['id']}"
@@ -162,8 +285,8 @@ class ComputePolicyManager:
             cloudapi_version=cloudApiConstants.CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=resource_url_relative_path)
 
-    def update_policy(self, policy_name, new_policy_info):
-        """Update the existing compute policy with new policy information.
+    def update_vdc_compute_policy(self, policy_name, new_policy_info):
+        """Update the existing vdc compute policy with new policy information.
 
         :param str policy_name: existing policy name
         :param dict new_policy_info: updated policy information with name and
@@ -174,7 +297,7 @@ class ComputePolicyManager:
         :raises: EntityNotFoundException: if compute policy is not found
         """
         self._raise_error_if_not_supported()
-        policy_info = self.get_policy(policy_name)
+        policy_info = self.get_vdc_compute_policy(policy_name)
         if new_policy_info.get('name'):
             payload = {}
             payload['name'] = \
@@ -235,6 +358,30 @@ class ComputePolicyManager:
             })
 
         return result
+
+    def assign_placement_policy_to_vapp_template_vms(self,
+                                                     compute_policy_href,
+                                                     org_name,
+                                                     catalog_name,
+                                                     catalog_item_name):
+        """Assign the compute policy to vms of given vapp template.
+
+        :param str compute_policy_href: compute policy to be removed
+        :param str org_name: name of the organization that has the catalog
+        :param str catalog_name: name of the catalog
+        :param str catalog_item_name: name of the catalog item that has vms
+
+        :return: an object of type vcd_client.TASK XML which represents
+        the asynchronous task that is updating virtual application template.
+
+        :rtype: lxml.objectify.ObjectifiedElement
+        """
+        self._raise_error_if_not_supported()
+        org = vcd_utils.get_org(self._sysadmin_client, org_name=org_name)
+        return org.assign_placement_policy_to_vapp_template_vms(
+            catalog_name=catalog_name,
+            catalog_item_name=catalog_item_name,
+            placement_policy_href=compute_policy_href)
 
     def assign_compute_policy_to_vapp_template_vms(self,
                                                    compute_policy_href,
@@ -311,7 +458,16 @@ class ComputePolicyManager:
         if not self._is_operation_supported:
             msg = "Cloudapi endpoint unavailable at current api version."
             logger.SERVER_LOGGER.error(msg)
-            raise OperationNotSupportedException(msg) # noqa: E501
+            raise OperationNotSupportedException(msg)
+
+    def _raise_error_if_global_pvdc_compute_policy_not_supported(self):
+        """Railse exception if higher api version is needed."""
+        api_version = float(self._cloudapi_client.get_api_version())
+        if api_version < PVDC_GLOBAL_COMPUTE_POLICY_VERSION: # noqa: E501
+            msg = f"Recieved api version {api_version}." \
+                  f" But atleast {PVDC_GLOBAL_COMPUTE_POLICY_VERSION} is required" # noqa: E501
+            logger.SERVER_LOGGER.debug(msg)
+            raise CseExceptions.GlobalPvdcComputePolicyNotSupported(msg)
 
     def _get_cse_policy_name(self, policy_name):
         """Add cse specific prefix to the policy name.
@@ -336,17 +492,25 @@ class ComputePolicyManager:
             return policy_name.replace(cloudApiConstants.CSE_COMPUTE_POLICY_PREFIX, '', 1) # noqa: E501
         return policy_name
 
-    def _get_policy_href(self, policy_id):
+    def _get_policy_href(self, policy_id, is_pvdc_compute_policy=False):
         """Construct policy href from given policy id.
 
         :param str policy_id: policy id
+        :param boolean is_pvdc_compute_policy: True if policy is a PVDC compute
+            policy
 
         :return: policy href
         :rtype: str
         """
-        return f"{self._cloudapi_client.get_base_url()}" \
-               f"{cloudApiConstants.CLOUDAPI_VERSION_1_0_0}/" \
-               f"{cloudApiConstants.CloudApiResource.VDC_COMPUTE_POLICIES}/" \
+        href_prefix = f"{self._cloudapi_client.get_base_url()}" \
+                      f"{cloudApiConstants.CLOUDAPI_VERSION_1_0_0}/"
+        cloudApiResource = cloudApiConstants.CloudApiResource
+        if is_pvdc_compute_policy:
+            return f"{href_prefix}" \
+                   f"{cloudApiResource.PVDC_COMPUTE_POLICIES}/" \
+                   f"{policy_id}"
+        return f"{href_prefix}" \
+               f"{cloudApiResource.VDC_COMPUTE_POLICIES}/" \
                f"{policy_id}"
 
     def remove_compute_policy_from_vdc(self, request_context: ctx.RequestContext, # noqa: E501

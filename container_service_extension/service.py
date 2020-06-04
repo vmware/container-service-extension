@@ -483,14 +483,14 @@ class Service(object, metaclass=Singleton):
                 # if policy name is not empty, stamp it on the template
                 if policy_name:
                     try:
-                        policy = cpm.get_policy(policy_name=policy_name)
+                        policy = cpm.get_vdc_compute_policy(policy_name=policy_name) # noqa: E501
                     except EntityNotFoundException:
                         # create the policy if it does not exist
                         msg = f"Creating missing compute policy " \
                               f"'{policy_name}'."
                         msg_update_callback.info(msg)
                         logger.SERVER_LOGGER.debug(msg)
-                        policy = cpm.add_policy(policy_name=policy_name)
+                        policy = cpm.add_vdc_compute_policy(policy_name=policy_name) # noqa: E501
 
                     msg = f"Assigning compute policy '{policy_name}' to " \
                           f"template '{catalog_item_name}'."

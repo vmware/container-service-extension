@@ -2,6 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import pyvcloud.vcd.exceptions as VcdExceptions
 import requests
 
 from container_service_extension.minor_error_codes import MinorErrorCode
@@ -208,3 +209,7 @@ class DefEntityResolutionError(CseServerError):
     def __str__(self):
         return f"{self.state}: Resolution of the cluster with defined entity" \
                f" id:{self.id} failed with error message: {self.msg}"
+
+
+class GlobalPvdcComputePolicyNotSupported(VcdExceptions.OperationNotSupportedException): # noqa: E501
+    """Raised when global pvdc compute policies are not supported."""
