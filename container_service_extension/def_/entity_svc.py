@@ -5,16 +5,17 @@
 from dataclasses import asdict
 from typing import List
 
-import container_service_extension.exceptions as exceptions
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import \
     CLOUDAPI_VERSION_1_0_0  # noqa: E501
 from container_service_extension.cloudapi.constants import CloudApiResource
-from container_service_extension.def_modules.models import DefEntity
-import container_service_extension.def_modules.utils as def_utils
+from container_service_extension.def_.models import DefEntity
+import container_service_extension.def_.utils as def_utils
+import container_service_extension.exceptions as exceptions
 from container_service_extension.shared_constants import RequestMethod
 
 
+# TODO(DEF) Exception handling
 class DefEntityService():
     """Manages lifecycle of entities.
 
@@ -81,7 +82,7 @@ class DefEntityService():
                 method=RequestMethod.GET,
                 cloudapi_version=CLOUDAPI_VERSION_1_0_0,
                 resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
-                                           f"{CloudApiResource.INTERFACES}/{vendor}/{nss}/{version}?"
+                                           f"{CloudApiResource.INTERFACES}/{vendor}/{nss}/{version}?"  # noqa: E501
                                            f"page={page_num}")
             if len(response_body['values']) > 0:
                 for entity in response_body['values']:
@@ -111,7 +112,7 @@ class DefEntityService():
                 method=RequestMethod.GET,
                 cloudapi_version=CLOUDAPI_VERSION_1_0_0,
                 resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
-                                           f"{vendor}/{nss}/{version}?page={page_num}")
+                                           f"{vendor}/{nss}/{version}?page={page_num}")  # noqa: E501
             if len(response_body['values']) > 0:
                 for entity in response_body['values']:
                     yield DefEntity(**entity)
@@ -149,13 +150,13 @@ class DefEntityService():
         return DefEntity(**response_body)
 
     def get_entity_by_name(self, name: str) -> DefEntity:
-        # TODO Below call should add another filter field 'entity.kind==native'.
+        # TODO(DEF) Below call should add another filter field 'entity.kind==native' # noqa: E501
         #  It should not get entities if non-native clusters.
         #  Awaiting on dependency from Extensibility team."
         response_body = self._cloudapi_client.do_request(
             method=RequestMethod.GET,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-            resource_url_relative_path=f"{CloudApiResource.ENTITIES}?filter=name=={name}")
+            resource_url_relative_path=f"{CloudApiResource.ENTITIES}?filter=name=={name}")  # noqa: E501
         entity = response_body['values'][0]
         return DefEntity(**entity)
 
@@ -185,14 +186,15 @@ class DefEntityService():
             method=RequestMethod.POST,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
-                                       f"{entity_id}/{CloudApiResource.ENTITY_RESOLVE}")
-        msg = response_body['message']
-        del response_body['message']
+                                       f"{entity_id}/{CloudApiResource.ENTITY_RESOLVE}")  # noqa: E501
+        msg = response_body[def_utils.DEF_ERROR_MESSAGE_KEY]
+        del response_body[def_utils.DEF_ERROR_MESSAGE_KEY]
         entity = DefEntity(**response_body)
-        if entity.state != 'RESOLVED':
+        if entity.state != def_utils.DEF_RESOLVED_STATE:
             raise exceptions.DefEntityResolutionErrorException(id=entity.id,
                                                                state=entity.state,  # noqa: E501
                                                                msg=msg)
+        return entity
 
     def filter_entities_by_property(self):
         # TODO Yet to be implemented. Waiting for the build from extensibility

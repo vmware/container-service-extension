@@ -7,7 +7,6 @@ import random
 import re
 import string
 import time
-import uuid
 
 import pkg_resources
 import pyvcloud.vcd.client as vcd_client
@@ -16,25 +15,19 @@ import pyvcloud.vcd.task as vcd_task
 import pyvcloud.vcd.vapp as vcd_vapp
 from pyvcloud.vcd.vdc import VDC
 import pyvcloud.vcd.vm as vcd_vm
-import requests
 import semantic_version as semver
 
 import container_service_extension.abstract_broker as abstract_broker
-import container_service_extension.authorization as auth
+from container_service_extension.def_.entity_svc import DefEntityService
+import container_service_extension.def_.models as def_models
+import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as e
 import container_service_extension.local_template_manager as ltm
-from container_service_extension.def_modules.entity_svc import DefEntityService
-from container_service_extension.def_modules.models import ClusterEntity
-from container_service_extension.def_modules.models import DefEntity
-import container_service_extension.def_modules.utils as def_utils
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.request_context as ctx
 import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import ClusterMetadataKey
-from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_NAME # noqa: E501
-from container_service_extension.server_constants import K8S_PROVIDER_KEY
-from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import KwargKey
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import NodeType
@@ -49,8 +42,8 @@ import container_service_extension.utils as utils
 import container_service_extension.vsphere_utils as vs_utils
 
 
-class DefClusterService(abstract_broker.AbstractBroker):
-    """Handles cluster operations for 'native' k8s provider."""
+class ClusterService(abstract_broker.AbstractBroker):
+    """Handles cluster operations for native DEF based clusters."""
 
     def __init__(self, request_context: ctx.RequestContext):
         self.context: ctx.RequestContext = None
@@ -60,7 +53,6 @@ class DefClusterService(abstract_broker.AbstractBroker):
         self.task = None
         self.task_resource = None
         self.entity_svc = DefEntityService(request_context.cloudapi_client)
-
 
     def get_cluster_info(self, **kwargs):
         """Get cluster metadata as well as node data.
@@ -73,11 +65,12 @@ class DefClusterService(abstract_broker.AbstractBroker):
             Optional data and default values: org_name=None, ovdc_name=None
         **telemetry: Optional
         """
-        # Yet to be tested
-        data = kwargs[KwargKey.DATA]
-        cluster_name = data['name']
-        cluster = self.entity_svc.filter_entities_by_property(cluster_name)
-        return cluster
+        # Yet to be implemented
+        pass
+        # data = kwargs[KwargKey.DATA]
+        # cluster_name = data['name']
+        # cluster = self.entity_svc.get_entity_by_name(cluster_name)
+        # return cluster
 
     def list_clusters(self, **kwargs):
         """List all native clusters and their relevant metadata.
@@ -89,10 +82,12 @@ class DefClusterService(abstract_broker.AbstractBroker):
             Optional data and default values: org_name=None, ovdc_name=None
         **telemetry: Optional
         """
-        # Yet to be tested
-        data = kwargs.get(KwargKey.DATA, {})
-        clusters = self.entity_svc.list_entities_by_entity_type('native_entity_type_id')
-        return clusters
+        # Yet to be implemented
+        pass
+        # data = kwargs.get(KwargKey.DATA, {})
+        # clusters = self.entity_svc.list_entities_by_entity_type
+        # ('native_entity_type_id')
+        # return clusters
 
     def get_cluster_config(self, **kwargs):
         """Get the cluster's kube config contents.
@@ -122,7 +117,6 @@ class DefClusterService(abstract_broker.AbstractBroker):
 
         :rtype: List[Dict]
         """
-
         # Yet to determine if this method needs modification
         data = kwargs[KwargKey.DATA]
         required = [
@@ -159,29 +153,22 @@ class DefClusterService(abstract_broker.AbstractBroker):
 
         return upgrades
 
-    @auth.secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
-    def create_cluster(self, cluster_spec: ClusterEntity, **kwargs):
+    def create_cluster(self, cluster_spec: def_models.ClusterEntity):
         """Start the cluster creation operation.
 
         Common broker function that validates data for the 'create cluster'
         operation and returns a dictionary with cluster detail and task
-        information. Calls the asyncronous cluster create function that
+        information. Calls the asynchronous cluster create function that
         actually performs the work. The returned `result['task_href']` can
         be polled to get updates on task progress.
 
-        **data: Required
-            Required data: cluster_name, org_name, ovdc_name, network_name
-            Optional data and default values: num_nodes=2, num_cpu=None,
-                mb_memory=None, storage_profile_name=None, ssh_key=None,
-                template_name=default, template_revision=default,
-                enable_nfs=False,rollback=True
         **telemetry: Optional
         """
-        #data = kwargs[KwargKey.DATA]
         cluster_name = cluster_spec.metadata.cluster_name
         org_name = cluster_spec.metadata.org_name
         ovdc_name = cluster_spec.metadata.ovdc_name
-
+        template_name = cluster_spec.spec.k8_distribution.template_name
+        template_revision = cluster_spec.spec.k8_distribution.template_revision
         # check that cluster name is syntactically valid
         if not is_valid_cluster_name(cluster_name):
             raise e.CseServerError(f"Invalid cluster name '{cluster_name}'")
@@ -195,39 +182,30 @@ class DefClusterService(abstract_broker.AbstractBroker):
         except e.ClusterNotFoundError:
             pass
         # check that requested/default template is valid
-        template = get_template(
-            name=cluster_spec.spec.k8_distribution.template_name,
-            revision=cluster_spec.spec.k8_distribution.template_revision)
-
-        template_name = cluster_spec.spec.k8_distribution.template_name
-        template_revision = cluster_spec.spec.k8_distribution.template_revision
-
-        cluster_id = str(uuid.uuid4())
-
+        get_template(name=template_name, revision=template_revision)
+        # create the corresponding defined entity .
+        def_entity = def_models.DefEntity(entity=cluster_spec)
+        self.entity_svc.\
+            create_entity(def_utils.get_registered_def_entity_type().id,
+                          entity=def_entity)
+        def_entity: def_models.DefEntity = self.entity_svc.get_entity_by_name(
+            name=cluster_name)
+        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
+        #  based clusters
         # must _update_task or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
         # call, session becomes None
-        msg = f"Creating cluster vApp '{cluster_name}' ({cluster_id}) " \
+        msg = f"Creating cluster vApp '{cluster_name}' ({def_entity.id}) " \
               f"from template '{template_name}' (revision {template_revision})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+        def_entity.entity.status.task_href = self.task_resource.get('href')
+        # TODO(DEF) below concept of status-phase needs to be properly implemented -  # noqa: E501
+        #  https://confluence.eng.vmware.com/display/VCD/%5BProposal%5D+Native+Clusters+Life+Cycle+Status  # noqa: E501
+        def_entity.entity.status.phase = 'CREATE_IN_PROGRESS'
         self.context.is_async = True
-
-        # Create Defined entity
-        def_entity = DefEntity(name=cluster_name, entity=cluster_spec)
-        self.entity_svc.create_entity(def_utils.get_registered_def_entity_type().id, entity=def_entity)
-        def_entity: DefEntity = self.entity_svc.get_entity_by_name(name=cluster_name)
         self._create_cluster_async(def_entity)
+        return def_entity
 
-        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
-        #  based clusters
-
-        return {
-            'name': cluster_name,
-            'cluster_id': def_entity.id,
-            'task_href': self.task_resource.get('href')
-        }
-
-    @auth.secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def resize_cluster(self, **kwargs):
         """Start the resize cluster operation.
 
@@ -294,7 +272,6 @@ class DefClusterService(abstract_broker.AbstractBroker):
         validated_data[RequestKey.NUM_WORKERS] = num_workers_wanted - num_workers # noqa: E501
         return self.create_nodes(data=validated_data, telemetry=False)
 
-    @auth.secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def delete_cluster(self, **kwargs):
         """Start the delete cluster operation.
 
@@ -346,7 +323,6 @@ class DefClusterService(abstract_broker.AbstractBroker):
             'task_href': self.task_resource.get('href')
         }
 
-    @auth.secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def upgrade_cluster(self, **kwargs):
         """Start the upgrade cluster operation.
 
@@ -488,7 +464,6 @@ class DefClusterService(abstract_broker.AbstractBroker):
                                       f"cluster '{cluster_name}'")
         return node_info
 
-    @auth.secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def create_nodes(self, **kwargs):
         """Start the create nodes operation.
 
@@ -594,7 +569,6 @@ class DefClusterService(abstract_broker.AbstractBroker):
             'task_href': self.task_resource.get('href')
         }
 
-    @auth.secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def delete_nodes(self, **kwargs):
         """Start the delete nodes operation.
 
@@ -661,9 +635,8 @@ class DefClusterService(abstract_broker.AbstractBroker):
             'task_href': self.task_resource.get('href')
         }
 
-    # all parameters following '*args' are required and keyword-only
     @utils.run_async
-    def _create_cluster_async(self, def_entity: DefEntity):
+    def _create_cluster_async(self, def_entity: def_models.DefEntity):
         try:
             cluster_entity = def_entity.entity
             cluster_id = def_entity.id
@@ -671,11 +644,11 @@ class DefClusterService(abstract_broker.AbstractBroker):
             org_name = cluster_entity.metadata.org_name
             ovdc_name = cluster_entity.metadata.ovdc_name
             num_workers = cluster_entity.spec.workers.count
-            master_storage_profile = cluster_entity.spec.control_plane.storage_profile
-            worker_storage_profile = cluster_entity.spec.workers.storage_profile
+            master_storage_profile = cluster_entity.spec.control_plane.storage_profile  # noqa: E501
+            worker_storage_profile = cluster_entity.spec.workers.storage_profile  # noqa: E501
             network_name = cluster_entity.spec.settings.network
             template_name = cluster_entity.spec.k8_distribution.template_name
-            template_revision = cluster_entity.spec.k8_distribution.template_revision
+            template_revision = cluster_entity.spec.k8_distribution.template_revision  # noqa: E501
             ssh_key = cluster_entity.spec.settings.ssh_key
             enable_nfs = cluster_entity.spec.settings.enable_nfs
             rollback = cluster_entity.spec.settings.rollback_on_failure
@@ -806,10 +779,14 @@ class DefClusterService(abstract_broker.AbstractBroker):
             msg = f"Created cluster '{cluster_name}' ({cluster_id})"
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
 
-            # Update defined entity instance with new values like vapp_id, master_ip.
-            # TODO(DEF) Yet to update the nodes
+            # Update defined entity instance with new values like vapp_id,
+            # master_ip and nodes.
+            # TODO(DEF) VCDA-1567 Schema doesn't yet have nodes definition.
+            #  master and worker "nodes" also have to be updated.
             def_entity.externalId = vapp_resource.get('href')
             def_entity.entity.status.master_ip = master_ip
+            # TODO(DEF) The concept of status is yet to be implemented properly
+            def_entity.entity.status.phase = 'CREATE_SUCCEEDED'
             self.entity_svc.update_entity(def_entity.id, def_entity)
 
             # Resolve the defined entity to a RESOLVED state
@@ -818,6 +795,8 @@ class DefClusterService(abstract_broker.AbstractBroker):
                 e.NFSNodeCreationError, e.ClusterJoiningError,
                 e.ClusterInitializationError, e.ClusterOperationError) as err:
 
+            # TODO(DEF) The concept of status is yet to be implemented properly
+            def_entity.entity.status.phase = 'CREATE_FAILED'
             # Resolve the defined entity to a RESOLVED/ERROR state. This should
             # fail required properties 'master_ip' have not been updated.
             self.entity_svc.resolve_entity(def_entity.id)

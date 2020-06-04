@@ -1,16 +1,16 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-from container_service_extension.def_modules.models import ClusterEntity
+import container_service_extension.def_.cluster_svc as cluster_svc
+import container_service_extension.def_.models as def_models
 from container_service_extension.request_context import RequestContext
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.telemetry.telemetry_handler import \
     record_user_action_telemetry
-from container_service_extension.def_modules.cluster_svc import DefClusterService
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_CREATE)
-def cluster_create(request_data, request_context: RequestContext):
+def cluster_create(request_context: RequestContext):
     """Request handler for cluster create operation.
 
     Required data: org_name, ovdc_name, cluster_name
@@ -24,9 +24,9 @@ def cluster_create(request_data, request_context: RequestContext):
 
     :return: Dict
     """
-    cluster_svc = DefClusterService(request_context)
-    cluster_entity_spec = ClusterEntity(**request_context.request_body)
-    return cluster_svc.create_cluster(cluster_entity_spec)
+    svc = cluster_svc.ClusterService(request_context)
+    cluster_entity_spec = def_models.ClusterEntity(**request_context.request_body)  # noqa: E501
+    return svc.create_cluster(cluster_entity_spec)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_RESIZE)
@@ -42,8 +42,8 @@ def cluster_resize(request_data, request_context: RequestContext):
 
     :return: Dict
     """
-    cluster_svc = DefClusterService(request_context)
-    return cluster_svc.resize_cluster(data=request_data)
+    svc = cluster_svc.ClusterService(request_context)
+    return svc.resize_cluster(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_DELETE)
@@ -57,8 +57,8 @@ def cluster_delete(request_data, request_context: RequestContext):
 
     :return: Dict
     """
-    cluster_svc = DefClusterService(request_context)
-    return cluster_svc.delete_cluster(data=request_data)
+    svc = cluster_svc.ClusterService(request_context)
+    return svc.delete_cluster(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_INFO)
@@ -72,8 +72,8 @@ def cluster_info(request_data, request_context: RequestContext):
 
     :return: Dict
     """
-    cluster_svc = DefClusterService(request_context)
-    return cluster_svc.get_cluster_info(data=request_data)
+    svc = cluster_svc.ClusterService(request_context)
+    return svc.get_cluster_info(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_CONFIG)
@@ -87,8 +87,8 @@ def cluster_config(request_data, request_context: RequestContext):
 
     :return: Dict
     """
-    cluster_svc = DefClusterService(request_context)
-    return cluster_svc.get_cluster_config(data=request_data)
+    svc = cluster_svc.ClusterService(request_context)
+    return svc.get_cluster_config(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_UPGRADE_PLAN)
@@ -99,8 +99,8 @@ def cluster_upgrade_plan(request_data, request_context: RequestContext):
 
     :return: List[Tuple(str, str)]
     """
-    cluster_svc = DefClusterService(request_context)
-    return cluster_svc.get_cluster_upgrade_plan(data=request_data)
+    svc = cluster_svc.ClusterService(request_context)
+    return svc.get_cluster_upgrade_plan(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_UPGRADE)
@@ -111,8 +111,8 @@ def cluster_upgrade(request_data, request_context: RequestContext):
 
     :return: Dict
     """
-    cluster_svc = DefClusterService(request_context)
-    return cluster_svc.upgrade_cluster(data=request_data)
+    svc = cluster_svc.ClusterService(request_context)
+    return svc.upgrade_cluster(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_LIST)
@@ -125,8 +125,8 @@ def cluster_list(request_data, request_context: RequestContext):
 
     :return: List
     """
-    cluster_svc = DefClusterService(request_context)
-    vcd_clusters_info = cluster_svc.list_clusters(data=request_data)
+    svc = cluster_svc.ClusterService(request_context)
+    vcd_clusters_info = svc.list_clusters(data=request_data)
     from container_service_extension.server_constants import K8S_PROVIDER_KEY
     common_cluster_properties = [
         'name',
@@ -145,6 +145,7 @@ def cluster_list(request_data, request_context: RequestContext):
 
     return result
 
+
 @record_user_action_telemetry(cse_operation=CseOperation.NODE_CREATE)
 def node_create(request_data, request_context: RequestContext):
     """Request handler for node create operation.
@@ -159,8 +160,8 @@ def node_create(request_data, request_context: RequestContext):
 
     :return: Dict
     """
-    cluster_svc = DefClusterService(request_context)
-    return cluster_svc.create_nodes(data=request_data)
+    svc = cluster_svc.ClusterService(request_context)
+    return svc.create_nodes(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.NODE_DELETE)
@@ -174,8 +175,8 @@ def node_delete(request_data, request_context: RequestContext):
 
     :return: Dict
     """
-    cluster_svc = DefClusterService(request_context)
-    return cluster_svc.delete_nodes(data=request_data)
+    svc = cluster_svc.ClusterService(request_context)
+    return svc.delete_nodes(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.NODE_INFO)
@@ -189,8 +190,8 @@ def node_info(request_data, request_context: RequestContext):
 
     :return: Dict
     """
-    cluster_svc = DefClusterService(request_context)
-    return cluster_svc.get_node_info(data=request_data)
+    svc = cluster_svc.ClusterService(request_context)
+    return svc.get_node_info(data=request_data)
 
 
 OPERATION_TO_METHOD = {
@@ -200,13 +201,9 @@ OPERATION_TO_METHOD = {
     CseOperation.CLUSTER_INFO: cluster_info,
     CseOperation.CLUSTER_LIST: cluster_list,
     CseOperation.CLUSTER_RESIZE: cluster_resize,
-    CseOperation.CLUSTER_UPGRADE_PLAN: cluster_upgrade_plan,  # noqa: E501
+    CseOperation.CLUSTER_UPGRADE_PLAN: cluster_upgrade_plan,
     CseOperation.CLUSTER_UPGRADE: cluster_upgrade,
     CseOperation.NODE_CREATE: node_create,
     CseOperation.NODE_DELETE: node_delete,
     CseOperation.NODE_INFO: node_info,
 }
-    
-    
-    
-

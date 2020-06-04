@@ -85,7 +85,7 @@ def get_default_storage_profile():
 
 def get_default_k8_distribution():
     config = get_server_runtime_config()
-    from container_service_extension.def_modules.models import Distribution
+    from container_service_extension.def_.models import Distribution
     return Distribution(template_name=config['broker']['default_template_name'],
                         template_revision=config['broker']['default_template_revision'])
 

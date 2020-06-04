@@ -12,11 +12,11 @@ from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 from requests.exceptions import HTTPError
 
-import container_service_extension.exceptions
 from container_service_extension.config_validator import get_validated_config
-import container_service_extension.def_modules.models as def_models
-import container_service_extension.def_modules.schema_svc as def_schema_svc
-import container_service_extension.def_modules.utils as def_utils
+import container_service_extension.def_.models as def_models
+import container_service_extension.def_.schema_svc as def_schema_svc
+import container_service_extension.def_.utils as def_utils
+import container_service_extension.exceptions as excptn
 from container_service_extension.exceptions import AmqpError
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import INSTALL_LOGGER
@@ -621,7 +621,7 @@ def _register_def_schema(client: Client,
             msg = "Successfully registered defined entity type"
         msg_update_callback.general(msg)
         INSTALL_LOGGER.debug(msg)
-    except container_service_extension.exceptions.DefNotSupportedException:
+    except excptn.DefNotSupportedException:
         msg = "Skipping defined entity type and defined entity interface" \
               " registration"
         msg_update_callback.general(msg)

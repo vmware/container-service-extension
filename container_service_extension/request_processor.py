@@ -7,7 +7,7 @@ import json
 import sys
 from urllib.parse import parse_qsl
 
-import container_service_extension.def_modules.utils as def_utils
+import container_service_extension.def_.utils as def_utils
 from container_service_extension.exception_handler import handle_exception
 import container_service_extension.exceptions as e
 from container_service_extension.logger import SERVER_LOGGER as LOGGER

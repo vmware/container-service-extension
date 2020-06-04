@@ -4,7 +4,7 @@
 
 from dataclasses import dataclass
 
-import container_service_extension.def_modules.utils as def_utils
+import container_service_extension.def_.utils as def_utils
 import container_service_extension.utils as utils
 
 
@@ -100,7 +100,7 @@ class Distribution:
     template_name: str = None
     template_revision: int = 1
 
-    def __init__(self, template_name: str = None, template_revision: int = None):
+    def __init__(self, template_name: str = None, template_revision: int = None):  # noqa: E501
         if not template_name:
             default_dist = utils.get_default_k8_distribution()
         self.template_name = template_name or default_dist.template_name
@@ -121,6 +121,7 @@ class Status:
     phase: str = None
     cni: str = None
     id: str = None
+    task_href: str = None
 
 
 @dataclass()
@@ -130,12 +131,13 @@ class ClusterSpec:
     If dictionaries are passed as arguments, the constructor auto-converts
     them into the expected class instances.
     """
+
     control_plane: ControlPlane
     workers: Workers
     k8_distribution: Distribution
     settings: Settings
 
-    def __init__(self, settings: Settings, k8_distribution: Distribution = None,
+    def __init__(self, settings: Settings, k8_distribution: Distribution = None,  # noqa: E501
                  control_plane: ControlPlane = None, workers: Workers = None):
         self.settings = Settings(**settings) \
             if isinstance(settings, dict) else settings
@@ -226,7 +228,6 @@ class DefEntity:
     externalId: str = None
     state: str = None
 
-
     def __init__(self, entity: ClusterEntity, name: str = None, id: str = None,
                  entityType: str = None, externalId: str = None,
                  state: str = None):
@@ -238,20 +239,3 @@ class DefEntity:
         # TODO(DEF) state has to be enum
         #  (PRE_CREATE, RESOLVED, RESOLUTION ERROR)
         self.state = state
-
-@dataclass()
-class Sample:
-    name: str
-    entity: str
-
-    def __init__(self, entity: str, name: str = None, **kwargs):
-        self.entity = entity
-        self.name = name
-
-x={'entity':'sahi+entity',
- 'name':'myname',
- 'extra':'super'}
-#del x['extra']
-print(x)
-s = Sample(**x)
-

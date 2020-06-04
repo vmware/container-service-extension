@@ -5,10 +5,9 @@ from enum import Enum
 from enum import unique
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
-
-# Defined Entity Framework related constants
 from container_service_extension.exceptions import DefNotSupportedException
 
+# Defined Entity Framework related constants
 DEF_CSE_VENDOR = 'cse'
 DEF_NATIVE_INTERFACE_NSS = 'native'
 DEF_NATIVE_INTERFACE_VERSION = '1.0.0'
@@ -22,6 +21,8 @@ DEF_API_MIN_VERSION = 35.0
 DEF_SCHEMA_DIRECTORY = 'cse_def_schema'
 DEF_ENTITY_TYPE_SCHEMA_FILE = 'schema.json'
 DEF_END_POINT_DESCRIMINATOR = 'internal'
+DEF_ERROR_MESSAGE_KEY = 'message'
+DEF_RESOLVED_STATE = 'RESOLVED'
 
 
 @unique
@@ -48,6 +49,7 @@ MAP_API_VERSION_TO_KEYS = {
         DefKey.ENTITY_TYPE_SCHEMA_VERSION: 'api_v35',
     }
 }
+
 
 def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
     """Raise DefNotSupportedException if defined entities are not supported.
@@ -103,7 +105,7 @@ def generate_entity_type_id(vendor, nss, version):
 
 
 def is_def_supported_by_cse_server():
-    """Return true if CSE server is qualified to invoke Defined Entity API
+    """Return true if CSE server is qualified to invoke Defined Entity API.
 
     :rtype: bool
     """

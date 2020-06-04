@@ -21,15 +21,14 @@ from pyvcloud.vcd.exceptions import OperationNotSupportedException
 
 import container_service_extension.compute_policy_manager \
     as compute_policy_manager
-import container_service_extension.exceptions
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.consumer import MessageConsumer
-import container_service_extension.def_modules.models as def_models
-import container_service_extension.def_modules.schema_svc as def_schema_svc
-import container_service_extension.def_modules.utils as def_utils
-from container_service_extension.def_modules.utils import raise_error_if_def_not_supported # noqa: E501
-import container_service_extension.exceptions as e
+import container_service_extension.def_.models as def_models
+import container_service_extension.def_.schema_svc as def_schema_svc
+import container_service_extension.def_.utils as def_utils
+from container_service_extension.def_.utils import raise_error_if_def_not_supported # noqa: E501
+import container_service_extension.exceptions as excptn
 import container_service_extension.local_template_manager as ltm
 import container_service_extension.logger as logger
 from container_service_extension.pks_cache import PksCache
@@ -166,10 +165,10 @@ class Service(object, metaclass=Singleton):
                 self._state = ServerState.DISABLED
                 return 'CSE has been disabled.'
             if server_action == ServerAction.STOP:
-                raise e.BadRequestError(
+                raise excptn.BadRequestError(
                     error_message='CSE must be disabled before '
                                   'it can be stopped.')
-            raise e.BadRequestError(
+            raise excptn.BadRequestError(
                 error_message=f"Invalid server action: '{server_action}'")
         if self._state == ServerState.DISABLED:
             if server_action == ServerAction.ENABLE:
@@ -181,17 +180,17 @@ class Service(object, metaclass=Singleton):
                 return graceful_shutdown()
         if self._state == ServerState.STOPPING:
             if server_action == ServerAction.ENABLE:
-                raise e.BadRequestError(
+                raise excptn.BadRequestError(
                     error_message='Cannot enable CSE while it is being'
                                   'stopped.')
             if server_action == ServerAction.DISABLE:
-                raise e.BadRequestError(
+                raise excptn.BadRequestError(
                     error_message='Cannot disable CSE while it is being'
                                   ' stopped.')
             if server_action == ServerAction.STOP:
                 return graceful_shutdown()
 
-        raise e.CseServerError(f"Invalid server state: '{self._state}'")
+        raise excptn.CseServerError(f"Invalid server state: '{self._state}'")
 
     def run(self, msg_update_callback=utils.NullPrinter()):
         self.config = get_validated_config(
@@ -282,8 +281,6 @@ class Service(object, metaclass=Singleton):
                                    cse_params=cse_params)
         record_user_action(cse_operation=CseOperation.SERVICE_RUN)
 
-        #self.defTest(msg_update_callback)
-
         while True:
             try:
                 time.sleep(1)
@@ -308,142 +305,6 @@ class Service(object, metaclass=Singleton):
 
         self._state = ServerState.STOPPED
         logger.SERVER_LOGGER.info("Done")
-
-
-
-    def defTest(self,msg_update_callback):
-        import \
-            container_service_extension.cloudapi.cloudapi_client as cloudApiClient
-        from container_service_extension.def_modules.entity_svc import \
-            DefEntityService
-        from container_service_extension.def_modules.schema_svc import \
-            DefSchemaService
-        from container_service_extension.def_modules.models import DefInterface
-        import container_service_extension.cloudapi.constants as c
-        from container_service_extension.def_modules.models import \
-            DefEntityType
-        from container_service_extension.utils import ConsoleMessagePrinter
-        from container_service_extension.configure_cse import _register_def_schema
-        log_filename = None
-        log_wire = \
-            utils.str_to_bool(self.config['service'].get('log_wire'))
-        if log_wire:
-            log_filename = logger.SERVER_DEBUG_WIRELOG_FILEPATH
-        client = Client(self.config['vcd']['host'],
-                        api_version=self.config['vcd']['api_version'],
-                        verify_ssl_certs=self.config['vcd']['verify'],
-                        log_file=log_filename,
-                        log_requests=log_wire,
-                        log_headers=log_wire,
-                        log_bodies=log_wire)
-        credentials = BasicLoginCredentials(self.config['vcd']['username'],
-                                            SYSTEM_ORG_NAME,
-                                            self.config['vcd']['password'])
-        client.set_credentials(credentials)
-        cloudapi_client = cloudApiClient.CloudApiClient(
-            client.get_cloudapi_uri(),
-            token=client.get_xvcloud_authorization_token(),
-            is_jwt_token=False,
-            api_version=client.get_api_version(),
-            logger_debug=logger.SERVER_LOGGER,
-            logger_wire=logger.SERVER_CLOUDAPI_WIRE_LOGGER,
-            verify_ssl=client._verify_ssl_certs,
-            is_sys_admin=client.is_sysadmin())
-
-
-        #_register_def_schema(client, msg_update_callback=msg_update_callback)
-        self._load_def_schema(msg_update_callback=msg_update_callback)
-        et = self.get_native_cluster_entity_type()
-        i = self.get_native_cluster_interface()
-
-        svc = DefEntityService(cloudapi_client)
-        schemasvc = DefSchemaService(cloudapi_client)
-
-        dist = def_utils.Distribution('k81.17', 1)
-        settings = def_utils.Settings('net')
-        spec = def_utils.ClusterSpec(control_plane=def_utils.ControlPlane(), workers=def_utils.Workers(),
-                           k8_distribution=dist, settings=settings)
-        metadata = def_utils.Metadata(cluster_name='myCluster', org_name='org1',
-                            ovdc_name='ovdc1')
-        cluster_entity = def_utils.ClusterEntity(metadata=metadata, spec=spec)
-        def_entity = def_utils.DefEntity(name=cluster_entity.metadata.cluster_name,
-                               entity=cluster_entity)
-
-        #print(svc.create_entity(et.id,def_entity))
-        print(svc.get_entity('urn:vcloud:entity:cse.nativeCluster1:1.0.0:a9a5c215-8aef-4260-b279-4ca4c5572a2f'))
-        # Create interface
-        # try:
-        #     interface = DefInterface(name='MyInterface1', id=None, vendor='pacific2',
-        #                  nss='nss', version='1.0.0', readonly=False)
-        #     interface = schemasvc.create_interface(interface)
-        # except Exception as e:
-        #     print(e)
-        # print(interface)
-        # list entity types
-        # for i in schemasvc.list_entity_types():
-        #     print(i)
-        # #print(schemasvc.get_interface('urn:vcloud:interface:pacific.native:1.0.0'))
-        # Update interface
-        # interface = DefInterface(name='PacificInterface', id='urn:vcloud:interface:pacific2.nss:1.0.0', vendor='pacific2',
-        #                  nss='nss', version='2.0.0', readonly=False)
-        # interface = schemasvc.update_interface(interface)
-        # print(interface)
-        # Create EntityType
-        # properties = {
-        #     'name': {'type': 'string'},
-        #     'master_ip': {'type': 'string'},
-        #     'worker_count': {'type': 'integer'},
-        #     'k8_dist': {'type': 'string'}
-        # }
-        # schema={'properties': properties}
-        # et = DefEntityType(name='Cluster1', description='clusters',vendor='cse1', nss='cluster1',
-        #                    version='1.0.0',
-        #                    schema=schema,
-        #                    interfaces=['urn:vcloud:interface:pacific2.nss:1.0.0'])
-        # try:
-        #     et = schemasvc.create_entity_type(et)
-        # except Exception as e:
-        #     print(e)
-        # print(et)
-        # print(schemasvc.get_entity_type('urn:vcloud:type:cse1.cluster1:1.0.0'))
-        # print(schemasvc.list_entity_types())
-        # Entity creation
-        # entity = {'name':'cluster3',
-        #           'k8_dist':'k81.17',
-        #           'master_ip': '',
-        #           'worker_count':2}
-        # from container_service_extension.def_modules.models import DefEntity
-        # et = DefEntity(name='cluster3',entity=entity)
-        # response = svc.create_entity('urn:vcloud:type:cse.cluster:1.0.0', et)
-        # print(response)
-        # List entities
-        # response = svc.list_entities()
-        # for x in response:
-        #     print(x)
-        # Update entity urn:vcloud:entity:cse.cluster:1.0.0:4376f9db-e103-426a-8722-0a359f7713ce
-        # entity = {'name': 'cluster2',
-        #           'k8_dist': 'k81.17',
-        #           'master_ip': '',
-        #           'worker_count': 4}
-        # et = {'name': 'cluster2',
-        #       'entity': entity,
-        #       'externalId': None,
-        #       'entityType': 'urn:vcloud:type:cse.cluster:1.0.0'}
-        # id = 'urn:vcloud:entity:cse.cluster:1.0.0:4376f9db-e103-426a-8722-0a359f7713ce'
-        # response = svc.update_entity(id, et)
-        # print(response)
-        # Get entity urn:vcloud:entity:cse.cluster:1.0.0:4376f9db-e103-426a-8722-0a359f7713ce
-        # id = 'urn:vcloud:entity:cse.cluster:1.0.0:2539e073-04ef-4baa-b538-06ff0651bfb9'
-        # response = svc.get_entity(id)
-        # print(response)
-        # Delete entity
-        # id = 'urn:vcloud:entity:cse.cluster:1.0.0:4376f9db-e103-426a-8722-0a359f7713ce'
-        # response = svc.delete_entity(id)
-        # print(response)
-        # Resolve entity
-        # id = 'urn:vcloud:entity:cse.cluster:1.0.0:bbe0fe7d-e61b-4724-8502-2b8c007f6b1e'
-        # response = svc.resolve_entity(id)
-        # print(response)
 
     def _load_def_schema(self, msg_update_callback=utils.NullPrinter()):
         """Load cluster interface and cluster entity type to global context.
@@ -480,7 +341,7 @@ class Service(object, metaclass=Singleton):
             msg = "Successfully loaded defined entity schema to global context"
             msg_update_callback.general(msg)
             logger.SERVER_LOGGER.debug(msg)
-        except container_service_extension.exceptions.DefNotSupportedException:
+        except excptn.DefNotSupportedException:
             msg = "Skipping initialization of defined entity type" \
                   " and defined entity interface"
             msg_update_callback.info(msg)

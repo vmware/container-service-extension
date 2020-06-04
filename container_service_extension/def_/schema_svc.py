@@ -7,18 +7,15 @@ from dataclasses import asdict
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0 # noqa: E501
 from container_service_extension.cloudapi.constants import CloudApiResource
-from container_service_extension.def_modules.models import DefEntityType
-from container_service_extension.def_modules.models import DefInterface
-from container_service_extension.def_modules.utils import raise_error_if_def_not_supported # noqa: E501
+from container_service_extension.def_.models import DefEntityType
+from container_service_extension.def_.models import DefInterface
+from container_service_extension.def_.utils import raise_error_if_def_not_supported # noqa: E501
 from container_service_extension.shared_constants import RequestMethod
 
 
+# TODO(DEF) Exception handling.
 class DefSchemaService():
-    """Manages lifecycle of defined entity interfaces and entity types.
-
-    TODO Add API version check at the appropriate place. This class needs to
-     be used if and only if vCD API version >= v35
-    """
+    """Manages lifecycle of defined entity interfaces and entity types."""
 
     def __init__(self, cloudapi_client: CloudApiClient):
         if not cloudapi_client.is_sys_admin:
