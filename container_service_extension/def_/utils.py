@@ -5,7 +5,7 @@ from enum import Enum
 from enum import unique
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
-from container_service_extension.exceptions import DefNotSupportedException
+import container_service_extension.exceptions as excptn
 
 # Defined Entity Framework related constants
 DEF_CSE_VENDOR = 'cse'
@@ -13,7 +13,7 @@ DEF_NATIVE_INTERFACE_NSS = 'native'
 DEF_NATIVE_INTERFACE_VERSION = '1.0.0'
 DEF_NATIVE_INTERFACE_NAME = 'nativeClusterInterface'
 DEF_INTERFACE_ID_PREFIX = 'urn:vcloud:interface'
-DEF_NATIVE_ENTITY_TYPE_NSS = 'nativeCluster1'
+DEF_NATIVE_ENTITY_TYPE_NSS = 'nativeCluster'
 DEF_NATIVE_ENTITY_TYPE_VERSION = '1.0.0'
 DEF_NATIVE_ENTITY_TYPE_NAME = 'nativeClusterEntityType'
 DEF_ENTITY_TYPE_ID_PREFIX = 'urn:vcloud:type'
@@ -57,7 +57,7 @@ def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
     :param cloudapi_client CloudApiClient
     """
     if float(cloudapi_client.get_api_version()) < DEF_API_MIN_VERSION:
-        raise DefNotSupportedException("Defined entity framework is"
+        raise excptn.DefNotSupportedException("Defined entity framework is"
                                        " not supported for"
                                        f" {cloudapi_client.get_api_version()}")
 

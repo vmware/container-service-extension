@@ -236,6 +236,4 @@ class DefEntity:
         self.id = id
         self.entityType = entityType
         self.externalId = externalId
-        # TODO(DEF) state has to be enum
-        #  (PRE_CREATE, RESOLVED, RESOLUTION ERROR)
         self.state = state

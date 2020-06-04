@@ -50,16 +50,17 @@ GET /cse/node/{node name}?cluster_name={cluster name}&org={org name}&vdc={vdc na
 
 GET /cse/internal/clusters
 POST /cse/internal/clusters
-GET /cse/internal/cluster/{cluster name}?org={org name}&vdc={vdc name}
-PUT /cse/internal/cluster/{cluster name}?org={org name}&vdc={vdc name}
-DELETE /cse/internal/cluster/{cluster name}?org={org name}&vdc={vdc name}
-GET /cse/internal/cluster/{cluster name}/config?org={org name}&vdc={vdc name}
-GET /cse/internal/cluster/{cluster name}/upgrade-plan?org={org name}&vdc={vdc name}
-POST /cse/internal/cluster/{cluster name}/action/upgrade
+GET /cse/internal/cluster/{cluster id}
+PUT /cse/internal/cluster/{cluster id}
+DELETE /cse/internal/cluster/{cluster id}
+GET /cse/internal/cluster/{cluster id}/config
+GET /cse/internal/cluster/{cluster id}/upgrade-plan
+POST /cse/internal/cluster/{cluster id}/action/upgrade
 
+# Yet to be finalized.
 POST /cse/internal/nodes
 DELETE /cse/internal/nodes
-GET /cse/internal/node/{node name}?cluster_name={cluster name}&org={org name}&vdc={vdc name}
+GET /cse/internal/{cluster id}/node
 
 GET /cse/ovdcs
 GET /cse/ovdc/{ovdc id}
@@ -87,8 +88,7 @@ OPERATION_TO_HANDLER = {
     CseOperation.CLUSTER_INFO: native_cluster_handler.cluster_info,
     CseOperation.CLUSTER_LIST: native_cluster_handler.cluster_list,
     CseOperation.CLUSTER_RESIZE: native_cluster_handler.cluster_resize,
-    CseOperation.CLUSTER_UPGRADE_PLAN: native_cluster_handler.cluster_upgrade_plan,
-    # noqa: E501
+    CseOperation.CLUSTER_UPGRADE_PLAN: native_cluster_handler.cluster_upgrade_plan,  # noqa: E501
     CseOperation.CLUSTER_UPGRADE: native_cluster_handler.cluster_upgrade,
     CseOperation.NODE_CREATE: native_cluster_handler.node_create,
     CseOperation.NODE_DELETE: native_cluster_handler.node_delete,
@@ -96,10 +96,8 @@ OPERATION_TO_HANDLER = {
     CseOperation.OVDC_UPDATE: ovdc_handler.ovdc_update,
     CseOperation.OVDC_INFO: ovdc_handler.ovdc_info,
     CseOperation.OVDC_LIST: ovdc_handler.ovdc_list,
-    CseOperation.OVDC_COMPUTE_POLICY_LIST: ovdc_handler.ovdc_compute_policy_list,
-    # noqa: E501
-    CseOperation.OVDC_COMPUTE_POLICY_UPDATE: ovdc_handler.ovdc_compute_policy_update,
-    # noqa: E501
+    CseOperation.OVDC_COMPUTE_POLICY_LIST: ovdc_handler.ovdc_compute_policy_list,  # noqa: E501
+    CseOperation.OVDC_COMPUTE_POLICY_UPDATE: ovdc_handler.ovdc_compute_policy_update,  # noqa: E501
     CseOperation.SYSTEM_INFO: system_handler.system_info,
     CseOperation.SYSTEM_UPDATE: system_handler.system_update,
     CseOperation.TEMPLATE_LIST: template_handler.template_list,
@@ -129,7 +127,7 @@ def process_request(body):
     operation = url_data[_OPERATION_KEY]
 
     # check if server is disabled
-    if operation not in (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE) \
+    if operation not in (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE)\
             and not Service().is_running():
         raise e.BadRequestError(
             error_message='CSE service is disabled. '
@@ -139,8 +137,7 @@ def process_request(body):
     request_data = {}
     request_body = None
     if len(body['body']) > 0:
-        raw_body = base64.b64decode(body['body']).decode(
-            sys.getfilesystemencoding())  # noqa: E501
+        raw_body = base64.b64decode(body['body']).decode(sys.getfilesystemencoding())  # noqa: E501
         request_body = json.loads(raw_body)
         request_data.update(request_body)
         LOGGER.debug(f"request body: {request_data}")

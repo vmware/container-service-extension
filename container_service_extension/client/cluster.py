@@ -123,7 +123,7 @@ class Cluster:
         :return: (json) A parsed json object describing the requested cluster.
         """
         method = RequestMethod.POST
-        uri = f"{self._uri}/internal/clusters"
+        uri = f"{self._uri}/clusters"
         data = {
             RequestKey.CLUSTER_NAME: name,
             RequestKey.NUM_WORKERS: node_count,

@@ -6,12 +6,11 @@ from dataclasses import asdict
 from typing import List
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
-from container_service_extension.cloudapi.constants import \
-    CLOUDAPI_VERSION_1_0_0  # noqa: E501
+from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0  # noqa: E501
 from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.def_.models import DefEntity
 import container_service_extension.def_.utils as def_utils
-import container_service_extension.exceptions as exceptions
+import container_service_extension.exceptions as excptn
 from container_service_extension.shared_constants import RequestMethod
 
 
@@ -152,7 +151,7 @@ class DefEntityService():
     def get_entity_by_name(self, name: str) -> DefEntity:
         # TODO(DEF) Below call should add another filter field 'entity.kind==native' # noqa: E501
         #  It should not get entities if non-native clusters.
-        #  Awaiting on dependency from Extensibility team."
+        #  Awaiting dependency from Extensibility team."
         response_body = self._cloudapi_client.do_request(
             method=RequestMethod.GET,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
@@ -191,9 +190,9 @@ class DefEntityService():
         del response_body[def_utils.DEF_ERROR_MESSAGE_KEY]
         entity = DefEntity(**response_body)
         if entity.state != def_utils.DEF_RESOLVED_STATE:
-            raise exceptions.DefEntityResolutionErrorException(id=entity.id,
-                                                               state=entity.state,  # noqa: E501
-                                                               msg=msg)
+            raise excptn.DefEntityResolutionErrorException(id=entity.id,
+                                                           state=entity.state,
+                                                           msg=msg)
         return entity
 
     def filter_entities_by_property(self):

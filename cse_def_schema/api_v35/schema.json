@@ -17,10 +17,7 @@
             "spec": {
                 "type": "object",
                 "required": [
-                    "workers",
-                    "control_plane",
-                    "settings",
-                    "k8_distribution"
+                    "settings"
                 ],
                 "properties": {
                     "workers": {

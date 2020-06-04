@@ -1,5 +1,5 @@
 # container-service-extension
-# Copyright (c) 2017 VMware, Inc. All Rights Reserved.
+# Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
 import copy
@@ -18,7 +18,7 @@ import pyvcloud.vcd.vm as vcd_vm
 import semantic_version as semver
 
 import container_service_extension.abstract_broker as abstract_broker
-from container_service_extension.def_.entity_svc import DefEntityService
+import container_service_extension.def_.entity_svc as def_entity_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as e
@@ -52,7 +52,8 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         self.task = None
         self.task_resource = None
-        self.entity_svc = DefEntityService(request_context.cloudapi_client)
+        self.entity_svc = def_entity_svc.DefEntityService(
+            request_context.cloudapi_client)
 
     def get_cluster_info(self, **kwargs):
         """Get cluster metadata as well as node data.
@@ -117,7 +118,8 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         :rtype: List[Dict]
         """
-        # Yet to determine if this method needs modification
+        # Yet to be implemented
+        pass
         data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME
@@ -156,22 +158,25 @@ class ClusterService(abstract_broker.AbstractBroker):
     def create_cluster(self, cluster_spec: def_models.ClusterEntity):
         """Start the cluster creation operation.
 
-        Common broker function that validates data for the 'create cluster'
-        operation and returns a dictionary with cluster detail and task
-        information. Calls the asynchronous cluster create function that
-        actually performs the work. The returned `result['task_href']` can
-        be polled to get updates on task progress.
+        Creates corresponding defined entity in vCD for every native cluster.
+        Updates the defined entity with new properties after the cluster
+        creation.
 
         **telemetry: Optional
+
+        :return: Defined entity of the cluster
+        :rtype: def_models.DefEntity
         """
         cluster_name = cluster_spec.metadata.cluster_name
         org_name = cluster_spec.metadata.org_name
         ovdc_name = cluster_spec.metadata.ovdc_name
         template_name = cluster_spec.spec.k8_distribution.template_name
         template_revision = cluster_spec.spec.k8_distribution.template_revision
+
         # check that cluster name is syntactically valid
         if not is_valid_cluster_name(cluster_name):
             raise e.CseServerError(f"Invalid cluster name '{cluster_name}'")
+
         # check that cluster name doesn't already exist
         try:
             get_cluster(self.context.client, cluster_name,
@@ -181,8 +186,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"Cluster '{cluster_name}' already exists.")
         except e.ClusterNotFoundError:
             pass
+
         # check that requested/default template is valid
         get_template(name=template_name, revision=template_revision)
+
         # create the corresponding defined entity .
         def_entity = def_models.DefEntity(entity=cluster_spec)
         self.entity_svc.\
@@ -190,8 +197,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                           entity=def_entity)
         def_entity: def_models.DefEntity = self.entity_svc.get_entity_by_name(
             name=cluster_name)
+
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
+
         # must _update_task or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
         # call, session becomes None
@@ -205,6 +214,203 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.context.is_async = True
         self._create_cluster_async(def_entity)
         return def_entity
+
+    @utils.run_async
+    def _create_cluster_async(self, def_entity: def_models.DefEntity):
+        try:
+            cluster_entity = def_entity.entity
+            cluster_id = def_entity.id
+            cluster_name = cluster_entity.metadata.cluster_name
+            org_name = cluster_entity.metadata.org_name
+            ovdc_name = cluster_entity.metadata.ovdc_name
+            num_workers = cluster_entity.spec.workers.count
+            master_storage_profile = cluster_entity.spec.control_plane.storage_profile  # noqa: E501
+            worker_storage_profile = cluster_entity.spec.workers.storage_profile  # noqa: E501
+            network_name = cluster_entity.spec.settings.network
+            template_name = cluster_entity.spec.k8_distribution.template_name
+            template_revision = cluster_entity.spec.k8_distribution.template_revision  # noqa: E501
+            ssh_key = cluster_entity.spec.settings.ssh_key
+            enable_nfs = cluster_entity.spec.settings.enable_nfs
+            rollback = cluster_entity.spec.settings.rollback_on_failure
+
+            org = vcd_utils.get_org(self.context.client, org_name=org_name)
+            vdc = vcd_utils.get_vdc(self.context.client,
+                                    vdc_name=ovdc_name,
+                                    org=org)
+
+            LOGGER.debug(f"About to create cluster '{cluster_name}' on "
+                         f"{ovdc_name} with {num_workers} worker nodes, "
+                         f"storage profile={worker_storage_profile}")
+            msg = f"Creating cluster vApp {cluster_name} ({cluster_id})"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            try:
+                vapp_resource = vdc.create_vapp(
+                    cluster_name,
+                    description=f"cluster '{cluster_name}'",
+                    network=network_name,
+                    fence_mode='bridged')
+            except Exception as err:
+                msg = f"Error while creating vApp: {err}"
+                LOGGER.debug(str(err))
+                raise e.ClusterOperationError(msg)
+            self.context.client.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0]) # noqa: E501
+
+            template = get_template(template_name, template_revision)
+
+            tags = {
+                ClusterMetadataKey.CLUSTER_ID: cluster_id,
+                ClusterMetadataKey.CSE_VERSION: pkg_resources.require('container-service-extension')[0].version, # noqa: E501
+                ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME], # noqa: E501
+                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION], # noqa: E501
+                ClusterMetadataKey.OS: template[LocalTemplateKey.OS], # noqa: E501
+                ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION], # noqa: E501
+                ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES], # noqa: E501
+                ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION], # noqa: E501
+                ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
+                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION] # noqa: E501
+            }
+            vapp = vcd_vapp.VApp(self.context.client,
+                                 href=vapp_resource.get('href'))
+            task = vapp.set_multiple_metadata(tags)
+            self.context.client.get_task_monitor().wait_for_status(task)
+
+            msg = f"Creating master node for cluster '{cluster_name}' " \
+                  f"({cluster_id})"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            vapp.reload()
+            server_config = utils.get_server_runtime_config()
+            catalog_name = server_config['broker']['catalog']
+            try:
+                add_nodes(self.context.sysadmin_client,
+                          num_nodes=1,
+                          node_type=NodeType.MASTER,
+                          org=org,
+                          vdc=vdc,
+                          vapp=vapp,
+                          catalog_name=catalog_name,
+                          template=template,
+                          network_name=network_name,
+                          storage_profile=master_storage_profile,
+                          ssh_key=ssh_key)
+            except Exception as err:
+                raise e.MasterNodeCreationError("Error adding master node:",
+                                                str(err))
+
+            msg = f"Initializing cluster '{cluster_name}' ({cluster_id})"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            vapp.reload()
+            init_cluster(self.context.sysadmin_client,
+                         vapp,
+                         template[LocalTemplateKey.NAME],
+                         template[LocalTemplateKey.REVISION])
+            master_ip = get_master_ip(self.context.sysadmin_client, vapp)
+            task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
+                                     master_ip)
+            self.context.client.get_task_monitor().wait_for_status(task)
+
+            msg = f"Creating {num_workers} node(s) for cluster " \
+                  f"'{cluster_name}' ({cluster_id})"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            try:
+                add_nodes(self.context.sysadmin_client,
+                          num_nodes=num_workers,
+                          node_type=NodeType.WORKER,
+                          org=org,
+                          vdc=vdc,
+                          vapp=vapp,
+                          catalog_name=catalog_name,
+                          template=template,
+                          network_name=network_name,
+                          storage_profile=worker_storage_profile,
+                          ssh_key=ssh_key)
+            except Exception as err:
+                raise e.WorkerNodeCreationError("Error creating worker node:",
+                                                str(err))
+
+            msg = f"Adding {num_workers} node(s) to cluster " \
+                  f"'{cluster_name}' ({cluster_id})"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            vapp.reload()
+            join_cluster(self.context.sysadmin_client,
+                         vapp,
+                         template[LocalTemplateKey.NAME],
+                         template[LocalTemplateKey.REVISION])
+
+            if enable_nfs:
+                msg = f"Creating NFS node for cluster " \
+                      f"'{cluster_name}' ({cluster_id})"
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                try:
+                    add_nodes(self.context.sysadmin_client,
+                              num_nodes=1,
+                              node_type=NodeType.NFS,
+                              org=org,
+                              vdc=vdc,
+                              vapp=vapp,
+                              catalog_name=catalog_name,
+                              template=template,
+                              network_name=network_name,
+                              storage_profile=worker_storage_profile,
+                              ssh_key=ssh_key)
+                except Exception as err:
+                    raise e.NFSNodeCreationError("Error creating NFS node:",
+                                                 str(err))
+
+            msg = f"Created cluster '{cluster_name}' ({cluster_id})"
+            self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+
+            # Update defined entity instance with new values like vapp_id,
+            # master_ip and nodes.
+            # TODO(DEF) VCDA-1567 Schema doesn't yet have nodes definition.
+            #  master and worker "nodes" also have to be updated.
+            def_entity.externalId = vapp_resource.get('href')
+            def_entity.entity.status.master_ip = master_ip
+            # TODO(DEF) The concept of status is yet to be implemented properly
+            def_entity.entity.status.phase = 'CREATE_SUCCEEDED'
+            self.entity_svc.update_entity(def_entity.id, def_entity)
+
+            # Resolve the defined entity to a RESOLVED state
+            self.entity_svc.resolve_entity(def_entity.id)
+        except (e.MasterNodeCreationError, e.WorkerNodeCreationError,
+                e.NFSNodeCreationError, e.ClusterJoiningError,
+                e.ClusterInitializationError, e.ClusterOperationError) as err:
+
+            # TODO(DEF) The concept of status is yet to be implemented properly
+            def_entity.entity.status.phase = 'CREATE_FAILED'
+            # Resolve the defined entity to a RESOLVED/ERROR state. This should
+            # fail required properties 'master_ip' have not been updated.
+            self.entity_svc.resolve_entity(def_entity.id)
+
+            if rollback:
+                msg = f"Error creating cluster '{cluster_name}'. " \
+                      f"Deleting cluster (rollback=True)"
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                LOGGER.info(msg)
+                try:
+                    cluster = get_cluster(self.context.client,
+                                          cluster_name,
+                                          cluster_id=cluster_id,
+                                          org_name=org_name,
+                                          ovdc_name=ovdc_name)
+                    _delete_vapp(self.context.client, cluster['vdc_href'],
+                                 cluster_name)
+                    # Delete the corresponding defined entity
+                    self.entity_svc.delete_entity(def_entity.id)
+                except Exception:
+                    LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
+                                 exc_info=True)
+            LOGGER.error(f"Error creating cluster '{cluster_name}'",
+                         exc_info=True)
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              error_message=str(err))
+            # raising an exception here prints a stacktrace to server console
+        except Exception as err:
+            LOGGER.error(f"Unknown error creating cluster '{cluster_name}'",
+                         exc_info=True)
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              error_message=str(err))
+        finally:
+            self.context.end()
 
     def resize_cluster(self, **kwargs):
         """Start the resize cluster operation.
@@ -220,6 +426,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 rollback=True, template_name=None, template_revision=None
         **telemetry: Optional
         """
+        pass
         data = kwargs[KwargKey.DATA]
         # TODO default template for resizing should be master's template
         required = [
@@ -284,6 +491,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             Optional data and default values: org_name=None, ovdc_name=None
         **telemetry: Optional
         """
+        pass
         data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME
@@ -335,6 +543,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             Optional data and default values: org_name=None, ovdc_name=None
         **telemetry: Optional
         """
+        pass
         data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME,
@@ -405,6 +614,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             Optional data and default values: org_name=None, ovdc_name=None
         **telemetry: Optional
         """
+        pass
         data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME,
@@ -634,203 +844,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             'cluster_name': cluster_name,
             'task_href': self.task_resource.get('href')
         }
-
-    @utils.run_async
-    def _create_cluster_async(self, def_entity: def_models.DefEntity):
-        try:
-            cluster_entity = def_entity.entity
-            cluster_id = def_entity.id
-            cluster_name = cluster_entity.metadata.cluster_name
-            org_name = cluster_entity.metadata.org_name
-            ovdc_name = cluster_entity.metadata.ovdc_name
-            num_workers = cluster_entity.spec.workers.count
-            master_storage_profile = cluster_entity.spec.control_plane.storage_profile  # noqa: E501
-            worker_storage_profile = cluster_entity.spec.workers.storage_profile  # noqa: E501
-            network_name = cluster_entity.spec.settings.network
-            template_name = cluster_entity.spec.k8_distribution.template_name
-            template_revision = cluster_entity.spec.k8_distribution.template_revision  # noqa: E501
-            ssh_key = cluster_entity.spec.settings.ssh_key
-            enable_nfs = cluster_entity.spec.settings.enable_nfs
-            rollback = cluster_entity.spec.settings.rollback_on_failure
-
-            org = vcd_utils.get_org(self.context.client, org_name=org_name)
-            vdc = vcd_utils.get_vdc(self.context.client,
-                                    vdc_name=ovdc_name,
-                                    org=org)
-
-            LOGGER.debug(f"About to create cluster '{cluster_name}' on "
-                         f"{ovdc_name} with {num_workers} worker nodes, "
-                         f"storage profile={worker_storage_profile}")
-            msg = f"Creating cluster vApp {cluster_name} ({cluster_id})"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-            try:
-                vapp_resource = vdc.create_vapp(
-                    cluster_name,
-                    description=f"cluster '{cluster_name}'",
-                    network=network_name,
-                    fence_mode='bridged')
-            except Exception as err:
-                msg = f"Error while creating vApp: {err}"
-                LOGGER.debug(str(err))
-                raise e.ClusterOperationError(msg)
-            self.context.client.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0]) # noqa: E501
-
-            template = get_template(template_name, template_revision)
-
-            tags = {
-                ClusterMetadataKey.CLUSTER_ID: cluster_id,
-                ClusterMetadataKey.CSE_VERSION: pkg_resources.require('container-service-extension')[0].version, # noqa: E501
-                ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME], # noqa: E501
-                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION], # noqa: E501
-                ClusterMetadataKey.OS: template[LocalTemplateKey.OS], # noqa: E501
-                ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION], # noqa: E501
-                ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES], # noqa: E501
-                ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION], # noqa: E501
-                ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
-                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION] # noqa: E501
-            }
-            vapp = vcd_vapp.VApp(self.context.client,
-                                 href=vapp_resource.get('href'))
-            task = vapp.set_multiple_metadata(tags)
-            self.context.client.get_task_monitor().wait_for_status(task)
-
-            msg = f"Creating master node for cluster '{cluster_name}' " \
-                  f"({cluster_id})"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-            vapp.reload()
-            server_config = utils.get_server_runtime_config()
-            catalog_name = server_config['broker']['catalog']
-            try:
-                add_nodes(self.context.sysadmin_client,
-                          num_nodes=1,
-                          node_type=NodeType.MASTER,
-                          org=org,
-                          vdc=vdc,
-                          vapp=vapp,
-                          catalog_name=catalog_name,
-                          template=template,
-                          network_name=network_name,
-                          storage_profile=master_storage_profile,
-                          ssh_key=ssh_key)
-            except Exception as err:
-                raise e.MasterNodeCreationError("Error adding master node:",
-                                                str(err))
-
-            msg = f"Initializing cluster '{cluster_name}' ({cluster_id})"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-            vapp.reload()
-            init_cluster(self.context.sysadmin_client,
-                         vapp,
-                         template[LocalTemplateKey.NAME],
-                         template[LocalTemplateKey.REVISION])
-            master_ip = get_master_ip(self.context.sysadmin_client, vapp)
-            task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
-                                     master_ip)
-            self.context.client.get_task_monitor().wait_for_status(task)
-
-            msg = f"Creating {num_workers} node(s) for cluster " \
-                  f"'{cluster_name}' ({cluster_id})"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-            try:
-                add_nodes(self.context.sysadmin_client,
-                          num_nodes=num_workers,
-                          node_type=NodeType.WORKER,
-                          org=org,
-                          vdc=vdc,
-                          vapp=vapp,
-                          catalog_name=catalog_name,
-                          template=template,
-                          network_name=network_name,
-                          storage_profile=worker_storage_profile,
-                          ssh_key=ssh_key)
-            except Exception as err:
-                raise e.WorkerNodeCreationError("Error creating worker node:",
-                                                str(err))
-
-            msg = f"Adding {num_workers} node(s) to cluster " \
-                  f"'{cluster_name}' ({cluster_id})"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-            vapp.reload()
-            join_cluster(self.context.sysadmin_client,
-                         vapp,
-                         template[LocalTemplateKey.NAME],
-                         template[LocalTemplateKey.REVISION])
-
-            if enable_nfs:
-                msg = f"Creating NFS node for cluster " \
-                      f"'{cluster_name}' ({cluster_id})"
-                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-                try:
-                    add_nodes(self.context.sysadmin_client,
-                              num_nodes=1,
-                              node_type=NodeType.NFS,
-                              org=org,
-                              vdc=vdc,
-                              vapp=vapp,
-                              catalog_name=catalog_name,
-                              template=template,
-                              network_name=network_name,
-                              storage_profile=worker_storage_profile,
-                              ssh_key=ssh_key)
-                except Exception as err:
-                    raise e.NFSNodeCreationError("Error creating NFS node:",
-                                                 str(err))
-
-            msg = f"Created cluster '{cluster_name}' ({cluster_id})"
-            self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
-
-            # Update defined entity instance with new values like vapp_id,
-            # master_ip and nodes.
-            # TODO(DEF) VCDA-1567 Schema doesn't yet have nodes definition.
-            #  master and worker "nodes" also have to be updated.
-            def_entity.externalId = vapp_resource.get('href')
-            def_entity.entity.status.master_ip = master_ip
-            # TODO(DEF) The concept of status is yet to be implemented properly
-            def_entity.entity.status.phase = 'CREATE_SUCCEEDED'
-            self.entity_svc.update_entity(def_entity.id, def_entity)
-
-            # Resolve the defined entity to a RESOLVED state
-            self.entity_svc.resolve_entity(def_entity.id)
-        except (e.MasterNodeCreationError, e.WorkerNodeCreationError,
-                e.NFSNodeCreationError, e.ClusterJoiningError,
-                e.ClusterInitializationError, e.ClusterOperationError) as err:
-
-            # TODO(DEF) The concept of status is yet to be implemented properly
-            def_entity.entity.status.phase = 'CREATE_FAILED'
-            # Resolve the defined entity to a RESOLVED/ERROR state. This should
-            # fail required properties 'master_ip' have not been updated.
-            self.entity_svc.resolve_entity(def_entity.id)
-
-            if rollback:
-                msg = f"Error creating cluster '{cluster_name}'. " \
-                      f"Deleting cluster (rollback=True)"
-                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-                LOGGER.info(msg)
-                try:
-                    cluster = get_cluster(self.context.client,
-                                          cluster_name,
-                                          cluster_id=cluster_id,
-                                          org_name=org_name,
-                                          ovdc_name=ovdc_name)
-                    _delete_vapp(self.context.client, cluster['vdc_href'],
-                                 cluster_name)
-                    # Delete the corresponding defined entity
-                    self.entity_svc.delete_entity(def_entity.id)
-                except Exception:
-                    LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
-                                 exc_info=True)
-            LOGGER.error(f"Error creating cluster '{cluster_name}'",
-                         exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR,
-                              error_message=str(err))
-            # raising an exception here prints a stacktrace to server console
-        except Exception as err:
-            LOGGER.error(f"Unknown error creating cluster '{cluster_name}'",
-                         exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR,
-                              error_message=str(err))
-        finally:
-            self.context.end()
 
     # all parameters following '*args' are required and keyword-only
     @utils.run_async
