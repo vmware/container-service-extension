@@ -12,6 +12,7 @@ class CloudApiResource(str, Enum):
     """Keys that are used to get the cloudapi resource names."""
 
     VDC_COMPUTE_POLICIES = 'vdcComputePolicies'
+    PVDC_COMPUTE_POLICIES = 'pvdcComputePolicies'
     EXTENSION_UI = 'extensions/ui'
     INTERFACES = 'interfaces'
     ENTITY_TYPES = 'entityTypes'

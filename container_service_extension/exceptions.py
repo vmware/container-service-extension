@@ -2,6 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import pyvcloud.vcd.exceptions as VcdExceptions
 import requests
 
 from container_service_extension.minor_error_codes import MinorErrorCode
@@ -191,3 +192,7 @@ class PksClusterNotFoundError(PksServerError):
 
 class PksDuplicateClusterError(PksServerError):
     """Raised when multiple PKS clusters of same name detected."""
+
+
+class GlobalPvdcComputePolicyNotSupported(VcdExceptions.OperationNotSupportedException): # noqa: E501
+    """Raised when global pvdc compute policies are not supported."""
