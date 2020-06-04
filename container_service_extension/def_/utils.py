@@ -57,9 +57,8 @@ def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
     :param cloudapi_client CloudApiClient
     """
     if float(cloudapi_client.get_api_version()) < DEF_API_MIN_VERSION:
-        raise excptn.DefNotSupportedException("Defined entity framework is"
-                                       " not supported for"
-                                       f" {cloudapi_client.get_api_version()}")
+        raise excptn.DefNotSupportedException("Defined entity framework is not"
+                                              " supported for {cloudapi_client.get_api_version()}")  # noqa: E501
 
 
 def get_registered_def_interface():

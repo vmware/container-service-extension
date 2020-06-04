@@ -79,15 +79,17 @@ def get_server_api_version():
     config = get_server_runtime_config()
     return config['vcd']['api_version']
 
+
 def get_default_storage_profile():
     config = get_server_runtime_config()
     return config['broker']['storage_profile']
 
+
 def get_default_k8_distribution():
     config = get_server_runtime_config()
     from container_service_extension.def_.models import Distribution
-    return Distribution(template_name=config['broker']['default_template_name'],
-                        template_revision=config['broker']['default_template_revision'])
+    return Distribution(template_name=config['broker']['default_template_name'],  # noqa: E501
+                        template_revision=config['broker']['default_template_revision'])  # noqa: E501
 
 
 def get_pks_cache():
