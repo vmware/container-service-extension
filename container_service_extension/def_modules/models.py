@@ -226,13 +226,32 @@ class DefEntity:
     externalId: str = None
     state: str = None
 
-    def __init__(self, name: str, entity: ClusterEntity, id: str = None,
+
+    def __init__(self, entity: ClusterEntity, name: str = None, id: str = None,
                  entityType: str = None, externalId: str = None,
                  state: str = None):
-        self.name = name
         self.entity = ClusterEntity(**entity) if isinstance(entity, dict) else entity  # noqa: E501
+        self.name = name or self.entity.metadata.cluster_name
         self.id = id
         self.entityType = entityType
         self.externalId = externalId
+        # TODO(DEF) state has to be enum
+        #  (PRE_CREATE, RESOLVED, RESOLUTION ERROR)
         self.state = state
+
+@dataclass()
+class Sample:
+    name: str
+    entity: str
+
+    def __init__(self, entity: str, name: str = None, **kwargs):
+        self.entity = entity
+        self.name = name
+
+x={'entity':'sahi+entity',
+ 'name':'myname',
+ 'extra':'super'}
+#del x['extra']
+print(x)
+s = Sample(**x)
 

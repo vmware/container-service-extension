@@ -21,6 +21,7 @@ from pyvcloud.vcd.exceptions import OperationNotSupportedException
 
 import container_service_extension.compute_policy_manager \
     as compute_policy_manager
+import container_service_extension.exceptions
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.consumer import MessageConsumer
@@ -479,7 +480,7 @@ class Service(object, metaclass=Singleton):
             msg = "Successfully loaded defined entity schema to global context"
             msg_update_callback.general(msg)
             logger.SERVER_LOGGER.debug(msg)
-        except def_utils.DefNotSupportedException:
+        except container_service_extension.exceptions.DefNotSupportedException:
             msg = "Skipping initialization of defined entity type" \
                   " and defined entity interface"
             msg_update_callback.info(msg)

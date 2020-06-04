@@ -177,7 +177,7 @@ class DefClusterService(abstract_broker.AbstractBroker):
                 enable_nfs=False,rollback=True
         **telemetry: Optional
         """
-        data = kwargs[KwargKey.DATA]
+        #data = kwargs[KwargKey.DATA]
         cluster_name = cluster_spec.metadata.cluster_name
         org_name = cluster_spec.metadata.org_name
         ovdc_name = cluster_spec.metadata.ovdc_name
@@ -215,43 +215,15 @@ class DefClusterService(abstract_broker.AbstractBroker):
         # Create Defined entity
         def_entity = DefEntity(name=cluster_name, entity=cluster_spec)
         self.entity_svc.create_entity(def_utils.get_registered_def_entity_type().id, entity=def_entity)
-        # TODO Below method is yet to be implemented
-        def_entity: DefEntity = self.entity_svc.filter_entities_by_property(cluster_name,org_name, ovdc_name)
-
+        def_entity: DefEntity = self.entity_svc.get_entity_by_name(name=cluster_name)
         self._create_cluster_async(def_entity)
-            # org_name=org_name,
-            # ovdc_name=ovdc_name,
-            # cluster_name=cluster_name,
-            # cluster_id=cluster_id,
-            # template_name=template_name,
-            # template_revision=template_revision,
-            # num_workers=num_workers,
-            # network_name=network_name,
-            # num_cpu=validated_data[RequestKey.NUM_CPU],
-            # mb_memory=validated_data[RequestKey.MB_MEMORY],
-            # storage_profile_name=validated_data[RequestKey.STORAGE_PROFILE_NAME], # noqa: E501
-            # ssh_key=validated_data[RequestKey.SSH_KEY],
-            # enable_nfs=validated_data[RequestKey.ENABLE_NFS],
-            # rollback=validated_data[RequestKey.ROLLBACK])
 
-        # TODO design and implement telemetry for defined entity based clusters
-        # if kwargs.get(KwargKey.TELEMETRY, True):
-        #     # Record the data for telemetry
-        #     cse_params = copy.deepcopy(validated_data)
-        #     cse_params[PayloadKey.CLUSTER_ID] = cluster_id
-        #     cse_params[LocalTemplateKey.MEMORY] = validated_data.get(RequestKey.MB_MEMORY)  # noqa: E501
-        #     cse_params[LocalTemplateKey.CPU] = validated_data.get(RequestKey.NUM_CPU) # noqa: E501
-        #     cse_params[LocalTemplateKey.KUBERNETES] = template.get(LocalTemplateKey.KUBERNETES)  # noqa: E501
-        #     cse_params[LocalTemplateKey.KUBERNETES_VERSION] = template.get(LocalTemplateKey.KUBERNETES_VERSION)  # noqa: E501
-        #     cse_params[LocalTemplateKey.OS] = template.get(LocalTemplateKey.OS)
-        #     cse_params[LocalTemplateKey.CNI] = template.get(LocalTemplateKey.CNI) # noqa: E501
-        #     cse_params[LocalTemplateKey.CNI_VERSION] = template.get(LocalTemplateKey.CNI_VERSION)  # noqa: E501
-        #     record_user_action_details(cse_operation=CseOperation.CLUSTER_CREATE, # noqa: E501
-        #                                cse_params=cse_params)
+        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
+        #  based clusters
 
         return {
             'name': cluster_name,
-            'cluster_id': cluster_id,
+            'cluster_id': def_entity.id,
             'task_href': self.task_resource.get('href')
         }
 
@@ -692,11 +664,6 @@ class DefClusterService(abstract_broker.AbstractBroker):
     # all parameters following '*args' are required and keyword-only
     @utils.run_async
     def _create_cluster_async(self, def_entity: DefEntity):
-                              # org_name, ovdc_name, cluster_name, cluster_id,
-                              # template_name, template_revision, num_workers,
-                              # network_name, num_cpu, mb_memory,
-                              # storage_profile_name, ssh_key, enable_nfs,
-                              # rollback):
         try:
             cluster_entity = def_entity.entity
             cluster_id = def_entity.id
@@ -770,8 +737,6 @@ class DefClusterService(abstract_broker.AbstractBroker):
                           catalog_name=catalog_name,
                           template=template,
                           network_name=network_name,
-                          num_cpu=None,
-                          memory_in_mb=None,
                           storage_profile=master_storage_profile,
                           ssh_key=ssh_key)
             except Exception as err:
@@ -803,8 +768,6 @@ class DefClusterService(abstract_broker.AbstractBroker):
                           catalog_name=catalog_name,
                           template=template,
                           network_name=network_name,
-                          num_cpu=None,
-                          memory_in_mb=None,
                           storage_profile=worker_storage_profile,
                           ssh_key=ssh_key)
             except Exception as err:
@@ -834,8 +797,6 @@ class DefClusterService(abstract_broker.AbstractBroker):
                               catalog_name=catalog_name,
                               template=template,
                               network_name=network_name,
-                              num_cpu=None,
-                              memory_in_mb=None,
                               storage_profile=worker_storage_profile,
                               ssh_key=ssh_key)
                 except Exception as err:
@@ -846,8 +807,9 @@ class DefClusterService(abstract_broker.AbstractBroker):
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
 
             # Update defined entity instance with new values like vapp_id, master_ip.
+            # TODO(DEF) Yet to update the nodes
             def_entity.externalId = vapp_resource.get('href')
-            def_entity.entity.state['master_ip'] = master_ip
+            def_entity.entity.status.master_ip = master_ip
             self.entity_svc.update_entity(def_entity.id, def_entity)
 
             # Resolve the defined entity to a RESOLVED state
@@ -856,8 +818,8 @@ class DefClusterService(abstract_broker.AbstractBroker):
                 e.NFSNodeCreationError, e.ClusterJoiningError,
                 e.ClusterInitializationError, e.ClusterOperationError) as err:
 
-            # Resolve the defined entity to a RESOLVED/ERROR state. This should fail
-            # as required properties 'master_ip' is not present.
+            # Resolve the defined entity to a RESOLVED/ERROR state. This should
+            # fail required properties 'master_ip' have not been updated.
             self.entity_svc.resolve_entity(def_entity.id)
 
             if rollback:

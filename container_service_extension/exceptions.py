@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import requests
+from pyvcloud.vcd.exceptions import OperationNotSupportedException, \
+    InvalidStateException
 
 from container_service_extension.minor_error_codes import MinorErrorCode
 
@@ -191,3 +193,20 @@ class PksClusterNotFoundError(PksServerError):
 
 class PksDuplicateClusterError(PksServerError):
     """Raised when multiple PKS clusters of same name detected."""
+
+
+class DefNotSupportedException(OperationNotSupportedException):
+    """Defined entity framework is not supported."""
+
+
+class DefEntityResolutionErrorException(InvalidStateException):
+    """Raised if Defined entity is not resolved properly."""
+
+    def __init__(self, id: str, state: str, msg: str = None):
+        self.id = id
+        self.state = state
+        self.msg = msg
+
+    def __str__(self):
+        return f"Resolution of the cluster with defined entity id:{self.id} " \
+               f"failed with error message: {self.msg}"

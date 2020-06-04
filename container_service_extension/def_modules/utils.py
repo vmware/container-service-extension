@@ -4,12 +4,11 @@
 from enum import Enum
 from enum import unique
 
-from pyvcloud.vcd.exceptions import OperationNotSupportedException
-
-import container_service_extension.def_modules.models as def_models
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 
 # Defined Entity Framework related constants
+from container_service_extension.exceptions import DefNotSupportedException
+
 DEF_CSE_VENDOR = 'cse'
 DEF_NATIVE_INTERFACE_NSS = 'native'
 DEF_NATIVE_INTERFACE_VERSION = '1.0.0'
@@ -50,11 +49,6 @@ MAP_API_VERSION_TO_KEYS = {
     }
 }
 
-
-class DefNotSupportedException(OperationNotSupportedException):
-    """Defined entity framework is not supported."""
-
-
 def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
     """Raise DefNotSupportedException if defined entities are not supported.
 
@@ -66,13 +60,13 @@ def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
                                        f" {cloudapi_client.get_api_version()}")
 
 
-def get_registered_def_interface() -> def_models.DefInterface:
+def get_registered_def_interface():
     """Fetch the native cluster interface loaded during server startup."""
     from container_service_extension.service import Service
     return Service().get_native_cluster_interface()
 
 
-def get_registered_def_entity_type() -> def_models.DefEntityType:
+def get_registered_def_entity_type():
     """Fetch the native cluster entity type loaded during server startup."""
     from container_service_extension.service import Service
     return Service().get_native_cluster_entity_type()
@@ -116,6 +110,3 @@ def is_def_supported_by_cse_server():
     import container_service_extension.utils as utils
     api_version = utils.get_server_api_version()
     return float(api_version) >= DEF_API_MIN_VERSION
-
-
-

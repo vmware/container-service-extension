@@ -5,11 +5,13 @@
 from dataclasses import asdict
 from typing import List
 
+import container_service_extension.exceptions as exceptions
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
-from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0 # noqa: E501
+from container_service_extension.cloudapi.constants import \
+    CLOUDAPI_VERSION_1_0_0  # noqa: E501
 from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.def_modules.models import DefEntity
-from container_service_extension.def_modules.utils import raise_error_if_def_not_supported # noqa: E501
+import container_service_extension.def_modules.utils as def_utils
 from container_service_extension.shared_constants import RequestMethod
 
 
@@ -21,7 +23,7 @@ class DefEntityService():
     """
 
     def __init__(self, cloudapi_client: CloudApiClient):
-        raise_error_if_def_not_supported(cloudapi_client)
+        def_utils.raise_error_if_def_not_supported(cloudapi_client)
         self._cloudapi_client = cloudapi_client
 
     def create_entity(self, entity_type_id: str, entity: DefEntity) -> None:
@@ -35,7 +37,7 @@ class DefEntityService():
             method=RequestMethod.POST,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/"
-            f"{entity_type_id}",
+                                       f"{entity_type_id}",
             payload=asdict(entity))
 
     def list_entities(self):
@@ -51,7 +53,7 @@ class DefEntityService():
                 method=RequestMethod.GET,
                 cloudapi_version=CLOUDAPI_VERSION_1_0_0,
                 resource_url_relative_path=f"{CloudApiResource.ENTITIES}?"
-                f"page={page_num}")
+                                           f"page={page_num}")
             if len(response_body['values']) > 0:
                 for entity in response_body['values']:
                     yield DefEntity(**entity)
@@ -79,8 +81,8 @@ class DefEntityService():
                 method=RequestMethod.GET,
                 cloudapi_version=CLOUDAPI_VERSION_1_0_0,
                 resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
-                f"{CloudApiResource.INTERFACES}/{vendor}/{nss}/{version}?"
-                f"page={page_num}")
+                                           f"{CloudApiResource.INTERFACES}/{vendor}/{nss}/{version}?"
+                                           f"page={page_num}")
             if len(response_body['values']) > 0:
                 for entity in response_body['values']:
                     yield DefEntity(**entity)
@@ -109,7 +111,7 @@ class DefEntityService():
                 method=RequestMethod.GET,
                 cloudapi_version=CLOUDAPI_VERSION_1_0_0,
                 resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
-                f"{vendor}/{nss}/{version}?page={page_num}")
+                                           f"{vendor}/{nss}/{version}?page={page_num}")
             if len(response_body['values']) > 0:
                 for entity in response_body['values']:
                     yield DefEntity(**entity)
@@ -128,7 +130,7 @@ class DefEntityService():
             method=RequestMethod.PUT,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
-            f"{entity_id}",
+                                       f"{entity_id}",
             payload=asdict(entity))
         return DefEntity(**response_body)
 
@@ -143,8 +145,19 @@ class DefEntityService():
             method=RequestMethod.GET,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
-            f"{entity_id}")
+                                       f"{entity_id}")
         return DefEntity(**response_body)
+
+    def get_entity_by_name(self, name: str) -> DefEntity:
+        # TODO Below call should add another filter field 'entity.kind==native'.
+        #  It should not get entities if non-native clusters.
+        #  Awaiting on dependency from Extensibility team."
+        response_body = self._cloudapi_client.do_request(
+            method=RequestMethod.GET,
+            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            resource_url_relative_path=f"{CloudApiResource.ENTITIES}?filter=name=={name}")
+        entity = response_body['values'][0]
+        return DefEntity(**entity)
 
     def delete_entity(self, entity_id: str) -> None:
         """Delete the defined entity.
@@ -156,7 +169,7 @@ class DefEntityService():
             method=RequestMethod.DELETE,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
-            f"{entity_id}")
+                                       f"{entity_id}")
 
     def resolve_entity(self, entity_id: str) -> DefEntity:
         """Resolve the entity.
@@ -172,8 +185,14 @@ class DefEntityService():
             method=RequestMethod.POST,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
-            f"{entity_id}/{CloudApiResource.ENTITY_RESOLVE}")
-        return DefEntity(**response_body)
+                                       f"{entity_id}/{CloudApiResource.ENTITY_RESOLVE}")
+        msg = response_body['message']
+        del response_body['message']
+        entity = DefEntity(**response_body)
+        if entity.state != 'RESOLVED':
+            raise exceptions.DefEntityResolutionErrorException(id=entity.id,
+                                                               state=entity.state,  # noqa: E501
+                                                               msg=msg)
 
     def filter_entities_by_property(self):
         # TODO Yet to be implemented. Waiting for the build from extensibility
