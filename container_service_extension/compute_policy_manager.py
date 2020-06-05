@@ -335,29 +335,65 @@ class ComputePolicyManager:
                                 is_admin_operation=True)
         return vdc.add_compute_policy(compute_policy_href)
 
-    def list_compute_policies_on_vdc(self, vdc_id):
+    def _generate_vdc_urn_from_id(self, vdc_id):
+        return f"{cloudApiConstants.CLOUDAPI_URN_PREFIX}:vdc:{vdc_id}"
+
+    def list_placement_policies_on_vdc(self, vdc_id):
+        """List all placement policies assigned to a given vdc.
+
+        :param str vdc_id: id of the vdc forwhich policies need to be
+         retrieved.
+        
+        :return: Generator that yields all placement policies associated with
+            the vdc
+        :rtype: Generator[Dict]
+        """
+        self.list_compute_policies_on_vdc(vdc_id, filters={'isSizingOnly': 'false'}) # noqa: E501
+
+    def list_compute_policies_on_vdc(self, vdc_id, filters=None):
         """List compute policy currently assigned to a given vdc.
 
         :param str vdc_id: id of the vdc for which policies need to be
             retrieved.
+        :param dict filters: dictionary of key value pairs for filtering
 
-        :return: A list of dictionaries with the keys 'name', 'href', and 'id'
-        :rtype: List
+        :return: Generator that yields all vdc compute policies associated with
+            the VDC after filtering
+        :rtype: Generator[Dict]
         """
         self._raise_error_if_not_supported()
-        vdc = vcd_utils.get_vdc(self._sysadmin_client, vdc_id=vdc_id,
-                                is_admin_operation=True)
+        vdc_urn = self._generate_vdc_urn_from_id(vdc_id=vdc_id)
+        relative_path = f"vdcs/{vdc_urn}/computePolicies"
+        filter_string = ""
+        if filters:
+            filter_string = ";".join([f"{key}=={value}" for (key, value) in filters.items()]) # noqa: E501
+        response_body = self._cloudapi_client.do_request(
+            method=RequestMethod.GET,
+            cloudapi_version=cloudApiConstants.CLOUDAPI_VERSION_1_0_0,
+            resource_url_relative_path=relative_path)
+        page_num = 0
+        while True:
+            page_num += 1
+            filter_string = ""
+            # without the &sortAsc parameter, vCD returns unpredictable results
+            query_string = f"page={page_num}&sortAsc=name"
+            if filter_string:
+                query_string = f"filter={filter_string}&{query_string}"
+            response_body = self._cloudapi_client.do_request(
+                method=RequestMethod.GET,
+                cloudapi_version=cloudApiConstants.CLOUDAPI_VERSION_1_0_0,
+                resource_url_relative_path=f"{relative_path}?{query_string}") # noqa: E501
 
-        result = []
-        cp_list = vdc.list_compute_policies()
-        for cp in cp_list:
-            result.append({
-                'name': self._get_policy_display_name(cp.get('name')),
-                'href': cp.get('href'),
-                'id': cp.get('id')
-            })
-
-        return result
+            if len(response_body['values']) > 0:
+                for cp in response_body['values']:
+                    policy = {
+                        'name': self._get_policy_display_name(cp.get('name')),
+                        'href': self._get_policy_href(cp.get('id')),
+                        'id': cp.get('id')
+                    }
+                    yield policy
+            else:
+                break
 
     def assign_placement_policy_to_vapp_template_vms(self,
                                                      compute_policy_href,
