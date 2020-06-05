@@ -343,7 +343,7 @@ class ComputePolicyManager:
 
         :param str vdc_id: id of the vdc forwhich policies need to be
          retrieved.
-        
+
         :return: Generator that yields all placement policies associated with
             the vdc
         :rtype: Generator[Dict]
