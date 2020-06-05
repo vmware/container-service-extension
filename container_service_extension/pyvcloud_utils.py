@@ -348,7 +348,8 @@ def catalog_item_exists(org, catalog_name, catalog_item_name):
         return False
 
 
-def create_and_share_catalog(org, catalog_name, catalog_desc='', logger=None,
+def create_and_share_catalog(org, catalog_name, catalog_desc='',
+                             logger=NULL_LOGGER,
                              msg_update_callback=NullPrinter()):
     """Create and share specified catalog.
 
@@ -371,20 +372,17 @@ def create_and_share_catalog(org, catalog_name, catalog_desc='', logger=None,
     if catalog_exists(org, catalog_name):
         msg = f"Found catalog '{catalog_name}'"
         msg_update_callback.general(msg)
-        if logger:
-            logger.info(msg)
+        logger.info(msg)
     else:
         msg = f"Creating catalog '{catalog_name}'"
         msg_update_callback.info(msg)
-        if logger:
-            logger.info(msg)
+        logger.info(msg)
 
         org.create_catalog(catalog_name, catalog_desc)
 
         msg = f"Created catalog '{catalog_name}'"
         msg_update_callback.general(msg)
-        if logger:
-            logger.info(msg)
+        logger.info(msg)
         org.reload()
     org.share_catalog(catalog_name)
     org.reload()

@@ -817,7 +817,7 @@ def _install_template(client, remote_template_manager, template, org_name,
         f"{template[remoteTemplateKey.KUBERNETES_VERSION].replace('.', '')}" \
         f"-{template[remoteTemplateKey.CNI]}{template[remoteTemplateKey.CNI_VERSION].replace('.','')}-vm" # noqa: E501
     build_params = {
-        templateBuildKey.TEMPLATE_NAME: template[remoteTemplateKey.NAME], # noqa: E501
+        templateBuildKey.TEMPLATE_NAME: template[remoteTemplateKey.NAME],
         templateBuildKey.TEMPLATE_REVISION: template[remoteTemplateKey.REVISION], # noqa: E501
         templateBuildKey.SOURCE_OVA_NAME: template[remoteTemplateKey.SOURCE_OVA_NAME], # noqa: E501
         templateBuildKey.SOURCE_OVA_HREF: template[remoteTemplateKey.SOURCE_OVA_HREF], # noqa: E501
