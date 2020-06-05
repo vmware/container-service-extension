@@ -85,7 +85,6 @@ class ComputePolicyManager:
         page_num = 0
         while True:
             page_num += 1
-            filter_string = ""
             # without the &sortAsc parameter, vCD returns unpredictable results
             query_string = f"page={page_num}&sortAsc=name"
             if filter_string:
@@ -346,7 +345,7 @@ class ComputePolicyManager:
 
         :return: Generator that yields all placement policies associated with
             the vdc
-        :rtype: Generator[Dict]
+        :rtype: Generator[Dict, None, None]
         """
         self.list_compute_policies_on_vdc(vdc_id, filters={'isSizingOnly': 'false'}) # noqa: E501
 
@@ -359,7 +358,7 @@ class ComputePolicyManager:
 
         :return: Generator that yields all vdc compute policies associated with
             the VDC after filtering
-        :rtype: Generator[Dict]
+        :rtype: Generator[Dict, None, None]
         """
         self._raise_error_if_not_supported()
         vdc_urn = self._generate_vdc_urn_from_id(vdc_id=vdc_id)
@@ -374,7 +373,6 @@ class ComputePolicyManager:
         page_num = 0
         while True:
             page_num += 1
-            filter_string = ""
             # without the &sortAsc parameter, vCD returns unpredictable results
             query_string = f"page={page_num}&sortAsc=name"
             if filter_string:
