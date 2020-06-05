@@ -26,7 +26,7 @@ import semantic_version
 import container_service_extension.compute_policy_manager \
     as compute_policy_manager
 from container_service_extension.config_validator import get_validated_config
-from container_service_extension.configure_cse import check_cse_installation
+import container_service_extension.configure_cse as configure_cse
 from container_service_extension.consumer import MessageConsumer
 import container_service_extension.def_modules.models as def_models
 import container_service_extension.def_modules.schema_svc as def_schema_svc
@@ -98,10 +98,10 @@ def verify_version_compatibility(sysadmin_client: Client,
 
     # convert 'cse-2.6.0' to '2.6.0'
     ext_cse_version = versions[0].split('-')[1]
-    ext_cse_version = semantic_version.Version('.'.join(ext_cse_version))
+    ext_cse_version = semantic_version.Version(ext_cse_version)
     # convert '2.6.0.0b2.dev5' to '2.6.0'
-    cse_version = Service.version()['version'].split('.')[:3]
-    cse_version = semantic_version.Version('.'.join(cse_version))
+    cse_version = '.'.join(Service.version()['version'].split('.')[:3])
+    cse_version = semantic_version.Version(cse_version)
     if cse_version > ext_cse_version:
         version_error_msg += \
             f"CSE Server version ({cse_version}) is higher than what was " \
@@ -286,8 +286,9 @@ class Service(object, metaclass=Singleton):
             msg_update_callback=msg_update_callback)
 
         if self.should_check_config:
-            check_cse_installation(
-                self.config, msg_update_callback=msg_update_callback)
+            configure_cse.check_cse_installation(
+                self.config,
+                msg_update_callback=msg_update_callback)
 
         if self.config.get('pks_config'):
             pks_config = self.config.get('pks_config')
