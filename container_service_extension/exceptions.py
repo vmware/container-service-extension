@@ -194,7 +194,7 @@ class PksDuplicateClusterError(PksServerError):
 
 
 class DefNotSupportedException(CseServerError):
-    """Defined entity framework is not supported."""
+    """Raised if API version does not support Defined entity feature."""
 
 
 class DefEntityResolutionErrorException(CseServerError):
