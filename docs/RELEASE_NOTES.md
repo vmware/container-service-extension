@@ -8,19 +8,26 @@ title: Release Notes
 ## CSE 2.6.1 GA(2.6.1)
 Release Date: 2020-04-30
 
-Supported VCD versions: 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0
+**Supported (and Tested) VCD versions** : 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0
+
+Note : Future update/patch releases of these vCD versions will be supported by CSE but
+they won't be tested individually. If a bug is found in their interoperability
+with CSE, please file a github [issue](https://github.com/vmware/container-service-extension/issues),
+the same will be fixed in a future CSE release.
 
 Enterprise PKS compatibility matrix
 
-|CSE   | VCD                                     | Enterprise PKS | NSX-T |
-|------|-----------------------------------------|----------------|-------|
-|2.6.1 | 9.5.0.4+, 9.7.0.4+, 10.0.0.1+, 10.1.0.x | 1.7            | 2.5.1 |
+|CSE   | VCD                                      | Enterprise PKS | NSX-T | Support status           |
+|------|------------------------------------------|----------------|-------|--------------------------|
+|2.6.1 | 9.5.0.4, 9.7.0.4, 10.0.0.1, 10.1.0.0     | 1.7            | 2.5.1 | Supported and Tested     |
+|2.6.1 | 9.5.0.5+, 9.7.0.5+, 10.0.0.2+, 10.1.0.1+ | 1.7            | 2.5.1 | Supported but not Tested |
 
 CSE UI plugin compatibility matrix
 
-|CSE   | VCD      | CSE UI plugin |
-|------|----------|---------------|
-|2.6.1 | 10.1.0.x | 1.0.1         |
+|CSE   | VCD       | CSE UI plugin | Support status           |
+|------|-----------|---------------|--------------------------|
+|2.6.1 | 10.1.0.0  | 1.0.1         | Supported and Tested     |
+|2.6.1 | 10.1.0.1+ | 1.0.1         | Supported but not Tested |
 
 **What's New**
 * Support for Enterprise PKS 1.7 (and NSX-T 2.5.1).
