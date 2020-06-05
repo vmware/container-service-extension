@@ -11,6 +11,7 @@ from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 from requests.exceptions import HTTPError
+import semantic_version
 
 from container_service_extension.config_validator import get_validated_config
 import container_service_extension.def_.models as def_models
@@ -40,6 +41,7 @@ from container_service_extension.server_constants import \
     CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, EXCHANGE_TYPE, LocalTemplateKey, \
     PKS_SERVICE_NAME, RemoteTemplateKey, SYSTEM_ORG_NAME, \
     TemplateBuildKey # noqa: H301
+import container_service_extension.service as service
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
 from container_service_extension.telemetry.constants import PayloadKey
@@ -272,6 +274,7 @@ def install_cse(config_file_name, skip_template_creation, force_update,
 
         # register or update cse on vCD
         _register_cse(client, amqp['routing_key'], amqp['exchange'],
+                      config['vcd']['api_version'],
                       msg_update_callback=msg_update_callback)
 
         # register cse def schema on VCD
@@ -638,7 +641,7 @@ def _register_def_schema(client: Client,
             pass
 
 
-def _register_cse(client, routing_key, exchange,
+def _register_cse(client, routing_key, exchange, target_vcd_api_version,
                   msg_update_callback=utils.NullPrinter()):
     """Register or update CSE on vCD.
 
@@ -658,21 +661,28 @@ def _register_cse(client, routing_key, exchange,
         f'/api/{PKS_SERVICE_NAME}/.*/.*'
     ]
 
-    cse_info = None
-    try:
-        cse_info = ext.get_extension_info(CSE_SERVICE_NAME,
-                                          namespace=CSE_SERVICE_NAMESPACE)
-    except MissingRecordException:
-        pass
+    # convert 'cse-2.6.0.0b2.dev5' to '2.6.0'
+    cse_version = service.Service.version()['version'].split('.')[:3]
+    cse_version = semantic_version.Version('.'.join(cse_version))
 
-    if cse_info is None:
-        ext.add_extension(CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, routing_key,
-                          exchange, patterns)
-        msg = f"Registered {CSE_SERVICE_NAME} as an API extension in vCD"
-    else:
+    vcd_api_versions = client.get_supported_versions_list()
+    if target_vcd_api_version not in vcd_api_versions:
+        raise ValueError(f"Target VCD API version '{target_vcd_api_version}' "
+                         f" is not in supported versions: {vcd_api_versions}")
+
+    description = f"cse-{cse_version},vcd_api-{target_vcd_api_version}"
+    msg = None
+    try:
+        ext.get_extension_info(CSE_SERVICE_NAME,
+                               namespace=CSE_SERVICE_NAMESPACE)
         ext.update_extension(CSE_SERVICE_NAME, namespace=CSE_SERVICE_NAMESPACE,
-                             routing_key=routing_key, exchange=exchange)
+                             routing_key=routing_key, exchange=exchange,
+                             description=description)
         msg = f"Updated {CSE_SERVICE_NAME} API Extension in vCD"
+    except MissingRecordException:
+        ext.add_extension(CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, routing_key,
+                          exchange, patterns, description=description)
+        msg = f"Registered {CSE_SERVICE_NAME} as an API extension in vCD"
 
     msg_update_callback.general(msg)
     INSTALL_LOGGER.info(msg)
