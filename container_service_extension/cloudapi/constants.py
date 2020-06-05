@@ -8,6 +8,7 @@ CLOUDAPI_VERSION_1_0_0 = '1.0.0'
 CSE_COMPUTE_POLICY_PREFIX = 'cse----'
 CLOUDAPI_URN_PREFIX = 'urn:vcloud'
 
+
 class CloudApiResource(str, Enum):
     """Keys that are used to get the cloudapi resource names."""
 

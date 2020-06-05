@@ -302,7 +302,7 @@ def install_cse(config_file_name, skip_template_creation, force_update,
 
         # set up cse catalog
         org = vcd_utils.get_org(client, org_name=config['broker']['org'])
-        org = vcd_utils.create_and_share_catalog(
+        vcd_utils.create_and_share_catalog(
             org, config['broker']['catalog'], catalog_desc='CSE templates',
             logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
 
