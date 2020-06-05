@@ -194,7 +194,7 @@ class PksDuplicateClusterError(PksServerError):
 
 
 class DefNotSupportedException(CseServerError):
-    """Defined entity framework is not supported."""
+    """Raised if API version does not support Defined entity feature."""
 
 
 class DefEntityResolutionErrorException(CseServerError):
@@ -206,5 +206,5 @@ class DefEntityResolutionErrorException(CseServerError):
         self.msg = msg
 
     def __str__(self):
-        return f"Resolution of the cluster with defined entity id:{self.id} " \
-               f"failed with error message: {self.msg}"
+        return f"{self.state}: Resolution of the cluster with defined entity" \
+               f" id:{self.id} failed with error message: {self.msg}"
