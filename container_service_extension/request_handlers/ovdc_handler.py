@@ -242,7 +242,10 @@ def ovdc_compute_policy_list(request_data,
     cpm = compute_policy_manager.ComputePolicyManager(
         request_context.sysadmin_client,
         log_wire=utils.str_to_bool(config['service'].get('log_wire')))
-    return cpm.list_compute_policies_on_vdc(request_data[RequestKey.OVDC_ID])
+    compute_policies = []
+    for cp in cpm.list_compute_policies_on_vdc(request_data[RequestKey.OVDC_ID]): # noqa: E501
+        compute_policies.append(cp)
+    return compute_policies
 
 
 def ovdc_compute_policy_update(request_data,
