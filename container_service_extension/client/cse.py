@@ -554,16 +554,16 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
                                   'Resource by filename; create resource if'
                                   ' doesn\'t exist')
 @click.pass_context
-@click.argument('resource_config_file_path',
-                metavar='RESOURCE_CONFIG_FILE_NAME',
+@click.argument('cluster_config_file_path',
+                metavar='CLUSTER_CONFIG_FILE_PATH',
                 type=click.Path(exists=True))
-def apply(ctx, resource_config_file_path):
+def apply(ctx, cluster_config_file_path):
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
-        cluster.apply(resource_config_file_path)
+        cluster.apply(cluster_config_file_path)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
