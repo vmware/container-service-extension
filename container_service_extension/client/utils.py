@@ -66,9 +66,9 @@ class GroupCommandFilter(click.Group):
         :return: Click command object for 'cmd_name'
         :rtype: click.Core.Command
         """
-        client = self.get_client(ctx)
-        # Apply filtering if client is available
-        if client:
+        try:
+            restore_session(ctx)
+            client = ctx.obj['client']
             version = client.get_api_version()
             # Skip the command if not supported
             if cmd_name in UNSUPPORTED_COMMANDS_BY_VERSION.get(version, {}).get(self.name, []):  # noqa: E501
@@ -80,14 +80,7 @@ class GroupCommandFilter(click.Group):
                 param for param in cmd.params
                 if param.name not in UNSUPPORTED_COMMAND_OPTIONS_BY_VERSION.get(version, {}).get(self.name, {}).get(cmd_name, [])]  # noqa: E501
             cmd.params = filtered_params
-
-        return click.Group.get_command(self, ctx, cmd_name)
-
-    def get_client(self, ctx):
-        client = None
-        try:
-            restore_session(ctx)
-            client = ctx.obj['client']
         except Exception:
             pass
-        return client
+
+        return click.Group.get_command(self, ctx, cmd_name)
