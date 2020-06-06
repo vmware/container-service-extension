@@ -43,7 +43,20 @@ UNSUPPORTED_COMMANDS_BY_VERSION = {
 }
 
 # List of unsupported commands by Api Version
+# TODO: All unsupported options depending on the command will go here
 UNSUPPORTED_COMMAND_OPTIONS_BY_VERSION = {
+    vcd_client.ApiVersion.VERSION_33.value: {
+        GroupKey.CLUSTER: {
+            CommandNameKey.CREATE: ['sizing_class']
+        }
+    },
+
+    ApiVersion.VERSION_34: {
+        GroupKey.CLUSTER: {
+            CommandNameKey.CREATE: ['sizing_class']
+        }
+    },
+
     ApiVersion.VERSION_35: {
         GroupKey.CLUSTER: {
             CommandNameKey.CREATE: ['cpu', 'memory']
@@ -66,28 +79,21 @@ class GroupCommandFilter(click.Group):
         :return: Click command object for 'cmd_name'
         :rtype: click.Core.Command
         """
-        client = self.get_client(ctx)
-        # Apply filtering if client is available
-        if client:
-            version = client.get_api_version()
-            # Skip the command if not supported
-            if cmd_name in UNSUPPORTED_COMMANDS_BY_VERSION.get(version, {}).get(self.name, []):  # noqa: E501
-                return None
-
-            cmd = click.Group.get_command(self, ctx, cmd_name)
-            # Remove all unsupported options for this command, if any
-            filtered_params = [
-                param for param in cmd.params
-                if param.name not in UNSUPPORTED_COMMAND_OPTIONS_BY_VERSION.get(version, {}).get(self.name, {}).get(cmd_name, [])]  # noqa: E501
-            cmd.params = filtered_params
-
-        return click.Group.get_command(self, ctx, cmd_name)
-
-    def get_client(self, ctx):
-        client = None
         try:
             restore_session(ctx)
             client = ctx.obj['client']
+            version = client.get_api_version()
+            # Skip the command if not supported
+            unsupported_commands = UNSUPPORTED_COMMANDS_BY_VERSION.get(version, {}).get(self.name, [])  # noqa: E501
+            if cmd_name in unsupported_commands:
+                return None
+
+            cmd = click.Group.get_command(self, ctx, cmd_name)
+            unsupported_params = UNSUPPORTED_COMMAND_OPTIONS_BY_VERSION.get(version, {}).get(self.name, {}).get(cmd_name, [])  # noqa: E501
+            # Remove all unsupported options for this command, if any
+            filtered_params = [param for param in cmd.params if param.name not in unsupported_params]  # noqa: E501
+            cmd.params = filtered_params
         except Exception:
             pass
-        return client
+
+        return click.Group.get_command(self, ctx, cmd_name)

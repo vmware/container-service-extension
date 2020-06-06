@@ -2,14 +2,12 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from pyvcloud.vcd.exceptions import OperationNotSupportedException
-
 from container_service_extension.client.response_processor import process_response # noqa: E501
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
 
 
-class DefCluster:
+class LegacyNativeCluster:
     def __init__(self, client):
         self.client = client
         self._uri = self.client.get_api_uri() + '/cse'
@@ -124,8 +122,31 @@ class DefCluster:
 
         :return: (json) A parsed json object describing the requested cluster.
         """
-        msg = "Operation not supported; Under implementation"
-        raise OperationNotSupportedException(msg)
+        method = RequestMethod.POST
+        uri = f"{self._uri}/clusters"
+        data = {
+            RequestKey.CLUSTER_NAME: name,
+            RequestKey.NUM_WORKERS: node_count,
+            RequestKey.OVDC_NAME: vdc,
+            RequestKey.NUM_CPU: cpu,
+            RequestKey.MB_MEMORY: memory,
+            RequestKey.NETWORK_NAME: network_name,
+            RequestKey.STORAGE_PROFILE_NAME: storage_profile,
+            RequestKey.SSH_KEY: ssh_key,
+            RequestKey.TEMPLATE_NAME: template_name,
+            RequestKey.TEMPLATE_REVISION: template_revision,
+            RequestKey.ENABLE_NFS: enable_nfs,
+            RequestKey.ROLLBACK: rollback,
+            RequestKey.ORG_NAME: org
+        }
+        response = self.client._do_request_prim(
+            method,
+            uri,
+            self.client._session,
+            contents=data,
+            media_type='application/json',
+            accept_type='application/json')
+        return process_response(response)
 
     def resize_cluster(self,
                        network_name,
@@ -139,13 +160,29 @@ class DefCluster:
                        cpu=None,
                        memory=None,
                        ssh_key=None):
-        msg = "Operation not supported; Under implementation"
-        raise OperationNotSupportedException(msg)
-
-    def apply(self, resource_config_file_path):
-        uri = f"{self._uri}/internal/clusters"
-        msg = f"Operation not supported; Implementation in progress for {uri}"
-        raise(OperationNotSupportedException(msg))
+        method = RequestMethod.PUT
+        uri = f"{self._uri}/cluster/{cluster_name}"
+        data = {
+            RequestKey.CLUSTER_NAME: cluster_name,
+            RequestKey.NUM_WORKERS: node_count,
+            RequestKey.ORG_NAME: org,
+            RequestKey.OVDC_NAME: vdc,
+            RequestKey.NETWORK_NAME: network_name,
+            RequestKey.ROLLBACK: rollback,
+            RequestKey.TEMPLATE_NAME: template_name,
+            RequestKey.TEMPLATE_REVISION: template_revision,
+            RequestKey.NUM_CPU: cpu,
+            RequestKey.MB_MEMORY: memory,
+            RequestKey.SSH_KEY: ssh_key
+        }
+        response = self.client._do_request_prim(
+            method,
+            uri,
+            self.client._session,
+            contents=data,
+            media_type='application/json',
+            accept_type='application/json')
+        return process_response(response)
 
     def delete_cluster(self, cluster_name, org=None, vdc=None):
         method = RequestMethod.DELETE
