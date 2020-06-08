@@ -496,7 +496,7 @@ class Service(object, metaclass=Singleton):
                           f"template '{catalog_item_name}'."
                     msg_update_callback.general(msg)
                     logger.SERVER_LOGGER.debug(msg)
-                    cpm.assign_compute_policy_to_vapp_template_vms(
+                    cpm.assign_vdc_sizing_policy_to_vapp_template_vms(
                         compute_policy_href=policy['href'],
                         org_name=org_name,
                         catalog_name=catalog_name,
@@ -509,7 +509,7 @@ class Service(object, metaclass=Singleton):
                     msg_update_callback.general(msg)
                     logger.SERVER_LOGGER.debug(msg)
 
-                    cpm.remove_all_compute_policies_from_vapp_template_vms(
+                    cpm.remove_all_vdc_compute_policies_from_vapp_template_vms(
                         org_name=org_name,
                         catalog_name=catalog_name,
                         catalog_item_name=catalog_item_name)

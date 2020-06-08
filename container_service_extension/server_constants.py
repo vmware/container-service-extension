@@ -48,7 +48,9 @@ SUPPORTED_VCD_API_VERSIONS = ['33.0', '34.0', '35.0']
 CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME = 'CSE_POLICY'
 CSE_GLOBAL_PVDC_COMPUTE_POLICY_DESCRIPTION = 'global PVDC compute policy for' \
                                              'cse'
-CLUSTER_PLACEMENT_POLICIES = ['native', 'tkg_plus']
+CSE_COMPUTE_POLICY_PREFIX = 'cse----'
+CLUSTER_PLACEMENT_POLICIES = [f"{CSE_COMPUTE_POLICY_PREFIX}{cluster_type}"
+                              for cluster_type in ['native', 'tkg_plus']]
 
 
 @unique
