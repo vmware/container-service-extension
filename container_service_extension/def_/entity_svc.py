@@ -190,11 +190,11 @@ class DefEntityService():
         del response_body[def_utils.DEF_ERROR_MESSAGE_KEY]
         entity = DefEntity(**response_body)
         if entity.state != def_utils.DEF_RESOLVED_STATE:
-            raise excptn.DefEntityResolutionErrorException(id=entity.id,
-                                                           state=entity.state,
-                                                           msg=msg)
+            raise excptn.DefEntityResolutionError(id=entity.id,
+                                                  state=entity.state,
+                                                  msg=msg)
         return entity
 
     def filter_entities_by_property(self):
         # TODO Yet to be implemented. Waiting for the build from extensibility
-        return None
+        raise NotImplementedError

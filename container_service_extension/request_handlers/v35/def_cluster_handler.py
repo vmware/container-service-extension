@@ -34,7 +34,7 @@ def cluster_resize(req_ctx: ctx.RequestContext):
 
     :return: Dict
     """
-    pass
+    raise NotImplementedError
     svc = cluster_svc.ClusterService(req_ctx)
     cluster_id = req_ctx.url_data['id']
     cluster_entity_spec = def_models.ClusterEntity(**req_ctx.body)  # noqa: E501
@@ -52,7 +52,7 @@ def cluster_delete(req_ctx: ctx.RequestContext):
 
     :return: Dict
     """
-    pass
+    raise NotImplementedError
     svc = cluster_svc.ClusterService(req_ctx)
     cluster_id = req_ctx.url_data['id']
     return svc.delete_cluster(cluster_id)
@@ -69,7 +69,7 @@ def cluster_info(req_ctx: ctx.RequestContext):
 
     :return: Dict
     """
-    pass
+    raise NotImplementedError
     svc = cluster_svc.ClusterService(req_ctx)
     cluster_id = req_ctx.url_data['id']
     return svc.get_cluster_info(cluster_id)
@@ -86,7 +86,7 @@ def cluster_config(req_ctx: ctx.RequestContext):
 
     :return: Dict
     """
-    pass
+    raise NotImplementedError
     svc = cluster_svc.ClusterService(req_ctx)
     cluster_id = req_ctx.url_data['id']
     return svc.get_cluster_config(cluster_id)
@@ -100,7 +100,7 @@ def cluster_upgrade_plan(request_data, req_ctx: ctx.RequestContext):
 
     :return: List[Tuple(str, str)]
     """
-    pass
+    raise NotImplementedError
     svc = cluster_svc.ClusterService(req_ctx)
     return svc.get_cluster_upgrade_plan(data=request_data)
 
@@ -113,7 +113,7 @@ def cluster_upgrade(request_data, req_ctx: ctx.RequestContext):
 
     :return: Dict
     """
-    pass
+    raise NotImplementedError
     svc = cluster_svc.ClusterService(req_ctx)
     return svc.upgrade_cluster(data=request_data)
 
@@ -128,7 +128,7 @@ def cluster_list(request_data, req_ctx: ctx.RequestContext):
 
     :return: List
     """
-    pass
+    raise NotImplementedError
     svc = cluster_svc.ClusterService(req_ctx)
     vcd_clusters_info = svc.list_clusters(data=request_data)
     from container_service_extension.server_constants import K8S_PROVIDER_KEY
@@ -164,7 +164,7 @@ def node_create(request_data, req_ctx: ctx.RequestContext):
 
     :return: Dict
     """
-    pass
+    raise NotImplementedError
     svc = cluster_svc.ClusterService(req_ctx)
     return svc.create_nodes(data=request_data)
 
@@ -180,7 +180,7 @@ def node_delete(request_data, req_ctx: ctx.RequestContext):
 
     :return: Dict
     """
-    pass
+    raise NotImplementedError
     svc = cluster_svc.ClusterService(req_ctx)
     return svc.delete_nodes(data=request_data)
 
@@ -196,7 +196,7 @@ def node_info(request_data, req_ctx: ctx.RequestContext):
 
     :return: Dict
     """
-    pass
+    raise NotImplementedError
     svc = cluster_svc.ClusterService(req_ctx)
     return svc.get_node_info(data=request_data)
 

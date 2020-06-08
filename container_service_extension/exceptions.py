@@ -197,7 +197,7 @@ class DefNotSupportedException(CseServerError):
     """Raised if API version does not support Defined entity feature."""
 
 
-class DefEntityResolutionErrorException(CseServerError):
+class DefEntityResolutionError(CseServerError):
     """Raised if Defined entity is not resolved properly."""
 
     def __init__(self, id: str, state: str, msg: str = None):

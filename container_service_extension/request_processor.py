@@ -109,7 +109,7 @@ _OPERATION_KEY = 'operation'
 
 def _is_def_endpoint(url: str):
     tokens = url.split('/')
-    return tokens[3] == def_utils.DEF_END_POINT_DESCRIMINATOR
+    return tokens[3] == def_utils.DEF_END_POINT_DISCRIMINATOR
 
 
 @handle_exception
@@ -199,7 +199,7 @@ def _get_url_data(method, url):
 
     :rtype: dict
     """
-    url = url.replace(f"/{def_utils.DEF_END_POINT_DESCRIMINATOR}", '')
+    url = url.replace(f"/{def_utils.DEF_END_POINT_DISCRIMINATOR}", '')
     tokens = url.split('/')
     num_tokens = len(tokens)
 

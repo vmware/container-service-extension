@@ -67,7 +67,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         **telemetry: Optional
         """
         # Yet to be implemented
-        pass
+        raise NotImplementedError
         # data = kwargs[KwargKey.DATA]
         # cluster_name = data['name']
         # cluster = self.entity_svc.get_entity_by_name(cluster_name)
@@ -84,7 +84,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         **telemetry: Optional
         """
         # Yet to be implemented
-        pass
+        raise NotImplementedError
         # data = kwargs.get(KwargKey.DATA, {})
         # clusters = self.entity_svc.list_entities_by_entity_type
         # ('native_entity_type_id')
@@ -102,6 +102,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             Optional data and default values: org_name=None, ovdc_name=None
         **telemetry: Optional
         """
+        raise NotImplementedError
         # Yet to be modified for defined entities
         # Gets external_id (vapp id) from entity
         # Gets to master node and gets the config
@@ -119,7 +120,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         :rtype: List[Dict]
         """
         # Yet to be implemented
-        pass
+        raise NotImplementedError
         data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME
@@ -426,7 +427,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 rollback=True, template_name=None, template_revision=None
         **telemetry: Optional
         """
-        pass
+        raise NotImplementedError
         data = kwargs[KwargKey.DATA]
         # TODO default template for resizing should be master's template
         required = [
@@ -491,7 +492,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             Optional data and default values: org_name=None, ovdc_name=None
         **telemetry: Optional
         """
-        pass
+        raise NotImplementedError
         data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME
@@ -543,7 +544,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             Optional data and default values: org_name=None, ovdc_name=None
         **telemetry: Optional
         """
-        pass
+        raise NotImplementedError
         data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME,
@@ -614,7 +615,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             Optional data and default values: org_name=None, ovdc_name=None
         **telemetry: Optional
         """
-        pass
+        raise NotImplementedError
         data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME,
@@ -689,6 +690,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 enable_nfs=False, rollback=True
         **telemetry: Optional
         """
+        raise NotImplementedError
         data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME,
@@ -791,6 +793,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             Optional data and default values: org_name=None, ovdc_name=None
         **telemetry: Optional
         """
+        raise NotImplementedError
         data = kwargs[KwargKey.DATA]
         required = [
             RequestKey.CLUSTER_NAME,
