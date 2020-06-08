@@ -225,8 +225,8 @@ class Service(object, metaclass=Singleton):
             self._process_template_compute_policy_compliance(
                 msg_update_callback=msg_update_callback)
         else:
-            msg = "Template rules are not supported by this version of CSE." \
-                  " Skipping template rule processing."
+            msg = "Template rules are not supported by CSE for vCD api " \
+                  "version 35.0 or above. Skipping template rule processing."
             msg_update_callback.info(msg)
             logger.SERVER_LOGGER.debug(msg)
 
