@@ -6,6 +6,7 @@ from enum import Enum
 
 CLOUDAPI_VERSION_1_0_0 = '1.0.0'
 CLOUDAPI_URN_PREFIX = 'urn:vcloud'
+CSE_COMPUTE_POLICY_PREFIX = 'cse----'
 
 
 class CloudApiResource(str, Enum):

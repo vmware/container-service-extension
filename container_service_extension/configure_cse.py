@@ -460,10 +460,10 @@ def install_template(template_name, template_revision, config_file_name,
         remote_template_cookbook = rtm.get_remote_template_cookbook()
 
         found_template = False
-        remoteTemplateKey = server_constants.RemoteTemplateKey
         for template in remote_template_cookbook['templates']:
-            template_name_matched = template_name in (template[remoteTemplateKey.NAME], '*') # noqa: E501
-            template_revision_matched = str(template_revision) in (str(template[remoteTemplateKey.REVISION]), '*') # noqa: E501
+            template_name_matched = template_name in (template[server_constants.RemoteTemplateKey.NAME], '*') # noqa: E501
+            template_revision_matched = \
+                str(template_revision) in (str(template[server_constants.RemoteTemplateKey.REVISION]), '*') # noqa: E501
             if template_name_matched and template_revision_matched:
                 found_template = True
                 _install_template(
@@ -771,8 +771,8 @@ def _setup_placement_policies(client, policy_list,
 
         for policy in policy_list:
             try:
-                computePolicyManager.get_vdc_compute_policy(policy)
-                msg = f"Skipping creating placement policy '{policy}'. Policy already exists" # noqa: E501
+                computePolicyManager.get_vdc_compute_policy(policy, is_placment_policy=True) # noqa: E501
+                msg = f"Skipping creating VDC placement policy '{policy}'. Policy already exists" # noqa: E501
                 msg_update_callback.general(msg)
                 INSTALL_LOGGER.debug(msg)
             except EntityNotFoundException:
@@ -780,7 +780,7 @@ def _setup_placement_policies(client, policy_list,
                 msg_update_callback.general(msg)
                 INSTALL_LOGGER.debug(msg)
                 computePolicyManager.add_vdc_compute_policy(policy,
-                                                            pvdc_compute_policy['id']) # noqa: E501
+                                                            pvdc_compute_policy_id=pvdc_compute_policy['id']) # noqa: E501
     except CseExceptions.GlobalPvdcComputePolicyNotSupported:
         msg = "Global PVDC compute policies are not supported." \
               "Skipping placement policy creation."
@@ -793,15 +793,14 @@ def _install_template(client, remote_template_manager, template, org_name,
                       storage_profile, force_update, retain_temp_vapp,
                       ssh_key, msg_update_callback=utils.NullPrinter()):
     localTemplateKey = server_constants.LocalTemplateKey
-    remoteTemplateKey = server_constants.RemoteTemplateKey
     templateBuildKey = server_constants.TemplateBuildKey
     remote_template_manager.download_template_scripts(
-        template_name=template[remoteTemplateKey.NAME],
-        revision=template[remoteTemplateKey.REVISION],
+        template_name=template[server_constants.RemoteTemplateKey.NAME],
+        revision=template[server_constants.RemoteTemplateKey.REVISION],
         force_overwrite=force_update)
     catalog_item_name = ltm.get_revisioned_template_name(
-        template[remoteTemplateKey.NAME],
-        template[remoteTemplateKey.REVISION])
+        template[server_constants.RemoteTemplateKey.NAME],
+        template[server_constants.RemoteTemplateKey.REVISION])
 
     # remote template data is a super set of local template data, barring
     # the key 'catalog_item_name'
@@ -813,24 +812,24 @@ def _install_template(client, remote_template_manager, template, org_name,
         raise ValueError(f"Invalid template data. Missing keys: {missing_keys}") # noqa: E501
 
     temp_vm_name = \
-        f"{template[remoteTemplateKey.OS].replace('.','')}-k8s" \
-        f"{template[remoteTemplateKey.KUBERNETES_VERSION].replace('.', '')}" \
-        f"-{template[remoteTemplateKey.CNI]}{template[remoteTemplateKey.CNI_VERSION].replace('.','')}-vm" # noqa: E501
+        f"{template[server_constants.RemoteTemplateKey.OS].replace('.','')}-k8s" \
+        f"{template[server_constants.RemoteTemplateKey.KUBERNETES_VERSION].replace('.', '')}" \
+        f"-{template[server_constants.RemoteTemplateKey.CNI]}{template[server_constants.RemoteTemplateKey.CNI_VERSION].replace('.','')}-vm" # noqa: E501
     build_params = {
-        templateBuildKey.TEMPLATE_NAME: template[remoteTemplateKey.NAME],
-        templateBuildKey.TEMPLATE_REVISION: template[remoteTemplateKey.REVISION], # noqa: E501
-        templateBuildKey.SOURCE_OVA_NAME: template[remoteTemplateKey.SOURCE_OVA_NAME], # noqa: E501
-        templateBuildKey.SOURCE_OVA_HREF: template[remoteTemplateKey.SOURCE_OVA_HREF], # noqa: E501
-        templateBuildKey.SOURCE_OVA_SHA256: template[remoteTemplateKey.SOURCE_OVA_SHA256], # noqa: E501
+        templateBuildKey.TEMPLATE_NAME: template[server_constants.RemoteTemplateKey.NAME], # noqa: E501
+        templateBuildKey.TEMPLATE_REVISION: template[server_constants.RemoteTemplateKey.REVISION], # noqa: E501
+        templateBuildKey.SOURCE_OVA_NAME: template[server_constants.RemoteTemplateKey.SOURCE_OVA_NAME], # noqa: E501
+        templateBuildKey.SOURCE_OVA_HREF: template[server_constants.RemoteTemplateKey.SOURCE_OVA_HREF], # noqa: E501
+        templateBuildKey.SOURCE_OVA_SHA256: template[server_constants.RemoteTemplateKey.SOURCE_OVA_SHA256], # noqa: E501
         templateBuildKey.ORG_NAME: org_name,
         templateBuildKey.VDC_NAME: vdc_name,
         templateBuildKey.CATALOG_NAME: catalog_name,
         templateBuildKey.CATALOG_ITEM_NAME: catalog_item_name,
-        templateBuildKey.CATALOG_ITEM_DESCRIPTION: template[remoteTemplateKey.DESCRIPTION], # noqa: E501
-        templateBuildKey.TEMP_VAPP_NAME: template[remoteTemplateKey.NAME] + '_temp', # noqa: E501
+        templateBuildKey.CATALOG_ITEM_DESCRIPTION: template[server_constants.RemoteTemplateKey.DESCRIPTION], # noqa: E501
+        templateBuildKey.TEMP_VAPP_NAME: template[server_constants.RemoteTemplateKey.NAME] + '_temp', # noqa: E501
         templateBuildKey.TEMP_VM_NAME: temp_vm_name,
-        templateBuildKey.CPU: template[remoteTemplateKey.CPU],
-        templateBuildKey.MEMORY: template[remoteTemplateKey.MEMORY],
+        templateBuildKey.CPU: template[server_constants.RemoteTemplateKey.CPU],
+        templateBuildKey.MEMORY: template[server_constants.RemoteTemplateKey.MEMORY], # noqa: E501
         templateBuildKey.NETWORK_NAME: network_name,
         templateBuildKey.IP_ALLOCATION_MODE: ip_allocation_mode, # noqa: E501
         templateBuildKey.STORAGE_PROFILE: storage_profile
