@@ -89,7 +89,7 @@ def get_default_k8_distribution():
     config = get_server_runtime_config()
     import container_service_extension.def_.models as def_models
     return def_models.Distribution(template_name=config['broker']['default_template_name'],  # noqa: E501
-                        template_revision=config['broker']['default_template_revision'])  # noqa: E501
+                                   template_revision=config['broker']['default_template_revision'])  # noqa: E501
 
 
 def get_pks_cache():
