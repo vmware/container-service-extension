@@ -167,7 +167,7 @@ def process_request(body):
 
     try:
         if is_def_request:
-            body_content = def_handler.OPERATION_TO_METHOD[operation](data, context)  # noqa: E501
+            body_content = def_handler.OPERATION_TO_METHOD[operation](context)  # noqa: E501
         else:
             body_content = OPERATION_TO_HANDLER[operation](data, context)
     finally:
