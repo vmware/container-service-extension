@@ -10,7 +10,7 @@ from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_
 from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.def_.models import DefEntity
 import container_service_extension.def_.utils as def_utils
-import container_service_extension.exceptions as exception
+import container_service_extension.exceptions as cse_exception
 from container_service_extension.shared_constants import RequestMethod
 
 
@@ -190,9 +190,9 @@ class DefEntityService():
         del response_body[def_utils.DEF_ERROR_MESSAGE_KEY]
         entity = DefEntity(**response_body)
         if entity.state != def_utils.DEF_RESOLVED_STATE:
-            raise exception.DefEntityResolutionError(id=entity.id,
-                                                     state=entity.state,
-                                                     msg=msg)
+            raise cse_exception.DefEntityResolutionError(id=entity.id,
+                                                         state=entity.state,
+                                                         msg=msg)
         return entity
 
     def filter_entities_by_property(self):
