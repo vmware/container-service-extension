@@ -67,8 +67,29 @@ def prompt_text(text, color='black', hide_input=False):
 
 
 def get_server_runtime_config():
-    from container_service_extension.service import Service
-    return Service().get_service_config()
+    import container_service_extension.service as cse_service
+    return cse_service.Service().get_service_config()
+
+
+def get_server_api_version():
+    """Get the API version with which CSE server is running.
+
+    :return: api version
+    """
+    config = get_server_runtime_config()
+    return config['vcd']['api_version']
+
+
+def get_default_storage_profile():
+    config = get_server_runtime_config()
+    return config['broker']['storage_profile']
+
+
+def get_default_k8_distribution():
+    config = get_server_runtime_config()
+    import container_service_extension.def_.models as def_models
+    return def_models.Distribution(template_name=config['broker']['default_template_name'],  # noqa: E501
+                                   template_revision=config['broker']['default_template_revision'])  # noqa: E501
 
 
 def get_pks_cache():

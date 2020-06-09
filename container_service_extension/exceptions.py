@@ -191,3 +191,20 @@ class PksClusterNotFoundError(PksServerError):
 
 class PksDuplicateClusterError(PksServerError):
     """Raised when multiple PKS clusters of same name detected."""
+
+
+class DefNotSupportedException(CseServerError):
+    """Raised if API version does not support Defined entity feature."""
+
+
+class DefEntityResolutionError(CseServerError):
+    """Raised if Defined entity is not resolved properly."""
+
+    def __init__(self, id: str, state: str, msg: str = None):
+        self.id = id
+        self.state = state
+        self.msg = msg
+
+    def __str__(self):
+        return f"{self.state}: Resolution of the cluster with defined entity" \
+               f" id:{self.id} failed with error message: {self.msg}"

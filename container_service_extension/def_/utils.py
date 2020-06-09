@@ -4,9 +4,8 @@
 from enum import Enum
 from enum import unique
 
-from pyvcloud.vcd.exceptions import OperationNotSupportedException
-
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
+import container_service_extension.exceptions as excptn
 
 # Defined Entity Framework related constants
 DEF_CSE_VENDOR = 'cse'
@@ -21,6 +20,9 @@ DEF_ENTITY_TYPE_ID_PREFIX = 'urn:vcloud:type'
 DEF_API_MIN_VERSION = 35.0
 DEF_SCHEMA_DIRECTORY = 'cse_def_schema'
 DEF_ENTITY_TYPE_SCHEMA_FILE = 'schema.json'
+DEF_END_POINT_DISCRIMINATOR = 'internal'
+DEF_ERROR_MESSAGE_KEY = 'message'
+DEF_RESOLVED_STATE = 'RESOLVED'
 
 
 @unique
@@ -49,19 +51,14 @@ MAP_API_VERSION_TO_KEYS = {
 }
 
 
-class DefNotSupportedException(OperationNotSupportedException):
-    """Defined entity framework is not supported."""
-
-
 def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
     """Raise DefNotSupportedException if defined entities are not supported.
 
     :param cloudapi_client CloudApiClient
     """
     if float(cloudapi_client.get_api_version()) < DEF_API_MIN_VERSION:
-        raise DefNotSupportedException("Defined entity framework is"
-                                       " not supported for"
-                                       f" {cloudapi_client.get_api_version()}")
+        raise excptn.DefNotSupportedException("Defined entity framework is not"
+                                              " supported for {cloudapi_client.get_api_version()}")  # noqa: E501
 
 
 def get_registered_def_interface():
@@ -104,3 +101,13 @@ def generate_entity_type_id(vendor, nss, version):
     :rtype str
     """
     return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{vendor}.{nss}:{version}"
+
+
+def is_def_supported_by_cse_server():
+    """Return true if CSE server is qualified to invoke Defined Entity API.
+
+    :rtype: bool
+    """
+    import container_service_extension.utils as utils
+    api_version = utils.get_server_api_version()
+    return float(api_version) >= DEF_API_MIN_VERSION

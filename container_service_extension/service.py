@@ -25,11 +25,11 @@ import container_service_extension.compute_policy_manager \
 from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.consumer import MessageConsumer
-import container_service_extension.def_modules.models as def_models
-import container_service_extension.def_modules.schema_svc as def_schema_svc
-import container_service_extension.def_modules.utils as def_utils
-from container_service_extension.def_modules.utils import raise_error_if_def_not_supported # noqa: E501
-import container_service_extension.exceptions as e
+import container_service_extension.def_.models as def_models
+import container_service_extension.def_.schema_svc as def_schema_svc
+import container_service_extension.def_.utils as def_utils
+from container_service_extension.def_.utils import raise_error_if_def_not_supported  # noqa: E501
+import container_service_extension.exceptions as cse_exception
 import container_service_extension.local_template_manager as ltm
 import container_service_extension.logger as logger
 from container_service_extension.pks_cache import PksCache
@@ -134,10 +134,10 @@ class Service(object, metaclass=Singleton):
             del result['python']
         return result
 
-    def get_native_cluster_interface(self):
+    def get_native_cluster_interface(self) -> def_models.DefInterface:
         return self._nativeInterface
 
-    def get_native_cluster_entity_type(self):
+    def get_native_cluster_entity_type(self) -> def_models.DefEntityType:
         return self._nativeEntityType
 
     @classmethod
@@ -166,10 +166,10 @@ class Service(object, metaclass=Singleton):
                 self._state = ServerState.DISABLED
                 return 'CSE has been disabled.'
             if server_action == ServerAction.STOP:
-                raise e.BadRequestError(
+                raise cse_exception.BadRequestError(
                     error_message='CSE must be disabled before '
                                   'it can be stopped.')
-            raise e.BadRequestError(
+            raise cse_exception.BadRequestError(
                 error_message=f"Invalid server action: '{server_action}'")
         if self._state == ServerState.DISABLED:
             if server_action == ServerAction.ENABLE:
@@ -181,17 +181,17 @@ class Service(object, metaclass=Singleton):
                 return graceful_shutdown()
         if self._state == ServerState.STOPPING:
             if server_action == ServerAction.ENABLE:
-                raise e.BadRequestError(
+                raise cse_exception.BadRequestError(
                     error_message='Cannot enable CSE while it is being'
                                   'stopped.')
             if server_action == ServerAction.DISABLE:
-                raise e.BadRequestError(
+                raise cse_exception.BadRequestError(
                     error_message='Cannot disable CSE while it is being'
                                   ' stopped.')
             if server_action == ServerAction.STOP:
                 return graceful_shutdown()
 
-        raise e.CseServerError(f"Invalid server state: '{self._state}'")
+        raise cse_exception.CseServerError(f"Invalid server state: '{self._state}'")  # noqa: E501
 
     def run(self, msg_update_callback=utils.NullPrinter()):
         self.config = get_validated_config(
@@ -266,7 +266,7 @@ class Service(object, metaclass=Singleton):
             except Exception:
                 logger.SERVER_LOGGER.error(traceback.format_exc())
 
-        logger.SERVER_LOGGER.info(f"Number of threads started: {len(self.threads)}") # noqa: E501
+        logger.SERVER_LOGGER.info(f"Number of threads started: {len(self.threads)}")  # noqa: E501
 
         self._state = ServerState.RUNNING
 
@@ -350,7 +350,7 @@ class Service(object, metaclass=Singleton):
             msg = "Successfully loaded defined entity schema to global context"
             msg_update_callback.general(msg)
             logger.SERVER_LOGGER.debug(msg)
-        except def_utils.DefNotSupportedException:
+        except cse_exception.DefNotSupportedException:
             msg = "Skipping initialization of defined entity type" \
                   " and defined entity interface"
             msg_update_callback.info(msg)

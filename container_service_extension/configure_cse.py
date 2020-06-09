@@ -13,9 +13,10 @@ from pyvcloud.vcd.org import Org
 from requests.exceptions import HTTPError
 
 from container_service_extension.config_validator import get_validated_config
-import container_service_extension.def_modules.models as def_models
-import container_service_extension.def_modules.schema_svc as def_schema_svc
-import container_service_extension.def_modules.utils as def_utils
+import container_service_extension.def_.models as def_models
+import container_service_extension.def_.schema_svc as def_schema_svc
+import container_service_extension.def_.utils as def_utils
+import container_service_extension.exceptions as cse_exception
 from container_service_extension.exceptions import AmqpError
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import INSTALL_LOGGER
@@ -600,7 +601,6 @@ def _register_def_schema(client: Client,
         schema_module = importlib.import_module(
             f'{def_utils.DEF_SCHEMA_DIRECTORY}.{keys_map[defKey.ENTITY_TYPE_SCHEMA_VERSION]}') # noqa: E501
         schema_file = pkg_resources.open_text(schema_module, def_utils.DEF_ENTITY_TYPE_SCHEMA_FILE) # noqa: E501
-
         native_entity_type = def_models.\
             DefEntityType(name=keys_map[defKey.ENTITY_TYPE_NAME],
                           description='',
@@ -621,7 +621,7 @@ def _register_def_schema(client: Client,
             msg = "Successfully registered defined entity type"
         msg_update_callback.general(msg)
         INSTALL_LOGGER.debug(msg)
-    except def_utils.DefNotSupportedException:
+    except cse_exception.DefNotSupportedException:
         msg = "Skipping defined entity type and defined entity interface" \
               " registration"
         msg_update_callback.general(msg)

@@ -7,22 +7,23 @@ import json
 import sys
 from urllib.parse import parse_qsl
 
+import container_service_extension.def_.utils as def_utils
 from container_service_extension.exception_handler import handle_exception
 import container_service_extension.exceptions as e
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.request_context as ctx
-import container_service_extension.request_handlers.native_cluster_handler as native_cluster_handler # noqa: E501
-import container_service_extension.request_handlers.ovdc_handler as ovdc_handler # noqa: E501
+import container_service_extension.request_handlers.native_cluster_handler as native_cluster_handler  # noqa: E501
+import container_service_extension.request_handlers.ovdc_handler as ovdc_handler  # noqa: E501
 import container_service_extension.request_handlers.pks_cluster_handler as pks_cluster_handler  # noqa: E501
-import container_service_extension.request_handlers.system_handler as system_handler # noqa: E501
-import container_service_extension.request_handlers.template_handler as template_handler # noqa: E501 E501
+import container_service_extension.request_handlers.system_handler as system_handler  # noqa: E501
+import container_service_extension.request_handlers.template_handler as template_handler  # noqa: E501 E501
+import container_service_extension.request_handlers.v35.def_cluster_handler as def_handler # noqa: E501
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import PKS_SERVICE_NAME
 from container_service_extension.shared_constants import OperationType
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
-
 
 """Process incoming requests
 
@@ -37,10 +38,23 @@ GET /cse/cluster/{cluster name}/config?org={org name}&vdc={vdc name}
 GET /cse/cluster/{cluster name}/upgrade-plan?org={org name}&vdc={vdc name}
 POST /cse/cluster/{cluster name}/action/upgrade
 
-
 POST /cse/nodes
 DELETE /cse/nodes
 GET /cse/node/{node name}?cluster_name={cluster name}&org={org name}&vdc={vdc name}
+
+GET /cse/internal/clusters
+POST /cse/internal/clusters
+GET /cse/internal/cluster/{cluster id}
+PUT /cse/internal/cluster/{cluster id}
+DELETE /cse/internal/cluster/{cluster id}
+GET /cse/internal/cluster/{cluster id}/config
+GET /cse/internal/cluster/{cluster id}/upgrade-plan
+POST /cse/internal/cluster/{cluster id}/action/upgrade
+
+# Yet to be finalized.
+POST /cse/internal/nodes
+DELETE /cse/internal/nodes
+GET /cse/internal/{cluster id}/node
 
 GET /cse/ovdcs
 GET /cse/ovdc/{ovdc id}
@@ -59,7 +73,7 @@ GET /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
 PUT /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
 DELETE /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
 GET /pks/cluster/{cluster name}/config?org={org name}&vdc={vdc name}
-""" # noqa: E501
+"""  # noqa: E501
 
 OPERATION_TO_HANDLER = {
     CseOperation.CLUSTER_CONFIG: native_cluster_handler.cluster_config,
@@ -76,8 +90,8 @@ OPERATION_TO_HANDLER = {
     CseOperation.OVDC_UPDATE: ovdc_handler.ovdc_update,
     CseOperation.OVDC_INFO: ovdc_handler.ovdc_info,
     CseOperation.OVDC_LIST: ovdc_handler.ovdc_list,
-    CseOperation.OVDC_COMPUTE_POLICY_LIST: ovdc_handler.ovdc_compute_policy_list, # noqa: E501
-    CseOperation.OVDC_COMPUTE_POLICY_UPDATE: ovdc_handler.ovdc_compute_policy_update, # noqa: E501
+    CseOperation.OVDC_COMPUTE_POLICY_LIST: ovdc_handler.ovdc_compute_policy_list,  # noqa: E501
+    CseOperation.OVDC_COMPUTE_POLICY_UPDATE: ovdc_handler.ovdc_compute_policy_update,  # noqa: E501
     CseOperation.SYSTEM_INFO: system_handler.system_info,
     CseOperation.SYSTEM_UPDATE: system_handler.system_update,
     CseOperation.TEMPLATE_LIST: template_handler.template_list,
@@ -91,6 +105,11 @@ OPERATION_TO_HANDLER = {
 }
 
 _OPERATION_KEY = 'operation'
+
+
+def _is_def_endpoint(url: str):
+    tokens = url.split('/')
+    return tokens[3] == def_utils.DEF_END_POINT_DISCRIMINATOR
 
 
 @handle_exception
@@ -110,11 +129,14 @@ def process_request(body):
 
     # create request data dict from request body data
     request_data = {}
+    request_body = None
     if len(body['body']) > 0:
-        raw_body = base64.b64decode(body['body']).decode(sys.getfilesystemencoding()) # noqa: E501
-        request_data = json.loads(raw_body)
+        raw_body = base64.b64decode(body['body']).decode(sys.getfilesystemencoding())  # noqa: E501
+        request_body = json.loads(raw_body)
+        request_data.update(request_body)
         LOGGER.debug(f"request body: {request_data}")
     # update request data dict with query params data
+    query_params = None
     if body['queryString']:
         query_params = dict(parse_qsl(body['queryString']))
         request_data.update(query_params)
@@ -136,9 +158,18 @@ def process_request(body):
 
     # process the request
     context = ctx.RequestContext(tenant_auth_token, is_jwt=is_jwt_token,
+                                 request_body=request_body,
+                                 request_url_data=url_data,
+                                 request_query_params=query_params,
                                  request_id=body['id'])
+
+    is_def_request = def_utils.is_def_supported_by_cse_server() and _is_def_endpoint(body['requestUri'])  # noqa: E501
+
     try:
-        body_content = OPERATION_TO_HANDLER[operation](data, context)
+        if is_def_request:
+            body_content = def_handler.OPERATION_TO_METHOD[operation](data, context)  # noqa: E501
+        else:
+            body_content = OPERATION_TO_HANDLER[operation](data, context)
     finally:
         if not context.is_async:
             context.end()
@@ -168,6 +199,7 @@ def _get_url_data(method, url):
 
     :rtype: dict
     """
+    url = url.replace(f"/{def_utils.DEF_END_POINT_DISCRIMINATOR}", '')
     tokens = url.split('/')
     num_tokens = len(tokens)
 

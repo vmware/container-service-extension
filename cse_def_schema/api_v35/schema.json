@@ -3,8 +3,7 @@
         "required": [
             "kind",
             "spec",
-            "metadata",
-            "settings"
+            "metadata"
         ],
         "properties": {
             "kind": {
@@ -17,6 +16,9 @@
             },
             "spec": {
                 "type": "object",
+                "required": [
+                    "settings"
+                ],
                 "properties": {
                     "workers": {
                         "type": "object",
@@ -60,6 +62,26 @@
                             }
                         }
                     },
+                    "settings": {
+                "type": "object",
+                "required": [
+                    "network"
+                ],
+                "properties": {
+                    "network": {
+                        "type": "string"
+                    },
+                    "ssh_key": {
+                        "type": "string"
+                    },
+                    "enable_nfs": {
+                        "type": "boolean"
+                    },
+                    "rollback_on_failure": {
+                        "type": "boolean"
+                    }
+                }
+            },
                     "k8_distribution": {
                         "type": "object",
                         "required": [
@@ -108,26 +130,6 @@
                     },
                     "cluster_name": {
                         "type": "string"
-                    }
-                }
-            },
-            "settings": {
-                "type": "object",
-                "required": [
-                    "network"
-                ],
-                "properties": {
-                    "network": {
-                        "type": "string"
-                    },
-                    "ssh_key": {
-                        "type": "string"
-                    },
-                    "enable_nfs": {
-                        "type": "boolean"
-                    },
-                    "rollback_on_failure": {
-                        "type": "boolean"
                     }
                 }
             },
