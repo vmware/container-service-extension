@@ -771,7 +771,7 @@ def _setup_placement_policies(client, policy_list,
 
         for policy in policy_list:
             try:
-                computePolicyManager.get_vdc_compute_policy(policy, is_placment_policy=True) # noqa: E501
+                computePolicyManager.get_vdc_compute_policy(policy, is_placement_policy=True) # noqa: E501
                 msg = f"Skipping creating VDC placement policy '{policy}'. Policy already exists" # noqa: E501
                 msg_update_callback.general(msg)
                 INSTALL_LOGGER.debug(msg)

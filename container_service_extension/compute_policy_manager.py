@@ -171,7 +171,7 @@ class ComputePolicyManager:
         raise EntityNotFoundException(f"Compute policy '{policy_name}'"
                                       f" does not exist.")
 
-    def get_vdc_compute_policy(self, policy_name, is_placment_policy=False):
+    def get_vdc_compute_policy(self, policy_name, is_placement_policy=False):
         """Get CSE created VDC compute policy by name.
 
         Note: This function can only be used to fetch VDC compute policies
@@ -194,7 +194,7 @@ class ComputePolicyManager:
             {
                 # CSE created policy will have a prefix
                 'name': self._get_cse_policy_name(policy_name),
-                'isSizingOnly': str(not is_placment_policy).lower()
+                'isSizingOnly': str(not is_placement_policy).lower()
             }
         for policy_dict in self.get_all_vdc_compute_policies(filters=filters):
             if policy_dict.get('display_name') == policy_name:
@@ -291,20 +291,24 @@ class ComputePolicyManager:
         created_policy['href'] = self._get_policy_href(created_policy['id'])
         return created_policy
 
-    def delete_vdc_compute_policy(self, policy_name):
+    def delete_vdc_compute_policy(self, policy_name,
+                                  is_placement_policy=False):
         """Delete the vdc compute policy created by CSE with the given name.
 
         Note: This function can only be used to fetch PVDC compute policies
             created by CSE.
 
         :param str policy_name: name of the compute policy
+        :param boolean is_placement_policy: True if the compute policy is a
+            VDC placement policy
 
         :return: dictionary containing response text
         :rtype: dict
         :raises: EntityNotFoundException: if compute policy is not found
         """
         self._raise_error_if_not_supported()
-        policy_info = self.get_vdc_compute_policy(policy_name)
+        policy_info = self.get_vdc_compute_policy(policy_name,
+                                                  is_placement_policy=is_placement_policy) # noqa: E501
         resource_url_relative_path = \
             f"{cloudapi_constants.CloudApiResource.VDC_COMPUTE_POLICIES}/" \
             f"{policy_info['id']}"
@@ -313,7 +317,8 @@ class ComputePolicyManager:
             cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=resource_url_relative_path)
 
-    def update_vdc_compute_policy(self, policy_name, new_policy_info):
+    def update_vdc_compute_policy(self, policy_name, new_policy_info,
+                                  is_placement_policy=False):
         """Update the existing vdc compute policy with new policy information.
 
         Note: This function can only be used to update VDC compute policies
@@ -322,13 +327,16 @@ class ComputePolicyManager:
         :param str policy_name: existing policy name
         :param dict new_policy_info: updated policy information with name and
         optional description
+        :parma boolean is_placement_policy: True if the VCD compute policy is a
+            placment policy
 
         :return: updated policy information
         :rtype: dict
         :raises: EntityNotFoundException: if compute policy is not found
         """
         self._raise_error_if_not_supported()
-        policy_info = self.get_vdc_compute_policy(policy_name)
+        policy_info = self.get_vdc_compute_policy(policy_name,
+                                                  is_placement_policy=is_placement_policy) # noqa: E501
         if new_policy_info.get('name'):
             payload = {}
             # add cse related prefix to the policy name
