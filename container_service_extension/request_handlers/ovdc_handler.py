@@ -242,7 +242,10 @@ def ovdc_compute_policy_list(request_data,
     cpm = compute_policy_manager.ComputePolicyManager(
         request_context.sysadmin_client,
         log_wire=utils.str_to_bool(config['service'].get('log_wire')))
-    return cpm.list_compute_policies_on_vdc(request_data[RequestKey.OVDC_ID])
+    compute_policies = []
+    for cp in cpm.list_compute_policies_on_vdc(request_data[RequestKey.OVDC_ID]): # noqa: E501
+        compute_policies.append(cp)
+    return compute_policies
 
 
 def ovdc_compute_policy_update(request_data,
@@ -282,7 +285,7 @@ def ovdc_compute_policy_update(request_data,
                     cp_id = _cp['id']
         else:
             try:
-                _cp = cpm.get_policy(cp_name)
+                _cp = cpm.get_vdc_compute_policy(cp_name)
                 cp_href = _cp['href']
                 cp_id = _cp['id']
             except vcd_e.EntityNotFoundException:
@@ -302,7 +305,7 @@ def ovdc_compute_policy_update(request_data,
             # TODO: fix remove_compute_policy by implementing a proper way
             # for calling async methods without having to pass request_context
             # outside handlers.
-            task_href = cpm.remove_compute_policy_from_vdc(
+            task_href = cpm.remove_vdc_compute_policy_from_vdc(
                 request_context,
                 ovdc_id,
                 cp_href,
