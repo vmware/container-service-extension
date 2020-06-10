@@ -56,6 +56,7 @@ from container_service_extension.telemetry.telemetry_handler import \
     record_user_action_details
 from container_service_extension.telemetry.telemetry_utils \
     import store_telemetry_settings
+import container_service_extension.utils as utils
 from container_service_extension.utils import check_python_version
 from container_service_extension.utils import ConsoleMessagePrinter
 from container_service_extension.utils import NullPrinter
@@ -289,11 +290,11 @@ def uiplugin(ctx):
 def version(ctx):
     """Display CSE version."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    ver_obj = Service.version()
-    ver_str = '%s, %s, version %s' % (ver_obj['product'],
-                                      ver_obj['description'],
-                                      ver_obj['version'])
-    stdout(ver_obj, ctx, ver_str)
+    cse_info = utils.get_cse_info()
+    ver_str = '%s, %s, version %s' % (cse_info['product'],
+                                      cse_info['description'],
+                                      cse_info['version'])
+    stdout(cse_info, ctx, ver_str)
 
 
 @cli.command(short_help='Generate sample CSE/PKS configuration')

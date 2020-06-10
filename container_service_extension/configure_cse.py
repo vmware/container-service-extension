@@ -41,7 +41,6 @@ from container_service_extension.server_constants import \
     CSE_SERVICE_NAME, CSE_SERVICE_NAMESPACE, EXCHANGE_TYPE, LocalTemplateKey, \
     PKS_SERVICE_NAME, RemoteTemplateKey, SYSTEM_ORG_NAME, \
     TemplateBuildKey # noqa: H301
-import container_service_extension.service as service
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
 from container_service_extension.telemetry.constants import PayloadKey
@@ -662,7 +661,7 @@ def _register_cse(client, routing_key, exchange, target_vcd_api_version,
     ]
 
     # convert 'cse-2.6.0.0b2.dev5' to '2.6.0'
-    cse_version = service.Service.version()['version'].split('.')[:3]
+    cse_version = utils.get_cse_info()['version'].split('.')[:3]
     cse_version = semantic_version.Version('.'.join(cse_version))
 
     vcd_api_versions = client.get_supported_versions_list()

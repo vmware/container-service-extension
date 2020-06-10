@@ -20,10 +20,10 @@ from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import LocalTemplateKey
-from container_service_extension.service import Service
 from container_service_extension.shared_constants import ComputePolicyAction
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 from container_service_extension.shared_constants import ServerAction
+import container_service_extension.utils as utils
 
 
 @vcd.group(short_help='Manage Native Kubernetes clusters')
@@ -44,11 +44,11 @@ Examples
 def version(ctx):
     """Display version of CSE plug-in."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
-    ver_obj = Service.version()
-    ver_str = '%s, %s, version %s' % (ver_obj['product'],
-                                      ver_obj['description'],
-                                      ver_obj['version'])
-    stdout(ver_obj, ctx, ver_str)
+    cse_info = utils.get_cse_info()
+    ver_str = '%s, %s, version %s' % (cse_info['product'],
+                                      cse_info['description'],
+                                      cse_info['version'])
+    stdout(cse_info, ctx, ver_str)
     CLIENT_LOGGER.debug(ver_str)
 
 

@@ -4,7 +4,6 @@
 
 from enum import Enum
 from enum import unique
-import platform
 import re
 import signal
 import sys
@@ -15,7 +14,6 @@ import traceback
 
 import click
 import lxml
-import pkg_resources
 import pyvcloud.vcd.api_extension as api_extension
 from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
 from pyvcloud.vcd.client import BasicLoginCredentials
@@ -101,32 +99,33 @@ def verify_version_compatibility(sysadmin_client: Client,
     ext_cse_version = versions[0].split('-')[1]
     ext_cse_version = semantic_version.Version(ext_cse_version)
     # convert '2.6.0.0b2.dev5' to '2.6.0'
-    cse_version = '.'.join(Service.version()['version'].split('.')[:3])
+    cse_version = '.'.join(utils.get_cse_info()['version'].split('.')[:3])
     cse_version = semantic_version.Version(cse_version)
     if cse_version > ext_cse_version:
         version_error_msg += \
             f"CSE Server version ({cse_version}) is higher than what was " \
-            f"previously used with VCD ({ext_cse_version}). " \
+            f"previously registered with VCD ({ext_cse_version}). " \
             f"Upgrade CSE to update CSE version on VCD."
     if cse_version < ext_cse_version:
         version_error_msg += \
             f"CSE Server version ({cse_version}) cannot be lower than what " \
-            f"was previously used with VCD ({ext_cse_version})."
+            f"was previously registered with VCD ({ext_cse_version})."
 
     # convert 'vcd_api-33.0' to '33.0'
     ext_vcd_api_version = versions[1].split('-')[1]
     if target_vcd_api_version > ext_vcd_api_version:
         version_error_msg += \
             f"Target VCD API version ({target_vcd_api_version}) is higher " \
-            f"than what was previously used by CSE ({ext_vcd_api_version}). " \
-            f"Upgrade CSE to update VCD API version used by CSE."
+            f"than what was previously registered by CSE " \
+            f"({ext_vcd_api_version}). Upgrade CSE to update " \
+            f"registered VCD API version."
     if target_vcd_api_version < ext_vcd_api_version:
         version_error_msg += \
             f"Target VCD API version ({target_vcd_api_version}) cannot be " \
-            f"lower than what was previously used by " \
+            f"lower than what was previously registered by " \
             f"CSE ({ext_vcd_api_version})."
 
-    if version_error_msg != '':
+    if version_error_msg:
         raise Exception(version_error_msg)
 
 
@@ -180,7 +179,7 @@ class Service(object, metaclass=Singleton):
         return self._state == ServerState.RUNNING
 
     def info(self, get_sysadmin_info=False):
-        result = Service.version()
+        result = utils.get_cse_info()
         if get_sysadmin_info:
             result['consumer_threads'] = len(self.threads)
             result['all_threads'] = threading.activeCount()
@@ -196,16 +195,6 @@ class Service(object, metaclass=Singleton):
 
     def get_native_cluster_entity_type(self) -> def_models.DefEntityType:
         return self._nativeEntityType
-
-    @classmethod
-    def version(cls):
-        return {
-            'product': 'CSE',
-            'description': 'Container Service Extension for VMware vCloud '
-                           'Director',
-            'version': pkg_resources.require('container-service-extension')[0].version,  # noqa: E501
-            'python': platform.python_version()
-        }
 
     def update_status(self, server_action: ServerAction):
         def graceful_shutdown():
@@ -260,12 +249,17 @@ class Service(object, metaclass=Singleton):
             logger_debug=logger.SERVER_LOGGER,
             msg_update_callback=msg_update_callback)
 
+        sysadmin_client = None
         try:
             sysadmin_client = vcd_utils.get_sys_admin_client()
             verify_version_compatibility(sysadmin_client,
                                          self.config['vcd']['api_version'])
+        except Exception as err:
+            logger.SERVER_LOGGER.info(err)
+            raise
         finally:
-            sysadmin_client.logout()
+            if sysadmin_client:
+                sysadmin_client.logout()
 
         populate_vsphere_list(self.config['vcs'])
 
