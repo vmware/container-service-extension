@@ -781,7 +781,7 @@ def _setup_placement_policies(client, policy_list,
                 INSTALL_LOGGER.debug(msg)
                 computePolicyManager.add_vdc_compute_policy(policy,
                                                             pvdc_compute_policy_id=pvdc_compute_policy['id']) # noqa: E501
-    except CseExceptions.GlobalPvdcComputePolicyNotSupported:
+    except cse_exception.GlobalPvdcComputePolicyNotSupported:
         msg = "Global PVDC compute policies are not supported." \
               "Skipping placement policy creation."
         msg_update_callback.general(msg)
