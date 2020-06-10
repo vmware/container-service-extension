@@ -20,7 +20,7 @@ import container_service_extension.utils as utils
 
 
 _SYSTEM_DEFAULT_COMPUTE_POLICY = 'System Default'
-GLOBAL_PVDC_COMPUTE_POLICY_VERSION = 35.0
+GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION = 35.0
 
 
 class ComputePolicyManager:
@@ -326,7 +326,8 @@ class ComputePolicyManager:
 
         :param str policy_name: existing policy name
         :param dict new_policy_info: updated policy information with name and
-        optional description
+            optional description.
+            Example: {"name": "new_name", "description": "my policy"}
         :parma boolean is_placement_policy: True if the VCD compute policy is a
             placment policy
 
@@ -569,9 +570,9 @@ class ComputePolicyManager:
     def _raise_error_if_global_pvdc_compute_policy_not_supported(self):
         """Railse exception if higher api version is needed."""
         api_version = float(self._cloudapi_client.get_api_version())
-        if api_version < GLOBAL_PVDC_COMPUTE_POLICY_VERSION: # noqa: E501
+        if api_version < GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION: # noqa: E501
             msg = f"Recieved api version {api_version}." \
-                  f" But atleast {GLOBAL_PVDC_COMPUTE_POLICY_VERSION} is required" # noqa: E501
+                  f" But atleast {GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION} is required" # noqa: E501
             logger.SERVER_LOGGER.debug(msg)
             raise cse_exceptions.GlobalPvdcComputePolicyNotSupported(msg)
 
