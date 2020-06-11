@@ -46,6 +46,7 @@ class CseOperation(Enum):
     CLUSTER_CONVERT = ('cluster convert', 'CLUSTER', 'CONVERT', 'CSE_CLUSTER_CONVERT')  # noqa: E501
     CONFIG_CHECK = ('config check', 'CONFIG', 'CHECK', 'CSE_CONFIG_CHECK')
     SERVICE_INSTALL = ('install server', 'SERVER', 'INSTALL', 'CSE_SERVICE_INSTALL')  # noqa: E501
+    SERVICE_UPGRADE = ('upgrade server', 'SERVER', 'UPGRADE', 'CSE_SERVICE_UPGRADE')  # noqa: E501
     SERVICE_RUN = ('run server', 'SERVER', 'RUN', 'CSE_SERVICE_RUN')
     TEMPLATE_INSTALL = ('template install', 'TEMPLATE', 'INSTALL', 'CSE_TEMPLATE_INSTALL')  # noqa: E501
     TEMPLATE_LIST = ('template list', 'TEMPLATE', 'LIST', 'CSE_TEMPLATE_LIST')  # noqa: E501

@@ -89,8 +89,9 @@ def verify_version_compatibility(sysadmin_client: Client,
         desc = re.search(r'<Description>(.*)<\/Description>', xml_str).group(1)
     except Exception:
         # version data doesn't exist, so CSE <= 2.6.1 was installed
-        raise Exception("CSE and VCD API version data not found on VCD. "
-                        "Upgrade CSE to update version data.")
+        raise cse_exception.VersionCompatibilityError(
+            "CSE and VCD API version data not found on VCD. "
+            "Upgrade CSE to update version data.")
 
     versions = desc.split(',')
     version_error_msg = ''
@@ -126,7 +127,7 @@ def verify_version_compatibility(sysadmin_client: Client,
             f"CSE ({ext_vcd_api_version})."
 
     if version_error_msg:
-        raise Exception(version_error_msg)
+        raise cse_exception.VersionCompatibilityError(version_error_msg)
 
 
 @unique

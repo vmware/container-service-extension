@@ -208,3 +208,11 @@ class DefEntityResolutionError(CseServerError):
     def __str__(self):
         return f"{self.state}: Resolution of the cluster with defined entity" \
                f" id:{self.id} failed with error message: {self.msg}"
+
+
+class VersionCompatibilityError(CseServerError):
+    """Raised on CSE or VCD API version difference.
+
+    Raised if local CSE version or target VCD API version is different
+    than the versions already registered by CSE.
+    """

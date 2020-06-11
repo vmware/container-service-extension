@@ -640,6 +640,16 @@ def _register_def_schema(client: Client,
             pass
 
 
+def deregister_cse(client, msg_update_callback=utils.NullPrinter(),
+                   logger=NULL_LOGGER):
+    """Deregister CSE from VCD."""
+    ext = APIExtension(client)
+    ext.delete_extension('cse', 'cse')
+    msg = "Successfully deregistered CSE from VCD"
+    msg_update_callback.general(msg)
+    logger.info(msg)
+
+
 def _register_cse(client, routing_key, exchange, target_vcd_api_version,
                   msg_update_callback=utils.NullPrinter()):
     """Register or update CSE on vCD.
