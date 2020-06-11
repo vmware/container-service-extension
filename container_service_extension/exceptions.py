@@ -213,3 +213,11 @@ class DefEntityResolutionError(CseServerError):
 
 class GlobalPvdcComputePolicyNotSupported(vcd_exceptions.OperationNotSupportedException): # noqa: E501
     """Raised when global pvdc compute policies are not supported."""
+
+
+class VersionCompatibilityError(CseServerError):
+    """Raised on CSE or VCD API version difference.
+
+    Raised if local CSE version or target VCD API version is different
+    than the versions already registered by CSE.
+    """
