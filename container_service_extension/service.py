@@ -26,7 +26,7 @@ from container_service_extension.config_validator import get_validated_config
 from container_service_extension.configure_cse import check_cse_installation
 from container_service_extension.consumer import MessageConsumer
 import container_service_extension.def_.models as def_models
-import container_service_extension.def_.schema_svc as def_schema_svc
+import container_service_extension.def_.schema_service as def_schema_svc
 import container_service_extension.def_.utils as def_utils
 from container_service_extension.def_.utils import raise_error_if_def_not_supported  # noqa: E501
 import container_service_extension.exceptions as cse_exception

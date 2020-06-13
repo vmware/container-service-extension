@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import copy
+from dataclasses import asdict
 import random
 import re
 import string
@@ -18,7 +19,7 @@ import pyvcloud.vcd.vm as vcd_vm
 import semantic_version as semver
 
 import container_service_extension.abstract_broker as abstract_broker
-import container_service_extension.def_.entity_svc as def_entity_svc
+import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as e
@@ -46,6 +47,8 @@ class ClusterService(abstract_broker.AbstractBroker):
     """Handles cluster operations for native DEF based clusters."""
 
     def __init__(self, request_context: ctx.RequestContext):
+        # TODO(DEF) Once all the methods are modified to use defined entities,
+        #  the param RequestContext needs to be replaced by cloudapiclient.
         self.context: ctx.RequestContext = None
         # populates above attributes
         super().__init__(request_context)
@@ -73,22 +76,16 @@ class ClusterService(abstract_broker.AbstractBroker):
         # cluster = self.entity_svc.get_entity_by_name(cluster_name)
         # return cluster
 
-    def list_clusters(self, **kwargs):
+    def list_clusters(self, filters: dict):
         """List all native clusters and their relevant metadata.
-
-        Common broker function that validates data for the 'list clusters'
-        operation and returns a list of cluster data.
-
-        **data: Optional
-            Optional data and default values: org_name=None, ovdc_name=None
-        **telemetry: Optional
         """
-        # Yet to be implemented
-        raise NotImplementedError
-        # data = kwargs.get(KwargKey.DATA, {})
-        # clusters = self.entity_svc.list_entities_by_entity_type
-        # ('native_entity_type_id')
-        # return clusters
+        ent_type: def_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
+        return self.entity_svc.list_entities_by_entity_type(
+            vendor=ent_type.vendor,
+            nss=ent_type.nss,
+            version=ent_type.version,
+            filters=filters)
+
 
     def get_cluster_config(self, **kwargs):
         """Get the cluster's kube config contents.

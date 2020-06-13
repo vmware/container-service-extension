@@ -1,8 +1,12 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-import container_service_extension.def_.cluster_svc as cluster_svc
+from dataclasses import asdict
+
+import container_service_extension.def_.cluster_service as cluster_svc
 import container_service_extension.def_.models as def_models
+import container_service_extension.def_.utils as def_utils
+import container_service_extension.exceptions as cse_exception
 import container_service_extension.request_context as ctx
 import container_service_extension.server_constants as const
 from container_service_extension.telemetry.telemetry_handler import \
@@ -119,35 +123,18 @@ def cluster_upgrade(request_data, req_ctx: ctx.RequestContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_LIST)
-def cluster_list(request_data, req_ctx: ctx.RequestContext):
+def cluster_list(req_ctx: ctx.RequestContext):
     """Request handler for cluster list operation.
-
-    Optional data and default values: org_name=None, ovdc_name=None
-
-    (data validation handled in broker)
 
     :return: List
     """
-    raise NotImplementedError
-    svc = cluster_svc.ClusterService(req_ctx)
-    vcd_clusters_info = svc.list_clusters(data=request_data)
-    from container_service_extension.server_constants import K8S_PROVIDER_KEY
-    common_cluster_properties = [
-        'name',
-        'vdc',
-        'status',
-        'org_name',
-        'k8s_version',
-        K8S_PROVIDER_KEY
-    ]
-
-    result = []
-    for cluster_info in vcd_clusters_info:
-        filtered_cluster_info = \
-            {k: cluster_info.get(k) for k in common_cluster_properties}
-        result.append(filtered_cluster_info)
-
-    return result
+    try:
+        svc = cluster_svc.ClusterService(req_ctx)
+        # entity_filter = def_utils.get_vcd_aware_filters(req_ctx.query_params)
+        return [asdict(def_entity) for def_entity in
+                svc.list_clusters(req_ctx.query_params)]
+    except KeyError as err:
+        raise cse_exception.BadRequestError(error_message=err)
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_CREATE)
