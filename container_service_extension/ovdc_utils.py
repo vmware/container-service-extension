@@ -14,7 +14,7 @@ from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.pks_cache import PksCache
 from container_service_extension.pksbroker import PksBroker
 import container_service_extension.pyvcloud_utils as vcd_utils
-import container_service_extension.request_context as ctx
+import container_service_extension.security_context as ctx
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import PKS_CLUSTER_DOMAIN_KEY
@@ -218,7 +218,7 @@ def _construct_pks_compute_profile_name(sysadmin_client: vcd_client.Client,
 
 
 def create_pks_compute_profile(request_data,
-                               request_context: ctx.RequestContext,
+                               request_context: ctx.SecurityContext,
                                pks_context):
     ovdc_id = request_data.get(RequestKey.OVDC_ID)
     org_name = request_data.get(RequestKey.ORG_NAME)

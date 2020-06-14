@@ -13,7 +13,7 @@ import container_service_extension.exceptions as e
 import container_service_extension.ovdc_utils as ovdc_utils
 import container_service_extension.pksbroker as pksbroker
 import container_service_extension.pksbroker_manager as pksbroker_manager
-import container_service_extension.request_context as ctx
+import container_service_extension.security_context as ctx
 import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
@@ -29,7 +29,7 @@ import container_service_extension.utils as utils
 SYSTEM_DEFAULT_COMPUTE_POLICY_NAME = "System Default"
 
 
-def ovdc_update(request_data, request_context: ctx.RequestContext):
+def ovdc_update(request_data, request_context: ctx.SecurityContext):
     """Request handler for ovdc enable, disable operations.
 
     Required data: org_name, ovdc_name, k8s_provider
@@ -105,7 +105,7 @@ def ovdc_update(request_data, request_context: ctx.RequestContext):
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_INFO)
-def ovdc_info(request_data, request_context: ctx.RequestContext):
+def ovdc_info(request_data, request_context: ctx.SecurityContext):
     """Request handler for ovdc info operation.
 
     Required data: org_name, ovdc_name
@@ -128,7 +128,7 @@ def ovdc_info(request_data, request_context: ctx.RequestContext):
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_LIST)
-def ovdc_list(request_data, request_context: ctx.RequestContext):
+def ovdc_list(request_data, request_context: ctx.SecurityContext):
     """Request handler for ovdc list operation.
 
     :return: List of dictionaries with org VDC k8s provider metadata.
@@ -226,7 +226,7 @@ def ovdc_list(request_data, request_context: ctx.RequestContext):
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_COMPUTE_POLICY_LIST)  # noqa: E501
 def ovdc_compute_policy_list(request_data,
-                             request_context: ctx.RequestContext):
+                             request_context: ctx.SecurityContext):
     """Request handler for ovdc compute-policy list operation.
 
     Required data: ovdc_id
@@ -249,7 +249,7 @@ def ovdc_compute_policy_list(request_data,
 
 
 def ovdc_compute_policy_update(request_data,
-                               request_context: ctx.RequestContext):
+                               request_context: ctx.SecurityContext):
     """Request handler for ovdc compute-policy update operation.
 
     Required data: ovdc_id, compute_policy_action, compute_policy_names

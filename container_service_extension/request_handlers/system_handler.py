@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import container_service_extension.exceptions as e
-import container_service_extension.request_context as ctx
+import container_service_extension.security_context as ctx
 import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
@@ -15,7 +15,7 @@ from container_service_extension.telemetry.telemetry_handler \
 
 
 @record_user_action_telemetry(CseOperation.SYSTEM_INFO)
-def system_info(request_data, request_context: ctx.RequestContext):
+def system_info(request_data, request_context: ctx.SecurityContext):
     """Request handler for system info operation.
 
     :return: Dictionary with system info data.
@@ -26,7 +26,7 @@ def system_info(request_data, request_context: ctx.RequestContext):
         get_sysadmin_info=request_context.client.is_sysadmin())
 
 
-def system_update(request_data, request_context: ctx.RequestContext):
+def system_update(request_data, request_context: ctx.SecurityContext):
     """Request handler for system update operation.
 
     :return: Dictionary with system update status.

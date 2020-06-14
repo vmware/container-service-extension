@@ -14,7 +14,7 @@ import container_service_extension.ovdc_utils as ovdc_utils
 from container_service_extension.pksbroker import PksBroker
 import container_service_extension.pksbroker_manager as pks_broker_manager
 from container_service_extension.pksbroker_manager import create_pks_context_for_all_accounts_in_org  # noqa: E501
-import container_service_extension.request_context as ctx
+import container_service_extension.security_context as ctx
 import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
@@ -28,7 +28,7 @@ import container_service_extension.utils as utils
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.PKS_CLUSTER_LIST)
-def cluster_list(request_data, request_context: ctx.RequestContext):
+def cluster_list(request_data, request_context: ctx.SecurityContext):
     """Request handler for cluster list operation.
 
     All brokers in the org do 'list cluster' operation.
@@ -64,7 +64,7 @@ def cluster_list(request_data, request_context: ctx.RequestContext):
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.PKS_CLUSTER_INFO)
-def cluster_info(request_data, request_context: ctx.RequestContext):
+def cluster_info(request_data, request_context: ctx.SecurityContext):
     """Request handler for cluster info operation.
 
     Required data: cluster_name
@@ -80,7 +80,7 @@ def cluster_info(request_data, request_context: ctx.RequestContext):
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.PKS_CLUSTER_CONFIG)
-def cluster_config(request_data, request_context: ctx.RequestContext):
+def cluster_config(request_data, request_context: ctx.SecurityContext):
     """Request handler for cluster config operation.
 
     Required data: cluster_name
@@ -96,7 +96,7 @@ def cluster_config(request_data, request_context: ctx.RequestContext):
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.PKS_CLUSTER_CREATE)
-def cluster_create(request_data, request_context: ctx.RequestContext):
+def cluster_create(request_data, request_context: ctx.SecurityContext):
     """Request handler for cluster create operation.
 
     Required data: org_name, ovdc_name, cluster_name
@@ -136,7 +136,7 @@ def cluster_create(request_data, request_context: ctx.RequestContext):
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.PKS_CLUSTER_DELETE)
-def cluster_delete(request_data, request_context: ctx.RequestContext):
+def cluster_delete(request_data, request_context: ctx.SecurityContext):
     """Request handler for cluster delete operation.
 
     Required data: cluster_name
@@ -152,7 +152,7 @@ def cluster_delete(request_data, request_context: ctx.RequestContext):
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.PKS_CLUSTER_RESIZE)
-def cluster_resize(request_data, request_context: ctx.RequestContext):
+def cluster_resize(request_data, request_context: ctx.SecurityContext):
     """Request handler for cluster resize operation.
 
     Required data: cluster_name, num_nodes
@@ -230,7 +230,7 @@ def _get_cluster_and_broker(request_data, request_context, **kwargs):
 
 
 def _get_broker_from_k8s_metadata(k8s_metadata,
-                                  request_context: ctx.RequestContext):
+                                  request_context: ctx.SecurityContext):
     """Get broker from ovdc k8s metadata.
 
     If PKS is not enabled, raise CseServerError

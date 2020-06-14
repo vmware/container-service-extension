@@ -7,8 +7,9 @@ import container_service_extension.def_.cluster_service as cluster_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as cse_exception
-import container_service_extension.request_context as ctx
+import container_service_extension.security_context as ctx
 import container_service_extension.server_constants as const
+from container_service_extension.request_context import RequestContext
 from container_service_extension.shared_constants import OperationType
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
@@ -76,23 +77,20 @@ def _get_url_data(method: str, url: str):
             raise cse_exception.MethodNotAllowedRequestError()
 
 
-
-
-
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_CREATE)
-def cluster_create(req_ctx: ctx.RequestContext):
+def cluster_create(req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
     """Request handler for cluster create operation.
 
     :return: Defined entity of the native cluster
     :rtype: container_service_extension.def_.models.DefEntity
     """
-    svc = cluster_svc.ClusterService(req_ctx)
+    svc = cluster_svc.ClusterService(security_ctx)
     cluster_entity_spec = def_models.ClusterEntity(**req_ctx.body)  # noqa: E501
     return svc.create_cluster(cluster_entity_spec)
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_RESIZE)
-def cluster_resize(req_ctx: ctx.RequestContext):
+def cluster_resize(req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
     """Request handler for cluster resize operation.
 
     Required data: cluster_name, num_nodes
@@ -112,7 +110,7 @@ def cluster_resize(req_ctx: ctx.RequestContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_DELETE)
-def cluster_delete(req_ctx: ctx.RequestContext):
+def cluster_delete(req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
     """Request handler for cluster delete operation.
 
     Required data: cluster_name
@@ -129,7 +127,7 @@ def cluster_delete(req_ctx: ctx.RequestContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_INFO)
-def cluster_info(req_ctx: ctx.RequestContext):
+def cluster_info(req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
     """Request handler for cluster info operation.
 
     Required data: cluster_name
@@ -140,13 +138,13 @@ def cluster_info(req_ctx: ctx.RequestContext):
     :return: Dict
     """
     raise NotImplementedError
-    svc = cluster_svc.ClusterService(req_ctx)
+    svc = cluster_svc.ClusterService(security_ctx)
     cluster_id = req_ctx.url_data['id']
     return svc.get_cluster_info(cluster_id)
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_CONFIG)
-def cluster_config(req_ctx: ctx.RequestContext):
+def cluster_config(req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
     """Request handler for cluster config operation.
 
     Required data: cluster_name
@@ -163,7 +161,7 @@ def cluster_config(req_ctx: ctx.RequestContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_UPGRADE_PLAN)  # noqa: E501
-def cluster_upgrade_plan(request_data, req_ctx: ctx.RequestContext):
+def cluster_upgrade_plan(request_data, req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
     """Request handler for cluster upgrade-plan operation.
 
     data validation handled in broker
@@ -176,7 +174,7 @@ def cluster_upgrade_plan(request_data, req_ctx: ctx.RequestContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_UPGRADE)
-def cluster_upgrade(request_data, req_ctx: ctx.RequestContext):
+def cluster_upgrade(request_data, req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
     """Request handler for cluster upgrade operation.
 
     data validation handled in broker
@@ -189,13 +187,13 @@ def cluster_upgrade(request_data, req_ctx: ctx.RequestContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_LIST)
-def cluster_list(req_ctx: ctx.RequestContext):
+def cluster_list(req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
     """Request handler for cluster list operation.
 
     :return: List
     """
     try:
-        svc = cluster_svc.ClusterService(req_ctx)
+        svc = cluster_svc.ClusterService(security_ctx)
         return [asdict(def_entity) for def_entity in
                 svc.list_clusters(req_ctx.query_params)]
     except KeyError as err:
@@ -203,7 +201,7 @@ def cluster_list(req_ctx: ctx.RequestContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_CREATE)
-def node_create(request_data, req_ctx: ctx.RequestContext):
+def node_create(request_data, req_ctx: ctx.SecurityContext):
     """Request handler for node create operation.
 
     Required data: cluster_name, network_name
@@ -222,7 +220,7 @@ def node_create(request_data, req_ctx: ctx.RequestContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_DELETE)
-def node_delete(request_data, req_ctx: ctx.RequestContext):
+def node_delete(request_data, req_ctx: ctx.SecurityContext):
     """Request handler for node delete operation.
 
     Required data: cluster_name, node_names_list
@@ -238,7 +236,7 @@ def node_delete(request_data, req_ctx: ctx.RequestContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_INFO)
-def node_info(request_data, req_ctx: ctx.RequestContext):
+def node_info(request_data, req_ctx: ctx.SecurityContext):
     """Request handler for node info operation.
 
     Required data: cluster_name, node_name
@@ -268,7 +266,7 @@ OPERATION_TO_METHOD = {
 }
 
 
-def invoke(req_ctx: ctx.RequestContext):
-    url_data = _get_url_data(req_ctx.verb, req_ctx.url)
-    operation = url_data[_OPERATION_KEY]
-    return OPERATION_TO_METHOD[operation](req_ctx), operation
+def invoke(req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
+    req_ctx.url_data = _get_url_data(req_ctx.verb, req_ctx.url)
+    operation = req_ctx.url_data[_OPERATION_KEY]
+    return OPERATION_TO_METHOD[operation](req_ctx, security_ctx), operation

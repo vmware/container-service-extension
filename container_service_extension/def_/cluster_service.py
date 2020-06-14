@@ -26,7 +26,7 @@ import container_service_extension.exceptions as e
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
-import container_service_extension.request_context as ctx
+import container_service_extension.security_context as ctx
 import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import KwargKey
@@ -46,10 +46,10 @@ import container_service_extension.vsphere_utils as vs_utils
 class ClusterService(abstract_broker.AbstractBroker):
     """Handles cluster operations for native DEF based clusters."""
 
-    def __init__(self, request_context: ctx.RequestContext):
+    def __init__(self, request_context: ctx.SecurityContext):
         # TODO(DEF) Once all the methods are modified to use defined entities,
         #  the param RequestContext needs to be replaced by cloudapiclient.
-        self.context: ctx.RequestContext = None
+        self.context: ctx.SecurityContext = None
         # populates above attributes
         super().__init__(request_context)
 
