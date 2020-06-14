@@ -21,13 +21,17 @@ class SecurityContext:
         # User context
         self._user: user_context.UserContext = None
 
+        # TODO SecurityContext doesn't seem right place to hold is_async flag.
+        #  First, is there a need for is_async flag? We can check if a given
+        #  operation is async or not by checking operation.response_code != 202
         # async operations should call end() when they are finished
         self.is_async: bool = False
 
+        # TODO SecurityContext doesn't seem right place to hold request_id.
+        #  This can be moved to RequestContext.
         # Request ID; may be None if SecurityContext is initialized outside of
         # request_processor.py
         self.request_id: str = request_id
-
 
     @property
     def client(self):

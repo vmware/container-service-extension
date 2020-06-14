@@ -11,14 +11,14 @@ import container_service_extension.def_.utils as def_utils
 from container_service_extension.exception_handler import handle_exception
 import container_service_extension.exceptions as e
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-import container_service_extension.security_context as ctx
+import container_service_extension.request_context as req_ctx
 import container_service_extension.request_handlers.native_cluster_handler as native_cluster_handler  # noqa: E501
 import container_service_extension.request_handlers.ovdc_handler as ovdc_handler  # noqa: E501
 import container_service_extension.request_handlers.pks_cluster_handler as pks_cluster_handler  # noqa: E501
 import container_service_extension.request_handlers.system_handler as system_handler  # noqa: E501
 import container_service_extension.request_handlers.template_handler as template_handler  # noqa: E501 E501
 import container_service_extension.request_handlers.v35.def_cluster_handler as def_handler # noqa: E501
-from container_service_extension.request_context import RequestContext
+import container_service_extension.security_context as sec_ctx
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import PKS_SERVICE_NAME
 from container_service_extension.shared_constants import OperationType
@@ -146,21 +146,29 @@ def process_request(body):
             is_jwt_token = True
 
     # create security context
-    security_ctx = ctx.SecurityContext(tenant_auth_token, is_jwt=is_jwt_token,
-                                       request_id=body['id'])
+    security_ctx = sec_ctx.SecurityContext(tenant_auth_token,
+                                           is_jwt=is_jwt_token,
+                                           request_id=body['id'])
 
-    req_ctx = RequestContext(body=request_body, url=url, verb=http_verb,
-                             query_params=query_params)
+    # create request context
+    request_ctx = req_ctx.RequestContext(body=request_body, url=url,
+                                         verb=http_verb,
+                                         query_params=query_params)
 
     is_def_request = def_utils.is_def_supported_by_cse_server() and _is_def_endpoint(body['requestUri'])  # noqa: E501
 
+    # TODO Let API_Handlers return ResponseContext(body,operation) and have
+    #  request_processor.py construct the final response from it.
     try:
         if is_def_request:
-            body_content, operation = def_handler.invoke(req_ctx, security_ctx)
+            body_content, operation = def_handler.invoke(request_ctx,
+                                                         security_ctx)
         else:
             body_content, operation = _invoke_legacy_handlers(security_ctx,
                                                               request_data)
     finally:
+        # TODO This can be also be written as (operation.response_code != 202).
+        #  It will eliminate the need for management of is_async flag.
         if not security_ctx.is_async:
             security_ctx.end()
 
@@ -174,9 +182,11 @@ def process_request(body):
     return response
 
 
-def _invoke_legacy_handlers(req_ctx: ctx.SecurityContext, request_data: dict):
+def _invoke_legacy_handlers(request_ctx: req_ctx.RequestContext,
+                            security_ctx: sec_ctx.SecurityContext,
+                            request_data: dict):
     from container_service_extension.service import Service
-    url_data = _get_url_data(req_ctx.verb, req_ctx.url)
+    url_data = _get_url_data(request_ctx.verb, request_ctx.url)
     operation = url_data[_OPERATION_KEY]
     # update request spec with operation specific data in the url
     request_data.update(url_data)
@@ -189,7 +199,7 @@ def _invoke_legacy_handlers(req_ctx: ctx.SecurityContext, request_data: dict):
         raise e.BadRequestError(
             error_message='CSE service is disabled. '
                           'Contact the System Administrator.')
-    body_content = OPERATION_TO_HANDLER[operation](data, req_ctx)
+    body_content = OPERATION_TO_HANDLER[operation](data, security_ctx)
     return body_content, operation
 
 
@@ -208,7 +218,6 @@ def _get_url_data(method, url):
 
     :rtype: dict
     """
-    #url = url.replace(f"/{def_utils.DEF_END_POINT_DISCRIMINATOR}", '')
     tokens = url.split('/')
     num_tokens = len(tokens)
 

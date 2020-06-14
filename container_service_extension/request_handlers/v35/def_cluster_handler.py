@@ -85,7 +85,7 @@ def cluster_create(req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
     :rtype: container_service_extension.def_.models.DefEntity
     """
     svc = cluster_svc.ClusterService(security_ctx)
-    cluster_entity_spec = def_models.ClusterEntity(**req_ctx.body)  # noqa: E501
+    cluster_entity_spec = def_models.ClusterEntity(**req_ctx.body)
     return svc.create_cluster(cluster_entity_spec)
 
 
@@ -103,9 +103,9 @@ def cluster_resize(req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
     :return: Dict
     """
     raise NotImplementedError
-    svc = cluster_svc.ClusterService(req_ctx)
-    cluster_id = req_ctx.url_data['id']
-    cluster_entity_spec = def_models.ClusterEntity(**req_ctx.body)  # noqa: E501
+    svc = cluster_svc.ClusterService(security_ctx)
+    cluster_id = req_ctx.url_data[RequestKey.CLUSTER_ID]
+    cluster_entity_spec = def_models.ClusterEntity(**req_ctx.body)
     return svc.resize_cluster(cluster_id, cluster_entity_spec)
 
 
@@ -122,7 +122,7 @@ def cluster_delete(req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
     """
     raise NotImplementedError
     svc = cluster_svc.ClusterService(req_ctx)
-    cluster_id = req_ctx.url_data['id']
+    cluster_id = req_ctx.url_data[RequestKey.CLUSTER_ID]
     return svc.delete_cluster(cluster_id)
 
 
@@ -137,10 +137,9 @@ def cluster_info(req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
 
     :return: Dict
     """
-    raise NotImplementedError
     svc = cluster_svc.ClusterService(security_ctx)
-    cluster_id = req_ctx.url_data['id']
-    return svc.get_cluster_info(cluster_id)
+    cluster_id = req_ctx.url_data[RequestKey.CLUSTER_ID]
+    return asdict(svc.get_cluster_info(cluster_id))
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_CONFIG)
@@ -156,7 +155,7 @@ def cluster_config(req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
     """
     raise NotImplementedError
     svc = cluster_svc.ClusterService(req_ctx)
-    cluster_id = req_ctx.url_data['id']
+    cluster_id = req_ctx.url_data[RequestKey.CLUSTER_ID]
     return svc.get_cluster_config(cluster_id)
 
 

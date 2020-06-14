@@ -812,9 +812,9 @@ def _install_template(client, remote_template_manager, template, org_name,
         raise ValueError(f"Invalid template data. Missing keys: {missing_keys}") # noqa: E501
 
     temp_vm_name = \
-        f"{template[server_constants.RemoteTemplateKey.OS].replace('.','')}-k8s" \
+        f"{template[server_constants.RemoteTemplateKey.OS].replace('.', '')}-k8s" \
         f"{template[server_constants.RemoteTemplateKey.KUBERNETES_VERSION].replace('.', '')}" \
-        f"-{template[server_constants.RemoteTemplateKey.CNI]}{template[server_constants.RemoteTemplateKey.CNI_VERSION].replace('.','')}-vm" # noqa: E501
+        f"-{template[server_constants.RemoteTemplateKey.CNI]}{template[server_constants.RemoteTemplateKey.CNI_VERSION].replace('.', '')}-vm"  # noqa: E501
     build_params = {
         templateBuildKey.TEMPLATE_NAME: template[server_constants.RemoteTemplateKey.NAME], # noqa: E501
         templateBuildKey.TEMPLATE_REVISION: template[server_constants.RemoteTemplateKey.REVISION], # noqa: E501

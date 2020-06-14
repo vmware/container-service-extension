@@ -62,7 +62,9 @@ class ClusterEntityFilterKey(Enum):
     ..api/cse/internal/clusters?entity.metadata.org_name=org1
     ..cloudapi/1.0.0/entities?filter=entity.metadata.org_name==org1
     """
+
     # TODO(DEF) CLI can leverage this enum for the filter implementation.
+    CLUSTER_NAME = 'name'
     ORG_NAME = 'entity.metadata.org_name'
     OVDC_NAME = 'entity.metadata.ovdc_name'
     KIND = 'entity.kind'

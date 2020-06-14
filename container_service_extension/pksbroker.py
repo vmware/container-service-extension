@@ -42,8 +42,8 @@ from container_service_extension.pksclient.models.update_cluster_parameters \
 from container_service_extension.pksclient.rest import ApiException
 from container_service_extension.pyvcloud_utils import \
     get_org_name_from_ovdc_id
-import container_service_extension.security_context as ctx
 import container_service_extension.request_handlers.request_utils as req_utils
+import container_service_extension.security_context as ctx
 from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.server_constants import K8S_PROVIDER_KEY

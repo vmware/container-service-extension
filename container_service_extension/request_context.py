@@ -7,10 +7,8 @@ from dataclasses import dataclass
 
 @dataclass
 class RequestContext:
-    """Represents HTTP request context.
+    """Represents HTTP request context."""
 
-    This class is immutable.
-    """
     body: dict
     url: str
     verb: str

@@ -346,8 +346,7 @@ class ComputePolicyManager:
             if 'description' in new_policy_info:
                 payload['description'] = new_policy_info['description']
             resource_url_relative_path = \
-                f"{cloudapi_constants.CloudApiResource.VDC_COMPUTE_POLICIES}/" \
-                f"{policy_info['id']}" # noqa: E501
+                f"{cloudapi_constants.CloudApiResource.VDC_COMPUTE_POLICIES}/{policy_info['id']}"  # noqa: E501
 
             updated_policy = self._cloudapi_client.do_request(
                 method=RequestMethod.PUT,

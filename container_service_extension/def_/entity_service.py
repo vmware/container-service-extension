@@ -1,7 +1,6 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-from enum import Enum
 
 from dataclasses import asdict
 from typing import List
@@ -9,7 +8,7 @@ from typing import List
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0  # noqa: E501
 from container_service_extension.cloudapi.constants import CloudApiResource
-from container_service_extension.def_.models import DefEntity, ClusterEntity
+from container_service_extension.def_.models import DefEntity, DefEntityType
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as cse_exception
 from container_service_extension.shared_constants import RequestMethod
@@ -169,16 +168,18 @@ class DefEntityService():
                                        f"{entity_id}")
         return DefEntity(**response_body)
 
-    def get_entity_by_name(self, name: str) -> DefEntity:
-        # TODO(DEF) Below call should add another filter field 'entity.kind==native' # noqa: E501
-        #  It should not get entities if non-native clusters.
-        #  Awaiting dependency from Extensibility team."
-        response_body = self._cloudapi_client.do_request(
-            method=RequestMethod.GET,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-            resource_url_relative_path=f"{CloudApiResource.ENTITIES}?filter=name=={name}")  # noqa: E501
-        entity = response_body['values'][0]
-        return DefEntity(**entity)
+    def get_native_entity_by_name(self, name: str) -> DefEntity:
+        """Get Native cluster defined entity by its name.
+
+        :param str name: Name of the native cluster.
+        :return:
+        """
+        filter_by_name = {def_utils.ClusterEntityFilterKey.CLUSTER_NAME: name}
+        entity_type: DefEntityType = def_utils.get_registered_def_entity_type()
+        return self.list_entities_by_entity_type(vendor=entity_type.vendor,
+                                                 nss=entity_type.nss,
+                                                 version=entity_type.version,
+                                                 filters=filter_by_name)
 
     def delete_entity(self, entity_id: str) -> None:
         """Delete the defined entity.
