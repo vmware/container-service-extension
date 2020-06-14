@@ -43,6 +43,8 @@ DELETE /cse/nodes
 GET /cse/node/{node name}?cluster_name={cluster name}&org={org name}&vdc={vdc name}
 
 GET /cse/internal/clusters
+Entities can be filtered by nested properties as defined per the schema
+GET /cse/internal/clusters?entity.kind={native}&entity.metadata.org_name={org name}
 POST /cse/internal/clusters
 GET /cse/internal/cluster/{cluster id}
 PUT /cse/internal/cluster/{cluster id}
@@ -114,19 +116,9 @@ def _is_def_endpoint(url: str):
 
 @handle_exception
 def process_request(body):
-    from container_service_extension.service import Service
     LOGGER.debug(f"Incoming request body: {json.dumps(body)}")
-
-    url_data = _get_url_data(body['method'], body['requestUri'])
-    operation = url_data[_OPERATION_KEY]
-
-    # check if server is disabled
-    if operation not in (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE)\
-            and not Service().is_running():
-        raise e.BadRequestError(
-            error_message='CSE service is disabled. '
-                          'Contact the System Administrator.')
-
+    http_verb = body['method']
+    url = body['requestUri']
     # create request data dict from request body data
     request_data = {}
     request_body = None
@@ -141,10 +133,6 @@ def process_request(body):
         query_params = dict(parse_qsl(body['queryString']))
         request_data.update(query_params)
         LOGGER.debug(f"query parameters: {query_params}")
-    # update request spec with operation specific data in the url
-    request_data.update(url_data)
-    # remove None values from request payload
-    data = {k: v for k, v in request_data.items() if v is not None}
 
     # extract out the authorization token
     tenant_auth_token = body['headers'].get('x-vcloud-authorization')
@@ -157,9 +145,10 @@ def process_request(body):
             is_jwt_token = True
 
     # process the request
-    context = ctx.RequestContext(tenant_auth_token, is_jwt=is_jwt_token,
+    req_ctx = ctx.RequestContext(tenant_auth_token, is_jwt=is_jwt_token,
                                  request_body=request_body,
-                                 request_url_data=url_data,
+                                 request_url=url,
+                                 request_verb=http_verb,
                                  request_query_params=query_params,
                                  request_id=body['id'])
 
@@ -167,12 +156,13 @@ def process_request(body):
 
     try:
         if is_def_request:
-            body_content = def_handler.OPERATION_TO_METHOD[operation](context)  # noqa: E501
+            body_content, operation = def_handler.invoke(req_ctx)
         else:
-            body_content = OPERATION_TO_HANDLER[operation](data, context)
+            body_content, operation = _invoke_legacy_handlers(req_ctx,
+                                                              request_data)
     finally:
-        if not context.is_async:
-            context.end()
+        if not req_ctx.is_async:
+            req_ctx.end()
 
     if not isinstance(body_content, (list, dict)):
         body_content = {RESPONSE_MESSAGE_KEY: str(body_content)}
@@ -182,6 +172,25 @@ def process_request(body):
     }
     LOGGER.debug(f"Outgoing response: {str(response)}")
     return response
+
+
+def _invoke_legacy_handlers(req_ctx: ctx.RequestContext, request_data: dict):
+    from container_service_extension.service import Service
+    url_data = _get_url_data(req_ctx.verb, req_ctx.url)
+    operation = url_data[_OPERATION_KEY]
+    # update request spec with operation specific data in the url
+    request_data.update(url_data)
+    # remove None values from request payload
+    data = {k: v for k, v in request_data.items() if v is not None}
+    # check if server is disabled
+    if operation not in (
+            CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE) \
+            and not Service().is_running():
+        raise e.BadRequestError(
+            error_message='CSE service is disabled. '
+                          'Contact the System Administrator.')
+    body_content = OPERATION_TO_HANDLER[operation](data, req_ctx)
+    return body_content, operation
 
 
 def _get_url_data(method, url):
@@ -199,7 +208,7 @@ def _get_url_data(method, url):
 
     :rtype: dict
     """
-    url = url.replace(f"/{def_utils.DEF_END_POINT_DISCRIMINATOR}", '')
+    #url = url.replace(f"/{def_utils.DEF_END_POINT_DISCRIMINATOR}", '')
     tokens = url.split('/')
     num_tokens = len(tokens)
 

@@ -9,8 +9,74 @@ import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as cse_exception
 import container_service_extension.request_context as ctx
 import container_service_extension.server_constants as const
+from container_service_extension.shared_constants import OperationType
+from container_service_extension.shared_constants import RequestKey
+from container_service_extension.shared_constants import RequestMethod
 from container_service_extension.telemetry.telemetry_handler import \
     record_user_action_telemetry
+
+_OPERATION_KEY = 'operation'
+
+
+def _get_url_data(method: str, url: str):
+    tokens = url.split('/')
+    num_tokens = len(tokens)
+
+    if num_tokens < 5:
+        raise cse_exception.NotFoundRequestError()
+
+    operation_type = tokens[4].lower()
+    if operation_type.endswith('s'):
+        operation_type = operation_type[:-1]
+
+    if operation_type == OperationType.CLUSTER:
+        if num_tokens == 5:
+            if method == RequestMethod.GET:
+                return {_OPERATION_KEY: const.CseOperation.CLUSTER_LIST}
+            if method == RequestMethod.POST:
+                return {_OPERATION_KEY: const.CseOperation.CLUSTER_CREATE}
+            raise cse_exception.MethodNotAllowedRequestError()
+        if num_tokens == 6:
+            if method == RequestMethod.GET:
+                return {
+                    _OPERATION_KEY: const.CseOperation.CLUSTER_INFO,
+                    RequestKey.CLUSTER_ID: tokens[5]
+                }
+            if method == RequestMethod.PUT:
+                return {
+                    _OPERATION_KEY: const.CseOperation.CLUSTER_RESIZE,
+                    RequestKey.CLUSTER_ID: tokens[5]
+                }
+            if method == RequestMethod.DELETE:
+                return {
+                    _OPERATION_KEY: const.CseOperation.CLUSTER_DELETE,
+                    RequestKey.CLUSTER_ID: tokens[5]
+                }
+            raise cse_exception.MethodNotAllowedRequestError()
+        if num_tokens == 7:
+            if method == RequestMethod.GET:
+                if tokens[6] == 'config':
+                    return {
+                        _OPERATION_KEY: const.CseOperation.CLUSTER_CONFIG,
+                        RequestKey.CLUSTER_ID: tokens[5]
+                    }
+                if tokens[6] == 'upgrade-plan':
+                    return {
+                        _OPERATION_KEY: const.CseOperation.CLUSTER_UPGRADE_PLAN,
+                        RequestKey.CLUSTER_ID: tokens[5]
+                    }
+            raise cse_exception.MethodNotAllowedRequestError()
+        if num_tokens == 8:
+            if method == RequestMethod.POST:
+                if tokens[6] == 'action' and tokens[7] == 'upgrade':
+                    return {
+                        _OPERATION_KEY: const.CseOperation.CLUSTER_UPGRADE,
+                        RequestKey.CLUSTER_ID: tokens[5]
+                    }
+            raise cse_exception.MethodNotAllowedRequestError()
+
+
+
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_CREATE)
@@ -130,7 +196,6 @@ def cluster_list(req_ctx: ctx.RequestContext):
     """
     try:
         svc = cluster_svc.ClusterService(req_ctx)
-        # entity_filter = def_utils.get_vcd_aware_filters(req_ctx.query_params)
         return [asdict(def_entity) for def_entity in
                 svc.list_clusters(req_ctx.query_params)]
     except KeyError as err:
@@ -201,3 +266,9 @@ OPERATION_TO_METHOD = {
     const.CseOperation.NODE_DELETE: node_delete,
     const.CseOperation.NODE_INFO: node_info,
 }
+
+
+def invoke(req_ctx: ctx.RequestContext):
+    url_data = _get_url_data(req_ctx.verb, req_ctx.url)
+    operation = url_data[_OPERATION_KEY]
+    return OPERATION_TO_METHOD[operation](req_ctx), operation

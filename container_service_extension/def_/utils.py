@@ -51,6 +51,26 @@ MAP_API_VERSION_TO_KEYS = {
 }
 
 
+class ClusterEntityFilterKey(Enum):
+    """Keys to filter cluster entities in CSE (or) vCD.
+
+    Below Keys are commonly used filters. An entity can be filtered by any of
+    its properties.
+
+    Usage examples:
+    ..api/cse/internal/clusters?entity.kind=native
+    ..api/cse/internal/clusters?entity.metadata.org_name=org1
+    ..cloudapi/1.0.0/entities?filter=entity.metadata.org_name==org1
+    """
+    # TODO(DEF) CLI can leverage this enum for the filter implementation.
+    ORG_NAME = 'entity.metadata.org_name'
+    OVDC_NAME = 'entity.metadata.ovdc_name'
+    KIND = 'entity.kind'
+    K8_DISTRIBUTION = 'entity.spec.k8_distribution.template_name'
+    STATE = 'state'
+    PHASE = 'entity.status.phase'
+
+
 def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
     """Raise DefNotSupportedException if defined entities are not supported.
 

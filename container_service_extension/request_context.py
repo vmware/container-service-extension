@@ -5,12 +5,13 @@ import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.user_context as user_context
 import container_service_extension.utils as utils
+from container_service_extension.shared_constants import RequestMethod
 
 
 class RequestContext:
     def __init__(self, auth_token, is_jwt=True, request_url=None,
                  request_body=None, request_query_params=None,
-                 request_url_data=None, request_id=None):
+                 request_verb=None, request_id=None):
         self._auth_token: str = auth_token
         self._is_jwt: bool = is_jwt
 
@@ -31,6 +32,7 @@ class RequestContext:
         self.request_id: str = request_id
 
         self.url: str = request_url
+        self.verb: str = request_verb
         self.url_data: dict = request_url_data
         self.body: dict = request_body
         self.query_params: dict = request_query_params
