@@ -34,6 +34,9 @@ from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.shared_constants import DefEntityOperation
+from container_service_extension.shared_constants import DefEntityOperationStatus  # noqa: E501
+from container_service_extension.shared_constants import DefEntityPhase
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import PayloadKey
@@ -190,9 +193,7 @@ class ClusterService(abstract_broker.AbstractBroker):
               f"from template '{template_name}' (revision {template_revision})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         def_entity.entity.status.task_href = self.task_resource.get('href')
-        # TODO(DEF) below concept of status-phase needs to be properly implemented -  # noqa: E501
-        #  https://confluence.eng.vmware.com/display/VCD/%5BProposal%5D+Native+Clusters+Life+Cycle+Status  # noqa: E501
-        def_entity.entity.status.phase = 'CREATE_IN_PROGRESS'
+        def_entity.entity.status.phase = str(DefEntityPhase(DefEntityOperation.CREATE, DefEntityOperationStatus.IN_PROGRESS))  # noqa: E501
         self.context.is_async = True
         self._create_cluster_async(def_entity)
         return def_entity
@@ -347,8 +348,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             #  master and worker "nodes" also have to be updated.
             def_entity.externalId = vapp_resource.get('href')
             def_entity.entity.status.master_ip = master_ip
-            # TODO(DEF) The concept of status is yet to be implemented properly
-            def_entity.entity.status.phase = 'CREATE_SUCCEEDED'
+            def_entity.entity.status.phase = str(DefEntityPhase(DefEntityOperation.CREATE, DefEntityOperationStatus.SUCCEEDED))  # noqa: E501
             self.entity_svc.update_entity(def_entity.id, def_entity)
 
             # Resolve the defined entity to a RESOLVED state
@@ -357,8 +357,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 e.NFSNodeCreationError, e.ClusterJoiningError,
                 e.ClusterInitializationError, e.ClusterOperationError) as err:
 
-            # TODO(DEF) The concept of status is yet to be implemented properly
-            def_entity.entity.status.phase = 'CREATE_FAILED'
+            def_entity.entity.status.phase = str(DefEntityPhase(DefEntityOperation.CREATE, DefEntityOperationStatus.FAILED))  # noqa: E501
             # Resolve the defined entity to a RESOLVED/ERROR state. This should
             # fail required properties 'master_ip' have not been updated.
             self.entity_svc.resolve_entity(def_entity.id)
@@ -387,6 +386,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                               error_message=str(err))
             # raising an exception here prints a stacktrace to server console
         except Exception as err:
+            if def_entity:
+                def_entity.entity.status.phase = str(DefEntityPhase(DefEntityOperation.CREATE, DefEntityOperationStatus.FAILED))  # noqa: E501
             LOGGER.error(f"Unknown error creating cluster '{cluster_name}'",
                          exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,

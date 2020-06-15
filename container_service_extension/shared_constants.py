@@ -2,8 +2,10 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from dataclasses import dataclass
 from enum import Enum
 from enum import unique
+
 
 ERROR_DESCRIPTION_KEY = "error description"
 ERROR_MINOR_CODE_KEY = "minor error code"
@@ -96,3 +98,52 @@ class RequestKey(str, Enum):
 
     # keys that are only used internally at server side
     PKS_EXT_HOST = 'pks_ext_host'
+
+
+@unique
+class DefEntityOperation(str, Enum):
+    CREATE = 'CREATE'
+    DELETE = 'DELETE'
+    UPDATE = 'UPDATE'
+    UPGRADE = 'UPGRADE'
+    UNKNOWN = 'UNKNOWN'
+
+
+@unique
+class DefEntityOperationStatus(str, Enum):
+    IN_PROGRESS = 'IN_PROGRESS'
+    SUCCEEDED = 'SUCCEEDED'
+    FAILED = 'FAILED'
+    UNKNOWN = 'UNKNOWN'
+
+
+@dataclass
+class DefEntityPhase:
+    """Supports two ways of creation.
+
+    1. DefEntityPhase(DefEntityOperation.CREATE, DefEntityOperationStatus.SUCCEEDED) # noqa: E501
+    2. DefEntityPhase.from_phase('CREATE:SUCCEEDED')
+    """
+
+    operation: DefEntityOperation
+    status: DefEntityOperationStatus
+
+    def __str__(self):
+        return f'{self.operation}:{self.status}'
+
+    @classmethod
+    def from_phase(cls, phase: str):
+        """Return instance of DefEntityPhase.
+
+        :param str phase: defined entity phase value. ex: "CREATE:SUCCEEDED"
+        :return: DefEntityPhase
+        :rtype: <class DefEntityPhase>
+        """
+        operation, status = phase.split(':')
+        return cls(DefEntityOperation[operation], DefEntityOperationStatus[status])  # noqa: E501
+
+    def is_operation_status_success(self) -> bool:
+        try:
+            return self.status == DefEntityOperationStatus.SUCCEEDED
+        except Exception:
+            return False
