@@ -629,7 +629,7 @@ class ComputePolicyManager:
         """
         return f"{cloudapi_constants.CLOUDAPI_URN_PREFIX}:vdc:{vdc_id}"
 
-    def remove_vdc_compute_policy_from_vdc(self, request_context: ctx.SecurityContext,  # noqa: E501
+    def remove_vdc_compute_policy_from_vdc(self, security_ctx: ctx.SecurityContext,  # noqa: E501
                                            ovdc_id,
                                            compute_policy_href,
                                            remove_compute_policy_from_vms=False): # noqa: E501
@@ -637,7 +637,7 @@ class ComputePolicyManager:
 
         Note: The VDC compute policy need not be created by CSE.
 
-        :param request_context: request context of remove compute policy
+        :param security_ctx: request context of remove compute policy
             request
         :param str ovdc_id: id of the vdc to assign the policy
         :param compute_policy_href: policy href to remove
@@ -671,9 +671,9 @@ class ComputePolicyManager:
             org_href=org.href)
 
         task_href = task_resource.get('href')
-        request_context.is_async = True
+        security_ctx.is_async = True
         self._remove_compute_policy_from_vdc_async(
-            request_context=request_context,
+            security_ctx=security_ctx,
             task=task,
             task_href=task_href,
             user_href=user_href,
@@ -688,7 +688,7 @@ class ComputePolicyManager:
 
     @utils.run_async
     def _remove_compute_policy_from_vdc_async(self, *args,
-                                              request_context: ctx.SecurityContext,  # noqa: E501
+                                              security_ctx: ctx.SecurityContext,  # noqa: E501
                                               task,
                                               task_href,
                                               user_href,
@@ -818,5 +818,5 @@ class ComputePolicyManager:
                 org_href=org_href,
                 error_message=f"{err}")
         finally:
-            if request_context.sysadmin_client:
-                request_context.end()
+            if security_ctx.sysadmin_client:
+                security_ctx.end()

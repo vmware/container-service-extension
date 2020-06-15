@@ -40,7 +40,7 @@ class DefEntityService():
                                        f"{entity_type_id}",
             payload=asdict(entity))
 
-    def list_entities(self, filters: dict = None):
+    def list_entities(self, filters: dict = None) -> List[DefEntity]:
         """List all defined entities of all entity types.
 
         vCD's behavior when invalid filter keys are passed:
@@ -88,8 +88,6 @@ class DefEntityService():
         :return: List of entities of that entity type
         :rtype: List[DefEntity]
         """
-        # TODO Yet to be verified. Waiting for the build from
-        #  Extensibility team.
         filter_string = None
         if filters:
             filter_string = ";".join(

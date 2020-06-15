@@ -191,16 +191,13 @@ def cluster_list(req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
 
     :return: List
     """
-    try:
-        svc = cluster_svc.ClusterService(security_ctx)
-        return [asdict(def_entity) for def_entity in
-                svc.list_clusters(req_ctx.query_params)]
-    except KeyError as err:
-        raise cse_exception.BadRequestError(error_message=err)
+    svc = cluster_svc.ClusterService(security_ctx)
+    return [asdict(def_entity) for def_entity in
+            svc.list_clusters(req_ctx.query_params)]
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_CREATE)
-def node_create(request_data, req_ctx: ctx.SecurityContext):
+def node_create(request_data, security_ctx: ctx.SecurityContext):
     """Request handler for node create operation.
 
     Required data: cluster_name, network_name
@@ -214,12 +211,12 @@ def node_create(request_data, req_ctx: ctx.SecurityContext):
     :return: Dict
     """
     raise NotImplementedError
-    svc = cluster_svc.ClusterService(req_ctx)
+    svc = cluster_svc.ClusterService(security_ctx)
     return svc.create_nodes(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_DELETE)
-def node_delete(request_data, req_ctx: ctx.SecurityContext):
+def node_delete(request_data, security_ctx: ctx.SecurityContext):
     """Request handler for node delete operation.
 
     Required data: cluster_name, node_names_list
@@ -230,12 +227,12 @@ def node_delete(request_data, req_ctx: ctx.SecurityContext):
     :return: Dict
     """
     raise NotImplementedError
-    svc = cluster_svc.ClusterService(req_ctx)
+    svc = cluster_svc.ClusterService(security_ctx)
     return svc.delete_nodes(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_INFO)
-def node_info(request_data, req_ctx: ctx.SecurityContext):
+def node_info(request_data, security_ctx: ctx.SecurityContext):
     """Request handler for node info operation.
 
     Required data: cluster_name, node_name
@@ -246,7 +243,7 @@ def node_info(request_data, req_ctx: ctx.SecurityContext):
     :return: Dict
     """
     raise NotImplementedError
-    svc = cluster_svc.ClusterService(req_ctx)
+    svc = cluster_svc.ClusterService(security_ctx)
     return svc.get_node_info(data=request_data)
 
 

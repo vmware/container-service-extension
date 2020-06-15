@@ -48,10 +48,10 @@ import container_service_extension.vsphere_utils as vs_utils
 class VcdBroker(abstract_broker.AbstractBroker):
     """Handles cluster operations for 'native' k8s provider."""
 
-    def __init__(self, request_context: ctx.SecurityContext):
+    def __init__(self, security_ctx: ctx.SecurityContext):
         self.context: ctx.SecurityContext = None
         # populates above attributes
-        super().__init__(request_context)
+        super().__init__(security_ctx)
 
         self.task = None
         self.task_resource = None

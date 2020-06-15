@@ -44,7 +44,7 @@ def cluster_list(request_data, request_context: ctx.SecurityContext):
     _raise_error_if_pks_not_enabled()
 
     pks_clusters_info = pks_broker_manager.list_clusters(request_data,
-                                                         request_context)
+                                                         security_ctx)
     common_cluster_properties = [
         'name',
         'vdc',
@@ -64,7 +64,7 @@ def cluster_list(request_data, request_context: ctx.SecurityContext):
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.PKS_CLUSTER_INFO)
-def cluster_info(request_data, request_context: ctx.SecurityContext):
+def cluster_info(request_data, security_ctx: ctx.SecurityContext):
     """Request handler for cluster info operation.
 
     Required data: cluster_name
@@ -75,12 +75,12 @@ def cluster_info(request_data, request_context: ctx.SecurityContext):
     :return: Dict
     """
     _raise_error_if_pks_not_enabled()
-    cluster, _ = _get_cluster_info(request_data, request_context)  # noqa: E501
+    cluster, _ = _get_cluster_info(request_data, security_ctx)  # noqa: E501
     return cluster
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.PKS_CLUSTER_CONFIG)
-def cluster_config(request_data, request_context: ctx.SecurityContext):
+def cluster_config(request_data, security_ctx: ctx.SecurityContext):
     """Request handler for cluster config operation.
 
     Required data: cluster_name
@@ -91,12 +91,12 @@ def cluster_config(request_data, request_context: ctx.SecurityContext):
     :return: Dict
     """
     _raise_error_if_pks_not_enabled()
-    _, broker = _get_cluster_info(request_data, request_context, telemetry=False)  # noqa: E501
+    _, broker = _get_cluster_info(request_data, security_ctx, telemetry=False)  # noqa: E501
     return broker.get_cluster_config(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.PKS_CLUSTER_CREATE)
-def cluster_create(request_data, request_context: ctx.SecurityContext):
+def cluster_create(request_data, security_ctx: ctx.SecurityContext):
     """Request handler for cluster create operation.
 
     Required data: org_name, ovdc_name, cluster_name
@@ -115,7 +115,7 @@ def cluster_create(request_data, request_context: ctx.SecurityContext):
     request_data['is_org_admin_search'] = True
 
     try:
-        _get_cluster_and_broker(request_data, request_context, telemetry=False)
+        _get_cluster_and_broker(request_data, security_ctx, telemetry=False)
         raise ClusterAlreadyExistsError(f"Cluster {cluster_name} "
                                         f"already exists.")
     except ClusterNotFoundError:
@@ -123,12 +123,12 @@ def cluster_create(request_data, request_context: ctx.SecurityContext):
 
     k8s_metadata = \
         ovdc_utils.get_ovdc_k8s_provider_metadata(
-            request_context.sysadmin_client,
+            security_ctx.sysadmin_client,
             org_name=request_data[RequestKey.ORG_NAME],
             ovdc_name=request_data[RequestKey.OVDC_NAME],
             include_credentials=True,
             include_nsxt_info=True)
-    broker = _get_broker_from_k8s_metadata(k8s_metadata, request_context)
+    broker = _get_broker_from_k8s_metadata(k8s_metadata, security_ctx)
     request_data[RequestKey.PKS_PLAN_NAME] = k8s_metadata[PKS_PLANS_KEY][0]
     request_data[RequestKey.PKS_EXT_HOST] = \
         f"{cluster_name}.{k8s_metadata[PKS_CLUSTER_DOMAIN_KEY]}"
@@ -136,7 +136,7 @@ def cluster_create(request_data, request_context: ctx.SecurityContext):
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.PKS_CLUSTER_DELETE)
-def cluster_delete(request_data, request_context: ctx.SecurityContext):
+def cluster_delete(request_data, security_ctx: ctx.SecurityContext):
     """Request handler for cluster delete operation.
 
     Required data: cluster_name
@@ -147,12 +147,12 @@ def cluster_delete(request_data, request_context: ctx.SecurityContext):
     :return: Dict
     """
     _raise_error_if_pks_not_enabled()
-    _, broker = _get_cluster_info(request_data, request_context, telemetry=False)  # noqa: E501
+    _, broker = _get_cluster_info(request_data, security_ctx, telemetry=False)  # noqa: E501
     return broker.delete_cluster(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.PKS_CLUSTER_RESIZE)
-def cluster_resize(request_data, request_context: ctx.SecurityContext):
+def cluster_resize(request_data, security_ctx: ctx.SecurityContext):
     """Request handler for cluster resize operation.
 
     Required data: cluster_name, num_nodes
@@ -163,11 +163,11 @@ def cluster_resize(request_data, request_context: ctx.SecurityContext):
     :return: Dict
     """
     _raise_error_if_pks_not_enabled()
-    _, broker = _get_cluster_info(request_data, request_context, telemetry=False)  # noqa: E501
+    _, broker = _get_cluster_info(request_data, security_ctx, telemetry=False)  # noqa: E501
     return broker.resize_cluster(data=request_data)
 
 
-def _get_cluster_info(request_data, request_context, **kwargs):
+def _get_cluster_info(request_data, security_ctx, **kwargs):
     """Get cluster details directly from cloud provider.
 
     Logic of the method is as follows.
@@ -192,26 +192,26 @@ def _get_cluster_info(request_data, request_context, **kwargs):
 
     if ovdc_name is not None and org_name is not None:
         k8s_metadata = \
-            ovdc_utils.get_ovdc_k8s_provider_metadata(request_context.sysadmin_client,  # noqa: E501
+            ovdc_utils.get_ovdc_k8s_provider_metadata(security_ctx.sysadmin_client,  # noqa: E501
                                                       org_name=org_name,
                                                       ovdc_name=ovdc_name,
                                                       include_credentials=True,
                                                       include_nsxt_info=True)
         broker = _get_broker_from_k8s_metadata(
-            k8s_metadata, request_context)
+            k8s_metadata, security_ctx)
         return broker.get_cluster_info(data=request_data, **kwargs), broker
 
-    return _get_cluster_and_broker(request_data, request_context, **kwargs)
+    return _get_cluster_and_broker(request_data, security_ctx, **kwargs)
 
 
-def _get_cluster_and_broker(request_data, request_context, **kwargs):
+def _get_cluster_and_broker(request_data, security_ctx, **kwargs):
     cluster_name = request_data[RequestKey.CLUSTER_NAME]
 
-    pks_ctx_list = create_pks_context_for_all_accounts_in_org(request_context)
+    pks_ctx_list = create_pks_context_for_all_accounts_in_org(security_ctx)
     for pks_ctx in pks_ctx_list:
         debug_msg = f"Get cluster info for cluster '{cluster_name}' " \
             f"failed on host '{pks_ctx['host']}' with error: "
-        pks_broker = PksBroker(pks_ctx, request_context)
+        pks_broker = PksBroker(pks_ctx, security_ctx)
         try:
             return pks_broker.get_cluster_info(data=request_data, **kwargs), pks_broker  # noqa: E501
         except (PksClusterNotFoundError, PksServerError) as err:
@@ -230,7 +230,7 @@ def _get_cluster_and_broker(request_data, request_context, **kwargs):
 
 
 def _get_broker_from_k8s_metadata(k8s_metadata,
-                                  request_context: ctx.SecurityContext):
+                                  security_ctx: ctx.SecurityContext):
     """Get broker from ovdc k8s metadata.
 
     If PKS is not enabled, raise CseServerError
@@ -242,7 +242,7 @@ def _get_broker_from_k8s_metadata(k8s_metadata,
     if not k8s_metadata or k8s_metadata.get(K8S_PROVIDER_KEY) != K8sProvider.PKS:  # noqa: E501
         raise CseServerError("Org VDC is not enabled for Kubernetes "
                              "cluster deployment")
-    return PksBroker(k8s_metadata, request_context)
+    return PksBroker(k8s_metadata, security_ctx)
 
 
 def _raise_error_if_pks_not_enabled():

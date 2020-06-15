@@ -60,7 +60,7 @@ class ClusterEntityFilterKey(Enum):
     Usage examples:
     ..api/cse/internal/clusters?entity.kind=native
     ..api/cse/internal/clusters?entity.metadata.org_name=org1
-    ..cloudapi/1.0.0/entities?filter=entity.metadata.org_name==org1
+    ..cloudapi/1.0.0/entities?filter=entity.metadata.org_name=org1
     """
 
     # TODO(DEF) CLI can leverage this enum for the filter implementation.

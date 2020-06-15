@@ -7,6 +7,7 @@ import random
 import re
 import string
 import time
+from typing import List
 
 import pkg_resources
 import pyvcloud.vcd.client as vcd_client
@@ -57,21 +58,12 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.entity_svc = def_entity_svc.DefEntityService(
             security_ctx.cloudapi_client)
 
-    def get_cluster_info(self, cluster_id: str):
-        """Get cluster metadata as well as node data.
-
-        Common broker function that validates data for the 'cluster info'
-        operation and returns cluster/node metadata as dictionary.
-
-        **data: Required
-            Required data: cluster_name
-            Optional data and default values: org_name=None, ovdc_name=None
-        **telemetry: Optional
-        """
+    def get_cluster_info(self, cluster_id: str) -> def_models.DefEntity:
+        """Get corresponding defined entity of the native cluster."""
         return self.entity_svc.get_entity(cluster_id)
 
-    def list_clusters(self, filters: dict):
-        """List all native clusters."""
+    def list_clusters(self, filters: dict) -> List[def_models.DefEntity]:
+        """List corresponding defined entities of all native clusters."""
         ent_type: def_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
         return self.entity_svc.list_entities_by_entity_type(
             vendor=ent_type.vendor,
