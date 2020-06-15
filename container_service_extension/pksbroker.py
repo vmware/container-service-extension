@@ -79,7 +79,7 @@ class PksBroker(AbstractBroker):
 
     VERSION_V1 = 'v1'
 
-    def __init__(self, pks_ctx, request_context: ctx.SecurityContext):
+    def __init__(self, pks_ctx, security_ctx: ctx.SecurityContext):
         """Initialize PKS broker.
 
         :param dict pks_ctx: A dictionary with which should atleast have the
@@ -90,7 +90,7 @@ class PksBroker(AbstractBroker):
         """
         self.context: ctx.SecurityContext = None
         # populates above attributes
-        super().__init__(request_context)
+        super().__init__(security_ctx)
 
         if not pks_ctx:
             raise ValueError(

@@ -8,8 +8,8 @@ import container_service_extension.security_context as ctx
 
 
 class AbstractBroker(abc.ABC):
-    def __init__(self, request_context: ctx.SecurityContext):
-        self.context: ctx.SecurityContext = request_context
+    def __init__(self, security_ctx: ctx.SecurityContext):
+        self.context: ctx.SecurityContext = security_ctx
 
     @abc.abstractmethod
     def create_cluster(self, **kwargs):
