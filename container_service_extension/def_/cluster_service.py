@@ -444,7 +444,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # TODO default template for resizing should be master's template
         # TODO(DEF) Handle Telemetry for Defined entities.
 
-        return self.create_nodes(cluster_id=id, def_entity=cluster_spec)
+        return self.create_nodes(cluster_id=id, cluster_spec=cluster_spec)
 
     def delete_cluster(self, **kwargs):
         """Start the delete cluster operation.
@@ -641,7 +641,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                       f"cluster '{cluster_name}'")
         return node_info
 
-    def create_nodes(self, cluster_id: str, def_entity: def_models.DefEntity):
+    def create_nodes(self, cluster_id: str, cluster_spec: def_models.DefEntity):
         """Start the create nodes operation.
 
         Validates data for 'node create' operation. Creating nodes is an
@@ -656,10 +656,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                 enable_nfs=False, rollback=True
         **telemetry: Optional
         """
-        cluster_name = def_entity.name
-        worker_count = def_entity.entity.spec.workers.count
-        template_name = def_entity.entity.spec.k8_distribution.template_name
-        template_revision = def_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
+        cluster_name = cluster_spec.name
+        worker_count = cluster_spec.entity.spec.workers.count
+        template_name = cluster_spec.entity.spec.k8_distribution.template_name
+        template_revision = cluster_spec.entity.spec.k8_distribution.template_revision  # noqa: E501
 
         # check that requested/default template is valid
         get_template(name=template_name, revision=template_revision)
@@ -674,13 +674,14 @@ class ClusterService(abstract_broker.AbstractBroker):
               f"'{template_name}' (revision {template_revision}) and " \
               f"adding to cluster '{cluster_name}' ({cluster_id})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-        def_entity.entity.status.task_href = self.task_resource.get('href')
-        def_entity.entity.status.phase = "NODE_CREATION_IN_PROGRESS"
-        def_entity = self.entity_svc.update_entity(id, def_entity)
+        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(id)
+        curr_entity.entity.status.task_href = self.task_resource.get('href')
+        curr_entity.entity.status.phase = "NODE_CREATION_IN_PROGRESS"
+        self.entity_svc.update_entity(id, curr_entity)
 
         self.context.is_async = True
-        self._create_nodes_async(cluster_id=id, def_entity=def_entity)
-        return def_entity
+        self._create_nodes_async(cluster_id=id, cluster_spec=cluster_spec)
+        return cluster_spec
 
     def delete_nodes(self, **kwargs):
         """Start the delete nodes operation.
@@ -752,23 +753,21 @@ class ClusterService(abstract_broker.AbstractBroker):
     # all parameters following '*args' are required and keyword-only
     @utils.run_async
     def _create_nodes_async(self, cluster_id: str,
-                            def_entity: def_models.DefEntity):
+                            cluster_spec: def_models.DefEntity):
         try:
-            vapp_href = def_entity.externalId
-            cluster_entity = def_entity.entity
-            cluster_id = def_entity.id
+            vapp_href = cluster_spec.externalId
+            cluster_entity = cluster_spec.entity
+            cluster_id = cluster_spec.id
             cluster_name = cluster_entity.metadata.cluster_name
             org_name = cluster_entity.metadata.org_name
             ovdc_name = cluster_entity.metadata.ovdc_name
             num_workers = cluster_entity.spec.workers.count
-            master_storage_profile = cluster_entity.spec.control_plane.storage_profile  # noqa: E501
             worker_storage_profile = cluster_entity.spec.workers.storage_profile  # noqa: E501
             network_name = cluster_entity.spec.settings.network
             template_name = cluster_entity.spec.k8_distribution.template_name
             template_revision = cluster_entity.spec.k8_distribution.template_revision  # noqa: E501
             template = get_template(template_name, template_revision)
             ssh_key = cluster_entity.spec.settings.ssh_key
-            enable_nfs = cluster_entity.spec.settings.enable_nfs
             rollback = cluster_entity.spec.settings.rollback_on_failure
 
             server_config = utils.get_server_runtime_config()
@@ -797,8 +796,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                                   catalog_name=catalog_name,
                                   template=template,
                                   network_name=network_name,
-                                  num_cpu=None,
-                                  memory_in_mb=None,
                                   storage_profile=worker_storage_profile,
                                   ssh_key=ssh_key)
 
@@ -821,7 +818,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Added {num_workers} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
                 self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+                curr_entity: def_models.DefEntity = self.entity_svc.get_entity(id)
+                curr_entity.entity.status.phase = "NODE_CREATION_SUCCESS"
+                curr_entity.entity.spec.workers = cluster_spec.entity.spec.workers
+                self.entity_svc.update_entity(id, curr_entity)
         except cse_exception.NodeCreationError as err:
+            curr_entity: def_models.DefEntity = self.entity_svc.get_entity(id)
+            curr_entity.entity.status.phase = "NODE_CREATION_FAILURE"
+            self.entity_svc.update_entity(id, curr_entity)
             if rollback:
                 msg = f"Error adding nodes to cluster '{cluster_name}' " \
                       f"({cluster_id}). Deleting nodes: {err.node_names} " \
