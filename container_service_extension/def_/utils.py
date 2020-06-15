@@ -51,6 +51,14 @@ MAP_API_VERSION_TO_KEYS = {
 }
 
 
+@unique
+class ClusterEntityKind(Enum):
+    NATIVE = 'native'
+    TKG = 'tkg'
+    TANZU_PLUS = 'tanzu_plus'
+
+
+@unique
 class ClusterEntityFilterKey(Enum):
     """Keys to filter cluster entities in CSE (or) vCD.
 

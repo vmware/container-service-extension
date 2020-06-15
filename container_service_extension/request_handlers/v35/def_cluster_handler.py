@@ -101,7 +101,6 @@ def cluster_resize(req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
 
     :return: Dict
     """
-    raise NotImplementedError
     svc = cluster_svc.ClusterService(security_ctx)
     cluster_id = req_ctx.url_data[RequestKey.CLUSTER_ID]
     cluster_entity_spec = def_models.ClusterEntity(**req_ctx.body)
