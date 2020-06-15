@@ -2,8 +2,10 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from dataclasses import dataclass
 from enum import Enum
 from enum import unique
+
 
 ERROR_DESCRIPTION_KEY = "error description"
 ERROR_MINOR_CODE_KEY = "minor error code"
@@ -93,3 +95,54 @@ class RequestKey(str, Enum):
 
     # keys that are only used internally at server side
     PKS_EXT_HOST = 'pks_ext_host'
+
+
+@unique
+class DefEntityOperation(str, Enum):
+    CREATE = 'CREATE'
+    DELETE = 'DELETE'
+    UPDATE = 'UPDATE'
+    UPGRADE = 'UPGRADE'
+    UNKNOWN = 'UNKNOWN'
+
+
+@unique
+class DefEntityOperationStatus(str, Enum):
+    IN_PROGRESS = 'IN_PROGRESS'
+    SUCCEEDED = 'SUCCEEDED'
+    FAILED = 'FAILED'
+    UNKNOWN = 'UNKNOWN'
+
+
+@dataclass
+class DefEntityPhase:
+    operation: DefEntityOperationStatus
+    status: DefEntityOperationStatus
+
+    def __str__(self):
+        return f'{self.operation}:{self.status}'
+
+    @staticmethod
+    def get_operation(phase: str):
+        if not phase:
+            return DefEntityOperation.UNKNOWN
+        try:
+            return phase.split(':')[0]
+        except Exception:
+            return DefEntityOperation.UNKNOWN
+
+    @staticmethod
+    def get_operation_status(phase: str):
+        if not phase:
+            return DefEntityOperation.UNKNOWN
+        try:
+            return phase.split(':')[1]
+        except Exception:
+            return DefEntityOperationStatus.UNKNOWN
+
+    @staticmethod
+    def is_status_green(phase: str):
+        try:
+            return phase.split(':')[1] == DefEntityOperationStatus.SUCCEEDED
+        except Exception:
+            return False
