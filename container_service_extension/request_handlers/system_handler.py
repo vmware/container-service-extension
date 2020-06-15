@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import container_service_extension.exceptions as e
-import container_service_extension.security_context as ctx
 import container_service_extension.request_handlers.request_utils as req_utils
+import container_service_extension.security_context as ctx
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus

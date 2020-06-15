@@ -14,8 +14,8 @@ import container_service_extension.ovdc_utils as ovdc_utils
 from container_service_extension.pksbroker import PksBroker
 import container_service_extension.pksbroker_manager as pks_broker_manager
 from container_service_extension.pksbroker_manager import create_pks_context_for_all_accounts_in_org  # noqa: E501
-import container_service_extension.security_context as ctx
 import container_service_extension.request_handlers.request_utils as req_utils
+import container_service_extension.security_context as ctx
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import PKS_CLUSTER_DOMAIN_KEY
@@ -28,7 +28,7 @@ import container_service_extension.utils as utils
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.PKS_CLUSTER_LIST)
-def cluster_list(request_data, request_context: ctx.SecurityContext):
+def cluster_list(request_data, security_ctx: ctx.SecurityContext):
     """Request handler for cluster list operation.
 
     All brokers in the org do 'list cluster' operation.

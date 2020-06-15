@@ -5,11 +5,10 @@ from dataclasses import asdict
 
 import container_service_extension.def_.cluster_service as cluster_svc
 import container_service_extension.def_.models as def_models
-import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as cse_exception
+from container_service_extension.request_context import RequestContext
 import container_service_extension.security_context as ctx
 import container_service_extension.server_constants as const
-from container_service_extension.request_context import RequestContext
 from container_service_extension.shared_constants import OperationType
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
@@ -63,7 +62,7 @@ def _get_url_data(method: str, url: str):
                     }
                 if tokens[6] == 'upgrade-plan':
                     return {
-                        _OPERATION_KEY: const.CseOperation.CLUSTER_UPGRADE_PLAN,
+                        _OPERATION_KEY: const.CseOperation.CLUSTER_UPGRADE_PLAN,  # noqa: E501
                         RequestKey.CLUSTER_ID: tokens[5]
                     }
             raise cse_exception.MethodNotAllowedRequestError()
@@ -160,7 +159,8 @@ def cluster_config(req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_UPGRADE_PLAN)  # noqa: E501
-def cluster_upgrade_plan(request_data, req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
+def cluster_upgrade_plan(request_data, req_ctx: RequestContext,
+                         security_ctx: ctx.SecurityContext):
     """Request handler for cluster upgrade-plan operation.
 
     data validation handled in broker
@@ -173,7 +173,8 @@ def cluster_upgrade_plan(request_data, req_ctx: RequestContext, security_ctx: ct
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_UPGRADE)
-def cluster_upgrade(request_data, req_ctx: RequestContext, security_ctx: ctx.SecurityContext):
+def cluster_upgrade(request_data, req_ctx: RequestContext,
+                    security_ctx: ctx.SecurityContext):
     """Request handler for cluster upgrade operation.
 
     data validation handled in broker
