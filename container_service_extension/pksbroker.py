@@ -43,7 +43,7 @@ from container_service_extension.pksclient.rest import ApiException
 from container_service_extension.pyvcloud_utils import \
     get_org_name_from_ovdc_id
 import container_service_extension.request_handlers.request_utils as req_utils
-import container_service_extension.security_context as ctx
+import container_service_extension.operation_context as ctx
 from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
@@ -79,7 +79,7 @@ class PksBroker(AbstractBroker):
 
     VERSION_V1 = 'v1'
 
-    def __init__(self, pks_ctx, security_ctx: ctx.SecurityContext):
+    def __init__(self, pks_ctx, op_ctx: ctx.OperationContext):
         """Initialize PKS broker.
 
         :param dict pks_ctx: A dictionary with which should atleast have the
@@ -88,9 +88,9 @@ class PksBroker(AbstractBroker):
             keys. Currently all callers of this method is using ovdc cache
             (subject to change) to initialize PKS broker.
         """
-        self.context: ctx.SecurityContext = None
+        self.context: ctx.OperationContext = None
         # populates above attributes
-        super().__init__(security_ctx)
+        super().__init__(op_ctx)
 
         if not pks_ctx:
             raise ValueError(

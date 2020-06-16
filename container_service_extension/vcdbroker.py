@@ -26,7 +26,7 @@ import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.request_handlers.request_utils as req_utils
-import container_service_extension.security_context as ctx
+import container_service_extension.operation_context as ctx
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_NAME # noqa: E501
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
@@ -48,10 +48,10 @@ import container_service_extension.vsphere_utils as vs_utils
 class VcdBroker(abstract_broker.AbstractBroker):
     """Handles cluster operations for 'native' k8s provider."""
 
-    def __init__(self, security_ctx: ctx.SecurityContext):
-        self.context: ctx.SecurityContext = None
+    def __init__(self, op_ctx: ctx.OperationContext):
+        self.context: ctx.OperationContext = None
         # populates above attributes
-        super().__init__(security_ctx)
+        super().__init__(op_ctx)
 
         self.task = None
         self.task_resource = None

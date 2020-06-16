@@ -27,7 +27,7 @@ import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.request_handlers.request_utils as req_utils
-import container_service_extension.security_context as ctx
+import container_service_extension.operation_context as ctx
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import KwargKey
 from container_service_extension.server_constants import LocalTemplateKey
@@ -46,17 +46,17 @@ import container_service_extension.vsphere_utils as vs_utils
 class ClusterService(abstract_broker.AbstractBroker):
     """Handles cluster operations for native DEF based clusters."""
 
-    def __init__(self, security_ctx: ctx.SecurityContext):
+    def __init__(self, op_ctx: ctx.OperationContext):
         # TODO(DEF) Once all the methods are modified to use defined entities,
         #  the param SecurityContext needs to be replaced by cloudapiclient.
-        self.context: ctx.SecurityContext = None
+        self.context: ctx.OperationContext = None
         # populates above attributes
-        super().__init__(security_ctx)
+        super().__init__(op_ctx)
 
         self.task = None
         self.task_resource = None
         self.entity_svc = def_entity_svc.DefEntityService(
-            security_ctx.cloudapi_client)
+            op_ctx.cloudapi_client)
 
     def get_cluster_info(self, cluster_id: str) -> def_models.DefEntity:
         """Get corresponding defined entity of the native cluster."""

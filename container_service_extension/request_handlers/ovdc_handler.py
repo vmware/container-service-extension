@@ -14,7 +14,7 @@ import container_service_extension.ovdc_utils as ovdc_utils
 import container_service_extension.pksbroker as pksbroker
 import container_service_extension.pksbroker_manager as pksbroker_manager
 import container_service_extension.request_handlers.request_utils as req_utils
-import container_service_extension.security_context as ctx
+import container_service_extension.operation_context as ctx
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.shared_constants import ComputePolicyAction
@@ -29,7 +29,7 @@ import container_service_extension.utils as utils
 SYSTEM_DEFAULT_COMPUTE_POLICY_NAME = "System Default"
 
 
-def ovdc_update(request_data, security_ctx: ctx.SecurityContext):
+def ovdc_update(request_data, op_ctx: ctx.OperationContext):
     """Request handler for ovdc enable, disable operations.
 
     Required data: org_name, ovdc_name, k8s_provider
@@ -70,7 +70,7 @@ def ovdc_update(request_data, security_ctx: ctx.SecurityContext):
 
             # Check if target ovdc is not already enabled for other non PKS k8 providers # noqa: E501
             ovdc_metadata = ovdc_utils.get_ovdc_k8s_provider_metadata(
-                security_ctx.sysadmin_client,
+                op_ctx.sysadmin_client,
                 ovdc_id=validated_data[RequestKey.OVDC_ID])
             ovdc_k8_provider = ovdc_metadata.get(K8S_PROVIDER_KEY)
             if ovdc_k8_provider != K8sProvider.NONE and \
@@ -78,18 +78,18 @@ def ovdc_update(request_data, security_ctx: ctx.SecurityContext):
                 raise e.CseServerError("Ovdc already enabled for different K8 provider")  # noqa: E501
 
             k8s_provider_info = ovdc_utils.construct_k8s_metadata_from_pks_cache(  # noqa: E501
-                security_ctx.sysadmin_client,
+                op_ctx.sysadmin_client,
                 ovdc_id=validated_data[RequestKey.OVDC_ID],
                 org_name=validated_data[RequestKey.ORG_NAME],
                 pks_plans=validated_data[RequestKey.PKS_PLAN_NAME],
                 pks_cluster_domain=validated_data[RequestKey.PKS_CLUSTER_DOMAIN],  # noqa: E501
                 k8s_provider=k8s_provider)
             ovdc_utils.create_pks_compute_profile(validated_data,
-                                                  security_ctx,
+                                                  op_ctx,
                                                   k8s_provider_info)
 
         task = ovdc_utils.update_ovdc_k8s_provider_metadata(
-            security_ctx.sysadmin_client,
+            op_ctx.sysadmin_client,
             validated_data[RequestKey.OVDC_ID],
             k8s_provider_data=k8s_provider_info,
             k8s_provider=k8s_provider)
@@ -105,7 +105,7 @@ def ovdc_update(request_data, security_ctx: ctx.SecurityContext):
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_INFO)
-def ovdc_info(request_data, security_ctx: ctx.SecurityContext):
+def ovdc_info(request_data, op_ctx: ctx.OperationContext):
     """Request handler for ovdc info operation.
 
     Required data: org_name, ovdc_name
@@ -123,12 +123,12 @@ def ovdc_info(request_data, security_ctx: ctx.SecurityContext):
                                cse_params=cse_params)
 
     return ovdc_utils.get_ovdc_k8s_provider_metadata(
-        security_ctx.sysadmin_client,
+        op_ctx.sysadmin_client,
         ovdc_id=request_data[RequestKey.OVDC_ID])
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_LIST)
-def ovdc_list(request_data, security_ctx: ctx.SecurityContext):
+def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     """Request handler for ovdc list operation.
 
     :return: List of dictionaries with org VDC k8s provider metadata.
@@ -146,7 +146,7 @@ def ovdc_list(request_data, security_ctx: ctx.SecurityContext):
     record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
                                cse_params=cse_params)
 
-    if list_pks_plans and not security_ctx.client.is_sysadmin():
+    if list_pks_plans and not op_ctx.client.is_sysadmin():
         raise e.UnauthorizedRequestError(
             'Operation denied. Enterprise PKS plans visible only '
             'to System Administrators.')
@@ -155,19 +155,19 @@ def ovdc_list(request_data, security_ctx: ctx.SecurityContext):
     # usage of sysadmin client along with a potentially non-sysadmin client
     # means that the function signature require both tenant client and
     # sysadmin client, which is very awkward
-    if security_ctx.client.is_sysadmin():
-        org_resource_list = security_ctx.client.get_org_list()
+    if op_ctx.client.is_sysadmin():
+        org_resource_list = op_ctx.client.get_org_list()
     else:
-        org_resource_list = list(security_ctx.client.get_org())
+        org_resource_list = list(op_ctx.client.get_org())
     ovdcs = []
     for org_resource in org_resource_list:
-        org = vcd_org.Org(security_ctx.client, resource=org_resource)
+        org = vcd_org.Org(op_ctx.client, resource=org_resource)
         for vdc_sparse in org.list_vdcs():
             ovdc_name = vdc_sparse['name']
             org_name = org.get_name()
 
             k8s_metadata = ovdc_utils.get_ovdc_k8s_provider_metadata(
-                security_ctx.sysadmin_client,
+                op_ctx.sysadmin_client,
                 ovdc_name=ovdc_name,
                 org_name=org_name)
             k8s_provider = k8s_metadata[K8S_PROVIDER_KEY]
@@ -182,7 +182,7 @@ def ovdc_list(request_data, security_ctx: ctx.SecurityContext):
                 pks_server = ''
                 if k8s_provider == K8sProvider.PKS:
                     # vc name for vdc can only be found using typed query
-                    q = security_ctx.client.get_typed_query(
+                    q = op_ctx.client.get_typed_query(
                         vcd_client.ResourceType.ADMIN_ORG_VDC.value,
                         query_result_format=vcd_client.QueryResultFormat.RECORDS, # noqa: E501
                         qfilter=f"name=={ovdc_name};orgName=={org_name}")
@@ -198,13 +198,13 @@ def ovdc_list(request_data, security_ctx: ctx.SecurityContext):
                         break
 
                     vc_to_pks_plans_map = {}
-                    pks_contexts = pksbroker_manager.create_pks_context_for_all_accounts_in_org(security_ctx)  # noqa: E501
+                    pks_contexts = pksbroker_manager.create_pks_context_for_all_accounts_in_org(op_ctx)  # noqa: E501
 
                     for pks_context in pks_contexts:
                         if pks_context['vc'] in vc_to_pks_plans_map:
                             continue
                         pks_broker = pksbroker.PksBroker(pks_context,
-                                                         security_ctx)
+                                                         op_ctx)
                         plans = pks_broker.list_plans()
                         plan_names = [plan.get('name') for plan in plans]
                         vc_to_pks_plans_map[pks_context['vc']] = \
@@ -226,7 +226,7 @@ def ovdc_list(request_data, security_ctx: ctx.SecurityContext):
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_COMPUTE_POLICY_LIST)  # noqa: E501
 def ovdc_compute_policy_list(request_data,
-                             security_ctx: ctx.SecurityContext):
+                             op_ctx: ctx.OperationContext):
     """Request handler for ovdc compute-policy list operation.
 
     Required data: ovdc_id
@@ -240,7 +240,7 @@ def ovdc_compute_policy_list(request_data,
 
     config = utils.get_server_runtime_config()
     cpm = compute_policy_manager.ComputePolicyManager(
-        security_ctx.sysadmin_client,
+        op_ctx.sysadmin_client,
         log_wire=utils.str_to_bool(config['service'].get('log_wire')))
     compute_policies = []
     for cp in cpm.list_compute_policies_on_vdc(request_data[RequestKey.OVDC_ID]): # noqa: E501
@@ -249,7 +249,7 @@ def ovdc_compute_policy_list(request_data,
 
 
 def ovdc_compute_policy_update(request_data,
-                               security_ctx: ctx.SecurityContext):
+                               op_ctx: ctx.OperationContext):
     """Request handler for ovdc compute-policy update operation.
 
     Required data: ovdc_id, compute_policy_action, compute_policy_names
@@ -274,7 +274,7 @@ def ovdc_compute_policy_update(request_data,
     try:
         config = utils.get_server_runtime_config()
         cpm = compute_policy_manager.ComputePolicyManager(
-            security_ctx.sysadmin_client,
+            op_ctx.sysadmin_client,
             log_wire=utils.str_to_bool(config['service'].get('log_wire'))) # noqa: E501
         cp_href = None
         cp_id = None
@@ -303,10 +303,10 @@ def ovdc_compute_policy_update(request_data,
 
         if action == ComputePolicyAction.REMOVE:
             # TODO: fix remove_compute_policy by implementing a proper way
-            # for calling async methods without having to pass security_ctx
+            # for calling async methods without having to pass op_ctx
             # outside handlers.
             task_href = cpm.remove_vdc_compute_policy_from_vdc(
-                security_ctx,
+                op_ctx,
                 ovdc_id,
                 cp_href,
                 remove_compute_policy_from_vms=remove_compute_policy_from_vms)

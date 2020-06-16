@@ -6,13 +6,13 @@ from pyvcloud.vcd.org import Org
 
 import container_service_extension.ovdc_utils as ovdc_utils
 from container_service_extension.pksbroker import PksBroker
-import container_service_extension.security_context as ctx
+import container_service_extension.operation_context as ctx
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 import container_service_extension.utils as utils
 
 
-def list_clusters(request_data, request_context: ctx.SecurityContext):
+def list_clusters(request_data, request_context: ctx.OperationContext):
     request_data['is_admin_request'] = True
     pks_clusters = []
     pks_contexts = create_pks_context_for_all_accounts_in_org(request_context)
@@ -23,7 +23,7 @@ def list_clusters(request_data, request_context: ctx.SecurityContext):
     return pks_clusters
 
 
-def create_pks_context_for_all_accounts_in_org(request_context: ctx.SecurityContext): # noqa: E501
+def create_pks_context_for_all_accounts_in_org(request_context: ctx.OperationContext): # noqa: E501
     """Create PKS context for accounts in a given Org.
 
     If user is Sysadmin

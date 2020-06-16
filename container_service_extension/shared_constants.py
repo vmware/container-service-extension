@@ -64,6 +64,8 @@ class RequestKey(str, Enum):
     OVDC_NAME = 'ovdc_name'
 
     # keys related to cluster requests
+    V35_CLUSTER_SPEC = 'cluster_spec'
+    V35_CLUSTER_FILTERS = 'cluster_filters'
     CLUSTER_NAME = 'cluster_name'
     CLUSTER_ID = 'cluster_id'
     MB_MEMORY = 'mb_memory'
