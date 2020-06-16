@@ -34,7 +34,6 @@ import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.remote_template_manager import \
     RemoteTemplateManager
 import container_service_extension.server_constants as server_constants
-import container_service_extension.service as service
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
 from container_service_extension.telemetry.constants import PayloadKey
@@ -826,10 +825,12 @@ def _install_template(client, remote_template_manager, template, org_name,
     if len(missing_keys) > 0:
         raise ValueError(f"Invalid template data. Missing keys: {missing_keys}") # noqa: E501
 
-    temp_vm_name = \
-        f"{template[server_constants.RemoteTemplateKey.OS].replace('.','')}-k8s" \
-        f"{template[server_constants.RemoteTemplateKey.KUBERNETES_VERSION].replace('.', '')}" \
-        f"-{template[server_constants.RemoteTemplateKey.CNI]}{template[server_constants.RemoteTemplateKey.CNI_VERSION].replace('.','')}-vm" # noqa: E501
+    temp_vm_name = (
+        f"{template[server_constants.RemoteTemplateKey.OS].replace('.','')}-"
+        f"k8s{template[server_constants.RemoteTemplateKey.KUBERNETES_VERSION].replace('.', '')}-" # noqa: E501
+        f"{template[server_constants.RemoteTemplateKey.CNI]}"
+        f"{template[server_constants.RemoteTemplateKey.CNI_VERSION].replace('.','')}-vm" # noqa: E501
+    )
     build_params = {
         templateBuildKey.TEMPLATE_NAME: template[server_constants.RemoteTemplateKey.NAME], # noqa: E501
         templateBuildKey.TEMPLATE_REVISION: template[server_constants.RemoteTemplateKey.REVISION], # noqa: E501
