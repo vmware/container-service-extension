@@ -642,6 +642,16 @@ def _register_def_schema(client: Client,
             pass
 
 
+def deregister_cse(client, msg_update_callback=utils.NullPrinter(),
+                   logger=NULL_LOGGER):
+    """Deregister CSE from VCD."""
+    ext = APIExtension(client)
+    ext.delete_extension('cse', 'cse')
+    msg = "Successfully deregistered CSE from VCD"
+    msg_update_callback.general(msg)
+    logger.info(msg)
+
+
 def _register_cse(client, routing_key, exchange, target_vcd_api_version,
                   msg_update_callback=utils.NullPrinter()):
     """Register or update CSE on vCD.
@@ -674,20 +684,24 @@ def _register_cse(client, routing_key, exchange, target_vcd_api_version,
     description = f"cse-{cse_version},vcd_api-{target_vcd_api_version}"
     msg = None
     try:
-        ext.get_extension_info(server_constants.CSE_SERVICE_NAME,
-                               namespace=server_constants.CSE_SERVICE_NAMESPACE) # noqa: E501
-        ext.update_extension(server_constants.CSE_SERVICE_NAME,
-                             namespace=server_constants.CSE_SERVICE_NAMESPACE,
-                             routing_key=routing_key, exchange=exchange,
-                             description=description)
+        ext.get_extension_info(
+            server_constants.CSE_SERVICE_NAME,
+            namespace=server_constants.CSE_SERVICE_NAMESPACE)
+        ext.update_extension(
+            server_constants.CSE_SERVICE_NAME,
+            namespace=server_constants.CSE_SERVICE_NAMESPACE,
+            routing_key=routing_key,
+            exchange=exchange,
+            description=description)
         msg = f"Updated {server_constants.CSE_SERVICE_NAME} API Extension in vCD" # noqa: E501
     except MissingRecordException:
-        ext.add_extension(server_constants.CSE_SERVICE_NAME,
-                          server_constants.CSE_SERVICE_NAMESPACE,
-                          routing_key,
-                          exchange,
-                          patterns,
-                          description=description)
+        ext.add_extension(
+            server_constants.CSE_SERVICE_NAME,
+            server_constants.CSE_SERVICE_NAMESPACE,
+            routing_key,
+            exchange,
+            patterns,
+            description=description)
         msg = f"Registered {server_constants.CSE_SERVICE_NAME} as an API extension in vCD" # noqa: E501
 
     msg_update_callback.general(msg)
