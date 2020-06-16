@@ -51,7 +51,7 @@ class DefEntityService():
 
         :param dict filters: Key-value pairs representing filter options
         :return: Generator of defined entities
-        :rtype: Generator[DefEntity]
+        :rtype: Generator[DefEntity, None, None]
         """
         filter_string = None
         if filters:
@@ -86,7 +86,7 @@ class DefEntityService():
         :param str version: version of the entity type
         :param dict filters: Key-value pairs representing filter options
         :return: List of entities of that entity type
-        :rtype: List[DefEntity]
+        :rtype: Generator[DefEntity, None, None]
         """
         filter_string = None
         if filters:
@@ -118,7 +118,7 @@ class DefEntityService():
         :param str nss: nss of the interface
         :param str version: version of the interface
         :return: Generator of entities of that interface type
-        :rtype: Generator[DefEntity]
+        :rtype: Generator[DefEntity, None, None]
         """
         # TODO Yet to be verified. Waiting for the build from Extensibility
         #  team.
