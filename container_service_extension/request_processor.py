@@ -161,6 +161,7 @@ def process_request(body):
     #  request_processor.py construct the final response from it.
     try:
         if is_def_request:
+            # TODO Handle the case when CSE server is disabled.
             body_content, operation = def_handler.invoke(request_ctx,
                                                          security_ctx)
         else:

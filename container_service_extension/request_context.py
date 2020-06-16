@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 @dataclass
 class RequestContext:
-    """Represents HTTP request context."""
+    """Represents slightly processed HTTP request context."""
 
     body: dict
     url: str
