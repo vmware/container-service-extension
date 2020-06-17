@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import container_service_extension.exceptions as e
+import container_service_extension.operation_context as ctx
 import container_service_extension.request_handlers.request_utils as req_utils
-import container_service_extension.security_context as ctx
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
@@ -15,7 +15,7 @@ from container_service_extension.telemetry.telemetry_handler \
 
 
 @record_user_action_telemetry(CseOperation.SYSTEM_INFO)
-def system_info(request_data, security_ctx: ctx.SecurityContext):
+def system_info(request_data, op_ctx: ctx.OperationContext):
     """Request handler for system info operation.
 
     :return: Dictionary with system info data.
@@ -23,10 +23,10 @@ def system_info(request_data, security_ctx: ctx.SecurityContext):
     # TODO: circular dependency with request_processor.py
     import container_service_extension.service as service
     return service.Service().info(
-        get_sysadmin_info=security_ctx.client.is_sysadmin())
+        get_sysadmin_info=op_ctx.client.is_sysadmin())
 
 
-def system_update(request_data, security_ctx: ctx.SecurityContext):
+def system_update(request_data, op_ctx: ctx.OperationContext):
     """Request handler for system update operation.
 
     :return: Dictionary with system update status.
@@ -47,7 +47,7 @@ def system_update(request_data, security_ctx: ctx.SecurityContext):
         cse_operation = CseOperation.SYSTEM_STOP
 
     status = OperationStatus.FAILED
-    if security_ctx.client.is_sysadmin:
+    if op_ctx.client.is_sysadmin:
         # circular dependency between request_processor.py and service.py
         import container_service_extension.service as service
         try:

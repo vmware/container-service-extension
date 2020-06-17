@@ -4,12 +4,12 @@
 
 import abc
 
-import container_service_extension.security_context as ctx
+import container_service_extension.operation_context as ctx
 
 
 class AbstractBroker(abc.ABC):
-    def __init__(self, security_ctx: ctx.SecurityContext):
-        self.context: ctx.SecurityContext = security_ctx
+    def __init__(self, op_ctx: ctx.OperationContext):
+        self.context: ctx.OperationContext = op_ctx
 
     @abc.abstractmethod
     def create_cluster(self, **kwargs):

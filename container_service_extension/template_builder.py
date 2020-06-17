@@ -202,8 +202,6 @@ class TemplateBuilder():
         except EntityNotFoundException:
             pass
 
-        init_script = self._get_init_script()
-
         msg = f"Creating vApp '{self.temp_vapp_name}'"
         self.msg_update_callback.info(msg)
         self.logger.info(msg)
@@ -221,7 +219,7 @@ class TemplateBuilder():
             memory=self.memory,
             cpu=self.cpu,
             password=None,
-            cust_script=init_script,
+            cust_script=None,
             accept_all_eulas=True,
             vm_name=self.temp_vm_name,
             hostname=self.temp_vm_name,
@@ -249,11 +247,13 @@ class TemplateBuilder():
         self.msg_update_callback.general(msg)
         self.logger.info(msg)
 
+        init_script = self._get_init_script()
         cust_script_filepath = ltm.get_script_filepath(
             self.template_name, self.template_revision, ScriptFile.CUST)
         cust_script = read_data_file(
             cust_script_filepath, logger=self.logger,
             msg_update_callback=self.msg_update_callback)
+        script_to_run = init_script + "\n" + cust_script
 
         vs = get_vsphere(self.sys_admin_client, vapp, vm_name,
                          logger=self.logger)
@@ -269,7 +269,7 @@ class TemplateBuilder():
                 vs.get_vm_by_moid(vapp.get_vm_moid(vm_name)),
                 'root',
                 password_auto,
-                cust_script,
+                script_to_run,
                 target_file=None,
                 wait_for_completion=True,
                 wait_time=10,

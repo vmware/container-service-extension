@@ -7,7 +7,7 @@ import container_service_extension.user_context as user_context
 import container_service_extension.utils as utils
 
 
-class SecurityContext:
+class OperationContext:
     def __init__(self, auth_token, is_jwt=True, request_id=None):
         self._auth_token: str = auth_token
         self._is_jwt: bool = is_jwt
@@ -21,15 +21,10 @@ class SecurityContext:
         # User context
         self._user: user_context.UserContext = None
 
-        # TODO SecurityContext doesn't seem right place to hold is_async flag.
-        #  First, is there a need for is_async flag? We can check if a given
-        #  operation is async or not by checking operation.response_code != 202
         # async operations should call end() when they are finished
         self.is_async: bool = False
 
-        # TODO SecurityContext doesn't seem right place to hold request_id.
-        #  This can be moved to RequestContext.
-        # Request ID; may be None if SecurityContext is initialized outside of
+        # Request ID; may be None if OperationContext is initialized outside of
         # request_processor.py
         self.request_id: str = request_id
 

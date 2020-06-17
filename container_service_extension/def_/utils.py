@@ -20,7 +20,7 @@ DEF_ENTITY_TYPE_ID_PREFIX = 'urn:vcloud:type'
 DEF_API_MIN_VERSION = 35.0
 DEF_SCHEMA_DIRECTORY = 'cse_def_schema'
 DEF_ENTITY_TYPE_SCHEMA_FILE = 'schema.json'
-DEF_END_POINT_DISCRIMINATOR = 'internal'
+V35_END_POINT_DISCRIMINATOR = 'internal'
 DEF_ERROR_MESSAGE_KEY = 'message'
 DEF_RESOLVED_STATE = 'RESOLVED'
 
@@ -68,7 +68,7 @@ class ClusterEntityFilterKey(Enum):
     Usage examples:
     ..api/cse/internal/clusters?entity.kind=native
     ..api/cse/internal/clusters?entity.metadata.org_name=org1
-    ..cloudapi/1.0.0/entities?filter=entity.metadata.org_name=org1
+    ..cloudapi/1.0.0/entities?filter=entity.metadata.org_name==org1
     """
 
     # TODO(DEF) CLI can leverage this enum for the filter implementation.
@@ -131,13 +131,3 @@ def generate_entity_type_id(vendor, nss, version):
     :rtype str
     """
     return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{vendor}.{nss}:{version}"
-
-
-def is_def_supported_by_cse_server():
-    """Return true if CSE server is qualified to invoke Defined Entity API.
-
-    :rtype: bool
-    """
-    import container_service_extension.utils as utils
-    api_version = utils.get_server_api_version()
-    return float(api_version) >= DEF_API_MIN_VERSION

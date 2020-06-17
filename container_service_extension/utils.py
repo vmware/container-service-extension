@@ -6,11 +6,14 @@ import functools
 import hashlib
 import os
 import pathlib
+import platform
 import stat
 import sys
 import threading
 
 import click
+import pkg_resources
+from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
 import requests
 
 from container_service_extension.logger import NULL_LOGGER
@@ -59,6 +62,16 @@ class NullPrinter():
 
     def error(self, msg):
         pass
+
+
+def get_cse_info():
+    return {
+        'product': 'CSE',
+        'description': 'Container Service Extension for VMware vCloud '
+                       'Director',
+        'version': pkg_resources.require('container-service-extension')[0].version,  # noqa: E501
+        'python': platform.python_version()
+    }
 
 
 def prompt_text(text, color='black', hide_input=False):
@@ -339,3 +352,15 @@ def run_async(func):
         return t
 
     return wrapper
+
+
+def is_v35_supported_by_cse_server():
+    """Return true if CSE server is qualified to invoke Defined Entity API.
+
+    DEF API is introduced in vCD API version 35.0
+
+    :rtype: bool
+    """
+    import container_service_extension.utils as utils
+    api_version = utils.get_server_api_version()
+    return float(api_version) >= float(vCDApiVersion.VERSION_35.value)
