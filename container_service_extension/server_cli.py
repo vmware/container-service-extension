@@ -14,8 +14,7 @@ from zipfile import ZipFile
 
 import click
 import cryptography
-from pyvcloud.vcd.client import BasicLoginCredentials
-from pyvcloud.vcd.client import Client
+import pyvcloud.vcd.client as vcd_client
 from pyvcloud.vcd.utils import metadata_to_dict
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
@@ -26,12 +25,11 @@ import yaml
 
 from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.config_validator import get_validated_config
-from container_service_extension.configure_cse import check_cse_installation
-from container_service_extension.configure_cse import install_cse
-from container_service_extension.configure_cse import install_template
+import container_service_extension.configure_cse as configure_cse
 from container_service_extension.encryption_engine import decrypt_file
 from container_service_extension.encryption_engine import encrypt_file
 from container_service_extension.encryption_engine import get_decrypted_file_contents # noqa: E501
+import container_service_extension.exceptions as e
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_CLI_LOGGER
@@ -45,7 +43,7 @@ from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import RemoteTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
-from container_service_extension.service import Service
+import container_service_extension.service as cse_service
 from container_service_extension.shared_constants import RequestMethod
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
@@ -56,6 +54,7 @@ from container_service_extension.telemetry.telemetry_handler import \
     record_user_action_details
 from container_service_extension.telemetry.telemetry_utils \
     import store_telemetry_settings
+import container_service_extension.utils as utils
 from container_service_extension.utils import check_python_version
 from container_service_extension.utils import ConsoleMessagePrinter
 from container_service_extension.utils import NullPrinter
@@ -289,11 +288,11 @@ def uiplugin(ctx):
 def version(ctx):
     """Display CSE version."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    ver_obj = Service.version()
-    ver_str = '%s, %s, version %s' % (ver_obj['product'],
-                                      ver_obj['description'],
-                                      ver_obj['version'])
-    stdout(ver_obj, ctx, ver_str)
+    cse_info = utils.get_cse_info()
+    ver_str = '%s, %s, version %s' % (cse_info['product'],
+                                      cse_info['description'],
+                                      cse_info['version'])
+    stdout(cse_info, ctx, ver_str)
 
 
 @cli.command(short_help='Generate sample CSE/PKS configuration')
@@ -374,7 +373,7 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
 
         if check_install:
             try:
-                check_cse_installation(
+                configure_cse.check_cse_installation(
                     config_dict, msg_update_callback=console_message_printer)
             except Exception as err:
                 msg = f"Error : {err}\nCSE installation is invalid"
@@ -564,14 +563,15 @@ def install(ctx, config_file_path, pks_config_file_path,
 
     try:
         try:
-            install_cse(config_file_name=config_file_path,
-                        pks_config_file_name=pks_config_file_path,
-                        skip_template_creation=skip_template_creation,
-                        force_update=force_update, ssh_key=ssh_key,
-                        retain_temp_vapp=retain_temp_vapp,
-                        skip_config_decryption=skip_config_decryption,
-                        decryption_password=password,
-                        msg_update_callback=console_message_printer)
+            configure_cse.install_cse(
+                config_file_name=config_file_path,
+                pks_config_file_name=pks_config_file_path,
+                skip_template_creation=skip_template_creation,
+                force_update=force_update, ssh_key=ssh_key,
+                retain_temp_vapp=retain_temp_vapp,
+                skip_config_decryption=skip_config_decryption,
+                decryption_password=password,
+                msg_update_callback=console_message_printer)
         except requests.exceptions.SSLError as err:
             raise Exception(f"SSL verification failed: {str(err)}")
         except requests.exceptions.ConnectionError as err:
@@ -635,11 +635,12 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     try:
         try:
             cse_run_complete = False
-            service = Service(config_file_path,
-                              pks_config_file=pks_config_file_path,
-                              should_check_config=not skip_check,
-                              skip_config_decryption=skip_config_decryption,
-                              decryption_password=password)
+            service = cse_service.Service(
+                config_file_path,
+                pks_config_file=pks_config_file_path,
+                should_check_config=not skip_check,
+                skip_config_decryption=skip_config_decryption,
+                decryption_password=password)
             service.run(msg_update_callback=console_message_printer)
             cse_run_complete = True
         except requests.exceptions.SSLError as err:
@@ -670,6 +671,123 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
             # block the process to let telemetry handler to finish posting
             # data to VAC. HACK!!!
             time.sleep(3)
+
+@cli.command('upgrade',
+             short_help="Upgrade existing CSE 2.6.0 entities")
+@click.pass_context
+@click.option(
+    '-c',
+    '--config',
+    'config_file_path',
+    default='config.yaml',
+    metavar='CONFIG_FILE_PATH',
+    type=click.Path(exists=True),
+    envvar='CSE_CONFIG',
+    required=True,
+    help="(Required) Filepath to CSE config file")
+@click.option(
+    '-s',
+    '--skip-config-decryption',
+    is_flag=True,
+    help='Skip decryption of CSE config file')
+@click.option(
+    '-t',
+    '--skip-template-creation',
+    'skip_template_creation',
+    is_flag=True,
+    help='Skips creating CSE k8s template during upgrade')
+@click.option(
+    '-f',
+    '--force-update',
+    is_flag=True,
+    help='Recreate CSE k8s templates on vCD even if they already exist')
+@click.option(
+    '-d',
+    '--retain-temp-vapp',
+    'retain_temp_vapp',
+    is_flag=True,
+    help='Retain the temporary vApp after the template has been captured'
+         ' --ssh-key option is required if this flag is used')
+@click.option(
+    '-k',
+    '--ssh-key',
+    'ssh_key_file',
+    required=False,
+    default=None,
+    type=click.File('r'),
+    help='Filepath of SSH public key to add to vApp template')
+def upgrade(ctx, config_file_path, skip_config_decryption,
+            skip_template_creation, force_update, retain_temp_vapp,
+            ssh_key_file):
+    """Upgrade existing CSE 2.6.0 installation/entities.
+
+    - Update existing Kubernetes cluster representation on VCD
+    - Update existing placement and sizing policies used by CSE
+    - Register defined entities schema to VCD
+    - Install templates from template repository linked in config file
+    - Add CSE / VCD API version info to VCD's extension data for CSE
+    """
+    console_message_printer = ConsoleMessagePrinter()
+    config = _get_config_dict(
+        config_file_path=config_file_path,
+        pks_config_file_path=None,
+        skip_config_decryption=skip_config_decryption,
+        msg_update_callback=console_message_printer,
+        validate=True,
+        log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
+        logger_debug=SERVER_CLI_LOGGER)
+    if not config['vcd']['verify']:
+        SERVER_CLI_LOGGER.warning(
+            "InsecureRequestWarning: Unverified HTTPS request is being made."
+            " Adding certificate verification is strongly advised.")
+        requests.packages.urllib3.disable_warnings()
+    log_wire = str_to_bool(config['service'].get('log_wire'))
+
+    sysadmin_client = None
+    try:
+        sysadmin_client, cloudapi_client = _get_clients_from_config(
+            config,
+            SERVER_CLI_WIRELOG_FILEPATH,
+            log_wire)
+
+        # Don't run upgrade if versions already match
+        try:
+            cse_service.verify_version_compatibility(
+                sysadmin_client, config['vcd']['api_version'])
+            console_message_printer.info('CSE is already up to date.')
+            return
+        except e.VersionCompatibilityError:
+            pass
+
+        # TODO: arbitrary upgrades
+
+        # Update CSE extension data on VCD
+        configure_cse.deregister_cse(
+            sysadmin_client,
+            msg_update_callback=console_message_printer,
+            logger=SERVER_CLI_LOGGER)
+        configure_cse._register_cse(
+            sysadmin_client,
+            config['amqp']['routing_key'],
+            config['amqp']['exchange'],
+            config['vcd']['api_version'],
+            msg_update_callback=console_message_printer)
+
+        # Record telemetry data on successful completion
+        record_user_action(
+            cse_operation=CseOperation.UPGRADE,
+            telemetry_settings=config['service']['telemetry'])
+    except Exception as err:
+        SERVER_CLI_LOGGER.error(str(err))
+        console_message_printer.error(str(err))
+        # Record telemetry data on failed cluster convert
+        record_user_action(cse_operation=CseOperation.UPGRADE,
+                           status=OperationStatus.FAILED,
+                           telemetry_settings=config['service']['telemetry'])
+        sys.exit(1)
+    finally:
+        if sysadmin_client:
+            sysadmin_client.logout()
 
 
 @cli.command('convert-cluster',
@@ -1253,7 +1371,7 @@ def install_cse_template(ctx, template_name, template_revision,
 
     try:
         try:
-            install_template(
+            configure_cse.install_template(
                 template_name=template_name,
                 template_revision=template_revision,
                 config_file_name=config_file_path,
@@ -1631,26 +1749,28 @@ def _get_config_dict(config_file_path,
 
 
 def _get_clients_from_config(config, log_wire_file, log_wire):
-    client = Client(config['vcd']['host'],
-                    api_version=config['vcd']['api_version'],
-                    verify_ssl_certs=config['vcd']['verify'],
-                    log_file=log_wire_file,
-                    log_requests=log_wire,
-                    log_headers=log_wire,
-                    log_bodies=log_wire)
-    credentials = BasicLoginCredentials(config['vcd']['username'],
-                                        SYSTEM_ORG_NAME,
-                                        config['vcd']['password'])
+    client = vcd_client.Client(
+        config['vcd']['host'],
+        api_version=config['vcd']['api_version'],
+        verify_ssl_certs=config['vcd']['verify'],
+        log_file=log_wire_file,
+        log_requests=log_wire,
+        log_headers=log_wire,
+        log_bodies=log_wire)
+    credentials = vcd_client.BasicLoginCredentials(
+        config['vcd']['username'],
+        SYSTEM_ORG_NAME,
+        config['vcd']['password'])
     client.set_credentials(credentials)
 
     logger_wire = NULL_LOGGER
     if log_wire:
         logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
 
-    cloudapi_client = \
-        vcd_utils.get_cloudapi_client_from_vcd_client(client,
-                                                      SERVER_CLI_LOGGER,
-                                                      logger_wire)
+    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
+        client,
+        SERVER_CLI_LOGGER,
+        logger_wire)
 
     return (client, cloudapi_client)
 

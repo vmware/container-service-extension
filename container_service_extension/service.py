@@ -4,7 +4,7 @@
 
 from enum import Enum
 from enum import unique
-import platform
+import re
 import signal
 import sys
 import threading
@@ -13,17 +13,19 @@ import time
 import traceback
 
 import click
-import pkg_resources
+import lxml
+import pyvcloud.vcd.api_extension as api_extension
 from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
+import semantic_version
 
 import container_service_extension.compute_policy_manager \
     as compute_policy_manager
 from container_service_extension.config_validator import get_validated_config
-from container_service_extension.configure_cse import check_cse_installation
+import container_service_extension.configure_cse as configure_cse
 from container_service_extension.consumer import MessageConsumer
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.schema_service as def_schema_svc
@@ -34,6 +36,8 @@ import container_service_extension.local_template_manager as ltm
 import container_service_extension.logger as logger
 from container_service_extension.pks_cache import PksCache
 import container_service_extension.pyvcloud_utils as vcd_utils
+from container_service_extension.server_constants import CSE_SERVICE_NAME
+from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import ServerAction
@@ -71,6 +75,59 @@ def consumer_thread(c):
         click.echo("About to stop consumer_thread.")
         logger.SERVER_LOGGER.error(traceback.format_exc())
         c.stop()
+
+
+def verify_version_compatibility(sysadmin_client: Client,
+                                 target_vcd_api_version: str):
+    ext = api_extension.APIExtension(sysadmin_client)
+    ext_dict = ext.get_extension_info(CSE_SERVICE_NAME,
+                                      namespace=CSE_SERVICE_NAMESPACE)
+    ext_xml = ext.get_extension_xml(ext_dict['id'])
+    xml_str = lxml.etree.tostring(ext_xml).decode('utf-8')
+    try:
+        # using lxml to get this description value is very difficult
+        desc = re.search(r'<Description>(.*)<\/Description>', xml_str).group(1)
+    except Exception:
+        # version data doesn't exist, so CSE <= 2.6.1 was installed
+        raise cse_exception.VersionCompatibilityError(
+            "CSE and VCD API version data not found on VCD. "
+            "Upgrade CSE to update version data.")
+
+    versions = desc.split(',')
+    version_error_msg = ''
+
+    # convert 'cse-2.6.0' to '2.6.0'
+    ext_cse_version = versions[0].split('-')[1]
+    ext_cse_version = semantic_version.Version(ext_cse_version)
+    # convert '2.6.0.0b2.dev5' to '2.6.0'
+    cse_version = '.'.join(utils.get_cse_info()['version'].split('.')[:3])
+    cse_version = semantic_version.Version(cse_version)
+    if cse_version > ext_cse_version:
+        version_error_msg += \
+            f"CSE Server version ({cse_version}) is higher than what was " \
+            f"previously registered with VCD ({ext_cse_version}). " \
+            f"Upgrade CSE to update CSE version on VCD."
+    if cse_version < ext_cse_version:
+        version_error_msg += \
+            f"CSE Server version ({cse_version}) cannot be lower than what " \
+            f"was previously registered with VCD ({ext_cse_version})."
+
+    # convert 'vcd_api-33.0' to '33.0'
+    ext_vcd_api_version = versions[1].split('-')[1]
+    if target_vcd_api_version > ext_vcd_api_version:
+        version_error_msg += \
+            f"Target VCD API version ({target_vcd_api_version}) is higher " \
+            f"than what was previously registered by CSE " \
+            f"({ext_vcd_api_version}). Upgrade CSE to update " \
+            f"registered VCD API version."
+    if target_vcd_api_version < ext_vcd_api_version:
+        version_error_msg += \
+            f"Target VCD API version ({target_vcd_api_version}) cannot be " \
+            f"lower than what was previously registered by " \
+            f"CSE ({ext_vcd_api_version})."
+
+    if version_error_msg:
+        raise cse_exception.VersionCompatibilityError(version_error_msg)
 
 
 @unique
@@ -123,7 +180,7 @@ class Service(object, metaclass=Singleton):
         return self._state == ServerState.RUNNING
 
     def info(self, get_sysadmin_info=False):
-        result = Service.version()
+        result = utils.get_cse_info()
         if get_sysadmin_info:
             result['consumer_threads'] = len(self.threads)
             result['all_threads'] = threading.activeCount()
@@ -139,16 +196,6 @@ class Service(object, metaclass=Singleton):
 
     def get_native_cluster_entity_type(self) -> def_models.DefEntityType:
         return self._nativeEntityType
-
-    @classmethod
-    def version(cls):
-        return {
-            'product': 'CSE',
-            'description': 'Container Service Extension for VMware vCloud '
-                           'Director',
-            'version': pkg_resources.require('container-service-extension')[0].version,  # noqa: E501
-            'python': platform.python_version()
-        }
 
     def update_status(self, server_action: ServerAction):
         def graceful_shutdown():
@@ -203,6 +250,18 @@ class Service(object, metaclass=Singleton):
             logger_debug=logger.SERVER_LOGGER,
             msg_update_callback=msg_update_callback)
 
+        sysadmin_client = None
+        try:
+            sysadmin_client = vcd_utils.get_sys_admin_client()
+            verify_version_compatibility(sysadmin_client,
+                                         self.config['vcd']['api_version'])
+        except Exception as err:
+            logger.SERVER_LOGGER.info(err)
+            raise
+        finally:
+            if sysadmin_client:
+                sysadmin_client.logout()
+
         populate_vsphere_list(self.config['vcs'])
 
         # Load def entity-type and interface
@@ -231,8 +290,9 @@ class Service(object, metaclass=Singleton):
             logger.SERVER_LOGGER.debug(msg)
 
         if self.should_check_config:
-            check_cse_installation(
-                self.config, msg_update_callback=msg_update_callback)
+            configure_cse.check_cse_installation(
+                self.config,
+                msg_update_callback=msg_update_callback)
 
         if self.config.get('pks_config'):
             pks_config = self.config.get('pks_config')

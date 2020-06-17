@@ -6,11 +6,13 @@ import functools
 import hashlib
 import os
 import pathlib
+import platform
 import stat
 import sys
 import threading
 
 import click
+import pkg_resources
 from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
 import requests
 
@@ -61,6 +63,16 @@ class NullPrinter():
 
     def error(self, msg):
         pass
+
+
+def get_cse_info():
+    return {
+        'product': 'CSE',
+        'description': 'Container Service Extension for VMware vCloud '
+                       'Director',
+        'version': pkg_resources.require('container-service-extension')[0].version,  # noqa: E501
+        'python': platform.python_version()
+    }
 
 
 def prompt_text(text, color='black', hide_input=False):
