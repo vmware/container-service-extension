@@ -10,11 +10,11 @@ import pyvcloud.vcd.utils as pyvcd_utils
 
 import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
 import container_service_extension.exceptions as e
+import container_service_extension.operation_context as ctx
 import container_service_extension.ovdc_utils as ovdc_utils
 import container_service_extension.pksbroker as pksbroker
 import container_service_extension.pksbroker_manager as pksbroker_manager
 import container_service_extension.request_handlers.request_utils as req_utils
-import container_service_extension.operation_context as ctx
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.shared_constants import ComputePolicyAction

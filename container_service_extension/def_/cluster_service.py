@@ -25,9 +25,9 @@ import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as e
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.request_handlers.request_utils as req_utils
-import container_service_extension.operation_context as ctx
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import KwargKey
 from container_service_extension.server_constants import LocalTemplateKey

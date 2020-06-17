@@ -22,6 +22,7 @@ from container_service_extension.logger import SERVER_PKS_WIRE_LOGGER
 from container_service_extension.nsxt.cluster_network_isolater import \
     ClusterNetworkIsolater
 from container_service_extension.nsxt.nsxt_client import NSXTClient
+import container_service_extension.operation_context as ctx
 from container_service_extension.pks_cache import PKS_COMPUTE_PROFILE_KEY
 from container_service_extension.pksclient.api.cluster_api import ClusterApi
 from container_service_extension.pksclient.api.plans_api import PlansApi
@@ -43,7 +44,6 @@ from container_service_extension.pksclient.rest import ApiException
 from container_service_extension.pyvcloud_utils import \
     get_org_name_from_ovdc_id
 import container_service_extension.request_handlers.request_utils as req_utils
-import container_service_extension.operation_context as ctx
 from container_service_extension.server_constants import \
     CSE_PKS_DEPLOY_RIGHT_NAME
 from container_service_extension.server_constants import K8S_PROVIDER_KEY

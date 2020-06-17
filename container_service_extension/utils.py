@@ -16,7 +16,6 @@ import pkg_resources
 from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
 import requests
 
-from container_service_extension.def_.utils import DEF_API_MIN_VERSION
 from container_service_extension.logger import NULL_LOGGER
 
 # chunk size in bytes for file reading

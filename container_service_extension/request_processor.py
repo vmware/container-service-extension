@@ -8,23 +8,23 @@ import sys
 from urllib.parse import parse_qsl
 
 import container_service_extension.def_.utils as def_utils
-import container_service_extension.utils
 from container_service_extension.exception_handler import handle_exception
 import container_service_extension.exceptions as cse_exception
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+import container_service_extension.operation_context as ctx
 import container_service_extension.request_handlers.native_cluster_handler as native_cluster_handler  # noqa: E501
 import container_service_extension.request_handlers.ovdc_handler as ovdc_handler  # noqa: E501
 import container_service_extension.request_handlers.pks_cluster_handler as pks_cluster_handler  # noqa: E501
 import container_service_extension.request_handlers.system_handler as system_handler  # noqa: E501
 import container_service_extension.request_handlers.template_handler as template_handler  # noqa: E501 E501
 import container_service_extension.request_handlers.v35.def_cluster_handler as v35_cluster_handler # noqa: E501
-import container_service_extension.operation_context as sec_ctx
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import PKS_SERVICE_NAME
 from container_service_extension.shared_constants import OperationType
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
+import container_service_extension.utils
 
 """Process incoming requests
 
@@ -177,9 +177,9 @@ def process_request(body):
             is_jwt_token = True
 
     # create operation context
-    operation_ctx = sec_ctx.OperationContext(tenant_auth_token,
-                                             is_jwt=is_jwt_token,
-                                             request_id=body['id'])
+    operation_ctx = ctx.OperationContext(tenant_auth_token,
+                                         is_jwt=is_jwt_token,
+                                         request_id=body['id'])
 
     try:
         body_content = OPERATION_TO_HANDLER[operation](data, operation_ctx)
@@ -253,6 +253,7 @@ def _get_v35_cluster_url_data(method: str, url: str):
                         RequestKey.CLUSTER_ID: tokens[5]
                     }
             raise cse_exception.MethodNotAllowedRequestError()
+
 
 def _get_url_data(method, url):
     """Parse url and http method to get desired CSE operation and url data.
