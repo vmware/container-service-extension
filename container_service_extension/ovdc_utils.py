@@ -218,14 +218,14 @@ def _construct_pks_compute_profile_name(sysadmin_client: vcd_client.Client,
 
 
 def create_pks_compute_profile(request_data,
-                               request_context: ctx.OperationContext,
+                               op_ctx: ctx.OperationContext,
                                pks_context):
     ovdc_id = request_data.get(RequestKey.OVDC_ID)
     org_name = request_data.get(RequestKey.ORG_NAME)
     ovdc_name = request_data.get(RequestKey.OVDC_NAME)
     # Compute profile creation
     pks_compute_profile_name = _construct_pks_compute_profile_name(
-        request_context.sysadmin_client, ovdc_id)
+        op_ctx.sysadmin_client, ovdc_id)
     pks_compute_profile_description = f"{org_name}--{ovdc_name}--{ovdc_id}"
     pks_az_name = f"az-{ovdc_name}"
     ovdc_rp_name = f"{ovdc_name} ({ovdc_id})"
@@ -241,7 +241,7 @@ def create_pks_compute_profile(request_data,
     LOGGER.debug(f"Creating PKS Compute Profile with name:"
                  f"{pks_compute_profile_name}")
 
-    pksbroker = PksBroker(pks_context, request_context)
+    pksbroker = PksBroker(pks_context, op_ctx)
     try:
         pksbroker.create_compute_profile(**compute_profile_params)
     except e.PksServerError as err:

@@ -637,7 +637,7 @@ class ComputePolicyManager:
 
         Note: The VDC compute policy need not be created by CSE.
 
-        :param op_ctx: request context of remove compute policy
+        :param op_ctx: operation context of remove compute policy
             request
         :param str ovdc_id: id of the vdc to assign the policy
         :param compute_policy_href: policy href to remove
