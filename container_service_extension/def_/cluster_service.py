@@ -48,7 +48,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     def __init__(self, op_ctx: ctx.OperationContext):
         # TODO(DEF) Once all the methods are modified to use defined entities,
-        #  the param SecurityContext needs to be replaced by cloudapiclient.
+        #  the param OperationContext needs to be replaced by cloudapiclient.
         self.context: ctx.OperationContext = None
         # populates above attributes
         super().__init__(op_ctx)

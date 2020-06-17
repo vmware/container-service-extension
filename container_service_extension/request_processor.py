@@ -24,7 +24,7 @@ from container_service_extension.shared_constants import OperationType
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
-import container_service_extension.utils
+import container_service_extension.utils as utils
 
 """Process incoming requests
 
@@ -135,7 +135,7 @@ def process_request(body):
 
     url_data = _get_url_data(body['method'], body['requestUri'])
     operation = url_data[_OPERATION_KEY]
-    is_v35_request = container_service_extension.utils.is_v35_supported_by_cse_server() and _is_v35_endpoint(body['requestUri'])  # noqa: E501
+    is_v35_request = utils.is_v35_supported_by_cse_server() and _is_v35_endpoint(body['requestUri'])  # noqa: E501
     # check if server is disabled
     if operation not in (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE)\
             and not Service().is_running():
@@ -154,11 +154,11 @@ def process_request(body):
             request_data.update(request_body)
         LOGGER.debug(f"request body: {request_data}")
     # update request data dict with query params data
-    query_params = None
     if body['queryString']:
         query_params = dict(parse_qsl(body['queryString']))
         if is_v35_request:
-            request_data[RequestKey.V35_CLUSTER_FILTERS] = query_params
+            request_data[RequestKey.V35_CLUSTER_FILTERS] = query_params.get(
+                RequestKey.V35_CLUSTER_FILTERS, None)
         else:
             request_data.update(query_params)
         LOGGER.debug(f"query parameters: {query_params}")
@@ -273,7 +273,7 @@ def _get_url_data(method, url):
     tokens = url.split('/')
     num_tokens = len(tokens)
 
-    is_v35_request = container_service_extension.utils.is_v35_supported_by_cse_server() and _is_v35_endpoint(url)  # noqa: E501
+    is_v35_request = utils.is_v35_supported_by_cse_server() and _is_v35_endpoint(url)  # noqa: E501
     if is_v35_request:
         return _get_v35_cluster_url_data(method, url)
 

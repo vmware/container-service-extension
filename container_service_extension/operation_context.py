@@ -24,7 +24,7 @@ class OperationContext:
         # async operations should call end() when they are finished
         self.is_async: bool = False
 
-        # Request ID; may be None if SecurityContext is initialized outside of
+        # Request ID; may be None if OperationContext is initialized outside of
         # request_processor.py
         self.request_id: str = request_id
 

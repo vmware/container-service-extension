@@ -22,7 +22,8 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     :rtype: container_service_extension.def_.models.DefEntity
     """
     svc = cluster_svc.ClusterService(op_ctx)
-    cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.V35_CLUSTER_SPEC])
+    cluster_entity_spec = def_models.ClusterEntity(
+        **data[RequestKey.V35_CLUSTER_SPEC])
     return svc.create_cluster(cluster_entity_spec)
 
 
@@ -42,7 +43,8 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     raise NotImplementedError
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
-    cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.V35_CLUSTER_SPEC])
+    cluster_entity_spec = def_models.ClusterEntity(
+        **data[RequestKey.V35_CLUSTER_SPEC])
     return svc.resize_cluster(cluster_id, cluster_entity_spec)
 
 
@@ -182,5 +184,4 @@ def node_info(request_data, op_ctx: ctx.OperationContext):
     raise NotImplementedError
     svc = cluster_svc.ClusterService(op_ctx)
     return svc.get_node_info(data=request_data)
-
 
