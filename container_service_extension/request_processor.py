@@ -8,6 +8,7 @@ import sys
 from urllib.parse import parse_qsl
 
 import container_service_extension.def_.utils as def_utils
+import container_service_extension.utils
 from container_service_extension.exception_handler import handle_exception
 import container_service_extension.exceptions as cse_exception
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
@@ -90,17 +91,17 @@ OPERATION_TO_HANDLER = {
     CseOperation.NODE_DELETE: native_cluster_handler.node_delete,
     CseOperation.NODE_INFO: native_cluster_handler.node_info,
 
-    CseOperation.v35_CLUSTER_CONFIG: v35_cluster_handler.cluster_config,
-    CseOperation.v35_CLUSTER_CREATE: v35_cluster_handler.cluster_create,
-    CseOperation.v35_CLUSTER_DELETE: v35_cluster_handler.cluster_delete,
-    CseOperation.v35_CLUSTER_INFO: v35_cluster_handler.cluster_info,
-    CseOperation.v35_CLUSTER_LIST: v35_cluster_handler.cluster_list,
-    CseOperation.v35_CLUSTER_RESIZE: v35_cluster_handler.cluster_resize,
-    CseOperation.v35_CLUSTER_UPGRADE_PLAN: v35_cluster_handler.cluster_upgrade_plan,  # noqa: E501
-    CseOperation.v35_CLUSTER_UPGRADE: v35_cluster_handler.cluster_upgrade,
-    CseOperation.v35_NODE_CREATE: v35_cluster_handler.node_create,
-    CseOperation.v35_NODE_DELETE: v35_cluster_handler.node_delete,
-    CseOperation.v35_NODE_INFO: v35_cluster_handler.node_info,
+    CseOperation.V35_CLUSTER_CONFIG: v35_cluster_handler.cluster_config,
+    CseOperation.V35_CLUSTER_CREATE: v35_cluster_handler.cluster_create,
+    CseOperation.V35_CLUSTER_DELETE: v35_cluster_handler.cluster_delete,
+    CseOperation.V35_CLUSTER_INFO: v35_cluster_handler.cluster_info,
+    CseOperation.V35_CLUSTER_LIST: v35_cluster_handler.cluster_list,
+    CseOperation.V35_CLUSTER_RESIZE: v35_cluster_handler.cluster_resize,
+    CseOperation.V35_CLUSTER_UPGRADE_PLAN: v35_cluster_handler.cluster_upgrade_plan,  # noqa: E501
+    CseOperation.V35_CLUSTER_UPGRADE: v35_cluster_handler.cluster_upgrade,
+    CseOperation.V35_NODE_CREATE: v35_cluster_handler.node_create,
+    CseOperation.V35_NODE_DELETE: v35_cluster_handler.node_delete,
+    CseOperation.V35_NODE_INFO: v35_cluster_handler.node_info,
 
     CseOperation.OVDC_UPDATE: ovdc_handler.ovdc_update,
     CseOperation.OVDC_INFO: ovdc_handler.ovdc_info,
@@ -122,9 +123,9 @@ OPERATION_TO_HANDLER = {
 _OPERATION_KEY = 'operation'
 
 
-def _is_def_endpoint(url: str):
+def _is_v35_endpoint(url: str):
     tokens = url.split('/')
-    return tokens[3] == def_utils.DEF_END_POINT_DISCRIMINATOR
+    return tokens[3] == def_utils.V35_END_POINT_DISCRIMINATOR
 
 
 @handle_exception
@@ -134,9 +135,9 @@ def process_request(body):
 
     url_data = _get_url_data(body['method'], body['requestUri'])
     operation = url_data[_OPERATION_KEY]
-    is_v35_request = def_utils.is_def_supported_by_cse_server() and _is_def_endpoint(body['requestUri'])  # noqa: E501
+    is_v35_request = container_service_extension.utils.is_v35_supported_by_cse_server() and _is_v35_endpoint(body['requestUri'])  # noqa: E501
     # check if server is disabled
-    if operation not in (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE) \
+    if operation not in (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE)\
             and not Service().is_running():
         raise cse_exception.BadRequestError(
             error_message='CSE service is disabled. '
@@ -177,8 +178,8 @@ def process_request(body):
 
     # create operation context
     operation_ctx = sec_ctx.OperationContext(tenant_auth_token,
-                                            is_jwt=is_jwt_token,
-                                            request_id=body['id'])
+                                             is_jwt=is_jwt_token,
+                                             request_id=body['id'])
 
     try:
         body_content = OPERATION_TO_HANDLER[operation](data, operation_ctx)
@@ -196,7 +197,7 @@ def process_request(body):
     return response
 
 
-def _get_v35_url_data(method: str, url: str):
+def _get_v35_cluster_url_data(method: str, url: str):
     tokens = url.split('/')
     num_tokens = len(tokens)
 
@@ -271,9 +272,9 @@ def _get_url_data(method, url):
     tokens = url.split('/')
     num_tokens = len(tokens)
 
-    is_v35_request = def_utils.is_def_supported_by_cse_server() and _is_def_endpoint(url)  # noqa: E501
+    is_v35_request = container_service_extension.utils.is_v35_supported_by_cse_server() and _is_v35_endpoint(url)  # noqa: E501
     if is_v35_request:
-        return _get_v35_url_data(method, url)
+        return _get_v35_cluster_url_data(method, url)
 
     if num_tokens < 4:
         raise cse_exception.NotFoundRequestError()

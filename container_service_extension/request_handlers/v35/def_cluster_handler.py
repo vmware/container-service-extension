@@ -130,7 +130,7 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     """
     svc = cluster_svc.ClusterService(op_ctx)
     return [asdict(def_entity) for def_entity in
-            svc.list_clusters(data[RequestKey.V35_CLUSTER_FILTERS])]
+            svc.list_clusters(data.get(RequestKey.V35_CLUSTER_FILTERS, None))]
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_CREATE)

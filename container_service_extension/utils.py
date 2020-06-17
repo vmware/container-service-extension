@@ -11,8 +11,10 @@ import sys
 import threading
 
 import click
+from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
 import requests
 
+from container_service_extension.def_.utils import DEF_API_MIN_VERSION
 from container_service_extension.logger import NULL_LOGGER
 
 # chunk size in bytes for file reading
@@ -339,3 +341,15 @@ def run_async(func):
         return t
 
     return wrapper
+
+
+def is_v35_supported_by_cse_server():
+    """Return true if CSE server is qualified to invoke Defined Entity API.
+
+    DEF API is introduced in vCD API version 35.0
+
+    :rtype: bool
+    """
+    import container_service_extension.utils as utils
+    api_version = utils.get_server_api_version()
+    return float(api_version) >= float(vCDApiVersion.VERSION_35.value)
