@@ -149,7 +149,7 @@ def process_request(body):
         raw_body = base64.b64decode(body['body']).decode(sys.getfilesystemencoding())  # noqa: E501
         request_body = json.loads(raw_body)
         if is_v35_request:
-            request_data[RequestKey.V35_CLUSTER_SPEC] = request_body
+            request_data[RequestKey.V35_SPEC] = request_body
         else:
             request_data.update(request_body)
         LOGGER.debug(f"request body: {request_data}")
@@ -157,8 +157,8 @@ def process_request(body):
     if body['queryString']:
         query_params = dict(parse_qsl(body['queryString']))
         if is_v35_request:
-            request_data[RequestKey.V35_CLUSTER_FILTERS] = query_params.get(
-                RequestKey.V35_CLUSTER_FILTERS, None)
+            request_data[RequestKey.V35_QUERY] = query_params.get(
+                RequestKey.V35_QUERY, None)
         else:
             request_data.update(query_params)
         LOGGER.debug(f"query parameters: {query_params}")

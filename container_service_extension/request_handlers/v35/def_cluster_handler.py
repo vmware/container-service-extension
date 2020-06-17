@@ -23,7 +23,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     """
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_entity_spec = def_models.ClusterEntity(
-        **data[RequestKey.V35_CLUSTER_SPEC])
+        **data[RequestKey.V35_SPEC])
     return svc.create_cluster(cluster_entity_spec)
 
 
@@ -44,7 +44,7 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
     cluster_entity_spec = def_models.ClusterEntity(
-        **data[RequestKey.V35_CLUSTER_SPEC])
+        **data[RequestKey.V35_SPEC])
     return svc.resize_cluster(cluster_id, cluster_entity_spec)
 
 
@@ -132,7 +132,7 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     """
     svc = cluster_svc.ClusterService(op_ctx)
     return [asdict(def_entity) for def_entity in
-            svc.list_clusters(data.get(RequestKey.V35_CLUSTER_FILTERS, None))]
+            svc.list_clusters(data.get(RequestKey.V35_QUERY, None))]
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_CREATE)
