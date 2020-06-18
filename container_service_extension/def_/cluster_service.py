@@ -210,8 +210,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             org_name = cluster_entity.metadata.org_name
             ovdc_name = cluster_entity.metadata.ovdc_name
             num_workers = cluster_entity.spec.workers.count
-            master_sizing_class = cluster_entity.spec.control_plane.sizing_class  # noqa: E501
-            worker_sizing_class = cluster_entity.spec.workers.sizing_class
+            master_sizing_class_name = cluster_entity.spec.control_plane.sizing_class  # noqa: E501
+            worker_sizing_class_name = cluster_entity.spec.workers.sizing_class
             master_storage_profile = cluster_entity.spec.control_plane.storage_profile  # noqa: E501
             worker_storage_profile = cluster_entity.spec.workers.storage_profile  # noqa: E501
             network_name = cluster_entity.spec.settings.network
@@ -280,7 +280,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                           network_name=network_name,
                           storage_profile=master_storage_profile,
                           ssh_key=ssh_key,
-                          sizing_class=master_sizing_class)
+                          sizing_class_name=master_sizing_class_name)
             except Exception as err:
                 raise e.MasterNodeCreationError("Error adding master node:",
                                                 str(err))
@@ -312,7 +312,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                           network_name=network_name,
                           storage_profile=worker_storage_profile,
                           ssh_key=ssh_key,
-                          sizing_class=worker_sizing_class)
+                          sizing_class_name=worker_sizing_class_name)
             except Exception as err:
                 raise e.WorkerNodeCreationError("Error creating worker node:",
                                                 str(err))
@@ -830,7 +830,7 @@ class ClusterService(abstract_broker.AbstractBroker):
     def _create_nodes_async(self, *args,
                             cluster_name, cluster_vdc_href, vapp_href,
                             cluster_id, template_name, template_revision,
-                            num_workers, network_name, sizing_class,
+                            num_workers, network_name, sizing_class_name,
                             storage_profile_name, ssh_key, enable_nfs,
                             rollback):
         try:
@@ -863,7 +863,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                   network_name=network_name,
                                   storage_profile=storage_profile_name,
                                   ssh_key=ssh_key,
-                                  sizing_class=sizing_class)
+                                  sizing_class_name=sizing_class_name)
 
             if node_type == NodeType.NFS:
                 msg = f"Created {num_workers} node(s) for cluster " \
@@ -1441,7 +1441,7 @@ def get_template(name=None, revision=None):
 
 def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
               catalog_name, template, network_name, storage_profile=None,
-              ssh_key=None, sizing_class=None):
+              ssh_key=None, sizing_class_name=None):
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
 
     specs = []
@@ -1473,8 +1473,8 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
         cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
                                                           log_wire=utils.str_to_bool(config['service']['log_wire']))  # noqa: E501
         sizing_class_href = None
-        if sizing_class:
-            sizing_class_href = cpm.get_vdc_compute_policy(sizing_class)['href']  # noqa: E501
+        if sizing_class_name:
+            sizing_class_href = cpm.get_vdc_compute_policy(sizing_class_name)['href']  # noqa: E501
         if storage_profile:
             storage_profile = vdc.get_storage_profile(storage_profile)
 
