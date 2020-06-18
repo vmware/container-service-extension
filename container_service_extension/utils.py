@@ -354,7 +354,7 @@ def run_async(func):
     return wrapper
 
 
-def is_cse_server_api_version_gte_35():
+def is_v35_supported_by_cse_server():
     """Return true if CSE server is qualified to invoke Defined Entity API.
 
     DEF API is introduced in vCD API version 35.0

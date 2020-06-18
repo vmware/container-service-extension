@@ -135,7 +135,7 @@ def process_request(body):
 
     url_data = _get_url_data(body['method'], body['requestUri'])
     operation = url_data[_OPERATION_KEY]
-    is_v35_request = utils.is_cse_server_api_version_gte_35() and _is_v35_endpoint(body['requestUri'])  # noqa: E501
+    is_v35_request = utils.is_v35_supported_by_cse_server() and _is_v35_endpoint(body['requestUri'])  # noqa: E501
     # check if server is disabled
     if operation not in (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE)\
             and not Service().is_running():
@@ -204,7 +204,8 @@ def _get_v35_cluster_url_data(method: str, url: str):
 
     :param RequestMethod method: http verb
     :param str url: http url
-    :return:
+
+    :rtype: dict
     """
     tokens = url.split('/')
     num_tokens = len(tokens)
@@ -281,7 +282,7 @@ def _get_url_data(method, url):
     tokens = url.split('/')
     num_tokens = len(tokens)
 
-    is_v35_request = utils.is_cse_server_api_version_gte_35() and _is_v35_endpoint(url)  # noqa: E501
+    is_v35_request = utils.is_v35_supported_by_cse_server() and _is_v35_endpoint(url)  # noqa: E501
     if is_v35_request:
         return _get_v35_cluster_url_data(method, url)
 
