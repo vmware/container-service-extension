@@ -184,4 +184,3 @@ def node_info(request_data, op_ctx: ctx.OperationContext):
     raise NotImplementedError
     svc = cluster_svc.ClusterService(op_ctx)
     return svc.get_node_info(data=request_data)
-
