@@ -66,7 +66,6 @@ class RequestKey(str, Enum):
     # keys related to cluster requests
     CLUSTER_NAME = 'cluster_name'
     MB_MEMORY = 'mb_memory'
-    SIZING_CLASS = 'sizing_class'
     NUM_CPU = 'num_cpu'
     NETWORK_NAME = 'network_name'
     STORAGE_PROFILE_NAME = 'storage_profile_name'
