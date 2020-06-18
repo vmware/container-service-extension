@@ -269,8 +269,8 @@ class Service(object, metaclass=Singleton):
 
         # # Read k8s catalog definition from catalog item metadata and append
         # # the same to to server run-time config
-        # self._load_template_definition_from_catalog(
-        #     msg_update_callback=msg_update_callback)
+        self._load_template_definition_from_catalog(
+            msg_update_callback=msg_update_callback)
 
         if float(self.config['vcd']['api_version']) < float(vCDApiVersion.VERSION_35.value): # noqa: E501
             # Read templates rules from config and update template deinfition

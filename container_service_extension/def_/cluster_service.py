@@ -178,8 +178,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.entity_svc.\
             create_entity(def_utils.get_registered_def_entity_type().id,
                           entity=def_entity)
-        def_entity: def_models.DefEntity = self.entity_svc.get_entity_by_name(
-            name=cluster_name)
+        def_entity: def_models.DefEntity = self.entity_svc.get_native_entity_by_name(name=cluster_name)  # noqa: E501
 
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
