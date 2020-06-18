@@ -5,6 +5,7 @@ import json
 
 import pika
 from pyvcloud.vcd.api_extension import APIExtension
+from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -864,6 +865,12 @@ def _install_template(client, remote_template_manager, template, org_name,
         templateBuildKey.IP_ALLOCATION_MODE: ip_allocation_mode, # noqa: E501
         templateBuildKey.STORAGE_PROFILE: storage_profile
     }
+    if float(client.get_api_version()) >= float(vCDApiVersion.VERSION_35.value): # noqa: E501
+        if not template.get(server_constants.RemoteTemplateKey.KIND) or \
+                template[server_constants.RemoteTemplateKey.KIND] not in server_constants.CLUSTER_PLACEMENT_POLICIES: # noqa: E501
+            raise ValueError(f"Cluster kind is {template.get(server_constants.RemoteTemplateKey.KIND)}" # noqa: E501
+                             f" Expected {server_constants.CLUSTER_PLACEMENT_POLICIES}") # noqa: E501
+        build_params[templateBuildKey.CSE_PLACEMENT_POLICY] = template[server_constants.RemoteTemplateKey.KIND] # noqa: E501
     builder = TemplateBuilder(client, client, build_params, ssh_key=ssh_key,
                               logger=INSTALL_LOGGER,
                               msg_update_callback=msg_update_callback)
