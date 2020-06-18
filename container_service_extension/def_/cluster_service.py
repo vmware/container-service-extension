@@ -19,6 +19,7 @@ import pyvcloud.vcd.vm as vcd_vm
 import semantic_version as semver
 
 import container_service_extension.abstract_broker as abstract_broker
+import container_service_extension.compute_policy_manager as compute_policy_manager  # noqa: E501
 import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.utils as def_utils
@@ -180,8 +181,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.entity_svc.\
             create_entity(def_utils.get_registered_def_entity_type().id,
                           entity=def_entity)
-        def_entity: def_models.DefEntity = self.entity_svc.get_entity_by_name(
-            name=cluster_name)
+        def_entity: def_models.DefEntity = self.entity_svc.get_native_entity_by_name(name=cluster_name)  # noqa: E501
 
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
@@ -196,6 +196,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         def_entity.entity.status.phase = str(DefEntityPhase(DefEntityOperation.CREATE, DefEntityOperationStatus.IN_PROGRESS))  # noqa: E501
         def_entity = self.entity_svc.update_entity(def_entity.id, def_entity)
         self.context.is_async = True
+        # TODO pre-defined sizing classes needs to be defined.
+        # TODO validate sizing policies referenced in the request against
+        # a pre-defined set of sizing policies.
         self._create_cluster_async(def_entity)
         return def_entity
 
@@ -208,6 +211,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             org_name = cluster_entity.metadata.org_name
             ovdc_name = cluster_entity.metadata.ovdc_name
             num_workers = cluster_entity.spec.workers.count
+            master_sizing_class_name = cluster_entity.spec.control_plane.sizing_class  # noqa: E501
+            worker_sizing_class_name = cluster_entity.spec.workers.sizing_class
             master_storage_profile = cluster_entity.spec.control_plane.storage_profile  # noqa: E501
             worker_storage_profile = cluster_entity.spec.workers.storage_profile  # noqa: E501
             network_name = cluster_entity.spec.settings.network
@@ -275,7 +280,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                           template=template,
                           network_name=network_name,
                           storage_profile=master_storage_profile,
-                          ssh_key=ssh_key)
+                          ssh_key=ssh_key,
+                          sizing_class_name=master_sizing_class_name)
             except Exception as err:
                 raise cse_exception.MasterNodeCreationError("Error adding master node:",
                                                             str(err))
@@ -306,7 +312,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                           template=template,
                           network_name=network_name,
                           storage_profile=worker_storage_profile,
-                          ssh_key=ssh_key)
+                          ssh_key=ssh_key,
+                          sizing_class_name=worker_sizing_class_name)
             except Exception as err:
                 raise cse_exception.WorkerNodeCreationError("Error creating worker node:",
                                                             str(err))
@@ -670,6 +677,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                    f"(received {worker_count}).")
 
         # TODO(DEF) Handle Telemetry for defined entities
+        # TODO add sizing policy to telemetry
 
         msg = f"Creating {worker_count} node(s) from template " \
               f"'{template_name}' (revision {template_revision}) and " \
@@ -798,7 +806,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                                   template=template,
                                   network_name=network_name,
                                   storage_profile=worker_storage_profile,
-                                  ssh_key=ssh_key)
+                                  ssh_key=ssh_key,
+                                  sizing_class_name=sizing_class_name)
 
             if node_type == NodeType.NFS:
                 msg = f"Created {num_workers} node(s) for cluster " \
@@ -1382,8 +1391,8 @@ def get_template(name=None, revision=None):
 
 
 def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
-              catalog_name, template, network_name, num_cpu=None,
-              memory_in_mb=None, storage_profile=None, ssh_key=None):
+              catalog_name, template, network_name, storage_profile=None,
+              ssh_key=None, sizing_class_name=None):
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
 
     specs = []
@@ -1409,6 +1418,15 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
         source_vapp = vcd_vapp.VApp(sysadmin_client, href=catalog_item_href)
         source_vm = source_vapp.get_all_vms()[0].get('name')
         if storage_profile is not None:
+            storage_profile = vdc.get_storage_profile(storage_profile)
+
+        config = utils.get_server_runtime_config()
+        cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
+                                                          log_wire=utils.str_to_bool(config['service']['log_wire']))  # noqa: E501
+        sizing_class_href = None
+        if sizing_class_name:
+            sizing_class_href = cpm.get_vdc_compute_policy(sizing_class_name)['href']  # noqa: E501
+        if storage_profile:
             storage_profile = vdc.get_storage_profile(storage_profile)
 
         cust_script = None
@@ -1440,9 +1458,11 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                 'network': network_name,
                 'ip_allocation_mode': 'pool'
             }
+            if sizing_class_href:
+                spec['sizing_policy_href'] = sizing_class_href
             if cust_script is not None:
                 spec['cust_script'] = cust_script
-            if storage_profile is not None:
+            if storage_profile:
                 spec['storage_profile'] = storage_profile
             specs.append(spec)
 
@@ -1450,20 +1470,10 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
         sysadmin_client.get_task_monitor().wait_for_status(task)
         vapp.reload()
 
-        if not num_cpu:
-            num_cpu = template[LocalTemplateKey.CPU]
-        if not memory_in_mb:
-            memory_in_mb = template[LocalTemplateKey.MEMORY]
         for spec in specs:
             vm_name = spec['target_vm_name']
             vm_resource = vapp.get_vm(vm_name)
             vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
-
-            task = vm.modify_cpu(num_cpu)
-            sysadmin_client.get_task_monitor().wait_for_status(task)
-
-            task = vm.modify_memory(memory_in_mb)
-            sysadmin_client.get_task_monitor().wait_for_status(task)
 
             task = vm.power_on()
             sysadmin_client.get_task_monitor().wait_for_status(task)

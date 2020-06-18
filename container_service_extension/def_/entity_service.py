@@ -172,12 +172,14 @@ class DefEntityService():
         :param str name: Name of the native cluster.
         :return:
         """
-        filter_by_name = {def_utils.ClusterEntityFilterKey.CLUSTER_NAME: name}
+        filter_by_name = {def_utils.ClusterEntityFilterKey.CLUSTER_NAME.value: name}  # noqa: E501
         entity_type: DefEntityType = def_utils.get_registered_def_entity_type()
-        return self.list_entities_by_entity_type(vendor=entity_type.vendor,
-                                                 nss=entity_type.nss,
-                                                 version=entity_type.version,
-                                                 filters=filter_by_name)
+        for entity in \
+            self.list_entities_by_entity_type(vendor=entity_type.vendor,
+                                              nss=entity_type.nss,
+                                              version=entity_type.version,
+                                              filters=filter_by_name):
+            return entity
 
     def delete_entity(self, entity_id: str) -> None:
         """Delete the defined entity.
