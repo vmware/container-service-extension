@@ -2,7 +2,7 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import container_service_extension.request_context as ctx
+import container_service_extension.operation_context as ctx
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.telemetry_handler import \
@@ -11,7 +11,7 @@ from container_service_extension.vcdbroker import VcdBroker
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_CREATE)
-def cluster_create(request_data, request_context: ctx.RequestContext):
+def cluster_create(request_data, op_ctx: ctx.OperationContext):
     """Request handler for cluster create operation.
 
     Required data: org_name, ovdc_name, cluster_name
@@ -25,12 +25,12 @@ def cluster_create(request_data, request_context: ctx.RequestContext):
 
     :return: Dict
     """
-    vcd_broker = VcdBroker(request_context)
+    vcd_broker = VcdBroker(op_ctx)
     return vcd_broker.create_cluster(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_RESIZE)
-def cluster_resize(request_data, request_context: ctx.RequestContext):
+def cluster_resize(request_data, op_ctx: ctx.OperationContext):
     """Request handler for cluster resize operation.
 
     Required data: cluster_name, num_nodes
@@ -42,12 +42,12 @@ def cluster_resize(request_data, request_context: ctx.RequestContext):
 
     :return: Dict
     """
-    vcd_broker = VcdBroker(request_context)
+    vcd_broker = VcdBroker(op_ctx)
     return vcd_broker.resize_cluster(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_DELETE)
-def cluster_delete(request_data, request_context: ctx.RequestContext):
+def cluster_delete(request_data, op_ctx: ctx.OperationContext):
     """Request handler for cluster delete operation.
 
     Required data: cluster_name
@@ -57,12 +57,12 @@ def cluster_delete(request_data, request_context: ctx.RequestContext):
 
     :return: Dict
     """
-    vcd_broker = VcdBroker(request_context)
+    vcd_broker = VcdBroker(op_ctx)
     return vcd_broker.delete_cluster(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_INFO)
-def cluster_info(request_data, request_context: ctx.RequestContext):
+def cluster_info(request_data, op_ctx: ctx.OperationContext):
     """Request handler for cluster info operation.
 
     Required data: cluster_name
@@ -72,12 +72,12 @@ def cluster_info(request_data, request_context: ctx.RequestContext):
 
     :return: Dict
     """
-    vcd_broker = VcdBroker(request_context)
+    vcd_broker = VcdBroker(op_ctx)
     return vcd_broker.get_cluster_info(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_CONFIG)
-def cluster_config(request_data, request_context: ctx.RequestContext):
+def cluster_config(request_data, op_ctx: ctx.OperationContext):
     """Request handler for cluster config operation.
 
     Required data: cluster_name
@@ -87,36 +87,36 @@ def cluster_config(request_data, request_context: ctx.RequestContext):
 
     :return: Dict
     """
-    vcd_broker = VcdBroker(request_context)
+    vcd_broker = VcdBroker(op_ctx)
     return vcd_broker.get_cluster_config(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_UPGRADE_PLAN)
-def cluster_upgrade_plan(request_data, request_context: ctx.RequestContext):
+def cluster_upgrade_plan(request_data, op_ctx: ctx.OperationContext):
     """Request handler for cluster upgrade-plan operation.
 
     data validation handled in broker
 
     :return: List[Tuple(str, str)]
     """
-    vcd_broker = VcdBroker(request_context)
+    vcd_broker = VcdBroker(op_ctx)
     return vcd_broker.get_cluster_upgrade_plan(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_UPGRADE)
-def cluster_upgrade(request_data, request_context: ctx.RequestContext):
+def cluster_upgrade(request_data, op_ctx: ctx.OperationContext):
     """Request handler for cluster upgrade operation.
 
     data validation handled in broker
 
     :return: Dict
     """
-    vcd_broker = VcdBroker(request_context)
+    vcd_broker = VcdBroker(op_ctx)
     return vcd_broker.upgrade_cluster(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_LIST)
-def cluster_list(request_data, request_context: ctx.RequestContext):
+def cluster_list(request_data, op_ctx: ctx.OperationContext):
     """Request handler for cluster list operation.
 
     Optional data and default values: org_name=None, ovdc_name=None
@@ -125,7 +125,7 @@ def cluster_list(request_data, request_context: ctx.RequestContext):
 
     :return: List
     """
-    vcd_broker = VcdBroker(request_context)
+    vcd_broker = VcdBroker(op_ctx)
     vcd_clusters_info = vcd_broker.list_clusters(data=request_data)
 
     common_cluster_properties = [
@@ -147,7 +147,7 @@ def cluster_list(request_data, request_context: ctx.RequestContext):
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.NODE_CREATE)
-def node_create(request_data, request_context: ctx.RequestContext):
+def node_create(request_data, op_ctx: ctx.OperationContext):
     """Request handler for node create operation.
 
     Required data: cluster_name, network_name
@@ -160,12 +160,12 @@ def node_create(request_data, request_context: ctx.RequestContext):
 
     :return: Dict
     """
-    vcd_broker = VcdBroker(request_context)
+    vcd_broker = VcdBroker(op_ctx)
     return vcd_broker.create_nodes(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.NODE_DELETE)
-def node_delete(request_data, request_context: ctx.RequestContext):
+def node_delete(request_data, op_ctx: ctx.OperationContext):
     """Request handler for node delete operation.
 
     Required data: cluster_name, node_names_list
@@ -175,12 +175,12 @@ def node_delete(request_data, request_context: ctx.RequestContext):
 
     :return: Dict
     """
-    vcd_broker = VcdBroker(request_context)
+    vcd_broker = VcdBroker(op_ctx)
     return vcd_broker.delete_nodes(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.NODE_INFO)
-def node_info(request_data, request_context: ctx.RequestContext):
+def node_info(request_data, op_ctx: ctx.OperationContext):
     """Request handler for node info operation.
 
     Required data: cluster_name, node_name
@@ -190,5 +190,5 @@ def node_info(request_data, request_context: ctx.RequestContext):
 
     :return: Dict
     """
-    vcd_broker = VcdBroker(request_context)
+    vcd_broker = VcdBroker(op_ctx)
     return vcd_broker.get_node_info(data=request_data)

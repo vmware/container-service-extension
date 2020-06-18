@@ -672,6 +672,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
             # data to VAC. HACK!!!
             time.sleep(3)
 
+
 @cli.command('upgrade',
              short_help="Upgrade existing CSE 2.6.0 entities")
 @click.pass_context

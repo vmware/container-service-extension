@@ -16,7 +16,7 @@ import semantic_version
 import container_service_extension.compute_policy_manager as cpm
 from container_service_extension.config_validator import get_validated_config
 import container_service_extension.def_.models as def_models
-import container_service_extension.def_.schema_svc as def_schema_svc
+import container_service_extension.def_.schema_service as def_schema_svc
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as cse_exception
 import container_service_extension.local_template_manager as ltm

@@ -7,6 +7,7 @@ import random
 import re
 import string
 import time
+from typing import List
 
 import pkg_resources
 import pyvcloud.vcd.client as vcd_client
@@ -18,14 +19,14 @@ import pyvcloud.vcd.vm as vcd_vm
 import semantic_version as semver
 
 import container_service_extension.abstract_broker as abstract_broker
-import container_service_extension.def_.entity_svc as def_entity_svc
+import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as e
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
-import container_service_extension.request_context as ctx
 import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import KwargKey
@@ -45,50 +46,30 @@ import container_service_extension.vsphere_utils as vs_utils
 class ClusterService(abstract_broker.AbstractBroker):
     """Handles cluster operations for native DEF based clusters."""
 
-    def __init__(self, request_context: ctx.RequestContext):
-        self.context: ctx.RequestContext = None
+    def __init__(self, op_ctx: ctx.OperationContext):
+        # TODO(DEF) Once all the methods are modified to use defined entities,
+        #  the param OperationContext needs to be replaced by cloudapiclient.
+        self.context: ctx.OperationContext = None
         # populates above attributes
-        super().__init__(request_context)
+        super().__init__(op_ctx)
 
         self.task = None
         self.task_resource = None
         self.entity_svc = def_entity_svc.DefEntityService(
-            request_context.cloudapi_client)
+            op_ctx.cloudapi_client)
 
-    def get_cluster_info(self, **kwargs):
-        """Get cluster metadata as well as node data.
+    def get_cluster_info(self, cluster_id: str) -> def_models.DefEntity:
+        """Get corresponding defined entity of the native cluster."""
+        return self.entity_svc.get_entity(cluster_id)
 
-        Common broker function that validates data for the 'cluster info'
-        operation and returns cluster/node metadata as dictionary.
-
-        **data: Required
-            Required data: cluster_name
-            Optional data and default values: org_name=None, ovdc_name=None
-        **telemetry: Optional
-        """
-        # Yet to be implemented
-        raise NotImplementedError
-        # data = kwargs[KwargKey.DATA]
-        # cluster_name = data['name']
-        # cluster = self.entity_svc.get_entity_by_name(cluster_name)
-        # return cluster
-
-    def list_clusters(self, **kwargs):
-        """List all native clusters and their relevant metadata.
-
-        Common broker function that validates data for the 'list clusters'
-        operation and returns a list of cluster data.
-
-        **data: Optional
-            Optional data and default values: org_name=None, ovdc_name=None
-        **telemetry: Optional
-        """
-        # Yet to be implemented
-        raise NotImplementedError
-        # data = kwargs.get(KwargKey.DATA, {})
-        # clusters = self.entity_svc.list_entities_by_entity_type
-        # ('native_entity_type_id')
-        # return clusters
+    def list_clusters(self, filters: dict) -> List[def_models.DefEntity]:
+        """List corresponding defined entities of all native clusters."""
+        ent_type: def_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
+        return self.entity_svc.list_entities_by_entity_type(
+            vendor=ent_type.vendor,
+            nss=ent_type.nss,
+            version=ent_type.version,
+            filters=filters)
 
     def get_cluster_config(self, **kwargs):
         """Get the cluster's kube config contents.

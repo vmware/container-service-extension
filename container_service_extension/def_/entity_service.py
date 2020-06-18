@@ -8,7 +8,7 @@ from typing import List
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0  # noqa: E501
 from container_service_extension.cloudapi.constants import CloudApiResource
-from container_service_extension.def_.models import DefEntity
+from container_service_extension.def_.models import DefEntity, DefEntityType
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as cse_exception
 from container_service_extension.shared_constants import RequestMethod
@@ -40,25 +40,73 @@ class DefEntityService():
                                        f"{entity_type_id}",
             payload=asdict(entity))
 
-    def list_entities(self):
+    def list_entities(self, filters: dict = None) -> List[DefEntity]:
         """List all defined entities of all entity types.
 
+        vCD's behavior when invalid filter keys are passed:
+            * It will throw a 400 if invalid first-level filter keys are passed
+            Valid keys : [name, id, externalId, entityType, entity, state].
+            * It will simply ignore any invalid nested properties and will
+            simply return empty list.
+
+        :param dict filters: Key-value pairs representing filter options
         :return: Generator of defined entities
-        :rtype: Generator[DefEntity]
+        :rtype: Generator[DefEntity, None, None]
         """
+        filter_string = None
+        if filters:
+            filter_string = ";".join([f"{k}=={v}" for (k, v) in filters.items()])  # noqa: E501
         page_num = 0
         while True:
             page_num += 1
+            query_string = f"page={page_num}&sortAsc=name"
+            if filter_string:
+                query_string = f"filter={filter_string}&{query_string}"
             response_body = self._cloudapi_client.do_request(
                 method=RequestMethod.GET,
                 cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-                resource_url_relative_path=f"{CloudApiResource.ENTITIES}?"
-                                           f"page={page_num}")
-            if len(response_body['values']) > 0:
-                for entity in response_body['values']:
-                    yield DefEntity(**entity)
-            else:
+                resource_url_relative_path=f"{CloudApiResource.ENTITIES}?{query_string}")  # noqa: E501
+            if len(response_body['values']) == 0:
                 break
+            for entity in response_body['values']:
+                yield DefEntity(**entity)
+
+    def list_entities_by_entity_type(self, vendor: str, nss: str, version: str,
+                                     filters: dict = None) -> List[DefEntity]:
+        """List entities of a given entity type.
+
+        vCD's behavior when invalid filter keys are passed:
+            * It will throw a 400 if invalid first-level filter keys are passed
+            Valid keys : [name, id, externalId, entityType, entity, state].
+            * It will simply return empty list on passing any invalid nested
+             properties.
+
+        :param str vendor: Vendor of the entity type
+        :param str nss: nss of the entity type
+        :param str version: version of the entity type
+        :param dict filters: Key-value pairs representing filter options
+        :return: List of entities of that entity type
+        :rtype: Generator[DefEntity, None, None]
+        """
+        filter_string = None
+        if filters:
+            filter_string = ";".join(
+                [f"{k}=={v}" for (k, v) in filters.items()])  # noqa: E501
+        page_num = 0
+        while True:
+            page_num += 1
+            query_string = f"page={page_num}&sortAsc=name"
+            if filter_string:
+                query_string = f"filter={filter_string}&{query_string}"
+            response_body = self._cloudapi_client.do_request(
+                method=RequestMethod.GET,
+                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+                resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
+                                           f"{vendor}/{nss}/{version}?{query_string}")  # noqa: E501
+            if len(response_body['values']) == 0:
+                break
+            for entity in response_body['values']:
+                yield DefEntity(**entity)
 
     def list_entities_by_interface(self, vendor: str, nss: str, version: str):
         """List entities of a given interface.
@@ -70,7 +118,7 @@ class DefEntityService():
         :param str nss: nss of the interface
         :param str version: version of the interface
         :return: Generator of entities of that interface type
-        :rtype: Generator[DefEntity]
+        :rtype: Generator[DefEntity, None, None]
         """
         # TODO Yet to be verified. Waiting for the build from Extensibility
         #  team.
@@ -83,40 +131,10 @@ class DefEntityService():
                 resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                            f"{CloudApiResource.INTERFACES}/{vendor}/{nss}/{version}?"  # noqa: E501
                                            f"page={page_num}")
-            if len(response_body['values']) > 0:
-                for entity in response_body['values']:
-                    yield DefEntity(**entity)
-            else:
+            if len(response_body['values']) == 0:
                 break
-
-    def list_entities_by_entity_type(self, vendor: str, nss: str,
-                                     version: str) -> List[DefEntity]:
-        """List entities of a given entity type.
-
-        An entity type is uniquely identified by properties vendor, nss and
-        version.
-
-        :param str vendor: Vendor of the entity type
-        :param str nss: nss of the entity type
-        :param str version: version of the entity type
-        :return: List of entities of that entity type
-        :rtype: List[DefEntity]
-        """
-        # TODO Yet to be verified. Waiting for the build from
-        #  Extensibility team.
-        page_num = 0
-        while True:
-            page_num += 1
-            response_body = self._cloudapi_client.do_request(
-                method=RequestMethod.GET,
-                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-                resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
-                                           f"{vendor}/{nss}/{version}?page={page_num}")  # noqa: E501
-            if len(response_body['values']) > 0:
-                for entity in response_body['values']:
-                    yield DefEntity(**entity)
-            else:
-                break
+            for entity in response_body['values']:
+                yield DefEntity(**entity)
 
     def update_entity(self, entity_id: str, entity: DefEntity) -> DefEntity:
         """Update entity instance.
@@ -148,16 +166,18 @@ class DefEntityService():
                                        f"{entity_id}")
         return DefEntity(**response_body)
 
-    def get_entity_by_name(self, name: str) -> DefEntity:
-        # TODO(DEF) Below call should add another filter field 'entity.kind==native' # noqa: E501
-        #  It should not get entities if non-native clusters.
-        #  Awaiting dependency from Extensibility team."
-        response_body = self._cloudapi_client.do_request(
-            method=RequestMethod.GET,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-            resource_url_relative_path=f"{CloudApiResource.ENTITIES}?filter=name=={name}")  # noqa: E501
-        entity = response_body['values'][0]
-        return DefEntity(**entity)
+    def get_native_entity_by_name(self, name: str) -> DefEntity:
+        """Get Native cluster defined entity by its name.
+
+        :param str name: Name of the native cluster.
+        :return:
+        """
+        filter_by_name = {def_utils.ClusterEntityFilterKey.CLUSTER_NAME: name}
+        entity_type: DefEntityType = def_utils.get_registered_def_entity_type()
+        return self.list_entities_by_entity_type(vendor=entity_type.vendor,
+                                                 nss=entity_type.nss,
+                                                 version=entity_type.version,
+                                                 filters=filter_by_name)
 
     def delete_entity(self, entity_id: str) -> None:
         """Delete the defined entity.
@@ -194,7 +214,3 @@ class DefEntityService():
                                                          state=entity.state,
                                                          msg=msg)
         return entity
-
-    def filter_entities_by_property(self):
-        # TODO Yet to be implemented. Waiting for the build from extensibility
-        raise NotImplementedError

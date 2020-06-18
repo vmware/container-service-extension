@@ -28,7 +28,7 @@ from container_service_extension.config_validator import get_validated_config
 import container_service_extension.configure_cse as configure_cse
 from container_service_extension.consumer import MessageConsumer
 import container_service_extension.def_.models as def_models
-import container_service_extension.def_.schema_svc as def_schema_svc
+import container_service_extension.def_.schema_service as def_schema_svc
 import container_service_extension.def_.utils as def_utils
 from container_service_extension.def_.utils import raise_error_if_def_not_supported  # noqa: E501
 import container_service_extension.exceptions as cse_exception
@@ -267,10 +267,10 @@ class Service(object, metaclass=Singleton):
         # Load def entity-type and interface
         self._load_def_schema(msg_update_callback=msg_update_callback)
 
-        # Read k8s catalog definition from catalog item metadata and append
-        # the same to to server run-time config
-        self._load_template_definition_from_catalog(
-            msg_update_callback=msg_update_callback)
+        # # Read k8s catalog definition from catalog item metadata and append
+        # # the same to to server run-time config
+        # self._load_template_definition_from_catalog(
+        #     msg_update_callback=msg_update_callback)
 
         if float(self.config['vcd']['api_version']) < float(vCDApiVersion.VERSION_35.value): # noqa: E501
             # Read templates rules from config and update template deinfition

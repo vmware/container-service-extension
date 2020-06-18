@@ -20,7 +20,7 @@ DEF_ENTITY_TYPE_ID_PREFIX = 'urn:vcloud:type'
 DEF_API_MIN_VERSION = 35.0
 DEF_SCHEMA_DIRECTORY = 'cse_def_schema'
 DEF_ENTITY_TYPE_SCHEMA_FILE = 'schema.json'
-DEF_END_POINT_DISCRIMINATOR = 'internal'
+V35_END_POINT_DISCRIMINATOR = 'internal'
 DEF_ERROR_MESSAGE_KEY = 'message'
 DEF_RESOLVED_STATE = 'RESOLVED'
 
@@ -49,6 +49,28 @@ MAP_API_VERSION_TO_KEYS = {
         DefKey.ENTITY_TYPE_SCHEMA_VERSION: 'api_v35',
     }
 }
+
+
+class ClusterEntityFilterKey(Enum):
+    """Keys to filter cluster entities in CSE (or) vCD.
+
+    Below Keys are commonly used filters. An entity can be filtered by any of
+    its properties.
+
+    Usage examples:
+    ..api/cse/internal/clusters?entity.kind=native
+    ..api/cse/internal/clusters?entity.metadata.org_name=org1
+    ..cloudapi/1.0.0/entities?filter=entity.metadata.org_name==org1
+    """
+
+    # TODO(DEF) CLI can leverage this enum for the filter implementation.
+    CLUSTER_NAME = 'name'
+    ORG_NAME = 'entity.metadata.org_name'
+    OVDC_NAME = 'entity.metadata.ovdc_name'
+    KIND = 'entity.kind'
+    K8_DISTRIBUTION = 'entity.spec.k8_distribution.template_name'
+    STATE = 'state'
+    PHASE = 'entity.status.phase'
 
 
 def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
@@ -101,13 +123,3 @@ def generate_entity_type_id(vendor, nss, version):
     :rtype str
     """
     return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{vendor}.{nss}:{version}"
-
-
-def is_def_supported_by_cse_server():
-    """Return true if CSE server is qualified to invoke Defined Entity API.
-
-    :rtype: bool
-    """
-    import container_service_extension.utils as utils
-    api_version = utils.get_server_api_version()
-    return float(api_version) >= DEF_API_MIN_VERSION
