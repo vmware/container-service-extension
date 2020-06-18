@@ -69,7 +69,6 @@ class RequestKey(str, Enum):
     CLUSTER_NAME = 'cluster_name'
     CLUSTER_ID = 'cluster_id'
     MB_MEMORY = 'mb_memory'
-    SIZING_CLASS = 'sizing_class'
     NUM_CPU = 'num_cpu'
     NETWORK_NAME = 'network_name'
     STORAGE_PROFILE_NAME = 'storage_profile_name'

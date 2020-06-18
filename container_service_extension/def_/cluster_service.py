@@ -693,8 +693,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None,
             RequestKey.NUM_WORKERS: 1,
-            # placeholder code for sizing_class
-            RequestKey.SIZING_CLASS: None,
             RequestKey.STORAGE_PROFILE_NAME: None,
             RequestKey.SSH_KEY: None,
             RequestKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME],
@@ -749,8 +747,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             template_revision=template_revision,
             num_workers=validated_data[RequestKey.NUM_WORKERS],
             network_name=validated_data[RequestKey.NETWORK_NAME],
-            # placeholder for sizing class
-            sizing_class=validated_data.get(RequestKey.SIZING_CLASS),
+            # TODO add sizing class from spec
             storage_profile_name=validated_data[RequestKey.STORAGE_PROFILE_NAME], # noqa: E501
             ssh_key=validated_data[RequestKey.SSH_KEY],
             enable_nfs=validated_data[RequestKey.ENABLE_NFS],
@@ -1475,9 +1472,9 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
         config = utils.get_server_runtime_config()
         cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
                                                           log_wire=utils.str_to_bool(config['service']['log_wire']))  # noqa: E501
-        # convert sizing_class from name to href.
+        sizing_class_href = None
         if sizing_class:
-            sizing_class = cpm.get_vdc_compute_policy(sizing_class)['href']
+            sizing_class_href = cpm.get_vdc_compute_policy(sizing_class)['href']  # noqa: E501
         if storage_profile:
             storage_profile = vdc.get_storage_profile(storage_profile)
 
@@ -1510,8 +1507,8 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                 'network': network_name,
                 'ip_allocation_mode': 'pool'
             }
-            if sizing_class:
-                spec['sizing_policy_href'] = sizing_class
+            if sizing_class_href:
+                spec['sizing_policy_href'] = sizing_class_href
             if cust_script is not None:
                 spec['cust_script'] = cust_script
             if storage_profile:
