@@ -198,6 +198,15 @@ def process_request(body):
 
 
 def _get_v35_cluster_url_data(method: str, url: str):
+    """Parse url and http method to get v35 cluster specific data.
+
+    Returns a dictionary with operation and url data.
+
+    :param RequestMethod method: http verb
+    :param str url: http url
+
+    :rtype: dict
+    """
     tokens = url.split('/')
     num_tokens = len(tokens)
 
