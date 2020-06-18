@@ -5,12 +5,12 @@
 import os
 
 import click
-from vcd_cli.utils import restore_session
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
 
 from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.pks_cluster import PksCluster
+import container_service_extension.client.utils as client_utils
 from container_service_extension.logger import CLIENT_LOGGER
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
@@ -97,7 +97,7 @@ def list_clusters(ctx, vdc, org_name):
     """Display clusters in Ent-PKS that are visible to the logged in user."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         cluster = PksCluster(client)
         if not client.is_sysadmin() and org_name is None:
@@ -135,7 +135,7 @@ def cluster_delete(ctx, cluster_name, vdc, org):
     """Delete an Ent-PKS cluster."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         cluster = PksCluster(client)
         if not client.is_sysadmin() and org is None:
@@ -189,7 +189,7 @@ def cluster_create(ctx, cluster_name, vdc, node_count, org_name):
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
 
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         if vdc is None:
             vdc = ctx.obj['profiles'].get('vdc_in_use')
             if not vdc:
@@ -249,7 +249,7 @@ def cluster_resize(ctx, cluster_name, node_count, org_name, vdc_name):
     """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if not client.is_sysadmin() and org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
@@ -292,7 +292,7 @@ def cluster_config(ctx, cluster_name, vdc, org):
     """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         cluster = PksCluster(client)
         if not client.is_sysadmin() and org is None:
@@ -334,7 +334,7 @@ def cluster_info(ctx, cluster_name, org, vdc):
     """Display info about an Ent-PKS K8 cluster."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         cluster = PksCluster(client)
         if not client.is_sysadmin() and org is None:
@@ -399,7 +399,7 @@ def ovdc_enable(ctx, ovdc_name, pks_plan,
     """Set Kubernetes provider to be Ent-PKS for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if client.is_sysadmin():
             ovdc = Ovdc(client)

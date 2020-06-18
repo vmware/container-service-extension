@@ -181,6 +181,7 @@ class Service(object, metaclass=Singleton):
 
     def info(self, get_sysadmin_info=False):
         result = utils.get_cse_info()
+        result['server_api_version'] = utils.get_server_api_version()
         if get_sysadmin_info:
             result['consumer_threads'] = len(self.threads)
             result['all_threads'] = threading.activeCount()

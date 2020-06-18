@@ -5,7 +5,6 @@
 import os
 
 import click
-from vcd_cli.utils import restore_session
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
 from vcd_cli.vcd import vcd
@@ -13,9 +12,10 @@ from vcd_cli.vcd import vcd
 
 from container_service_extension.client import pks
 from container_service_extension.client.cluster import Cluster
+import container_service_extension.client.command_filter as cmd_filter
 from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.system import System
-from container_service_extension.client.utils import GroupCommandFilter
+import container_service_extension.client.utils as client_utils
 from container_service_extension.exceptions import CseResponseError
 from container_service_extension.logger import CLIENT_LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
@@ -74,7 +74,7 @@ def list_templates(ctx):
     """Display templates that can be used by native Kubernetes provider."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         result = cluster.get_templates()
@@ -85,7 +85,7 @@ def list_templates(ctx):
         CLIENT_LOGGER.error(str(e))
 
 
-@cse.group('cluster', cls=GroupCommandFilter,
+@cse.group('cluster', cls=cmd_filter.GroupCommandFilter,
            short_help='Manage Native Kubernetes clusters')
 @click.pass_context
 def cluster_group(ctx):
@@ -184,7 +184,7 @@ def list_clusters(ctx, vdc, org_name):
     """Display clusters in vCD that are visible to the logged in user."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         if not client.is_sysadmin() and org_name is None:
@@ -237,7 +237,7 @@ def cluster_delete(ctx, name, vdc, org):
     """Delete a Kubernetes cluster."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         if not client.is_sysadmin() and org is None:
@@ -351,9 +351,10 @@ def cluster_delete(ctx, name, vdc, org):
     required=False,
     metavar='ORG_NAME',
     help='Org to use. Defaults to currently logged-in org')
-def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
+def cluster_create(ctx, name, vdc, node_count, network_name,
                    storage_profile, ssh_key_file, template_name,
-                   template_revision, enable_nfs, disable_rollback, org_name):
+                   template_revision, enable_nfs, disable_rollback, org_name,
+                   cpu=None, memory=None):
     """Create a Kubernetes cluster (max name length is 25 characters)."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
@@ -362,7 +363,7 @@ def cluster_create(ctx, name, vdc, node_count, cpu, memory, network_name,
             raise Exception("Both flags --template-name(-t) and "
                             "--template-revision (-r) must be specified.")
 
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         if vdc is None:
             vdc = ctx.obj['profiles'].get('vdc_in_use')
             if not vdc:
@@ -511,7 +512,7 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
             raise Exception("Both --template-name (-t) and "
                             "--template-revision (-r) must be specified.")
 
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if not client.is_sysadmin() and org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
@@ -560,7 +561,7 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
 def apply(ctx, cluster_config_file_path):
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         cluster.apply(cluster_config_file_path)
@@ -594,7 +595,7 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name):
     """Display templates that the specified cluster can upgrade to."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         if not client.is_sysadmin() and org_name is None:
@@ -652,7 +653,7 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
     """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         if not client.is_sysadmin() and org_name is None:
@@ -694,7 +695,7 @@ def cluster_config(ctx, name, vdc, org):
     """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         if not client.is_sysadmin() and org is None:
@@ -734,7 +735,7 @@ def cluster_info(ctx, name, org, vdc):
     """Display info about a Kubernetes cluster."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
         if not client.is_sysadmin() and org is None:
@@ -814,7 +815,7 @@ def node_info(ctx, cluster_name, node_name, org_name, vdc):
     """Display info about a node in a native Kubernetes provider cluster."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
 
@@ -935,7 +936,7 @@ def create_node(ctx, cluster_name, node_count, org, vdc, cpu, memory,
             raise Exception("Both --template-name (-t) and "
                             "--template-revision (-r) must be specified.")
 
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if org is None and not client.is_sysadmin():
             org = ctx.obj['profiles'].get('org_in_use')
@@ -989,7 +990,7 @@ def list_nodes(ctx, name, org, vdc):
     """Display nodes of a cluster that uses native Kubernetes provider."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if org is None and not client.is_sysadmin():
             org = ctx.obj['profiles'].get('org_in_use')
@@ -1034,7 +1035,7 @@ def delete_nodes(ctx, cluster_name, node_names, org, vdc):
     """Delete node(s) in a cluster that uses native Kubernetes provider."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
@@ -1076,7 +1077,7 @@ def system_info(ctx):
     """Display CSE server info."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
         result = system.get_info()
@@ -1094,7 +1095,7 @@ def stop_service(ctx):
     """Stop CSE server."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
         result = system.update_service_status(action=ServerAction.STOP)
@@ -1111,7 +1112,7 @@ def enable_service(ctx):
     """Enable CSE server."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
         result = system.update_service_status(action=ServerAction.ENABLE)
@@ -1128,7 +1129,7 @@ def disable_service(ctx):
     """Disable CSE server."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
         result = system.update_service_status(action=ServerAction.DISABLE)
@@ -1188,7 +1189,7 @@ def list_ovdcs(ctx, list_pks_plans):
     """Display org VDCs in vCD that are visible to the logged in user."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         ovdc = Ovdc(client)
         result = ovdc.list_ovdc_for_k8s(list_pks_plans=list_pks_plans)
@@ -1215,7 +1216,7 @@ def ovdc_enable(ctx, ovdc_name, org_name):
     """Set Kubernetes provider for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if client.is_sysadmin():
             ovdc = Ovdc(client)
@@ -1254,7 +1255,7 @@ def ovdc_disable(ctx, ovdc_name, org_name):
     """Disable Kubernetes cluster deployment for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if client.is_sysadmin():
             ovdc = Ovdc(client)
@@ -1291,7 +1292,7 @@ def ovdc_info(ctx, ovdc_name, org_name):
     """Display information about Kubernetes provider for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if client.is_sysadmin():
             ovdc = Ovdc(client)
@@ -1350,7 +1351,7 @@ Examples
 def compute_policy_list(ctx, org_name, ovdc_name):
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if not client.is_sysadmin():
             raise Exception("Insufficient permission to perform operation.")
@@ -1384,7 +1385,7 @@ def compute_policy_list(ctx, org_name, ovdc_name):
 def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if not client.is_sysadmin():
             raise Exception("Insufficient permission to perform operation.")
@@ -1432,7 +1433,7 @@ def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name,
                           remove_compute_policy_from_vms):
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
-        restore_session(ctx)
+        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if not client.is_sysadmin():
             raise Exception("Insufficient permission to perform operation.")
