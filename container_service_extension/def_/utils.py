@@ -73,6 +73,12 @@ class ClusterEntityFilterKey(Enum):
     PHASE = 'entity.status.phase'
 
 
+class ClusterEntityKind(Enum):
+    NATIVE = 'native'
+    TKG = 'tkg'
+    TANZU_PLUS = 'tanzu_plus'
+
+
 def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
     """Raise DefNotSupportedException if defined entities are not supported.
 

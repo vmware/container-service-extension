@@ -78,6 +78,8 @@ class ControlPlane:
     count: int = 1
 
     def __init__(self, sizing_class: str = None, storage_profile: str = None, count: int = 1): # noqa: E501
+        # TODO(DEF) Pre-defined sizing classes need to be defined.
+        #  Get the default sizing class.
         self.sizing_class = sizing_class
         self.storage_profile = storage_profile or utils.get_default_storage_profile()  # noqa: E501
         self.count = count
@@ -90,6 +92,8 @@ class Workers:
     count: int = 2
 
     def __init__(self, sizing_class: str = None, storage_profile: str = None, count: int = 2):  # noqa: E501
+        # TODO(DEF) Pre-defined sizing classes need to be defined.
+        #  Get the default sizing class.
         self.sizing_class = sizing_class
         self.storage_profile = storage_profile or utils.get_default_storage_profile()  # noqa: E501
         self.count = count
