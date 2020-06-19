@@ -753,8 +753,8 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
 
         # Don't run upgrade if versions already match
         try:
-            # cse_service.verify_version_compatibility(
-            #     sysadmin_client, config['vcd']['api_version'])
+            cse_service.verify_version_compatibility(
+                sysadmin_client, config['vcd']['api_version'])
             console_message_printer.info('CSE is already up to date.')
             return
         except e.VersionCompatibilityError:

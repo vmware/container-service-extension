@@ -193,7 +193,9 @@ class ClusterService(abstract_broker.AbstractBroker):
               f"from template '{template_name}' (revision {template_revision})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         def_entity.entity.status.task_href = self.task_resource.get('href')
-        def_entity.entity.status.phase = str(DefEntityPhase(DefEntityOperation.CREATE, DefEntityOperationStatus.IN_PROGRESS))  # noqa: E501
+        def_entity.entity.status.phase = str(
+            DefEntityPhase(DefEntityOperation.CREATE,
+                           DefEntityOperationStatus.IN_PROGRESS))
         def_entity = self.entity_svc.update_entity(def_entity.id, def_entity)
         self.context.is_async = True
         self._create_cluster_async(def_entity.id, cluster_spec)
@@ -312,8 +314,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                           ssh_key=ssh_key,
                           sizing_class_name=worker_sizing_class_name)
             except Exception as err:
-                raise e.WorkerNodeCreationError(
-                    "Error creating worker node:", str(err))
+                raise e.WorkerNodeCreationError("Error creating worker node:",
+                                                str(err))
 
             msg = f"Adding {num_workers} node(s) to cluster " \
                   f"'{cluster_name}' ({cluster_id})"
@@ -341,20 +343,22 @@ class ClusterService(abstract_broker.AbstractBroker):
                               storage_profile=worker_storage_profile,
                               ssh_key=ssh_key)
                 except Exception as err:
-                    raise e.NFSNodeCreationError(
-                        "Error creating NFS node:", str(err))
+                    raise e.NFSNodeCreationError("Error creating NFS node:",
+                                                 str(err))
 
             msg = f"Created cluster '{cluster_name}' ({cluster_id})"
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
 
-            # Update defined entity instance with new values like vapp_id,
+            # Update defined entity instance with new properties like vapp_id,
             # master_ip and nodes.
             # TODO(DEF) VCDA-1567 Schema doesn't yet have nodes definition.
             #  master and worker "nodes" also have to be updated.
             def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             def_entity.externalId = vapp_resource.get('href')
             def_entity.entity.status.master_ip = master_ip
-            def_entity.entity.status.phase = str(DefEntityPhase(DefEntityOperation.CREATE, DefEntityOperationStatus.SUCCEEDED))  # noqa: E501
+            def_entity.entity.status.phase = str(
+                DefEntityPhase(DefEntityOperation.CREATE,
+                               DefEntityOperationStatus.SUCCEEDED))
             self.entity_svc.update_entity(cluster_id, def_entity)
             self.entity_svc.resolve_entity(cluster_id)
         except (e.MasterNodeCreationError, e.WorkerNodeCreationError,
