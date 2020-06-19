@@ -196,28 +196,27 @@ class ClusterService(abstract_broker.AbstractBroker):
         def_entity.entity.status.phase = str(DefEntityPhase(DefEntityOperation.CREATE, DefEntityOperationStatus.IN_PROGRESS))  # noqa: E501
         def_entity = self.entity_svc.update_entity(def_entity.id, def_entity)
         self.context.is_async = True
-        self._create_cluster_async(def_entity)
+        self._create_cluster_async(def_entity.id, cluster_spec)
         return def_entity
 
     @utils.run_async
-    def _create_cluster_async(self, cluster_spec: def_models.DefEntity):
+    def _create_cluster_async(self, cluster_id: str, cluster_spec: def_models.ClusterEntity):
         try:
-            cluster_entity = cluster_spec.entity
-            cluster_id = cluster_spec.id
-            cluster_name = cluster_entity.metadata.cluster_name
-            org_name = cluster_entity.metadata.org_name
-            ovdc_name = cluster_entity.metadata.ovdc_name
-            num_workers = cluster_entity.spec.workers.count
-            master_sizing_class_name = cluster_entity.spec.control_plane.sizing_class  # noqa: E501
-            worker_sizing_class_name = cluster_entity.spec.workers.sizing_class
-            master_storage_profile = cluster_entity.spec.control_plane.storage_profile  # noqa: E501
-            worker_storage_profile = cluster_entity.spec.workers.storage_profile  # noqa: E501
-            network_name = cluster_entity.spec.settings.network
-            template_name = cluster_entity.spec.k8_distribution.template_name
-            template_revision = cluster_entity.spec.k8_distribution.template_revision  # noqa: E501
-            ssh_key = cluster_entity.spec.settings.ssh_key
-            enable_nfs = cluster_entity.spec.settings.enable_nfs
-            rollback = cluster_entity.spec.settings.rollback_on_failure
+            cluster_id = cluster_id
+            cluster_name = cluster_spec.metadata.cluster_name
+            org_name = cluster_spec.metadata.org_name
+            ovdc_name = cluster_spec.metadata.ovdc_name
+            num_workers = cluster_spec.spec.workers.count
+            master_sizing_class_name = cluster_spec.spec.control_plane.sizing_class  # noqa: E501
+            worker_sizing_class_name = cluster_spec.spec.workers.sizing_class
+            master_storage_profile = cluster_spec.spec.control_plane.storage_profile  # noqa: E501
+            worker_storage_profile = cluster_spec.spec.workers.storage_profile  # noqa: E501
+            network_name = cluster_spec.spec.settings.network
+            template_name = cluster_spec.spec.k8_distribution.template_name
+            template_revision = cluster_spec.spec.k8_distribution.template_revision  # noqa: E501
+            ssh_key = cluster_spec.spec.settings.ssh_key
+            enable_nfs = cluster_spec.spec.settings.enable_nfs
+            rollback = cluster_spec.spec.settings.rollback_on_failure
 
             org = vcd_utils.get_org(self.context.client, org_name=org_name)
             vdc = vcd_utils.get_vdc(self.context.client,
@@ -312,8 +311,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                           ssh_key=ssh_key,
                           sizing_class_name=worker_sizing_class_name)
             except Exception as err:
-                raise cse_exception.WorkerNodeCreationError("Error creating worker node:",
-                                                            str(err))
+                raise cse_exception.WorkerNodeCreationError(
+                    "Error creating worker node:", str(err))
 
             msg = f"Adding {num_workers} node(s) to cluster " \
                   f"'{cluster_name}' ({cluster_id})"
@@ -341,8 +340,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                               storage_profile=worker_storage_profile,
                               ssh_key=ssh_key)
                 except Exception as err:
-                    raise cse_exception.NFSNodeCreationError("Error creating NFS node:",
-                                                             str(err))
+                    raise cse_exception.NFSNodeCreationError(
+                        "Error creating NFS node:", str(err))
 
             msg = f"Created cluster '{cluster_name}' ({cluster_id})"
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
@@ -351,21 +350,16 @@ class ClusterService(abstract_broker.AbstractBroker):
             # master_ip and nodes.
             # TODO(DEF) VCDA-1567 Schema doesn't yet have nodes definition.
             #  master and worker "nodes" also have to be updated.
-            cluster_spec.externalId = vapp_resource.get('href')
-            cluster_spec.entity.status.master_ip = master_ip
-            cluster_spec.entity.status.phase = str(DefEntityPhase(DefEntityOperation.CREATE, DefEntityOperationStatus.SUCCEEDED))  # noqa: E501
-            self.entity_svc.update_entity(cluster_spec.id, cluster_spec)
-            self.entity_svc.resolve_entity(cluster_spec.id)
+            def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)
+            def_entity.externalId = vapp_resource.get('href')
+            def_entity.entity.status.master_ip = master_ip
+            def_entity.entity.status.phase = str(DefEntityPhase(DefEntityOperation.CREATE, DefEntityOperationStatus.SUCCEEDED))  # noqa: E501
+            self.entity_svc.update_entity(cluster_id, def_entity)
+            self.entity_svc.resolve_entity(cluster_id)
         except (cse_exception.MasterNodeCreationError, cse_exception.WorkerNodeCreationError,
                 cse_exception.NFSNodeCreationError, cse_exception.ClusterJoiningError,
                 cse_exception.ClusterInitializationError, cse_exception.ClusterOperationError) as err:
-
-            cluster_spec.entity.status.phase = str(
-                DefEntityPhase(DefEntityOperation.CREATE,
-                               DefEntityOperationStatus.FAILED))
-            # Resolve the defined entity to an ERROR state. This should
-            # fail required properties 'master_ip' have not been updated.
-            self.entity_svc.resolve_entity(cluster_spec.id)
+            self._fail_operation_and_resolve_entity(cluster_id, DefEntityOperation.CREATE)
 
             if rollback:
                 msg = f"Error creating cluster '{cluster_name}'. " \
@@ -381,7 +375,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     _delete_vapp(self.context.client, cluster['vdc_href'],
                                  cluster_name)
                     # Delete the corresponding defined entity
-                    self.entity_svc.delete_entity(cluster_spec.id)
+                    self.entity_svc.delete_entity(cluster_id)
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
@@ -391,18 +385,21 @@ class ClusterService(abstract_broker.AbstractBroker):
                               error_message=str(err))
             # raising an exception here prints a stacktrace to server console
         except Exception as err:
-            cluster_spec.entity.status.phase = str(
-                DefEntityPhase(DefEntityOperation.CREATE,
-                               DefEntityOperationStatus.FAILED))
-            # Resolve the defined entity to an ERROR state. This should
-            # fail required properties 'master_ip' have not been updated.
-            self.entity_svc.resolve_entity(cluster_spec.id)
+
             LOGGER.error(f"Unknown error creating cluster '{cluster_name}'",
                          exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.CREATE)
         finally:
             self.context.end()
+
+    def _fail_operation_and_resolve_entity(self, cluster_id: str, op: DefEntityOperation):
+        def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)
+        def_entity.entity.status.phase = str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
+        self.entity_svc.update_entity(cluster_id, def_entity)
+        self.entity_svc.resolve_entity(cluster_id)
 
     def resize_cluster(self, id: str, cluster_spec: def_models.ClusterEntity):
         """Start the resize cluster operation
