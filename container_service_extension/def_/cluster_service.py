@@ -23,7 +23,7 @@ import container_service_extension.compute_policy_manager as compute_policy_mana
 import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.utils as def_utils
-import container_service_extension.exceptions as cse_exception
+import container_service_extension.exceptions as e
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.operation_context as ctx
@@ -161,16 +161,16 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # check that cluster name is syntactically valid
         if not is_valid_cluster_name(cluster_name):
-            raise cse_exception.CseServerError(f"Invalid cluster name '{cluster_name}'")
+            raise e.CseServerError(f"Invalid cluster name '{cluster_name}'")
 
         # check that cluster name doesn't already exist
         try:
             get_cluster(self.context.client, cluster_name,
                         org_name=org_name,
                         ovdc_name=ovdc_name)
-            raise cse_exception.ClusterAlreadyExistsError(
+            raise e.ClusterAlreadyExistsError(
                 f"Cluster '{cluster_name}' already exists.")
-        except cse_exception.ClusterNotFoundError:
+        except e.ClusterNotFoundError:
             pass
 
         # check that requested/default template is valid
@@ -200,7 +200,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         return def_entity
 
     @utils.run_async
-    def _create_cluster_async(self, cluster_id: str, cluster_spec: def_models.ClusterEntity):
+    def _create_cluster_async(self, cluster_id: str,
+                              cluster_spec: def_models.ClusterEntity):
         try:
             cluster_id = cluster_id
             cluster_name = cluster_spec.metadata.cluster_name
@@ -237,7 +238,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             except Exception as err:
                 msg = f"Error while creating vApp: {err}"
                 LOGGER.debug(str(err))
-                raise cse_exception.ClusterOperationError(msg)
+                raise e.ClusterOperationError(msg)
             self.context.client.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0]) # noqa: E501
 
             template = get_template(template_name, template_revision)
@@ -279,8 +280,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                           ssh_key=ssh_key,
                           sizing_class_name=master_sizing_class_name)
             except Exception as err:
-                raise cse_exception.MasterNodeCreationError("Error adding master node:",
-                                                            str(err))
+                raise e.MasterNodeCreationError("Error adding master node:",
+                                                str(err))
 
             msg = f"Initializing cluster '{cluster_name}' ({cluster_id})"
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
@@ -311,7 +312,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                           ssh_key=ssh_key,
                           sizing_class_name=worker_sizing_class_name)
             except Exception as err:
-                raise cse_exception.WorkerNodeCreationError(
+                raise e.WorkerNodeCreationError(
                     "Error creating worker node:", str(err))
 
             msg = f"Adding {num_workers} node(s) to cluster " \
@@ -340,7 +341,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                               storage_profile=worker_storage_profile,
                               ssh_key=ssh_key)
                 except Exception as err:
-                    raise cse_exception.NFSNodeCreationError(
+                    raise e.NFSNodeCreationError(
                         "Error creating NFS node:", str(err))
 
             msg = f"Created cluster '{cluster_name}' ({cluster_id})"
@@ -350,16 +351,17 @@ class ClusterService(abstract_broker.AbstractBroker):
             # master_ip and nodes.
             # TODO(DEF) VCDA-1567 Schema doesn't yet have nodes definition.
             #  master and worker "nodes" also have to be updated.
-            def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)
+            def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             def_entity.externalId = vapp_resource.get('href')
             def_entity.entity.status.master_ip = master_ip
             def_entity.entity.status.phase = str(DefEntityPhase(DefEntityOperation.CREATE, DefEntityOperationStatus.SUCCEEDED))  # noqa: E501
             self.entity_svc.update_entity(cluster_id, def_entity)
             self.entity_svc.resolve_entity(cluster_id)
-        except (cse_exception.MasterNodeCreationError, cse_exception.WorkerNodeCreationError,
-                cse_exception.NFSNodeCreationError, cse_exception.ClusterJoiningError,
-                cse_exception.ClusterInitializationError, cse_exception.ClusterOperationError) as err:
-            self._fail_operation_and_resolve_entity(cluster_id, DefEntityOperation.CREATE)
+        except (e.MasterNodeCreationError, e.WorkerNodeCreationError,
+                e.NFSNodeCreationError, e.ClusterJoiningError,
+                e.ClusterInitializationError, e.ClusterOperationError) as err:
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.CREATE)
 
             if rollback:
                 msg = f"Error creating cluster '{cluster_name}'. " \
@@ -395,14 +397,16 @@ class ClusterService(abstract_broker.AbstractBroker):
         finally:
             self.context.end()
 
-    def _fail_operation_and_resolve_entity(self, cluster_id: str, op: DefEntityOperation):
-        def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)
-        def_entity.entity.status.phase = str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
+    def _fail_operation_and_resolve_entity(self, cluster_id: str,
+                                           op: DefEntityOperation):
+        def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+        def_entity.entity.status.phase = \
+            str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
         self.entity_svc.update_entity(cluster_id, def_entity)
         self.entity_svc.resolve_entity(cluster_id)
 
     def resize_cluster(self, id: str, cluster_spec: def_models.ClusterEntity):
-        """Start the resize cluster operation
+        """Start the resize cluster operation.
 
         :param str id: Defined entity Id of the cluster
         :param DefEntity cluster_spec: Input cluster spec
@@ -422,26 +426,25 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # Check if entity is of kind native.
         if kind != def_utils.ClusterEntityKind.NATIVE.value:
-            raise cse_exception.CseServerError(f"CSE cannot resize an entity "
-                                               f"of kind {kind}")
+            raise e.CseServerError(f"CSE cannot resize an entity of type {kind}")  # noqa: E501
 
         # Check if cluster is in a valid state
         if state != def_utils.DEF_RESOLVED_STATE or\
                 not phase.is_operation_status_success():
-            raise cse_exception.CseServerError(
+            raise e.CseServerError(
                 f"Cluster {name} with id {id} is not in a valid state to "
                 f"perform resize. Contact Administrator.")
 
         # Check if the desired worker count is valid
         spec_worker_count = cluster_spec.spec.workers.count
         if curr_worker_count > spec_worker_count:
-            raise cse_exception.CseServerError(
+            raise e.CseServerError(
                 "Scaling down native Kubernetes clusters is not supported.")
         elif curr_worker_count == spec_worker_count:
-            raise cse_exception.CseServerError(
+            raise e.CseServerError(
                 f"Cluster '{name}' already has {spec_worker_count} workers.")
         elif spec_worker_count < 1:
-            raise cse_exception.CseServerError(
+            raise e.CseServerError(
                 f"Worker count must be > 0 (received {spec_worker_count}).")
 
         # TODO(DEF) Below is a temporary hack to unset "enable_nfs" as resize
@@ -547,7 +550,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         if not template:
             # TODO all of these e.CseServerError instances related to request
             # should be changed to BadRequestError (400)
-            raise cse_exception.CseServerError(
+            raise e.CseServerError(
                 f"Specified template/revision ({template_name} revision "
                 f"{template_revision}) is not a valid upgrade target for "
                 f"cluster '{cluster_name}'.")
@@ -645,11 +648,12 @@ class ClusterService(abstract_broker.AbstractBroker):
                 node_info['node_type'] = 'nfs'
                 node_info['exports'] = get_nfs_exports(self.context.sysadmin_client, node_info['ipAddress'], vapp, vm_name) # noqa: E501
         if node_info is None:
-            raise cse_exception.NodeNotFoundError(f"Node '{node_name}' not found in "
+            raise e.NodeNotFoundError(f"Node '{node_name}' not found in "
                                       f"cluster '{cluster_name}'")
         return node_info
 
-    def create_nodes(self, cluster_id: str, cluster_spec: def_models.ClusterEntity):
+    def create_nodes(self, cluster_id: str,
+                     cluster_spec: def_models.ClusterEntity):
         """Start the create nodes operation.
 
         :param str cluster_id: Defined entity Id of the cluster
@@ -668,7 +672,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         get_template(name=template_name, revision=template_revision)
 
         if worker_count < 1:
-            raise cse_exception.CseServerError(f"Worker count must be > 0 "
+            raise e.CseServerError(f"Worker count must be > 0 "
                                    f"(received {worker_count}).")
 
         # TODO(DEF) Handle Telemetry for defined entities
@@ -677,7 +681,7 @@ class ClusterService(abstract_broker.AbstractBroker):
               f"'{template_name}' (revision {template_revision}) and " \
               f"adding to cluster '{cluster_name}' ({cluster_id})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)
+        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
         curr_entity.entity.status.task_href = self.task_resource.get('href')
         curr_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.UPDATE,
@@ -685,7 +689,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)
 
         self.context.is_async = True
-        self._create_nodes_async(cluster_id=cluster_id, cluster_spec=cluster_spec)
+        self._create_nodes_async(cluster_id=cluster_id, cluster_spec=cluster_spec)  # noqa: E501
         return curr_entity
 
     def delete_nodes(self, **kwargs):
@@ -723,7 +727,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # check that master node is not in specified nodes
         for node in node_names_list:
             if node.startswith(NodeType.MASTER):
-                raise cse_exception.CseServerError(f"Can't delete master node: '{node}'.")
+                raise e.CseServerError(f"Can't delete master node: '{node}'.")
 
         cluster = get_cluster(self.context.client, cluster_name,
                               org_name=validated_data[RequestKey.ORG_NAME],
@@ -761,7 +765,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                             cluster_spec: def_models.ClusterEntity):
         try:
             cluster_id = cluster_id
-            curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)
+            curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             vapp_href = curr_entity.externalId
             cluster_name = cluster_spec.metadata.cluster_name
             org_name = cluster_spec.metadata.org_name
@@ -830,8 +834,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                                    DefEntityOperationStatus.SUCCEEDED))
                 curr_entity.entity.spec.workers = cluster_spec.spec.workers
                 self.entity_svc.update_entity(cluster_id, curr_entity)
-        except cse_exception.NodeCreationError as err:
-            self._fail_operation_and_resolve_entity(cluster_id, DefEntityOperation.UPDATE)
+        except e.NodeCreationError as err:
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.UPDATE)
             if rollback:
                 msg = f"Error adding nodes to cluster '{cluster_name}' " \
                       f"({cluster_id}). Deleting nodes: {err.node_names} " \
@@ -857,7 +862,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.error(str(err), exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
-            self._fail_operation_and_resolve_entity(cluster_id, DefEntityOperation.UPDATE)
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.UPDATE)
         finally:
             self.context.end()
 
@@ -876,7 +882,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                              vapp_href,
                              node_names_list,
                              cluster_name=cluster_name)
-            except (cse_exception.NodeOperationError, cse_exception.ScriptExecutionError) as err:
+            except (e.NodeOperationError, e.ScriptExecutionError) as err:
                 LOGGER.warning(f"Failed to drain nodes: {node_names_list} in "
                                f"cluster '{cluster_name}'. "
                                f"Continuing node delete...\nError: {err}")
@@ -1366,10 +1372,10 @@ def get_cluster(client, cluster_name, cluster_id=None, org_name=None,
                                 cluster_id=cluster_id, org_name=org_name,
                                 ovdc_name=ovdc_name)
     if len(clusters) > 1:
-        raise cse_exception.CseDuplicateClusterError(f"Found multiple clusters named"
+        raise e.CseDuplicateClusterError(f"Found multiple clusters named"
                                          f" '{cluster_name}'.")
     if len(clusters) == 0:
-        raise cse_exception.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")
+        raise e.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")
 
     return clusters[0]
 
@@ -1488,14 +1494,14 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                     script=script)
                 errors = get_script_execution_errors(exec_results)
                 if errors:
-                    raise cse_exception.ScriptExecutionError(
+                    raise e.ScriptExecutionError(
                         f"VM customization script execution failed "
                         f"on node {vm_name}:{errors}")
     except Exception as err:
         # TODO: get details of the exception to determine cause of failure,
         # e.g. not enough resources available.
         node_list = [entry.get('target_vm_name') for entry in specs]
-        raise cse_exception.NodeCreationError(node_list, str(err))
+        raise e.NodeCreationError(node_list, str(err))
 
     vapp.reload()
     return {'task': task, 'specs': specs}
@@ -1531,7 +1537,7 @@ def get_master_ip(sysadmin_client: vcd_client.Client, vapp):
                                      check_tools=False)
     errors = get_script_execution_errors(result)
     if errors:
-        raise cse_exception.ScriptExecutionError(f"Get master IP script execution failed "
+        raise e.ScriptExecutionError(f"Get master IP script execution failed "
                                      f"on master node {node_names}:{errors}")
     master_ip = result[0][1].content.decode().split()[0]
     LOGGER.debug(f"Retrieved master IP for vapp: "
@@ -1553,14 +1559,14 @@ def init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                                          node_names=node_names, script=script)
         errors = get_script_execution_errors(result)
         if errors:
-            raise cse_exception.ScriptExecutionError(
+            raise e.ScriptExecutionError(
                 f"Initialize cluster script execution failed on node "
                 f"{node_names}:{errors}")
         if result[0][0] != 0:
-            raise cse_exception.ClusterInitializationError(f"Couldn't initialize cluster:\n{result[0][2].content.decode()}") # noqa: E501
+            raise e.ClusterInitializationError(f"Couldn't initialize cluster:\n{result[0][2].content.decode()}") # noqa: E501
     except Exception as err:
         LOGGER.error(err, exc_info=True)
-        raise cse_exception.ClusterInitializationError(
+        raise e.ClusterInitializationError(
             f"Couldn't initialize cluster: {str(err)}")
 
 
@@ -1576,7 +1582,7 @@ def join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                                             script=script)
     errors = get_script_execution_errors(master_result)
     if errors:
-        raise cse_exception.ScriptExecutionError(f"Join cluster script execution failed "
+        raise e.ScriptExecutionError(f"Join cluster script execution failed "
                                      f"on master node {node_names}:{errors}")
     init_info = master_result[0][1].content.decode().split()
 
@@ -1593,11 +1599,11 @@ def join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                                              script=script)
     errors = get_script_execution_errors(worker_results)
     if errors:
-        raise cse_exception.ScriptExecutionError(f"Join cluster script execution failed "
+        raise e.ScriptExecutionError(f"Join cluster script execution failed "
                                      f"on worker node  {node_names}:{errors}")
     for result in worker_results:
         if result[0] != 0:
-            raise cse_exception.ClusterJoiningError(f"Couldn't join cluster:"
+            raise e.ClusterJoiningError(f"Couldn't join cluster:"
                                         f"\n{result[2].content.decode()}")
 
 
@@ -1622,7 +1628,7 @@ def _wait_until_ready_to_exec(vs, vm, password, tries=30):
         time.sleep(2)
 
     if not ready:
-        raise cse_exception.CseServerError('VM is not ready to execute scripts')
+        raise e.CseServerError('VM is not ready to execute scripts')
 
 
 def execute_script_in_nodes(sysadmin_client: vcd_client.Client,
@@ -1699,10 +1705,10 @@ def run_script_in_nodes(sysadmin_client: vcd_client.Client, vapp_href,
                                       check_tools=False)
     errors = get_script_execution_errors(results)
     if errors:
-        raise cse_exception.ScriptExecutionError(f"Script execution failed on node "
+        raise e.ScriptExecutionError(f"Script execution failed on node "
                                      f"{node_names}\nErrors: {errors}")
     if results[0][0] != 0:
-        raise cse_exception.NodeOperationError(f"Error during node operation:\n"
+        raise e.NodeOperationError(f"Error during node operation:\n"
                                    f"{results[0][2].content.decode()}")
 
 
