@@ -831,10 +831,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 curr_entity.entity.spec.workers = cluster_spec.spec.workers
                 self.entity_svc.update_entity(cluster_id, curr_entity)
         except cse_exception.NodeCreationError as err:
-            curr_entity.entity.status.phase = str(
-                DefEntityPhase(DefEntityOperation.UPDATE,
-                               DefEntityOperationStatus.FAILED))
-            self.entity_svc.update_entity(cluster_id, curr_entity)
+            self._fail_operation_and_resolve_entity(cluster_id, DefEntityOperation.UPDATE)
             if rollback:
                 msg = f"Error adding nodes to cluster '{cluster_name}' " \
                       f"({cluster_id}). Deleting nodes: {err.node_names} " \
@@ -860,11 +857,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.error(str(err), exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
-            if curr_entity:
-                curr_entity.entity.status.phase = str(
-                    DefEntityPhase(DefEntityOperation.UPDATE,
-                                   DefEntityOperationStatus.FAILED))
-                self.entity_svc.update_entity(cluster_id, curr_entity)
+            self._fail_operation_and_resolve_entity(cluster_id, DefEntityOperation.UPDATE)
         finally:
             self.context.end()
 
