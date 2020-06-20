@@ -176,19 +176,11 @@ class ClusterService(abstract_broker.AbstractBroker):
         # check that requested/default template is valid
         get_template(name=template_name, revision=template_revision)
 
-        # create the corresponding defined entity .
-        def_entity = def_models.DefEntity(entity=cluster_spec)
-        self.entity_svc.\
-            create_entity(def_utils.get_registered_def_entity_type().id,
-                          entity=def_entity)
-        def_entity: def_models.DefEntity = self.entity_svc.get_native_entity_by_name(name=cluster_name)  # noqa: E501
-
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
 
-        # must _update_task or else self.task_resource is None
-        # do not logout of sys admin, or else in pyvcloud's session.request()
-        # call, session becomes None
+        # create the corresponding defined entity .
+        def_entity = def_models.DefEntity(entity=cluster_spec)
         msg = f"Creating cluster vApp '{cluster_name}' ({def_entity.id}) " \
               f"from template '{template_name}' (revision {template_revision})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
@@ -196,7 +188,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         def_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.CREATE,
                            DefEntityOperationStatus.IN_PROGRESS))
-        def_entity = self.entity_svc.update_entity(def_entity.id, def_entity)
+        self.entity_svc. \
+            create_entity(def_utils.get_registered_def_entity_type().id,
+                          entity=def_entity)
         self.context.is_async = True
         self._create_cluster_async(def_entity.id, cluster_spec)
         return def_entity
@@ -409,10 +403,11 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.entity_svc.update_entity(cluster_id, def_entity)
         self.entity_svc.resolve_entity(cluster_id)
 
-    def resize_cluster(self, id: str, cluster_spec: def_models.ClusterEntity):
+    def resize_cluster(self, cluster_id: str,
+                       cluster_spec: def_models.ClusterEntity):
         """Start the resize cluster operation.
 
-        :param str id: Defined entity Id of the cluster
+        :param str cluster_id: Defined entity Id of the cluster
         :param DefEntity cluster_spec: Input cluster spec
         :return: DefEntity of the cluster with the updated operation status
         and task_href.
@@ -420,7 +415,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         :rtype: DefEntity
         """
         # Get the existing defined entity for the given cluster id
-        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(id)
+        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
         name: str = curr_entity.name
         kind: str = curr_entity.entity.kind
         curr_worker_count: int = curr_entity.entity.spec.workers.count
@@ -429,15 +424,15 @@ class ClusterService(abstract_broker.AbstractBroker):
             curr_entity.entity.status.phase)
 
         # Check if entity is of kind native.
-        if kind != def_utils.ClusterEntityKind.NATIVE.value:
+        if kind == def_utils.ClusterEntityKind.TKG.value:
             raise e.CseServerError(f"CSE cannot resize an entity of type {kind}")  # noqa: E501
 
         # Check if cluster is in a valid state
         if state != def_utils.DEF_RESOLVED_STATE or\
                 not phase.is_operation_status_success():
             raise e.CseServerError(
-                f"Cluster {name} with id {id} is not in a valid state to "
-                f"perform resize. Contact Administrator.")
+                f"Cluster {name} with id {cluster_id} is not in a valid state "
+                f"to be resized. Please contact the administrator.")
 
         # Check if the desired worker count is valid
         spec_worker_count = cluster_spec.spec.workers.count
@@ -459,7 +454,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # TODO default template for resizing should be master's template
         # TODO(DEF) Handle Telemetry for Defined entities.
 
-        return self.create_nodes(cluster_id=id, cluster_spec=cluster_spec)
+        return self.create_nodes(cluster_id=cluster_id, cluster_spec=cluster_spec)  # noqa: E501
 
     def delete_cluster(self, **kwargs):
         """Start the delete cluster operation.
