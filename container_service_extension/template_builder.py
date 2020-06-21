@@ -385,7 +385,7 @@ class TemplateBuilder():
     def _tag_with_cse_placement_policy(self):
         """Tag the created template with placement policies if provided."""
         if not self.cse_placement_policy:
-            msg = "Skipping tagging template with palcement policy."
+            msg = "Skipping tagging template with placement policy."
             self.msg_update_callback.info(msg)
             self.logger.debug(msg)
             return
@@ -395,12 +395,6 @@ class TemplateBuilder():
         try:
             policy = cpm.get_vdc_compute_policy(self.cse_placement_policy,
                                                 is_placement_policy=True)
-        except EntityNotFoundException:
-            msg = f"Placement policy {self.cse_placement_policy} not found"
-            self.msg_update_callback.error(msg)
-            self.logger.error(msg)
-
-        try:
             task = cpm.assign_vdc_placement_policy_to_vapp_template_vms(
                 policy['href'],
                 self.org_name,
@@ -415,6 +409,10 @@ class TemplateBuilder():
                       f" placement policy {self.cse_placement_policy}."
             self.msg_update_callback.info(msg)
             self.logger.info(msg)
+        except EntityNotFoundException:
+            msg = f"Placement policy {self.cse_placement_policy} not found"
+            self.msg_update_callback.error(msg)
+            self.logger.error(msg)
         except Exception as err:
             msg = f"Failed to tag template {self.catalog_item_name} with " \
                   f"placement policy {self.cse_placement_policy}. Error: {err}"

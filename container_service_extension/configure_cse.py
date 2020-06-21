@@ -866,8 +866,7 @@ def _install_template(client, remote_template_manager, template, org_name,
         templateBuildKey.STORAGE_PROFILE: storage_profile
     }
     if float(client.get_api_version()) >= float(vCDApiVersion.VERSION_35.value): # noqa: E501
-        if not template.get(server_constants.RemoteTemplateKey.KIND) or \
-                template[server_constants.RemoteTemplateKey.KIND] not in server_constants.CLUSTER_PLACEMENT_POLICIES: # noqa: E501
+        if template[server_constants.RemoteTemplateKey.KIND] not in server_constants.CLUSTER_PLACEMENT_POLICIES: # noqa: E501
             raise ValueError(f"Cluster kind is {template.get(server_constants.RemoteTemplateKey.KIND)}" # noqa: E501
                              f" Expected {server_constants.CLUSTER_PLACEMENT_POLICIES}") # noqa: E501
         build_params[templateBuildKey.CSE_PLACEMENT_POLICY] = template[server_constants.RemoteTemplateKey.KIND] # noqa: E501
