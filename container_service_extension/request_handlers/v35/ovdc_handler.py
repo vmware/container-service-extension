@@ -43,7 +43,7 @@ def ovdc_update(data, operation_context: ctx.OperationContext):
     validated_data = request_data
     req_utils.validate_payload(request_data, required)
 
-    if not (set(validated_data[RequestKey.K8S_PROVIDER]) - set(CLUSTER_PLACEMENT_POLICIES)): # noqa: E501
+    if set(validated_data[RequestKey.K8S_PROVIDER]) - set(CLUSTER_PLACEMENT_POLICIES): # noqa: E501
         msg = "Cluster providers should have one of the follwoing values:" \
               f" {', '.join(CLUSTER_PLACEMENT_POLICIES)}."
         logger.SERVER_LOGGER.error(msg)
