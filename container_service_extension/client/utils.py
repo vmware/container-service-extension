@@ -30,9 +30,7 @@ def cse_restore_session(ctx, vdc_required=False) -> None:
     if token is None or len(token) == 0:
         raise Exception('Can\'t restore session, please login again.')
     if not profiles.get('verify'):
-        if profiles.get('disable_warnings'):
-            pass
-        else:
+        if not profiles.get('disable_warnings'):
             click.secho(
                 'InsecureRequestWarning: '
                 'Unverified HTTPS request is being made. '

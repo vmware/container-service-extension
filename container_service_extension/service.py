@@ -41,6 +41,7 @@ from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import ServerAction
+from container_service_extension.shared_constants import CSE_SERVER_API_VERSION
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import PayloadKey
 from container_service_extension.telemetry.telemetry_handler \
@@ -181,7 +182,7 @@ class Service(object, metaclass=Singleton):
 
     def info(self, get_sysadmin_info=False):
         result = utils.get_cse_info()
-        result['server_api_version'] = utils.get_server_api_version()
+        result[CSE_SERVER_API_VERSION] = utils.get_server_api_version()
         if get_sysadmin_info:
             result['consumer_threads'] = len(self.threads)
             result['all_threads'] = threading.activeCount()
