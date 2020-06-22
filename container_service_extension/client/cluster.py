@@ -27,9 +27,9 @@ class Cluster:
         :return: instance of version specific client side cluster
         """
         api_version = client.get_api_version()
-        if float(api_version) == float(vcd_client.ApiVersion.VERSION_33.value) or float(api_version) == float(vcd_client.ApiVersion.VERSION_34.value):   # noqa: E501
+        if float(api_version) < float(vcd_client.ApiVersion.VERSION_35.value):   # noqa: E501
             return LegacyNativeCluster(client)
-        elif float(api_version) == float(vcd_client.ApiVersion.VERSION_35):
+        elif float(api_version) >= float(vcd_client.ApiVersion.VERSION_35.value):  # noqa: E501
             if cluster_kind == ClusterKind.NATIVE or cluster_kind == ClusterKind.TKG_PLUS:  # noqa: E501
                 return NativeCluster(client)
             elif cluster_kind == ClusterKind.TKG:
