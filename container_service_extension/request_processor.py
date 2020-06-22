@@ -18,6 +18,7 @@ import container_service_extension.request_handlers.pks_cluster_handler as pks_c
 import container_service_extension.request_handlers.system_handler as system_handler  # noqa: E501
 import container_service_extension.request_handlers.template_handler as template_handler  # noqa: E501 E501
 import container_service_extension.request_handlers.v35.def_cluster_handler as v35_cluster_handler # noqa: E501
+import container_service_extension.request_handlers.v35.ovdc_handler as v35_ovdc_handler # noqa: E501
 from container_service_extension.server_constants import CseOperation
 from container_service_extension.server_constants import PKS_SERVICE_NAME
 from container_service_extension.shared_constants import OperationType
@@ -66,9 +67,9 @@ GET /cse/ovdc/{ovdc_id}/compute-policies
 PUT /cse/ovdc/{ovdc_id}/compute-policies
 
 New ovdc endpoints
-GET /cse/internal/ovdcs
-GET /cse/internal/ovdcs/{ovdc_id}
-PUT /cse/internal/ovdcs/{ovdc_id}
+GET /cse/internal/ovdc
+GET /cse/internal/ovdc/{ovdc_id}
+PUT /cse/internal/ovdc/{ovdc_id}
 
 GET /cse/system
 PUT /cse/system
@@ -107,6 +108,10 @@ OPERATION_TO_HANDLER = {
     CseOperation.V35_NODE_CREATE: v35_cluster_handler.node_create,
     CseOperation.V35_NODE_DELETE: v35_cluster_handler.node_delete,
     CseOperation.V35_NODE_INFO: v35_cluster_handler.node_info,
+
+    CseOperation.V35_OVDC_LIST: v35_ovdc_handler.ovdc_list,
+    CseOperation.V35_OVDC_INFO: v35_ovdc_handler.ovdc_info,
+    CseOperation.V35_OVDC_UPDATE: v35_ovdc_handler.ovdc_update,
 
     CseOperation.OVDC_UPDATE: ovdc_handler.ovdc_update,
     CseOperation.OVDC_INFO: ovdc_handler.ovdc_info,
@@ -202,8 +207,8 @@ def process_request(body):
     return response
 
 
-def _get_v35_cluster_url_data(method: str, url: str):
-    """Parse url and http method to get v35 cluster specific data.
+def _get_v35_url_data(method: str, url: str):
+    """Parse url and http method to get CSE v35 data.
 
     Returns a dictionary with operation and url data.
 
@@ -223,50 +228,96 @@ def _get_v35_cluster_url_data(method: str, url: str):
         operation_type = operation_type[:-1]
 
     if operation_type == OperationType.CLUSTER:
-        if num_tokens == 5:
-            if method == RequestMethod.GET:
-                return {_OPERATION_KEY: CseOperation.V35_CLUSTER_LIST}
-            if method == RequestMethod.POST:
-                return {_OPERATION_KEY: CseOperation.V35_CLUSTER_CREATE}
-            raise cse_exception.MethodNotAllowedRequestError()
-        if num_tokens == 6:
-            if method == RequestMethod.GET:
+        return _get_v35_cluster_url_data(method, tokens)
+
+    if operation_type == OperationType.OVDC:
+        return _get_v35_ovdc_url_data(method, tokens)
+
+
+def _get_v35_cluster_url_data(method: str, tokens):
+    """Parse tokens from url and http method to get v35 cluster specific data.
+
+    Returns a dictionary with operation and url data.
+
+    :param RequestMethod method: http verb
+    :param str[] tokens: http url
+
+    :rtype: dict
+    """
+    num_tokens = len(tokens)
+    if num_tokens == 5:
+        if method == RequestMethod.GET:
+            return {_OPERATION_KEY: CseOperation.V35_CLUSTER_LIST}
+        if method == RequestMethod.POST:
+            return {_OPERATION_KEY: CseOperation.V35_CLUSTER_CREATE}
+        raise cse_exception.MethodNotAllowedRequestError()
+    if num_tokens == 6:
+        if method == RequestMethod.GET:
+            return {
+                _OPERATION_KEY: CseOperation.V35_CLUSTER_INFO,
+                RequestKey.CLUSTER_ID: tokens[5]
+            }
+        if method == RequestMethod.PUT:
+            return {
+                _OPERATION_KEY: CseOperation.V35_CLUSTER_RESIZE,
+                RequestKey.CLUSTER_ID: tokens[5]
+            }
+        if method == RequestMethod.DELETE:
+            return {
+                _OPERATION_KEY: CseOperation.V35_CLUSTER_DELETE,
+                RequestKey.CLUSTER_ID: tokens[5]
+            }
+        raise cse_exception.MethodNotAllowedRequestError()
+    if num_tokens == 7:
+        if method == RequestMethod.GET:
+            if tokens[6] == 'config':
                 return {
-                    _OPERATION_KEY: CseOperation.V35_CLUSTER_INFO,
+                    _OPERATION_KEY: CseOperation.V35_CLUSTER_CONFIG,
                     RequestKey.CLUSTER_ID: tokens[5]
                 }
-            if method == RequestMethod.PUT:
+            if tokens[6] == 'upgrade-plan':
                 return {
-                    _OPERATION_KEY: CseOperation.V35_CLUSTER_RESIZE,
+                    _OPERATION_KEY: CseOperation.V35_CLUSTER_UPGRADE_PLAN,  # noqa: E501
                     RequestKey.CLUSTER_ID: tokens[5]
                 }
-            if method == RequestMethod.DELETE:
+        raise cse_exception.MethodNotAllowedRequestError()
+    if num_tokens == 8:
+        if method == RequestMethod.POST:
+            if tokens[6] == 'action' and tokens[7] == 'upgrade':
                 return {
-                    _OPERATION_KEY: CseOperation.V35_CLUSTER_DELETE,
+                    _OPERATION_KEY: CseOperation.V35_CLUSTER_UPGRADE,
                     RequestKey.CLUSTER_ID: tokens[5]
                 }
-            raise cse_exception.MethodNotAllowedRequestError()
-        if num_tokens == 7:
-            if method == RequestMethod.GET:
-                if tokens[6] == 'config':
-                    return {
-                        _OPERATION_KEY: CseOperation.V35_CLUSTER_CONFIG,
-                        RequestKey.CLUSTER_ID: tokens[5]
-                    }
-                if tokens[6] == 'upgrade-plan':
-                    return {
-                        _OPERATION_KEY: CseOperation.V35_CLUSTER_UPGRADE_PLAN,  # noqa: E501
-                        RequestKey.CLUSTER_ID: tokens[5]
-                    }
-            raise cse_exception.MethodNotAllowedRequestError()
-        if num_tokens == 8:
-            if method == RequestMethod.POST:
-                if tokens[6] == 'action' and tokens[7] == 'upgrade':
-                    return {
-                        _OPERATION_KEY: CseOperation.V35_CLUSTER_UPGRADE,
-                        RequestKey.CLUSTER_ID: tokens[5]
-                    }
-            raise cse_exception.MethodNotAllowedRequestError()
+        raise cse_exception.MethodNotAllowedRequestError()
+
+
+def _get_v35_ovdc_url_data(method: str, tokens):
+    """Parse tokens from url and http method to get v35 ovdc specific data.
+
+    Returns a dictionary with operation and url data.
+
+    :param RequestMethod method: http verb
+    :param str[] tokens: http url
+
+    :rtype: dict
+    """
+    num_tokens = len(tokens)
+    if num_tokens == 5:
+        if method == RequestMethod.GET:
+            return {_OPERATION_KEY: CseOperation.V35_OVDC_LIST}
+        raise cse_exception.MethodNotAllowedRequestError()
+    if num_tokens == 6:
+        if method == RequestMethod.PUT:
+            return {
+                _OPERATION_KEY: CseOperation.V35_OVDC_UPDATE,
+                RequestKey.OVDC_ID: tokens[5]
+            }
+        if method == RequestMethod.GET:
+            return {
+                _OPERATION_KEY: CseOperation.V35_OVDC_INFO,
+                RequestKey.OVDC_ID: tokens[5]
+            }
+        raise cse_exception.MethodNotAllowedRequestError()
 
 
 def _get_url_data(method, url):
@@ -292,7 +343,7 @@ def _get_url_data(method, url):
 
     is_v35_request = utils.is_v35_supported_by_cse_server() and _is_v35_endpoint(url)  # noqa: E501
     if is_v35_request:
-        return _get_v35_cluster_url_data(method, url)
+        return _get_v35_url_data(method, url)
 
     if tokens[2] == PKS_SERVICE_NAME:
         return _get_pks_url_data(method, url)
