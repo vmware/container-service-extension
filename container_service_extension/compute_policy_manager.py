@@ -634,7 +634,7 @@ class ComputePolicyManager:
 
         Note: The VDC compute policy need not be created by CSE.
 
-        :param op_ctx: request context of remove compute policy
+        :param op_ctx: operation context of remove compute policy
             request
         :param str ovdc_id: id of the vdc to assign the policy
         :param compute_policy_href: policy href to remove
@@ -643,7 +643,7 @@ class ComputePolicyManager:
 
         :return: dictionary containing 'task_href'.
         """
-        # TODO find an efficient way without passing in request context
+        # TODO find an efficient way without passing in operation context
         vdc = vcd_utils.get_vdc(self._sysadmin_client, vdc_id=ovdc_id)
 
         org = vcd_utils.get_org(self._sysadmin_client)
@@ -695,8 +695,8 @@ class ComputePolicyManager:
                                               remove_compute_policy_from_vms):
         try:
             vdc = vcd_utils.get_vdc(self._sysadmin_client, vdc_id=ovdc_id,
-                                is_admin_operation=True)
-            self.remove_compute_policy_from_vdc_with_task(
+                                    is_admin_operation=True)
+            self.remove_compute_policy_from_vdc(
                 task=task,
                 task_href=task_href,
                 user_href=user_href,
@@ -725,30 +725,15 @@ class ComputePolicyManager:
             if op_ctx.sysadmin_client:
                 op_ctx.end()
 
-
-
-    def remove_compute_policy_from_vdc_with_task(self, *args,
-                                                 task,
-                                                 task_href,
-                                                 user_href,
-                                                 org_href,
-                                                 ovdc_id,
-                                                 vdc,
-                                                 compute_policy_href,
-                                                 remove_compute_policy_from_vms):
+    def remove_compute_policy_from_vdc(self, task,
+                                       task_href, user_href,
+                                       org_href, ovdc_id,
+                                       vdc, compute_policy_href,
+                                       remove_compute_policy_from_vms,
+                                       is_placement_policy=False):
         user_name = self._session.get('user')
         try:
             if remove_compute_policy_from_vms:
-                system_default_href = None
-                for cp_dict in self.list_compute_policies_on_vdc(ovdc_id):
-                    if cp_dict['name'] == _SYSTEM_DEFAULT_COMPUTE_POLICY:
-                        system_default_href = cp_dict['href']
-                        break
-                if system_default_href is None:
-                    raise EntityNotFoundException(
-                        f"Error: {_SYSTEM_DEFAULT_COMPUTE_POLICY} "
-                        f"compute policy not found")
-
                 compute_policy_id = retrieve_compute_policy_id_from_href(compute_policy_href) # noqa: E501
                 vapps = vcd_utils.get_all_vapps_in_ovdc(self._sysadmin_client,
                                                         ovdc_id)
@@ -759,6 +744,12 @@ class ComputePolicyManager:
                         if vm_resource.VdcComputePolicy.get('id') == compute_policy_id: # noqa: E501
                             target_vms.append(vm_resource)
                 vm_names = [vm.get('name') for vm in target_vms]
+                system_default_href = None
+                filter_by_name = {'name': _SYSTEM_DEFAULT_COMPUTE_POLICY}
+                for cp_dict in self.list_compute_policies_on_vdc(ovdc_id,
+                                                                 filters=filter_by_name):  # noqa: E501
+                    system_default_href = cp_dict['href']
+                    break
 
                 task.update(
                     status=vcd_client.TaskStatus.RUNNING.value,
@@ -782,7 +773,8 @@ class ComputePolicyManager:
                 for vm_resource in target_vms:
                     vm = VM(self._sysadmin_client,
                             href=vm_resource.get('href'))
-                    _task = vm.update_compute_policy(system_default_href)
+                    _task = vm.update_compute_policy(system_default_href,
+                                                     remove_placement_policy=is_placement_policy)  # noqa: E501
 
                     task.update(
                         status=vcd_client.TaskStatus.RUNNING.value,
@@ -802,7 +794,6 @@ class ComputePolicyManager:
                         org_href=org_href,
                     )
                     task_monitor.wait_for_success(_task)
-
             task.update(
                 status=vcd_client.TaskStatus.RUNNING.value,
                 namespace='vcloud.cse',
