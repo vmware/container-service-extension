@@ -4,9 +4,11 @@
 import json
 
 import pika
-from pyvcloud.vcd.api_extension import APIExtension
+import pyvcloud.vcd.api_extension as api_extension
+from pyvcloud.vcd.client import ApiVersion
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
+from pyvcloud.vcd.client import NSMAP
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
@@ -121,7 +123,7 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
                 connection.close()
 
         # check that CSE is registered to vCD correctly
-        ext = APIExtension(client)
+        ext = api_extension.APIExtension(client)
         try:
             cse_info = ext.get_extension(server_constants.CSE_SERVICE_NAME,
                                          namespace=server_constants.CSE_SERVICE_NAMESPACE) # noqa: E501
@@ -177,7 +179,39 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
     SERVER_CLI_LOGGER.debug(msg)
 
 
-def install_cse(config_file_name, skip_template_creation, force_update,
+def _construct_cse_extension_description(target_vcd_api_version):
+    """."""
+    cse_version = utils.get_installed_cse_version()
+    description = f"cse-{cse_version},vcd_api-{target_vcd_api_version}"
+    return description
+
+
+def parse_cse_extension_description(sys_admin_client):
+    """."""
+    ext = api_extension.APIExtension(sys_admin_client)
+    ext_dict = ext.get_extension_info(
+        server_constants.CSE_SERVICE_NAME,
+        namespace=server_constants.CSE_SERVICE_NAMESPACE)
+    ext_xml = ext.get_extension_xml(ext_dict['id'])
+    child = ext_xml.find(f"{{{NSMAP['vcloud']}}}Description")
+    description = ''
+    if child:
+        description = child.text
+
+    cse_version = server_constants.UNKNOWN_CSE_VERSION
+    vcd_api_version = server_constants.UNKNOWN_VCD_API_VERSION
+    tokens = description.split(",")
+    if len(tokens) == 2:
+        cse_tokens = tokens[0].split("-")
+        if len(cse_tokens) == 2:
+            cse_version = semantic_version.Version(cse_tokens[1])
+        vcd_api_tokens = tokens[1].split("-")
+        if len(vcd_api_tokens) == 2:
+            vcd_api_version = vcd_api_tokens[1]
+    return (cse_version, vcd_api_version)
+
+
+def install_cse(config_file_name, skip_template_creation,
                 ssh_key, retain_temp_vapp, pks_config_file_name=None,
                 skip_config_decryption=False,
                 decryption_password=None,
@@ -192,8 +226,6 @@ def install_cse(config_file_name, skip_template_creation, force_update,
 
     :param str config_file_name: config file name.
     :param bool skip_template_creation: If True, skip creating the templates.
-    :param bool force_update: if True and templates already exist in vCD,
-        overwrites existing templates.
     :param str ssh_key: public ssh key to place into template vApp(s).
     :param bool retain_temp_vapp: if True, temporary vApp will not destroyed,
         so the user can ssh into and debug the vm.
@@ -226,7 +258,6 @@ def install_cse(config_file_name, skip_template_creation, force_update,
             PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),  # noqa: E501
             PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(pks_config_file_name),  # noqa: E501
             PayloadKey.WERE_TEMPLATES_SKIPPED: bool(skip_template_creation),  # noqa: E501
-            PayloadKey.WERE_TEMPLATES_FORCE_UPDATED: bool(force_update),  # noqa: E501
             PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(retain_temp_vapp),  # noqa: E501
             PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(ssh_key)  # noqa: E501
         }
@@ -264,16 +295,13 @@ def install_cse(config_file_name, skip_template_creation, force_update,
                               amqp['password'],
                               msg_update_callback=msg_update_callback)
 
-        # register or update cse on vCD
-        _register_cse(client, amqp['routing_key'], amqp['exchange'],
-                      config['vcd']['api_version'],
-                      msg_update_callback=msg_update_callback)
-
-        # register cse def schema on VCD
-        # schema should be located at
-        # ~/.cse-schema/api-v<API VERSION>/schema.json
-        _register_def_schema(client, msg_update_callback=msg_update_callback,
-                             log_wire=log_wire)
+        # register cse as an api extension to vCD
+        _register_cse_as_extension(
+            client=client,
+            routing_key=amqp['routing_key'],
+            exchange=amqp['exchange'],
+            target_vcd_api_version=config['vcd']['api_version'],
+            msg_update_callback=msg_update_callback)
 
         # Since we use CSE extension id as our telemetry instance_id, the
         # validated config won't have the instance_id yet. Now that CSE has
@@ -281,6 +309,12 @@ def install_cse(config_file_name, skip_template_creation, force_update,
         # config with the correct instance_id
         if config['service']['telemetry']['enable']:
             store_telemetry_settings(config)
+
+        # register cse def schema on VCD
+        # schema should be located at
+        # ~/.cse-schema/api-v<API VERSION>/schema.json
+        _register_def_schema(client, msg_update_callback=msg_update_callback,
+                             log_wire=log_wire)
 
         # register rights to vCD
         # TODO() should also remove rights when unregistering CSE
@@ -332,7 +366,7 @@ def install_cse(config_file_name, skip_template_creation, force_update,
                     network_name=config['broker']['network'],
                     ip_allocation_mode=config['broker']['ip_allocation_mode'],
                     storage_profile=config['broker']['storage_profile'],
-                    force_update=force_update,
+                    force_update=False,
                     retain_temp_vapp=retain_temp_vapp,
                     ssh_key=ssh_key,
                     msg_update_callback=msg_update_callback)
@@ -376,6 +410,128 @@ def install_cse(config_file_name, skip_template_creation, force_update,
                            status=OperationStatus.FAILED,
                            telemetry_settings=config['service']['telemetry'])
         raise  # TODO() need installation relevant exceptions for rollback
+    finally:
+        if client is not None:
+            client.logout()
+
+
+def upgrade_cse(config_file_name, config, skip_template_creation,
+                ssh_key, retain_temp_vapp,
+                msg_update_callback=utils.NullPrinter()):
+    populate_vsphere_list(config['vcs'])
+
+    msg = f"Upgrading CSE on vCloud Director using config file " \
+          f"'{config_file_name}'"
+    msg_update_callback.info(msg)
+    INSTALL_LOGGER.info(msg)
+
+    client = None
+    try:
+        # Todo: Record telemetry detail call
+
+        log_filename = None
+        log_wire = utils.str_to_bool(config['service'].get('log_wire'))
+        if log_wire:
+            log_filename = INSTALL_WIRELOG_FILEPATH
+
+        client = Client(config['vcd']['host'],
+                        api_version=config['vcd']['api_version'],
+                        verify_ssl_certs=config['vcd']['verify'],
+                        log_file=log_filename,
+                        log_requests=log_wire,
+                        log_headers=log_wire,
+                        log_bodies=log_wire)
+        credentials = BasicLoginCredentials(config['vcd']['username'],
+                                            server_constants.SYSTEM_ORG_NAME,
+                                            config['vcd']['password'])
+        client.set_credentials(credentials)
+        msg = f"Connected to vCD as system administrator: " \
+              f"{config['vcd']['host']}:{config['vcd']['port']}"
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.info(msg)
+
+        try:
+            ext_cse_version, ext_vcd_api_version = \
+                parse_cse_extension_description(client)
+            if ext_cse_version == server_constants.UNKNOWN_CSE_VERSION or \
+                    ext_vcd_api_version == server_constants.UNKNOWN_VCD_API_VERSION: # noqa: E501
+                msg = "Found CSE api extension registered with vCD, but " \
+                      "couldn't determine version of CSE and/or vCD api " \
+                      "used previously."
+                msg_update_callback.info(msg)
+                INSTALL_LOGGER.info(msg)
+            else:
+                msg = "Found CSE api extension registered by CSE " \
+                      f"'{ext_cse_version}' at vCD api version " \
+                      f"'v{ext_vcd_api_version}'."
+                msg_update_callback.general(msg)
+                INSTALL_LOGGER.info(msg)
+        except MissingRecordException:
+            msg = "CSE api extension not registered with vCD. Please use " \
+                  "`cse install' instead of 'cse upgrade'."
+            raise Exception(msg)
+
+        target_vcd_api_version = config['vcd']['api_version']
+        target_cse_version = utils.get_installed_cse_version()
+
+        # Handle various upgrade scenarios
+        # Post CSE 3.0.0 only the following upgrades should be allowed
+        # CSE X.Y.Z -> CSE X+1.0.0, CSE X.Y+1.0, X.Y.Z+1
+        # vCD api X -> vCD api X+ (as supported by CSE and pyvcloud)
+
+        # Upgrading from Unknown version is allowed only in
+        # CSE 3.0.0 (2.6.0.devX for the time being)
+
+        update_path_not_valid_msg = "CSE upgrade "
+        if ext_cse_version == server_constants.UNKNOWN_CSE_VERSION or \
+                ext_vcd_api_version == server_constants.UNKNOWN_VCD_API_VERSION: # noqa: E501
+            update_path_not_valid_msg += "to "
+        else:
+            update_path_not_valid_msg += \
+                f"path (CSE '{ext_cse_version}', vCD " \
+                f"api 'v{ext_vcd_api_version}') -> "
+        update_path_not_valid_msg += f"(CSE '{target_cse_version}', vCD api " \
+                                     f"'v{target_vcd_api_version}') is not " \
+                                     "supported."
+
+        if target_cse_version < ext_cse_version or \
+                float(target_vcd_api_version) < float(ext_vcd_api_version):
+            raise Exception(update_path_not_valid_msg)
+
+        # CSE version info in extension description is only applicable for
+        # CSE 2.6.02b.dev and CSE 3.0.0+ versions.
+        cse_2_6_0 = semantic_version.Version('2.6.0')
+        cse_3_0_0 = semantic_version.Version('3.0.0')
+        if ext_cse_version in \
+                (server_constants.UNKNOWN_CSE_VERSION, cse_2_6_0, cse_3_0_0):
+            if target_vcd_api_version in \
+                    (ApiVersion.VERSION_33.value, ApiVersion.VERSION_34.value):
+                _legacy_upgrade_to_33_34(
+                    client=client, config=config,
+                    ext_vcd_api_version=ext_vcd_api_version,
+                    skip_template_creation=skip_template_creation,
+                    ssh_key=ssh_key, retain_temp_vapp=retain_temp_vapp,
+                    msg_update_callback=msg_update_callback)
+            elif target_vcd_api_version in (ApiVersion.VERSION_35.value):
+                _upgrade_to_35(
+                    client=client, config=config,
+                    ext_vcd_api_version=ext_vcd_api_version,
+                    skip_template_creation=skip_template_creation,
+                    ssh_key=ssh_key, retain_temp_vapp=retain_temp_vapp,
+                    msg_update_callback=msg_update_callback,
+                    log_wire=log_wire)
+            else:
+                raise Exception(update_path_not_valid_msg)
+        else:
+            raise Exception(update_path_not_valid_msg)
+
+        # Todo: Telemetry - Record successful upgrade
+    except Exception:
+        msg_update_callback.error(
+            "CSE Installation Error. Check CSE install logs")
+        INSTALL_LOGGER.error("CSE Installation Error", exc_info=True)
+        # Todo: Telemetry - Record failed upgrade
+        raise
     finally:
         if client is not None:
             client.logout()
@@ -642,19 +798,22 @@ def _register_def_schema(client: Client,
             pass
 
 
-def deregister_cse(client, msg_update_callback=utils.NullPrinter(),
-                   logger=NULL_LOGGER):
+def _deregister_cse(client, msg_update_callback=utils.NullPrinter()):
     """Deregister CSE from VCD."""
-    ext = APIExtension(client)
-    ext.delete_extension('cse', 'cse')
+    ext = api_extension.APIExtension(client)
+    ext.delete_extension(name=server_constants.CSE_SERVICE_NAME,
+                         namespace=server_constants.CSE_SERVICE_NAMESPACE)
     msg = "Successfully deregistered CSE from VCD"
     msg_update_callback.general(msg)
-    logger.info(msg)
+    INSTALL_LOGGER.info(msg)
 
 
-def _register_cse(client, routing_key, exchange, target_vcd_api_version,
-                  msg_update_callback=utils.NullPrinter()):
-    """Register or update CSE on vCD.
+def _register_cse_as_extension(client, routing_key, exchange,
+                               target_vcd_api_version,
+                               msg_update_callback=utils.NullPrinter()):
+    """Register CSE on vCD.
+
+    Throws exception if CSE is already registered.
 
     :param pyvcloud.vcd.client.Client client:
     :param pyvcloud.vcd.client.Client client:
@@ -662,7 +821,7 @@ def _register_cse(client, routing_key, exchange, target_vcd_api_version,
     :param str exchange:
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     """
-    ext = APIExtension(client)
+    ext = api_extension.APIExtension(client)
     patterns = [
         f'/api/{server_constants.CSE_SERVICE_NAME}',
         f'/api/{server_constants.CSE_SERVICE_NAME}/.*',
@@ -672,28 +831,19 @@ def _register_cse(client, routing_key, exchange, target_vcd_api_version,
         f'/api/{server_constants.PKS_SERVICE_NAME}/.*/.*'
     ]
 
-    # convert 'cse-2.6.0.0b2.dev5' to '2.6.0'
-    cse_version = utils.get_cse_info()['version'].split('.')[:3]
-    cse_version = semantic_version.Version('.'.join(cse_version))
-
     vcd_api_versions = client.get_supported_versions_list()
     if target_vcd_api_version not in vcd_api_versions:
         raise ValueError(f"Target VCD API version '{target_vcd_api_version}' "
                          f" is not in supported versions: {vcd_api_versions}")
-
-    description = f"cse-{cse_version},vcd_api-{target_vcd_api_version}"
+    description = _construct_cse_extension_description(target_vcd_api_version)
     msg = None
     try:
         ext.get_extension_info(
             server_constants.CSE_SERVICE_NAME,
             namespace=server_constants.CSE_SERVICE_NAMESPACE)
-        ext.update_extension(
-            server_constants.CSE_SERVICE_NAME,
-            namespace=server_constants.CSE_SERVICE_NAMESPACE,
-            routing_key=routing_key,
-            exchange=exchange,
-            description=description)
-        msg = f"Updated {server_constants.CSE_SERVICE_NAME} API Extension in vCD" # noqa: E501
+        msg = f"API extension '{server_constants.CSE_SERVICE_NAME}' already " \
+              "exists in vCD. Use `cse upgrade` instead of 'cse install'."
+        raise Exception(msg)
     except MissingRecordException:
         ext.add_extension(
             server_constants.CSE_SERVICE_NAME,
@@ -724,7 +874,7 @@ def _register_right(client, right_name, description, category, bundle_key,
     :raises BadRequestException: if a right with given name already
         exists in vCD.
     """
-    ext = APIExtension(client)
+    ext = api_extension.APIExtension(client)
     # Since the client is a sys admin, org will hold a reference to System org
     system_org = Org(client, resource=client.get_org())
     try:
@@ -872,3 +1022,125 @@ def _install_template(client, remote_template_manager, template, org_name,
 
     ltm.save_metadata(client, org_name, catalog_name, catalog_item_name,
                       template_data)
+
+
+def _legacy_upgrade_to_33_34(client, config, ext_vcd_api_version,
+                             skip_template_creation, ssh_key, retain_temp_vapp,
+                             msg_update_callback=utils.NullPrinter()):
+    # create amqp exchange if it doesn't exist
+    amqp = config['amqp']
+    _create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
+                          amqp['vhost'], amqp['ssl'], amqp['username'],
+                          amqp['password'],
+                          msg_update_callback=msg_update_callback)
+
+    # update cse api extension
+    _deregister_cse(client, msg_update_callback=msg_update_callback)
+    _register_cse_as_extension(
+        client=client,
+        routing_key=amqp['routing_key'],
+        exchange=amqp['exchange'],
+        target_vcd_api_version=config['vcd']['api_version'],
+        msg_update_callback=msg_update_callback)
+
+    # Recreate all supported templates
+    if skip_template_creation:
+        msg = "Skipping creation of templates."
+        msg_update_callback.info(msg)
+        INSTALL_LOGGER.warning(msg)
+    else:
+        # read remote template cookbook, download all scripts
+        rtm = RemoteTemplateManager(
+            remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
+            logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
+        remote_template_cookbook = rtm.get_remote_template_cookbook()
+
+        # create all templates defined in cookbook
+        for template in remote_template_cookbook['templates']:
+            # TODO tag created templates with placement policies
+            _install_template(
+                client=client,
+                remote_template_manager=rtm,
+                template=template,
+                org_name=config['broker']['org'],
+                vdc_name=config['broker']['vdc'],
+                catalog_name=config['broker']['catalog'],
+                network_name=config['broker']['network'],
+                ip_allocation_mode=config['broker']['ip_allocation_mode'],
+                storage_profile=config['broker']['storage_profile'],
+                force_update=True,
+                retain_temp_vapp=retain_temp_vapp,
+                ssh_key=ssh_key,
+                msg_update_callback=msg_update_callback)
+
+    # do convert cluster
+    target_vcd_version = config['vcd']['api_version']
+    if ext_vcd_api_version != target_vcd_version:
+        _legacy_update_clusters()
+
+
+def _legacy_update_clusters():
+    pass
+
+
+def _upgrade_to_35(client, config, ext_vcd_api_version,
+                   skip_template_creation, ssh_key, retain_temp_vapp,
+                   msg_update_callback=utils.NullPrinter(), log_wire=False):
+    # create amqp exchange if it doesn't exist
+    amqp = config['amqp']
+    _create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
+                          amqp['vhost'], amqp['ssl'], amqp['username'],
+                          amqp['password'],
+                          msg_update_callback=msg_update_callback)
+
+    # update cse api extension
+    _deregister_cse(client, msg_update_callback=msg_update_callback)
+    _register_cse_as_extension(
+        client=client,
+        routing_key=amqp['routing_key'],
+        exchange=amqp['exchange'],
+        target_vcd_api_version=config['vcd']['api_version'],
+        msg_update_callback=msg_update_callback)
+
+    # Add global placement polcies
+    _setup_placement_policies(client,
+                              policy_list=server_constants.CLUSTER_PLACEMENT_POLICIES, # noqa: E501
+                              msg_update_callback=msg_update_callback,
+                              log_wire=log_wire)
+
+    # Register def schema
+    _register_def_schema(client, msg_update_callback=msg_update_callback,
+                         log_wire=log_wire)
+
+    # Recreate all supported templates
+    if skip_template_creation:
+        msg = "Skipping creation of templates."
+        msg_update_callback.info(msg)
+        INSTALL_LOGGER.warning(msg)
+    else:
+        # read remote template cookbook, download all scripts
+        rtm = RemoteTemplateManager(
+            remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
+            logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
+        remote_template_cookbook = rtm.get_remote_template_cookbook()
+
+        # create all templates defined in cookbook
+        for template in remote_template_cookbook['templates']:
+            # TODO tag created templates with placement policies
+            _install_template(
+                client=client,
+                remote_template_manager=rtm,
+                template=template,
+                org_name=config['broker']['org'],
+                vdc_name=config['broker']['vdc'],
+                catalog_name=config['broker']['catalog'],
+                network_name=config['broker']['network'],
+                ip_allocation_mode=config['broker']['ip_allocation_mode'],
+                storage_profile=config['broker']['storage_profile'],
+                force_update=True,
+                retain_temp_vapp=retain_temp_vapp,
+                ssh_key=ssh_key,
+                msg_update_callback=msg_update_callback)
+
+    # Cleanup all existing CSE polcies. Assign new policy to all clusters
+    # Create DEF entity for all clusters

@@ -29,8 +29,9 @@ import container_service_extension.configure_cse as configure_cse
 from container_service_extension.encryption_engine import decrypt_file
 from container_service_extension.encryption_engine import encrypt_file
 from container_service_extension.encryption_engine import get_decrypted_file_contents # noqa: E501
-import container_service_extension.exceptions as e
 import container_service_extension.local_template_manager as ltm
+from container_service_extension.logger import INSTALL_LOGGER
+from container_service_extension.logger import INSTALL_WIRELOG_FILEPATH
 from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_CLI_LOGGER
 from container_service_extension.logger import SERVER_CLI_WIRELOG_FILEPATH
@@ -516,11 +517,6 @@ def encrypt(ctx, input_file, output_file):
     is_flag=True,
     help='Skips creating CSE k8s template during installation')
 @click.option(
-    '-f',
-    '--force-update',
-    is_flag=True,
-    help='Recreate CSE k8s templates on vCD even if they already exist')
-@click.option(
     '-d',
     '--retain-temp-vapp',
     'retain_temp_vapp',
@@ -536,7 +532,7 @@ def encrypt(ctx, input_file, output_file):
     type=click.File('r'),
     help='Filepath of SSH public key to add to vApp template')
 def install(ctx, config_file_path, pks_config_file_path,
-            skip_config_decryption, skip_template_creation, force_update,
+            skip_config_decryption, skip_template_creation,
             retain_temp_vapp, ssh_key_file):
     """Install CSE on vCloud Director."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
@@ -567,7 +563,7 @@ def install(ctx, config_file_path, pks_config_file_path,
                 config_file_name=config_file_path,
                 pks_config_file_name=pks_config_file_path,
                 skip_template_creation=skip_template_creation,
-                force_update=force_update, ssh_key=ssh_key,
+                ssh_key=ssh_key,
                 retain_temp_vapp=retain_temp_vapp,
                 skip_config_decryption=skip_config_decryption,
                 decryption_password=password,
@@ -689,6 +685,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
 @click.option(
     '-s',
     '--skip-config-decryption',
+    'skip_config_decryption',
     is_flag=True,
     help='Skip decryption of CSE config file')
 @click.option(
@@ -697,11 +694,6 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     'skip_template_creation',
     is_flag=True,
     help='Skips creating CSE k8s template during upgrade')
-@click.option(
-    '-f',
-    '--force-update',
-    is_flag=True,
-    help='Recreate CSE k8s templates on vCD even if they already exist')
 @click.option(
     '-d',
     '--retain-temp-vapp',
@@ -718,7 +710,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     type=click.File('r'),
     help='Filepath of SSH public key to add to vApp template')
 def upgrade(ctx, config_file_path, skip_config_decryption,
-            skip_template_creation, force_update, retain_temp_vapp,
+            skip_template_creation, retain_temp_vapp,
             ssh_key_file):
     """Upgrade existing CSE 2.6.0 installation/entities.
 
@@ -728,67 +720,49 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
     - Install templates from template repository linked in config file
     - Add CSE / VCD API version info to VCD's extension data for CSE
     """
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
-    config = _get_config_dict(
-        config_file_path=config_file_path,
-        pks_config_file_path=None,
-        skip_config_decryption=skip_config_decryption,
-        msg_update_callback=console_message_printer,
-        validate=True,
-        log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-        logger_debug=SERVER_CLI_LOGGER)
-    if not config['vcd']['verify']:
-        SERVER_CLI_LOGGER.warning(
-            "InsecureRequestWarning: Unverified HTTPS request is being made."
-            " Adding certificate verification is strongly advised.")
-        requests.packages.urllib3.disable_warnings()
-    log_wire = str_to_bool(config['service'].get('log_wire'))
+    check_python_version(console_message_printer)
 
-    sysadmin_client = None
+    if retain_temp_vapp and not ssh_key_file:
+        msg = "Must provide ssh-key file (using --ssh-key OR -k) if " \
+              "--retain-temp-vapp is provided, or else temporary vm will be " \
+              "inaccessible"
+        console_message_printer.error(msg)
+        INSTALL_LOGGER.error(msg)
+        sys.exit(1)
+
+    ssh_key = None
+    if ssh_key_file is not None:
+        ssh_key = ssh_key_file.read()
+
     try:
-        sysadmin_client, cloudapi_client = _get_clients_from_config(
-            config,
-            SERVER_CLI_WIRELOG_FILEPATH,
-            log_wire)
-
-        # Don't run upgrade if versions already match
-        try:
-            cse_service.verify_version_compatibility(
-                sysadmin_client, config['vcd']['api_version'])
-            console_message_printer.info('CSE is already up to date.')
-            return
-        except e.VersionCompatibilityError:
-            pass
-
-        # TODO: arbitrary upgrades
-
-        # Update CSE extension data on VCD
-        configure_cse.deregister_cse(
-            sysadmin_client,
+        config = _get_config_dict(
+            config_file_path=config_file_path,
+            pks_config_file_path=None,
+            skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
-            logger=SERVER_CLI_LOGGER)
-        configure_cse._register_cse(
-            sysadmin_client,
-            config['amqp']['routing_key'],
-            config['amqp']['exchange'],
-            config['vcd']['api_version'],
+            validate=False,
+            # validate=True,
+            log_wire_file=INSTALL_WIRELOG_FILEPATH,
+            logger_debug=INSTALL_LOGGER)
+
+        configure_cse.upgrade_cse(
+            config_file_name=config_file_path,
+            config=config,
+            skip_template_creation=skip_template_creation,
+            ssh_key=ssh_key,
+            retain_temp_vapp=retain_temp_vapp,
             msg_update_callback=console_message_printer)
 
-        # Record telemetry data on successful completion
-        record_user_action(
-            cse_operation=CseOperation.UPGRADE,
-            telemetry_settings=config['service']['telemetry'])
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
-        # Record telemetry data on failed cluster convert
-        record_user_action(cse_operation=CseOperation.UPGRADE,
-                           status=OperationStatus.FAILED,
-                           telemetry_settings=config['service']['telemetry'])
         sys.exit(1)
     finally:
-        if sysadmin_client:
-            sysadmin_client.logout()
+        # block the process to let telemetry handler to finish posting data to
+        # VAC. HACK!!!
+        time.sleep(3)
 
 
 @cli.command('convert-cluster',
