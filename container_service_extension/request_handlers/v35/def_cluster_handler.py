@@ -10,7 +10,6 @@ import container_service_extension.server_constants as const
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.telemetry_handler import \
     record_user_action_telemetry
-import container_service_extension.request_handlers.v35.ovdc_handler as ovdc_handler  # noqa: E501
 
 _OPERATION_KEY = 'operation'
 

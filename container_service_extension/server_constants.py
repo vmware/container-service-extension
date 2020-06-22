@@ -189,6 +189,10 @@ class CseOperation(Enum):
     SYSTEM_UPDATE = ('update system status')
     TEMPLATE_LIST = ('list all templates')
 
+    V35_OVDC_LIST = ('list ovdcs for v35')
+    V35_OVDC_INFO = ('get info of ovdc for v35')
+    V35_OVDC_UPDATE = ('enable or disable ovdc for a cluster kind for v35', requests.codes.accepted)  # noqa: E501
+
     PKS_CLUSTER_CONFIG = ('get config of PKS cluster')
     PKS_CLUSTER_CREATE = ('create PKS cluster', requests.codes.accepted)
     PKS_CLUSTER_DELETE = ('delete PKS cluster', requests.codes.accepted)
