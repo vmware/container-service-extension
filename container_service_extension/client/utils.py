@@ -7,6 +7,7 @@ import requests
 from vcd_cli.profiles import Profiles
 
 from container_service_extension.client import system as syst
+from container_service_extension.shared_constants import CSE_SERVER_API_VERSION
 
 
 def cse_restore_session(ctx, vdc_required=False) -> None:
@@ -30,9 +31,7 @@ def cse_restore_session(ctx, vdc_required=False) -> None:
     if token is None or len(token) == 0:
         raise Exception('Can\'t restore session, please login again.')
     if not profiles.get('verify'):
-        if profiles.get('disable_warnings'):
-            pass
-        else:
+        if not profiles.get('disable_warnings'):
             click.secho(
                 'InsecureRequestWarning: '
                 'Unverified HTTPS request is being made. '
@@ -72,17 +71,17 @@ def _override_client(ctx) -> None:
     :param <click.core.Context> ctx: click context
     """
     profiles = Profiles.load()
-    server_api_version = profiles.get('server_api_version')
+    cse_server_api_version = profiles.get(CSE_SERVER_API_VERSION)
     # Get server_api_version; save it in profiles if doesn't exist
-    if not server_api_version:
+    if not cse_server_api_version:
         system = syst.System(ctx.obj['client'])
         sys_info = system.get_info()
-        server_api_version = sys_info.get('server_api_version')
-        profiles.set('server_api_version', server_api_version)
+        cse_server_api_version = sys_info.get(CSE_SERVER_API_VERSION)
+        profiles.set(CSE_SERVER_API_VERSION, cse_server_api_version)
         profiles.save()
     client = Client(
         profiles.get('host'),
-        api_version=server_api_version,
+        api_version=cse_server_api_version,
         verify_ssl_certs=profiles.get('verify'),
         log_file='vcd.log',
         log_requests=profiles.get('log_request'),
