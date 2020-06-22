@@ -142,6 +142,7 @@ class RemoteTemplateKey(str, Enum):
     CNI = 'cni'
     CNI_VERSION = 'cni_version'
     UPGRADE_FROM = 'upgrade_from'
+    KIND = 'kind'
 
 
 # CSE requests
@@ -231,3 +232,4 @@ class TemplateBuildKey(str, Enum):
     NETWORK_NAME = 'network_name'
     IP_ALLOCATION_MODE = 'ip_allocation_mode'
     STORAGE_PROFILE = 'storage_profile'
+    CSE_PLACEMENT_POLICY = 'cse_placement_policy'
