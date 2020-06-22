@@ -12,11 +12,6 @@ import container_service_extension.client.utils as client_utils
 from container_service_extension.logger import CLIENT_LOGGER
 
 
-class ApiVersion(str, Enum):  # TODO(): use pyvcloud constant
-    VERSION_34 = '34.0'
-    VERSION_35 = '35.0'
-
-
 class ClusterKind(str, Enum):
     NATIVE = 'native'
     TKG = 'tkg'
@@ -40,7 +35,7 @@ UNSUPPORTED_COMMANDS_BY_VERSION = {
     vcd_client.ApiVersion.VERSION_33.value: {
         GroupKey.CLUSTER: ['apply']
     },
-    ApiVersion.VERSION_34: {
+    vcd_client.ApiVersion.VERSION_34.value: {
         GroupKey.CLUSTER: ['apply']
     }
 }
@@ -54,13 +49,13 @@ UNSUPPORTED_COMMAND_OPTIONS_BY_VERSION = {
         }
     },
 
-    ApiVersion.VERSION_34: {
+    vcd_client.ApiVersion.VERSION_34.value: {
         GroupKey.CLUSTER: {
             CommandNameKey.CREATE: ['sizing_class']
         }
     },
 
-    ApiVersion.VERSION_35: {
+    vcd_client.ApiVersion.VERSION_35.value: {
         GroupKey.CLUSTER: {
             CommandNameKey.CREATE: ['cpu', 'memory']
         }
