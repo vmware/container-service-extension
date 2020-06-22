@@ -6,6 +6,11 @@ from enum import Enum
 from enum import unique
 
 import requests
+import semantic_version
+
+# CSE SERVICE; default version strings for CSE api extension
+UNKNOWN_CSE_VERSION = semantic_version.Version("0.0.0")
+UNKNOWN_VCD_API_VERSION = "0.0"
 
 # CSE SERVICE; used for registering CSE to vCD as an api extension service.
 CSE_SERVICE_NAME = 'cse'
