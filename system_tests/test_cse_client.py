@@ -108,8 +108,8 @@ def cse_server():
     result = env.CLI_RUNNER.invoke(cli, template_install_cmd,
                                    catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info('cse', template_install_cmd, result.exit_code,
-                                      result.output)
+        testutils.format_command_info('cse', template_install_cmd,
+                                      result.exit_code, result.output)
 
     # start cse server as subprocess
     cmd = f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption"

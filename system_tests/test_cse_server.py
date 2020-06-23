@@ -297,7 +297,7 @@ def test_0080_install_skip_template_creation(config,
         assert not env.vapp_exists(temp_vapp_name), \
             'vApp exists when it should not.'
 
-# TODO Remove after Guest Customization fix
+
 def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
     """Test install.
 
@@ -333,11 +333,11 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
     vdc = VDC(env.CLIENT, href=env.VDC_HREF)
     for template_config in env.TEMPLATE_DEFINITIONS:
         # check that source ova file exists in catalog
-        
+
         # TODO remove after Guest Customization fix
         if 'photon' in template_config['source_ova_name']:
             continue
-        template_install_cmd  = \
+        template_install_cmd = \
             f"template install --config {env.ACTIVE_CONFIG_FILEPATH} " \
             f"--ssh-key {env.SSH_KEY_FILEPATH} --retain-temp-vapp " \
             f"--skip-config-decryption {template_config['name']} " \
@@ -367,7 +367,7 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
         except EntityNotFoundException:
             assert False, 'vApp does not exist when it should.'
 
-
+# TODO Uncomment after Guest Customization fix
 # def test_0100_install_force_update(config, unregister_cse_before_test):
 #     """Tests installation option: '--force-update'.
 
