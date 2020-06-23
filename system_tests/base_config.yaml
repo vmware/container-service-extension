@@ -61,12 +61,12 @@ broker:
   default_template_name: ubuntu-16.04_k8-1.16_weave-2.6.0
 
                                         # name of the default template to use if none is specified
-  default_template_revision: 2          # revision of the default template to use if none is specified
+  default_template_revision: 1          # revision of the default template to use if none is specified
   ip_allocation_mode: pool              # dhcp or pool
   network: myNW                    # org network within @vdc that will be used during the install process to build the template
                                         #   Should have outbound access to the public internet
                                         #   CSE appliance doesn't need to be connected to this network
-  org: '???'                            # vCD org that contains the shared catalog where the master templates will be stored
+  org: template-org                           # vCD org that contains the shared catalog where the master templates will be stored
   remote_template_cookbook_url: https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template.yaml
   storage_profile: '*'                  # name of the storage profile to use when creating the temporary vApp used to build the template
   vdc: template-vdc                       # VDC within @org that will be used during the install process to build the template
