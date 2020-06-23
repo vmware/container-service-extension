@@ -311,8 +311,6 @@ def install_cse(config_file_name, skip_template_creation,
             store_telemetry_settings(config)
 
         # register cse def schema on VCD
-        # schema should be located at
-        # ~/.cse-schema/api-v<API VERSION>/schema.json
         _register_def_schema(client, msg_update_callback=msg_update_callback,
                              log_wire=log_wire)
 
@@ -342,34 +340,15 @@ def install_cse(config_file_name, skip_template_creation,
             org, config['broker']['catalog'], catalog_desc='CSE templates',
             logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
 
-        if skip_template_creation:
-            msg = "Skipping creation of templates."
-            msg_update_callback.info(msg)
-            INSTALL_LOGGER.warning(msg)
-        else:
-            # read remote template cookbook, download all scripts
-            rtm = RemoteTemplateManager(
-                remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
-                logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
-            remote_template_cookbook = rtm.get_remote_template_cookbook()
-
-            # create all templates defined in cookbook
-            for template in remote_template_cookbook['templates']:
-                # TODO tag created templates with placement policies
-                _install_template(
-                    client=client,
-                    remote_template_manager=rtm,
-                    template=template,
-                    org_name=config['broker']['org'],
-                    vdc_name=config['broker']['vdc'],
-                    catalog_name=config['broker']['catalog'],
-                    network_name=config['broker']['network'],
-                    ip_allocation_mode=config['broker']['ip_allocation_mode'],
-                    storage_profile=config['broker']['storage_profile'],
-                    force_update=False,
-                    retain_temp_vapp=retain_temp_vapp,
-                    ssh_key=ssh_key,
-                    msg_update_callback=msg_update_callback)
+        # install all templates
+        _install_all_templates(
+            client=client,
+            config=config,
+            skip_template_creation=skip_template_creation,
+            force_create=False,
+            retain_temp_vapp=retain_temp_vapp,
+            ssh_key=retain_temp_vapp,
+            msg_update_callback=msg_update_callback)
 
         # if it's a PKS setup, setup NSX-T constructs
         if config.get('pks_config'):
@@ -413,6 +392,530 @@ def install_cse(config_file_name, skip_template_creation,
     finally:
         if client is not None:
             client.logout()
+
+
+def _create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
+                          username, password,
+                          msg_update_callback=utils.NullPrinter()):
+    """Create the specified AMQP exchange if it does not exist.
+
+    If specified AMQP exchange exists already, does nothing.
+
+    :param str exchange_name: The AMQP exchange name to check for or create.
+    :param str host: AMQP host name.
+    :param str password: AMQP password.
+    :param int port: AMQP port number.
+    :param bool use_ssl: Enable ssl.
+    :param str username: AMQP username.
+    :param str vhost: AMQP vhost.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+
+    :raises cse_exception.AmqpError: if AMQP exchange could not be created.
+    """
+    msg = f"Checking for AMQP exchange '{exchange_name}'"
+    msg_update_callback.info(msg)
+    INSTALL_LOGGER.info(msg)
+    credentials = pika.PlainCredentials(username, password)
+    parameters = pika.ConnectionParameters(host, port, vhost, credentials,
+                                           ssl=use_ssl, connection_attempts=3,
+                                           retry_delay=2, socket_timeout=5)
+    connection = None
+    try:
+        connection = pika.BlockingConnection(parameters)
+        channel = connection.channel()
+        channel.exchange_declare(exchange=exchange_name,
+                                 exchange_type=server_constants.EXCHANGE_TYPE,
+                                 durable=True, auto_delete=False)
+    except Exception as err:
+        msg = f"Cannot create AMQP exchange '{exchange_name}'"
+        msg_update_callback.error(msg)
+        INSTALL_LOGGER.error(msg, exc_info=True)
+        raise cse_exception.AmqpError(msg, str(err))
+    finally:
+        if connection is not None:
+            connection.close()
+    msg = f"AMQP exchange '{exchange_name}' is ready"
+    msg_update_callback.general(msg)
+    INSTALL_LOGGER.info(msg)
+
+
+def _deregister_cse(client, msg_update_callback=utils.NullPrinter()):
+    """Deregister CSE from VCD."""
+    ext = api_extension.APIExtension(client)
+    ext.delete_extension(name=server_constants.CSE_SERVICE_NAME,
+                         namespace=server_constants.CSE_SERVICE_NAMESPACE)
+    msg = "Successfully deregistered CSE from VCD"
+    msg_update_callback.general(msg)
+    INSTALL_LOGGER.info(msg)
+
+
+def _register_cse_as_extension(client, routing_key, exchange,
+                               target_vcd_api_version,
+                               msg_update_callback=utils.NullPrinter()):
+    """Register CSE on vCD.
+
+    Throws exception if CSE is already registered.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param pyvcloud.vcd.client.Client client:
+    :param str routing_key:
+    :param str exchange:
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    """
+    ext = api_extension.APIExtension(client)
+    patterns = [
+        f'/api/{server_constants.CSE_SERVICE_NAME}',
+        f'/api/{server_constants.CSE_SERVICE_NAME}/.*',
+        f'/api/{server_constants.PKS_SERVICE_NAME}',
+        f'/api/{server_constants.PKS_SERVICE_NAME}/.*',
+    ]
+
+    vcd_api_versions = client.get_supported_versions_list()
+    if target_vcd_api_version not in vcd_api_versions:
+        raise ValueError(f"Target VCD API version '{target_vcd_api_version}' "
+                         f" is not in supported versions: {vcd_api_versions}")
+    description = _construct_cse_extension_description(target_vcd_api_version)
+    msg = None
+    try:
+        ext.get_extension_info(
+            server_constants.CSE_SERVICE_NAME,
+            namespace=server_constants.CSE_SERVICE_NAMESPACE)
+        msg = f"API extension '{server_constants.CSE_SERVICE_NAME}' already " \
+              "exists in vCD. Use `cse upgrade` instead of 'cse install'."
+        raise Exception(msg)
+    except MissingRecordException:
+        ext.add_extension(
+            server_constants.CSE_SERVICE_NAME,
+            server_constants.CSE_SERVICE_NAMESPACE,
+            routing_key,
+            exchange,
+            patterns,
+            description=description)
+        msg = f"Registered {server_constants.CSE_SERVICE_NAME} as an API extension in vCD" # noqa: E501
+
+    msg_update_callback.general(msg)
+    INSTALL_LOGGER.info(msg)
+
+
+def _register_def_schema(client: Client,
+                         msg_update_callback=utils.NullPrinter(),
+                         log_wire=False):
+    """Register defined entity interface and defined entity type.
+
+    If vCD api version is >= 35, register the vCD api version based
+    defined entity interface and defined entity type. Read the schema present
+    in the location dictated by api version to register the
+    defined entity type.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param bool log_wire: wire logging enabled
+    """
+    msg = "Registering defined entity schema"
+    msg_update_callback.info(msg)
+    INSTALL_LOGGER.debug(msg)
+    logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
+    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(client=client, # noqa: E501
+                                                                    logger_debug=INSTALL_LOGGER, # noqa: E501
+                                                                    logger_wire=logger_wire) # noqa: E501
+    schema_file = None
+    try:
+        def_utils.raise_error_if_def_not_supported(cloudapi_client)
+        schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
+        keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(client.get_api_version())] # noqa: E501
+        defKey = def_utils.DefKey
+        native_interface = def_models.\
+            DefInterface(name=keys_map[defKey.INTERFACE_NAME],
+                         vendor=keys_map[defKey.VENDOR],
+                         nss=keys_map[defKey.INTERFACE_NSS],
+                         version=keys_map[defKey.INTERFACE_VERSION], # noqa: E501
+                         readonly=False)
+        msg = ""
+        try:
+            schema_svc.get_interface(native_interface.get_id())
+            msg = "defined entity interface already exists." \
+                  " Skipping defined entity interface creation"
+        except HTTPError:
+            # TODO handle this part only if the interface was not found
+            native_interface = schema_svc.create_interface(native_interface)
+            msg = "Successfully created defined entity interface"
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.debug(msg)
+
+        # TODO stop-gap fix - find efficient way to import schema
+        import importlib
+        import importlib.resources as pkg_resources
+        schema_module = importlib.import_module(
+            f'{def_utils.DEF_SCHEMA_DIRECTORY}.{keys_map[defKey.ENTITY_TYPE_SCHEMA_VERSION]}') # noqa: E501
+        schema_file = pkg_resources.open_text(schema_module, def_utils.DEF_ENTITY_TYPE_SCHEMA_FILE) # noqa: E501
+        native_entity_type = def_models.\
+            DefEntityType(name=keys_map[defKey.ENTITY_TYPE_NAME],
+                          description='',
+                          vendor=keys_map[defKey.VENDOR],
+                          nss=keys_map[defKey.ENTITY_TYPE_NSS],
+                          version=keys_map[defKey.ENTITY_TYPE_VERSION],
+                          schema=json.load(schema_file),
+                          interfaces=[native_interface.get_id()],
+                          readonly=False)
+        msg = ""
+        try:
+            schema_svc.get_entity_type(native_entity_type.get_id())
+            msg = "defined entity type already exists." \
+                  " Skipping defined entity type creation"
+        except HTTPError:
+            # TODO handle this part only if the entity type was not found
+            native_entity_type = schema_svc.create_entity_type(native_entity_type) # noqa: E501
+            msg = "Successfully registered defined entity type"
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.debug(msg)
+    except cse_exception.DefNotSupportedException:
+        msg = "Skipping defined entity type and defined entity interface" \
+              " registration"
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.debug(msg)
+    except Exception as e:
+        msg = f"Error occured while registering defined entity schema: {str(e)}" # noqa: E501
+        msg_update_callback.error(msg)
+        INSTALL_LOGGER.error(msg)
+        raise(e)
+    finally:
+        try:
+            schema_file.close()
+        except Exception:
+            pass
+
+
+def _register_right(client, right_name, description, category, bundle_key,
+                    msg_update_callback=utils.NullPrinter()):
+    """Register a right for CSE.
+
+    :param pyvcloud.vcd.client.Client client:
+    :param str right_name: the name of the new right to be registered.
+    :param str description: brief description about the new right.
+    :param str category: add the right in existing categories in
+        vCD Roles and Rights or specify a new category name.
+    :param str bundle_key: is used to identify the right name and change
+        its value to different languages using localization bundle.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+
+    :raises BadRequestException: if a right with given name already
+        exists in vCD.
+    """
+    ext = api_extension.APIExtension(client)
+    # Since the client is a sys admin, org will hold a reference to System org
+    system_org = Org(client, resource=client.get_org())
+    try:
+        right_name_in_vcd = f"{{{server_constants.CSE_SERVICE_NAME}}}:{right_name}" # noqa: E501
+        # TODO(): When org.get_right_record() is moved outside the org scope in
+        # pyvcloud, update the code below to adhere to the new method names.
+        system_org.get_right_record(right_name_in_vcd)
+        msg = f"Right: {right_name} already exists in vCD"
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.info(msg)
+        # Presence of the right in vCD is not a guarantee that the right will
+        # be assigned to system org too.
+        rights_in_system = system_org.list_rights_of_org()
+        for dikt in rights_in_system:
+            # TODO(): When localization support comes in, this check should be
+            # ditched for a better one.
+            if dikt['name'] == right_name_in_vcd:
+                msg = f"Right: {right_name} already assigned to System " \
+                    f"organization."
+                msg_update_callback.general(msg)
+                INSTALL_LOGGER.info(msg)
+                return
+        # Since the right is not assigned to system org, we need to add it.
+        msg = f"Assigning Right: {right_name} to System organization."
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.info(msg)
+        system_org.add_rights([right_name_in_vcd])
+    except EntityNotFoundException:
+        # Registering a right via api extension end point, auto assigns it to
+        # System org.
+        msg = f"Registering Right: {right_name} in vCD"
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.info(msg)
+        ext.add_service_right(
+            right_name, server_constants.CSE_SERVICE_NAME,
+            server_constants.CSE_SERVICE_NAMESPACE, description,
+            category, bundle_key)
+
+
+def _setup_placement_policies(client, policy_list,
+                              msg_update_callback=utils.NullPrinter(),
+                              log_wire=False):
+    """
+    Create placement policies for each cluster type.
+
+    Create the global pvdc compute policy if not present and create placement
+    policy for each policy in the policy list. This should be done only for
+    vcd api version >= 35 (zeus)
+
+    :parma client vcdClient.Client
+    :param policy_list str[]
+    """
+    msg = "Setting up placement policies for cluster types"
+    msg_update_callback.info(msg)
+    INSTALL_LOGGER.debug(msg)
+    computePolicyManager = cpm.ComputePolicyManager(client, log_wire=log_wire)
+    pvdc_compute_policy = None
+    try:
+        try:
+            pvdc_compute_policy = computePolicyManager.get_pvdc_compute_policy(
+                server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME)
+            msg = "Skipping global PVDC compute policy creation. Policy already exists" # noqa: E501
+            msg_update_callback.general(msg)
+            INSTALL_LOGGER.debug(msg)
+        except EntityNotFoundException:
+            msg = "Creating global PVDC compute policy"
+            msg_update_callback.general(msg)
+            INSTALL_LOGGER.debug(msg)
+            pvdc_compute_policy = computePolicyManager.add_pvdc_compute_policy(
+                server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME,
+                server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_DESCRIPTION)
+
+        for policy in policy_list:
+            try:
+                computePolicyManager.get_vdc_compute_policy(policy, is_placement_policy=True) # noqa: E501
+                msg = f"Skipping creating VDC placement policy '{policy}'. Policy already exists" # noqa: E501
+                msg_update_callback.general(msg)
+                INSTALL_LOGGER.debug(msg)
+            except EntityNotFoundException:
+                msg = f"Creating placement policy '{policy}'"
+                msg_update_callback.general(msg)
+                INSTALL_LOGGER.debug(msg)
+                computePolicyManager.add_vdc_compute_policy(policy,
+                                                            pvdc_compute_policy_id=pvdc_compute_policy['id']) # noqa: E501
+    except cse_exception.GlobalPvdcComputePolicyNotSupported:
+        msg = "Global PVDC compute policies are not supported." \
+              "Skipping placement policy creation."
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.debug(msg)
+
+
+def _install_all_templates(
+        client, config, skip_template_creation, force_create, retain_temp_vapp,
+        ssh_key, msg_update_callback=utils.NullPrinter()):
+    if skip_template_creation:
+        msg = "Skipping creation of templates."
+        msg_update_callback.info(msg)
+        INSTALL_LOGGER.warning(msg)
+    else:
+        # read remote template cookbook, download all scripts
+        rtm = RemoteTemplateManager(
+            remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
+            logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
+        remote_template_cookbook = rtm.get_remote_template_cookbook()
+
+        # create all templates defined in cookbook
+        for template in remote_template_cookbook['templates']:
+            # TODO tag created templates with placement policies
+            _install_single_template(
+                client=client,
+                remote_template_manager=rtm,
+                template=template,
+                org_name=config['broker']['org'],
+                vdc_name=config['broker']['vdc'],
+                catalog_name=config['broker']['catalog'],
+                network_name=config['broker']['network'],
+                ip_allocation_mode=config['broker']['ip_allocation_mode'],
+                storage_profile=config['broker']['storage_profile'],
+                force_update=force_create,
+                retain_temp_vapp=retain_temp_vapp,
+                ssh_key=ssh_key,
+                msg_update_callback=msg_update_callback)
+
+
+def install_template(template_name, template_revision, config_file_name,
+                     force_create, retain_temp_vapp, ssh_key,
+                     skip_config_decryption=False, decryption_password=None,
+                     msg_update_callback=utils.NullPrinter()):
+    """Install a particular template in CSE.
+
+    If template_name and revision are wild carded to *, all templates defined
+    in remote template cookbook will be installed.
+
+    :param str template_name:
+    :param str template_revision:
+    :param str config_file_name: config file name.
+    :param bool force_create: if True and template already exists in vCD,
+        overwrites existing template.
+    :param str ssh_key: public ssh key to place into template vApp(s).
+    :param bool retain_temp_vapp: if True, temporary vApp will not destroyed,
+        so the user can ssh into and debug the vm.
+    :param bool skip_config_decryption: do not decrypt the config file.
+    :param str decryption_password: password to decrypt the config file.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    """
+    config = get_validated_config(
+        config_file_name, skip_config_decryption=skip_config_decryption,
+        decryption_password=decryption_password,
+        log_wire_file=INSTALL_WIRELOG_FILEPATH,
+        logger_debug=INSTALL_LOGGER,
+        msg_update_callback=msg_update_callback)
+
+    populate_vsphere_list(config['vcs'])
+
+    msg = f"Installing template '{template_name}' at revision " \
+          f"'{template_revision}' on vCloud Director using config file " \
+          f"'{config_file_name}'"
+    msg_update_callback.info(msg)
+    INSTALL_LOGGER.info(msg)
+
+    client = None
+    try:
+        # Telemetry data construction
+        cse_params = {
+            PayloadKey.TEMPLATE_NAME: template_name,
+            PayloadKey.TEMPLATE_REVISION: template_revision,
+            PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),
+            PayloadKey.WERE_TEMPLATES_FORCE_UPDATED: bool(force_create),
+            PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(retain_temp_vapp),
+            PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(ssh_key)
+        }
+        # Record telemetry data
+        record_user_action_details(
+            cse_operation=CseOperation.TEMPLATE_INSTALL,
+            cse_params=cse_params,
+            telemetry_settings=config['service']['telemetry'])
+
+        log_filename = None
+        log_wire = utils.str_to_bool(config['service'].get('log_wire'))
+        if log_wire:
+            log_filename = INSTALL_WIRELOG_FILEPATH
+
+        client = Client(config['vcd']['host'],
+                        api_version=config['vcd']['api_version'],
+                        verify_ssl_certs=config['vcd']['verify'],
+                        log_file=log_filename,
+                        log_requests=log_wire,
+                        log_headers=log_wire,
+                        log_bodies=log_wire)
+        credentials = BasicLoginCredentials(config['vcd']['username'],
+                                            server_constants.SYSTEM_ORG_NAME,
+                                            config['vcd']['password'])
+        client.set_credentials(credentials)
+        msg = f"Connected to vCD as system administrator: " \
+              f"{config['vcd']['host']}:{config['vcd']['port']}"
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.info(msg)
+
+        # read remote template cookbook
+        rtm = RemoteTemplateManager(
+            remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
+            logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
+        remote_template_cookbook = rtm.get_remote_template_cookbook()
+
+        found_template = False
+        for template in remote_template_cookbook['templates']:
+            template_name_matched = template_name in (template[server_constants.RemoteTemplateKey.NAME], '*') # noqa: E501
+            template_revision_matched = \
+                str(template_revision) in (str(template[server_constants.RemoteTemplateKey.REVISION]), '*') # noqa: E501
+            if template_name_matched and template_revision_matched:
+                found_template = True
+                _install_single_template(
+                    client=client,
+                    remote_template_manager=rtm,
+                    template=template,
+                    org_name=config['broker']['org'],
+                    vdc_name=config['broker']['vdc'],
+                    catalog_name=config['broker']['catalog'],
+                    network_name=config['broker']['network'],
+                    ip_allocation_mode=config['broker']['ip_allocation_mode'],
+                    storage_profile=config['broker']['storage_profile'],
+                    force_update=force_create,
+                    retain_temp_vapp=retain_temp_vapp,
+                    ssh_key=ssh_key,
+                    msg_update_callback=msg_update_callback)
+
+        if not found_template:
+            msg = f"Template '{template_name}' at revision " \
+                  f"'{template_revision}' not found in remote template " \
+                  "cookbook."
+            msg_update_callback.error(msg)
+            INSTALL_LOGGER.error(msg, exc_info=True)
+            raise Exception(msg)
+
+        # Record telemetry data on successful template install
+        record_user_action(cse_operation=CseOperation.TEMPLATE_INSTALL,
+                           status=OperationStatus.SUCCESS,
+                           telemetry_settings=config['service']['telemetry'])  # noqa: E501
+    except Exception:
+        msg_update_callback.error(
+            "Template Installation Error. Check CSE install logs")
+        INSTALL_LOGGER.error("Template Installation Error", exc_info=True)
+
+        # Record telemetry data on template install failure
+        record_user_action(cse_operation=CseOperation.TEMPLATE_INSTALL,
+                           status=OperationStatus.FAILED,
+                           telemetry_settings=config['service']['telemetry'])
+    finally:
+        if client is not None:
+            client.logout()
+
+
+def _install_single_template(
+        client, remote_template_manager, template, org_name,
+        vdc_name, catalog_name, network_name, ip_allocation_mode,
+        storage_profile, force_update, retain_temp_vapp,
+        ssh_key, msg_update_callback=utils.NullPrinter()):
+    localTemplateKey = server_constants.LocalTemplateKey
+    templateBuildKey = server_constants.TemplateBuildKey
+    remote_template_manager.download_template_scripts(
+        template_name=template[server_constants.RemoteTemplateKey.NAME],
+        revision=template[server_constants.RemoteTemplateKey.REVISION],
+        force_overwrite=force_update)
+    catalog_item_name = ltm.get_revisioned_template_name(
+        template[server_constants.RemoteTemplateKey.NAME],
+        template[server_constants.RemoteTemplateKey.REVISION])
+
+    # remote template data is a super set of local template data, barring
+    # the key 'catalog_item_name'
+    template_data = dict(template)
+    template_data[localTemplateKey.CATALOG_ITEM_NAME] = catalog_item_name
+
+    missing_keys = [k for k in localTemplateKey if k not in template_data]
+    if len(missing_keys) > 0:
+        raise ValueError(f"Invalid template data. Missing keys: {missing_keys}") # noqa: E501
+
+    temp_vm_name = (
+        f"{template[server_constants.RemoteTemplateKey.OS].replace('.','')}-"
+        f"k8s{template[server_constants.RemoteTemplateKey.KUBERNETES_VERSION].replace('.', '')}-" # noqa: E501
+        f"{template[server_constants.RemoteTemplateKey.CNI]}"
+        f"{template[server_constants.RemoteTemplateKey.CNI_VERSION].replace('.','')}-vm" # noqa: E501
+    )
+    build_params = {
+        templateBuildKey.TEMPLATE_NAME: template[server_constants.RemoteTemplateKey.NAME], # noqa: E501
+        templateBuildKey.TEMPLATE_REVISION: template[server_constants.RemoteTemplateKey.REVISION], # noqa: E501
+        templateBuildKey.SOURCE_OVA_NAME: template[server_constants.RemoteTemplateKey.SOURCE_OVA_NAME], # noqa: E501
+        templateBuildKey.SOURCE_OVA_HREF: template[server_constants.RemoteTemplateKey.SOURCE_OVA_HREF], # noqa: E501
+        templateBuildKey.SOURCE_OVA_SHA256: template[server_constants.RemoteTemplateKey.SOURCE_OVA_SHA256], # noqa: E501
+        templateBuildKey.ORG_NAME: org_name,
+        templateBuildKey.VDC_NAME: vdc_name,
+        templateBuildKey.CATALOG_NAME: catalog_name,
+        templateBuildKey.CATALOG_ITEM_NAME: catalog_item_name,
+        templateBuildKey.CATALOG_ITEM_DESCRIPTION: template[server_constants.RemoteTemplateKey.DESCRIPTION], # noqa: E501
+        templateBuildKey.TEMP_VAPP_NAME: template[server_constants.RemoteTemplateKey.NAME] + '_temp', # noqa: E501
+        templateBuildKey.TEMP_VM_NAME: temp_vm_name,
+        templateBuildKey.CPU: template[server_constants.RemoteTemplateKey.CPU],
+        templateBuildKey.MEMORY: template[server_constants.RemoteTemplateKey.MEMORY], # noqa: E501
+        templateBuildKey.NETWORK_NAME: network_name,
+        templateBuildKey.IP_ALLOCATION_MODE: ip_allocation_mode, # noqa: E501
+        templateBuildKey.STORAGE_PROFILE: storage_profile
+    }
+    if float(client.get_api_version()) >= float(vCDApiVersion.VERSION_35.value): # noqa: E501
+        if template[server_constants.RemoteTemplateKey.KIND] not in server_constants.CLUSTER_PLACEMENT_POLICIES: # noqa: E501
+            raise ValueError(f"Cluster kind is {template.get(server_constants.RemoteTemplateKey.KIND)}" # noqa: E501
+                             f" Expected {server_constants.CLUSTER_PLACEMENT_POLICIES}") # noqa: E501
+        build_params[templateBuildKey.CSE_PLACEMENT_POLICY] = template[server_constants.RemoteTemplateKey.KIND] # noqa: E501
+    builder = TemplateBuilder(client, client, build_params, ssh_key=ssh_key,
+                              logger=INSTALL_LOGGER,
+                              msg_update_callback=msg_update_callback)
+    builder.build(force_recreate=force_update,
+                  retain_temp_vapp=retain_temp_vapp)
+
+    ltm.save_metadata(client, org_name, catalog_name, catalog_item_name,
+                      template_data)
 
 
 def upgrade_cse(config_file_name, config, skip_template_creation,
@@ -537,496 +1040,40 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
             client.logout()
 
 
-def install_template(template_name, template_revision, config_file_name,
-                     force_create, retain_temp_vapp, ssh_key,
-                     skip_config_decryption=False, decryption_password=None,
-                     msg_update_callback=utils.NullPrinter()):
-    """Install a particular template in CSE.
-
-    If template_name and revision are wild carded to *, all templates defined
-    in remote template cookbook will be installed.
-
-    :param str template_name:
-    :param str template_revision:
-    :param str config_file_name: config file name.
-    :param bool force_create: if True and template already exists in vCD,
-        overwrites existing template.
-    :param str ssh_key: public ssh key to place into template vApp(s).
-    :param bool retain_temp_vapp: if True, temporary vApp will not destroyed,
-        so the user can ssh into and debug the vm.
-    :param bool skip_config_decryption: do not decrypt the config file.
-    :param str decryption_password: password to decrypt the config file.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
-    """
-    config = get_validated_config(
-        config_file_name, skip_config_decryption=skip_config_decryption,
-        decryption_password=decryption_password,
-        log_wire_file=INSTALL_WIRELOG_FILEPATH,
-        logger_debug=INSTALL_LOGGER,
-        msg_update_callback=msg_update_callback)
-
-    populate_vsphere_list(config['vcs'])
-
-    msg = f"Installing template '{template_name}' at revision " \
-          f"'{template_revision}' on vCloud Director using config file " \
-          f"'{config_file_name}'"
-    msg_update_callback.info(msg)
-    INSTALL_LOGGER.info(msg)
-
-    client = None
-    try:
-        # Telemetry data construction
-        cse_params = {
-            PayloadKey.TEMPLATE_NAME: template_name,
-            PayloadKey.TEMPLATE_REVISION: template_revision,
-            PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),
-            PayloadKey.WERE_TEMPLATES_FORCE_UPDATED: bool(force_create),
-            PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(retain_temp_vapp),
-            PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(ssh_key)
-        }
-        # Record telemetry data
-        record_user_action_details(
-            cse_operation=CseOperation.TEMPLATE_INSTALL,
-            cse_params=cse_params,
-            telemetry_settings=config['service']['telemetry'])
-
-        log_filename = None
-        log_wire = utils.str_to_bool(config['service'].get('log_wire'))
-        if log_wire:
-            log_filename = INSTALL_WIRELOG_FILEPATH
-
-        client = Client(config['vcd']['host'],
-                        api_version=config['vcd']['api_version'],
-                        verify_ssl_certs=config['vcd']['verify'],
-                        log_file=log_filename,
-                        log_requests=log_wire,
-                        log_headers=log_wire,
-                        log_bodies=log_wire)
-        credentials = BasicLoginCredentials(config['vcd']['username'],
-                                            server_constants.SYSTEM_ORG_NAME,
-                                            config['vcd']['password'])
-        client.set_credentials(credentials)
-        msg = f"Connected to vCD as system administrator: " \
-              f"{config['vcd']['host']}:{config['vcd']['port']}"
-        msg_update_callback.general(msg)
-        INSTALL_LOGGER.info(msg)
-
-        # read remote template cookbook
-        rtm = RemoteTemplateManager(
-            remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
-            logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
-        remote_template_cookbook = rtm.get_remote_template_cookbook()
-
-        found_template = False
-        for template in remote_template_cookbook['templates']:
-            template_name_matched = template_name in (template[server_constants.RemoteTemplateKey.NAME], '*') # noqa: E501
-            template_revision_matched = \
-                str(template_revision) in (str(template[server_constants.RemoteTemplateKey.REVISION]), '*') # noqa: E501
-            if template_name_matched and template_revision_matched:
-                found_template = True
-                _install_template(
-                    client=client,
-                    remote_template_manager=rtm,
-                    template=template,
-                    org_name=config['broker']['org'],
-                    vdc_name=config['broker']['vdc'],
-                    catalog_name=config['broker']['catalog'],
-                    network_name=config['broker']['network'],
-                    ip_allocation_mode=config['broker']['ip_allocation_mode'],
-                    storage_profile=config['broker']['storage_profile'],
-                    force_update=force_create,
-                    retain_temp_vapp=retain_temp_vapp,
-                    ssh_key=ssh_key,
-                    msg_update_callback=msg_update_callback)
-
-        if not found_template:
-            msg = f"Template '{template_name}' at revision " \
-                  f"'{template_revision}' not found in remote template " \
-                  "cookbook."
-            msg_update_callback.error(msg)
-            INSTALL_LOGGER.error(msg, exc_info=True)
-            raise Exception(msg)
-
-        # Record telemetry data on successful template install
-        record_user_action(cse_operation=CseOperation.TEMPLATE_INSTALL,
-                           status=OperationStatus.SUCCESS,
-                           telemetry_settings=config['service']['telemetry'])  # noqa: E501
-    except Exception:
-        msg_update_callback.error(
-            "Template Installation Error. Check CSE install logs")
-        INSTALL_LOGGER.error("Template Installation Error", exc_info=True)
-
-        # Record telemetry data on template install failure
-        record_user_action(cse_operation=CseOperation.TEMPLATE_INSTALL,
-                           status=OperationStatus.FAILED,
-                           telemetry_settings=config['service']['telemetry'])
-    finally:
-        if client is not None:
-            client.logout()
-
-
-def _create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
-                          username, password,
+def _update_cse_extension(client, routing_key, exchange,
+                          target_vcd_api_version,
                           msg_update_callback=utils.NullPrinter()):
-    """Create the specified AMQP exchange if it does not exist.
-
-    If specified AMQP exchange exists already, does nothing.
-
-    :param str exchange_name: The AMQP exchange name to check for or create.
-    :param str host: AMQP host name.
-    :param str password: AMQP password.
-    :param int port: AMQP port number.
-    :param bool use_ssl: Enable ssl.
-    :param str username: AMQP username.
-    :param str vhost: AMQP vhost.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
-
-    :raises cse_exception.AmqpError: if AMQP exchange could not be created.
-    """
-    msg = f"Checking for AMQP exchange '{exchange_name}'"
-    msg_update_callback.info(msg)
-    INSTALL_LOGGER.info(msg)
-    credentials = pika.PlainCredentials(username, password)
-    parameters = pika.ConnectionParameters(host, port, vhost, credentials,
-                                           ssl=use_ssl, connection_attempts=3,
-                                           retry_delay=2, socket_timeout=5)
-    connection = None
-    try:
-        connection = pika.BlockingConnection(parameters)
-        channel = connection.channel()
-        channel.exchange_declare(exchange=exchange_name,
-                                 exchange_type=server_constants.EXCHANGE_TYPE,
-                                 durable=True, auto_delete=False)
-    except Exception as err:
-        msg = f"Cannot create AMQP exchange '{exchange_name}'"
-        msg_update_callback.error(msg)
-        INSTALL_LOGGER.error(msg, exc_info=True)
-        raise cse_exception.AmqpError(msg, str(err))
-    finally:
-        if connection is not None:
-            connection.close()
-    msg = f"AMQP exchange '{exchange_name}' is ready"
-    msg_update_callback.general(msg)
-    INSTALL_LOGGER.info(msg)
-
-
-def _register_def_schema(client: Client,
-                         msg_update_callback=utils.NullPrinter(),
-                         log_wire=False):
-    """Register defined entity interface and defined entity type.
-
-    If vCD api version is >= 35, register the vCD api version based
-    defined entity interface and defined entity type. Read the schema present
-    in the location dictated by api version to register the
-    defined entity type.
-
-    :param pyvcloud.vcd.client.Client client:
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
-    :param bool log_wire: wire logging enabled
-    """
-    msg = "Registering defined entity schema"
-    msg_update_callback.info(msg)
-    INSTALL_LOGGER.debug(msg)
-    logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
-    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(client=client, # noqa: E501
-                                                                    logger_debug=INSTALL_LOGGER, # noqa: E501
-                                                                    logger_wire=logger_wire) # noqa: E501
-    schema_file = None
-    try:
-        def_utils.raise_error_if_def_not_supported(cloudapi_client)
-        schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
-        keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(client.get_api_version())] # noqa: E501
-        defKey = def_utils.DefKey
-        native_interface = def_models.\
-            DefInterface(name=keys_map[defKey.INTERFACE_NAME],
-                         vendor=keys_map[defKey.VENDOR],
-                         nss=keys_map[defKey.INTERFACE_NSS],
-                         version=keys_map[defKey.INTERFACE_VERSION], # noqa: E501
-                         readonly=False)
-        msg = ""
-        try:
-            schema_svc.get_interface(native_interface.get_id())
-            msg = "defined entity interface already exists." \
-                  " Skipping defined entity interface creation"
-        except HTTPError:
-            # TODO handle this part only if the interface was not found
-            native_interface = schema_svc.create_interface(native_interface)
-            msg = "Successfully created defined entity interface"
-        msg_update_callback.general(msg)
-        INSTALL_LOGGER.debug(msg)
-
-        # TODO stop-gap fix - find efficient way to import schema
-        import importlib
-        import importlib.resources as pkg_resources
-        schema_module = importlib.import_module(
-            f'{def_utils.DEF_SCHEMA_DIRECTORY}.{keys_map[defKey.ENTITY_TYPE_SCHEMA_VERSION]}') # noqa: E501
-        schema_file = pkg_resources.open_text(schema_module, def_utils.DEF_ENTITY_TYPE_SCHEMA_FILE) # noqa: E501
-        native_entity_type = def_models.\
-            DefEntityType(name=keys_map[defKey.ENTITY_TYPE_NAME],
-                          description='',
-                          vendor=keys_map[defKey.VENDOR],
-                          nss=keys_map[defKey.ENTITY_TYPE_NSS],
-                          version=keys_map[defKey.ENTITY_TYPE_VERSION],
-                          schema=json.load(schema_file),
-                          interfaces=[native_interface.get_id()],
-                          readonly=False)
-        msg = ""
-        try:
-            schema_svc.get_entity_type(native_entity_type.get_id())
-            msg = "defined entity type already exists." \
-                  " Skipping defined entity type creation"
-        except HTTPError:
-            # TODO handle this part only if the entity type was not found
-            native_entity_type = schema_svc.create_entity_type(native_entity_type) # noqa: E501
-            msg = "Successfully registered defined entity type"
-        msg_update_callback.general(msg)
-        INSTALL_LOGGER.debug(msg)
-    except cse_exception.DefNotSupportedException:
-        msg = "Skipping defined entity type and defined entity interface" \
-              " registration"
-        msg_update_callback.general(msg)
-        INSTALL_LOGGER.debug(msg)
-    except Exception as e:
-        msg = f"Error occured while registering defined entity schema: {str(e)}" # noqa: E501
-        msg_update_callback.error(msg)
-        INSTALL_LOGGER.error(msg)
-        raise(e)
-    finally:
-        try:
-            schema_file.close()
-        except Exception:
-            pass
-
-
-def _deregister_cse(client, msg_update_callback=utils.NullPrinter()):
-    """Deregister CSE from VCD."""
-    ext = api_extension.APIExtension(client)
-    ext.delete_extension(name=server_constants.CSE_SERVICE_NAME,
-                         namespace=server_constants.CSE_SERVICE_NAMESPACE)
-    msg = "Successfully deregistered CSE from VCD"
-    msg_update_callback.general(msg)
-    INSTALL_LOGGER.info(msg)
-
-
-def _register_cse_as_extension(client, routing_key, exchange,
-                               target_vcd_api_version,
-                               msg_update_callback=utils.NullPrinter()):
-    """Register CSE on vCD.
-
-    Throws exception if CSE is already registered.
-
-    :param pyvcloud.vcd.client.Client client:
-    :param pyvcloud.vcd.client.Client client:
-    :param str routing_key:
-    :param str exchange:
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
-    """
+    """."""
     ext = api_extension.APIExtension(client)
     patterns = [
         f'/api/{server_constants.CSE_SERVICE_NAME}',
         f'/api/{server_constants.CSE_SERVICE_NAME}/.*',
-        f'/api/{server_constants.CSE_SERVICE_NAME}/.*/.*',
         f'/api/{server_constants.PKS_SERVICE_NAME}',
         f'/api/{server_constants.PKS_SERVICE_NAME}/.*',
-        f'/api/{server_constants.PKS_SERVICE_NAME}/.*/.*'
     ]
 
-    vcd_api_versions = client.get_supported_versions_list()
-    if target_vcd_api_version not in vcd_api_versions:
-        raise ValueError(f"Target VCD API version '{target_vcd_api_version}' "
-                         f" is not in supported versions: {vcd_api_versions}")
     description = _construct_cse_extension_description(target_vcd_api_version)
     msg = None
-    try:
-        ext.get_extension_info(
-            server_constants.CSE_SERVICE_NAME,
-            namespace=server_constants.CSE_SERVICE_NAMESPACE)
-        msg = f"API extension '{server_constants.CSE_SERVICE_NAME}' already " \
-              "exists in vCD. Use `cse upgrade` instead of 'cse install'."
-        raise Exception(msg)
-    except MissingRecordException:
-        ext.add_extension(
-            server_constants.CSE_SERVICE_NAME,
-            server_constants.CSE_SERVICE_NAMESPACE,
-            routing_key,
-            exchange,
-            patterns,
-            description=description)
-        msg = f"Registered {server_constants.CSE_SERVICE_NAME} as an API extension in vCD" # noqa: E501
 
+    ext.update_extension(
+        name=server_constants.CSE_SERVICE_NAME,
+        namespace=server_constants.CSE_SERVICE_NAMESPACE,
+        routing_key=routing_key,
+        exchange=exchange,
+        description=description)
+
+    ext.remove_all_api_filters_from_service(
+        name=server_constants.CSE_SERVICE_NAME,
+        namespace=server_constants.CSE_SERVICE_NAMESPACE)
+
+    ext.add_api_filters_to_service(
+        name=server_constants.CSE_SERVICE_NAME,
+        patterns=patterns,
+        namespace=server_constants.CSE_SERVICE_NAMESPACE)
+
+    msg = f"Updated API extension '{server_constants.CSE_SERVICE_NAME}' in vCD"
     msg_update_callback.general(msg)
     INSTALL_LOGGER.info(msg)
-
-
-def _register_right(client, right_name, description, category, bundle_key,
-                    msg_update_callback=utils.NullPrinter()):
-    """Register a right for CSE.
-
-    :param pyvcloud.vcd.client.Client client:
-    :param str right_name: the name of the new right to be registered.
-    :param str description: brief description about the new right.
-    :param str category: add the right in existing categories in
-        vCD Roles and Rights or specify a new category name.
-    :param str bundle_key: is used to identify the right name and change
-        its value to different languages using localization bundle.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
-
-    :raises BadRequestException: if a right with given name already
-        exists in vCD.
-    """
-    ext = api_extension.APIExtension(client)
-    # Since the client is a sys admin, org will hold a reference to System org
-    system_org = Org(client, resource=client.get_org())
-    try:
-        right_name_in_vcd = f"{{{server_constants.CSE_SERVICE_NAME}}}:{right_name}" # noqa: E501
-        # TODO(): When org.get_right_record() is moved outside the org scope in
-        # pyvcloud, update the code below to adhere to the new method names.
-        system_org.get_right_record(right_name_in_vcd)
-        msg = f"Right: {right_name} already exists in vCD"
-        msg_update_callback.general(msg)
-        INSTALL_LOGGER.info(msg)
-        # Presence of the right in vCD is not a guarantee that the right will
-        # be assigned to system org too.
-        rights_in_system = system_org.list_rights_of_org()
-        for dikt in rights_in_system:
-            # TODO(): When localization support comes in, this check should be
-            # ditched for a better one.
-            if dikt['name'] == right_name_in_vcd:
-                msg = f"Right: {right_name} already assigned to System " \
-                    f"organization."
-                msg_update_callback.general(msg)
-                INSTALL_LOGGER.info(msg)
-                return
-        # Since the right is not assigned to system org, we need to add it.
-        msg = f"Assigning Right: {right_name} to System organization."
-        msg_update_callback.general(msg)
-        INSTALL_LOGGER.info(msg)
-        system_org.add_rights([right_name_in_vcd])
-    except EntityNotFoundException:
-        # Registering a right via api extension end point, auto assigns it to
-        # System org.
-        msg = f"Registering Right: {right_name} in vCD"
-        msg_update_callback.general(msg)
-        INSTALL_LOGGER.info(msg)
-        ext.add_service_right(
-            right_name, server_constants.CSE_SERVICE_NAME,
-            server_constants.CSE_SERVICE_NAMESPACE, description,
-            category, bundle_key)
-
-
-def _setup_placement_policies(client, policy_list,
-                              msg_update_callback=utils.NullPrinter(),
-                              log_wire=False):
-    """
-    Create placement policies for each cluster type.
-
-    Create the global pvdc compute policy if not present and create placement
-    policy for each policy in the policy list. This should be done only for
-    vcd api version >= 35 (zeus)
-
-    :parma client vcdClient.Client
-    :param policy_list str[]
-    """
-    msg = "Setting up placement policies for cluster types"
-    msg_update_callback.info(msg)
-    INSTALL_LOGGER.debug(msg)
-    computePolicyManager = cpm.ComputePolicyManager(client, log_wire=log_wire)
-    pvdc_compute_policy = None
-    try:
-        try:
-            pvdc_compute_policy = computePolicyManager.get_pvdc_compute_policy(
-                server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME)
-            msg = "Skipping global PVDC compute policy creation. Policy already exists" # noqa: E501
-            msg_update_callback.general(msg)
-            INSTALL_LOGGER.debug(msg)
-        except EntityNotFoundException:
-            msg = "Creating global PVDC compute policy"
-            msg_update_callback.general(msg)
-            INSTALL_LOGGER.debug(msg)
-            pvdc_compute_policy = computePolicyManager.add_pvdc_compute_policy(
-                server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME,
-                server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_DESCRIPTION)
-
-        for policy in policy_list:
-            try:
-                computePolicyManager.get_vdc_compute_policy(policy, is_placement_policy=True) # noqa: E501
-                msg = f"Skipping creating VDC placement policy '{policy}'. Policy already exists" # noqa: E501
-                msg_update_callback.general(msg)
-                INSTALL_LOGGER.debug(msg)
-            except EntityNotFoundException:
-                msg = f"Creating placement policy '{policy}'"
-                msg_update_callback.general(msg)
-                INSTALL_LOGGER.debug(msg)
-                computePolicyManager.add_vdc_compute_policy(policy,
-                                                            pvdc_compute_policy_id=pvdc_compute_policy['id']) # noqa: E501
-    except cse_exception.GlobalPvdcComputePolicyNotSupported:
-        msg = "Global PVDC compute policies are not supported." \
-              "Skipping placement policy creation."
-        msg_update_callback.general(msg)
-        INSTALL_LOGGER.debug(msg)
-
-
-def _install_template(client, remote_template_manager, template, org_name,
-                      vdc_name, catalog_name, network_name, ip_allocation_mode,
-                      storage_profile, force_update, retain_temp_vapp,
-                      ssh_key, msg_update_callback=utils.NullPrinter()):
-    localTemplateKey = server_constants.LocalTemplateKey
-    templateBuildKey = server_constants.TemplateBuildKey
-    remote_template_manager.download_template_scripts(
-        template_name=template[server_constants.RemoteTemplateKey.NAME],
-        revision=template[server_constants.RemoteTemplateKey.REVISION],
-        force_overwrite=force_update)
-    catalog_item_name = ltm.get_revisioned_template_name(
-        template[server_constants.RemoteTemplateKey.NAME],
-        template[server_constants.RemoteTemplateKey.REVISION])
-
-    # remote template data is a super set of local template data, barring
-    # the key 'catalog_item_name'
-    template_data = dict(template)
-    template_data[localTemplateKey.CATALOG_ITEM_NAME] = catalog_item_name
-
-    missing_keys = [k for k in localTemplateKey if k not in template_data]
-    if len(missing_keys) > 0:
-        raise ValueError(f"Invalid template data. Missing keys: {missing_keys}") # noqa: E501
-
-    temp_vm_name = (
-        f"{template[server_constants.RemoteTemplateKey.OS].replace('.','')}-"
-        f"k8s{template[server_constants.RemoteTemplateKey.KUBERNETES_VERSION].replace('.', '')}-" # noqa: E501
-        f"{template[server_constants.RemoteTemplateKey.CNI]}"
-        f"{template[server_constants.RemoteTemplateKey.CNI_VERSION].replace('.','')}-vm" # noqa: E501
-    )
-    build_params = {
-        templateBuildKey.TEMPLATE_NAME: template[server_constants.RemoteTemplateKey.NAME], # noqa: E501
-        templateBuildKey.TEMPLATE_REVISION: template[server_constants.RemoteTemplateKey.REVISION], # noqa: E501
-        templateBuildKey.SOURCE_OVA_NAME: template[server_constants.RemoteTemplateKey.SOURCE_OVA_NAME], # noqa: E501
-        templateBuildKey.SOURCE_OVA_HREF: template[server_constants.RemoteTemplateKey.SOURCE_OVA_HREF], # noqa: E501
-        templateBuildKey.SOURCE_OVA_SHA256: template[server_constants.RemoteTemplateKey.SOURCE_OVA_SHA256], # noqa: E501
-        templateBuildKey.ORG_NAME: org_name,
-        templateBuildKey.VDC_NAME: vdc_name,
-        templateBuildKey.CATALOG_NAME: catalog_name,
-        templateBuildKey.CATALOG_ITEM_NAME: catalog_item_name,
-        templateBuildKey.CATALOG_ITEM_DESCRIPTION: template[server_constants.RemoteTemplateKey.DESCRIPTION], # noqa: E501
-        templateBuildKey.TEMP_VAPP_NAME: template[server_constants.RemoteTemplateKey.NAME] + '_temp', # noqa: E501
-        templateBuildKey.TEMP_VM_NAME: temp_vm_name,
-        templateBuildKey.CPU: template[server_constants.RemoteTemplateKey.CPU],
-        templateBuildKey.MEMORY: template[server_constants.RemoteTemplateKey.MEMORY], # noqa: E501
-        templateBuildKey.NETWORK_NAME: network_name,
-        templateBuildKey.IP_ALLOCATION_MODE: ip_allocation_mode, # noqa: E501
-        templateBuildKey.STORAGE_PROFILE: storage_profile
-    }
-    if float(client.get_api_version()) >= float(vCDApiVersion.VERSION_35.value): # noqa: E501
-        if template[server_constants.RemoteTemplateKey.KIND] not in server_constants.CLUSTER_PLACEMENT_POLICIES: # noqa: E501
-            raise ValueError(f"Cluster kind is {template.get(server_constants.RemoteTemplateKey.KIND)}" # noqa: E501
-                             f" Expected {server_constants.CLUSTER_PLACEMENT_POLICIES}") # noqa: E501
-        build_params[templateBuildKey.CSE_PLACEMENT_POLICY] = template[server_constants.RemoteTemplateKey.KIND] # noqa: E501
-    builder = TemplateBuilder(client, client, build_params, ssh_key=ssh_key,
-                              logger=INSTALL_LOGGER,
-                              msg_update_callback=msg_update_callback)
-    builder.build(force_recreate=force_update,
-                  retain_temp_vapp=retain_temp_vapp)
-
-    ltm.save_metadata(client, org_name, catalog_name, catalog_item_name,
-                      template_data)
 
 
 def _legacy_upgrade_to_33_34(client, config, ext_vcd_api_version,
@@ -1040,8 +1087,7 @@ def _legacy_upgrade_to_33_34(client, config, ext_vcd_api_version,
                           msg_update_callback=msg_update_callback)
 
     # update cse api extension
-    _deregister_cse(client, msg_update_callback=msg_update_callback)
-    _register_cse_as_extension(
+    _update_cse_extension(
         client=client,
         routing_key=amqp['routing_key'],
         exchange=amqp['exchange'],
@@ -1049,34 +1095,14 @@ def _legacy_upgrade_to_33_34(client, config, ext_vcd_api_version,
         msg_update_callback=msg_update_callback)
 
     # Recreate all supported templates
-    if skip_template_creation:
-        msg = "Skipping creation of templates."
-        msg_update_callback.info(msg)
-        INSTALL_LOGGER.warning(msg)
-    else:
-        # read remote template cookbook, download all scripts
-        rtm = RemoteTemplateManager(
-            remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
-            logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
-        remote_template_cookbook = rtm.get_remote_template_cookbook()
-
-        # create all templates defined in cookbook
-        for template in remote_template_cookbook['templates']:
-            # TODO tag created templates with placement policies
-            _install_template(
-                client=client,
-                remote_template_manager=rtm,
-                template=template,
-                org_name=config['broker']['org'],
-                vdc_name=config['broker']['vdc'],
-                catalog_name=config['broker']['catalog'],
-                network_name=config['broker']['network'],
-                ip_allocation_mode=config['broker']['ip_allocation_mode'],
-                storage_profile=config['broker']['storage_profile'],
-                force_update=True,
-                retain_temp_vapp=retain_temp_vapp,
-                ssh_key=ssh_key,
-                msg_update_callback=msg_update_callback)
+    _install_all_templates(
+        client=client,
+        config=config,
+        skip_template_creation=skip_template_creation,
+        force_create=True,
+        retain_temp_vapp=retain_temp_vapp,
+        ssh_key=retain_temp_vapp,
+        msg_update_callback=msg_update_callback)
 
     # do convert cluster
     target_vcd_version = config['vcd']['api_version']
@@ -1099,8 +1125,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
                           msg_update_callback=msg_update_callback)
 
     # update cse api extension
-    _deregister_cse(client, msg_update_callback=msg_update_callback)
-    _register_cse_as_extension(
+    _update_cse_extension(
         client=client,
         routing_key=amqp['routing_key'],
         exchange=amqp['exchange'],
@@ -1118,34 +1143,16 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
                          log_wire=log_wire)
 
     # Recreate all supported templates
-    if skip_template_creation:
-        msg = "Skipping creation of templates."
-        msg_update_callback.info(msg)
-        INSTALL_LOGGER.warning(msg)
-    else:
-        # read remote template cookbook, download all scripts
-        rtm = RemoteTemplateManager(
-            remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
-            logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
-        remote_template_cookbook = rtm.get_remote_template_cookbook()
+    _install_all_templates(
+        client=client,
+        config=config,
+        skip_template_creation=skip_template_creation,
+        force_create=True,
+        retain_temp_vapp=retain_temp_vapp,
+        ssh_key=retain_temp_vapp,
+        msg_update_callback=msg_update_callback)
 
-        # create all templates defined in cookbook
-        for template in remote_template_cookbook['templates']:
-            # TODO tag created templates with placement policies
-            _install_template(
-                client=client,
-                remote_template_manager=rtm,
-                template=template,
-                org_name=config['broker']['org'],
-                vdc_name=config['broker']['vdc'],
-                catalog_name=config['broker']['catalog'],
-                network_name=config['broker']['network'],
-                ip_allocation_mode=config['broker']['ip_allocation_mode'],
-                storage_profile=config['broker']['storage_profile'],
-                force_update=True,
-                retain_temp_vapp=retain_temp_vapp,
-                ssh_key=ssh_key,
-                msg_update_callback=msg_update_callback)
+    # TODO tag created templates with placement policies
 
     # Cleanup all existing CSE polcies. Assign new policy to all clusters
     # Create DEF entity for all clusters
