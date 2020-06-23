@@ -4,7 +4,7 @@
 import json
 
 import pika
-from pyvcloud.vcd.api_extension import APIExtension
+import pyvcloud.vcd.api_extension as api_extension
 from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
@@ -1007,8 +1007,8 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         cse_3_0_0 = semantic_version.Version('3.0.0')
         if ext_cse_version in \
                 (server_constants.UNKNOWN_CSE_VERSION, cse_2_6_0, cse_3_0_0):
-            if target_vcd_api_version in \
-                    (vCDApiVersion.VERSION_33.value, vCDApiVersion.VERSION_34.value):
+            if target_vcd_api_version in (vCDApiVersion.VERSION_33.value,
+                                          vCDApiVersion.VERSION_34.value):
                 _legacy_upgrade_to_33_34(
                     client=client, config=config,
                     ext_vcd_api_version=ext_vcd_api_version,
