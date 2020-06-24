@@ -241,7 +241,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                     namespace='vcloud.cse',
                     operation='',
                     operation_name=operation_name,
-                    details='',
+                    details=f'Failed with error: {err}',
                     progress=None,
                     owner_href=vdc.href,
                     owner_name=vdc.name,
