@@ -267,8 +267,8 @@ class Service(object, metaclass=Singleton):
         # Load def entity-type and interface
         self._load_def_schema(msg_update_callback=msg_update_callback)
 
-        # # Read k8s catalog definition from catalog item metadata and append
-        # # the same to to server run-time config
+        # Read k8s catalog definition from catalog item metadata and append
+        # the same to to server run-time config
         self._load_template_definition_from_catalog(
             msg_update_callback=msg_update_callback)
 

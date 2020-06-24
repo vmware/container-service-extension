@@ -176,50 +176,44 @@ class ClusterService(abstract_broker.AbstractBroker):
         # check that requested/default template is valid
         get_template(name=template_name, revision=template_revision)
 
-        # create the corresponding defined entity .
-        def_entity = def_models.DefEntity(entity=cluster_spec)
-        self.entity_svc.\
-            create_entity(def_utils.get_registered_def_entity_type().id,
-                          entity=def_entity)
-        def_entity: def_models.DefEntity = self.entity_svc.get_native_entity_by_name(name=cluster_name)  # noqa: E501
-
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
 
-        # must _update_task or else self.task_resource is None
-        # do not logout of sys admin, or else in pyvcloud's session.request()
-        # call, session becomes None
+        # create the corresponding defined entity .
+        def_entity = def_models.DefEntity(entity=cluster_spec)
         msg = f"Creating cluster vApp '{cluster_name}' ({def_entity.id}) " \
               f"from template '{template_name}' (revision {template_revision})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         def_entity.entity.status.task_href = self.task_resource.get('href')
-        def_entity.entity.status.phase = str(DefEntityPhase(DefEntityOperation.CREATE, DefEntityOperationStatus.IN_PROGRESS))  # noqa: E501
+        def_entity.entity.status.phase = str(
+            DefEntityPhase(DefEntityOperation.CREATE,
+                           DefEntityOperationStatus.IN_PROGRESS))
+        self.entity_svc. \
+            create_entity(def_utils.get_registered_def_entity_type().id,
+                          entity=def_entity)
         self.context.is_async = True
-        # TODO pre-defined sizing classes needs to be defined.
-        # TODO validate sizing policies referenced in the request against
-        # a pre-defined set of sizing policies.
-        self._create_cluster_async(def_entity)
+        self._create_cluster_async(def_entity.id, cluster_spec)
         return def_entity
 
     @utils.run_async
-    def _create_cluster_async(self, def_entity: def_models.DefEntity):
+    def _create_cluster_async(self, cluster_id: str,
+                              cluster_spec: def_models.ClusterEntity):
         try:
-            cluster_entity = def_entity.entity
-            cluster_id = def_entity.id
-            cluster_name = cluster_entity.metadata.cluster_name
-            org_name = cluster_entity.metadata.org_name
-            ovdc_name = cluster_entity.metadata.ovdc_name
-            num_workers = cluster_entity.spec.workers.count
-            master_sizing_class_name = cluster_entity.spec.control_plane.sizing_class  # noqa: E501
-            worker_sizing_class_name = cluster_entity.spec.workers.sizing_class
-            master_storage_profile = cluster_entity.spec.control_plane.storage_profile  # noqa: E501
-            worker_storage_profile = cluster_entity.spec.workers.storage_profile  # noqa: E501
-            network_name = cluster_entity.spec.settings.network
-            template_name = cluster_entity.spec.k8_distribution.template_name
-            template_revision = cluster_entity.spec.k8_distribution.template_revision  # noqa: E501
-            ssh_key = cluster_entity.spec.settings.ssh_key
-            enable_nfs = cluster_entity.spec.settings.enable_nfs
-            rollback = cluster_entity.spec.settings.rollback_on_failure
+            cluster_id = cluster_id
+            cluster_name = cluster_spec.metadata.cluster_name
+            org_name = cluster_spec.metadata.org_name
+            ovdc_name = cluster_spec.metadata.ovdc_name
+            num_workers = cluster_spec.spec.workers.count
+            master_sizing_class_name = cluster_spec.spec.control_plane.sizing_class  # noqa: E501
+            worker_sizing_class_name = cluster_spec.spec.workers.sizing_class
+            master_storage_profile = cluster_spec.spec.control_plane.storage_profile  # noqa: E501
+            worker_storage_profile = cluster_spec.spec.workers.storage_profile  # noqa: E501
+            network_name = cluster_spec.spec.settings.network
+            template_name = cluster_spec.spec.k8_distribution.template_name
+            template_revision = cluster_spec.spec.k8_distribution.template_revision  # noqa: E501
+            ssh_key = cluster_spec.spec.settings.ssh_key
+            enable_nfs = cluster_spec.spec.settings.enable_nfs
+            rollback = cluster_spec.spec.settings.rollback_on_failure
 
             org = vcd_utils.get_org(self.context.client, org_name=org_name)
             vdc = vcd_utils.get_vdc(self.context.client,
@@ -349,25 +343,23 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Created cluster '{cluster_name}' ({cluster_id})"
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
 
-            # Update defined entity instance with new values like vapp_id,
+            # Update defined entity instance with new properties like vapp_id,
             # master_ip and nodes.
             # TODO(DEF) VCDA-1567 Schema doesn't yet have nodes definition.
             #  master and worker "nodes" also have to be updated.
+            def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             def_entity.externalId = vapp_resource.get('href')
             def_entity.entity.status.master_ip = master_ip
-            def_entity.entity.status.phase = str(DefEntityPhase(DefEntityOperation.CREATE, DefEntityOperationStatus.SUCCEEDED))  # noqa: E501
-            self.entity_svc.update_entity(def_entity.id, def_entity)
-
-            # Resolve the defined entity to a RESOLVED state
-            self.entity_svc.resolve_entity(def_entity.id)
+            def_entity.entity.status.phase = str(
+                DefEntityPhase(DefEntityOperation.CREATE,
+                               DefEntityOperationStatus.SUCCEEDED))
+            self.entity_svc.update_entity(cluster_id, def_entity)
+            self.entity_svc.resolve_entity(cluster_id)
         except (e.MasterNodeCreationError, e.WorkerNodeCreationError,
                 e.NFSNodeCreationError, e.ClusterJoiningError,
                 e.ClusterInitializationError, e.ClusterOperationError) as err:
-
-            def_entity.entity.status.phase = str(DefEntityPhase(DefEntityOperation.CREATE, DefEntityOperationStatus.FAILED))  # noqa: E501
-            # Resolve the defined entity to a RESOLVED/ERROR state. This should
-            # fail required properties 'master_ip' have not been updated.
-            self.entity_svc.resolve_entity(def_entity.id)
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.CREATE)
 
             if rollback:
                 msg = f"Error creating cluster '{cluster_name}'. " \
@@ -383,7 +375,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     _delete_vapp(self.context.client, cluster['vdc_href'],
                                  cluster_name)
                     # Delete the corresponding defined entity
-                    self.entity_svc.delete_entity(def_entity.id)
+                    self.entity_svc.delete_entity(cluster_id)
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
@@ -393,81 +385,76 @@ class ClusterService(abstract_broker.AbstractBroker):
                               error_message=str(err))
             # raising an exception here prints a stacktrace to server console
         except Exception as err:
-            if def_entity:
-                def_entity.entity.status.phase = str(DefEntityPhase(DefEntityOperation.CREATE, DefEntityOperationStatus.FAILED))  # noqa: E501
+
             LOGGER.error(f"Unknown error creating cluster '{cluster_name}'",
                          exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.CREATE)
         finally:
             self.context.end()
 
-    def resize_cluster(self, **kwargs):
+    def _fail_operation_and_resolve_entity(self, cluster_id: str,
+                                           op: DefEntityOperation):
+        def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+        def_entity.entity.status.phase = \
+            str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
+        self.entity_svc.update_entity(cluster_id, def_entity)
+        self.entity_svc.resolve_entity(cluster_id)
+
+    def resize_cluster(self, cluster_id: str,
+                       cluster_spec: def_models.ClusterEntity):
         """Start the resize cluster operation.
 
-        Common broker function that validates data for the 'resize cluster'
-        operation. Native clusters cannot be resized down. Creating nodes is an
-        asynchronous task, so the returned `result['task_href']` can be polled
-        to get updates on task progress.
+        :param str cluster_id: Defined entity Id of the cluster
+        :param DefEntity cluster_spec: Input cluster spec
+        :return: DefEntity of the cluster with the updated operation status
+        and task_href.
 
-        **data: Required
-            Required data: cluster_name, network, num_nodes
-            Optional data and default values: org_name=None, ovdc_name=None,
-                rollback=True, template_name=None, template_revision=None
-        **telemetry: Optional
+        :rtype: DefEntity
         """
-        raise NotImplementedError
-        data = kwargs[KwargKey.DATA]
+        # Get the existing defined entity for the given cluster id
+        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+        name: str = curr_entity.name
+        kind: str = curr_entity.entity.kind
+        curr_worker_count: int = curr_entity.entity.spec.workers.count
+        state: str = curr_entity.state
+        phase: DefEntityPhase = DefEntityPhase.from_phase(
+            curr_entity.entity.status.phase)
+
+        # Check if entity is of kind native.
+        if kind == def_utils.ClusterEntityKind.TKG.value:
+            raise e.CseServerError(f"CSE cannot resize an entity of type {kind}")  # noqa: E501
+
+        # Check if cluster is in a valid state
+        if state != def_utils.DEF_RESOLVED_STATE or\
+                not phase.is_operation_status_success():
+            raise e.CseServerError(
+                f"Cluster {name} with id {cluster_id} is not in a valid state "
+                f"to be resized. Please contact the administrator.")
+
+        # Check if the desired worker count is valid
+        spec_worker_count = cluster_spec.spec.workers.count
+        if curr_worker_count > spec_worker_count:
+            raise e.CseServerError(
+                "Scaling down native Kubernetes clusters is not supported.")
+        elif curr_worker_count == spec_worker_count:
+            raise e.CseServerError(
+                f"Cluster '{name}' already has {spec_worker_count} workers.")
+        elif spec_worker_count < 1:
+            raise e.CseServerError(
+                f"Worker count must be > 0 (received {spec_worker_count}).")
+
+        # TODO(DEF) Below is a temporary hack to unset "enable_nfs" as resize
+        #  operation is strictly about resizing worker nodes. NFS needs to be
+        #  handled properly during the implementation of "node add" command.
+        cluster_spec.spec.settings.enable_nfs = False
+
         # TODO default template for resizing should be master's template
-        required = [
-            RequestKey.CLUSTER_NAME,
-            RequestKey.NUM_WORKERS,
-            RequestKey.NETWORK_NAME
-        ]
-        defaults = {
-            RequestKey.ORG_NAME: None,
-            RequestKey.OVDC_NAME: None,
-            RequestKey.NUM_WORKERS: 1,
-            RequestKey.NUM_CPU: None,
-            RequestKey.MB_MEMORY: None,
-            RequestKey.STORAGE_PROFILE_NAME: None,
-            RequestKey.SSH_KEY: None,
-            RequestKey.ENABLE_NFS: False,
-            RequestKey.ROLLBACK: True,
-        }
-        validated_data = {**defaults, **data}
-        req_utils.validate_payload(validated_data, required)
+        # TODO(DEF) Handle Telemetry for Defined entities.
 
-        cluster_name = validated_data[RequestKey.CLUSTER_NAME]
-        num_workers_wanted = validated_data[RequestKey.NUM_WORKERS]
-
-        if num_workers_wanted < 1:
-            raise e.CseServerError(f"Worker node count must be > 0 (received"
-                                   f" {num_workers_wanted}).")
-
-        # cluster_handler.py already makes a cluster info API call to vCD, but
-        # that call does not return any node info, so this additional
-        # cluster info call must be made
-        cluster_info = self.get_cluster_info(data=validated_data,
-                                             telemetry=False)
-        num_workers = len(cluster_info['nodes'])
-        if num_workers > num_workers_wanted:
-            raise e.CseServerError("Scaling down native Kubernetes "
-                                   "clusters is not supported.")
-        elif num_workers == num_workers_wanted:
-            raise e.CseServerError(f"Cluster '{cluster_name}' already has "
-                                   f"{num_workers} worker nodes.")
-
-        if kwargs.get(KwargKey.TELEMETRY, True):
-            # Record the telemetry data
-            cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster_info[PayloadKey.CLUSTER_ID] # noqa: E501
-            cse_params[LocalTemplateKey.MEMORY] = validated_data.get(RequestKey.MB_MEMORY) # noqa: E501
-            cse_params[LocalTemplateKey.CPU] = validated_data.get(RequestKey.NUM_CPU) # noqa: E501
-            record_user_action_details(cse_operation=CseOperation.CLUSTER_RESIZE, cse_params=cse_params) # noqa: E501
-
-        validated_data[RequestKey.NUM_WORKERS] = num_workers_wanted - num_workers # noqa: E501
-        return self.create_nodes(data=validated_data, telemetry=False)
+        return self.create_nodes(cluster_id=cluster_id, cluster_spec=cluster_spec)  # noqa: E501
 
     def delete_cluster(self, **kwargs):
         """Start the delete cluster operation.
@@ -664,99 +651,45 @@ class ClusterService(abstract_broker.AbstractBroker):
                                       f"cluster '{cluster_name}'")
         return node_info
 
-    def create_nodes(self, **kwargs):
+    def create_nodes(self, cluster_id: str,
+                     cluster_spec: def_models.ClusterEntity):
         """Start the create nodes operation.
 
-        Validates data for 'node create' operation. Creating nodes is an
-        asynchronous task, so the returned `result['task_href']` can be polled
-        to get updates on task progress.
+        :param str cluster_id: Defined entity Id of the cluster
+        :param DefEntity cluster_spec: Input cluster spec
+        :return: DefEntity of the cluster with the updated operation status
+        and task_href.
 
-        **data: Required
-            Required data: cluster_name, network_name
-            Optional data and default values: num_nodes=2, num_cpu=None,
-                mb_memory=None, storage_profile_name=None, ssh_key=None,
-                template_name=default, template_revision=default,
-                enable_nfs=False, rollback=True
-        **telemetry: Optional
+        :rtype: DefEntity
         """
-        raise NotImplementedError
-        data = kwargs[KwargKey.DATA]
-        required = [
-            RequestKey.CLUSTER_NAME,
-            RequestKey.NETWORK_NAME
-        ]
+        cluster_name = cluster_spec.metadata.cluster_name
+        worker_count = cluster_spec.spec.workers.count
+        template_name = cluster_spec.spec.k8_distribution.template_name
+        template_revision = cluster_spec.spec.k8_distribution.template_revision  # noqa: E501
+
         # check that requested/default template is valid
-        template = get_template(
-            name=data.get(RequestKey.TEMPLATE_NAME),
-            revision=data.get(RequestKey.TEMPLATE_REVISION))
-        defaults = {
-            RequestKey.ORG_NAME: None,
-            RequestKey.OVDC_NAME: None,
-            RequestKey.NUM_WORKERS: 1,
-            RequestKey.STORAGE_PROFILE_NAME: None,
-            RequestKey.SSH_KEY: None,
-            RequestKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME],
-            RequestKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION],
-            RequestKey.ENABLE_NFS: False,
-            RequestKey.ROLLBACK: True,
-        }
-        validated_data = {**defaults, **data}
-        req_utils.validate_payload(validated_data, required)
+        get_template(name=template_name, revision=template_revision)
 
-        cluster_name = validated_data[RequestKey.CLUSTER_NAME]
-        template_name = validated_data[RequestKey.TEMPLATE_NAME]
-        template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
-        num_workers = validated_data[RequestKey.NUM_WORKERS]
+        if worker_count < 1:
+            raise e.CseServerError(f"Worker count must be > 0 "
+                                   f"(received {worker_count}).")
 
-        if num_workers < 1:
-            raise e.CseServerError(f"Worker node count must be > 0 "
-                                   f"(received {num_workers}).")
+        # TODO(DEF) Handle Telemetry for defined entities
 
-        cluster = get_cluster(self.context.client, cluster_name,
-                              org_name=validated_data[RequestKey.ORG_NAME],
-                              ovdc_name=validated_data[RequestKey.OVDC_NAME])
-        cluster_id = cluster['cluster_id']
-
-        if kwargs.get(KwargKey.TELEMETRY, True):
-            # Record the data for telemetry
-            cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster_id
-            # TODO add sizing policy to telemetry
-            cse_params[LocalTemplateKey.KUBERNETES] = template.get(LocalTemplateKey.KUBERNETES)  # noqa: E501
-            cse_params[LocalTemplateKey.KUBERNETES_VERSION] = template.get(LocalTemplateKey.KUBERNETES_VERSION)  # noqa: E501
-            cse_params[LocalTemplateKey.OS] = template.get(LocalTemplateKey.OS)
-            cse_params[LocalTemplateKey.CNI] = template.get(LocalTemplateKey.CNI) # noqa: E501
-            cse_params[LocalTemplateKey.CNI_VERSION] = template.get(LocalTemplateKey.CNI_VERSION)  # noqa: E501
-            record_user_action_details(cse_operation=CseOperation.NODE_CREATE,
-                                       cse_params=cse_params)
-
-        # must _update_task here or else self.task_resource is None
-        # do not logout of sys admin, or else in pyvcloud's session.request()
-        # call, session becomes None
-        msg = f"Creating {num_workers} node(s) from template " \
+        msg = f"Creating {worker_count} node(s) from template " \
               f"'{template_name}' (revision {template_revision}) and " \
               f"adding to cluster '{cluster_name}' ({cluster_id})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-        self.context.is_async = True
-        self._create_nodes_async(
-            cluster_name=cluster_name,
-            cluster_vdc_href=cluster['vdc_href'],
-            vapp_href=cluster['vapp_href'],
-            cluster_id=cluster_id,
-            template_name=template_name,
-            template_revision=template_revision,
-            num_workers=validated_data[RequestKey.NUM_WORKERS],
-            network_name=validated_data[RequestKey.NETWORK_NAME],
-            # TODO add sizing class from spec
-            storage_profile_name=validated_data[RequestKey.STORAGE_PROFILE_NAME], # noqa: E501
-            ssh_key=validated_data[RequestKey.SSH_KEY],
-            enable_nfs=validated_data[RequestKey.ENABLE_NFS],
-            rollback=validated_data[RequestKey.ROLLBACK])
+        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+        curr_entity.entity.status.task_href = self.task_resource.get('href')
+        curr_entity.entity.status.phase = str(
+            DefEntityPhase(DefEntityOperation.UPDATE,
+                           DefEntityOperationStatus.IN_PROGRESS))
+        curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)
 
-        return {
-            'cluster_name': cluster_name,
-            'task_href': self.task_resource.get('href')
-        }
+        self.context.is_async = True
+        self._create_nodes_async(cluster_id=cluster_id, cluster_spec=cluster_spec)  # noqa: E501
+        return curr_entity
 
     def delete_nodes(self, **kwargs):
         """Start the delete nodes operation.
@@ -827,20 +760,31 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     # all parameters following '*args' are required and keyword-only
     @utils.run_async
-    def _create_nodes_async(self, *args,
-                            cluster_name, cluster_vdc_href, vapp_href,
-                            cluster_id, template_name, template_revision,
-                            num_workers, network_name, sizing_class_name,
-                            storage_profile_name, ssh_key, enable_nfs,
-                            rollback):
+    def _create_nodes_async(self, cluster_id: str,
+                            cluster_spec: def_models.ClusterEntity):
         try:
-            org = vcd_utils.get_org(self.context.client)
-            vdc = VDC(self.context.client, href=cluster_vdc_href)
-            vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
-            template = get_template(name=template_name,
-                                    revision=template_revision)
+            cluster_id = cluster_id
+            curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+            vapp_href = curr_entity.externalId
+            cluster_name = cluster_spec.metadata.cluster_name
+            org_name = cluster_spec.metadata.org_name
+            ovdc_name = cluster_spec.metadata.ovdc_name
+            num_workers = cluster_spec.spec.workers.count
+            worker_storage_profile = cluster_spec.spec.workers.storage_profile  # noqa: E501
+            worker_sizing_class = cluster_spec.spec.workers.sizing_class
+            network_name = cluster_spec.spec.settings.network
+            template_name = cluster_spec.spec.k8_distribution.template_name
+            template_revision = cluster_spec.spec.k8_distribution.template_revision  # noqa: E501
+            template = get_template(template_name, template_revision)
+            ssh_key = cluster_spec.spec.settings.ssh_key
+            rollback = cluster_spec.spec.settings.rollback_on_failure
+            enable_nfs = cluster_spec.spec.settings.enable_nfs
+
             server_config = utils.get_server_runtime_config()
             catalog_name = server_config['broker']['catalog']
+            org = vcd_utils.get_org(self.context.client, org_name=org_name)
+            ovdc = vcd_utils.get_vdc(self.context.client, vdc_name=ovdc_name, org=org)  # noqa: E501
+            vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
 
             node_type = NodeType.WORKER
             if enable_nfs:
@@ -856,14 +800,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                                   num_nodes=num_workers,
                                   node_type=node_type,
                                   org=org,
-                                  vdc=vdc,
+                                  vdc=ovdc,
                                   vapp=vapp,
                                   catalog_name=catalog_name,
                                   template=template,
                                   network_name=network_name,
-                                  storage_profile=storage_profile_name,
+                                  storage_profile=worker_storage_profile,
                                   ssh_key=ssh_key,
-                                  sizing_class_name=sizing_class_name)
+                                  sizing_class_name=worker_sizing_class)
 
             if node_type == NodeType.NFS:
                 msg = f"Created {num_workers} node(s) for cluster " \
@@ -884,7 +828,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Added {num_workers} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
                 self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+                curr_entity.entity.status.phase = str(
+                    DefEntityPhase(DefEntityOperation.UPDATE,
+                                   DefEntityOperationStatus.SUCCEEDED))
+                curr_entity.entity.spec.workers = cluster_spec.spec.workers
+                self.entity_svc.update_entity(cluster_id, curr_entity)
         except e.NodeCreationError as err:
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.UPDATE)
             if rollback:
                 msg = f"Error adding nodes to cluster '{cluster_name}' " \
                       f"({cluster_id}). Deleting nodes: {err.node_names} " \
@@ -910,6 +861,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.error(str(err), exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.UPDATE)
         finally:
             self.context.end()
 
