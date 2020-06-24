@@ -1,100 +1,89 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-
-from enum import Enum
-from enum import unique
-
 import click
-import pyvcloud.vcd.client as vcd_client
-from vcd_cli.utils import restore_session
+from pyvcloud.vcd.client import Client
+import requests
+from vcd_cli.profiles import Profiles
+
+from container_service_extension.client import system as syst
+from container_service_extension.shared_constants import CSE_SERVER_API_VERSION
 
 
-class ApiVersion(str, Enum):  # TODO(): use pyvcloud constant
-    VERSION_34 = '34.0'
-    VERSION_35 = '35.0'
+def cse_restore_session(ctx, vdc_required=False) -> None:
+    """Restores the session with vcd client with right server api version.
 
+    Replace the vcd client in ctx.obj with new client created with server api
+    version. Also saves the server api version in profiles.
 
-class ClusterKind(str, Enum):
-    NATIVE = 'native'
-    TKG = 'tkg'
-    TKG_PLUS = 'tkg-plus'
-
-
-@unique
-class GroupKey(str, Enum):
-    CLUSTER = 'cluster'
-    NODE = 'node'
-
-
-@unique
-class CommandNameKey(str, Enum):
-    CREATE = 'create'
-    NODE = 'node'
-
-
-# List of unsupported commands by Api Version
-UNSUPPORTED_COMMANDS_BY_VERSION = {
-    vcd_client.ApiVersion.VERSION_33.value: {
-        GroupKey.CLUSTER: ['apply']
-    },
-    ApiVersion.VERSION_34: {
-        GroupKey.CLUSTER: ['apply']
-    }
-}
-
-# List of unsupported commands by Api Version
-# TODO: All unsupported options depending on the command will go here
-UNSUPPORTED_COMMAND_OPTIONS_BY_VERSION = {
-    vcd_client.ApiVersion.VERSION_33.value: {
-        GroupKey.CLUSTER: {
-            CommandNameKey.CREATE: ['sizing_class']
-        }
-    },
-
-    ApiVersion.VERSION_34: {
-        GroupKey.CLUSTER: {
-            CommandNameKey.CREATE: ['sizing_class']
-        }
-    },
-
-    ApiVersion.VERSION_35: {
-        GroupKey.CLUSTER: {
-            CommandNameKey.CREATE: ['cpu', 'memory']
-        }
-    }
-}
-
-
-class GroupCommandFilter(click.Group):
-    """Filter for CLI group commands.
-
-    Returns set of supported sub-commands by specific API version
+    :param <click.core.Context> ctx: click context
+    :param bool vdc_required: is vdc required or not
+    :return:
     """
+    # Always override the vcd_client by new client with CSE server api version.
+    if type(ctx.obj) is not dict or not ctx.obj.get('client'):
+        profiles = Profiles.load()
+        token = profiles.get('token')
+        if token is None or len(token) == 0:
+            raise Exception('Can\'t restore session, please login again.')
+        if not profiles.get('verify'):
+            if not profiles.get('disable_warnings'):
+                click.secho(
+                    'InsecureRequestWarning: '
+                    'Unverified HTTPS request is being made. '
+                    'Adding certificate verification is strongly '
+                    'advised.',
+                    fg='yellow',
+                    err=True)
+            requests.packages.urllib3.disable_warnings()
 
-    def get_command(self, ctx, cmd_name):
-        """Override this click method to customize.
+        client = Client(
+            profiles.get('host'),
+            api_version=profiles.get('api_version'),
+            verify_ssl_certs=profiles.get('verify'),
+            log_file='vcd.log',
+            log_requests=profiles.get('log_request'),
+            log_headers=profiles.get('log_header'),
+            log_bodies=profiles.get('log_body'))
+        client.rehydrate_from_token(
+            profiles.get('token'), profiles.get('is_jwt_token'))
 
-        :param click.core.Context ctx: Click Context
-        :param str cmd_name: name of the command (ex:create, delete, resize)
-        :return: Click command object for 'cmd_name'
-        :rtype: click.Core.Command
-        """
-        try:
-            restore_session(ctx)
-            client = ctx.obj['client']
-            version = client.get_api_version()
-            # Skip the command if not supported
-            unsupported_commands = UNSUPPORTED_COMMANDS_BY_VERSION.get(version, {}).get(self.name, [])  # noqa: E501
-            if cmd_name in unsupported_commands:
-                return None
+        ctx.obj = {}
+        ctx.obj['client'] = client
 
-            cmd = click.Group.get_command(self, ctx, cmd_name)
-            unsupported_params = UNSUPPORTED_COMMAND_OPTIONS_BY_VERSION.get(version, {}).get(self.name, {}).get(cmd_name, [])  # noqa: E501
-            # Remove all unsupported options for this command, if any
-            filtered_params = [param for param in cmd.params if param.name not in unsupported_params]  # noqa: E501
-            cmd.params = filtered_params
-        except Exception:
-            pass
+    _override_client(ctx)
 
-        return click.Group.get_command(self, ctx, cmd_name)
+    if vdc_required:
+        if not ctx.obj['profiles'].get('vdc_in_use') or \
+                not ctx.obj['profiles'].get('vdc_href'):
+            raise Exception('select a virtual datacenter')
+
+
+def _override_client(ctx) -> None:
+    """Replace the vcd client in ctx.obj with new one.
+
+    New vcd client takes the CSE server_api_version as api_version param.
+    Save profile also with 'cse_server_api_version' for subsequent commands.
+
+    :param <click.core.Context> ctx: click context
+    """
+    profiles = Profiles.load()
+    cse_server_api_version = profiles.get(CSE_SERVER_API_VERSION)
+    # Get server_api_version; save it in profiles if doesn't exist
+    if not cse_server_api_version:
+        system = syst.System(ctx.obj['client'])
+        sys_info = system.get_info()
+        cse_server_api_version = sys_info.get(CSE_SERVER_API_VERSION)
+        profiles.set(CSE_SERVER_API_VERSION, cse_server_api_version)
+        profiles.save()
+    client = Client(
+        profiles.get('host'),
+        api_version=cse_server_api_version,
+        verify_ssl_certs=profiles.get('verify'),
+        log_file='vcd.log',
+        log_requests=profiles.get('log_request'),
+        log_headers=profiles.get('log_header'),
+        log_bodies=profiles.get('log_body'))
+    client.rehydrate_from_token(profiles.get('token'), profiles.get('is_jwt_token'))  # noqa: E501
+    ctx.obj['client'] = client
+    ctx.obj['profiles'] = profiles
