@@ -8,6 +8,7 @@ from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 from pyvcloud.vcd.vapp import VApp
 
+import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.pyvcloud_utils import catalog_item_exists
@@ -36,7 +37,7 @@ class TemplateBuilder():
 
     def __init__(self, client, sys_admin_client, build_params, org=None,
                  vdc=None, ssh_key=None, logger=NULL_LOGGER,
-                 msg_update_callback=NullPrinter()):
+                 msg_update_callback=NullPrinter(), log_wire=False):
         """.
 
         :param pyvcloud.vcd.Client client:
@@ -97,6 +98,8 @@ class TemplateBuilder():
         self.network_name = build_params.get(TemplateBuildKey.NETWORK_NAME) # noqa: E501
         self.ip_allocation_mode = build_params.get(TemplateBuildKey.IP_ALLOCATION_MODE) # noqa: E501
         self.storage_profile = build_params.get(TemplateBuildKey.STORAGE_PROFILE) # noqa: E501
+        self.cse_placement_policy = build_params.get(TemplateBuildKey.CSE_PLACEMENT_POLICY) # noqa: E501
+        self.log_wire = log_wire
 
         if self.template_name and self.template_revision and \
                 self.ova_name and self.ova_href and self.ova_sha256 and \
@@ -379,6 +382,43 @@ class TemplateBuilder():
         self.msg_update_callback.general(msg)
         self.logger.info(msg)
 
+    def _tag_with_cse_placement_policy(self):
+        """Tag the created template with placement policies if provided."""
+        if not self.cse_placement_policy:
+            msg = "Skipping tagging template with placement policy."
+            self.msg_update_callback.info(msg)
+            self.logger.debug(msg)
+            return
+        policy = None
+        cpm = compute_policy_manager.ComputePolicyManager(self.client,
+                                                          log_wire=self.log_wire) # noqa: E501
+        try:
+            policy = cpm.get_vdc_compute_policy(self.cse_placement_policy,
+                                                is_placement_policy=True)
+            task = cpm.assign_vdc_placement_policy_to_vapp_template_vms(
+                policy['href'],
+                self.org_name,
+                self.catalog_name,
+                self.catalog_item_name)
+            if task:
+                self.client.get_task_monitor().wait_for_success(task)
+                msg = f"Successfully tagged template {self.catalog_item_name} " \
+                      f" with placement policy {self.cse_placement_policy}." # noqa: E501
+            else:
+                msg = f"{self.catalog_item_name} already tagged with" \
+                      f" placement policy {self.cse_placement_policy}."
+            self.msg_update_callback.info(msg)
+            self.logger.info(msg)
+        except EntityNotFoundException:
+            msg = f"Placement policy {self.cse_placement_policy} not found"
+            self.msg_update_callback.error(msg)
+            self.logger.error(msg)
+        except Exception as err:
+            msg = f"Failed to tag template {self.catalog_item_name} with " \
+                  f"placement policy {self.cse_placement_policy}. Error: {err}"
+            self.msg_update_callback.error(msg)
+            self.logger.error(msg)
+
     def build(self, force_recreate=False, retain_temp_vapp=False):
         """Create a K8 template.
 
@@ -394,6 +434,7 @@ class TemplateBuilder():
             if catalog_item_exists(org=self.org,
                                    catalog_name=self.catalog_name,
                                    catalog_item_name=self.catalog_item_name):
+                self._tag_with_cse_placement_policy()
                 msg = f"Found template '{self.template_name}' at revision " \
                       f"{self.template_revision} in catalog " \
                       f"'{self.catalog_name}.'"
@@ -407,5 +448,6 @@ class TemplateBuilder():
         vapp = self._create_temp_vapp()
         self._customize_vm(vapp, self.temp_vm_name)
         self._capture_temp_vapp(vapp)
+        self._tag_with_cse_placement_policy()
         if not retain_temp_vapp:
             self._delete_temp_vapp()
