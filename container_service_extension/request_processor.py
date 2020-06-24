@@ -67,7 +67,7 @@ GET /cse/ovdc/{ovdc_id}/compute-policies
 PUT /cse/ovdc/{ovdc_id}/compute-policies
 
 New ovdc endpoints
-GET /cse/internal/ovdc
+GET /cse/internal/ovdcs
 GET /cse/internal/ovdc/{ovdc_id}
 PUT /cse/internal/ovdc/{ovdc_id}
 
