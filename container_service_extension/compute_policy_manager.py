@@ -773,8 +773,12 @@ class ComputePolicyManager:
                 for vm_resource in target_vms:
                     vm = VM(self._sysadmin_client,
                             href=vm_resource.get('href'))
-                    _task = vm.update_compute_policy(system_default_href,
-                                                     remove_placement_policy=is_placement_policy)  # noqa: E501
+                    _task = None
+                    if is_placement_policy:
+                        _task = vm.remove_placement_policy()
+                    else:
+                        _task = vm.update_compute_policy(
+                            compute_policy_href=system_default_href)
 
                     task.update(
                         status=vcd_client.TaskStatus.RUNNING.value,
