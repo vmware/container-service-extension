@@ -60,7 +60,7 @@ def ovdc_update(data, operation_context: ctx.OperationContext):
         status=vcd_client.TaskStatus.RUNNING.value,
         namespace='vcloud.cse',
         operation=msg,
-        operation_name='',
+        operation_name='OVDC Update',
         details='',
         progress=None,
         owner_href=vdc.href,
@@ -218,8 +218,8 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                                                ovdc_id=ovdc_id,
                                                vdc=vdc,
                                                compute_policy_href=policy['href'],  # noqa: E501
-                                               remove_compute_policy_from_vms=remove_compute_policy_from_vms)  # noqa: E501
-
+                                               remove_compute_policy_from_vms=remove_compute_policy_from_vms, # noqa: E501
+                                               is_placement_policy=True)
         msg = f"Successfully updated OVDC: {vdc.name}"
         logger.SERVER_LOGGER.debug(msg)
         task.update(status=vcd_client.TaskStatus.SUCCESS.value,

@@ -8,7 +8,7 @@ import click
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
 
-from container_service_extension.client.ovdc import Ovdc
+from container_service_extension.client.ovdc_legacy import LegacyOvdc
 from container_service_extension.client.pks_cluster import PksCluster
 import container_service_extension.client.utils as client_utils
 from container_service_extension.logger import CLIENT_LOGGER
@@ -402,16 +402,53 @@ def ovdc_enable(ctx, ovdc_name, pks_plan,
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if client.is_sysadmin():
-            ovdc = Ovdc(client)
+            ovdc = LegacyOvdc(client)
             if org_name is None:
                 org_name = ctx.obj['profiles'].get('org_in_use')
-            result = ovdc.update_ovdc_for_k8s(
+            result = ovdc.update_ovdc_for_pks(
                 enable=True,
                 ovdc_name=ovdc_name,
                 org_name=org_name,
                 k8s_provider=K8sProvider.PKS,
                 pks_plan=pks_plan,
                 pks_cluster_domain=pks_cluster_domain)
+            stdout(result, ctx)
+            CLIENT_LOGGER.debug(result)
+        else:
+            msg = "Insufficient permission to perform operation."
+            stderr(msg, ctx)
+            CLIENT_LOGGER.error(msg)
+    except Exception as e:
+        stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
+
+
+@ovdc_group.command('disable',
+                    short_help='Disable PKS cluster deployment for '
+                               'an org VDC')
+@click.pass_context
+@click.argument('ovdc_name', required=True, metavar='VDC_NAME')
+@click.option(
+    '-o',
+    '--org',
+    'org_name',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help="Org to use. Defaults to currently logged-in org")
+def ovdc_disable(ctx, ovdc_name, org_name):
+    """Disable Kubernetes cluster deployment for an org VDC."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
+    try:
+        client_utils.cse_restore_session(ctx)
+        client = ctx.obj['client']
+        if client.is_sysadmin():
+            ovdc = LegacyOvdc(client)
+            if org_name is None:
+                org_name = ctx.obj['profiles'].get('org_in_use')
+            result = ovdc.update_ovdc_for_pks(enable=False,
+                                              ovdc_name=ovdc_name,
+                                              org_name=org_name)
             stdout(result, ctx)
             CLIENT_LOGGER.debug(result)
         else:
