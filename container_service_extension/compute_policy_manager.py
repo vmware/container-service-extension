@@ -630,27 +630,27 @@ class ComputePolicyManager:
         """Obtain VM's placement policy id if present.
 
         :param lxml.objectify.ObjectifiedElement vm: VM object
-        
+
         :return: placement policy id of the vm
         :rtype: str
         """
         if hasattr(vm, 'ComputePolicy') and \
             hasattr(vm.ComputePolicy, 'VmPlacementPolicy') and \
                 vm.ComputePolicy.VmPlacementPolicy.get('id'):
-                return vm.ComputePolicy.VmPlacementPolicy.get('id')
+            return vm.ComputePolicy.VmPlacementPolicy.get('id')
 
     def _get_vm_sizing_policy_id(self, vm) -> str:
         """Obtain VM's sizing policy id if present.
 
         :param lxml.objectify.ObjectifiedElement vm: VM object
-        
+
         :return: sizing policy id of the vm
         :rtype: str
         """
         if hasattr(vm, 'ComputePolicy') and \
             hasattr(vm.ComputePolicy, 'VmSizingPolicy') and \
                 vm.ComputePolicy.VmPSizingPolicy.get('id'):
-                return vm.ComputePolicy.VmSizingPolicy.get('id')
+            return vm.ComputePolicy.VmSizingPolicy.get('id')
 
     def remove_vdc_compute_policy_from_vdc(self, op_ctx: ctx.OperationContext, # noqa: E501
                                            ovdc_id,
