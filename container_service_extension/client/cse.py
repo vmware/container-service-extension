@@ -1146,7 +1146,8 @@ def disable_service(ctx):
         CLIENT_LOGGER.error(str(e))
 
 
-@cse.group('ovdc', short_help='Manage Kubernetes provider for org VDCs')
+@cse.group('ovdc', cls=cmd_filter.GroupCommandFilter,
+           short_help='Manage Kubernetes provider for org VDCs')
 @click.pass_context
 def ovdc_group(ctx):
     """Manage Kubernetes provider for org VDCs.
@@ -1218,7 +1219,15 @@ def list_ovdcs(ctx, list_pks_plans):
     required=False,
     metavar='ORG_NAME',
     help="Org to use. Defaults to currently logged-in org")
-def ovdc_enable(ctx, ovdc_name, org_name):
+@click.option(
+    '-k',
+    '--kind',
+    'kind',
+    default=None,
+    required=True,
+    metavar='KIND',
+    help="kind of cluster to enable")
+def ovdc_enable(ctx, ovdc_name, org_name, kind):
     """Set Kubernetes provider for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
@@ -1232,7 +1241,7 @@ def ovdc_enable(ctx, ovdc_name, org_name):
                 enable=True,
                 ovdc_name=ovdc_name,
                 org_name=org_name,
-                k8s_provider=K8sProvider.NATIVE)
+                k8s_provider=kind)
             stdout(result, ctx)
             CLIENT_LOGGER.debug(result)
         else:
@@ -1257,7 +1266,23 @@ def ovdc_enable(ctx, ovdc_name, org_name):
     required=False,
     metavar='ORG_NAME',
     help="Org to use. Defaults to currently logged-in org")
-def ovdc_disable(ctx, ovdc_name, org_name):
+@click.option(
+    '-k',
+    '--kind',
+    'kind',
+    default=None,
+    required=True,
+    metavar='KIND',
+    help="kind of cluster to disable")
+@click.option(
+    '-f',
+    '--force',
+    'remove_compute_policy_from_vms',
+    is_flag=True,
+    help="Remove the compute policies from deployed VMs as well. "
+         "Does not remove the compute policy from vApp templates in catalog. ")
+def ovdc_disable(ctx, ovdc_name, org_name,
+                 kind, remove_compute_policy_from_vms):
     """Disable Kubernetes cluster deployment for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
@@ -1269,7 +1294,9 @@ def ovdc_disable(ctx, ovdc_name, org_name):
                 org_name = ctx.obj['profiles'].get('org_in_use')
             result = ovdc.update_ovdc_for_k8s(enable=False,
                                               ovdc_name=ovdc_name,
-                                              org_name=org_name)
+                                              org_name=org_name,
+                                              k8s_provider=kind,
+                                              remove_compute_policy_from_vms=remove_compute_policy_from_vms) # noqa: E501
             stdout(result, ctx)
             CLIENT_LOGGER.debug(result)
         else:
