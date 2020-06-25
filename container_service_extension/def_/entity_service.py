@@ -3,7 +3,12 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from dataclasses import asdict
+import functools
+import json
 from typing import List
+
+from requests.exceptions import HTTPError
+
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0  # noqa: E501
@@ -11,10 +16,39 @@ from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.def_.models import DefEntity, DefEntityType
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as cse_exception
+from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.shared_constants import RequestMethod
 
 
-# TODO(DEF) Exception handling
+def handle_entity_service_exception(func):
+    """Decorate to trap exceptions and process them.
+
+    Raise errors of type HTTPError as DefEntityServiceError
+    and raise the custom error. Re-raise any other exception as it is.
+
+    This decorator should be applied only on method of entity_service.py
+
+    :param method func: decorated function
+
+    :return: reference to the function that executes the decorated function
+        and traps exceptions raised by it.
+    """
+    @functools.wraps(func)
+    def exception_handler_wrapper(*args, **kwargs):
+        try:
+            result = func(*args, **kwargs)
+        except HTTPError as error:
+            response_dict = json.loads(error.response.text)
+            error_message = response_dict.get('message')
+            LOGGER.error(error_message)
+            raise cse_exception.DefEntityServiceError(error_message=error_message, minor_error_code=error.response.status_code)  # noqa: E501
+        except Exception as error:
+            LOGGER.error(error)
+            raise error
+        return result
+    return exception_handler_wrapper
+
+
 class DefEntityService():
     """Manages lifecycle of entities.
 
@@ -26,6 +60,7 @@ class DefEntityService():
         def_utils.raise_error_if_def_not_supported(cloudapi_client)
         self._cloudapi_client = cloudapi_client
 
+    @handle_entity_service_exception
     def create_entity(self, entity_type_id: str, entity: DefEntity) -> None:
         """Create defined entity instance of an entity type.
 
@@ -40,6 +75,7 @@ class DefEntityService():
                                        f"{entity_type_id}",
             payload=asdict(entity))
 
+    @handle_entity_service_exception
     def list_entities(self, filters: dict = None) -> List[DefEntity]:
         """List all defined entities of all entity types.
 
@@ -71,6 +107,7 @@ class DefEntityService():
             for entity in response_body['values']:
                 yield DefEntity(**entity)
 
+    @handle_entity_service_exception
     def list_entities_by_entity_type(self, vendor: str, nss: str, version: str,
                                      filters: dict = None) -> List[DefEntity]:
         """List entities of a given entity type.
@@ -108,6 +145,7 @@ class DefEntityService():
             for entity in response_body['values']:
                 yield DefEntity(**entity)
 
+    @handle_entity_service_exception
     def list_entities_by_interface(self, vendor: str, nss: str, version: str):
         """List entities of a given interface.
 
@@ -136,6 +174,7 @@ class DefEntityService():
             for entity in response_body['values']:
                 yield DefEntity(**entity)
 
+    @handle_entity_service_exception
     def update_entity(self, entity_id: str, entity: DefEntity) -> DefEntity:
         """Update entity instance.
 
@@ -152,6 +191,7 @@ class DefEntityService():
             payload=asdict(entity))
         return DefEntity(**response_body)
 
+    @handle_entity_service_exception
     def get_entity(self, entity_id: str) -> DefEntity:
         """Get the defined entity given entity id.
 
@@ -166,6 +206,7 @@ class DefEntityService():
                                        f"{entity_id}")
         return DefEntity(**response_body)
 
+    @handle_entity_service_exception
     def get_native_entity_by_name(self, name: str) -> DefEntity:
         """Get Native cluster defined entity by its name.
 
@@ -181,6 +222,7 @@ class DefEntityService():
                                               filters=filter_by_name):
             return entity
 
+    @handle_entity_service_exception
     def delete_entity(self, entity_id: str) -> None:
         """Delete the defined entity.
 
@@ -193,6 +235,7 @@ class DefEntityService():
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{entity_id}")
 
+    @handle_entity_service_exception
     def resolve_entity(self, entity_id: str) -> DefEntity:
         """Resolve the entity.
 
