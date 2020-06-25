@@ -626,6 +626,32 @@ class ComputePolicyManager:
         """
         return f"{cloudapi_constants.CLOUDAPI_URN_PREFIX}:vdc:{vdc_id}"
 
+    def _get_vm_placement_policy_id(self, vm) -> str:
+        """Obtain VM's placement policy id if present.
+
+        :param lxml.objectify.ObjectifiedElement vm: VM object
+        
+        :return: placement policy id of the vm
+        :rtype: str
+        """
+        if hasattr(vm, 'ComputePolicy') and \
+            hasattr(vm.ComputePolicy, 'VmPlacementPolicy') and \
+                vm.ComputePolicy.VmPlacementPolicy.get('id'):
+                return vm.ComputePolicy.VmPlacementPolicy.get('id')
+
+    def _get_vm_sizing_policy_id(self, vm) -> str:
+        """Obtain VM's sizing policy id if present.
+
+        :param lxml.objectify.ObjectifiedElement vm: VM object
+        
+        :return: sizing policy id of the vm
+        :rtype: str
+        """
+        if hasattr(vm, 'ComputePolicy') and \
+            hasattr(vm.ComputePolicy, 'VmSizingPolicy') and \
+                vm.ComputePolicy.VmPSizingPolicy.get('id'):
+                return vm.ComputePolicy.VmSizingPolicy.get('id')
+
     def remove_vdc_compute_policy_from_vdc(self, op_ctx: ctx.OperationContext, # noqa: E501
                                            ovdc_id,
                                            compute_policy_href,
@@ -762,7 +788,7 @@ class ComputePolicyManager:
                     for vapp in vapps:
                         target_vms += \
                             [vm for vm in vapp.get_all_vms()
-                                if vm.ComputePolicy.VmPlacementPolicy.get('id') == compute_policy_id] # noqa: E501
+                                if self._get_vm_placement_policy_id(vm) == compute_policy_id] # noqa: E501
                     vm_names = [vm.get('name') for vm in target_vms]
                     operation_msg = f"Removing placement policy from " \
                                     f"{len(vm_names)} VMs. " \
@@ -771,7 +797,7 @@ class ComputePolicyManager:
                     for vapp in vapps:
                         target_vms += \
                             [vm for vm in vapp.get_all_vms()
-                                if vm.ComputePolicy.VmSizingPolicy.get('id') == compute_policy_id] # noqa: E501
+                                if self._get_vm_sizing_policy_id(vm) == compute_policy_id] # noqa: E501
                     vm_names = [vm.get('name') for vm in target_vms]
                     filter_by_name = {'name': _SYSTEM_DEFAULT_COMPUTE_POLICY}
                     for cp_dict in self.list_compute_policies_on_vdc(ovdc_id,
