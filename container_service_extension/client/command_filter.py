@@ -22,6 +22,7 @@ class ClusterKind(str, Enum):
 class GroupKey(str, Enum):
     CLUSTER = 'cluster'
     NODE = 'node'
+    OVDC = 'ovdc'
 
 
 @unique
@@ -33,13 +34,17 @@ class CommandNameKey(str, Enum):
 # List of unsupported commands by Api Version
 UNSUPPORTED_COMMANDS_BY_VERSION = {
     vcd_client.ApiVersion.VERSION_33.value: {
-        GroupKey.CLUSTER: ['apply']
+        GroupKey.CLUSTER: ['apply'],
+        # TODO(metadata based enablement for < v35): Revisit after decision
+        # to support metadata way of enabling for native clusters
+        GroupKey.OVDC: ['enable', 'disable']
     },
     vcd_client.ApiVersion.VERSION_34.value: {
         GroupKey.CLUSTER: ['apply']
     },
     vcd_client.ApiVersion.VERSION_35.value: {
         GroupKey.CLUSTER: ['create']
+        GroupKey.OVDC: ['compute-policy']
     }
 }
 
