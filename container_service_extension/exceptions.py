@@ -221,3 +221,11 @@ class VersionCompatibilityError(CseServerError):
     Raised if local CSE version or target VCD API version is different
     than the versions already registered by CSE.
     """
+
+
+class DefEntityServiceError(InternalServerRequestError):
+    """Raised on any defined entity service operation failure"""
+
+
+class DefSchemaServiceError(InternalServerRequestError):
+    """Raised on any of defined schema service error"""
