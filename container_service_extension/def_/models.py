@@ -3,9 +3,11 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from dataclasses import dataclass
+from typing import List
 
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.utils as utils
+import container_service_extension.exceptions as cse_exception
 
 
 @dataclass(frozen=True)
@@ -244,3 +246,4 @@ class DefEntity:
         self.entityType = entityType
         self.externalId = externalId
         self.state = state
+    

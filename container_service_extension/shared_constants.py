@@ -85,7 +85,9 @@ class RequestKey(str, Enum):
     ROLLBACK = 'rollback'
 
     # keys related to ovdc requests
+    # TODO: Move from K8S_PROVIDER to K8S_RUNTIME to be consistent with UI
     K8S_PROVIDER = 'k8s_provider'
+    K8S_RUNTIME = 'k8s_runtime'
     OVDC_ID = 'ovdc_id'
     PKS_CLUSTER_DOMAIN = 'pks_cluster_domain'
     PKS_PLAN_NAME = 'pks_plan_name'
