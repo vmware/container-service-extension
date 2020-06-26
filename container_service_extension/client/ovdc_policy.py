@@ -29,19 +29,23 @@ class PolicyBasedOvdc:
 
     def update_ovdc_for_k8s(self,
                             ovdc_name,
-                            k8s_provider,
+                            k8s_runtime,
                             enable=True,
                             org_name=None,
                             remove_compute_policy_from_vms=False,
                             **kwargs):
         """Enable/Disable ovdc for k8s for the given k8s provider.
 
-        :param bool enable: If set to True will enable the vdc for the
-            paricular k8s_provider else if set to False, K8 support on
-            the vdc will be disabled.
         :param str ovdc_name: Name of org VDC to update
+        :param str k8s_runtime: k8s_runtime of the k8s provider to
+        enable / disable for the ovdc
+        :param bool enable: If set to True will enable the vdc for the
+            paricular k8s_runtime else if set to False, K8 support on
+            the vdc will be disabled.
         :param str org_name: Name of org that @ovdc_name belongs to
-        :param str kind: Kind of the k8s provider to enable / disable
+        :param bool remove_compute_policy_from_vms: If set to True and
+            enable is False, then all the vms in the ovdc having policies for
+            the k8s_runtime is deleted.
 
         :rtype: dict
         """
@@ -58,17 +62,18 @@ class PolicyBasedOvdc:
             self.client._session,
             accept_type='application/json')
         ovdc = process_response(fetch_ovdc_response)
-        providers = ovdc[RequestKey.K8S_PROVIDER]
+        runtimes = ovdc[RequestKey.K8S_RUNTIME]
         if enable:
-            if k8s_provider in providers:
-                raise Exception(f"OVDC {ovdc_name} already enabled for {k8s_provider}") # noqa: E501
-            providers.append(k8s_provider)
+            if k8s_runtime in runtimes:
+                raise Exception(f"OVDC {ovdc_name} already enabled for {k8s_runtime}") # noqa: E501
+            runtimes.append(k8s_runtime)
         else:
-            if k8s_provider not in providers:
-                raise Exception(f"OVDC {ovdc_name} already disabled for {k8s_provider}") # noqa: E501
-            providers.remove(k8s_provider)
+            if k8s_runtime not in runtimes:
+                raise Exception(f"OVDC {ovdc_name} already disabled for {k8s_runtime}") # noqa: E501
+            runtimes.remove(k8s_runtime)
         data = {
-            RequestKey.K8S_PROVIDER: providers,
+            RequestKey.K8S_RUNTIME: runtimes,
+            # TODO: Update after the discussion regarding the flag.
             RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: remove_compute_policy_from_vms # noqa: E501
         }
         resp = self.client._do_request_prim(

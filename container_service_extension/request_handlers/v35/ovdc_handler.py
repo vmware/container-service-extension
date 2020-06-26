@@ -9,11 +9,12 @@ import pyvcloud.vcd.task as vcd_task
 
 import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
 import container_service_extension.logger as logger
+import container_service_extension.models as cse_models
 import container_service_extension.operation_context as ctx
 import container_service_extension.ovdc_utils as ovdc_utils
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.request_handlers.request_utils as req_utils
-from container_service_extension.server_constants import CLUSTER_PLACEMENT_POLICIES # noqa: E501
+from container_service_extension.server_constants import CLUSTER_RUNTIME_PLACEMENT_POLICIES # noqa: E501
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.telemetry_handler import record_user_action_details  # noqa: E501
@@ -35,25 +36,27 @@ def ovdc_update(data, operation_context: ctx.OperationContext):
 
     :return: Dictionary with org VDC update task href.
     """
-    ovdc_id = data[RequestKey.OVDC_ID]
-    request_data = data[RequestKey.V35_SPEC]
-    required = [
-        RequestKey.K8S_PROVIDER,
-    ]
-    validated_data = request_data
-    req_utils.validate_payload(request_data, required)
+    # ovdc_id = data[RequestKey.OVDC_ID]
+    # request_data = data[RequestKey.V35_SPEC]
+    # required = [
+    #     RequestKey.K8S_RUNTIME,
+    # ]
+    # validated_data = request_data
+    # req_utils.validate_payload(request_data, required)
 
-    if set(validated_data[RequestKey.K8S_PROVIDER]) - set(CLUSTER_PLACEMENT_POLICIES): # noqa: E501
-        msg = "Cluster providers should have one of the follwoing values:" \
-              f" {', '.join(CLUSTER_PLACEMENT_POLICIES)}."
-        logger.SERVER_LOGGER.error(msg)
-        raise ValueError(msg)
+    # if set(validated_data[RequestKey.K8S_RUNTIME]) - set(CLUSTER_RUNTIME_PLACEMENT_POLICIES): # noqa: E501
+    #     msg = "Cluster providers should have one of the follwoing values:" \
+    #           f" {', '.join(CLUSTER_RUNTIME_PLACEMENT_POLICIES)}."
+    #     logger.SERVER_LOGGER.error(msg)
+    #     raise ValueError(msg)
+
+    ovdc_request = cse_models.Ovdc(**{**data[RequestKey.V35_SPEC], "id": data[RequestKey.OVDC_ID]})
 
     msg = "Updating OVDC placement policies"
     task = vcd_task.Task(operation_context.sysadmin_client)
     org = vcd_utils.get_org(operation_context.client)
     user_href = org.get_user(operation_context.user.name).get('href')
-    vdc = vcd_utils.get_vdc(operation_context.sysadmin_client, vdc_id=ovdc_id,
+    vdc = vcd_utils.get_vdc(operation_context.sysadmin_client, vdc_id=ovdc_request.id,
                             is_admin_operation=True)
     logger.SERVER_LOGGER.debug(msg)
     task_resource = task.update(
@@ -74,15 +77,14 @@ def ovdc_update(data, operation_context: ctx.OperationContext):
         stack_trace=None)
     task_href = task_resource.get('href')
     operation_context.is_async = True
-    remove_compute_policy_from_vms = validated_data.get(RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS)  # noqa:E501
     _update_ovdc_using_placement_policy_async(operation_context=operation_context,  # noqa:E501
                                               task=task,
                                               task_href=task_href,
                                               user_href=user_href,
-                                              policy_list=validated_data[RequestKey.K8S_PROVIDER],  # noqa:E501
+                                              policy_list=validated_data[RequestKey.K8S_RUNTIME],  # noqa:E501
                                               ovdc_id=ovdc_id,
                                               vdc=vdc,
-                                              remove_compute_policy_from_vms=remove_compute_policy_from_vms)  # noqa:E501
+                                              remove_compute_policy_from_vms=ovdc_request.remove_compute_policy_from_vms or False)  # noqa:E501
     return {'task_href': task_href}
 
 

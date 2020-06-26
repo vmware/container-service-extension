@@ -22,6 +22,7 @@ from container_service_extension.logger import CLIENT_LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
+from container_service_extension.server_constants import CLUSTER_RUNTIME_PLACEMENT_POLICIES # noqa: E501
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.shared_constants import ComputePolicyAction
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
@@ -1221,13 +1222,13 @@ def list_ovdcs(ctx, list_pks_plans):
     help="Org to use. Defaults to currently logged-in org")
 @click.option(
     '-k',
-    '--kind',
-    'kind',
-    default=None,
+    '--k8-runtime',
+    'k8_runtime',
     required=True,
-    metavar='KIND',
-    help="kind of cluster to enable")
-def ovdc_enable(ctx, ovdc_name, org_name, kind):
+    type=click.Choice(CLUSTER_RUNTIME_PLACEMENT_POLICIES),
+    metavar='K8_RUNTIME',
+    help="kubernetes runtime to enable")
+def ovdc_enable(ctx, ovdc_name, org_name, k8_runtime):
     """Set Kubernetes provider for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
@@ -1241,7 +1242,7 @@ def ovdc_enable(ctx, ovdc_name, org_name, kind):
                 enable=True,
                 ovdc_name=ovdc_name,
                 org_name=org_name,
-                k8s_provider=kind)
+                k8s_runtime=k8_runtime)
             stdout(result, ctx)
             CLIENT_LOGGER.debug(result)
         else:
@@ -1268,12 +1269,12 @@ def ovdc_enable(ctx, ovdc_name, org_name, kind):
     help="Org to use. Defaults to currently logged-in org")
 @click.option(
     '-k',
-    '--kind',
-    'kind',
+    '--k8-runtime',
+    'k8_runtime',
     default=None,
     required=True,
-    metavar='KIND',
-    help="kind of cluster to disable")
+    metavar='K8_RUNTIME',
+    help="Kubernetes runtime to disable")
 @click.option(
     '-f',
     '--force',
@@ -1282,7 +1283,7 @@ def ovdc_enable(ctx, ovdc_name, org_name, kind):
     help="Remove the compute policies from deployed VMs as well. "
          "Does not remove the compute policy from vApp templates in catalog. ")
 def ovdc_disable(ctx, ovdc_name, org_name,
-                 kind, remove_compute_policy_from_vms):
+                 k8_runtime, remove_compute_policy_from_vms):
     """Disable Kubernetes cluster deployment for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
@@ -1295,7 +1296,7 @@ def ovdc_disable(ctx, ovdc_name, org_name,
             result = ovdc.update_ovdc_for_k8s(enable=False,
                                               ovdc_name=ovdc_name,
                                               org_name=org_name,
-                                              k8s_provider=kind,
+                                              k8s_provider=k8_runtime,
                                               remove_compute_policy_from_vms=remove_compute_policy_from_vms) # noqa: E501
             stdout(result, ctx)
             CLIENT_LOGGER.debug(result)
