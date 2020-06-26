@@ -1623,6 +1623,17 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
         if storage_profile is not None:
             storage_profile = vdc.get_storage_profile(storage_profile)
 
+        cust_script = None
+        if ssh_key is not None:
+            cust_script = \
+                "#!/usr/bin/env bash\n" \
+                "if [ x$1=x\"postcustomization\" ];\n" \
+                "then\n" \
+                "mkdir -p /root/.ssh\n" \
+                f"echo '{ssh_key}' >> /root/.ssh/authorized_keys\n" \
+                "chmod -R go-rwx /root/.ssh\n" \
+                "fi"
+
         vapp.reload()
         for n in range(num_nodes):
             name = None
@@ -1641,6 +1652,8 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                 'network': network_name,
                 'ip_allocation_mode': 'pool'
             }
+            if cust_script is not None:
+                spec['cust_script'] = cust_script
             if storage_profile is not None:
                 spec['storage_profile'] = storage_profile
             specs.append(spec)
@@ -1653,16 +1666,6 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
             num_cpu = template[LocalTemplateKey.CPU]
         if not memory_in_mb:
             memory_in_mb = template[LocalTemplateKey.MEMORY]
-        cust_script = None
-        if ssh_key is not None:
-            cust_script = \
-                "#!/usr/bin/env bash\n" \
-                "if [ x$1=x\"postcustomization\" ];\n" \
-                "then\n" \
-                "mkdir -p /root/.ssh\n" \
-                f"echo '{ssh_key}' >> /root/.ssh/authorized_keys\n" \
-                "chmod -R go-rwx /root/.ssh\n" \
-                "fi"
 
         for spec in specs:
             vm_name = spec['target_vm_name']
@@ -1678,16 +1681,6 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
             task = vm.power_on()
             sysadmin_client.get_task_monitor().wait_for_status(task)
             vapp.reload()
-
-            if cust_script:
-                exec_results = execute_script_in_nodes(
-                    sysadmin_client, vapp=vapp, node_names=[vm_name],
-                    script=cust_script)
-                errors = get_script_execution_errors(exec_results)
-                if errors:
-                    raise e.ScriptExecutionError(
-                        "Execution failed for VM customization script to add "
-                        f"ssh key to node {vm_name}:{errors}")
 
             if node_type == NodeType.NFS:
                 LOGGER.debug(f"Enabling NFS server on {vm_name}")
