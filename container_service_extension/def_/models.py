@@ -120,12 +120,27 @@ class Settings:
 
 
 @dataclass()
+class Kubernetes:
+    name: str
+    version: str
+
+
+@dataclass()
+class Cni:
+    name: str
+    version: str
+
+
+@dataclass()
 class Status:
     master_ip: str = None
     phase: str = None
     cni: str = None
-    id: str = None
     task_href: str = None
+    kubernetes: Kubernetes = None
+    cni: Cni = None
+    docker_version: str = None
+    os: str = None
 
 
 @dataclass()

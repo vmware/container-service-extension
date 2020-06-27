@@ -110,6 +110,42 @@
                     },
                     "master_ip": {
                         "type": "string"
+                    },
+                    "kubernetes": {
+                        "type": "object",
+                        "required": [
+                            "name",
+                            "version"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "version": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "cni": {
+                        "type": "object",
+                        "required": [
+                            "name",
+                            "version"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "version": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "os": {
+                        "type": "string"
+                    },
+                    "docker_version": {
+                        "type": "string"
                     }
                 },
                 "additionalproperties": true

@@ -174,7 +174,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             pass
 
         # check that requested/default template is valid
-        get_template(name=template_name, revision=template_revision)
+        template = get_template(name=template_name, revision=template_revision)
 
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
@@ -188,9 +188,16 @@ class ClusterService(abstract_broker.AbstractBroker):
         def_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.CREATE,
                            DefEntityOperationStatus.IN_PROGRESS))
+        def_entity.entity.status.kubernetes = def_models.Kubernetes(name=template[LocalTemplateKey.KUBERNETES], # noqa: E501
+                                                                    version=template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
+        def_entity.entity.status.cni = def_models.Cni(name=template[LocalTemplateKey.CNI], # noqa: E501
+                                                      version=template[LocalTemplateKey.CNI_VERSION]) # noqa: E501
+        def_entity.entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
+        def_entity.entity.status.os = template[LocalTemplateKey.OS]
         self.entity_svc. \
             create_entity(def_utils.get_registered_def_entity_type().id,
                           entity=def_entity)
+        def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)
         self.context.is_async = True
         self._create_cluster_async(def_entity.id, cluster_spec)
         return def_entity
