@@ -192,6 +192,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             create_entity(def_utils.get_registered_def_entity_type().id,
                           entity=def_entity)
         self.context.is_async = True
+        def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)
         self._create_cluster_async(def_entity.id, cluster_spec)
         return def_entity
 
@@ -199,7 +200,6 @@ class ClusterService(abstract_broker.AbstractBroker):
     def _create_cluster_async(self, cluster_id: str,
                               cluster_spec: def_models.ClusterEntity):
         try:
-            cluster_id = cluster_id
             cluster_name = cluster_spec.metadata.cluster_name
             org_name = cluster_spec.metadata.org_name
             ovdc_name = cluster_spec.metadata.ovdc_name
@@ -343,6 +343,10 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Created cluster '{cluster_name}' ({cluster_id})"
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
 
+
+
+
+
             # Update defined entity instance with new properties like vapp_id,
             # master_ip and nodes.
             # TODO(DEF) VCDA-1567 Schema doesn't yet have nodes definition.
@@ -353,6 +357,24 @@ class ClusterService(abstract_broker.AbstractBroker):
             def_entity.entity.status.phase = str(
                 DefEntityPhase(DefEntityOperation.CREATE,
                                DefEntityOperationStatus.SUCCEEDED))
+            vms = vapp.get_all_vms()
+            worker_nodes = []
+            nfs_nodes=[]
+            for vm in vms:
+                vm_name = vm.get('name')
+                node = def_models.Node(name=vm_name,
+                                       ip=vapp.get_primary_ip(vm_name),
+                                       status=vcd_client.VCLOUD_STATUS_MAP.get(int(vm.get('status'))),
+                                       cpu_count=vm.VmSpecSection.NumCpus.text if hasattr(vm, 'VmSpecSection') else None,
+                                       memory_mb=vm.VmSpecSection.MemoryResourceMb.Configured.text if hasattr(vm, 'VmSpecSection') else None)
+                if vm_name.startswith(NodeType.MASTER):
+                    master_node = node
+                elif vm_name.startswith(NodeType.WORKER):
+                    worker_nodes.append(node)
+                elif vm_name.startswith(NodeType.NFS):
+                    nfs_nodes.append(node)
+            def_entity.entity.status.nodes = def_models.Nodes(master=master_node, worker=worker_nodes, nfs=nfs_nodes)
+
             self.entity_svc.update_entity(cluster_id, def_entity)
             self.entity_svc.resolve_entity(cluster_id)
         except (e.MasterNodeCreationError, e.WorkerNodeCreationError,
@@ -763,7 +785,6 @@ class ClusterService(abstract_broker.AbstractBroker):
     def _create_nodes_async(self, cluster_id: str,
                             cluster_spec: def_models.ClusterEntity):
         try:
-            cluster_id = cluster_id
             curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             vapp_href = curr_entity.externalId
             cluster_name = cluster_spec.metadata.cluster_name

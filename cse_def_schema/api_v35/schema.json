@@ -1,4 +1,17 @@
 {
+        "definitions": {
+            "node": {
+                "type": "object",
+                "required": ["name", "ip"],
+                "properties": {
+                    "name": {"type": "string"},
+                    "ip": {"type": "string"},
+                    "status": {"type": "string"},
+                    "cpu_count": {"type": "string"},
+                    "memory_mb": {"type": "string"}
+                }
+            }
+        },
         "type": "object",
         "required": [
             "kind",
@@ -102,7 +115,7 @@
             "status": {
                 "type": "object",
                 "required": [
-                    "master_ip"
+                    "master_ip", "nodes"
                 ],
                 "properties": {
                     "phase": {
@@ -110,6 +123,25 @@
                     },
                     "master_ip": {
                         "type": "string"
+                    },
+                    "nodes": {
+                        "type": "object",
+                        "required": ["master"],
+                        "properties": {
+                            "master": {
+                                "$ref": "#/definitions/node"
+                            },
+                            "workers": {
+                                "type": "array",
+                                "items": {"$ref": "#/definitions/node"},
+                                "default": []
+                            },
+                            "nfs": {
+                                "type": "array",
+                                "items": {"$ref": "#/definitions/node"},
+                                "default": []
+                            }
+                        }
                     }
                 },
                 "additionalproperties": true

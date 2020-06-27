@@ -1,8 +1,9 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+from typing import List
 
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.utils as utils
@@ -120,12 +121,35 @@ class Settings:
 
 
 @dataclass()
+class Node:
+    name: str = None
+    ip: str = None
+    status: str = None
+    cpu_count: int = None
+    memory_mb: str = None
+
+
+@dataclass()
+class Nodes:
+    master: Node = None
+    workers: List[Node] = None
+    nfs: List[Node] = None
+
+    def __init__(self, master: Node = None, workers: List[Node] = None,
+                 nfs: List[Node] = None):
+        self.master = Node(**master) if isinstance(master, dict) else master
+        self.workers = [Node(**w) if isinstance(w, dict) else w for w in workers]
+        self.nfs = [Node(**n) if isinstance(n, dict) else n for n in nfs]
+
+
+@dataclass()
 class Status:
+    # TODO(DEF) Remove master_ip once nodes is implemented.
     master_ip: str = None
     phase: str = None
     cni: str = None
-    id: str = None
     task_href: str = None
+    nodes: Nodes = None
 
 
 @dataclass()
