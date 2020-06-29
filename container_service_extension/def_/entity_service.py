@@ -235,7 +235,6 @@ class DefEntityService():
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{entity_id}")
 
-    @handle_entity_service_exception
     def resolve_entity(self, entity_id: str) -> DefEntity:
         """Resolve the entity.
 
@@ -254,8 +253,8 @@ class DefEntityService():
         msg = response_body[def_utils.DEF_ERROR_MESSAGE_KEY]
         del response_body[def_utils.DEF_ERROR_MESSAGE_KEY]
         entity = DefEntity(**response_body)
+        # TODO: Just record the error message; revisit after HTTP response code
+        # is good enough to decide if exception should be thrown or not
         if entity.state != def_utils.DEF_RESOLVED_STATE:
-            raise cse_exception.DefEntityResolutionError(id=entity.id,
-                                                         state=entity.state,
-                                                         msg=msg)
+            LOGGER.error(msg)
         return entity

@@ -2,13 +2,11 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 from dataclasses import asdict
-import functools
 
 import container_service_extension.def_.cluster_service as cluster_svc
 import container_service_extension.def_.models as def_models
-import container_service_extension.exceptions as cse_exception
-from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.operation_context as ctx
+import container_service_extension.request_handlers.request_utils as request_utils  # noqa: E501
 import container_service_extension.server_constants as const
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.telemetry_handler import \
@@ -17,35 +15,8 @@ from container_service_extension.telemetry.telemetry_handler import \
 _OPERATION_KEY = 'operation'
 
 
-def handle_input_exception(func):
-    """Decorate to trap exceptions and process them.
-
-    Raise errors of type KeyError, TypeError, ValueError as
-    BadRequestError.
-
-    This decorator is only applied on the methods of def_cluster_handler.py
-
-    :param method func: decorated function
-
-    :return: reference to the function that executes the decorated function
-        and traps exceptions raised by it.
-    """
-    @functools.wraps(func)
-    def exception_handler_wrapper(*args, **kwargs):
-        try:
-            result = func(*args, **kwargs)
-        except (KeyError, TypeError, ValueError) as error:
-            LOGGER.error(error)
-            raise cse_exception.BadRequestError(error_message=str(error))
-        except Exception as error:
-            LOGGER.error(error)
-            raise error
-        return result
-    return exception_handler_wrapper
-
-
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_CREATE)
-@handle_input_exception
+@request_utils.v35_api_exception_handler
 def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster create operation.
 
@@ -58,7 +29,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_RESIZE)
-@handle_input_exception
+@request_utils.v35_api_exception_handler
 def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster resize operation.
 
@@ -78,7 +49,7 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_DELETE)
-@handle_input_exception
+@request_utils.v35_api_exception_handler
 def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster delete operation.
 
@@ -96,7 +67,7 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_INFO)
-@handle_input_exception
+@request_utils.v35_api_exception_handler
 def cluster_info(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster info operation.
 
@@ -113,7 +84,7 @@ def cluster_info(data: dict, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_CONFIG)
-@handle_input_exception
+@request_utils.v35_api_exception_handler
 def cluster_config(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster config operation.
 
@@ -131,7 +102,7 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_UPGRADE_PLAN)  # noqa: E501
-@handle_input_exception
+@request_utils.v35_api_exception_handler
 def cluster_upgrade_plan(request_data, op_ctx: ctx.OperationContext):
     """Request handler for cluster upgrade-plan operation.
 
@@ -145,7 +116,7 @@ def cluster_upgrade_plan(request_data, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_UPGRADE)
-@handle_input_exception
+@request_utils.v35_api_exception_handler
 def cluster_upgrade(request_data, op_ctx: ctx.OperationContext):
     """Request handler for cluster upgrade operation.
 
@@ -159,7 +130,7 @@ def cluster_upgrade(request_data, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_LIST)
-@handle_input_exception
+@request_utils.v35_api_exception_handler
 def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster list operation.
 
@@ -171,7 +142,7 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_CREATE)
-@handle_input_exception
+@request_utils.v35_api_exception_handler
 def node_create(request_data, op_ctx: ctx.OperationContext):
     """Request handler for node create operation.
 
@@ -191,7 +162,7 @@ def node_create(request_data, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_DELETE)
-@handle_input_exception
+@request_utils.v35_api_exception_handler
 def node_delete(request_data, op_ctx: ctx.OperationContext):
     """Request handler for node delete operation.
 
@@ -208,7 +179,7 @@ def node_delete(request_data, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_INFO)
-@handle_input_exception
+@request_utils.v35_api_exception_handler
 def node_info(request_data, op_ctx: ctx.OperationContext):
     """Request handler for node info operation.
 
