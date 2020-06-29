@@ -36,9 +36,7 @@
                     "workers": {
                         "type": "object",
                         "required": [
-                            "count",
-                            "sizing_class",
-                            "storage_profile"
+                            "count"
                         ],
                         "properties": {
                             "count": {
@@ -57,9 +55,7 @@
                     "control_plane": {
                         "type": "object",
                         "required": [
-                            "count",
-                            "sizing_class",
-                            "storage_profile"
+                            "count"
                         ],
                         "properties": {
                             "count": {
@@ -76,25 +72,25 @@
                         }
                     },
                     "settings": {
-                "type": "object",
-                "required": [
-                    "network"
-                ],
-                "properties": {
-                    "network": {
-                        "type": "string"
+                        "type": "object",
+                        "required": [
+                            "network"
+                        ],
+                        "properties": {
+                            "network": {
+                                "type": "string"
+                            },
+                            "ssh_key": {
+                                "type": "string"
+                            },
+                            "enable_nfs": {
+                                "type": "boolean"
+                            },
+                            "rollback_on_failure": {
+                                "type": "boolean"
+                            }
+                        }
                     },
-                    "ssh_key": {
-                        "type": "string"
-                    },
-                    "enable_nfs": {
-                        "type": "boolean"
-                    },
-                    "rollback_on_failure": {
-                        "type": "boolean"
-                    }
-                }
-            },
                     "k8_distribution": {
                         "type": "object",
                         "required": [
