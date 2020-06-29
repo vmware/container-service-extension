@@ -209,6 +209,8 @@ class TemplateBuilder():
         self.msg_update_callback.info(msg)
         self.logger.info(msg)
 
+        init_script = self._get_init_script()
+
         vapp_sparse_resource = self.vdc.instantiate_vapp(
             self.temp_vapp_name,
             self.catalog_name,
@@ -222,7 +224,7 @@ class TemplateBuilder():
             memory=self.memory,
             cpu=self.cpu,
             password=None,
-            cust_script=None,
+            cust_script=init_script,
             accept_all_eulas=True,
             vm_name=self.temp_vm_name,
             hostname=self.temp_vm_name,
@@ -250,13 +252,11 @@ class TemplateBuilder():
         self.msg_update_callback.general(msg)
         self.logger.info(msg)
 
-        init_script = self._get_init_script()
         cust_script_filepath = ltm.get_script_filepath(
             self.template_name, self.template_revision, ScriptFile.CUST)
         cust_script = read_data_file(
             cust_script_filepath, logger=self.logger,
             msg_update_callback=self.msg_update_callback)
-        script_to_run = init_script + "\n" + cust_script
 
         vs = get_vsphere(self.sys_admin_client, vapp, vm_name,
                          logger=self.logger)
@@ -272,7 +272,7 @@ class TemplateBuilder():
                 vs.get_vm_by_moid(vapp.get_vm_moid(vm_name)),
                 'root',
                 password_auto,
-                script_to_run,
+                cust_script,
                 target_file=None,
                 wait_for_completion=True,
                 wait_time=10,
@@ -402,8 +402,9 @@ class TemplateBuilder():
                 self.catalog_item_name)
             if task:
                 self.client.get_task_monitor().wait_for_success(task)
-                msg = f"Successfully tagged template {self.catalog_item_name} " \
-                      f" with placement policy {self.cse_placement_policy}." # noqa: E501
+                msg = "Successfully tagged template " \
+                      f"{self.catalog_item_name} with placement policy " \
+                      f"{self.cse_placement_policy}."
             else:
                 msg = f"{self.catalog_item_name} already tagged with" \
                       f" placement policy {self.cse_placement_policy}."
