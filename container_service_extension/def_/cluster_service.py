@@ -188,10 +188,12 @@ class ClusterService(abstract_broker.AbstractBroker):
         def_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.CREATE,
                            DefEntityOperationStatus.IN_PROGRESS))
-        def_entity.entity.status.kubernetes = def_models.Kubernetes(name=template[LocalTemplateKey.KUBERNETES], # noqa: E501
-                                                                    version=template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
-        def_entity.entity.status.cni = def_models.Cni(name=template[LocalTemplateKey.CNI], # noqa: E501
-                                                      version=template[LocalTemplateKey.CNI_VERSION]) # noqa: E501
+        def_entity.entity.status.kubernetes = \
+            _get_kubernetes_string(template[LocalTemplateKey.KUBERNETES],
+                                   template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
+        def_entity.entity.status.cni = \
+            _get_kubernetes_string(template[LocalTemplateKey.CNI],
+                                   template[LocalTemplateKey.CNI_VERSION])
         def_entity.entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
         def_entity.entity.status.os = template[LocalTemplateKey.OS]
         self.entity_svc. \
@@ -1720,3 +1722,29 @@ def run_script_in_nodes(sysadmin_client: vcd_client.Client, vapp_href,
 
 def get_script_execution_errors(results):
     return [result[2].content.decode() for result in results if result[0] != 0]
+
+
+def _get_kubernetes_string(kubernetes_type: str, version: str) -> str:
+    """Generate kubernetes string containing the type and version.
+
+    Example: if kuberenetes_type is "upstream" and version is "1.17.3",
+        kubernetes_string returned is "upstream 1.17.3"
+
+    :param str kubernetes_type:
+    :param str version:
+    :rtype: str
+    """
+    return f"{kuberenetes_type} {version}"
+
+
+def _get_cni_string(cni_name: str, version: str) -> str:
+    """Generate CNI string containing CNI name and version.
+
+    Example: if cni_name is "weave" and version is "2.4.3", the returned
+        value for cni_string is "weave 2.4.3"
+
+    :param str cni_name:
+    :param str version:
+    :rtype: str
+    """
+    return f"{cni_name} {version}"
