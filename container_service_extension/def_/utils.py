@@ -113,7 +113,7 @@ def generate_interface_id(vendor, nss, version):
 
     :rtype str
     """
-    return f"{DEF_INTERFACE_ID_PREFIX}:{vendor}.{nss}:{version}"
+    return f"{DEF_INTERFACE_ID_PREFIX}:{vendor}:{nss}:{version}"
 
 
 def generate_entity_type_id(vendor, nss, version):
@@ -128,4 +128,4 @@ def generate_entity_type_id(vendor, nss, version):
 
     :rtype str
     """
-    return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{vendor}.{nss}:{version}"
+    return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{vendor}:{nss}:{version}"

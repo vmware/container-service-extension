@@ -192,6 +192,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             create_entity(def_utils.get_registered_def_entity_type().id,
                           entity=def_entity)
         self.context.is_async = True
+        def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)
         self._create_cluster_async(def_entity.id, cluster_spec)
         return def_entity
 
