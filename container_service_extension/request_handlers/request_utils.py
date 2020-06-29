@@ -1,8 +1,11 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import functools
 
+import container_service_extension.exceptions as cse_exception
 from container_service_extension.exceptions import BadRequestError
+from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.shared_constants import RequestKey
 
@@ -81,3 +84,30 @@ def validate_payload(payload, required_keys):
         raise BadRequestError(error_message, minor_error_code)
 
     return valid
+
+
+def v35_api_exception_handler(func):
+    """Decorate to trap exceptions and process them.
+
+    Raise errors of type KeyError, TypeError, ValueError as
+    BadRequestError.
+
+    Also raises BadRequest and Internal Server Errors from backend.
+
+    :param method func: decorated function
+
+    :return: reference to the function that executes the decorated function
+        and traps exceptions raised by it.
+    """
+    @functools.wraps(func)
+    def exception_handler_wrapper(*args, **kwargs):
+        try:
+            result = func(*args, **kwargs)
+        except (KeyError, TypeError, ValueError) as error:
+            LOGGER.error(error)
+            raise cse_exception.BadRequestError(error_message=str(error))
+        except Exception as error:
+            LOGGER.error(error)
+            raise error
+        return result
+    return exception_handler_wrapper

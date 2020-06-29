@@ -251,11 +251,6 @@ class DefEntityService():
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{entity_id}/{CloudApiResource.ENTITY_RESOLVE}")  # noqa: E501
-        msg = response_body[def_utils.DEF_ERROR_MESSAGE_KEY]
         del response_body[def_utils.DEF_ERROR_MESSAGE_KEY]
         entity = DefEntity(**response_body)
-        if entity.state != def_utils.DEF_RESOLVED_STATE:
-            raise cse_exception.DefEntityResolutionError(id=entity.id,
-                                                         state=entity.state,
-                                                         msg=msg)
         return entity
