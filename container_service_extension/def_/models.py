@@ -124,8 +124,11 @@ class Status:
     master_ip: str = None
     phase: str = None
     cni: str = None
-    id: str = None
     task_href: str = None
+    kubernetes: str = None
+    cni: str = None
+    docker_version: str = None
+    os: str = None
 
 
 @dataclass()
