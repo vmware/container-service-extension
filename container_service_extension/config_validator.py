@@ -279,13 +279,20 @@ def _validate_vcd_and_vcs_config(vcd_dict,
         for vc in vcs:
             vcenter = platform.get_vcenter(vc['name'])
             vsphere_url = urlparse(vcenter.Url.text)
-            v = VSphere(vsphere_url.hostname, vc['username'],
-                        vc['password'], vsphere_url.port)
+            vsphere_url_port = vsphere_url.port
+            if vsphere_url_port:
+                v = VSphere(vsphere_url.hostname, vc['username'],
+                            vc['password'], vsphere_url.port)
+            else:
+                v = VSphere(vsphere_url.hostname, vc['username'],
+                            vc['password'])
             v.connect()
-            msg_update_callback.general(
-                f"Connected to vCenter Server '{vc['name']}' as "
-                f"'{vc['username']}' ({vsphere_url.hostname}:"
-                f"{vsphere_url.port})")
+            msg = f"Connected to vCenter Server '{vc['name']}' as " \
+                f"'{vc['username']}' ({vsphere_url.hostname}"
+            if vsphere_url_port:
+                msg += f":{vsphere_url.port}"
+            msg += ")"
+            msg_update_callback.general(msg)
     finally:
         if client is not None:
             client.logout()

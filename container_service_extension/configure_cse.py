@@ -11,12 +11,14 @@ from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import NSMAP
+from pyvcloud.vcd.client import QueryResultFormat
+from pyvcloud.vcd.client import ResourceType
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 import semantic_version
 
-import container_service_extension.compute_policy_manager as cpm
+import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
 from container_service_extension.config_validator import get_validated_config
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.schema_service as def_schema_svc
@@ -49,6 +51,7 @@ from container_service_extension.telemetry.telemetry_utils import \
     store_telemetry_settings
 from container_service_extension.template_builder import TemplateBuilder
 import container_service_extension.utils as utils
+from container_service_extension.vcdbroker import get_all_clusters as get_all_cse_clusters # noqa: E501
 from container_service_extension.vsphere_utils import populate_vsphere_list
 
 
@@ -515,7 +518,7 @@ def _register_def_schema(client: Client,
     """
     msg = "Registering defined entity schema"
     msg_update_callback.info(msg)
-    INSTALL_LOGGER.debug(msg)
+    INSTALL_LOGGER.info(msg)
     logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
     cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(client=client, # noqa: E501
                                                                     logger_debug=INSTALL_LOGGER, # noqa: E501
@@ -659,11 +662,12 @@ def _setup_placement_policies(client, policy_list,
     msg = "Setting up placement policies for cluster types"
     msg_update_callback.info(msg)
     INSTALL_LOGGER.debug(msg)
-    computePolicyManager = cpm.ComputePolicyManager(client, log_wire=log_wire)
+    cpm = \
+        compute_policy_manager.ComputePolicyManager(client, log_wire=log_wire)
     pvdc_compute_policy = None
     try:
         try:
-            pvdc_compute_policy = computePolicyManager.get_pvdc_compute_policy(
+            pvdc_compute_policy = cpm.get_pvdc_compute_policy(
                 server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME)
             msg = "Skipping global PVDC compute policy creation. Policy already exists" # noqa: E501
             msg_update_callback.general(msg)
@@ -672,13 +676,13 @@ def _setup_placement_policies(client, policy_list,
             msg = "Creating global PVDC compute policy"
             msg_update_callback.general(msg)
             INSTALL_LOGGER.debug(msg)
-            pvdc_compute_policy = computePolicyManager.add_pvdc_compute_policy(
+            pvdc_compute_policy = cpm.add_pvdc_compute_policy(
                 server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME,
                 server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_DESCRIPTION)
 
         for policy in policy_list:
             try:
-                computePolicyManager.get_vdc_compute_policy(policy, is_placement_policy=True) # noqa: E501
+                cpm.get_vdc_compute_policy(policy, is_placement_policy=True)
                 msg = f"Skipping creating VDC placement policy '{policy}'. Policy already exists" # noqa: E501
                 msg_update_callback.general(msg)
                 INSTALL_LOGGER.debug(msg)
@@ -686,8 +690,8 @@ def _setup_placement_policies(client, policy_list,
                 msg = f"Creating placement policy '{policy}'"
                 msg_update_callback.general(msg)
                 INSTALL_LOGGER.debug(msg)
-                computePolicyManager.add_vdc_compute_policy(policy,
-                                                            pvdc_compute_policy_id=pvdc_compute_policy['id']) # noqa: E501
+                cpm.add_vdc_compute_policy(
+                    policy, pvdc_compute_policy_id=pvdc_compute_policy['id'])
     except cse_exception.GlobalPvdcComputePolicyNotSupported:
         msg = "Global PVDC compute policies are not supported." \
               "Skipping placement policy creation."
@@ -1120,41 +1124,205 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
                    skip_template_creation, ssh_key, retain_temp_vapp,
                    msg_update_callback=utils.NullPrinter(), log_wire=False):
     # create amqp exchange if it doesn't exist
-    amqp = config['amqp']
-    _create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
-                          amqp['vhost'], amqp['ssl'], amqp['username'],
-                          amqp['password'],
-                          msg_update_callback=msg_update_callback)
+    # amqp = config['amqp']
+    # _create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
+    #                      amqp['vhost'], amqp['ssl'], amqp['username'],
+    #                      amqp['password'],
+    #                      msg_update_callback=msg_update_callback)
 
     # update cse api extension
-    _update_cse_extension(
-        client=client,
-        routing_key=amqp['routing_key'],
-        exchange=amqp['exchange'],
-        target_vcd_api_version=config['vcd']['api_version'],
-        msg_update_callback=msg_update_callback)
+    # _update_cse_extension(
+    #    client=client,
+    #    routing_key=amqp['routing_key'],
+    #    exchange=amqp['exchange'],
+    #    target_vcd_api_version=config['vcd']['api_version'],
+    #    msg_update_callback=msg_update_callback)
 
     # Add global placement polcies
-    _setup_placement_policies(client,
-                              policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES, # noqa: E501
-                              msg_update_callback=msg_update_callback,
-                              log_wire=log_wire)
+    # _setup_placement_policies(
+    #   client,
+    #   policy_list=server_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES,
+    #   msg_update_callback=msg_update_callback,
+    #   log_wire=log_wire)
 
     # Register def schema
-    _register_def_schema(client, msg_update_callback=msg_update_callback,
-                         log_wire=log_wire)
+    # _register_def_schema(client, msg_update_callback=msg_update_callback,
+    #                     log_wire=log_wire)
 
     # Recreate all supported templates
-    _install_all_templates(
+    # _install_all_templates(
+    #    client=client,
+    #    config=config,
+    #    skip_template_creation=skip_template_creation,
+    #    force_create=True,
+    #    retain_temp_vapp=retain_temp_vapp,
+    #    ssh_key=retain_temp_vapp,
+    #    msg_update_callback=msg_update_callback)
+
+    # Update old templates to have the new vdc placement compute policies
+    cse_templates = _get_all_cse_templates(client, msg_update_callback)
+    _add_placement_policy_to_templates(
+        client, cse_templates, msg_update_callback, log_wire)
+
+    clusters = get_all_cse_clusters(client)
+    # ToDo : Update clusters to have auto generated password and fix their
+    # metadata
+
+    # Add new vdc compute policy to ovdc with existing CSE clusters
+    _add_vdc_placement_policy_to_ovdc_with_existing_clusters(
         client=client,
-        config=config,
-        skip_template_creation=skip_template_creation,
-        force_create=True,
-        retain_temp_vapp=retain_temp_vapp,
-        ssh_key=retain_temp_vapp,
-        msg_update_callback=msg_update_callback)
+        cse_clusters=clusters,
+        msg_update_callback=msg_update_callback,
+        log_wire=log_wire)
 
-    # TODO tag created templates with placement policies
-
-    # Cleanup all existing CSE polcies. Assign new policy to all clusters
+    # Assign new policy to all clusters
     # Create DEF entity for all clusters
+
+    # Remove all old CSE compute polcieis??
+
+
+def _get_all_cse_templates(client,
+                           msg_update_callback=utils.NullPrinter()):
+    result = []
+    msg = "Searching for CSE k8s templates in vCD."
+    msg_update_callback.info(msg)
+    INSTALL_LOGGER.info(msg)
+    query = client.get_typed_query(
+        ResourceType.VAPP_TEMPLATE.value,
+        query_result_format=QueryResultFormat.RECORDS)
+    for template_record in query.execute():
+        record = {}
+        record['name'] = template_record.get('name')
+        if ('photon' in record['name'] or 'ubuntu' in record['name']) and \
+           ('k8' in record['name'] or 'tkg' in record['name']) and \
+           'weave' in record['name']:
+            record['href'] = template_record.get('href')
+            record['catalog_name'] = template_record.get('catalogName')
+            record['vdc_name'] = template_record.get('vdcName')
+            record['vdc_href'] = template_record.get('vdc')
+            record['org_href'] = template_record.get('org')
+            org = Org(client, href=record['org_href'])
+            record['org_name'] = org.get_name()
+            result.append(record)
+    msg = f"Found {len(result)} CSE k8s templates in vCD."
+    msg_update_callback.general(msg)
+    INSTALL_LOGGER.info(msg)
+    return result
+
+
+def _add_placement_policy_to_templates(
+        client, cse_templates,
+        msg_update_callback=utils.NullPrinter(),
+        log_wire=False):
+    cpm = \
+        compute_policy_manager.ComputePolicyManager(client, log_wire=log_wire)
+
+    for template in cse_templates:
+        msg = f"Processing template '{template['name']}'."
+        msg_update_callback.info(msg)
+        INSTALL_LOGGER.info(msg)
+
+        if 'k8' in template['name']:
+            policy_name = \
+                server_constants.NATIVE_CLUSTER_PLACEMENT_POLICY_NAME
+        elif 'tkg' in template['name']:
+            policy_name = \
+                server_constants.TKG_PLUS_CLUSTER_PLACEMENT_POLICY_NAME
+        else:
+            msg = f"Unknown kind of template '{template['name']}'."
+            INSTALL_LOGGER.debug(msg)
+            msg_update_callback.warning(msg)
+            continue
+
+        task = cpm.remove_all_vdc_compute_policies_from_vapp_template_vms(
+            org_name=template['org_name'],
+            catalog_name=template['catalog_name'],
+            catalog_item_name=template['name'])
+
+        if task is not None:
+            client.get_task_monitor().wait_for_success(task)
+            msg = f"Removed all compute policies from template " \
+                  f"'{template['name']}'."
+            msg_update_callback.general(msg)
+            INSTALL_LOGGER.info(msg)
+
+        policy = cpm.get_vdc_compute_policy(policy_name,
+                                            is_placement_policy=True)
+        task = cpm.assign_vdc_placement_policy_to_vapp_template_vms(
+            compute_policy_href=policy['href'],
+            org_name=template['org_name'],
+            catalog_name=template['catalog_name'],
+            catalog_item_name=template['name'])
+
+        if task is not None:
+            client.get_task_monitor().wait_for_success(task)
+            msg = f"Assigned policy '{policy['display_name']}' to template " \
+                  f"'{template['name']}'."
+            msg_update_callback.general(msg)
+            INSTALL_LOGGER.info(msg)
+
+    msg = "Finished processing all CSE k8s templates."
+    msg_update_callback.general(msg)
+    INSTALL_LOGGER.info(msg)
+
+
+def _add_vdc_placement_policy_to_ovdc_with_existing_clusters(
+        client,
+        cse_clusters,
+        msg_update_callback=utils.NullPrinter(),
+        log_wire=False):
+    msg = "Identifying vDCs that are currently hosting CSE clusters."
+    msg_update_callback.info(msg)
+    INSTALL_LOGGER.info(msg)
+
+    tkg_plus_ovdcs = []
+    native_ovdcs = []
+    vdc_names = {}
+    for cluster in cse_clusters:
+        if 'k8' in cluster['template_name']:
+            id = cluster['vdc_id']
+            native_ovdcs.append(id)
+            vdc_names[id] = cluster['vdc_name']
+        elif 'tkg' in cluster['template_name']:
+            id = cluster['vdc_id']
+            tkg_plus_ovdcs.append(id)
+            vdc_names[id] = cluster['vdc_name']
+
+    native_ovdcs = set(native_ovdcs)
+    tkg_plus_ovdcs = set(tkg_plus_ovdcs)
+
+    msg = f"Found {len(native_ovdcs)} vDCs hosting NATIVE CSE custers " \
+          f"and {len(tkg_plus_ovdcs)} vDCs hosting TKG PLUS clusters."
+    msg_update_callback.info(msg)
+    INSTALL_LOGGER.info(msg)
+
+    cpm = \
+        compute_policy_manager.ComputePolicyManager(client, log_wire=log_wire)
+    native_policy = cpm.get_vdc_compute_policy(
+        policy_name=server_constants.NATIVE_CLUSTER_PLACEMENT_POLICY_NAME,
+        is_placement_policy=True)
+    tkg_plus_policy = cpm.get_vdc_compute_policy(
+        policy_name=server_constants.TKG_PLUS_CLUSTER_PLACEMENT_POLICY_NAME,
+        is_placement_policy=True)
+
+    if len(native_ovdcs):
+        for vdc_id in native_ovdcs:
+            cpm.add_compute_policy_to_vdc(
+                vdc_id=vdc_id,
+                compute_policy_href=native_policy['href'])
+            msg = "Added compute policy " \
+                  f"'{native_policy['display_name']}' to vDC " \
+                  f"'{vdc_names[vdc_id]}'"
+            INSTALL_LOGGER.info(msg)
+            msg_update_callback.general(msg)
+
+    if len(tkg_plus_ovdcs):
+        for vdc_id in tkg_plus_ovdcs:
+            cpm.add_compute_policy_to_vdc(
+                vdc_id=vdc_id,
+                compute_policy_href=tkg_plus_policy['href'])
+            msg = "Added compute policy " \
+                  f"'{tkg_plus_policy['display_name']}' to vDC " \
+                  f"'{vdc_names[vdc_id]}'"
+            INSTALL_LOGGER.info(msg)
+            msg_update_callback.general(msg)

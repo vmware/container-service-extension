@@ -485,7 +485,7 @@ def encrypt(ctx, input_file, output_file):
         sys.exit(1)
 
 
-@cli.command(short_help='Install CSE on vCD')
+@cli.command(short_help='Install CSE 3.0.0 on vCD')
 @click.pass_context
 @click.option(
     '-c',
@@ -670,7 +670,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
 
 
 @cli.command('upgrade',
-             short_help="Upgrade existing CSE 2.6.0 entities")
+             short_help="Upgrade CSE to 3.0.0 on vCD")
 @click.pass_context
 @click.option(
     '-c',
@@ -742,7 +742,8 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
-            validate=True,
+            validate=False,
+            # validate=True,
             log_wire_file=INSTALL_WIRELOG_FILEPATH,
             logger_debug=INSTALL_LOGGER)
 
