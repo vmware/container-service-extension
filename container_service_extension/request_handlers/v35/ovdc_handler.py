@@ -14,7 +14,7 @@ def ovdc_update(data, operation_context: ctx.OperationContext):
     Add or remove the respective cluster placement policies to enable or
     disable cluster deployment of a certain kind in the OVDC.
 
-    Required data: k8s_provider
+    Required data: k8s_runtime
 
     :return: Dictionary with org VDC update task href.
     """
@@ -38,6 +38,6 @@ def ovdc_info(data, operation_context: ctx.OperationContext):
 def ovdc_list(data, operation_context: ctx.OperationContext):
     """Request handler for ovdc list operation.
 
-    :return: List of dictionaries with org VDC k8s provider metadata.
+    :return: List of dictionaries with org VDC k8s runtimes.
     """
     return ovdc_service.list_ovdc(operation_context)

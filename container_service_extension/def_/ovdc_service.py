@@ -15,6 +15,9 @@ import container_service_extension.logger as logger
 import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.shared_constants import RequestKey
+from container_service_extension.telemetry.constants import CseOperation
+from container_service_extension.telemetry.constants import OperationStatus
+import container_service_extension.telemetry.telemetry_handler as telemetry_handler # noqa: E501
 import container_service_extension.utils as utils
 
 
@@ -26,10 +29,6 @@ class Ovdc:
     remove_compute_policy_from_vms: bool = False
 
 
-# TODO address telemetry problem: Cannot decide before calling the async
-# method if the operation is enable or disable. Enabling an OVDC and DISABLING
-# another OVDC can also be done in the same request.
-# TODO add remove_policy_from_vms flag.
 def update_ovdc(operation_context: ctx.OperationContext, ovdc: Ovdc) -> dict:
     """Update ovdc with the updated k8s runtimes list.
 
@@ -63,6 +62,9 @@ def update_ovdc(operation_context: ctx.OperationContext, ovdc: Ovdc) -> dict:
         stack_trace=None)
     task_href = task_resource.get('href')
     operation_context.is_async = True
+    # NOTE: Telemetry is currently handled in the async function as it is not
+    # possible to know the operation (enable/disable) without comparing it to
+    # current k8s runtimes.
     _update_ovdc_using_placement_policy_async(operation_context=operation_context,  # noqa:E501
                                               task=task,
                                               task_href=task_href,
@@ -82,10 +84,11 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
     :return: dictionary containing the ovdc information
     :rtype: dict
     """
-    # cse_params = copy.deepcopy(data)
-    # record_user_action_details(cse_operation=CseOperation.OVDC_INFO,
-    #                            cse_params=cse_params)
-    # TODO find out the details to be recorded for telemetry
+    cse_params = {
+        RequestKey.OVDC_ID: ovdc_id
+    }
+    telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_INFO, # noqa: E501
+                                                 cse_params=cse_params)
     config = utils.get_server_runtime_config()
     log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire'))
     result = asdict(get_ovdc_k8s_runtime_details(operation_context.sysadmin_client, # noqa: E501
@@ -104,10 +107,10 @@ def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
     :return: list of dictionary containing details about the ovdc
     :rtype: List[dict]
     """
-    # cse_params = copy.deepcopy(data)
-    # record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
-    #                            cse_params=cse_params)
-    # TODO find out the details to be recorded for telemetry
+    # Record telemetry
+    telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_LIST, # noqa: E501
+                                                 cse_params={})
+
     if operation_context.client.is_sysadmin():
         org_resource_list = operation_context.client.get_org_list()
     else:
@@ -178,6 +181,8 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
     :param vdc: VDC object
     """
     operation_name = "Update OVDC with placement policies"
+    k8s_runtimes_added = ''
+    k8s_runtimes_deleted = ''
     try:
         config = utils.get_server_runtime_config()
         log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire'))
@@ -189,6 +194,29 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
 
         policies_to_add = set(policy_list) - set(existing_policies)
         policies_to_delete = set(existing_policies) - set(policy_list)
+
+        # Telemetry for 'vcd cse ovdc enable' command
+        # TODO: Update telemetry request to handle 'k8s_runtime' array
+        k8s_runtimes_added = ','.join(policies_to_add)
+        if k8s_runtimes_added:
+            cse_params = {
+                RequestKey.K8S_PROVIDER: k8s_runtimes_added,
+                RequestKey.OVDC_ID: ovdc_id,
+            }
+            telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_ENABLE, # noqa: E501
+                                                         cse_params=cse_params)
+
+        # Telemetry for 'vcd cse ovdc enable' command
+        # TODO: Update telemetry request to handle 'k8s_runtime' array
+        k8s_runtimes_deleted = '.'.join(policies_to_delete)
+        if k8s_runtimes_deleted:
+            cse_params = {
+                RequestKey.K8S_PROVIDER: k8s_runtimes_deleted,
+                RequestKey.OVDC_ID: ovdc_id,
+                RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: remove_compute_policy_from_vms # noqa: E501
+            }
+            telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_DISABLE, # noqa: E501
+                                                         cse_params=cse_params)
 
         for cp_name in policies_to_add:
             msg = f"Adding k8s provider {cp_name} to OVDC {vdc.name}"
@@ -251,7 +279,21 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                     user_name=operation_context.user.name,
                     task_href=task_href,
                     org_href=operation_context.user.org_href)
+        # Record telemetry
+        if k8s_runtimes_added:
+            telemetry_handler.record_user_action(CseOperation.OVDC_ENABLE,
+                                                 status=OperationStatus.SUCCESS) # noqa: E501
+        if k8s_runtimes_deleted:
+            telemetry_handler.record_user_action(CseOperation.OVDC_DISABLE,
+                                                 status=OperationStatus.SUCCESS) # noqa: E501
     except Exception as err:
+        # Record telemetry
+        if k8s_runtimes_added:
+            telemetry_handler.record_user_action(CseOperation.OVDC_ENABLE,
+                                                 status=OperationStatus.FAILED)
+        if k8s_runtimes_deleted:
+            telemetry_handler.record_user_action(CseOperation.OVDC_DISABLE,
+                                                 status=OperationStatus.FAILED)
         logger.SERVER_LOGGER.error(err)
         task.update(status=vcd_client.TaskStatus.ERROR.value,
                     namespace='vcloud.cse',
