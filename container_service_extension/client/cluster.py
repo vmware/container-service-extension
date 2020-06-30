@@ -4,11 +4,11 @@
 
 import pyvcloud.vcd.client as vcd_client
 
-from container_service_extension.def_.utils import ClusterEntityKind   # noqa: E501
 from container_service_extension.client.def_entity_cluster import DefEntityCluster # noqa: E501
 from container_service_extension.client.legacy_native_cluster import LegacyNativeCluster  # noqa: E501
 from container_service_extension.client.native_cluster import NativeCluster  # noqa: E501
 from container_service_extension.client.tkg_cluster import TKGCluster
+from container_service_extension.def_.utils import ClusterEntityKind   # noqa: E501
 
 
 class Cluster:
