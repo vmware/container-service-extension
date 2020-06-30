@@ -359,13 +359,59 @@ organization. Use a different organization by using the '--org' option.
 
 \b
 Examples
-    vcd cse ovdc enable ovdc2 --pks-plan 'plan1' \\
+    vcd cse pks ovdc enable ovdc2 --pks-plan 'plan1' \\
      --pks-cluster-domain 'myorg.com'
         Set 'ovdc2' Kubernetes provider to be ent-pks.
         Use pks plan 'plan1' for 'ovdc2'.
         Set cluster domain to be 'myorg.com'.
+
+\b
+    vcd cse pks ovdc disable ovdc3
+        Set 'ovdc3' Kubernetes provider to be none,
+        which disables Kubernetes cluster deployment on 'ovdc3'.
+
+\b
+    vcd cse pks ovdc info ovdc1
+        Display detailed information about ovdc 'ovdc1'.
+
+\b
+    vcd cse pks ovdc list
+        Display ovdcs in vCD that are visible to the logged in user.
+        vcd cse ovdc list
+
+\b
+    vcd cse pksovdc list --pks-plans
+        Displays list of ovdcs in a given org along with available PKS
+        plans if any. If executed by System-administrator, it will
+        display all ovdcs from all orgs.
     """
     pass
+
+
+@ovdc_group.command('list',
+                    short_help='Display org VDCs in vCD that are visible '
+                               'to the logged in user')
+@click.option(
+    '-p',
+    '--pks-plans',
+    'list_pks_plans',
+    is_flag=True,
+    help="Display available PKS plans if org VDC is backed by "
+         "Enterprise PKS infrastructure")
+@click.pass_context
+def list_ovdcs(ctx, list_pks_plans):
+    """Display org VDCs in vCD that are visible to the logged in user."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
+    try:
+        client_utils.cse_restore_session(ctx)
+        client = ctx.obj['client']
+        ovdc = LegacyOvdc(client)
+        result = ovdc.list_ovdc_for_k8s(list_pks_plans=list_pks_plans)
+        stdout(result, ctx, sort_headers=False)
+        CLIENT_LOGGER.debug(result)
+    except Exception as e:
+        stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
 
 
 @ovdc_group.command('enable',
@@ -453,6 +499,41 @@ def ovdc_disable(ctx, ovdc_name, org_name):
             CLIENT_LOGGER.debug(result)
         else:
             msg = "Insufficient permission to perform operation."
+            stderr(msg, ctx)
+            CLIENT_LOGGER.error(msg)
+    except Exception as e:
+        stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
+
+
+@ovdc_group.command('info',
+                    short_help='Display information about Kubernetes provider '
+                               'for an org VDC')
+@click.pass_context
+@click.argument('ovdc_name', required=True, metavar='VDC_NAME')
+@click.option(
+    '-o',
+    '--org',
+    'org_name',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help="Org to use. Defaults to currently logged-in org")
+def ovdc_info(ctx, ovdc_name, org_name):
+    """Display information about Kubernetes provider for an org VDC."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
+    try:
+        client_utils.cse_restore_session(ctx)
+        client = ctx.obj['client']
+        if client.is_sysadmin():
+            ovdc = LegacyOvdc(client)
+            if org_name is None:
+                org_name = ctx.obj['profiles'].get('org_in_use')
+            result = ovdc.info_ovdc_for_k8s(ovdc_name, org_name)
+            stdout(result, ctx)
+            CLIENT_LOGGER.debug(result)
+        else:
+            msg = "Insufficient permission to perform operation"
             stderr(msg, ctx)
             CLIENT_LOGGER.error(msg)
     except Exception as e:
