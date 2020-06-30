@@ -742,8 +742,7 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
-            validate=False,
-            # validate=True,
+            validate=True,
             log_wire_file=INSTALL_WIRELOG_FILEPATH,
             logger_debug=INSTALL_LOGGER)
 
