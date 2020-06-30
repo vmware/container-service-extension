@@ -552,9 +552,8 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
 
 
 @cluster_group.command('apply',
-                       short_help='apply the configuration to Defined Entity'
-                                  'Resource by filename; create resource if'
-                                  ' doesn\'t exist')
+                       short_help='apply the configuration changes defined '
+                                  'in the file to create or resize cluster')
 @click.pass_context
 @click.argument('cluster_config_file_path',
                 metavar='CLUSTER_CONFIG_FILE_PATH',
@@ -578,7 +577,9 @@ def apply(ctx, cluster_config_file_path):
             cluster_config['metadata']['org_name'] = ctx.obj['profiles'].get('org_in_use')  # noqa: E501
 
         cluster = Cluster(client, cluster_config)
-        cluster.apply()
+        result = cluster.apply()
+        stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
