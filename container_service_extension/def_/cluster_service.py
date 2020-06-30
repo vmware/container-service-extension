@@ -1734,7 +1734,7 @@ def _get_kubernetes_string(kubernetes_type: str, version: str) -> str:
     :param str version:
     :rtype: str
     """
-    return f"{kuberenetes_type} {version}"
+    return f"{kubernetes_type} {version}"
 
 
 def _get_cni_string(cni_name: str, version: str) -> str:
