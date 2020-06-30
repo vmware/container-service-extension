@@ -20,9 +20,9 @@ import container_service_extension.client.utils as client_utils
 from container_service_extension.exceptions import CseResponseError
 from container_service_extension.logger import CLIENT_LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
+from container_service_extension.server_constants import CLUSTER_RUNTIME_PLACEMENT_POLICIES # noqa: E501
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
-from container_service_extension.server_constants import CLUSTER_RUNTIME_PLACEMENT_POLICIES # noqa: E501
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.shared_constants import ComputePolicyAction
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
@@ -1185,22 +1185,15 @@ Examples
 @ovdc_group.command('list',
                     short_help='Display org VDCs in vCD that are visible '
                                'to the logged in user')
-@click.option(
-    '-p',
-    '--pks-plans',
-    'list_pks_plans',
-    is_flag=True,
-    help="Display available PKS plans if org VDC is backed by "
-         "Enterprise PKS infrastructure")
 @click.pass_context
-def list_ovdcs(ctx, list_pks_plans):
+def list_ovdcs(ctx):
     """Display org VDCs in vCD that are visible to the logged in user."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         ovdc = Ovdc(client)
-        result = ovdc.list_ovdc_for_k8s(list_pks_plans=list_pks_plans)
+        result = ovdc.list_ovdc_for_k8s()
         stdout(result, ctx, sort_headers=False)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
