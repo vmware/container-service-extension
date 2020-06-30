@@ -9,7 +9,6 @@ import pyvcloud.vcd.utils as pyvcd_utils
 from pyvcloud.vcd.vdc import VDC
 import requests
 
-import container_service_extension.compute_policy_manager as compute_policy_manager  # noqa: E501
 import container_service_extension.exceptions as e
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.operation_context as ctx
@@ -70,29 +69,6 @@ def get_ovdc_k8s_provider_metadata(sysadmin_client: vcd_client.Client,
                 nsxt_info = pks_cache.get_nsxt_info(pvdc_info.vc)
                 result['nsxt'] = nsxt_info
 
-    return result
-
-
-def get_ovdc_k8s_provider_details(sysadmin_client: vcd_client.Client,
-                                  org_name=None, ovdc_name=None,
-                                  ovdc_id=None, log_wire=False):
-    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
-    cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client, log_wire=log_wire)  # noqa: E501
-    ovdc = vcd_utils.get_vdc(client=sysadmin_client,
-                             vdc_name=ovdc_name,
-                             org_name=org_name,
-                             vdc_id=ovdc_id,
-                             is_admin_operation=True)
-    ovdc_id = vcd_utils.extract_id(ovdc.get_resource().get('id'))
-    ovdc_name = ovdc.get_resource().get('name')
-    policies = []
-    for policy in cpm.list_vdc_placement_policies_on_vdc(ovdc_id):
-        policies.append(policy['name'])
-    result = {
-        'ovdc_name': ovdc_name,
-        'ovdc_id': ovdc_id,
-        K8S_PROVIDER_KEY: policies,
-    }
     return result
 
 

@@ -16,15 +16,15 @@ class PolicyBasedOvdc:
         self.client = client
         self._uri = self.client.get_api_uri() + '/cse/internal'
 
-    def list_ovdc_for_k8s(self, list_pks_plans=False):
+    # TODO add list and get call for `vcd cse pks ovdc ...` commands
+    def list_ovdc_for_k8s(self):
         method = RequestMethod.GET
         uri = f'{self._uri}/ovdcs'
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
-            accept_type='application/json',
-            params={RequestKey.LIST_PKS_PLANS: list_pks_plans})
+            accept_type='application/json')
         return process_response(response)
 
     def update_ovdc_for_k8s(self,
