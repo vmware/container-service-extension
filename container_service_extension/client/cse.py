@@ -1283,7 +1283,7 @@ def ovdc_disable(ctx, ovdc_name, org_name,
             result = ovdc.update_ovdc_for_k8s(enable=False,
                                               ovdc_name=ovdc_name,
                                               org_name=org_name,
-                                              k8s_provider=k8_runtime,
+                                              k8s_runtime=k8_runtime,
                                               remove_compute_policy_from_vms=remove_compute_policy_from_vms) # noqa: E501
             stdout(result, ctx)
             CLIENT_LOGGER.debug(result)
