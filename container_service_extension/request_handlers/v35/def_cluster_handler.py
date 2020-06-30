@@ -117,16 +117,17 @@ def cluster_upgrade_plan(request_data, op_ctx: ctx.OperationContext):
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_UPGRADE)
 @request_utils.v35_api_exception_handler
-def cluster_upgrade(request_data, op_ctx: ctx.OperationContext):
+def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     """Request handler for cluster upgrade operation.
 
     data validation handled in broker
 
     :return: Dict
     """
-    raise NotImplementedError
     svc = cluster_svc.ClusterService(op_ctx)
-    return svc.upgrade_cluster(data=request_data)
+    cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
+    cluster_id = data[RequestKey.CLUSTER_ID]
+    return svc.upgrade_cluster(cluster_id, cluster_entity_spec)
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_LIST)

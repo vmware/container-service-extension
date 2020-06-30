@@ -141,6 +141,28 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         return upgrades
 
+    def _get_cluster_upgrade_plan(self,
+                                  cluster_entity: def_models.ClusterEntity) -> List[dict]: # noqa: E501
+        """Get list of templates that a given cluster can upgrade to.
+
+        :param def_models.ClusterEntity cluster_entity: current cluster entity
+        :return: List of dictionary containing templates
+        :rtype: List[dict]
+        """
+        src_name = cluster_entity.spec.k8_distribution.template_name
+        src_rev = cluster_entity.spec.k8_distribution.template_revision
+
+        upgrades = []
+        config = utils.get_server_runtime_config()
+        for t in config['broker']['templates']:
+            if src_name in t[LocalTemplateKey.UPGRADE_FROM] \
+                    and t[LocalTemplateKey.NAME] != src_name \
+                    and int(t[LocalTemplateKey.REVISION]) > int(src_rev):
+                upgrades.append(t)
+
+        return upgrades
+
+
     def create_cluster(self, cluster_spec: def_models.ClusterEntity):
         """Start the cluster creation operation.
 
@@ -518,40 +540,27 @@ class ClusterService(abstract_broker.AbstractBroker):
             'task_href': self.task_resource.get('href')
         }
 
-    def upgrade_cluster(self, **kwargs):
+    def upgrade_cluster(self, cluster_id: str,
+                        upgrade_spec: def_models.ClusterEntity):
         """Start the upgrade cluster operation.
 
-        Validates data for 'upgrade cluster' operation.
         Upgrading cluster is an asynchronous task, so the returned
         `result['task_href']` can be polled to get updates on task progress.
 
-        **data: Required
-            Required data: cluster_name, template_name, template_revision
-            Optional data and default values: org_name=None, ovdc_name=None
-        **telemetry: Optional
+        :param str cluster_id: id of the cluster to be upgraded
+        :param cluster_spec def_models.ClusterEntity: cluster spec with new kubernetes distribution and revision
         """
-        raise NotImplementedError
-        data = kwargs[KwargKey.DATA]
-        required = [
-            RequestKey.CLUSTER_NAME,
-            RequestKey.TEMPLATE_NAME,
-            RequestKey.TEMPLATE_REVISION
-        ]
-        defaults = {
-            RequestKey.ORG_NAME: None,
-            RequestKey.OVDC_NAME: None
-        }
-        validated_data = {**defaults, **data}
-        req_utils.validate_payload(validated_data, required)
-
-        cluster_name = validated_data[RequestKey.CLUSTER_NAME]
-        template_name = validated_data[RequestKey.TEMPLATE_NAME]
-        template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
+        def_entity = self.entity_svc.get_entity(cluster_id)
+        cluster_name = def_entity.entity.metadata.cluster_name
+        current_template_name = def_entity.entity.spec.k8_distribution.template_name # noqa: E501
+        current_template_revision = def_entity.entity.spec.k8_distribution.template_revision # noqa: E501
+        new_template_name = upgrade_spec.spec.k8_distribution.template_name
+        new_template_revision = upgrade_spec.spec.k8_distribution.template_revision # noqa: E501
 
         # check that the specified template is a valid upgrade target
         template = {}
-        valid_templates = self.get_cluster_upgrade_plan(data=validated_data,
-                                                        telemetry=False)
+        valid_templates = self._get_cluster_upgrade_plan(def_entity.entity)
+
         for t in valid_templates:
             if t[LocalTemplateKey.NAME] == template_name and t[LocalTemplateKey.REVISION] == str(template_revision): # noqa: E501
                 template = t
@@ -560,24 +569,20 @@ class ClusterService(abstract_broker.AbstractBroker):
             # TODO all of these e.CseServerError instances related to request
             # should be changed to BadRequestError (400)
             raise e.CseServerError(
-                f"Specified template/revision ({template_name} revision "
-                f"{template_revision}) is not a valid upgrade target for "
+                f"Specified template/revision ({new_template_name} revision "
+                f"{new_template_revision}) is not a valid upgrade target for "
                 f"cluster '{cluster_name}'.")
 
         # get cluster data (including node names) to pass to async function
-        cluster = self.get_cluster_info(data=validated_data, telemetry=False)
+        # cluster = self.get_cluster_info(data=validated_data, telemetry=False)
 
-        if kwargs.get(KwargKey.TELEMETRY, True):
-            # Record the telemetry data
-            cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
-            record_user_action_details(cse_operation=CseOperation.CLUSTER_UPGRADE, # noqa: E501
-                                       cse_params=cse_params)
+        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
+        #  based clusters
 
         msg = f"Upgrading cluster '{cluster_name}' " \
-              f"software to match template {template_name} (revision " \
-              f"{template_revision}): Kubernetes: " \
-              f"{cluster['kubernetes_version']} -> " \
+              f"software to match template {new_template_name} (revision " \
+              f"{new_template_revision}): Kubernetes: " \
+              f"{def} -> " \
               f"{template[LocalTemplateKey.KUBERNETES_VERSION]}, Docker-CE: " \
               f"{cluster['docker_version']} -> " \
               f"{template[LocalTemplateKey.DOCKER_VERSION]}, CNI: " \
