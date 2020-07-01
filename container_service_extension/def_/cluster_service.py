@@ -1026,7 +1026,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
                 ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION] # noqa: E501
             }
-            # vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
+
             task = cluster_vapp.set_multiple_metadata(metadata)
             self.context.client.get_task_monitor().wait_for_status(task)
 
