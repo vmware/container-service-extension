@@ -398,6 +398,11 @@ class Service(object, metaclass=Singleton):
                   " and defined entity interface"
             msg_update_callback.info(msg)
             logger.SERVER_LOGGER.debug(msg)
+        except cse_exception.DefSchemaServiceError as e:
+            msg = f"Error while loading defined entity schema: {e.minor_error_code}"  # noqa: E501
+            msg_update_callback.error(msg)
+            logger.SERVER_LOGGER.debug(msg)
+            raise e
         except Exception as e:
             msg = f"Failed to load defined entity schema to global context: {str(e)}" # noqa: E501
             msg_update_callback.error(e)

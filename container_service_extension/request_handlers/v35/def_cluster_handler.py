@@ -6,6 +6,7 @@ from dataclasses import asdict
 import container_service_extension.def_.cluster_service as cluster_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.operation_context as ctx
+import container_service_extension.request_handlers.request_utils as request_utils  # noqa: E501
 import container_service_extension.server_constants as const
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.telemetry_handler import \
@@ -15,6 +16,7 @@ _OPERATION_KEY = 'operation'
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_CREATE)
+@request_utils.v35_api_exception_handler
 def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster create operation.
 
@@ -27,6 +29,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_RESIZE)
+@request_utils.v35_api_exception_handler
 def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster resize operation.
 
@@ -46,6 +49,7 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_DELETE)
+@request_utils.v35_api_exception_handler
 def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster delete operation.
 
@@ -63,6 +67,7 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_INFO)
+@request_utils.v35_api_exception_handler
 def cluster_info(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster info operation.
 
@@ -79,6 +84,7 @@ def cluster_info(data: dict, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_CONFIG)
+@request_utils.v35_api_exception_handler
 def cluster_config(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster config operation.
 
@@ -96,6 +102,7 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_UPGRADE_PLAN)  # noqa: E501
+@request_utils.v35_api_exception_handler
 def cluster_upgrade_plan(request_data, op_ctx: ctx.OperationContext):
     """Request handler for cluster upgrade-plan operation.
 
@@ -109,6 +116,7 @@ def cluster_upgrade_plan(request_data, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_UPGRADE)
+@request_utils.v35_api_exception_handler
 def cluster_upgrade(request_data, op_ctx: ctx.OperationContext):
     """Request handler for cluster upgrade operation.
 
@@ -122,6 +130,7 @@ def cluster_upgrade(request_data, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_LIST)
+@request_utils.v35_api_exception_handler
 def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster list operation.
 
@@ -133,6 +142,7 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_CREATE)
+@request_utils.v35_api_exception_handler
 def node_create(request_data, op_ctx: ctx.OperationContext):
     """Request handler for node create operation.
 
@@ -152,6 +162,7 @@ def node_create(request_data, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_DELETE)
+@request_utils.v35_api_exception_handler
 def node_delete(request_data, op_ctx: ctx.OperationContext):
     """Request handler for node delete operation.
 
@@ -168,6 +179,7 @@ def node_delete(request_data, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_INFO)
+@request_utils.v35_api_exception_handler
 def node_info(request_data, op_ctx: ctx.OperationContext):
     """Request handler for node info operation.
 

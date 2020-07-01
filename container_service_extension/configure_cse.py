@@ -12,7 +12,6 @@ from pyvcloud.vcd.client import NSMAP
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
-from requests.exceptions import HTTPError
 import semantic_version
 
 import container_service_extension.compute_policy_manager as cpm
@@ -535,7 +534,7 @@ def _register_def_schema(client: Client,
             schema_svc.get_interface(native_interface.get_id())
             msg = "defined entity interface already exists." \
                   " Skipping defined entity interface creation"
-        except HTTPError:
+        except cse_exception.DefSchemaServiceError:
             # TODO handle this part only if the interface was not found
             native_interface = schema_svc.create_interface(native_interface)
             msg = "Successfully created defined entity interface"
@@ -562,9 +561,9 @@ def _register_def_schema(client: Client,
             schema_svc.get_entity_type(native_entity_type.get_id())
             msg = "defined entity type already exists." \
                   " Skipping defined entity type creation"
-        except HTTPError:
+        except cse_exception.DefSchemaServiceError:
             # TODO handle this part only if the entity type was not found
-            native_entity_type = schema_svc.create_entity_type(native_entity_type) # noqa: E501
+            native_entity_type = schema_svc.create_entity_type(native_entity_type)  # noqa: E501
             msg = "Successfully registered defined entity type"
         msg_update_callback.general(msg)
         INSTALL_LOGGER.debug(msg)
@@ -573,8 +572,13 @@ def _register_def_schema(client: Client,
               " registration"
         msg_update_callback.general(msg)
         INSTALL_LOGGER.debug(msg)
+    except (ImportError, ModuleNotFoundError, FileNotFoundError) as e:
+        msg = f"Error while loading defined entity schema: {str(e)}"
+        msg_update_callback.error(msg)
+        INSTALL_LOGGER.error(msg)
+        raise e
     except Exception as e:
-        msg = f"Error occured while registering defined entity schema: {str(e)}" # noqa: E501
+        msg = f"Error occurred while registering defined entity schema: {str(e)}" # noqa: E501
         msg_update_callback.error(msg)
         INSTALL_LOGGER.error(msg)
         raise(e)
