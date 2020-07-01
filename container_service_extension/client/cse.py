@@ -8,6 +8,7 @@ import click
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
 from vcd_cli.vcd import vcd
+import yaml
 
 
 from container_service_extension.client import pks
@@ -563,8 +564,21 @@ def apply(ctx, cluster_config_file_path):
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
-        cluster = Cluster(client)
-        cluster.apply(cluster_config_file_path)
+        with open(cluster_config_file_path) as f:
+            cluster_config = yaml.safe_load(f) or {}
+
+        if not cluster_config.get('metadata', {}).get('ovdc_name'):
+            vdc = ctx.obj['profiles'].get('vdc_in_use')
+            if not vdc:
+                raise Exception("Virtual datacenter context is not set. "
+                                "Use either command 'vcd vdc use' or option "
+                                "'--vdc' to set the vdc context.")
+            cluster_config['metadata']['ovdc_name'] = vdc
+        if not cluster_config.get('metadata', {}).get('org_name'):
+            cluster_config['metadata']['org_name'] = ctx.obj['profiles'].get('org_in_use')  # noqa: E501
+
+        cluster = Cluster(client, cluster_config)
+        cluster.apply()
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))

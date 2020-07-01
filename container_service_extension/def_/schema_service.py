@@ -51,8 +51,6 @@ class DefSchemaService():
     """Manages lifecycle of defined entity interfaces and entity types."""
 
     def __init__(self, cloudapi_client: CloudApiClient):
-        if not cloudapi_client.is_sys_admin:
-            raise ValueError("Cloud API Client should be sysadmin.")
         raise_error_if_def_not_supported(cloudapi_client)
         self._cloudapi_client = cloudapi_client
 

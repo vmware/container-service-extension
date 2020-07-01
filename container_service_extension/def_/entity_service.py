@@ -14,6 +14,7 @@ from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0  # noqa: E501
 from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.def_.models import DefEntity, DefEntityType
+import container_service_extension.def_.schema_service as def_schema_svc
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as cse_exception
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
@@ -214,7 +215,7 @@ class DefEntityService():
         :return:
         """
         filter_by_name = {def_utils.ClusterEntityFilterKey.CLUSTER_NAME.value: name}  # noqa: E501
-        entity_type: DefEntityType = def_utils.get_registered_def_entity_type()
+        entity_type: DefEntityType = self.get_registered_def_entity_type_for_v35()  # noqa: E501
         for entity in \
             self.list_entities_by_entity_type(vendor=entity_type.vendor,
                                               nss=entity_type.nss,
@@ -258,3 +259,13 @@ class DefEntityService():
         if entity.state != def_utils.DEF_RESOLVED_STATE:
             LOGGER.error(msg)
         return entity
+
+    def get_registered_def_entity_type_for_v35(self):
+        """Fetch the native cluster entity type."""
+        schema_svc = def_schema_svc.DefSchemaService(self._cloudapi_client)
+        keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(self._cloudapi_client.get_api_version())]  # noqa: E501
+        entity_type_id = def_utils.generate_entity_type_id(
+            vendor=keys_map[def_utils.DefKey.VENDOR],
+            nss=keys_map[def_utils.DefKey.ENTITY_TYPE_NSS],
+            version=keys_map[def_utils.DefKey.ENTITY_TYPE_VERSION])
+        return schema_svc.get_entity_type(entity_type_id)
