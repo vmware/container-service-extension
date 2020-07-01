@@ -103,16 +103,15 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_UPGRADE_PLAN)  # noqa: E501
 @request_utils.v35_api_exception_handler
-def cluster_upgrade_plan(request_data, op_ctx: ctx.OperationContext):
+def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
     """Request handler for cluster upgrade-plan operation.
 
     data validation handled in broker
 
     :return: List[Tuple(str, str)]
     """
-    raise NotImplementedError
     svc = cluster_svc.ClusterService(op_ctx)
-    return svc.get_cluster_upgrade_plan(data=request_data)
+    return svc.get_cluster_upgrade_plan(data[RequestKey.CLUSTER_ID])
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_UPGRADE)
