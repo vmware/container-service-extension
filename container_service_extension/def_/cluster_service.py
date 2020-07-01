@@ -359,7 +359,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                DefEntityOperationStatus.SUCCEEDED))
             vms = vapp.get_all_vms()
             worker_nodes = []
-            nfs_nodes=[]
+            nfs_nodes = []
             for vm in vms:
                 vm_name = vm.get('name')
                 node = def_models.Node(name=vm_name,
@@ -373,7 +373,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     worker_nodes.append(node)
                 elif vm_name.startswith(NodeType.NFS):
                     nfs_nodes.append(node)
-            def_entity.entity.status.nodes = def_models.Nodes(master=master_node, worker=worker_nodes, nfs=nfs_nodes)
+            def_entity.entity.status.nodes = def_models.Nodes(master=master_node, workers=worker_nodes, nfs=nfs_nodes)
 
             self.entity_svc.update_entity(cluster_id, def_entity)
             self.entity_svc.resolve_entity(cluster_id)
@@ -944,7 +944,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                               error_message=str(err))
         finally:
             self.context.end()
-
     # all parameters following '*args' are required and keyword-only
     @utils.run_async
     def _upgrade_cluster_async(self, *args, cluster, template):
