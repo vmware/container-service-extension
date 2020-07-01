@@ -2,6 +2,7 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 import json
+import time
 
 import pika
 import pyvcloud.vcd.api_extension as api_extension
@@ -14,6 +15,10 @@ from pyvcloud.vcd.client import ResourceType
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
+import pyvcloud.vcd.utils as pyvcloud_vcd_utils
+from pyvcloud.vcd.vapp import VApp
+from pyvcloud.vcd.vm import VM
+from requests.exceptions import HTTPError
 import semantic_version
 
 import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
@@ -109,7 +114,7 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
                                          auto_delete=False)
                 msg = f"AMQP exchange '{amqp['exchange']}' exists"
                 msg_update_callback.general(msg)
-                SERVER_CLI_LOGGER.debug(msg)
+                SERVER_CLI_LOGGER.info(msg)
             except pika.exceptions.ChannelClosed:
                 msg = f"AMQP exchange '{amqp['exchange']}' does not exist"
                 msg_update_callback.error(msg)
@@ -141,16 +146,16 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
                     msg += f"\nvCD-CSE exchange: {cse_info['exchange']}" \
                            f"\nCSE config exchange: {amqp['exchange']}"
                 msg_update_callback.info(msg)
-                SERVER_CLI_LOGGER.debug(msg)
+                SERVER_CLI_LOGGER.info(msg)
                 err_msgs.append(msg)
             if cse_info['enabled'] == 'true':
                 msg = "CSE on vCD is currently enabled"
                 msg_update_callback.general(msg)
-                SERVER_CLI_LOGGER.debug(msg)
+                SERVER_CLI_LOGGER.info(msg)
             else:
                 msg = "CSE on vCD is currently disabled"
                 msg_update_callback.info(msg)
-                SERVER_CLI_LOGGER.debug(msg)
+                SERVER_CLI_LOGGER.info(msg)
         except MissingRecordException:
             msg = "CSE is not registered to vCD"
             msg_update_callback.error(msg)
@@ -164,7 +169,7 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
         if vcd_utils.catalog_exists(org, catalog_name):
             msg = f"Found catalog '{catalog_name}'"
             msg_update_callback.general(msg)
-            SERVER_CLI_LOGGER.debug(msg)
+            SERVER_CLI_LOGGER.info(msg)
         else:
             msg = f"Catalog '{catalog_name}' not found"
             msg_update_callback.error(msg)
@@ -178,7 +183,7 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
         raise Exception(err_msgs)
     msg = "CSE installation is valid"
     msg_update_callback.general(msg)
-    SERVER_CLI_LOGGER.debug(msg)
+    SERVER_CLI_LOGGER.info(msg)
 
 
 def _construct_cse_extension_description(target_vcd_api_version):
@@ -542,7 +547,7 @@ def _register_def_schema(client: Client,
             native_interface = schema_svc.create_interface(native_interface)
             msg = "Successfully created defined entity interface"
         msg_update_callback.general(msg)
-        INSTALL_LOGGER.debug(msg)
+        INSTALL_LOGGER.info(msg)
 
         # TODO stop-gap fix - find efficient way to import schema
         import importlib
@@ -569,12 +574,12 @@ def _register_def_schema(client: Client,
             native_entity_type = schema_svc.create_entity_type(native_entity_type)  # noqa: E501
             msg = "Successfully registered defined entity type"
         msg_update_callback.general(msg)
-        INSTALL_LOGGER.debug(msg)
+        INSTALL_LOGGER.info(msg)
     except cse_exception.DefNotSupportedException:
         msg = "Skipping defined entity type and defined entity interface" \
               " registration"
         msg_update_callback.general(msg)
-        INSTALL_LOGGER.debug(msg)
+        INSTALL_LOGGER.info(msg)
     except (ImportError, ModuleNotFoundError, FileNotFoundError) as e:
         msg = f"Error while loading defined entity schema: {str(e)}"
         msg_update_callback.error(msg)
@@ -584,7 +589,7 @@ def _register_def_schema(client: Client,
         msg = f"Error occurred while registering defined entity schema: {str(e)}" # noqa: E501
         msg_update_callback.error(msg)
         INSTALL_LOGGER.error(msg)
-        raise(e)
+        raise e
     finally:
         try:
             schema_file.close()
@@ -663,7 +668,7 @@ def _setup_placement_policies(client, policy_list,
     """
     msg = "Setting up placement policies for cluster types"
     msg_update_callback.info(msg)
-    INSTALL_LOGGER.debug(msg)
+    INSTALL_LOGGER.info(msg)
     cpm = \
         compute_policy_manager.ComputePolicyManager(client, log_wire=log_wire)
     pvdc_compute_policy = None
@@ -673,11 +678,11 @@ def _setup_placement_policies(client, policy_list,
                 server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME)
             msg = "Skipping global PVDC compute policy creation. Policy already exists" # noqa: E501
             msg_update_callback.general(msg)
-            INSTALL_LOGGER.debug(msg)
+            INSTALL_LOGGER.info(msg)
         except EntityNotFoundException:
             msg = "Creating global PVDC compute policy"
             msg_update_callback.general(msg)
-            INSTALL_LOGGER.debug(msg)
+            INSTALL_LOGGER.info(msg)
             pvdc_compute_policy = cpm.add_pvdc_compute_policy(
                 server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME,
                 server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_DESCRIPTION)
@@ -687,18 +692,18 @@ def _setup_placement_policies(client, policy_list,
                 cpm.get_vdc_compute_policy(policy, is_placement_policy=True)
                 msg = f"Skipping creating VDC placement policy '{policy}'. Policy already exists" # noqa: E501
                 msg_update_callback.general(msg)
-                INSTALL_LOGGER.debug(msg)
+                INSTALL_LOGGER.info(msg)
             except EntityNotFoundException:
                 msg = f"Creating placement policy '{policy}'"
                 msg_update_callback.general(msg)
-                INSTALL_LOGGER.debug(msg)
+                INSTALL_LOGGER.info(msg)
                 cpm.add_vdc_compute_policy(
                     policy, pvdc_compute_policy_id=pvdc_compute_policy['id'])
     except cse_exception.GlobalPvdcComputePolicyNotSupported:
         msg = "Global PVDC compute policies are not supported." \
               "Skipping placement policy creation."
         msg_update_callback.general(msg)
-        INSTALL_LOGGER.debug(msg)
+        INSTALL_LOGGER.info(msg)
 
 
 def _install_all_templates(
@@ -1112,14 +1117,19 @@ def _legacy_upgrade_to_33_34(client, config, ext_vcd_api_version,
         ssh_key=retain_temp_vapp,
         msg_update_callback=msg_update_callback)
 
-    # do convert cluster
-    target_vcd_version = config['vcd']['api_version']
-    if ext_vcd_api_version != target_vcd_version:
-        _legacy_update_clusters()
-
-
-def _legacy_update_clusters():
-    pass
+    # Fix cluster metadata and admin password
+    clusters = get_all_cse_clusters(client)
+    _fix_cluster_metadata(
+        client=client,
+        config=config,
+        cse_clusters=clusters,
+        msg_update_callback=msg_update_callback)
+    _fix_cluster_admin_password(
+        client=client,
+        cse_clusters=clusters,
+        new_admin_password=None,
+        skip_wait_for_gc=False,
+        msg_update_callback=msg_update_callback)
 
 
 def _upgrade_to_35(client, config, ext_vcd_api_version,
@@ -1127,7 +1137,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
                    msg_update_callback=utils.NullPrinter(), log_wire=False):
     # create amqp exchange if it doesn't exist
     # amqp = config['amqp']
-    # _create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
+    #_create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
     #                      amqp['vhost'], amqp['ssl'], amqp['username'],
     #                      amqp['password'],
     #                      msg_update_callback=msg_update_callback)
@@ -1142,10 +1152,10 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
 
     # Add global placement polcies
     # _setup_placement_policies(
-    #   client,
-    #   policy_list=server_constants.CLUSTER_PLACEMENT_POLICIES,
-    #   msg_update_callback=msg_update_callback,
-    #   log_wire=log_wire)
+    #    client,
+    #    policy_list=server_constants.CLUSTER_PLACEMENT_POLICIES,
+    #    msg_update_callback=msg_update_callback,
+    #    log_wire=log_wire)
 
     # Register def schema
     # _register_def_schema(client, msg_update_callback=msg_update_callback,
@@ -1162,20 +1172,30 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     #    msg_update_callback=msg_update_callback)
 
     # Update old templates to have the new vdc placement compute policies
-    cse_templates = _get_all_cse_templates(client, msg_update_callback)
-    _add_placement_policy_to_templates(
-        client, cse_templates, msg_update_callback, log_wire)
+    # cse_templates = _get_all_cse_templates(client, msg_update_callback)
+    # _add_placement_policy_to_templates(
+    #    client, cse_templates, msg_update_callback, log_wire)
 
+    # Update clusters to have auto generated password and fix their metadata
     clusters = get_all_cse_clusters(client)
-    # ToDo : Update clusters to have auto generated password and fix their
-    # metadata
-
-    # Add new vdc compute policy to ovdc with existing CSE clusters
-    _add_vdc_placement_policy_to_ovdc_with_existing_clusters(
+    # _fix_cluster_metadata(
+    #    client=client,
+    #    config=config,
+    #    cse_clusters=clusters,
+    #    msg_update_callback=msg_update_callback)
+    _fix_cluster_admin_password(
         client=client,
         cse_clusters=clusters,
-        msg_update_callback=msg_update_callback,
-        log_wire=log_wire)
+        new_admin_password="changeme1",
+        skip_wait_for_gc=False,
+        msg_update_callback=msg_update_callback)
+
+    # Add new vdc compute policy to ovdc with existing CSE clusters
+    # _add_vdc_placement_policy_to_ovdc_with_existing_clusters(
+    #    client=client,
+    #    cse_clusters=clusters,
+    #    msg_update_callback=msg_update_callback,
+    #    log_wire=log_wire)
 
     # Assign new policy to all clusters
     # Create DEF entity for all clusters
@@ -1232,7 +1252,7 @@ def _add_placement_policy_to_templates(
                 server_constants.TKG_PLUS_CLUSTER_PLACEMENT_POLICY_NAME
         else:
             msg = f"Unknown kind of template '{template['name']}'."
-            INSTALL_LOGGER.debug(msg)
+            INSTALL_LOGGER.info(msg)
             msg_update_callback.warning(msg)
             continue
 
@@ -1328,3 +1348,288 @@ def _add_vdc_placement_policy_to_ovdc_with_existing_clusters(
                   f"'{vdc_names[vdc_id]}'"
             INSTALL_LOGGER.info(msg)
             msg_update_callback.general(msg)
+
+
+def _fix_cluster_metadata(client,
+                          config,
+                          cse_clusters,
+                          msg_update_callback=utils.NullPrinter()):
+    msg = "Fixing metadata on CSE k8s clusters."
+    INSTALL_LOGGER.info(msg)
+    msg_update_callback.info(msg)
+    if len(cse_clusters) == 0:
+        msg = "No CSE k8s clusters were found."
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.info(msg)
+        return
+
+    for cluster in cse_clusters:
+        msg = f"Processing metadata of cluster '{cluster['name']}'."
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.info(msg)
+
+        vapp_href = cluster['vapp_href']
+        vapp = VApp(client, href=vapp_href)
+
+        # This step removes the old 'cse.template' metadata and adds
+        # cse.template.name and cse.template.revision metadata
+        # using hard-coded values taken from github history
+        metadata_dict = \
+            pyvcloud_vcd_utils.metadata_to_dict(vapp.get_metadata())
+        old_template_name = metadata_dict.get(
+            server_constants.ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME) # noqa: E501
+        if old_template_name:
+            msg = "Determining k8s version on cluster."
+            INSTALL_LOGGER.info(msg)
+            msg_update_callback.info(msg)
+
+            cse_version = metadata_dict.get(
+                server_constants.ClusterMetadataKey.CSE_VERSION)
+            new_template_name = None
+            if 'photon' in old_template_name:
+                new_template_name = 'photon-v2'
+                if cse_version in ('1.0.0'):
+                    new_template_name += '_k8-1.8_weave-2.0.5'
+                elif cse_version in ('1.1.0', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4'): # noqa: E501
+                    new_template_name += '_k8-1.9_weave-2.3.0'
+                elif cse_version in ('1.2.5', '1.2.6', '1.2.7',): # noqa: E501
+                    new_template_name += '_k8-1.10_weave-2.3.0'
+                elif cse_version in ('2.0.0'):
+                    new_template_name += '_k8-1.12_weave-2.3.0'
+            elif 'ubuntu' in old_template_name:
+                new_template_name = 'ubuntu-16.04'
+                if cse_version in ('1.0.0'):
+                    new_template_name += '_k8-1.9_weave-2.1.3'
+                elif cse_version in ('1.1.0', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4', '1.2.5', '1.2.6', '1.2.7'): # noqa: E501
+                    new_template_name += '_k8-1.10_weave-2.3.0'
+                elif cse_version in ('2.0.0'):
+                    new_template_name += '_k8-1.13_weave-2.3.0'
+
+            if new_template_name:
+                msg = "Updating template metadata of cluster."
+                INSTALL_LOGGER.info(msg)
+                msg_update_callback.info(msg)
+
+                task = vapp.remove_metadata(
+                    server_constants.ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME) # noqa: E501
+                client.get_task_monitor().wait_for_success(task)
+
+                new_metadata_to_add = {
+                    server_constants.ClusterMetadataKey.TEMPLATE_NAME: new_template_name, # noqa: E501
+                    server_constants.ClusterMetadataKey.TEMPLATE_REVISION: 0
+                }
+                task = vapp.set_multiple_metadata(new_metadata_to_add)
+                client.get_task_monitor().wait_for_success(task)
+
+        # This step uses data from the newly updated cse.template.name and
+        # cse.template.revision metadata fields as well as github history
+        # to add [cse.os, cse.docker.version, cse.kubernetes,
+        # cse.kubernetes.version, cse.cni, cse.cni.version] to the clusters.
+        vapp.reload()
+        metadata_dict = \
+            pyvcloud_vcd_utils.metadata_to_dict(vapp.get_metadata())
+        template_name = metadata_dict.get(
+            server_constants.ClusterMetadataKey.TEMPLATE_NAME)
+        template_revision = str(metadata_dict.get(
+            server_constants.ClusterMetadataKey.TEMPLATE_REVISION, '0'))
+
+        if not template_name:
+            msg = "Unable to determine source template of cluster " \
+                  f"'{cluster['name']}'. Stopped processing cluster."
+            INSTALL_LOGGER.error(msg)
+            msg_update_callback.error(msg)
+            continue
+
+        tokens = template_name.split('_')
+        k8s_data = tokens[1].split('-')
+        cni_data = tokens[2].split('-')
+
+        os = tokens[0]
+        # old clusters that were converted can have non-exsitent template name
+        # that has 'k8s' string in it instead of 'k8'
+        if k8s_data[0] in ('k8', 'k8s'):
+            k8s_distribution = 'upstream'
+        elif 'tkg' == k8s_data[0]:
+            k8s_distribution = "Tanzu Kubernetes Grid"
+        else:
+            k8s_distribution = "Unknown Kubernetes Distribution"
+        k8s_version = k8s_data[1]
+        cni = cni_data[0]
+        cni_version = cni_data[1]
+        docker_version = '0.0.0'
+
+        org_name = config['broker']['org']
+        catalog_name = config['broker']['catalog']
+        k8_templates = ltm.get_all_k8s_local_template_definition(
+            client=client, catalog_name=catalog_name, org_name=org_name)
+        for k8_template in k8_templates:
+            if (str(k8_template[server_constants.LocalTemplateKey.REVISION]), k8_template[server_constants.LocalTemplateKey.NAME]) == (template_revision, template_name):  # noqa: E501
+                if k8_template.get(server_constants.LocalTemplateKey.OS):
+                    os = k8_template.get(server_constants.LocalTemplateKey.OS)
+                if k8_template.get(server_constants.LocalTemplateKey.KUBERNETES): # noqa: E501
+                    k8s_distribution = k8_template.get(server_constants.LocalTemplateKey.KUBERNETES) # noqa: E501
+                if k8_template.get(server_constants.LocalTemplateKey.KUBERNETES_VERSION): # noqa: E501
+                    k8s_version = k8_template[server_constants.LocalTemplateKey.KUBERNETES_VERSION] # noqa: E501
+                if k8_template.get(server_constants.LocalTemplateKey.CNI):
+                    cni = k8_template.get(server_constants.LocalTemplateKey.CNI) # noqa: E501
+                if k8_template.get(server_constants.LocalTemplateKey.CNI_VERSION): # noqa: E501
+                    cni_version = k8_template.get(server_constants.LocalTemplateKey.CNI_VERSION) # noqa: E501
+                if k8_template.get(server_constants.LocalTemplateKey.DOCKER_VERSION): # noqa: E501
+                    docker_version = k8_template[server_constants.LocalTemplateKey.DOCKER_VERSION] # noqa: E501
+                break
+
+        new_metadata = {
+            server_constants.ClusterMetadataKey.OS: os,
+            server_constants.ClusterMetadataKey.DOCKER_VERSION: docker_version,
+            server_constants.ClusterMetadataKey.KUBERNETES: k8s_distribution,
+            server_constants.ClusterMetadataKey.KUBERNETES_VERSION: k8s_version, # noqa: E501
+            server_constants.ClusterMetadataKey.CNI: cni,
+            server_constants.ClusterMetadataKey.CNI_VERSION: cni_version,
+        }
+        task = vapp.set_multiple_metadata(new_metadata)
+        client.get_task_monitor().wait_for_success(task)
+
+        msg = "Finished processing metadata of cluster."
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.general(msg)
+
+
+def _fix_cluster_admin_password(client,
+                                cse_clusters,
+                                new_admin_password=None,
+                                skip_wait_for_gc=True,
+                                msg_update_callback=utils.NullPrinter()):
+    msg = "Fixing admin password of CSE k8s clusters."
+    INSTALL_LOGGER.info(msg)
+    msg_update_callback.info(msg)
+    if len(cse_clusters) == 0:
+        msg = "No CSE k8s clusters were found."
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.info(msg)
+        return
+
+    href_of_vms_to_verify = []
+    for cluster in cse_clusters:
+        msg = f"Processing admin password of cluster '{cluster['name']}'."
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.info(msg)
+
+        vm_hrefs_for_password_update = []
+        vapp_href = cluster['vapp_href']
+        vapp = VApp(client, href=vapp_href)
+        vm_resources = vapp.get_all_vms()
+        for vm_resource in vm_resources:
+            vm = VM(client, href=vm_resource.get('href'))
+            msg = f"Determining if vm '{vm.get_resource().get('name')}' " \
+                  "needs processing'."
+            INSTALL_LOGGER.info(msg)
+            msg_update_callback.info(msg)
+
+            gc_section = vm.get_guest_customization_section()
+            admin_password_enabled = False
+            if hasattr(gc_section, 'AdminPasswordEnabled'):
+                admin_password_enabled = utils.str_to_bool(gc_section.AdminPasswordEnabled) # noqa: E501
+            admin_password_on_vm = None
+            if hasattr(gc_section, 'AdminPassword'):
+                admin_password_on_vm = gc_section.AdminPassword.text
+
+            skip_vm = False
+            if admin_password_enabled:
+                if new_admin_password:
+                    if new_admin_password == admin_password_on_vm:
+                        skip_vm = True
+                else:
+                    if admin_password_on_vm:
+                        skip_vm = True
+            if not skip_vm:
+                href_of_vms_to_verify.append(vm.href)
+                vm_hrefs_for_password_update.append(vm.href)
+
+        # At least one vm in the vApp needs a password update
+        if len(vm_hrefs_for_password_update) > 0:
+            # try:
+                # msg = f"Undeploying the vApp '{cluster['name']}'"
+                # INSTALL_LOGGER.info(msg)
+                # msg_update_callback.info(msg)
+                # task = vapp.undeploy()
+                # client.get_task_monitor().wait_for_success(task)
+                # msg = "Successfully undeployed the vApp."
+                # INSTALL_LOGGER.info(msg)
+                # msg_update_callback.general(msg)
+            # except Exception as err:
+            #    INSTALL_LOGGER.debug(str(err))
+            #    msg_update_callback.warning(str(err))
+
+            for href in vm_hrefs_for_password_update:
+                vm = VM(client=client, href=href)
+                msg = f"Processing vm '{vm.get_resource().get('name')}'." \
+                      "\nUpdating vm admin password"
+                INSTALL_LOGGER.info(msg)
+                msg_update_callback.info(msg)
+
+                try:
+                    msg = "Undeploying vm."
+                    INSTALL_LOGGER.info(msg)
+                    msg_update_callback.info(msg)
+                    task = vm.undeploy()
+                    client.get_task_monitor().wait_for_success(task)
+                    msg = "Successfully undeployed vm"
+                    INSTALL_LOGGER.info(msg)
+                    msg_update_callback.general(msg)
+                except Exception as err:
+                    INSTALL_LOGGER.debug(str(err))
+                    msg_update_callback.warning(str(err))
+
+                vm.reload()
+                task = vm.update_guest_customization_section(
+                    enabled=True,
+                    admin_password_enabled=True,
+                    admin_password_auto=not new_admin_password,
+                    admin_password=new_admin_password,
+                )
+                client.get_task_monitor().wait_for_success(task)
+                msg = "Successfully updated vm"
+                INSTALL_LOGGER.info(msg)
+                msg_update_callback.general(msg)
+
+                msg = "Deploying vm."
+                INSTALL_LOGGER.info(msg)
+                msg_update_callback.info(msg)
+                vm.reload()
+                task = vm.power_on_and_force_recustomization()
+                client.get_task_monitor().wait_for_success(task)
+                msg = "Successfully deployed vm"
+                INSTALL_LOGGER.info(msg)
+                msg_update_callback.general(msg)
+
+        msg = f"Successfully processed cluster '{cluster['name']}'"
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.general(msg)
+
+    if not skip_wait_for_gc:
+        while len(href_of_vms_to_verify) != 0:
+            msg = f"Waiting on guest customization to finish on {len(href_of_vms_to_verify)} vms." # noqa: E501
+            INSTALL_LOGGER.info(msg)
+            msg_update_callback.info(msg)
+            to_remove = []
+            for href in href_of_vms_to_verify:
+                vm = VM(client=client, href=href)
+                gc_section = vm.get_guest_customization_section()
+                admin_password_enabled = False
+                if hasattr(gc_section, 'AdminPasswordEnabled'):
+                    admin_password_enabled = utils.str_to_bool(gc_section.AdminPasswordEnabled) # noqa: E501
+                admin_password = None
+                if hasattr(gc_section, 'AdminPassword'):
+                    admin_password = gc_section.AdminPassword.text
+
+                if admin_password_enabled and admin_password:
+                    to_remove.append(vm.href)
+
+            for href in to_remove:
+                href_of_vms_to_verify.remove(href)
+
+            time.sleep(5)
+
+            msg = "Finished Guest customization on all vms."
+            INSTALL_LOGGER.info(msg)
+            msg_update_callback.info(msg)
