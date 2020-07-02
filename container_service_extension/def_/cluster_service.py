@@ -174,7 +174,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             pass
 
         # check that requested/default template is valid
-        get_template(name=template_name, revision=template_revision)
+        template = get_template(name=template_name, revision=template_revision)
 
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
@@ -188,9 +188,18 @@ class ClusterService(abstract_broker.AbstractBroker):
         def_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.CREATE,
                            DefEntityOperationStatus.IN_PROGRESS))
+        def_entity.entity.status.kubernetes = \
+            _create_k8s_software_string(template[LocalTemplateKey.KUBERNETES],
+                                        template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
+        def_entity.entity.status.cni = \
+            _create_k8s_software_string(template[LocalTemplateKey.CNI],
+                                        template[LocalTemplateKey.CNI_VERSION])
+        def_entity.entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
+        def_entity.entity.status.os = template[LocalTemplateKey.OS]
         self.entity_svc. \
             create_entity(def_utils.get_registered_def_entity_type().id,
                           entity=def_entity)
+        def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)
         self.context.is_async = True
         def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)
         self._create_cluster_async(def_entity.id, cluster_spec)
@@ -1733,3 +1742,16 @@ def run_script_in_nodes(sysadmin_client: vcd_client.Client, vapp_href,
 
 def get_script_execution_errors(results):
     return [result[2].content.decode() for result in results if result[0] != 0]
+
+
+def _create_k8s_software_string(software_name: str, software_version: str) -> str: # noqa: E501
+    """Generate string containing the software name and version.
+
+    Example: if software_name is "upstream" and version is "1.17.3",
+        "upstream 1.17.3" is returned
+
+    :param str software_name:
+    :param str software_version:
+    :rtype: str
+    """
+    return f"{software_name} {software_version}"

@@ -87,9 +87,7 @@ def cse_server():
     install_cmd = ['install',
                    '--config', env.ACTIVE_CONFIG_FILEPATH,
                    '--ssh-key', env.SSH_KEY_FILEPATH,
-                   '--skip-config-decryption',
-                   # TODO Remove after Guest Customization fix
-                   '--skip-template-creation']
+                   '--skip-config-decryption']
     config = env.setup_active_config()
     result = env.CLI_RUNNER.invoke(cli, install_cmd,
                                    input='y',
@@ -97,19 +95,6 @@ def cse_server():
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', install_cmd, result.exit_code,
                                       result.output)
-
-    # TODO Remove after Guest Customization fix
-    template_install_cmd = ['template', 'install',
-                            '--config', env.ACTIVE_CONFIG_FILEPATH,
-                            '--ssh-key', env.SSH_KEY_FILEPATH,
-                            '--skip-config-decryption',
-                            config['broker']['default_template_name'],
-                            str(config['broker']['default_template_revision'])]
-    result = env.CLI_RUNNER.invoke(cli, template_install_cmd,
-                                   catch_exceptions=False)
-    assert result.exit_code == 0,\
-        testutils.format_command_info('cse', template_install_cmd,
-                                      result.exit_code, result.output)
 
     # start cse server as subprocess
     cmd = f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption"

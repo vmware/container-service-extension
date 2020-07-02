@@ -15,6 +15,7 @@ import click
 import pkg_resources
 from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
 import requests
+import semantic_version
 
 from container_service_extension.logger import NULL_LOGGER
 
@@ -67,11 +68,20 @@ class NullPrinter():
 def get_cse_info():
     return {
         'product': 'CSE',
-        'description': 'Container Service Extension for VMware vCloud '
-                       'Director',
+        'description': 'Container Service Extension for VMware vCloud Director', # noqa: E501
         'version': pkg_resources.require('container-service-extension')[0].version,  # noqa: E501
         'python': platform.python_version()
     }
+
+
+def get_installed_cse_version():
+    """."""
+    cse_version_raw = get_cse_info()['version']
+    # Cleanup version string. Strip dev version string segment.
+    # e.g. convert '2.6.0.0b2.dev5' to '2.6.0'
+    tokens = cse_version_raw.split('.')[:3]
+    cse_version = semantic_version.Version('.'.join(tokens))
+    return cse_version
 
 
 def prompt_text(text, color='black', hide_input=False):

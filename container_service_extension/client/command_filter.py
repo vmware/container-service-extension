@@ -37,6 +37,9 @@ UNSUPPORTED_COMMANDS_BY_VERSION = {
     },
     vcd_client.ApiVersion.VERSION_34.value: {
         GroupKey.CLUSTER: ['apply']
+    },
+    vcd_client.ApiVersion.VERSION_35.value: {
+        GroupKey.CLUSTER: ['create']
     }
 }
 
