@@ -97,6 +97,8 @@ class DefSchemaService():
         :return: Interface that is just created
         :rtype: DefInterface
         """
+        if not self._cloudapi_client.is_sys_admin:
+            raise ValueError("Cloud API Client should be sysadmin.")
         response_body = self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.POST,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
@@ -114,6 +116,8 @@ class DefSchemaService():
         :return: Interface that is just updated.
         :rtype: DefInterface
         """
+        if not self._cloudapi_client.is_sys_admin:
+            raise ValueError("Cloud API Client should be sysadmin.")
         response_body = self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.PUT,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
@@ -129,6 +133,8 @@ class DefSchemaService():
         :param str id: Id of the interface.
         :return: None
         """
+        if not self._cloudapi_client.is_sys_admin:
+            raise ValueError("Cloud API Client should be sysadmin.")
         return self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.DELETE,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
@@ -142,6 +148,8 @@ class DefSchemaService():
         :return: DefEntityType that is just created
         :rtype: DefEntityType
         """
+        if not self._cloudapi_client.is_sys_admin:
+            raise ValueError("Cloud API Client should be sysadmin.")
         response_body = self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.POST,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
@@ -195,6 +203,8 @@ class DefSchemaService():
         :return: Updated entity type
         :rtype: DefEntityType
         """
+        if not self._cloudapi_client.is_sys_admin:
+            raise ValueError("Cloud API Client should be sysadmin.")
         response_body = self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.PUT,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
@@ -210,6 +220,8 @@ class DefSchemaService():
         :param str id: Id of the entity type to be deleted.
         :return: None
         """
+        if not self._cloudapi_client.is_sys_admin:
+            raise ValueError("Cloud API Client should be sysadmin.")
         self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.DELETE,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
