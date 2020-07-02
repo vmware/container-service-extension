@@ -11,6 +11,7 @@ import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.task as vcd_task
 
 import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
+import container_service_extension.def_.models as def_models
 import container_service_extension.logger as logger
 import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
@@ -21,15 +22,8 @@ import container_service_extension.telemetry.telemetry_handler as telemetry_hand
 import container_service_extension.utils as utils
 
 
-@dataclass()
-class Ovdc:
-    k8s_runtime: List[str]
-    ovdc_name: str = None
-    ovdc_id: str = None
-    remove_compute_policy_from_vms: bool = False
-
-
-def update_ovdc(operation_context: ctx.OperationContext, ovdc: Ovdc) -> dict:
+def update_ovdc(operation_context: ctx.OperationContext,
+                ovdc_id: str, ovdc: def_models.Ovdc) -> dict: # noqa: 501
     """Update ovdc with the updated k8s runtimes list.
 
     :param ctx.OperationContext operation_context: context for the request
@@ -41,7 +35,7 @@ def update_ovdc(operation_context: ctx.OperationContext, ovdc: Ovdc) -> dict:
     task = vcd_task.Task(operation_context.sysadmin_client)
     org = vcd_utils.get_org(operation_context.client)
     user_href = org.get_user(operation_context.user.name).get('href')
-    vdc = vcd_utils.get_vdc(operation_context.sysadmin_client, vdc_id=ovdc.ovdc_id, # noqa: E501
+    vdc = vcd_utils.get_vdc(operation_context.sysadmin_client, vdc_id=ovdc_id, # noqa: E501
                             is_admin_operation=True)
     logger.SERVER_LOGGER.debug(msg)
     task_resource = task.update(
@@ -65,14 +59,14 @@ def update_ovdc(operation_context: ctx.OperationContext, ovdc: Ovdc) -> dict:
     # NOTE: Telemetry is currently handled in the async function as it is not
     # possible to know the operation (enable/disable) without comparing it to
     # current k8s runtimes.
-    _update_ovdc_using_placement_policy_async(operation_context=operation_context,  # noqa:E501
+    _update_ovdc_using_placement_policy_async(operation_context=operation_context, # noqa:E501
                                               task=task,
                                               task_href=task_href,
                                               user_href=user_href,
-                                              policy_list=ovdc.k8s_runtime,  # noqa:E501
-                                              ovdc_id=ovdc.ovdc_id,
+                                              policy_list=ovdc.k8s_runtime, # noqa:E501
+                                              ovdc_id=ovdc_id,
                                               vdc=vdc,
-                                              remove_compute_policy_from_vms=ovdc.remove_compute_policy_from_vms)  # noqa:E501
+                                              remove_cp_from_vms_on_disable=ovdc.remove_cp_from_vms_on_disable) # noqa:E501
     return {'task_href': task_href}
 
 
@@ -125,8 +119,7 @@ def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
                 get_ovdc_k8s_runtime_details(operation_context.sysadmin_client,
                                              org_name=org_name,
                                              ovdc_name=ovdc_name))
-            # TODO: Find a better way to avoid sending
-            # remove_compute_policy_from_vms flag
+            # TODO: Find a better way to remove remove_compute_policy_from_vms
             del ovdc_details[RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS]
             ovdcs.append(ovdc_details)
     return ovdcs
@@ -134,7 +127,7 @@ def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
 
 def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
                                  org_name=None, ovdc_name=None,
-                                 ovdc_id=None, log_wire=False) -> Ovdc:
+                                 ovdc_id=None, log_wire=False) -> def_models.Ovdc: # noqa: E501
     """Get k8s runtime details for an ovdc.
 
     :param sysadmin_client vcd_client.Client: vcd sysadmin client
@@ -143,7 +136,7 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
     :param str ovdc_id:
     :param bool log_wire:
     :return: Ovdc object with k8s runtimes
-    :rtype: Ovdc
+    :rtype: def_models.Ovdc
     """
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
     cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
@@ -158,7 +151,7 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
     policies = []
     for policy in cpm.list_vdc_placement_policies_on_vdc(ovdc_id):
         policies.append(policy['name'])
-    return Ovdc(ovdc_name=ovdc_name, ovdc_id=ovdc_id, k8s_runtime=policies)
+    return def_models.Ovdc(ovdc_name=ovdc_name, ovdc_id=ovdc_id, k8s_runtime=policies) # noqa: E501
 
 
 @utils.run_async
@@ -169,16 +162,19 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                                               policy_list,
                                               ovdc_id,
                                               vdc,
-                                              remove_compute_policy_from_vms=False):  # noqa: E501
+                                              remove_cp_from_vms_on_disable=False):  # noqa: E501
     """Enable ovdc using placement policies.
 
-    :param operation_context ctx.OperationContext: operation context object
-    :param task vcd_task.Task: Task resource to track progress
-    :param task_href str: href of the task
-    :param user_href str:
-    :param policy_list str[]: The new list of policies associated with the ovdc
-    :param ovdc_id str:
-    :param vdc: VDC object
+    :param ctx.OperationContext operation_context: operation context object
+    :param vcd_task.Task task: Task resource to track progress
+    :param str task_href: href of the task
+    :param str user_href:
+    :param List[str] policy_list: The new list of policies associated with
+        the ovdc
+    :param str ovdc_id:
+    :param pyvcloud.vcd.vdc.VDC vdc: VDC object
+    :param bool remove_cp_from_vms_on_disable: Set to true if placement
+        policies need to be removed from the vms before removing from the VDC.
     """
     operation_name = "Update OVDC with placement policies"
     k8s_runtimes_added = ''
@@ -213,7 +209,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
             cse_params = {
                 RequestKey.K8S_PROVIDER: k8s_runtimes_deleted,
                 RequestKey.OVDC_ID: ovdc_id,
-                RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: remove_compute_policy_from_vms # noqa: E501
+                RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: remove_cp_from_vms_on_disable # noqa: E501
             }
             telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_DISABLE, # noqa: E501
                                                          cse_params=cse_params)
@@ -262,7 +258,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                                                ovdc_id=ovdc_id,
                                                vdc=vdc,
                                                compute_policy_href=policy['href'],  # noqa: E501
-                                               remove_compute_policy_from_vms=remove_compute_policy_from_vms, # noqa: E501
+                                               remove_cp_from_vms_on_disable=remove_cp_from_vms_on_disable, # noqa: E501
                                                is_placement_policy=True)
         msg = f"Successfully updated OVDC: {vdc.name}"
         logger.SERVER_LOGGER.debug(msg)

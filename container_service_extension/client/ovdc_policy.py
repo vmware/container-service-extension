@@ -3,9 +3,11 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from pyvcloud.vcd import utils
+from dataclasses import  asdict
 
 from container_service_extension.client.response_processor import \
     process_response
+import container_service_extension.def_.models as def_models
 from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
@@ -16,7 +18,6 @@ class PolicyBasedOvdc:
         self.client = client
         self._uri = self.client.get_api_uri() + '/cse/internal'
 
-    # TODO add list and get call for `vcd cse pks ovdc ...` commands
     def list_ovdc_for_k8s(self):
         method = RequestMethod.GET
         uri = f'{self._uri}/ovdcs'
@@ -32,8 +33,7 @@ class PolicyBasedOvdc:
                             k8s_runtime,
                             enable=True,
                             org_name=None,
-                            remove_compute_policy_from_vms=False,
-                            **kwargs):
+                            remove_cp_from_vms_on_disable=False):
         """Enable/Disable ovdc for k8s for the given k8s provider.
 
         :param str ovdc_name: Name of org VDC to update
@@ -43,7 +43,7 @@ class PolicyBasedOvdc:
             paricular k8s_runtime else if set to False, K8 support on
             the vdc will be disabled.
         :param str org_name: Name of org that @ovdc_name belongs to
-        :param bool remove_compute_policy_from_vms: If set to True and
+        :param bool remove_cp_from_vms_on_disable: If set to True and
             enable is False, then all the vms in the ovdc having policies for
             the k8s_runtime is deleted.
 
@@ -56,13 +56,13 @@ class PolicyBasedOvdc:
         uri = f'{self._uri}/ovdc/{ovdc_id}'
 
         # fetch existing k8s providers
-        fetch_ovdc_response = self.client._do_request_prim(
+        ovdc_response = self.client._do_request_prim(
             RequestMethod.GET,
             uri,
             self.client._session,
             accept_type='application/json')
-        ovdc = process_response(fetch_ovdc_response)
-        runtimes = ovdc[RequestKey.K8S_RUNTIME]
+        curr_ovdc = def_models.Ovdc(**process_response(ovdc_response))
+        runtimes = curr_ovdc.k8s_runtime
         if enable:
             if k8s_runtime in runtimes:
                 raise Exception(f"OVDC {ovdc_name} already enabled for {k8s_runtime}") # noqa: E501
@@ -71,16 +71,14 @@ class PolicyBasedOvdc:
             if k8s_runtime not in runtimes:
                 raise Exception(f"OVDC {ovdc_name} already disabled for {k8s_runtime}") # noqa: E501
             runtimes.remove(k8s_runtime)
-        data = {
-            RequestKey.K8S_RUNTIME: runtimes,
-            # TODO: Update after the discussion regarding the flag.
-            RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: remove_compute_policy_from_vms # noqa: E501
-        }
+        update_request = def_models.Ovdc(k8s_runtime=runtimes,
+                                         remove_cp_from_vms_on_disable=remove_cp_from_vms_on_disable) # noqa: E501
+
         resp = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
-            contents=data,
+            contents=asdict(update_request),
             media_type='application/json',
             accept_type='application/json')
         return process_response(resp)
