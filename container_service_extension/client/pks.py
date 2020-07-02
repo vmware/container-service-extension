@@ -8,7 +8,7 @@ import click
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
 
-from container_service_extension.client.ovdc_legacy import LegacyOvdc
+from container_service_extension.client.legacy_ovdc import LegacyOvdc
 from container_service_extension.client.pks_cluster import PksCluster
 import container_service_extension.client.utils as client_utils
 from container_service_extension.logger import CLIENT_LOGGER

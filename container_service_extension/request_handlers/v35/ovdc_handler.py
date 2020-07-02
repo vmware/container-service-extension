@@ -1,6 +1,7 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import container_service_extension.def_.models as def_models
 import container_service_extension.def_.ovdc_service as ovdc_service
 import container_service_extension.operation_context as ctx
 from container_service_extension.shared_constants import RequestKey
@@ -18,8 +19,10 @@ def ovdc_update(data, operation_context: ctx.OperationContext):
 
     :return: Dictionary with org VDC update task href.
     """
-    ovdc = ovdc_service.Ovdc(**{**data[RequestKey.V35_SPEC], "ovdc_id": data[RequestKey.OVDC_ID]}) # noqa: E501
-    return ovdc_service.update_ovdc(operation_context, ovdc)
+    ovdc_spec = def_models.Ovdc(**data[RequestKey.V35_SPEC])
+    return ovdc_service.update_ovdc(operation_context,
+                                    ovdc_id=data[RequestKey.OVDC_ID],
+                                    ovdc_spec=ovdc_spec)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_INFO)

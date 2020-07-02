@@ -730,7 +730,7 @@ class ComputePolicyManager:
                 ovdc_id=ovdc_id,
                 vdc=vdc,
                 compute_policy_href=compute_policy_href,
-                remove_compute_policy_from_vms=remove_compute_policy_from_vms)
+                remove_cp_from_vms_on_disable=remove_compute_policy_from_vms)
             if task.get('status') == vcd_client.TaskStatus.RUNNING.value:
                 task.update(
                     status=vcd_client.TaskStatus.SUCCESS.value,
@@ -773,11 +773,11 @@ class ComputePolicyManager:
                                        task_href, user_href,
                                        org_href, ovdc_id,
                                        vdc, compute_policy_href,
-                                       remove_compute_policy_from_vms,
+                                       remove_cp_from_vms_on_disable,
                                        is_placement_policy=False):
         user_name = self._session.get('user')
         try:
-            if remove_compute_policy_from_vms:
+            if remove_cp_from_vms_on_disable:
                 compute_policy_id = retrieve_compute_policy_id_from_href(compute_policy_href) # noqa: E501
                 vapps = vcd_utils.get_all_vapps_in_ovdc(self._sysadmin_client,
                                                         ovdc_id)

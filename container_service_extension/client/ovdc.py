@@ -4,7 +4,7 @@
 
 import pyvcloud.vcd.client as vcd_client
 
-from container_service_extension.client.ovdc_legacy import LegacyOvdc
+from container_service_extension.client.legacy_ovdc import LegacyOvdc
 from container_service_extension.client.ovdc_policy import PolicyBasedOvdc
 
 
