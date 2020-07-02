@@ -709,9 +709,15 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     default=None,
     type=click.File('r'),
     help='Filepath of SSH public key to add to vApp template')
+@click.option(
+    '--admin-password',
+    'admin_password',
+    default=None,
+    metavar='ADMIN_PASSWORD',
+    help="New root password to set on cluster vms. If left empty password will be auto-generated") # noqa: E501
 def upgrade(ctx, config_file_path, skip_config_decryption,
             skip_template_creation, retain_temp_vapp,
-            ssh_key_file):
+            ssh_key_file, admin_password):
     """Upgrade existing CSE 2.6.0 installation/entities.
 
     - Update existing Kubernetes cluster representation on VCD
@@ -753,6 +759,7 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
             skip_template_creation=skip_template_creation,
             ssh_key=ssh_key,
             retain_temp_vapp=retain_temp_vapp,
+            admin_password=admin_password,
             msg_update_callback=console_message_printer)
 
     except Exception as err:
