@@ -19,7 +19,6 @@ import pyvcloud.vcd.utils as pyvcloud_vcd_utils
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
-from requests.exceptions import HTTPError
 import semantic_version
 
 import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
@@ -1378,12 +1377,12 @@ def _remove_old_cse_compute_policies(client,
         org = Org(client, resource=org_resource)
         vdcs = org.list_vdcs()
         for vdc_data in vdcs:
-            vdc_name = vdc_data['name']
+            # vdc_name = vdc_data['name']
             vdc_href = vdc_data['href']
             vdc = VDC(client, href=vdc_href)
             vdc_resource = vdc.get_resource()
             # vdc_id = vdc_resource.get('id')
-            # ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
+            # ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name, # noqa: E501
             #           is_admin_operation=True)
             vdc_id = pyvcloud_vcd_utils.extract_id(vdc_resource.get('id'))
             vdc_sizing_policies = cpm.list_vdc_sizing_policies_on_vdc(vdc_id)
@@ -1677,31 +1676,31 @@ def _assign_placement_policy_to_existing_clusters():
 
 
 def _create_def_entity_for_existing_clusters(
-        client=client,
-        cse_clusters=clusters,
+        client,
+        cse_clusters,
         msg_update_callback=utils.NullPrinter(),
-        log_wire=log_wire):
-
+        log_wire=False):
+    pass
     # cluster_spec: def_models.ClusterEntity
 
-    def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
+    # def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
 
-    def_entity = def_models.DefEntity(entity=cluster_spec)
-    msg = f"Creating cluster vApp '{cluster_name}' ({def_entity.id}) " \
-          f"from template '{template_name}' (revision {template_revision})"
-    def_entity.entity.status.task_href = self.task_resource.get('href')
-    def_entity.entity.status.phase = str(
-        DefEntityPhase(DefEntityOperation.CREATE,
-                       DefEntityOperationStatus.IN_PROGRESS))
-    self.entity_svc. \
-        create_entity(def_utils.get_registered_def_entity_type().id,
-                      entity=def_entity)
+    # def_entity = def_models.DefEntity(entity=cluster_spec)
+    # msg = f"Creating cluster vApp '{cluster_name}' ({def_entity.id}) " \
+    #      f"from template '{template_name}' (revision {template_revision})"
+    # def_entity.entity.status.task_href = self.task_resource.get('href')
+    # def_entity.entity.status.phase = str(
+    #    DefEntityPhase(DefEntityOperation.CREATE,
+    #                   DefEntityOperationStatus.IN_PROGRESS))
+    # self.entity_svc. \
+    #    create_entity(def_utils.get_registered_def_entity_type().id,
+    #                  entity=def_entity)
 
-    def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-    def_entity.externalId = vapp_resource.get('href')
-    def_entity.entity.status.master_ip = master_ip
-    def_entity.entity.status.phase = str(
-        DefEntityPhase(DefEntityOperation.CREATE,
-                       DefEntityOperationStatus.SUCCEEDED))
-    self.entity_svc.update_entity(cluster_id, def_entity)
-    self.entity_svc.resolve_entity(cluster_id)
+    # def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+    # def_entity.externalId = vapp_resource.get('href')
+    # def_entity.entity.status.master_ip = master_ip
+    # def_entity.entity.status.phase = str(
+    #    DefEntityPhase(DefEntityOperation.CREATE,
+    #                   DefEntityOperationStatus.SUCCEEDED))
+    # self.entity_svc.update_entity(cluster_id, def_entity)
+    # self.entity_svc.resolve_entity(cluster_id)
