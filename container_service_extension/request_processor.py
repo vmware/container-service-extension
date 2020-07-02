@@ -282,12 +282,12 @@ def _get_url_data(method, url):
     tokens = url.split('/')
     num_tokens = len(tokens)
 
+    if num_tokens < 4:
+        raise cse_exception.NotFoundRequestError()
+
     is_v35_request = utils.is_v35_supported_by_cse_server() and _is_v35_endpoint(url)  # noqa: E501
     if is_v35_request:
         return _get_v35_cluster_url_data(method, url)
-
-    if num_tokens < 4:
-        raise cse_exception.NotFoundRequestError()
 
     if tokens[2] == PKS_SERVICE_NAME:
         return _get_pks_url_data(method, url)
