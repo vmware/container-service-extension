@@ -647,10 +647,14 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         :rtype: DefEntity
         """
+        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
+            cluster_id)  # noqa: E501
         cluster_name = cluster_spec.metadata.cluster_name
         worker_count = cluster_spec.spec.workers.count
-        template_name = cluster_spec.spec.k8_distribution.template_name
-        template_revision = cluster_spec.spec.k8_distribution.template_revision  # noqa: E501
+
+        # Resize using the template with which cluster was originally created.
+        template_name = curr_entity.entity.spec.k8_distribution.template_name
+        template_revision = curr_entity.entity.spec.k8_distribution.template_revision  #
 
         # check that requested/default template is valid
         get_template(name=template_name, revision=template_revision)
@@ -749,21 +753,24 @@ class ClusterService(abstract_broker.AbstractBroker):
                             cluster_spec: def_models.ClusterEntity):
         try:
             cluster_id = cluster_id
-            curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+            curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
+                cluster_id)  # noqa: E501
             vapp_href = curr_entity.externalId
-            cluster_name = cluster_spec.metadata.cluster_name
-            org_name = cluster_spec.metadata.org_name
-            ovdc_name = cluster_spec.metadata.ovdc_name
+            cluster_name = curr_entity.entity.metadata.cluster_name
+            org_name = curr_entity.entity.metadata.org_name
+            ovdc_name = curr_entity.entity.metadata.ovdc_name
             num_workers = cluster_spec.spec.workers.count
             worker_storage_profile = cluster_spec.spec.workers.storage_profile  # noqa: E501
             worker_sizing_class = cluster_spec.spec.workers.sizing_class
             network_name = cluster_spec.spec.settings.network
-            template_name = cluster_spec.spec.k8_distribution.template_name
-            template_revision = cluster_spec.spec.k8_distribution.template_revision  # noqa: E501
-            template = get_template(template_name, template_revision)
             ssh_key = cluster_spec.spec.settings.ssh_key
             rollback = cluster_spec.spec.settings.rollback_on_failure
             enable_nfs = cluster_spec.spec.settings.enable_nfs
+
+            # Use the template with which cluster was originally created.
+            template_name = curr_entity.entity.spec.k8_distribution.template_name  # noqa: E501
+            template_revision = curr_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
+            template = get_template(template_name, template_revision)
 
             server_config = utils.get_server_runtime_config()
             catalog_name = server_config['broker']['catalog']
