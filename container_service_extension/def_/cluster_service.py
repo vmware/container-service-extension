@@ -421,10 +421,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_entity.entity.status.phase)
 
-        # Check if entity is of kind native.
-        if kind == def_utils.ClusterEntityKind.TKG.value:
-            raise e.CseServerError(f"CSE cannot resize an entity of type {kind}")  # noqa: E501
-
         # Check if cluster is in a valid state
         if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
             raise e.CseServerError(
@@ -459,17 +455,11 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
             cluster_id)
         cluster_name: str = curr_entity.name
-        kind: str = curr_entity.entity.kind
         state: str = curr_entity.state
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_entity.entity.status.phase)
         org_name = curr_entity.entity.metadata.org_name
         ovdc_name = curr_entity.entity.metadata.ovdc_name
-
-        # Check if entity is of kind native.
-        if kind == def_utils.ClusterEntityKind.TKG.value:
-            raise e.CseServerError(
-                f"CSE cannot delete an entity of type {kind}")  # noqa: E501
 
         # Check if cluster is in a valid state
         if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
