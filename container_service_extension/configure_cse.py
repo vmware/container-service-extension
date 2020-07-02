@@ -17,6 +17,7 @@ from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 import pyvcloud.vcd.utils as pyvcloud_vcd_utils
 from pyvcloud.vcd.vapp import VApp
+from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
 from requests.exceptions import HTTPError
 import semantic_version
@@ -932,7 +933,7 @@ def _install_single_template(
 
 
 def upgrade_cse(config_file_name, config, skip_template_creation,
-                ssh_key, retain_temp_vapp,
+                ssh_key, retain_temp_vapp, admin_password,
                 msg_update_callback=utils.NullPrinter()):
     populate_vsphere_list(config['vcs'])
 
@@ -1023,17 +1024,23 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
             if target_vcd_api_version in (vCDApiVersion.VERSION_33.value,
                                           vCDApiVersion.VERSION_34.value):
                 _legacy_upgrade_to_33_34(
-                    client=client, config=config,
+                    client=client,
+                    config=config,
                     ext_vcd_api_version=ext_vcd_api_version,
                     skip_template_creation=skip_template_creation,
-                    ssh_key=ssh_key, retain_temp_vapp=retain_temp_vapp,
+                    ssh_key=ssh_key,
+                    retain_temp_vapp=retain_temp_vapp,
+                    admin_password=admin_password,
                     msg_update_callback=msg_update_callback)
             elif target_vcd_api_version in (vCDApiVersion.VERSION_35.value):
                 _upgrade_to_35(
-                    client=client, config=config,
+                    client=client,
+                    config=config,
                     ext_vcd_api_version=ext_vcd_api_version,
                     skip_template_creation=skip_template_creation,
-                    ssh_key=ssh_key, retain_temp_vapp=retain_temp_vapp,
+                    ssh_key=ssh_key,
+                    retain_temp_vapp=retain_temp_vapp,
+                    admin_password=admin_password,
                     msg_update_callback=msg_update_callback,
                     log_wire=log_wire)
             else:
@@ -1090,7 +1097,8 @@ def _update_cse_extension(client, routing_key, exchange,
 
 
 def _legacy_upgrade_to_33_34(client, config, ext_vcd_api_version,
-                             skip_template_creation, ssh_key, retain_temp_vapp,
+                             skip_template_creation, ssh_key,
+                             retain_temp_vapp, admin_password,
                              msg_update_callback=utils.NullPrinter()):
     # create amqp exchange if it doesn't exist
     amqp = config['amqp']
@@ -1127,17 +1135,17 @@ def _legacy_upgrade_to_33_34(client, config, ext_vcd_api_version,
     _fix_cluster_admin_password(
         client=client,
         cse_clusters=clusters,
-        new_admin_password=None,
-        skip_wait_for_gc=False,
+        new_admin_password=admin_password,
         msg_update_callback=msg_update_callback)
 
 
 def _upgrade_to_35(client, config, ext_vcd_api_version,
                    skip_template_creation, ssh_key, retain_temp_vapp,
-                   msg_update_callback=utils.NullPrinter(), log_wire=False):
+                   admin_password, msg_update_callback=utils.NullPrinter(),
+                   log_wire=False):
     # create amqp exchange if it doesn't exist
     # amqp = config['amqp']
-    #_create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
+    # _create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
     #                      amqp['vhost'], amqp['ssl'], amqp['username'],
     #                      amqp['password'],
     #                      msg_update_callback=msg_update_callback)
@@ -1176,20 +1184,6 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     # _add_placement_policy_to_templates(
     #    client, cse_templates, msg_update_callback, log_wire)
 
-    # Update clusters to have auto generated password and fix their metadata
-    clusters = get_all_cse_clusters(client)
-    # _fix_cluster_metadata(
-    #    client=client,
-    #    config=config,
-    #    cse_clusters=clusters,
-    #    msg_update_callback=msg_update_callback)
-    _fix_cluster_admin_password(
-        client=client,
-        cse_clusters=clusters,
-        new_admin_password="changeme1",
-        skip_wait_for_gc=False,
-        msg_update_callback=msg_update_callback)
-
     # Add new vdc compute policy to ovdc with existing CSE clusters
     # _add_vdc_placement_policy_to_ovdc_with_existing_clusters(
     #    client=client,
@@ -1197,10 +1191,33 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     #    msg_update_callback=msg_update_callback,
     #    log_wire=log_wire)
 
-    # Assign new policy to all clusters
-    # Create DEF entity for all clusters
+    # Remove all old CSE compute policies
+    # _remove_old_cse_compute_policies(client=client,
+    #                                 msg_update_callback=msg_update_callback,
+    #                                 log_wire=log_wire)
 
-    # Remove all old CSE compute polcieis??
+    # Update clusters to have auto generated password and fix their metadata
+    clusters = get_all_cse_clusters(client)
+    # _fix_cluster_metadata(
+    #    client=client,
+    #    config=config,
+    #    cse_clusters=clusters,
+    #    msg_update_callback=msg_update_callback)
+    # _fix_cluster_admin_password(
+    #    client=client,
+    #    cse_clusters=clusters,
+    #    new_admin_password=admin_password,
+    #    msg_update_callback=msg_update_callback)
+
+    # Assign new placement policy to all clusters - Is this required?
+    # ToDo
+
+    # Create DEF entity for all clusters
+    _create_def_entity_for_existing_clusters(
+        client=client,
+        cse_clusters=clusters,
+        msg_update_callback=msg_update_callback,
+        log_wire=log_wire)
 
 
 def _get_all_cse_templates(client,
@@ -1350,6 +1367,42 @@ def _add_vdc_placement_policy_to_ovdc_with_existing_clusters(
             msg_update_callback.general(msg)
 
 
+def _remove_old_cse_compute_policies(client,
+                                     msg_update_callback=utils.NullPrinter(),
+                                     log_wire=False):
+    cpm = \
+        compute_policy_manager.ComputePolicyManager(client, log_wire=log_wire)
+    all_cse_policy_names = []
+    org_resources = client.get_org_list()
+    for org_resource in org_resources:
+        org = Org(client, resource=org_resource)
+        vdcs = org.list_vdcs()
+        for vdc_data in vdcs:
+            vdc_name = vdc_data['name']
+            vdc_href = vdc_data['href']
+            vdc = VDC(client, href=vdc_href)
+            vdc_resource = vdc.get_resource()
+            # vdc_id = vdc_resource.get('id')
+            # ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
+            #           is_admin_operation=True)
+            vdc_id = pyvcloud_vcd_utils.extract_id(vdc_resource.get('id'))
+            vdc_sizing_policies = cpm.list_vdc_sizing_policies_on_vdc(vdc_id)
+            if vdc_sizing_policies:
+                for policy in vdc_sizing_policies:
+                    all_cse_policy_names.append(policy['name'])
+                    cpm.remove_vdc_compute_policy_from_vdc(
+                        op_ctx=None, # ??
+                        ovdc_id=vdc_id,
+                        compute_policy_href=policy['href'],
+                        remove_compute_policy_from_vms=True)
+
+    for policy_name in all_cse_policy_names:
+        try:
+            cpm.delete_vdc_compute_policy(policy_name=policy_name)
+        except Exception:
+            pass
+
+
 def _fix_cluster_metadata(client,
                           config,
                           cse_clusters,
@@ -1497,7 +1550,6 @@ def _fix_cluster_metadata(client,
 def _fix_cluster_admin_password(client,
                                 cse_clusters,
                                 new_admin_password=None,
-                                skip_wait_for_gc=True,
                                 msg_update_callback=utils.NullPrinter()):
     msg = "Fixing admin password of CSE k8s clusters."
     INSTALL_LOGGER.info(msg)
@@ -1547,26 +1599,8 @@ def _fix_cluster_admin_password(client,
 
         # At least one vm in the vApp needs a password update
         if len(vm_hrefs_for_password_update) > 0:
-            # try:
-                # msg = f"Undeploying the vApp '{cluster['name']}'"
-                # INSTALL_LOGGER.info(msg)
-                # msg_update_callback.info(msg)
-                # task = vapp.undeploy()
-                # client.get_task_monitor().wait_for_success(task)
-                # msg = "Successfully undeployed the vApp."
-                # INSTALL_LOGGER.info(msg)
-                # msg_update_callback.general(msg)
-            # except Exception as err:
-            #    INSTALL_LOGGER.debug(str(err))
-            #    msg_update_callback.warning(str(err))
-
             for href in vm_hrefs_for_password_update:
                 vm = VM(client=client, href=href)
-                msg = f"Processing vm '{vm.get_resource().get('name')}'." \
-                      "\nUpdating vm admin password"
-                INSTALL_LOGGER.info(msg)
-                msg_update_callback.info(msg)
-
                 try:
                     msg = "Undeploying vm."
                     INSTALL_LOGGER.info(msg)
@@ -1578,8 +1612,12 @@ def _fix_cluster_admin_password(client,
                     msg_update_callback.general(msg)
                 except Exception as err:
                     INSTALL_LOGGER.debug(str(err))
-                    msg_update_callback.warning(str(err))
+                    msg_update_callback.info(str(err))
 
+                msg = f"Processing vm '{vm.get_resource().get('name')}'." \
+                      "\nUpdating vm admin password"
+                INSTALL_LOGGER.info(msg)
+                msg_update_callback.info(msg)
                 vm.reload()
                 task = vm.update_guest_customization_section(
                     enabled=True,
@@ -1606,30 +1644,64 @@ def _fix_cluster_admin_password(client,
         INSTALL_LOGGER.info(msg)
         msg_update_callback.general(msg)
 
-    if not skip_wait_for_gc:
-        while len(href_of_vms_to_verify) != 0:
-            msg = f"Waiting on guest customization to finish on {len(href_of_vms_to_verify)} vms." # noqa: E501
-            INSTALL_LOGGER.info(msg)
-            msg_update_callback.info(msg)
-            to_remove = []
-            for href in href_of_vms_to_verify:
-                vm = VM(client=client, href=href)
-                gc_section = vm.get_guest_customization_section()
-                admin_password_enabled = False
-                if hasattr(gc_section, 'AdminPasswordEnabled'):
-                    admin_password_enabled = utils.str_to_bool(gc_section.AdminPasswordEnabled) # noqa: E501
-                admin_password = None
-                if hasattr(gc_section, 'AdminPassword'):
-                    admin_password = gc_section.AdminPassword.text
+    while len(href_of_vms_to_verify) != 0:
+        msg = f"Waiting on guest customization to finish on {len(href_of_vms_to_verify)} vms." # noqa: E501
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.info(msg)
+        to_remove = []
+        for href in href_of_vms_to_verify:
+            vm = VM(client=client, href=href)
+            gc_section = vm.get_guest_customization_section()
+            admin_password_enabled = False
+            if hasattr(gc_section, 'AdminPasswordEnabled'):
+                admin_password_enabled = utils.str_to_bool(gc_section.AdminPasswordEnabled) # noqa: E501
+            admin_password = None
+            if hasattr(gc_section, 'AdminPassword'):
+                admin_password = gc_section.AdminPassword.text
+            if admin_password_enabled and admin_password:
+                to_remove.append(vm.href)
 
-                if admin_password_enabled and admin_password:
-                    to_remove.append(vm.href)
+        for href in to_remove:
+            href_of_vms_to_verify.remove(href)
 
-            for href in to_remove:
-                href_of_vms_to_verify.remove(href)
-
+        if len(href_of_vms_to_verify) > 0:
             time.sleep(5)
-
+        else:
             msg = "Finished Guest customization on all vms."
             INSTALL_LOGGER.info(msg)
             msg_update_callback.info(msg)
+
+
+def _assign_placement_policy_to_existing_clusters():
+    pass
+
+
+def _create_def_entity_for_existing_clusters(
+        client=client,
+        cse_clusters=clusters,
+        msg_update_callback=utils.NullPrinter(),
+        log_wire=log_wire):
+
+    # cluster_spec: def_models.ClusterEntity
+
+    def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
+
+    def_entity = def_models.DefEntity(entity=cluster_spec)
+    msg = f"Creating cluster vApp '{cluster_name}' ({def_entity.id}) " \
+          f"from template '{template_name}' (revision {template_revision})"
+    def_entity.entity.status.task_href = self.task_resource.get('href')
+    def_entity.entity.status.phase = str(
+        DefEntityPhase(DefEntityOperation.CREATE,
+                       DefEntityOperationStatus.IN_PROGRESS))
+    self.entity_svc. \
+        create_entity(def_utils.get_registered_def_entity_type().id,
+                      entity=def_entity)
+
+    def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+    def_entity.externalId = vapp_resource.get('href')
+    def_entity.entity.status.master_ip = master_ip
+    def_entity.entity.status.phase = str(
+        DefEntityPhase(DefEntityOperation.CREATE,
+                       DefEntityOperationStatus.SUCCEEDED))
+    self.entity_svc.update_entity(cluster_id, def_entity)
+    self.entity_svc.resolve_entity(cluster_id)

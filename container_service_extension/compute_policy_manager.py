@@ -414,7 +414,7 @@ class ComputePolicyManager:
             'isSizingOnly': 'true',
             'name': f'{cloudapi_constants.CSE_COMPUTE_POLICY_PREFIX}*'
         }
-        self.list_compute_policies_on_vdc(vdc_id, filters=filters)
+        return self.list_compute_policies_on_vdc(vdc_id, filters=filters)
 
     def list_compute_policies_on_vdc(self, vdc_id, filters=None):
         """List all compute policies currently assigned to a given vdc.
