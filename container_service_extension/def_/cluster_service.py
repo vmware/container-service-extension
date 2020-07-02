@@ -154,8 +154,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         :rtype: def_models.DefEntity
         """
         cluster_name = cluster_spec.metadata.cluster_name
-        org_name = cluster_spec.metadata.org_name
-        ovdc_name = cluster_spec.metadata.ovdc_name
         template_name = cluster_spec.spec.k8_distribution.template_name
         template_revision = cluster_spec.spec.k8_distribution.template_revision
 
@@ -164,14 +162,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             raise e.CseServerError(f"Invalid cluster name '{cluster_name}'")
 
         # check that cluster name doesn't already exist
-        try:
-            get_cluster(self.context.client, cluster_name,
-                        org_name=org_name,
-                        ovdc_name=ovdc_name)
+        if self.entity_svc.get_native_entity_by_name(cluster_name):
             raise e.ClusterAlreadyExistsError(
                 f"Cluster '{cluster_name}' already exists.")
-        except e.ClusterNotFoundError:
-            pass
 
         # check that requested/default template is valid
         template = get_template(name=template_name, revision=template_revision)
@@ -199,7 +192,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.entity_svc. \
             create_entity(def_utils.get_registered_def_entity_type().id,
                           entity=def_entity)
-        def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)
         self.context.is_async = True
         def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)
         self._create_cluster_async(def_entity.id, cluster_spec)
@@ -377,12 +369,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 LOGGER.info(msg)
                 try:
-                    cluster = get_cluster(self.context.client,
-                                          cluster_name,
-                                          cluster_id=cluster_id,
-                                          org_name=org_name,
-                                          ovdc_name=ovdc_name)
-                    _delete_vapp(self.context.client, cluster['vdc_href'],
+                    _delete_vapp(self.context.client,
+                                 self._get_vdc_href(org_name, ovdc_name),
                                  cluster_name)
                     # Delete the corresponding defined entity
                     self.entity_svc.delete_entity(cluster_id)
@@ -466,57 +454,56 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         return self.create_nodes(cluster_id=cluster_id, cluster_spec=cluster_spec)  # noqa: E501
 
-    def delete_cluster(self, **kwargs):
-        """Start the delete cluster operation.
+    def delete_cluster(self, cluster_id):
+        """Start the delete cluster operation."""
+        # Get the existing defined entity for the given cluster id
+        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
+            cluster_id)
+        cluster_name: str = curr_entity.name
+        kind: str = curr_entity.entity.kind
+        state: str = curr_entity.state
+        phase: DefEntityPhase = DefEntityPhase.from_phase(
+            curr_entity.entity.status.phase)
+        org_name = curr_entity.entity.metadata.org_name
+        ovdc_name = curr_entity.entity.metadata.ovdc_name
 
-        Common broker function that validates data for 'delete cluster'
-        operation. Deleting nodes is an asynchronous task, so the returned
-        `result['task_href']` can be polled to get updates on task progress.
+        # Check if entity is of kind native.
+        if kind == def_utils.ClusterEntityKind.TKG.value:
+            raise e.CseServerError(
+                f"CSE cannot delete an entity of type {kind}")  # noqa: E501
 
-        **data: Required
-            Required data: cluster_name
-            Optional data and default values: org_name=None, ovdc_name=None
-        **telemetry: Optional
-        """
-        raise NotImplementedError
-        data = kwargs[KwargKey.DATA]
-        required = [
-            RequestKey.CLUSTER_NAME
-        ]
-        defaults = {
-            RequestKey.ORG_NAME: None,
-            RequestKey.OVDC_NAME: None
-        }
-        validated_data = {**defaults, **data}
-        req_utils.validate_payload(validated_data, required)
+        # Check if cluster is in a valid state
+        if state != def_utils.DEF_RESOLVED_STATE or \
+                not phase.is_operation_status_success():
+            raise e.CseServerError(
+                f"Cluster {cluster_name} with id {cluster_id} is not in a "
+                f"valid state to be deleted. Please contact administrator.")
 
-        cluster_name = validated_data[RequestKey.CLUSTER_NAME]
-
-        cluster = get_cluster(self.context.client, cluster_name,
-                              org_name=validated_data[RequestKey.ORG_NAME],
-                              ovdc_name=validated_data[RequestKey.OVDC_NAME])
-        cluster_id = cluster['cluster_id']
-
-        if kwargs.get(KwargKey.TELEMETRY, True):
-            # Record the telemetry data
-            cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster_id
-            record_user_action_details(cse_operation=CseOperation.CLUSTER_DELETE, # noqa: E501
-                                       cse_params=cse_params)
+        # TODO(DEF) Handle Telemetry
 
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
         # call, session becomes None
         msg = f"Deleting cluster '{cluster_name}' ({cluster_id})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-        self.context.is_async = True
-        self._delete_cluster_async(cluster_name=cluster_name,
-                                   cluster_vdc_href=cluster['vdc_href'])
 
-        return {
-            'cluster_name': cluster_name,
-            'task_href': self.task_resource.get('href')
-        }
+        curr_entity.entity.status.task_href = self.task_resource.get('href')
+        curr_entity.entity.status.phase = str(
+            DefEntityPhase(DefEntityOperation.DELETE,
+                           DefEntityOperationStatus.IN_PROGRESS))
+        curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)
+        self.context.is_async = True
+        self._delete_cluster_async(cluster_id=cluster_id,
+                                   cluster_vdc_href=self._get_vdc_href(
+                                       org_name, ovdc_name))
+        return curr_entity
+
+    def _get_vdc_href(self, org_name, ovdc_name):
+        client = self.context.client
+        org = vcd_org.Org(client=client,
+                          resource=client.get_org_by_name(org_name))
+        vdc_resource = org.get_vdc(name=ovdc_name)
+        return vdc_resource.get('href')
 
     def upgrade_cluster(self, **kwargs):
         """Start the upgrade cluster operation.
@@ -917,15 +904,18 @@ class ClusterService(abstract_broker.AbstractBroker):
         finally:
             self.context.end()
 
-    # all parameters following '*args' are required and keyword-only
     @utils.run_async
-    def _delete_cluster_async(self, *args, cluster_name, cluster_vdc_href):
+    def _delete_cluster_async(self, cluster_id, cluster_vdc_href):
         try:
+            curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
+                cluster_id)
+            cluster_name = curr_entity.name
             msg = f"Deleting cluster '{cluster_name}'"
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             _delete_vapp(self.context.client, cluster_vdc_href, cluster_name)
             msg = f"Deleted cluster '{cluster_name}'"
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+            self.entity_svc.delete_entity(cluster_id)
         except Exception as err:
             LOGGER.error(f"Unexpected error while deleting cluster: {err}",
                          exc_info=True)
