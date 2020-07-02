@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from dataclasses import dataclass
+from typing import List
 
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.utils as utils
@@ -244,3 +245,11 @@ class DefEntity:
         self.entityType = entityType
         self.externalId = externalId
         self.state = state
+
+
+@dataclass()
+class Ovdc:
+    k8s_runtime: List[str]
+    ovdc_name: str = None
+    ovdc_id: str = None
+    remove_cp_from_vms_on_disable: bool = False
