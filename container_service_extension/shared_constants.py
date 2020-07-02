@@ -148,3 +148,9 @@ class DefEntityPhase:
             return self.status == DefEntityOperationStatus.SUCCEEDED
         except Exception:
             return False
+
+    def is_entity_busy(self) -> bool:
+        try:
+            return self.status == DefEntityOperationStatus.IN_PROGRESS
+        except Exception:
+            return False

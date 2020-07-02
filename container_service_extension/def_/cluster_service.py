@@ -426,8 +426,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             raise e.CseServerError(f"CSE cannot resize an entity of type {kind}")  # noqa: E501
 
         # Check if cluster is in a valid state
-        if state != def_utils.DEF_RESOLVED_STATE or\
-                not phase.is_operation_status_success():
+        if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
             raise e.CseServerError(
                 f"Cluster {name} with id {cluster_id} is not in a valid state "
                 f"to be resized. Please contact the administrator.")
@@ -473,8 +472,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"CSE cannot delete an entity of type {kind}")  # noqa: E501
 
         # Check if cluster is in a valid state
-        if state != def_utils.DEF_RESOLVED_STATE or \
-                not phase.is_operation_status_success():
+        if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
             raise e.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
                 f"valid state to be deleted. Please contact administrator.")
@@ -917,6 +915,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
             self.entity_svc.delete_entity(cluster_id)
         except Exception as err:
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.DELETE)
             LOGGER.error(f"Unexpected error while deleting cluster: {err}",
                          exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
