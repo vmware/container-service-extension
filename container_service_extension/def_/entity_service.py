@@ -215,7 +215,7 @@ class DefEntityService():
         :return:
         """
         filter_by_name = {def_utils.ClusterEntityFilterKey.CLUSTER_NAME.value: name}  # noqa: E501
-        entity_type: DefEntityType = self.get_registered_def_entity_type_for_v35()  # noqa: E501
+        entity_type: DefEntityType = self.get_def_entity_type()
         for entity in \
             self.list_entities_by_entity_type(vendor=entity_type.vendor,
                                               nss=entity_type.nss,
@@ -260,8 +260,16 @@ class DefEntityService():
             LOGGER.error(msg)
         return entity
 
-    def get_registered_def_entity_type_for_v35(self):
-        """Fetch the native cluster entity type."""
+    def get_def_entity_type(self):
+        """Fetch the native cluster entity type.
+
+        This method is required for CSE client to make use of
+        Defined entity service directly with no requirement of
+        CSE server.
+
+        :return: Defined Entity Type for the current client api version
+        :rtype: DefEntityType
+        """
         schema_svc = def_schema_svc.DefSchemaService(self._cloudapi_client)
         keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(self._cloudapi_client.get_api_version())]  # noqa: E501
         entity_type_id = def_utils.generate_entity_type_id(

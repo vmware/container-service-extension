@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import copy
+import dataclasses
 import random
 import re
 import string
@@ -202,7 +203,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.context.is_async = True
         def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)
         self._create_cluster_async(def_entity.id, cluster_spec)
-        return def_entity
+        return dataclasses.asdict(def_entity)
 
     @utils.run_async
     def _create_cluster_async(self, cluster_id: str,

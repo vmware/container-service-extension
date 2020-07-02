@@ -104,6 +104,10 @@ Examples
     vcd cse cluster list -vdc ovdc1
         Display clusters in vdc 'ovdc1'.
 \b
+    vcd cse cluster apply input_spec.yaml
+        Apply the configuration changes defined in the 'input_spec.yaml'
+        to create new cluster or update the existing cluster
+\b
     vcd cse cluster create mycluster --network mynetwork
         Create a Kubernetes cluster named 'mycluster'.
         The cluster will have 2 worker nodes.
@@ -552,8 +556,10 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
 
 
 @cluster_group.command('apply',
-                       short_help='apply the configuration changes defined '
-                                  'in the file to create or resize cluster')
+                       help="Example:vcd cse cluster apply input_spec.yaml",
+                       short_help='apply the cluster configuration defined '
+                                  'in the file to either create new a cluster '
+                                  'or update the existing cluster')
 @click.pass_context
 @click.argument('cluster_config_file_path',
                 metavar='CLUSTER_CONFIG_FILE_PATH',
@@ -578,7 +584,7 @@ def apply(ctx, cluster_config_file_path):
 
         cluster = Cluster(client, cluster_config)
         result = cluster.apply()
-        stdout(result, ctx)
+        stdout(yaml.dump(result), ctx)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
