@@ -8,6 +8,7 @@ from container_service_extension.client.def_entity_cluster import DefEntityClust
 import container_service_extension.client.response_processor as response_processor  # noqa: E501
 from container_service_extension.def_ import models as def_models
 import container_service_extension.def_.entity_service as def_entity_svc
+import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as exceptions
 import container_service_extension.shared_constants as shared_constants
 
@@ -22,10 +23,9 @@ class NativeCluster(DefEntityCluster):
 
     """
 
-    def __init__(self, client, cluster_config=None):
+    def __init__(self, client):
         super().__init__(client)
-        self._uri = self._client.get_api_uri() + '/cse/internal'
-        self._cluster_config = cluster_config
+        self._uri = f"{self._client.get_api_uri()}/cse/{def_utils.V35_END_POINT_DISCRIMINATOR}"  # noqa: E501
 
     def create_cluster(self, cluster_entity: def_models.ClusterEntity):
         """Create a new Kubernetes cluster.
@@ -45,19 +45,25 @@ class NativeCluster(DefEntityCluster):
         msg = "Operation not supported; Under implementation"
         raise vcd_exceptions.OperationNotSupportedException(msg)
 
-    def apply(self):
+    def apply(self, cluster_config):
+        """Apply the configuration either to create or update the cluster.
+
+        :param dict cluster_config: cluster configuration information
+        :return: requests.models.Response response
+        :raises: exceptions.BadRequestError
+        """
         uri = f"{self._uri}/clusters"
         method = shared_constants.RequestMethod.POST
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        cluster_entity_spec = def_models.ClusterEntity(**self._cluster_config)
-        cluster_name = cluster_entity_spec.metadata.cluster_name
+        cluster_spec = def_models.ClusterEntity(**cluster_config)
+        cluster_name = cluster_spec.metadata.cluster_name
         def_entity = entity_svc.get_native_entity_by_name(cluster_name)
         if not def_entity:
             response = self._client._do_request_prim(
                 method,
                 uri,
                 self._client._session,
-                contents=self._cluster_config,
+                contents=cluster_config,
                 media_type='application/json',
                 accept_type='application/json')
             return response_processor.process_response(response)

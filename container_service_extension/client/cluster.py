@@ -14,14 +14,15 @@ from container_service_extension.def_.utils import ClusterEntityKind   # noqa: E
 class Cluster:
     """Returns the cluster class as determined by API version."""
 
-    def __new__(cls, client: vcd_client, cluster_config=None):
+    def __new__(cls, client: vcd_client, cluster_entity_kind=None):
         """Create the right cluster class for the negotiated API version.
 
         In case of ApiVersion.VERSION_35, return specific instance if the
         cluster kind is known up-front.
 
-        If the cluster kind is unknown, return instance of DefEntityCluster for
-        all common operations like get_cluster_info(), list_clusters()
+        If the cluster entity kind is unknown, return instance of
+        DefEntityCluster for all common operations like get_cluster_info(),
+        list_clusters()
 
         :param pyvcloud.vcd.client client: vcd client
         :param dict cluster_config: cluster configuration
@@ -31,9 +32,8 @@ class Cluster:
         if float(api_version) < float(vcd_client.ApiVersion.VERSION_35.value):   # noqa: E501
             return LegacyNativeCluster(client)
         elif float(api_version) >= float(vcd_client.ApiVersion.VERSION_35.value):  # noqa: E501
-            cluster_entity_kind = cluster_config.get('kind')
             if cluster_entity_kind == ClusterEntityKind.NATIVE.value or cluster_entity_kind == ClusterEntityKind.TANZU_PLUS.value:  # noqa: E501
-                return NativeCluster(client, cluster_config=cluster_config)
+                return NativeCluster(client)
             elif cluster_entity_kind == ClusterEntityKind.TKG.value:
                 return TKGCluster(client)
             else:
