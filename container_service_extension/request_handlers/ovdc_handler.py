@@ -312,7 +312,7 @@ def ovdc_compute_policy_update(request_data,
             response = cpm.remove_vdc_compute_policy_from_vdc(
                 ovdc_id,
                 cp_href,
-                remove_compute_policy_from_vms=remove_compute_policy_from_vms)
+                force=remove_compute_policy_from_vms)
             # Follow task_href to completion in a different thread and end
             # operation context
             _follow_task(op_ctx, response['task_href'], ovdc_id)
