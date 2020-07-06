@@ -40,7 +40,10 @@ UNSUPPORTED_COMMANDS_BY_VERSION = {
         GroupKey.OVDC: ['enable', 'disable']
     },
     vcd_client.ApiVersion.VERSION_34.value: {
-        GroupKey.CLUSTER: ['apply']
+        GroupKey.CLUSTER: ['apply'],
+        # TODO(metadata based enablement for < v35): Revisit after decision
+        # to support metadata way of enabling for native clusters
+        GroupKey.OVDC: ['enable', 'disable']
     },
     vcd_client.ApiVersion.VERSION_35.value: {
         GroupKey.CLUSTER: ['create'],

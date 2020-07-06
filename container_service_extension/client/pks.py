@@ -380,7 +380,7 @@ Examples
         vcd cse ovdc list
 
 \b
-    vcd cse pksovdc list --pks-plans
+    vcd cse pks ovdc list --pks-plans
         Displays list of ovdcs in a given org along with available PKS
         plans if any. If executed by System-administrator, it will
         display all ovdcs from all orgs.
