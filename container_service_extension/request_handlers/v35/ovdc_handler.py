@@ -4,11 +4,13 @@
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.ovdc_service as ovdc_service
 import container_service_extension.operation_context as ctx
+import container_service_extension.request_handlers.request_utils as request_utils  # noqa: E501
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.telemetry_handler import record_user_action_telemetry  # noqa: E501
 
 
+@request_utils.v35_api_exception_handler
 def ovdc_update(data, operation_context: ctx.OperationContext):
     """Request handler for ovdc enable, disable operations.
 
@@ -26,6 +28,7 @@ def ovdc_update(data, operation_context: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_INFO)
+@request_utils.v35_api_exception_handler
 def ovdc_info(data, operation_context: ctx.OperationContext):
     """Request handler for ovdc info operation.
 
@@ -38,6 +41,7 @@ def ovdc_info(data, operation_context: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_LIST)
+@request_utils.v35_api_exception_handler
 def ovdc_list(data, operation_context: ctx.OperationContext):
     """Request handler for ovdc list operation.
 
