@@ -19,13 +19,10 @@ import container_service_extension.client.utils as client_utils
 from container_service_extension.exceptions import CseResponseError
 from container_service_extension.logger import CLIENT_LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
-import container_service_extension.shared_constants as shared_constants
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import LocalTemplateKey
-from container_service_extension.shared_constants import ComputePolicyAction
-from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
-from container_service_extension.shared_constants import ServerAction
+import container_service_extension.shared_constants as shared_constants
 import container_service_extension.utils as utils
 
 
@@ -701,7 +698,8 @@ def cluster_config(ctx, name, vdc, org):
         cluster = Cluster(client)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
-        cluster_config = cluster.get_cluster_config(name, vdc=vdc, org=org).get(RESPONSE_MESSAGE_KEY) # noqa: E501
+        cluster_config = cluster.get_cluster_config(name, vdc=vdc, org=org) \
+            .get(shared_constants.RESPONSE_MESSAGE_KEY)
         if os.name == 'nt':
             cluster_config = str.replace(cluster_config, '\n', '\r\n')
 
@@ -1099,7 +1097,7 @@ def stop_service(ctx):
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
-        result = system.update_service_status(action=ServerAction.STOP)
+        result = system.update_service_status(action=shared_constants.ServerAction.STOP) # noqa: E501
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
@@ -1116,7 +1114,7 @@ def enable_service(ctx):
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
-        result = system.update_service_status(action=ServerAction.ENABLE)
+        result = system.update_service_status(action=shared_constants.ServerAction.ENABLE) # noqa: E501
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
@@ -1133,7 +1131,7 @@ def disable_service(ctx):
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
-        result = system.update_service_status(action=ServerAction.DISABLE)
+        result = system.update_service_status(action=shared_constants.ServerAction.DISABLE) # noqa: E501
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
@@ -1291,7 +1289,8 @@ def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus):
     help="Remove the compute policies from deployed VMs as well. "
          "Does not remove the compute policy from vApp templates in catalog. ")
 def ovdc_disable(ctx, ovdc_name, org_name,
-                 enable_native, enable_tkg_plus, remove_cp_from_vms_on_disable):
+                 enable_native, enable_tkg_plus,
+                 remove_cp_from_vms_on_disable):
     """Disable Kubernetes cluster deployment for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     if not (enable_native or enable_tkg_plus):
@@ -1445,7 +1444,7 @@ def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
         result = ovdc.update_ovdc_compute_policies(ovdc_name,
                                                    org_name,
                                                    compute_policy_name,
-                                                   ComputePolicyAction.ADD,
+                                                   shared_constants.ComputePolicyAction.ADD, # noqa: E501
                                                    False)
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
@@ -1493,7 +1492,7 @@ def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name,
         result = ovdc.update_ovdc_compute_policies(ovdc_name,
                                                    org_name,
                                                    compute_policy_name,
-                                                   ComputePolicyAction.REMOVE,
+                                                   shared_constants.ComputePolicyAction.REMOVE, # noqa: E501
                                                    remove_compute_policy_from_vms) # noqa: E501
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
