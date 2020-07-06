@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 # import copy
 from dataclasses import asdict
-from dataclasses import dataclass
 from typing import List
 
 import pyvcloud.vcd.client as vcd_client
@@ -27,7 +26,8 @@ def update_ovdc(operation_context: ctx.OperationContext,
     """Update ovdc with the updated k8s runtimes list.
 
     :param ctx.OperationContext operation_context: context for the request
-    :param def_models.Ovdc ovdc_spec: Ovdc object having the updated k8s runtime list
+    :param def_models.Ovdc ovdc_spec: Ovdc object having the updated
+        k8s runtime list
     :return: dictionary containing the task href for the update operation
     :rtype: dict
     """
