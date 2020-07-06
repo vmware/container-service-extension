@@ -529,9 +529,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             curr_entity.entity.status.phase)
         state: str = curr_entity.state
         if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
-        raise e.CseServerError(
-            f"Cluster {cluster_name} with id {cluster_id} is not in a "
-            f"valid state to be deleted. Please contact administrator.")
+            raise e.CseServerError(
+                f"Cluster {cluster_name} with id {cluster_id} is not in a "
+                f"valid state to be deleted. Please contact administrator.")
 
         # check that the specified template is a valid upgrade target
         template = {}
@@ -567,10 +567,15 @@ class ClusterService(abstract_broker.AbstractBroker):
               f"{template[LocalTemplateKey.CNI_VERSION]}"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         LOGGER.info(f"{msg} ({curr_entity.externalId})")
-        self.context.is_async = True
-        self._upgrade_cluster_async(cluster_defined_entity=curr_entity,
-                                    template=template)
 
+        curr_entity.entity.status.phase = str(
+            DefEntityPhase(DefEntityOperation.UPGRADE, DefEntityOperationStatus.IN_PROGRESS)) # noqa: E501
+        curr_entity.entity.status.task_href = self.task_resource.get('href')
+        curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)
+
+        self.context.is_async = True
+        self._upgrade_cluster_async(cluster_id=cluster_id,
+                                    template=template)
         return {
             'cluster_name': cluster_name,
             'task_href': self.task_resource.get('href')
@@ -920,11 +925,12 @@ class ClusterService(abstract_broker.AbstractBroker):
     # all parameters following '*args' are required and keyword-only
     @utils.run_async
     def _upgrade_cluster_async(self, *args,
-                               cluster_defined_entity: def_models.DefEntity,
+                               cluster_id: str,
                                template):
         try:
-            cluster_name = cluster_defined_entity.entity.metadata.cluster_name
-            vapp_href = cluster_defined_entity.externalId
+            curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id) # noqa: E501
+            cluster_name = curr_entity.entity.metadata.cluster_name
+            vapp_href = curr_entity.externalId
 
             # TODO use cluster status field to get the master and worker nodes
             cluster_vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
@@ -938,12 +944,12 @@ class ClusterService(abstract_broker.AbstractBroker):
             # semantic version doesn't allow leading zeros
             # docker's version format YY.MM.patch allows us to directly use
             # lexicographical string comparison
-            c_docker = cluster_defined_entity.entity.status.docker_version
+            c_docker = curr_entity.entity.status.docker_version
             t_docker = template[LocalTemplateKey.DOCKER_VERSION]
-            k8s_details = cluster_defined_entity.entity.status.kubernetes.split(' ') # noqa: E501
+            k8s_details = curr_entity.entity.status.kubernetes.split(' ')
             c_k8s = semver.Version(k8s_details[1])
             t_k8s = semver.Version(template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
-            cni_details = cluster_defined_entity.entity.status.cni.split(' ')
+            cni_details = curr_entity.entity.status.cni.split(' ')
             c_cni = semver.Version(cni_details[1])
             t_cni = semver.Version(template[LocalTemplateKey.CNI_VERSION])
 
@@ -1021,7 +1027,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             if upgrade_cni:
                 msg = "Applying CNI " \
-                      f"({cluster_defined_entity.entity.status.cni} " \
+                      f"({curr_entity.entity.status.cni} " \
                       f"-> {t_cni}) in master node {master_node_names}"
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
@@ -1053,19 +1059,22 @@ class ClusterService(abstract_broker.AbstractBroker):
             self.context.client.get_task_monitor().wait_for_status(task)
 
             # update defined entity of the cluster
-            cluster_defined_entity.entity.spec.k8_distribution.template_name = \
-                template[LocalTemplateKey.NAME] # noqa: E501
-            cluster_defined_entity.entity.spec.k8_distribution.template_revision = \
-                int(template[LocalTemplateKey.REVISION]) # noqa: E501
-            cluster_defined_entity.entity.status.cni = \
+            curr_entity.entity.spec.k8_distribution.template_name = \
+                template[LocalTemplateKey.NAME]
+            curr_entity.entity.spec.k8_distribution.template_revision = \
+                int(template[LocalTemplateKey.REVISION])
+            curr_entity.entity.status.cni = \
                 _create_k8s_software_string(template[LocalTemplateKey.CNI],
                                             template[LocalTemplateKey.CNI_VERSION]) # noqa: E501
-            cluster_defined_entity.entity.status.kubernetes = \
+            curr_entity.entity.status.kubernetes = \
                 _create_k8s_software_string(template[LocalTemplateKey.KUBERNETES], # noqa: E501
                                             template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
-            cluster_defined_entity.entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
-            cluster_defined_entity.entity.status.os = template[LocalTemplateKey.OS] # noqa: E501
-            self.entity_svc.update_entity(cluster_defined_entity.id, cluster_defined_entity) # noqa: E501
+            curr_entity.entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
+            curr_entity.entity.status.os = template[LocalTemplateKey.OS]
+            curr_entity.entity.status.phase = str(
+                DefEntityPhase(DefEntityOperation.UPGRADE,
+                               DefEntityOperationStatus.SUCCEEDED))
+            self.entity_svc.update_entity(curr_entity.id, curr_entity)
 
             msg = f"Successfully upgraded cluster '{cluster_name}' software " \
                   f"to match template {template_name} (revision " \
@@ -1079,6 +1088,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                   f"'{cluster_name}': {err}"
             LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR, error_message=msg)
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.UPGRADE)
         finally:
             self.context.end()
 
