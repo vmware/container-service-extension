@@ -37,7 +37,7 @@ UNSUPPORTED_COMMANDS_BY_VERSION = {
         GroupKey.CLUSTER: ['apply']
     },
     vcd_client.ApiVersion.VERSION_35.value: {
-        GroupKey.CLUSTER: ['create']
+        GroupKey.CLUSTER: ['create'],
         GroupKey.OVDC: ['compute-policy']
     }
 }
