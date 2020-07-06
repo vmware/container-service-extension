@@ -1,9 +1,9 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+from dataclasses import asdict
 
 from pyvcloud.vcd import utils
-from dataclasses import  asdict
 
 from container_service_extension.client.response_processor import \
     process_response

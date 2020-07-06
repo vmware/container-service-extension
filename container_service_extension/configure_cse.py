@@ -34,8 +34,8 @@ from container_service_extension.nsxt.nsxt_client import NSXTClient
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.remote_template_manager import \
     RemoteTemplateManager
-import container_service_extension.shared_constants as shared_constants
 import container_service_extension.server_constants as server_constants
+import container_service_extension.shared_constants as shared_constants
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
 from container_service_extension.telemetry.constants import PayloadKey
