@@ -105,8 +105,6 @@ class PolicyBasedOvdc:
             accept_type='application/json')
         return process_response(response)
 
-    # TODO(compute-policy for v35): Revisit after decision on
-    # support for api version 35
     def update_ovdc_compute_policies(self, ovdc_name, org_name,
                                      compute_policy_name, action,
                                      remove_compute_policy_from_vms):
@@ -119,6 +117,9 @@ class PolicyBasedOvdc:
 
         :rtype: dict
         """
+        # TODO(compute-policy for v35): Revisit after decision on
+        # support for api version 35
+        raise NotImplementedError
         method = RequestMethod.PUT
         ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
@@ -149,6 +150,9 @@ class PolicyBasedOvdc:
 
         :rtype: dict
         """
+        # TODO(compute-policy for v35): Revisit after decision on
+        # support for api version 35
+        raise NotImplementedError
         method = RequestMethod.GET
         ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)

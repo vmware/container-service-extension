@@ -1315,7 +1315,7 @@ def ovdc_disable(ctx, ovdc_name, org_name,
     """Disable Kubernetes cluster deployment for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     if not (enable_native or enable_tkg_plus):
-        msg = "Please specify at least one of --native or --tkg-plus to enable"
+        msg = "Please specify at least one of --native or --tkg-plus to disable" # noqa:E501
         stderr(msg, ctx)
         CLIENT_LOGGER.error(msg)
     k8_runtime = []

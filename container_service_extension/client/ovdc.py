@@ -1,5 +1,5 @@
 # container-service-extension
-# Copyright (c) 2017 VMware, Inc. All Rights Reserved.
+# Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
 import pyvcloud.vcd.client as vcd_client
@@ -18,7 +18,7 @@ class Ovdc:
         For apiVersoin >= 35 return PolicyBasedOvdc class
 
         :param pyvcloud.vcd.client client: vcd client
-        :return: instance of version specific client side cluster
+        :return: instance of version specific client side Ovdc class
         """
         api_version = client.get_api_version()
         if float(api_version) < float(vcd_client.ApiVersion.VERSION_35.value):
