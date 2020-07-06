@@ -774,8 +774,6 @@ class ComputePolicyManager:
         :param lxml.objectify.Element task_resource: Task resource for
             the umbrella task
         """
-        org = vcd_utils.get_org(self._sysadmin_client)
-        org.reload()
         user_name = task_resource.User.get('name')
         user_href = task_resource.User.get('href')
         org_href = task_resource.Organization.get('href')
@@ -797,7 +795,7 @@ class ComputePolicyManager:
                 owner_type=vcd_client.EntityType.VDC.value,
                 user_href=user_href,
                 user_name=user_name,
-                org_href=org.href)
+                org_href=org_href)
         task_href = task_resource.get('href')
 
         try:
@@ -847,8 +845,7 @@ class ComputePolicyManager:
                     user_href=user_href,
                     user_name=user_name,
                     task_href=task_href,
-                    org_href=org.href,
-                )
+                    org_href=org_href)
 
                 task_monitor = self._sysadmin_client.get_task_monitor()
                 for vm_resource in target_vms:
@@ -880,8 +877,7 @@ class ComputePolicyManager:
                         user_href=user_href,
                         user_name=user_name,
                         task_href=task_href,
-                        org_href=org.href,
-                    )
+                        org_href=org_href)
                     task_monitor.wait_for_success(_task)
             final_status = vcd_client.TaskStatus.RUNNING.value \
                 if is_umbrella_task else vcd_client.TaskStatus.SUCCESS.value
@@ -899,8 +895,7 @@ class ComputePolicyManager:
                 user_href=user_href,
                 user_name=user_name,
                 task_href=task_href,
-                org_href=org.href,
-            )
+                org_href=org_href)
 
             vdc.remove_compute_policy(compute_policy_href)
         except Exception as err:
@@ -920,7 +915,7 @@ class ComputePolicyManager:
                     user_href=user_href,
                     user_name=self._session.get('user'),
                     task_href=task_href,
-                    org_href=org.href,
+                    org_href=org_href,
                     error_message=f"{err}",
                     stack_trace='')
 
