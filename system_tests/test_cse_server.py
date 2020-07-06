@@ -248,7 +248,7 @@ def test_0070_check_invalid_installation(config):
     except Exception:
         pass
 
-
+# TODO() This will be fixed once upgrade command is implemented
 # def test_0080_install_skip_template_creation(config,
 #                                              unregister_cse_before_test):
 #     """Test install.
@@ -349,7 +349,7 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
         except EntityNotFoundException:
             assert False, 'vApp does not exist when it should.'
 
-
+# TODO() This will be fixed once upgrade command is implemented
 # def test_0100_install_force_update(config, unregister_cse_before_test):
 #     """Tests installation option: '--force-update'.
 #

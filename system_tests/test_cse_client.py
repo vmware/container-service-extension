@@ -96,14 +96,14 @@ def cse_server():
     # TODO(): Temporary fix(96-105) to handle CTOT install failure.
     # TODO() Revisit again.
     if result.exit_code != 0:
-        upgrade_cmd = ['upgrade',
+        install_cmd = ['upgrade',
                        '--config', env.ACTIVE_CONFIG_FILEPATH,
                        '--ssh-key', env.SSH_KEY_FILEPATH,
                        '--skip-config-decryption']
-    config = env.setup_active_config()
-    result = env.CLI_RUNNER.invoke(cli, upgrade_cmd,
-                                   input='y',
-                                   catch_exceptions=False)
+        config = env.setup_active_config()
+        result = env.CLI_RUNNER.invoke(cli, install_cmd,
+                                       input='y',
+                                       catch_exceptions=False)
 
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', install_cmd, result.exit_code,
