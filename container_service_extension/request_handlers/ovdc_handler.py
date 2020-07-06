@@ -343,6 +343,7 @@ def _follow_task(op_ctx: ctx.OperationContext, task_href: str, ovdc_id: str):
         user_name = session.get('user')
         user_href = org.get_user(user_name).get('href')
         msg = "Remove ovdc compute policy"
+        # TODO(pyvcloud): Add method to retireve task from task href
         t = task.update(
             status=vcd_task.TaskStatus.RUNNING.value,
             namespace='vcloud.cse',

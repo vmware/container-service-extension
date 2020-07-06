@@ -693,10 +693,7 @@ class ComputePolicyManager:
         self._remove_compute_policy_from_vdc_async(
             ovdc_id=ovdc_id,
             compute_policy_href=compute_policy_href,
-            task=task,
-            task_href=task_href,
-            user_href=user_href,
-            org_href=org.href,
+            task_resource=task_resource,
             force=force)
 
         return {
@@ -707,19 +704,19 @@ class ComputePolicyManager:
     def _remove_compute_policy_from_vdc_async(self, *args,
                                               ovdc_id,
                                               compute_policy_href,
-                                              task,
-                                              task_href,
-                                              user_href,
-                                              org_href,
+                                              task_resource,
                                               force=False):
         vdc = vcd_utils.get_vdc(self._sysadmin_client, vdc_id=ovdc_id,
                                 is_admin_operation=True)
+        task_href = task_resource.get('href')
+        user_href = task_resource.User.get('href')
+        org_href = task_resource.Organization.get('href')
+        task = Task(client=self._sysadmin_client)
         try:
-            self.remove_compute_policy_from_vdc(
+            self.remove_compute_policy_from_vdc_sync(
                 vdc=vdc,
                 compute_policy_href=compute_policy_href,
-                task=task,
-                task_href=task_href,
+                task_resource=task_resource,
                 force=force)
 
             task.update(
@@ -739,7 +736,8 @@ class ComputePolicyManager:
                 org_href=org_href,
             )
         except Exception as err:
-            msg = f'Failed to remove compute policy: {err}'
+            msg = f'Failed to remove compute policy: {compute_policy_href} ' \
+                  f'from the OVDC: {vdc.name}'
             logger.SERVER_LOGGER.error(msg)# noqa: E501
             task.update(
                 status=vcd_client.TaskStatus.ERROR.value,
@@ -758,12 +756,11 @@ class ComputePolicyManager:
                 error_message=f"{err}",
                 stack_trace='')
 
-    def remove_compute_policy_from_vdc(self,
-                                       vdc, compute_policy_href,
-                                       force=False,
-                                       is_placement_policy=False,
-                                       task=None,
-                                       task_href=None):
+    def remove_compute_policy_from_vdc_sync(self,
+                                            vdc, compute_policy_href,
+                                            force=False,
+                                            is_placement_policy=False,
+                                            task_resource=None):
         """Remove compute policy from vdc.
 
         This method makes use of an umbrella task which can be used for
@@ -774,22 +771,19 @@ class ComputePolicyManager:
         :param str compute_policy_href: href of the compute policy to remove
         :param bool force: Force remove compute policy from vms in the VDC
             as well
-        :param pyvcloud.vcd.task.Task task: Task object for the umbrella task
-        :param str task_href: href of the umbrella task
+        :param lxml.objectify.Element task_resource: Task resource for
+            the umbrella task
         """
-        is_umbrella_task = (task and task_href)
-        if (task and not task_href) or (task_href and not task):
-            msg = "Specify both task and task_href to update an already " \
-                  "existing task"
-            logger.SERVER_LOGGER.error((msg))
-            raise ValueError(msg)
         org = vcd_utils.get_org(self._sysadmin_client)
         org.reload()
-        user_name = self._session.get('user')
-        user_href = org.get_user(user_name).get('href')
-        # Create a task
+        user_name = task_resource.User.get('name')
+        user_href = task_resource.User.get('href')
+        org_href = task_resource.Organization.get('href')
+        task = Task(self._sysadmin_client)
+        task_href = None
+        is_umbrella_task = task_resource is not None
+        # Create a task if not umbrella task
         if not is_umbrella_task:
-            task = Task(self._sysadmin_client)
             task_resource = task.update(
                 status=vcd_client.TaskStatus.RUNNING.value,
                 namespace='vcloud.cse',
@@ -804,7 +798,7 @@ class ComputePolicyManager:
                 user_href=user_href,
                 user_name=user_name,
                 org_href=org.href)
-            task_href = task_resource.get('href')
+        task_href = task_resource.get('href')
 
         try:
             # remove the compute policy from VMs if force is True
@@ -911,7 +905,7 @@ class ComputePolicyManager:
             vdc.remove_compute_policy(compute_policy_href)
         except Exception as err:
             logger.SERVER_LOGGER.error(err, exc_info=True)
-            # Set task to error if not an
+            # Set task to error if not an umbrella task
             if not is_umbrella_task:
                 task.update(
                     status=vcd_client.TaskStatus.ERROR.value,
