@@ -99,8 +99,6 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
 def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
     """Request handler for cluster upgrade-plan operation.
 
-    data validation handled in broker
-
     :return: List[Tuple(str, str)]
     """
     svc = cluster_svc.ClusterService(op_ctx)
