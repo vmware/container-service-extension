@@ -37,7 +37,7 @@ class PolicyBasedOvdc:
         """Enable/Disable ovdc for k8s for the given k8s provider.
 
         :param str ovdc_name: Name of org VDC to update
-        :param str k8s_runtime: k8s_runtime of the k8s provider to
+        :param List[str] k8s_runtime: k8s_runtime of the k8s provider to
         enable / disable for the ovdc
         :param bool enable: If set to True will enable the vdc for the
             paricular k8s_runtime else if set to False, K8 support on
@@ -63,14 +63,15 @@ class PolicyBasedOvdc:
             accept_type='application/json')
         curr_ovdc = def_models.Ovdc(**process_response(ovdc_response))
         runtimes = curr_ovdc.k8s_runtime
-        if enable:
-            if k8s_runtime in runtimes:
-                raise Exception(f"OVDC {ovdc_name} already enabled for {k8s_runtime}") # noqa: E501
-            runtimes.append(k8s_runtime)
-        else:
-            if k8s_runtime not in runtimes:
-                raise Exception(f"OVDC {ovdc_name} already disabled for {k8s_runtime}") # noqa: E501
-            runtimes.remove(k8s_runtime)
+        for k in k8s_runtime:
+            if enable:
+                if k in runtimes:
+                    raise Exception(f"OVDC {ovdc_name} already enabled for {k8s_runtime}") # noqa: E501
+                runtimes.append(k)
+            else:
+                if k not in runtimes:
+                    raise Exception(f"OVDC {ovdc_name} already disabled for {k8s_runtime}") # noqa: E501
+                runtimes.remove(k)
         update_request = def_models.Ovdc(k8s_runtime=runtimes,
                                          remove_cp_from_vms_on_disable=remove_cp_from_vms_on_disable) # noqa: E501
 
