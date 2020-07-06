@@ -352,10 +352,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Created cluster '{cluster_name}' ({cluster_id})"
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
 
-
-
-
-
             # Update defined entity instance with new properties like vapp_id,
             # master_ip and nodes.
             # TODO(DEF) VCDA-1567 Schema doesn't yet have nodes definition.
@@ -366,23 +362,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             def_entity.entity.status.phase = str(
                 DefEntityPhase(DefEntityOperation.CREATE,
                                DefEntityOperationStatus.SUCCEEDED))
-            vms = vapp.get_all_vms()
-            worker_nodes = []
-            nfs_nodes = []
-            for vm in vms:
-                vm_name = vm.get('name')
-                node = def_models.Node(name=vm_name,
-                                       ip=vapp.get_primary_ip(vm_name),
-                                       status=vcd_client.VCLOUD_STATUS_MAP.get(int(vm.get('status'))),
-                                       cpu_count=vm.VmSpecSection.NumCpus.text if hasattr(vm, 'VmSpecSection') else None,
-                                       memory_mb=vm.VmSpecSection.MemoryResourceMb.Configured.text if hasattr(vm, 'VmSpecSection') else None)
-                if vm_name.startswith(NodeType.MASTER):
-                    master_node = node
-                elif vm_name.startswith(NodeType.WORKER):
-                    worker_nodes.append(node)
-                elif vm_name.startswith(NodeType.NFS):
-                    nfs_nodes.append(node)
-            def_entity.entity.status.nodes = def_models.Nodes(master=master_node, workers=worker_nodes, nfs=nfs_nodes)
+            def_entity.entity.status.nodes = self._get_nodes_details(vapp)
 
             self.entity_svc.update_entity(cluster_id, def_entity)
             self.entity_svc.resolve_entity(cluster_id)
@@ -425,6 +405,30 @@ class ClusterService(abstract_broker.AbstractBroker):
                                                     DefEntityOperation.CREATE)
         finally:
             self.context.end()
+
+    def _get_nodes_details(self, vapp):
+        vms = vapp.get_all_vms()
+        workers = []
+        nfs_nodes = []
+        for vm in vms:
+            name = vm.get('name')
+            ip = vapp.get_primary_ip(name)
+            size = None
+            if hasattr(vm, 'ComputePolicy') and hasattr(vm.ComputePolicy,
+                                                        'VmSizingPolicy'):
+                size = vm.ComputePolicy.VmSizingPolicy.get('name')
+            if name.startswith(NodeType.MASTER):
+                master = def_models.Node(name=name, ip=ip, sizing_class=size)
+            elif name.startswith(NodeType.WORKER):
+                workers.append(
+                    def_models.Node(name=name, ip=ip, sizing_class=size))
+            elif name.startswith(NodeType.NFS):
+                exports = get_nfs_exports(self.context.sysadmin_client, ip,
+                                          vapp, name)
+                nfs_nodes.append(def_models.NfsNode(name=name, ip=ip,
+                                                    sizing_class=size,
+                                                    exports=exports))
+        return def_models.Nodes(master=master, workers=workers, nfs=nfs_nodes)
 
     def _fail_operation_and_resolve_entity(self, cluster_id: str,
                                            op: DefEntityOperation):
@@ -840,7 +844,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                   sizing_class_name=worker_sizing_class)
 
             if node_type == NodeType.NFS:
-                msg = f"Created {num_workers} node(s) for cluster " \
+                msg = f"Created {num_workers} nfs_node(s) for cluster " \
                       f"'{cluster_name}' ({cluster_id})"
                 self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
             elif node_type == NodeType.WORKER:
@@ -858,11 +862,12 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Added {num_workers} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
                 self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
-                curr_entity.entity.status.phase = str(
-                    DefEntityPhase(DefEntityOperation.UPDATE,
-                                   DefEntityOperationStatus.SUCCEEDED))
-                curr_entity.entity.spec.workers = cluster_spec.spec.workers
-                self.entity_svc.update_entity(cluster_id, curr_entity)
+            curr_entity.entity.status.phase = str(
+                DefEntityPhase(DefEntityOperation.UPDATE,
+                               DefEntityOperationStatus.SUCCEEDED))
+            curr_entity.entity.spec.workers = cluster_spec.spec.workers
+            curr_entity.entity.status.nodes = self._get_nodes_details(vapp)
+            self.entity_svc.update_entity(cluster_id, curr_entity)
         except e.NodeCreationError as err:
             self._fail_operation_and_resolve_entity(cluster_id,
                                                     DefEntityOperation.UPDATE)

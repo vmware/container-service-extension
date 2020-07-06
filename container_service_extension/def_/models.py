@@ -1,9 +1,8 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+from dataclasses import dataclass
 from typing import List
-
-from dataclasses import dataclass, asdict
 
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.utils as utils
@@ -122,24 +121,27 @@ class Settings:
 
 @dataclass()
 class Node:
-    name: str = None
-    ip: str = None
-    status: str = None
-    cpu_count: int = None
-    memory_mb: str = None
+    name: str
+    ip: str
+    sizing_class: str = None
+
+
+@dataclass()
+class NfsNode(Node):
+    exports: str = None
 
 
 @dataclass()
 class Nodes:
     master: Node = None
     workers: List[Node] = None
-    nfs: List[Node] = None
+    nfs: List[NfsNode] = None
 
     def __init__(self, master: Node = None, workers: List[Node] = None,
                  nfs: List[Node] = None):
         self.master = Node(**master) if isinstance(master, dict) else master
-        self.workers = [Node(**w) if isinstance(w, dict) else w for w in workers]
-        self.nfs = [Node(**n) if isinstance(n, dict) else n for n in nfs]
+        self.workers = [Node(**w) if isinstance(w, dict) else w for w in workers]  # noqa: E501
+        self.nfs = [NfsNode(**n) if isinstance(n, dict) else n for n in nfs]
 
 
 @dataclass()
@@ -154,6 +156,19 @@ class Status:
     docker_version: str = None
     os: str = None
     nodes: Nodes = None
+
+    def __init__(self, master_ip: str = None, phase: str = None,
+                 cni: str = None, task_href: str = None,
+                 kubernetes: str = None, docker_version: str = None,
+                 os: str = None, nodes: str = None):
+        self.master_ip = master_ip
+        self.phase = phase
+        self.cni = cni
+        self.task_href = task_href
+        self.kubernetes = kubernetes
+        self.docker_version = docker_version
+        self.os = os
+        self.nodes = Nodes(**nodes) if isinstance(nodes, dict) else nodes
 
 
 @dataclass()

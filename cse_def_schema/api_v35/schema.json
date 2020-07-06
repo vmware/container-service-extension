@@ -6,10 +6,9 @@
                 "properties": {
                     "name": {"type": "string"},
                     "ip": {"type": "string"},
-                    "status": {"type": "string"},
-                    "cpu_count": {"type": "string"},
-                    "memory_mb": {"type": "string"}
-                }
+                    "sizing_class": {"type": "string"}
+                },
+                "additionalproperties": true
             }
         },
         "type": "object",
