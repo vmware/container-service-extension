@@ -23,11 +23,11 @@ import container_service_extension.utils as utils
 
 
 def update_ovdc(operation_context: ctx.OperationContext,
-                ovdc_id: str, ovdc: def_models.Ovdc) -> dict: # noqa: 501
+                ovdc_id: str, ovdc_spec: def_models.Ovdc) -> dict: # noqa: 501
     """Update ovdc with the updated k8s runtimes list.
 
     :param ctx.OperationContext operation_context: context for the request
-    :param Ovdc ovdc: Ovdc object having the updated k8s runtime list
+    :param def_models.Ovdc ovdc_spec: Ovdc object having the updated k8s runtime list
     :return: dictionary containing the task href for the update operation
     :rtype: dict
     """
@@ -63,10 +63,10 @@ def update_ovdc(operation_context: ctx.OperationContext,
                                               task=task,
                                               task_href=task_href,
                                               user_href=user_href,
-                                              policy_list=ovdc.k8s_runtime, # noqa:E501
+                                              policy_list=ovdc_spec.k8s_runtime, # noqa:E501
                                               ovdc_id=ovdc_id,
                                               vdc=vdc,
-                                              remove_cp_from_vms_on_disable=ovdc.remove_cp_from_vms_on_disable) # noqa:E501
+                                              remove_cp_from_vms_on_disable=ovdc_spec.remove_cp_from_vms_on_disable) # noqa:E501
     return {'task_href': task_href}
 
 
@@ -88,9 +88,9 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
     result = asdict(get_ovdc_k8s_runtime_details(operation_context.sysadmin_client, # noqa: E501
                                                  ovdc_id=ovdc_id,
                                                  log_wire=log_wire))
-    # TODO: Find a better way to avoid sending remove_compute_policy_from_vms
+    # TODO: Find a better way to avoid sending remove_cp_from_vms_on_disable
     # flag
-    del result[RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS]
+    del result['remove_cp_from_vms_on_disable']
     return result
 
 
@@ -119,8 +119,8 @@ def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
                 get_ovdc_k8s_runtime_details(operation_context.sysadmin_client,
                                              org_name=org_name,
                                              ovdc_name=ovdc_name))
-            # TODO: Find a better way to remove remove_compute_policy_from_vms
-            del ovdc_details[RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS]
+            # TODO: Find a better way to remove remove_cp_from_vms_on_disable
+            del ovdc_details['remove_cp_from_vms_on_disable']
             ovdcs.append(ovdc_details)
     return ovdcs
 
@@ -188,6 +188,8 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
         for policy in cpm.list_vdc_placement_policies_on_vdc(ovdc_id):
             existing_policies.append(policy['name'])
 
+        logger.SERVER_LOGGER.debug(policy_list)
+        logger.SERVER_LOGGER.debug(existing_policies)
         policies_to_add = set(policy_list) - set(existing_policies)
         policies_to_delete = set(existing_policies) - set(policy_list)
 
@@ -305,6 +307,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                     task_href=task_href,
                     org_href=operation_context.user.org_href,
                     error_message=f"{err}")
+        raise err
     finally:
         if operation_context.sysadmin_client:
             operation_context.end()

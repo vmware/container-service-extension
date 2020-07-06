@@ -1230,7 +1230,7 @@ def list_ovdcs(ctx):
 def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus):
     """Set Kubernetes provider for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
-    if not (enable_native and enable_tkg_plus):
+    if not (enable_native or enable_tkg_plus):
         msg = "Please specify at least one of --native or --tkg-plus to enable"
         stderr(msg, ctx)
         CLIENT_LOGGER.error(msg)
@@ -1300,7 +1300,7 @@ def ovdc_disable(ctx, ovdc_name, org_name,
                  enable_native, enable_tkg_plus, remove_cp_from_vms_on_disable):
     """Disable Kubernetes cluster deployment for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
-    if not (enable_native and enable_tkg_plus):
+    if not (enable_native or enable_tkg_plus):
         msg = "Please specify at least one of --native or --tkg-plus to enable"
         stderr(msg, ctx)
         CLIENT_LOGGER.error(msg)
