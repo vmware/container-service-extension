@@ -100,10 +100,10 @@ def cse_server():
                        '--config', env.ACTIVE_CONFIG_FILEPATH,
                        '--ssh-key', env.SSH_KEY_FILEPATH,
                        '--skip-config-decryption']
-    config = env.setup_active_config()
-    result = env.CLI_RUNNER.invoke(cli, upgrade_cmd,
-                                   input='y',
-                                   catch_exceptions=False)
+        config = env.setup_active_config()
+        result = env.CLI_RUNNER.invoke(cli, upgrade_cmd,
+                                       input='y',
+                                       catch_exceptions=False)
 
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', install_cmd, result.exit_code,
