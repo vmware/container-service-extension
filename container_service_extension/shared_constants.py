@@ -151,4 +151,3 @@ class DefEntityPhase:
 
     def is_entity_busy(self) -> bool:
         return self.status == DefEntityOperationStatus.IN_PROGRESS
-
