@@ -1181,6 +1181,8 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     # _add_placement_policy_to_templates(
     #    client, cse_templates, msg_update_callback, log_wire)
 
+    clusters = get_all_cse_clusters(client)
+
     # Add new vdc compute policy to ovdc with existing CSE clusters
     # _add_vdc_placement_policy_to_ovdc_with_existing_clusters(
     #    client=client,
@@ -1189,12 +1191,11 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     #    log_wire=log_wire)
 
     # Remove all old CSE compute policies
-    # _remove_old_cse_compute_policies(client=client,
-    #                                 msg_update_callback=msg_update_callback,
-    #                                 log_wire=log_wire)
+    _remove_old_cse_compute_policies(client=client,
+                                     msg_update_callback=msg_update_callback,
+                                     log_wire=log_wire)
 
     # Update clusters to have auto generated password and fix their metadata
-    clusters = get_all_cse_clusters(client)
     # _fix_cluster_metadata(
     #    client=client,
     #    config=config,
@@ -1210,11 +1211,11 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     # ToDo
 
     # Create DEF entity for all clusters
-    _create_def_entity_for_existing_clusters(
-        client=client,
-        cse_clusters=clusters,
-        msg_update_callback=msg_update_callback,
-        log_wire=log_wire)
+    # _create_def_entity_for_existing_clusters(
+    #    client=client,
+    #    cse_clusters=clusters,
+    #    msg_update_callback=msg_update_callback,
+    #    log_wire=log_wire)
 
 
 def _get_all_cse_templates(client,
@@ -1367,15 +1368,30 @@ def _add_vdc_placement_policy_to_ovdc_with_existing_clusters(
 def _remove_old_cse_compute_policies(client,
                                      msg_update_callback=utils.NullPrinter(),
                                      log_wire=False):
+    msg = "Removing old compute policies created by CSE."
+    msg_update_callback.info(msg)
+    INSTALL_LOGGER.info(msg)
+
     cpm = \
         compute_policy_manager.ComputePolicyManager(client, log_wire=log_wire)
     all_cse_policy_names = []
     org_resources = client.get_org_list()
     for org_resource in org_resources:
         org = Org(client, resource=org_resource)
+        org_name = org.get_name()
+
+        msg = f"Processing Org : '{org_name}'"
+        msg_update_callback.info(msg)
+        INSTALL_LOGGER.info(msg)
+
         vdcs = org.list_vdcs()
         for vdc_data in vdcs:
-            # vdc_name = vdc_data['name']
+            vdc_name = vdc_data['name']
+
+            msg = f"Processing Org VDC: '{vdc_name}'"
+            msg_update_callback.info(msg)
+            INSTALL_LOGGER.info(msg)
+
             vdc_href = vdc_data['href']
             vdc = VDC(client, href=vdc_href)
             vdc_resource = vdc.get_resource()
@@ -1386,18 +1402,44 @@ def _remove_old_cse_compute_policies(client,
             vdc_sizing_policies = cpm.list_vdc_sizing_policies_on_vdc(vdc_id)
             if vdc_sizing_policies:
                 for policy in vdc_sizing_policies:
+                    msg = f"Processing Policy : '{policy['name']}' on Org VDC: '{vdc_name}'" # noqa: E501
+                    msg_update_callback.info(msg)
+                    INSTALL_LOGGER.info(msg)
+
                     all_cse_policy_names.append(policy['name'])
-                    cpm.remove_vdc_compute_policy_from_vdc(
-                        op_ctx=None, # ??
+                    task_data = cpm.remove_vdc_compute_policy_from_vdc(
                         ovdc_id=vdc_id,
                         compute_policy_href=policy['href'],
-                        remove_compute_policy_from_vms=True)
+                        force=True)
+                    fake_task_object = {'href': task_data['task_href']}
+                    client.get_task_monitor().wait_for_status(fake_task_object) # noqa: E501
+
+                    msg = f"Removed Policy : '{policy['name']}' from Org VDC: '{vdc_name}'" # noqa: E501
+                    msg_update_callback.general(msg)
+                    INSTALL_LOGGER.info(msg)
+            msg = f"Finished processing Org VDC: '{vdc_name}'"
+            msg_update_callback.general(msg)
+            INSTALL_LOGGER.info(msg)
+
+        msg = f"Finished processing Org : '{org_name}'"
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.info(msg)
 
     for policy_name in all_cse_policy_names:
         try:
+            msg = f"Deleting  Policy : '{policy_name}'"
+            msg_update_callback.info(msg)
+            INSTALL_LOGGER.info(msg)
+
             cpm.delete_vdc_compute_policy(policy_name=policy_name)
+
+            msg = f"Deleted  Policy : '{policy_name}'"
+            msg_update_callback.general(msg)
+            INSTALL_LOGGER.info(msg)
         except Exception:
-            pass
+            msg = f"Failed to deleted  Policy : '{policy_name}'"
+            msg_update_callback.error(msg)
+            INSTALL_LOGGER.error(msg)
 
 
 def _fix_cluster_metadata(client,

@@ -836,10 +836,12 @@ class ComputePolicyManager:
                             [vm for vm in vapp.get_all_vms()
                                 if self._get_vm_sizing_policy_id(vm) == compute_policy_id] # noqa: E501
                     vm_names = [vm.get('name') for vm in target_vms]
+
                     for cp_dict in self.list_compute_policies_on_vdc(vdc_id):
                         if cp_dict['name'] == _SYSTEM_DEFAULT_COMPUTE_POLICY:
                             system_default_href = cp_dict['href']
                             break
+
                     operation_msg = "Setting sizing policy to " \
                                     f"'{_SYSTEM_DEFAULT_COMPUTE_POLICY}' on " \
                                     f"{len(vm_names)} VMs. " \
