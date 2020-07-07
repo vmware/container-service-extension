@@ -160,7 +160,7 @@ class Status:
     def __init__(self, master_ip: str = None, phase: str = None,
                  cni: str = None, task_href: str = None,
                  kubernetes: str = None, docker_version: str = None,
-                 os: str = None, nodes: str = None):
+                 os: str = None, nodes: Nodes = None):
         self.master_ip = master_ip
         self.phase = phase
         self.cni = cni

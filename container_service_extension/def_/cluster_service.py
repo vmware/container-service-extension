@@ -413,20 +413,23 @@ class ClusterService(abstract_broker.AbstractBroker):
         for vm in vms:
             name = vm.get('name')
             ip = vapp.get_primary_ip(name)
-            size = None
+            sizing_class = None
             if hasattr(vm, 'ComputePolicy') and hasattr(vm.ComputePolicy,
                                                         'VmSizingPolicy'):
-                size = vm.ComputePolicy.VmSizingPolicy.get('name')
+                policy_name = vm.ComputePolicy.VmSizingPolicy.get('name')
+                sizing_class = compute_policy_manager.ComputePolicyManager.\
+                    get_policy_display_name(policy_name)
             if name.startswith(NodeType.MASTER):
-                master = def_models.Node(name=name, ip=ip, sizing_class=size)
+                master = def_models.Node(name=name, ip=ip, sizing_class=sizing_class)  # noqa: E501
             elif name.startswith(NodeType.WORKER):
                 workers.append(
-                    def_models.Node(name=name, ip=ip, sizing_class=size))
+                    def_models.Node(name=name, ip=ip,
+                                    sizing_class=sizing_class))
             elif name.startswith(NodeType.NFS):
                 exports = get_nfs_exports(self.context.sysadmin_client, ip,
                                           vapp, name)
                 nfs_nodes.append(def_models.NfsNode(name=name, ip=ip,
-                                                    sizing_class=size,
+                                                    sizing_class=sizing_class,
                                                     exports=exports))
         return def_models.Nodes(master=master, workers=workers, nfs=nfs_nodes)
 
