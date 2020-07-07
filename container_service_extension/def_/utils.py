@@ -9,9 +9,10 @@ import container_service_extension.exceptions as excptn
 
 # Defined Entity Framework related constants
 DEF_CSE_VENDOR = 'cse'
-DEF_NATIVE_INTERFACE_NSS = 'native'
+DEF_VMWARE_VENDOR = 'vmware'
+DEF_NATIVE_INTERFACE_NSS = 'k8s'
 DEF_NATIVE_INTERFACE_VERSION = '1.0.0'
-DEF_NATIVE_INTERFACE_NAME = 'nativeClusterInterface'
+DEF_NATIVE_INTERFACE_NAME = 'Kubernetes'
 DEF_INTERFACE_ID_PREFIX = 'urn:vcloud:interface'
 DEF_NATIVE_ENTITY_TYPE_NSS = 'nativeCluster'
 DEF_NATIVE_ENTITY_TYPE_VERSION = '1.0.0'
@@ -27,6 +28,7 @@ DEF_RESOLVED_STATE = 'RESOLVED'
 
 @unique
 class DefKey(str, Enum):
+    VMWARE_VENDOR = 'vmware'
     VENDOR = 'vendor'
     INTERFACE_NSS = 'interface_nss'
     INTERFACE_VERSION = 'interface_version'
@@ -39,6 +41,7 @@ class DefKey(str, Enum):
 
 MAP_API_VERSION_TO_KEYS = {
     35.0: {
+        DefKey.VMWARE_VENDOR: DEF_VMWARE_VENDOR,
         DefKey.VENDOR: DEF_CSE_VENDOR,
         DefKey.INTERFACE_NSS: DEF_NATIVE_INTERFACE_NSS,
         DefKey.INTERFACE_VERSION: DEF_NATIVE_INTERFACE_VERSION,
@@ -92,7 +95,7 @@ def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
 def get_registered_def_interface():
     """Fetch the native cluster interface loaded during server startup."""
     from container_service_extension.service import Service
-    return Service().get_native_cluster_interface()
+    return Service().get_kubernetes_interface()
 
 
 def get_registered_def_entity_type():

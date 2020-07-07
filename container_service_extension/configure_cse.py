@@ -1,6 +1,8 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import importlib
+import importlib.resources as pkg_resources
 import json
 
 import pika
@@ -523,27 +525,22 @@ def _register_def_schema(client: Client,
         schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
         keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(client.get_api_version())] # noqa: E501
         defKey = def_utils.DefKey
-        native_interface = def_models.\
+        kubernetes_interface = def_models.\
             DefInterface(name=keys_map[defKey.INTERFACE_NAME],
-                         vendor=keys_map[defKey.VENDOR],
+                         vendor=keys_map[defKey.VMWARE_VENDOR],
                          nss=keys_map[defKey.INTERFACE_NSS],
                          version=keys_map[defKey.INTERFACE_VERSION], # noqa: E501
                          readonly=False)
-        msg = ""
         try:
-            schema_svc.get_interface(native_interface.get_id())
-            msg = "defined entity interface already exists." \
-                  " Skipping defined entity interface creation"
+            # k8s interface should always be present
+            schema_svc.get_interface(kubernetes_interface.get_id())
         except cse_exception.DefSchemaServiceError:
-            # TODO handle this part only if the interface was not found
-            native_interface = schema_svc.create_interface(native_interface)
-            msg = "Successfully created defined entity interface"
-        msg_update_callback.general(msg)
-        INSTALL_LOGGER.debug(msg)
+            msg = "Failed to obtain built-in defined entity interface " \
+                  f"{keys_map[defKey.INTERFACE_NAME]}"
+            msg_update_callback.error(msg)
+            INSTALL_LOGGER.error(msg)
+            raise
 
-        # TODO stop-gap fix - find efficient way to import schema
-        import importlib
-        import importlib.resources as pkg_resources
         schema_module = importlib.import_module(
             f'{def_utils.DEF_SCHEMA_DIRECTORY}.{keys_map[defKey.ENTITY_TYPE_SCHEMA_VERSION]}') # noqa: E501
         schema_file = pkg_resources.open_text(schema_module, def_utils.DEF_ENTITY_TYPE_SCHEMA_FILE) # noqa: E501
@@ -554,7 +551,7 @@ def _register_def_schema(client: Client,
                           nss=keys_map[defKey.ENTITY_TYPE_NSS],
                           version=keys_map[defKey.ENTITY_TYPE_VERSION],
                           schema=json.load(schema_file),
-                          interfaces=[native_interface.get_id()],
+                          interfaces=[kubernetes_interface.get_id()],
                           readonly=False)
         msg = ""
         try:
