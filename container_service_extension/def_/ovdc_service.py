@@ -239,29 +239,26 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
         for cp_name in policies_to_delete:
             msg = f"Removing k8s provider {cp_name} from OVDC {ovdc_id}"
             logger.SERVER_LOGGER.debug(msg)
-            task.update(status=vcd_client.TaskStatus.RUNNING.value,
-                        namespace='vcloud.cse',
-                        operation=msg,
-                        operation_name=operation_name,
-                        details='',
-                        progress=None,
-                        owner_href=vdc.href,
-                        owner_name=vdc.name,
-                        owner_type=vcd_client.EntityType.VDC.value,
-                        user_href=user_href,
-                        user_name=operation_context.user.name,
-                        task_href=task_href,
-                        org_href=operation_context.user.org_href)
+            task_resource = \
+                task.update(status=vcd_client.TaskStatus.RUNNING.value,
+                            namespace='vcloud.cse',
+                            operation=msg,
+                            operation_name=operation_name,
+                            details='',
+                            progress=None,
+                            owner_href=vdc.href,
+                            owner_name=vdc.name,
+                            owner_type=vcd_client.EntityType.VDC.value,
+                            user_href=user_href,
+                            user_name=operation_context.user.name,
+                            task_href=task_href,
+                            org_href=operation_context.user.org_href)
             policy = cpm.get_vdc_compute_policy(cp_name, is_placement_policy=True)  # noqa: E501
-            cpm.remove_compute_policy_from_vdc(task=task,
-                                               task_href=task_href,
-                                               user_href=user_href,
-                                               org_href=operation_context.user.org_href,  # noqa: E501
-                                               ovdc_id=ovdc_id,
-                                               vdc=vdc,
-                                               compute_policy_href=policy['href'],  # noqa: E501
-                                               remove_cp_from_vms_on_disable=remove_cp_from_vms_on_disable, # noqa: E501
-                                               is_placement_policy=True)
+            cpm.remove_compute_policy_from_vdc_sync(vdc=vdc,
+                                                    compute_policy_href=policy['href'],  # noqa: E501
+                                                    force=remove_cp_from_vms_on_disable, # noqa: E501
+                                                    is_placement_policy=True,
+                                                    task_resource=task_resource) # noqa: E501
         msg = f"Successfully updated OVDC: {vdc.name}"
         logger.SERVER_LOGGER.debug(msg)
         task.update(status=vcd_client.TaskStatus.SUCCESS.value,

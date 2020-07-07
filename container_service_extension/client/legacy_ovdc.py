@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from pyvcloud.vcd import utils
+import pyvcloud.vcd.exceptions as vcd_exceptions
 
 from container_service_extension.client.response_processor import \
     process_response
@@ -32,7 +33,8 @@ class LegacyOvdc:
     # to support metadata way of enabling for native clusters
     def update_ovdc_for_k8s(self, ovdc_name, k8s_provider, **kwargs):
         """Enable/Disable ovdc for native workflow."""
-        raise NotImplementedError
+        msg = "Operation not supported; Under implementation"
+        raise vcd_exceptions.OperationNotSupportedException(msg)
 
     def update_ovdc_for_pks(self,
                             enable,

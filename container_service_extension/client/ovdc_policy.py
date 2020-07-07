@@ -4,6 +4,7 @@
 from dataclasses import asdict
 
 from pyvcloud.vcd import utils
+import pyvcloud.vcd.exceptions as vcd_exceptions
 
 from container_service_extension.client.response_processor import \
     process_response
@@ -119,7 +120,8 @@ class PolicyBasedOvdc:
         """
         # TODO(compute-policy for v35): Revisit after decision on
         # support for api version 35
-        raise NotImplementedError
+        msg = "Operation not supported; Under implementation"
+        raise vcd_exceptions.OperationNotSupportedException(msg)
         method = RequestMethod.PUT
         ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
@@ -152,7 +154,8 @@ class PolicyBasedOvdc:
         """
         # TODO(compute-policy for v35): Revisit after decision on
         # support for api version 35
-        raise NotImplementedError
+        msg = "Operation not supported; Under implementation"
+        raise vcd_exceptions.OperationNotSupportedException(msg)
         method = RequestMethod.GET
         ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)

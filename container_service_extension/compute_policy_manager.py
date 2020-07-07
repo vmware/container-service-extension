@@ -721,7 +721,7 @@ class ComputePolicyManager:
                 force=force)
 
             task.update(
-                status=vcd_client.TaskStatus.ERROR.value,
+                status=vcd_client.TaskStatus.SUCCESS.value,
                 namespace='vcloud.cse',
                 operation=f"Removed compute policy (href: "
                           f"{compute_policy_href}) from org VDC '{vdc.name}'",  # noqa: E501
