@@ -22,8 +22,8 @@ class DefEntityCluster:
     """
 
     def __init__(self, client):
-        self.client = client
-        self.cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
+        self._client = client
+        self._cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
             client=client, logger_debug=CLIENT_LOGGER)
 
     def get_clusters(self, vdc=None, org=None, **kwargs):

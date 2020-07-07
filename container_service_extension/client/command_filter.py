@@ -12,12 +12,6 @@ import container_service_extension.client.utils as client_utils
 from container_service_extension.logger import CLIENT_LOGGER
 
 
-class ClusterKind(str, Enum):
-    NATIVE = 'native'
-    TKG = 'tkg'
-    TKG_PLUS = 'tkg-plus'
-
-
 @unique
 class GroupKey(str, Enum):
     CLUSTER = 'cluster'

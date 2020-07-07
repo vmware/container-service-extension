@@ -8,6 +8,7 @@ import click
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
 from vcd_cli.vcd import vcd
+import yaml
 
 
 from container_service_extension.client import pks
@@ -102,6 +103,10 @@ Examples
 \b
     vcd cse cluster list -vdc ovdc1
         Display clusters in vdc 'ovdc1'.
+\b
+    vcd cse cluster apply input_spec.yaml
+        Apply the configuration changes defined in the 'input_spec.yaml'
+        to create new cluster or update the existing cluster
 \b
     vcd cse cluster create mycluster --network mynetwork
         Create a Kubernetes cluster named 'mycluster'.
@@ -551,9 +556,10 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
 
 
 @cluster_group.command('apply',
-                       short_help='apply the configuration to Defined Entity'
-                                  'Resource by filename; create resource if'
-                                  ' doesn\'t exist')
+                       help="Example:vcd cse cluster apply input_spec.yaml",
+                       short_help='apply the cluster configuration defined '
+                                  'in the file to either create new a cluster '
+                                  'or update the existing cluster')
 @click.pass_context
 @click.argument('cluster_config_file_path',
                 metavar='CLUSTER_CONFIG_FILE_PATH',
@@ -563,8 +569,23 @@ def apply(ctx, cluster_config_file_path):
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
-        cluster = Cluster(client)
-        cluster.apply(cluster_config_file_path)
+        with open(cluster_config_file_path) as f:
+            cluster_config = yaml.safe_load(f) or {}
+
+        if not cluster_config.get('metadata', {}).get('ovdc_name'):
+            vdc = ctx.obj['profiles'].get('vdc_in_use')
+            if not vdc:
+                raise Exception("Virtual datacenter context is not set. "
+                                "Use either command 'vcd vdc use' or option "
+                                "'--vdc' to set the vdc context.")
+            cluster_config['metadata']['ovdc_name'] = vdc
+        if not cluster_config.get('metadata', {}).get('org_name'):
+            cluster_config['metadata']['org_name'] = ctx.obj['profiles'].get('org_in_use')  # noqa: E501
+
+        cluster = Cluster(client, cluster_entity_kind=cluster_config.get('kind'))  # noqa: E501
+        result = cluster.apply(cluster_config)
+        stdout(yaml.dump(result), ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))

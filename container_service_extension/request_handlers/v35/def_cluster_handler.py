@@ -33,14 +33,8 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
 def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster resize operation.
 
-    Required data: cluster_name, num_nodes
-    Optional data and default values: org_name=None, ovdc_name=None
-    Conditional data and default values:
-            network_name, rollback=True
-
-    (data validation handled in broker)
-
-    :return: Dict
+    :return: Defined entity of the native cluster
+    :rtype: container_service_extension.def_.models.DefEntity
     """
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
@@ -60,7 +54,6 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    raise NotImplementedError
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
     return svc.delete_cluster(cluster_id)
@@ -103,30 +96,28 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_UPGRADE_PLAN)  # noqa: E501
 @request_utils.v35_api_exception_handler
-def cluster_upgrade_plan(request_data, op_ctx: ctx.OperationContext):
+def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
     """Request handler for cluster upgrade-plan operation.
-
-    data validation handled in broker
 
     :return: List[Tuple(str, str)]
     """
-    raise NotImplementedError
     svc = cluster_svc.ClusterService(op_ctx)
-    return svc.get_cluster_upgrade_plan(data=request_data)
+    return svc.get_cluster_upgrade_plan(data[RequestKey.CLUSTER_ID])
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_UPGRADE)
 @request_utils.v35_api_exception_handler
-def cluster_upgrade(request_data, op_ctx: ctx.OperationContext):
+def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     """Request handler for cluster upgrade operation.
 
     data validation handled in broker
 
     :return: Dict
     """
-    raise NotImplementedError
     svc = cluster_svc.ClusterService(op_ctx)
-    return svc.upgrade_cluster(data=request_data)
+    cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
+    cluster_id = data[RequestKey.CLUSTER_ID]
+    return svc.upgrade_cluster(cluster_id, cluster_entity_spec)
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_LIST)
