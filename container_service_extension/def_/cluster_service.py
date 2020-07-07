@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import copy
+from dataclasses import asdict
 import random
 import re
 import string
@@ -518,6 +519,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         :param str cluster_id: id of the cluster to be upgraded
         :param def_models.ClusterEntity upgrade_spec: cluster spec with new
             kubernetes distribution and revision
+
+        :return: Defined entity with upgrade in progress set
+        :rtype: def_models.DefEntity representing the cluster
         """
         curr_entity = self.entity_svc.get_entity(cluster_id)
         cluster_name = curr_entity.entity.metadata.cluster_name
@@ -576,10 +580,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.context.is_async = True
         self._upgrade_cluster_async(cluster_id=cluster_id,
                                     template=template)
-        return {
-            'cluster_name': cluster_name,
-            'task_href': self.task_resource.get('href')
-        }
+        return asdict(curr_entity)
 
     def get_node_info(self, **kwargs):
         """Get node metadata as dictionary.
