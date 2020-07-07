@@ -415,7 +415,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         # Get the existing defined entity for the given cluster id
         curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
         name: str = curr_entity.name
-        kind: str = curr_entity.entity.kind
         curr_worker_count: int = curr_entity.entity.spec.workers.count
         state: str = curr_entity.state
         phase: DefEntityPhase = DefEntityPhase.from_phase(
@@ -458,8 +457,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         state: str = curr_entity.state
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_entity.entity.status.phase)
-        org_name = curr_entity.entity.metadata.org_name
-        ovdc_name = curr_entity.entity.metadata.ovdc_name
 
         # Check if cluster is in a valid state
         if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
@@ -652,7 +649,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # Resize using the template with which cluster was originally created.
         template_name = curr_entity.entity.spec.k8_distribution.template_name
-        template_revision = curr_entity.entity.spec.k8_distribution.template_revision  #
+        template_revision = curr_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
 
         # check that requested/default template is valid
         get_template(name=template_name, revision=template_revision)
