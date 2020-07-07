@@ -100,7 +100,7 @@ class ComputePolicyManager:
                 break
             for policy in response_body['values']:
                 cp_name = policy['name']
-                policy['display_name'] = self._get_policy_display_name(cp_name)
+                policy['display_name'] = self.get_policy_display_name(cp_name)
                 yield policy
 
     def get_all_vdc_compute_policies(self, filters=None):
@@ -141,7 +141,7 @@ class ComputePolicyManager:
                 break
             for policy in response_body['values']:
                 cp_name = policy['name']
-                policy['display_name'] = self._get_policy_display_name(cp_name)
+                policy['display_name'] = self.get_policy_display_name(cp_name)
                 yield policy
 
     def get_pvdc_compute_policy(self, policy_name):
@@ -228,7 +228,7 @@ class ComputePolicyManager:
             cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=resource.PVDC_COMPUTE_POLICIES,
             payload=policy_info)
-        pvdc_policy['display_name'] = self._get_policy_display_name(pvdc_policy['name']) # noqa: E501
+        pvdc_policy['display_name'] = self.get_policy_display_name(pvdc_policy['name']) # noqa: E501
         pvdc_policy['href'] = self._get_policy_href(pvdc_policy['id'],
                                                     is_pvdc_compute_policy=True) # noqa: E501
         return pvdc_policy
@@ -286,7 +286,7 @@ class ComputePolicyManager:
             resource_url_relative_path=resource.VDC_COMPUTE_POLICIES,
             payload=policy_info)
 
-        created_policy['display_name'] = self._get_policy_display_name(created_policy['name']) # noqa: E501
+        created_policy['display_name'] = self.get_policy_display_name(created_policy['name']) # noqa: E501
         created_policy['href'] = self._get_policy_href(created_policy['id'])
         return created_policy
 
@@ -355,7 +355,7 @@ class ComputePolicyManager:
                 payload=payload)
 
             updated_policy['display_name'] = \
-                self._get_policy_display_name(updated_policy['name'])
+                self.get_policy_display_name(updated_policy['name'])
             updated_policy['href'] = policy_info['href']
             return updated_policy
 
@@ -448,7 +448,7 @@ class ComputePolicyManager:
                 break
             for cp in response_body['values']:
                 policy = {
-                    'name': self._get_policy_display_name(cp.get('name')),
+                    'name': self.get_policy_display_name(cp.get('name')),
                     'href': self._get_policy_href(cp.get('id')),
                     'id': cp.get('id')
                 }
@@ -581,7 +581,8 @@ class ComputePolicyManager:
         """
         return f"{cloudapi_constants.CSE_COMPUTE_POLICY_PREFIX}{policy_name}"
 
-    def _get_policy_display_name(self, policy_name):
+    @staticmethod
+    def get_policy_display_name(policy_name):
         """Remove cse specific prefix from the given policy name.
 
         :param str policy_name: name of the policy

@@ -1,4 +1,16 @@
 {
+        "definitions": {
+            "node": {
+                "type": "object",
+                "required": ["name", "ip"],
+                "properties": {
+                    "name": {"type": "string"},
+                    "ip": {"type": "string"},
+                    "sizing_class": {"type": "string"}
+                },
+                "additionalproperties": true
+            }
+        },
         "type": "object",
         "required": [
             "kind",
@@ -23,9 +35,7 @@
                     "workers": {
                         "type": "object",
                         "required": [
-                            "count",
-                            "sizing_class",
-                            "storage_profile"
+                            "count"
                         ],
                         "properties": {
                             "count": {
@@ -44,9 +54,7 @@
                     "control_plane": {
                         "type": "object",
                         "required": [
-                            "count",
-                            "sizing_class",
-                            "storage_profile"
+                            "count"
                         ],
                         "properties": {
                             "count": {
@@ -63,25 +71,25 @@
                         }
                     },
                     "settings": {
-                "type": "object",
-                "required": [
-                    "network"
-                ],
-                "properties": {
-                    "network": {
-                        "type": "string"
+                        "type": "object",
+                        "required": [
+                            "network"
+                        ],
+                        "properties": {
+                            "network": {
+                                "type": "string"
+                            },
+                            "ssh_key": {
+                                "type": "string"
+                            },
+                            "enable_nfs": {
+                                "type": "boolean"
+                            },
+                            "rollback_on_failure": {
+                                "type": "boolean"
+                            }
+                        }
                     },
-                    "ssh_key": {
-                        "type": "string"
-                    },
-                    "enable_nfs": {
-                        "type": "boolean"
-                    },
-                    "rollback_on_failure": {
-                        "type": "boolean"
-                    }
-                }
-            },
                     "k8_distribution": {
                         "type": "object",
                         "required": [
@@ -102,7 +110,7 @@
             "status": {
                 "type": "object",
                 "required": [
-                    "master_ip"
+                    "master_ip", "nodes"
                 ],
                 "properties": {
                     "phase": {
@@ -122,7 +130,25 @@
                     },
                     "docker_version": {
                         "type": "string"
-                    }
+                    },
+                    "nodes": {
+                        "type": "object",
+                        "required": ["master"],
+                        "properties": {
+                            "master": {
+                                "$ref": "#/definitions/node"
+                            },
+                            "workers": {
+                                "type": "array",
+                                "items": {"$ref": "#/definitions/node"},
+                                "default": []
+                            },
+                            "nfs": {
+                                "type": "array",
+                                "items": {"$ref": "#/definitions/node"},
+                                "default": []
+                            }
+                        }
                 },
                 "additionalproperties": true
             },

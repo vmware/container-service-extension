@@ -1,8 +1,8 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-
 from dataclasses import dataclass
+from typing import List
 
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.utils as utils
@@ -120,7 +120,33 @@ class Settings:
 
 
 @dataclass()
+class Node:
+    name: str
+    ip: str
+    sizing_class: str = None
+
+
+@dataclass()
+class NfsNode(Node):
+    exports: str = None
+
+
+@dataclass()
+class Nodes:
+    master: Node = None
+    workers: List[Node] = None
+    nfs: List[NfsNode] = None
+
+    def __init__(self, master: Node = None, workers: List[Node] = None,
+                 nfs: List[Node] = None):
+        self.master = Node(**master) if isinstance(master, dict) else master
+        self.workers = [Node(**w) if isinstance(w, dict) else w for w in workers]  # noqa: E501
+        self.nfs = [NfsNode(**n) if isinstance(n, dict) else n for n in nfs]
+
+
+@dataclass()
 class Status:
+    # TODO(DEF) Remove master_ip once nodes is implemented.
     master_ip: str = None
     phase: str = None
     cni: str = None
@@ -129,6 +155,20 @@ class Status:
     cni: str = None
     docker_version: str = None
     os: str = None
+    nodes: Nodes = None
+
+    def __init__(self, master_ip: str = None, phase: str = None,
+                 cni: str = None, task_href: str = None,
+                 kubernetes: str = None, docker_version: str = None,
+                 os: str = None, nodes: Nodes = None):
+        self.master_ip = master_ip
+        self.phase = phase
+        self.cni = cni
+        self.task_href = task_href
+        self.kubernetes = kubernetes
+        self.docker_version = docker_version
+        self.os = os
+        self.nodes = Nodes(**nodes) if isinstance(nodes, dict) else nodes
 
 
 @dataclass()
