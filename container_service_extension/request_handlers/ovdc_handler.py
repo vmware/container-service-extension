@@ -6,14 +6,17 @@ import copy
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.exceptions as vcd_e
 import pyvcloud.vcd.org as vcd_org
+import pyvcloud.vcd.task as vcd_task
 import pyvcloud.vcd.utils as pyvcd_utils
 
 import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
 import container_service_extension.exceptions as e
+import container_service_extension.logger as logger
 import container_service_extension.operation_context as ctx
 import container_service_extension.ovdc_utils as ovdc_utils
 import container_service_extension.pksbroker as pksbroker
 import container_service_extension.pksbroker_manager as pksbroker_manager
+import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
@@ -305,19 +308,22 @@ def ovdc_compute_policy_update(request_data,
             # TODO: fix remove_compute_policy by implementing a proper way
             # for calling async methods without having to pass op_ctx
             # outside handlers.
-            task_href = cpm.remove_vdc_compute_policy_from_vdc(
-                op_ctx,
+            op_ctx.is_async = True
+            response = cpm.remove_vdc_compute_policy_from_vdc(
                 ovdc_id,
                 cp_href,
-                remove_compute_policy_from_vms=remove_compute_policy_from_vms)
+                force=remove_compute_policy_from_vms)
+            # Follow task_href to completion in a different thread and end
+            # operation context
+            _follow_task(op_ctx, response['task_href'], ovdc_id)
             # Record telemetry data
             record_user_action(CseOperation.OVDC_COMPUTE_POLICY_REMOVE)
-            return task_href
+            return response
 
         raise e.BadRequestError("Unsupported compute policy action")
 
     except Exception as err:
-        # Record telemetry data failure
+        # Record telemetry data failure`
         if action == ComputePolicyAction.ADD:
             record_user_action(CseOperation.OVDC_COMPUTE_POLICY_ADD,
                                status=OperationStatus.FAILED)
@@ -325,3 +331,36 @@ def ovdc_compute_policy_update(request_data,
             record_user_action(CseOperation.OVDC_COMPUTE_POLICY_REMOVE,
                                status=OperationStatus.FAILED)
         raise err
+
+
+@utils.run_async
+def _follow_task(op_ctx: ctx.OperationContext, task_href: str, ovdc_id: str):
+    try:
+        task = vcd_task.Task(client=op_ctx.sysadmin_client)
+        session = op_ctx.sysadmin_client.get_vcloud_session()
+        vdc = vcd_utils.get_vdc(op_ctx.sysadmin_client, vdc_id=ovdc_id)
+        org = vcd_utils.get_org(op_ctx.sysadmin_client)
+        user_name = session.get('user')
+        user_href = org.get_user(user_name).get('href')
+        msg = "Remove ovdc compute policy"
+        # TODO(pyvcloud): Add method to retireve task from task href
+        t = task.update(
+            status=vcd_task.TaskStatus.RUNNING.value,
+            namespace='vcloud.cse',
+            operation=msg,
+            operation_name=msg,
+            details='',
+            progress=None,
+            owner_href=vdc.href,
+            owner_name=vdc.name,
+            owner_type=vcd_client.EntityType.VDC.value,
+            user_href=user_href,
+            user_name=user_name,
+            org_href=op_ctx.user.org_href,
+            task_href=task_href)
+        op_ctx.sysadmin_client.get_task_monitor().wait_for_status(t)
+    except Exception as err:
+        logger.SERVER_LOGGER.error(f"{err}")
+    finally:
+        if op_ctx.sysadmin_client:
+            op_ctx.end()
