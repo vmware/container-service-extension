@@ -921,8 +921,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             # TODO use cluster status field to get the master and worker nodes
             cluster_vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
             all_node_names = [vm.get('name') for vm in cluster_vapp.get_all_vms()] # noqa: E501
-            master_node_names = [vm_name.startswith(NodeType.MASTER) for vm_name in all_node_names] # noqa: E501
-            worker_node_names = [vm_name.startswith(NodeType.WORKER) for vm_name in all_node_names] # noqa: E501
+            master_node_names = [vm_name for vm_name in all_node_names if vm_name.startswith(NodeType.MASTER)] # noqa: E501
+            worker_node_names = [vm_name for vm_name in all_node_names if vm_name.startswith(NodeType.WORKER)] # noqa: E501
 
             template_name = template[LocalTemplateKey.NAME]
             template_revision = template[LocalTemplateKey.REVISION]
