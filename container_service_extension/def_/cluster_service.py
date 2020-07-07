@@ -93,50 +93,40 @@ class ClusterService(abstract_broker.AbstractBroker):
         # Gets external_id (vapp id) from entity
         # Gets to master node and gets the config
 
-    def get_cluster_upgrade_plan(self, **kwargs):
+    def get_cluster_upgrade_plan(self, cluster_id: str):
         """Get the template names/revisions that the cluster can upgrade to.
 
-        **data: Required
-            Required data: cluster_name
-            Optional data and default values: org_name=None, ovdc_name=None
-        **telemetry: Optional
-
+        :param str cluster_id:
         :return: A list of dictionaries with keys defined in LocalTemplateKey
 
         :rtype: List[Dict]
         """
-        # Yet to be implemented
-        raise NotImplementedError
-        data = kwargs[KwargKey.DATA]
-        required = [
-            RequestKey.CLUSTER_NAME
-        ]
-        defaults = {
-            RequestKey.ORG_NAME: None,
-            RequestKey.OVDC_NAME: None
-        }
-        validated_data = {**defaults, **data}
-        req_utils.validate_payload(validated_data, required)
+        curr_entity = self.entity_svc.get_entity(cluster_id)
 
-        cluster = get_cluster(self.context.client,
-                              validated_data[RequestKey.CLUSTER_NAME],
-                              org_name=validated_data[RequestKey.ORG_NAME],
-                              ovdc_name=validated_data[RequestKey.OVDC_NAME])
+        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
+        #  based clusters
+        # cse_params = copy.deepcopy(validated_data)
+        # cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
+        # record_user_action_details(cse_operation=CseOperation.CLUSTER_UPGRADE_PLAN, cse_params=cse_params)  # noqa: E501
 
-        if kwargs.get(KwargKey.TELEMETRY, True):
-            # Record the telemetry data
-            cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
-            record_user_action_details(cse_operation=CseOperation.CLUSTER_UPGRADE_PLAN, cse_params=cse_params)  # noqa: E501
+        return self._get_cluster_upgrade_plan(curr_entity.entity.spec.k8_distribution.template_name, # noqa: E501
+                                              curr_entity.entity.spec.k8_distribution.template_revision) # noqa: E501
 
-        src_name = cluster['template_name']
-        src_rev = cluster['template_revision']
+    def _get_cluster_upgrade_plan(self, source_template_name,
+                                  source_template_revision) -> List[dict]: # noqa: E501
+        """Get list of templates that a given cluster can upgrade to.
 
+        :param str source_template_name:
+        :param str source_template_revision:
+        :return: List of dictionary containing templates
+        :rtype: List[dict]
+        """
         upgrades = []
         config = utils.get_server_runtime_config()
         for t in config['broker']['templates']:
-            if src_name in t[LocalTemplateKey.UPGRADE_FROM]:
-                if t[LocalTemplateKey.NAME] == src_name and int(t[LocalTemplateKey.REVISION]) <= int(src_rev): # noqa: E501
+            if source_template_name in t[LocalTemplateKey.UPGRADE_FROM]:
+                if t[LocalTemplateKey.NAME] == source_template_name and \
+                        int(t[LocalTemplateKey.REVISION]) <= int(source_template_revision): # noqa: E501
                     continue
                 upgrades.append(t)
 
@@ -489,80 +479,78 @@ class ClusterService(abstract_broker.AbstractBroker):
         vdc_resource = org.get_vdc(name=ovdc_name)
         return vdc_resource.get('href')
 
-    def upgrade_cluster(self, **kwargs):
+    def upgrade_cluster(self, cluster_id: str,
+                        upgrade_spec: def_models.ClusterEntity):
         """Start the upgrade cluster operation.
 
-        Validates data for 'upgrade cluster' operation.
         Upgrading cluster is an asynchronous task, so the returned
         `result['task_href']` can be polled to get updates on task progress.
 
-        **data: Required
-            Required data: cluster_name, template_name, template_revision
-            Optional data and default values: org_name=None, ovdc_name=None
-        **telemetry: Optional
-        """
-        raise NotImplementedError
-        data = kwargs[KwargKey.DATA]
-        required = [
-            RequestKey.CLUSTER_NAME,
-            RequestKey.TEMPLATE_NAME,
-            RequestKey.TEMPLATE_REVISION
-        ]
-        defaults = {
-            RequestKey.ORG_NAME: None,
-            RequestKey.OVDC_NAME: None
-        }
-        validated_data = {**defaults, **data}
-        req_utils.validate_payload(validated_data, required)
+        :param str cluster_id: id of the cluster to be upgraded
+        :param def_models.ClusterEntity upgrade_spec: cluster spec with new
+            kubernetes distribution and revision
 
-        cluster_name = validated_data[RequestKey.CLUSTER_NAME]
-        template_name = validated_data[RequestKey.TEMPLATE_NAME]
-        template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
+        :return: Defined entity with upgrade in progress set
+        :rtype: def_models.DefEntity representing the cluster
+        """
+        curr_entity = self.entity_svc.get_entity(cluster_id)
+        cluster_name = curr_entity.entity.metadata.cluster_name
+        new_template_name = upgrade_spec.spec.k8_distribution.template_name
+        new_template_revision = upgrade_spec.spec.k8_distribution.template_revision # noqa: E501
+
+        # check if cluster is in a valid state
+        phase: DefEntityPhase = DefEntityPhase.from_phase(
+            curr_entity.entity.status.phase)
+        state: str = curr_entity.state
+        if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
+            raise e.CseServerError(
+                f"Cluster {cluster_name} with id {cluster_id} is not in a "
+                f"valid state to be deleted. Please contact administrator.")
 
         # check that the specified template is a valid upgrade target
         template = {}
-        valid_templates = self.get_cluster_upgrade_plan(data=validated_data,
-                                                        telemetry=False)
+        valid_templates = self._get_cluster_upgrade_plan(curr_entity.entity.spec.k8_distribution.template_name, # noqa: E501
+                                                         curr_entity.entity.spec.k8_distribution.template_revision) # noqa: E501
+
         for t in valid_templates:
-            if t[LocalTemplateKey.NAME] == template_name and t[LocalTemplateKey.REVISION] == str(template_revision): # noqa: E501
+            if t[LocalTemplateKey.NAME] == new_template_name and \
+                    t[LocalTemplateKey.REVISION] == str(new_template_revision): # noqa: E501
                 template = t
                 break
         if not template:
             # TODO all of these e.CseServerError instances related to request
             # should be changed to BadRequestError (400)
             raise e.CseServerError(
-                f"Specified template/revision ({template_name} revision "
-                f"{template_revision}) is not a valid upgrade target for "
+                f"Specified template/revision ({new_template_name} revision "
+                f"{new_template_revision}) is not a valid upgrade target for "
                 f"cluster '{cluster_name}'.")
 
         # get cluster data (including node names) to pass to async function
-        cluster = self.get_cluster_info(data=validated_data, telemetry=False)
 
-        if kwargs.get(KwargKey.TELEMETRY, True):
-            # Record the telemetry data
-            cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
-            record_user_action_details(cse_operation=CseOperation.CLUSTER_UPGRADE, # noqa: E501
-                                       cse_params=cse_params)
+        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
+        #  based clusters
 
         msg = f"Upgrading cluster '{cluster_name}' " \
-              f"software to match template {template_name} (revision " \
-              f"{template_revision}): Kubernetes: " \
-              f"{cluster['kubernetes_version']} -> " \
+              f"software to match template {new_template_name} (revision " \
+              f"{new_template_revision}): Kubernetes: " \
+              f"{curr_entity.entity.status.kubernetes} -> " \
               f"{template[LocalTemplateKey.KUBERNETES_VERSION]}, Docker-CE: " \
-              f"{cluster['docker_version']} -> " \
+              f"{curr_entity.entity.status.docker_version} -> " \
               f"{template[LocalTemplateKey.DOCKER_VERSION]}, CNI: " \
-              f"{cluster['cni']} {cluster['cni_version']} -> " \
+              f"{curr_entity.entity.status.cni} -> " \
               f"{template[LocalTemplateKey.CNI_VERSION]}"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-        LOGGER.info(f"{msg} ({cluster['vapp_href']})")
-        self.context.is_async = True
-        self._upgrade_cluster_async(cluster=cluster, template=template)
+        LOGGER.info(f"{msg} ({curr_entity.externalId})")
 
-        return {
-            'cluster_name': cluster_name,
-            'task_href': self.task_resource.get('href')
-        }
+        curr_entity.entity.status.phase = str(
+            DefEntityPhase(DefEntityOperation.UPGRADE, DefEntityOperationStatus.IN_PROGRESS)) # noqa: E501
+        curr_entity.entity.status.task_href = self.task_resource.get('href')
+        curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)
+
+        self.context.is_async = True
+        self._upgrade_cluster_async(cluster_id=cluster_id,
+                                    template=template)
+        return dataclasses.asdict(curr_entity)
 
     def get_node_info(self, **kwargs):
         """Get node metadata as dictionary.
@@ -922,24 +910,33 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     # all parameters following '*args' are required and keyword-only
     @utils.run_async
-    def _upgrade_cluster_async(self, *args, cluster, template):
+    def _upgrade_cluster_async(self, *args,
+                               cluster_id: str,
+                               template):
         try:
-            cluster_name = cluster['name']
-            master_node_names = [n['name'] for n in cluster['master_nodes']]
-            worker_node_names = [n['name'] for n in cluster['nodes']]
-            all_node_names = master_node_names + worker_node_names
-            vapp_href = cluster['vapp_href']
+            curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id) # noqa: E501
+            cluster_name = curr_entity.entity.metadata.cluster_name
+            vapp_href = curr_entity.externalId
+
+            # TODO use cluster status field to get the master and worker nodes
+            cluster_vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
+            all_node_names = [vm.get('name') for vm in cluster_vapp.get_all_vms()] # noqa: E501
+            master_node_names = [vm_name for vm_name in all_node_names if vm_name.startswith(NodeType.MASTER)] # noqa: E501
+            worker_node_names = [vm_name for vm_name in all_node_names if vm_name.startswith(NodeType.WORKER)] # noqa: E501
+
             template_name = template[LocalTemplateKey.NAME]
             template_revision = template[LocalTemplateKey.REVISION]
 
             # semantic version doesn't allow leading zeros
             # docker's version format YY.MM.patch allows us to directly use
             # lexicographical string comparison
-            c_docker = cluster['docker_version']
+            c_docker = curr_entity.entity.status.docker_version
             t_docker = template[LocalTemplateKey.DOCKER_VERSION]
-            c_k8s = semver.Version(cluster['kubernetes_version'])
+            k8s_details = curr_entity.entity.status.kubernetes.split(' ')
+            c_k8s = semver.Version(k8s_details[1])
             t_k8s = semver.Version(template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
-            c_cni = semver.Version(cluster['cni_version'])
+            cni_details = curr_entity.entity.status.cni.split(' ')
+            c_cni = semver.Version(cni_details[1])
             t_cni = semver.Version(template[LocalTemplateKey.CNI_VERSION])
 
             upgrade_docker = t_docker > c_docker
@@ -1015,8 +1012,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                                     all_node_names, script)
 
             if upgrade_cni:
-                msg = f"Applying CNI ({cluster['cni']} {c_cni} -> {t_cni}) " \
-                      f"in master node {master_node_names}"
+                msg = "Applying CNI " \
+                      f"({curr_entity.entity.status.cni} " \
+                      f"-> {t_cni}) in master node {master_node_names}"
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
@@ -1042,9 +1040,27 @@ class ClusterService(abstract_broker.AbstractBroker):
                 ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
                 ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION] # noqa: E501
             }
-            vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
-            task = vapp.set_multiple_metadata(metadata)
+
+            task = cluster_vapp.set_multiple_metadata(metadata)
             self.context.client.get_task_monitor().wait_for_status(task)
+
+            # update defined entity of the cluster
+            curr_entity.entity.spec.k8_distribution.template_name = \
+                template[LocalTemplateKey.NAME]
+            curr_entity.entity.spec.k8_distribution.template_revision = \
+                int(template[LocalTemplateKey.REVISION])
+            curr_entity.entity.status.cni = \
+                _create_k8s_software_string(template[LocalTemplateKey.CNI],
+                                            template[LocalTemplateKey.CNI_VERSION]) # noqa: E501
+            curr_entity.entity.status.kubernetes = \
+                _create_k8s_software_string(template[LocalTemplateKey.KUBERNETES], # noqa: E501
+                                            template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
+            curr_entity.entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
+            curr_entity.entity.status.os = template[LocalTemplateKey.OS]
+            curr_entity.entity.status.phase = str(
+                DefEntityPhase(DefEntityOperation.UPGRADE,
+                               DefEntityOperationStatus.SUCCEEDED))
+            self.entity_svc.update_entity(curr_entity.id, curr_entity)
 
             msg = f"Successfully upgraded cluster '{cluster_name}' software " \
                   f"to match template {template_name} (revision " \
@@ -1058,6 +1074,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                   f"'{cluster_name}': {err}"
             LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR, error_message=msg)
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.UPGRADE)
         finally:
             self.context.end()
 
