@@ -208,6 +208,20 @@ class DefEntityService():
         return DefEntity(**response_body)
 
     @handle_entity_service_exception
+    def get_entity_by_name(self, entity_name: str, filters: dict = None) -> DefEntity:  # noqa: E501
+        """Get the defined entity given entity name.
+
+        :param str entity_name: name of the entity.
+        :param dict filters: key-value pairs representing filter options
+        :return: Details of the entity.
+        :rtype: DefEntity
+        """
+        entity_list = self.list_entities(filters=filters)
+        for def_entity in entity_list:
+            if entity_name == def_entity.name:
+                return def_entity
+
+    @handle_entity_service_exception
     def get_native_entity_by_name(self, name: str) -> DefEntity:
         """Get Native cluster defined entity by its name.
 

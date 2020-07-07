@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from container_service_extension.client.response_processor import process_response # noqa: E501
+from container_service_extension.logger import CLIENT_LOGGER
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
 
@@ -31,7 +32,22 @@ class LegacyNativeCluster:
             self.client._session,
             accept_type='application/json',
             params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
-        return process_response(response)
+        result = process_response(response)
+        CLIENT_LOGGER.debug(result)
+        clusters = []
+        for c in result:
+            # TODO cluster api response keys need to be more well defined
+            cluster = {
+                'Name': c.get('name') or 'N/A',
+                'VDC': c.get('vdc') or 'N/A',
+                'Org': c.get('org_name') or 'N/A',
+                'K8s Runtime': c.get('k8s_type') or 'N/A',
+                'K8s Version': c.get('k8s_version') or 'N/A',
+                'Status': c.get('status') or 'N/A',
+                'Provider': c.get('k8s_provider') or 'N/A',
+            }
+            clusters.append(cluster)
+        return clusters
 
     def get_cluster_info(self, name, org=None, vdc=None):
         method = RequestMethod.GET

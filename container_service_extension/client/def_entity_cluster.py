@@ -1,9 +1,11 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import pyvcloud.vcd.exceptions as vcd_exceptions
 
-from pyvcloud.vcd.exceptions import OperationNotSupportedException
-
+import container_service_extension.def_.entity_service as def_entity_svc
+from container_service_extension.def_.utils import ClusterEntityFilterKey
+import container_service_extension.exceptions as cse_exceptions
 from container_service_extension.logger import CLIENT_LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
 
@@ -36,13 +38,33 @@ class DefEntityCluster:
         :return: cluster list information
         :rtype: list(dict)
         """
-        # method = RequestMethod.GET
-        msg = "Operation not supported; Under implementation"
-        raise OperationNotSupportedException(msg)
+        filters = {}
+        if org:
+            filters[ClusterEntityFilterKey.ORG_NAME.value] = org
+        if vdc:
+            filters[ClusterEntityFilterKey.OVDC_NAME.value] = vdc
 
-    def get_cluster_info(self, name, org=None, vdc=None, **kwargs):
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        entity_list = entity_svc.list_entities(filters=filters)  # noqa: E501
+        CLIENT_LOGGER.debug(entity_list)
+        clusters = []
+        # TODO() relevant output
+        for def_entity in entity_list:
+            cluster = {
+                'Name': def_entity.name,
+                'Kind': def_entity.entity.kind,
+                'VDC': def_entity.entity.metadata.ovdc_name,
+                'Org': def_entity.entity.metadata.org_name,
+                'K8s Version': def_entity.entity.status.kubernetes,
+                'Status': def_entity.entity.status.phase,
+            }
+            clusters.append(cluster)
+        return clusters
+
+    def get_cluster_info(self, cluster_name, org=None, vdc=None, **kwargs):
         """Get cluster information using DEF API.
 
+        :param str cluster_name: name of the cluster
         :param str vdc: name of vdc
         :param str org: name of org
         :param kwargs: *filter (dict): keys,values for DEF API query filter
@@ -50,10 +72,26 @@ class DefEntityCluster:
         :return: cluster information
         :rtype: dict
         """
-        # method = RequestMethod.GET
-        msg = "Operation not supported; Under implementation"
-        raise OperationNotSupportedException(msg)
+        filters = {}
+        if org:
+            filters[ClusterEntityFilterKey.ORG_NAME.value] = org
+        if vdc:
+            filters[ClusterEntityFilterKey.OVDC_NAME.value] = vdc
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        def_entity = entity_svc.get_entity_by_name(entity_name=cluster_name, filters=filters)  # noqa: E501
+        if def_entity:
+            CLIENT_LOGGER.debug(def_entity)
+            # TODO() relevant output
+            return {
+                'Name': def_entity.name,
+                'Kind': def_entity.entity.kind,
+                'VDC': def_entity.entity.metadata.ovdc_name,
+                'Org': def_entity.entity.metadata.org_name,
+                'K8s Version': def_entity.entity.status.kubernetes,  # noqa: E501
+                'Status': def_entity.entity.status.phase,
+            }
+        raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
 
     def __getattr__(self, name):
         msg = "Operation not supported; Under implementation"
-        raise OperationNotSupportedException(msg)
+        raise vcd_exceptions.OperationNotSupportedException(msg)
