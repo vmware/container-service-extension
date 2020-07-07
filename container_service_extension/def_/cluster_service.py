@@ -959,6 +959,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         finally:
             self.context.end()
     # all parameters following '*args' are required and keyword-only
+
     @utils.run_async
     def _upgrade_cluster_async(self, *args, cluster, template):
         try:
