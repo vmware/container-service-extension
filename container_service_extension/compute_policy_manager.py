@@ -648,7 +648,7 @@ class ComputePolicyManager:
         """
         if hasattr(vm, 'ComputePolicy') and \
             hasattr(vm.ComputePolicy, 'VmSizingPolicy') and \
-                vm.ComputePolicy.VmPSizingPolicy.get('id'):
+                vm.ComputePolicy.VmSizingPolicy.get('id'):
             return vm.ComputePolicy.VmSizingPolicy.get('id')
 
     def remove_vdc_compute_policy_from_vdc(self, # noqa: E501
@@ -815,8 +815,10 @@ class ComputePolicyManager:
             # remove the compute policy from VMs if force is True
             if force:
                 compute_policy_id = retrieve_compute_policy_id_from_href(compute_policy_href) # noqa: E501
-                vapps = vcd_utils.get_all_vapps_in_ovdc(self._sysadmin_client,
-                                                        vdc.id)
+                vdc_id = vcd_utils.extract_id(vdc.get_resource().get('id'))
+                vapps = vcd_utils.get_all_vapps_in_ovdc(
+                    client=self._sysadmin_client,
+                    ovdc_id=vdc_id)
                 target_vms = []
                 system_default_href = None
                 operation_msg = None
@@ -835,11 +837,10 @@ class ComputePolicyManager:
                             [vm for vm in vapp.get_all_vms()
                                 if self._get_vm_sizing_policy_id(vm) == compute_policy_id] # noqa: E501
                     vm_names = [vm.get('name') for vm in target_vms]
-                    filter_by_name = {'name': _SYSTEM_DEFAULT_COMPUTE_POLICY}
-                    for cp_dict in self.list_compute_policies_on_vdc(vdc.id,
-                                                                     filters=filter_by_name):  # noqa: E501
-                        system_default_href = cp_dict['href']
-                        break
+                    for cp_dict in self.list_compute_policies_on_vdc(vdc_id):
+                        if cp_dict['name'] == _SYSTEM_DEFAULT_COMPUTE_POLICY:
+                            system_default_href = cp_dict['href']
+                            break
                     operation_msg = "Setting sizing policy to " \
                                     f"'{_SYSTEM_DEFAULT_COMPUTE_POLICY}' on " \
                                     f"{len(vm_names)} VMs. " \
