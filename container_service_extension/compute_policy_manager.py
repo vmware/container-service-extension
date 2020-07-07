@@ -668,6 +668,9 @@ class ComputePolicyManager:
         """
         vdc = vcd_utils.get_vdc(self._sysadmin_client, vdc_id=ovdc_id)
 
+        # TODO the following org will be associated with 'System' org.
+        # task created should be associated with the corresponding org of the
+        # vdc object.
         org = vcd_utils.get_org(self._sysadmin_client)
         org.reload()
         user_name = self._session.get('user')
@@ -774,16 +777,20 @@ class ComputePolicyManager:
         :param lxml.objectify.Element task_resource: Task resource for
             the umbrella task
         """
-        org = vcd_utils.get_org(self._sysadmin_client)
-        org.reload()
         user_name = self._session.get('user')
-        user_href = org.get_user(user_name).get('href')
 
         task = Task(self._sysadmin_client)
         task_href = None
         is_umbrella_task = task_resource is not None
         # Create a task if not umbrella task
         if not is_umbrella_task:
+            # TODO the following org will be associated with 'System' org.
+            # task created should be associated with the corresponding org of
+            # the vdc object.
+            org = vcd_utils.get_org(self._sysadmin_client)
+            org.reload()
+            user_href = org.get_user(user_name).get('href')
+            org_href = org.href
             task_resource = task.update(
                 status=vcd_client.TaskStatus.RUNNING.value,
                 namespace='vcloud.cse',
@@ -798,6 +805,10 @@ class ComputePolicyManager:
                 user_href=user_href,
                 user_name=user_name,
                 org_href=org.href)
+        else:
+            user_href = task_resource.User.get('href')
+            org_href = task_resource.Organization.get('href')
+
         task_href = task_resource.get('href')
 
         try:
@@ -847,7 +858,7 @@ class ComputePolicyManager:
                     user_href=user_href,
                     user_name=user_name,
                     task_href=task_href,
-                    org_href=org.href)
+                    org_href=org_href)
 
                 task_monitor = self._sysadmin_client.get_task_monitor()
                 for vm_resource in target_vms:
@@ -879,7 +890,7 @@ class ComputePolicyManager:
                         user_href=user_href,
                         user_name=user_name,
                         task_href=task_href,
-                        org_href=org.href)
+                        org_href=org_href)
                     task_monitor.wait_for_success(_task)
             final_status = vcd_client.TaskStatus.RUNNING.value \
                 if is_umbrella_task else vcd_client.TaskStatus.SUCCESS.value
@@ -897,7 +908,7 @@ class ComputePolicyManager:
                 user_href=user_href,
                 user_name=user_name,
                 task_href=task_href,
-                org_href=org.href)
+                org_href=org_href)
 
             vdc.remove_compute_policy(compute_policy_href)
         except Exception as err:
@@ -919,7 +930,7 @@ class ComputePolicyManager:
                     user_href=user_href,
                     user_name=self._session.get('user'),
                     task_href=task_href,
-                    org_href=org.href,
+                    org_href=org_href,
                     error_message=f"{err}",
                     stack_trace='')
             raise err
