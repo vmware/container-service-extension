@@ -481,9 +481,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                            DefEntityOperationStatus.IN_PROGRESS))
         curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)
         self.context.is_async = True
-        self._delete_cluster_async(cluster_id=cluster_id,
-                                   cluster_vdc_href=self._get_vdc_href(
-                                       org_name, ovdc_name))
+        self._delete_cluster_async(cluster_id=cluster_id)
         return curr_entity
 
     def _get_vdc_href(self, org_name, ovdc_name):
@@ -900,11 +898,14 @@ class ClusterService(abstract_broker.AbstractBroker):
             self.context.end()
 
     @utils.run_async
-    def _delete_cluster_async(self, cluster_id, cluster_vdc_href):
+    def _delete_cluster_async(self, cluster_id):
         try:
             curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
                 cluster_id)
             cluster_name = curr_entity.name
+            org_name = curr_entity.entity.metadata.org_name
+            ovdc_name = curr_entity.entity.metadata.ovdc_name
+            cluster_vdc_href = self._get_vdc_href(org_name, ovdc_name)
             msg = f"Deleting cluster '{cluster_name}'"
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             _delete_vapp(self.context.client, cluster_vdc_href, cluster_name)
