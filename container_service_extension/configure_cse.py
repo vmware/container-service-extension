@@ -1678,27 +1678,63 @@ def _create_def_entity_for_existing_clusters(
         cse_clusters,
         msg_update_callback=utils.NullPrinter(),
         log_wire=False):
-    pass
-    # cluster_spec: def_models.ClusterEntity
+    for cluster in cse_clusters:
+        try:
+            def_entity = self.entity_svc.get_entity(cluster_id)
+            continue
+        except Exception as err:
+            INSTALL_LOGGER.debug(str(err))
+            pass
 
-    # def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
+        if 'k8' in cluster['template_name']:
+            kind = 'native'
+        elif 'tkg' in cluster['template_name']:
+            kind = 'tkg_plus'
+        cluster_id = cluster['cluster_id']
 
-    # def_entity = def_models.DefEntity(entity=cluster_spec)
-    # msg = f"Creating cluster vApp '{cluster_name}' ({def_entity.id}) " \
-    #      f"from template '{template_name}' (revision {template_revision})"
-    # def_entity.entity.status.task_href = self.task_resource.get('href')
-    # def_entity.entity.status.phase = str(
-    #    DefEntityPhase(DefEntityOperation.CREATE,
-    #                   DefEntityOperationStatus.IN_PROGRESS))
-    # self.entity_svc. \
-    #    create_entity(def_utils.get_registered_def_entity_type().id,
-    #                  entity=def_entity)
+        data = {
+            "kind": kind,
+            "spec": {
+                "workers": {
+                    "count": len(cluster['nodes']),
+                    "sizing_class": "",
+                    "storage_profile": "*"
+                },
+                "control_plane": {
+                    "count": 1,
+                    "sizing_class": "",
+                    "storage_profile": "*"
+                },
+                "settings": {
+                    "network": "net",
+                    "ssh_key": "",
+                    "enable_nfs": len(cluster['nfs_nodes'] > 0)
+                },
+                "k8_distribution": {
+                    "template_name": cluster['template_name'],
+                    "template_revision": cluster['template_revision']
+                }
+            },
+            "status": {
+                "id": cluster_id,
+                "cni": f"{cluster['cni']} {cluster['cni_version']}",
+                "phase": str(DefEntityPhase(DefEntityOperation.CREATE,
+                    DefEntityOperationStatus.SUCCEEDED)),
+                "master_ip": cluster['leader_endpoint']
+            },
+            "metadata": {
+                "org_name": "",
+                "ovdc_name": cluster['vdc_name'],
+                "cluster_name": cluster['name']
+            },
+            "api_version": ""
+        }
+        cluster_spec = def_models.ClusterEntity(**data)
 
-    # def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-    # def_entity.externalId = vapp_resource.get('href')
-    # def_entity.entity.status.master_ip = master_ip
-    # def_entity.entity.status.phase = str(
-    #    DefEntityPhase(DefEntityOperation.CREATE,
-    #                   DefEntityOperationStatus.SUCCEEDED))
-    # self.entity_svc.update_entity(cluster_id, def_entity)
-    # self.entity_svc.resolve_entity(cluster_id)
+        def_entity = def_models.DefEntity(entity=cluster_spec)
+        entity_svc.create_entity(def_utils.get_registered_def_entity_type().id,
+                                 entity=def_entity)
+        def_entity = entity_svc.get_entity(cluster_id)
+        def_entity.externalId = cluster['vapp_href']
+        entity_svc.update_entity(cluster_id, def_entity)
+        entity_svc.resolve_entity(cluster_id)
