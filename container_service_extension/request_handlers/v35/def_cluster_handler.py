@@ -33,14 +33,8 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
 def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster resize operation.
 
-    Required data: cluster_name, num_nodes
-    Optional data and default values: org_name=None, ovdc_name=None
-    Conditional data and default values:
-            network_name, rollback=True
-
-    (data validation handled in broker)
-
-    :return: Dict
+    :return: Defined entity of the native cluster
+    :rtype: container_service_extension.def_.models.DefEntity
     """
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
@@ -60,7 +54,6 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    raise NotImplementedError
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
     return svc.delete_cluster(cluster_id)

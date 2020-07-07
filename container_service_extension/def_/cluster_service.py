@@ -154,8 +154,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         :rtype: def_models.DefEntity
         """
         cluster_name = cluster_spec.metadata.cluster_name
-        org_name = cluster_spec.metadata.org_name
-        ovdc_name = cluster_spec.metadata.ovdc_name
         template_name = cluster_spec.spec.k8_distribution.template_name
         template_revision = cluster_spec.spec.k8_distribution.template_revision
 
@@ -164,14 +162,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             raise e.CseServerError(f"Invalid cluster name '{cluster_name}'")
 
         # check that cluster name doesn't already exist
-        try:
-            get_cluster(self.context.client, cluster_name,
-                        org_name=org_name,
-                        ovdc_name=ovdc_name)
+        if self.entity_svc.get_native_entity_by_name(cluster_name):
             raise e.ClusterAlreadyExistsError(
                 f"Cluster '{cluster_name}' already exists.")
-        except e.ClusterNotFoundError:
-            pass
 
         # check that requested/default template is valid
         template = get_template(name=template_name, revision=template_revision)
@@ -199,7 +192,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.entity_svc. \
             create_entity(def_utils.get_registered_def_entity_type().id,
                           entity=def_entity)
-        def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)
         self.context.is_async = True
         def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)
         self._create_cluster_async(def_entity.id, cluster_spec)
@@ -377,12 +369,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 LOGGER.info(msg)
                 try:
-                    cluster = get_cluster(self.context.client,
-                                          cluster_name,
-                                          cluster_id=cluster_id,
-                                          org_name=org_name,
-                                          ovdc_name=ovdc_name)
-                    _delete_vapp(self.context.client, cluster['vdc_href'],
+                    _delete_vapp(self.context.client,
+                                 self._get_vdc_href(org_name, ovdc_name),
                                  cluster_name)
                     # Delete the corresponding defined entity
                     self.entity_svc.delete_entity(cluster_id)
@@ -427,19 +415,13 @@ class ClusterService(abstract_broker.AbstractBroker):
         # Get the existing defined entity for the given cluster id
         curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
         name: str = curr_entity.name
-        kind: str = curr_entity.entity.kind
         curr_worker_count: int = curr_entity.entity.spec.workers.count
         state: str = curr_entity.state
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_entity.entity.status.phase)
 
-        # Check if entity is of kind native.
-        if kind == def_utils.ClusterEntityKind.TKG.value:
-            raise e.CseServerError(f"CSE cannot resize an entity of type {kind}")  # noqa: E501
-
         # Check if cluster is in a valid state
-        if state != def_utils.DEF_RESOLVED_STATE or\
-                not phase.is_operation_status_success():
+        if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
             raise e.CseServerError(
                 f"Cluster {name} with id {cluster_id} is not in a valid state "
                 f"to be resized. Please contact the administrator.")
@@ -466,57 +448,45 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         return self.create_nodes(cluster_id=cluster_id, cluster_spec=cluster_spec)  # noqa: E501
 
-    def delete_cluster(self, **kwargs):
-        """Start the delete cluster operation.
+    def delete_cluster(self, cluster_id):
+        """Start the delete cluster operation."""
+        # Get the existing defined entity for the given cluster id
+        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
+            cluster_id)
+        cluster_name: str = curr_entity.name
+        state: str = curr_entity.state
+        phase: DefEntityPhase = DefEntityPhase.from_phase(
+            curr_entity.entity.status.phase)
 
-        Common broker function that validates data for 'delete cluster'
-        operation. Deleting nodes is an asynchronous task, so the returned
-        `result['task_href']` can be polled to get updates on task progress.
+        # Check if cluster is in a valid state
+        if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
+            raise e.CseServerError(
+                f"Cluster {cluster_name} with id {cluster_id} is not in a "
+                f"valid state to be deleted. Please contact administrator.")
 
-        **data: Required
-            Required data: cluster_name
-            Optional data and default values: org_name=None, ovdc_name=None
-        **telemetry: Optional
-        """
-        raise NotImplementedError
-        data = kwargs[KwargKey.DATA]
-        required = [
-            RequestKey.CLUSTER_NAME
-        ]
-        defaults = {
-            RequestKey.ORG_NAME: None,
-            RequestKey.OVDC_NAME: None
-        }
-        validated_data = {**defaults, **data}
-        req_utils.validate_payload(validated_data, required)
-
-        cluster_name = validated_data[RequestKey.CLUSTER_NAME]
-
-        cluster = get_cluster(self.context.client, cluster_name,
-                              org_name=validated_data[RequestKey.ORG_NAME],
-                              ovdc_name=validated_data[RequestKey.OVDC_NAME])
-        cluster_id = cluster['cluster_id']
-
-        if kwargs.get(KwargKey.TELEMETRY, True):
-            # Record the telemetry data
-            cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster_id
-            record_user_action_details(cse_operation=CseOperation.CLUSTER_DELETE, # noqa: E501
-                                       cse_params=cse_params)
+        # TODO(DEF) Handle Telemetry
 
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
         # call, session becomes None
         msg = f"Deleting cluster '{cluster_name}' ({cluster_id})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-        self.context.is_async = True
-        self._delete_cluster_async(cluster_name=cluster_name,
-                                   cluster_vdc_href=cluster['vdc_href'])
 
-        return {
-            'cluster_name': cluster_name,
-            'task_href': self.task_resource.get('href')
-        }
+        curr_entity.entity.status.task_href = self.task_resource.get('href')
+        curr_entity.entity.status.phase = str(
+            DefEntityPhase(DefEntityOperation.DELETE,
+                           DefEntityOperationStatus.IN_PROGRESS))
+        curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)
+        self.context.is_async = True
+        self._delete_cluster_async(cluster_id=cluster_id)
+        return curr_entity
+
+    def _get_vdc_href(self, org_name, ovdc_name):
+        client = self.context.client
+        org = vcd_org.Org(client=client,
+                          resource=client.get_org_by_name(org_name))
+        vdc_resource = org.get_vdc(name=ovdc_name)
+        return vdc_resource.get('href')
 
     def upgrade_cluster(self, **kwargs):
         """Start the upgrade cluster operation.
@@ -672,10 +642,14 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         :rtype: DefEntity
         """
+        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
+            cluster_id)  # noqa: E501
         cluster_name = cluster_spec.metadata.cluster_name
         worker_count = cluster_spec.spec.workers.count
-        template_name = cluster_spec.spec.k8_distribution.template_name
-        template_revision = cluster_spec.spec.k8_distribution.template_revision  # noqa: E501
+
+        # Resize using the template with which cluster was originally created.
+        template_name = curr_entity.entity.spec.k8_distribution.template_name
+        template_revision = curr_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
 
         # check that requested/default template is valid
         get_template(name=template_name, revision=template_revision)
@@ -774,21 +748,24 @@ class ClusterService(abstract_broker.AbstractBroker):
                             cluster_spec: def_models.ClusterEntity):
         try:
             cluster_id = cluster_id
-            curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+            curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
+                cluster_id)  # noqa: E501
             vapp_href = curr_entity.externalId
-            cluster_name = cluster_spec.metadata.cluster_name
-            org_name = cluster_spec.metadata.org_name
-            ovdc_name = cluster_spec.metadata.ovdc_name
+            cluster_name = curr_entity.entity.metadata.cluster_name
+            org_name = curr_entity.entity.metadata.org_name
+            ovdc_name = curr_entity.entity.metadata.ovdc_name
             num_workers = cluster_spec.spec.workers.count
             worker_storage_profile = cluster_spec.spec.workers.storage_profile  # noqa: E501
             worker_sizing_class = cluster_spec.spec.workers.sizing_class
             network_name = cluster_spec.spec.settings.network
-            template_name = cluster_spec.spec.k8_distribution.template_name
-            template_revision = cluster_spec.spec.k8_distribution.template_revision  # noqa: E501
-            template = get_template(template_name, template_revision)
             ssh_key = cluster_spec.spec.settings.ssh_key
             rollback = cluster_spec.spec.settings.rollback_on_failure
             enable_nfs = cluster_spec.spec.settings.enable_nfs
+
+            # Use the template with which cluster was originally created.
+            template_name = curr_entity.entity.spec.k8_distribution.template_name  # noqa: E501
+            template_revision = curr_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
+            template = get_template(template_name, template_revision)
 
             server_config = utils.get_server_runtime_config()
             catalog_name = server_config['broker']['catalog']
@@ -917,16 +894,24 @@ class ClusterService(abstract_broker.AbstractBroker):
         finally:
             self.context.end()
 
-    # all parameters following '*args' are required and keyword-only
     @utils.run_async
-    def _delete_cluster_async(self, *args, cluster_name, cluster_vdc_href):
+    def _delete_cluster_async(self, cluster_id):
         try:
+            curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
+                cluster_id)
+            cluster_name = curr_entity.name
+            org_name = curr_entity.entity.metadata.org_name
+            ovdc_name = curr_entity.entity.metadata.ovdc_name
+            cluster_vdc_href = self._get_vdc_href(org_name, ovdc_name)
             msg = f"Deleting cluster '{cluster_name}'"
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             _delete_vapp(self.context.client, cluster_vdc_href, cluster_name)
             msg = f"Deleted cluster '{cluster_name}'"
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+            self.entity_svc.delete_entity(cluster_id)
         except Exception as err:
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.DELETE)
             LOGGER.error(f"Unexpected error while deleting cluster: {err}",
                          exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
