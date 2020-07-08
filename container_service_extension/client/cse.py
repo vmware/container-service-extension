@@ -194,23 +194,8 @@ def list_clusters(ctx, vdc, org_name):
         cluster = Cluster(client)
         if not client.is_sysadmin() and org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
-        result = cluster.get_clusters(vdc=vdc, org=org_name)
-        clusters = []
-        for c in result:
-            # TODO cluster api response keys need to be more well defined
-            cluster = {
-                'Name': c.get('name') or 'N/A',
-                'VDC': c.get('vdc') or 'N/A',
-                'Org': c.get('org_name') or 'N/A',
-                'K8s Runtime': c.get('k8s_type') or 'N/A',
-                'K8s Version': c.get('k8s_version') or 'N/A',
-                'Status': c.get('status') or 'N/A',
-                'Provider': c.get('k8s_provider') or 'N/A',
-            }
-            clusters.append(cluster)
-
+        clusters = cluster.get_clusters(vdc=vdc, org=org_name)
         stdout(clusters, ctx, show_id=True, sort_headers=False)
-        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))

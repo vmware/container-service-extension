@@ -25,7 +25,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     """
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
-    return svc.create_cluster(cluster_entity_spec)
+    return asdict(svc.create_cluster(cluster_entity_spec))
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_RESIZE)
@@ -39,7 +39,7 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
     cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
-    return svc.resize_cluster(cluster_id, cluster_entity_spec)
+    return asdict(svc.resize_cluster(cluster_id, cluster_entity_spec))
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_DELETE)
@@ -56,7 +56,7 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     """
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
-    return svc.delete_cluster(cluster_id)
+    return asdict(svc.delete_cluster(cluster_id))
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_INFO)
@@ -117,7 +117,7 @@ def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
     cluster_id = data[RequestKey.CLUSTER_ID]
-    return svc.upgrade_cluster(cluster_id, cluster_entity_spec)
+    return asdict(svc.upgrade_cluster(cluster_id, cluster_entity_spec))
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_LIST)
