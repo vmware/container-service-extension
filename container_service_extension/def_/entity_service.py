@@ -287,7 +287,7 @@ class DefEntityService():
         schema_svc = def_schema_svc.DefSchemaService(self._cloudapi_client)
         keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(self._cloudapi_client.get_api_version())]  # noqa: E501
         entity_type_id = def_utils.generate_entity_type_id(
-            vendor=keys_map[def_utils.DefKey.VENDOR],
+            vendor=keys_map[def_utils.DefKey.ENTITY_TYPE_VENDOR],
             nss=keys_map[def_utils.DefKey.ENTITY_TYPE_NSS],
             version=keys_map[def_utils.DefKey.ENTITY_TYPE_VERSION])
         return schema_svc.get_entity_type(entity_type_id)

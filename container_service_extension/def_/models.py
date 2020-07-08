@@ -13,9 +13,9 @@ class DefInterface:
     """Provides interface for the defined entity type."""
 
     name: str
-    vendor: str = def_utils.DEF_CSE_VENDOR
-    nss: str = def_utils.DEF_NATIVE_INTERFACE_NSS
-    version: str = def_utils.DEF_NATIVE_INTERFACE_VERSION
+    vendor: str = def_utils.DEF_VMWARE_VENDOR
+    nss: str = def_utils.DEF_VMWARE_INTERFACE_NSS
+    version: str = def_utils.DEF_VMWARE_INTERFACE_VERSION
     id: str = None
     readonly: bool = False
 
@@ -249,7 +249,7 @@ class ClusterEntity:
     api_version: str = ''
 
     def __init__(self, metadata: Metadata, spec: ClusterSpec, status=Status(),
-                 kind: str = def_utils.DEF_NATIVE_INTERFACE_NSS,
+                 kind: str = def_utils.DEF_VMWARE_INTERFACE_NSS,
                  api_version: str = ''):
 
         self.metadata = Metadata(**metadata) \

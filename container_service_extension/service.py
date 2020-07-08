@@ -134,7 +134,7 @@ class Service(object, metaclass=Singleton):
         self.threads = []
         self.pks_cache = None
         self._state = ServerState.STOPPED
-        self._nativeInterface: def_models.DefInterface = None
+        self._kubernetesInterface: def_models.DefInterface = None
         self._nativeEntityType: def_models.DefEntityType = None
 
     def get_service_config(self):
@@ -174,8 +174,9 @@ class Service(object, metaclass=Singleton):
             del result['python']
         return result
 
-    def get_native_cluster_interface(self) -> def_models.DefInterface:
-        return self._nativeInterface
+    def get_kubernetes_interface(self) -> def_models.DefInterface:
+        """Get the built-in kubernetes interface from vCD."""
+        return self._kubernetesInterface
 
     def get_native_cluster_entity_type(self) -> def_models.DefEntityType:
         return self._nativeEntityType
@@ -382,13 +383,13 @@ class Service(object, metaclass=Singleton):
             schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
             defKey = def_utils.DefKey
             keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(sysadmin_client.get_api_version())] # noqa: E501
-            interface_id = def_utils.generate_interface_id(vendor=keys_map[defKey.VENDOR], # noqa: E501
+            interface_id = def_utils.generate_interface_id(vendor=keys_map[defKey.INTERFACE_VENDOR], # noqa: E501
                                                            nss=keys_map[defKey.INTERFACE_NSS], # noqa: E501
                                                            version=keys_map[defKey.INTERFACE_VERSION]) # noqa: E501
-            entity_type_id = def_utils.generate_entity_type_id(vendor=keys_map[defKey.VENDOR], # noqa: E501
+            entity_type_id = def_utils.generate_entity_type_id(vendor=keys_map[defKey.ENTITY_TYPE_VENDOR], # noqa: E501
                                                                nss=keys_map[defKey.ENTITY_TYPE_NSS], # noqa: E501
                                                                version=keys_map[defKey.ENTITY_TYPE_VERSION]) # noqa: E501
-            self._nativeInterface = schema_svc.get_interface(interface_id)
+            self._kubernetesInterface = schema_svc.get_interface(interface_id)
             self._nativeEntityType = schema_svc.get_entity_type(entity_type_id)
             msg = "Successfully loaded defined entity schema to global context"
             msg_update_callback.general(msg)
