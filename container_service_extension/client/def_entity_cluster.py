@@ -46,10 +46,10 @@ class DefEntityCluster:
 
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         entity_list = entity_svc.list_entities(filters=filters)  # noqa: E501
-        CLIENT_LOGGER.debug(entity_list)
         clusters = []
         # TODO() relevant output
         for def_entity in entity_list:
+            CLIENT_LOGGER.debug(f"Defined entity list from server:{def_entity}")  # noqa: E501
             cluster = {
                 'Name': def_entity.name,
                 'Kind': def_entity.entity.kind,
@@ -80,7 +80,7 @@ class DefEntityCluster:
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         def_entity = entity_svc.get_entity_by_name(entity_name=cluster_name, filters=filters)  # noqa: E501
         if def_entity:
-            CLIENT_LOGGER.debug(def_entity)
+            CLIENT_LOGGER.debug(f"Defined entity info from server:{def_entity}")  # noqa: E501
             # TODO() relevant output
             return {
                 'Name': def_entity.name,
