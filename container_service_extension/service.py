@@ -175,6 +175,7 @@ class Service(object, metaclass=Singleton):
         return result
 
     def get_kubernetes_interface(self) -> def_models.DefInterface:
+        """Get the built-in kubernetes interface from vCD."""
         return self._kubernetesInterface
 
     def get_native_cluster_entity_type(self) -> def_models.DefEntityType:
@@ -382,10 +383,10 @@ class Service(object, metaclass=Singleton):
             schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
             defKey = def_utils.DefKey
             keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(sysadmin_client.get_api_version())] # noqa: E501
-            interface_id = def_utils.generate_interface_id(vendor=keys_map[defKey.VMWARE_VENDOR], # noqa: E501
+            interface_id = def_utils.generate_interface_id(vendor=keys_map[defKey.INTERFACE_VENDOR], # noqa: E501
                                                            nss=keys_map[defKey.INTERFACE_NSS], # noqa: E501
                                                            version=keys_map[defKey.INTERFACE_VERSION]) # noqa: E501
-            entity_type_id = def_utils.generate_entity_type_id(vendor=keys_map[defKey.VENDOR], # noqa: E501
+            entity_type_id = def_utils.generate_entity_type_id(vendor=keys_map[defKey.ENTITY_TYPE_VENDOR], # noqa: E501
                                                                nss=keys_map[defKey.ENTITY_TYPE_NSS], # noqa: E501
                                                                version=keys_map[defKey.ENTITY_TYPE_VERSION]) # noqa: E501
             self._kubernetesInterface = schema_svc.get_interface(interface_id)

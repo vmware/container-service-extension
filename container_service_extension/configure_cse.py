@@ -527,7 +527,7 @@ def _register_def_schema(client: Client,
         defKey = def_utils.DefKey
         kubernetes_interface = def_models.\
             DefInterface(name=keys_map[defKey.INTERFACE_NAME],
-                         vendor=keys_map[defKey.VMWARE_VENDOR],
+                         vendor=keys_map[defKey.INTERFACE_VENDOR],
                          nss=keys_map[defKey.INTERFACE_NSS],
                          version=keys_map[defKey.INTERFACE_VERSION], # noqa: E501
                          readonly=False)
@@ -547,7 +547,7 @@ def _register_def_schema(client: Client,
         native_entity_type = def_models.\
             DefEntityType(name=keys_map[defKey.ENTITY_TYPE_NAME],
                           description='',
-                          vendor=keys_map[defKey.VENDOR],
+                          vendor=keys_map[defKey.ENTITY_TYPE_VENDOR],
                           nss=keys_map[defKey.ENTITY_TYPE_NSS],
                           version=keys_map[defKey.ENTITY_TYPE_VERSION],
                           schema=json.load(schema_file),
