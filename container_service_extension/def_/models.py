@@ -284,3 +284,11 @@ class DefEntity:
         self.entityType = entityType
         self.externalId = externalId
         self.state = state
+
+
+@dataclass()
+class Ovdc:
+    k8s_runtime: List[str]
+    ovdc_name: str = None
+    ovdc_id: str = None
+    remove_cp_from_vms_on_disable: bool = False

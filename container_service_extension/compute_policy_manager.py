@@ -630,7 +630,6 @@ class ComputePolicyManager:
         """Obtain VM's placement policy id if present.
 
         :param lxml.objectify.ObjectifiedElement vm: VM object
-
         :return: placement policy id of the vm
         :rtype: str
         """
@@ -643,7 +642,6 @@ class ComputePolicyManager:
         """Obtain VM's sizing policy id if present.
 
         :param lxml.objectify.ObjectifiedElement vm: VM object
-
         :return: sizing policy id of the vm
         :rtype: str
         """

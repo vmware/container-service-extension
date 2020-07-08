@@ -53,7 +53,6 @@ SUPPORTED_VCD_API_VERSIONS = ['33.0', '34.0', '35.0']
 CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME = 'global'
 CSE_GLOBAL_PVDC_COMPUTE_POLICY_DESCRIPTION = 'global PVDC compute policy for' \
                                              'cse'
-CLUSTER_PLACEMENT_POLICIES = ['native', 'tkg_plus']
 
 
 @unique
@@ -193,6 +192,10 @@ class CseOperation(Enum):
     SYSTEM_INFO = ('get info of system')
     SYSTEM_UPDATE = ('update system status')
     TEMPLATE_LIST = ('list all templates')
+
+    V35_OVDC_LIST = ('list ovdcs for v35')
+    V35_OVDC_INFO = ('get info of ovdc for v35')
+    V35_OVDC_UPDATE = ('enable or disable ovdc for a cluster kind for v35', requests.codes.accepted)  # noqa: E501
 
     PKS_CLUSTER_CONFIG = ('get config of PKS cluster')
     PKS_CLUSTER_CREATE = ('create PKS cluster', requests.codes.accepted)

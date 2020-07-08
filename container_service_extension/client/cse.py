@@ -23,9 +23,7 @@ from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import LocalTemplateKey
-from container_service_extension.shared_constants import ComputePolicyAction
-from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
-from container_service_extension.shared_constants import ServerAction
+import container_service_extension.shared_constants as shared_constants
 import container_service_extension.utils as utils
 
 
@@ -706,7 +704,8 @@ def cluster_config(ctx, name, vdc, org):
         cluster = Cluster(client)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
-        cluster_config = cluster.get_cluster_config(name, vdc=vdc, org=org).get(RESPONSE_MESSAGE_KEY) # noqa: E501
+        cluster_config = cluster.get_cluster_config(name, vdc=vdc, org=org) \
+            .get(shared_constants.RESPONSE_MESSAGE_KEY)
         if os.name == 'nt':
             cluster_config = str.replace(cluster_config, '\n', '\r\n')
 
@@ -1104,7 +1103,7 @@ def stop_service(ctx):
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
-        result = system.update_service_status(action=ServerAction.STOP)
+        result = system.update_service_status(action=shared_constants.ServerAction.STOP) # noqa: E501
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
@@ -1121,7 +1120,7 @@ def enable_service(ctx):
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
-        result = system.update_service_status(action=ServerAction.ENABLE)
+        result = system.update_service_status(action=shared_constants.ServerAction.ENABLE) # noqa: E501
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
@@ -1138,7 +1137,7 @@ def disable_service(ctx):
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
-        result = system.update_service_status(action=ServerAction.DISABLE)
+        result = system.update_service_status(action=shared_constants.ServerAction.DISABLE) # noqa: E501
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
@@ -1146,7 +1145,8 @@ def disable_service(ctx):
         CLIENT_LOGGER.error(str(e))
 
 
-@cse.group('ovdc', short_help='Manage Kubernetes provider for org VDCs')
+@cse.group('ovdc', cls=cmd_filter.GroupCommandFilter,
+           short_help='Manage Kubernetes provider for org VDCs')
 @click.pass_context
 def ovdc_group(ctx):
     """Manage Kubernetes provider for org VDCs.
@@ -1171,11 +1171,6 @@ Examples
     vcd cse ovdc list
         Display ovdcs in vCD that are visible to the logged in user.
         vcd cse ovdc list
-\b
-        vcd cse ovdc list --pks-plans
-            Displays list of ovdcs in a given org along with available PKS
-            plans if any. If executed by System-administrator, it will
-            display all ovdcs from all orgs.
     """
     pass
 
@@ -1183,22 +1178,15 @@ Examples
 @ovdc_group.command('list',
                     short_help='Display org VDCs in vCD that are visible '
                                'to the logged in user')
-@click.option(
-    '-p',
-    '--pks-plans',
-    'list_pks_plans',
-    is_flag=True,
-    help="Display available PKS plans if org VDC is backed by "
-         "Enterprise PKS infrastructure")
 @click.pass_context
-def list_ovdcs(ctx, list_pks_plans):
+def list_ovdcs(ctx):
     """Display org VDCs in vCD that are visible to the logged in user."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         ovdc = Ovdc(client)
-        result = ovdc.list_ovdc_for_k8s(list_pks_plans=list_pks_plans)
+        result = ovdc.list_ovdc_for_k8s()
         stdout(result, ctx, sort_headers=False)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
@@ -1218,9 +1206,32 @@ def list_ovdcs(ctx, list_pks_plans):
     required=False,
     metavar='ORG_NAME',
     help="Org to use. Defaults to currently logged-in org")
-def ovdc_enable(ctx, ovdc_name, org_name):
+@click.option(
+    '-n',
+    '--native',
+    'enable_native',
+    is_flag=True,
+    help="Enable OVDC for native cluster deployment"
+)
+@click.option(
+    '-t',
+    '--tkg-plus',
+    'enable_tkg_plus',
+    is_flag=True,
+    help="Enable OVDC for TKG plus cluster deployment"
+)
+def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus):
     """Set Kubernetes provider for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
+    if not (enable_native or enable_tkg_plus):
+        msg = "Please specify at least one of --native or --tkg-plus to enable"
+        stderr(msg, ctx)
+        CLIENT_LOGGER.error(msg)
+    k8_runtime = []
+    if enable_native:
+        k8_runtime.append(shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY)
+    if enable_tkg_plus:
+        k8_runtime.append(shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY)
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
@@ -1232,7 +1243,7 @@ def ovdc_enable(ctx, ovdc_name, org_name):
                 enable=True,
                 ovdc_name=ovdc_name,
                 org_name=org_name,
-                k8s_provider=K8sProvider.NATIVE)
+                k8s_runtime=k8_runtime)
             stdout(result, ctx)
             CLIENT_LOGGER.debug(result)
         else:
@@ -1257,9 +1268,41 @@ def ovdc_enable(ctx, ovdc_name, org_name):
     required=False,
     metavar='ORG_NAME',
     help="Org to use. Defaults to currently logged-in org")
-def ovdc_disable(ctx, ovdc_name, org_name):
+@click.option(
+    '-n',
+    '--native',
+    'enable_native',
+    is_flag=True,
+    help="Enable OVDC for native cluster deployment"
+)
+@click.option(
+    '-t',
+    '--tkg-plus',
+    'enable_tkg_plus',
+    is_flag=True,
+    help="Enable OVDC for TKG plus cluster deployment"
+)
+@click.option(
+    '-f',
+    '--force',
+    'remove_cp_from_vms_on_disable',
+    is_flag=True,
+    help="Remove the compute policies from deployed VMs as well. "
+         "Does not remove the compute policy from vApp templates in catalog. ")
+def ovdc_disable(ctx, ovdc_name, org_name,
+                 enable_native, enable_tkg_plus,
+                 remove_cp_from_vms_on_disable):
     """Disable Kubernetes cluster deployment for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
+    if not (enable_native or enable_tkg_plus):
+        msg = "Please specify at least one of --native or --tkg-plus to disable" # noqa:E501
+        stderr(msg, ctx)
+        CLIENT_LOGGER.error(msg)
+    k8_runtime = []
+    if enable_native:
+        k8_runtime.append(shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY)
+    if enable_tkg_plus:
+        k8_runtime.append(shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY)
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
@@ -1269,7 +1312,9 @@ def ovdc_disable(ctx, ovdc_name, org_name):
                 org_name = ctx.obj['profiles'].get('org_in_use')
             result = ovdc.update_ovdc_for_k8s(enable=False,
                                               ovdc_name=ovdc_name,
-                                              org_name=org_name)
+                                              org_name=org_name,
+                                              k8s_runtime=k8_runtime,
+                                              remove_cp_from_vms_on_disable=remove_cp_from_vms_on_disable) # noqa: E501
             stdout(result, ctx)
             CLIENT_LOGGER.debug(result)
         else:
@@ -1400,7 +1445,7 @@ def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
         result = ovdc.update_ovdc_compute_policies(ovdc_name,
                                                    org_name,
                                                    compute_policy_name,
-                                                   ComputePolicyAction.ADD,
+                                                   shared_constants.ComputePolicyAction.ADD, # noqa: E501
                                                    False)
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
@@ -1448,7 +1493,7 @@ def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name,
         result = ovdc.update_ovdc_compute_policies(ovdc_name,
                                                    org_name,
                                                    compute_policy_name,
-                                                   ComputePolicyAction.REMOVE,
+                                                   shared_constants.ComputePolicyAction.REMOVE, # noqa: E501
                                                    remove_compute_policy_from_vms) # noqa: E501
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)

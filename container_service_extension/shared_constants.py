@@ -15,6 +15,11 @@ UNKNOWN_ERROR_MESSAGE = "Unknown error. Please contact your System " \
 RESPONSE_MESSAGE_KEY = "message"
 CSE_SERVER_API_VERSION = 'cse_server_api_version'
 
+NATIVE_CLUSTER_RUNTIME_POLICY = 'native'
+TKG_PLUS_CLUSTER_RUNTIME_POLICY = 'tkg_plus'
+CLUSTER_RUNTIME_PLACEMENT_POLICIES = [NATIVE_CLUSTER_RUNTIME_POLICY,
+                                      TKG_PLUS_CLUSTER_RUNTIME_POLICY]
+
 
 @unique
 class OperationType(str, Enum):

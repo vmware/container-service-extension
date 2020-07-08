@@ -35,6 +35,7 @@ import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.remote_template_manager import \
     RemoteTemplateManager
 import container_service_extension.server_constants as server_constants
+import container_service_extension.shared_constants as shared_constants
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
 from container_service_extension.telemetry.constants import PayloadKey
@@ -329,7 +330,7 @@ def install_cse(config_file_name, skip_template_creation,
 
         # set up placement policies for all types of clusters
         _setup_placement_policies(client,
-                                  policy_list=server_constants.CLUSTER_PLACEMENT_POLICIES, # noqa: E501
+                                  policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES, # noqa: E501
                                   msg_update_callback=msg_update_callback,
                                   log_wire=log_wire)
 
@@ -908,9 +909,9 @@ def _install_single_template(
         templateBuildKey.STORAGE_PROFILE: storage_profile
     }
     if float(client.get_api_version()) >= float(vCDApiVersion.VERSION_35.value): # noqa: E501
-        if template[server_constants.RemoteTemplateKey.KIND] not in server_constants.CLUSTER_PLACEMENT_POLICIES: # noqa: E501
+        if template[server_constants.RemoteTemplateKey.KIND] not in shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES: # noqa: E501
             raise ValueError(f"Cluster kind is {template.get(server_constants.RemoteTemplateKey.KIND)}" # noqa: E501
-                             f" Expected {server_constants.CLUSTER_PLACEMENT_POLICIES}") # noqa: E501
+                             f" Expected {shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES}") # noqa: E501
         build_params[templateBuildKey.CSE_PLACEMENT_POLICY] = template[server_constants.RemoteTemplateKey.KIND] # noqa: E501
     builder = TemplateBuilder(client, client, build_params, ssh_key=ssh_key,
                               logger=INSTALL_LOGGER,
@@ -1138,7 +1139,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
 
     # Add global placement polcies
     _setup_placement_policies(client,
-                              policy_list=server_constants.CLUSTER_PLACEMENT_POLICIES, # noqa: E501
+                              policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES, # noqa: E501
                               msg_update_callback=msg_update_callback,
                               log_wire=log_wire)
 
