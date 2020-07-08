@@ -297,26 +297,27 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Creating {num_workers} node(s) for cluster " \
                   f"'{cluster_name}' ({cluster_id})"
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-            try:
-                add_nodes(self.context.sysadmin_client,
-                          num_nodes=num_workers,
-                          node_type=NodeType.WORKER,
-                          org=org,
-                          vdc=vdc,
-                          vapp=vapp,
-                          catalog_name=catalog_name,
-                          template=template,
-                          network_name=network_name,
-                          storage_profile=worker_storage_profile,
-                          ssh_key=ssh_key,
-                          sizing_class_name=worker_sizing_class_name)
-            except Exception as err:
-                raise e.WorkerNodeCreationError("Error creating worker node:",
-                                                str(err))
+            if num_workers > 0:
+                try:
+                    add_nodes(self.context.sysadmin_client,
+                              num_nodes=num_workers,
+                              node_type=NodeType.WORKER,
+                              org=org,
+                              vdc=vdc,
+                              vapp=vapp,
+                              catalog_name=catalog_name,
+                              template=template,
+                              network_name=network_name,
+                              storage_profile=worker_storage_profile,
+                              ssh_key=ssh_key,
+                              sizing_class_name=worker_sizing_class_name)
+                except Exception as err:
+                    raise e.WorkerNodeCreationError("Error creating worker node:", str(err))  # noqa: E501
 
-            msg = f"Adding {num_workers} node(s) to cluster " \
-                  f"'{cluster_name}' ({cluster_id})"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                msg = f"Adding {num_workers} node(s) to cluster " \
+                    f"'{cluster_name}' ({cluster_id})"
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+
             vapp.reload()
             join_cluster(self.context.sysadmin_client,
                          vapp,
@@ -429,15 +430,12 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # Check if the desired worker count is valid
         spec_worker_count = cluster_spec.spec.workers.count
-        if curr_worker_count > spec_worker_count:
-            raise e.CseServerError(
-                "Scaling down native Kubernetes clusters is not supported.")
-        elif curr_worker_count == spec_worker_count:
+        if curr_worker_count == spec_worker_count:
             raise e.CseServerError(
                 f"Cluster '{name}' already has {spec_worker_count} workers.")
-        elif spec_worker_count < 1:
+        elif spec_worker_count < 0:
             raise e.CseServerError(
-                f"Worker count must be > 0 (received {spec_worker_count}).")
+                f"Worker count must be >= 0 (received {spec_worker_count}).")
 
         # TODO(DEF) Below is a temporary hack to unset "enable_nfs" as resize
         #  operation is strictly about resizing worker nodes. NFS needs to be
@@ -446,8 +444,11 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # TODO default template for resizing should be master's template
         # TODO(DEF) Handle Telemetry for Defined entities.
-
-        return self.create_nodes(cluster_id=cluster_id, cluster_spec=cluster_spec)  # noqa: E501
+        if spec_worker_count > curr_worker_count:
+            cluster_spec.spec.workers.count = spec_worker_count - curr_worker_count  # noqa: E501
+            return self.create_nodes(cluster_id=cluster_id, cluster_spec=cluster_spec)  # noqa: E501
+        else:
+            raise NotImplementedError("Scaling down is under implementation")
 
     def delete_cluster(self, cluster_id):
         """Start the delete cluster operation."""

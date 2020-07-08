@@ -411,8 +411,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         num_workers_wanted = validated_data[RequestKey.NUM_WORKERS]
 
-        if num_workers_wanted < 1:
-            raise e.CseServerError(f"Worker node count must be > 0 (received"
+        if num_workers_wanted < 0:
+            raise e.CseServerError(f"Worker node count must be >= 0 (received"
                                    f" {num_workers_wanted}).")
 
         # cluster_handler.py already makes a cluster info API call to vCD, but
@@ -421,10 +421,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         cluster_info = self.get_cluster_info(data=validated_data,
                                              telemetry=False)
         num_workers = len(cluster_info['nodes'])
-        if num_workers > num_workers_wanted:
-            raise e.CseServerError("Scaling down native Kubernetes "
-                                   "clusters is not supported.")
-        elif num_workers == num_workers_wanted:
+        if num_workers == num_workers_wanted:
             raise e.CseServerError(f"Cluster '{cluster_name}' already has "
                                    f"{num_workers} worker nodes.")
 
@@ -436,8 +433,14 @@ class VcdBroker(abstract_broker.AbstractBroker):
             cse_params[LocalTemplateKey.CPU] = validated_data.get(RequestKey.NUM_CPU) # noqa: E501
             record_user_action_details(cse_operation=CseOperation.CLUSTER_RESIZE, cse_params=cse_params) # noqa: E501
 
-        validated_data[RequestKey.NUM_WORKERS] = num_workers_wanted - num_workers # noqa: E501
-        return self.create_nodes(data=validated_data, telemetry=False)
+        if num_workers_wanted > num_workers:
+            validated_data[RequestKey.NUM_WORKERS] = num_workers_wanted - num_workers  # noqa: E501
+            return self.create_nodes(data=validated_data, telemetry=False)
+        else:
+            num_workers_to_be_deleted = num_workers - num_workers_wanted
+            node_list = cluster_info['nodes']
+            validated_data[RequestKey.NODE_NAMES_LIST] = [node['name'] for node in node_list[0:num_workers_to_be_deleted]] # noqa: E501
+            return self.delete_nodes(data=validated_data, telemetry=False)
 
     @auth.secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def delete_cluster(self, **kwargs):
@@ -892,30 +895,31 @@ class VcdBroker(abstract_broker.AbstractBroker):
                                      master_ip)
             self.context.client.get_task_monitor().wait_for_status(task)
 
-            msg = f"Creating {num_workers} node(s) for cluster " \
-                  f"'{cluster_name}' ({cluster_id})"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-            try:
-                add_nodes(self.context.sysadmin_client,
-                          num_nodes=num_workers,
-                          node_type=NodeType.WORKER,
-                          org=org,
-                          vdc=vdc,
-                          vapp=vapp,
-                          catalog_name=catalog_name,
-                          template=template,
-                          network_name=network_name,
-                          num_cpu=num_cpu,
-                          memory_in_mb=mb_memory,
-                          storage_profile=storage_profile_name,
-                          ssh_key=ssh_key)
-            except Exception as err:
-                raise e.WorkerNodeCreationError("Error creating worker node:",
-                                                str(err))
+            if num_workers > 0:
+                msg = f"Creating {num_workers} node(s) for cluster " \
+                    f"'{cluster_name}' ({cluster_id})"
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                try:
+                    add_nodes(self.context.sysadmin_client,
+                              num_nodes=num_workers,
+                              node_type=NodeType.WORKER,
+                              org=org,
+                              vdc=vdc,
+                              vapp=vapp,
+                              catalog_name=catalog_name,
+                              template=template,
+                              network_name=network_name,
+                              num_cpu=num_cpu,
+                              memory_in_mb=mb_memory,
+                              storage_profile=storage_profile_name,
+                              ssh_key=ssh_key)
+                except Exception as err:
+                    raise e.WorkerNodeCreationError("Error creating worker node:", str(err))  # noqa: E501
 
-            msg = f"Adding {num_workers} node(s) to cluster " \
-                  f"'{cluster_name}' ({cluster_id})"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                msg = f"Adding {num_workers} node(s) to cluster " \
+                    f"'{cluster_name}' ({cluster_id})"
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+
             vapp.reload()
             join_cluster(self.context.sysadmin_client,
                          vapp,
