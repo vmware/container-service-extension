@@ -1139,7 +1139,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
 
     # Add global placement polcies
     _setup_placement_policies(client,
-                              policy_list=server_constants.CLUSTER_PLACEMENT_POLICIES, # noqa: E501
+                              policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES, # noqa: E501
                               msg_update_callback=msg_update_callback,
                               log_wire=log_wire)
 
