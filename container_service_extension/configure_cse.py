@@ -1830,7 +1830,7 @@ def _create_def_entity_for_existing_clusters(
                     "network": cluster['network_name'],
                     "ssh_key": "", # Impossible to get this value from clusters
                     "enable_nfs": len(cluster['nfs_nodes']) > 0,
-                #    "rollback_on_failure": True # assuming default
+                    # "rollback_on_failure": True # assuming default
                 },
                 "k8_distribution": {
                     "template_name": cluster['template_name'],
