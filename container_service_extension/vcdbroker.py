@@ -91,24 +91,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                                        cse_params=cse_params)
 
         cluster[K8S_PROVIDER_KEY] = K8sProvider.NATIVE
-        vapp = vcd_vapp.VApp(self.context.client, href=cluster['vapp_href'])
-        vms = vapp.get_all_vms()
-        for vm in vms:
-            node_info = {
-                'name': vm.get('name'),
-                'ipAddress': ''
-            }
-            try:
-                node_info['ipAddress'] = vapp.get_primary_ip(vm.get('name'))
-            except Exception:
-                LOGGER.debug(f"Unable to get ip address of node "
-                             f"{vm.get('name')}")
-            if vm.get('name').startswith(NodeType.MASTER):
-                cluster.get('master_nodes').append(node_info)
-            elif vm.get('name').startswith(NodeType.WORKER):
-                cluster.get('nodes').append(node_info)
-            elif vm.get('name').startswith(NodeType.NFS):
-                cluster.get('nfs_nodes').append(node_info)
+        _update_cluster_dict_with_node_info(self.context.client, cluster)
 
         return cluster
 
@@ -1446,10 +1429,34 @@ def is_valid_cluster_name(name):
     return all(allowed.match(x) for x in name.split("."))
 
 
+def _update_cluster_dict_with_node_info(client, cluster):
+    vapp = vcd_vapp.VApp(client, href=cluster['vapp_href'])
+    vms = vapp.get_all_vms()
+    for vm in vms:
+        node_info = {
+            'name': vm.get('name'),
+            'ipAddress': ''
+        }
+        try:
+            node_info['ipAddress'] = vapp.get_primary_ip(vm.get('name'))
+        except Exception:
+            LOGGER.debug(f"Unable to get ip address of node "
+                         f"{vm.get('name')}")
+        if vm.get('name').startswith(NodeType.MASTER):
+            cluster.get('master_nodes').append(node_info)
+        elif vm.get('name').startswith(NodeType.WORKER):
+            cluster.get('nodes').append(node_info)
+        elif vm.get('name').startswith(NodeType.NFS):
+            cluster.get('nfs_nodes').append(node_info)
+
+
 def get_all_clusters(client, cluster_name=None, cluster_id=None,
-                     org_name=None, ovdc_name=None):
+                     org_name=None, ovdc_name=None, fetch_details=False):
     """Get list of dictionaries containing data for each visible cluster.
 
+    :param bool fetch_details: If set, will fetch additional information about
+        each individual cluster e.g. network_name, org_name, org_href, list of
+        master/worker/nfs nodes and their ips.
     TODO define these cluster data dictionary keys better:
         'name', 'vapp_id', 'vapp_href', 'vdc_name', 'vdc_href', 'vdc_id',
         'leader_endpoint', 'master_nodes', 'nodes', 'nfs_nodes',
@@ -1515,41 +1522,38 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
         vapp_href = f'{client.get_api_uri()}/vApp/vapp-{vapp_id}'
 
         clusters[vapp_id] = {
-            'name': record.get('name'),
-            'vapp_id': vapp_id,
-            'vapp_href': vapp_href,
-            'vdc_name': record.get('vdcName'),
-            'vdc_href': f'{client.get_api_uri()}/vdc/{vdc_id}',
-            'vdc_id': vdc_id,
-            'leader_endpoint': '',
-            'master_nodes': [],
-            'nodes': [],
-            'nfs_nodes': [],
-            'number_of_vms': record.get('numberOfVMs'),
-            'template_name': '',
-            'template_revision': '',
-            'cse_version': '',
             'cluster_id': '',
-            'status': record.get('status'),
-            'os': '',
+            'cni': '',
+            'cni_version': '',
+            'cse_version': '',
             'docker_version': '',
             'kubernetes': '',
             'kubernetes_version': '',
-            'cni': '',
-            'cni_version': ''
+            'leader_endpoint': '',
+            'master_nodes': [],
+            'name': record.get('name'),
+            'network_name': '',
+            'nfs_nodes': [],
+            'nodes': [],
+            'number_of_vms': record.get('numberOfVMs'),
+            'org_name': '',
+            'org_href': '',
+            'os': '',
+            'status': record.get('status'),
+            'storage_profile_name': '',
+            'template_name': '',
+            'template_revision': '',
+            'vapp_href': vapp_href,
+            'vapp_id': vapp_id,
+            'vdc_href': f'{client.get_api_uri()}/vdc/{vdc_id}',
+            'vdc_id': vdc_id,
+            'vdc_name': record.get('vdcName')
         }
 
         if hasattr(record, 'Metadata'):
             for element in record.Metadata.MetadataEntry:
                 if element.Key in metadata_key_to_cluster_key:
                     clusters[vapp_id][metadata_key_to_cluster_key[element.Key]] = str(element.TypedValue.Value) # noqa: E501
-                # for pre-2.5.0 cluster backwards compatibility
-                elif element.Key == ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME and clusters[vapp_id]['template_name'] == '': # noqa: E501
-                    clusters[vapp_id]['template_name'] = str(element.TypedValue.Value) # noqa: E501
-
-        # pre-2.6 clusters may not have kubernetes version metadata
-        if clusters[vapp_id]['kubernetes_version'] == '':
-            clusters[vapp_id]['kubernetes_version'] = ltm.get_k8s_version_from_template_name(clusters[vapp_id]['template_name']) # noqa: E501
 
     # api query can fetch only 8 metadata at a time
     # since we have more than 8 metadata, we need to use 2 queries
@@ -1559,9 +1563,22 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
             for element in record.Metadata.MetadataEntry:
                 if element.Key in metadata_key_to_cluster_key:
                     clusters[vapp_id][metadata_key_to_cluster_key[element.Key]] = str(element.TypedValue.Value) # noqa: E501
-                # for pre-2.5.0 cluster backwards compatibility
-                elif element.Key == ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME and clusters[vapp_id]['template_name'] == '': # noqa: E501
-                    clusters[vapp_id]['template_name'] = str(element.TypedValue.Value) # noqa: E501
+
+    if not fetch_details:
+        return list(clusters.values())
+
+    for cluster in clusters.values():
+        vapp = vcd_vapp.VApp(client, href=cluster['vapp_href'])
+        cluster['network_name'] = \
+            vcd_utils.get_parent_network_name_of_vapp(vapp)
+        cluster['storage_profile_name'] = \
+            vcd_utils.get_storage_profile_name_of_first_vm_in_vapp(vapp)
+        _update_cluster_dict_with_node_info(client, cluster)
+        if client.is_sysadmin():
+            cluster['org_name'] = \
+                vcd_utils.get_org_name_from_ovdc_id(client, cluster['vdc_id'])
+            cluster['org_href'] = \
+                vcd_utils.get_org_href_from_ovdc_id(client, cluster['vdc_id'])
 
     return list(clusters.values())
 

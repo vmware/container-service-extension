@@ -19,7 +19,6 @@ from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 import pyvcloud.vcd.utils as pyvcloud_vcd_utils
 from pyvcloud.vcd.vapp import VApp
-from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
 import semantic_version
 
@@ -566,8 +565,7 @@ def _register_def_schema(client: Client,
         msg = ""
         try:
             schema_svc.get_entity_type(native_entity_type.get_id())
-            msg = "defined entity type already exists." \
-                  " Skipping defined entity type creation"
+            msg = "Skipping creation of Defined Entity Type. Defined Entity Type already exists." # noqa: E501
         except cse_exception.DefSchemaServiceError:
             # TODO handle this part only if the entity type was not found
             native_entity_type = schema_svc.create_entity_type(native_entity_type)  # noqa: E501
@@ -675,7 +673,7 @@ def _setup_placement_policies(client, policy_list,
         try:
             pvdc_compute_policy = cpm.get_pvdc_compute_policy(
                 server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME)
-            msg = "Skipping global PVDC compute policy creation. Policy already exists" # noqa: E501
+            msg = "Skipping creation of global PVDC compute policy. Policy already exists" # noqa: E501
             msg_update_callback.general(msg)
             INSTALL_LOGGER.info(msg)
         except EntityNotFoundException:
@@ -689,7 +687,7 @@ def _setup_placement_policies(client, policy_list,
         for policy in policy_list:
             try:
                 cpm.get_vdc_compute_policy(policy, is_placement_policy=True)
-                msg = f"Skipping creating VDC placement policy '{policy}'. Policy already exists" # noqa: E501
+                msg = f"Skipping creation of VDC placement policy '{policy}'. Policy already exists" # noqa: E501
                 msg_update_callback.general(msg)
                 INSTALL_LOGGER.info(msg)
             except EntityNotFoundException:
@@ -700,7 +698,7 @@ def _setup_placement_policies(client, policy_list,
                     policy, pvdc_compute_policy_id=pvdc_compute_policy['id'])
     except cse_exception.GlobalPvdcComputePolicyNotSupported:
         msg = "Global PVDC compute policies are not supported." \
-              "Skipping placement policy creation."
+              "Skipping creation of placement policy."
         msg_update_callback.general(msg)
         INSTALL_LOGGER.info(msg)
 
@@ -711,7 +709,7 @@ def _install_all_templates(
     if skip_template_creation:
         msg = "Skipping creation of templates."
         msg_update_callback.info(msg)
-        INSTALL_LOGGER.warning(msg)
+        INSTALL_LOGGER.info(msg)
     else:
         # read remote template cookbook, download all scripts
         rtm = RemoteTemplateManager(
@@ -916,10 +914,10 @@ def _install_single_template(
         templateBuildKey.STORAGE_PROFILE: storage_profile
     }
     if float(client.get_api_version()) >= float(vCDApiVersion.VERSION_35.value): # noqa: E501
-        if template[server_constants.RemoteTemplateKey.KIND] not in shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES: # noqa: E501
+        if template.get(server_constants.RemoteTemplateKey.KIND) not in shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES: # noqa: E501
             raise ValueError(f"Cluster kind is {template.get(server_constants.RemoteTemplateKey.KIND)}" # noqa: E501
                              f" Expected {shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES}") # noqa: E501
-        build_params[templateBuildKey.CSE_PLACEMENT_POLICY] = template[server_constants.RemoteTemplateKey.KIND] # noqa: E501
+        build_params[templateBuildKey.CSE_PLACEMENT_POLICY] = template.get(server_constants.RemoteTemplateKey.KIND) # noqa: E501
     builder = TemplateBuilder(client, client, build_params, ssh_key=ssh_key,
                               logger=INSTALL_LOGGER,
                               msg_update_callback=msg_update_callback)
@@ -1167,7 +1165,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     # Add global placement polcies
     _setup_placement_policies(
         client=client,
-        policy_list=server_constants.CLUSTER_PLACEMENT_POLICIES,
+        policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
 
@@ -1178,14 +1176,14 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
         log_wire=log_wire)
 
     # Recreate all supported templates
-    # _install_all_templates(
-    #    client=client,
-    #    config=config,
-    #    skip_template_creation=skip_template_creation,
-    #    force_create=True,
-    #    retain_temp_vapp=retain_temp_vapp,
-    #    ssh_key=retain_temp_vapp,
-    #    msg_update_callback=msg_update_callback)
+    _install_all_templates(
+        client=client,
+        config=config,
+        skip_template_creation=skip_template_creation,
+        force_create=True,
+        retain_temp_vapp=retain_temp_vapp,
+        ssh_key=retain_temp_vapp,
+        msg_update_callback=msg_update_callback)
 
     # Update old templates vms with the new placement compute policies
     # Will remove all existing policies assigned to template vms.
@@ -1194,7 +1192,10 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
 
-    clusters = get_all_cse_clusters(client=client)
+    msg = "Loading all CSE clusters for processing..."
+    INSTALL_LOGGER.info(msg)
+    msg_update_callback.info(msg)
+    clusters = get_all_cse_clusters(client=client, fetch_details=True)
 
     # Add new vdc compute policy to ovdc with existing CSE clusters
     _assign_placement_policy_to_vdc_with_existing_clusters(
@@ -1210,23 +1211,22 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
         log_wire=log_wire)
 
     # Update clusters to have auto generated password and fix their metadata
-    # _fix_cluster_metadata(
-    #    client=client,
-    #    config=config,
-    #    cse_clusters=clusters,
-    #    msg_update_callback=msg_update_callback)
-    # _fix_cluster_admin_password(
-    #    client=client,
-    #    cse_clusters=clusters,
-    #    new_admin_password=admin_password,
-    #    msg_update_callback=msg_update_callback)
-
-    # Assign new placement policy to all clusters
-    _assign_placement_policy_to_existing_clusters(
+    _fix_cluster_metadata(
+        client=client,
+        config=config,
+        cse_clusters=clusters,
+        msg_update_callback=msg_update_callback)
+    _fix_cluster_admin_password(
         client=client,
         cse_clusters=clusters,
-        msg_update_callback=msg_update_callback,
-        log_wire=log_wire)
+        new_admin_password=admin_password,
+        msg_update_callback=msg_update_callback)
+
+    # The new placement policies can't be assigned to existing CSE k8s clusters
+    # because the support for assigning compute policy to deployed vms is not
+    # there in pyvcloud. However skipping this step is not going to hurt us,
+    # since the cse placement policies are dummy policies designed to gate
+    # cluster deployment and has no play once the cluster has been deployed.
 
     # Create DEF entity for all existing clusters (if missing)
     _create_def_entity_for_existing_clusters(
@@ -1268,10 +1268,10 @@ def _get_all_cse_templates(client,
 def _get_placement_policy_name_from_template_name(template_name):
     if 'k8' in template_name:
         policy_name = \
-            server_constants.NATIVE_CLUSTER_PLACEMENT_POLICY_NAME
+            shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY
     elif 'tkg' in template_name:
         policy_name = \
-            server_constants.TKG_PLUS_CLUSTER_PLACEMENT_POLICY_NAME
+            shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY
     else:
         raise Exception(f"Unknown kind of template '{template_name}'.")
 
@@ -1298,12 +1298,12 @@ def _assign_placement_policy_to_templates(
         INSTALL_LOGGER.info(msg)
 
         try:
-            policy_name=_get_placement_policy_name_from_template_name(
+            policy_name = _get_placement_policy_name_from_template_name(
                 template['name'])
         except Exception as err:
             msg = str(err)
             INSTALL_LOGGER.info(msg)
-            msg_update_callback.warning(msg)
+            msg_update_callback.info(msg)
             continue
 
         task = cpm.remove_all_vdc_compute_policies_from_vapp_template_vms(
@@ -1338,7 +1338,7 @@ def _assign_placement_policy_to_templates(
     INSTALL_LOGGER.info(msg)
 
 
-def _add_placement_policy_to_vdc_with_existing_clusters(
+def _assign_placement_policy_to_vdc_with_existing_clusters(
         client,
         cse_clusters,
         msg_update_callback=utils.NullPrinter(),
@@ -1375,10 +1375,10 @@ def _add_placement_policy_to_vdc_with_existing_clusters(
     cpm = \
         compute_policy_manager.ComputePolicyManager(client, log_wire=log_wire)
     native_policy = cpm.get_vdc_compute_policy(
-        policy_name=server_constants.NATIVE_CLUSTER_PLACEMENT_POLICY_NAME,
+        policy_name=shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY,
         is_placement_policy=True)
     tkg_plus_policy = cpm.get_vdc_compute_policy(
-        policy_name=server_constants.TKG_PLUS_CLUSTER_PLACEMENT_POLICY_NAME,
+        policy_name=shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY,
         is_placement_policy=True)
 
     if len(native_ovdcs):
@@ -1428,7 +1428,7 @@ def _remove_old_cse_sizing_compute_policies(
         for vdc_data in vdcs:
             vdc_name = vdc_data['name']
 
-            msg = f"Processing Org VDC: '{vdc_name}'"
+            msg = f"Processing Org VDC : '{vdc_name}'"
             msg_update_callback.info(msg)
             INSTALL_LOGGER.info(msg)
 
@@ -1437,7 +1437,7 @@ def _remove_old_cse_sizing_compute_policies(
             vdc_sizing_policies = cpm.list_vdc_sizing_policies_on_vdc(vdc_id)
             if vdc_sizing_policies:
                 for policy in vdc_sizing_policies:
-                    msg = f"Processing Policy : '{policy['name']}' on Org VDC: '{vdc_name}'" # noqa: E501
+                    msg = f"Processing Policy : '{policy['name']}' on Org VDC : '{vdc_name}'" # noqa: E501
                     msg_update_callback.info(msg)
                     INSTALL_LOGGER.info(msg)
 
@@ -1449,10 +1449,11 @@ def _remove_old_cse_sizing_compute_policies(
                     fake_task_object = {'href': task_data['task_href']}
                     client.get_task_monitor().wait_for_status(fake_task_object) # noqa: E501
 
-                    msg = f"Removed Policy : '{policy['name']}' from Org VDC: '{vdc_name}'" # noqa: E501
+                    msg = f"Removed Policy : '{policy['name']}' from Org VDC : '{vdc_name}'" # noqa: E501
                     msg_update_callback.general(msg)
                     INSTALL_LOGGER.info(msg)
-            msg = f"Finished processing Org VDC: '{vdc_name}'"
+
+            msg = f"Finished processing Org VDC : '{vdc_name}'"
             msg_update_callback.general(msg)
             INSTALL_LOGGER.info(msg)
 
@@ -1746,68 +1747,15 @@ def _fix_cluster_admin_password(client,
             msg_update_callback.info(msg)
 
 
-def _assign_placement_policy_to_existing_clusters(
-        client,
-        cse_clusters,
-        msg_update_callback=utils.NullPrinter(),
-        log_wire=False):
-    msg = "Adding relevant placement compute policy to CSE cluster vms."
-    msg_update_callback.info(msg)
-    INSTALL_LOGGER.info(msg)
-
-    cpm = \
-        compute_policy_manager.ComputePolicyManager(client, log_wire=log_wire)
-    for cluster in cse_clusters:
-        msg = f"Processing cluster '{cluster['name']}'."
-        msg_update_callback.info(msg)
-        INSTALL_LOGGER.info(msg)
-
-        try:
-            policy_name=_get_placement_policy_name_from_template_name(
-                cluster['template_name'])
-        except Exception as err:
-            msg = str(err)
-            INSTALL_LOGGER.info(msg)
-            msg_update_callback.warning(msg)
-            continue
-
-        task = cpm.remove_all_vdc_compute_policies_from_vapp_template_vms(
-            org_name=template['org_name'],
-            catalog_name=template['catalog_name'],
-            catalog_item_name=template['name'])
-
-        if task is not None:
-            client.get_task_monitor().wait_for_success(task)
-            msg = f"Removed all compute policies from template " \
-                  f"'{template['name']}'."
-            msg_update_callback.general(msg)
-            INSTALL_LOGGER.info(msg)
-
-        policy = cpm.get_vdc_compute_policy(policy_name,
-                                            is_placement_policy=True)
-        task = cpm.assign_vdc_placement_policy_to_vapp_template_vms(
-            compute_policy_href=policy['href'],
-            org_name=template['org_name'],
-            catalog_name=template['catalog_name'],
-            catalog_item_name=template['name'])
-
-        if task is not None:
-            client.get_task_monitor().wait_for_success(task)
-            msg = f"Assigned policy '{policy['display_name']}' to template " \
-                  f"'{template['name']}'."
-            msg_update_callback.general(msg)
-            INSTALL_LOGGER.info(msg)
-
-    msg = "Finished processing all CSE k8s templates."
-    msg_update_callback.general(msg)
-    INSTALL_LOGGER.info(msg)
-
-
 def _create_def_entity_for_existing_clusters(
         client,
         cse_clusters,
         msg_update_callback=utils.NullPrinter(),
         log_wire=False):
+    msg = "Creating Defined Entity for old CSE k8s clusters"
+    msg_update_callback.info(msg)
+    INSTALL_LOGGER.info(msg)
+
     logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
     cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
         client=client,
@@ -1816,64 +1764,104 @@ def _create_def_entity_for_existing_clusters(
     entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
 
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
-    defKey = def_utils.DefKey
     keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(client.get_api_version())] # noqa: E501
     entity_type_id = def_utils.generate_entity_type_id(
-        vendor=keys_map[defKey.VENDOR],
-        nss=keys_map[defKey.ENTITY_TYPE_NSS],
-        version=keys_map[defKey.ENTITY_TYPE_VERSION])
+        vendor=keys_map[def_utils.DefKey.ENTITY_TYPE_VENDOR],
+        nss=keys_map[def_utils.DefKey.ENTITY_TYPE_NSS],
+        version=keys_map[def_utils.DefKey.ENTITY_TYPE_VERSION])
     nativeEntityType = schema_svc.get_entity_type(entity_type_id)
 
     for cluster in cse_clusters:
+        msg = f"Processing cluster '{cluster['name']}'"
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.info(msg)
+
         cluster_id = cluster['cluster_id']
         try:
             def_entity = entity_svc.get_entity(cluster_id)
+            msg = f"Skipping cluster '{cluster['name']}' since it already " \
+                  "has a Defined Entity."
+            INSTALL_LOGGER.info(msg)
+            msg_update_callback.info(msg)
             continue
         except Exception as err:
             INSTALL_LOGGER.debug(str(err))
 
-        if 'k8' in cluster['template_name']:
-            kind = 'native'
-        elif 'tkg' in cluster['template_name']:
-            kind = 'tkg_plus'
+        msg = f"Creating Defined Entity for cluster '{cluster['name']}'"
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.info(msg)
+
+        policy_name = _get_placement_policy_name_from_template_name(
+            cluster['template_name'])
+        if policy_name == shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY:
+            kind = def_utils.ClusterEntityKind.NATIVE.value
+        elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY:
+            kind = def_utils.ClusterEntityKind.TANZU_PLUS
+
+        worker_nodes = []
+        for item in cluster['nodes']:
+            worker_nodes.append({
+                'name': item['name'],
+                'ip': item['ipAddress'],
+                'sizing_class': ''  # Not valid for old clusters
+            })
+        nfs_nodes = []
+        for item in cluster['nfs_nodes']:
+            worker_nodes.append({
+                'name': item['name'],
+                'ip': item['ipAddress'],
+                'sizing_class': '' # Not valid for old clusters
+            })
 
         data = {
             "kind": kind,
             "spec": {
                 "workers": {
                     "count": len(cluster['nodes']),
-                    "sizing_class": "",
-                    "storage_profile": "*"
+                    "sizing_class": "", # Not valid for old clusters
+                    "storage_profile": cluster['storage_profile_name']
                 },
                 "control_plane": {
-                    "count": 1,
-                    "sizing_class": "",
-                    "storage_profile": "*"
+                    "count": len(cluster['master_nodes']),
+                    "sizing_class": "", # Not valid for old clusters
+                    "storage_profile": cluster['storage_profile_name']
                 },
                 "settings": {
-                    "network": "ToDo",
-                    "ssh_key": "ToDo",
-                    "enable_nfs": len(cluster['nfs_nodes']) > 0
+                    "network": cluster['network_name'],
+                    "ssh_key": "", # Impossible to get this value from clusters
+                    "enable_nfs": len(cluster['nfs_nodes']) > 0,
+                #    "rollback_on_failure": True # assuming default
                 },
                 "k8_distribution": {
                     "template_name": cluster['template_name'],
-                    "template_revision": cluster['template_revision']
+                    "template_revision": int(cluster['template_revision'])
                 }
             },
             "status": {
-                # "id": cluster_id,
-                "cni": f"{cluster['cni']} {cluster['cni_version']}",
                 "phase": str(shared_constants.DefEntityPhase(
                     shared_constants.DefEntityOperation.CREATE,
                     shared_constants.DefEntityOperationStatus.SUCCEEDED)),
-                "master_ip": cluster['leader_endpoint']
+                "master_ip": cluster['leader_endpoint'],
+                "kubernetes": f"{cluster['kubernetes']} {cluster['kubernetes_version']}", # noqa: E501
+                "cni": f"{cluster['cni']} {cluster['cni_version']}",
+                "os": cluster['os'],
+                "docker_version": cluster['docker_version'],
+                "nodes": {
+                    "master": {
+                        "name": cluster['master_nodes'][0]['name'],
+                        "ip": cluster['master_nodes'][0]['ipAddress'],
+                        "sizing_class": "" # Not valid for old clusters
+                    },
+                    "workers": worker_nodes,
+                    "nfs": nfs_nodes
+                }
             },
             "metadata": {
-                "org_name": "ToDo",
+                "org_name": cluster['org_name'],
                 "ovdc_name": cluster['vdc_name'],
                 "cluster_name": cluster['name']
             },
-            "api_version": ""
+            "api_version": "" # no idea what it should be
         }
         cluster_spec = def_models.ClusterEntity(**data)
 
@@ -1885,10 +1873,30 @@ def _create_def_entity_for_existing_clusters(
         entity_svc.update_entity(def_entity_id, def_entity)
         entity_svc.resolve_entity(def_entity_id)
 
+        msg = f"Created Defined Entity for cluster '{cluster['name']}'"
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.general(msg)
+
         # update vapp metadata to reflect new cluster_id
+        msg = f"Updating metadata of cluster '{cluster['name']}'"
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.info(msg)
+
         tags = {
             server_constants.ClusterMetadataKey.CLUSTER_ID: def_entity_id
         }
         vapp = VApp(client, href=cluster['vapp_href'])
         task = vapp.set_multiple_metadata(tags)
         client.get_task_monitor().wait_for_status(task)
+
+        msg = f"Updated metadata of cluster '{cluster['name']}'"
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.general(msg)
+
+        msg = f"Finished processing cluster '{cluster['name']}'"
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.general(msg)
+
+    msg = "Finished processing all clusters."
+    INSTALL_LOGGER.info(msg)
+    msg_update_callback.general(msg)

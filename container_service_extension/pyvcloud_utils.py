@@ -152,16 +152,16 @@ def get_vdc(client, vdc_id=None, vdc_name=None, org=None, org_name=None,
     return VDC(client, resource=resource)
 
 
-def get_org_name_from_ovdc_id(sysadmin_client: vcd_client.Client, vdc_id):
-    """Get org_name from vdc_id using OVDC_TO_ORG_MAP.
+def get_org_name_href_from_ovdc_id(sysadmin_client: vcd_client.Client, vdc_id):
+    """Get org name and href from vdc_id using OVDC_TO_ORG_MAP.
 
-    Update OVDC_TO_ORG_MAP for new {org_name:vdc_id} pair
+    Update OVDC_TO_ORG_MAP for new vdc_id
 
     :param vdc_id: unique ovdc id
 
-    :return: org_name
+    :return: org's name and href
 
-    :rtype: str
+    :rtype: dict
     """
     raise_error_if_not_sysadmin(sysadmin_client)
 
@@ -175,9 +175,21 @@ def get_org_name_from_ovdc_id(sysadmin_client: vcd_client.Client, vdc_id):
         vdc_obj.get_resource(),
         vcd_client.RelationType.UP,
         vcd_client.EntityType.ADMIN_ORG.value)
-    org = vcd_org.Org(sysadmin_client, href=link.href)
-    OVDC_TO_ORG_MAP[vdc_id] = org.get_name()
-    return org.get_name()
+    org_href = link.href
+    org = vcd_org.Org(sysadmin_client, href=org_href)
+    org_name = org.get_name()
+
+    result = {'name': org_name, 'href': org_href}
+    OVDC_TO_ORG_MAP[vdc_id] = result
+    return result
+
+
+def get_org_name_from_ovdc_id(sysadmin_client: vcd_client.Client, vdc_id):
+    return get_org_name_href_from_ovdc_id(sysadmin_client, vdc_id).get('name')
+
+
+def get_org_href_from_ovdc_id(sysadmin_client: vcd_client.Client, vdc_id):
+    return get_org_name_href_from_ovdc_id(sysadmin_client, vdc_id).get('href')
 
 
 def get_pvdc_id(sysadmin_client: vcd_client.Client, ovdc: VDC):
@@ -436,6 +448,55 @@ def get_all_vapps_in_ovdc(client, ovdc_id):
         vapps.append(vapp)
 
     return vapps
+
+
+def get_parent_network_name_of_vapp(vapp):
+    network_name = ""
+    if not vapp:
+        return network_name
+
+    vapp_resource = vapp.get_resource()
+    network_config_section = None
+    if hasattr(vapp_resource, 'NetworkConfigSection'):
+        network_config_section = vapp_resource.NetworkConfigSection
+    network_config = None
+    if network_config_section is not None and hasattr(network_config_section, 'NetworkConfig'): # noqa: E501
+        network_config = network_config_section.NetworkConfig
+    configuration_section = None
+    if network_config is not None and hasattr(network_config, 'Configuration'): # noqa: E501
+        configuration_section = network_config.Configuration
+    if configuration_section is not None and hasattr(configuration_section, 'ParentNetwork'): # noqa: E501
+        parent_network = configuration_section.ParentNetwork
+        network_name = parent_network.get('name')
+
+    return network_name
+
+
+def get_storage_profile_name_of_first_vm_in_vapp(vapp):
+    storage_profile_name = ""
+    if not vapp:
+        return storage_profile_name
+
+    vms = vapp.get_all_vms()
+
+    if len(vms) == 0:
+        return storage_profile_name
+
+    first_vm = vms[0]
+    vm_spec_section = None
+    if hasattr(first_vm, 'VmSpecSection'):
+        vm_spec_section = first_vm.VmSpecSection
+    disk_section = None
+    if vm_spec_section is not None and hasattr(vm_spec_section, 'DiskSection'): # noqa : E501
+        disk_section = vm_spec_section.DiskSection
+    disk_settings = None
+    if disk_section is not None and hasattr(disk_section, 'DiskSettings'): # noqa: E501
+        disk_settings = disk_section.DiskSettings
+    if disk_settings is not None and hasattr(disk_settings, 'StorageProfile'): # noqa: E501
+        storage_profile = disk_settings.StorageProfile
+        storage_profile_name = storage_profile.get('name')
+
+    return storage_profile_name
 
 
 def get_cloudapi_client_from_vcd_client(client: vcd_client.Client,
