@@ -78,7 +78,7 @@ class ClusterService(abstract_broker.AbstractBroker):
     def get_cluster_config(self, cluster_id: str):
         """Get the cluster's kube config contents.
 
-        :param str cluster_id: 
+        :param str cluster_id:
         :return: Dictionary containing cluster config.
         :rtype: dict
         """
