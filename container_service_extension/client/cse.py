@@ -1,7 +1,7 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-
+import dataclasses
 import os
 
 import click
@@ -17,6 +17,8 @@ import container_service_extension.client.command_filter as cmd_filter
 from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.system import System
 import container_service_extension.client.utils as client_utils
+import container_service_extension.def_.models as def_models
+import container_service_extension.def_.utils as def_utils
 from container_service_extension.exceptions import CseResponseError
 from container_service_extension.logger import CLIENT_LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
@@ -539,17 +541,58 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
 
 
 @cluster_group.command('apply',
-                       help="Example:vcd cse cluster apply input_spec.yaml",
+                       help="Example:vcd cse cluster apply -f input_spec.yaml"
+                       " \n\nExample:vcd cse cluster apply --sample"
+                       " \n\nExample:vcd cse cluster apply -s -o output.yaml",
                        short_help='apply the cluster configuration defined '
                                   'in the file to either create new a cluster '
-                                  'or update the existing cluster')
+                                  'or update the existing cluster or'
+                                  'generate sample configuration file')
 @click.pass_context
-@click.argument('cluster_config_file_path',
-                metavar='CLUSTER_CONFIG_FILE_PATH',
-                type=click.Path(exists=True))
-def apply(ctx, cluster_config_file_path):
+@click.option(
+    '-f',
+    'cluster_config_file_path',
+    required=False,
+    metavar='CLUSTER_CONFIG_FILE_PATH',
+    type=click.Path(exists=True),
+    help="Full path of configuration file; This flag can't be used together with -s/-o")  # noqa: E501
+@click.option(
+    '-s',
+    '--sample',
+    'generate_sample_config',
+    is_flag=True,
+    required=False,
+    default=False,
+    help="generate sample cluster configuration file; This flag can't be used together with -f")  # noqa: E501
+@click.option(
+    '-o',
+    '--output',
+    'output',
+    required=False,
+    default=None,
+    metavar='OUTPUT_FILE_NAME',
+    help="Filepath to write sample configuration file to; This flag can only be used with -s")  # noqa: E501
+def apply(ctx, cluster_config_file_path, generate_sample_config, output):
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
+        console_message_printer = utils.ConsoleMessagePrinter()
+        if cluster_config_file_path and (generate_sample_config or output):
+            console_message_printer.general_no_color(ctx.get_help())
+            raise Exception("-s/-o flag can't be used together with -f")  # noqa: E501
+
+        if not cluster_config_file_path and not generate_sample_config:
+            console_message_printer.general_no_color(ctx.get_help())
+            raise Exception("No option chosen")
+
+        if cluster_config_file_path and not os.path.exists(cluster_config_file_path):  # noqa: E501
+            console_message_printer.general_no_color(ctx.get_help())
+            raise Exception(f"{cluster_config_file_path} not found")
+
+        if generate_sample_config:
+            sample_cluster_config = _get_sample_cluster_configuration(output=output)  # noqa: E501
+            console_message_printer.general_no_color(sample_cluster_config)
+            return
+
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         with open(cluster_config_file_path) as f:
@@ -1500,6 +1543,47 @@ def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name,
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
+
+
+def _get_sample_cluster_configuration(output=None):
+    metadata = def_models.Metadata('mycluster', 'myorg', 'myvdc')
+    status = def_models.Status()
+    settings = def_models.Settings(network='myNetwork', ssh_key=None, enable_nfs=False)  # noqa: E501
+    k8_distribution = def_models.Distribution(
+        template_name='ubuntu-16.04_k8-1.17_weave-2.6.0',
+        template_revision=2
+    )
+    control_plane = def_models.ControlPlane(
+        count=1,
+        sizing_class='Large',
+        storage_profile='myStorageProfile'
+    )
+    workers = def_models.Workers(
+        count=2,
+        sizing_class='small',
+        storage_profile='*'
+    )
+
+    cluster_spec = def_models.ClusterSpec(
+        control_plane=control_plane,
+        k8_distribution=k8_distribution,
+        settings=settings,
+        workers=workers
+    )
+    cluster_entity = def_models.ClusterEntity(
+        metadata=metadata,
+        spec=cluster_spec,
+        status=status,
+        kind=def_utils.ClusterEntityKind.NATIVE.value
+    )
+
+    sample_cluster_config = yaml.dump(dataclasses.asdict(cluster_entity))
+
+    if output:
+        with open(output, 'w') as f:
+            f.write(sample_cluster_config)
+
+    return sample_cluster_config
 
 
 # Add-on CLI support for PKS container provider
