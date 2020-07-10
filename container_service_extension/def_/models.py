@@ -82,7 +82,6 @@ class ControlPlane:
         #  Get the default sizing class.
         self.sizing_class = sizing_class
         self.storage_profile = storage_profile
-        # or utils.get_default_storage_profile()  # noqa: E501
         self.count = count
 
 
@@ -97,7 +96,6 @@ class Workers:
         #  Get the default sizing class.
         self.sizing_class = sizing_class
         self.storage_profile = storage_profile
-        # or utils.get_default_storage_profile()  # noqa: E501
         self.count = count
 
 

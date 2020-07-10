@@ -1573,7 +1573,7 @@ def _fix_cluster_metadata(client,
         cni_data = tokens[2].split('-')
 
         os = tokens[0]
-        # old clusters that were converted can have non-exsitent template name
+        # old clusters that were converted can have non-existent template name
         # that has 'k8s' string in it instead of 'k8'
         if k8s_data[0] in ('k8', 'k8s'):
             k8s_distribution = 'upstream'
@@ -1769,7 +1769,7 @@ def _create_def_entity_for_existing_clusters(
         vendor=keys_map[def_utils.DefKey.ENTITY_TYPE_VENDOR],
         nss=keys_map[def_utils.DefKey.ENTITY_TYPE_NSS],
         version=keys_map[def_utils.DefKey.ENTITY_TYPE_VERSION])
-    nativeEntityType = schema_svc.get_entity_type(entity_type_id)
+    native_entity_type = schema_svc.get_entity_type(entity_type_id)
 
     for cluster in cse_clusters:
         msg = f"Processing cluster '{cluster['name']}'"
@@ -1866,7 +1866,7 @@ def _create_def_entity_for_existing_clusters(
         cluster_spec = def_models.ClusterEntity(**data)
 
         def_entity = def_models.DefEntity(entity=cluster_spec)
-        entity_svc.create_entity(nativeEntityType.id, entity=def_entity)
+        entity_svc.create_entity(native_entity_type.id, entity=def_entity)
         def_entity = entity_svc.get_native_entity_by_name(cluster['name'])
         def_entity_id = def_entity.id
         def_entity.externalId = cluster['vapp_href']

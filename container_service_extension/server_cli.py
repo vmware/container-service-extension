@@ -485,7 +485,7 @@ def encrypt(ctx, input_file, output_file):
         sys.exit(1)
 
 
-@cli.command(short_help='Install CSE 3.0.0 on vCD')
+@cli.command(short_help='Install CSE extension 3.0.0 on vCD')
 @click.pass_context
 @click.option(
     '-c',
@@ -670,7 +670,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
 
 
 @cli.command('upgrade',
-             short_help="Upgrade CSE to 3.0.0 on vCD")
+             short_help="Upgrade CSE extension to version 3.0.0 on vCD")
 @click.pass_context
 @click.option(
     '-c',
@@ -681,7 +681,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     type=click.Path(exists=True),
     envvar='CSE_CONFIG',
     required=True,
-    help="(Required) Filepath to CSE config file")
+    help="Filepath to CSE config file")
 @click.option(
     '-s',
     '--skip-config-decryption',
@@ -693,13 +693,13 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     '--skip-template-creation',
     'skip_template_creation',
     is_flag=True,
-    help='Skips creating CSE k8s template during upgrade')
+    help='Skip creating CSE k8s templates during upgrade')
 @click.option(
     '-d',
     '--retain-temp-vapp',
     'retain_temp_vapp',
     is_flag=True,
-    help='Retain the temporary vApp after the template has been captured'
+    help='Retain the temporary vApp after the CSE k8s template has been captured' # noqa: E501
          ' --ssh-key option is required if this flag is used')
 @click.option(
     '-k',
@@ -708,23 +708,30 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     required=False,
     default=None,
     type=click.File('r'),
-    help='Filepath of SSH public key to add to vApp template')
+    help='Filepath of SSH public key to add to CSE k8s template vms')
 @click.option(
+    '-p',
     '--admin-password',
     'admin_password',
     default=None,
     metavar='ADMIN_PASSWORD',
-    help="New root password to set on cluster vms. If left empty password will be auto-generated") # noqa: E501
+    help="New root password to set on existing CSE k8s cluster vms. If left "
+         "empty, old passwords,if present, will be retained else it will be "
+         "auto-generated")
 def upgrade(ctx, config_file_path, skip_config_decryption,
             skip_template_creation, retain_temp_vapp,
             ssh_key_file, admin_password):
-    """Upgrade existing CSE 2.6.0 installation/entities.
+    """Upgrade existing CSE installation/entities to match CSE 3.0.
 
-    - Update existing Kubernetes cluster representation on VCD
-    - Update existing placement and sizing policies used by CSE
-    - Register defined entities schema to VCD
-    - Install templates from template repository linked in config file
+\b
     - Add CSE / VCD API version info to VCD's extension data for CSE
+    - Register defined entities schema of CSE k8s clusters with VCD
+    - Create placement compute policies used by CSE
+    - Remove old sizing compute policies created by CSE 2.6 and below
+    - Install all templates from template repository linked in config file
+    - Update currently installed templates that are no longer defined in
+      CSE template repository to adhere to CSE 3.0 template requirements.
+    - Update existing CSE k8s cluster's to match CSE 3.0 k8s clusters.
     """
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
@@ -748,8 +755,7 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
-            validate=False,
-            # validate=True,
+            validate=True,
             log_wire_file=INSTALL_WIRELOG_FILEPATH,
             logger_debug=INSTALL_LOGGER)
 
