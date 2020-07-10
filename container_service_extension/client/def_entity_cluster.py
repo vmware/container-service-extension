@@ -9,6 +9,11 @@ import container_service_extension.exceptions as cse_exceptions
 from container_service_extension.logger import CLIENT_LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
 
+from container_service_extension.client.tkgclient import TkgClusterApi
+from container_service_extension.client.tkgclient.configuration import Configuration
+from container_service_extension.client.tkgclient.api_client import ApiClient
+from container_service_extension.client.tkgclient.models.tkg_cluster import TkgCluster
+
 
 class DefEntityCluster:
     """Handle operations common to DefNative and vsphere kubernetes clusters.
@@ -27,6 +32,29 @@ class DefEntityCluster:
         self._client = client
         self._cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
             client=client, logger_debug=CLIENT_LOGGER)
+        self.tkg_client = self._get_tkg_client()
+
+    def _get_tkg_client(self):
+        tkg_config = Configuration()
+        tkg_config.host = f"{self._client.get_cloudapi_uri()}/1.0.0/"
+        tkg_config.verify_ssl = self._client._verify_ssl_certs
+        tkg_client = ApiClient(configuration=tkg_config)
+        jwt_token = self._client.get_access_token()
+        if jwt_token:
+            tkg_client.set_default_header("Authorization", f"Bearer {jwt_token}")
+        else:
+            legacy_token = self._client.get_xvcloud_authorization_token()
+            tkg_client.set_default_header("x-vcloud-authorization", legacy_token)
+        api_version = self._client.get_api_version()
+        tkg_client.set_default_header("Accept", f"application/json;version={api_version}")
+        return tkg_client
+
+    def get_tkg_cluster(self, id):
+        tkg_cluster_api = TkgClusterApi(api_client=self.tkg_client)
+        # Returns tuple of response_data, response_status, response_headers
+        response = tkg_cluster_api.get_tkg_cluster(id)
+        cluster: TkgCluster = response[0]
+        return cluster.to_dict()
 
     def get_clusters(self, vdc=None, org=None, **kwargs):
         """Get collection of clusters using DEF API.
@@ -92,6 +120,6 @@ class DefEntityCluster:
             }
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
 
-    def __getattr__(self, name):
-        msg = "Operation not supported; Under implementation"
-        raise vcd_exceptions.OperationNotSupportedException(msg)
+    # def __getattr__(self, name):
+    #     msg = "Operation not supported; Under implementation"
+    #     raise vcd_exceptions.OperationNotSupportedException(msg)
