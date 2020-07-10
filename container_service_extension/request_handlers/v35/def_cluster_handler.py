@@ -81,14 +81,10 @@ def cluster_info(data: dict, op_ctx: ctx.OperationContext):
 def cluster_config(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster config operation.
 
-    Required data: cluster_name
-    Optional data and default values: org_name=None, ovdc_name=None
-
-    (data validation handled in broker)
+    Required data: cluster_id
 
     :return: Dict
     """
-    raise NotImplementedError
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
     return svc.get_cluster_config(cluster_id)

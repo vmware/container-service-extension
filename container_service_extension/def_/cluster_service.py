@@ -75,22 +75,35 @@ class ClusterService(abstract_broker.AbstractBroker):
             version=ent_type.version,
             filters=filters)
 
-    def get_cluster_config(self, **kwargs):
+    def get_cluster_config(self, cluster_id: str):
         """Get the cluster's kube config contents.
 
-        Common broker function that validates data for 'cluster config'
-        operation and returns the cluster's kube config file contents
-        as a string.
-
-        **data: Required
-            Required data: cluster_name
-            Optional data and default values: org_name=None, ovdc_name=None
-        **telemetry: Optional
+        :param str cluster_id: 
+        :return: Dictionary containing cluster config.
+        :rtype: dict
         """
-        raise NotImplementedError
-        # Yet to be modified for defined entities
-        # Gets external_id (vapp id) from entity
-        # Gets to master node and gets the config
+        curr_entity = self.entity_svc.get_entity(cluster_id)
+
+        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
+        #  based clusters
+
+        vapp = vcd_vapp.VApp(self.context.client, href=curr_entity.externalId)
+        master_node_name = curr_entity.entity.status.nodes.master.name
+
+        LOGGER.debug(f"getting file from node {master_node_name}")
+        password = vapp.get_admin_password(master_node_name)
+        vs = vs_utils.get_vsphere(self.context.sysadmin_client, vapp,
+                                  vm_name=master_node_name, logger=LOGGER)
+        vs.connect()
+        moid = vapp.get_vm_moid(master_node_name)
+        vm = vs.get_vm_by_moid(moid)
+        filename = '/root/.kube/config'
+        result = vs.download_file_from_guest(vm, 'root', password, filename)
+
+        if not result:
+            raise e.ClusterOperationError("Couldn't get cluster configuration")
+
+        return result.content.decode()
 
     def get_cluster_upgrade_plan(self, cluster_id: str):
         """Get the template names/revisions that the cluster can upgrade to.
