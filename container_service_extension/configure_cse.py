@@ -1195,7 +1195,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     msg = "Loading all CSE clusters for processing..."
     INSTALL_LOGGER.info(msg)
     msg_update_callback.info(msg)
-    clusters = get_all_cse_clusters(client=client, fetch_details=True)
+    clusters = get_all_cse_clusters(client=client, fetch_details=False)
 
     # Add new vdc compute policy to ovdc with existing CSE clusters
     _assign_placement_policy_to_vdc_with_existing_clusters(
@@ -1224,9 +1224,18 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
 
     # The new placement policies can't be assigned to existing CSE k8s clusters
     # because the support for assigning compute policy to deployed vms is not
-    # there in pyvcloud. However skipping this step is not going to hurt us,
-    # since the cse placement policies are dummy policies designed to gate
-    # cluster deployment and has no play once the cluster has been deployed.
+    # there in CSE's compute policy manager. However skipping this step is not
+    # going to hurt us, since the cse placement policies are dummy policies
+    # designed to gate cluster deployment and has no play once the cluster has
+    # been deployed.
+
+    # Loading the clusters again after their metadata has been fixed.
+    # This time do fetch node details, org name etc. So that the def schema
+    # can be populated.
+    msg = "Loading all CSE clusters for processing..."
+    INSTALL_LOGGER.info(msg)
+    msg_update_callback.info(msg)
+    clusters = get_all_cse_clusters(client=client, fetch_details=True)
 
     # Create DEF entity for all existing clusters (if missing)
     _create_def_entity_for_existing_clusters(
@@ -1524,6 +1533,8 @@ def _fix_cluster_metadata(client,
                     new_template_name += '_k8-1.10_weave-2.3.0'
                 elif cse_version in ('2.0.0'):
                     new_template_name += '_k8-1.12_weave-2.3.0'
+                else:
+                    new_template_name += '_k8-0.0_weave-0.0.0'
             elif 'ubuntu' in old_template_name:
                 new_template_name = 'ubuntu-16.04'
                 if cse_version in ('1.0.0'):
@@ -1532,6 +1543,8 @@ def _fix_cluster_metadata(client,
                     new_template_name += '_k8-1.10_weave-2.3.0'
                 elif cse_version in ('2.0.0'):
                     new_template_name += '_k8-1.13_weave-2.3.0'
+                else:
+                    new_template_name += '_k8-0.0_weave-0.0.0'
 
             if new_template_name:
                 msg = "Updating template metadata of cluster."
@@ -1586,6 +1599,7 @@ def _fix_cluster_metadata(client,
         cni_version = cni_data[1]
         docker_version = '0.0.0'
 
+        # Try to determine the above values using template definition
         org_name = config['broker']['org']
         catalog_name = config['broker']['catalog']
         k8_templates = ltm.get_all_k8s_local_template_definition(
