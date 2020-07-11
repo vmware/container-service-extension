@@ -1,10 +1,15 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+from typing import List
+
 import pyvcloud.vcd.exceptions as vcd_exceptions
 
 import container_service_extension.def_.entity_service as def_entity_svc
 from container_service_extension.def_.utils import ClusterEntityFilterKey
+from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_NSS
+from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_VERSION
+from container_service_extension.def_.utils import DEF_VMWARE_VENDOR
 import container_service_extension.exceptions as cse_exceptions
 from container_service_extension.logger import CLIENT_LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
@@ -66,10 +71,19 @@ class DefEntityCluster:
 
     def list_tkg_clusters(self):
         tkg_cluster_api = TkgClusterApi(api_client=self.tkg_client)
-        response = tkg_cluster_api.list_tkg_clusters('vmware/tkgcluster/1.0.0')
-        clusters: TkgCluster = response[0]
-        for cluster in clusters:
-            print(cluster.to_dict)
+        response = tkg_cluster_api.list_tkg_clusters(
+            f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}")
+        entities: List[TkgCluster] = response[0]
+        clusters = []
+        for entity in entities:
+            cluster = {
+                'Name': entity.metadata.name,
+                'Kind': 'TanzuKubernetesCluster',
+                'VDC': entity.metadata.virtual_data_center_name,
+                'K8s Version': entity.spec.distribution.version
+            }
+            clusters.append(cluster)
+        return clusters
 
 
     def get_clusters(self, vdc=None, org=None, **kwargs):
@@ -116,8 +130,6 @@ class DefEntityCluster:
         :return: cluster information
         :rtype: dict
         """
-        return self.list_tkg_clusters()
-        return self.get_tkg_cluster('urn:vcloud:entity:vmware:tkgcluster:1.0.0:99007f07-d069-49ec-b745-c83e49645a85')
         filters = {}
         if org:
             filters[ClusterEntityFilterKey.ORG_NAME.value] = org

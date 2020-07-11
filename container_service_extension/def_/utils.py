@@ -9,9 +9,12 @@ import container_service_extension.exceptions as excptn
 
 # Defined Entity Framework related constants
 DEF_CSE_VENDOR = 'cse'
-DEF_NATIVE_INTERFACE_NSS = 'native'
-DEF_NATIVE_INTERFACE_VERSION = '1.0.0'
-DEF_NATIVE_INTERFACE_NAME = 'nativeClusterInterface'
+DEF_VMWARE_VENDOR = 'vmware'
+DEF_VMWARE_INTERFACE_NSS = 'k8s'
+DEF_VMWARE_INTERFACE_VERSION = '1.0.0'
+DEF_VMWARE_INTERFACE_NAME = 'Kubernetes'
+DEF_TKG_ENTITY_TYPE_NSS = 'tkgcluster'
+DEF_TKG_ENTITY_TYPE_VERSION = '1.0.0'
 DEF_INTERFACE_ID_PREFIX = 'urn:vcloud:interface'
 DEF_NATIVE_ENTITY_TYPE_NSS = 'nativeCluster'
 DEF_NATIVE_ENTITY_TYPE_VERSION = '1.0.0'
@@ -27,10 +30,11 @@ DEF_RESOLVED_STATE = 'RESOLVED'
 
 @unique
 class DefKey(str, Enum):
-    VENDOR = 'vendor'
+    INTERFACE_VENDOR = 'interface_vendor'
     INTERFACE_NSS = 'interface_nss'
     INTERFACE_VERSION = 'interface_version'
     INTERFACE_NAME = 'interface_name'
+    ENTITY_TYPE_VENDOR = 'entity_type_vendor'
     ENTITY_TYPE_NAME = 'entity_type_name'
     ENTITY_TYPE_NSS = 'entity_type_nss'
     ENTITY_TYPE_VERSION = 'entity_type_version'
@@ -39,10 +43,11 @@ class DefKey(str, Enum):
 
 MAP_API_VERSION_TO_KEYS = {
     35.0: {
-        DefKey.VENDOR: DEF_CSE_VENDOR,
-        DefKey.INTERFACE_NSS: DEF_NATIVE_INTERFACE_NSS,
-        DefKey.INTERFACE_VERSION: DEF_NATIVE_INTERFACE_VERSION,
-        DefKey.INTERFACE_NAME: DEF_NATIVE_INTERFACE_NAME,
+        DefKey.INTERFACE_VENDOR: DEF_VMWARE_VENDOR,
+        DefKey.INTERFACE_NSS: DEF_VMWARE_INTERFACE_NSS,
+        DefKey.INTERFACE_VERSION: DEF_VMWARE_INTERFACE_VERSION,
+        DefKey.INTERFACE_NAME: DEF_VMWARE_INTERFACE_NAME,
+        DefKey.ENTITY_TYPE_VENDOR: DEF_CSE_VENDOR,
         DefKey.ENTITY_TYPE_NSS: DEF_NATIVE_ENTITY_TYPE_NSS,
         DefKey.ENTITY_TYPE_VERSION: DEF_NATIVE_ENTITY_TYPE_VERSION,
         DefKey.ENTITY_TYPE_NAME: DEF_NATIVE_ENTITY_TYPE_NAME,
@@ -92,7 +97,7 @@ def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
 def get_registered_def_interface():
     """Fetch the native cluster interface loaded during server startup."""
     from container_service_extension.service import Service
-    return Service().get_native_cluster_interface()
+    return Service().get_kubernetes_interface()
 
 
 def get_registered_def_entity_type():
