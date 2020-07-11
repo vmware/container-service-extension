@@ -122,7 +122,7 @@ class PolicyBasedOvdc:
         msg = "Operation not supported; Under implementation"
         raise vcd_exceptions.OperationNotSupportedException(msg)
         method = RequestMethod.PUT
-        ovdc = get_vdc(self._client, vdc_name=ovdc_name, org_name=org_name,
+        ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
         uri = f'{self._uri}/ovdc/{ovdc_id}/compute-policies'
@@ -134,10 +134,10 @@ class PolicyBasedOvdc:
             RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: remove_compute_policy_from_vms # noqa: E501
         }
 
-        response = self._client._do_request_prim(
+        response = self.client._do_request_prim(
             method,
             uri,
-            self._client._session,
+            self.client._session,
             contents=data,
             media_type='application/json',
             accept_type='application/json')
@@ -155,14 +155,14 @@ class PolicyBasedOvdc:
         msg = "Operation not supported; Under implementation"
         raise vcd_exceptions.OperationNotSupportedException(msg)
         method = RequestMethod.GET
-        ovdc = get_vdc(self._client, vdc_name=ovdc_name, org_name=org_name,
+        ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
         uri = f'{self._uri}/ovdc/{ovdc_id}/compute-policies'
 
-        response = self._client._do_request_prim(
+        response = self.client._do_request_prim(
             method,
             uri,
-            self._client._session,
+            self.client._session,
             accept_type='application/json')
         return process_response(response)

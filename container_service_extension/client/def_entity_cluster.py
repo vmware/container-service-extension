@@ -41,20 +41,36 @@ class DefEntityCluster:
         tkg_client = ApiClient(configuration=tkg_config)
         jwt_token = self._client.get_access_token()
         if jwt_token:
-            tkg_client.set_default_header("Authorization", f"Bearer {jwt_token}")
+            tkg_client.set_default_header("Authorization", f"Bearer {jwt_token}")  # noqa: E501
         else:
             legacy_token = self._client.get_xvcloud_authorization_token()
-            tkg_client.set_default_header("x-vcloud-authorization", legacy_token)
+            tkg_client.set_default_header("x-vcloud-authorization", legacy_token)  # noqa: E501
         api_version = self._client.get_api_version()
-        tkg_client.set_default_header("Accept", f"application/json;version={api_version}")
+        tkg_client.set_default_header("Accept", f"application/json;version={api_version}")  # noqa: E501
         return tkg_client
 
     def get_tkg_cluster(self, id):
+        """Sample method to use tkg_client.
+
+        To be modified or removed as per the needs of CSE-CLI
+
+        :param id: Id of the cluster
+        :return: Tkg cluster
+        :rtype: dict
+        """
         tkg_cluster_api = TkgClusterApi(api_client=self.tkg_client)
         # Returns tuple of response_data, response_status, response_headers
         response = tkg_cluster_api.get_tkg_cluster(id)
         cluster: TkgCluster = response[0]
         return cluster.to_dict()
+
+    def list_tkg_clusters(self):
+        tkg_cluster_api = TkgClusterApi(api_client=self.tkg_client)
+        response = tkg_cluster_api.list_tkg_clusters('vmware/tkgcluster/1.0.0')
+        clusters: TkgCluster = response[0]
+        for cluster in clusters:
+            print(cluster.to_dict)
+
 
     def get_clusters(self, vdc=None, org=None, **kwargs):
         """Get collection of clusters using DEF API.
@@ -100,6 +116,8 @@ class DefEntityCluster:
         :return: cluster information
         :rtype: dict
         """
+        return self.list_tkg_clusters()
+        return self.get_tkg_cluster('urn:vcloud:entity:vmware:tkgcluster:1.0.0:99007f07-d069-49ec-b745-c83e49645a85')
         filters = {}
         if org:
             filters[ClusterEntityFilterKey.ORG_NAME.value] = org
@@ -120,6 +138,3 @@ class DefEntityCluster:
             }
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
 
-    # def __getattr__(self, name):
-    #     msg = "Operation not supported; Under implementation"
-    #     raise vcd_exceptions.OperationNotSupportedException(msg)

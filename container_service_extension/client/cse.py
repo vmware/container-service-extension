@@ -743,6 +743,8 @@ def cluster_info(ctx, name, org, vdc):
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
+        import time
+        time.sleep(10)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
         cluster_info = cluster.get_cluster_info(name, org=org, vdc=vdc)

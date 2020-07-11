@@ -34,7 +34,51 @@ class TkgClusterApi(object):
         self.api_client = api_client
 
     def list_tkg_clusters(self, entity_type, **kwargs):
-        raise NotImplementedError
+        all_params = ['id']  # noqa: E501
+        all_params.append('async')
+        all_params.append('_return_http_data_only')
+        all_params.append('_preload_content')
+        all_params.append('_request_timeout')
+
+        params = locals()
+        for key, val in six.iteritems(params['kwargs']):
+            if key not in all_params:
+                raise TypeError(
+                    "Got an unexpected keyword argument '%s'"
+                    " to method create_tkg_cluster" % key
+                )
+            params[key] = val
+        del params['kwargs']
+        if ('entity_type' not in params or
+                params['entity_type'] is None):
+            raise ValueError(
+                "Missing the required parameter `entity_type` when calling `list_tkg_clusters`")
+        path_params = {}
+        query_params = []
+        header_params = {}
+        header_params[
+            'Content-Type'] = self.api_client.select_header_content_type(
+            ['application/json'])
+        form_params = []
+        local_var_files = {}
+        body_params = None
+        auth_settings = []
+        collection_formats = {}
+        return self.api_client.call_api(
+            f"entities/{entity_type}", 'GET',
+            path_params,
+            query_params,
+            header_params,
+            body=body_params,
+            post_params=form_params,
+            files=local_var_files,
+            response_type='list[TkgCluster]',  # noqa: E501
+            auth_settings=auth_settings,
+            async_req=params.get('async'),
+            _return_http_data_only=params.get('_return_http_data_only'),
+            _preload_content=params.get('_preload_content', True),
+            _request_timeout=params.get('_request_timeout'),
+            collection_formats=collection_formats)
 
     def get_tkg_cluster(self, id, **kwargs):
         all_params = ['id']  # noqa: E501

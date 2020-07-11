@@ -603,7 +603,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         node_name = validated_data[RequestKey.NODE_NAME]
 
-        cluster = get_cluster(self.context._client, cluster_name,
+        cluster = get_cluster(self.context.client, cluster_name,
                               org_name=validated_data[RequestKey.ORG_NAME],
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
 
@@ -613,7 +613,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
             record_user_action_details(cse_operation=CseOperation.NODE_INFO, cse_params=cse_params)  # noqa: E501
 
-        vapp = vcd_vapp.VApp(self.context._client, href=cluster['vapp_href'])
+        vapp = vcd_vapp.VApp(self.context.client, href=cluster['vapp_href'])
         vms = vapp.get_all_vms()
         node_info = None
         for vm in vms:
@@ -728,7 +728,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             if node.startswith(NodeType.MASTER):
                 raise e.CseServerError(f"Can't delete master node: '{node}'.")
 
-        cluster = get_cluster(self.context._client, cluster_name,
+        cluster = get_cluster(self.context.client, cluster_name,
                               org_name=validated_data[RequestKey.ORG_NAME],
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
         cluster_id = cluster['cluster_id']

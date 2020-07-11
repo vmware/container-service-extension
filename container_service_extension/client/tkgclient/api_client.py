@@ -229,8 +229,11 @@ class ApiClient(object):
             data = json.loads(response.data)
         except ValueError:
             data = response.data
-
-        data = data['entity']
+        if response_type == 'TkgCluster':
+            data = data['entity']
+        elif response_type == 'list[TkgCluster]':
+            entities = data['values']
+            data = [def_entity['entity'] for def_entity in entities]
         return self.__deserialize(data, response_type)
 
     def __deserialize(self, data, klass):
