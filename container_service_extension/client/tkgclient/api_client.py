@@ -158,7 +158,8 @@ class ApiClient(object):
         if _preload_content:
             # deserialize response data
             if response_type:
-                return_data = self.deserialize(response_data, response_type)
+                return_data = self.deserialize(response_data, response_type,
+                                               method)
             else:
                 return_data = None
 
@@ -210,9 +211,10 @@ class ApiClient(object):
         return {key: self.sanitize_for_serialization(val)
                 for key, val in six.iteritems(obj_dict)}
 
-    def deserialize(self, response, response_type):
+    def deserialize(self, response, response_type, method):
         """Deserializes response into an object.
 
+        :param method:
         :param response: RESTResponse object to be deserialized.
         :param response_type: class literal for
             deserialized object, or string of class name.
@@ -229,9 +231,9 @@ class ApiClient(object):
             data = json.loads(response.data)
         except ValueError:
             data = response.data
-        if response_type == 'TkgCluster':
+        if response_type == 'TkgCluster' and method == 'GET':
             data = data['entity']
-        elif response_type == 'list[TkgCluster]':
+        elif response_type == 'list[TkgCluster]' and method == 'GET':
             entities = data['values']
             data = [def_entity['entity'] for def_entity in entities]
         return self.__deserialize(data, response_type)
