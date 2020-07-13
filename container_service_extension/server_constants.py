@@ -54,6 +54,9 @@ CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME = 'global'
 CSE_GLOBAL_PVDC_COMPUTE_POLICY_DESCRIPTION = 'global PVDC compute policy for' \
                                              'cse'
 
+# CSE cluster Kubeconfig path
+CSE_CLUSTER_KUBECONFIG_PATH = '/root/.kube/config'
+
 
 @unique
 class NodeType(str, Enum):

@@ -28,6 +28,7 @@ import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import ClusterMetadataKey
+from container_service_extension.server_constants import CSE_CLUSTER_KUBECONFIG_PATH # noqa: E501
 from container_service_extension.server_constants import CSE_NATIVE_DEPLOY_RIGHT_NAME # noqa: E501
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
@@ -207,9 +208,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
             vs.connect()
             moid = vapp.get_vm_moid(node_name)
             vm = vs.get_vm_by_moid(moid)
-            filename = '/root/.kube/config'
             result = vs.download_file_from_guest(vm, 'root', password,
-                                                 filename)
+                                                 CSE_CLUSTER_KUBECONFIG_PATH)
             all_results.append(result)
 
         if len(all_results) == 0 or all_results[0].status_code != requests.codes.ok: # noqa: E501
