@@ -610,7 +610,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
 
         cluster = Cluster(client, cluster_entity_kind=cluster_config.get('kind'))  # noqa: E501
         result = cluster.apply(cluster_config)
-        stdout(yaml.dump(result), ctx)
+        console_message_printer.general_no_color(yaml.dump(result))
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
@@ -1546,6 +1546,12 @@ def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name,
 
 
 def _get_sample_cluster_configuration(output=None):
+    """Generate sample cluster configuration.
+
+    :param str output: full path of output file
+    :return: sample cluster configuration
+    :rtype: str
+    """
     metadata = def_models.Metadata('mycluster', 'myorg', 'myvdc')
     status = def_models.Status()
     settings = def_models.Settings(network='myNetwork', ssh_key=None, enable_nfs=False)  # noqa: E501
