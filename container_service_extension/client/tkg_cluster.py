@@ -4,10 +4,8 @@
 
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 
-from container_service_extension.client.def_entity_cluster import DefEntityCluster  # noqa: E501
 
-
-class TKGCluster(DefEntityCluster):
+class TKGCluster:
     """Embedded Kubernetes into vSphere."""
 
     def __init__(self, client):
