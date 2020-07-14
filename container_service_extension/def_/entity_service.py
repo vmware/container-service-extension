@@ -222,19 +222,20 @@ class DefEntityService():
                 return def_entity
 
     @handle_entity_service_exception
-    def get_native_entity_by_name(self, name: str) -> DefEntity:
+    def get_native_entity_by_name(self, name: str, filters: dict = {}) -> DefEntity:  # noqa: E501
         """Get Native cluster defined entity by its name.
 
         :param str name: Name of the native cluster.
+        :param dict filters: key-value pairs representing filter options
         :return:
         """
-        filter_by_name = {def_utils.ClusterEntityFilterKey.CLUSTER_NAME.value: name}  # noqa: E501
+        filters[def_utils.ClusterEntityFilterKey.CLUSTER_NAME.value] = name  # noqa: E501
         entity_type: DefEntityType = self.get_def_entity_type()
         for entity in \
             self.list_entities_by_entity_type(vendor=entity_type.vendor,
                                               nss=entity_type.nss,
                                               version=entity_type.version,
-                                              filters=filter_by_name):
+                                              filters=filters):
             return entity
 
     @handle_entity_service_exception

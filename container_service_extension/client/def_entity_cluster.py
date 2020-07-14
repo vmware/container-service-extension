@@ -3,8 +3,10 @@
 # SPDX-License-Identifier: BSD-2-Clause
 import pyvcloud.vcd.exceptions as vcd_exceptions
 
+from container_service_extension.client.native_cluster import NativeCluster
+import container_service_extension.client.utils as client_utils
 import container_service_extension.def_.entity_service as def_entity_svc
-from container_service_extension.def_.utils import ClusterEntityFilterKey
+from container_service_extension.def_.utils import ClusterEntityKind
 import container_service_extension.exceptions as cse_exceptions
 from container_service_extension.logger import CLIENT_LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
@@ -27,6 +29,7 @@ class DefEntityCluster:
         self._client = client
         self._cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
             client=client, logger_debug=CLIENT_LOGGER)
+        self._nativeCluster = NativeCluster(client)
 
     def get_clusters(self, vdc=None, org=None, **kwargs):
         """Get collection of clusters using DEF API.
@@ -38,12 +41,7 @@ class DefEntityCluster:
         :return: cluster list information
         :rtype: list(dict)
         """
-        filters = {}
-        if org:
-            filters[ClusterEntityFilterKey.ORG_NAME.value] = org
-        if vdc:
-            filters[ClusterEntityFilterKey.OVDC_NAME.value] = vdc
-
+        filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         entity_list = entity_svc.list_entities(filters=filters)  # noqa: E501
         clusters = []
@@ -72,11 +70,7 @@ class DefEntityCluster:
         :return: cluster information
         :rtype: dict
         """
-        filters = {}
-        if org:
-            filters[ClusterEntityFilterKey.ORG_NAME.value] = org
-        if vdc:
-            filters[ClusterEntityFilterKey.OVDC_NAME.value] = vdc
+        filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         def_entity = entity_svc.get_entity_by_name(entity_name=cluster_name, filters=filters)  # noqa: E501
         if def_entity:
@@ -90,6 +84,24 @@ class DefEntityCluster:
                 'K8s Version': def_entity.entity.status.kubernetes,  # noqa: E501
                 'Status': def_entity.entity.status.phase,
             }
+        raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+
+    def delete_cluster(self, cluster_name, org=None, vdc=None):
+        """Delete DEF cluster by name.
+
+        :param str cluster_name: native cluster name
+        :param str org: name of the org
+        :param str vdc: name of the vdc
+        :return: requests.models.Response response
+        :rtype: dict
+        :raises ClusterNotFoundError
+        """
+        filters = self._construct_filters(org=org, vdc=vdc)
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        def_entity = entity_svc.get_entity_by_name(entity_name=cluster_name, filters=filters)  # noqa: E501
+        if def_entity:
+            if def_entity.entity.kind == ClusterEntityKind.NATIVE.value:
+                return self._nativeCluster.delete_cluster_by_id(def_entity.id)
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
 
     def __getattr__(self, name):

@@ -221,13 +221,21 @@ def list_clusters(ctx, vdc, org_name):
     required=False,
     metavar='ORG_NAME',
     help='Restrict cluster search to specified org')
-def cluster_delete(ctx, name, vdc, org):
+@click.option(
+    '-k',
+    '--kind',
+    'cluster_kind',
+    default=None,
+    required=False,
+    metavar='CLUSTER_KIND',
+    help='Restrict cluster search to cluster kind')
+def cluster_delete(ctx, name, vdc, org, cluster_kind=None):
     """Delete a Kubernetes cluster."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
-        cluster = Cluster(client)
+        cluster = Cluster(client, cluster_entity_kind=cluster_kind)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
         result = cluster.delete_cluster(name, org, vdc)

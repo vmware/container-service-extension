@@ -22,6 +22,7 @@ class GroupKey(str, Enum):
 @unique
 class CommandNameKey(str, Enum):
     CREATE = 'create'
+    DELETE = 'delete'
     NODE = 'node'
 
 
@@ -50,13 +51,15 @@ UNSUPPORTED_COMMANDS_BY_VERSION = {
 UNSUPPORTED_COMMAND_OPTIONS_BY_VERSION = {
     vcd_client.ApiVersion.VERSION_33.value: {
         GroupKey.CLUSTER: {
-            CommandNameKey.CREATE: ['sizing_class']
-        }
+            CommandNameKey.CREATE: ['sizing_class'],
+            CommandNameKey.DELETE: ['cluster_kind']
+        },
     },
 
     vcd_client.ApiVersion.VERSION_34.value: {
         GroupKey.CLUSTER: {
-            CommandNameKey.CREATE: ['sizing_class']
+            CommandNameKey.CREATE: ['sizing_class'],
+            CommandNameKey.DELETE: ['cluster_kind']
         }
     },
 
