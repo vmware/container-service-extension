@@ -18,7 +18,7 @@ version of the template from which the cluster is deployed. However, please note
 that if the template itself was created by CSE 2.5.x, then this approach is not
 foolproof. In such cases it's better to recreate the template in CSE 2.6.1, and
 then run `cse convert-cluster` command against the affected cluster to fix its
-metadata. Possible error messages if the template is not recreated and 
+metadata. Possible error messages if the template is not recreated and
 `cse convert-cluster` is not run are as follows (but not limited to):
 
 N/A or patch version missing in/from Kubernetes version field
@@ -43,27 +43,6 @@ cluster 'used_old_tempalte': Invalid version string: '1.16'
 ```
 
 ---
-### Re-registering 2.6.0 GA CSE UI plugin with VCD doesn't work properly
-If the beta version of CSE UI plugin is already registered with VCD, trying to
-upgrade it via CSE cli or VCD UI will fail. Right now, the only way to update
-the UI plugin is to de-register/delete it and then re-install using the new
-zip file. Additionally, the provider will need to re-publish the plugin to all
-the tenants that were previously given access to the CSE UI plugin.
-
----
-### CSE landing page on VCD UI perpetually shows a spinning wheel
-If CSE server is inaccessible/down, on VCD UI's CSE landing page, user only
-sees the loading spinner instead of an error message. Workaround: Make sure CSE
-server is up and running.
-
----
-### Cluster operations fail silently on UI
-On clicking `confirm` in cluster creation/deletion wizards/confirmation message
-boxes, user does not immediately get to know if the plugin successfully sent
-the request, or if CSE Server successfully received the same. Form validation
-and HTTP error display has not been implemented in CSE UI plugin yet.
-
----
 ### Never ending CSE tasks in VCD UI / Failed CSE tasks without proper error message
 If CSE server encounters any error during cluster/node creation, users may see
 CSE tasks in VCD never reach to completion, or the tasks may show up as failed
@@ -74,24 +53,12 @@ occurred. Please inspect CSE server logs in these cases, or file a github
 [issue](https://github.com/vmware/container-service-extension/issues).
 
 ---
-### Enterprise PKS cluster creation fails from UI
-If CSE is enabled with Enterprise PKS but OrgVDCs are not enabled with
-Enterprise PKS as their k8s provider, UI will allow cluster creation operation
-on that OrgVDC, but the operation will eventually fail. This behavior is as
-designed.
-
-*Workaround:* - Enable the OrgVDC explicitly for Enterprise PKS cluster
-deployment via the following command
-```sh
->vcd cse ovdc enable [ovdc name] -k 'ent-pks' -o [Org Name] -d [domain name] -p [plan name]
-```
----
 ### Fresh installation of CSE 2.5.1 or below via `pip install` is broken
 CSE 2.5.1 or below versions have an open-ended dependencies, which permit `pip`
 to pull and install latest versions of the dependencies. Two such dependencies
 are `pyvcloud` and `vcd-cli`, and their latest available versions are
 incompatible with CSE 2.5.1 or below. We are reviewing our design on
-dependencies, and hope to bring improvements in near future. 
+dependencies, and hope to bring improvements in near future.
 
 *Workaround:* - Un-install incompatible `pyvcloud` and `vcd-cli` libraries, and
 manually install compatible versions.
