@@ -75,7 +75,3 @@ class NativeCluster(DefEntityCluster):
                 media_type='application/json',
                 accept_type='application/json')
         return response_processor.process_response(response)
-
-    def __getattr__(self, name):
-        msg = "Operation not supported; Under *** implementation"
-        raise vcd_exceptions.OperationNotSupportedException(msg)

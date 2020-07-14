@@ -541,7 +541,7 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
 
 
 @cluster_group.command('apply',
-                       help="Example:vcd cse cluster apply -f input_spec.yaml"
+                       help="Example:vcd cse cluster apply input_spec.yaml"
                        " \n\nExample:vcd cse cluster apply --sample"
                        " \n\nExample:vcd cse cluster apply -s -o output.yaml",
                        short_help='apply the cluster configuration defined '
@@ -549,13 +549,11 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
                                   'or update the existing cluster or'
                                   'generate sample configuration file')
 @click.pass_context
-@click.option(
-    '-f',
+@click.argument(
     'cluster_config_file_path',
     required=False,
     metavar='CLUSTER_CONFIG_FILE_PATH',
-    type=click.Path(exists=True),
-    help="Full path of configuration file; This flag can't be used together with -s/-o")  # noqa: E501
+    type=click.Path(exists=True))
 @click.option(
     '-s',
     '--sample',
@@ -563,7 +561,7 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
     is_flag=True,
     required=False,
     default=False,
-    help="generate sample cluster configuration file; This flag can't be used together with -f")  # noqa: E501
+    help="generate sample cluster configuration file; This flag can't be used together with CLUSTER_CONFIG_FILE_PATH")  # noqa: E501
 @click.option(
     '-o',
     '--output',
@@ -571,14 +569,14 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
     required=False,
     default=None,
     metavar='OUTPUT_FILE_NAME',
-    help="Filepath to write sample configuration file to; This flag can only be used with -s")  # noqa: E501
+    help="Filepath to write sample configuration file to; This flag should be used with -s")  # noqa: E501
 def apply(ctx, cluster_config_file_path, generate_sample_config, output):
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         console_message_printer = utils.ConsoleMessagePrinter()
         if cluster_config_file_path and (generate_sample_config or output):
             console_message_printer.general_no_color(ctx.get_help())
-            raise Exception("-s/-o flag can't be used together with -f")  # noqa: E501
+            raise Exception("-s/-o flag can't be used together with CLUSTER_CONFIG_FILE_PATH")  # noqa: E501
 
         if not cluster_config_file_path and not generate_sample_config:
             console_message_printer.general_no_color(ctx.get_help())
