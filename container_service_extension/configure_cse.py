@@ -929,13 +929,13 @@ def _install_single_template(
 def upgrade_cse(config_file_name, config, skip_template_creation,
                 ssh_key, retain_temp_vapp, admin_password,
                 msg_update_callback=utils.NullPrinter()):
-    """Handle logistics for upgaring CSE to v3.0.
+    """Handle logistics for upgrading CSE to v3.0.
 
     Handles decision making for configuring AMQP exchange/settings,
     defined entity schema registration for vCD api version >= 35,
     extension registration, catalog setup and template creation, removing old
     CSE sizing based compute policies, assigning the new placement compute
-    policy to concenred org VDCs, and create DEF entity for existing clusters.
+    policy to concerned org VDCs, and create DEF entity for existing clusters.
 
     :param str config_file_name: config file name.
     :param dict config: content of the CSE config file.
