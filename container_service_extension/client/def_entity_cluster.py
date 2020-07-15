@@ -3,8 +3,10 @@
 # SPDX-License-Identifier: BSD-2-Clause
 from typing import List
 
-import pyvcloud.vcd.exceptions as vcd_exceptions
-
+from container_service_extension.client.tkgclient import TkgClusterApi
+from container_service_extension.client.tkgclient.api_client import ApiClient
+from container_service_extension.client.tkgclient.configuration import Configuration  # noqa: E501
+from container_service_extension.client.tkgclient.models.tkg_cluster import TkgCluster  # noqa: E501
 import container_service_extension.def_.entity_service as def_entity_svc
 from container_service_extension.def_.utils import ClusterEntityFilterKey
 from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_NSS
@@ -13,11 +15,6 @@ from container_service_extension.def_.utils import DEF_VMWARE_VENDOR
 import container_service_extension.exceptions as cse_exceptions
 from container_service_extension.logger import CLIENT_LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
-
-from container_service_extension.client.tkgclient import TkgClusterApi
-from container_service_extension.client.tkgclient.configuration import Configuration
-from container_service_extension.client.tkgclient.api_client import ApiClient
-from container_service_extension.client.tkgclient.models.tkg_cluster import TkgCluster
 
 
 class DefEntityCluster:
@@ -72,7 +69,7 @@ class DefEntityCluster:
     def list_tkg_clusters(self):
         tkg_cluster_api = TkgClusterApi(api_client=self.tkg_client)
         response = tkg_cluster_api.list_tkg_clusters(
-            f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}")
+            f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}")  # noqa: E501
         entities: List[TkgCluster] = response[0]
         clusters = []
         for entity in entities:
@@ -84,7 +81,6 @@ class DefEntityCluster:
             }
             clusters.append(cluster)
         return clusters
-
 
     def get_clusters(self, vdc=None, org=None, **kwargs):
         """Get collection of clusters using DEF API.
@@ -149,4 +145,3 @@ class DefEntityCluster:
                 'Status': def_entity.entity.status.phase,
             }
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
-
