@@ -71,19 +71,22 @@ class DefEntityCluster:
         """
         filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        def_entity = entity_svc.get_entity_by_name(entity_name=cluster_name, filters=filters)  # noqa: E501
-        if def_entity:
-            CLIENT_LOGGER.debug(f"Defined entity info from server:{def_entity}")  # noqa: E501
-            # TODO() relevant output
-            return {
-                'Name': def_entity.name,
-                'Kind': def_entity.entity.kind,
-                'VDC': def_entity.entity.metadata.ovdc_name,
-                'Org': def_entity.entity.metadata.org_name,
-                'K8s Version': def_entity.entity.status.kubernetes,  # noqa: E501
-                'Status': def_entity.entity.status.phase,
-            }
-        raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+        def_entities = entity_svc.get_entities_by_name(entity_name=cluster_name, filters=filters)  # noqa: E501
+        if len(def_entities) > 1:
+            raise cse_exceptions.CseDuplicateClusterError("Found more than one cluster; please use --kind option")  # noqa: E501
+        if len(def_entities) == 0:
+            raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+        def_entity = def_entities[0]
+        CLIENT_LOGGER.debug(f"Defined entity info from server:{def_entity}")  # noqa: E501
+        # TODO() relevant output
+        return {
+            'Name': def_entity.name,
+            'Kind': def_entity.entity.kind,
+            'VDC': def_entity.entity.metadata.ovdc_name,
+            'Org': def_entity.entity.metadata.org_name,
+            'K8s Version': def_entity.entity.status.kubernetes,  # noqa: E501
+            'Status': def_entity.entity.status.phase,
+        }
 
     def delete_cluster(self, cluster_name, org=None, vdc=None):
         """Delete DEF cluster by name.
@@ -95,10 +98,14 @@ class DefEntityCluster:
         :rtype: dict
         :raises ClusterNotFoundError
         """
-        filters = self._construct_filters(org=org, vdc=vdc)
+        filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        def_entity = entity_svc.get_entity_by_name(entity_name=cluster_name, filters=filters)  # noqa: E501
-        if def_entity:
-            if def_entity.entity.kind == ClusterEntityKind.NATIVE.value:
-                return self._nativeCluster.delete_cluster_by_id(def_entity.id)
-        raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+        def_entities = entity_svc.get_entities_by_name(entity_name=cluster_name, filters=filters)  # noqa: E501
+        if len(def_entities) > 1:
+            raise cse_exceptions.CseDuplicateClusterError("Found more than one cluster; please use --kind option")  # noqa: E501
+        if len(def_entities) == 0:
+            raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+        def_entity = def_entities[0]
+        if def_entity.entity.kind == ClusterEntityKind.NATIVE.value:
+            return self._nativeCluster.delete_cluster_by_id(def_entity.id)
+        # TODO() TKG cluster delete
