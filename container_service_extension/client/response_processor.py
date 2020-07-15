@@ -7,6 +7,7 @@ import os
 
 import requests
 
+import container_service_extension.client.constants as cli_constants
 from container_service_extension.exceptions import CseResponseError
 from container_service_extension.logger import CLIENT_WIRE_LOGGER
 from container_service_extension.logger import NULL_LOGGER
@@ -17,10 +18,8 @@ from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 from container_service_extension.shared_constants import UNKNOWN_ERROR_MESSAGE
 from container_service_extension.utils import str_to_bool
 
-ENV_CSE_CLIENT_WIRE_LOGGING = 'CSE_CLIENT_WIRE_LOGGING'
-
 wire_logger = NULL_LOGGER
-if str_to_bool(os.getenv(ENV_CSE_CLIENT_WIRE_LOGGING)):
+if str_to_bool(os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING)):
     wire_logger = CLIENT_WIRE_LOGGER
 
 

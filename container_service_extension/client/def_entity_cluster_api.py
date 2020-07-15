@@ -1,10 +1,13 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+from dataclasses import asdict
+import os
 from typing import List
 
 import pyvcloud.vcd.exceptions as vcd_exceptions
 
+import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
 from container_service_extension.client.tkgclient import TkgClusterApi
 from container_service_extension.client.tkgclient.api_client import ApiClient
@@ -17,7 +20,7 @@ from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_NSS
 from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_VERSION
 from container_service_extension.def_.utils import DEF_VMWARE_VENDOR
 import container_service_extension.exceptions as cse_exceptions
-from container_service_extension.logger import CLIENT_LOGGER
+import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
 
 DUPLICATE_CLUSTER_ERROR_MSG = "Duplicated clusters found. Please use --k8-runtime for the unique identification"  # noqa: E501
@@ -37,8 +40,13 @@ class DefEntityClusterApi:
 
     def __init__(self, client):
         self._client = client
-        self._cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
-            client=client, logger_debug=CLIENT_LOGGER)
+        logger_wire = logger.NULL_LOGGER
+        if os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING):
+            logger_wire = logger.CLIENT_WIRE_LOGGER
+        self._cloudapi_client = \
+            vcd_utils.get_cloudapi_client_from_vcd_client(
+                client=client, logger_debug=logger.CLIENT_LOGGER,
+                logger_wire=logger_wire)
         self._nativeCluster = NativeClusterApi(client)
         self.tkg_client = self._get_tkg_client()
 
@@ -102,16 +110,32 @@ class DefEntityClusterApi:
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         entity_list = entity_svc.list_entities(filters=filters)  # noqa: E501
         clusters = []
-        # TODO() relevant output
+
         for def_entity in entity_list:
-            CLIENT_LOGGER.debug(f"Defined entity list from server:{def_entity}")  # noqa: E501
+            logger.CLIENT_LOGGER.debug(f"Defined entity list from server:{def_entity}")  # noqa: E501
+            is_tkg_cluster = def_entity.entityType == cli_constants.TKG_ENTITY_TYPE_ID # noqa: E501
+            vdc_name = def_entity.entity.metadata.VirtualDataCenterName \
+                if is_tkg_cluster else def_entity.entity.metadata.ovdc_name
+
+            # TODO check if the values returned matches the required k8_runtime
+            k8_runtime = cli_constants.TKG_CLUSTER_RUNTIME \
+                if is_tkg_cluster else def_entity.entity.kind
+            org_name = "" if is_tkg_cluster else def_entity.entity.metadata.org_name # noqa: E501
+
+            # TODO find the correct parameter to fill for Owner
+            owner = " "
+
+            k8_version = f"TKG {def_entity.entity.spec.distribution.version}" \
+                if is_tkg_cluster else def_entity.entity.status.kubernetes # noqa: E501
+
             cluster = {
-                'Name': def_entity.name,
-                'Kind': def_entity.entity.kind,
-                'VDC': def_entity.entity.metadata.ovdc_name,
-                'Org': def_entity.entity.metadata.org_name,
-                'K8s Version': def_entity.entity.status.kubernetes,
-                'Status': def_entity.entity.status.phase,
+                cli_constants.CLIOutputKey.CLUSTER_NAME.value: def_entity.name,
+                cli_constants.CLIOutputKey.VDC.value: vdc_name,
+                cli_constants.CLIOutputKey.ORG.value: org_name,
+                cli_constants.CLIOutputKey.K8S_RUNTIME.value: k8_runtime,
+                cli_constants.CLIOutputKey.K8S_VERSION.value: k8_version,
+                cli_constants.CLIOutputKey.STATUS.value: def_entity.entity.status.phase, # noqa: E501
+                cli_constants.CLIOutputKey.OWNER.value: owner
             }
             clusters.append(cluster)
         return clusters
@@ -136,16 +160,9 @@ class DefEntityClusterApi:
         if len(def_entities) == 0:
             raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
         def_entity = def_entities[0]
-        CLIENT_LOGGER.debug(f"Defined entity info from server:{def_entity}")  # noqa: E501
+        CLIENT_LOGGER.debug(f"Defined entity info from server:{def_entity.entity}")  # noqa: E501
         # TODO() relevant output
-        return {
-            'Name': def_entity.name,
-            'Kind': def_entity.entity.kind,
-            'VDC': def_entity.entity.metadata.ovdc_name,
-            'Org': def_entity.entity.metadata.org_name,
-            'K8s Version': def_entity.entity.status.kubernetes,  # noqa: E501
-            'Status': def_entity.entity.status.phase,
-        }
+        return asdict(def_entity)
 
     def delete_cluster(self, cluster_name, org=None, vdc=None):
         """Delete DEF cluster by name.

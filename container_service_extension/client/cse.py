@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 import dataclasses
 import os
+import yaml
 
 import click
 from vcd_cli.utils import stderr
@@ -240,16 +241,18 @@ def cluster_delete(ctx, name, vdc, org, k8_runtime=None):
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
+        # TODO(delete cluster implementation): proceed after implementation.
         result = cluster.delete_cluster(name, org, vdc)
-        # result is empty for delete cluster operation on PKS-managed clusters.
-        # In that specific case, below check helps to print out a meaningful
-        # message to users.
         if len(result) == 0:
             click.secho(f"Delete cluster operation has been initiated on "
                         f"{name}, please check the status using"
                         f" 'vcd cse cluster info {name}'.", fg='yellow')
-        stdout(result, ctx)
-        CLIENT_LOGGER.debug(result)
+        if result.get('task_href'):
+            stdout(result, ctx)
+            CLIENT_LOGGER.debug(result)
+        else:
+            msg_update_callback = utils.ConsoleMessagePrinter()
+            msg_update_callback.general_no_color(yaml.dump(result, indent=4))
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
@@ -813,7 +816,8 @@ def cluster_info(ctx, name, org, vdc, k8_runtime=None):
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
         cluster_info = cluster.get_cluster_info(name, org=org, vdc=vdc)
-        stdout(cluster_info, ctx, show_id=True)
+        msg_update_callback = utils.ConsoleMessagePrinter()
+        msg_update_callback.general_no_color(yaml.dump(cluster_info, indent=4))
         CLIENT_LOGGER.debug(cluster_info)
     except Exception as e:
         stderr(e, ctx)
@@ -887,6 +891,7 @@ def node_info(ctx, cluster_name, node_name, org_name, vdc):
     """Display info about a node in a native Kubernetes provider cluster."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
+        # TODO(NFS nodes): for api version >= 35, use the command for nfs
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         cluster = Cluster(client)
@@ -1003,6 +1008,7 @@ def create_node(ctx, cluster_name, node_count, org, vdc, cpu, memory,
     """Add node(s) to a cluster that uses native Kubernetes provider."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
+        # TODO(NFS nodes): for api version >= 35, use the command for nfs
         if (template_name and not template_revision) or \
                 (not template_name and template_revision):
             raise Exception("Both --template-name (-t) and "
@@ -1062,6 +1068,7 @@ def list_nodes(ctx, name, org, vdc):
     """Display nodes of a cluster that uses native Kubernetes provider."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
+        # TODO(NFS nodes): for api version >= 35, use the command for nfs
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if org is None and not client.is_sysadmin():
@@ -1107,6 +1114,7 @@ def delete_nodes(ctx, cluster_name, node_names, org, vdc):
     """Delete node(s) in a cluster that uses native Kubernetes provider."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
+        # TODO(NFS nodes): for api version >= 35, use the command for nfs
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if not client.is_sysadmin() and org is None:
@@ -1417,7 +1425,8 @@ def ovdc_info(ctx, ovdc_name, org_name):
             if org_name is None:
                 org_name = ctx.obj['profiles'].get('org_in_use')
             result = ovdc.info_ovdc_for_k8s(ovdc_name, org_name)
-            stdout(result, ctx)
+            msg_update_callback = utils.ConsoleMessagePrinter()
+            msg_update_callback.general_no_color(yaml.dump(result, indent=4))
             CLIENT_LOGGER.debug(result)
         else:
             msg = "Insufficient permission to perform operation"
