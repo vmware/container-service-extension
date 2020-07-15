@@ -1,7 +1,6 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-import pyvcloud.vcd.exceptions as vcd_exceptions
 
 from container_service_extension.client.native_cluster import NativeCluster
 import container_service_extension.client.utils as client_utils
@@ -103,7 +102,3 @@ class DefEntityCluster:
             if def_entity.entity.kind == ClusterEntityKind.NATIVE.value:
                 return self._nativeCluster.delete_cluster_by_id(def_entity.id)
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
-
-    def __getattr__(self, name):
-        msg = "Operation not supported; Under implementation"
-        raise vcd_exceptions.OperationNotSupportedException(msg)
