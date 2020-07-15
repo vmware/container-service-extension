@@ -322,7 +322,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
         num_workers = validated_data[RequestKey.NUM_WORKERS]
 
-        # check that requested number of worker nodes is at least more than 1
+        # check that requested number of worker nodes is 0 or more
         if num_workers < 0:
             raise e.CseServerError(
                 f"Worker node count must be >= 0 (received {num_workers}).")
@@ -411,8 +411,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         num_workers_wanted = validated_data[RequestKey.NUM_WORKERS]
 
-        if num_workers_wanted < 1:
-            raise e.CseServerError(f"Worker node count must be > 0 (received"
+        if num_workers_wanted < 0:
+            raise e.CseServerError(f"Worker node count must be >= 0 (received"
                                    f" {num_workers_wanted}).")
 
         # cluster_handler.py already makes a cluster info API call to vCD, but
@@ -421,10 +421,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         cluster_info = self.get_cluster_info(data=validated_data,
                                              telemetry=False)
         num_workers = len(cluster_info['nodes'])
-        if num_workers > num_workers_wanted:
-            raise e.CseServerError("Scaling down native Kubernetes "
-                                   "clusters is not supported.")
-        elif num_workers == num_workers_wanted:
+        if num_workers == num_workers_wanted:
             raise e.CseServerError(f"Cluster '{cluster_name}' already has "
                                    f"{num_workers} worker nodes.")
 
@@ -436,8 +433,14 @@ class VcdBroker(abstract_broker.AbstractBroker):
             cse_params[LocalTemplateKey.CPU] = validated_data.get(RequestKey.NUM_CPU) # noqa: E501
             record_user_action_details(cse_operation=CseOperation.CLUSTER_RESIZE, cse_params=cse_params) # noqa: E501
 
-        validated_data[RequestKey.NUM_WORKERS] = num_workers_wanted - num_workers # noqa: E501
-        return self.create_nodes(data=validated_data, telemetry=False)
+        if num_workers_wanted > num_workers:
+            validated_data[RequestKey.NUM_WORKERS] = num_workers_wanted - num_workers  # noqa: E501
+            return self.create_nodes(data=validated_data, telemetry=False)
+        else:
+            num_workers_to_be_deleted = num_workers - num_workers_wanted
+            node_list = cluster_info['nodes']
+            validated_data[RequestKey.NODE_NAMES_LIST] = [node['name'] for node in node_list[0:num_workers_to_be_deleted]] # noqa: E501
+            return self.delete_nodes(data=validated_data, telemetry=False)
 
     @auth.secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
     def delete_cluster(self, **kwargs):
@@ -1597,114 +1600,114 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
               catalog_name, template, network_name, num_cpu=None,
               memory_in_mb=None, storage_profile=None, ssh_key=None):
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+    if num_nodes > 0:
+        specs = []
+        try:
+            # DEV NOTE: With api v33.0 and onwards, get_catalog operation will fail  # noqa: E501
+            # for non admin users of an an org which is not hosting the catalog,  # noqa: E501
+            # even if the catalog is explicitly shared with the org in question.  # noqa: E501
+            # This happens because for api v 33.0 and onwards, the Org XML no
+            # longer returns the href to catalogs accessible to the org, and typed  # noqa: E501
+            # queries hide the catalog link from non admin users.
+            # As a workaround, we will use a sys admin client to get the href and  # noqa: E501
+            # pass it forward. Do note that the catalog itself can still be
+            # accessed by these non admin users, just that they can't find by the  # noqa: E501
+            # href on their own.
 
-    specs = []
-    try:
-        # DEV NOTE: With api v33.0 and onwards, get_catalog operation will fail
-        # for non admin users of an an org which is not hosting the catalog,
-        # even if the catalog is explicitly shared with the org in question.
-        # This happens because for api v 33.0 and onwards, the Org XML no
-        # longer returns the href to catalogs accessible to the org, and typed
-        # queries hide the catalog link from non admin users.
-        # As a workaround, we will use a sys admin client to get the href and
-        # pass it forward. Do note that the catalog itself can still be
-        # accessed by these non admin users, just that they can't find by the
-        # href on their own.
+            org_name = org.get_name()
+            org_resource = sysadmin_client.get_org_by_name(org_name)
+            org_sa = vcd_org.Org(sysadmin_client, resource=org_resource)
+            catalog_item = org_sa.get_catalog_item(
+                catalog_name, template[LocalTemplateKey.CATALOG_ITEM_NAME])
+            catalog_item_href = catalog_item.Entity.get('href')
 
-        org_name = org.get_name()
-        org_resource = sysadmin_client.get_org_by_name(org_name)
-        org_sa = vcd_org.Org(sysadmin_client, resource=org_resource)
-        catalog_item = org_sa.get_catalog_item(
-            catalog_name, template[LocalTemplateKey.CATALOG_ITEM_NAME])
-        catalog_item_href = catalog_item.Entity.get('href')
-
-        source_vapp = vcd_vapp.VApp(sysadmin_client, href=catalog_item_href)
-        source_vm = source_vapp.get_all_vms()[0].get('name')
-        if storage_profile is not None:
-            storage_profile = vdc.get_storage_profile(storage_profile)
-
-        cust_script = None
-        if ssh_key is not None:
-            cust_script = \
-                "#!/usr/bin/env bash\n" \
-                "if [ x$1=x\"postcustomization\" ];\n" \
-                "then\n" \
-                "mkdir -p /root/.ssh\n" \
-                f"echo '{ssh_key}' >> /root/.ssh/authorized_keys\n" \
-                "chmod -R go-rwx /root/.ssh\n" \
-                "fi"
-
-        vapp.reload()
-        for n in range(num_nodes):
-            name = None
-            while True:
-                name = f"{node_type}-{''.join(random.choices(string.ascii_lowercase + string.digits, k=4))}" # noqa: E501
-                try:
-                    vapp.get_vm(name)
-                except Exception:
-                    break
-            spec = {
-                'source_vm_name': source_vm,
-                'vapp': source_vapp.resource,
-                'target_vm_name': name,
-                'hostname': name,
-                'password_auto': True,
-                'network': network_name,
-                'ip_allocation_mode': 'pool'
-            }
-            if cust_script is not None:
-                spec['cust_script'] = cust_script
+            source_vapp = vcd_vapp.VApp(sysadmin_client, href=catalog_item_href)  # noqa: E501
+            source_vm = source_vapp.get_all_vms()[0].get('name')
             if storage_profile is not None:
-                spec['storage_profile'] = storage_profile
-            specs.append(spec)
+                storage_profile = vdc.get_storage_profile(storage_profile)
 
-        task = vapp.add_vms(specs, power_on=False)
-        sysadmin_client.get_task_monitor().wait_for_status(task)
-        vapp.reload()
+            cust_script = None
+            if ssh_key is not None:
+                cust_script = \
+                    "#!/usr/bin/env bash\n" \
+                    "if [ x$1=x\"postcustomization\" ];\n" \
+                    "then\n" \
+                    "mkdir -p /root/.ssh\n" \
+                    f"echo '{ssh_key}' >> /root/.ssh/authorized_keys\n" \
+                    "chmod -R go-rwx /root/.ssh\n" \
+                    "fi"
 
-        if not num_cpu:
-            num_cpu = template[LocalTemplateKey.CPU]
-        if not memory_in_mb:
-            memory_in_mb = template[LocalTemplateKey.MEMORY]
+            vapp.reload()
+            for n in range(num_nodes):
+                name = None
+                while True:
+                    name = f"{node_type}-{''.join(random.choices(string.ascii_lowercase + string.digits, k=4))}" # noqa: E501
+                    try:
+                        vapp.get_vm(name)
+                    except Exception:
+                        break
+                spec = {
+                    'source_vm_name': source_vm,
+                    'vapp': source_vapp.resource,
+                    'target_vm_name': name,
+                    'hostname': name,
+                    'password_auto': True,
+                    'network': network_name,
+                    'ip_allocation_mode': 'pool'
+                }
+                if cust_script is not None:
+                    spec['cust_script'] = cust_script
+                if storage_profile is not None:
+                    spec['storage_profile'] = storage_profile
+                specs.append(spec)
 
-        for spec in specs:
-            vm_name = spec['target_vm_name']
-            vm_resource = vapp.get_vm(vm_name)
-            vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
-
-            task = vm.modify_cpu(num_cpu)
-            sysadmin_client.get_task_monitor().wait_for_status(task)
-
-            task = vm.modify_memory(memory_in_mb)
-            sysadmin_client.get_task_monitor().wait_for_status(task)
-
-            task = vm.power_on()
+            task = vapp.add_vms(specs, power_on=False)
             sysadmin_client.get_task_monitor().wait_for_status(task)
             vapp.reload()
 
-            if node_type == NodeType.NFS:
-                LOGGER.debug(f"Enabling NFS server on {vm_name}")
-                script_filepath = ltm.get_script_filepath(
-                    template[LocalTemplateKey.NAME],
-                    template[LocalTemplateKey.REVISION],
-                    ScriptFile.NFSD)
-                script = utils.read_data_file(script_filepath, logger=LOGGER)
-                exec_results = execute_script_in_nodes(
-                    sysadmin_client, vapp=vapp, node_names=[vm_name],
-                    script=script)
-                errors = get_script_execution_errors(exec_results)
-                if errors:
-                    raise e.ScriptExecutionError(
-                        "NFSD script execution failed on node "
-                        f"{vm_name}:{errors}")
-    except Exception as err:
-        # TODO: get details of the exception to determine cause of failure,
-        # e.g. not enough resources available.
-        node_list = [entry.get('target_vm_name') for entry in specs]
-        raise e.NodeCreationError(node_list, str(err))
+            if not num_cpu:
+                num_cpu = template[LocalTemplateKey.CPU]
+            if not memory_in_mb:
+                memory_in_mb = template[LocalTemplateKey.MEMORY]
 
-    vapp.reload()
-    return {'task': task, 'specs': specs}
+            for spec in specs:
+                vm_name = spec['target_vm_name']
+                vm_resource = vapp.get_vm(vm_name)
+                vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
+
+                task = vm.modify_cpu(num_cpu)
+                sysadmin_client.get_task_monitor().wait_for_status(task)
+
+                task = vm.modify_memory(memory_in_mb)
+                sysadmin_client.get_task_monitor().wait_for_status(task)
+
+                task = vm.power_on()
+                sysadmin_client.get_task_monitor().wait_for_status(task)
+                vapp.reload()
+
+                if node_type == NodeType.NFS:
+                    LOGGER.debug(f"Enabling NFS server on {vm_name}")
+                    script_filepath = ltm.get_script_filepath(
+                        template[LocalTemplateKey.NAME],
+                        template[LocalTemplateKey.REVISION],
+                        ScriptFile.NFSD)
+                    script = utils.read_data_file(script_filepath, logger=LOGGER)  # noqa: E501
+                    exec_results = execute_script_in_nodes(
+                        sysadmin_client, vapp=vapp, node_names=[vm_name],
+                        script=script)
+                    errors = get_script_execution_errors(exec_results)
+                    if errors:
+                        raise e.ScriptExecutionError(
+                            "NFSD script execution failed on node "
+                            f"{vm_name}:{errors}")
+        except Exception as err:
+            # TODO: get details of the exception to determine cause of failure,
+            # e.g. not enough resources available.
+            node_list = [entry.get('target_vm_name') for entry in specs]
+            raise e.NodeCreationError(node_list, str(err))
+
+        vapp.reload()
+        return {'task': task, 'specs': specs}
 
 
 def get_node_names(vapp, node_type):
