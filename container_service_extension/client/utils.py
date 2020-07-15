@@ -93,7 +93,7 @@ def _override_client(ctx) -> None:
 def construct_filters(**kwargs):
     filters = {}
     if kwargs.get('org'):
-        filters[def_utils.ClusterEntityFilterKey.ORG_NAME.value] = kwargs.get['org']  # noqa: E501
+        filters[def_utils.ClusterEntityFilterKey.ORG_NAME.value] = kwargs['org']  # noqa: E501
     if kwargs.get('vdc'):
-        filters[def_utils.ClusterEntityFilterKey.OVDC_NAME.value] = kwargs.get['vdc']  # noqa: E501
+        filters[def_utils.ClusterEntityFilterKey.OVDC_NAME.value] = kwargs['vdc']  # noqa: E501
     return filters

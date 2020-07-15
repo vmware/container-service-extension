@@ -49,6 +49,34 @@ class NativeCluster:
         msg = "Operation not supported; Under implementation"
         raise vcd_exceptions.OperationNotSupportedException(msg)
 
+    def get_cluster_info(self, cluster_name, org=None, vdc=None, **kwargs):
+        """Get cluster information using DEF API.
+
+        :param str cluster_name: name of the cluster
+        :param str vdc: name of vdc
+        :param str org: name of org
+        :param kwargs: *filter (dict): keys,values for DEF API query filter
+
+        :return: cluster information
+        :rtype: dict
+        """
+        filters = client_utils.construct_filters(org=org, vdc=vdc)
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
+        CLIENT_LOGGER.debug(f"Defined entity info from server:{def_entity}")  # noqa: E501
+        if not def_entity:
+            raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+        # TODO() relevant output
+        if def_entity:
+            return {
+                'Name': def_entity.name,
+                'Kind': def_entity.entity.kind,
+                'VDC': def_entity.entity.metadata.ovdc_name,
+                'Org': def_entity.entity.metadata.org_name,
+                'K8s Version': def_entity.entity.status.kubernetes,  # noqa: E501
+                'Status': def_entity.entity.status.phase,
+            }
+
     def delete_cluster(self, cluster_name, org=None, vdc=None):
         """Delete DEF native cluster by name.
 

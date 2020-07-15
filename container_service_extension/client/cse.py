@@ -785,13 +785,21 @@ def cluster_config(ctx, name, vdc, org):
     required=False,
     metavar='ORG_NAME',
     help='Restrict cluster search to specified org')
-def cluster_info(ctx, name, org, vdc):
+@click.option(
+    '-k',
+    '--kind',
+    'cluster_kind',
+    default=None,
+    required=False,
+    metavar='CLUSTER_KIND',
+    help='Restrict cluster search to cluster kind')
+def cluster_info(ctx, name, org, vdc, cluster_kind=None):
     """Display info about a Kubernetes cluster."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
-        cluster = Cluster(client)
+        cluster = Cluster(client, cluster_entity_kind=cluster_kind)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
         cluster_info = cluster.get_cluster_info(name, org=org, vdc=vdc)
