@@ -15,9 +15,6 @@ from zipfile import ZipFile
 import click
 import cryptography
 import pyvcloud.vcd.client as vcd_client
-from pyvcloud.vcd.utils import metadata_to_dict
-from pyvcloud.vcd.vapp import VApp
-from pyvcloud.vcd.vm import VM
 from pyVmomi import vim
 import requests
 from vcd_cli.utils import stdout
@@ -40,7 +37,6 @@ from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.remote_template_manager import RemoteTemplateManager # noqa: E501
 from container_service_extension.sample_generator import generate_sample_config
-from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import RemoteTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
@@ -61,7 +57,6 @@ from container_service_extension.utils import ConsoleMessagePrinter
 from container_service_extension.utils import NullPrinter
 from container_service_extension.utils import prompt_text
 from container_service_extension.utils import str_to_bool
-from container_service_extension.vcdbroker import get_all_clusters
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
