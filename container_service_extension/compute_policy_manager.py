@@ -563,7 +563,7 @@ class ComputePolicyManager:
             raise OperationNotSupportedException(msg)
 
     def _raise_error_if_global_pvdc_compute_policy_not_supported(self):
-        """Railse exception if higher api version is needed."""
+        """Raise exception if higher api version is needed."""
         api_version = float(self._cloudapi_client.get_api_version())
         if api_version < GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION: # noqa: E501
             msg = f"Recieved api version {api_version}." \

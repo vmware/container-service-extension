@@ -15,9 +15,6 @@ from zipfile import ZipFile
 import click
 import cryptography
 import pyvcloud.vcd.client as vcd_client
-from pyvcloud.vcd.utils import metadata_to_dict
-from pyvcloud.vcd.vapp import VApp
-from pyvcloud.vcd.vm import VM
 from pyVmomi import vim
 import requests
 from vcd_cli.utils import stdout
@@ -40,7 +37,6 @@ from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.remote_template_manager import RemoteTemplateManager # noqa: E501
 from container_service_extension.sample_generator import generate_sample_config
-from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import RemoteTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
@@ -61,7 +57,6 @@ from container_service_extension.utils import ConsoleMessagePrinter
 from container_service_extension.utils import NullPrinter
 from container_service_extension.utils import prompt_text
 from container_service_extension.utils import str_to_bool
-from container_service_extension.vcdbroker import get_all_clusters
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -130,6 +125,20 @@ def cli(ctx):
 \b
         cse install -c config.yaml --retain-temp-vapp --ssh-key ~/.ssh/id_rsa.pub
             Install CSE, retain the temporary vApp after the templates have
+            been captured. Copy specified SSH key into all template VMs so
+            users with the corresponding private key have access (--ssh-key is
+            required when --retain-temp-vapp is used).
+\b
+        cse upgrade --config config.yaml --skip-config-decryption
+            Upgrade CSE using configuration specified in 'config.yaml'.
+\b
+        cse upgrade -c encrypted-config.yaml
+            Upgrade CSE using configuration specified in
+            'encrypted-config.yaml'. The configuration file will be decrypted
+            in memory using a password (user will be prompted for the password).
+\b
+        cse upgrade -c config.yaml --retain-temp-vapp --ssh-key ~/.ssh/id_rsa.pub
+            Upgrade CSE, retain the temporary vApp after the templates have
             been captured. Copy specified SSH key into all template VMs so
             users with the corresponding private key have access (--ssh-key is
             required when --retain-temp-vapp is used).
@@ -485,7 +494,7 @@ def encrypt(ctx, input_file, output_file):
         sys.exit(1)
 
 
-@cli.command(short_help='Install CSE on vCD')
+@cli.command(short_help='Install CSE extension 3.0.0 on vCD')
 @click.pass_context
 @click.option(
     '-c',
@@ -670,7 +679,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
 
 
 @cli.command('upgrade',
-             short_help="Upgrade existing CSE 2.6.0 entities")
+             short_help="Upgrade CSE extension to version 3.0.0 on vCD")
 @click.pass_context
 @click.option(
     '-c',
@@ -681,7 +690,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     type=click.Path(exists=True),
     envvar='CSE_CONFIG',
     required=True,
-    help="(Required) Filepath to CSE config file")
+    help="Filepath to CSE config file")
 @click.option(
     '-s',
     '--skip-config-decryption',
@@ -693,13 +702,13 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     '--skip-template-creation',
     'skip_template_creation',
     is_flag=True,
-    help='Skips creating CSE k8s template during upgrade')
+    help='Skip creating CSE k8s templates during upgrade')
 @click.option(
     '-d',
     '--retain-temp-vapp',
     'retain_temp_vapp',
     is_flag=True,
-    help='Retain the temporary vApp after the template has been captured'
+    help='Retain the temporary vApp after the CSE k8s template has been captured' # noqa: E501
          ' --ssh-key option is required if this flag is used')
 @click.option(
     '-k',
@@ -708,17 +717,30 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     required=False,
     default=None,
     type=click.File('r'),
-    help='Filepath of SSH public key to add to vApp template')
+    help='Filepath of SSH public key to add to CSE k8s template vms')
+@click.option(
+    '-p',
+    '--admin-password',
+    'admin_password',
+    default=None,
+    metavar='ADMIN_PASSWORD',
+    help="New root password to set on existing CSE k8s cluster vms. If left "
+         "empty, old passwords,if present, will be retained else it will be "
+         "auto-generated")
 def upgrade(ctx, config_file_path, skip_config_decryption,
             skip_template_creation, retain_temp_vapp,
-            ssh_key_file):
-    """Upgrade existing CSE 2.6.0 installation/entities.
+            ssh_key_file, admin_password):
+    """Upgrade existing CSE installation/entities to match CSE 3.0.
 
-    - Update existing Kubernetes cluster representation on VCD
-    - Update existing placement and sizing policies used by CSE
-    - Register defined entities schema to VCD
-    - Install templates from template repository linked in config file
+\b
     - Add CSE / VCD API version info to VCD's extension data for CSE
+    - Register defined entities schema of CSE k8s clusters with VCD
+    - Create placement compute policies used by CSE
+    - Remove old sizing compute policies created by CSE 2.6 and below
+    - Install all templates from template repository linked in config file
+    - Update currently installed templates that are no longer defined in
+      CSE template repository to adhere to CSE 3.0 template requirements.
+    - Update existing CSE k8s cluster's to match CSE 3.0 k8s clusters.
     """
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
@@ -752,6 +774,7 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
             skip_template_creation=skip_template_creation,
             ssh_key=ssh_key,
             retain_temp_vapp=retain_temp_vapp,
+            admin_password=admin_password,
             msg_update_callback=console_message_printer)
 
     except Exception as err:
@@ -762,329 +785,6 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
         # block the process to let telemetry handler to finish posting data to
         # VAC. HACK!!!
         time.sleep(3)
-
-
-@cli.command('convert-cluster',
-             short_help="Converts pre CSE 2.5.2 clusters to CSE 2.5.2+ "
-                        "cluster format. Use '*' as cluster name to "
-                        "convert all clusters.")
-@click.pass_context
-@click.argument('cluster_name', metavar='CLUSTER_NAME', default=None)
-@click.option(
-    '-c',
-    '--config',
-    'config_file_path',
-    default='config.yaml',
-    metavar='CONFIG_FILE_PATH',
-    type=click.Path(exists=True),
-    envvar='CSE_CONFIG',
-    required=True,
-    help="(Required) Filepath to CSE config file")
-@click.option(
-    '--admin-password',
-    default=None,
-    metavar='ADMIN_PASSWORD',
-    help="New root password to set on cluster vms. If left empty password will be auto-generated") # noqa: E501
-@click.option(
-    '-o',
-    '--org',
-    'org_name',
-    default=None,
-    metavar='ORG_NAME',
-    help="Only convert clusters from a specific org")
-@click.option(
-    '-v',
-    '--vdc',
-    'vdc_name',
-    default=None,
-    metavar='VDC_NAME',
-    help='Only convert clusters from a specific org VDC')
-@click.option(
-    '-g',
-    '--skip-wait-for-gc',
-    'skip_wait_for_gc',
-    is_flag=True,
-    help='Skip waiting for guest customization to finish on vms')
-@click.option(
-    '-s',
-    '--skip-config-decryption',
-    is_flag=True,
-    help='Skip decryption of CSE config file')
-def convert_cluster(ctx, config_file_path, skip_config_decryption,
-                    cluster_name, admin_password,
-                    org_name, vdc_name, skip_wait_for_gc):
-    """Convert pre CSE 2.6.0 clusters to CSE 2.6.0 cluster format.
-
-    Use '*' as cluster name to convert all clusters.
-    """
-    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    console_message_printer = ConsoleMessagePrinter()
-    check_python_version(console_message_printer)
-
-    client = None
-    try:
-        config = _get_config_dict(
-            config_file_path=config_file_path,
-            pks_config_file_path=None,
-            skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer,
-            validate=True,
-            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-            logger_debug=SERVER_CLI_LOGGER)
-
-        # Record telemetry details
-        cse_params = {
-            PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),
-            PayloadKey.WAS_GC_WAIT_SKIPPED: bool(skip_wait_for_gc),
-            PayloadKey.WAS_OVDC_SPECIFIED: bool(vdc_name),
-            PayloadKey.WAS_ORG_SPECIFIED: bool(org_name),
-            PayloadKey.WAS_NEW_ADMIN_PASSWORD_PROVIDED: bool(admin_password)
-        }
-        record_user_action_details(cse_operation=CseOperation.CLUSTER_CONVERT,
-                                   cse_params=cse_params,
-                                   telemetry_settings=config['service']['telemetry'])  # noqa: E501
-        log_wire_file = None
-        log_wire = str_to_bool(config['service'].get('log_wire'))
-        if log_wire:
-            log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
-
-        client, _ = _get_clients_from_config(config, log_wire_file, log_wire)
-
-        msg = f"Connected to vCD as system administrator: " \
-              f"{config['vcd']['host']}:{config['vcd']['port']}"
-        SERVER_CLI_LOGGER.debug(msg)
-        console_message_printer.general(msg)
-
-        cluster_records = get_all_clusters(client=client,
-                                           cluster_name=cluster_name,
-                                           org_name=org_name,
-                                           ovdc_name=vdc_name)
-
-        if len(cluster_records) == 0:
-            msg = "No clusters were found."
-            SERVER_CLI_LOGGER.debug(msg)
-            console_message_printer.info(msg)
-            return
-
-        href_of_vms_to_verify = []
-        for cluster in cluster_records:
-            msg = f"Processing cluster '{cluster['name']}'."
-            SERVER_CLI_LOGGER.debug(msg)
-            console_message_printer.info(msg)
-            vapp_href = cluster['vapp_href']
-            vapp = VApp(client, href=vapp_href)
-
-            # this step removes the old 'cse.template' metadata and adds
-            # cse.template.name and cse.template.revision metadata
-            # using hard-coded values taken from github history
-            msg = "Processing metadata of cluster."
-            SERVER_CLI_LOGGER.debug(msg)
-            console_message_printer.info(msg)
-
-            metadata_dict = metadata_to_dict(vapp.get_metadata())
-            old_template_name = metadata_dict.get(ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME) # noqa: E501
-            new_template_name = None
-            cse_version = metadata_dict.get(ClusterMetadataKey.CSE_VERSION)
-            if old_template_name:
-                msg = "Determining k8s version on cluster."
-                SERVER_CLI_LOGGER.debug(msg)
-                console_message_printer.info(msg)
-                if 'photon' in old_template_name:
-                    new_template_name = 'photon-v2'
-                    if cse_version in ('1.0.0'):
-                        new_template_name += '_k8s-1.8_weave-2.0.5'
-                    elif cse_version in ('1.1.0', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4'): # noqa: E501
-                        new_template_name += '_k8s-1.9_weave-2.3.0'
-                    elif cse_version in ('1.2.5', '1.2.6', '1.2.7',): # noqa: E501
-                        new_template_name += '_k8s-1.10_weave-2.3.0'
-                    elif cse_version in ('2.0.0'):
-                        new_template_name += '_k8s-1.12_weave-2.3.0'
-                elif 'ubuntu' in old_template_name:
-                    new_template_name = 'ubuntu-16.04'
-                    if cse_version in ('1.0.0'):
-                        new_template_name += '_k8s-1.9_weave-2.1.3'
-                    elif cse_version in ('1.1.0', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4', '1.2.5', '1.2.6', '1.2.7'): # noqa: E501
-                        new_template_name += '_k8s-1.10_weave-2.3.0'
-                    elif cse_version in ('2.0.0'):
-                        new_template_name += '_k8s-1.13_weave-2.3.0'
-
-            if new_template_name:
-                msg = "Updating metadata of cluster."
-                SERVER_CLI_LOGGER.debug(msg)
-                console_message_printer.info(msg)
-                task = vapp.remove_metadata(ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME) # noqa: E501
-                client.get_task_monitor().wait_for_success(task)
-                new_metadata_to_add = {
-                    ClusterMetadataKey.TEMPLATE_NAME: new_template_name,
-                    ClusterMetadataKey.TEMPLATE_REVISION: 0
-                }
-                task = vapp.set_multiple_metadata(new_metadata_to_add)
-                client.get_task_monitor().wait_for_success(task)
-
-            # this step uses hard-coded data from the newly updated
-            # cse.template.name and cse.template.revision metadata fields as
-            # well as github history to add [cse.os, cse.docker.version,
-            # cse.kubernetes, cse.kubernetes.version, cse.cni, cse.cni.version]
-            # to the clusters
-            vapp.reload()
-            metadata_dict = metadata_to_dict(vapp.get_metadata())
-            template_name = metadata_dict.get(ClusterMetadataKey.TEMPLATE_NAME)
-            template_revision = str(metadata_dict.get(ClusterMetadataKey.TEMPLATE_REVISION, '0')) # noqa: E501
-
-            if template_name:
-                org_name = config['broker']['org']
-                catalog_name = config['broker']['catalog']
-                k8_templates = ltm.get_all_k8s_local_template_definition(
-                    client=client, catalog_name=catalog_name, org_name=org_name)  # noqa: E501
-                k8s_version, docker_version = '0.0.0', '0.0.0'
-                for k8_template in k8_templates:
-                    if (str(k8_template[LocalTemplateKey.REVISION]), k8_template[LocalTemplateKey.NAME]) == (template_revision, template_name):  # noqa: E501
-                        k8s_version, docker_version = k8_template[LocalTemplateKey.KUBERNETES_VERSION], k8_template[LocalTemplateKey.DOCKER_VERSION]  # noqa: E501
-                        break
-                tokens = template_name.split('_')
-                new_metadata = {
-                    ClusterMetadataKey.OS: tokens[0],
-                    ClusterMetadataKey.DOCKER_VERSION: docker_version,
-                    ClusterMetadataKey.KUBERNETES: 'upstream',
-                    ClusterMetadataKey.KUBERNETES_VERSION: k8s_version,
-                    ClusterMetadataKey.CNI: tokens[2].split('-')[0],
-                    ClusterMetadataKey.CNI_VERSION: tokens[2].split('-')[1],
-                }
-                task = vapp.set_multiple_metadata(new_metadata)
-                client.get_task_monitor().wait_for_success(task)
-
-                msg = "Finished processing metadata of cluster."
-                SERVER_CLI_LOGGER.debug(msg)
-                console_message_printer.general(msg)
-
-            # Update admin password of all VMs that are not set properly
-            vm_hrefs_for_password_update = []
-            vm_resources = vapp.get_all_vms()
-            for vm_resource in vm_resources:
-                vm = VM(client, href=vm_resource.get('href'))
-                msg = f"Determining if vm '{vm.get_resource().get('name')}" \
-                      "needs processing'."
-                SERVER_CLI_LOGGER.debug(msg)
-                console_message_printer.info(msg)
-
-                gc_section = vm.get_guest_customization_section()
-                admin_password_enabled = False
-                if hasattr(gc_section, 'AdminPasswordEnabled'):
-                    admin_password_enabled = str_to_bool(gc_section.AdminPasswordEnabled) # noqa: E501
-                admin_password_on_vm = None
-                if hasattr(gc_section, 'AdminPassword'):
-                    admin_password_on_vm = gc_section.AdminPassword.text
-
-                skip_vm = False
-                if admin_password_enabled:
-                    if admin_password:
-                        if admin_password == admin_password_on_vm:
-                            skip_vm = True
-                    else:
-                        if admin_password_on_vm:
-                            skip_vm = True
-                if not skip_vm:
-                    href_of_vms_to_verify.append(vm.href)
-                    vm_hrefs_for_password_update.append(vm.href)
-
-            # At least one vm in the vApp needs a password update
-            if len(vm_hrefs_for_password_update) > 0:
-                try:
-                    msg = f"Undeploying the cluster '{cluster['name']}'"
-                    SERVER_CLI_LOGGER.debug(msg)
-                    console_message_printer.info(msg)
-
-                    task = vapp.undeploy()
-                    client.get_task_monitor().wait_for_success(task)
-                    msg = "Successfully undeployed the vApp."
-                    SERVER_CLI_LOGGER.debug(msg)
-                    console_message_printer.general(msg)
-                except Exception as err:
-                    console_message_printer.error(str(err))
-
-                for href in vm_hrefs_for_password_update:
-                    vm = VM(client=client, href=href)
-                    msg = f"Processing vm {vm.get_resource().get('name')}'." \
-                          "\nUpdating vm admin password"
-                    SERVER_CLI_LOGGER.debug(msg)
-                    console_message_printer.info(msg)
-                    task = vm.update_guest_customization_section(
-                        enabled=True,
-                        admin_password_enabled=True,
-                        admin_password_auto=not admin_password,
-                        admin_password=admin_password,
-                    )
-                    client.get_task_monitor().wait_for_success(task)
-                    msg = "Successfully updated vm"
-                    SERVER_CLI_LOGGER.debug(msg)
-                    console_message_printer.general(msg)
-
-                    msg = "Deploying vm."
-                    SERVER_CLI_LOGGER.debug(msg)
-                    console_message_printer.info(msg)
-                    task = vm.power_on_and_force_recustomization()
-                    client.get_task_monitor().wait_for_success(task)
-                    msg = "Successfully deployed vm"
-                    SERVER_CLI_LOGGER.debug(msg)
-                    console_message_printer.general(msg)
-
-                msg = "Deploying cluster"
-                SERVER_CLI_LOGGER.debug(msg)
-                console_message_printer.info(msg)
-                task = vapp.deploy(power_on=True)
-                client.get_task_monitor().wait_for_success(task)
-                msg = "Successfully deployed cluster"
-                SERVER_CLI_LOGGER.debug(msg)
-                console_message_printer.general(msg)
-
-                msg = f"Successfully processed cluster '{cluster['name']}'"
-                SERVER_CLI_LOGGER.debug(msg)
-                console_message_printer.general(msg)
-
-        if not skip_wait_for_gc:
-            while len(href_of_vms_to_verify) != 0:
-                msg = f"Waiting on guest customization to finish on {len(href_of_vms_to_verify)} vms." # noqa: E501
-                SERVER_CLI_LOGGER.debug(msg)
-                console_message_printer.info(msg)
-                to_remove = []
-                for href in href_of_vms_to_verify:
-                    vm = VM(client=client, href=href)
-                    gc_section = vm.get_guest_customization_section()
-                    admin_password_enabled = False
-                    if hasattr(gc_section, 'AdminPasswordEnabled'):
-                        admin_password_enabled = str_to_bool(gc_section.AdminPasswordEnabled) # noqa: E501
-                    admin_password = None
-                    if hasattr(gc_section, 'AdminPassword'):
-                        admin_password = gc_section.AdminPassword.text
-
-                    if admin_password_enabled and admin_password:
-                        to_remove.append(vm.href)
-
-                for href in to_remove:
-                    href_of_vms_to_verify.remove(href)
-
-                time.sleep(5)
-
-                msg = "Finished Guest customization on all vms."
-                SERVER_CLI_LOGGER.debug(msg)
-                console_message_printer.info(msg)
-
-        # Record telemetry data on successful completion
-        record_user_action(cse_operation=CseOperation.CLUSTER_CONVERT, telemetry_settings=config['service']['telemetry'])  # noqa: E501
-    except Exception as err:
-        SERVER_CLI_LOGGER.error(str(err))
-        console_message_printer.error(str(err))
-        # Record telemetry data on failed cluster convert
-        record_user_action(cse_operation=CseOperation.CLUSTER_CONVERT,
-                           status=OperationStatus.FAILED,
-                           telemetry_settings=config['service']['telemetry'])
-        sys.exit(1)
-    finally:
-        # block the process to let telemetry handler to finish posting data to
-        # VAC. HACK!!!
-        time.sleep(3)
-        if client:
-            client.logout()
 
 
 @template.command(
