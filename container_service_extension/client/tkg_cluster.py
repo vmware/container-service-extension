@@ -12,7 +12,6 @@ class TKGCluster(DefEntityCluster):
 
     def __init__(self, client):
         self.client = client
-        self._uri = self.client.get_api_uri() + '/vdc'
 
     def __getattr__(self, name):
         msg = "Operation not supported; Under implementation"
