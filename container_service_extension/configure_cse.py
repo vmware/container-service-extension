@@ -929,6 +929,26 @@ def _install_single_template(
 def upgrade_cse(config_file_name, config, skip_template_creation,
                 ssh_key, retain_temp_vapp, admin_password,
                 msg_update_callback=utils.NullPrinter()):
+    """Handle logistics for upgaring CSE to v3.0.
+
+    Handles decision making for configuring AMQP exchange/settings,
+    defined entity schema registration for vCD api version >= 35,
+    extension registration, catalog setup and template creation, removing old
+    CSE sizing based compute policies, assigning the new placement compute
+    policy to concenred org VDCs, and create DEF entity for existing clusters.
+
+    :param str config_file_name: config file name.
+    :param dict config: content of the CSE config file.
+    :param bool skip_template_creation: If True, skip creating the templates.
+    :param str ssh_key: public ssh key to place into template vApp(s).
+    :param bool retain_temp_vapp: if True, temporary vApp will not destroyed,
+        so the user can ssh into and debug the vm.
+    :param str admin_password: New password to be set on existing CSE k8s
+        cluster vms. If omitted, old password will be retained, however if
+        old password is missing a new password will be auto generated
+        regardless.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    """
     populate_vsphere_list(config['vcs'])
 
     msg = f"Upgrading CSE on vCloud Director using config file " \
@@ -1855,7 +1875,7 @@ def _create_def_entity_for_existing_clusters(
         entity_svc.update_entity(def_entity_id, def_entity)
         entity_svc.resolve_entity(def_entity_id)
 
-        msg = f"Created Defined Entity for cluster '{cluster['name']}'"
+        msg = f"Generated new id for cluster '{cluster['name']}' "
         INSTALL_LOGGER.info(msg)
         msg_update_callback.general(msg)
 
