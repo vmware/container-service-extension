@@ -1433,20 +1433,32 @@ def _update_cluster_dict_with_node_info(client, cluster):
     vapp = vcd_vapp.VApp(client, href=cluster['vapp_href'])
     vms = vapp.get_all_vms()
     for vm in vms:
+        vm_name = vm.get('name')
         node_info = {
-            'name': vm.get('name'),
-            'ipAddress': ''
+            'name': vm_name,
+            'numberOfCpus': '',
+            'memoryMB': '',
+            'ipAddress': '',
+            'exports': ''
         }
+
+        if hasattr(vm, 'VmSpecSection'):
+            node_info['numberOfCpus'] = vm.VmSpecSection.NumCpus.text
+            node_info['memoryMB'] = vm.VmSpecSection.MemoryResourceMb.Configured.text # noqa: E501
+
         try:
-            node_info['ipAddress'] = vapp.get_primary_ip(vm.get('name'))
+            node_info['ipAddress'] = vapp.get_primary_ip(vm_name)
         except Exception:
-            LOGGER.debug(f"Unable to get ip address of node "
-                         f"{vm.get('name')}")
-        if vm.get('name').startswith(NodeType.MASTER):
+            LOGGER.debug(f"Unable to get ip address of node {vm_name}")
+
+        if vm_name.startswith(NodeType.MASTER):
             cluster.get('master_nodes').append(node_info)
-        elif vm.get('name').startswith(NodeType.WORKER):
+        elif vm_name.startswith(NodeType.WORKER):
             cluster.get('nodes').append(node_info)
-        elif vm.get('name').startswith(NodeType.NFS):
+        elif vm_name.startswith(NodeType.NFS):
+            if client.is_sysadmin():
+                node_info['exports'] = get_nfs_exports(
+                    client, node_info['ipAddress'], vapp, vm_name)
             cluster.get('nfs_nodes').append(node_info)
 
 
@@ -1489,7 +1501,6 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
                f',metadata:{ClusterMetadataKey.CSE_VERSION}'
                f',metadata:{ClusterMetadataKey.TEMPLATE_NAME}'
                f',metadata:{ClusterMetadataKey.TEMPLATE_REVISION}'
-               f',metadata:{ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME}' # noqa: E501
                f',metadata:{ClusterMetadataKey.OS}')
     q2 = client.get_typed_query(
         resource_type,

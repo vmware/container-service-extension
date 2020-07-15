@@ -109,19 +109,20 @@ class LocalTemplateKey(str, Enum):
     """Enumerate the keys that define a template."""
 
     CATALOG_ITEM_NAME = 'catalog_item_name'
+    CNI = 'cni'
+    CNI_VERSION = 'cni_version'
     COMPUTE_POLICY = 'compute_policy'
     CPU = 'cpu'
     DEPRECATED = 'deprecated'
     DESCRIPTION = 'description'
-    MEMORY = 'mem'
-    NAME = 'name'
-    REVISION = 'revision'
-    OS = 'os'
     DOCKER_VERSION = 'docker_version'
+    KIND = 'kind'
     KUBERNETES = 'kubernetes'
     KUBERNETES_VERSION = 'kubernetes_version'
-    CNI = 'cni'
-    CNI_VERSION = 'cni_version'
+    MEMORY = 'mem'
+    NAME = 'name'
+    OS = 'os'
+    REVISION = 'revision'
     UPGRADE_FROM = 'upgrade_from'
 
 
@@ -129,24 +130,24 @@ class LocalTemplateKey(str, Enum):
 class RemoteTemplateKey(str, Enum):
     """Enumerate the keys that define a template."""
 
+    CNI = 'cni'
+    CNI_VERSION = 'cni_version'
     COMPUTE_POLICY = 'compute_policy'
     CPU = 'cpu'
     DEPRECATED = 'deprecated'
     DESCRIPTION = 'description'
+    DOCKER_VERSION = 'docker_version'
+    KIND = 'kind'
+    KUBERNETES = 'kubernetes'
+    KUBERNETES_VERSION = 'kubernetes_version'
     MEMORY = 'mem'
     NAME = 'name'
+    OS = 'os'
     REVISION = 'revision'
     SOURCE_OVA_HREF = 'source_ova'
     SOURCE_OVA_NAME = 'source_ova_name'
     SOURCE_OVA_SHA256 = 'sha256_ova'
-    OS = 'os'
-    DOCKER_VERSION = 'docker_version'
-    KUBERNETES = 'kubernetes'
-    KUBERNETES_VERSION = 'kubernetes_version'
-    CNI = 'cni'
-    CNI_VERSION = 'cni_version'
     UPGRADE_FROM = 'upgrade_from'
-    KIND = 'kind'
 
 
 # CSE requests
