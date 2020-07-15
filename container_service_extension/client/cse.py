@@ -582,7 +582,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
 
         if not cluster_config_file_path and not generate_sample_config:
             console_message_printer.general_no_color(ctx.get_help())
-            msg = "No option chosen"
+            msg = "No option chosen/invalid option"
             CLIENT_LOGGER.error(msg)
             raise Exception(msg)
 
@@ -1582,6 +1582,7 @@ def _get_sample_cluster_configuration(output=None):
     )
 
     sample_cluster_config = yaml.dump(dataclasses.asdict(cluster_entity))
+    CLIENT_LOGGER.info(sample_cluster_config)
 
     if output:
         with open(output, 'w') as f:
