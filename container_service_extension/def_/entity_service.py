@@ -208,18 +208,20 @@ class DefEntityService():
         return DefEntity(**response_body)
 
     @handle_entity_service_exception
-    def get_entity_by_name(self, entity_name: str, filters: dict = None) -> DefEntity:  # noqa: E501
-        """Get the defined entity given entity name.
+    def get_entities_by_name(self, entity_name: str, filters: dict = None) -> List[DefEntity]:  # noqa: E501
+        """Get the defined entities for given entity name.
 
         :param str entity_name: name of the entity.
         :param dict filters: key-value pairs representing filter options
-        :return: Details of the entity.
-        :rtype: DefEntity
+        :return: list of def entities with the given entity_name.
+        :rtype: list of DefEntities
         """
         entity_list = self.list_entities(filters=filters)
+        def_entities = []
         for def_entity in entity_list:
             if entity_name == def_entity.name:
-                return def_entity
+                def_entities.append(def_entity)
+        return def_entities
 
     @handle_entity_service_exception
     def get_native_entity_by_name(self, name: str, filters: dict = {}) -> DefEntity:  # noqa: E501
