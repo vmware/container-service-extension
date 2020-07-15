@@ -576,15 +576,15 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
         console_message_printer = utils.ConsoleMessagePrinter()
         if cluster_config_file_path and (generate_sample_config or output):
             console_message_printer.general_no_color(ctx.get_help())
-            raise Exception("-s/-o flag can't be used together with CLUSTER_CONFIG_FILE_PATH")  # noqa: E501
+            msg = "-s/-o flag can't be used together with CLUSTER_CONFIG_FILE_PATH"  # noqa: E501
+            CLIENT_LOGGER.error(msg)
+            raise Exception(msg)
 
         if not cluster_config_file_path and not generate_sample_config:
             console_message_printer.general_no_color(ctx.get_help())
-            raise Exception("No option chosen")
-
-        if cluster_config_file_path and not os.path.exists(cluster_config_file_path):  # noqa: E501
-            console_message_printer.general_no_color(ctx.get_help())
-            raise Exception(f"{cluster_config_file_path} not found")
+            msg = "No option chosen"
+            CLIENT_LOGGER.error(msg)
+            raise Exception(msg)
 
         if generate_sample_config:
             sample_cluster_config = _get_sample_cluster_configuration(output=output)  # noqa: E501
