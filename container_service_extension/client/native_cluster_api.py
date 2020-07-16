@@ -2,17 +2,19 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 from dataclasses import asdict
+import os
 
 import pyvcloud.vcd.exceptions as vcd_exceptions
 import yaml
 
+import container_service_extension.client.constants as cli_constants
 import container_service_extension.client.response_processor as response_processor  # noqa: E501
 import container_service_extension.client.utils as client_utils
 from container_service_extension.def_ import models as def_models
 import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as cse_exceptions
-from container_service_extension.logger import CLIENT_LOGGER
+import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.shared_constants as shared_constants
 
@@ -30,8 +32,12 @@ class NativeClusterApi:
     def __init__(self, client):
         self._client = client
         self._uri = f"{self._client.get_api_uri()}/cse/{def_utils.V35_END_POINT_DISCRIMINATOR}"  # noqa: E501
-        self._cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
-            client=client, logger_debug=CLIENT_LOGGER)
+        if os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING):
+            logger_wire = logger.CLIENT_WIRE_LOGGER
+        self._cloudapi_client = \
+            vcd_utils.get_cloudapi_client_from_vcd_client(
+                client=client, logger_debug=logger.CLIENT_LOGGER,
+                logger_wire=logger_wire)
 
     def create_cluster(self, cluster_entity: def_models.ClusterEntity):
         """Create a new Kubernetes cluster.
@@ -65,7 +71,7 @@ class NativeClusterApi:
         filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
-        CLIENT_LOGGER.debug(f"Defined entity info from server:{def_entity}")  # noqa: E501
+        logger.CLIENT_LOGGER.debug(f"Defined entity info from server:{def_entity}")  # noqa: E501
         if not def_entity:
             raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
         # TODO() relevant output
@@ -178,7 +184,8 @@ class NativeClusterApi:
             should be upgraded to.
         :param str org: org name of the cluster
         :param str vdc: vdc of the cluster
-        :return: requests.models.Response response
+        :return: str response
+        :rtype: str
         """
         filters = client_utils.construct_filters(org=org_name, vdc=ovdc_name)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)

@@ -123,7 +123,6 @@ class DefEntityClusterApi:
             version=DEF_NATIVE_ENTITY_TYPE_VERSION,
             filters=filters)
 
-        # TODO add org and vdc
         clusters = self.list_tkg_clusters() or []
         for def_entity in native_entities:
             logger.CLIENT_LOGGER.debug(f"Native Defined entity list from server: {def_entity}")  # noqa: E501
