@@ -5,8 +5,6 @@ from dataclasses import asdict
 import os
 from typing import List
 
-import pyvcloud.vcd.exceptions as vcd_exceptions
-
 import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
 from container_service_extension.client.tkgclient import TkgClusterApi
@@ -15,15 +13,12 @@ from container_service_extension.client.tkgclient.configuration import Configura
 from container_service_extension.client.tkgclient.models.tkg_cluster import TkgCluster  # noqa: E501
 import container_service_extension.client.utils as client_utils
 import container_service_extension.def_.entity_service as def_entity_svc
-from container_service_extension.def_.utils import ClusterEntityKind
-from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_NSS
-from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_VERSION
-from container_service_extension.def_.utils import DEF_VMWARE_VENDOR
 from container_service_extension.def_.utils import DEF_CSE_VENDOR
 from container_service_extension.def_.utils import DEF_NATIVE_ENTITY_TYPE_NSS
 from container_service_extension.def_.utils import DEF_NATIVE_ENTITY_TYPE_VERSION # noqa: E501
-from container_service_extension.def_.utils import generate_entity_type_id
-from container_service_extension.def_.models import DefEntity
+from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_NSS
+from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_VERSION
+from container_service_extension.def_.utils import DEF_VMWARE_VENDOR
 import container_service_extension.exceptions as cse_exceptions
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
@@ -123,18 +118,19 @@ class DefEntityClusterApi:
         native_entities = entity_svc.list_entities_by_entity_type(
             vendor=DEF_CSE_VENDOR,
             nss=DEF_NATIVE_ENTITY_TYPE_NSS,
-            version=DEF_NATIVE_ENTITY_TYPE_VERSION)
-        
-        # TODO add org and vdc 
+            version=DEF_NATIVE_ENTITY_TYPE_VERSION,
+            filters=filters)
+
+        # TODO add org and vdc
         clusters = self.list_tkg_clusters()
         for def_entity in native_entities:
             logger.CLIENT_LOGGER.debug(f"Native Defined entity list from server: {def_entity}")  # noqa: E501
             cluster = {
                 cli_constants.CLIOutputKey.CLUSTER_NAME.value: def_entity.name,
-                cli_constants.CLIOutputKey.VDC.value: def_entity.entity.metadata.ovdc_name,
-                cli_constants.CLIOutputKey.ORG.value: def_entity.entity.metadata.org_name,
-                cli_constants.CLIOutputKey.K8S_RUNTIME.value: def_entity.entity.kind,
-                cli_constants.CLIOutputKey.K8S_VERSION.value: def_entity.entity.status.kubernetes,
+                cli_constants.CLIOutputKey.VDC.value: def_entity.entity.metadata.ovdc_name, # noqa: E501
+                cli_constants.CLIOutputKey.ORG.value: def_entity.entity.metadata.org_name, # noqa: E501
+                cli_constants.CLIOutputKey.K8S_RUNTIME.value: def_entity.entity.kind, # noqa: E501
+                cli_constants.CLIOutputKey.K8S_VERSION.value: def_entity.entity.status.kubernetes, # noqa: E501
                 cli_constants.CLIOutputKey.STATUS.value: def_entity.entity.status.phase, # noqa: E501
                 # TODO(Owner in CSE server response): Owner value is needed
                 cli_constants.CLIOutputKey.OWNER.value: " "
@@ -181,7 +177,6 @@ class DefEntityClusterApi:
         :rtype: dict
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
-
         tkg_entities, native_def_entity = \
             self._get_all_clusters_by_name(cluster_name, org=org, vdc=vdc)
         if (tkg_entities and native_def_entity) or (len(tkg_entities) > 1):
@@ -219,7 +214,7 @@ class DefEntityClusterApi:
             raise cse_exceptions.CseDuplicateClusterError(msg)
 
         if native_def_entity:
-            return self._nativeCluster.delete_cluster_by_id(native_def_entity.id)
+            return self._nativeCluster.delete_cluster_by_id(native_def_entity.id) # noqa: E501
         elif len(tkg_entities) == 1:
             # TODO() TKG cluster delete
             raise NotImplementedError("Cluster delete for TKG clusters not yet implemented") # noqa: E501
