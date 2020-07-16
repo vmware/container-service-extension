@@ -644,13 +644,21 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
     required=False,
     metavar='ORG_NAME',
     help="Restrict cluster search to specific org")
-def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name):
+@click.option(
+    '-k',
+    '--k8-runtime',
+    'k8_runtime',
+    default=None,
+    required=False,
+    metavar='K8-RUNTIME',
+    help='Restrict cluster search to cluster kind')
+def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name, k8_runtime=None):
     """Display templates that the specified cluster can upgrade to."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
-        cluster = Cluster(client)
+        cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
 
