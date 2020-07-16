@@ -39,7 +39,6 @@ class TkgClusterApi(object):
         all_params.append('_return_http_data_only')
         all_params.append('_preload_content')
         all_params.append('_request_timeout')
-        # WHAT IF THIS IS A STRING? filter=name=="something"
         all_params.append('object_filter')
 
         params = locals()
