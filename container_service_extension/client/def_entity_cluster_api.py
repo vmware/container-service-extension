@@ -142,6 +142,33 @@ class DefEntityClusterApi:
             clusters.append(cluster)
         return clusters
 
+    def _get_all_clusters_by_name(self, cluster_name: str, org=None, vdc=None):
+        """Get native and TKG clusters by name.
+
+        Assumption: Native clusters cannot have name collision among them.
+        But there can be multiple TKG clusters with the same name and 2 or
+        more TKG clusters can also have the same name.
+
+        :param str cluster_name: Cluster name to search for
+        :param str org: Org to filter by
+        :param str vdc: VDC to filter by
+        :returns: tuple containing TKG cluster list and native cluster if
+            present.
+        :rtype: (list[TkgCluster], def_models.DefEntity)
+        """
+        filters = client_utils.construct_filters(org=org, vdc=vdc)
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        native_def_entity = entity_svc.get_native_entity_by_name(
+            name=cluster_name,
+            filters=filters)
+        # TODO add filters for TKG cluster
+        tkg_cluster_api = TkgClusterApi(api_client=self.tkg_client)
+        response = \
+            tkg_cluster_api.list_tkg_clusters(
+                f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}", # noqa: E501
+                object_filter=f"name=={cluster_name}")
+        return response[0], native_def_entity
+
     def get_cluster_info(self, cluster_name, org=None, vdc=None, **kwargs):
         """Get cluster information using DEF API.
 
@@ -154,35 +181,17 @@ class DefEntityClusterApi:
         :rtype: dict
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
-        filters = client_utils.construct_filters(org=org, vdc=vdc)
-        filters["entitiyType"] = generate_entity_type_id(vendor=DEF_CSE_VENDOR,
-                                                         nss=DEF_NATIVE_ENTITY_TYPE_NSS, # noqa: E501
-                                                         version=DEF_NATIVE_ENTITY_TYPE_VERSION) # noqa: E501
-        # TODO add filters for TKG cluster
 
-        native_entity = self._nativeCluster.get_cluster_info(cluster_name,
-                                                             org=org,
-                                                             vdc=vdc)
-
-
-        # NOTE: Currently, if there are multiple clusters by the same name,
-        # which can be a possibility with TKG clusters, an error is raised.
-        tkg_cluster_api = TkgClusterApi(api_client=self.tkg_client)
-        response = tkg_cluster_api.list_tkg_clusters(
-            f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}", # noqa: E501
-            object_filter=f"name=={cluster_name}")
-        
-        tkg_entities: List[TkgCluster] = response[0]
-
-        if (def_entity and len(tkg_entities) > 0) or (len(tkg_entities) > 1):
+        tkg_entities, native_def_entity = \
+            self._get_all_clusters_by_name(cluster_name, org=org, vdc=vdc)
+        if (tkg_entities and native_def_entity) or (len(tkg_entities) > 1):
             msg = "Duplicated clusters found. Please use --k8-runtime for the unique identification" # noqa: E501
             logger.CLIENT_LOGGER.error(msg)
-            raise cse_exceptions.CseDuplicateClusterError(msg)  # noqa: E501
+            raise cse_exceptions.CseDuplicateClusterError(msg)
 
-        if def_entity:
-            cluster_info = 
+        if native_def_entity:
+            cluster_info = asdict(native_def_entity.entity)
         elif len(tkg_entities) == 1:
-            # TODO response of a TKG cluster is very very horrible
             cluster_info = tkg_entities[0].to_dict()
         else:
             msg = f"Cluster '{cluster_name}' not found."
@@ -202,17 +211,22 @@ class DefEntityClusterApi:
         :rtype: dict
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
-        filters = client_utils.construct_filters(org=org, vdc=vdc)
-        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        def_entities = entity_svc.get_entities_by_name(entity_name=cluster_name, filters=filters)  # noqa: E501
-        if len(def_entities) > 1:
-            raise cse_exceptions.CseDuplicateClusterError(DUPLICATE_CLUSTER_ERROR_MSG)  # noqa: E501
-        if len(def_entities) == 0:
-            raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
-        def_entity = def_entities[0]
-        if def_entity.entity.kind == ClusterEntityKind.NATIVE.value:
-            return self._nativeCluster.delete_cluster_by_id(def_entity.id)
-        # TODO() TKG cluster delete
+        tkg_entities, native_def_entity = \
+            self._get_all_clusters_by_name(cluster_name, org=org, vdc=vdc)
+        if (tkg_entities and native_def_entity) or (len(tkg_entities) > 1):
+            msg = "Duplicated clusters found. Please use --k8-runtime for the unique identification" # noqa: E501
+            logger.CLIENT_LOGGER.error(msg)
+            raise cse_exceptions.CseDuplicateClusterError(msg)
+
+        if native_def_entity:
+            return self._nativeCluster.delete_cluster_by_id(native_def_entity.id)
+        elif len(tkg_entities) == 1:
+            # TODO() TKG cluster delete
+            raise NotImplementedError("Cluster delete for TKG clusters not yet implemented") # noqa: E501
+
+        msg = f"Cluster '{cluster_name}' not found."
+        logger.CLIENT_LOGGER.error(msg)
+        raise cse_exceptions.ClusterNotFoundError(msg)
 
     def get_upgrade_plan(self, cluster_name, org=None, vdc=None):
         """Get the upgrade plan for the given cluster name.

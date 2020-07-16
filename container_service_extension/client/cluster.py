@@ -8,7 +8,7 @@ from container_service_extension.client.def_entity_cluster_api import DefEntityC
 from container_service_extension.client.legacy_native_cluster_api import LegacyNativeClusterApi  # noqa: E501
 from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
 from container_service_extension.client.tkg_cluster_api import TKGClusterApi
-from container_service_extension.def_.utils import ClusterEntityKind   # noqa: E501
+from container_service_extension.def_.utils import ClusterEntityKind
 
 
 class Cluster:
