@@ -239,18 +239,12 @@ def cluster_delete(ctx, name, vdc, org, k8_runtime=None):
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
-        # TODO(delete cluster implementation): proceed after implementation.
         result = cluster.delete_cluster(name, org, vdc)
         if len(result) == 0:
             click.secho(f"Delete cluster operation has been initiated on "
                         f"{name}, please check the status using"
                         f" 'vcd cse cluster info {name}'.", fg='yellow')
-        if result.get('task_href'):
-            stdout(result, ctx)
-            CLIENT_LOGGER.debug(result)
-        else:
-            msg_update_callback = utils.ConsoleMessagePrinter()
-            msg_update_callback.general_no_color(yaml.dump(result, indent=4))
+        stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
@@ -617,7 +611,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
 
         cluster = Cluster(client, k8_runtime=cluster_config.get('kind'))  # noqa: E501
         result = cluster.apply(cluster_config)
-        stdout(yaml.dump(result['entity']))
+        stdout(result, ctx)
         CLIENT_LOGGER.debug(result['entity'])
     except Exception as e:
         stderr(e, ctx)
@@ -735,7 +729,7 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
         if isinstance(cluster, legacy_native_cluster_api.LegacyNativeClusterApi): # noqa: E501
             stdout(result, ctx)
         else:
-            stdout(yaml.load(result.entity))
+            stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
@@ -821,14 +815,8 @@ def cluster_info(ctx, name, org, vdc, k8_runtime=None):
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
-        cluster_info = cluster.get_cluster_info(name, org=org, vdc=vdc)
-        import container_service_extension.client.legacy_native_cluster_api as legacy_native_cluster_api # noqa: E501
-        if isinstance(cluster, legacy_native_cluster_api.LegacyNativeClusterApi): # noqa: E501
-            stdout(cluster_info)
-        else:
-            msg_update_callback = utils.ConsoleMessagePrinter()
-            msg_update_callback.general_no_color(yaml.dump(cluster_info, indent=4)) # noqa: E501
-        CLIENT_LOGGER.debug(cluster_info)
+        result = cluster.get_cluster_info(name, org=org, vdc=vdc)
+        stdout(result, ctx)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))

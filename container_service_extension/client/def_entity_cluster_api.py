@@ -5,6 +5,8 @@ from dataclasses import asdict
 import os
 from typing import List
 
+import yaml
+
 import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
 from container_service_extension.client.tkgclient import TkgClusterApi
@@ -122,7 +124,7 @@ class DefEntityClusterApi:
             filters=filters)
 
         # TODO add org and vdc
-        clusters = self.list_tkg_clusters()
+        clusters = self.list_tkg_clusters() or []
         for def_entity in native_entities:
             logger.CLIENT_LOGGER.debug(f"Native Defined entity list from server: {def_entity}")  # noqa: E501
             cluster = {
@@ -174,7 +176,7 @@ class DefEntityClusterApi:
         :param kwargs: *filter (dict): keys,values for DEF API query filter
 
         :return: cluster information
-        :rtype: dict
+        :rtype: str
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
         tkg_entities, native_def_entity = \
@@ -194,7 +196,7 @@ class DefEntityClusterApi:
             raise cse_exceptions.ClusterNotFoundError(msg)
 
         logger.CLIENT_LOGGER.debug(f"Defined entity output from server: {cluster_info}") # noqa: E501
-        return cluster_info
+        return yaml.dump(cluster_info)
 
     def delete_cluster(self, cluster_name, org=None, vdc=None):
         """Delete DEF cluster by name.
