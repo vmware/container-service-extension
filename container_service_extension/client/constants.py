@@ -13,7 +13,7 @@ TKG_ENTITY_TYPE_ID = def_utils.generate_entity_type_id(
     def_utils.TKG_ENTITY_TYPE_NSS,
     def_utils.TKG_ENTITY_TYPE_VERSION)
 
-TKG_CLUSTER_RUNTIME = 'TKG'
+TKG_CLUSTER_RUNTIME = 'TanzuKubernetesCluster'
 
 
 @unique

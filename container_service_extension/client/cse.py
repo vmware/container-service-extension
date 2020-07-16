@@ -9,8 +9,6 @@ import click
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
 from vcd_cli.vcd import vcd
-import yaml
-
 
 from container_service_extension.client import pks
 from container_service_extension.client.cluster import Cluster
@@ -619,8 +617,8 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
 
         cluster = Cluster(client, k8_runtime=cluster_config.get('kind'))  # noqa: E501
         result = cluster.apply(cluster_config)
-        console_message_printer.general_no_color(yaml.dump(result))
-        CLIENT_LOGGER.debug(result)
+        console_message_printer.general_no_color(yaml.dump(result['entity']))
+        CLIENT_LOGGER.debug(result['entity'])
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
@@ -721,14 +719,22 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
-        cluster = Cluster(client)
+        # Get legacy_native_cluster object for api version < 35 or
+        # native_cluster object for api version >= 35
+        cluster = Cluster(client, cluster_entity_kind=ClusterEntityKind.NATIVE.value)
         if not client.is_sysadmin() and org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
 
         result = cluster.upgrade_cluster(cluster_name, template_name,
                                          template_revision, ovdc_name=vdc,
                                          org_name=org_name)
-        stdout(result, ctx)
+        import container_service_extension.client.legacy_native_cluster as legacy_native_cluster
+        if isinstance(cluster, legacy_native_cluster.LegacyNativeCluster):
+            # maintain old form of output
+            stdout(result, ctx)
+        else:
+            msg_update_callback = utils.ConsoleMessagePrinter()
+            msg_update_callback.general_no_color(yaml.load(result['entity']))
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
@@ -816,8 +822,12 @@ def cluster_info(ctx, name, org, vdc, k8_runtime=None):
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
         cluster_info = cluster.get_cluster_info(name, org=org, vdc=vdc)
-        msg_update_callback = utils.ConsoleMessagePrinter()
-        msg_update_callback.general_no_color(yaml.dump(cluster_info, indent=4))
+        import container_service_extension.client.legacy_native_cluster as legacy_native_cluster # noqa: E501
+        if isinstance(cluster, legacy_native_cluster.LegacyNativeCluster):
+            stdout(cluster_info)
+        else:
+            msg_update_callback = utils.ConsoleMessagePrinter()
+            msg_update_callback.general_no_color(yaml.dump(cluster_info, indent=4)) # noqa: E501
         CLIENT_LOGGER.debug(cluster_info)
     except Exception as e:
         stderr(e, ctx)

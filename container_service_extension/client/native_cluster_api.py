@@ -1,6 +1,7 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+from dataclasses import asdict
 
 import pyvcloud.vcd.exceptions as vcd_exceptions
 
@@ -68,14 +69,7 @@ class NativeClusterApi:
             raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
         # TODO() relevant output
         if def_entity:
-            return {
-                'Name': def_entity.name,
-                'Kind': def_entity.entity.kind,
-                'VDC': def_entity.entity.metadata.ovdc_name,
-                'Org': def_entity.entity.metadata.org_name,
-                'K8s Version': def_entity.entity.status.kubernetes,  # noqa: E501
-                'Status': def_entity.entity.status.phase,
-            }
+            return asdict(def_entity.entity)
 
     def delete_cluster(self, cluster_name, org=None, vdc=None):
         """Delete DEF native cluster by name.
