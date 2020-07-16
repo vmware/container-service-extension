@@ -134,3 +134,34 @@ class NativeClusterApi:
                 media_type='application/json',
                 accept_type='application/json')
         return response_processor.process_response(response)
+
+    def upgrade_cluster(self, cluster_name, template_name, template_revision,
+                        org_name=None, ovdc_name=None):
+        """List of upgrade paths
+        :param str cluster_name:
+        :param str template_name: Name of the template the cluster should be
+            upgraded to.
+        :param str template_revision: Revision of the template the cluster
+            should be upgraded to.
+        :param str org: org name of the cluster
+        :param str vdc: vdc of the cluster
+        :return: requests.models.Response response
+        """
+        filters = client_utils.construct_filters(org=org_name, vdc=ovdc_name)
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        curr_entity = entity_svc.get_native_entity_by_name(name=cluster_name,
+                                                          filters=filters)  # noqa: E501
+        if curr_entity:
+            curr_entity.entity.spec.k8_distribution.template_name = template_name # noqa: E501
+            curr_entity.entity.spec.k8_distribution.template_revision = template_revision # noqa: E501
+            uri = f'{self._uri}/cluster/{curr_entity.id}/action/upgrade'
+            response = self._client._do_request_prim(
+                shared_constants.RequestMethod.POST,
+                uri,
+                self._client._session,
+                contents=asdict(curr_entity.entity),
+                media_type='application/json',
+                accept_type='application/json')
+            return response_processor.process_response(response)
+        raise cse_exceptions.ClusterNotFoundError(
+            f"Cluster '{cluster_name}' not found.")  # noqa: E501
