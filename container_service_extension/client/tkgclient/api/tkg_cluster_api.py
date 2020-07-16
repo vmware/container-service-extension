@@ -39,13 +39,15 @@ class TkgClusterApi(object):
         all_params.append('_return_http_data_only')
         all_params.append('_preload_content')
         all_params.append('_request_timeout')
+        # WHAT IF THIS IS A STRING? filter=name=="something"
+        all_params.append('object_filter')
 
         params = locals()
         for key, val in six.iteritems(params['kwargs']):
             if key not in all_params:
                 raise TypeError(
                     "Got an unexpected keyword argument '%s'"
-                    " to method create_tkg_cluster" % key
+                    " to method list_tkg_clusters" % key
                 )
             params[key] = val
         del params['kwargs']
@@ -55,6 +57,8 @@ class TkgClusterApi(object):
                 "Missing the required parameter `entity_type` when calling `list_tkg_clusters`")
         path_params = {}
         query_params = []
+        if params.get('object_filter'):
+            query_params.append(('filter', params['object_filter']))
         header_params = {}
         header_params[
             'Content-Type'] = self.api_client.select_header_content_type(
