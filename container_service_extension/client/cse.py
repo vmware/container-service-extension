@@ -3,12 +3,12 @@
 # SPDX-License-Identifier: BSD-2-Clause
 import dataclasses
 import os
-import yaml
 
 import click
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
 from vcd_cli.vcd import vcd
+import yaml
 
 from container_service_extension.client import pks
 from container_service_extension.client.cluster import Cluster
@@ -26,7 +26,6 @@ from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import LocalTemplateKey
 import container_service_extension.shared_constants as shared_constants
 import container_service_extension.utils as utils
-from container_service_extension.def_.utils import ClusterEntityKind
 
 
 @vcd.group(short_help='Manage Native Kubernetes clusters')
@@ -653,7 +652,8 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name):
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         # TODO (TKG): handle for TKG clusters
-        cluster = Cluster(client, k8_runtime=ClusterEntityKind.NATIVE.value)
+        cluster = Cluster(client,
+                          k8_runtime=def_utils.ClusterEntityKind.NATIVE.value)
         if not client.is_sysadmin() and org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
 
@@ -714,7 +714,8 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
         # Get legacy_native_cluster object for api version < 35 or
         # native_cluster object for api version >= 35
         # TODO(TKG): Modify to include TKG clusters
-        cluster = Cluster(client, k8_runtime=ClusterEntityKind.NATIVE.value)
+        cluster = Cluster(client,
+                          k8_runtime=def_utils.ClusterEntityKind.NATIVE.value)
         if not client.is_sysadmin() and org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
 
@@ -814,7 +815,7 @@ def cluster_info(ctx, name, org, vdc, k8_runtime=None):
             org = ctx.obj['profiles'].get('org_in_use')
         cluster_info = cluster.get_cluster_info(name, org=org, vdc=vdc)
         import container_service_extension.client.legacy_native_cluster_api as legacy_native_cluster_api # noqa: E501
-        if isinstance(cluster, legacy_native_cluster_api.LegacyNativeClusterApi):
+        if isinstance(cluster, legacy_native_cluster_api.LegacyNativeClusterApi): # noqa: E501
             stdout(cluster_info)
         else:
             msg_update_callback = utils.ConsoleMessagePrinter()

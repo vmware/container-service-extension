@@ -137,7 +137,8 @@ class NativeClusterApi:
 
     def upgrade_cluster(self, cluster_name, template_name, template_revision,
                         org_name=None, ovdc_name=None):
-        """List of upgrade paths
+        """Upgrade cluster to a new template.
+
         :param str cluster_name:
         :param str template_name: Name of the template the cluster should be
             upgraded to.
@@ -150,7 +151,7 @@ class NativeClusterApi:
         filters = client_utils.construct_filters(org=org_name, vdc=ovdc_name)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         curr_entity = entity_svc.get_native_entity_by_name(name=cluster_name,
-                                                          filters=filters)  # noqa: E501
+                                                           filters=filters)  # noqa: E501
         if curr_entity:
             curr_entity.entity.spec.k8_distribution.template_name = template_name # noqa: E501
             curr_entity.entity.spec.k8_distribution.template_revision = template_revision # noqa: E501
