@@ -4,6 +4,7 @@
 from dataclasses import asdict
 
 import pyvcloud.vcd.exceptions as vcd_exceptions
+import yaml
 
 import container_service_extension.client.response_processor as response_processor  # noqa: E501
 import container_service_extension.client.utils as client_utils
@@ -69,7 +70,7 @@ class NativeClusterApi:
             raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
         # TODO() relevant output
         if def_entity:
-            return asdict(def_entity.entity)
+            return yaml.dump(asdict(def_entity.entity))
 
     def delete_cluster(self, cluster_name, org=None, vdc=None):
         """Delete DEF native cluster by name.
@@ -93,7 +94,7 @@ class NativeClusterApi:
 
         :param str cluster_id: native cluster entity id
         :return: requests.models.Response response
-        :rtype: dict
+        :rtype: str
         """
         uri = f"{self._uri}/cluster/{cluster_id}"
         response = self._client._do_request_prim(
@@ -102,13 +103,13 @@ class NativeClusterApi:
             self._client._session,
             media_type='application/json',
             accept_type='application/json')
-        return response_processor.process_response(response)
+        return yaml.dump(response_processor.process_response(response))
 
     def apply(self, cluster_config):
         """Apply the configuration either to create or update the cluster.
 
         :param dict cluster_config: cluster configuration information
-        :return: requests.models.Response response
+        :return: str
         """
         uri = f"{self._uri}/clusters"
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
@@ -133,7 +134,7 @@ class NativeClusterApi:
                 contents=cluster_config,
                 media_type='application/json',
                 accept_type='application/json')
-        return response_processor.process_response(response)
+        return yaml.dump(response_processor.process_response(response)['entity']) # noqa: E501
 
     def upgrade_cluster(self, cluster_name, template_name, template_revision,
                         org_name=None, ovdc_name=None):
@@ -163,6 +164,6 @@ class NativeClusterApi:
                 contents=asdict(curr_entity.entity),
                 media_type='application/json',
                 accept_type='application/json')
-            return response_processor.process_response(response)
+            return yaml.dump(response_processor.process_response(response)['entity']) # noqa: E501
         raise cse_exceptions.ClusterNotFoundError(
             f"Cluster '{cluster_name}' not found.")  # noqa: E501
