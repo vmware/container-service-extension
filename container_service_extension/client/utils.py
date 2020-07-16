@@ -7,6 +7,7 @@ import requests
 from vcd_cli.profiles import Profiles
 
 from container_service_extension.client import system as syst
+import container_service_extension.def_.utils as def_utils
 from container_service_extension.shared_constants import CSE_SERVER_API_VERSION
 
 
@@ -87,3 +88,12 @@ def _override_client(ctx) -> None:
     client.rehydrate_from_token(profiles.get('token'), profiles.get('is_jwt_token'))  # noqa: E501
     ctx.obj['client'] = client
     ctx.obj['profiles'] = profiles
+
+
+def construct_filters(**kwargs):
+    filters = {}
+    if kwargs.get('org'):
+        filters[def_utils.ClusterEntityFilterKey.ORG_NAME.value] = kwargs['org']  # noqa: E501
+    if kwargs.get('vdc'):
+        filters[def_utils.ClusterEntityFilterKey.OVDC_NAME.value] = kwargs['vdc']  # noqa: E501
+    return filters

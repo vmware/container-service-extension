@@ -3,12 +3,14 @@
 # SPDX-License-Identifier: BSD-2-Clause
 from typing import List
 
+from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
 from container_service_extension.client.tkgclient import TkgClusterApi
 from container_service_extension.client.tkgclient.api_client import ApiClient
 from container_service_extension.client.tkgclient.configuration import Configuration  # noqa: E501
 from container_service_extension.client.tkgclient.models.tkg_cluster import TkgCluster  # noqa: E501
+import container_service_extension.client.utils as client_utils
 import container_service_extension.def_.entity_service as def_entity_svc
-from container_service_extension.def_.utils import ClusterEntityFilterKey
+from container_service_extension.def_.utils import ClusterEntityKind
 from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_NSS
 from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_VERSION
 from container_service_extension.def_.utils import DEF_VMWARE_VENDOR
@@ -17,7 +19,7 @@ from container_service_extension.logger import CLIENT_LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
 
 
-class DefEntityCluster:
+class DefEntityClusterApi:
     """Handle operations common to DefNative and vsphere kubernetes clusters.
 
     Also any operation where cluster kind is not known should be handled here.
@@ -34,6 +36,7 @@ class DefEntityCluster:
         self._client = client
         self._cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
             client=client, logger_debug=CLIENT_LOGGER)
+        self._nativeCluster = NativeClusterApi(client)
         self.tkg_client = self._get_tkg_client()
 
     def _get_tkg_client(self):
@@ -92,12 +95,7 @@ class DefEntityCluster:
         :return: cluster list information
         :rtype: list(dict)
         """
-        filters = {}
-        if org:
-            filters[ClusterEntityFilterKey.ORG_NAME.value] = org
-        if vdc:
-            filters[ClusterEntityFilterKey.OVDC_NAME.value] = vdc
-
+        filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         entity_list = entity_svc.list_entities(filters=filters)  # noqa: E501
         clusters = []
@@ -126,22 +124,43 @@ class DefEntityCluster:
         :return: cluster information
         :rtype: dict
         """
-        filters = {}
-        if org:
-            filters[ClusterEntityFilterKey.ORG_NAME.value] = org
-        if vdc:
-            filters[ClusterEntityFilterKey.OVDC_NAME.value] = vdc
+        filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        def_entity = entity_svc.get_entity_by_name(entity_name=cluster_name, filters=filters)  # noqa: E501
-        if def_entity:
-            CLIENT_LOGGER.debug(f"Defined entity info from server:{def_entity}")  # noqa: E501
-            # TODO() relevant output
-            return {
-                'Name': def_entity.name,
-                'Kind': def_entity.entity.kind,
-                'VDC': def_entity.entity.metadata.ovdc_name,
-                'Org': def_entity.entity.metadata.org_name,
-                'K8s Version': def_entity.entity.status.kubernetes,  # noqa: E501
-                'Status': def_entity.entity.status.phase,
-            }
-        raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+        def_entities = entity_svc.get_entities_by_name(entity_name=cluster_name, filters=filters)  # noqa: E501
+        if len(def_entities) > 1:
+            raise cse_exceptions.CseDuplicateClusterError("Duplicated clusters found. Please use --k8-runtime for the unique identification")  # noqa: E501
+        if len(def_entities) == 0:
+            raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+        def_entity = def_entities[0]
+        CLIENT_LOGGER.debug(f"Defined entity info from server:{def_entity}")  # noqa: E501
+        # TODO() relevant output
+        return {
+            'Name': def_entity.name,
+            'Kind': def_entity.entity.kind,
+            'VDC': def_entity.entity.metadata.ovdc_name,
+            'Org': def_entity.entity.metadata.org_name,
+            'K8s Version': def_entity.entity.status.kubernetes,  # noqa: E501
+            'Status': def_entity.entity.status.phase,
+        }
+
+    def delete_cluster(self, cluster_name, org=None, vdc=None):
+        """Delete DEF cluster by name.
+
+        :param str cluster_name: native cluster name
+        :param str org: name of the org
+        :param str vdc: name of the vdc
+        :return: requests.models.Response response
+        :rtype: dict
+        :raises ClusterNotFoundError
+        """
+        filters = client_utils.construct_filters(org=org, vdc=vdc)
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        def_entities = entity_svc.get_entities_by_name(entity_name=cluster_name, filters=filters)  # noqa: E501
+        if len(def_entities) > 1:
+            raise cse_exceptions.CseDuplicateClusterError("Duplicated clusters found. Please use --k8-runtime for the unique identification")  # noqa: E501
+        if len(def_entities) == 0:
+            raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+        def_entity = def_entities[0]
+        if def_entity.entity.kind == ClusterEntityKind.NATIVE.value:
+            return self._nativeCluster.delete_cluster_by_id(def_entity.id)
+        # TODO() TKG cluster delete

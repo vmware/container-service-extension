@@ -4,17 +4,17 @@
 
 import pyvcloud.vcd.client as vcd_client
 
-from container_service_extension.client.def_entity_cluster import DefEntityCluster # noqa: E501
-from container_service_extension.client.legacy_native_cluster import LegacyNativeCluster  # noqa: E501
-from container_service_extension.client.native_cluster import NativeCluster  # noqa: E501
-from container_service_extension.client.tkg_cluster import TKGCluster
+from container_service_extension.client.def_entity_cluster_api import DefEntityClusterApi # noqa: E501
+from container_service_extension.client.legacy_native_cluster_api import LegacyNativeClusterApi  # noqa: E501
+from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
+from container_service_extension.client.tkg_cluster_api import TKGClusterApi
 from container_service_extension.def_.utils import ClusterEntityKind   # noqa: E501
 
 
 class Cluster:
     """Returns the cluster class as determined by API version."""
 
-    def __new__(cls, client: vcd_client, cluster_entity_kind=None):
+    def __new__(cls, client: vcd_client, k8_runtime=None):
         """Create the right cluster class for the negotiated API version.
 
         In case of ApiVersion.VERSION_35, return specific instance if the
@@ -30,11 +30,11 @@ class Cluster:
         """
         api_version = client.get_api_version()
         if float(api_version) < float(vcd_client.ApiVersion.VERSION_35.value):   # noqa: E501
-            return LegacyNativeCluster(client)
+            return LegacyNativeClusterApi(client)
         elif float(api_version) >= float(vcd_client.ApiVersion.VERSION_35.value):  # noqa: E501
-            if cluster_entity_kind == ClusterEntityKind.NATIVE.value or cluster_entity_kind == ClusterEntityKind.TANZU_PLUS.value:  # noqa: E501
-                return NativeCluster(client)
-            elif cluster_entity_kind == ClusterEntityKind.TKG.value:
-                return TKGCluster(client)
+            if k8_runtime == ClusterEntityKind.NATIVE.value or k8_runtime == ClusterEntityKind.TANZU_PLUS.value:  # noqa: E501
+                return NativeClusterApi(client)
+            elif k8_runtime == ClusterEntityKind.TKG.value:
+                return TKGClusterApi(client)
             else:
-                return DefEntityCluster(client)
+                return DefEntityClusterApi(client)

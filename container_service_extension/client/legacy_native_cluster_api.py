@@ -8,7 +8,7 @@ from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RequestMethod
 
 
-class LegacyNativeCluster:
+class LegacyNativeClusterApi:
     def __init__(self, client):
         self.client = client
         self._uri = self.client.get_api_uri() + '/cse'
