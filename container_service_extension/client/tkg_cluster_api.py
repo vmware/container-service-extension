@@ -5,7 +5,7 @@
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 
 
-class TKGCluster:
+class TKGClusterApi:
     """Embedded Kubernetes into vSphere."""
 
     def __init__(self, client):

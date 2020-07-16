@@ -225,19 +225,19 @@ def list_clusters(ctx, vdc, org_name):
     help='Restrict cluster search to specified org')
 @click.option(
     '-k',
-    '--kind',
-    'cluster_kind',
+    '--k8-runtime',
+    'k8_runtime',
     default=None,
     required=False,
-    metavar='CLUSTER_KIND',
+    metavar='K8-RUNTIME',
     help='Restrict cluster search to cluster kind')
-def cluster_delete(ctx, name, vdc, org, cluster_kind=None):
+def cluster_delete(ctx, name, vdc, org, k8_runtime=None):
     """Delete a Kubernetes cluster."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
-        cluster = Cluster(client, cluster_entity_kind=cluster_kind)
+        cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
         result = cluster.delete_cluster(name, org, vdc)
@@ -614,7 +614,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
         if not cluster_config.get('metadata', {}).get('org_name'):
             cluster_config['metadata']['org_name'] = ctx.obj['profiles'].get('org_in_use')  # noqa: E501
 
-        cluster = Cluster(client, cluster_entity_kind=cluster_config.get('kind'))  # noqa: E501
+        cluster = Cluster(client, k8_runtime=cluster_config.get('kind'))  # noqa: E501
         result = cluster.apply(cluster_config)
         console_message_printer.general_no_color(yaml.dump(result))
         CLIENT_LOGGER.debug(result)
@@ -787,19 +787,19 @@ def cluster_config(ctx, name, vdc, org):
     help='Restrict cluster search to specified org')
 @click.option(
     '-k',
-    '--kind',
-    'cluster_kind',
+    '--k8-runtime',
+    'k8_runtime',
     default=None,
     required=False,
-    metavar='CLUSTER_KIND',
+    metavar='K8-RUNTIME',
     help='Restrict cluster search to cluster kind')
-def cluster_info(ctx, name, org, vdc, cluster_kind=None):
+def cluster_info(ctx, name, org, vdc, k8_runtime=None):
     """Display info about a Kubernetes cluster."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
-        cluster = Cluster(client, cluster_entity_kind=cluster_kind)
+        cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
         cluster_info = cluster.get_cluster_info(name, org=org, vdc=vdc)

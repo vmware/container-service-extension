@@ -1,10 +1,9 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-
 from typing import List
 
-from container_service_extension.client.native_cluster import NativeCluster
+from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
 from container_service_extension.client.tkgclient import TkgClusterApi
 from container_service_extension.client.tkgclient.api_client import ApiClient
 from container_service_extension.client.tkgclient.configuration import Configuration  # noqa: E501
@@ -20,7 +19,7 @@ from container_service_extension.logger import CLIENT_LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
 
 
-class DefEntityCluster:
+class DefEntityClusterApi:
     """Handle operations common to DefNative and vsphere kubernetes clusters.
 
     Also any operation where cluster kind is not known should be handled here.
@@ -37,7 +36,7 @@ class DefEntityCluster:
         self._client = client
         self._cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
             client=client, logger_debug=CLIENT_LOGGER)
-        self._nativeCluster = NativeCluster(client)
+        self._nativeCluster = NativeClusterApi(client)
         self.tkg_client = self._get_tkg_client()
 
     def _get_tkg_client(self):
@@ -129,7 +128,7 @@ class DefEntityCluster:
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         def_entities = entity_svc.get_entities_by_name(entity_name=cluster_name, filters=filters)  # noqa: E501
         if len(def_entities) > 1:
-            raise cse_exceptions.CseDuplicateClusterError("Found more than one cluster; please use --kind option")  # noqa: E501
+            raise cse_exceptions.CseDuplicateClusterError("Duplicated clusters found. Please use --k8-runtime for the unique identification")  # noqa: E501
         if len(def_entities) == 0:
             raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
         def_entity = def_entities[0]
@@ -158,7 +157,7 @@ class DefEntityCluster:
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         def_entities = entity_svc.get_entities_by_name(entity_name=cluster_name, filters=filters)  # noqa: E501
         if len(def_entities) > 1:
-            raise cse_exceptions.CseDuplicateClusterError("Found more than one cluster; please use --kind option")  # noqa: E501
+            raise cse_exceptions.CseDuplicateClusterError("Duplicated clusters found. Please use --k8-runtime for the unique identification")  # noqa: E501
         if len(def_entities) == 0:
             raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
         def_entity = def_entities[0]
