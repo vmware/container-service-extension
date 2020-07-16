@@ -15,7 +15,7 @@ import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.shared_constants as shared_constants
 
 
-class NativeCluster:
+class NativeClusterApi:
     """Handle operations that are specific to cluster kind 'native'.
 
     Examples:

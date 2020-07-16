@@ -53,16 +53,16 @@ UNSUPPORTED_COMMAND_OPTIONS_BY_VERSION = {
     vcd_client.ApiVersion.VERSION_33.value: {
         GroupKey.CLUSTER: {
             CommandNameKey.CREATE: ['sizing_class'],
-            CommandNameKey.DELETE: ['cluster_kind'],
-            CommandNameKey.INFO: ['cluster_kind']
+            CommandNameKey.DELETE: ['k8_runtime'],
+            CommandNameKey.INFO: ['k8_runtime']
         },
     },
 
     vcd_client.ApiVersion.VERSION_34.value: {
         GroupKey.CLUSTER: {
             CommandNameKey.CREATE: ['sizing_class'],
-            CommandNameKey.DELETE: ['cluster_kind'],
-            CommandNameKey.INFO: ['cluster_kind']
+            CommandNameKey.DELETE: ['k8_runtime'],
+            CommandNameKey.INFO: ['k8_runtime']
         }
     },
 
