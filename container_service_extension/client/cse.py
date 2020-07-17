@@ -624,6 +624,8 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
 
 
 @cluster_group.command('upgrade-plan',
+                       help="Example:vcd cse cluster upgrade-plan my-cluster"
+                            " \n\nExample:vcd cse cluster upgrade-plan --k8-runtime native my-cluster",  # noqa: E501
                        short_help='Display templates that the specified '
                                   'cluster can upgrade to')
 @click.pass_context

@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 from typing import List
 
+import pyvcloud.vcd.exceptions as vcd_exceptions
+
 from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
 from container_service_extension.client.tkgclient import TkgClusterApi
 from container_service_extension.client.tkgclient.api_client import ApiClient
@@ -187,4 +189,5 @@ class DefEntityClusterApi:
         def_entity = def_entities[0]
         if def_entity.entity.kind == ClusterEntityKind.NATIVE.value:
             return self._nativeCluster.get_upgrade_plan_by_cluster_id(def_entity.id)  # noqa: E501
-        # TODO() TKG Cluster Upgrade
+        else:
+            raise vcd_exceptions.OperationNotSupportedException(f"upgrade-plan is not supported for k8-runtime:{def_entity.entity.kind}")  # noqa: E501
