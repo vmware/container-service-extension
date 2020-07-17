@@ -434,7 +434,7 @@ def test_0070_vcd_cse_cluster_create(config, test_runner_username):
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=f"cse cluster create "
                        f"{env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}"
-                       f" -n {config['broker']['network']} -N 1 ", exit_code=0,
+                       f" -n {config['broker']['network']} -N 0 ", exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
                    validate_output_func=None, test_user=test_runner_username)
@@ -584,11 +584,7 @@ def test_0110_vcd_cse_cluster_resize(test_runner_username, config):
                    test_user=test_runner_username),
         cmd_binder(cmd=f"cse cluster resize -N 0 -n {config['broker']['network']}" # noqa
                        f" {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}", # noqa: E501
-                   exit_code=2, validate_output_func=generate_validate_node_count_func(num_nodes+1), # noqa
-                   test_user=test_runner_username),
-        cmd_binder(cmd=f"cse cluster resize -N {num_nodes} -n {config['broker']['network']}" # noqa
-                       f" {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}", # noqa: E501
-                   exit_code=2, validate_output_func=generate_validate_node_count_func(num_nodes+1), # noqa
+                   exit_code=0, validate_output_func=generate_validate_node_count_func(0), # noqa
                    test_user=test_runner_username)
     ]
     execute_commands(cmd_list)
