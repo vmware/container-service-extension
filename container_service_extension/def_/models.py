@@ -70,14 +70,16 @@ class Metadata:
     org_name: str
     ovdc_name: str
 
+
 @dataclass()
 class Nfs:
     sizing_class: str = None
     storage_profile: str = None
     count: int = 0
 
+
 @dataclass()
-class ControlPlane():
+class ControlPlane:
     sizing_class: str = None
     storage_profile: str = None
     count: int = 1
@@ -177,7 +179,8 @@ class ClusterSpec:
     settings: Settings
 
     def __init__(self, settings: Settings, k8_distribution: Distribution = None,  # noqa: E501
-                 control_plane: ControlPlane = None, workers: Workers = None, nfs: Nfs = None):
+                 control_plane: ControlPlane = None, workers: Workers = None,
+                 nfs: Nfs = None):
         self.settings = Settings(**settings) \
             if isinstance(settings, dict) else settings
         self.control_plane = ControlPlane(**control_plane) \
