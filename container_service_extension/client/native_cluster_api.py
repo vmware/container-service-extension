@@ -110,6 +110,37 @@ class NativeClusterApi:
             accept_type='application/json')
         return response_processor.process_response(response)
 
+    def get_upgrade_plan(self, cluster_name, org=None, vdc=None):
+        """Get the upgrade plan for given cluster.
+
+        :param cluster_name: name of the cluster
+        :param org: name of the org
+        :param vdc: name of the vdc
+        :return: requests.models.Response response
+        :rtype: dict
+        """
+        filters = client_utils.construct_filters(org=org, vdc=vdc)
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
+        if def_entity:
+            return self.get_upgrade_plan_by_cluster_id(def_entity.id)
+        raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+
+    def get_upgrade_plan_by_cluster_id(self, cluster_id):
+        """Get the upgrade plan for give cluster id.
+
+        :param cluster_id: unique id of the cluster
+        :return: requests.models.Response response
+        :rtype: dict
+        """
+        uri = f'{self._uri}/cluster/{cluster_id}/upgrade-plan'
+        response = self._client._do_request_prim(
+            shared_constants.RequestMethod.GET,
+            uri,
+            self._client._session,
+            accept_type='application/json')
+        return response_processor.process_response(response)
+
     def apply(self, cluster_config):
         """Apply the configuration either to create or update the cluster.
 
