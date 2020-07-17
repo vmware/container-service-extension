@@ -58,16 +58,13 @@ CSE_GLOBAL_PVDC_COMPUTE_POLICY_DESCRIPTION = \
 CSE_CLUSTER_KUBECONFIG_PATH = '/root/.kube/config'
 
 # MQTT constants
-# TODO version should be major.minor.patch; patch change doesn't mean version needs
-# to be updated, but major upgrade with api changes should lead to updating the version
+# TODO: version should be major.minor.patch
+#  Also, patch change doesn't mean version needs to be updated,
+#  but major upgrade with api changes should lead to updating the version
 MQTT_EXTENSION_VERSION = '1.0.0'
 MQTT_EXTENSION_VENDOR = 'VMWare'
 MQTT_EXTENSION_PRIORITY = 100
-MQTT_TOKEN_NAME = 'extToken'
-MQTT_ENDPOINT_PATH = '/api/mqttEndpoint'
-MQTT_MIN_API_VERSION = 34.0
-API_FILTER_PATH = '/extension/service/apifilter/'
-
+MQTT_MIN_API_VERSION = 35.0
 
 
 @unique
