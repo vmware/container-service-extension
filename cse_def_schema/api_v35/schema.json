@@ -70,6 +70,25 @@
                             }
                         }
                     },
+                    "nfs": {
+                        "type": "object",
+                        "required": [
+                            "count"
+                        ],
+                        "properties": {
+                            "count": {
+                                "type": "integer",
+                                "maximum": 1,
+                                "minimum": 1
+                            },
+                            "sizing_class": {
+                                "type": "string"
+                            },
+                            "storage_profile": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "settings": {
                         "type": "object",
                         "required": [
