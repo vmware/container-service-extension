@@ -584,7 +584,7 @@ def test_0110_vcd_cse_cluster_resize(test_runner_username, config):
                    test_user=test_runner_username),
         cmd_binder(cmd=f"cse cluster resize -N 0 -n {config['broker']['network']}" # noqa
                        f" {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}", # noqa: E501
-                   exit_code=2, validate_output_func=generate_validate_node_count_func(num_nodes+1), # noqa
+                   exit_code=0, validate_output_func=generate_validate_node_count_func(1), # noqa
                    test_user=test_runner_username),
         cmd_binder(cmd=f"cse cluster resize -N {num_nodes} -n {config['broker']['network']}" # noqa
                        f" {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}", # noqa: E501
