@@ -72,31 +72,24 @@ class Metadata:
 
 
 @dataclass()
+class Nfs:
+    sizing_class: str = None
+    storage_profile: str = None
+    count: int = 0
+
+
+@dataclass()
 class ControlPlane:
     sizing_class: str = None
     storage_profile: str = None
     count: int = 1
-
-    def __init__(self, sizing_class: str = None, storage_profile: str = None, count: int = 1): # noqa: E501
-        # TODO(DEF) Pre-defined sizing classes need to be defined.
-        #  Get the default sizing class.
-        self.sizing_class = sizing_class
-        self.storage_profile = storage_profile
-        self.count = count
 
 
 @dataclass()
 class Workers:
     sizing_class: str = None
     storage_profile: str = None
-    count: int = 2
-
-    def __init__(self, sizing_class: str = None, storage_profile: str = None, count: int = 2):  # noqa: E501
-        # TODO(DEF) Pre-defined sizing classes need to be defined.
-        #  Get the default sizing class.
-        self.sizing_class = sizing_class
-        self.storage_profile = storage_profile
-        self.count = count
+    count: int = 1
 
 
 @dataclass()
@@ -181,17 +174,20 @@ class ClusterSpec:
 
     control_plane: ControlPlane
     workers: Workers
+    nfs: Nfs
     k8_distribution: Distribution
     settings: Settings
 
     def __init__(self, settings: Settings, k8_distribution: Distribution = None,  # noqa: E501
-                 control_plane: ControlPlane = None, workers: Workers = None):
+                 control_plane: ControlPlane = None, workers: Workers = None,
+                 nfs: Nfs = None):
         self.settings = Settings(**settings) \
             if isinstance(settings, dict) else settings
         self.control_plane = ControlPlane(**control_plane) \
             if isinstance(control_plane, dict) else control_plane or ControlPlane()  # noqa: E501
         self.workers = Workers(**workers) \
             if isinstance(workers, dict) else workers or Workers()
+        self.nfs = Nfs(**nfs) if isinstance(nfs, dict) else nfs or Nfs()
         self.k8_distribution = Distribution(**k8_distribution) \
             if isinstance(k8_distribution, dict) else k8_distribution or Distribution()  # noqa: E501
 
