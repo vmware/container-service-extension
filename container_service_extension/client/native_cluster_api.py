@@ -32,6 +32,7 @@ class NativeClusterApi:
     def __init__(self, client):
         self._client = client
         self._uri = f"{self._client.get_api_uri()}/cse/{def_utils.V35_END_POINT_DISCRIMINATOR}"  # noqa: E501
+        logger_wire = logger.NULL_LOGGER
         if os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING):
             logger_wire = logger.CLIENT_WIRE_LOGGER
         self._cloudapi_client = \

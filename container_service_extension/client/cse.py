@@ -193,7 +193,7 @@ def list_clusters(ctx, vdc, org_name):
         cluster = Cluster(client)
         if not client.is_sysadmin() and org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
-        clusters = cluster.get_clusters(vdc=vdc, org=org_name)
+        clusters = cluster.list_clusters(vdc=vdc, org=org_name)
         stdout(clusters, ctx, show_id=True, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
@@ -245,6 +245,7 @@ def cluster_delete(ctx, name, vdc, org, k8_runtime=None):
                         f"{name}, please check the status using"
                         f" 'vcd cse cluster info {name}'.", fg='yellow')
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
@@ -705,8 +706,6 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
-        # Get legacy_native_cluster object for api version < 35 or
-        # native_cluster object for api version >= 35
         # TODO(TKG): Modify to include TKG clusters
         cluster = Cluster(client,
                           k8_runtime=def_utils.ClusterEntityKind.NATIVE.value)
@@ -805,6 +804,7 @@ def cluster_info(ctx, name, org, vdc, k8_runtime=None):
             org = ctx.obj['profiles'].get('org_in_use')
         result = cluster.get_cluster_info(name, org=org, vdc=vdc)
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))

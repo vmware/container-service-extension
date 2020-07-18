@@ -13,13 +13,13 @@ TKG_ENTITY_TYPE_ID = def_utils.generate_entity_type_id(
     def_utils.TKG_ENTITY_TYPE_NSS,
     def_utils.TKG_ENTITY_TYPE_VERSION)
 
-TKG_CLUSTER_RUNTIME = 'TanzuKubernetesCluster'
+TKG_CLUSTER_RUNTIME = 'TkgCluster'
 
 
 @unique
 class CLIOutputKey(str, Enum):
     # Output keys for cluster list
-    CLUSTER_NAME = "name"
+    CLUSTER_NAME = "Name"
     VDC = "VDC"
     ORG = "Org"
     K8S_RUNTIME = "K8s Runtime"

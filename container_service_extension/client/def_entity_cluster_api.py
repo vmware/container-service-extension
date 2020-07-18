@@ -81,10 +81,27 @@ class DefEntityClusterApi:
         cluster: TkgCluster = response[0]
         return cluster.to_dict()
 
-    def list_tkg_clusters(self):
+    def list_tkg_clusters(self, vdc=None, org=None):
+        """List all the TKG clusters.
+
+        :param str vdc: name of vdc to filter by
+        :param str org: name of the org to filter by
+        :return: list of TKG cluster information.
+        :rtype: List[dict]
+        """
         tkg_cluster_api = TkgClusterApi(api_client=self.tkg_client)
+        filters = []
+        if org:
+            # TODO(Org filed for TKG): Add filter once schema is updated
+            pass
+        if vdc:
+            filters.append(("entity.metadata.virtualDataCenterName", vdc))
+        filter_string = None
+        if filters:
+            filter_string = ";".join([f"{f[0]}=={f[1]}" for f in filters])  # noqa: E501
         response = tkg_cluster_api.list_tkg_clusters(
-            f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}")  # noqa: E501
+            f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}",  # noqa: E501
+            object_filter=filter_string)
         entities: List[TkgCluster] = response[0]
         clusters = []
         for entity in entities:
@@ -94,7 +111,7 @@ class DefEntityClusterApi:
                 cli_constants.CLIOutputKey.VDC.value: entity.metadata.virtual_data_center_name, # noqa: E501
                 # TODO(TKG): Missing org name in the response
                 cli_constants.CLIOutputKey.ORG.value: " ", # noqa: E501
-                cli_constants.CLIOutputKey.K8S_RUNTIME.value: "TanzuKubernetesCluster", # noqa: E501
+                cli_constants.CLIOutputKey.K8S_RUNTIME.value: cli_constants.TKG_CLUSTER_RUNTIME, # noqa: E501
                 cli_constants.CLIOutputKey.K8S_VERSION.value: entity.spec.distribution.version, # noqa: E501
                 # TODO(TKG): status field doesn't have any attributes
                 cli_constants.CLIOutputKey.STATUS.value: " ",
@@ -104,7 +121,7 @@ class DefEntityClusterApi:
             clusters.append(cluster)
         return clusters
 
-    def get_clusters(self, vdc=None, org=None, **kwargs):
+    def list_clusters(self, vdc=None, org=None, **kwargs):
         """Get collection of clusters using DEF API.
 
         :param str vdc: name of vdc
@@ -122,23 +139,26 @@ class DefEntityClusterApi:
             version=DEF_NATIVE_ENTITY_TYPE_VERSION,
             filters=filters)
 
-        clusters = self.list_tkg_clusters() or []
+        clusters = self.list_tkg_clusters(vdc=vdc, org=org) or []
         for def_entity in native_entities:
+            entity = def_entity.entity
             logger.CLIENT_LOGGER.debug(f"Native Defined entity list from server: {def_entity}")  # noqa: E501
+            owner_id = def_entity.ownerId if hasattr(def_entity, 'ownerId') else ' '  # noqa: E501
+            # TODO(Owner in CSE server response): REST call to fetch owner_name
             cluster = {
                 cli_constants.CLIOutputKey.CLUSTER_NAME.value: def_entity.name,
-                cli_constants.CLIOutputKey.VDC.value: def_entity.entity.metadata.ovdc_name, # noqa: E501
-                cli_constants.CLIOutputKey.ORG.value: def_entity.entity.metadata.org_name, # noqa: E501
-                cli_constants.CLIOutputKey.K8S_RUNTIME.value: def_entity.entity.kind, # noqa: E501
-                cli_constants.CLIOutputKey.K8S_VERSION.value: def_entity.entity.status.kubernetes, # noqa: E501
-                cli_constants.CLIOutputKey.STATUS.value: def_entity.entity.status.phase, # noqa: E501
-                # TODO(Owner in CSE server response): Owner value is needed
-                cli_constants.CLIOutputKey.OWNER.value: " "
+                cli_constants.CLIOutputKey.VDC.value: entity.metadata.ovdc_name, # noqa: E501
+                cli_constants.CLIOutputKey.ORG.value: entity.metadata.org_name, # noqa: E501
+                cli_constants.CLIOutputKey.K8S_RUNTIME.value: entity.kind, # noqa: E501
+                cli_constants.CLIOutputKey.K8S_VERSION.value: entity.status.kubernetes, # noqa: E501
+                cli_constants.CLIOutputKey.STATUS.value: entity.status.phase, # noqa: E501
+                cli_constants.CLIOutputKey.OWNER.value: ' '
             }
             clusters.append(cluster)
         return clusters
 
-    def _get_all_clusters_by_name(self, cluster_name: str, org=None, vdc=None):
+    def _get_tkg_and_native_clusters(self, cluster_name: str,
+                                     org=None, vdc=None):
         """Get native and TKG clusters by name.
 
         Assumption: Native clusters cannot have name collision among them.
@@ -157,13 +177,25 @@ class DefEntityClusterApi:
         native_def_entity = entity_svc.get_native_entity_by_name(
             name=cluster_name,
             filters=filters)
+        native_def_entity_dict = {}
+        if native_def_entity:
+            native_def_entity_dict = asdict(native_def_entity)
         # TODO add filters for TKG cluster
         tkg_cluster_api = TkgClusterApi(api_client=self.tkg_client)
+
+        filters = [("entity.metadata.name", cluster_name)]
+        if org:
+            # TODO(Org filed for TKG): Add filter once schema is updated
+            pass
+        if vdc:
+            filters.append(("entity.metadata.virtualDataCenterName", vdc))
+        filter_string = ";".join([f"{f[0]}=={f[1]}" for f in filters])
         response = \
             tkg_cluster_api.list_tkg_clusters(
                 f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}", # noqa: E501
-                object_filter=f"name=={cluster_name}")
-        return response[0], native_def_entity
+                object_filter=filter_string)
+        tkg_entities = [tkg_entity.to_dict() for tkg_entity in response[0]]
+        return tkg_entities, native_def_entity_dict
 
     def get_cluster_info(self, cluster_name, org=None, vdc=None, **kwargs):
         """Get cluster information using DEF API.
@@ -177,22 +209,19 @@ class DefEntityClusterApi:
         :rtype: str
         """
         tkg_entities, native_def_entity = \
-            self._get_all_clusters_by_name(cluster_name, org=org, vdc=vdc)
+            self._get_tkg_and_native_clusters(cluster_name, org=org, vdc=vdc)
         if (tkg_entities and native_def_entity) or (len(tkg_entities) > 1):
-            msg = "Duplicated clusters found. Please use --k8-runtime for the unique identification" # noqa: E501
+            msg = f"Multiple clusters found with name {cluster_name}. " \
+                  "Please use the flag --k8-runtime to uniquely identify the cluster." # noqa: E501
             logger.CLIENT_LOGGER.error(msg)
             raise cse_exceptions.CseDuplicateClusterError(msg)
-
-        if native_def_entity:
-            cluster_info = asdict(native_def_entity.entity)
-        elif len(tkg_entities) == 1:
-            cluster_info = tkg_entities[0].to_dict()
-        else:
+        elif not native_def_entity and len(tkg_entities) == 0:
             msg = f"Cluster '{cluster_name}' not found."
             logger.CLIENT_LOGGER.error(msg)
             raise cse_exceptions.ClusterNotFoundError(msg)
-
-        logger.CLIENT_LOGGER.debug(f"Defined entity output from server: {cluster_info}") # noqa: E501
+        cluster_info = native_def_entity.get('entity') or tkg_entities[0]
+        logger.CLIENT_LOGGER.debug(
+            f"Received defined entity of cluster {cluster_name} : {cluster_info}")  # noqa: E501
         return yaml.dump(cluster_info)
 
     def delete_cluster(self, cluster_name, org=None, vdc=None):
@@ -205,19 +234,19 @@ class DefEntityClusterApi:
         :rtype: dict
         :raises ClusterNotFoundError
         """
-        tkg_entities, native_def_entity = \
-            self._get_all_clusters_by_name(cluster_name, org=org, vdc=vdc)
-        if (tkg_entities and native_def_entity) or (len(tkg_entities) > 1):
-            msg = "Duplicated clusters found. Please use --k8-runtime for the unique identification" # noqa: E501
+        tkg_entities, native_entity = \
+            self._get_tkg_and_native_clusters(cluster_name, org=org, vdc=vdc)
+        if (tkg_entities and native_entity) or (len(tkg_entities) > 1):
+            msg = f"Multiple clusters found with name {cluster_name}. " \
+                  "Please use the flag --k8-runtime to uniquely identify the cluster to delete."  # noqa: E501
             logger.CLIENT_LOGGER.error(msg)
             raise cse_exceptions.CseDuplicateClusterError(msg)
-
-        if native_def_entity:
-            return self._nativeCluster.delete_cluster_by_id(native_def_entity.id) # noqa: E501
-        elif len(tkg_entities) == 1:
-            # TODO() TKG cluster delete
-            raise NotImplementedError("Cluster delete for TKG clusters not yet implemented") # noqa: E501
-
-        msg = f"Cluster '{cluster_name}' not found."
-        logger.CLIENT_LOGGER.error(msg)
-        raise cse_exceptions.ClusterNotFoundError(msg)
+        elif not native_entity and len(tkg_entities) == 0:
+            msg = f"Cluster '{cluster_name}' not found."
+            logger.CLIENT_LOGGER.error(msg)
+            raise cse_exceptions.ClusterNotFoundError(msg)
+        elif native_entity:
+            return self._nativeCluster.delete_cluster_by_id(
+                native_entity.get('id'))
+        # TODO() TKG cluster delete
+        raise NotImplementedError("Cluster delete for TKG clusters not yet implemented")  # noqa: E501
