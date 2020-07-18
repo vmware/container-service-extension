@@ -283,4 +283,4 @@ class DefEntityClusterApi:
                 native_entity.get('id'))
         # TODO() TKG cluster delete
         raise NotImplementedError(
-            "Fetch Cluster config for TKG clusters not yet implemented")  # noqa: E501
+            "Get Cluster upgrade-plan for TKG clusters not yet implemented")  # noqa: E501
