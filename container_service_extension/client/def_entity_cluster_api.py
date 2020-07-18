@@ -5,6 +5,7 @@ from dataclasses import asdict
 import os
 from typing import List
 
+import pyvcloud.vcd.exceptions as vcd_exceptions
 import yaml
 
 import container_service_extension.client.constants as cli_constants
@@ -15,6 +16,7 @@ from container_service_extension.client.tkgclient.configuration import Configura
 from container_service_extension.client.tkgclient.models.tkg_cluster import TkgCluster  # noqa: E501
 import container_service_extension.client.utils as client_utils
 import container_service_extension.def_.entity_service as def_entity_svc
+from container_service_extension.def_.utils import ClusterEntityKind
 from container_service_extension.def_.utils import DEF_CSE_VENDOR
 from container_service_extension.def_.utils import DEF_NATIVE_ENTITY_TYPE_NSS
 from container_service_extension.def_.utils import DEF_NATIVE_ENTITY_TYPE_VERSION # noqa: E501
@@ -144,7 +146,8 @@ class DefEntityClusterApi:
         for def_entity in native_entities:
             entity = def_entity.entity
             logger.CLIENT_LOGGER.debug(f"Native Defined entity list from server: {def_entity}")  # noqa: E501
-            owner_id = def_entity.ownerId if hasattr(def_entity, 'ownerId') else ' '  # noqa: E501
+            # owner_id = \
+            # def_entity.ownerId if hasattr(def_entity, 'ownerId') else ' '
             # TODO(Owner in CSE server response): REST call to fetch owner_name
             cluster = {
                 cli_constants.CLIOutputKey.CLUSTER_NAME.value: def_entity.name,
