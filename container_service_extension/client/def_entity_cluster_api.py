@@ -281,7 +281,6 @@ class DefEntityClusterApi:
         elif native_entity:
             return self._nativeCluster.get_upgrade_plan_by_cluster_id(
                 native_entity.get('id'))
-        # TODO() TKG cluster delete
         raise NotImplementedError(
             "Get Cluster upgrade-plan for TKG clusters not yet implemented")  # noqa: E501
 
@@ -299,18 +298,20 @@ class DefEntityClusterApi:
         :return: requests.models.Response response
         :rtype: dict
         """
-        filters = client_utils.construct_filters(org=org_name, vdc=ovdc_name)
-        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        def_entities = entity_svc.get_entities_by_name(entity_name=cluster_name, filters=filters)  # noqa: E501
-        if len(def_entities) > 1:
-            raise cse_exceptions.CseDuplicateClusterError(DUPLICATE_CLUSTER_ERROR_MSG)  # noqa: E501
-        if len(def_entities) == 0:
-            raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
-        current_entity = def_entities[0]
-        if current_entity.entity.kind == ClusterEntityKind.NATIVE.value:
-            current_entity.entity.spec.k8_distribution.template_name = template_name  # noqa: E501
-            current_entity.entity.spec.k8_distribution.template_revision = template_revision  # noqa: E501
-            return self._nativeCluster.upgrade_cluster_by_cluster_id(current_entity.id, cluster_entity=current_entity)  # noqa: E501
-        else:
-            raise vcd_exceptions.OperationNotSupportedException(f"upgrade is not supported for k8-runtime:{current_entity.entity.kind}")  # noqa: E501
-
+        tkg_entities, native_entity = \
+            self._get_tkg_native_clusters_by_name(cluster_name, org=org_name, vdc=ovdc_name)  # noqa: E501
+        if (tkg_entities and native_entity) or (len(tkg_entities) > 1):
+            msg = f"Multiple clusters found with name {cluster_name}. " \
+                "Please use the flag --k8-runtime to uniquely identify the cluster to delete."  # noqa: E501
+            logger.CLIENT_LOGGER.error(msg)
+            raise cse_exceptions.CseDuplicateClusterError(msg)
+        elif not native_entity and len(tkg_entities) == 0:
+            msg = f"Cluster '{cluster_name}' not found."
+            logger.CLIENT_LOGGER.error(msg)
+            raise cse_exceptions.ClusterNotFoundError(msg)
+        elif native_entity:
+            native_entity['entity']['spec']['k8_distribution']['template_name'] = template_name  # noqa: E501
+            native_entity['entity']['spec']['k8_distribution']['template_revision'] = template_revision  # noqa: E501
+            return self._nativeCluster.upgrade_cluster_by_cluster_id(native_entity.id, cluster_entity=native_entity)  # noqa: E501
+        raise NotImplementedError(
+            "Cluster upgrade for TKG clusters not yet implemented")  # noqa: E501
