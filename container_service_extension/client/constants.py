@@ -26,3 +26,15 @@ class CLIOutputKey(str, Enum):
     K8S_VERSION = "K8s Version"
     STATUS = "Status"
     OWNER = "Owner"
+
+
+@unique
+class TKGClusterEntityFilterKey(str, Enum):
+    """Keys to filter TKG cluster entities in CSE CLI.
+
+    Below Keys are commonly used filters. An entity can be filtered by any of
+    its properties.
+    """
+
+    CLUSTER_NAME = 'entity.metadata.name'
+    VDC_NAME = 'entity.metadata.virtualDataCenterName'

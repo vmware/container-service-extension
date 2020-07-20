@@ -96,7 +96,7 @@ class DefEntityClusterApi:
             # TODO(TKG): Add org filter once TKG schema is updated
             pass
         if vdc:
-            filters.append(("entity.metadata.virtualDataCenterName", vdc))
+            filters.append((cli_constants.TKGClusterEntityFilterKey.VDC_NAME.value, vdc))  # noqa: E501
         filter_string = None
         if filters:
             filter_string = ";".join([f"{f[0]}=={f[1]}" for f in filters])  # noqa: E501
@@ -159,8 +159,8 @@ class DefEntityClusterApi:
             clusters.append(cluster)
         return clusters
 
-    def _get_tkg_and_native_clusters(self, cluster_name: str,
-                                     org=None, vdc=None):
+    def _get_tkg_native_clusters_by_name(self, cluster_name: str,
+                                         org=None, vdc=None):
         """Get native and TKG clusters by name.
 
         Assumption: Native clusters cannot have name collision among them.
@@ -185,12 +185,12 @@ class DefEntityClusterApi:
         # TODO add filters for TKG cluster
         tkg_cluster_api = TkgClusterApi(api_client=self.tkg_client)
 
-        filters = [("entity.metadata.name", cluster_name)]
+        filters = [(cli_constants.TKGClusterEntityFilterKey.CLUSTER_NAME.value, cluster_name)]  # noqa: E501
         if org:
             # TODO(Org filed for TKG): Add filter once schema is updated
             pass
         if vdc:
-            filters.append(("entity.metadata.virtualDataCenterName", vdc))
+            filters.append((cli_constants.TKGClusterEntityFilterKey.VDC_NAME.value, vdc))  # noqa: E501
         filter_string = ";".join([f"{f[0]}=={f[1]}" for f in filters])
         response = \
             tkg_cluster_api.list_tkg_clusters(
@@ -212,7 +212,8 @@ class DefEntityClusterApi:
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
         tkg_entities, native_def_entity = \
-            self._get_tkg_and_native_clusters(cluster_name, org=org, vdc=vdc)
+            self._get_tkg_native_clusters_by_name(cluster_name,
+                                                  org=org, vdc=vdc)
         if (tkg_entities and native_def_entity) or (len(tkg_entities) > 1):
             msg = f"Multiple clusters found with name {cluster_name}. " \
                   "Please use the flag --k8-runtime to uniquely identify the cluster." # noqa: E501
@@ -238,7 +239,8 @@ class DefEntityClusterApi:
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
         tkg_entities, native_entity = \
-            self._get_tkg_and_native_clusters(cluster_name, org=org, vdc=vdc)
+            self._get_tkg_native_clusters_by_name(cluster_name,
+                                                  org=org, vdc=vdc)
         if (tkg_entities and native_entity) or (len(tkg_entities) > 1):
             msg = f"Multiple clusters found with name {cluster_name}. " \
                   "Please use the flag --k8-runtime to uniquely identify the cluster to delete."  # noqa: E501
@@ -266,7 +268,7 @@ class DefEntityClusterApi:
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
         tkg_entities, native_entity = \
-            self._get_tkg_and_native_clusters(cluster_name, org=org, vdc=vdc)
+            self._get_tkg_native_clusters_by_name(cluster_name, org=org, vdc=vdc)  # noqa: E501
         if (tkg_entities and native_entity) or (len(tkg_entities) > 1):
             msg = f"Multiple clusters found with name {cluster_name}. " \
                   "Please use the flag --k8-runtime to uniquely identify the cluster to delete."  # noqa: E501
