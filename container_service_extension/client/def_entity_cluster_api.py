@@ -191,3 +191,32 @@ class DefEntityClusterApi:
             return self._nativeCluster.get_upgrade_plan_by_cluster_id(def_entity.id)  # noqa: E501
         else:
             raise vcd_exceptions.OperationNotSupportedException(f"upgrade-plan is not supported for k8-runtime:{def_entity.entity.kind}")  # noqa: E501
+
+    def upgrade_cluster(self, cluster_name, template_name,
+                        template_revision, org_name=None, ovdc_name=None):
+        """Get the upgrade plan for given cluster.
+
+        :param str cluster_name: name of the cluster
+        :param str template_name: Name of the template the cluster should be
+        upgraded to.
+        :param str template_revision: Revision of the template the cluster
+        should be upgraded to.
+        :param org_name: name of the org
+        :param ovdc_name: name of the vdc
+        :return: requests.models.Response response
+        :rtype: dict
+        """
+        filters = client_utils.construct_filters(org=org_name, vdc=ovdc_name)
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        def_entities = entity_svc.get_entities_by_name(entity_name=cluster_name, filters=filters)  # noqa: E501
+        if len(def_entities) > 1:
+            raise cse_exceptions.CseDuplicateClusterError(DUPLICATE_CLUSTER_ERROR_MSG)  # noqa: E501
+        if len(def_entities) == 0:
+            raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+        current_entity = def_entities[0]
+        if current_entity.entity.kind == ClusterEntityKind.NATIVE.value:
+            current_entity.entity.spec.k8_distribution.template_name = template_name  # noqa: E501
+            current_entity.entity.spec.k8_distribution.template_revision = template_revision  # noqa: E501
+            return self._nativeCluster.upgrade_cluster_by_cluster_id(current_entity.id, cluster_entity=current_entity)  # noqa: E501
+        else:
+            raise vcd_exceptions.OperationNotSupportedException(f"upgrade is not supported for k8-runtime:{current_entity.entity.kind}")  # noqa: E501

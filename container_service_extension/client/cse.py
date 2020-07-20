@@ -686,6 +686,8 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name, k8_runtime=None):
 
 
 @cluster_group.command('upgrade',
+                       help="Example:\n\nvcd cse cluster upgrade my-cluster ubuntu-16.04_k8-1.18_weave-2.6.4 1"  # noqa: E501
+                            "\n\nvcd cse cluster upgrade -k native my-cluster ubuntu-16.04_k8.. 2",  # noqa: E501
                        short_help="Upgrade cluster software to specified "
                                   "template's software versions")
 @click.pass_context
@@ -708,8 +710,16 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name, k8_runtime=None):
     required=False,
     metavar='ORG_NAME',
     help="Restrict cluster search to specific org")
+@click.option(
+    '-k',
+    '--k8-runtime',
+    'k8_runtime',
+    default=None,
+    required=False,
+    metavar='K8-RUNTIME',
+    help='Restrict cluster search to cluster kind')
 def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
-                    vdc, org_name):
+                    vdc, org_name, k8_runtime=None):
     """Upgrade cluster software to specified template's software versions.
 
     Affected software: Docker-CE, Kubernetes, CNI
@@ -718,7 +728,7 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
-        cluster = Cluster(client)
+        cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
 
