@@ -546,7 +546,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
             raise e.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
-                f"valid state to be deleted. Please contact administrator.")
+                f"valid state to be upgraded. Please contact administrator.")
 
         # check that the specified template is a valid upgrade target
         template = {}
