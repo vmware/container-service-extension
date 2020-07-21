@@ -228,13 +228,42 @@ class DefEntityClusterApi:
             f"Received defined entity of cluster {cluster_name} : {cluster_info}")  # noqa: E501
         return yaml.dump(cluster_info)
 
+    def get_cluster_config(self, cluster_name, org=None, vdc=None):
+        """Get cluster config.
+
+        :param str cluster_name: name of the cluster
+        :param str vdc: name of vdc
+        :param str org: name of org
+
+        :return: cluster information
+        :rtype: str
+        :raises ClusterNotFoundError, CseDuplicateClusterError
+        """
+        tkg_entities, native_def_entity = \
+            self._get_tkg_native_clusters_by_name(cluster_name,
+                                                  org=org, vdc=vdc)
+        if (tkg_entities and native_def_entity) or (len(tkg_entities) > 1):
+            msg = f"Multiple clusters found with name {cluster_name}. " \
+                "Please use the flag --k8-runtime to uniquely identify the cluster." # noqa: E501
+            logger.CLIENT_LOGGER.error(msg)
+            raise cse_exceptions.CseDuplicateClusterError(msg)
+        elif not native_def_entity and len(tkg_entities) == 0:
+            msg = f"Cluster '{cluster_name}' not found."
+            logger.CLIENT_LOGGER.error(msg)
+            raise cse_exceptions.ClusterNotFoundError(msg)
+        elif native_def_entity:
+            return self._nativeCluster.get_cluster_config_by_id(
+                native_def_entity.get('id'))
+        raise NotImplementedError(
+            "Get Cluster Config for TKG clusters not yet implemented")  # noqa: E501
+
     def delete_cluster(self, cluster_name, org=None, vdc=None):
         """Delete DEF cluster by name.
 
         :param str cluster_name: name of the cluster
         :param str org: name of the org
         :param str vdc: name of the vdc
-        :return: requests.models.Response response
+        :return: deleted cluster info
         :rtype: dict
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
@@ -263,7 +292,7 @@ class DefEntityClusterApi:
         :param cluster_name: name of the cluster
         :param str org: name of the org
         :param str vdc: name of the vdc
-        :return: requests.models.Response response
+        :return: upgrade plan
         :rtype: dict
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """

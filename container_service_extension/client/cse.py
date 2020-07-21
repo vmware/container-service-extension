@@ -738,7 +738,10 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
         CLIENT_LOGGER.error(str(e))
 
 
-@cluster_group.command('config', short_help='Display cluster configuration')
+@cluster_group.command('config',
+                       help="Example:\n\nvcd cse cluster config my-cluster"
+                            " \n\nvcd cse cluster config -k native my-cluster",  # noqa: E501
+                       short_help='Display cluster configuration')
 @click.pass_context
 @click.argument('name', required=True)
 @click.option(
@@ -757,7 +760,15 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
     default=None,
     metavar='VDC_NAME',
     help='Restrict cluster search to specified org VDC')
-def cluster_config(ctx, name, vdc, org):
+@click.option(
+    '-k',
+    '--k8-runtime',
+    'k8_runtime',
+    default=None,
+    required=False,
+    metavar='K8-RUNTIME',
+    help='Restrict cluster search to cluster kind')
+def cluster_config(ctx, name, vdc, org, k8_runtime=None):
     """Display cluster configuration.
 
     To write to a file: `vcd cse cluster config mycluster > ~/.kube/my_config`
@@ -766,7 +777,7 @@ def cluster_config(ctx, name, vdc, org):
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
-        cluster = Cluster(client)
+        cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
         cluster_config = cluster.get_cluster_config(name, vdc=vdc, org=org) \

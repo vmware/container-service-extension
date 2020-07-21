@@ -85,7 +85,7 @@ class NativeClusterApi:
         :param str cluster_name: native cluster name
         :param str org: name of the org
         :param str vdc: name of the vdc
-        :return: requests.models.Response response
+        :return: deleted cluster information
         :rtype: dict
         :raises ClusterNotFoundError
         """
@@ -100,7 +100,7 @@ class NativeClusterApi:
         """Delete the existing Kubernetes cluster by id.
 
         :param str cluster_id: native cluster entity id
-        :return: requests.models.Response response
+        :return: decoded response content
         :rtype: str
         """
         uri = f"{self._uri}/cluster/{cluster_id}"
@@ -112,13 +112,47 @@ class NativeClusterApi:
             accept_type='application/json')
         return yaml.dump(response_processor.process_response(response))
 
+    def get_cluster_config(self, cluster_name, org=None, vdc=None):
+        """Get cluster config for the given cluster name.
+
+        :param str cluster_name: name of the cluster
+        :param str vdc: name of vdc
+        :param str org: name of org
+
+        :return: cluster information
+        :rtype: str
+        :raises ClusterNotFoundError, CseDuplicateClusterError
+        """
+        filters = client_utils.construct_filters(org=org, vdc=vdc)
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
+        if def_entity:
+            return self.get_cluster_config_by_id(def_entity.id)
+        raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+
+    def get_cluster_config_by_id(self, cluster_id):
+        """Get the cluster config for given cluster id.
+
+        :param str cluster_id: native cluster entity id
+        :return: decoded response content
+        :rtype: dict
+        """
+        uri = f"{self._uri}/cluster/{cluster_id}/config"
+        response = self._client._do_request_prim(
+            shared_constants.RequestMethod.GET,
+            uri,
+            self._client._session,
+            media_type='application/json',
+            accept_type='application/json')
+        return response_processor.process_response(response)
+
     def get_upgrade_plan(self, cluster_name, org=None, vdc=None):
         """Get the upgrade plan for given cluster.
 
         :param cluster_name: name of the cluster
         :param org: name of the org
         :param vdc: name of the vdc
-        :return: requests.models.Response response
+        :return: upgrade plan info
         :rtype: dict
         """
         filters = client_utils.construct_filters(org=org, vdc=vdc)
@@ -132,7 +166,7 @@ class NativeClusterApi:
         """Get the upgrade plan for give cluster id.
 
         :param cluster_id: unique id of the cluster
-        :return: requests.models.Response response
+        :return: decoded response content
         :rtype: dict
         """
         uri = f'{self._uri}/cluster/{cluster_id}/upgrade-plan'
