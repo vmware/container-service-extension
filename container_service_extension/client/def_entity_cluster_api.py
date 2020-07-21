@@ -264,7 +264,7 @@ class DefEntityClusterApi:
         :param str org: name of the org
         :param str vdc: name of the vdc
         :return: deleted cluster info
-        :rtype: dict
+        :rtype: str
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
         tkg_entities, native_entity = \
@@ -292,8 +292,8 @@ class DefEntityClusterApi:
         :param cluster_name: name of the cluster
         :param str org: name of the org
         :param str vdc: name of the vdc
-        :return: upgrade plan
-        :rtype: dict
+        :return: upgrade plan(s)
+        :rtype: list
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
         tkg_entities, native_entity = \
