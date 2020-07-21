@@ -300,6 +300,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             RequestKey.ROLLBACK: True,
         }
         validated_data = {**defaults, **data}
+
         req_utils.validate_payload(validated_data, required)
         template_name = validated_data[RequestKey.TEMPLATE_NAME]
         template_revision = validated_data[RequestKey.TEMPLATE_REVISION]
@@ -380,7 +381,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None,
-            RequestKey.NUM_WORKERS: 1,
+            RequestKey.NUM_WORKERS: None,
             RequestKey.NUM_CPU: None,
             RequestKey.MB_MEMORY: None,
             RequestKey.STORAGE_PROFILE_NAME: None,
@@ -394,7 +395,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         num_workers_wanted = validated_data[RequestKey.NUM_WORKERS]
 
-        if num_workers_wanted < 0:
+        if num_workers_wanted is None or num_workers_wanted < 0:
             raise e.CseServerError(f"Worker node count must be >= 0 (received"
                                    f" {num_workers_wanted}).")
 
