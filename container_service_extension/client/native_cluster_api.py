@@ -86,7 +86,7 @@ class NativeClusterApi:
         :param str org: name of the org
         :param str vdc: name of the vdc
         :return: deleted cluster information
-        :rtype: dict
+        :rtype: str
         :raises ClusterNotFoundError
         """
         filters = client_utils.construct_filters(org=org, vdc=vdc)
@@ -167,7 +167,7 @@ class NativeClusterApi:
 
         :param cluster_id: unique id of the cluster
         :return: decoded response content
-        :rtype: dict
+        :rtype: list
         """
         uri = f'{self._uri}/cluster/{cluster_id}/upgrade-plan'
         response = self._client._do_request_prim(
