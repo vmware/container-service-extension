@@ -3,6 +3,7 @@ import pyvcloud.vcd.client as vcd_client
 import requests
 
 import container_service_extension.cloudapi.constants as cloudapi_constants
+import container_service_extension.exceptions as cse_exceptions
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.server_constants as constants
