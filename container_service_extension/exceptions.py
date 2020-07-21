@@ -229,3 +229,7 @@ class DefEntityServiceError(InternalServerRequestError):
 
 class DefSchemaServiceError(InternalServerRequestError):
     """Raised on any of defined schema service error."""
+
+
+class MQTTExtensionError(CseServerError):
+    """Raised on any error when setting up the MQTT extension."""
