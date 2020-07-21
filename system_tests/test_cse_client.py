@@ -606,7 +606,7 @@ def test_0120_vcd_cse_node_operation(test_runner_username, config):
     different users
     """
     node_pattern = r'(node-\S+)'
-    num_nodes = 2
+    num_nodes = 0 # last resize scaled the cluster down to 0 nodes
     cmd_binder = collections.namedtuple('UserCmdBinder',
                                         'cmd exit_code validate_output_func '
                                         'test_user')
