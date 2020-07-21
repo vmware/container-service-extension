@@ -900,36 +900,36 @@ class ClusterService(abstract_broker.AbstractBroker):
         vapp_href = curr_entity.externalId
         cluster_name = curr_entity.entity.metadata.cluster_name
         final_worker_count = cluster_spec.spec.workers.count
-        workers_deleted = [node.name
-                           for node in curr_entity.entity.status.nodes.workers[final_worker_count:]]  # noqa: E501
+        workers_for_deletion = \
+            [node.name for node in curr_entity.entity.status.nodes.workers[final_worker_count:]]  # noqa: E501
 
         vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
         try:
-            msg = f"Draining {len(workers_deleted)} node(s) from cluster " \
-                  f"'{cluster_name}': {workers_deleted}"
+            msg = f"Draining {len(workers_for_deletion)} node(s) " \
+                  f"from cluster '{cluster_name}': {workers_for_deletion}"
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
 
             # if nodes fail to drain, continue with node deletion anyways
             try:
                 _drain_nodes(self.context.sysadmin_client,
                              vapp_href,
-                             workers_deleted,
+                             workers_for_deletion,
                              cluster_name=cluster_name)
             except (e.NodeOperationError, e.ScriptExecutionError) as err:
-                LOGGER.warning(f"Failed to drain nodes: {workers_deleted} in "
-                               f"cluster '{cluster_name}'. "
-                               f"Continuing node delete...\nError: {err}")
+                LOGGER.warning(f"Failed to drain nodes: {workers_for_deletion}"
+                               f" in cluster '{cluster_name}'."
+                               f" Continuing node delete...\nError: {err}")
 
-            msg = f"Deleting {len(workers_deleted)} node(s) from cluster " \
-                  f"'{cluster_name}': {workers_deleted}"
+            msg = f"Deleting {len(workers_for_deletion)} node(s) from " \
+                  f"cluster '{cluster_name}': {workers_for_deletion}"
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
 
             _delete_nodes(self.context.sysadmin_client,
                           vapp_href,
-                          workers_deleted,
+                          workers_for_deletion,
                           cluster_name=cluster_name)
 
-            msg = f"Deleted {len(workers_deleted)} node(s)" \
+            msg = f"Deleted {len(workers_for_deletion)} node(s)" \
                   f" to cluster '{cluster_name}'"
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
             curr_entity.entity.status.phase = str(
@@ -940,7 +940,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self.entity_svc.update_entity(cluster_id, curr_entity)
         except Exception as err:
             LOGGER.error(f"Unexpected error while deleting nodes "
-                         f"{workers_deleted}: {err}",
+                         f"{workers_for_deletion}: {err}",
                          exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
