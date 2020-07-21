@@ -10,7 +10,6 @@ from vcd_cli.utils import stdout
 from vcd_cli.vcd import vcd
 import yaml
 
-
 from container_service_extension.client import pks
 from container_service_extension.client.cluster import Cluster
 import container_service_extension.client.command_filter as cmd_filter
@@ -194,7 +193,7 @@ def list_clusters(ctx, vdc, org_name):
         cluster = Cluster(client)
         if not client.is_sysadmin() and org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
-        clusters = cluster.get_clusters(vdc=vdc, org=org_name)
+        clusters = cluster.list_clusters(vdc=vdc, org=org_name)
         stdout(clusters, ctx, show_id=True, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
@@ -241,9 +240,6 @@ def cluster_delete(ctx, name, vdc, org, k8_runtime=None):
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
         result = cluster.delete_cluster(name, org, vdc)
-        # result is empty for delete cluster operation on PKS-managed clusters.
-        # In that specific case, below check helps to print out a meaningful
-        # message to users.
         if len(result) == 0:
             click.secho(f"Delete cluster operation has been initiated on "
                         f"{name}, please check the status using"
@@ -616,7 +612,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
 
         cluster = Cluster(client, k8_runtime=cluster_config.get('kind'))  # noqa: E501
         result = cluster.apply(cluster_config)
-        console_message_printer.general_no_color(yaml.dump(result))
+        stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
@@ -686,6 +682,8 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name, k8_runtime=None):
 
 
 @cluster_group.command('upgrade',
+                       help="Example:\n\nvcd cse cluster upgrade my-cluster ubuntu-16.04_k8-1.18_weave-2.6.4 1"  # noqa: E501
+                            "\n\nvcd cse cluster upgrade -k native my-cluster ubuntu-16.04_k8.. 2",  # noqa: E501
                        short_help="Upgrade cluster software to specified "
                                   "template's software versions")
 @click.pass_context
@@ -708,8 +706,16 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name, k8_runtime=None):
     required=False,
     metavar='ORG_NAME',
     help="Restrict cluster search to specific org")
+@click.option(
+    '-k',
+    '--k8-runtime',
+    'k8_runtime',
+    default=None,
+    required=False,
+    metavar='K8-RUNTIME',
+    help='Restrict cluster search to cluster kind')
 def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
-                    vdc, org_name):
+                    vdc, org_name, k8_runtime=None):
     """Upgrade cluster software to specified template's software versions.
 
     Affected software: Docker-CE, Kubernetes, CNI
@@ -718,7 +724,7 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
-        cluster = Cluster(client)
+        cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
 
@@ -812,9 +818,9 @@ def cluster_info(ctx, name, org, vdc, k8_runtime=None):
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
-        cluster_info = cluster.get_cluster_info(name, org=org, vdc=vdc)
-        stdout(cluster_info, ctx, show_id=True)
-        CLIENT_LOGGER.debug(cluster_info)
+        result = cluster.get_cluster_info(name, org=org, vdc=vdc)
+        stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
@@ -1417,7 +1423,7 @@ def ovdc_info(ctx, ovdc_name, org_name):
             if org_name is None:
                 org_name = ctx.obj['profiles'].get('org_in_use')
             result = ovdc.info_ovdc_for_k8s(ovdc_name, org_name)
-            stdout(result, ctx)
+            stdout(yaml.dump(result), ctx)
             CLIENT_LOGGER.debug(result)
         else:
             msg = "Insufficient permission to perform operation"

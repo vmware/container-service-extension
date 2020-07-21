@@ -23,7 +23,7 @@ class LegacyNativeClusterApi:
             accept_type='application/json')
         return process_response(response)
 
-    def get_clusters(self, vdc=None, org=None):
+    def list_clusters(self, vdc=None, org=None):
         method = RequestMethod.GET
         uri = f"{self._uri}/clusters"
         response = self.client._do_request_prim(

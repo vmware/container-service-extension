@@ -23,6 +23,8 @@ class GroupKey(str, Enum):
 class CommandNameKey(str, Enum):
     CREATE = 'create'
     DELETE = 'delete'
+    UPGRADE = 'upgrade',
+    UPGRADE_PLAN = 'upgrade-plan'
     INFO = 'info'
     NODE = 'node'
 
@@ -33,17 +35,17 @@ UNSUPPORTED_COMMANDS_BY_VERSION = {
         GroupKey.CLUSTER: ['apply'],
         # TODO(metadata based enablement for < v35): Revisit after decision
         # to support metadata way of enabling for native clusters
-        GroupKey.OVDC: ['enable', 'disable']
+        GroupKey.OVDC: ['enable', 'disable', 'info']
     },
     vcd_client.ApiVersion.VERSION_34.value: {
         GroupKey.CLUSTER: ['apply'],
         # TODO(metadata based enablement for < v35): Revisit after decision
         # to support metadata way of enabling for native clusters
-        GroupKey.OVDC: ['enable', 'disable']
+        GroupKey.OVDC: ['enable', 'disable', 'info']
     },
     vcd_client.ApiVersion.VERSION_35.value: {
         GroupKey.CLUSTER: ['create'],
-        GroupKey.OVDC: ['compute-policy']
+        GroupKey.OVDC: ['compute-policy', 'info']
     }
 }
 
@@ -54,7 +56,9 @@ UNSUPPORTED_COMMAND_OPTIONS_BY_VERSION = {
         GroupKey.CLUSTER: {
             CommandNameKey.CREATE: ['sizing_class'],
             CommandNameKey.DELETE: ['k8_runtime'],
-            CommandNameKey.INFO: ['k8_runtime']
+            CommandNameKey.INFO: ['k8_runtime'],
+            CommandNameKey.UPGRADE: ['k8_runtime'],
+            CommandNameKey.UPGRADE_PLAN: ['k8_runtime']
         },
     },
 
@@ -62,7 +66,9 @@ UNSUPPORTED_COMMAND_OPTIONS_BY_VERSION = {
         GroupKey.CLUSTER: {
             CommandNameKey.CREATE: ['sizing_class'],
             CommandNameKey.DELETE: ['k8_runtime'],
-            CommandNameKey.INFO: ['k8_runtime']
+            CommandNameKey.INFO: ['k8_runtime'],
+            CommandNameKey.UPGRADE: ['k8_runtime'],
+            CommandNameKey.UPGRADE_PLAN: ['k8_runtime']
         }
     },
 

@@ -449,14 +449,14 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         # Get the existing defined entity for the given cluster id
         curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-        cluster_name: str = curr_entity.name
-        template_name = curr_entity.entity.spec.k8_distribution.template_name
-        template_revision = curr_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
+        name: str = curr_entity.name
         curr_worker_count: int = curr_entity.entity.spec.workers.count
         curr_nfs_count: int = curr_entity.entity.spec.nfs.count
         state: str = curr_entity.state
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_entity.entity.status.phase)
+        template_name = curr_entity.entity.spec.k8_distribution.template_name  # noqa: E501
+        template_revision = curr_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
         spec_worker_count = cluster_spec.spec.workers.count
         spec_nfs_count = cluster_spec.spec.nfs.count
 
@@ -467,12 +467,13 @@ class ClusterService(abstract_broker.AbstractBroker):
         # check if cluster is in a valid state
         if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
             raise e.CseServerError(
-                f"Cluster {cluster_name} with id {cluster_id} is not in a valid state "
+                f"Cluster {name} with id {cluster_id} is not in a valid state "
                 f"to be resized. Please contact the administrator.")
 
-        # check if the desired worker and nfs count is valid
-        if workers_2_be_added == 0 and nfs_2_be_added == 0:
-            raise e.CseServerError(f"Cluster '{cluster_name}' already has "
+        # Check if the desired worker count is valid
+        spec_worker_count = cluster_spec.spec.workers.count
+        if curr_worker_count == spec_worker_count and nfs_2_be_added == 0:
+            raise e.CseServerError(f"Cluster '{name}' already has "
                                    f"{spec_worker_count} workers and "
                                    f"{spec_nfs_count} nfs nodes.")
         elif spec_worker_count < 0:
@@ -482,23 +483,45 @@ class ClusterService(abstract_broker.AbstractBroker):
             raise e.CseServerError(
                 f"Scaling down nfs nodes to {spec_nfs_count} is not supported")
 
-        # TODO(DEF) Handle Telemetry for defined entities
+        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
+        #  based clusters
 
+        if spec_worker_count > curr_worker_count or nfs_2_be_added > 0:
+            num_workers_to_add = spec_worker_count - curr_worker_count
+            # TODO validate template details in input spec to check uniformity
+            msg = f"Creating {num_workers_to_add} node(s) from template " \
+                  f"'{template_name}' (revision {template_revision}) and " \
+                  f"adding to cluster '{name}' ({cluster_id})"
+        else:
+            num_workers_deleted = curr_worker_count - cluster_spec.spec.workers.count  # noqa: E501
+            msg = f"Deleting {num_workers_deleted} node(s) from cluster " \
+                  f"'{curr_entity.entity.metadata.cluster_name}' ({cluster_id})"  # noqa: E501
+        self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+
+        # TODO(DEF) Below is a temporary hack to unset "enable_nfs" as resize
+        #  operation is strictly about resizing worker nodes. NFS needs to be
+        #  handled properly during the implementation of "node add" command.
+        cluster_spec.spec.settings.enable_nfs = False
         curr_entity.entity.status.task_href = self.task_resource.get('href')
         curr_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
         curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)
-        if workers_2_be_added > 0 or nfs_2_be_added > 0:
-            msg = f"Creating {workers_2_be_added} worker(s) from template " \
-                  f"'{template_name}' (revision {template_revision}) and " \
-                  f"adding to cluster '{cluster_name}' ({cluster_id})"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-            self.context.is_async = True
+
+        self.context.is_async = True
+        if spec_worker_count > curr_worker_count:
+            # check that requested/default template is valid
+
+            # TODO validate template for uniformity
+
+            get_template(name=template_name, revision=template_revision)
+
             self._create_nodes_async(cluster_id=cluster_id,
-                                     cluster_spec=cluster_spec)
+                                     cluster_spec=cluster_spec)  # noqa: E501
         else:
-            raise NotImplementedError("Scaling down is under implementation")
+
+            self._delete_nodes_async(cluster_id=cluster_id,
+                                     cluster_spec=cluster_spec)
         return curr_entity
 
     def delete_cluster(self, cluster_id):
@@ -507,12 +530,11 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
             cluster_id)
         cluster_name: str = curr_entity.name
-        state: str = curr_entity.state
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_entity.entity.status.phase)
 
-        # Check if cluster is in a valid state
-        if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
+        # Check if cluster is busy
+        if phase.is_entity_busy():
             raise e.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
                 f"valid state to be deleted. Please contact administrator.")
@@ -567,7 +589,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
             raise e.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
-                f"valid state to be deleted. Please contact administrator.")
+                f"valid state to be upgraded. Please contact administrator.")
 
         # check that the specified template is a valid upgrade target
         template = {}
@@ -696,12 +718,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
             cluster_id)  # noqa: E501
         cluster_name = cluster_spec.metadata.cluster_name
-        curr_worker_count: int = curr_entity.entity.spec.workers.count
-        curr_nfs_count: int = curr_entity.entity.spec.nfs.count
-        spec_worker_count = cluster_spec.spec.workers.count
-        spec_nfs_count = cluster_spec.spec.nfs.count
-        worker_count = spec_worker_count - curr_worker_count
-        nfs_count = spec_nfs_count - curr_nfs_count
+        num_workers_to_add = cluster_spec.spec.workers.count - curr_entity.entity.spec.workers.count  # noqa: E501
+        worker_count = cluster_spec.spec.workers.count
 
         # Resize using the template with which cluster was originally created.
         template_name = curr_entity.entity.spec.k8_distribution.template_name
@@ -710,13 +728,13 @@ class ClusterService(abstract_broker.AbstractBroker):
         # check that requested/default template is valid
         get_template(name=template_name, revision=template_revision)
 
-        if worker_count < 1 and nfs_count < 1:
+        if worker_count < 1:
             raise e.CseServerError(f"Worker count must be > 0 "
                                    f"(received {worker_count}).")
 
         # TODO(DEF) Handle Telemetry for defined entities
 
-        msg = f"Creating {worker_count} worker(s) from template " \
+        msg = f"Creating {num_workers_to_add} node(s) from template " \
               f"'{template_name}' (revision {template_revision}) and " \
               f"adding to cluster '{cluster_name}' ({cluster_id})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
@@ -731,7 +749,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         self._create_nodes_async(cluster_id=cluster_id, cluster_spec=cluster_spec)  # noqa: E501
         return curr_entity
 
-    def delete_nodes(self, **kwargs):
+    def delete_nodes(self, cluster_id: str,
+                     cluster_spec: def_models.ClusterEntity):
         """Start the delete nodes operation.
 
         Validates data for the 'delete nodes' operation. Deleting nodes is an
@@ -743,60 +762,38 @@ class ClusterService(abstract_broker.AbstractBroker):
             Optional data and default values: org_name=None, ovdc_name=None
         **telemetry: Optional
         """
-        raise NotImplementedError
-        data = kwargs[KwargKey.DATA]
-        required = [
-            RequestKey.CLUSTER_NAME,
-            RequestKey.NODE_NAMES_LIST
-        ]
-        defaults = {
-            RequestKey.ORG_NAME: None,
-            RequestKey.OVDC_NAME: None
-        }
-        validated_data = {**defaults, **data}
-        req_utils.validate_payload(validated_data, required)
+        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
+            cluster_id)  # noqa: E501
+        final_worker_count = cluster_spec.spec.workers.count
 
-        cluster_name = validated_data[RequestKey.CLUSTER_NAME]
-        node_names_list = validated_data[RequestKey.NODE_NAMES_LIST]
+        if final_worker_count < 0:
+            raise e.CseServerError(f"Worker count must be >= 0 "
+                                   f"(received {final_worker_count}).")
 
-        # check that there are nodes to delete
-        if len(node_names_list) == 0:
-            LOGGER.debug("No nodes specified to delete")
-            return {'body': {}}
-        # check that master node is not in specified nodes
-        for node in node_names_list:
-            if node.startswith(NodeType.MASTER):
-                raise e.CseServerError(f"Can't delete master node: '{node}'.")
-
-        cluster = get_cluster(self.context.client, cluster_name,
-                              org_name=validated_data[RequestKey.ORG_NAME],
-                              ovdc_name=validated_data[RequestKey.OVDC_NAME])
-        cluster_id = cluster['cluster_id']
-
-        if kwargs.get(KwargKey.TELEMETRY, True):
-            # Record the telemetry data; record separate data for each node
-            cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
-            for node in node_names_list:
-                cse_params[PayloadKey.NODE_NAME] = node
-                record_user_action_details(cse_operation=CseOperation.NODE_DELETE, cse_params=cse_params)  # noqa: E501
+        num_workers_to_delete = curr_entity.entity.spec.workers.count - cluster_spec.spec.workers.count  # noqa: E501
 
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
         # call, session becomes None
-        msg = f"Deleting {len(node_names_list)} node(s) " \
-              f"from cluster '{cluster_name}'({cluster_id})"
+        msg = f"Deleting {num_workers_to_delete} node(s) from cluster " \
+              f"'{curr_entity.entity.metadata.cluster_name}' ({cluster_id})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-        self.context.is_async = True
-        self._delete_nodes_async(
-            cluster_name=cluster_name,
-            vapp_href=cluster['vapp_href'],
-            node_names_list=validated_data[RequestKey.NODE_NAMES_LIST])
 
-        return {
-            'cluster_name': cluster_name,
-            'task_href': self.task_resource.get('href')
-        }
+        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
+        #  based clusters
+
+        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
+            cluster_id)  # noqa: E501
+        curr_entity.entity.status.task_href = self.task_resource.get('href')
+        curr_entity.entity.status.phase = str(
+            DefEntityPhase(DefEntityOperation.UPDATE,
+                           DefEntityOperationStatus.IN_PROGRESS))
+        curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)
+
+        self.context.is_async = True
+        self._delete_nodes_async(cluster_id=cluster_id,
+                                 cluster_spec=cluster_spec)
+        return curr_entity
 
     # all parameters following '*args' are required and keyword-only
     @utils.run_async
@@ -810,10 +807,10 @@ class ClusterService(abstract_broker.AbstractBroker):
             ovdc_name = curr_entity.entity.metadata.ovdc_name
             curr_worker_count: int = curr_entity.entity.spec.workers.count
             curr_nfs_count: int = curr_entity.entity.spec.nfs.count
-            spec_worker_count = cluster_spec.spec.workers.count
-            spec_nfs_count = cluster_spec.spec.nfs.count
-            worker_storage_profile = curr_entity.entity.spec.workers.storage_profile  # noqa: E501
+            spec_worker_count = cluster_spec.spec.workers.count - curr_entity.entity.spec.workers.count  # noqa: E501
+            worker_storage_profile =  curr_entity.entity.spec.workers.storage_profile  # noqa: E501
             worker_sizing_class = curr_entity.entity.spec.workers.sizing_class
+            spec_nfs_count = cluster_spec.spec.nfs.count
             nfs_storage_profile = curr_entity.entity.spec.nfs.storage_profile
             nfs_sizing_class = curr_entity.entity.spec.nfs.sizing_class
             network_name = cluster_spec.spec.settings.network
@@ -928,44 +925,60 @@ class ClusterService(abstract_broker.AbstractBroker):
         finally:
             self.context.end()
 
-    # all parameters following '*args' are required and keyword-only
     @utils.run_async
-    def _delete_nodes_async(self, *args,
-                            cluster_name, vapp_href, node_names_list):
+    def _delete_nodes_async(self, cluster_id: str,
+                            cluster_spec: def_models.ClusterEntity):
+        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
+            cluster_id)  # noqa: E501
+        vapp_href = curr_entity.externalId
+        cluster_name = curr_entity.entity.metadata.cluster_name
+        final_worker_count = cluster_spec.spec.workers.count
+        workers_for_deletion = \
+            [node.name for node in curr_entity.entity.status.nodes.workers[final_worker_count:]]  # noqa: E501
+
+        vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
         try:
-            msg = f"Draining {len(node_names_list)} node(s) from cluster " \
-                  f"'{cluster_name}': {node_names_list}"
+            msg = f"Draining {len(workers_for_deletion)} node(s) " \
+                  f"from cluster '{cluster_name}': {workers_for_deletion}"
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
 
             # if nodes fail to drain, continue with node deletion anyways
             try:
                 _drain_nodes(self.context.sysadmin_client,
                              vapp_href,
-                             node_names_list,
+                             workers_for_deletion,
                              cluster_name=cluster_name)
             except (e.NodeOperationError, e.ScriptExecutionError) as err:
-                LOGGER.warning(f"Failed to drain nodes: {node_names_list} in "
-                               f"cluster '{cluster_name}'. "
-                               f"Continuing node delete...\nError: {err}")
+                LOGGER.warning(f"Failed to drain nodes: {workers_for_deletion}"
+                               f" in cluster '{cluster_name}'."
+                               f" Continuing node delete...\nError: {err}")
 
-            msg = f"Deleting {len(node_names_list)} node(s) from cluster " \
-                  f"'{cluster_name}': {node_names_list}"
+            msg = f"Deleting {len(workers_for_deletion)} node(s) from " \
+                  f"cluster '{cluster_name}': {workers_for_deletion}"
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
 
             _delete_nodes(self.context.sysadmin_client,
                           vapp_href,
-                          node_names_list,
+                          workers_for_deletion,
                           cluster_name=cluster_name)
 
-            msg = f"Deleted {len(node_names_list)} node(s)" \
+            msg = f"Deleted {len(workers_for_deletion)} node(s)" \
                   f" to cluster '{cluster_name}'"
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+            curr_entity.entity.status.phase = str(
+                DefEntityPhase(DefEntityOperation.UPDATE,
+                               DefEntityOperationStatus.SUCCEEDED))
+            curr_entity.entity.spec.workers = cluster_spec.spec.workers
+            curr_entity.entity.status.nodes = self._get_nodes_details(vapp)
+            self.entity_svc.update_entity(cluster_id, curr_entity)
         except Exception as err:
             LOGGER.error(f"Unexpected error while deleting nodes "
-                         f"{node_names_list}: {err}",
+                         f"{workers_for_deletion}: {err}",
                          exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.UPDATE)
         finally:
             self.context.end()
 
@@ -1007,8 +1020,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             # TODO use cluster status field to get the master and worker nodes
             cluster_vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
             all_node_names = [vm.get('name') for vm in cluster_vapp.get_all_vms()] # noqa: E501
-            master_node_names = [vm_name for vm_name in all_node_names if vm_name.startswith(NodeType.MASTER)] # noqa: E501
-            worker_node_names = [vm_name for vm_name in all_node_names if vm_name.startswith(NodeType.WORKER)] # noqa: E501
+            master_node_names = [curr_entity.entity.status.nodes.master.name] # noqa: E501
+            worker_node_names = [worker.name for worker in curr_entity.entity.status.nodes.workers] # noqa: E501
 
             template_name = template[LocalTemplateKey.NAME]
             template_revision = template[LocalTemplateKey.REVISION]
