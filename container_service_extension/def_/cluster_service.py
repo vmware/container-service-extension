@@ -470,13 +470,25 @@ class ClusterService(abstract_broker.AbstractBroker):
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
 
+        if spec_worker_count > curr_worker_count:
+            num_workers_to_add = spec_worker_count - curr_worker_count
+            template_name = curr_entity.entity.spec.k8_distribution.template_name  # noqa: E501
+            template_revision = curr_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
+            msg = f"Creating {num_workers_to_add} node(s) from template " \
+                  f"'{template_name}' (revision {template_revision}) and " \
+                  f"adding to cluster '{name}' ({cluster_id})"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+        else:
+            num_workers_deleted = curr_worker_count - cluster_spec.spec.workers.count  # noqa: E501
+            msg = f"Deleting {num_workers_deleted} node(s) from cluster " \
+                  f"'{curr_entity.entity.metadata.cluster_name}' ({cluster_id})"  # noqa: E501
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+
         # TODO(DEF) Below is a temporary hack to unset "enable_nfs" as resize
         #  operation is strictly about resizing worker nodes. NFS needs to be
         #  handled properly during the implementation of "node add" command.
         cluster_spec.spec.settings.enable_nfs = False
-
-        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
-            cluster_id)  # noqa: E501
+        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
         curr_entity.entity.status.task_href = self.task_resource.get('href')
         curr_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.UPDATE,
@@ -486,34 +498,17 @@ class ClusterService(abstract_broker.AbstractBroker):
         # TODO default template for resizing should be master's template
         # TODO(DEF) Handle Telemetry for Defined entities.
         if spec_worker_count > curr_worker_count:
-            # Resize using the template with which cluster was
-            # originally created.
-            template_name = curr_entity.entity.spec.k8_distribution.template_name  # noqa: E501
-            template_revision = curr_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
-
             # check that requested/default template is valid
-            get_template(name=template_name, revision=template_revision)
+            get_template(name=curr_entity.entity.spec.k8_distribution.template_name,  # noqa: E501
+                         revision=curr_entity.entity.spec.k8_distribution.template_revision)  # noqa: E501
 
-            num_workers_to_add = spec_worker_count - curr_worker_count
-            msg = f"Creating {num_workers_to_add} node(s) from template " \
-                  f"'{template_name}' (revision {template_revision}) and " \
-                  f"adding to cluster '{name}' ({cluster_id})"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             self.context.is_async = True
             self._create_nodes_async(cluster_id=cluster_id,
                                      cluster_spec=cluster_spec)  # noqa: E501
-            return curr_entity
-
-        num_workers_deleted = curr_worker_count - cluster_spec.spec.workers.count  # noqa: E501
-        # must _update_task here or else self.task_resource is None
-        # do not logout of sys admin, or else in pyvcloud's session.request()
-        # call, session becomes None
-        msg = f"Deleting {num_workers_deleted} node(s) from cluster " \
-              f"'{curr_entity.entity.metadata.cluster_name}' ({cluster_id})"
-        self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-        self.context.is_async = True
-        self._delete_nodes_async(cluster_id=cluster_id,
-                                 cluster_spec=cluster_spec)
+        else:
+            self.context.is_async = True
+            self._delete_nodes_async(cluster_id=cluster_id,
+                                     cluster_spec=cluster_spec)
         return curr_entity
 
     def delete_cluster(self, cluster_id):
@@ -522,7 +517,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
             cluster_id)
         cluster_name: str = curr_entity.name
-        state: str = curr_entity.state
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_entity.entity.status.phase)
 
@@ -841,8 +835,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                                   sizing_class_name=worker_sizing_class)
 
             if node_type == NodeType.NFS:
-                msg = f"Created {num_workers_to_add} nfs_node(s) for cluster " \
-                      f"'{cluster_name}' ({cluster_id})"
+                msg = f"Created {num_workers_to_add} nfs_node(s) " \
+                      f"for cluster '{cluster_name}' ({cluster_id})"
                 self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
             elif node_type == NodeType.WORKER:
                 msg = f"Adding {num_workers_to_add} node(s) to cluster " \

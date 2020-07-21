@@ -79,7 +79,7 @@
                             "count": {
                                 "type": "integer",
                                 "maximum": 1,
-                                "minimum": 1
+                                "minimum": 0
                             },
                             "sizing_class": {
                                 "type": "string"
