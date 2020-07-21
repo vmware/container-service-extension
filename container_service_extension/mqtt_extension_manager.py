@@ -89,10 +89,6 @@ class MQTTExtensionManager:
             respond topic, and description
         :rtype: dict with fields: ext_urn_id, listen_topic, respond_topic,
             description
-
-        :return: a tuple of urn_id, listen topic, and respond topic,
-            each of type str. In case of any error, None is returned.
-        :rtype: tuple
         """
         ext_info = self.get_extension_info(ext_name, ext_version, ext_vendor)
         if not ext_info:

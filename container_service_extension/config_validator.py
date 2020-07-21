@@ -33,6 +33,7 @@ from container_service_extension.sample_generator import \
     SAMPLE_PKS_NSXT_SERVERS_SECTION, SAMPLE_PKS_ORGS_SECTION, \
     SAMPLE_PKS_PVDCS_SECTION, SAMPLE_PKS_SERVERS_SECTION, \
     SAMPLE_SERVICE_CONFIG, SAMPLE_VCD_CONFIG, SAMPLE_VCS_CONFIG # noqa: H301
+from container_service_extension.server_constants import MQTT_MIN_API_VERSION
 from container_service_extension.server_constants import \
     SUPPORTED_VCD_API_VERSIONS
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
@@ -115,7 +116,9 @@ def get_validated_config(config_file_name,
         nsxt_wire_logger = SERVER_NSXT_WIRE_LOGGER
     check_keys_and_value_types(config, sample_config, location='config file',
                                msg_update_callback=msg_update_callback)
-    _validate_amqp_config(config['amqp'], msg_update_callback)
+    api_version = config['vcd']['api_version']
+    if float(api_version) < MQTT_MIN_API_VERSION:
+        _validate_amqp_config(config['amqp'], msg_update_callback)
     _validate_vcd_and_vcs_config(config['vcd'], config['vcs'],
                                  msg_update_callback,
                                  log_file=log_wire_file,
