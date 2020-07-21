@@ -281,6 +281,37 @@ class DefEntityClusterApi:
         elif native_entity:
             return self._nativeCluster.get_upgrade_plan_by_cluster_id(
                 native_entity.get('id'))
-        # TODO() TKG cluster delete
         raise NotImplementedError(
             "Get Cluster upgrade-plan for TKG clusters not yet implemented")  # noqa: E501
+
+    def upgrade_cluster(self, cluster_name, template_name,
+                        template_revision, org_name=None, ovdc_name=None):
+        """Get the upgrade plan for given cluster.
+
+        :param str cluster_name: name of the cluster
+        :param str template_name: Name of the template the cluster should be
+        upgraded to.
+        :param str template_revision: Revision of the template the cluster
+        should be upgraded to.
+        :param org_name: name of the org
+        :param ovdc_name: name of the vdc
+        :return: requests.models.Response response
+        :rtype: dict
+        """
+        tkg_entities, native_entity = \
+            self._get_tkg_native_clusters_by_name(cluster_name, org=org_name, vdc=ovdc_name)  # noqa: E501
+        if (tkg_entities and native_entity) or (len(tkg_entities) > 1):
+            msg = f"Multiple clusters found with name {cluster_name}. " \
+                "Please use the flag --k8-runtime to uniquely identify the cluster to delete."  # noqa: E501
+            logger.CLIENT_LOGGER.error(msg)
+            raise cse_exceptions.CseDuplicateClusterError(msg)
+        elif not native_entity and len(tkg_entities) == 0:
+            msg = f"Cluster '{cluster_name}' not found."
+            logger.CLIENT_LOGGER.error(msg)
+            raise cse_exceptions.ClusterNotFoundError(msg)
+        elif native_entity:
+            native_entity['entity']['spec']['k8_distribution']['template_name'] = template_name  # noqa: E501
+            native_entity['entity']['spec']['k8_distribution']['template_revision'] = template_revision  # noqa: E501
+            return self._nativeCluster.upgrade_cluster_by_cluster_id(native_entity.id, cluster_entity=native_entity)  # noqa: E501
+        raise NotImplementedError(
+            "Cluster upgrade for TKG clusters not yet implemented")  # noqa: E501

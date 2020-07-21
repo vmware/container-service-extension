@@ -143,6 +143,47 @@ class NativeClusterApi:
             accept_type='application/json')
         return response_processor.process_response(response)
 
+    def upgrade_cluster(self, cluster_name, template_name,
+                        template_revision, org_name=None, ovdc_name=None):
+        """Get the upgrade plan for given cluster.
+
+        :param str cluster_name: name of the cluster
+        :param str template_name: Name of the template the cluster should be
+        upgraded to.
+        :param str template_revision: Revision of the template the cluster
+        should be upgraded to.
+        :param org_name: name of the org
+        :param ovdc_name: name of the vdc
+        :return: requests.models.Response response
+        :rtype: dict
+        """
+        filters = client_utils.construct_filters(org=org_name, vdc=ovdc_name)
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        current_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
+        if current_entity:
+            current_entity.entity.spec.k8_distribution.template_name = template_name  # noqa: E501
+            current_entity.entity.spec.k8_distribution.template_revision = template_revision  # noqa: E501
+            return self.upgrade_cluster_by_cluster_id(current_entity.id, cluster_entity=asdict(current_entity))  # noqa: E501
+        raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+
+    def upgrade_cluster_by_cluster_id(self, cluster_id, cluster_entity):
+        """Get the upgrade plan for give cluster id.
+
+        :param str cluster_id: unique id of the cluster
+        :param dict cluster_entity: defined entity
+        :return: requests.models.Response response
+        :rtype: dict
+        """
+        uri = f'{self._uri}/cluster/{cluster_id}/action/upgrade'
+        response = self._client._do_request_prim(
+            shared_constants.RequestMethod.POST,
+            uri,
+            self._client._session,
+            contents=cluster_entity['entity'],
+            media_type='application/json',
+            accept_type='application/json')
+        return yaml.dump(response_processor.process_response(response)['entity']) # noqa: E501
+
     def apply(self, cluster_config):
         """Apply the configuration either to create or update the cluster.
 
@@ -173,36 +214,3 @@ class NativeClusterApi:
                 media_type='application/json',
                 accept_type='application/json')
         return yaml.dump(response_processor.process_response(response)['entity']) # noqa: E501
-
-    def upgrade_cluster(self, cluster_name, template_name, template_revision,
-                        org_name=None, ovdc_name=None):
-        """Upgrade cluster to a new template.
-
-        :param str cluster_name:
-        :param str template_name: Name of the template the cluster should be
-            upgraded to.
-        :param str template_revision: Revision of the template the cluster
-            should be upgraded to.
-        :param str org: org name of the cluster
-        :param str vdc: vdc of the cluster
-        :return: str response
-        :rtype: str
-        """
-        filters = client_utils.construct_filters(org=org_name, vdc=ovdc_name)
-        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        curr_entity = entity_svc.get_native_entity_by_name(name=cluster_name,
-                                                           filters=filters)  # noqa: E501
-        if curr_entity:
-            curr_entity.entity.spec.k8_distribution.template_name = template_name # noqa: E501
-            curr_entity.entity.spec.k8_distribution.template_revision = template_revision # noqa: E501
-            uri = f'{self._uri}/cluster/{curr_entity.id}/action/upgrade'
-            response = self._client._do_request_prim(
-                shared_constants.RequestMethod.POST,
-                uri,
-                self._client._session,
-                contents=asdict(curr_entity.entity),
-                media_type='application/json',
-                accept_type='application/json')
-            return yaml.dump(response_processor.process_response(response)['entity']) # noqa: E501
-        raise cse_exceptions.ClusterNotFoundError(
-            f"Cluster '{cluster_name}' not found.")  # noqa: E501
