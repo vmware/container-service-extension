@@ -209,15 +209,17 @@ class ClusterService(abstract_broker.AbstractBroker):
             org_name = cluster_spec.metadata.org_name
             ovdc_name = cluster_spec.metadata.ovdc_name
             num_workers = cluster_spec.spec.workers.count
-            master_sizing_class_name = cluster_spec.spec.control_plane.sizing_class  # noqa: E501
-            worker_sizing_class_name = cluster_spec.spec.workers.sizing_class
+            master_sizing_class = cluster_spec.spec.control_plane.sizing_class
+            worker_sizing_class = cluster_spec.spec.workers.sizing_class
             master_storage_profile = cluster_spec.spec.control_plane.storage_profile  # noqa: E501
             worker_storage_profile = cluster_spec.spec.workers.storage_profile  # noqa: E501
+            nfs_count = cluster_spec.spec.nfs.count
+            nfs_sizing_class = cluster_spec.spec.nfs.sizing_class
+            nfs_storage_profile = cluster_spec.spec.nfs.storage_profile
             network_name = cluster_spec.spec.settings.network
             template_name = cluster_spec.spec.k8_distribution.template_name
             template_revision = cluster_spec.spec.k8_distribution.template_revision  # noqa: E501
             ssh_key = cluster_spec.spec.settings.ssh_key
-            enable_nfs = cluster_spec.spec.settings.enable_nfs
             rollback = cluster_spec.spec.settings.rollback_on_failure
 
             org = vcd_utils.get_org(self.context.client, org_name=org_name)
@@ -279,7 +281,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                           network_name=network_name,
                           storage_profile=master_storage_profile,
                           ssh_key=ssh_key,
-                          sizing_class_name=master_sizing_class_name)
+                          sizing_class_name=master_sizing_class)
             except Exception as err:
                 raise e.MasterNodeCreationError("Error adding master node:",
                                                 str(err))
@@ -311,7 +313,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                           network_name=network_name,
                           storage_profile=worker_storage_profile,
                           ssh_key=ssh_key,
-                          sizing_class_name=worker_sizing_class_name)
+                          sizing_class_name=worker_sizing_class)
             except Exception as err:
                 raise e.WorkerNodeCreationError("Error creating worker node:",
                                                 str(err))
@@ -325,13 +327,13 @@ class ClusterService(abstract_broker.AbstractBroker):
                          template[LocalTemplateKey.NAME],
                          template[LocalTemplateKey.REVISION])
 
-            if enable_nfs:
-                msg = f"Creating NFS node for cluster " \
+            if nfs_count > 0:
+                msg = f"Creating {nfs_count} NFS nodes for cluster " \
                       f"'{cluster_name}' ({cluster_id})"
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 try:
                     add_nodes(self.context.sysadmin_client,
-                              num_nodes=1,
+                              num_nodes=nfs_count,
                               node_type=NodeType.NFS,
                               org=org,
                               vdc=vdc,
@@ -339,8 +341,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                               catalog_name=catalog_name,
                               template=template,
                               network_name=network_name,
-                              storage_profile=worker_storage_profile,
-                              ssh_key=ssh_key)
+                              storage_profile=nfs_storage_profile,
+                              ssh_key=ssh_key,
+                              sizing_class_name=nfs_sizing_class)
                 except Exception as err:
                     raise e.NFSNodeCreationError("Error creating NFS node:",
                                                  str(err))
@@ -446,39 +449,57 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         # Get the existing defined entity for the given cluster id
         curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-        name: str = curr_entity.name
+        cluster_name: str = curr_entity.name
+        template_name = curr_entity.entity.spec.k8_distribution.template_name
+        template_revision = curr_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
         curr_worker_count: int = curr_entity.entity.spec.workers.count
+        curr_nfs_count: int = curr_entity.entity.spec.nfs.count
         state: str = curr_entity.state
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_entity.entity.status.phase)
+        spec_worker_count = cluster_spec.spec.workers.count
+        spec_nfs_count = cluster_spec.spec.nfs.count
 
-        # Check if cluster is in a valid state
+        # workers_2_be_added can either be +ve or -ve
+        workers_2_be_added = spec_worker_count - curr_worker_count
+        nfs_2_be_added = spec_nfs_count - curr_nfs_count
+
+        # check if cluster is in a valid state
         if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
             raise e.CseServerError(
-                f"Cluster {name} with id {cluster_id} is not in a valid state "
+                f"Cluster {cluster_name} with id {cluster_id} is not in a valid state "
                 f"to be resized. Please contact the administrator.")
 
-        # Check if the desired worker count is valid
-        spec_worker_count = cluster_spec.spec.workers.count
-        if curr_worker_count == spec_worker_count:
-            raise e.CseServerError(
-                f"Cluster '{name}' already has {spec_worker_count} workers.")
+        # check if the desired worker and nfs count is valid
+        if workers_2_be_added == 0 and nfs_2_be_added == 0:
+            raise e.CseServerError(f"Cluster '{cluster_name}' already has "
+                                   f"{spec_worker_count} workers and "
+                                   f"{spec_nfs_count} nfs nodes.")
         elif spec_worker_count < 0:
             raise e.CseServerError(
                 f"Worker count must be >= 0 (received {spec_worker_count}).")
+        elif nfs_2_be_added < 0:
+            raise e.CseServerError(
+                f"Scaling down nfs nodes to {spec_nfs_count} is not supported")
 
-        # TODO(DEF) Below is a temporary hack to unset "enable_nfs" as resize
-        #  operation is strictly about resizing worker nodes. NFS needs to be
-        #  handled properly during the implementation of "node add" command.
-        cluster_spec.spec.settings.enable_nfs = False
+        # TODO(DEF) Handle Telemetry for defined entities
 
-        # TODO default template for resizing should be master's template
-        # TODO(DEF) Handle Telemetry for Defined entities.
-        if spec_worker_count > curr_worker_count:
-            cluster_spec.spec.workers.count = spec_worker_count - curr_worker_count  # noqa: E501
-            return self.create_nodes(cluster_id=cluster_id, cluster_spec=cluster_spec)  # noqa: E501
+        curr_entity.entity.status.task_href = self.task_resource.get('href')
+        curr_entity.entity.status.phase = str(
+            DefEntityPhase(DefEntityOperation.UPDATE,
+                           DefEntityOperationStatus.IN_PROGRESS))
+        curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)
+        if workers_2_be_added > 0 or nfs_2_be_added > 0:
+            msg = f"Creating {workers_2_be_added} worker(s) from template " \
+                  f"'{template_name}' (revision {template_revision}) and " \
+                  f"adding to cluster '{cluster_name}' ({cluster_id})"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            self.context.is_async = True
+            self._create_nodes_async(cluster_id=cluster_id,
+                                     cluster_spec=cluster_spec)
         else:
             raise NotImplementedError("Scaling down is under implementation")
+        return curr_entity
 
     def delete_cluster(self, cluster_id):
         """Start the delete cluster operation."""
@@ -675,7 +696,12 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
             cluster_id)  # noqa: E501
         cluster_name = cluster_spec.metadata.cluster_name
-        worker_count = cluster_spec.spec.workers.count
+        curr_worker_count: int = curr_entity.entity.spec.workers.count
+        curr_nfs_count: int = curr_entity.entity.spec.nfs.count
+        spec_worker_count = cluster_spec.spec.workers.count
+        spec_nfs_count = cluster_spec.spec.nfs.count
+        worker_count = spec_worker_count - curr_worker_count
+        nfs_count = spec_nfs_count - curr_nfs_count
 
         # Resize using the template with which cluster was originally created.
         template_name = curr_entity.entity.spec.k8_distribution.template_name
@@ -684,13 +710,13 @@ class ClusterService(abstract_broker.AbstractBroker):
         # check that requested/default template is valid
         get_template(name=template_name, revision=template_revision)
 
-        if worker_count < 1:
+        if worker_count < 1 and nfs_count < 1:
             raise e.CseServerError(f"Worker count must be > 0 "
                                    f"(received {worker_count}).")
 
         # TODO(DEF) Handle Telemetry for defined entities
 
-        msg = f"Creating {worker_count} node(s) from template " \
+        msg = f"Creating {worker_count} worker(s) from template " \
               f"'{template_name}' (revision {template_revision}) and " \
               f"adding to cluster '{cluster_name}' ({cluster_id})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
@@ -782,13 +808,20 @@ class ClusterService(abstract_broker.AbstractBroker):
             cluster_name = curr_entity.entity.metadata.cluster_name
             org_name = curr_entity.entity.metadata.org_name
             ovdc_name = curr_entity.entity.metadata.ovdc_name
-            num_workers = cluster_spec.spec.workers.count
-            worker_storage_profile = cluster_spec.spec.workers.storage_profile  # noqa: E501
-            worker_sizing_class = cluster_spec.spec.workers.sizing_class
+            curr_worker_count: int = curr_entity.entity.spec.workers.count
+            curr_nfs_count: int = curr_entity.entity.spec.nfs.count
+            spec_worker_count = cluster_spec.spec.workers.count
+            spec_nfs_count = cluster_spec.spec.nfs.count
+            worker_storage_profile = curr_entity.entity.spec.workers.storage_profile  # noqa: E501
+            worker_sizing_class = curr_entity.entity.spec.workers.sizing_class
+            nfs_storage_profile = curr_entity.entity.spec.nfs.storage_profile
+            nfs_sizing_class = curr_entity.entity.spec.nfs.sizing_class
             network_name = cluster_spec.spec.settings.network
             ssh_key = cluster_spec.spec.settings.ssh_key
             rollback = cluster_spec.spec.settings.rollback_on_failure
-            enable_nfs = cluster_spec.spec.settings.enable_nfs
+
+            worker_2_be_added = spec_worker_count - curr_worker_count
+            nfs_2_be_added = spec_nfs_count - curr_nfs_count
 
             # Use the template with which cluster was originally created.
             template_name = curr_entity.entity.spec.k8_distribution.template_name  # noqa: E501
@@ -801,52 +834,65 @@ class ClusterService(abstract_broker.AbstractBroker):
             ovdc = vcd_utils.get_vdc(self.context.client, vdc_name=ovdc_name, org=org)  # noqa: E501
             vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
 
-            node_type = NodeType.WORKER
-            if enable_nfs:
-                node_type = NodeType.NFS
-
-            msg = f"Creating {num_workers} node(s) from template " \
-                f"'{template_name}' (revision {template_revision}) and " \
-                f"adding to cluster '{cluster_name}' ({cluster_id})"
-            LOGGER.debug(msg)
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-
-            new_nodes = add_nodes(self.context.sysadmin_client,
-                                  num_nodes=num_workers,
-                                  node_type=node_type,
-                                  org=org,
-                                  vdc=ovdc,
-                                  vapp=vapp,
-                                  catalog_name=catalog_name,
-                                  template=template,
-                                  network_name=network_name,
-                                  storage_profile=worker_storage_profile,
-                                  ssh_key=ssh_key,
-                                  sizing_class_name=worker_sizing_class)
-
-            if node_type == NodeType.NFS:
-                msg = f"Created {num_workers} nfs_node(s) for cluster " \
-                      f"'{cluster_name}' ({cluster_id})"
-                self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
-            elif node_type == NodeType.WORKER:
-                msg = f"Adding {num_workers} node(s) to cluster " \
+            if worker_2_be_added:
+                msg = f"Creating {worker_2_be_added} worker(s) from template" \
+                      f"' {template_name}' (revision {template_revision}); " \
+                      f"adding to cluster '{cluster_name}' ({cluster_id})"
+                LOGGER.debug(msg)
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                worker_nodes = add_nodes(self.context.sysadmin_client,
+                                      num_nodes=worker_2_be_added,
+                                      node_type=NodeType.WORKER,
+                                      org=org,
+                                      vdc=ovdc,
+                                      vapp=vapp,
+                                      catalog_name=catalog_name,
+                                      template=template,
+                                      network_name=network_name,
+                                      storage_profile=worker_storage_profile,
+                                      ssh_key=ssh_key,
+                                      sizing_class_name=worker_sizing_class)
+                msg = f"Adding {worker_2_be_added} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 target_nodes = []
-                for spec in new_nodes['specs']:
+                for spec in worker_nodes['specs']:
                     target_nodes.append(spec['target_vm_name'])
                 vapp.reload()
                 join_cluster(self.context.sysadmin_client,
                              vapp,
                              template[LocalTemplateKey.NAME],
                              template[LocalTemplateKey.REVISION], target_nodes)
-                msg = f"Added {num_workers} node(s) to cluster " \
+                msg = f"Added {worker_2_be_added} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
                 self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+            if nfs_2_be_added:
+                msg = f"Creating {nfs_2_be_added} nfs node(s) from template " \
+                      f"'{template_name}' (revision {template_revision}) " \
+                      f"for cluster '{cluster_name}' ({cluster_id})"
+                LOGGER.debug(msg)
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                add_nodes(self.context.sysadmin_client,
+                          num_nodes=nfs_2_be_added,
+                          node_type=NodeType.NFS,
+                          org=org,
+                          vdc=ovdc,
+                          vapp=vapp,
+                          catalog_name=catalog_name,
+                          template=template,
+                          network_name=network_name,
+                          storage_profile=nfs_storage_profile,
+                          ssh_key=ssh_key,
+                          sizing_class_name=nfs_sizing_class)
+                msg = f"Created {nfs_2_be_added} nfs_node(s) for cluster " \
+                      f"'{cluster_name}' ({cluster_id})"
+                self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+
             curr_entity.entity.status.phase = str(
                 DefEntityPhase(DefEntityOperation.UPDATE,
                                DefEntityOperationStatus.SUCCEEDED))
-            curr_entity.entity.spec.workers = cluster_spec.spec.workers
+            curr_entity.entity.spec.workers.count = spec_worker_count
+            curr_entity.entity.spec.nfs.count = spec_nfs_count
             curr_entity.entity.status.nodes = self._get_nodes_details(vapp)
             self.entity_svc.update_entity(cluster_id, curr_entity)
         except e.NodeCreationError as err:
