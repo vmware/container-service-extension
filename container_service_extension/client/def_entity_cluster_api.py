@@ -341,6 +341,6 @@ class DefEntityClusterApi:
         elif native_entity:
             native_entity['entity']['spec']['k8_distribution']['template_name'] = template_name  # noqa: E501
             native_entity['entity']['spec']['k8_distribution']['template_revision'] = template_revision  # noqa: E501
-            return self._nativeCluster.upgrade_cluster_by_cluster_id(native_entity.id, cluster_entity=native_entity)  # noqa: E501
+            return self._nativeCluster.upgrade_cluster_by_cluster_id(native_entity['id'], cluster_entity=native_entity)  # noqa: E501
         raise NotImplementedError(
             "Cluster upgrade for TKG clusters not yet implemented")  # noqa: E501

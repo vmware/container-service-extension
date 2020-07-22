@@ -545,9 +545,9 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
 
 
 @cluster_group.command('apply',
-                       help="Example:vcd cse cluster apply input_spec.yaml"
-                       " \n\nExample:vcd cse cluster apply --sample"
-                       " \n\nExample:vcd cse cluster apply -s -o output.yaml",
+                       help="Example:\n\nvcd cse cluster apply input_spec.yaml"
+                       " \n\nvcd cse cluster apply --sample"
+                       " \n\nvcd cse cluster apply -s -o output.yaml",
                        short_help='apply the cluster configuration defined '
                                   'in the file to either create new a cluster '
                                   'or update the existing cluster or'
@@ -620,8 +620,8 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
 
 
 @cluster_group.command('upgrade-plan',
-                       help="Example:vcd cse cluster upgrade-plan my-cluster"
-                            " \n\nExample:vcd cse cluster upgrade-plan --k8-runtime native my-cluster",  # noqa: E501
+                       help="Example:\n\nvcd cse cluster upgrade-plan my-cluster"  # noqa: E501
+                            " \n\nvcd cse cluster upgrade-plan --k8-runtime native my-cluster",  # noqa: E501
                        short_help='Display templates that the specified '
                                   'cluster can upgrade to')
 @click.pass_context
