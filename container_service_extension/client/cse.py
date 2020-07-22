@@ -545,7 +545,7 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
 
 
 @cluster_group.command('apply',
-                       help="Example:\n\nvcd cse cluster apply input_spec.yaml"
+                       help="Examples:\n\nvcd cse cluster apply input_spec.yaml"  # noqa: E501
                        " \n\nvcd cse cluster apply --sample"
                        " \n\nvcd cse cluster apply -s -o output.yaml",
                        short_help='apply the cluster configuration defined '
@@ -620,7 +620,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
 
 
 @cluster_group.command('upgrade-plan',
-                       help="Example:\n\nvcd cse cluster upgrade-plan my-cluster"  # noqa: E501
+                       help="Examples:\n\nvcd cse cluster upgrade-plan my-cluster"  # noqa: E501
                             " \n\nvcd cse cluster upgrade-plan --k8-runtime native my-cluster",  # noqa: E501
                        short_help='Display templates that the specified '
                                   'cluster can upgrade to')
@@ -682,7 +682,7 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name, k8_runtime=None):
 
 
 @cluster_group.command('upgrade',
-                       help="Example:\n\nvcd cse cluster upgrade my-cluster ubuntu-16.04_k8-1.18_weave-2.6.4 1"  # noqa: E501
+                       help="Examples:\n\nvcd cse cluster upgrade my-cluster ubuntu-16.04_k8-1.18_weave-2.6.4 1"  # noqa: E501
                             "\n\nvcd cse cluster upgrade -k native my-cluster ubuntu-16.04_k8.. 2",  # noqa: E501
                        short_help="Upgrade cluster software to specified "
                                   "template's software versions")
@@ -739,7 +739,7 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
 
 
 @cluster_group.command('config',
-                       help="Example:\n\nvcd cse cluster config my-cluster"
+                       help="Examples:\n\nvcd cse cluster config my-cluster"
                             " \n\nvcd cse cluster config -k native my-cluster",  # noqa: E501
                        short_help='Display cluster configuration')
 @click.pass_context
