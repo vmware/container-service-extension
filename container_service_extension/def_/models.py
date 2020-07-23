@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import List
 
 import container_service_extension.def_.utils as def_utils
-import container_service_extension.utils as utils
 
 
 @dataclass(frozen=True)
