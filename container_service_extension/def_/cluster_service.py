@@ -1580,6 +1580,9 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
             # TODO: get details of the exception to determine cause of failure,
             # e.g. not enough resources available.
             node_list = [entry.get('target_vm_name') for entry in specs]
+            if "throwImmutablePolicyException" in err.vcd_error.get('stackTrace', ''):  # noqa: E501
+                raise e.NodeCreationError(node_list,
+                                          f"OVDC not enabled for {template[LocalTemplateKey.KIND]}")  # noqa: E501
             raise e.NodeCreationError(node_list, str(err))
 
         vapp.reload()
