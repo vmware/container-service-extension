@@ -739,7 +739,7 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
 
 
 @cluster_group.command('config',
-                       help="Example:\n\nvcd cse cluster config my-cluster"
+                       help="Examples:\n\nvcd cse cluster config my-cluster"
                             " \n\nvcd cse cluster config -k native my-cluster",  # noqa: E501
                        short_help='Display cluster configuration')
 @click.pass_context
