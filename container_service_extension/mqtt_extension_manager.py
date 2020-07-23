@@ -1,3 +1,6 @@
+from enum import Enum
+from enum import unique
+
 from lxml import etree
 import pyvcloud.vcd.client as vcd_client
 import requests
@@ -9,8 +12,34 @@ import container_service_extension.server_constants as constants
 from container_service_extension.shared_constants import RequestMethod
 
 
+@unique
+class ExtKey(str, Enum):
+    EXT_NAME = 'name'
+    EXT_VERSION = 'version'
+    EXT_VENDOR = 'vendor'
+    EXT_PRIORITY = 'priority'
+    EXT_ENABLED = 'enabled'
+    EXT_AUTH_ENABLED = 'authorizationEnabled'
+    EXT_DESCRIPTION = 'description'
+    EXT_URN_ID = 'ext_urn_id'
+    EXT_LISTEN_TOPIC = 'listen_topic'
+    EXT_RESPOND_TOPIC = 'respond_topic'
+
+
+@unique
+class TokenKey(str, Enum):
+    TOKEN_NAME = 'name'
+    TOKEN_TYPE = 'type'
+    TOKEN_EXT_ID = 'extensionId'
+    TOKEN = 'token'
+    TOKEN_ID = 'token_id'
+
+
 def get_id_from_link(link, id_path):
     """Get the id from the link.
+
+    Example: link='/admin/ext/service/12345/',id_path='/ext/service/'.
+    The expected return would be '12345'.
 
     :param str link: url link (may be multiple links concatenated)
     :param str id_path: path before the id
@@ -30,6 +59,9 @@ def get_id_from_link(link, id_path):
 
 def parse_url_pattern(initial_pattern):
     """Parse the url pattern from the initial pattern.
+
+    Example: initial_pattern = '\n     /api/endpoint\n      '
+    The expected return would be: '/api/endpoint'.
 
     :param str initial_pattern: the raw pattern
 
@@ -127,13 +159,13 @@ class MQTTExtensionManager:
             description
         """
         payload = {
-            "name": ext_name,
-            "version": ext_version,
-            "vendor": ext_vendor,
-            "priority": priority,
-            "enabled": "true" if ext_enabled else "false",
-            "authorizationEnabled": "true" if auth_enabled else "false",
-            'description': description
+            ExtKey.EXT_NAME: ext_name,
+            ExtKey.EXT_VERSION: ext_version,
+            ExtKey.EXT_VENDOR: ext_vendor,
+            ExtKey.EXT_PRIORITY: priority,
+            ExtKey.EXT_ENABLED: "true" if ext_enabled else "false",
+            ExtKey.EXT_AUTH_ENABLED: "true" if auth_enabled else "false",
+            ExtKey.EXT_DESCRIPTION: description
         }
         ext_info = None
         try:
@@ -142,10 +174,12 @@ class MQTTExtensionManager:
                 resource_url_relative_path='extensions/api',
                 payload=payload)
             mqtt_topics = response_body['mqttTopics']
-            ext_info = {'ext_urn_id': response_body['id'],
-                        'listen_topic': mqtt_topics['monitor'],
-                        'respond_topic': mqtt_topics['respond'],
-                        'description': response_body['description']}
+            ext_info = {
+                ExtKey.EXT_URN_ID: response_body['id'],
+                ExtKey.EXT_LISTEN_TOPIC: mqtt_topics['monitor'],
+                ExtKey.EXT_RESPOND_TOPIC: mqtt_topics['respond'],
+                ExtKey.EXT_DESCRIPTION: response_body['description']
+            }
         except requests.exceptions.HTTPError as err:
             logger.SERVER_LOGGER.error(err)
         return ext_info
@@ -175,10 +209,12 @@ class MQTTExtensionManager:
                         curr_info['version'] == ext_version \
                         and curr_info['vendor'] == ext_vendor:
                     mqtt_topics = curr_info['mqttTopics']
-                    ext_info = {'ext_urn_id': curr_info['id'],
-                                'listen_topic': mqtt_topics['monitor'],
-                                'respond_topic': mqtt_topics['respond'],
-                                'description': curr_info['description']}
+                    ext_info = {
+                        ExtKey.EXT_URN_ID: curr_info['id'],
+                        ExtKey.EXT_LISTEN_TOPIC:mqtt_topics['monitor'],
+                        ExtKey.EXT_RESPOND_TOPIC:mqtt_topics['respond'],
+                        ExtKey.EXT_DESCRIPTION:curr_info['description']
+                    }
                     break
         except requests.exceptions.HTTPError as err:
             logger.SERVER_LOGGER.error(err)
@@ -240,13 +276,13 @@ class MQTTExtensionManager:
         :rtype: bool
         """
         payload = {
-            "name": ext_name,
-            "version": ext_version,
-            "vendor": ext_vendor,
-            "priority": priority,
-            "enabled": "true" if ext_enabled else "false",
-            "authorizationEnabled": "true" if auth_enabled else "false",
-            'description': description
+            ExtKey.EXT_NAME: ext_name,
+            ExtKey.EXT_VERSION: ext_version,
+            ExtKey.EXT_VENDOR: ext_vendor,
+            ExtKey.EXT_PRIORITY: priority,
+            ExtKey.EXT_ENABLED: "true" if ext_enabled else "false",
+            ExtKey.EXT_AUTH_ENABLED: "true" if auth_enabled else "false",
+            ExtKey.EXT_DESCRIPTION: description
         }
         success = True
         try:
@@ -325,9 +361,9 @@ class MQTTExtensionManager:
         :rtype: dict with fields: token and token_id
         """
         payload = {
-            "name": token_name,
-            "type": "EXTENSION",
-            "extensionId": ext_urn_id
+            TokenKey.TOKEN_NAME: token_name,
+            TokenKey.TOKEN_TYPE: "EXTENSION",
+            TokenKey.TOKEN_EXT_ID: ext_urn_id
         }
         token_info = None
         try:
@@ -336,8 +372,10 @@ class MQTTExtensionManager:
                 cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
                 resource_url_relative_path="tokens",
                 payload=payload)
-            token_info = {'token': response_body['token'],
-                          'token_id': response_body['id']}
+            token_info = {
+                TokenKey.TOKEN: response_body['token'],
+                TokenKey.TOKEN_ID: response_body['id']
+            }
         except requests.exceptions.HTTPError as err:
             logger.SERVER_LOGGER.error(err)
         return token_info
