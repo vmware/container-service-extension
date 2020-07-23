@@ -211,9 +211,9 @@ class MQTTExtensionManager:
                     mqtt_topics = curr_info['mqttTopics']
                     ext_info = {
                         ExtKey.EXT_URN_ID: curr_info['id'],
-                        ExtKey.EXT_LISTEN_TOPIC:mqtt_topics['monitor'],
-                        ExtKey.EXT_RESPOND_TOPIC:mqtt_topics['respond'],
-                        ExtKey.EXT_DESCRIPTION:curr_info['description']
+                        ExtKey.EXT_LISTEN_TOPIC: mqtt_topics['monitor'],
+                        ExtKey.EXT_RESPOND_TOPIC: mqtt_topics['respond'],
+                        ExtKey.EXT_DESCRIPTION: curr_info['description']
                     }
                     break
         except requests.exceptions.HTTPError as err:
