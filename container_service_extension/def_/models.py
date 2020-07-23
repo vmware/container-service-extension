@@ -94,14 +94,12 @@ class Workers:
 
 @dataclass()
 class Distribution:
-    template_name: str = None
-    template_revision: int = 1
+    template_name: str = ""
+    template_revision: int = 0
 
-    def __init__(self, template_name: str = None, template_revision: int = None):  # noqa: E501
-        if not template_name:
-            default_dist = utils.get_default_k8_distribution()
-        self.template_name = template_name or default_dist.template_name
-        self.template_revision = template_revision or default_dist.template_revision  # noqa: E501
+    def __init__(self, template_name: str, template_revision: int):
+        self.template_name = template_name
+        self.template_revision = template_revision
 
 
 @dataclass()
