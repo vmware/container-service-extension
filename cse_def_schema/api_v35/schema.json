@@ -21,8 +21,8 @@
             "kind": {
                 "enum": [
                     "native",
-                    "tkg",
-                    "tanzu_plus"
+                    "TanzuKubernetesCluster",
+                    "TKG+"
                 ],
                 "type": "string"
             },
@@ -78,7 +78,7 @@
                         "properties": {
                             "count": {
                                 "type": "integer",
-                                "maximum": 1,
+                                "maximum": 100,
                                 "minimum": 0
                             },
                             "sizing_class": {
@@ -100,9 +100,6 @@
                             },
                             "ssh_key": {
                                 "type": "string"
-                            },
-                            "enable_nfs": {
-                                "type": "boolean"
                             },
                             "rollback_on_failure": {
                                 "type": "boolean"
