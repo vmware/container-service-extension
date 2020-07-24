@@ -524,27 +524,55 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # trigger async operation
         self.context.is_async = True
-        if workers_2_add > 0 or nfs_2_add > 0:
-            get_template(name=template_name, revision=template_revision)
-            self._create_nodes_async(cluster_id=cluster_id,
-                                     cluster_spec=cluster_spec)
-        if workers_2_add < 0:
-            self._delete_nodes_async(cluster_id=cluster_id,
-                                     cluster_spec=cluster_spec)
-
-        # Wait for the children threads of the current thread to join
-        curr_thread_id = str(threading.current_thread().ident)
-        for t in threading.enumerate():
-            if t.getName().endswith(curr_thread_id):
-                t.join()
-
-        # Update the Task status to SUCCESS if it is not in an ERROR state
-        msg = f"Resized the cluster '{cluster_name}' ({cluster_id}) to the " \
-              f"desired worker count {desired_worker_count} and " \
-              f"nfs count {desired_nfs_count}"
-        if self.task_resource.get('status') != vcd_client.TaskStatus.ERROR:
-            self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+        self._resize_cluster_async(cluster_id=cluster_id,
+                                   cluster_spec=cluster_spec)
         return curr_entity
+
+    def _resize_cluster_async(self, cluster_id, cluster_spec):
+        try:
+            curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
+                cluster_id)
+            cluster_name: str = curr_entity.name
+            curr_worker_count: int = curr_entity.entity.spec.workers.count
+            curr_nfs_count: int = curr_entity.entity.spec.nfs.count
+            template_name = curr_entity.entity.spec.k8_distribution.template_name  # noqa: E501
+            template_revision = curr_entity.entity.spec.k8_distribution.template_revision
+
+            desired_worker_count: int = cluster_spec.spec.workers.count
+            desired_nfs_count: int = cluster_spec.spec.nfs.count
+            workers_2_add: int = desired_worker_count - curr_worker_count
+            nfs_2_add: int = desired_nfs_count - curr_nfs_count
+
+            if workers_2_add > 0 or nfs_2_add > 0:
+                get_template(name=template_name, revision=template_revision)
+                self._create_nodes_async(cluster_id=cluster_id,
+                                         cluster_spec=cluster_spec)
+            if workers_2_add < 0:
+                self._delete_nodes_async(cluster_id=cluster_id,
+                                         cluster_spec=cluster_spec)
+
+            # Wait for the children threads of the current thread to join
+            curr_thread_id = str(threading.current_thread().ident)
+            for t in threading.enumerate():
+                if t.getName().endswith(curr_thread_id):
+                    t.join()
+
+            # Update the Task status to SUCCESS if it is not in an ERROR state
+            msg = f"Resized the cluster '{cluster_name}' ({cluster_id}) to the " \
+                  f"desired worker count {desired_worker_count} and " \
+                  f"nfs count {desired_nfs_count}"
+            self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+        except Exception as err:
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.UPDATE)
+            LOGGER.error(f"Unexpected error while resizing nodes for "
+                         f"{cluster_name} ({cluster_id}): {err}",
+                         exc_info=True)
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              error_message=str(err))
+        finally:
+            self.context.end()
+
 
     def delete_cluster(self, cluster_id):
         """Start the delete cluster operation."""
@@ -957,8 +985,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.error(str(err), exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
-        finally:
-            self.context.end()
 
     @utils.run_async
     def _delete_nodes_async(self, cluster_id: str,
@@ -1007,16 +1033,15 @@ class ClusterService(abstract_broker.AbstractBroker):
             curr_entity.entity.status.nodes = self._get_nodes_details(vapp)
             self.entity_svc.update_entity(cluster_id, curr_entity)
         except Exception as err:
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.UPDATE,
+                                                    vapp)
             LOGGER.error(f"Unexpected error while deleting nodes "
                          f"{workers_for_deletion}: {err}",
                          exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.UPDATE,
-                                                    vapp)
-        finally:
-            self.context.end()
+
 
     @utils.run_async
     def _delete_cluster_async(self, cluster_name, org_name, ovdc_name,
@@ -1254,18 +1279,22 @@ class ClusterService(abstract_broker.AbstractBroker):
         if self.task is None:
             self.task = vcd_task.Task(self.context.sysadmin_client)
 
-        task_href = None
-        if self.task_resource is not None:
-            task_href = self.task_resource.get('href')
-
         org = vcd_utils.get_org(self.context.client)
         user_href = org.get_user(self.context.user.name).get('href')
 
-        curr_task_status = self.task_resource.get('status')
-        if curr_task_status == vcd_client.TaskStatus.SUCCESS or \
-                vcd_client.TaskStatus.ERROR:
-            return
+        # Wait for the thread-1 to finish updating the task, before thread-2 in
+        # the line can read the current status of the task.
+        # It is safe for thread-2 to check the current task status before
+        # updating it. A task with a terminal state of SUCCESS or ERROR cannot
+        # be further updated; vCD throws an error.
         with self.task_update_lock:
+            task_href = None
+            if self.task_resource is not None:
+                task_href = self.task_resource.get('href')
+                curr_task_status = self.task_resource.get('status')
+                if curr_task_status == vcd_client.TaskStatus.SUCCESS or \
+                        vcd_client.TaskStatus.ERROR:
+                    return
             self.task_resource = self.task.update(
                 status=status.value,
                 namespace='vcloud.cse',
