@@ -97,7 +97,7 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
                                             config['vcd']['password'])
         client.set_credentials(credentials)
 
-        if float(client.get_api_version()) >= \
+        if config.get('mqtt') and float(client.get_api_version()) >= \
                 server_constants.MQTT_MIN_API_VERSION:
             # Check that MQTT extension exists
             mqtt_ext_manager = MQTTExtensionManager(client)
@@ -105,10 +105,7 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
                 ext_name=server_constants.CSE_SERVICE_NAME,
                 ext_version=server_constants.MQTT_EXTENSION_VERSION,
                 ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
-            if not mqtt_ext_info:
-                msg = "Could not find MQTT Extension"
-                err_msgs.append(msg)
-            else:
+            if mqtt_ext_info:
                 # Check MQTT api filter status
                 ext_urn_id = mqtt_ext_info['ext_urn_id']
                 ext_uuid = mqtt_ext_manager.get_extension_uuid(ext_urn_id)
@@ -118,17 +115,24 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
                     msg = f"Could not find MQTT API FIlter: " \
                           f"{server_constants.MQTT_API_FILTER_PATTERN}"
                     err_msgs.append(msg)
+            else:
+                msg = "Could not find MQTT Extension"
+                err_msgs.append(msg)
         else:
             # check that AMQP exchange exists
             amqp = config['amqp']
-            credentials = pika.PlainCredentials(amqp['username'], amqp['password'])
+            credentials = pika.PlainCredentials(amqp['username'],
+                                                amqp['password'])
             parameters = pika.ConnectionParameters(amqp['host'], amqp['port'],
                                                    amqp['vhost'], credentials,
                                                    ssl=amqp['ssl'],
                                                    connection_attempts=3,
-                                                   retry_delay=2, socket_timeout=5)
+                                                   retry_delay=2,
+                                                   socket_timeout=5)
             connection = None
             try:
+                connection = pika.BlockingConnection(parameters)
+                channel = connection.channel()
                 channel.exchange_declare(exchange=amqp['exchange'],
                                          exchange_type=server_constants.EXCHANGE_TYPE, # noqa: E501
                                          durable=True,
@@ -146,38 +150,41 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
                 if connection is not None:
                     connection.close()
 
-        # check that CSE is registered to vCD correctly
-        ext = api_extension.APIExtension(client)
-        try:
-            cse_info = ext.get_extension(server_constants.CSE_SERVICE_NAME,
-                                         namespace=server_constants.CSE_SERVICE_NAMESPACE) # noqa: E501
-            rkey_matches = cse_info['routingKey'] == amqp['routing_key']
-            exchange_matches = cse_info['exchange'] == amqp['exchange']
-            if not rkey_matches or not exchange_matches:
-                msg = "CSE is registered as an extension, but the extension " \
-                      "settings on vCD are not the same as config settings."
-                if not rkey_matches:
-                    msg += f"\nvCD-CSE routing key: {cse_info['routingKey']}" \
-                           f"\nCSE config routing key: {amqp['routing_key']}"
-                if not exchange_matches:
-                    msg += f"\nvCD-CSE exchange: {cse_info['exchange']}" \
-                           f"\nCSE config exchange: {amqp['exchange']}"
-                msg_update_callback.info(msg)
-                SERVER_CLI_LOGGER.info(msg)
+            # check that CSE is registered to vCD correctly
+            ext = api_extension.APIExtension(client)
+            try:
+                cse_info = ext.get_extension(server_constants.CSE_SERVICE_NAME,
+                                             namespace=server_constants.CSE_SERVICE_NAMESPACE) # noqa: E501
+                rkey_matches = cse_info['routingKey'] == amqp['routing_key']
+                exchange_matches = cse_info['exchange'] == amqp['exchange']
+                if not rkey_matches or not exchange_matches:
+                    msg = "CSE is registered as an extension, but the " \
+                          "extension settings on vCD are not the same as " \
+                          "config settings."
+                    if not rkey_matches:
+                        msg += f"\nvCD-CSE routing key: " \
+                               f"{cse_info['routingKey']}" \
+                               f"\nCSE config routing key: " \
+                               f"{amqp['routing_key']}"
+                    if not exchange_matches:
+                        msg += f"\nvCD-CSE exchange: {cse_info['exchange']}" \
+                               f"\nCSE config exchange: {amqp['exchange']}"
+                    msg_update_callback.info(msg)
+                    SERVER_CLI_LOGGER.info(msg)
+                    err_msgs.append(msg)
+                if cse_info['enabled'] == 'true':
+                    msg = "CSE on vCD is currently enabled"
+                    msg_update_callback.general(msg)
+                    SERVER_CLI_LOGGER.info(msg)
+                else:
+                    msg = "CSE on vCD is currently disabled"
+                    msg_update_callback.info(msg)
+                    SERVER_CLI_LOGGER.info(msg)
+            except MissingRecordException:
+                msg = "CSE is not registered to vCD"
+                msg_update_callback.error(msg)
+                SERVER_CLI_LOGGER.error(msg)
                 err_msgs.append(msg)
-            if cse_info['enabled'] == 'true':
-                msg = "CSE on vCD is currently enabled"
-                msg_update_callback.general(msg)
-                SERVER_CLI_LOGGER.info(msg)
-            else:
-                msg = "CSE on vCD is currently disabled"
-                msg_update_callback.info(msg)
-                SERVER_CLI_LOGGER.info(msg)
-        except MissingRecordException:
-            msg = "CSE is not registered to vCD"
-            msg_update_callback.error(msg)
-            SERVER_CLI_LOGGER.error(msg)
-            err_msgs.append(msg)
 
         # check that catalog exists in vCD
         org_name = config['broker']['org']
@@ -313,7 +320,7 @@ def install_cse(config_file_name, skip_template_creation,
         INSTALL_LOGGER.info(msg)
 
         # Setup extension message protocol
-        if float(client.get_api_version()) >= \
+        if config.get('mqtt') and float(client.get_api_version()) >= \
                 server_constants.MQTT_MIN_API_VERSION:
             mqtt_ext_manager = MQTTExtensionManager(client)
             ext_info = mqtt_ext_manager.setup_extension(
@@ -323,7 +330,7 @@ def install_cse(config_file_name, skip_template_creation,
                 description='')
             ext_uuid = mqtt_ext_manager.get_extension_uuid(
                 ext_info['ext_urn_id'])
-            api_filter_id = mqtt_ext_manager.setup_api_filter(
+            _ = mqtt_ext_manager.setup_api_filter(
                 server_constants.MQTT_API_FILTER_PATTERN, ext_uuid)
         else:
             # create amqp exchange if it doesn't exist
@@ -344,24 +351,16 @@ def install_cse(config_file_name, skip_template_creation,
             # register rights to vCD
             # TODO() should also remove rights when unregistering CSE
             _register_right(client,
-                            right_name=server_constants.CSE_NATIVE_DEPLOY_RIGHT_NAME,
-                            # noqa: E501
-                            description=server_constants.CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,
-                            # noqa: E501
-                            category=server_constants.CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,
-                            # noqa: E501
-                            bundle_key=server_constants.CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY,
-                            # noqa: E501
+                            right_name=server_constants.CSE_NATIVE_DEPLOY_RIGHT_NAME,  # noqa: E501
+                            description=server_constants.CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,  # noqa: E501
+                            category=server_constants.CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,  # noqa: E501
+                            bundle_key=server_constants.CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY,  # noqa: E501
                             msg_update_callback=msg_update_callback)
             _register_right(client,
-                            right_name=server_constants.CSE_PKS_DEPLOY_RIGHT_NAME,
-                            # noqa: E501
-                            description=server_constants.CSE_PKS_DEPLOY_RIGHT_DESCRIPTION,
-                            # noqa: E501
-                            category=server_constants.CSE_PKS_DEPLOY_RIGHT_CATEGORY,
-                            # noqa: E501
-                            bundle_key=server_constants.CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY,
-                            # noqa: E501
+                            right_name=server_constants.CSE_PKS_DEPLOY_RIGHT_NAME,  # noqa: E501
+                            description=server_constants.CSE_PKS_DEPLOY_RIGHT_DESCRIPTION,  # noqa: E501
+                            category=server_constants.CSE_PKS_DEPLOY_RIGHT_CATEGORY,  # noqa: E501
+                            bundle_key=server_constants.CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY,  # noqa: E501
                             msg_update_callback=msg_update_callback)
 
         # Since we use CSE extension id as our telemetry instance_id, the
@@ -486,6 +485,7 @@ def _create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
     INSTALL_LOGGER.info(msg)
 
 
+# TODO: make sure not used for MQTT extension
 def _deregister_cse(client, msg_update_callback=utils.NullPrinter()):
     """Deregister CSE from VCD."""
     ext = api_extension.APIExtension(client)

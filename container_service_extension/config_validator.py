@@ -29,10 +29,11 @@ from container_service_extension.remote_template_manager import \
 from container_service_extension.sample_generator import \
     PKS_ACCOUNTS_SECTION_KEY, PKS_NSXT_SERVERS_SECTION_KEY, \
     PKS_ORGS_SECTION_KEY, PKS_PVDCS_SECTION_KEY, PKS_SERVERS_SECTION_KEY, \
-    SAMPLE_AMQP_CONFIG, SAMPLE_BROKER_CONFIG, SAMPLE_PKS_ACCOUNTS_SECTION, \
-    SAMPLE_PKS_NSXT_SERVERS_SECTION, SAMPLE_PKS_ORGS_SECTION, \
-    SAMPLE_PKS_PVDCS_SECTION, SAMPLE_PKS_SERVERS_SECTION, \
-    SAMPLE_SERVICE_CONFIG, SAMPLE_VCD_CONFIG, SAMPLE_VCS_CONFIG # noqa: H301
+    SAMPLE_AMQP_CONFIG, SAMPLE_BROKER_CONFIG, SAMPLE_MQTT_CONFIG, \
+    SAMPLE_PKS_ACCOUNTS_SECTION, SAMPLE_PKS_NSXT_SERVERS_SECTION, \
+    SAMPLE_PKS_ORGS_SECTION, SAMPLE_PKS_PVDCS_SECTION, \
+    SAMPLE_PKS_SERVERS_SECTION, SAMPLE_SERVICE_CONFIG, SAMPLE_VCD_CONFIG, \
+    SAMPLE_VCS_CONFIG
 from container_service_extension.server_constants import MQTT_MIN_API_VERSION
 from container_service_extension.server_constants import \
     SUPPORTED_VCD_API_VERSIONS
@@ -104,8 +105,12 @@ def get_validated_config(config_file_name,
     msg_update_callback.info(
         f"Validating config file '{config_file_name}'")
     # This allows us to compare top-level config keys and value types
+    use_mqtt = config.get('mqtt') and \
+        float(config['vcd']['api_version']) >= MQTT_MIN_API_VERSION
+    sample_protocol_dict = SAMPLE_AMQP_CONFIG if not use_mqtt \
+        else SAMPLE_MQTT_CONFIG
     sample_config = {
-        **SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
+        **sample_protocol_dict, **SAMPLE_VCD_CONFIG,
         **SAMPLE_VCS_CONFIG, **SAMPLE_SERVICE_CONFIG,
         **SAMPLE_BROKER_CONFIG
     }
@@ -116,8 +121,7 @@ def get_validated_config(config_file_name,
         nsxt_wire_logger = SERVER_NSXT_WIRE_LOGGER
     check_keys_and_value_types(config, sample_config, location='config file',
                                msg_update_callback=msg_update_callback)
-    api_version = config['vcd']['api_version']
-    if float(api_version) < MQTT_MIN_API_VERSION:
+    if not use_mqtt:
         _validate_amqp_config(config['amqp'], msg_update_callback)
     _validate_vcd_and_vcs_config(config['vcd'], config['vcs'],
                                  msg_update_callback,
