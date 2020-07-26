@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 from dataclasses import asdict
 import os
-from typing import List
 
 import yaml
 
@@ -100,12 +99,15 @@ class DefEntityClusterApi:
         filter_string = None
         if filters:
             filter_string = ";".join([f"{f[0]}=={f[1]}" for f in filters])  # noqa: E501
-        response = tkg_cluster_api.list_tkg_clusters(
-            f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}",  # noqa: E501
-            object_filter=filter_string)
-        entities: List[TkgCluster] = response[0]
+        (entities, status, headers, additional_data) = \
+            tkg_cluster_api.list_tkg_clusters(
+                f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}",  # noqa: E501
+                _return_http_data_only=False,
+                object_filter=filter_string)
         clusters = []
-        for entity in entities:
+        for i in range(len(entities)):
+            entity: TkgCluster = entities[i]
+            entity_properties = additional_data[i]
             logger.CLIENT_LOGGER.debug(f"TKG Defined entity list from server: {entity}")  # noqa: E501
             cluster = {
                 cli_constants.CLIOutputKey.CLUSTER_NAME.value: entity.metadata.name, # noqa: E501
@@ -115,9 +117,9 @@ class DefEntityClusterApi:
                 cli_constants.CLIOutputKey.K8S_RUNTIME.value: cli_constants.TKG_CLUSTER_RUNTIME, # noqa: E501
                 cli_constants.CLIOutputKey.K8S_VERSION.value: entity.spec.distribution.version, # noqa: E501
                 # TODO(TKG): status field doesn't have any attributes
-                cli_constants.CLIOutputKey.STATUS.value: " ",
+                cli_constants.CLIOutputKey.STATUS.value: entity.status.phase,
                 # TODO(Owner in CSE server response): Owner value is needed
-                cli_constants.CLIOutputKey.OWNER.value: " ",
+                cli_constants.CLIOutputKey.OWNER.value: entity_properties['owner']['name'],  # noqa: E501
             }
             clusters.append(cluster)
         return clusters
@@ -140,6 +142,7 @@ class DefEntityClusterApi:
             version=DEF_NATIVE_ENTITY_TYPE_VERSION,
             filters=filters)
 
+        # clusters = []
         clusters = self.list_tkg_clusters(vdc=vdc, org=org) or []
         for def_entity in native_entities:
             entity = def_entity.entity
