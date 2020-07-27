@@ -90,9 +90,11 @@ class MQTTExtensionManager:
         wire_logger = logger.NULL_LOGGER
         if log_wire:
             wire_logger = logger.SERVER_CLOUDAPI_WIRE_LOGGER
+        self._wire_logger = wire_logger
+        self._debug_logger = debug_logger
         self._cloudapi_client = \
             vcd_utils.get_cloudapi_client_from_vcd_client(
-                self._sysadmin_client, debug_logger, wire_logger)
+                self._sysadmin_client, self._debug_logger, self._wire_logger)
 
     def setup_extension(self, ext_name, ext_version, ext_vendor,
                         priority=constants.MQTT_EXTENSION_PRIORITY,
