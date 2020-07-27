@@ -356,8 +356,8 @@ def read_data_file(filepath, logger=NULL_LOGGER,
 def run_async(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        curr_thread_id = threading.current_thread().ident
-        t = threading.Thread(name=func.__name__+':'+str(curr_thread_id),
+        parent_thread_id = threading.current_thread().ident
+        t = threading.Thread(name=func.__name__+':'+str(parent_thread_id),
                              target=func, args=args, kwargs=kwargs, daemon=True)  # noqa: E501
         t.start()
         return t

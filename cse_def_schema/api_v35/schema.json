@@ -2,7 +2,7 @@
         "definitions": {
             "node": {
                 "type": "object",
-                "required": ["name", "ip"],
+                "required": ["name"],
                 "properties": {
                     "name": {"type": "string"},
                     "ip": {"type": "string"},
