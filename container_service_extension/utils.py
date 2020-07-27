@@ -356,13 +356,16 @@ def read_data_file(filepath, logger=NULL_LOGGER,
 def run_async(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        parent_thread_id = threading.current_thread().ident
-        t = threading.Thread(name=func.__name__+':'+str(parent_thread_id),
+        t = threading.Thread(name=generate_thread_name(func.__name__),
                              target=func, args=args, kwargs=kwargs, daemon=True)  # noqa: E501
         t.start()
         return t
-
     return wrapper
+
+
+def generate_thread_name(function_name):
+    parent_thread_id = threading.current_thread().ident
+    return function_name + ':' + str(parent_thread_id)
 
 
 def is_v35_supported_by_cse_server():
