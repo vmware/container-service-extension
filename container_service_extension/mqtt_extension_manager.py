@@ -76,7 +76,8 @@ class MQTTExtensionManager:
     Note: This extension can only be used with VCD API Version 35.0 and above.
     """
 
-    def __init__(self, sysadmin_client: vcd_client.Client, log_wire):
+    def __init__(self, sysadmin_client: vcd_client.Client,
+                 debug_logger=logger.SERVER_LOGGER, log_wire=True):
         # Ensure correct credentials and api version
         vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
         client_api_version = float(sysadmin_client.get_api_version())
@@ -91,7 +92,7 @@ class MQTTExtensionManager:
             wire_logger = logger.SERVER_CLOUDAPI_WIRE_LOGGER
         self._cloudapi_client = \
             vcd_utils.get_cloudapi_client_from_vcd_client(
-                self._sysadmin_client, logger.SERVER_LOGGER, wire_logger)
+                self._sysadmin_client, debug_logger, wire_logger)
 
     def setup_extension(self, ext_name, ext_version, ext_vendor,
                         priority=constants.MQTT_EXTENSION_PRIORITY,
