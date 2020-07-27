@@ -106,6 +106,8 @@ class DefEntityClusterApi:
                 object_filter=filter_string)
         clusters = []
         for i in range(len(entities)):
+            # NOTE: additional_data will contain corresponding defined entity
+            # details
             entity: TkgCluster = entities[i]
             entity_properties = additional_data[i]
             logger.CLIENT_LOGGER.debug(f"TKG Defined entity list from server: {entity}")  # noqa: E501
@@ -142,7 +144,6 @@ class DefEntityClusterApi:
             version=DEF_NATIVE_ENTITY_TYPE_VERSION,
             filters=filters)
 
-        # clusters = []
         clusters = self.list_tkg_clusters(vdc=vdc, org=org) or []
         for def_entity in native_entities:
             entity = def_entity.entity
@@ -214,6 +215,8 @@ class DefEntityClusterApi:
         :rtype: str
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
+        # TODO(Display Owner information): Owner information needs to be
+        # displayed
         tkg_entities, native_def_entity = \
             self._get_tkg_native_clusters_by_name(cluster_name,
                                                   org=org, vdc=vdc)
