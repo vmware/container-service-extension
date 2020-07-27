@@ -88,6 +88,10 @@ class RequestKey(str, Enum):
     NODE_NAMES_LIST = 'node_names'
     SSH_KEY = 'ssh_key'
     ROLLBACK = 'rollback'
+    WORKERS = 'workers'
+    COUNT = 'count'
+    NFS = 'nfs'
+    K8_DISTRIBUTION = 'k8_distribution'
 
     # keys related to ovdc requests
     K8S_PROVIDER = 'k8s_provider'

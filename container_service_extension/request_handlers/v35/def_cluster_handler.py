@@ -33,12 +33,21 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
 def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster resize operation.
 
+    Validate data before actual resize is delegated to cluster service.
+
     :return: Defined entity of the native cluster
     :rtype: container_service_extension.def_.models.DefEntity
     """
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
     cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
+    curr_entity = svc.entity_svc.get_entity(cluster_id)
+    request_utils.validate_def_native_payload(
+        asdict(cluster_entity_spec.spec), asdict(curr_entity.entity.spec),
+        exclude_fields={
+            RequestKey.WORKERS: [RequestKey.COUNT],
+            RequestKey.NFS: [RequestKey.COUNT]
+        })
     return asdict(svc.resize_cluster(cluster_id, cluster_entity_spec))
 
 
@@ -106,13 +115,19 @@ def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
 def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     """Request handler for cluster upgrade operation.
 
-    data validation handled in broker
+    Validate data before actual upgrade is delegated to cluster service.
 
     :return: Dict
     """
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
     cluster_id = data[RequestKey.CLUSTER_ID]
+    curr_entity = svc.entity_svc.get_entity(cluster_id)
+    request_utils.validate_def_native_payload(
+        asdict(cluster_entity_spec.spec), asdict(curr_entity.entity.spec),
+        exclude_fields={
+            RequestKey.K8_DISTRIBUTION: [RequestKey.TEMPLATE_NAME, RequestKey.TEMPLATE_REVISION]  # noqa: E501
+        })
     return asdict(svc.upgrade_cluster(cluster_id, cluster_entity_spec))
 
 
