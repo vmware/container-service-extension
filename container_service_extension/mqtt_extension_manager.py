@@ -1,5 +1,6 @@
 from enum import Enum
 from enum import unique
+import re
 
 from lxml import etree
 import pyvcloud.vcd.client as vcd_client
@@ -38,7 +39,7 @@ class TokenKey(str, Enum):
 def get_id_from_link(link, id_path):
     """Get the id from the link.
 
-    Example: link='/admin/ext/service/12345/',id_path='/ext/service/'.
+    Example: link='/admin/ext/service/12345/', id_path='/ext/service/'.
     The expected return would be '12345'.
 
     :param str link: url link (may be multiple links concatenated)
@@ -47,32 +48,23 @@ def get_id_from_link(link, id_path):
     :return: the id
     :rtype: str
     """
-    ext_service_ind = link.find(id_path)
-    if ext_service_ind == -1:
-        return None
-    start_ind = ext_service_ind + len(id_path)
-    end_offset = link[start_ind:].find('/')
-    if end_offset == -1:  # if link ends in id
-        end_offset = len(link)
-    return link[start_ind:start_ind + end_offset]
+    regex_pattern = f'({id_path})([^/]+)'
+    id_match = re.search(pattern=regex_pattern, string=link)
+    return id_match.group(2)  # The id is in the index 2 group after id_path
 
 
-def parse_url_pattern(initial_pattern):
-    """Parse the url pattern from the initial pattern.
+def parse_api_filter_pattern(initial_pattern):
+    """Parse the url pattern from the initial api filter pattern.
 
     Example: initial_pattern = '\n     /api/endpoint\n      '
     The expected return would be: '/api/endpoint'.
 
-    :param str initial_pattern: the raw pattern
+    :param str initial_pattern: the raw api filter pattern
 
     :return: the parsed url pattern
     :rtype: str
     """
-    pattern_start_ind = initial_pattern.find('/')
-    pattern_end_ind = initial_pattern.rfind('\n')
-    if pattern_end_ind == -1:
-        pattern_end_ind = len(initial_pattern)
-    return initial_pattern[pattern_start_ind:pattern_end_ind]
+    return re.findall(pattern='/.+', string=initial_pattern)[0]
 
 
 class MQTTExtensionManager:
@@ -84,7 +76,7 @@ class MQTTExtensionManager:
     Note: This extension can only be used with VCD API Version 35.0 and above.
     """
 
-    def __init__(self, sysadmin_client: vcd_client.Client):
+    def __init__(self, sysadmin_client: vcd_client.Client, log_wire):
         # Ensure correct credentials and api version
         vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
         client_api_version = float(sysadmin_client.get_api_version())
@@ -94,9 +86,12 @@ class MQTTExtensionManager:
                              f'{constants.MQTT_MIN_API_VERSION} to use MQTT')
 
         self._sysadmin_client: vcd_client.Client = sysadmin_client
+        wire_logger = logger.NULL_LOGGER
+        if log_wire:
+            wire_logger = logger.SERVER_CLOUDAPI_WIRE_LOGGER
         self._cloudapi_client = \
             vcd_utils.get_cloudapi_client_from_vcd_client(
-                self._sysadmin_client)
+                self._sysadmin_client, logger.SERVER_LOGGER, wire_logger)
 
     def setup_extension(self, ext_name, ext_version, ext_vendor,
                         priority=constants.MQTT_EXTENSION_PRIORITY,
@@ -157,6 +152,7 @@ class MQTTExtensionManager:
             respond topic, and description
         :rtype: dict with fields: ext_urn_id, listen_topic, respond_topic,
             description
+        :raises: HTTPError if unable to create the extension
         """
         payload = {
             ExtKey.EXT_NAME: ext_name,
@@ -167,21 +163,17 @@ class MQTTExtensionManager:
             ExtKey.EXT_AUTH_ENABLED: "true" if auth_enabled else "false",
             ExtKey.EXT_DESCRIPTION: description
         }
-        ext_info = None
-        try:
-            response_body = self._cloudapi_client.do_request(
-                method=RequestMethod.POST,
-                resource_url_relative_path='extensions/api',
-                payload=payload)
-            mqtt_topics = response_body['mqttTopics']
-            ext_info = {
-                ExtKey.EXT_URN_ID: response_body['id'],
-                ExtKey.EXT_LISTEN_TOPIC: mqtt_topics['monitor'],
-                ExtKey.EXT_RESPOND_TOPIC: mqtt_topics['respond'],
-                ExtKey.EXT_DESCRIPTION: response_body['description']
-            }
-        except requests.exceptions.HTTPError as err:
-            logger.SERVER_LOGGER.error(err)
+        response_body = self._cloudapi_client.do_request(
+            method=RequestMethod.POST,
+            resource_url_relative_path=constants.EXTENSIONS_API_PATH,
+            payload=payload)
+        mqtt_topics = response_body['mqttTopics']
+        ext_info = {
+            ExtKey.EXT_URN_ID: response_body['id'],
+            ExtKey.EXT_LISTEN_TOPIC: mqtt_topics['monitor'],
+            ExtKey.EXT_RESPOND_TOPIC: mqtt_topics['respond'],
+            ExtKey.EXT_DESCRIPTION: response_body['description']
+        }
         return ext_info
 
     def get_extension_info(self, ext_name, ext_version, ext_vendor):
@@ -195,47 +187,42 @@ class MQTTExtensionManager:
             respond topic, and description
         :rtype: dict with fields: ext_urn_id, listen_topic, respond_topic,
             description
+        :raises: HTTPError if unable to make the GET request
         """
-        ext_info = None
-        try:
-            response_body = self._cloudapi_client.do_request(
-                method=RequestMethod.GET,
-                resource_url_relative_path="extensions/api")
-            ext_info_arr = response_body['values']
+        response_body = self._cloudapi_client.do_request(
+            method=RequestMethod.GET,
+            resource_url_relative_path=constants.EXTENSIONS_API_PATH)
+        all_ext_info_arr = response_body['values']
 
-            # Find extension
-            for curr_info in ext_info_arr:
-                if curr_info['name'] == ext_name and \
-                        curr_info['version'] == ext_version \
-                        and curr_info['vendor'] == ext_vendor:
-                    mqtt_topics = curr_info['mqttTopics']
-                    ext_info = {
-                        ExtKey.EXT_URN_ID: curr_info['id'],
-                        ExtKey.EXT_LISTEN_TOPIC: mqtt_topics['monitor'],
-                        ExtKey.EXT_RESPOND_TOPIC: mqtt_topics['respond'],
-                        ExtKey.EXT_DESCRIPTION: curr_info['description']
-                    }
-                    break
-        except requests.exceptions.HTTPError as err:
-            logger.SERVER_LOGGER.error(err)
+        # Find extension
+        ext_info = None
+        for curr_info in all_ext_info_arr:
+            if curr_info['name'] == ext_name and \
+                    curr_info['version'] == ext_version \
+                    and curr_info['vendor'] == ext_vendor:
+                mqtt_topics = curr_info['mqttTopics']
+                ext_info = {
+                    ExtKey.EXT_URN_ID: curr_info['id'],
+                    ExtKey.EXT_LISTEN_TOPIC: mqtt_topics['monitor'],
+                    ExtKey.EXT_RESPOND_TOPIC: mqtt_topics['respond'],
+                    ExtKey.EXT_DESCRIPTION: curr_info['description']
+                }
+                break
         return ext_info
 
-    def get_extension_response_body(self, ext_urn_id):
+    def get_extension_info_by_urn(self, ext_urn_id):
         """Get the extension with the specified id.
 
         :param str ext_urn_id: the extension urn id
 
         :return: the response body of the GET request for the extension
         :rtype: dict
+        :raises: HTTPError if unable to make the GET request
         """
-        response_body = None
-        try:
-            response_body = self._cloudapi_client.do_request(
-                method=RequestMethod.GET,
-                resource_url_relative_path=f"extensions/api/"
-                                           f"{ext_urn_id}")
-        except requests.exceptions.HTTPError as err:
-            logger.SERVER_LOGGER.error(err)
+        response_body = self._cloudapi_client.do_request(
+            method=RequestMethod.GET,
+            resource_url_relative_path=f"{constants.EXTENSIONS_API_PATH}/"
+                                       f"{ext_urn_id}")
         return response_body
 
     def get_extension_uuid(self, ext_urn_id):
@@ -247,11 +234,11 @@ class MQTTExtensionManager:
         :rtype: str
         """
         # retrieve string of links and get id from the string of links
-        _ = self.get_extension_response_body(ext_urn_id)  # Make last response
+        _ = self.get_extension_info_by_urn(ext_urn_id)  # Make last response
         ext_response_headers = self._cloudapi_client.\
             get_last_response_headers()
         links_str = ext_response_headers['Link']
-        return get_id_from_link(links_str, '/extension/service/')
+        return get_id_from_link(links_str, constants.EXT_SERVICE_PATH)
 
     def update_extension(self, ext_name, ext_version, ext_vendor, ext_urn_id,
                          priority=constants.MQTT_EXTENSION_PRIORITY,
@@ -272,8 +259,7 @@ class MQTTExtensionManager:
             the extension
         :param str description: description of the extension
 
-        :return: status of the update: True if successful, False otherwise
-        :rtype: bool
+        :raises: HTTPError if unable to make the PUT request
         """
         payload = {
             ExtKey.EXT_NAME: ext_name,
@@ -284,16 +270,11 @@ class MQTTExtensionManager:
             ExtKey.EXT_AUTH_ENABLED: "true" if auth_enabled else "false",
             ExtKey.EXT_DESCRIPTION: description
         }
-        success = True
-        try:
-            self._cloudapi_client.do_request(
-                method=RequestMethod.PUT,
-                resource_url_relative_path=f"extensions/api/{ext_urn_id}",
-                payload=payload)
-        except requests.exceptions.HTTPError as err:
-            logger.SERVER_LOGGER.error(err)
-            success = False
-        return success
+        self._cloudapi_client.do_request(
+            method=RequestMethod.PUT,
+            resource_url_relative_path=f"{constants.EXTENSIONS_API_PATH}/"
+                                       f"{ext_urn_id}",
+            payload=payload)
 
     def delete_extension(self, ext_name, ext_version, ext_vendor, ext_urn_id):
         """Delete the extension.
@@ -305,21 +286,18 @@ class MQTTExtensionManager:
         :param str ext_version: the extension version
         :param str ext_vendor: the extension vendor
         :param str ext_urn_id: the extension urn id
-        """
-        # Turn extension off
-        update_result = self.update_extension(ext_name, ext_version,
-                                              ext_vendor, ext_urn_id,
-                                              ext_enabled=False)
-        if not update_result:
-            return False
 
-        try:
-            self._cloudapi_client.do_request(
-                method=RequestMethod.DELETE,
-                resource_url_relative_path=f"extensions/api/"
-                                           f"{ext_urn_id}")
-        except requests.exceptions.HTTPError as err:
-            logger.SERVER_LOGGER.error(err)
+        :raises: HTTPError if unable to turn the extension off or
+            make the DELETE request
+        """
+        # Turn extension off before deleting
+        self.update_extension(ext_name, ext_version, ext_vendor, ext_urn_id,
+                              ext_enabled=False)
+
+        self._cloudapi_client.do_request(
+            method=RequestMethod.DELETE,
+            resource_url_relative_path=f"{constants.EXTENSIONS_API_PATH}/"
+                                       f"{ext_urn_id}")
 
     def check_extension_status(self, ext_urn_id):
         """Check if the MQTT extension is active.
@@ -329,8 +307,11 @@ class MQTTExtensionManager:
         :return: status of the MQTT extension
         :rtype: bool
         """
-        extension_response_body = self.get_extension_response_body(ext_urn_id)
-        if not extension_response_body:
+        try:
+            ext_response_body = self.get_extension_info_by_urn(ext_urn_id)
+            if not ext_response_body:
+                return False
+        except requests.exceptions.HTTPError:
             return False
         return True
 
@@ -359,25 +340,22 @@ class MQTTExtensionManager:
 
         :return: dictionary containing the token and token id
         :rtype: dict with fields: token and token_id
+        :raises: HTTPError if unable to make the POST request
         """
         payload = {
             TokenKey.TOKEN_NAME: token_name,
             TokenKey.TOKEN_TYPE: "EXTENSION",
             TokenKey.TOKEN_EXT_ID: ext_urn_id
         }
-        token_info = None
-        try:
-            response_body = self._cloudapi_client.do_request(
-                method=RequestMethod.POST,
-                cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
-                resource_url_relative_path="tokens",
-                payload=payload)
-            token_info = {
-                TokenKey.TOKEN: response_body['token'],
-                TokenKey.TOKEN_ID: response_body['id']
-            }
-        except requests.exceptions.HTTPError as err:
-            logger.SERVER_LOGGER.error(err)
+        response_body = self._cloudapi_client.do_request(
+            method=RequestMethod.POST,
+            cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+            resource_url_relative_path=constants.TOKEN_PATH,
+            payload=payload)
+        token_info = {
+            TokenKey.TOKEN: response_body['token'],
+            TokenKey.TOKEN_ID: response_body['id']
+        }
         return token_info
 
     def get_all_extension_token_ids(self, ext_name, ext_version, ext_vendor):
@@ -389,33 +367,30 @@ class MQTTExtensionManager:
 
         :return: list of token ids (str)
         :rtype: list of strs
+        :raises: HTTPError if unable to make the GET request
         """
         token_ids = []
-        try:
-            response_body = self._cloudapi_client.do_request(
-                method=RequestMethod.GET,
-                cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
-                resource_url_relative_path="tokens")
-            ext_combine_name = f"{ext_vendor}/{ext_name}/{ext_version}"
-            for token_info in response_body['values']: #
-                if token_info['owner']['name'] == ext_combine_name:
-                    token_ids.append(token_info['id'])
-        except requests.exceptions.HTTPError as err:
-            logger.SERVER_LOGGER.error(err)
+        response_body = self._cloudapi_client.do_request(
+            method=RequestMethod.GET,
+            cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+            resource_url_relative_path=constants.TOKEN_PATH)
+        ext_combine_name = f"{ext_vendor}/{ext_name}/{ext_version}"
+        for token_info in response_body['values']:
+            if token_info['owner']['name'] == ext_combine_name:
+                token_ids.append(token_info['id'])
         return token_ids
 
     def delete_extension_token(self, token_id):
         """Delete the specified token with token_id.
 
         :param str token_id: the token's id
+        :raises: HTTPError if unable to make the delete request
         """
-        try:
-            self._cloudapi_client.do_request(
-                method=RequestMethod.DELETE,
-                cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
-                resource_url_relative_path=f"tokens/{token_id}")
-        except requests.exceptions.HTTPError as err:
-            logger.SERVER_LOGGER.error(err)
+        self._cloudapi_client.do_request(
+            method=RequestMethod.DELETE,
+            cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+            resource_url_relative_path=f"{constants.TOKEN_PATH}/"
+                                       f"{token_id}")
 
     def delete_all_extension_tokens(self, ext_name, ext_version, ext_vendor):
         """Delete all of the extension's tokens.
@@ -423,6 +398,8 @@ class MQTTExtensionManager:
         :param str ext_name: the extension name
         :param str ext_version: the extension version
         :param str ext_vendor: the extension vendor
+
+        :raises: HTTPError if unable to delete any of the tokens
         """
         token_ids = self.get_all_extension_token_ids(ext_name, ext_version,
                                                      ext_vendor)
@@ -438,9 +415,10 @@ class MQTTExtensionManager:
         active = True
         try:
             self._cloudapi_client.do_request(
-                method=RequestMethod.DELETE,
+                method=RequestMethod.GET,
                 cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
-                resource_url_relative_path=f"tokens/{token_id}")
+                resource_url_relative_path=f"{constants.TOKEN_PATH}/"
+                                           f"{token_id}")
         except requests.exceptions.HTTPError:
             active = False
         return active
@@ -459,6 +437,8 @@ class MQTTExtensionManager:
         :return: id of api filter. In case of any error, the empty string
             is returned.
         :rtype: str
+        :raises: Exception if error in creating api filter or deleting extra
+            api filters
         """
         active_api_filter_ids = self.get_api_filter_ids(api_filter_url_pattern,
                                                         ext_uuid)
@@ -466,8 +446,8 @@ class MQTTExtensionManager:
             return self.create_api_filter(api_filter_url_pattern, ext_uuid)
         elif len(active_api_filter_ids) > 1:
             # Ensure only one api filter
-            for ind in range(1, len(active_api_filter_ids)):
-                self.delete_api_filter(active_api_filter_ids[ind])
+            for filter_id in active_api_filter_ids[1:]:
+                self.delete_api_filter(filter_id)
         return active_api_filter_ids[0]
 
     def create_api_filter(self, api_filter_url_pattern, ext_uuid):
@@ -480,6 +460,7 @@ class MQTTExtensionManager:
         :return: id of the api filter. In case of any error, the empty string
             is returned.
         :rtype: str
+        :raises: Exception if error in making POST request
         """
         xml_etree = etree.XML(
             f"""
@@ -491,18 +472,16 @@ class MQTTExtensionManager:
             </vmext:ApiFilter>
             """)
         absolute_api_filters_url = f"{self._sysadmin_client.get_api_uri()}" \
-            f"/admin/extension/service/{ext_uuid}/apifilters"
+            f"{constants.ADMIN_EXT_SERVICE_PATH}{ext_uuid}" \
+            f"{constants.API_FILTERS_PATH}"
 
-        api_filter_id = ''
-        try:
-            response_body = self._sysadmin_client.post_resource(
-                uri=absolute_api_filters_url,
-                contents=xml_etree,
-                media_type=vcd_client.EntityType.API_FILTER.value)
-            api_filter_id = get_id_from_link(response_body.attrib['href'],
-                                             '/extension/service/apifilter/')
-        except Exception as err:
-            logger.SERVER_LOGGER.error(err)
+        response_body = self._sysadmin_client.post_resource(
+            uri=absolute_api_filters_url,
+            contents=xml_etree,
+            media_type=vcd_client.EntityType.API_FILTER.value)
+        api_filter_id = get_id_from_link(response_body.attrib['href'],
+                                         f'{constants.EXT_SERVICE_PATH}'
+                                         f'{constants.API_FILTER_PATH}')
         return api_filter_id
 
     def get_api_filter_ids(self, api_filter_url_pattern, ext_uuid):
@@ -514,39 +493,35 @@ class MQTTExtensionManager:
 
         :return: list of api filter ids
         :rtype: list of strs
+        :raises: Exception if error in making GET request
         """
-        filter_ids = []
         absolute_api_filters_url = f"{self._sysadmin_client.get_api_uri()}" \
-                                   f"/admin/extension/service/" \
-                                   f"{ext_uuid}/apifilters"
-        try:
-            response_body = self._sysadmin_client.get_resource(
-                uri=absolute_api_filters_url)
-            api_filters = response_body['ApiFilterRecord']
-            for filter_info in api_filters:
-                curr_filter_url_pattern = parse_url_pattern(
-                    filter_info.attrib['urlPattern'])
-                if curr_filter_url_pattern == api_filter_url_pattern:
-                    filter_id = get_id_from_link(filter_info.attrib['href'],
-                                                 '/extension/service/'
-                                                 'apifilter/')
-                    filter_ids.append(filter_id)
-        except Exception as err:
-            logger.SERVER_LOGGER.error(err)
+                                   f"{constants.ADMIN_EXT_SERVICE_PATH}" \
+                                   f"{ext_uuid}{constants.API_FILTERS_PATH}"
+        filter_ids = []
+        response_body = self._sysadmin_client.get_resource(
+            uri=absolute_api_filters_url)
+        api_filters = response_body['ApiFilterRecord']
+        for filter_info in api_filters:
+            curr_filter_url_pattern = parse_api_filter_pattern(
+                filter_info.attrib['urlPattern'])
+            if curr_filter_url_pattern == api_filter_url_pattern:
+                filter_id = get_id_from_link(filter_info.attrib['href'],
+                                             f'{constants.EXT_SERVICE_PATH}'
+                                             f'{constants.API_FILTER_PATH}')
+                filter_ids.append(filter_id)
         return filter_ids
 
     def delete_api_filter(self, filter_id):
         """Delete the api filter.
 
         :param str filter_id: filter id
+        :raises: Exception if error in making DELETE request
         """
         absolute_api_filters_url = f"{self._sysadmin_client.get_api_uri()}" \
-                                   f"/admin/extension/service/apifilter/" \
-                                   f"{filter_id}"
-        try:
-            self._sysadmin_client.delete_resource(absolute_api_filters_url)
-        except Exception as err:
-            logger.SERVER_LOGGER.error(err)
+                                   f"{constants.ADMIN_EXT_SERVICE_PATH}" \
+                                   f"{constants.API_FILTER_PATH}{filter_id}"
+        self._sysadmin_client.delete_resource(absolute_api_filters_url)
 
     def check_api_filter_status(self, api_filter_id):
         """Check if the api filter is active.
@@ -557,7 +532,8 @@ class MQTTExtensionManager:
         :rtype: bool
         """
         extension_api_filter_url = f"{self._sysadmin_client.get_api_uri()}" \
-                                   f"/admin/extension/service/apifilter/" \
+                                   f"{constants.ADMIN_EXT_SERVICE_PATH}" \
+                                   f"{constants.API_FILTER_PATH}" \
                                    f"{api_filter_id}"
         active = True
         try:

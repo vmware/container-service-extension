@@ -61,10 +61,16 @@ CSE_CLUSTER_KUBECONFIG_PATH = '/root/.kube/config'
 # TODO: version should be major.minor.patch
 #  Also, patch change doesn't mean version needs to be updated,
 #  but major upgrade with api changes should lead to updating the version
+ADMIN_EXT_SERVICE_PATH = '/admin/extension/service/'
+API_FILTER_PATH = 'apifilter/'
+API_FILTERS_PATH = '/apifilters'
+EXTENSIONS_API_PATH = 'extensions/api'
+EXT_SERVICE_PATH = '/extension/service/'
 MQTT_EXTENSION_VERSION = '1.0.0'
 MQTT_EXTENSION_VENDOR = 'VMWare'
 MQTT_EXTENSION_PRIORITY = 100
 MQTT_MIN_API_VERSION = 35.0
+TOKEN_PATH = 'tokens'
 
 
 @unique
