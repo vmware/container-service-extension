@@ -92,13 +92,16 @@ class DefEntityClusterApi:
         tkg_cluster_api = TkgClusterApi(api_client=self.tkg_client)
         filters = []
         if org:
-            # TODO(TKG): Add org filter once TKG schema is updated
+            # TODO(Org filter not working)
+            # filters.append((cli_constants.TKGClusterEntityFilterKey.ORG_NAME.value, org))  # noqa: E501
             pass
         if vdc:
             filters.append((cli_constants.TKGClusterEntityFilterKey.VDC_NAME.value, vdc))  # noqa: E501
         filter_string = None
         if filters:
             filter_string = ";".join([f"{f[0]}=={f[1]}" for f in filters])  # noqa: E501
+        # additional_data in the following statement represents the information
+        # associated with the defined entity
         (entities, status, headers, additional_data) = \
             tkg_cluster_api.list_tkg_clusters(
                 f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}",  # noqa: E501
@@ -115,7 +118,7 @@ class DefEntityClusterApi:
                 cli_constants.CLIOutputKey.CLUSTER_NAME.value: entity.metadata.name, # noqa: E501
                 cli_constants.CLIOutputKey.VDC.value: entity.metadata.virtual_data_center_name, # noqa: E501
                 # TODO(TKG): Missing org name in the response
-                cli_constants.CLIOutputKey.ORG.value: " ", # noqa: E501
+                cli_constants.CLIOutputKey.ORG.value: entity_properties['org']['name'], # noqa: E501
                 cli_constants.CLIOutputKey.K8S_RUNTIME.value: cli_constants.TKG_CLUSTER_RUNTIME, # noqa: E501
                 cli_constants.CLIOutputKey.K8S_VERSION.value: entity.spec.distribution.version, # noqa: E501
                 # TODO(TKG): status field doesn't have any attributes

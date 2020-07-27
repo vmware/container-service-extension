@@ -158,6 +158,8 @@ class ApiClient(object):
         if _preload_content:
             # deserialize response data
             if response_type:
+                # additional_data represents the data related to TkgCluster
+                # entity
                 return_data, additional_data = self.deserialize(response_data,
                                                                 response_type,
                                                                 method)

@@ -58,6 +58,9 @@ class TkgClusterApi(object):
         if params.get('object_filter'):
             query_params.append(('filter', params['object_filter']))
         header_params = {}
+        # HTTP header `Accept`
+        header_params['Accept'] = self.api_client.select_header_accept(
+            ['*/*'])  # noqa: E501
         header_params[
             'Content-Type'] = self.api_client.select_header_content_type(
             ['application/json'])
