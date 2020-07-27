@@ -86,6 +86,35 @@ def validate_payload(payload, required_keys):
     return valid
 
 
+def validate_def_native_payload(desired_spec: dict, actual_spec: dict,
+                                exclude_fields={}, dict_name=None):
+    """Validate the desired spec with the current spec.
+
+    :param dict desired_spec: input spec
+    :param dict actual_spec: reference spec to validate the desired spec
+    :param dict exclude_fields: exclude the list of given sub-keys from validation  # noqa: E501
+    :param str dict_name: name of the dictionary key whose nested dict that undergoes validation
+    :return: true on successful validation
+    :rtype: bool
+    :raises: BadRequestError on encountering invalid payload value
+    """
+    for payload_key, payload_val in desired_spec.items():
+
+        if isinstance(payload_val, dict):
+            validate_def_native_payload(payload_val, actual_spec.get(payload_key),  # noqa: E501
+                                        exclude_fields=exclude_fields,
+                                        dict_name=payload_key)
+        else:
+            if payload_key in exclude_fields.get(dict_name, []):
+                continue
+            expected_val = actual_spec.get(payload_key)
+            if payload_val != expected_val:
+                error_msg = f"Invalid cluster configuration: {dict_name}-->{payload_key} has incorrect value"  # noqa: E501
+                raise BadRequestError(error_msg)
+
+    return True
+
+
 def v35_api_exception_handler(func):
     """Decorate to trap exceptions and process them.
 
