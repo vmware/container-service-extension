@@ -109,7 +109,7 @@ def validate_def_native_payload(desired_spec: dict, actual_spec: dict,
                 continue
             expected_val = actual_spec.get(payload_key)
             if payload_val != expected_val:
-                error_msg = f"Invalid cluster configuration: {dict_name}-->{payload_key} has incorrect value"  # noqa: E501
+                error_msg = f"Invalid input configuration: {dict_name}-->{payload_key} has incorrect value"  # noqa: E501
                 raise BadRequestError(error_msg)
 
     return True
