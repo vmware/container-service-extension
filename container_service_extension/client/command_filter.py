@@ -21,9 +21,10 @@ class GroupKey(str, Enum):
 
 @unique
 class CommandNameKey(str, Enum):
+    CONFIG = 'config'
     CREATE = 'create'
     DELETE = 'delete'
-    UPGRADE = 'upgrade',
+    UPGRADE = 'upgrade'
     UPGRADE_PLAN = 'upgrade-plan'
     INFO = 'info'
     NODE = 'node'
@@ -58,7 +59,8 @@ UNSUPPORTED_COMMAND_OPTIONS_BY_VERSION = {
             CommandNameKey.DELETE: ['k8_runtime'],
             CommandNameKey.INFO: ['k8_runtime'],
             CommandNameKey.UPGRADE: ['k8_runtime'],
-            CommandNameKey.UPGRADE_PLAN: ['k8_runtime']
+            CommandNameKey.UPGRADE_PLAN: ['k8_runtime'],
+            CommandNameKey.CONFIG: ['k8_runtime']
         },
     },
 
@@ -68,7 +70,8 @@ UNSUPPORTED_COMMAND_OPTIONS_BY_VERSION = {
             CommandNameKey.DELETE: ['k8_runtime'],
             CommandNameKey.INFO: ['k8_runtime'],
             CommandNameKey.UPGRADE: ['k8_runtime'],
-            CommandNameKey.UPGRADE_PLAN: ['k8_runtime']
+            CommandNameKey.UPGRADE_PLAN: ['k8_runtime'],
+            CommandNameKey.CONFIG: ['k8_runtime']
         }
     },
 
