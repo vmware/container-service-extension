@@ -554,12 +554,12 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # trigger async operation
         self.context.is_async = True
-        self._trigger_and_monitor_resize(cluster_id=cluster_id,
-                                         cluster_spec=cluster_spec)
+        self._monitor_resize(cluster_id=cluster_id,
+                             cluster_spec=cluster_spec)
         return curr_entity
 
     @utils.run_async
-    def _trigger_and_monitor_resize(self, cluster_id, cluster_spec):
+    def _monitor_resize(self, cluster_id, cluster_spec):
         """Triggers and monitors one or more async threads of resize.
 
         This method (or) thread can trigger two async threads (for node
@@ -919,12 +919,12 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)
 
         self.context.is_async = True
-        self._trigger_and_monitor_delete_nodes(cluster_id=cluster_id,
-                                               nodes_2_del=nodes_2_del)
+        self._monitor_delete_nodes(cluster_id=cluster_id,
+                                   nodes_2_del=nodes_2_del)
         return curr_entity
 
     @utils.run_async
-    def _trigger_and_monitor_delete_nodes(self, cluster_id, nodes_2_del):
+    def _monitor_delete_nodes(self, cluster_id, nodes_2_del):
         """Triggers and monitors delete thread.
 
         This method (or) thread waits for the thread(s) to join before
@@ -970,10 +970,24 @@ class ClusterService(abstract_broker.AbstractBroker):
         finally:
             self.context.end()
 
-    # all parameters following '*args' are required and keyword-only
     @utils.run_async
     def _create_nodes_async(self, cluster_id: str,
                             cluster_spec: def_models.ClusterEntity):
+        """Creates worker and/or nfs nodes in vCD.
+
+        This method is executed by a thread in an asynchronous manner.
+        Do's:
+        - Update the defined entity in except blocks.
+        - Can set the self.task status either to Running or Error
+        Dont's:
+        - Do not set the self.task status to SUCCESS. This will prevent other
+        parallel threads if any to update the status. vCD interprets SUCCESS
+        as a terminal state.
+        - Do not end the context.client.
+
+        Let the caller monitor thread or method to set SUCCESS task status,
+         end the client context
+        """
         try:
             # get the current state of the defined entity
             curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
@@ -982,26 +996,26 @@ class ClusterService(abstract_broker.AbstractBroker):
             org_name = curr_entity.entity.metadata.org_name
             ovdc_name = curr_entity.entity.metadata.ovdc_name
             curr_worker_count: int = curr_entity.entity.spec.workers.count
+            curr_nfs_count: int = curr_entity.entity.spec.nfs.count
+
+            # use the same settings with which cluster was originally created
+            # viz., template, storage_profile, and network among others.
             worker_storage_profile = curr_entity.entity.spec.workers.storage_profile  # noqa: E501
             worker_sizing_class = curr_entity.entity.spec.workers.sizing_class
-            curr_nfs_count: int = curr_entity.entity.spec.nfs.count
             nfs_storage_profile = curr_entity.entity.spec.nfs.storage_profile
             nfs_sizing_class = curr_entity.entity.spec.nfs.sizing_class
             network_name = curr_entity.entity.spec.settings.network
             ssh_key = curr_entity.entity.spec.settings.ssh_key
             rollback = cluster_spec.spec.settings.rollback_on_failure
+            template_name = curr_entity.entity.spec.k8_distribution.template_name  # noqa: E501
+            template_revision = curr_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
+            template = get_template(template_name, template_revision)
 
-            # compute the values of workers and nfs to be added or removed by
-            # comparing the desired and the current state.
+            # compute the values of workers and nfs to be added or removed
             desired_worker_count: int = cluster_spec.spec.workers.count
             workers_2_add = desired_worker_count - curr_worker_count
             desired_nfs_count = cluster_spec.spec.nfs.count
             nfs_2_add = desired_nfs_count - curr_nfs_count
-
-            # use the template with which cluster was originally created.
-            template_name = curr_entity.entity.spec.k8_distribution.template_name  # noqa: E501
-            template_revision = curr_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
-            template = get_template(template_name, template_revision)
 
             server_config = utils.get_server_runtime_config()
             catalog_name = server_config['broker']['catalog']
@@ -1101,6 +1115,21 @@ class ClusterService(abstract_broker.AbstractBroker):
     def _delete_nodes_async(self, cluster_id: str,
                             cluster_spec: def_models.ClusterEntity = None,
                             nodes_2_del=[]):
+        """Deletes worker and/or nfs nodes in vCD.
+
+        This method is executed by a thread in an asynchronous manner.
+        Do's:
+        - Update the defined entity in except blocks.
+        - Set the self.task status either to Running or Error
+        Dont's:
+        - Do not set the self.task status to SUCCESS. This will prevent other
+        parallel threads if any to update the status. vCD interprets SUCCESS
+        as a terminal state.
+        - Do not end the context.client.
+
+        Let the caller monitor thread or method to set SUCCESS task status,
+          end the client context
+        """
         curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
         vapp_href = curr_entity.externalId
         cluster_name = curr_entity.entity.metadata.cluster_name
@@ -1396,7 +1425,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # the line can read the current status of the task.
         # It is safe for thread-2 to check the current task status before
         # updating it. A task with a terminal state of SUCCESS or ERROR cannot
-        # be further updated; vCD throws an error.
+        # be further updated; vCD will throw an error.
         with self.task_update_lock:
             task_href = None
             if self.task_resource is not None:
