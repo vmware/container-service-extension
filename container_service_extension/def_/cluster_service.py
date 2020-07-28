@@ -535,8 +535,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             raise e.CseServerError(
                 f"Worker count must be >= 0 (received {desired_worker_count})")
         elif nfs_2_add < 0:
-            raise e.CseServerError(
-                f"Scaling down nfs nodes is not supported")  # noqa: E501
+            raise e.CseServerError(f"Scaling down nfs nodes is not supported")
 
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
@@ -617,9 +616,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                     DefEntityPhase(DefEntityOperation.UPDATE,
                                    DefEntityOperationStatus.FAILED))
             else:
-                msg = f"Resized the cluster '{cluster_name}' ({cluster_id}) to " \
-                      f"the desired worker count {desired_worker_count} and " \
-                      f"nfs count {desired_nfs_count}"
+                msg = f"Resized the cluster '{cluster_name}' ({cluster_id}) " \
+                      f"to the desired worker count {desired_worker_count} " \
+                      f"and nfs count {desired_nfs_count}"
                 self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
                 curr_entity.entity.status.phase = str(
                     DefEntityPhase(DefEntityOperation.UPDATE,
@@ -638,8 +637,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self.context.end()
 
     def _sync_def_entity(self, cluster_id, curr_entity=None, vapp=None):
-        """Syncs the defined entity with the latest state of the cluster-vApp.
-        """
+        """Sync the defined entity with the latest vApp status."""
         if not curr_entity:
             curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
                 cluster_id)
@@ -967,7 +965,7 @@ class ClusterService(abstract_broker.AbstractBroker):
     @utils.run_async
     def _create_nodes_async(self, cluster_id: str,
                             cluster_spec: def_models.ClusterEntity):
-        """Creates worker and/or nfs nodes in vCD.
+        """Create worker and/or nfs nodes in vCD.
 
         This method is executed by a thread in an asynchronous manner.
         Do's:
@@ -1109,7 +1107,7 @@ class ClusterService(abstract_broker.AbstractBroker):
     def _delete_nodes_async(self, cluster_id: str,
                             cluster_spec: def_models.ClusterEntity = None,
                             nodes_2_del=[]):
-        """Deletes worker and/or nfs nodes in vCD.
+        """Delete worker and/or nfs nodes in vCD.
 
         This method is executed by a thread in an asynchronous manner.
         Do's:

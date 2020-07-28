@@ -54,11 +54,7 @@ DELETE /cse/internal/cluster/{cluster id}
 GET /cse/internal/cluster/{cluster id}/config
 GET /cse/internal/cluster/{cluster id}/upgrade-plan
 POST /cse/internal/cluster/{cluster id}/action/upgrade
-
-# Yet to be finalized.
-POST /cse/internal/nodes
-DELETE /cse/internal/nodes
-GET /cse/internal/{cluster id}/node
+DEL /cse/internal/cluster/{cluster id}/nfs/{node-name}
 
 GET /cse/ovdcs
 GET /cse/ovdc/{ovdc id}
