@@ -82,7 +82,7 @@ class ClusterEntityFilterKey(Enum):
 
 class ClusterEntityKind(Enum):
     NATIVE = 'native'
-    TKG = 'TanzuKubernetesCluster'
+    TKG = 'TanzuKubernetesGrid'
     TANZU_PLUS = 'TKG+'
 
 

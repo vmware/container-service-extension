@@ -21,7 +21,7 @@
             "kind": {
                 "enum": [
                     "native",
-                    "TanzuKubernetesCluster",
+                    "TanzuKubernetesGrid",
                     "TKG+"
                 ],
                 "type": "string"

@@ -562,7 +562,7 @@ class ClusterService(abstract_broker.AbstractBroker):
     def _monitor_resize(self, cluster_id, cluster_spec):
         """Triggers and monitors one or more async threads of resize.
 
-        This method (or) thread can trigger two async threads (for node
+        This method (or) thread triggers two async threads (for node
         addition and deletion) in parallel. It waits for both the threads to
         join before calling the resize operation complete.
 
@@ -609,7 +609,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                 if t.getName().endswith(curr_thread_id):
                     t.join()
 
-            # update the defined entity and the task status
+            # update the defined entity and the task status. Check if one of
+            # the child threads had set the status to ERROR.
             curr_task_status = self.task_resource.get('status')
             if curr_task_status == vcd_client.TaskStatus.ERROR.value:
                 curr_entity.entity.status.phase = str(
@@ -637,6 +638,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             self.context.end()
 
     def _sync_def_entity(self, cluster_id, curr_entity=None, vapp=None):
+        """Syncs the defined entity with the latest state of the cluster-vApp.
+        """
         if not curr_entity:
             curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
                 cluster_id)
@@ -680,8 +683,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             DefEntityPhase(DefEntityOperation.DELETE,
                            DefEntityOperationStatus.IN_PROGRESS))
 
-        # attempt deleting the defined entity; a way to authorize the user to
-        # delete the backing cluster vApp.
+        # attempt deleting the defined entity; lets vCD authorize the user
+        # for delete operation. If deletion of the cluster fails for any
+        # reason, defined entity will be recreated by async thread.
         self.entity_svc.delete_entity(cluster_id)
         self.context.is_async = True
         self._delete_cluster_async(cluster_name=cluster_name,
@@ -883,23 +887,13 @@ class ClusterService(abstract_broker.AbstractBroker):
         return curr_entity
 
     def delete_nodes(self, cluster_id: str, nodes_2_del=[]):
-        """Start the delete nodes operation.
-
-        Validates data for the 'delete nodes' operation. Deleting nodes is an
-        asynchronous task, so the returned `result['task_href']` can be polled
-        to get updates on task progress.
-
-        **data: Required
-            Required data: cluster_name, node_names_list
-            Optional data and default values: org_name=None, ovdc_name=None
-        **telemetry: Optional
-        """
+        """Start the delete nodes operation."""
         curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
             cluster_id)
 
         if len(nodes_2_del) == 0:
             LOGGER.debug("No nodes specified to delete")
-            return
+            return curr_entity
 
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
