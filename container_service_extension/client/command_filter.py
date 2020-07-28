@@ -32,6 +32,12 @@ class CommandNameKey(str, Enum):
 
 # List of unsupported commands by Api Version
 UNSUPPORTED_COMMANDS_BY_VERSION = {
+    vcd_client.ApiVersion.VERSION_35.value: [GroupKey.NODE]
+}
+
+
+# List of unsupported subcommands by Api Version
+UNSUPPORTED_SUBCOMMANDS_BY_VERSION = {
     vcd_client.ApiVersion.VERSION_33.value: {
         GroupKey.CLUSTER: ['apply'],
         # TODO(metadata based enablement for < v35): Revisit after decision
@@ -50,9 +56,9 @@ UNSUPPORTED_COMMANDS_BY_VERSION = {
     }
 }
 
-# List of unsupported commands by Api Version
+# List of unsupported subcommand options by Api Version
 # TODO: All unsupported options depending on the command will go here
-UNSUPPORTED_COMMAND_OPTIONS_BY_VERSION = {
+UNSUPPORTED_SUBCOMMAND_OPTIONS_BY_VERSION = {
     vcd_client.ApiVersion.VERSION_33.value: {
         GroupKey.CLUSTER: {
             CommandNameKey.CREATE: ['sizing_class'],
@@ -102,14 +108,19 @@ class GroupCommandFilter(click.Group):
                 client_utils.cse_restore_session(ctx)
             client = ctx.obj['client']
             version = client.get_api_version()
+
             # Skip the command if not supported
-            unsupported_commands = UNSUPPORTED_COMMANDS_BY_VERSION.get(version, {}).get(self.name, [])  # noqa: E501
+            if cmd_name in UNSUPPORTED_COMMANDS_BY_VERSION.get(version, []):
+                return None
+
+            # Skip the subcommand if not supported
+            unsupported_commands = UNSUPPORTED_SUBCOMMANDS_BY_VERSION.get(version, {}).get(self.name, [])  # noqa: E501
             if cmd_name in unsupported_commands:
                 return None
 
             cmd = click.Group.get_command(self, ctx, cmd_name)
-            unsupported_params = UNSUPPORTED_COMMAND_OPTIONS_BY_VERSION.get(version, {}).get(self.name, {}).get(cmd_name, [])  # noqa: E501
-            # Remove all unsupported options for this command, if any
+            unsupported_params = UNSUPPORTED_SUBCOMMAND_OPTIONS_BY_VERSION.get(version, {}).get(self.name, {}).get(cmd_name, [])  # noqa: E501
+            # Remove all unsupported options for this subcommand, if any
             filtered_params = [param for param in cmd.params if param.name not in unsupported_params]  # noqa: E501
             cmd.params = filtered_params
         except Exception as e:
