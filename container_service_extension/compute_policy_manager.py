@@ -478,7 +478,8 @@ class ComputePolicyManager:
         return org.assign_placement_policy_to_vapp_template_vms(
             catalog_name=catalog_name,
             catalog_item_name=catalog_item_name,
-            placement_policy_href=compute_policy_href)
+            placement_policy_href=compute_policy_href,
+            placement_policy_final=True)
 
     def assign_vdc_sizing_policy_to_vapp_template_vms(self,
                                                       compute_policy_href,

@@ -400,7 +400,7 @@ class TemplateBuilder():
                 self.org_name,
                 self.catalog_name,
                 self.catalog_item_name)
-            if task:
+            if task is not None:
                 self.client.get_task_monitor().wait_for_success(task)
                 msg = "Successfully tagged template " \
                       f"{self.catalog_item_name} with placement policy " \

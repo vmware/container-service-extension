@@ -33,6 +33,7 @@ import container_service_extension.logger as logger
 from container_service_extension.pks_cache import PksCache
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.server_constants as server_constants
+import container_service_extension.shared_constants as shared_constants
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import CSE_SERVER_API_VERSION
@@ -256,6 +257,9 @@ class Service(object, metaclass=Singleton):
         self._load_template_definition_from_catalog(
             msg_update_callback=msg_update_callback)
 
+        self._load_placement_policy_details(
+            msg_update_callback=msg_update_callback)
+
         if float(self.config['vcd']['api_version']) < float(vCDApiVersion.VERSION_35.value): # noqa: E501
             # Read templates rules from config and update template deinfition
             # in server run-time config
@@ -412,6 +416,33 @@ class Service(object, metaclass=Singleton):
         finally:
             if sysadmin_client:
                 sysadmin_client.logout()
+
+    def _load_placement_policy_details(self,
+                                       msg_update_callback=utils.NullPrinter()):  # noqa: E501
+        msg = "Loading kubernetes runtime placement policies."
+        logger.SERVER_LOGGER.info(msg)
+        msg_update_callback.general(msg)
+        client = None
+        try:
+            sysadmin_client = vcd_utils.get_sys_admin_client()
+            if float(sysadmin_client.get_api_version()) < compute_policy_manager.GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION:
+                msg = f"Placement policies for kubernetes runtimes not"\
+                      f" supported in api version {sysadmin_client.get_api_version()}"  # noqa: E501
+                logger.SERVER_LOGGER.debug(msg)
+                msg_update_callback.info(msg)
+                return
+            placement_policy_name_to_href = {}
+            cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
+                                                              log_wire=self.config['service'].get('log_wire')) # noqa: E501
+            for runtime_policy in shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES:  # noqa: E501
+                placement_policy_name_to_href[runtime_policy] = \
+                    cpm.get_vdc_compute_policy(runtime_policy, is_placement_policy=True)['href']  # noqa: E501
+            self.config['placement_policy_hrefs'] = placement_policy_name_to_href  # noqa: E501
+        except Exception as e:
+            msg = f"Failed to load placement policies to server runtime configt: {str(e)}" # noqa: E501
+            msg_update_callback.error(e)
+            logger.SERVER_LOGGER.error(e)
+            raise(e)
 
     def _load_template_definition_from_catalog(self,
                                                msg_update_callback=utils.NullPrinter()): # noqa: E501

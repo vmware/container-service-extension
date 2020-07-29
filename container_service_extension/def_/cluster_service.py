@@ -193,6 +193,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                         template[LocalTemplateKey.CNI_VERSION])
         def_entity.entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
         def_entity.entity.status.os = template[LocalTemplateKey.OS]
+        def_entity.entityType = def_utils.get_registered_def_entity_type().id
         self.entity_svc. \
             create_entity(def_utils.get_registered_def_entity_type().id,
                           entity=def_entity)
@@ -1538,7 +1539,8 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                     'hostname': name,
                     'password_auto': True,
                     'network': network_name,
-                    'ip_allocation_mode': 'pool'
+                    'ip_allocation_mode': 'pool',
+                    'placement_policy_href': config['placement_policy_hrefs'][template[LocalTemplateKey.KIND]]  # noqa: E501
                 }
                 if sizing_class_href:
                     spec['sizing_policy_href'] = sizing_class_href
@@ -1580,6 +1582,11 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
             # TODO: get details of the exception to determine cause of failure,
             # e.g. not enough resources available.
             node_list = [entry.get('target_vm_name') for entry in specs]
+            if hasattr(err, 'vcd_error') and \
+                "throwPolicyNotAvailableException" in err.vcd_error.get('stackTrace', ''):  # noqa: E501
+                raise e.NodeCreationError(node_list,
+                                          f"OVDC not enabled for {template[LocalTemplateKey.KIND]}")  # noqa: E501
+
             raise e.NodeCreationError(node_list, str(err))
 
         vapp.reload()
