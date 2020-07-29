@@ -1539,11 +1539,11 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                     'hostname': name,
                     'password_auto': True,
                     'network': network_name,
-                    'ip_allocation_mode': 'pool',
-                    'placement_policy_href': config['placement_policy_hrefs'][template[LocalTemplateKey.KIND]]  # noqa: E501
+                    'ip_allocation_mode': 'pool'
                 }
                 if sizing_class_href:
                     spec['sizing_policy_href'] = sizing_class_href
+                    spec['placement_policy_href'] = config['placement_policy_hrefs'][template[LocalTemplateKey.KIND]]  # noqa: E501
                 if cust_script is not None:
                     spec['cust_script'] = cust_script
                 if storage_profile:
