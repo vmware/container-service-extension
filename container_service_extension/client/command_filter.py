@@ -95,6 +95,12 @@ class GroupCommandFilter(click.Group):
     Returns set of supported sub-commands by specific API version
     """
 
+    # TODO(Make get_command hierarchy aware): Since get_command() cannot know
+    # the hierarchical context of 'cmd_name', there is a possibility that
+    # there will be unintended command ommition.
+    # Example: If 'node' command is ommited in cse group, and the filter is
+    # used in pks group (which is part of cse group), then the 'node' command
+    # under pks group also will be ommitted.
     def get_command(self, ctx, cmd_name):
         """Override this click method to customize.
 
@@ -114,8 +120,8 @@ class GroupCommandFilter(click.Group):
                 return None
 
             # Skip the subcommand if not supported
-            unsupported_commands = UNSUPPORTED_SUBCOMMANDS_BY_VERSION.get(version, {}).get(self.name, [])  # noqa: E501
-            if cmd_name in unsupported_commands:
+            unsupported_subcommands = UNSUPPORTED_SUBCOMMANDS_BY_VERSION.get(version, {}).get(self.name, [])  # noqa: E501
+            if cmd_name in unsupported_subcommands:
                 return None
 
             cmd = click.Group.get_command(self, ctx, cmd_name)
