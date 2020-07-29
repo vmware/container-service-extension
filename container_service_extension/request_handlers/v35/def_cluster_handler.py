@@ -42,7 +42,7 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     cluster_id = data[RequestKey.CLUSTER_ID]
     cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
     curr_entity = svc.entity_svc.get_entity(cluster_id)
-    request_utils.validate_def_native_payload(
+    request_utils.validate_request_payload(
         asdict(cluster_entity_spec.spec), asdict(curr_entity.entity.spec),
         exclude_fields={
             RequestKey.WORKERS: [RequestKey.COUNT],
@@ -123,7 +123,7 @@ def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
     cluster_id = data[RequestKey.CLUSTER_ID]
     curr_entity = svc.entity_svc.get_entity(cluster_id)
-    request_utils.validate_def_native_payload(
+    request_utils.validate_request_payload(
         asdict(cluster_entity_spec.spec), asdict(curr_entity.entity.spec),
         exclude_fields={
             RequestKey.K8_DISTRIBUTION: [RequestKey.TEMPLATE_NAME, RequestKey.TEMPLATE_REVISION]  # noqa: E501

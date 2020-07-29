@@ -86,14 +86,14 @@ def validate_payload(payload, required_keys):
     return valid
 
 
-def validate_def_native_payload(desired_spec: dict, actual_spec: dict,
-                                exclude_fields={}, dict_name=None):
+def validate_request_payload(desired_spec: dict, actual_spec: dict,
+                             exclude_fields={}, dict_name=None):
     """Validate the desired spec with the current spec.
 
     :param dict desired_spec: input spec
     :param dict actual_spec: reference spec to validate the desired spec
     :param dict exclude_fields: exclude the list of given sub-keys from validation  # noqa: E501
-    :param str dict_name: name of the dictionary key whose nested dict that undergoes validation
+    :param str dict_name: Name of the property - whose value is of type dict and which has to undergo further validation.
     :return: true on successful validation
     :rtype: bool
     :raises: BadRequestError on encountering invalid payload value
@@ -101,9 +101,9 @@ def validate_def_native_payload(desired_spec: dict, actual_spec: dict,
     for payload_key, payload_val in desired_spec.items():
 
         if isinstance(payload_val, dict):
-            validate_def_native_payload(payload_val, actual_spec.get(payload_key),  # noqa: E501
-                                        exclude_fields=exclude_fields,
-                                        dict_name=payload_key)
+            validate_request_payload(payload_val, actual_spec.get(payload_key),
+                                     exclude_fields=exclude_fields,
+                                     dict_name=payload_key)
         else:
             if payload_key in exclude_fields.get(dict_name, []):
                 continue
