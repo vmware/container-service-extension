@@ -374,3 +374,28 @@ def is_v35_supported_by_cse_server():
     import container_service_extension.utils as utils
     api_version = utils.get_server_api_version()
     return float(api_version) >= float(vCDApiVersion.VERSION_35.value)
+
+
+def flatten_dictionary(input_dict, parent_key='', separator='.'):
+    """Flatten a given dictionary with nested dictionaries if any.
+
+    Example: { 'a' : {'b':'c', 'd': {'e' : 'f'}}, 'g' : 'h'} will be flattened
+    to {'a.b': 'c', 'a.d.e': 'f', 'g': 'h'}
+
+    This will flatten only the values of dict type.
+
+    :param dict input_dict:
+    :param str parent_key: parent key that gets prefixed while forming flattened key  # noqa: E501
+    :param str separator: use the separator to form flattened key
+    :return: flattened dictionary
+    :rtype: dict
+    """
+    flattened_dict = {}
+    for k in input_dict.keys():
+        val = input_dict.get(k)
+        key_prefix = f"{parent_key}{k}"
+        if isinstance(val, dict):
+            flattened_dict.update(flatten_dictionary(val, f"{key_prefix}{separator}"))  # noqa: E501
+        else:
+            flattened_dict.update({key_prefix: val})
+    return flattened_dict
