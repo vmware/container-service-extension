@@ -255,6 +255,7 @@ class ClusterEntity:
         self.kind = kind
         self.api_version = api_version
 
+
 @dataclass()
 class Owner:
     name: str = None
