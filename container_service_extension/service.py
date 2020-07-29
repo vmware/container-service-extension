@@ -438,7 +438,7 @@ class Service(object, metaclass=Singleton):
             msg = f"Failed to load placement policies to server runtime configt: {str(e)}" # noqa: E501
             msg_update_callback.error(e)
             logger.SERVER_LOGGER.error(e)
-            raise(e)
+            raise
 
     def _load_template_definition_from_catalog(self,
                                                msg_update_callback=utils.NullPrinter()): # noqa: E501

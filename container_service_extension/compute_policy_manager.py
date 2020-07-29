@@ -870,6 +870,7 @@ class ComputePolicyManager:
                     if is_placement_policy:
                         if hasattr(vm_resource, 'ComputePolicy') and \
                                 not hasattr(vm_resource.ComputePolicy, 'VmSizingPolicy'):  # noqa: E501
+                            # Updating sizing policy for the VM
                             _task = vm.update_compute_policy(
                                 compute_policy_href=system_default_href)
                             operation_msg = \
