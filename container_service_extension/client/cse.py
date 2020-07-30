@@ -28,7 +28,8 @@ import container_service_extension.shared_constants as shared_constants
 import container_service_extension.utils as utils
 
 
-@vcd.group(short_help='Manage Native Kubernetes clusters')
+@vcd.group(short_help='Manage Native Kubernetes clusters',
+           cls=cmd_filter.GroupCommandFilter)
 @click.pass_context
 def cse(ctx):
     """Manage Native Kubernetes clusters.
