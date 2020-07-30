@@ -193,7 +193,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                                         template[LocalTemplateKey.CNI_VERSION])
         def_entity.entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
         def_entity.entity.status.os = template[LocalTemplateKey.OS]
-        def_entity.entityType = def_utils.get_registered_def_entity_type().id
         self.entity_svc. \
             create_entity(def_utils.get_registered_def_entity_type().id,
                           entity=def_entity)
