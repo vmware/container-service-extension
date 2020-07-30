@@ -24,7 +24,7 @@ import container_service_extension.exceptions as cse_exceptions
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
 
-DUPLICATE_CLUSTER_ERROR_MSG = "Duplicated clusters found. Please use --k8-runtime for the unique identification"  # noqa: E501
+DUPLICATE_CLUSTER_ERROR_MSG = "Duplicate clusters found. Please use --k8-runtime for the unique identification"  # noqa: E501
 
 
 class DefEntityClusterApi:
