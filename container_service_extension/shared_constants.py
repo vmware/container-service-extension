@@ -7,6 +7,10 @@ from enum import Enum
 from enum import unique
 
 
+CSE_URL_FRAGMENT = 'cse'
+PKS_URL_FRAGMENT = 'pks'
+CSE_3_0_URL_FRAGMENT = '3.0'
+
 ERROR_DESCRIPTION_KEY = "error description"
 ERROR_MINOR_CODE_KEY = "minor error code"
 UNKNOWN_ERROR_MESSAGE = "Unknown error. Please contact your System " \
