@@ -12,7 +12,6 @@ import container_service_extension.client.response_processor as response_process
 import container_service_extension.client.utils as client_utils
 from container_service_extension.def_ import models as def_models
 import container_service_extension.def_.entity_service as def_entity_svc
-import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as cse_exceptions
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
@@ -31,7 +30,7 @@ class NativeClusterApi:
 
     def __init__(self, client):
         self._client = client
-        self._uri = f"{self._client.get_api_uri()}/cse/{def_utils.V35_END_POINT_DISCRIMINATOR}"  # noqa: E501
+        self._uri = f"{self._client.get_api_uri()}/{shared_constants.CSE_URL_FRAGMENT}/{shared_constants.CSE_3_0_URL_FRAGMENT}"  # noqa: E501
         logger_wire = logger.NULL_LOGGER
         if os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING):
             logger_wire = logger.CLIENT_WIRE_LOGGER

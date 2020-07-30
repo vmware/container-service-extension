@@ -4,17 +4,16 @@
 
 from container_service_extension.client.response_processor import process_response # noqa: E501
 from container_service_extension.logger import CLIENT_LOGGER
-from container_service_extension.shared_constants import RequestKey
-from container_service_extension.shared_constants import RequestMethod
+import container_service_extension.shared_constants as shared_constants
 
 
 class LegacyNativeClusterApi:
     def __init__(self, client):
         self.client = client
-        self._uri = self.client.get_api_uri() + '/cse'
+        self._uri = f"{self.client.get_api_uri()}/{shared_constants.CSE_URL_FRAGMENT}"  # noqa: E501
 
     def get_templates(self):
-        method = RequestMethod.GET
+        method = shared_constants.RequestMethod.GET
         uri = f"{self._uri}/templates"
         response = self.client._do_request_prim(
             method,
@@ -24,14 +23,15 @@ class LegacyNativeClusterApi:
         return process_response(response)
 
     def list_clusters(self, vdc=None, org=None):
-        method = RequestMethod.GET
+        method = shared_constants.RequestMethod.GET
         uri = f"{self._uri}/clusters"
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
             accept_type='application/json',
-            params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
+            params={shared_constants.RequestKey.ORG_NAME: org,
+                    shared_constants.RequestKey.OVDC_NAME: vdc})
         result = process_response(response)
         CLIENT_LOGGER.debug(result)
         clusters = []
@@ -50,37 +50,39 @@ class LegacyNativeClusterApi:
         return clusters
 
     def get_cluster_info(self, name, org=None, vdc=None):
-        method = RequestMethod.GET
+        method = shared_constants.RequestMethod.GET
         uri = f'{self._uri}/cluster/{name}'
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
             accept_type='application/json',
-            params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
+            params={shared_constants.RequestKey.ORG_NAME: org,
+                    shared_constants.RequestKey.OVDC_NAME: vdc})
         return process_response(response)
 
     def get_upgrade_plan(self, cluster_name, org=None, vdc=None):
-        method = RequestMethod.GET
+        method = shared_constants.RequestMethod.GET
         uri = f'{self._uri}/cluster/{cluster_name}/upgrade-plan'
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
             accept_type='application/json',
-            params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
+            params={shared_constants.RequestKey.ORG_NAME: org,
+                    shared_constants.RequestKey.OVDC_NAME: vdc})
         return process_response(response)
 
     def upgrade_cluster(self, cluster_name, template_name, template_revision,
                         org_name=None, ovdc_name=None):
-        method = RequestMethod.POST
+        method = shared_constants.RequestMethod.POST
         uri = f'{self._uri}/cluster/{cluster_name}/action/upgrade'
         data = {
-            RequestKey.CLUSTER_NAME: cluster_name,
-            RequestKey.TEMPLATE_NAME: template_name,
-            RequestKey.TEMPLATE_REVISION: template_revision,
-            RequestKey.ORG_NAME: org_name,
-            RequestKey.OVDC_NAME: ovdc_name,
+            shared_constants.RequestKey.CLUSTER_NAME: cluster_name,
+            shared_constants.RequestKey.TEMPLATE_NAME: template_name,
+            shared_constants.RequestKey.TEMPLATE_REVISION: template_revision,
+            shared_constants.RequestKey.ORG_NAME: org_name,
+            shared_constants.RequestKey.OVDC_NAME: ovdc_name,
         }
         response = self.client._do_request_prim(
             method,
@@ -138,22 +140,22 @@ class LegacyNativeClusterApi:
 
         :return: (json) A parsed json object describing the requested cluster.
         """
-        method = RequestMethod.POST
+        method = shared_constants.RequestMethod.POST
         uri = f"{self._uri}/clusters"
         data = {
-            RequestKey.CLUSTER_NAME: name,
-            RequestKey.NUM_WORKERS: node_count,
-            RequestKey.OVDC_NAME: vdc,
-            RequestKey.NUM_CPU: cpu,
-            RequestKey.MB_MEMORY: memory,
-            RequestKey.NETWORK_NAME: network_name,
-            RequestKey.STORAGE_PROFILE_NAME: storage_profile,
-            RequestKey.SSH_KEY: ssh_key,
-            RequestKey.TEMPLATE_NAME: template_name,
-            RequestKey.TEMPLATE_REVISION: template_revision,
-            RequestKey.ENABLE_NFS: enable_nfs,
-            RequestKey.ROLLBACK: rollback,
-            RequestKey.ORG_NAME: org
+            shared_constants.RequestKey.CLUSTER_NAME: name,
+            shared_constants.RequestKey.NUM_WORKERS: node_count,
+            shared_constants.RequestKey.OVDC_NAME: vdc,
+            shared_constants.RequestKey.NUM_CPU: cpu,
+            shared_constants.RequestKey.MB_MEMORY: memory,
+            shared_constants.RequestKey.NETWORK_NAME: network_name,
+            shared_constants.RequestKey.STORAGE_PROFILE_NAME: storage_profile,
+            shared_constants.RequestKey.SSH_KEY: ssh_key,
+            shared_constants.RequestKey.TEMPLATE_NAME: template_name,
+            shared_constants.RequestKey.TEMPLATE_REVISION: template_revision,
+            shared_constants.RequestKey.ENABLE_NFS: enable_nfs,
+            shared_constants.RequestKey.ROLLBACK: rollback,
+            shared_constants.RequestKey.ORG_NAME: org
         }
         response = self.client._do_request_prim(
             method,
@@ -176,20 +178,20 @@ class LegacyNativeClusterApi:
                        cpu=None,
                        memory=None,
                        ssh_key=None):
-        method = RequestMethod.PUT
+        method = shared_constants.RequestMethod.PUT
         uri = f"{self._uri}/cluster/{cluster_name}"
         data = {
-            RequestKey.CLUSTER_NAME: cluster_name,
-            RequestKey.NUM_WORKERS: node_count,
-            RequestKey.ORG_NAME: org,
-            RequestKey.OVDC_NAME: vdc,
-            RequestKey.NETWORK_NAME: network_name,
-            RequestKey.ROLLBACK: rollback,
-            RequestKey.TEMPLATE_NAME: template_name,
-            RequestKey.TEMPLATE_REVISION: template_revision,
-            RequestKey.NUM_CPU: cpu,
-            RequestKey.MB_MEMORY: memory,
-            RequestKey.SSH_KEY: ssh_key
+            shared_constants.RequestKey.CLUSTER_NAME: cluster_name,
+            shared_constants.RequestKey.NUM_WORKERS: node_count,
+            shared_constants.RequestKey.ORG_NAME: org,
+            shared_constants.RequestKey.OVDC_NAME: vdc,
+            shared_constants.RequestKey.NETWORK_NAME: network_name,
+            shared_constants.RequestKey.ROLLBACK: rollback,
+            shared_constants.RequestKey.TEMPLATE_NAME: template_name,
+            shared_constants.RequestKey.TEMPLATE_REVISION: template_revision,
+            shared_constants.RequestKey.NUM_CPU: cpu,
+            shared_constants.RequestKey.MB_MEMORY: memory,
+            shared_constants.RequestKey.SSH_KEY: ssh_key
         }
         response = self.client._do_request_prim(
             method,
@@ -201,30 +203,32 @@ class LegacyNativeClusterApi:
         return process_response(response)
 
     def delete_cluster(self, cluster_name, org=None, vdc=None):
-        method = RequestMethod.DELETE
+        method = shared_constants.RequestMethod.DELETE
         uri = f"{self._uri}/cluster/{cluster_name}"
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
             accept_type='application/json',
-            params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
+            params={shared_constants.RequestKey.ORG_NAME: org,
+                    shared_constants.RequestKey.OVDC_NAME: vdc})
         return process_response(response)
 
     def get_cluster_config(self, cluster_name, org=None, vdc=None):
-        method = RequestMethod.GET
+        method = shared_constants.RequestMethod.GET
         uri = f"{self._uri}/cluster/{cluster_name}/config"
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
             accept_type='application/json',
-            params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
+            params={shared_constants.RequestKey.ORG_NAME: org,
+                    shared_constants.RequestKey.OVDC_NAME: vdc})
 
         return process_response(response)
 
     def get_node_info(self, cluster_name, node_name, org=None, vdc=None):
-        method = RequestMethod.GET
+        method = shared_constants.RequestMethod.GET
         uri = f"{self._uri}/node/{node_name}"
         response = self.client._do_request_prim(
             method,
@@ -232,9 +236,9 @@ class LegacyNativeClusterApi:
             self.client._session,
             accept_type='application/json',
             params={
-                RequestKey.ORG_NAME: org,
-                RequestKey.OVDC_NAME: vdc,
-                RequestKey.CLUSTER_NAME: cluster_name
+                shared_constants.RequestKey.ORG_NAME: org,
+                shared_constants.RequestKey.OVDC_NAME: vdc,
+                shared_constants.RequestKey.CLUSTER_NAME: cluster_name
             })
         return process_response(response)
 
@@ -278,22 +282,22 @@ class LegacyNativeClusterApi:
 
         :return: (json) A parsed json object describing the requested cluster.
         """
-        method = RequestMethod.POST
+        method = shared_constants.RequestMethod.POST
         uri = f'{self._uri}/nodes'
         data = {
-            RequestKey.CLUSTER_NAME: cluster_name,
-            RequestKey.NUM_WORKERS: node_count,
-            RequestKey.ORG_NAME: org,
-            RequestKey.OVDC_NAME: vdc,
-            RequestKey.NUM_CPU: cpu,
-            RequestKey.MB_MEMORY: memory,
-            RequestKey.NETWORK_NAME: network_name,
-            RequestKey.STORAGE_PROFILE_NAME: storage_profile,
-            RequestKey.SSH_KEY: ssh_key,
-            RequestKey.TEMPLATE_NAME: template_name,
-            RequestKey.TEMPLATE_REVISION: template_revision,
-            RequestKey.ENABLE_NFS: enable_nfs,
-            RequestKey.ROLLBACK: rollback
+            shared_constants.RequestKey.CLUSTER_NAME: cluster_name,
+            shared_constants.RequestKey.NUM_WORKERS: node_count,
+            shared_constants.RequestKey.ORG_NAME: org,
+            shared_constants.RequestKey.OVDC_NAME: vdc,
+            shared_constants.RequestKey.NUM_CPU: cpu,
+            shared_constants.RequestKey.MB_MEMORY: memory,
+            shared_constants.RequestKey.NETWORK_NAME: network_name,
+            shared_constants.RequestKey.STORAGE_PROFILE_NAME: storage_profile,
+            shared_constants.RequestKey.SSH_KEY: ssh_key,
+            shared_constants.RequestKey.TEMPLATE_NAME: template_name,
+            shared_constants.RequestKey.TEMPLATE_REVISION: template_revision,
+            shared_constants.RequestKey.ENABLE_NFS: enable_nfs,
+            shared_constants.RequestKey.ROLLBACK: rollback
         }
         response = self.client._do_request_prim(
             method,
@@ -314,13 +318,13 @@ class LegacyNativeClusterApi:
         :return: (json) A parsed json object describing the requested cluster
             operation.
         """
-        method = RequestMethod.DELETE
+        method = shared_constants.RequestMethod.DELETE
         uri = f"{self._uri}/nodes"
         data = {
-            RequestKey.CLUSTER_NAME: cluster_name,
-            RequestKey.ORG_NAME: org,
-            RequestKey.OVDC_NAME: vdc,
-            RequestKey.NODE_NAMES_LIST: nodes
+            shared_constants.RequestKey.CLUSTER_NAME: cluster_name,
+            shared_constants.RequestKey.ORG_NAME: org,
+            shared_constants.RequestKey.OVDC_NAME: vdc,
+            shared_constants.RequestKey.NODE_NAMES_LIST: nodes
         }
         response = self.client._do_request_prim(
             method,
