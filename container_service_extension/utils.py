@@ -13,7 +13,6 @@ import threading
 
 import click
 import pkg_resources
-from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
 import requests
 import semantic_version
 
