@@ -257,6 +257,18 @@ class ClusterEntity:
 
 
 @dataclass()
+class Owner:
+    name: str = None
+    id: str = None
+
+
+@dataclass()
+class Org:
+    name: str = None
+    id: str = None
+
+
+@dataclass()
 class DefEntity:
     """Represents defined entity instance.
 
@@ -273,13 +285,15 @@ class DefEntity:
 
     def __init__(self, entity: ClusterEntity, name: str = None, id: str = None,
                  entityType: str = None, externalId: str = None,
-                 state: str = None):
+                 state: str = None, owner: Owner = None, org: Org = None):
         self.entity = ClusterEntity(**entity) if isinstance(entity, dict) else entity  # noqa: E501
         self.name = name or self.entity.metadata.cluster_name
         self.id = id
         self.entityType = entityType
         self.externalId = externalId
         self.state = state
+        self.owner = Owner(**owner) if isinstance(owner, dict) else owner
+        self.org = Org(**org) if isinstance(org, dict) else org
 
 
 @dataclass()

@@ -28,7 +28,8 @@ import container_service_extension.shared_constants as shared_constants
 import container_service_extension.utils as utils
 
 
-@vcd.group(short_help='Manage Native Kubernetes clusters')
+@vcd.group(short_help='Manage Native Kubernetes clusters',
+           cls=cmd_filter.GroupCommandFilter)
 @click.pass_context
 def cse(ctx):
     """Manage Native Kubernetes clusters.
@@ -545,9 +546,9 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
 
 
 @cluster_group.command('apply',
-                       help="Example:vcd cse cluster apply input_spec.yaml"
-                       " \n\nExample:vcd cse cluster apply --sample"
-                       " \n\nExample:vcd cse cluster apply -s -o output.yaml",
+                       help="Examples:\n\nvcd cse cluster apply input_spec.yaml"  # noqa: E501
+                       " \n\nvcd cse cluster apply --sample"
+                       " \n\nvcd cse cluster apply -s -o output.yaml",
                        short_help='apply the cluster configuration defined '
                                   'in the file to either create new a cluster '
                                   'or update the existing cluster or'
@@ -620,8 +621,8 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
 
 
 @cluster_group.command('upgrade-plan',
-                       help="Example:vcd cse cluster upgrade-plan my-cluster"
-                            " \n\nExample:vcd cse cluster upgrade-plan --k8-runtime native my-cluster",  # noqa: E501
+                       help="Examples:\n\nvcd cse cluster upgrade-plan my-cluster"  # noqa: E501
+                            " \n\nvcd cse cluster upgrade-plan --k8-runtime native my-cluster",  # noqa: E501
                        short_help='Display templates that the specified '
                                   'cluster can upgrade to')
 @click.pass_context
@@ -682,7 +683,7 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name, k8_runtime=None):
 
 
 @cluster_group.command('upgrade',
-                       help="Example:\n\nvcd cse cluster upgrade my-cluster ubuntu-16.04_k8-1.18_weave-2.6.4 1"  # noqa: E501
+                       help="Examples:\n\nvcd cse cluster upgrade my-cluster ubuntu-16.04_k8-1.18_weave-2.6.4 1"  # noqa: E501
                             "\n\nvcd cse cluster upgrade -k native my-cluster ubuntu-16.04_k8.. 2",  # noqa: E501
                        short_help="Upgrade cluster software to specified "
                                   "template's software versions")
@@ -738,7 +739,10 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
         CLIENT_LOGGER.error(str(e))
 
 
-@cluster_group.command('config', short_help='Display cluster configuration')
+@cluster_group.command('config',
+                       help="Examples:\n\nvcd cse cluster config my-cluster"
+                            " \n\nvcd cse cluster config -k native my-cluster",  # noqa: E501
+                       short_help='Display cluster configuration')
 @click.pass_context
 @click.argument('name', required=True)
 @click.option(
@@ -757,7 +761,15 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
     default=None,
     metavar='VDC_NAME',
     help='Restrict cluster search to specified org VDC')
-def cluster_config(ctx, name, vdc, org):
+@click.option(
+    '-k',
+    '--k8-runtime',
+    'k8_runtime',
+    default=None,
+    required=False,
+    metavar='K8-RUNTIME',
+    help='Restrict cluster search to cluster kind')
+def cluster_config(ctx, name, vdc, org, k8_runtime=None):
     """Display cluster configuration.
 
     To write to a file: `vcd cse cluster config mycluster > ~/.kube/my_config`
@@ -766,7 +778,7 @@ def cluster_config(ctx, name, vdc, org):
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
-        cluster = Cluster(client)
+        cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
         cluster_config = cluster.get_cluster_config(name, vdc=vdc, org=org) \

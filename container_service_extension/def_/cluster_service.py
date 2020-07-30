@@ -535,7 +535,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             raise e.CseServerError(
                 f"Worker count must be >= 0 (received {desired_worker_count})")
         elif num_nfs_to_add < 0:
-            raise e.CseServerError(f"Scaling down nfs nodes is not supported")
+            raise e.CseServerError("Scaling down nfs nodes is not supported")
 
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
@@ -1132,7 +1132,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                                        f"cluster {cluster_name}({cluster_id})")
             desired_worker_count = cluster_spec.spec.workers.count
             nodes_to_del = [node.name for node in
-                           curr_entity.entity.status.nodes.workers[desired_worker_count:]]  # noqa: E501
+                            curr_entity.entity.status.nodes.workers[
+                            desired_worker_count:]]
 
         vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
         try:

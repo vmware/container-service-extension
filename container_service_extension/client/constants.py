@@ -38,3 +38,4 @@ class TKGClusterEntityFilterKey(str, Enum):
 
     CLUSTER_NAME = 'entity.metadata.name'
     VDC_NAME = 'entity.metadata.virtualDataCenterName'
+    ORG_NAME = 'org.name'
