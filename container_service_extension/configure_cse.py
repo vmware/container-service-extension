@@ -472,10 +472,10 @@ def _register_cse_as_extension(client, routing_key, exchange,
     """
     ext = api_extension.APIExtension(client)
     patterns = [
-        f'/api/{server_constants.CSE_SERVICE_NAME}',
-        f'/api/{server_constants.CSE_SERVICE_NAME}/.*',
-        f'/api/{server_constants.PKS_SERVICE_NAME}',
-        f'/api/{server_constants.PKS_SERVICE_NAME}/.*',
+        f'/api/{shared_constants.CSE_URL_FRAGMENT}',
+        f'/api/{shared_constants.CSE_URL_FRAGMENT}/.*',
+        f'/api/{shared_constants.PKS_URL_FRAGMENT}',
+        f'/api/{shared_constants.PKS_URL_FRAGMENT}/.*',
     ]
 
     vcd_api_versions = client.get_supported_versions_list()
@@ -1084,10 +1084,10 @@ def _update_cse_extension(client, routing_key, exchange,
     """."""
     ext = api_extension.APIExtension(client)
     patterns = [
-        f'/api/{server_constants.CSE_SERVICE_NAME}',
-        f'/api/{server_constants.CSE_SERVICE_NAME}/.*',
-        f'/api/{server_constants.PKS_SERVICE_NAME}',
-        f'/api/{server_constants.PKS_SERVICE_NAME}/.*',
+        f'/api/{shared_constants.CSE_URL_FRAGMENT}',
+        f'/api/{shared_constants.CSE_URL_FRAGMENT}/.*',
+        f'/api/{shared_constants.PKS_URL_FRAGMENT}',
+        f'/api/{shared_constants.PKS_URL_FRAGMENT}/.*',
     ]
 
     description = _construct_cse_extension_description(target_vcd_api_version)

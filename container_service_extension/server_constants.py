@@ -18,13 +18,6 @@ CSE_SERVICE_NAMESPACE = 'cse'
 EXCHANGE_TYPE = 'direct'
 SYSTEM_ORG_NAME = 'system'
 
-# CSE SERVICE; used for registering CSE to vCD as an api extension service.
-CSE_SERVICE_NAME = 'cse'
-PKS_SERVICE_NAME = 'pks'
-CSE_SERVICE_NAMESPACE = 'cse'
-EXCHANGE_TYPE = 'direct'
-SYSTEM_ORG_NAME = 'system'
-
 # DEPLOY RIGHTS; used by authorization framework to weed out unauthorized calls
 CSE_NATIVE_DEPLOY_RIGHT_NAME = 'CSE NATIVE DEPLOY RIGHT'
 CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION = 'Right necessary to deploy kubernetes ' \
