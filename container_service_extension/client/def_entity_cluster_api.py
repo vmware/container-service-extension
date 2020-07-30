@@ -8,18 +8,12 @@ import yaml
 
 import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
-from container_service_extension.client.tkgclient import TkgClusterApi
-from container_service_extension.client.tkgclient.api_client import ApiClient
-from container_service_extension.client.tkgclient.configuration import Configuration  # noqa: E501
-from container_service_extension.client.tkgclient.models.tkg_cluster import TkgCluster  # noqa: E501
+import container_service_extension.client.tkg_cluster_api as tkg_cluster_api
 import container_service_extension.client.utils as client_utils
 import container_service_extension.def_.entity_service as def_entity_svc
 from container_service_extension.def_.utils import DEF_CSE_VENDOR
 from container_service_extension.def_.utils import DEF_NATIVE_ENTITY_TYPE_NSS
 from container_service_extension.def_.utils import DEF_NATIVE_ENTITY_TYPE_VERSION # noqa: E501
-from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_NSS
-from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_VERSION
-from container_service_extension.def_.utils import DEF_VMWARE_VENDOR
 import container_service_extension.exceptions as cse_exceptions
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
@@ -49,85 +43,7 @@ class DefEntityClusterApi:
                 client=client, logger_debug=logger.CLIENT_LOGGER,
                 logger_wire=logger_wire)
         self._nativeCluster = NativeClusterApi(client)
-        self.tkg_client = self._get_tkg_client()
-
-    def _get_tkg_client(self):
-        tkg_config = Configuration()
-        tkg_config.host = f"{self._client.get_cloudapi_uri()}/1.0.0/"
-        tkg_config.verify_ssl = self._client._verify_ssl_certs
-        tkg_client = ApiClient(configuration=tkg_config)
-        jwt_token = self._client.get_access_token()
-        if jwt_token:
-            tkg_client.set_default_header("Authorization", f"Bearer {jwt_token}")  # noqa: E501
-        else:
-            legacy_token = self._client.get_xvcloud_authorization_token()
-            tkg_client.set_default_header("x-vcloud-authorization", legacy_token)  # noqa: E501
-        api_version = self._client.get_api_version()
-        tkg_client.set_default_header("Accept", f"application/json;version={api_version}")  # noqa: E501
-        return tkg_client
-
-    def get_tkg_cluster(self, id):
-        """Sample method to use tkg_client.
-
-        To be modified or removed as per the needs of CSE-CLI
-
-        :param id: Id of the cluster
-        :return: Tkg cluster
-        :rtype: dict
-        """
-        tkg_cluster_api = TkgClusterApi(api_client=self.tkg_client)
-        # Returns tuple of response_data, response_status, response_headers
-        response = tkg_cluster_api.get_tkg_cluster(id)
-        cluster: TkgCluster = response[0]
-        return cluster.to_dict()
-
-    def list_tkg_clusters(self, vdc=None, org=None):
-        """List all the TKG clusters.
-
-        :param str vdc: name of vdc to filter by
-        :param str org: name of the org to filter by
-        :return: list of TKG cluster information.
-        :rtype: List[dict]
-        """
-        tkg_cluster_api = TkgClusterApi(api_client=self.tkg_client)
-        filters = []
-        if org:
-            # TODO(Org filter not working)
-            # filters.append((cli_constants.TKGClusterEntityFilterKey.ORG_NAME.value, org))  # noqa: E501
-            pass
-        if vdc:
-            filters.append((cli_constants.TKGClusterEntityFilterKey.VDC_NAME.value, vdc))  # noqa: E501
-        filter_string = None
-        if filters:
-            filter_string = ";".join([f"{f[0]}=={f[1]}" for f in filters])  # noqa: E501
-        # additional_data in the following statement represents the information
-        # associated with the defined entity
-        (entities, status, headers, additional_data) = \
-            tkg_cluster_api.list_tkg_clusters(
-                f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}",  # noqa: E501
-                _return_http_data_only=False,
-                object_filter=filter_string)
-        clusters = []
-        for i in range(len(entities)):
-            # NOTE: additional_data will contain corresponding defined entity
-            # details
-            entity: TkgCluster = entities[i]
-            entity_properties = additional_data[i]
-            logger.CLIENT_LOGGER.debug(f"TKG Defined entity list from server: {entity}")  # noqa: E501
-            cluster = {
-                cli_constants.CLIOutputKey.CLUSTER_NAME.value: entity.metadata.name, # noqa: E501
-                cli_constants.CLIOutputKey.VDC.value: entity.metadata.virtual_data_center_name, # noqa: E501
-                # TODO(TKG): Missing org name in the response
-                cli_constants.CLIOutputKey.ORG.value: entity_properties['org']['name'], # noqa: E501
-                cli_constants.CLIOutputKey.K8S_RUNTIME.value: cli_constants.TKG_CLUSTER_RUNTIME, # noqa: E501
-                cli_constants.CLIOutputKey.K8S_VERSION.value: entity.spec.distribution.version, # noqa: E501
-                # TODO(TKG): status field doesn't have any attributes
-                cli_constants.CLIOutputKey.STATUS.value: entity.status.phase if entity.status else 'N/A',  # noqa: E501
-                # TODO(Owner in CSE server response): Owner value is needed
-                cli_constants.CLIOutputKey.OWNER.value: entity_properties['owner']['name'],  # noqa: E501
-            }
-            clusters.append(cluster)
-        return clusters
+        self._tkgCluster = tkg_cluster_api.TKGClusterApi(client)
 
     def list_clusters(self, vdc=None, org=None, **kwargs):
         """Get collection of clusters using DEF API.
@@ -147,7 +63,7 @@ class DefEntityClusterApi:
             version=DEF_NATIVE_ENTITY_TYPE_VERSION,
             filters=filters)
 
-        clusters = self.list_tkg_clusters(vdc=vdc, org=org) or []
+        clusters = self._tkgCluster.list_tkg_clusters(vdc=vdc, org=org) or []
         for def_entity in native_entities:
             entity = def_entity.entity
             logger.CLIENT_LOGGER.debug(f"Native Defined entity list from server: {def_entity}")  # noqa: E501
@@ -186,22 +102,12 @@ class DefEntityClusterApi:
         native_def_entity_dict = {}
         if native_def_entity:
             native_def_entity_dict = asdict(native_def_entity)
-        # TODO add filters for TKG cluster
-        tkg_cluster_api = TkgClusterApi(api_client=self.tkg_client)
-
-        filters = [(cli_constants.TKGClusterEntityFilterKey.CLUSTER_NAME.value, cluster_name)]  # noqa: E501
-        if org:
-            # TODO(Org filed for TKG): Add filter once schema is updated
-            pass
-        if vdc:
-            filters.append((cli_constants.TKGClusterEntityFilterKey.VDC_NAME.value, vdc))  # noqa: E501
-        filter_string = ";".join([f"{f[0]}=={f[1]}" for f in filters])
-        response = \
-            tkg_cluster_api.list_tkg_clusters(
-                f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}", # noqa: E501
-                object_filter=filter_string)
-        tkg_entities = [tkg_entity.to_dict() for tkg_entity in response[0]]
-        return tkg_entities, native_def_entity_dict
+        tkg_entities = self._tkgCluster.get_tkg_clusters_by_name(cluster_name,
+                                                                 vdc=vdc,
+                                                                 org=org)
+        # convert the tkg entities to dictionary
+        tkg_entity_dicts = [tkg_entity.to_dict() for tkg_entity in tkg_entities]
+        return tkg_entity_dicts, native_def_entity_dict
 
     def get_cluster_info(self, cluster_name, org=None, vdc=None, **kwargs):
         """Get cluster information using DEF API.
