@@ -150,7 +150,7 @@ def node_create(request_data, op_ctx: ctx.OperationContext):
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_DELETE)
 @request_utils.v35_api_exception_handler
-def node_delete(request_data, op_ctx: ctx.OperationContext):
+def nfs_node_delete(data, op_ctx: ctx.OperationContext):
     """Request handler for node delete operation.
 
     Required data: cluster_name, node_names_list
@@ -160,9 +160,10 @@ def node_delete(request_data, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    raise NotImplementedError
     svc = cluster_svc.ClusterService(op_ctx)
-    return svc.delete_nodes(data=request_data)
+    cluster_id = data[RequestKey.CLUSTER_ID]
+    node_name = data[RequestKey.NODE_NAME]
+    return asdict(svc.delete_nodes(cluster_id, [node_name]))
 
 
 @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_INFO)

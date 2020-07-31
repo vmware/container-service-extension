@@ -1879,10 +1879,12 @@ def _create_def_entity_for_existing_clusters(
                 control_plane=def_models.ControlPlane(
                     count=len(cluster['master_nodes']),
                     storage_profile=cluster['storage_profile_name']),
+                nfs=def_models.Nfs(
+                    count=len(cluster['nfs_nodes']),
+                    storage_profile=cluster['storage_profile_name']),
                 settings=def_models.Settings(
                     network=cluster['network_name'],
-                    ssh_key="", # Impossible to get this value from clusters
-                    enable_nfs=len(cluster['nfs_nodes']) > 0),
+                    ssh_key=""),  # Impossible to get this value from clusters
                 k8_distribution=def_models.Distribution(
                     template_name=cluster['template_name'],
                     template_revision=int(cluster['template_revision']))),

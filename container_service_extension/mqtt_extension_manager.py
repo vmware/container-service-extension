@@ -540,6 +540,7 @@ class MQTTExtensionManager:
 
         :param str filter_id: filter id
 
+
         :raises: Exception if error in making DELETE request
         """
         absolute_api_filters_url = f"{self._sysadmin_client.get_api_uri()}" \

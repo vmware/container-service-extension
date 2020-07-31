@@ -82,9 +82,9 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
         if num_missing_metadata_keys > 0:
             # This catalog item has partial CSE metadata, so skip it but also
             # log relevant information.
-            msg = f"Catalog item '{item_name}' missing " \
-                  f"{num_missing_metadata_keys} metadata: " \
-                  f"{missing_metadata_keys}" # noqa: F841
+            # msg = f"Catalog item '{item_name}' missing " \
+            #       f"{num_missing_metadata_keys} metadata: " \
+            #       f"{missing_metadata_keys}" # noqa: F841
             # ToDo: Log the msg.
             continue
 
