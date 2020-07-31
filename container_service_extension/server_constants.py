@@ -61,11 +61,15 @@ CSE_CLUSTER_KUBECONFIG_PATH = '/root/.kube/config'
 # TODO: version should be major.minor.patch
 #  Also, patch change doesn't mean version needs to be updated,
 #  but major upgrade with api changes should lead to updating the version
+ADMIN_EXT_SERVICE_PATH = 'admin/extension/service'
+API_FILTER_PATH = 'apifilter'
+API_FILTERS_PATH = 'apifilters'
+EXTENSIONS_API_PATH = 'extensions/api'
 MQTT_EXTENSION_VERSION = '1.0.0'
 MQTT_EXTENSION_VENDOR = 'VMWare'
 MQTT_EXTENSION_PRIORITY = 100
 MQTT_MIN_API_VERSION = 35.0
-MQTT_API_FILTER_PATTERN = '/api/mqttEndpoint'
+TOKEN_PATH = 'tokens'
 
 
 @unique
@@ -255,3 +259,26 @@ class TemplateBuildKey(str, Enum):
     IP_ALLOCATION_MODE = 'ip_allocation_mode'
     STORAGE_PROFILE = 'storage_profile'
     CSE_PLACEMENT_POLICY = 'cse_placement_policy'
+
+
+@unique
+class MQTTExtKey(str, Enum):
+    EXT_NAME = 'name'
+    EXT_VERSION = 'version'
+    EXT_VENDOR = 'vendor'
+    EXT_PRIORITY = 'priority'
+    EXT_ENABLED = 'enabled'
+    EXT_AUTH_ENABLED = 'authorizationEnabled'
+    EXT_DESCRIPTION = 'description'
+    EXT_URN_ID = 'ext_urn_id'
+    EXT_LISTEN_TOPIC = 'listen_topic'
+    EXT_RESPOND_TOPIC = 'respond_topic'
+
+
+@unique
+class MQTTExtTokenKey(str, Enum):
+    TOKEN_NAME = 'name'
+    TOKEN_TYPE = 'type'
+    TOKEN_EXT_ID = 'extensionId'
+    TOKEN = 'token'
+    TOKEN_ID = 'token_id'
