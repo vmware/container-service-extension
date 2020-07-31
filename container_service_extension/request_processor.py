@@ -54,11 +54,7 @@ DELETE /cse/internal/cluster/{cluster id}
 GET /cse/internal/cluster/{cluster id}/config
 GET /cse/internal/cluster/{cluster id}/upgrade-plan
 POST /cse/internal/cluster/{cluster id}/action/upgrade
-
-# Yet to be finalized.
-POST /cse/internal/nodes
-DELETE /cse/internal/nodes
-GET /cse/internal/{cluster id}/node
+DEL /cse/internal/cluster/{cluster id}/nfs/{node-name}
 
 GET /cse/ovdcs
 GET /cse/ovdc/{ovdc id}
@@ -105,8 +101,8 @@ OPERATION_TO_HANDLER = {
     CseOperation.V35_CLUSTER_RESIZE: v35_cluster_handler.cluster_resize,
     CseOperation.V35_CLUSTER_UPGRADE_PLAN: v35_cluster_handler.cluster_upgrade_plan,  # noqa: E501
     CseOperation.V35_CLUSTER_UPGRADE: v35_cluster_handler.cluster_upgrade,
+    CseOperation.V35_NODE_DELETE: v35_cluster_handler.nfs_node_delete,
     CseOperation.V35_NODE_CREATE: v35_cluster_handler.node_create,
-    CseOperation.V35_NODE_DELETE: v35_cluster_handler.node_delete,
     CseOperation.V35_NODE_INFO: v35_cluster_handler.node_info,
 
     CseOperation.V35_OVDC_LIST: v35_ovdc_handler.ovdc_list,
@@ -287,6 +283,13 @@ def _get_v35_cluster_url_data(method: str, tokens):
                 return {
                     _OPERATION_KEY: CseOperation.V35_CLUSTER_UPGRADE,
                     RequestKey.CLUSTER_ID: tokens[5]
+                }
+        if method == RequestMethod.DELETE:
+            if tokens[6] == 'nfs':
+                return {
+                    _OPERATION_KEY: CseOperation.V35_NODE_DELETE,
+                    RequestKey.CLUSTER_ID: tokens[5],
+                    RequestKey.NODE_NAME: tokens[7]
                 }
         raise cse_exception.MethodNotAllowedRequestError()
 
