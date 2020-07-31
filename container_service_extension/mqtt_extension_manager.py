@@ -305,7 +305,7 @@ class MQTTExtensionManager:
             make the DELETE request
         """
         # Turn extension off before deleting
-        self.update_extension(ext_name, ext_version, ext_vendor, ext_urn_id,
+        self.update_extension(ext_name, ext_version, ext_vendor,
                               ext_enabled=False)
 
         self._cloudapi_client.do_request(
@@ -322,12 +322,12 @@ class MQTTExtensionManager:
         :rtype: bool
         """
         try:
-            ext_response_body = self.get_extension_info_by_urn(ext_urn_id)
-            if not ext_response_body:
-                return False
+            _ = self.get_extension_info_by_urn(ext_urn_id)
+            return True
         except requests.exceptions.HTTPError:
+            last_response = self._cloudapi_client.get_last_response()
+            self._debug_logger.debug(last_response.text)
             return False
-        return True
 
     def setup_extension_token(self, token_name, ext_name, ext_version,
                               ext_vendor, ext_urn_id):
