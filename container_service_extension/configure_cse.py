@@ -97,8 +97,7 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
                                             config['vcd']['password'])
         client.set_credentials(credentials)
 
-        if config.get('mqtt') and float(client.get_api_version()) >= \
-                server_constants.MQTT_MIN_API_VERSION:
+        if utils.use_mqtt_protocol(config):
             # Check that MQTT extension exists
             mqtt_ext_manager = MQTTExtensionManager(client)
             mqtt_ext_info = mqtt_ext_manager.get_extension_info(
@@ -323,8 +322,7 @@ def install_cse(config_file_name, skip_template_creation,
         INSTALL_LOGGER.info(msg)
 
         # Setup extension message protocol
-        if config.get('mqtt') and float(client.get_api_version()) >= \
-                server_constants.MQTT_MIN_API_VERSION:
+        if utils.use_mqtt_protocol(config):
             mqtt_ext_manager = MQTTExtensionManager(client)
             ext_info = mqtt_ext_manager.setup_extension(
                 ext_name=server_constants.CSE_SERVICE_NAME,

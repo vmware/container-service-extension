@@ -18,6 +18,8 @@ import requests
 import semantic_version
 
 from container_service_extension.logger import NULL_LOGGER
+from container_service_extension.server_constants import MQTT_MIN_API_VERSION
+
 
 # chunk size in bytes for file reading
 BUF_SIZE = 65536
@@ -374,3 +376,19 @@ def is_v35_supported_by_cse_server():
     import container_service_extension.utils as utils
     api_version = utils.get_server_api_version()
     return float(api_version) >= float(vCDApiVersion.VERSION_35.value)
+
+
+def use_mqtt_protocol(config):
+    """Return true if should use the mqtt protocol; false otherwise.
+
+    The MQTT protocol should be used if the config file contains an "mqtt" key
+        and the api version is greater than or equal to the minimum mqtt
+        api version.
+
+    :param dict config: config yaml file as a dictionary
+
+    :return: whether to use the mqtt protocol
+    :rtype: str
+    """
+    return config.get('mqtt') is not None and \
+        float(config['vcd']['api_version']) >= MQTT_MIN_API_VERSION

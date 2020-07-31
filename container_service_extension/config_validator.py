@@ -34,7 +34,6 @@ from container_service_extension.sample_generator import \
     SAMPLE_PKS_ORGS_SECTION, SAMPLE_PKS_PVDCS_SECTION, \
     SAMPLE_PKS_SERVERS_SECTION, SAMPLE_SERVICE_CONFIG, SAMPLE_VCD_CONFIG, \
     SAMPLE_VCS_CONFIG
-from container_service_extension.server_constants import MQTT_MIN_API_VERSION
 from container_service_extension.server_constants import \
     SUPPORTED_VCD_API_VERSIONS
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
@@ -47,6 +46,7 @@ from container_service_extension.utils import check_keys_and_value_types
 from container_service_extension.utils import get_duplicate_items_in_list
 from container_service_extension.utils import NullPrinter
 from container_service_extension.utils import str_to_bool
+from container_service_extension.utils import use_mqtt_protocol
 
 
 def get_validated_config(config_file_name,
@@ -105,8 +105,7 @@ def get_validated_config(config_file_name,
     msg_update_callback.info(
         f"Validating config file '{config_file_name}'")
     # This allows us to compare top-level config keys and value types
-    use_mqtt = config.get('mqtt') and \
-        float(config['vcd']['api_version']) >= MQTT_MIN_API_VERSION
+    use_mqtt = use_mqtt_protocol(config)
     sample_protocol_dict = SAMPLE_AMQP_CONFIG if not use_mqtt \
         else SAMPLE_MQTT_CONFIG
     sample_config = {
