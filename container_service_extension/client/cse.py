@@ -1596,7 +1596,7 @@ def _get_sample_cluster_configuration(output=None):
     """
     metadata = def_models.Metadata('mycluster', 'myorg', 'myvdc')
     status = def_models.Status()
-    settings = def_models.Settings(network='myNetwork', ssh_key=None, enable_nfs=False)  # noqa: E501
+    settings = def_models.Settings(network='myNetwork', ssh_key=None)
     k8_distribution = def_models.Distribution(
         template_name='ubuntu-16.04_k8-1.17_weave-2.6.0',
         template_revision=2
