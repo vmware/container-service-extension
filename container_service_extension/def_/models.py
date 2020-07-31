@@ -282,6 +282,8 @@ class DefEntity:
     entityType: str = None
     externalId: str = None
     state: str = None
+    owner: Owner = None
+    org: Org = None
 
     def __init__(self, entity: ClusterEntity, name: str = None, id: str = None,
                  entityType: str = None, externalId: str = None,

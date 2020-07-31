@@ -151,9 +151,6 @@ class DefEntityClusterApi:
         for def_entity in native_entities:
             entity = def_entity.entity
             logger.CLIENT_LOGGER.debug(f"Native Defined entity list from server: {def_entity}")  # noqa: E501
-            # owner_id = \
-            # def_entity.ownerId if hasattr(def_entity, 'ownerId') else ' '
-            # TODO(Owner in CSE server response): REST call to fetch owner_name
             cluster = {
                 cli_constants.CLIOutputKey.CLUSTER_NAME.value: def_entity.name,
                 cli_constants.CLIOutputKey.VDC.value: entity.metadata.ovdc_name, # noqa: E501
@@ -161,7 +158,7 @@ class DefEntityClusterApi:
                 cli_constants.CLIOutputKey.K8S_RUNTIME.value: entity.kind, # noqa: E501
                 cli_constants.CLIOutputKey.K8S_VERSION.value: entity.status.kubernetes, # noqa: E501
                 cli_constants.CLIOutputKey.STATUS.value: entity.status.phase, # noqa: E501
-                cli_constants.CLIOutputKey.OWNER.value: ' '
+                cli_constants.CLIOutputKey.OWNER.value: def_entity.owner.name
             }
             clusters.append(cluster)
         return clusters
