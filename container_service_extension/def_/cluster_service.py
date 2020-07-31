@@ -1132,8 +1132,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                        f"cluster {cluster_name}({cluster_id})")
             desired_worker_count = cluster_spec.spec.workers.count
             nodes_to_del = [node.name for node in
-                            curr_entity.entity.status.nodes.workers[
-                            desired_worker_count:]]
+                            curr_entity.entity.status.nodes.workers[desired_worker_count:]]  # noqa: E501
 
         vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
         try:
