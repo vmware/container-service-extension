@@ -79,9 +79,9 @@ def get_validated_config(config_file_name,
     :raises KeyError: if config file has missing or extra properties.
     :raises TypeError: if the value type for a config file property
         is incorrect.
-    :raises container_service_extension.exceptions.AmqpConnectionError: if
-        AMQP connection failed (host, password, port, username,
-        vhost is invalid).
+    :raises container_service_extension.exceptions.AmqpConnectionError:
+        (when not using MQTT) if AMQP connection failed (host, password, port,
+        username, vhost is invalid).
     :raises pyvcloud.vcd.exceptions.NotAcceptableException: if 'vcd'
         'api_version' is unsupported.
     :raises requests.exceptions.ConnectionError: if 'vcd' 'host' is invalid.

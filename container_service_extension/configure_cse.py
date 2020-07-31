@@ -265,7 +265,10 @@ def install_cse(config_file_name, skip_template_creation,
     :param str decryption_password: password to decrypt the config file.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
-    :raises cse_exception.AmqpError: if AMQP exchange could not be created.
+    :raises cse_exception.AmqpError: (when using AMQP) if AMQP exchange
+        could not be created.
+    :raises requests.exceptions.HTTPError: (when using MQTT) if the MQTT
+        extension and api filter were not set up correctly
     """
     config = get_validated_config(
         config_file_name, pks_config_file_name=pks_config_file_name,
