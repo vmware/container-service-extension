@@ -82,8 +82,8 @@ class ClusterEntityFilterKey(Enum):
 
 class ClusterEntityKind(Enum):
     NATIVE = 'native'
-    TKG = 'tkg'
-    TANZU_PLUS = 'tanzu_plus'
+    TKG = 'TanzuKubernetesGrid'
+    TANZU_PLUS = 'TKG+'
 
 
 def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
