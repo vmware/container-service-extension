@@ -8,7 +8,8 @@ import pyvcloud.vcd.exceptions as vcd_exceptions
 from container_service_extension.client.response_processor import \
     process_response
 from container_service_extension.pyvcloud_utils import get_vdc
-import container_service_extension.server_constants as shared_constants
+import container_service_extension.server_constants as server_constants
+import container_service_extension.shared_constants as shared_constants
 
 
 class LegacyOvdc:
@@ -63,7 +64,7 @@ class LegacyOvdc:
         uri = f'{self._uri}/ovdc/{ovdc_id}'
 
         if not enable:
-            k8s_provider = shared_constants.K8sProvider.NONE
+            k8s_provider = server_constants.K8sProvider.NONE
             pks_plan = None
             pks_cluster_domain = None
 
