@@ -23,9 +23,9 @@ import tempfile
 import six
 from six.moves.urllib.parse import quote
 
-from swagger_client.configuration import Configuration
-import swagger_client.models
-from swagger_client import rest
+from container_service_extension.client.tkgclient.configuration import Configuration
+import container_service_extension.client.tkgclient.models
+from container_service_extension.client.tkgclient import rest
 
 
 class ApiClient(object):
@@ -155,10 +155,15 @@ class ApiClient(object):
         self.last_response = response_data
 
         return_data = response_data
+        additional_data = None
         if _preload_content:
             # deserialize response data
             if response_type:
-                return_data = self.deserialize(response_data, response_type)
+                # additional_data represents the data related to TkgCluster
+                # entity
+                return_data, additional_data = self.deserialize(response_data,
+                                                                response_type,
+                                                                method)
             else:
                 return_data = None
 
@@ -166,7 +171,7 @@ class ApiClient(object):
             return (return_data)
         else:
             return (return_data, response_data.status,
-                    response_data.getheaders())
+                    response_data.getheaders(), additional_data)
 
     def sanitize_for_serialization(self, obj):
         """Builds a JSON POST object.
@@ -210,12 +215,13 @@ class ApiClient(object):
         return {key: self.sanitize_for_serialization(val)
                 for key, val in six.iteritems(obj_dict)}
 
-    def deserialize(self, response, response_type):
+    def deserialize(self, response, response_type, method):
         """Deserializes response into an object.
 
         :param response: RESTResponse object to be deserialized.
         :param response_type: class literal for
             deserialized object, or string of class name.
+        :param method: HTTP method used to get the response
 
         :return: deserialized object.
         """
@@ -229,6 +235,20 @@ class ApiClient(object):
             data = json.loads(response.data)
         except ValueError:
             data = response.data
+        additional_data = None
+        if response_type == 'TkgCluster' and method == 'GET':
+            additional_data = data
+            data = data['entity']
+            del additional_data['entity']
+        elif response_type == 'list[TkgCluster]' and method == 'GET':
+            def_entities = data['values']
+            additional_data = []
+            data = []
+            for def_entity in def_entities:
+                data.append(def_entity['entity'])
+                del def_entity['entity']
+                additional_data.append(def_entity)
+        return self.__deserialize(data, response_type), additional_data
 
         return self.__deserialize(data, response_type)
 
@@ -258,7 +278,7 @@ class ApiClient(object):
             if klass in self.NATIVE_TYPES_MAPPING:
                 klass = self.NATIVE_TYPES_MAPPING[klass]
             else:
-                klass = getattr(swagger_client.models, klass)
+                klass = getattr(container_service_extension.client.tkgclient.models, klass)
 
         if klass in self.PRIMITIVE_TYPES:
             return self.__deserialize_primitive(data, klass)
@@ -274,7 +294,7 @@ class ApiClient(object):
     def call_api(self, resource_path, method,
                  path_params=None, query_params=None, header_params=None,
                  body=None, post_params=None, files=None,
-                 response_type=None, auth_settings=None, async=None,
+                 response_type=None, auth_settings=None, async_req=None,
                  _return_http_data_only=None, collection_formats=None,
                  _preload_content=True, _request_timeout=None):
         """Makes the HTTP request (synchronous) and returns deserialized data.
@@ -313,7 +333,7 @@ class ApiClient(object):
             If parameter async is False or missing,
             then the method will return the response directly.
         """
-        if not async:
+        if not async_req:
             return self.__call_api(resource_path, method,
                                    path_params, query_params, header_params,
                                    body, post_params, files,

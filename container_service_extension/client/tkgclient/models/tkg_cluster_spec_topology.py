@@ -16,8 +16,8 @@ import re  # noqa: F401
 
 import six
 
-from swagger_client.models.tkg_cluster_topology_control_plane import TkgClusterTopologyControlPlane  # noqa: F401,E501
-from swagger_client.models.tkg_cluster_topology_workers import TkgClusterTopologyWorkers  # noqa: F401,E501
+from container_service_extension.client.tkgclient.models.tkg_cluster_topology_control_plane import TkgClusterTopologyControlPlane  # noqa: F401,E501
+from container_service_extension.client.tkgclient.models.tkg_cluster_topology_workers import TkgClusterTopologyWorkers  # noqa: F401,E501
 
 
 class TkgClusterSpecTopology(object):

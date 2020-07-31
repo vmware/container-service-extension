@@ -16,9 +16,9 @@ import re  # noqa: F401
 
 import six
 
-from swagger_client.models.tkg_cluster_spec_distribution import TkgClusterSpecDistribution  # noqa: F401,E501
-from swagger_client.models.tkg_cluster_spec_settings import TkgClusterSpecSettings  # noqa: F401,E501
-from swagger_client.models.tkg_cluster_spec_topology import TkgClusterSpecTopology  # noqa: F401,E501
+from container_service_extension.client.tkgclient.models.tkg_cluster_spec_distribution import TkgClusterSpecDistribution  # noqa: F401,E501
+from container_service_extension.client.tkgclient.models.tkg_cluster_spec_settings import TkgClusterSpecSettings  # noqa: F401,E501
+from container_service_extension.client.tkgclient.models.tkg_cluster_spec_topology import TkgClusterSpecTopology  # noqa: F401,E501
 
 
 class TkgClusterSpec(object):
