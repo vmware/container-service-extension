@@ -405,12 +405,12 @@ def _get_v35_cluster_url_data(method: str, tokens: list):
                     _OPERATION_KEY: CseOperation.V35_CLUSTER_UPGRADE,
                     shared_constants.RequestKey.CLUSTER_ID: tokens[5]
                 }
-        if method == RequestMethod.DELETE:
+        if method == shared_constants.RequestMethod.DELETE:
             if tokens[6] == 'nfs':
                 return {
                     _OPERATION_KEY: CseOperation.V35_NODE_DELETE,
-                    RequestKey.CLUSTER_ID: tokens[5],
-                    RequestKey.NODE_NAME: tokens[7]
+                    shared_constants.RequestKey.CLUSTER_ID: tokens[5],
+                    shared_constants.RequestKey.NODE_NAME: tokens[7]
                 }
         raise cse_exception.MethodNotAllowedRequestError()
 
