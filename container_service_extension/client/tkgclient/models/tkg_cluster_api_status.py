@@ -16,7 +16,7 @@ import re  # noqa: F401
 
 import six
 
-from swagger_client.models.tkg_cluster_api_status_api_endpoint import TkgClusterApiStatusApiEndpoint  # noqa: F401,E501
+from container_service_extension.client.tkgclient.models.tkg_cluster_api_status_api_endpoint import TkgClusterApiStatusApiEndpoint  # noqa: F401,E501
 
 
 class TkgClusterApiStatus(object):

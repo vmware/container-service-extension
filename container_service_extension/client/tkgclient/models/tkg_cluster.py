@@ -16,9 +16,9 @@ import re  # noqa: F401
 
 import six
 
-from swagger_client.models.tkg_cluster_metadata import TkgClusterMetadata  # noqa: F401,E501
-from swagger_client.models.tkg_cluster_spec import TkgClusterSpec  # noqa: F401,E501
-from swagger_client.models.tkg_cluster_status import TkgClusterStatus  # noqa: F401,E501
+from container_service_extension.client.tkgclient.models.tkg_cluster_metadata import TkgClusterMetadata  # noqa: F401,E501
+from container_service_extension.client.tkgclient.models.tkg_cluster_spec import TkgClusterSpec  # noqa: F401,E501
+from container_service_extension.client.tkgclient.models.tkg_cluster_status import TkgClusterStatus  # noqa: F401,E501
 
 
 class TkgCluster(object):

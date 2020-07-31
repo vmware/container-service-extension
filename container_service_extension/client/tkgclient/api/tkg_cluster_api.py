@@ -18,7 +18,7 @@ import re  # noqa: F401
 # python 2 and python 3 compatibility library
 import six
 
-from swagger_client.api_client import ApiClient
+from container_service_extension.client.tkgclient.api_client import ApiClient
 
 
 class TkgClusterApi(object):
@@ -33,22 +33,119 @@ class TkgClusterApi(object):
             api_client = ApiClient()
         self.api_client = api_client
 
+    def list_tkg_clusters(self, entity_type, **kwargs):
+        all_params = ['id']  # noqa: E501
+        all_params.append('async_req')
+        all_params.append('_return_http_data_only')
+        all_params.append('_preload_content')
+        all_params.append('_request_timeout')
+        all_params.append('object_filter')
+
+        params = locals()
+        for key, val in six.iteritems(params['kwargs']):
+            if key not in all_params:
+                raise TypeError(
+                    "Got an unexpected keyword argument '%s'"
+                    " to method list_tkg_clusters" % key
+                )
+            params[key] = val
+        del params['kwargs']
+        if ('entity_type' not in params or
+                params['entity_type'] is None):
+            raise ValueError(
+                "Missing the required parameter `entity_type` when calling `list_tkg_clusters`")
+        path_params = {}
+        query_params = []
+        if params.get('object_filter'):
+            query_params.append(('filter', params['object_filter']))
+        header_params = {}
+        # HTTP header `Accept`
+        header_params['Accept'] = self.api_client.select_header_accept(
+            ['*/*'])  # noqa: E501
+        header_params[
+            'Content-Type'] = self.api_client.select_header_content_type(
+            ['application/json'])
+        form_params = []
+        local_var_files = {}
+        body_params = None
+        auth_settings = []
+        collection_formats = {}
+        return self.api_client.call_api(
+            f"entities/{entity_type}", 'GET',
+            path_params,
+            query_params,
+            header_params,
+            body=body_params,
+            post_params=form_params,
+            files=local_var_files,
+            response_type='list[TkgCluster]',  # noqa: E501
+            auth_settings=auth_settings,
+            async_req=params.get('async_req'),
+            _return_http_data_only=params.get('_return_http_data_only'),
+            _preload_content=params.get('_preload_content', True),
+            _request_timeout=params.get('_request_timeout'),
+            collection_formats=collection_formats)
+
+    def get_tkg_cluster(self, id, **kwargs):
+        all_params = ['id']  # noqa: E501
+        all_params.append('async_req')
+        all_params.append('_return_http_data_only')
+        all_params.append('_preload_content')
+        all_params.append('_request_timeout')
+
+        params = locals()
+        for key, val in six.iteritems(params['kwargs']):
+            if key not in all_params:
+                raise TypeError(
+                    "Got an unexpected keyword argument '%s'"
+                    " to method create_tkg_cluster" % key
+                )
+            params[key] = val
+        del params['kwargs']
+        if ('id' not in params or
+                params['id'] is None):
+            raise ValueError("Missing the required parameter `id` when calling `get_tkg_cluster`")
+        path_params = {}
+        query_params = []
+        header_params = {}
+        header_params['Content-Type'] = self.api_client.select_header_content_type(['application/json'])
+        form_params = []
+        local_var_files = {}
+        body_params = None
+        auth_settings = []
+        collection_formats = {}
+        return self.api_client.call_api(
+            f"entities/{id}", 'GET',
+            path_params,
+            query_params,
+            header_params,
+            body=body_params,
+            post_params=form_params,
+            files=local_var_files,
+            response_type='TkgCluster',  # noqa: E501
+            auth_settings=auth_settings,
+            async_req=params.get('async_req'),
+            _return_http_data_only=params.get('_return_http_data_only'),
+            _preload_content=params.get('_preload_content', True),
+            _request_timeout=params.get('_request_timeout'),
+            collection_formats=collection_formats)
+
     def create_tkg_cluster(self, tkg_cluster, **kwargs):  # noqa: E501
         """Creates a new TKG cluster. This operation is asynchronous and returns a task that you can monitor to track the progress of the request.   # noqa: E501
 
         This method makes a synchronous HTTP request by default. To make an
-        asynchronous HTTP request, please pass async=True
-        >>> thread = api.create_tkg_cluster(tkg_cluster, async=True)
+        asynchronous HTTP request, please pass async_req=True
+        >>> thread = api.create_tkg_cluster(tkg_cluster, async_req=True)
         >>> result = thread.get()
 
-        :param async bool
+        :param async_req bool
         :param TkgCluster tkg_cluster: (required)
         :return: None
                  If the method is called asynchronously,
                  returns the request thread.
         """
         kwargs['_return_http_data_only'] = True
-        if kwargs.get('async'):
+        if kwargs.get('async_req'):
             return self.create_tkg_cluster_with_http_info(tkg_cluster, **kwargs)  # noqa: E501
         else:
             (data) = self.create_tkg_cluster_with_http_info(tkg_cluster, **kwargs)  # noqa: E501
@@ -58,11 +155,11 @@ class TkgClusterApi(object):
         """Creates a new TKG cluster. This operation is asynchronous and returns a task that you can monitor to track the progress of the request.   # noqa: E501
 
         This method makes a synchronous HTTP request by default. To make an
-        asynchronous HTTP request, please pass async=True
-        >>> thread = api.create_tkg_cluster_with_http_info(tkg_cluster, async=True)
+        asynchronous HTTP request, please pass async_req=True
+        >>> thread = api.create_tkg_cluster_with_http_info(tkg_cluster, async_req=True)
         >>> result = thread.get()
 
-        :param async bool
+        :param async_req bool
         :param TkgCluster tkg_cluster: (required)
         :return: None
                  If the method is called asynchronously,
@@ -70,7 +167,7 @@ class TkgClusterApi(object):
         """
 
         all_params = ['tkg_cluster']  # noqa: E501
-        all_params.append('async')
+        all_params.append('async_req')
         all_params.append('_return_http_data_only')
         all_params.append('_preload_content')
         all_params.append('_request_timeout')
@@ -120,7 +217,7 @@ class TkgClusterApi(object):
             files=local_var_files,
             response_type=None,  # noqa: E501
             auth_settings=auth_settings,
-            async=params.get('async'),
+            async_req=params.get('async_req'),
             _return_http_data_only=params.get('_return_http_data_only'),
             _preload_content=params.get('_preload_content', True),
             _request_timeout=params.get('_request_timeout'),
@@ -131,18 +228,18 @@ class TkgClusterApi(object):
 
         Deletes the TKG defined entity instance with the unique identifier (URN) This operation is asynchronous and returns a task that you can monitor to track the progress of the request.   # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
-        asynchronous HTTP request, please pass async=True
-        >>> thread = api.delete_tkg_cluster(tkg_cluster_id, async=True)
+        asynchronous HTTP request, please pass async_req=True
+        >>> thread = api.delete_tkg_cluster(tkg_cluster_id, async_req=True)
         >>> result = thread.get()
 
-        :param async bool
+        :param async_req bool
         :param str tkg_cluster_id: A URN corresponding to a TKG defined entity instance previously created by a POST to above OpenAPI tkgClusters endpoint.  (required)
         :return: None
                  If the method is called asynchronously,
                  returns the request thread.
         """
         kwargs['_return_http_data_only'] = True
-        if kwargs.get('async'):
+        if kwargs.get('async_req'):
             return self.delete_tkg_cluster_with_http_info(tkg_cluster_id, **kwargs)  # noqa: E501
         else:
             (data) = self.delete_tkg_cluster_with_http_info(tkg_cluster_id, **kwargs)  # noqa: E501
@@ -153,11 +250,11 @@ class TkgClusterApi(object):
 
         Deletes the TKG defined entity instance with the unique identifier (URN) This operation is asynchronous and returns a task that you can monitor to track the progress of the request.   # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
-        asynchronous HTTP request, please pass async=True
-        >>> thread = api.delete_tkg_cluster_with_http_info(tkg_cluster_id, async=True)
+        asynchronous HTTP request, please pass async_req=True
+        >>> thread = api.delete_tkg_cluster_with_http_info(tkg_cluster_id, async_req=True)
         >>> result = thread.get()
 
-        :param async bool
+        :param async_req bool
         :param str tkg_cluster_id: A URN corresponding to a TKG defined entity instance previously created by a POST to above OpenAPI tkgClusters endpoint.  (required)
         :return: None
                  If the method is called asynchronously,
@@ -165,7 +262,7 @@ class TkgClusterApi(object):
         """
 
         all_params = ['tkg_cluster_id']  # noqa: E501
-        all_params.append('async')
+        all_params.append('async_req')
         all_params.append('_return_http_data_only')
         all_params.append('_preload_content')
         all_params.append('_request_timeout')
@@ -211,7 +308,7 @@ class TkgClusterApi(object):
             files=local_var_files,
             response_type=None,  # noqa: E501
             auth_settings=auth_settings,
-            async=params.get('async'),
+            async_req=params.get('async_req'),
             _return_http_data_only=params.get('_return_http_data_only'),
             _preload_content=params.get('_preload_content', True),
             _request_timeout=params.get('_request_timeout'),
@@ -221,11 +318,11 @@ class TkgClusterApi(object):
         """Update the desired state of the TKG cluster. This operation is asynchronous and returns a task that you can monitor to track the progress of the request.   # noqa: E501
 
         This method makes a synchronous HTTP request by default. To make an
-        asynchronous HTTP request, please pass async=True
-        >>> thread = api.update_tkg_cluster(tkg_cluster_id, tkg_cluster, async=True)
+        asynchronous HTTP request, please pass async_req=True
+        >>> thread = api.update_tkg_cluster(tkg_cluster_id, tkg_cluster, async_req=True)
         >>> result = thread.get()
 
-        :param async bool
+        :param async_req bool
         :param str tkg_cluster_id: A URN corresponding to a TKG defined entity instance previously created by a POST to above OpenAPI tkgClusters endpoint.  (required)
         :param TkgCluster tkg_cluster: (required)
         :return: None
@@ -233,7 +330,7 @@ class TkgClusterApi(object):
                  returns the request thread.
         """
         kwargs['_return_http_data_only'] = True
-        if kwargs.get('async'):
+        if kwargs.get('async_req'):
             return self.update_tkg_cluster_with_http_info(tkg_cluster_id, tkg_cluster, **kwargs)  # noqa: E501
         else:
             (data) = self.update_tkg_cluster_with_http_info(tkg_cluster_id, tkg_cluster, **kwargs)  # noqa: E501
@@ -243,8 +340,8 @@ class TkgClusterApi(object):
         """Update the desired state of the TKG cluster. This operation is asynchronous and returns a task that you can monitor to track the progress of the request.   # noqa: E501
 
         This method makes a synchronous HTTP request by default. To make an
-        asynchronous HTTP request, please pass async=True
-        >>> thread = api.update_tkg_cluster_with_http_info(tkg_cluster_id, tkg_cluster, async=True)
+        asynchronous HTTP request, please pass async_req=True
+        >>> thread = api.update_tkg_cluster_with_http_info(tkg_cluster_id, tkg_cluster, async_req=True)
         >>> result = thread.get()
 
         :param async bool
@@ -256,7 +353,7 @@ class TkgClusterApi(object):
         """
 
         all_params = ['tkg_cluster_id', 'tkg_cluster']  # noqa: E501
-        all_params.append('async')
+        all_params.append('async_req')
         all_params.append('_return_http_data_only')
         all_params.append('_preload_content')
         all_params.append('_request_timeout')
@@ -312,7 +409,7 @@ class TkgClusterApi(object):
             files=local_var_files,
             response_type=None,  # noqa: E501
             auth_settings=auth_settings,
-            async=params.get('async'),
+            async_req=params.get('async_req'),
             _return_http_data_only=params.get('_return_http_data_only'),
             _preload_content=params.get('_preload_content', True),
             _request_timeout=params.get('_request_timeout'),
