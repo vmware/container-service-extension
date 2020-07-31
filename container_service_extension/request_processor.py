@@ -29,6 +29,8 @@ import container_service_extension.utils as utils
 
 Following are the valid api endpoints.
 
+API version 33.0 and 34.0
+--------------------------
 GET /cse/clusters?org={org name}&vdc={vdc name}
 POST /cse/clusters
 GET /cse/cluster/{cluster name}?org={org name}&vdc={vdc name}
@@ -42,6 +44,15 @@ POST /cse/nodes
 DELETE /cse/nodes
 GET /cse/node/{node name}?cluster_name={cluster name}&org={org name}&vdc={vdc name}
 
+GET /cse/ovdcs
+GET /cse/ovdc/{ovdc id}
+PUT /cse/ovdc/{ovdc id}
+GET /cse/ovdc/{ovdc_id}/compute-policies
+PUT /cse/ovdc/{ovdc_id}/compute-policies
+
+
+API version 35.0
+----------------
 GET /cse/3.0/clusters
 Entities can be filtered by nested properties as defined per the schema
 GET /cse/3.0/clusters?entity.kind={native}&entity.metadata.org_name={org name}
@@ -54,17 +65,13 @@ GET /cse/3.0/cluster/{cluster id}/upgrade-plan
 POST /cse/3.0/cluster/{cluster id}/action/upgrade
 DELETE /cse/3.0/cluster/{cluster id}/nfs/{node-name}
 
-GET /cse/ovdcs
-GET /cse/ovdc/{ovdc id}
-PUT /cse/ovdc/{ovdc id}
-GET /cse/ovdc/{ovdc_id}/compute-policies
-PUT /cse/ovdc/{ovdc_id}/compute-policies
-
-New ovdc endpoints
 GET /cse/3.0/ovdcs
 GET /cse/3.0/ovdc/{ovdc_id}
 PUT /cse/3.0/ovdc/{ovdc_id}
 
+
+Not dependent on API version
+----------------------------
 GET /cse/system
 PUT /cse/system
 
