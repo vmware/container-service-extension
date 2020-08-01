@@ -12,6 +12,7 @@ import yaml
 
 from container_service_extension.client import pks
 from container_service_extension.client.cluster import Cluster
+from container_service_extension.client.cluster import ClusterEntityKind
 import container_service_extension.client.command_filter as cmd_filter
 from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.system import System
@@ -596,19 +597,30 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
             console_message_printer.general_no_color(sample_cluster_config)
             return
 
-        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         with open(cluster_config_file_path) as f:
             cluster_config = yaml.safe_load(f) or {}
 
-        if not cluster_config.get('metadata', {}).get('ovdc_name'):
+        k8_runtime = cluster_config.get('kind')
+        if not k8_runtime:
+            raise Exception("Cluster kind missing from the spec.")
+
+        metadata = cluster_config.get('metadata', {})
+        metadata_vdc_key = ''
+        if k8_runtime == ClusterEntityKind.NATIVE.value or \
+                k8_runtime == ClusterEntityKind.TANZU_PLUS.value:
+            metadata_vdc_key = 'ovdc_name'
+        elif k8_runtime == ClusterEntityKind.TKG.value:
+            metadata_vdc_key = 'virtualDataCenterName'
+        if not metadata.get(metadata_vdc_key):
             vdc = ctx.obj['profiles'].get('vdc_in_use')
             if not vdc:
                 raise Exception("Virtual datacenter context is not set. "
                                 "Use either command 'vcd vdc use' or option "
                                 "'--vdc' to set the vdc context.")
-            cluster_config['metadata']['ovdc_name'] = vdc
-        if not cluster_config.get('metadata', {}).get('org_name'):
+            metadata[metadata_vdc_key] = vdc
+        if k8_runtime != ClusterEntityKind.TKG.value and \
+                not cluster_config.get('metadata', {}).get('org_name'):
             cluster_config['metadata']['org_name'] = ctx.obj['profiles'].get('org_in_use')  # noqa: E501
 
         cluster = Cluster(client, k8_runtime=cluster_config.get('kind'))  # noqa: E501

@@ -102,7 +102,7 @@ class DefEntityClusterApi:
         native_def_entity_dict = {}
         if native_def_entity:
             native_def_entity_dict = asdict(native_def_entity)
-        tkg_entities = self._tkgCluster.get_tkg_clusters_by_name(cluster_name,
+        tkg_entities, _ = self._tkgCluster.get_tkg_clusters_by_name(cluster_name,
                                                                  vdc=vdc,
                                                                  org=org)
         # convert the tkg entities to dictionary
@@ -194,9 +194,7 @@ class DefEntityClusterApi:
         elif native_entity:
             return self._nativeCluster.delete_cluster_by_id(
                 native_entity.get('id'))
-        # TODO() TKG cluster delete
-        raise NotImplementedError(
-            "Cluster delete for TKG clusters not yet implemented")  # noqa: E501
+        return self._tkgCluster.delete_cluster(cluster_name=cluster_name)
 
     def get_upgrade_plan(self, cluster_name, org=None, vdc=None):
         """Get the upgrade plan for the given cluster name.

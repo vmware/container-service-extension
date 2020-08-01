@@ -2,16 +2,23 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import json
+import yaml
+from dataclasses import asdict
+from dataclasses import make_dataclass
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 
 import container_service_extension.client.constants as cli_constants
+from container_service_extension.client.response_processor import process_response
 from container_service_extension.client.tkgclient import TkgClusterApi
+import container_service_extension.client.tkgclient.rest as tkg_rest
 from container_service_extension.client.tkgclient.api_client import ApiClient
 from container_service_extension.client.tkgclient.configuration import Configuration  # noqa: E501
 from container_service_extension.client.tkgclient.models.tkg_cluster import TkgCluster  # noqa: E501
 from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_NSS
 from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_VERSION
 from container_service_extension.def_.utils import DEF_VMWARE_VENDOR
+import container_service_extension.exceptions as cse_exceptions
 import container_service_extension.logger as logger
 
 
@@ -20,23 +27,20 @@ class TKGClusterApi:
 
     def __init__(self, client):
         self._client = client
-        self.tkg_client = self._get_tkg_client()
-        self._tkg_client_api = TkgClusterApi(api_client=self.tkg_client)
-
-    def _get_tkg_client(self):
         tkg_config = Configuration()
         tkg_config.host = f"{self._client.get_cloudapi_uri()}/1.0.0/"
         tkg_config.verify_ssl = self._client._verify_ssl_certs
-        tkg_client = ApiClient(configuration=tkg_config)
+
+        self._tkg_client = ApiClient(configuration=tkg_config)
         jwt_token = self._client.get_access_token()
         if jwt_token:
-            tkg_client.set_default_header("Authorization", f"Bearer {jwt_token}")  # noqa: E501
+            self._tkg_client.set_default_header("Authorization", f"Bearer {jwt_token}")  # noqa: E501
         else:
             legacy_token = self._client.get_xvcloud_authorization_token()
-            tkg_client.set_default_header("x-vcloud-authorization", legacy_token)  # noqa: E501
+            self._tkg_client.set_default_header("x-vcloud-authorization", legacy_token)  # noqa: E501
         api_version = self._client.get_api_version()
-        tkg_client.set_default_header("Accept", f"application/json;version={api_version}")  # noqa: E501
-        return tkg_client
+        self._tkg_client.set_default_header("Accept", f"application/json;version={api_version}")  # noqa: E501
+        self._tkg_client_api = TkgClusterApi(api_client=self._tkg_client)
 
     def get_tkg_cluster(self, cluster_id):
         """Sample method to use tkg_client.
@@ -92,7 +96,7 @@ class TKGClusterApi:
                 cli_constants.CLIOutputKey.K8S_RUNTIME.value: cli_constants.TKG_CLUSTER_RUNTIME, # noqa: E501
                 cli_constants.CLIOutputKey.K8S_VERSION.value: entity.spec.distribution.version, # noqa: E501
                 # TODO(TKG): status field doesn't have any attributes
-                cli_constants.CLIOutputKey.STATUS.value: entity.status.phase,
+                cli_constants.CLIOutputKey.STATUS.value: entity.status.phase if entity.status else 'N/A',
                 # TODO(Owner in CSE server response): Owner value is needed
                 cli_constants.CLIOutputKey.OWNER.value: entity_properties['owner']['name'],  # noqa: E501
             }
@@ -107,11 +111,11 @@ class TKGClusterApi:
         if vdc:
             filters.append((cli_constants.TKGClusterEntityFilterKey.VDC_NAME.value, vdc))  # noqa: E501
         filter_string = ";".join([f"{f[0]}=={f[1]}" for f in filters])
-        response = \
+        (entities, status, headers, additional_data) = \
             self._tkg_client_api.list_tkg_clusters(
                 f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}", # noqa: E501
                 object_filter=filter_string)
-        return response[0]
+        return entities, additional_data
 
     def apply(self, cluster_config: dict):
         """Apply the configuration either to create or update the cluster.
@@ -119,33 +123,72 @@ class TKGClusterApi:
         :param dict cluster_config: cluster configuration information
         :return: str
         """
-        cluster_name = cluster_config.get('metadata', {}).get('cluster_name')
-        tkg_entities = self.get_tkg_clusters_by_name(cluster_name)
-        if len(tkg_entities) == 0:
-            response = self._tkg_client_api.create_tkg_cluster(cluster_config)
-        elif len(tkg_entities) == 1:
-            response = self._tkg_client_api.update_tkg_cluster(cluster_config)
-        else:
-            msg = f"Multiple clusters found with name {cluster_name}. " \
-                  "Failed to apply the Spec."
-            logger.CLIENT_LOGGER.error(msg)
-            raise cse_exceptions.CseDuplicateClusterError(msg)
-        if not def_entity:
-            response = self._client._do_request_prim(
-                shared_constants.RequestMethod.POST,
-                uri,
-                self._client._session,
-                contents=cluster_config,
-                media_type='application/json',
-                accept_type='application/json')
-        else:
-            cluster_id = def_entity.id
-            uri = f"{self._uri}/cluster/{cluster_id}"
-            response = self._client._do_request_prim(
-                shared_constants.RequestMethod.PUT,
-                uri,
-                self._client._session,
-                contents=cluster_config,
-                media_type='application/json',
-                accept_type='application/json')
-        return yaml.dump(response_processor.process_response(response)['entity']) # noqa: E501
+        try:
+            cluster_name = cluster_config.get('metadata', {}).get('name')
+            tkg_entities, additional_data = self.get_tkg_clusters_by_name(cluster_name)
+            # TODO: Better way to deserialize the object into TkgCluster
+            deseralizeCls = make_dataclass('Deserialize', [('data', str)])
+            if len(tkg_entities) == 0:
+                # deserialize the cluster config given in to TkgCluster object
+                deserialize_input = deseralizeCls(data=json.dumps(cluster_config))
+                self._tkg_client_api.create_tkg_cluster(
+                    tkg_cluster=self._tkg_client.deserialize(deserialize_input, 'TkgCluster', '')[0])
+            elif len(tkg_entities) == 1:
+                # deserialize the cluster config given in to TkgCluster object
+                cluster_id = additional_data[0]['id']
+                deserialize_input = deseralizeCls(data=json.dumps(cluster_config))
+                self._tkg_client_api.update_tkg_cluster(
+                    tkg_cluster_id=cluster_id,
+                    tkg_cluster=self._tkg_client.deserialize(deserialize_input, 'TkgCluster', '')[0])
+            else:
+                # More than 1 TKG cluster with the same name found.
+                msg = f"Multiple clusters found with name {cluster_name}. " \
+                      "Failed to apply the Spec."
+                logger.CLIENT_LOGGER.error(msg)
+                raise cse_exceptions.CseDuplicateClusterError(msg)
+            # Retrieve the created TKG cluster details
+            entity, additional_data = self.get_tkg_clusters_by_name(cluster_name)
+            return yaml.dump(entity[0].to_dict()) if len(entity) > 0 else ""
+        except Exception as e:
+            logger.CLIENT_LOGGER.error(f"{e}")
+            raise
+
+    def delete_cluster_by_id(self, cluster_id):
+        """Delete a cluster using the cluster id.
+
+        :param str cluster_id
+        :return: string representing the cluster entity.
+        """
+        try:
+            self._tkg_client_api.delete_tkg_cluster(cluster_id)
+            return yaml.dump(self.get_tkg_cluster(cluster_id))
+        except Exception as e:
+            logger.CLIENT_LOGGER.error(f"{e}")
+            raise
+
+    def delete_cluster(self, cluster_name, org=None, vdc=None):
+        """Delete DEF native cluster by name.
+
+        :param str cluster_name: native cluster name
+        :param str org: name of the org
+        :param str vdc: name of the vdc
+        :return: deleted cluster information
+        :rtype: str
+        :raises ClusterNotFoundError
+        """
+        try:
+            entities, additional_data = \
+                self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)
+            if len(entities) == 1:
+                return self.delete_cluster_by_id(additional_data[0]['id'])
+            elif len(entities) == 0:
+                raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+            else:
+                # More than 1 TKG cluster with the same name found.
+                msg = f"Multiple clusters found with name {cluster_name}. " \
+                      "Failed to apply the Spec."
+                logger.CLIENT_LOGGER.error(msg)
+                raise cse_exceptions.CseDuplicateClusterError(msg)
+        except Exception as e:
+            logger.CLIENT_LOGGER.error(f"{e}")
+            raise
