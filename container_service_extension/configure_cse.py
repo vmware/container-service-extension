@@ -486,7 +486,6 @@ def _create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
     INSTALL_LOGGER.info(msg)
 
 
-# TODO: make sure not used for MQTT extension
 def _deregister_cse(client, msg_update_callback=utils.NullPrinter()):
     """Deregister CSE from VCD."""
     ext = api_extension.APIExtension(client)
@@ -1202,7 +1201,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
                    admin_password, msg_update_callback=utils.NullPrinter(),
                    log_wire=False):
     # Update amqp exchange
-    _create_amqp_exchange(
+    _create_amqp_exchange(  # TODO: check if using mqtt
         exchange_name=config['amqp']['exchange'],
         host=config['amqp']['host'],
         port=config['amqp']['port'],
@@ -1213,7 +1212,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
         msg_update_callback=msg_update_callback)
 
     # Update cse api extension (along with api end points)
-    _update_cse_extension(
+    _update_cse_extension(  # TODO: check if using mqtt
         client=client,
         routing_key=config['amqp']['routing_key'],
         exchange=config['amqp']['exchange'],
