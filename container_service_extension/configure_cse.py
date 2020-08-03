@@ -1201,24 +1201,44 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
                    skip_template_creation, ssh_key, retain_temp_vapp,
                    admin_password, msg_update_callback=utils.NullPrinter(),
                    log_wire=False):
-    # Update amqp exchange
-    _create_amqp_exchange(
-        exchange_name=config['amqp']['exchange'],
-        host=config['amqp']['host'],
-        port=config['amqp']['port'],
-        vhost=config['amqp']['vhost'],
-        use_ssl=config['amqp']['ssl'],
-        username=config['amqp']['username'],
-        password=config['amqp']['password'],
-        msg_update_callback=msg_update_callback)
+    if utils.use_mqtt_protocol(config):
+        # Delete extension if present and set up MQTT extension
+        try:
+            api_ext = api_extension.APIExtension(client)
+            api_ext.delete_extension(
+                name=server_constants.CSE_SERVICE_NAME,
+                namespace=server_constants.CSE_SERVICE_NAMESPACE)
+        except MissingRecordException:
+            pass
 
-    # Update cse api extension (along with api end points)
-    _update_cse_extension(
-        client=client,
-        routing_key=config['amqp']['routing_key'],
-        exchange=config['amqp']['exchange'],
-        target_vcd_api_version=config['vcd']['api_version'],
-        msg_update_callback=msg_update_callback)
+        mqtt_ext_manager = MQTTExtensionManager(client)
+        ext_info = mqtt_ext_manager.setup_extension(
+            ext_name=server_constants.CSE_SERVICE_NAME,
+            ext_version=server_constants.MQTT_EXTENSION_VERSION,
+            ext_vendor=server_constants.MQTT_EXTENSION_VENDOR,
+            description='')
+        ext_uuid = mqtt_ext_manager.get_extension_uuid(ext_info['ext_urn_id'])
+        _ = mqtt_ext_manager.setup_api_filter(
+            server_constants.MQTT_API_FILTER_PATTERN, ext_uuid)
+    else:
+        # Update amqp exchange
+        _create_amqp_exchange(
+            exchange_name=config['amqp']['exchange'],
+            host=config['amqp']['host'],
+            port=config['amqp']['port'],
+            vhost=config['amqp']['vhost'],
+            use_ssl=config['amqp']['ssl'],
+            username=config['amqp']['username'],
+            password=config['amqp']['password'],
+            msg_update_callback=msg_update_callback)
+
+        # Update cse api extension (along with api end points)
+        _update_cse_extension(
+            client=client,
+            routing_key=config['amqp']['routing_key'],
+            exchange=config['amqp']['exchange'],
+            target_vcd_api_version=config['vcd']['api_version'],
+            msg_update_callback=msg_update_callback)
 
     # Add global placement polcies
     _setup_placement_policies(
