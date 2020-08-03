@@ -324,11 +324,13 @@ def install_cse(config_file_name, skip_template_creation,
         # Setup extension message protocol
         if utils.use_mqtt_protocol(config):
             mqtt_ext_manager = MQTTExtensionManager(client)
+            description = _construct_cse_extension_description(
+                config['vcd']['api_version'])
             ext_info = mqtt_ext_manager.setup_extension(
                 ext_name=server_constants.CSE_SERVICE_NAME,
                 ext_version=server_constants.MQTT_EXTENSION_VERSION,
                 ext_vendor=server_constants.MQTT_EXTENSION_VENDOR,
-                description='')
+                description=description)
             ext_uuid = mqtt_ext_manager.get_extension_uuid(
                 ext_info['ext_urn_id'])
             _ = mqtt_ext_manager.setup_api_filter(
@@ -486,7 +488,6 @@ def _create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
     INSTALL_LOGGER.info(msg)
 
 
-# TODO: make sure not used for MQTT extension
 def _deregister_cse(client, msg_update_callback=utils.NullPrinter()):
     """Deregister CSE from VCD."""
     ext = api_extension.APIExtension(client)
