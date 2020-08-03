@@ -108,8 +108,7 @@ class Distribution:
 class Settings:
     network: str
     ssh_key: str = None
-    enable_nfs: bool = False
-    rollback_on_failure = True
+    rollback_on_failure: bool = True
 
 
 @dataclass()
@@ -216,7 +215,7 @@ class ClusterEntity:
             "settings": {
                 "network": "net",
                 "ssh_key": null,
-                "enable_nfs": false
+                "rollback_on_failure": true
             },
             "k8_distribution": {
                 "template_name": "k81.17",
@@ -282,6 +281,8 @@ class DefEntity:
     entityType: str = None
     externalId: str = None
     state: str = None
+    owner: Owner = None
+    org: Org = None
 
     def __init__(self, entity: ClusterEntity, name: str = None, id: str = None,
                  entityType: str = None, externalId: str = None,
