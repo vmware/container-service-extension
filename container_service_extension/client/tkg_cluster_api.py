@@ -127,19 +127,26 @@ class TKGClusterApi:
             cluster_name = cluster_config.get('metadata', {}).get('name')
             tkg_entities, additional_data = self.get_tkg_clusters_by_name(cluster_name)
             # TODO: Better way to deserialize the object into TkgCluster
-            deseralizeCls = make_dataclass('Deserialize', [('data', str)])
+            deseralize_cls = make_dataclass('Deserialize', [('data', str)])
+            task_href = None
             if len(tkg_entities) == 0:
                 # deserialize the cluster config given in to TkgCluster object
-                deserialize_input = deseralizeCls(data=json.dumps(cluster_config))
-                self._tkg_client_api.create_tkg_cluster(
-                    tkg_cluster=self._tkg_client.deserialize(deserialize_input, 'TkgCluster', '')[0])
+                deserialize_input = deseralize_cls(data=json.dumps(cluster_config))
+                response, status, headers, additional_data = \
+                    self._tkg_client_api.create_tkg_cluster_with_http_info(
+                        tkg_cluster=self._tkg_client.deserialize(deserialize_input, 'TkgCluster', '')[0])
+                # Get the task href from the header
+                task_href = headers.get('Location')
             elif len(tkg_entities) == 1:
                 # deserialize the cluster config given in to TkgCluster object
                 cluster_id = additional_data[0]['id']
-                deserialize_input = deseralizeCls(data=json.dumps(cluster_config))
-                self._tkg_client_api.update_tkg_cluster(
-                    tkg_cluster_id=cluster_id,
-                    tkg_cluster=self._tkg_client.deserialize(deserialize_input, 'TkgCluster', '')[0])
+                deserialize_input = deseralize_cls(data=json.dumps(cluster_config))
+                response, status, headers, additional_data  = \
+                    self._tkg_client_api.update_tkg_cluster(
+                        tkg_cluster_id=cluster_id,
+                        tkg_cluster=self._tkg_client.deserialize(deserialize_input, 'TkgCluster', '')[0])
+                # Get the task href from the header
+                task_href = headers.get('Location')
             else:
                 # More than 1 TKG cluster with the same name found.
                 msg = f"Multiple clusters found with name {cluster_name}. " \
@@ -148,9 +155,11 @@ class TKGClusterApi:
                 raise cse_exceptions.CseDuplicateClusterError(msg)
             # Retrieve the created TKG cluster details
             entity, additional_data = self.get_tkg_clusters_by_name(cluster_name)
-            return yaml.dump(entity[0].to_dict()) if len(entity) > 0 else ""
+            output_dict = entity[0].to_dict()
+            output_dict['task_href'] = task_href
+            return yaml.dump(output_dict)
         except Exception as e:
-            logger.CLIENT_LOGGER.error(f"{e}")
+            logger.CLIENT_LOGGER.error(f"Error while applying cluster spec: {e}")  # noqa: E501
             raise
 
     def delete_cluster_by_id(self, cluster_id):
@@ -163,7 +172,7 @@ class TKGClusterApi:
             self._tkg_client_api.delete_tkg_cluster(cluster_id)
             return yaml.dump(self.get_tkg_cluster(cluster_id))
         except Exception as e:
-            logger.CLIENT_LOGGER.error(f"{e}")
+            logger.CLIENT_LOGGER.error(f"Error deleting the cluster: {e}")
             raise
 
     def delete_cluster(self, cluster_name, org=None, vdc=None):
