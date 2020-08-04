@@ -1,5 +1,3 @@
-import re
-
 from lxml import etree
 import pyvcloud.vcd.client as vcd_client
 import requests
@@ -57,20 +55,6 @@ def _get_id_from_api_filter_link(filter_link):
             return link_dirs[ind + 2]
         ind += 1
     return ''
-
-
-def _parse_api_filter_pattern(initial_pattern):
-    """Parse the url pattern from the initial api filter pattern.
-
-    Example: initial_pattern = '\n     /api/endpoint\n      '
-    The expected return would be: '/api/endpoint'.
-
-    :param str initial_pattern: the raw api filter pattern
-
-    :return: the parsed url pattern
-    :rtype: str
-    """
-    return re.findall(pattern='/.+', string=initial_pattern)[0]
 
 
 class MQTTExtensionManager:
@@ -481,15 +465,12 @@ class MQTTExtensionManager:
         :rtype: str
         :raises: Exception if error in making POST request
         """
-        xml_etree = etree.XML(
-            f"""
-            <vmext:ApiFilter xmlns:vmext =
-                "http://www.vmware.com/vcloud/extension/v1.5">
-                <vmext:UrlPattern>
-                    {api_filter_url_pattern}
-                </vmext:UrlPattern >
-            </vmext:ApiFilter>
-            """)
+        xml_str = \
+            f"<vmext:ApiFilter xmlns:vmext =" \
+            f"\"http://www.vmware.com/vcloud/extension/v1.5\">" \
+            f"<vmext:UrlPattern>{api_filter_url_pattern}</vmext:UrlPattern >" \
+            f"</vmext:ApiFilter>"
+        xml_etree = etree.XML(xml_str)
         absolute_api_filters_url = f"{self._sysadmin_client.get_api_uri()}" \
             f"/{constants.ADMIN_EXT_SERVICE_PATH}/{ext_uuid}" \
             f"/{constants.API_FILTERS_PATH}"
@@ -527,9 +508,7 @@ class MQTTExtensionManager:
         except AttributeError:
             return filter_ids
         for filter_info in api_filters:
-            curr_filter_url_pattern = _parse_api_filter_pattern(
-                filter_info.attrib['urlPattern'])
-            if curr_filter_url_pattern == api_filter_url_pattern:
+            if filter_info.attrib['urlPattern'] == api_filter_url_pattern:
                 filter_id = _get_id_from_api_filter_link(
                     filter_info.attrib['href'])
                 filter_ids.append(filter_id)
