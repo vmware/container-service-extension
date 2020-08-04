@@ -13,7 +13,6 @@ import threading
 
 import click
 import pkg_resources
-from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
 import requests
 import semantic_version
 
@@ -366,15 +365,3 @@ def run_async(func):
 def generate_thread_name(function_name):
     parent_thread_id = threading.current_thread().ident
     return function_name + ':' + str(parent_thread_id)
-
-
-def is_v35_supported_by_cse_server():
-    """Return true if CSE server is qualified to invoke Defined Entity API.
-
-    DEF API is introduced in vCD API version 35.0
-
-    :rtype: bool
-    """
-    import container_service_extension.utils as utils
-    api_version = utils.get_server_api_version()
-    return float(api_version) >= float(vCDApiVersion.VERSION_35.value)
