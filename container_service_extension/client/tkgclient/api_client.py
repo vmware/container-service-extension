@@ -223,7 +223,7 @@ class ApiClient(object):
             deserialized object, or string of class name.
         :param method: HTTP method used to get the response
 
-        :return: deserialized object.
+        :return: (deserialized object, additional entity properties)
         """
         # handle file downloading
         # save response body into a tmp file and return the instance
