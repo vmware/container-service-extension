@@ -262,8 +262,7 @@ def _get_url_data(method: str, url: str, api_version: str):
         return _get_pks_url_data(method, url)
 
     if _is_cse_3_0_endpoint(url):
-        if api_version == VcdApiVersion.VERSION_35.value:
-            return _get_v35_url_data(method, url)
+        return _get_v35_url_data(method, url, api_version)
 
     return _get_legacy_url_data(method, url, api_version)
 
@@ -322,7 +321,7 @@ def _get_pks_url_data(method: str, url: str):
     raise cse_exception.NotFoundRequestError()
 
 
-def _get_v35_url_data(method: str, url: str):
+def _get_v35_url_data(method: str, url: str, api_version: str):
     """Parse url and http method to get CSE v35 data.
 
     Returns a dictionary with operation and url data.
@@ -332,6 +331,9 @@ def _get_v35_url_data(method: str, url: str):
 
     :rtype: dict
     """
+    if api_version != VcdApiVersion.VERSION_35.value:
+        raise cse_exception.NotFoundRequestError()
+
     tokens = url.split('/')
     num_tokens = len(tokens)
 
