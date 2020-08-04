@@ -169,6 +169,11 @@ class ClusterService(abstract_broker.AbstractBroker):
         ovdc_name = cluster_spec.metadata.ovdc_name
         template_name = cluster_spec.spec.k8_distribution.template_name
         template_revision = cluster_spec.spec.k8_distribution.template_revision
+        if not (template_name or template_revision):
+            default_dist = utils.get_default_k8_distribution()
+            cluster_spec.spec.k8_distribution = default_dist
+            template_name = default_dist.template_name
+            template_revision = default_dist.template_revision
 
         # check that cluster name is syntactically valid
         if not is_valid_cluster_name(cluster_name):
