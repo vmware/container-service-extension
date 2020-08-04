@@ -122,7 +122,7 @@ class DefEntityClusterApi:
                 cli_constants.CLIOutputKey.K8S_RUNTIME.value: cli_constants.TKG_CLUSTER_RUNTIME, # noqa: E501
                 cli_constants.CLIOutputKey.K8S_VERSION.value: entity.spec.distribution.version, # noqa: E501
                 # TODO(TKG): status field doesn't have any attributes
-                cli_constants.CLIOutputKey.STATUS.value: entity.status.phase,
+                cli_constants.CLIOutputKey.STATUS.value: entity.status.phase if entity.status else 'N/A',  # noqa: E501
                 # TODO(Owner in CSE server response): Owner value is needed
                 cli_constants.CLIOutputKey.OWNER.value: entity_properties['owner']['name'],  # noqa: E501
             }
