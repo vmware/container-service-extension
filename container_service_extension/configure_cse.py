@@ -1202,6 +1202,12 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
                    skip_template_creation, ssh_key, retain_temp_vapp,
                    admin_password, msg_update_callback=utils.NullPrinter(),
                    log_wire=False):
+    """Handle upgrade to api version 35.
+
+    :raises: MultipleRecordsException: if more than one service with the
+        given name and namespace are found when trying to delete the amqp-based
+        extension.
+    """
     if utils.use_mqtt_protocol(config):
         # Delete extension if present and set up MQTT extension
         try:
