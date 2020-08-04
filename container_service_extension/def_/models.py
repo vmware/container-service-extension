@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import List
 
 import container_service_extension.def_.utils as def_utils
-import container_service_extension.utils as utils
 
 
 @dataclass(frozen=True)
@@ -94,22 +93,19 @@ class Workers:
 
 @dataclass()
 class Distribution:
-    template_name: str = None
-    template_revision: int = 1
+    template_name: str = ""
+    template_revision: int = 0
 
-    def __init__(self, template_name: str = None, template_revision: int = None):  # noqa: E501
-        if not template_name:
-            default_dist = utils.get_default_k8_distribution()
-        self.template_name = template_name or default_dist.template_name
-        self.template_revision = template_revision or default_dist.template_revision  # noqa: E501
+    def __init__(self, template_name: str, template_revision: int):
+        self.template_name = template_name
+        self.template_revision = template_revision
 
 
 @dataclass()
 class Settings:
     network: str
     ssh_key: str = None
-    enable_nfs: bool = False
-    rollback_on_failure = True
+    rollback_on_failure: bool = True
 
 
 @dataclass()
@@ -216,7 +212,7 @@ class ClusterEntity:
             "settings": {
                 "network": "net",
                 "ssh_key": null,
-                "enable_nfs": false
+                "rollback_on_failure": true
             },
             "k8_distribution": {
                 "template_name": "k81.17",
@@ -282,6 +278,8 @@ class DefEntity:
     entityType: str = None
     externalId: str = None
     state: str = None
+    owner: Owner = None
+    org: Org = None
 
     def __init__(self, entity: ClusterEntity, name: str = None, id: str = None,
                  entityType: str = None, externalId: str = None,

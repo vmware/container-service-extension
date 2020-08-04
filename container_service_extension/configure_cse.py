@@ -513,10 +513,10 @@ def _register_cse_as_extension(client, routing_key, exchange,
     """
     ext = api_extension.APIExtension(client)
     patterns = [
-        f'/api/{server_constants.CSE_SERVICE_NAME}',
-        f'/api/{server_constants.CSE_SERVICE_NAME}/.*',
-        f'/api/{server_constants.PKS_SERVICE_NAME}',
-        f'/api/{server_constants.PKS_SERVICE_NAME}/.*',
+        f'/api/{shared_constants.CSE_URL_FRAGMENT}',
+        f'/api/{shared_constants.CSE_URL_FRAGMENT}/.*',
+        f'/api/{shared_constants.PKS_URL_FRAGMENT}',
+        f'/api/{shared_constants.PKS_URL_FRAGMENT}/.*',
     ]
 
     vcd_api_versions = client.get_supported_versions_list()
@@ -1125,10 +1125,10 @@ def _update_cse_extension(client, routing_key, exchange,
     """."""
     ext = api_extension.APIExtension(client)
     patterns = [
-        f'/api/{server_constants.CSE_SERVICE_NAME}',
-        f'/api/{server_constants.CSE_SERVICE_NAME}/.*',
-        f'/api/{server_constants.PKS_SERVICE_NAME}',
-        f'/api/{server_constants.PKS_SERVICE_NAME}/.*',
+        f'/api/{shared_constants.CSE_URL_FRAGMENT}',
+        f'/api/{shared_constants.CSE_URL_FRAGMENT}/.*',
+        f'/api/{shared_constants.PKS_URL_FRAGMENT}',
+        f'/api/{shared_constants.PKS_URL_FRAGMENT}/.*',
     ]
 
     description = _construct_cse_extension_description(target_vcd_api_version)
@@ -1295,6 +1295,11 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
         cse_clusters=clusters,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
+
+    # Print list of users categorized by org, who currently owns CSE clusters
+    # and will need DEF entity rights.
+    _print_users_in_need_of_def_rights(
+        cse_clusters=clusters, msg_update_callback=msg_update_callback)
 
 
 def _fix_cluster_metadata(client,
@@ -1945,3 +1950,21 @@ def _create_def_entity_for_existing_clusters(
     msg = "Finished processing all clusters."
     INSTALL_LOGGER.info(msg)
     msg_update_callback.general(msg)
+
+
+def _print_users_in_need_of_def_rights(
+        cse_clusters, msg_update_callback=utils.NullPrinter()):
+    org_user_dict = {}
+    for cluster in cse_clusters:
+        if cluster['org_name'] not in org_user_dict:
+            org_user_dict[cluster['org_name']] = []
+        org_user_dict[cluster['org_name']].append(cluster['owner_name'])
+
+    msg = "The following users own CSE k8s clusters and will require [TODO] rights to access them in CSE 3.0"  # noqa: E501
+    msg_update_callback.info(msg)
+    INSTALL_LOGGER.info(msg)
+
+    for org_name, user_list in org_user_dict.items():
+        msg = f"Org : {org_name} -> Users : {', '.join(set(user_list))}"
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.info(msg)

@@ -478,7 +478,8 @@ class ComputePolicyManager:
         return org.assign_placement_policy_to_vapp_template_vms(
             catalog_name=catalog_name,
             catalog_item_name=catalog_item_name,
-            placement_policy_href=compute_policy_href)
+            placement_policy_href=compute_policy_href,
+            placement_policy_final=True)
 
     def assign_vdc_sizing_policy_to_vapp_template_vms(self,
                                                       compute_policy_href,
@@ -821,6 +822,10 @@ class ComputePolicyManager:
                 target_vms = []
                 system_default_href = None
                 operation_msg = None
+                for cp_dict in self.list_compute_policies_on_vdc(vdc_id):
+                    if cp_dict['name'] == _SYSTEM_DEFAULT_COMPUTE_POLICY:
+                        system_default_href = cp_dict['href']
+                        break
                 if is_placement_policy:
                     for vapp in vapps:
                         target_vms += \
@@ -836,10 +841,6 @@ class ComputePolicyManager:
                             [vm for vm in vapp.get_all_vms()
                                 if self._get_vm_sizing_policy_id(vm) == compute_policy_id] # noqa: E501
                     vm_names = [vm.get('name') for vm in target_vms]
-                    for cp_dict in self.list_compute_policies_on_vdc(vdc_id):
-                        if cp_dict['name'] == _SYSTEM_DEFAULT_COMPUTE_POLICY:
-                            system_default_href = cp_dict['href']
-                            break
                     operation_msg = "Setting sizing policy to " \
                                     f"'{_SYSTEM_DEFAULT_COMPUTE_POLICY}' on " \
                                     f"{len(vm_names)} VMs. " \
@@ -867,31 +868,70 @@ class ComputePolicyManager:
                     _task = None
                     operation_msg = None
                     if is_placement_policy:
+                        if hasattr(vm_resource, 'ComputePolicy') and \
+                                not hasattr(vm_resource.ComputePolicy, 'VmSizingPolicy'):  # noqa: E501
+                            # Updating sizing policy for the VM
+                            _task = vm.update_compute_policy(
+                                compute_policy_href=system_default_href)
+                            operation_msg = \
+                                "Setting compute policy to " \
+                                f"'{_SYSTEM_DEFAULT_COMPUTE_POLICY}' "\
+                                f"on VM '{vm_resource.get('name')}'"
+                            task.update(
+                                status=vcd_client.TaskStatus.RUNNING.value,
+                                namespace='vcloud.cse',
+                                operation=operation_msg,
+                                operation_name=f'Setting sizing policy to {_SYSTEM_DEFAULT_COMPUTE_POLICY}',  # noqa: E501
+                                details='',
+                                progress=None,
+                                owner_href=vdc.href,
+                                owner_name=vdc.name,
+                                owner_type=vcd_client.EntityType.VDC.value,
+                                user_href=user_href,
+                                user_name=user_name,
+                                task_href=task_href,
+                                org_href=org_href)
+                            task_monitor.wait_for_success(_task)
                         _task = vm.remove_placement_policy()
                         operation_msg = "Removing placement policy on VM " \
                                         f"'{vm_resource.get('name')}'"
+                        task.update(
+                            status=vcd_client.TaskStatus.RUNNING.value,
+                            namespace='vcloud.cse',
+                            operation=operation_msg,
+                            operation_name='Remove org VDC compute policy',
+                            details='',
+                            progress=None,
+                            owner_href=vdc.href,
+                            owner_name=vdc.name,
+                            owner_type=vcd_client.EntityType.VDC.value,
+                            user_href=user_href,
+                            user_name=user_name,
+                            task_href=task_href,
+                            org_href=org_href)
+                        task_monitor.wait_for_success(_task)
                     else:
                         _task = vm.update_compute_policy(
                             compute_policy_href=system_default_href)
-                        operation_msg = "Setting compute policy to " \
+                        operation_msg = "Setting sizing policy to " \
                                         f"'{_SYSTEM_DEFAULT_COMPUTE_POLICY}' "\
                                         f"on VM '{vm_resource.get('name')}'"
+                        task.update(
+                            status=vcd_client.TaskStatus.RUNNING.value,
+                            namespace='vcloud.cse',
+                            operation=operation_msg,
+                            operation_name='Remove org VDC compute policy',
+                            details='',
+                            progress=None,
+                            owner_href=vdc.href,
+                            owner_name=vdc.name,
+                            owner_type=vcd_client.EntityType.VDC.value,
+                            user_href=user_href,
+                            user_name=user_name,
+                            task_href=task_href,
+                            org_href=org_href)
+                        task_monitor.wait_for_success(_task)
 
-                    task.update(
-                        status=vcd_client.TaskStatus.RUNNING.value,
-                        namespace='vcloud.cse',
-                        operation=operation_msg,
-                        operation_name='Remove org VDC compute policy',
-                        details='',
-                        progress=None,
-                        owner_href=vdc.href,
-                        owner_name=vdc.name,
-                        owner_type=vcd_client.EntityType.VDC.value,
-                        user_href=user_href,
-                        user_name=user_name,
-                        task_href=task_href,
-                        org_href=org_href)
-                    task_monitor.wait_for_success(_task)
             final_status = vcd_client.TaskStatus.RUNNING.value \
                 if is_umbrella_task else vcd_client.TaskStatus.SUCCESS.value
             task.update(

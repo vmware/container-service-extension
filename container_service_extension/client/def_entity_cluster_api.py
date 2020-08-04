@@ -24,7 +24,7 @@ import container_service_extension.exceptions as cse_exceptions
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
 
-DUPLICATE_CLUSTER_ERROR_MSG = "Duplicated clusters found. Please use --k8-runtime for the unique identification"  # noqa: E501
+DUPLICATE_CLUSTER_ERROR_MSG = "Duplicate clusters found. Please use --k8-runtime for the unique identification"  # noqa: E501
 
 
 class DefEntityClusterApi:
@@ -122,7 +122,7 @@ class DefEntityClusterApi:
                 cli_constants.CLIOutputKey.K8S_RUNTIME.value: cli_constants.TKG_CLUSTER_RUNTIME, # noqa: E501
                 cli_constants.CLIOutputKey.K8S_VERSION.value: entity.spec.distribution.version, # noqa: E501
                 # TODO(TKG): status field doesn't have any attributes
-                cli_constants.CLIOutputKey.STATUS.value: entity.status.phase,
+                cli_constants.CLIOutputKey.STATUS.value: entity.status.phase if entity.status else 'N/A',  # noqa: E501
                 # TODO(Owner in CSE server response): Owner value is needed
                 cli_constants.CLIOutputKey.OWNER.value: entity_properties['owner']['name'],  # noqa: E501
             }
@@ -151,9 +151,6 @@ class DefEntityClusterApi:
         for def_entity in native_entities:
             entity = def_entity.entity
             logger.CLIENT_LOGGER.debug(f"Native Defined entity list from server: {def_entity}")  # noqa: E501
-            # owner_id = \
-            # def_entity.ownerId if hasattr(def_entity, 'ownerId') else ' '
-            # TODO(Owner in CSE server response): REST call to fetch owner_name
             cluster = {
                 cli_constants.CLIOutputKey.CLUSTER_NAME.value: def_entity.name,
                 cli_constants.CLIOutputKey.VDC.value: entity.metadata.ovdc_name, # noqa: E501
@@ -161,7 +158,7 @@ class DefEntityClusterApi:
                 cli_constants.CLIOutputKey.K8S_RUNTIME.value: entity.kind, # noqa: E501
                 cli_constants.CLIOutputKey.K8S_VERSION.value: entity.status.kubernetes, # noqa: E501
                 cli_constants.CLIOutputKey.STATUS.value: entity.status.phase, # noqa: E501
-                cli_constants.CLIOutputKey.OWNER.value: ' '
+                cli_constants.CLIOutputKey.OWNER.value: def_entity.owner.name
             }
             clusters.append(cluster)
         return clusters

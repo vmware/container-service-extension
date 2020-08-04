@@ -304,7 +304,6 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                     task_href=task_href,
                     org_href=operation_context.user.org_href,
                     error_message=f"{err}")
-        raise err
     finally:
         if operation_context.sysadmin_client:
             operation_context.end()

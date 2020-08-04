@@ -33,10 +33,7 @@ import container_service_extension.logger as logger
 from container_service_extension.pks_cache import PksCache
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.server_constants as server_constants
-from container_service_extension.server_constants import LocalTemplateKey
-from container_service_extension.server_constants import SYSTEM_ORG_NAME
-from container_service_extension.shared_constants import CSE_SERVER_API_VERSION
-from container_service_extension.shared_constants import ServerAction
+import container_service_extension.shared_constants as shared_constants
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import PayloadKey
 from container_service_extension.telemetry.telemetry_handler \
@@ -163,7 +160,7 @@ class Service(object, metaclass=Singleton):
 
     def info(self, get_sysadmin_info=False):
         result = utils.get_cse_info()
-        result[CSE_SERVER_API_VERSION] = utils.get_server_api_version()
+        result[shared_constants.CSE_SERVER_API_VERSION] = utils.get_server_api_version()  # noqa: E501
         if get_sysadmin_info:
             result['consumer_threads'] = len(self.threads)
             result['all_threads'] = threading.activeCount()
@@ -181,7 +178,7 @@ class Service(object, metaclass=Singleton):
     def get_native_cluster_entity_type(self) -> def_models.DefEntityType:
         return self._nativeEntityType
 
-    def update_status(self, server_action: ServerAction):
+    def update_status(self, server_action: shared_constants.ServerAction):
         def graceful_shutdown():
             message = 'Shutting down CSE'
             n = self.active_requests_count()
@@ -191,35 +188,35 @@ class Service(object, metaclass=Singleton):
             return message
 
         if self._state == ServerState.RUNNING:
-            if server_action == ServerAction.ENABLE:
+            if server_action == shared_constants.ServerAction.ENABLE:
                 return 'CSE is already enabled and running.'
-            if server_action == ServerAction.DISABLE:
+            if server_action == shared_constants.ServerAction.DISABLE:
                 self._state = ServerState.DISABLED
                 return 'CSE has been disabled.'
-            if server_action == ServerAction.STOP:
+            if server_action == shared_constants.ServerAction.STOP:
                 raise cse_exception.BadRequestError(
                     error_message='CSE must be disabled before '
                                   'it can be stopped.')
             raise cse_exception.BadRequestError(
                 error_message=f"Invalid server action: '{server_action}'")
         if self._state == ServerState.DISABLED:
-            if server_action == ServerAction.ENABLE:
+            if server_action == shared_constants.ServerAction.ENABLE:
                 self._state = ServerState.RUNNING
                 return 'CSE has been enabled and is running.'
-            if server_action == ServerAction.DISABLE:
+            if server_action == shared_constants.ServerAction.DISABLE:
                 return 'CSE is already disabled.'
-            if server_action == ServerAction.STOP:
+            if server_action == shared_constants.ServerAction.STOP:
                 return graceful_shutdown()
         if self._state == ServerState.STOPPING:
-            if server_action == ServerAction.ENABLE:
+            if server_action == shared_constants.ServerAction.ENABLE:
                 raise cse_exception.BadRequestError(
                     error_message='Cannot enable CSE while it is being'
                                   'stopped.')
-            if server_action == ServerAction.DISABLE:
+            if server_action == shared_constants.ServerAction.DISABLE:
                 raise cse_exception.BadRequestError(
                     error_message='Cannot disable CSE while it is being'
                                   ' stopped.')
-            if server_action == ServerAction.STOP:
+            if server_action == shared_constants.ServerAction.STOP:
                 return graceful_shutdown()
 
         raise cse_exception.CseServerError(f"Invalid server state: '{self._state}'")  # noqa: E501
@@ -254,6 +251,9 @@ class Service(object, metaclass=Singleton):
         # Read k8s catalog definition from catalog item metadata and append
         # the same to to server run-time config
         self._load_template_definition_from_catalog(
+            msg_update_callback=msg_update_callback)
+
+        self._load_placement_policy_details(
             msg_update_callback=msg_update_callback)
 
         if float(self.config['vcd']['api_version']) < float(vCDApiVersion.VERSION_35.value): # noqa: E501
@@ -413,6 +413,33 @@ class Service(object, metaclass=Singleton):
             if sysadmin_client:
                 sysadmin_client.logout()
 
+    def _load_placement_policy_details(self,
+                                       msg_update_callback=utils.NullPrinter()):  # noqa: E501
+        msg = "Loading kubernetes runtime placement policies."
+        logger.SERVER_LOGGER.info(msg)
+        msg_update_callback.general(msg)
+        try:
+            sysadmin_client = vcd_utils.get_sys_admin_client()
+            if float(sysadmin_client.get_api_version()) < compute_policy_manager.GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION:  # noqa: E501
+                msg = "Placement policies for kubernetes runtimes not " \
+                      " supported in api version " \
+                      f"{sysadmin_client.get_api_version()}"  # noqa: E501
+                logger.SERVER_LOGGER.debug(msg)
+                msg_update_callback.info(msg)
+                return
+            placement_policy_name_to_href = {}
+            cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
+                                                              log_wire=self.config['service'].get('log_wire')) # noqa: E501
+            for runtime_policy in shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES:  # noqa: E501
+                placement_policy_name_to_href[runtime_policy] = \
+                    cpm.get_vdc_compute_policy(runtime_policy, is_placement_policy=True)['href']  # noqa: E501
+            self.config['placement_policy_hrefs'] = placement_policy_name_to_href  # noqa: E501
+        except Exception as e:
+            msg = f"Failed to load placement policies to server runtime configt: {str(e)}" # noqa: E501
+            msg_update_callback.error(e)
+            logger.SERVER_LOGGER.error(e)
+            raise
+
     def _load_template_definition_from_catalog(self,
                                                msg_update_callback=utils.NullPrinter()): # noqa: E501
         msg = "Loading k8s template definition from catalog"
@@ -435,7 +462,7 @@ class Service(object, metaclass=Singleton):
                             log_headers=log_wire,
                             log_bodies=log_wire)
             credentials = BasicLoginCredentials(self.config['vcd']['username'],
-                                                SYSTEM_ORG_NAME,
+                                                server_constants.SYSTEM_ORG_NAME,  # noqa: E501
                                                 self.config['vcd']['password'])
             client.set_credentials(credentials)
 
@@ -459,7 +486,8 @@ class Service(object, metaclass=Singleton):
                 str(self.config['broker']['default_template_revision'])
             found_default_template = False
             for template in k8_templates:
-                if str(template[LocalTemplateKey.REVISION]) == default_template_revision and template[LocalTemplateKey.NAME] == default_template_name: # noqa: E501
+                if str(template[server_constants.LocalTemplateKey.REVISION]) == default_template_revision and \
+                        template[server_constants.LocalTemplateKey.NAME] == default_template_name: # noqa: E501
                     found_default_template = True
 
                 msg = f"Found K8 template '{template['name']}' at revision " \
@@ -527,8 +555,8 @@ class Service(object, metaclass=Singleton):
                                                               log_wire=self.config['service'].get('log_wire')) # noqa: E501
 
             for template in self.config['broker']['templates']:
-                policy_name = template[LocalTemplateKey.COMPUTE_POLICY]
-                catalog_item_name = template[LocalTemplateKey.CATALOG_ITEM_NAME] # noqa: E501
+                policy_name = template[server_constants.LocalTemplateKey.COMPUTE_POLICY]  # noqa: E501
+                catalog_item_name = template[server_constants.LocalTemplateKey.CATALOG_ITEM_NAME] # noqa: E501
                 # if policy name is not empty, stamp it on the template
                 if policy_name:
                     try:
