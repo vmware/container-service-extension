@@ -365,3 +365,29 @@ def run_async(func):
 def generate_thread_name(function_name):
     parent_thread_id = threading.current_thread().ident
     return function_name + ':' + str(parent_thread_id)
+
+
+def flatten_dictionary(input_dict, parent_key='', separator='.'):
+    """Flatten a given dictionary with nested dictionaries if any.
+
+    Example: { 'a' : {'b':'c', 'd': {'e' : 'f'}}, 'g' : 'h'} will be flattened
+    to {'a.b': 'c', 'a.d.e': 'f', 'g': 'h'}
+
+    This will flatten only the values of dict type.
+
+    :param dict input_dict:
+    :param str parent_key: parent key that gets prefixed while forming flattened key  # noqa: E501
+    :param str separator: use the separator to form flattened key
+    :return: flattened dictionary
+    :rtype: dict
+    """
+    flattened_dict = {}
+    for k in input_dict.keys():
+        val = input_dict.get(k)
+        key_prefix = f"{parent_key}{k}"
+        if isinstance(val, dict):
+            parent_key = f"{key_prefix}{separator}"
+            flattened_dict.update(flatten_dictionary(val, parent_key))  # noqa: E501
+        else:
+            flattened_dict.update({key_prefix: val})
+    return flattened_dict

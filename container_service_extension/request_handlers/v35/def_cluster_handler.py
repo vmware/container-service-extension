@@ -8,6 +8,7 @@ import container_service_extension.def_.models as def_models
 import container_service_extension.operation_context as ctx
 import container_service_extension.request_handlers.request_utils as request_utils  # noqa: E501
 import container_service_extension.server_constants as const
+from container_service_extension.shared_constants import FlattenedClusterSpecKey  # noqa: E501
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.telemetry_handler import \
     record_user_action_telemetry
@@ -33,12 +34,19 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
 def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster resize operation.
 
+    Validate data before actual resize is delegated to cluster service.
+
     :return: Defined entity of the native cluster
     :rtype: container_service_extension.def_.models.DefEntity
     """
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
     cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
+    curr_entity = svc.entity_svc.get_entity(cluster_id)
+    request_utils.validate_request_payload(
+        asdict(cluster_entity_spec.spec), asdict(curr_entity.entity.spec),
+        exclude_fields=[FlattenedClusterSpecKey.WORKERS_COUNT.value,
+                        FlattenedClusterSpecKey.NFS_COUNT.value])
     return asdict(svc.resize_cluster(cluster_id, cluster_entity_spec))
 
 
@@ -106,13 +114,18 @@ def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
 def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     """Request handler for cluster upgrade operation.
 
-    data validation handled in broker
+    Validate data before actual upgrade is delegated to cluster service.
 
     :return: Dict
     """
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
     cluster_id = data[RequestKey.CLUSTER_ID]
+    curr_entity = svc.entity_svc.get_entity(cluster_id)
+    request_utils.validate_request_payload(
+        asdict(cluster_entity_spec.spec), asdict(curr_entity.entity.spec),
+        exclude_fields=[FlattenedClusterSpecKey.TEMPLATE_NAME.value,
+                        FlattenedClusterSpecKey.TEMPLATE_REVISION.value])
     return asdict(svc.upgrade_cluster(cluster_id, cluster_entity_spec))
 
 
