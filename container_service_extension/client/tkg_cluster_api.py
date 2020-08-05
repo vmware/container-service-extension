@@ -110,11 +110,15 @@ class TKGClusterApi:
         if vdc:
             filters.append((cli_constants.TKGClusterEntityFilterKey.VDC_NAME.value, vdc))  # noqa: E501
         filter_string = ";".join([f"{f[0]}=={f[1]}" for f in filters])
-        (entities, status, headers, additional_data) = \
+        response = \
             self._tkg_client_api.list_tkg_clusters(
                 f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}", # noqa: E501
                 object_filter=filter_string)
-        return entities, additional_data
+        if response:
+            entities = response[0]
+            additional_data = response[3]
+            return entities, additional_data
+        return None, None
 
     def apply(self, cluster_config: dict):
         """Apply the configuration either to create or update the cluster.
@@ -124,7 +128,8 @@ class TKGClusterApi:
         """
         try:
             cluster_name = cluster_config.get('metadata', {}).get('name')
-            tkg_entities, additional_data = self.get_tkg_clusters_by_name(cluster_name)  # noqa: E501
+            vdc_name = cluster_config.get('metadata', {}).get('virtualDataCenterName')  # noqa: E501
+            tkg_entities, additional_data = self.get_tkg_clusters_by_name(cluster_name, vdc=vdc_name)  # noqa: E501
             # TODO: Better way to deserialize the object into TkgCluster
             deseralize_cls = make_dataclass('Deserialize', [('data', str)])
             # deserialize the cluster config given in to TkgCluster object
@@ -137,7 +142,7 @@ class TKGClusterApi:
                 # deserialize the cluster config given in to TkgCluster object
                 cluster_id = additional_data[0]['id']
                 response, status, headers, additional_data = \
-                    self._tkg_client_api.update_tkg_cluster(
+                    self._tkg_client_api.update_tkg_cluster_with_http_info(
                         tkg_cluster_id=cluster_id,
                         tkg_cluster=tkg_cluster)
             else:

@@ -96,15 +96,30 @@ class DefEntityClusterApi:
         """
         filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        native_def_entity = entity_svc.get_native_entity_by_name(
-            name=cluster_name,
-            filters=filters)
+        native_def_entity = None
+        # NOTE: The following can throw error if invoked by users who
+        # doesn't have the necessary rights.
+        try:
+            native_def_entity = entity_svc.get_native_entity_by_name(
+                name=cluster_name,
+                filters=filters)
+        except Exception:
+            pass
+
         native_def_entity_dict = {}
         if native_def_entity:
             native_def_entity_dict = asdict(native_def_entity)
-        tkg_entities, _ = self._tkgCluster.get_tkg_clusters_by_name(cluster_name,  # noqa: E501
-                                                                    vdc=vdc,
-                                                                    org=org)
+
+        tkg_entities = []
+        # NOTE: The following can throw error if invoked by users who
+        # doesn't have the necessary rights.
+        try:
+            tkg_entities, _ = self._tkgCluster.get_tkg_clusters_by_name(
+                cluster_name,
+                vdc=vdc,
+                org=org)
+        except Exception:
+            pass
         # convert the tkg entities to dictionary
         tkg_entity_dicts = [tkg_entity.to_dict() for tkg_entity in tkg_entities]  # noqa: E501
         return tkg_entity_dicts, native_def_entity_dict
