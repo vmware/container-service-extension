@@ -127,6 +127,14 @@ class DefEntityOperationStatus(str, Enum):
     UNKNOWN = 'UNKNOWN'
 
 
+@unique
+class FlattenedClusterSpecKey(Enum):
+    WORKERS_COUNT = 'workers.count'
+    NFS_COUNT = 'nfs.count'
+    TEMPLATE_NAME = 'k8_distribution.template_name'
+    TEMPLATE_REVISION = 'k8_distribution.template_revision'
+
+
 @dataclass
 class DefEntityPhase:
     """Supports two ways of creation.

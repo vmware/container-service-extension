@@ -357,7 +357,8 @@ def read_data_file(filepath, logger=NULL_LOGGER,
 def run_async(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        t = threading.Thread(name=generate_thread_name(func.__name__),
+        t = threading.Thread(name=
+                             _thread_name(func.__name__),
                              target=func, args=args, kwargs=kwargs, daemon=True)  # noqa: E501
         t.start()
         return t
@@ -383,3 +384,29 @@ def use_mqtt_protocol(config):
     """
     return config.get('mqtt') is not None and \
         float(config['vcd']['api_version']) >= MQTT_MIN_API_VERSION
+
+
+def flatten_dictionary(input_dict, parent_key='', separator='.'):
+    """Flatten a given dictionary with nested dictionaries if any.
+
+    Example: { 'a' : {'b':'c', 'd': {'e' : 'f'}}, 'g' : 'h'} will be flattened
+    to {'a.b': 'c', 'a.d.e': 'f', 'g': 'h'}
+
+    This will flatten only the values of dict type.
+
+    :param dict input_dict:
+    :param str parent_key: parent key that gets prefixed while forming flattened key  # noqa: E501
+    :param str separator: use the separator to form flattened key
+    :return: flattened dictionary
+    :rtype: dict
+    """
+    flattened_dict = {}
+    for k in input_dict.keys():
+        val = input_dict.get(k)
+        key_prefix = f"{parent_key}{k}"
+        if isinstance(val, dict):
+            parent_key = f"{key_prefix}{separator}"
+            flattened_dict.update(flatten_dictionary(val, parent_key))  # noqa: E501
+        else:
+            flattened_dict.update({key_prefix: val})
+    return flattened_dict
