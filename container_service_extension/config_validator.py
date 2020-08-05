@@ -106,10 +106,10 @@ def get_validated_config(config_file_name,
         f"Validating config file '{config_file_name}'")
     # This allows us to compare top-level config keys and value types
     use_mqtt = use_mqtt_protocol(config)
-    sample_protocol_dict = SAMPLE_AMQP_CONFIG if not use_mqtt \
+    sample_message_queue_config = SAMPLE_AMQP_CONFIG if not use_mqtt \
         else SAMPLE_MQTT_CONFIG
     sample_config = {
-        **sample_protocol_dict, **SAMPLE_VCD_CONFIG,
+        **sample_message_queue_config, **SAMPLE_VCD_CONFIG,
         **SAMPLE_VCS_CONFIG, **SAMPLE_SERVICE_CONFIG,
         **SAMPLE_BROKER_CONFIG
     }
