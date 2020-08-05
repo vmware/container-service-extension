@@ -8,7 +8,7 @@ import yaml
 
 import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
-import container_service_extension.client.tkg_cluster_api as tkg_cluster_api
+import container_service_extension.client.tkg_cluster_api as tkg_cli_api
 import container_service_extension.client.utils as client_utils
 import container_service_extension.def_.entity_service as def_entity_svc
 from container_service_extension.def_.utils import DEF_CSE_VENDOR
@@ -43,7 +43,7 @@ class DefEntityClusterApi:
                 client=client, logger_debug=logger.CLIENT_LOGGER,
                 logger_wire=logger_wire)
         self._nativeCluster = NativeClusterApi(client)
-        self._tkgCluster = tkg_cluster_api.TKGClusterApi(client)
+        self._tkgCluster = tkg_cli_api.TKGClusterApi(client)
 
     def list_clusters(self, vdc=None, org=None, **kwargs):
         """Get collection of clusters using DEF API.
@@ -102,11 +102,11 @@ class DefEntityClusterApi:
         native_def_entity_dict = {}
         if native_def_entity:
             native_def_entity_dict = asdict(native_def_entity)
-        tkg_entities, _ = self._tkgCluster.get_tkg_clusters_by_name(cluster_name,
-                                                                 vdc=vdc,
-                                                                 org=org)
+        tkg_entities, _ = self._tkgCluster.get_tkg_clusters_by_name(cluster_name,  # noqa: E501
+                                                                    vdc=vdc,
+                                                                    org=org)
         # convert the tkg entities to dictionary
-        tkg_entity_dicts = [tkg_entity.to_dict() for tkg_entity in tkg_entities]
+        tkg_entity_dicts = [tkg_entity.to_dict() for tkg_entity in tkg_entities]  # noqa: E501
         return tkg_entity_dicts, native_def_entity_dict
 
     def get_cluster_info(self, cluster_name, org=None, vdc=None, **kwargs):

@@ -299,7 +299,7 @@ class TkgClusterApi(object):
         auth_settings = []  # noqa: E501
 
         return self.api_client.call_api(
-            'tkgCluster', 'DELETE',
+            'tkgClusters/{tkgClusterId}', 'DELETE',
             path_params,
             query_params,
             header_params,
@@ -400,7 +400,7 @@ class TkgClusterApi(object):
         auth_settings = []  # noqa: E501
 
         return self.api_client.call_api(
-            'tkgCluster', 'PUT',
+            'tkgClusters/{tkgClusterId}', 'PUT',
             path_params,
             query_params,
             header_params,
