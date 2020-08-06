@@ -18,6 +18,7 @@ from pyvcloud.vcd.org import Org
 import pyvcloud.vcd.utils as pyvcloud_vcd_utils
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
+from requests.exceptions import HTTPError
 import semantic_version
 
 import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
@@ -199,7 +200,7 @@ def _check_amqp_extension_installation(client, config, msg_update_callback,
 
 
 def _check_mqtt_extension_installation(client, err_msgs):
-    """Check that MQTT extension exists."""
+    """Check that MQTT extension exists with its API filter."""
     mqtt_ext_manager = MQTTExtensionManager(client)
     mqtt_ext_info = mqtt_ext_manager.get_extension_info(
         ext_name=server_constants.CSE_SERVICE_NAME,
@@ -334,18 +335,20 @@ def install_cse(config_file_name, skip_template_creation,
 
         # Setup extension message protocol
         if utils.use_mqtt_protocol(config):
+            # Check for current MQTT extension
             mqtt_ext_manager = MQTTExtensionManager(client)
-            description = _construct_cse_extension_description(
-                config['vcd']['api_version'])
-            ext_info = mqtt_ext_manager.setup_extension(
-                ext_name=server_constants.CSE_SERVICE_NAME,
-                ext_version=server_constants.MQTT_EXTENSION_VERSION,
-                ext_vendor=server_constants.MQTT_EXTENSION_VENDOR,
-                description=description)
-            ext_uuid = mqtt_ext_manager.get_extension_uuid(
-                ext_info['ext_urn_id'])
-            _ = mqtt_ext_manager.setup_api_filter(
-                server_constants.MQTT_API_FILTER_PATTERN, ext_uuid)
+            try:
+                _ = mqtt_ext_manager.get_extension_info(
+                    ext_name=server_constants.CSE_SERVICE_NAME,
+                    ext_version=server_constants.MQTT_EXTENSION_VERSION,
+                    ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
+                msg = "MQTT extension already exists. " \
+                      "Use `cse upgrade` instead of 'cse install'."
+                raise Exception(msg)
+            except HTTPError:
+                pass
+
+            _install_mqtt(client, config)
             mqtt_msg = 'MQTT extension is ready'
             msg_update_callback.general(mqtt_msg)
         else:
@@ -454,6 +457,29 @@ def install_cse(config_file_name, skip_template_creation,
     finally:
         if client is not None:
             client.logout()
+
+
+def _install_mqtt(client, config):
+    """Installs the MQTT extension and api filter.
+
+    :param Client client: client used to install cse server components
+    :param dict config: content of the CSE config file.
+
+    :raises HTTPError: if the MQTT extension and api filter were not set up
+        correctly
+    """
+    mqtt_ext_manager = MQTTExtensionManager(client)
+    description = _construct_cse_extension_description(
+        config['vcd']['api_version'])
+    ext_info = mqtt_ext_manager.setup_extension(
+        ext_name=server_constants.CSE_SERVICE_NAME,
+        ext_version=server_constants.MQTT_EXTENSION_VERSION,
+        ext_vendor=server_constants.MQTT_EXTENSION_VENDOR,
+        description=description)
+    ext_uuid = mqtt_ext_manager.get_extension_uuid(
+        ext_info['ext_urn_id'])
+    _ = mqtt_ext_manager.setup_api_filter(
+        server_constants.MQTT_API_FILTER_PATTERN, ext_uuid)
 
 
 def _create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
