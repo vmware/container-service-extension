@@ -250,8 +250,6 @@ class ApiClient(object):
                 additional_data.append(def_entity)
         return self.__deserialize(data, response_type), additional_data
 
-        return self.__deserialize(data, response_type)
-
     def __deserialize(self, data, klass):
         """Deserializes dict, list, str into an object.
 

@@ -14,6 +14,7 @@ from container_service_extension.client import pks
 from container_service_extension.client.cluster import Cluster
 from container_service_extension.client.cluster import ClusterEntityKind
 import container_service_extension.client.command_filter as cmd_filter
+import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.system import System
 import container_service_extension.client.utils as client_utils
@@ -609,9 +610,9 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
         metadata_vdc_key = ''
         if k8_runtime == ClusterEntityKind.NATIVE.value or \
                 k8_runtime == ClusterEntityKind.TANZU_PLUS.value:
-            metadata_vdc_key = 'ovdc_name'
+            metadata_vdc_key = cli_constants.NativeClusterMetadataKey.OVDC_NAME.value  # noqa: E501
         elif k8_runtime == ClusterEntityKind.TKG.value:
-            metadata_vdc_key = 'virtualDataCenterName'
+            metadata_vdc_key = cli_constants.TKGClusterMetadataKey.OVDC_NAME.value  # noqa: E501
         if not metadata.get(metadata_vdc_key):
             vdc = ctx.obj['profiles'].get('vdc_in_use')
             if not vdc:

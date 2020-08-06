@@ -53,7 +53,7 @@ class TKGClusterApi:
         :rtype: dict
         """
         # Returns tuple of response_data, response_status, response_headers,
-        #   additional_data
+        #   tkg_def_entities
         response = self._tkg_client_api.get_tkg_cluster(cluster_id)
         cluster: TkgCluster = response[0]
         return cluster.to_dict()
@@ -76,19 +76,19 @@ class TKGClusterApi:
         filter_string = None
         if filters:
             filter_string = ";".join([f"{f[0]}=={f[1]}" for f in filters])
-        # additional_data in the following statement represents the information
+        # tkg_def_entities in the following statement represents the information
         # associated with the defined entity
-        (entities, status, headers, additional_data) = \
+        (entities, status, headers, tkg_def_entities) = \
             self._tkg_client_api.list_tkg_clusters(
                 f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}",  # noqa: E501
                 _return_http_data_only=False,
                 object_filter=filter_string)
         clusters = []
         for i in range(len(entities)):
-            # NOTE: additional_data will contain corresponding defined entity
+            # NOTE: tkg_def_entities will contain corresponding defined entity
             # details
             entity: TkgCluster = entities[i]
-            entity_properties = additional_data[i]
+            entity_properties = tkg_def_entities[i]
             logger.CLIENT_LOGGER.debug(f"TKG Defined entity list from server: {entity}")  # noqa: E501
             cluster = {
                 cli_constants.CLIOutputKey.CLUSTER_NAME.value: entity.metadata.name, # noqa: E501
@@ -114,11 +114,12 @@ class TKGClusterApi:
             self._tkg_client_api.list_tkg_clusters(
                 f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}", # noqa: E501
                 object_filter=filter_string)
+        entities = []
+        tkg_def_entities = []
         if response:
             entities = response[0]
-            additional_data = response[3]
-            return entities, additional_data
-        return None, None
+            tkg_def_entities = response[3]
+        return entities, tkg_def_entities
 
     def apply(self, cluster_config: dict):
         """Apply the configuration either to create or update the cluster.
@@ -129,19 +130,19 @@ class TKGClusterApi:
         try:
             cluster_name = cluster_config.get('metadata', {}).get('name')
             vdc_name = cluster_config.get('metadata', {}).get('virtualDataCenterName')  # noqa: E501
-            tkg_entities, additional_data = self.get_tkg_clusters_by_name(cluster_name, vdc=vdc_name)  # noqa: E501
+            tkg_entities, tkg_def_entities = self.get_tkg_clusters_by_name(cluster_name, vdc=vdc_name)  # noqa: E501
             # TODO: Better way to deserialize the object into TkgCluster
             deseralize_cls = make_dataclass('Deserialize', [('data', str)])
             # deserialize the cluster config given in to TkgCluster object
             deserialize_input = deseralize_cls(data=json.dumps(cluster_config))
             tkg_cluster = self._tkg_client.deserialize(deserialize_input, 'TkgCluster', '')[0]  # noqa: E501
             if len(tkg_entities) == 0:
-                response, status, headers, additional_data = \
+                response, status, headers, tkg_def_entities = \
                     self._tkg_client_api.create_tkg_cluster_with_http_info(tkg_cluster=tkg_cluster)  # noqa: E501
             elif len(tkg_entities) == 1:
                 # deserialize the cluster config given in to TkgCluster object
-                cluster_id = additional_data[0]['id']
-                response, status, headers, additional_data = \
+                cluster_id = tkg_def_entities[0]['id']
+                response, status, headers, tkg_def_entities = \
                     self._tkg_client_api.update_tkg_cluster_with_http_info(
                         tkg_cluster_id=cluster_id,
                         tkg_cluster=tkg_cluster)
@@ -152,7 +153,7 @@ class TKGClusterApi:
                 logger.CLIENT_LOGGER.error(msg)
                 raise cse_exceptions.CseDuplicateClusterError(msg)
             # Retrieve the created TKG cluster details
-            entity, additional_data = self.get_tkg_clusters_by_name(cluster_name)  # noqa: E501
+            entity, tkg_def_entities = self.get_tkg_clusters_by_name(cluster_name)  # noqa: E501
             output_dict = entity[0].to_dict()
             # Get the task href from the header
             output_dict['task_href'] = headers.get('Location')
@@ -172,7 +173,7 @@ class TKGClusterApi:
         :return: string representing the cluster entity.
         """
         try:
-            response, status, headers, additional_data = \
+            response, status, headers, tkg_def_entities = \
                 self._tkg_client_api.delete_tkg_cluster_with_http_info(tkg_cluster_id=cluster_id)  # noqa: E501
             tkg_cluster_dict = self.get_tkg_cluster(cluster_id)
             tkg_cluster_dict['task_href'] = headers.get('Location')
@@ -196,11 +197,10 @@ class TKGClusterApi:
         :raises ClusterNotFoundError
         """
         try:
-            entities, additional_data = \
+            entities, tkg_def_entities = \
                 self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)
-            entities = [1]
             if len(entities) == 1:
-                return self.delete_cluster_by_id(additional_data[0]['id'])
+                return self.delete_cluster_by_id(tkg_def_entities[0]['id'])
             elif len(entities) == 0:
                 raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
             else:

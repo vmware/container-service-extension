@@ -96,19 +96,17 @@ class DefEntityClusterApi:
         """
         filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        native_def_entity = None
+        native_def_entity_dict = {}
         # NOTE: The following can throw error if invoked by users who
         # doesn't have the necessary rights.
         try:
             native_def_entity = entity_svc.get_native_entity_by_name(
                 name=cluster_name,
                 filters=filters)
+            if native_def_entity:
+                native_def_entity_dict = asdict(native_def_entity)
         except Exception:
             pass
-
-        native_def_entity_dict = {}
-        if native_def_entity:
-            native_def_entity_dict = asdict(native_def_entity)
 
         tkg_entities = []
         # NOTE: The following can throw error if invoked by users who
