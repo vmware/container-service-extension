@@ -186,7 +186,7 @@ class TKGClusterApi:
         :param str vdc: name of the vdc
         :return: deleted cluster information
         :rtype: str
-        :raises ClusterNotFoundError
+        :raises ClusterNotFoundError, CseDuplicateClusterError
         """
         try:
             entities, tkg_def_entities = \
