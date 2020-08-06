@@ -323,18 +323,7 @@ def install_cse(config_file_name, skip_template_creation,
 
         # Setup extension message protocol
         if utils.use_mqtt_protocol(config):
-            mqtt_ext_manager = MQTTExtensionManager(client)
-            description = _construct_cse_extension_description(
-                config['vcd']['api_version'])
-            ext_info = mqtt_ext_manager.setup_extension(
-                ext_name=server_constants.CSE_SERVICE_NAME,
-                ext_version=server_constants.MQTT_EXTENSION_VERSION,
-                ext_vendor=server_constants.MQTT_EXTENSION_VENDOR,
-                description=description)
-            ext_uuid = mqtt_ext_manager.get_extension_uuid(
-                ext_info['ext_urn_id'])
-            _ = mqtt_ext_manager.setup_api_filter(
-                server_constants.MQTT_API_FILTER_PATTERN, ext_uuid)
+            _install_mqtt(client, config)
         else:
             # create amqp exchange if it doesn't exist
             amqp = config['amqp']
@@ -441,6 +430,29 @@ def install_cse(config_file_name, skip_template_creation,
     finally:
         if client is not None:
             client.logout()
+
+
+def _install_mqtt(client, config):
+    """Installs the MQTT extension and api filter.
+
+    :param Client client: client used to install cse server components
+    :param dict config: content of the CSE config file.
+
+    :raises requests.exceptions.HTTPError: (when using MQTT) if the MQTT
+        extension and api filter were not set up correctly
+    """
+    mqtt_ext_manager = MQTTExtensionManager(client)
+    description = _construct_cse_extension_description(
+        config['vcd']['api_version'])
+    ext_info = mqtt_ext_manager.setup_extension(
+        ext_name=server_constants.CSE_SERVICE_NAME,
+        ext_version=server_constants.MQTT_EXTENSION_VERSION,
+        ext_vendor=server_constants.MQTT_EXTENSION_VENDOR,
+        description=description)
+    ext_uuid = mqtt_ext_manager.get_extension_uuid(
+        ext_info['ext_urn_id'])
+    _ = mqtt_ext_manager.setup_api_filter(
+        server_constants.MQTT_API_FILTER_PATTERN, ext_uuid)
 
 
 def _create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
@@ -1204,9 +1216,11 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
                    log_wire=False):
     """Handle upgrade to api version 35.
 
-    :raises: MultipleRecordsException: (using mqtt) if more than one service
-        with the given name and namespace are found when trying to delete the
-        amqp-based extension.
+    :raises: MultipleRecordsException: (when using mqtt) if more than one
+        service with the given name and namespace are found when trying to
+        delete the amqp-based extension.
+    :raises requests.exceptions.HTTPError: (when using MQTT) if the MQTT
+        components were not installed correctly
     """
     if utils.use_mqtt_protocol(config):
         # Delete extension if present and set up MQTT extension
@@ -1218,15 +1232,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
         except MissingRecordException:
             pass
 
-        mqtt_ext_manager = MQTTExtensionManager(client)
-        ext_info = mqtt_ext_manager.setup_extension(
-            ext_name=server_constants.CSE_SERVICE_NAME,
-            ext_version=server_constants.MQTT_EXTENSION_VERSION,
-            ext_vendor=server_constants.MQTT_EXTENSION_VENDOR,
-            description='')
-        ext_uuid = mqtt_ext_manager.get_extension_uuid(ext_info['ext_urn_id'])
-        _ = mqtt_ext_manager.setup_api_filter(
-            server_constants.MQTT_API_FILTER_PATTERN, ext_uuid)
+        _install_mqtt(client, config)
     else:
         # Update amqp exchange
         _create_amqp_exchange(
