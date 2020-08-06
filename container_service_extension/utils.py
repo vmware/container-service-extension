@@ -357,8 +357,7 @@ def read_data_file(filepath, logger=NULL_LOGGER,
 def run_async(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        t = threading.Thread(name=
-                             _thread_name(func.__name__),
+        t = threading.Thread(name=generate_thread_name(func.__name__),
                              target=func, args=args, kwargs=kwargs, daemon=True)  # noqa: E501
         t.start()
         return t
@@ -370,7 +369,7 @@ def generate_thread_name(function_name):
     return function_name + ':' + str(parent_thread_id)
 
 
-def use_mqtt_protocol(config):
+def should_use_mqtt_protocol(config):
     """Return true if should use the mqtt protocol; false otherwise.
 
     The MQTT protocol should be used if the config file contains an "mqtt" key
@@ -383,6 +382,8 @@ def use_mqtt_protocol(config):
     :rtype: str
     """
     return config.get('mqtt') is not None and \
+        config.get('vcd') is not None and \
+        config['vcd'].get('api_version') is not None and \
         float(config['vcd']['api_version']) >= MQTT_MIN_API_VERSION
 
 

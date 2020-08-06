@@ -18,7 +18,6 @@ from pyvcloud.vcd.org import Org
 import pyvcloud.vcd.utils as pyvcloud_vcd_utils
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
-from requests.exceptions import HTTPError
 import semantic_version
 
 import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
@@ -98,8 +97,9 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
                                             config['vcd']['password'])
         client.set_credentials(credentials)
 
-        if utils.use_mqtt_protocol(config):
-            _check_mqtt_extension_installation(client, err_msgs)
+        if utils.should_use_mqtt_protocol(config):
+            _check_mqtt_extension_installation(client, msg_update_callback,
+                                               err_msgs)
         else:
             _check_amqp_extension_installation(client, config,
                                                msg_update_callback, err_msgs)
@@ -130,7 +130,7 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
 
 def _check_amqp_extension_installation(client, config, msg_update_callback,
                                        err_msgs):
-    """Check that AMQP exchange exists."""
+    """Check that AMQP exchange and api extension exists."""
     amqp = config['amqp']
     credentials = pika.PlainCredentials(amqp['username'],
                                         amqp['password'])
@@ -144,17 +144,22 @@ def _check_amqp_extension_installation(client, config, msg_update_callback,
     try:
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
-        channel.exchange_declare(exchange=amqp['exchange'],
-                                 exchange_type=server_constants.EXCHANGE_TYPE,
-                                 # noqa: E501
-                                 durable=True,
-                                 passive=True,
-                                 auto_delete=False)
-        msg = f"AMQP exchange '{amqp['exchange']}' exists"
-        msg_update_callback.general(msg)
-        SERVER_CLI_LOGGER.info(msg)
-    except pika.exceptions.ChannelClosed:
-        msg = f"AMQP exchange '{amqp['exchange']}' does not exist"
+        try:
+            channel.exchange_declare(exchange=amqp['exchange'],
+                                     exchange_type=server_constants.EXCHANGE_TYPE,  # noqa: E501
+                                     durable=True,
+                                     passive=True,
+                                     auto_delete=False)
+            msg = f"AMQP exchange '{amqp['exchange']}' exists"
+            msg_update_callback.general(msg)
+            SERVER_CLI_LOGGER.info(msg)
+        except pika.exceptions.ChannelClosed:
+            msg = f"AMQP exchange '{amqp['exchange']}' does not exist"
+            msg_update_callback.error(msg)
+            SERVER_CLI_LOGGER.error(msg)
+            err_msgs.append(msg)
+    except Exception:  # TODO() replace raw exception with specific
+        msg = f"Could not connect to AMQP exchange '{amqp['exchange']}'"
         msg_update_callback.error(msg)
         SERVER_CLI_LOGGER.error(msg)
         err_msgs.append(msg)
@@ -199,7 +204,7 @@ def _check_amqp_extension_installation(client, config, msg_update_callback,
         err_msgs.append(msg)
 
 
-def _check_mqtt_extension_installation(client, err_msgs):
+def _check_mqtt_extension_installation(client, msg_update_callback, err_msgs):
     """Check that MQTT extension exists with its API filter."""
     mqtt_ext_manager = MQTTExtensionManager(client)
     mqtt_ext_info = mqtt_ext_manager.get_extension_info(
@@ -215,9 +220,17 @@ def _check_mqtt_extension_installation(client, err_msgs):
         if not api_filter_ids:
             msg = f"Could not find MQTT API FIlter: " \
                   f"{server_constants.MQTT_API_FILTER_PATTERN}"
+            msg_update_callback.error(msg)
+            SERVER_CLI_LOGGER.error(msg)
             err_msgs.append(msg)
+        else:
+            msg = "MQTT extension and API filter exist"
+            msg_update_callback.general(msg)
+            SERVER_CLI_LOGGER.info(msg)
     else:
         msg = "Could not find MQTT Extension"
+        msg_update_callback.error(msg)
+        SERVER_CLI_LOGGER.error(msg)
         err_msgs.append(msg)
 
 
@@ -278,8 +291,8 @@ def install_cse(config_file_name, skip_template_creation,
 
     :raises cse_exception.AmqpError: (when using AMQP) if AMQP exchange
         could not be created.
-    :raises requests.exceptions.HTTPError: (when using MQTT) if the MQTT
-        extension and api filter were not set up correctly
+    :raises requests.exceptions.HTTPError: (when using MQTT) if there is an
+        issue in retrieiving MQTT info or in setting up the MQTT components
     """
     config = get_validated_config(
         config_file_name, pks_config_file_name=pks_config_file_name,
@@ -334,23 +347,22 @@ def install_cse(config_file_name, skip_template_creation,
         INSTALL_LOGGER.info(msg)
 
         # Setup extension message protocol
-        if utils.use_mqtt_protocol(config):
+        if utils.should_use_mqtt_protocol(config):
             # Check for current MQTT extension
             mqtt_ext_manager = MQTTExtensionManager(client)
-            try:
-                _ = mqtt_ext_manager.get_extension_info(
-                    ext_name=server_constants.CSE_SERVICE_NAME,
-                    ext_version=server_constants.MQTT_EXTENSION_VERSION,
-                    ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
+            ext_info = mqtt_ext_manager.get_extension_info(
+                ext_name=server_constants.CSE_SERVICE_NAME,
+                ext_version=server_constants.MQTT_EXTENSION_VERSION,
+                ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
+            if ext_info:  # Extension exists
                 msg = "MQTT extension already exists. " \
-                      "Use `cse upgrade` instead of 'cse install'."
+                    "Use `cse upgrade` instead of 'cse install'."
                 raise Exception(msg)
-            except HTTPError:
-                pass
 
             _install_mqtt(client, config)
             mqtt_msg = 'MQTT extension is ready'
             msg_update_callback.general(mqtt_msg)
+            INSTALL_LOGGER.info(mqtt_msg)
         else:
             # create amqp exchange if it doesn't exist
             amqp = config['amqp']
@@ -465,8 +477,8 @@ def _install_mqtt(client, config):
     :param Client client: client used to install cse server components
     :param dict config: content of the CSE config file.
 
-    :raises HTTPError: if the MQTT extension and api filter were not set up
-        correctly
+    :raises requests.exceptions.HTTPError: if the MQTT extension and api filter
+        were not set up correctly
     """
     mqtt_ext_manager = MQTTExtensionManager(client)
     description = _construct_cse_extension_description(
