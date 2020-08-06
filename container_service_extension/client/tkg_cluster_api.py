@@ -2,9 +2,6 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from dataclasses import make_dataclass
-import json
-
 import yaml
 
 import container_service_extension.client.constants as cli_constants
@@ -76,8 +73,8 @@ class TKGClusterApi:
         filter_string = None
         if filters:
             filter_string = ";".join([f"{f[0]}=={f[1]}" for f in filters])
-        # tkg_def_entities in the following statement represents the information
-        # associated with the defined entity
+        # tkg_def_entities in the following statement represents the
+        # information associated with the defined entity
         (entities, status, headers, tkg_def_entities) = \
             self._tkg_client_api.list_tkg_clusters(
                 f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}",  # noqa: E501

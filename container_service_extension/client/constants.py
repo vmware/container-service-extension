@@ -19,6 +19,7 @@ TKG_CLUSTER_RUNTIME = 'TkgCluster'
 @unique
 class CLIOutputKey(str, Enum):
     """Keys for displaying Cluster list output."""
+
     CLUSTER_NAME = "Name"
     VDC = "VDC"
     ORG = "Org"
@@ -44,6 +45,7 @@ class TKGClusterEntityFilterKey(str, Enum):
 @unique
 class TKGClusterMetadataKey(str, Enum):
     """Metadata keys for TKG cluster entities."""
+
     OVDC_NAME = 'virtualDataCenterName'
     CLUSTER_NAME = 'name'
     PLACEMENT_POLICY = 'placementPolicy'
@@ -52,6 +54,7 @@ class TKGClusterMetadataKey(str, Enum):
 @unique
 class NativeClusterMetadataKey(str, Enum):
     """Metadata keys for Native cluster entities."""
+
     OVDC_NAME = 'ovdc_name'
     CLUSTER_NAME = 'cluster_name'
     ORG_NAME = 'org_name'
