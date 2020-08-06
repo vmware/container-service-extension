@@ -18,7 +18,8 @@ TKG_CLUSTER_RUNTIME = 'TkgCluster'
 
 @unique
 class CLIOutputKey(str, Enum):
-    # Output keys for cluster list
+    """Keys for displaying Cluster list output."""
+
     CLUSTER_NAME = "Name"
     VDC = "VDC"
     ORG = "Org"
