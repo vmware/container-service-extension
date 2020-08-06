@@ -40,21 +40,3 @@ class TKGClusterEntityFilterKey(str, Enum):
     CLUSTER_NAME = 'entity.metadata.name'
     VDC_NAME = 'entity.metadata.virtualDataCenterName'
     ORG_NAME = 'org.name'
-
-
-@unique
-class TKGClusterMetadataKey(str, Enum):
-    """Metadata keys for TKG cluster entities."""
-
-    OVDC_NAME = 'virtualDataCenterName'
-    CLUSTER_NAME = 'name'
-    PLACEMENT_POLICY = 'placementPolicy'
-
-
-@unique
-class NativeClusterMetadataKey(str, Enum):
-    """Metadata keys for Native cluster entities."""
-
-    OVDC_NAME = 'ovdc_name'
-    CLUSTER_NAME = 'cluster_name'
-    ORG_NAME = 'org_name'

@@ -37,7 +37,8 @@ class TKGClusterApi:
         api_version = self._client.get_api_version()
         self._tkg_client.set_default_header("Accept", f"application/json;version={api_version}")  # noqa: E501
         org_logged_in = vcd_utils.get_org(self._client)
-        self._tkg_client.set_default_header("x-vmware-vcloud-tenant-context", org_logged_in.href.split('/')[-1])  # noqa: E501
+        org_id = org_logged_in.href.split('/')[-1]
+        self._tkg_client.set_default_header("x-vmware-vcloud-tenant-context", org_id)  # noqa: E501
         self._tkg_client_api = TkgClusterApi(api_client=self._tkg_client)
 
     def get_tkg_cluster(self, cluster_id):
