@@ -131,21 +131,15 @@ class TKGClusterApi:
             cluster_name = cluster_config.get('metadata', {}).get('name')
             vdc_name = cluster_config.get('metadata', {}).get('virtualDataCenterName')  # noqa: E501
             tkg_entities, tkg_def_entities = self.get_tkg_clusters_by_name(cluster_name, vdc=vdc_name)  # noqa: E501
-            # TODO: Better way to deserialize the object into TkgCluster
-            deseralize_cls = make_dataclass('Deserialize', [('data', str)])
-            # deserialize the cluster config given in to TkgCluster object
-            deserialize_input = deseralize_cls(data=json.dumps(cluster_config))
-            tkg_cluster = self._tkg_client.deserialize(deserialize_input, 'TkgCluster', '')[0]  # noqa: E501
             if len(tkg_entities) == 0:
                 response, status, headers, tkg_def_entities = \
-                    self._tkg_client_api.create_tkg_cluster_with_http_info(tkg_cluster=tkg_cluster)  # noqa: E501
+                    self._tkg_client_api.create_tkg_cluster_with_http_info(tkg_cluster=cluster_config)  # noqa: E501
             elif len(tkg_entities) == 1:
-                # deserialize the cluster config given in to TkgCluster object
                 cluster_id = tkg_def_entities[0]['id']
                 response, status, headers, tkg_def_entities = \
                     self._tkg_client_api.update_tkg_cluster_with_http_info(
                         tkg_cluster_id=cluster_id,
-                        tkg_cluster=tkg_cluster)
+                        tkg_cluster=cluster_config)
             else:
                 # More than 1 TKG cluster with the same name found.
                 msg = f"Multiple clusters found with name {cluster_name}. " \
