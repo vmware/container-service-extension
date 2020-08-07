@@ -7,7 +7,10 @@ from enum import unique
 
 import container_service_extension.def_.utils as def_utils
 
+# Client environment variables
 ENV_CSE_CLIENT_WIRE_LOGGING = 'CSE_CLIENT_WIRE_LOGGING'
+ENV_CSE_TKG_PLUS_ENABLE = 'CSE_TKG_PLUS_ENABLE'
+
 TKG_ENTITY_TYPE_ID = def_utils.generate_entity_type_id(
     def_utils.DEF_VMWARE_VENDOR,
     def_utils.TKG_ENTITY_TYPE_NSS,
