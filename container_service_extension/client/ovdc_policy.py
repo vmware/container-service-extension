@@ -10,17 +10,16 @@ from container_service_extension.client.response_processor import \
     process_response
 import container_service_extension.def_.models as def_models
 from container_service_extension.pyvcloud_utils import get_vdc
-from container_service_extension.shared_constants import RequestKey
-from container_service_extension.shared_constants import RequestMethod
+import container_service_extension.shared_constants as shared_constants
 
 
 class PolicyBasedOvdc:
     def __init__(self, client):
         self.client = client
-        self._uri = self.client.get_api_uri() + '/cse/internal'
+        self._uri = f"{self.client.get_api_uri()}/{shared_constants.CSE_URL_FRAGMENT}/{shared_constants.CSE_3_0_URL_FRAGMENT}"  # noqa: E501
 
     def list_ovdc_for_k8s(self):
-        method = RequestMethod.GET
+        method = shared_constants.RequestMethod.GET
         uri = f'{self._uri}/ovdcs'
         response = self.client._do_request_prim(
             method,
@@ -50,7 +49,7 @@ class PolicyBasedOvdc:
 
         :rtype: dict
         """
-        method = RequestMethod.PUT
+        method = shared_constants.RequestMethod.PUT
         ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
@@ -58,7 +57,7 @@ class PolicyBasedOvdc:
 
         # fetch existing k8s providers
         ovdc_response = self.client._do_request_prim(
-            RequestMethod.GET,
+            shared_constants.RequestMethod.GET,
             uri,
             self.client._session,
             accept_type='application/json')
@@ -73,8 +72,9 @@ class PolicyBasedOvdc:
                 if k not in runtimes:
                     raise Exception(f"OVDC {ovdc_name} already disabled for {k8s_runtime}") # noqa: E501
                 runtimes.remove(k)
-        update_request = def_models.Ovdc(k8s_runtime=runtimes,
-                                         remove_cp_from_vms_on_disable=remove_cp_from_vms_on_disable) # noqa: E501
+        update_request = def_models.Ovdc(
+            k8s_runtime=runtimes,
+            remove_cp_from_vms_on_disable=remove_cp_from_vms_on_disable)
 
         resp = self.client._do_request_prim(
             method,
@@ -93,7 +93,7 @@ class PolicyBasedOvdc:
 
         :rtype: dict
         """
-        method = RequestMethod.GET
+        method = shared_constants.RequestMethod.GET
         ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
@@ -121,17 +121,17 @@ class PolicyBasedOvdc:
         """
         msg = "Operation not supported; Under implementation"
         raise vcd_exceptions.OperationNotSupportedException(msg)
-        method = RequestMethod.PUT
+        method = shared_constants.RequestMethod.PUT
         ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
         uri = f'{self._uri}/ovdc/{ovdc_id}/compute-policies'
 
         data = {
-            RequestKey.OVDC_ID: ovdc_id, # also exists in url
-            RequestKey.COMPUTE_POLICY_NAME: compute_policy_name,
-            RequestKey.COMPUTE_POLICY_ACTION: action,
-            RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: remove_compute_policy_from_vms # noqa: E501
+            shared_constants.RequestKey.OVDC_ID: ovdc_id, # also exists in url
+            shared_constants.RequestKey.COMPUTE_POLICY_NAME: compute_policy_name,  # noqa: E501
+            shared_constants.RequestKey.COMPUTE_POLICY_ACTION: action,
+            shared_constants.RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: remove_compute_policy_from_vms # noqa: E501
         }
 
         response = self.client._do_request_prim(
@@ -154,7 +154,7 @@ class PolicyBasedOvdc:
         """
         msg = "Operation not supported; Under implementation"
         raise vcd_exceptions.OperationNotSupportedException(msg)
-        method = RequestMethod.GET
+        method = shared_constants.RequestMethod.GET
         ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))

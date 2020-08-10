@@ -3,35 +3,36 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from container_service_extension.client.response_processor import process_response # noqa: E501
-from container_service_extension.shared_constants import RequestKey
-from container_service_extension.shared_constants import RequestMethod
+import container_service_extension.shared_constants as shared_constants
 
 
 class PksCluster:
     def __init__(self, client):
         self.client = client
-        self._uri = self.client.get_api_uri() + '/pks'
+        self._uri = f"{self.client.get_api_uri()}/{shared_constants.PKS_URL_FRAGMENT}"  # noqa: E501
 
     def get_clusters(self, vdc=None, org=None):
-        method = RequestMethod.GET
+        method = shared_constants.RequestMethod.GET
         uri = f"{self._uri}/clusters"
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
             accept_type='application/json',
-            params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
+            params={shared_constants.RequestKey.ORG_NAME: org,
+                    shared_constants.RequestKey.OVDC_NAME: vdc})
         return process_response(response)
 
     def get_cluster_info(self, name, org=None, vdc=None):
-        method = RequestMethod.GET
+        method = shared_constants.RequestMethod.GET
         uri = f'{self._uri}/cluster/{name}'
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
             accept_type='application/json',
-            params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
+            params={shared_constants.RequestKey.ORG_NAME: org,
+                    shared_constants.RequestKey.OVDC_NAME: vdc})
         return process_response(response)
 
     def create_cluster(self,
@@ -50,13 +51,13 @@ class PksCluster:
 
         :return: (json) A parsed json object describing the requested cluster.
         """
-        method = RequestMethod.POST
+        method = shared_constants.RequestMethod.POST
         uri = f"{self._uri}/clusters"
         data = {
-            RequestKey.CLUSTER_NAME: name,
-            RequestKey.NUM_WORKERS: node_count,
-            RequestKey.OVDC_NAME: vdc,
-            RequestKey.ORG_NAME: org
+            shared_constants.RequestKey.CLUSTER_NAME: name,
+            shared_constants.RequestKey.NUM_WORKERS: node_count,
+            shared_constants.RequestKey.OVDC_NAME: vdc,
+            shared_constants.RequestKey.ORG_NAME: org
         }
         response = self.client._do_request_prim(
             method,
@@ -72,13 +73,13 @@ class PksCluster:
                        node_count,
                        org=None,
                        vdc=None):
-        method = RequestMethod.PUT
+        method = shared_constants.RequestMethod.PUT
         uri = f"{self._uri}/cluster/{cluster_name}"
         data = {
-            RequestKey.CLUSTER_NAME: cluster_name,
-            RequestKey.NUM_WORKERS: node_count,
-            RequestKey.ORG_NAME: org,
-            RequestKey.OVDC_NAME: vdc
+            shared_constants.RequestKey.CLUSTER_NAME: cluster_name,
+            shared_constants.RequestKey.NUM_WORKERS: node_count,
+            shared_constants.RequestKey.ORG_NAME: org,
+            shared_constants.RequestKey.OVDC_NAME: vdc
         }
         response = self.client._do_request_prim(
             method,
@@ -90,24 +91,26 @@ class PksCluster:
         return process_response(response)
 
     def delete_cluster(self, cluster_name, org=None, vdc=None):
-        method = RequestMethod.DELETE
+        method = shared_constants.RequestMethod.DELETE
         uri = f"{self._uri}/cluster/{cluster_name}"
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
             accept_type='application/json',
-            params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
+            params={shared_constants.RequestKey.ORG_NAME: org,
+                    shared_constants.RequestKey.OVDC_NAME: vdc})
         return process_response(response)
 
     def get_cluster_config(self, cluster_name, org=None, vdc=None):
-        method = RequestMethod.GET
+        method = shared_constants.RequestMethod.GET
         uri = f"{self._uri}/cluster/{cluster_name}/config"
         response = self.client._do_request_prim(
             method,
             uri,
             self.client._session,
             accept_type='application/json',
-            params={RequestKey.ORG_NAME: org, RequestKey.OVDC_NAME: vdc})
+            params={shared_constants.RequestKey.ORG_NAME: org,
+                    shared_constants.RequestKey.OVDC_NAME: vdc})
 
         return process_response(response)

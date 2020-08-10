@@ -7,7 +7,8 @@ import json
 import sys
 from urllib.parse import parse_qsl
 
-import container_service_extension.def_.utils as def_utils
+from pyvcloud.vcd.client import ApiVersion as VcdApiVersion
+
 from container_service_extension.exception_handler import handle_exception
 import container_service_extension.exceptions as cse_exception
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
@@ -20,17 +21,16 @@ import container_service_extension.request_handlers.template_handler as template
 import container_service_extension.request_handlers.v35.def_cluster_handler as v35_cluster_handler # noqa: E501
 import container_service_extension.request_handlers.v35.ovdc_handler as v35_ovdc_handler # noqa: E501
 from container_service_extension.server_constants import CseOperation
-from container_service_extension.server_constants import PKS_SERVICE_NAME
-from container_service_extension.shared_constants import OperationType
-from container_service_extension.shared_constants import RequestKey
-from container_service_extension.shared_constants import RequestMethod
-from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
+import container_service_extension.shared_constants as shared_constants
 import container_service_extension.utils as utils
+
 
 """Process incoming requests
 
 Following are the valid api endpoints.
 
+API version 33.0 and 34.0
+--------------------------
 GET /cse/clusters?org={org name}&vdc={vdc name}
 POST /cse/clusters
 GET /cse/cluster/{cluster name}?org={org name}&vdc={vdc name}
@@ -44,29 +44,34 @@ POST /cse/nodes
 DELETE /cse/nodes
 GET /cse/node/{node name}?cluster_name={cluster name}&org={org name}&vdc={vdc name}
 
-GET /cse/internal/clusters
-Entities can be filtered by nested properties as defined per the schema
-GET /cse/internal/clusters?entity.kind={native}&entity.metadata.org_name={org name}
-POST /cse/internal/clusters
-GET /cse/internal/cluster/{cluster id}
-PUT /cse/internal/cluster/{cluster id}
-DELETE /cse/internal/cluster/{cluster id}
-GET /cse/internal/cluster/{cluster id}/config
-GET /cse/internal/cluster/{cluster id}/upgrade-plan
-POST /cse/internal/cluster/{cluster id}/action/upgrade
-DEL /cse/internal/cluster/{cluster id}/nfs/{node-name}
-
 GET /cse/ovdcs
 GET /cse/ovdc/{ovdc id}
 PUT /cse/ovdc/{ovdc id}
 GET /cse/ovdc/{ovdc_id}/compute-policies
 PUT /cse/ovdc/{ovdc_id}/compute-policies
 
-New ovdc endpoints
-GET /cse/internal/ovdcs
-GET /cse/internal/ovdc/{ovdc_id}
-PUT /cse/internal/ovdc/{ovdc_id}
 
+API version 35.0
+----------------
+GET /cse/3.0/clusters
+Entities can be filtered by nested properties as defined per the schema
+GET /cse/3.0/clusters?entity.kind={native}&entity.metadata.org_name={org name}
+POST /cse/3.0/clusters
+GET /cse/3.0/cluster/{cluster id}
+PUT /cse/3.0/cluster/{cluster id}
+DELETE /cse/3.0/cluster/{cluster id}
+GET /cse/3.0/cluster/{cluster id}/config
+GET /cse/3.0/cluster/{cluster id}/upgrade-plan
+POST /cse/3.0/cluster/{cluster id}/action/upgrade
+DELETE /cse/3.0/cluster/{cluster id}/nfs/{node-name}
+
+GET /cse/3.0/ovdcs
+GET /cse/3.0/ovdc/{ovdc_id}
+PUT /cse/3.0/ovdc/{ovdc_id}
+
+
+Not dependent on API version
+----------------------------
 GET /cse/system
 PUT /cse/system
 
@@ -129,42 +134,56 @@ OPERATION_TO_HANDLER = {
 _OPERATION_KEY = 'operation'
 
 
-def _is_v35_endpoint(url: str):
-    tokens = url.split('/')
-    return tokens[3] == def_utils.V35_END_POINT_DISCRIMINATOR
-
-
 @handle_exception
-def process_request(body):
+def process_request(message):
     from container_service_extension.service import Service
-    LOGGER.debug(f"Incoming request body: {json.dumps(body)}")
+    LOGGER.debug(f"Incoming request message: {json.dumps(message)}")
 
-    url_data = _get_url_data(body['method'], body['requestUri'])
+    api_version = '0.0'
+    accept_header = message['headers'].get('Accept')
+    if accept_header:
+        tokens = accept_header.split(";")
+        if len(tokens) == 2:
+            tokens = tokens[1].split("=")
+            if len(tokens) == 2:
+                api_version = tokens[1]
+
+    url_data = _get_url_data(method=message['method'],
+                             url=message['requestUri'],
+                             api_version=api_version)  # noqa: E501
     operation = url_data[_OPERATION_KEY]
-    is_v35_request = utils.is_v35_supported_by_cse_server() and _is_v35_endpoint(body['requestUri'])  # noqa: E501
-    # check if server is disabled
-    if operation not in (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE)\
-            and not Service().is_running():
-        raise cse_exception.BadRequestError(
-            error_message='CSE service is disabled. '
-                          'Contact the System Administrator.')
 
-    # create request data dict from request body data
+    # Check api version and if server is disabled or not
+    # /system operations are excluded from these checks
+    if operation not in (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE):
+        if not Service().is_running():
+            raise cse_exception.BadRequestError(
+                error_message='CSE service is disabled. '
+                              'Contact the System Administrator.')
+        else:
+            server_api_version = utils.get_server_api_version()
+            if api_version != server_api_version:
+                raise cse_exception.NotAcceptableRequestError(
+                    error_message="Invalid api version specified. Expected "
+                                  f"api version '{server_api_version}'.")
+
+    # create request data dict from incoming message data
     request_data = {}
-    if len(body['body']) > 0:
-        raw_body = base64.b64decode(body['body']).decode(sys.getfilesystemencoding())  # noqa: E501
+    is_cse_3_0_request = _is_cse_3_0_endpoint(message['requestUri'])
+    if len(message['body']) > 0:
+        raw_body = base64.b64decode(message['body']).decode(sys.getfilesystemencoding())  # noqa: E501
         request_body = json.loads(raw_body)
-        if is_v35_request:
-            request_data[RequestKey.V35_SPEC] = request_body
+        if is_cse_3_0_request:
+            request_data[shared_constants.RequestKey.V35_SPEC] = request_body
         else:
             request_data.update(request_body)
         LOGGER.debug(f"request body: {request_data}")
     # update request data dict with query params data
-    if body['queryString']:
-        query_params = dict(parse_qsl(body['queryString']))
-        if is_v35_request:
-            request_data[RequestKey.V35_QUERY] = query_params.get(
-                RequestKey.V35_QUERY, None)
+    if message['queryString']:
+        query_params = dict(parse_qsl(message['queryString']))
+        if is_cse_3_0_request:
+            request_data[shared_constants.RequestKey.V35_QUERY] = \
+                query_params.get(shared_constants.RequestKey.V35_QUERY, None)
         else:
             request_data.update(query_params)
         LOGGER.debug(f"query parameters: {query_params}")
@@ -173,9 +192,9 @@ def process_request(body):
     # remove None values from request payload
     data = {k: v for k, v in request_data.items() if v is not None}
     # extract out the authorization token
-    tenant_auth_token = body['headers'].get('x-vcloud-authorization')
+    tenant_auth_token = message['headers'].get('x-vcloud-authorization')
     is_jwt_token = False
-    auth_header = body['headers'].get('Authorization')
+    auth_header = message['headers'].get('Authorization')
     if auth_header:
         tokens = auth_header.split(" ")
         if len(tokens) == 2 and tokens[0].lower() == 'bearer':
@@ -185,7 +204,7 @@ def process_request(body):
     # create operation context
     operation_ctx = ctx.OperationContext(tenant_auth_token,
                                          is_jwt=is_jwt_token,
-                                         request_id=body['id'])
+                                         request_id=message['id'])
 
     try:
         body_content = OPERATION_TO_HANDLER[operation](data, operation_ctx)
@@ -194,7 +213,8 @@ def process_request(body):
             operation_ctx.end()
 
     if not isinstance(body_content, (list, dict)):
-        body_content = {RESPONSE_MESSAGE_KEY: str(body_content)}
+        body_content = \
+            {shared_constants.RESPONSE_MESSAGE_KEY: str(body_content)}
     response = {
         'status_code': operation.ideal_response_code,
         'body': body_content,
@@ -203,7 +223,105 @@ def process_request(body):
     return response
 
 
-def _get_v35_url_data(method: str, url: str):
+def _is_cse_3_0_endpoint(url: str):
+    tokens = url.split('/')
+    if len(tokens) >= 4:
+        return tokens[3] == shared_constants.CSE_3_0_URL_FRAGMENT
+    return False
+
+
+def _is_pks_endpoint(url: str):
+    tokens = url.split('/')
+    if len(tokens) >= 3:
+        return tokens[2] == shared_constants.PKS_URL_FRAGMENT
+    return False
+
+
+def _get_url_data(method: str, url: str, api_version: str):
+    """Parse url and http method to get desired CSE operation and url data.
+
+    Url is processed like a tree to find the desired operation as fast as
+    possible. These explicit checks allow any invalid urls or http methods to
+    fall through and trigger the appropriate exception.
+
+    Returns a data dictionary with 'operation' key and also any relevant url
+    data.
+
+    :param shared_constants.RequestMethod method:
+    :param str url:
+
+    :rtype: dict
+    """
+    tokens = url.split('/')
+    num_tokens = len(tokens)
+
+    if num_tokens < 4:
+        raise cse_exception.NotFoundRequestError()
+
+    if _is_pks_endpoint(url):
+        return _get_pks_url_data(method, url)
+
+    if _is_cse_3_0_endpoint(url):
+        return _get_v35_url_data(method, url, api_version)
+
+    return _get_legacy_url_data(method, url, api_version)
+
+
+def _get_pks_url_data(method: str, url: str):
+    """Parse url and http method to get desired PKS operation and url data.
+
+    Returns a data dictionary with 'operation' key and also any relevant url
+    data.
+
+    :param shared_constants.RequestMethod method:
+    :param str url:
+
+    :rtype: dict
+    """
+    tokens = url.split('/')
+    num_tokens = len(tokens)
+
+    operation_type = tokens[3].lower()
+    if operation_type.endswith('s'):
+        operation_type = operation_type[:-1]
+
+    if operation_type == shared_constants.OperationType.CLUSTER:
+        if num_tokens == 4:
+            if method == shared_constants.RequestMethod.GET:
+                return {_OPERATION_KEY: CseOperation.PKS_CLUSTER_LIST}
+            if method == shared_constants.RequestMethod.POST:
+                return {_OPERATION_KEY: CseOperation.PKS_CLUSTER_CREATE}
+            raise cse_exception.MethodNotAllowedRequestError()
+        if num_tokens == 5:
+            if method == shared_constants.RequestMethod.GET:
+                return {
+                    _OPERATION_KEY: CseOperation.PKS_CLUSTER_INFO,
+                    shared_constants.RequestKey.CLUSTER_NAME: tokens[4]
+                }
+            if method == shared_constants.RequestMethod.PUT:
+                return {
+                    _OPERATION_KEY: CseOperation.PKS_CLUSTER_RESIZE,
+                    shared_constants.RequestKey.CLUSTER_NAME: tokens[4]
+                }
+            if method == shared_constants.RequestMethod.DELETE:
+                return {
+                    _OPERATION_KEY: CseOperation.PKS_CLUSTER_DELETE,
+                    shared_constants.RequestKey.CLUSTER_NAME: tokens[4]
+                }
+            raise cse_exception.MethodNotAllowedRequestError()
+        if num_tokens == 6:
+            if method == shared_constants.RequestMethod.GET:
+                if tokens[5] == 'config':
+                    return {
+                        _OPERATION_KEY: CseOperation.PKS_CLUSTER_CONFIG,
+                        shared_constants.RequestKey.CLUSTER_NAME: tokens[4]
+                    }
+            raise cse_exception.MethodNotAllowedRequestError()
+
+    raise cse_exception.NotFoundRequestError()
+
+
+def _get_v35_url_data(method: str, url: str, api_version: str):
     """Parse url and http method to get CSE v35 data.
 
     Returns a dictionary with operation and url data.
@@ -213,6 +331,9 @@ def _get_v35_url_data(method: str, url: str):
 
     :rtype: dict
     """
+    if api_version != VcdApiVersion.VERSION_35.value:
+        raise cse_exception.NotFoundRequestError()
+
     tokens = url.split('/')
     num_tokens = len(tokens)
 
@@ -223,14 +344,16 @@ def _get_v35_url_data(method: str, url: str):
     if operation_type.endswith('s'):
         operation_type = operation_type[:-1]
 
-    if operation_type == OperationType.CLUSTER:
+    if operation_type == shared_constants.OperationType.CLUSTER:
         return _get_v35_cluster_url_data(method, tokens)
 
-    if operation_type == OperationType.OVDC:
+    if operation_type == shared_constants.OperationType.OVDC:
         return _get_v35_ovdc_url_data(method, tokens)
 
+    raise cse_exception.NotFoundRequestError()
 
-def _get_v35_cluster_url_data(method: str, tokens):
+
+def _get_v35_cluster_url_data(method: str, tokens: list):
     """Parse tokens from url and http method to get v35 cluster specific data.
 
     Returns a dictionary with operation and url data.
@@ -242,273 +365,206 @@ def _get_v35_cluster_url_data(method: str, tokens):
     """
     num_tokens = len(tokens)
     if num_tokens == 5:
-        if method == RequestMethod.GET:
+        if method == shared_constants.RequestMethod.GET:
             return {_OPERATION_KEY: CseOperation.V35_CLUSTER_LIST}
-        if method == RequestMethod.POST:
+        if method == shared_constants.RequestMethod.POST:
             return {_OPERATION_KEY: CseOperation.V35_CLUSTER_CREATE}
         raise cse_exception.MethodNotAllowedRequestError()
     if num_tokens == 6:
-        if method == RequestMethod.GET:
+        if method == shared_constants.RequestMethod.GET:
             return {
                 _OPERATION_KEY: CseOperation.V35_CLUSTER_INFO,
-                RequestKey.CLUSTER_ID: tokens[5]
+                shared_constants.RequestKey.CLUSTER_ID: tokens[5]
             }
-        if method == RequestMethod.PUT:
+        if method == shared_constants.RequestMethod.PUT:
             return {
                 _OPERATION_KEY: CseOperation.V35_CLUSTER_RESIZE,
-                RequestKey.CLUSTER_ID: tokens[5]
+                shared_constants.RequestKey.CLUSTER_ID: tokens[5]
             }
-        if method == RequestMethod.DELETE:
+        if method == shared_constants.RequestMethod.DELETE:
             return {
                 _OPERATION_KEY: CseOperation.V35_CLUSTER_DELETE,
-                RequestKey.CLUSTER_ID: tokens[5]
+                shared_constants.RequestKey.CLUSTER_ID: tokens[5]
             }
         raise cse_exception.MethodNotAllowedRequestError()
     if num_tokens == 7:
-        if method == RequestMethod.GET:
+        if method == shared_constants.RequestMethod.GET:
             if tokens[6] == 'config':
                 return {
                     _OPERATION_KEY: CseOperation.V35_CLUSTER_CONFIG,
-                    RequestKey.CLUSTER_ID: tokens[5]
+                    shared_constants.RequestKey.CLUSTER_ID: tokens[5]
                 }
             if tokens[6] == 'upgrade-plan':
                 return {
                     _OPERATION_KEY: CseOperation.V35_CLUSTER_UPGRADE_PLAN,  # noqa: E501
-                    RequestKey.CLUSTER_ID: tokens[5]
+                    shared_constants.RequestKey.CLUSTER_ID: tokens[5]
                 }
         raise cse_exception.MethodNotAllowedRequestError()
     if num_tokens == 8:
-        if method == RequestMethod.POST:
+        if method == shared_constants.RequestMethod.POST:
             if tokens[6] == 'action' and tokens[7] == 'upgrade':
                 return {
                     _OPERATION_KEY: CseOperation.V35_CLUSTER_UPGRADE,
-                    RequestKey.CLUSTER_ID: tokens[5]
+                    shared_constants.RequestKey.CLUSTER_ID: tokens[5]
                 }
-        if method == RequestMethod.DELETE:
+        if method == shared_constants.RequestMethod.DELETE:
             if tokens[6] == 'nfs':
                 return {
                     _OPERATION_KEY: CseOperation.V35_NODE_DELETE,
-                    RequestKey.CLUSTER_ID: tokens[5],
-                    RequestKey.NODE_NAME: tokens[7]
+                    shared_constants.RequestKey.CLUSTER_ID: tokens[5],
+                    shared_constants.RequestKey.NODE_NAME: tokens[7]
                 }
         raise cse_exception.MethodNotAllowedRequestError()
 
 
-def _get_v35_ovdc_url_data(method: str, tokens):
+def _get_v35_ovdc_url_data(method: str, tokens: list):
     """Parse tokens from url and http method to get v35 ovdc specific data.
 
     Returns a dictionary with operation and url data.
 
-    :param RequestMethod method: http verb
+    :param shared_constants.RequestMethod method: http verb
     :param str[] tokens: http url
 
     :rtype: dict
     """
     num_tokens = len(tokens)
     if num_tokens == 5:
-        if method == RequestMethod.GET:
+        if method == shared_constants.RequestMethod.GET:
             return {_OPERATION_KEY: CseOperation.V35_OVDC_LIST}
         raise cse_exception.MethodNotAllowedRequestError()
     if num_tokens == 6:
-        if method == RequestMethod.PUT:
+        if method == shared_constants.RequestMethod.PUT:
             return {
                 _OPERATION_KEY: CseOperation.V35_OVDC_UPDATE,
-                RequestKey.OVDC_ID: tokens[5]
+                shared_constants.RequestKey.OVDC_ID: tokens[5]
             }
-        if method == RequestMethod.GET:
+        if method == shared_constants.RequestMethod.GET:
             return {
                 _OPERATION_KEY: CseOperation.V35_OVDC_INFO,
-                RequestKey.OVDC_ID: tokens[5]
+                shared_constants.RequestKey.OVDC_ID: tokens[5]
             }
         raise cse_exception.MethodNotAllowedRequestError()
 
 
-def _get_url_data(method, url):
-    """Parse url and http method to get desired CSE operation and url data.
-
-    Url is processed like a tree to find the desired operation as fast as
-    possible. These explicit checks allow any invalid urls or http methods to
-    fall through and trigger the appropriate exception.
-
-    Returns a data dictionary with 'operation' key and also any relevant url
-    data.
-
-    :param RequestMethod method:
-    :param str url:
-
-    :rtype: dict
-    """
+def _get_legacy_url_data(method: str, url: str, api_version: str):
     tokens = url.split('/')
     num_tokens = len(tokens)
-
-    if num_tokens < 4:
-        raise cse_exception.NotFoundRequestError()
-
-    is_v35_request = utils.is_v35_supported_by_cse_server() and _is_v35_endpoint(url)  # noqa: E501
-    if is_v35_request:
-        return _get_v35_url_data(method, url)
-
-    if tokens[2] == PKS_SERVICE_NAME:
-        return _get_pks_url_data(method, url)
 
     operation_type = tokens[3].lower()
     if operation_type.endswith('s'):
         operation_type = operation_type[:-1]
 
-    if operation_type == OperationType.CLUSTER:
+    if operation_type == shared_constants.OperationType.CLUSTER:
+        if api_version not in (VcdApiVersion.VERSION_33.value,
+                               VcdApiVersion.VERSION_34.value):
+            raise cse_exception.NotFoundRequestError()
+
         if num_tokens == 4:
-            if method == RequestMethod.GET:
+            if method == shared_constants.RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.CLUSTER_LIST}
-            if method == RequestMethod.POST:
+            if method == shared_constants.RequestMethod.POST:
                 return {_OPERATION_KEY: CseOperation.CLUSTER_CREATE}
             raise cse_exception.MethodNotAllowedRequestError()
         if num_tokens == 5:
-            if method == RequestMethod.GET:
+            if method == shared_constants.RequestMethod.GET:
                 return {
                     _OPERATION_KEY: CseOperation.CLUSTER_INFO,
-                    RequestKey.CLUSTER_NAME: tokens[4]
+                    shared_constants.RequestKey.CLUSTER_NAME: tokens[4]
                 }
-            if method == RequestMethod.PUT:
+            if method == shared_constants.RequestMethod.PUT:
                 return {
                     _OPERATION_KEY: CseOperation.CLUSTER_RESIZE,
-                    RequestKey.CLUSTER_NAME: tokens[4]
+                    shared_constants.RequestKey.CLUSTER_NAME: tokens[4]
                 }
-            if method == RequestMethod.DELETE:
+            if method == shared_constants.RequestMethod.DELETE:
                 return {
                     _OPERATION_KEY: CseOperation.CLUSTER_DELETE,
-                    RequestKey.CLUSTER_NAME: tokens[4]
+                    shared_constants.RequestKey.CLUSTER_NAME: tokens[4]
                 }
             raise cse_exception.MethodNotAllowedRequestError()
         if num_tokens == 6:
-            if method == RequestMethod.GET:
+            if method == shared_constants.RequestMethod.GET:
                 if tokens[5] == 'config':
                     return {
                         _OPERATION_KEY: CseOperation.CLUSTER_CONFIG,
-                        RequestKey.CLUSTER_NAME: tokens[4]
+                        shared_constants.RequestKey.CLUSTER_NAME: tokens[4]
                     }
                 if tokens[5] == 'upgrade-plan':
                     return {
                         _OPERATION_KEY: CseOperation.CLUSTER_UPGRADE_PLAN,
-                        RequestKey.CLUSTER_NAME: tokens[4]
+                        shared_constants.RequestKey.CLUSTER_NAME: tokens[4]
                     }
             raise cse_exception.MethodNotAllowedRequestError()
         if num_tokens == 7:
-            if method == RequestMethod.POST:
+            if method == shared_constants.RequestMethod.POST:
                 if tokens[5] == 'action' and tokens[6] == 'upgrade':
                     return {
                         _OPERATION_KEY: CseOperation.CLUSTER_UPGRADE,
-                        RequestKey.CLUSTER_NAME: tokens[4]
+                        shared_constants.RequestKey.CLUSTER_NAME: tokens[4]
                     }
             raise cse_exception.MethodNotAllowedRequestError()
-    elif operation_type == OperationType.NODE:
+    elif operation_type == shared_constants.OperationType.NODE:
+        if api_version not in (VcdApiVersion.VERSION_33.value,
+                               VcdApiVersion.VERSION_34.value):
+            raise cse_exception.NotFoundRequestError()
+
         if num_tokens == 4:
-            if method == RequestMethod.POST:
+            if method == shared_constants.RequestMethod.POST:
                 return {_OPERATION_KEY: CseOperation.NODE_CREATE}
-            if method == RequestMethod.DELETE:
+            if method == shared_constants.RequestMethod.DELETE:
                 return {_OPERATION_KEY: CseOperation.NODE_DELETE}
             raise cse_exception.MethodNotAllowedRequestError()
         if num_tokens == 5:
-            if method == RequestMethod.GET:
+            if method == shared_constants.RequestMethod.GET:
                 return {
                     _OPERATION_KEY: CseOperation.NODE_INFO,
-                    RequestKey.NODE_NAME: tokens[4]
+                    shared_constants.RequestKey.NODE_NAME: tokens[4]
                 }
             raise cse_exception.MethodNotAllowedRequestError()
+    elif operation_type == shared_constants.OperationType.OVDC:
+        if api_version not in (VcdApiVersion.VERSION_33.value,
+                               VcdApiVersion.VERSION_34.value):
+            raise cse_exception.NotFoundRequestError()
 
-    elif operation_type == OperationType.OVDC:
         if num_tokens == 4:
-            if method == RequestMethod.GET:
+            if method == shared_constants.RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.OVDC_LIST}
             raise cse_exception.MethodNotAllowedRequestError()
         if num_tokens == 5:
-            if method == RequestMethod.GET:
+            if method == shared_constants.RequestMethod.GET:
                 return {
                     _OPERATION_KEY: CseOperation.OVDC_INFO,
-                    RequestKey.OVDC_ID: tokens[4]
+                    shared_constants.RequestKey.OVDC_ID: tokens[4]
                 }
-            if method == RequestMethod.PUT:
+            if method == shared_constants.RequestMethod.PUT:
                 return {
                     _OPERATION_KEY: CseOperation.OVDC_UPDATE,
-                    RequestKey.OVDC_ID: tokens[4]
+                    shared_constants.RequestKey.OVDC_ID: tokens[4]
                 }
             raise cse_exception.MethodNotAllowedRequestError()
         if num_tokens == 6 and tokens[5] == 'compute-policies':
-            if method == RequestMethod.GET:
+            if method == shared_constants.RequestMethod.GET:
                 return {
                     _OPERATION_KEY: CseOperation.OVDC_COMPUTE_POLICY_LIST,
-                    RequestKey.OVDC_ID: tokens[4]
+                    shared_constants.RequestKey.OVDC_ID: tokens[4]
                 }
-            if method == RequestMethod.PUT:
+            if method == shared_constants.RequestMethod.PUT:
                 return {
                     _OPERATION_KEY: CseOperation.OVDC_COMPUTE_POLICY_UPDATE,
-                    RequestKey.OVDC_ID: tokens[4]
+                    shared_constants.RequestKey.OVDC_ID: tokens[4]
                 }
             raise cse_exception.MethodNotAllowedRequestError()
-
-    elif operation_type == OperationType.SYSTEM:
+    elif operation_type == shared_constants.OperationType.SYSTEM:
         if num_tokens == 4:
-            if method == RequestMethod.GET:
+            if method == shared_constants.RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.SYSTEM_INFO}
-            if method == RequestMethod.PUT:
+            if method == shared_constants.RequestMethod.PUT:
                 return {_OPERATION_KEY: CseOperation.SYSTEM_UPDATE}
             raise cse_exception.MethodNotAllowedRequestError()
-
-    elif operation_type == OperationType.TEMPLATE:
+    elif operation_type == shared_constants.OperationType.TEMPLATE:
         if num_tokens == 4:
-            if method == RequestMethod.GET:
+            if method == shared_constants.RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.TEMPLATE_LIST}
             raise cse_exception.MethodNotAllowedRequestError()
 
     raise cse_exception.NotFoundRequestError()
-
-
-def _get_pks_url_data(method, url):
-    """Parse url and http method to get desired PKS operation and url data.
-
-    Returns a data dictionary with 'operation' key and also any relevant url
-    data.
-
-    :param RequestMethod method:
-    :param str url:
-
-    :rtype: dict
-    """
-    tokens = url.split('/')
-    num_tokens = len(tokens)
-    operation_type = tokens[3].lower()
-    if operation_type.endswith('s'):
-        operation_type = operation_type[:-1]
-
-    if operation_type == OperationType.CLUSTER:
-        if num_tokens == 4:
-            if method == RequestMethod.GET:
-                return {_OPERATION_KEY: CseOperation.PKS_CLUSTER_LIST}
-            if method == RequestMethod.POST:
-                return {_OPERATION_KEY: CseOperation.PKS_CLUSTER_CREATE}
-            raise cse_exception.MethodNotAllowedRequestError()
-        if num_tokens == 5:
-            if method == RequestMethod.GET:
-                return {
-                    _OPERATION_KEY: CseOperation.PKS_CLUSTER_INFO,
-                    RequestKey.CLUSTER_NAME: tokens[4]
-                }
-            if method == RequestMethod.PUT:
-                return {
-                    _OPERATION_KEY: CseOperation.PKS_CLUSTER_RESIZE,
-                    RequestKey.CLUSTER_NAME: tokens[4]
-                }
-            if method == RequestMethod.DELETE:
-                return {
-                    _OPERATION_KEY: CseOperation.PKS_CLUSTER_DELETE,
-                    RequestKey.CLUSTER_NAME: tokens[4]
-                }
-            raise cse_exception.MethodNotAllowedRequestError()
-        if num_tokens == 6:
-            if method == RequestMethod.GET:
-                if tokens[5] == 'config':
-                    return {
-                        _OPERATION_KEY: CseOperation.PKS_CLUSTER_CONFIG,
-                        RequestKey.CLUSTER_NAME: tokens[4]
-                    }
-            raise cse_exception.MethodNotAllowedRequestError()
-    raise cse_exception.MethodNotAllowedRequestError()

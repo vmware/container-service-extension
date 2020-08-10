@@ -169,6 +169,11 @@ class ClusterService(abstract_broker.AbstractBroker):
         ovdc_name = cluster_spec.metadata.ovdc_name
         template_name = cluster_spec.spec.k8_distribution.template_name
         template_revision = cluster_spec.spec.k8_distribution.template_revision
+        if not (template_name or template_revision):
+            default_dist = utils.get_default_k8_distribution()
+            cluster_spec.spec.k8_distribution = default_dist
+            template_name = default_dist.template_name
+            template_revision = default_dist.template_revision
 
         # check that cluster name is syntactically valid
         if not is_valid_cluster_name(cluster_name):
@@ -1786,6 +1791,7 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                 }
                 if sizing_class_href:
                     spec['sizing_policy_href'] = sizing_class_href
+                    spec['placement_policy_href'] = config['placement_policy_hrefs'][template[LocalTemplateKey.KIND]]  # noqa: E501
                 if cust_script is not None:
                     spec['cust_script'] = cust_script
                 if storage_profile:
@@ -1824,6 +1830,11 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
             # TODO: get details of the exception to determine cause of failure,
             # e.g. not enough resources available.
             node_list = [entry.get('target_vm_name') for entry in specs]
+            if hasattr(err, 'vcd_error') and \
+                    "throwPolicyNotAvailableException" in err.vcd_error.get('stackTrace', ''):  # noqa: E501
+                raise e.NodeCreationError(node_list,
+                                          f"OVDC not enabled for {template[LocalTemplateKey.KIND]}")  # noqa: E501
+
             raise e.NodeCreationError(node_list, str(err))
 
         vapp.reload()

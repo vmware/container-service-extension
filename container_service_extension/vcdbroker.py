@@ -140,6 +140,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 'status': c['status'],
                 'vdc_id': c['vdc_id'],
                 'org_name': org_name,
+                'owner_name': c['owner_name'],
                 K8S_PROVIDER_KEY: K8sProvider.NATIVE
             })
         return clusters
@@ -1554,6 +1555,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
             'org_name': '',
             'org_href': '',
             'os': '',
+            'owner_name': record.get('ownerName'),
             'status': record.get('status'),
             'storage_profile_name': '',
             'template_name': '',

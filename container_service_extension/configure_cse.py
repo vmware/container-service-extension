@@ -97,93 +97,12 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
                                             config['vcd']['password'])
         client.set_credentials(credentials)
 
-        if utils.use_mqtt_protocol(config):
-            # Check that MQTT extension exists
-            mqtt_ext_manager = MQTTExtensionManager(client)
-            mqtt_ext_info = mqtt_ext_manager.get_extension_info(
-                ext_name=server_constants.CSE_SERVICE_NAME,
-                ext_version=server_constants.MQTT_EXTENSION_VERSION,
-                ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
-            if mqtt_ext_info:
-                # Check MQTT api filter status
-                ext_urn_id = mqtt_ext_info['ext_urn_id']
-                ext_uuid = mqtt_ext_manager.get_extension_uuid(ext_urn_id)
-                api_filter_ids = mqtt_ext_manager.get_api_filter_ids(
-                    server_constants.MQTT_API_FILTER_PATTERN, ext_uuid)
-                if not api_filter_ids:
-                    msg = f"Could not find MQTT API FIlter: " \
-                          f"{server_constants.MQTT_API_FILTER_PATTERN}"
-                    err_msgs.append(msg)
-            else:
-                msg = "Could not find MQTT Extension"
-                err_msgs.append(msg)
+        if utils.should_use_mqtt_protocol(config):
+            _check_mqtt_extension_installation(client, msg_update_callback,
+                                               err_msgs)
         else:
-            # check that AMQP exchange exists
-            amqp = config['amqp']
-            credentials = pika.PlainCredentials(amqp['username'],
-                                                amqp['password'])
-            parameters = pika.ConnectionParameters(amqp['host'], amqp['port'],
-                                                   amqp['vhost'], credentials,
-                                                   ssl=amqp['ssl'],
-                                                   connection_attempts=3,
-                                                   retry_delay=2,
-                                                   socket_timeout=5)
-            connection = None
-            try:
-                connection = pika.BlockingConnection(parameters)
-                channel = connection.channel()
-                channel.exchange_declare(exchange=amqp['exchange'],
-                                         exchange_type=server_constants.EXCHANGE_TYPE, # noqa: E501
-                                         durable=True,
-                                         passive=True,
-                                         auto_delete=False)
-                msg = f"AMQP exchange '{amqp['exchange']}' exists"
-                msg_update_callback.general(msg)
-                SERVER_CLI_LOGGER.info(msg)
-            except pika.exceptions.ChannelClosed:
-                msg = f"AMQP exchange '{amqp['exchange']}' does not exist"
-                msg_update_callback.error(msg)
-                SERVER_CLI_LOGGER.error(msg)
-                err_msgs.append(msg)
-            finally:
-                if connection is not None:
-                    connection.close()
-
-            # check that CSE is registered to vCD correctly
-            ext = api_extension.APIExtension(client)
-            try:
-                cse_info = ext.get_extension(server_constants.CSE_SERVICE_NAME,
-                                             namespace=server_constants.CSE_SERVICE_NAMESPACE) # noqa: E501
-                rkey_matches = cse_info['routingKey'] == amqp['routing_key']
-                exchange_matches = cse_info['exchange'] == amqp['exchange']
-                if not rkey_matches or not exchange_matches:
-                    msg = "CSE is registered as an extension, but the " \
-                          "extension settings on vCD are not the same as " \
-                          "config settings."
-                    if not rkey_matches:
-                        msg += f"\nvCD-CSE routing key: " \
-                               f"{cse_info['routingKey']}" \
-                               f"\nCSE config routing key: " \
-                               f"{amqp['routing_key']}"
-                    if not exchange_matches:
-                        msg += f"\nvCD-CSE exchange: {cse_info['exchange']}" \
-                               f"\nCSE config exchange: {amqp['exchange']}"
-                    msg_update_callback.info(msg)
-                    SERVER_CLI_LOGGER.info(msg)
-                    err_msgs.append(msg)
-                if cse_info['enabled'] == 'true':
-                    msg = "CSE on vCD is currently enabled"
-                    msg_update_callback.general(msg)
-                    SERVER_CLI_LOGGER.info(msg)
-                else:
-                    msg = "CSE on vCD is currently disabled"
-                    msg_update_callback.info(msg)
-                    SERVER_CLI_LOGGER.info(msg)
-            except MissingRecordException:
-                msg = "CSE is not registered to vCD"
-                msg_update_callback.error(msg)
-                SERVER_CLI_LOGGER.error(msg)
-                err_msgs.append(msg)
+            _check_amqp_extension_installation(client, config,
+                                               msg_update_callback, err_msgs)
 
         # check that catalog exists in vCD
         org_name = config['broker']['org']
@@ -207,6 +126,112 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
     msg = "CSE installation is valid"
     msg_update_callback.general(msg)
     SERVER_CLI_LOGGER.info(msg)
+
+
+def _check_amqp_extension_installation(client, config, msg_update_callback,
+                                       err_msgs):
+    """Check that AMQP exchange and api extension exists."""
+    amqp = config['amqp']
+    credentials = pika.PlainCredentials(amqp['username'],
+                                        amqp['password'])
+    parameters = pika.ConnectionParameters(amqp['host'], amqp['port'],
+                                           amqp['vhost'], credentials,
+                                           ssl=amqp['ssl'],
+                                           connection_attempts=3,
+                                           retry_delay=2,
+                                           socket_timeout=5)
+    connection = None
+    try:
+        connection = pika.BlockingConnection(parameters)
+        channel = connection.channel()
+        try:
+            channel.exchange_declare(exchange=amqp['exchange'],
+                                     exchange_type=server_constants.EXCHANGE_TYPE,  # noqa: E501
+                                     durable=True,
+                                     passive=True,
+                                     auto_delete=False)
+            msg = f"AMQP exchange '{amqp['exchange']}' exists"
+            msg_update_callback.general(msg)
+            SERVER_CLI_LOGGER.info(msg)
+        except pika.exceptions.ChannelClosed:
+            msg = f"AMQP exchange '{amqp['exchange']}' does not exist"
+            msg_update_callback.error(msg)
+            SERVER_CLI_LOGGER.error(msg)
+            err_msgs.append(msg)
+    except Exception:  # TODO() replace raw exception with specific
+        msg = f"Could not connect to AMQP exchange '{amqp['exchange']}'"
+        msg_update_callback.error(msg)
+        SERVER_CLI_LOGGER.error(msg)
+        err_msgs.append(msg)
+    finally:
+        if connection is not None:
+            connection.close()
+
+    # check that CSE is registered to vCD correctly
+    ext = api_extension.APIExtension(client)
+    try:
+        cse_info = ext.get_extension(server_constants.CSE_SERVICE_NAME,
+                                     namespace=server_constants.CSE_SERVICE_NAMESPACE)  # noqa: E501
+        rkey_matches = cse_info['routingKey'] == amqp['routing_key']
+        exchange_matches = cse_info['exchange'] == amqp['exchange']
+        if not rkey_matches or not exchange_matches:
+            msg = "CSE is registered as an extension, but the " \
+                  "extension settings on vCD are not the same as " \
+                  "config settings."
+            if not rkey_matches:
+                msg += f"\nvCD-CSE routing key: " \
+                       f"{cse_info['routingKey']}" \
+                       f"\nCSE config routing key: " \
+                       f"{amqp['routing_key']}"
+            if not exchange_matches:
+                msg += f"\nvCD-CSE exchange: {cse_info['exchange']}" \
+                       f"\nCSE config exchange: {amqp['exchange']}"
+            msg_update_callback.info(msg)
+            SERVER_CLI_LOGGER.info(msg)
+            err_msgs.append(msg)
+        if cse_info['enabled'] == 'true':
+            msg = "CSE on vCD is currently enabled"
+            msg_update_callback.general(msg)
+            SERVER_CLI_LOGGER.info(msg)
+        else:
+            msg = "CSE on vCD is currently disabled"
+            msg_update_callback.info(msg)
+            SERVER_CLI_LOGGER.info(msg)
+    except MissingRecordException:
+        msg = "CSE is not registered to vCD"
+        msg_update_callback.error(msg)
+        SERVER_CLI_LOGGER.error(msg)
+        err_msgs.append(msg)
+
+
+def _check_mqtt_extension_installation(client, msg_update_callback, err_msgs):
+    """Check that MQTT extension exists with its API filter."""
+    mqtt_ext_manager = MQTTExtensionManager(client)
+    mqtt_ext_info = mqtt_ext_manager.get_extension_info(
+        ext_name=server_constants.CSE_SERVICE_NAME,
+        ext_version=server_constants.MQTT_EXTENSION_VERSION,
+        ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
+    if mqtt_ext_info:
+        # Check MQTT api filter status
+        ext_urn_id = mqtt_ext_info['ext_urn_id']
+        ext_uuid = mqtt_ext_manager.get_extension_uuid(ext_urn_id)
+        api_filter_ids = mqtt_ext_manager.get_api_filter_ids(
+            server_constants.MQTT_API_FILTER_PATTERN, ext_uuid)
+        if not api_filter_ids:
+            msg = f"Could not find MQTT API FIlter: " \
+                  f"{server_constants.MQTT_API_FILTER_PATTERN}"
+            msg_update_callback.error(msg)
+            SERVER_CLI_LOGGER.error(msg)
+            err_msgs.append(msg)
+        else:
+            msg = "MQTT extension and API filter exist"
+            msg_update_callback.general(msg)
+            SERVER_CLI_LOGGER.info(msg)
+    else:
+        msg = "Could not find MQTT Extension"
+        msg_update_callback.error(msg)
+        SERVER_CLI_LOGGER.error(msg)
+        err_msgs.append(msg)
 
 
 def _construct_cse_extension_description(target_vcd_api_version):
@@ -266,8 +291,8 @@ def install_cse(config_file_name, skip_template_creation,
 
     :raises cse_exception.AmqpError: (when using AMQP) if AMQP exchange
         could not be created.
-    :raises requests.exceptions.HTTPError: (when using MQTT) if the MQTT
-        extension and api filter were not set up correctly
+    :raises requests.exceptions.HTTPError: (when using MQTT) if there is an
+        issue in retrieiving MQTT info or in setting up the MQTT components
     """
     config = get_validated_config(
         config_file_name, pks_config_file_name=pks_config_file_name,
@@ -322,8 +347,22 @@ def install_cse(config_file_name, skip_template_creation,
         INSTALL_LOGGER.info(msg)
 
         # Setup extension message protocol
-        if utils.use_mqtt_protocol(config):
+        if utils.should_use_mqtt_protocol(config):
+            # Check for current MQTT extension
+            mqtt_ext_manager = MQTTExtensionManager(client)
+            ext_info = mqtt_ext_manager.get_extension_info(
+                ext_name=server_constants.CSE_SERVICE_NAME,
+                ext_version=server_constants.MQTT_EXTENSION_VERSION,
+                ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
+            if ext_info:  # Extension exists
+                msg = "MQTT extension already exists. " \
+                    "Use `cse upgrade` instead of 'cse install'."
+                raise Exception(msg)
+
             _install_mqtt(client, config)
+            mqtt_msg = 'MQTT extension is ready'
+            msg_update_callback.general(mqtt_msg)
+            INSTALL_LOGGER.info(mqtt_msg)
         else:
             # create amqp exchange if it doesn't exist
             amqp = config['amqp']
@@ -438,8 +477,8 @@ def _install_mqtt(client, config):
     :param Client client: client used to install cse server components
     :param dict config: content of the CSE config file.
 
-    :raises requests.exceptions.HTTPError: (when using MQTT) if the MQTT
-        extension and api filter were not set up correctly
+    :raises requests.exceptions.HTTPError: if the MQTT extension and api filter
+        were not set up correctly
     """
     mqtt_ext_manager = MQTTExtensionManager(client)
     description = _construct_cse_extension_description(
@@ -525,10 +564,10 @@ def _register_cse_as_extension(client, routing_key, exchange,
     """
     ext = api_extension.APIExtension(client)
     patterns = [
-        f'/api/{server_constants.CSE_SERVICE_NAME}',
-        f'/api/{server_constants.CSE_SERVICE_NAME}/.*',
-        f'/api/{server_constants.PKS_SERVICE_NAME}',
-        f'/api/{server_constants.PKS_SERVICE_NAME}/.*',
+        f'/api/{shared_constants.CSE_URL_FRAGMENT}',
+        f'/api/{shared_constants.CSE_URL_FRAGMENT}/.*',
+        f'/api/{shared_constants.PKS_URL_FRAGMENT}',
+        f'/api/{shared_constants.PKS_URL_FRAGMENT}/.*',
     ]
 
     vcd_api_versions = client.get_supported_versions_list()
@@ -1137,10 +1176,10 @@ def _update_cse_extension(client, routing_key, exchange,
     """."""
     ext = api_extension.APIExtension(client)
     patterns = [
-        f'/api/{server_constants.CSE_SERVICE_NAME}',
-        f'/api/{server_constants.CSE_SERVICE_NAME}/.*',
-        f'/api/{server_constants.PKS_SERVICE_NAME}',
-        f'/api/{server_constants.PKS_SERVICE_NAME}/.*',
+        f'/api/{shared_constants.CSE_URL_FRAGMENT}',
+        f'/api/{shared_constants.CSE_URL_FRAGMENT}/.*',
+        f'/api/{shared_constants.PKS_URL_FRAGMENT}',
+        f'/api/{shared_constants.PKS_URL_FRAGMENT}/.*',
     ]
 
     description = _construct_cse_extension_description(target_vcd_api_version)
@@ -1226,6 +1265,9 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
         # Delete extension if present and set up MQTT extension
         try:
             api_ext = api_extension.APIExtension(client)
+            api_ext.remove_all_api_filters_from_service(
+                name=server_constants.CSE_SERVICE_NAME,
+                namespace=server_constants.CSE_SERVICE_NAMESPACE)
             api_ext.delete_extension(
                 name=server_constants.CSE_SERVICE_NAME,
                 namespace=server_constants.CSE_SERVICE_NAMESPACE)
@@ -1327,6 +1369,11 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
         cse_clusters=clusters,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
+
+    # Print list of users categorized by org, who currently owns CSE clusters
+    # and will need DEF entity rights.
+    _print_users_in_need_of_def_rights(
+        cse_clusters=clusters, msg_update_callback=msg_update_callback)
 
 
 def _fix_cluster_metadata(client,
@@ -1977,3 +2024,21 @@ def _create_def_entity_for_existing_clusters(
     msg = "Finished processing all clusters."
     INSTALL_LOGGER.info(msg)
     msg_update_callback.general(msg)
+
+
+def _print_users_in_need_of_def_rights(
+        cse_clusters, msg_update_callback=utils.NullPrinter()):
+    org_user_dict = {}
+    for cluster in cse_clusters:
+        if cluster['org_name'] not in org_user_dict:
+            org_user_dict[cluster['org_name']] = []
+        org_user_dict[cluster['org_name']].append(cluster['owner_name'])
+
+    msg = "The following users own CSE k8s clusters and will require [TODO] rights to access them in CSE 3.0"  # noqa: E501
+    msg_update_callback.info(msg)
+    INSTALL_LOGGER.info(msg)
+
+    for org_name, user_list in org_user_dict.items():
+        msg = f"Org : {org_name} -> Users : {', '.join(set(user_list))}"
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.info(msg)

@@ -9,12 +9,18 @@ from pyvcloud.vcd.client import Client
 import requests
 
 from container_service_extension.logger import NULL_LOGGER
+from container_service_extension.mqtt_extension_manager import \
+    MQTTExtensionManager
 from container_service_extension.server_constants import CSE_SERVICE_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
+from container_service_extension.server_constants import MQTT_EXTENSION_VENDOR
+from container_service_extension.server_constants import MQTT_EXTENSION_VERSION
+from container_service_extension.server_constants import MQTTExtKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.telemetry.constants import COLLECTOR_ID
 from container_service_extension.telemetry.constants import VAC_URL
 from container_service_extension.utils import NullPrinter
+from container_service_extension.utils import should_use_mqtt_protocol
 
 
 CEIP_HEADER_NAME = "x-vmware-vcloud-ceip-id"
@@ -97,6 +103,37 @@ def get_telemetry_instance_id(vcd, logger_debug=NULL_LOGGER,
             client.logout()
 
 
+def get_mqtt_extension_uuid(vcd):
+    """Get the MQTT extension uuid.
+
+    If the extension is not set up, None is returned.
+
+    :param dict vcd: 'vcd' section of config file as a dict.
+
+    :return: MQTT extension uuid
+    :rtype: str
+    :raises: requests.exceptions.HTTPError if there is an error in trying to
+        retrieve MQTT extension info
+    """
+    # Set up client
+    client = Client(vcd['host'],
+                    api_version=vcd['api_version'],
+                    verify_ssl_certs=vcd['verify'])
+    client.set_credentials(BasicLoginCredentials(
+        vcd['username'], SYSTEM_ORG_NAME, vcd['password']))
+
+    mqtt_ext_manager = MQTTExtensionManager(client)
+    ext_info = mqtt_ext_manager.get_extension_info(
+        ext_name=CSE_SERVICE_NAME,
+        ext_version=MQTT_EXTENSION_VERSION,
+        ext_vendor=MQTT_EXTENSION_VENDOR)
+    if not ext_info:
+        return None
+    ext_uuid = mqtt_ext_manager.get_extension_uuid(
+        ext_info[MQTTExtKey.EXT_URN_ID])
+    return ext_uuid
+
+
 def store_telemetry_settings(config_dict):
     """Populate telemetry instance id, url and collector id in config.
 
@@ -112,6 +149,9 @@ def store_telemetry_settings(config_dict):
     if config_dict['service']['telemetry']['enable']:
         vcd_ceip_id = get_vcd_ceip_id(config_dict['vcd']['host'],
                                       verify_ssl=config_dict['vcd']['verify'])
-        instance_id = get_telemetry_instance_id(config_dict['vcd'])
+        if should_use_mqtt_protocol(config_dict):
+            instance_id = get_mqtt_extension_uuid(config_dict['vcd'])
+        else:
+            instance_id = get_telemetry_instance_id(config_dict['vcd'])
     config_dict['service']['telemetry']['vcd_ceip_id'] = vcd_ceip_id
     config_dict['service']['telemetry']['instance_id'] = instance_id
