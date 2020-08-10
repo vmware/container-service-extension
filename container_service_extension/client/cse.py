@@ -1370,14 +1370,14 @@ def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus):
     '--native',
     'disable_native',
     is_flag=True,
-    help="Enable OVDC for native cluster deployment"
+    help="Disable OVDC for native cluster deployment"
 )
 @click.option(
     '-t',
     '--tkg-plus',
     'disable_tkg_plus',
     is_flag=True,
-    help="Enable OVDC for TKG plus cluster deployment"
+    help="Disable OVDC for TKG plus cluster deployment"
 )
 @click.option(
     '-f',
