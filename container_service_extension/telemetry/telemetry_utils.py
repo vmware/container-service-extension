@@ -99,9 +99,8 @@ def get_telemetry_instance_id(config_dict, logger_debug=NULL_LOGGER,
                 ext_vendor=MQTT_EXTENSION_VENDOR)
             if not ext_info:
                 return ''
-            ext_uuid = mqtt_ext_manager.get_extension_uuid(
+            return mqtt_ext_manager.get_extension_uuid(
                 ext_info[MQTTExtKey.EXT_URN_ID])
-            return ext_uuid
         else:
             # Get AMQP extension id
             ext = APIExtension(client)
