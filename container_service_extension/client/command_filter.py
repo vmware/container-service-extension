@@ -92,9 +92,9 @@ UNSUPPORTED_SUBCOMMAND_OPTIONS_BY_VERSION = {
         },
         GroupKey.OVDC: {
             CommandNameKey.ENABLE: [] if str_to_bool(
-                os.getenv(cli_constants.ENV_CSE_TKG_PLUS_ENABLE)) else ['enable_tkg_plus'],  # noqa: E501
+                os.getenv(cli_constants.ENV_CSE_TKG_PLUS_ENABLED)) else ['enable_tkg_plus'],  # noqa: E501
             CommandNameKey.DISABLE: [] if str_to_bool(
-                os.getenv(cli_constants.ENV_CSE_TKG_PLUS_ENABLE)) else ['enable_tkg_plus']  # noqa: E501
+                os.getenv(cli_constants.ENV_CSE_TKG_PLUS_ENABLED)) else ['disable_tkg_plus']  # noqa: E501
         }
     }
 }

@@ -1368,14 +1368,14 @@ def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus):
 @click.option(
     '-n',
     '--native',
-    'enable_native',
+    'disable_native',
     is_flag=True,
     help="Enable OVDC for native cluster deployment"
 )
 @click.option(
     '-t',
     '--tkg-plus',
-    'enable_tkg_plus',
+    'disable_tkg_plus',
     is_flag=True,
     help="Enable OVDC for TKG plus cluster deployment"
 )
@@ -1387,18 +1387,18 @@ def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus):
     help="Remove the compute policies from deployed VMs as well. "
          "Does not remove the compute policy from vApp templates in catalog. ")
 def ovdc_disable(ctx, ovdc_name, org_name,
-                 enable_native, enable_tkg_plus,
+                 disable_native, disable_tkg_plus,
                  remove_cp_from_vms_on_disable):
     """Disable Kubernetes cluster deployment for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
-    if not (enable_native or enable_tkg_plus):
+    if not (disable_native or disable_tkg_plus):
         msg = "Please specify at least one of --native or --tkg-plus to disable" # noqa:E501
         stderr(msg, ctx)
         CLIENT_LOGGER.error(msg)
     k8_runtime = []
-    if enable_native:
+    if disable_native:
         k8_runtime.append(shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY)
-    if enable_tkg_plus:
+    if disable_tkg_plus:
         k8_runtime.append(shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY)
     try:
         client_utils.cse_restore_session(ctx)
