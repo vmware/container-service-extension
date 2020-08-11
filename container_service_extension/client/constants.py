@@ -15,8 +15,7 @@ TKG_ENTITY_TYPE_ID = def_utils.generate_entity_type_id(
 
 TKG_CLUSTER_RUNTIME = 'TkgCluster'
 
-# Profile variables
-CSE_SERVER_API_VERSION = 'cse_server_api_version'
+# CLI Profile key
 CSE_SERVER_RUNNING = 'cse_server_running'
 
 

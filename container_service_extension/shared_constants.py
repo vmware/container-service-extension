@@ -17,6 +17,7 @@ UNKNOWN_ERROR_MESSAGE = "Unknown error. Please contact your System " \
                         "Administrator"
 
 RESPONSE_MESSAGE_KEY = "message"
+CSE_SERVER_API_VERSION = 'cse_server_api_version'
 
 NATIVE_CLUSTER_RUNTIME_POLICY = 'native'
 TKG_PLUS_CLUSTER_RUNTIME_POLICY = 'tkg_plus'
