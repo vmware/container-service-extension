@@ -108,7 +108,7 @@ def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
     return svc.get_cluster_upgrade_plan(data[RequestKey.CLUSTER_ID])
 
 
-# @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_UPGRADE)
+@record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE)  # noqa: E501
 @request_utils.v35_api_exception_handler
 def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     """Request handler for cluster upgrade operation.
