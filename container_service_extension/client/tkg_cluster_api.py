@@ -119,6 +119,27 @@ class TKGClusterApi:
             tkg_def_entities = response[3]
         return entities, tkg_def_entities
 
+    def get_cluster_info(self, cluster_name, org=None, vdc=None):
+        """Get cluster information of a TKG cluster API.
+
+        :param str cluster_name: name of the cluster
+        :param str vdc: name of vdc
+        :param str org: name of org
+
+        :return: cluster information
+        :rtype: str
+        :raises ClusterNotFoundError
+        """
+        tkg_entities, _ = self.get_tkg_clusters_by_name(cluster_name, vdc=vdc, org=org)  # noqa: E501
+        if len(tkg_entities) == 0:
+            msg = f"Cluster '{cluster_name}' not found."
+            logger.CLIENT_LOGGER.error(msg)
+            raise cse_exceptions.ClusterNotFoundError(msg)
+        cluster_dict = tkg_entities[0].to_dict()
+        logger.CLIENT_LOGGER.debug(
+            f"Received defined entity of cluster {cluster_name} : {cluster_dict}")  # noqa: E501
+        return yaml.dump(cluster_dict)
+
     def apply(self, cluster_config: dict):
         """Apply the configuration either to create or update the cluster.
 
@@ -179,9 +200,9 @@ class TKGClusterApi:
             raise
 
     def delete_cluster(self, cluster_name, org=None, vdc=None):
-        """Delete DEF native cluster by name.
+        """Delete TKG cluster by name.
 
-        :param str cluster_name: native cluster name
+        :param str cluster_name: TKG cluster name
         :param str org: name of the org
         :param str vdc: name of the vdc
         :return: deleted cluster information
@@ -208,3 +229,15 @@ class TKGClusterApi:
         except Exception as e:
             logger.CLIENT_LOGGER.error(f"{e}")
             raise
+
+    def get_cluster_config(self, cluster_name, vdc=None, org=None):
+        """Get kubernetes cluster config of the cluster.
+
+        :param str cluster_name: TKG cluster name
+        :param str org: name of the org
+        :param str vdc: name of the vdc
+        :return: Cluster kubeconfig information
+        :rtype: str
+        :raises ClusterNotFoundError, CseDuplicateClusterError
+        """
+        raise NotImplementedError()

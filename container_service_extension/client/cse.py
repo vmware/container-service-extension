@@ -238,6 +238,13 @@ def cluster_delete(ctx, name, vdc, org, k8_runtime=None):
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
+        if client_utils.is_cli_for_tkg_only():
+            if k8_runtime in [ClusterEntityKind.NATIVE.value,
+                              ClusterEntityKind.TANZU_PLUS.value]:
+                # Cannot run the command as cse cli is enabled only for native:
+                raise Exception("CSE cli is enabled only for "
+                                "TanzuKubernetesCluster runtime.")
+            k8_runtime = ClusterEntityKind.TKG.value
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
@@ -604,7 +611,13 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
         k8_runtime = cluster_config.get('kind')
         if not k8_runtime:
             raise Exception("Cluster kind missing from the spec.")
-
+        if client_utils.is_cli_for_tkg_only():
+            if k8_runtime in [ClusterEntityKind.NATIVE.value,
+                              ClusterEntityKind.TANZU_PLUS.value]:
+                # Cannot run the command as cse cli is enabled only for native:
+                raise Exception("CSE cli is enabled only for "
+                                "TanzuKubernetesCluster runtime.")
+            k8_runtime = ClusterEntityKind.TKG.value
         metadata = cluster_config.get('metadata', {})
         metadata_vdc_key = ''
         if k8_runtime == ClusterEntityKind.NATIVE.value or \
@@ -668,6 +681,13 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name, k8_runtime=None):
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
+        if client_utils.is_cli_for_tkg_only():
+            if k8_runtime in [ClusterEntityKind.NATIVE.value,
+                              ClusterEntityKind.TANZU_PLUS.value]:
+                # Cannot run the command as cse cli is enabled only for native:
+                raise Exception("CSE cli is enabled only for "
+                                "TanzuKubernetesCluster runtime.")
+            k8_runtime = ClusterEntityKind.TKG.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org_name is None:
@@ -736,6 +756,13 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
+        if client_utils.is_cli_for_tkg_only():
+            if k8_runtime in [ClusterEntityKind.NATIVE.value,
+                              ClusterEntityKind.TANZU_PLUS.value]:
+                # Cannot run the command as cse cli is enabled only for native:
+                raise Exception("CSE cli is enabled only for "
+                                "TanzuKubernetesCluster runtime.")
+            k8_runtime = ClusterEntityKind.TKG.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org_name is None:
@@ -789,6 +816,13 @@ def cluster_config(ctx, name, vdc, org, k8_runtime=None):
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
+        if client_utils.is_cli_for_tkg_only():
+            if k8_runtime in [ClusterEntityKind.NATIVE.value,
+                              ClusterEntityKind.TANZU_PLUS.value]:
+                # Cannot run the command as cse cli is enabled only for native:
+                raise Exception("CSE cli is enabled only for "
+                                "TanzuKubernetesCluster runtime.")
+            k8_runtime = ClusterEntityKind.TKG.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
@@ -838,6 +872,13 @@ def cluster_info(ctx, name, org, vdc, k8_runtime=None):
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
+        if client_utils.is_cli_for_tkg_only():
+            if k8_runtime in [ClusterEntityKind.NATIVE.value,
+                              ClusterEntityKind.TANZU_PLUS.value]:
+                # Cannot run the command as cse cli is enabled only for native:
+                raise Exception("CSE cli is enabled only for "
+                                "TanzuKubernetesCluster runtime.")
+            k8_runtime = ClusterEntityKind.TKG.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
