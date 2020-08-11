@@ -1756,7 +1756,18 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                                                               log_wire=utils.str_to_bool(config['service']['log_wire']))  # noqa: E501
             sizing_class_href = None
             if sizing_class_name:
-                sizing_class_href = cpm.get_vdc_compute_policy(sizing_class_name)['href']  # noqa: E501
+                vdc_resource = vdc.get_resource()
+                filters = {
+                    'name': sizing_class_name,
+                    'isSizingOnly': True,
+                }
+                policies = cpm.list_compute_policies_on_vdc(vdc_resource.get('id'), filters=filters)  # noqa: E501
+                for policy in policies:
+                    sizing_class_href = policy.get('href')
+                if not sizing_class_href:
+                    msg = f"Sizing policy {sizing_class_name} not present in VDC {vdc.get('name')}"  # noqa: E501
+                    LOGGER.error(msg)
+                    raise Exception(msg)
             if storage_profile:
                 storage_profile = vdc.get_storage_profile(storage_profile)
 
