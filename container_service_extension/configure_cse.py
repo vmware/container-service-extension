@@ -1857,7 +1857,6 @@ def _create_def_entity_for_existing_clusters(
                 phase=str(shared_constants.DefEntityPhase(
                     shared_constants.DefEntityOperation.CREATE,
                     shared_constants.DefEntityOperationStatus.SUCCEEDED)),
-                master_ip=cluster['leader_endpoint'],
                 kubernetes=f"{cluster['kubernetes']} {cluster['kubernetes_version']}", # noqa: E501
                 cni=f"{cluster['cni']} {cluster['cni_version']}",
                 os=cluster['os'],
