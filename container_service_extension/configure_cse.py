@@ -215,8 +215,7 @@ def _check_mqtt_extension_installation(client, msg_update_callback, err_msgs):
         # Check MQTT api filter status
         ext_urn_id = mqtt_ext_info['ext_urn_id']
         ext_uuid = mqtt_ext_manager.get_extension_uuid(ext_urn_id)
-        api_filter_ids = mqtt_ext_manager.get_api_filter_ids(
-            server_constants.MQTT_API_FILTER_PATTERN, ext_uuid)
+        api_filter_ids = mqtt_ext_manager.get_api_filter_ids(ext_uuid)
         if not api_filter_ids:
             msg = f"Could not find MQTT API FIlter: " \
                   f"{server_constants.MQTT_API_FILTER_PATTERN}"
@@ -490,8 +489,7 @@ def _install_mqtt(client, config):
         description=description)
     ext_uuid = mqtt_ext_manager.get_extension_uuid(
         ext_info['ext_urn_id'])
-    _ = mqtt_ext_manager.setup_api_filter(
-        server_constants.MQTT_API_FILTER_PATTERN, ext_uuid)
+    _ = mqtt_ext_manager.setup_api_filter(ext_uuid)
 
 
 def _create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,

@@ -65,14 +65,14 @@ def get_vcd_ceip_id(vcd_host, verify_ssl=True, logger_debug=NULL_LOGGER):
             response.close()
 
 
-def get_telemetry_instance_id(vcd, logger_debug=NULL_LOGGER,
+def get_telemetry_instance_id(config_dict, logger_debug=NULL_LOGGER,
                               msg_update_callback=NullPrinter()):
-    """Get CSE extension id which is used as instance id.
+    """Get CSE AMQP or MQTT extension id which is used as instance id.
 
     Any exception is logged as error. No exception is leaked out
     of this method and does not affect the server startup.
 
-    :param dict vcd: 'vcd' section of config file as a dict.
+    :param dict config_dict: CSE configuration
     :param logging.logger logger_debug: logger instance to log any error
     in retrieving CSE extension id.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
@@ -84,16 +84,30 @@ def get_telemetry_instance_id(vcd, logger_debug=NULL_LOGGER,
     :raises Exception: if any exception happens while retrieving CSE
     extension id
     """
+    vcd = config_dict['vcd']
     try:
         client = Client(vcd['host'], api_version=vcd['api_version'],
                         verify_ssl_certs=vcd['verify'])
         client.set_credentials(BasicLoginCredentials(
             vcd['username'], SYSTEM_ORG_NAME, vcd['password']))
-        ext = APIExtension(client)
-        cse_info = ext.get_extension_info(CSE_SERVICE_NAME,
-                                          namespace=CSE_SERVICE_NAMESPACE)
-        logger_debug.info("Retrieved telemetry instance id")
-        return cse_info.get('id')
+        if should_use_mqtt_protocol(config_dict):
+            # Get MQTT extension uuid
+            mqtt_ext_manager = MQTTExtensionManager(client)
+            ext_info = mqtt_ext_manager.get_extension_info(
+                ext_name=CSE_SERVICE_NAME,
+                ext_version=MQTT_EXTENSION_VERSION,
+                ext_vendor=MQTT_EXTENSION_VENDOR)
+            if not ext_info:
+                return ''
+            return mqtt_ext_manager.get_extension_uuid(
+                ext_info[MQTTExtKey.EXT_URN_ID])
+        else:
+            # Get AMQP extension id
+            ext = APIExtension(client)
+            cse_info = ext.get_extension_info(CSE_SERVICE_NAME,
+                                              namespace=CSE_SERVICE_NAMESPACE)
+            logger_debug.info("Retrieved telemetry instance id")
+            return cse_info.get('id')
     except Exception as err:
         msg = f"Cannot retrieve telemetry instance id:{err}"
         msg_update_callback.general(msg)
@@ -101,37 +115,6 @@ def get_telemetry_instance_id(vcd, logger_debug=NULL_LOGGER,
     finally:
         if client is not None:
             client.logout()
-
-
-def get_mqtt_extension_uuid(vcd):
-    """Get the MQTT extension uuid.
-
-    If the extension is not set up, None is returned.
-
-    :param dict vcd: 'vcd' section of config file as a dict.
-
-    :return: MQTT extension uuid
-    :rtype: str
-    :raises: requests.exceptions.HTTPError if there is an error in trying to
-        retrieve MQTT extension info
-    """
-    # Set up client
-    client = Client(vcd['host'],
-                    api_version=vcd['api_version'],
-                    verify_ssl_certs=vcd['verify'])
-    client.set_credentials(BasicLoginCredentials(
-        vcd['username'], SYSTEM_ORG_NAME, vcd['password']))
-
-    mqtt_ext_manager = MQTTExtensionManager(client)
-    ext_info = mqtt_ext_manager.get_extension_info(
-        ext_name=CSE_SERVICE_NAME,
-        ext_version=MQTT_EXTENSION_VERSION,
-        ext_vendor=MQTT_EXTENSION_VENDOR)
-    if not ext_info:
-        return None
-    ext_uuid = mqtt_ext_manager.get_extension_uuid(
-        ext_info[MQTTExtKey.EXT_URN_ID])
-    return ext_uuid
 
 
 def store_telemetry_settings(config_dict):
@@ -149,9 +132,6 @@ def store_telemetry_settings(config_dict):
     if config_dict['service']['telemetry']['enable']:
         vcd_ceip_id = get_vcd_ceip_id(config_dict['vcd']['host'],
                                       verify_ssl=config_dict['vcd']['verify'])
-        if should_use_mqtt_protocol(config_dict):
-            instance_id = get_mqtt_extension_uuid(config_dict['vcd'])
-        else:
-            instance_id = get_telemetry_instance_id(config_dict['vcd'])
+        instance_id = get_telemetry_instance_id(config_dict)
     config_dict['service']['telemetry']['vcd_ceip_id'] = vcd_ceip_id
     config_dict['service']['telemetry']['instance_id'] = instance_id

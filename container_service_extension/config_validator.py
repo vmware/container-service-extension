@@ -120,6 +120,9 @@ def get_validated_config(config_file_name,
         nsxt_wire_logger = SERVER_NSXT_WIRE_LOGGER
     check_keys_and_value_types(config, sample_config, location='config file',
                                msg_update_callback=msg_update_callback)
+    # MQTT validation not required because no MQTT host, exchange, etc.
+    # is needed in the config file since the server code creates and
+    # registers the MQTT extension directly using server constants
     if not use_mqtt:
         _validate_amqp_config(config['amqp'], msg_update_callback)
     _validate_vcd_and_vcs_config(config['vcd'], config['vcs'],
