@@ -1,7 +1,6 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-
 import copy
 import random
 import re
@@ -110,6 +109,9 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         if not result:
             raise e.ClusterOperationError("Couldn't get cluster configuration")
+
+        record_user_action_details(cse_operation=CseOperation.V35_CLUSTER_CONFIG, # noqa: E501
+                                   cse_params=curr_entity)
 
         return result.content.decode()
 
@@ -221,6 +223,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                           entity=def_entity)
         self.context.is_async = True
         def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)
+        record_user_action_details(cse_operation=CseOperation.V35_CLUSTER_APPLY,  # noqa: E501
+                                   cse_params=def_entity)
         self._create_cluster_async(def_entity.id, cluster_spec)
         return def_entity
 
@@ -555,6 +559,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
         curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)
+        record_user_action_details(cse_operation=CseOperation.V35_CLUSTER_APPLY,  # noqa: E501
+                                   cse_params=curr_entity)
 
         # trigger async operation
         self.context.is_async = True

@@ -46,7 +46,10 @@ OPERATION_TO_PAYLOAD_GENERATOR = {
     CseOperation.OVDC_DISABLE: payload_generator.get_payload_for_ovdc_disable,
     CseOperation.OVDC_ENABLE: payload_generator.get_payload_for_ovdc_enable,
     CseOperation.OVDC_INFO: payload_generator.get_payload_for_ovdc_info,
-    CseOperation.OVDC_LIST: payload_generator.get_payload_for_ovdc_list
+    CseOperation.OVDC_LIST: payload_generator.get_payload_for_ovdc_list,
+
+    CseOperation.V35_CLUSTER_CONFIG: payload_generator.get_payload_for_v35_cluster_config,  # noqa: E501
+    CseOperation.V35_CLUSTER_APPLY: payload_generator.get_payload_for_v35_cluster_apply  # noqa: E501
 }
 
 
