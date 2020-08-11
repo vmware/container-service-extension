@@ -444,6 +444,7 @@ def get_payload_for_v35_cluster_config(def_entity: DefEntity):
     return {
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_CONFIG.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
         PayloadKey.TEMPLATE_NAME: def_entity.entity.spec.k8_distribution.template_name,  # noqa: E501
         PayloadKey.TEMPLATE_REVISION: def_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
     }
@@ -475,4 +476,36 @@ def get_payload_for_v35_cluster_apply(def_entity: DefEntity):
         PayloadKey.NFS_STORAGE_PROFILE: def_entity.entity.spec.nfs.storage_profile,  # noqa: E501
         PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(def_entity.entity.spec.settings.ssh_key),  # noqa: E501
         PayloadKey.WAS_ROLLBACK_ENABLED: bool(def_entity.entity.spec.settings.rollback_on_failure)  # noqa: E501
+    }
+
+
+def get_payload_for_v35_cluster_delete(def_entity: DefEntity):
+    """Construct telemetry payload of v35 cluster delete.
+
+    :param DefEntity def_entity: defined entity instance
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.V35_CLUSTER_DELETE.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_KIND: def_entity.entity.kind
+    }
+
+
+def get_payload_for_v35_cluster_upgrade_plan(def_entity: DefEntity):
+    """Construct telemetry payload of v35 cluster upgrade plan.
+
+    :param DefEntity def_entity: defined entity instance
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.V35_CLUSTER_UPGRADE_PLAN.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_KIND: def_entity.entity.kind
     }

@@ -76,6 +76,8 @@ class CseOperation(Enum):
 
     V35_CLUSTER_CONFIG = ('DEF cluster config', 'CLUSTER', 'V35_CONFIG', 'CSE_V35_CLUSTER_CONFIG')   # noqa: E501
     V35_CLUSTER_APPLY = ('DEF cluster create', 'CLUSTER', 'V35_APPLY', 'CSE_V35_CLUSTER_APPLY')  # noqa: E501
+    V35_CLUSTER_DELETE = ('DEF cluster delete', 'CLUSTER', 'V35_DELETE', 'CSE_V35_CLUSTER_DELETE')  # noqa: E501
+    V35_CLUSTER_UPGRADE_PLAN = ('DEF cluster upgrade plan', 'CLUSTER', 'V35_UPGRADE_PLAN', 'CSE_V35_CLUSTER_UPGRADE_PLAN')  # noqa: E501
 
     # Following operations do not require telemetry details. Hence the VAC
     # table name field is empty
