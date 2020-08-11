@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import functools
+import json
 
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.telemetry.constants import CseOperation
@@ -49,7 +50,10 @@ OPERATION_TO_PAYLOAD_GENERATOR = {
     CseOperation.OVDC_LIST: payload_generator.get_payload_for_ovdc_list,
 
     CseOperation.V35_CLUSTER_CONFIG: payload_generator.get_payload_for_v35_cluster_config,  # noqa: E501
-    CseOperation.V35_CLUSTER_APPLY: payload_generator.get_payload_for_v35_cluster_apply  # noqa: E501
+    CseOperation.V35_CLUSTER_APPLY: payload_generator.get_payload_for_v35_cluster_apply,  # noqa: E501
+    CseOperation.V35_CLUSTER_DELETE: payload_generator.get_payload_for_v35_cluster_delete,  # noqa: E501
+    CseOperation.V35_CLUSTER_UPGRADE_PLAN: payload_generator.get_payload_for_v35_cluster_upgrade_plan  # noqa: E501
+
 }
 
 
@@ -104,6 +108,7 @@ def record_user_action(cse_operation, status=OperationStatus.SUCCESS,
 
         if telemetry_settings['enable']:
             payload = get_payload_for_user_action(cse_operation, status, message)  # noqa: E501
+            print(json.dumps(payload))
             _send_data_to_telemetry_server(payload, telemetry_settings)
     except Exception as err:
         LOGGER.warning(f"Error in recording user action information:{str(err)}")  # noqa: E501
@@ -125,6 +130,7 @@ def record_user_action_details(cse_operation, cse_params,
 
         if telemetry_settings['enable']:
             payload = OPERATION_TO_PAYLOAD_GENERATOR[cse_operation](cse_params)
+            print(json.dumps(payload))
             _send_data_to_telemetry_server(payload, telemetry_settings)
     except Exception as err:
         LOGGER.warning(f"Error in recording CSE operation details :{str(err)}")  # noqa: E501
