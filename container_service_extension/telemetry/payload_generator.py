@@ -1,7 +1,9 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import pyvcloud.vcd.utils as pyvcd_utils
 
+from container_service_extension.def_.models import DefEntity
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
@@ -427,4 +429,50 @@ def get_payload_for_ovdc_list(params):
     return {
         PayloadKey.TYPE: CseOperation.OVDC_LIST.telemetry_table,
         PayloadKey.WAS_PKS_PLAN_SPECIFIED: bool(params.get(RequestKey.LIST_PKS_PLANS))  # noqa: E501
+    }
+
+
+def get_payload_for_v35_cluster_config(def_entity: DefEntity):
+    """Construct telemetry payload of v35 cluster config.
+
+    :param DefEntity def_entity: defined entity instance
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.V35_CLUSTER_CONFIG.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.TEMPLATE_NAME: def_entity.entity.spec.k8_distribution.template_name,  # noqa: E501
+        PayloadKey.TEMPLATE_REVISION: def_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
+    }
+
+
+def get_payload_for_v35_cluster_apply(def_entity: DefEntity):
+    """Construct telemetry payload of v35 cluster apply.
+
+    :param DefEntity def_entity: defined entity instance
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.V35_CLUSTER_APPLY.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
+        PayloadKey.TEMPLATE_NAME: def_entity.entity.spec.k8_distribution.template_name,  # noqa: E501
+        PayloadKey.TEMPLATE_REVISION: def_entity.entity.spec.k8_distribution.template_revision,  # noqa: E501
+        PayloadKey.NUMBER_OF_MASTER_NODES: def_entity.entity.spec.control_plane.count,  # noqa: E501
+        PayloadKey.NUMBER_OF_WORKER_NODES: def_entity.entity.spec.workers.count,  # noqa: E501
+        PayloadKey.NUMBER_OF_NFS_NODES: def_entity.entity.spec.nfs.count,  # noqa: E501
+        PayloadKey.CONTROL_PLANE_SIZING_CLASS: def_entity.entity.spec.control_plane.sizing_class,  # noqa: E501
+        PayloadKey.CONTROL_PLANE_STORAGE_PROFILE: def_entity.entity.spec.control_plane.storage_profile,  # noqa: E501
+        PayloadKey.WORKERS_SIZING_CLASS: def_entity.entity.spec.workers.sizing_class,  # noqa: E501
+        PayloadKey.WORKERS_STORAGE_PROFILE: def_entity.entity.spec.workers.storage_profile,  # noqa: E501
+        PayloadKey.NFS_SIZING_CLASS: def_entity.entity.spec.nfs.sizing_class,  # noqa: E501
+        PayloadKey.NFS_STORAGE_PROFILE: def_entity.entity.spec.nfs.storage_profile,  # noqa: E501
+        PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(def_entity.entity.spec.settings.ssh_key),  # noqa: E501
+        PayloadKey.WAS_ROLLBACK_ENABLED: bool(def_entity.entity.spec.settings.rollback_on_failure)  # noqa: E501
     }

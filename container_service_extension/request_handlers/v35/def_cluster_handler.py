@@ -7,16 +7,16 @@ import container_service_extension.def_.cluster_service as cluster_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.operation_context as ctx
 import container_service_extension.request_handlers.request_utils as request_utils  # noqa: E501
-import container_service_extension.server_constants as const
 from container_service_extension.shared_constants import FlattenedClusterSpecKey  # noqa: E501
 from container_service_extension.shared_constants import RequestKey
+import container_service_extension.telemetry.constants as telemetry_constants
 from container_service_extension.telemetry.telemetry_handler import \
     record_user_action_telemetry
 
 _OPERATION_KEY = 'operation'
 
 
-@record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_CREATE)
+@record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY)  # noqa: E501
 @request_utils.v35_api_exception_handler
 def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster create operation.
@@ -29,7 +29,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     return asdict(svc.create_cluster(cluster_entity_spec))
 
 
-@record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_RESIZE)
+@record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY)  # noqa: E501
 @request_utils.v35_api_exception_handler
 def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster resize operation.
@@ -50,7 +50,7 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     return asdict(svc.resize_cluster(cluster_id, cluster_entity_spec))
 
 
-@record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_DELETE)
+# @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_DELETE)
 @request_utils.v35_api_exception_handler
 def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster delete operation.
@@ -67,7 +67,6 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     return asdict(svc.delete_cluster(cluster_id))
 
 
-@record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_INFO)
 @request_utils.v35_api_exception_handler
 def cluster_info(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster info operation.
@@ -84,7 +83,7 @@ def cluster_info(data: dict, op_ctx: ctx.OperationContext):
     return asdict(svc.get_cluster_info(cluster_id))
 
 
-@record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_CONFIG)
+@record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_CONFIG)  # noqa: E501
 @request_utils.v35_api_exception_handler
 def cluster_config(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster config operation.
@@ -98,7 +97,7 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
     return svc.get_cluster_config(cluster_id)
 
 
-@record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_UPGRADE_PLAN)  # noqa: E501
+# @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_UPGRADE_PLAN)  # noqa: E501
 @request_utils.v35_api_exception_handler
 def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
     """Request handler for cluster upgrade-plan operation.
@@ -109,7 +108,7 @@ def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
     return svc.get_cluster_upgrade_plan(data[RequestKey.CLUSTER_ID])
 
 
-@record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_UPGRADE)
+# @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_UPGRADE)
 @request_utils.v35_api_exception_handler
 def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     """Request handler for cluster upgrade operation.
@@ -129,7 +128,7 @@ def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     return asdict(svc.upgrade_cluster(cluster_id, cluster_entity_spec))
 
 
-@record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_LIST)
+# @record_user_action_telemetry(cse_operation=const.CseOperation.CLUSTER_LIST)   # noqa: E501
 @request_utils.v35_api_exception_handler
 def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster list operation.
@@ -141,7 +140,6 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
             svc.list_clusters(data.get(RequestKey.V35_QUERY, None))]
 
 
-@record_user_action_telemetry(cse_operation=const.CseOperation.NODE_CREATE)
 @request_utils.v35_api_exception_handler
 def node_create(request_data, op_ctx: ctx.OperationContext):
     """Request handler for node create operation.
@@ -161,7 +159,7 @@ def node_create(request_data, op_ctx: ctx.OperationContext):
     return svc.create_nodes(data=request_data)
 
 
-@record_user_action_telemetry(cse_operation=const.CseOperation.NODE_DELETE)
+# @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_DELETE)
 @request_utils.v35_api_exception_handler
 def nfs_node_delete(data, op_ctx: ctx.OperationContext):
     """Request handler for node delete operation.
@@ -179,7 +177,7 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
     return asdict(svc.delete_nodes(cluster_id, [node_name]))
 
 
-@record_user_action_telemetry(cse_operation=const.CseOperation.NODE_INFO)
+# @record_user_action_telemetry(cse_operation=const.CseOperation.NODE_INFO)
 @request_utils.v35_api_exception_handler
 def node_info(request_data, op_ctx: ctx.OperationContext):
     """Request handler for node info operation.
