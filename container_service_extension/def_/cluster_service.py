@@ -749,10 +749,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"{new_template_revision}) is not a valid upgrade target for "
                 f"cluster '{cluster_name}'.")
 
-        # get cluster data (including node names) to pass to async function
-
-        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
-        #  based clusters
+        telemetry_handler.record_user_action_details(
+            telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE,
+            cse_params=curr_entity)
 
         msg = f"Upgrading cluster '{cluster_name}' " \
               f"software to match template {new_template_name} (revision " \

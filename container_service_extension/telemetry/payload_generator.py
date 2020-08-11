@@ -509,3 +509,21 @@ def get_payload_for_v35_cluster_upgrade_plan(def_entity: DefEntity):
         PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
         PayloadKey.CLUSTER_KIND: def_entity.entity.kind
     }
+
+
+def get_payload_for_v35_cluster_upgrade(def_entity: DefEntity):
+    """Construct telemetry payload of v35 cluster upgrade.
+
+    :param DefEntity def_entity: defined entity instance
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.V35_CLUSTER_UPGRADE.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
+        PayloadKey.TEMPLATE_NAME: def_entity.entity.spec.k8_distribution.template_name,  # noqa: E501
+        PayloadKey.TEMPLATE_REVISION: def_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
+    }
