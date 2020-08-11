@@ -11,7 +11,7 @@ VAC_URL = "https://vcsa.vmware.com/ph-stg/api/hyper/send/"
 
 # Value of collector id that is required as part of HTTP request
 # to post sample data to telemetry server
-COLLECTOR_ID = "CSE.2_6"
+COLLECTOR_ID = "CSE.3_0"
 
 
 @unique
@@ -74,6 +74,9 @@ class CseOperation(Enum):
     PKS_CLUSTER_LIST = ('pks-cluster list', 'PKS_CLUSTER', 'LIST', 'PKS_CLUSTER_LIST')  # noqa: E501
     PKS_CLUSTER_RESIZE = ('cluster resize', 'PKS_CLUSTER', 'RESIZE', 'PKS_CLUSTER_RESIZE')  # noqa: E501
 
+    V35_CLUSTER_CONFIG = ('DEF cluster config', 'CLUSTER', 'V35_CONFIG', 'CSE_V35_CLUSTER_CONFIG')   # noqa: E501
+    V35_CLUSTER_APPLY = ('DEF cluster create', 'CLUSTER', 'V35_APPLY', 'CSE_V35_CLUSTER_APPLY')  # noqa: E501
+
     # Following operations do not require telemetry details. Hence the VAC
     # table name field is empty
     OVDC_COMPUTE_POLICY_ADD = ('ovdc compute policy', 'COMPUTE_POLICY', 'ADD', '')  # noqa: E501
@@ -97,8 +100,11 @@ class PayloadKey(str, Enum):
     ACTION = 'action',
     ADDED_NFS_NODE = 'added_nfs_node'
     CLUSTER_ID = 'cluster_id'
+    CLUSTER_KIND = 'cluster_kind'
     CNI = 'cni'
     CNI_VERSION = 'cni_version'
+    CONTROL_PLANE_SIZING_CLASS = 'control_plane_sizing_class'
+    CONTROL_PLANE_STORAGE_PROFILE = 'control_plane_storage_class'
     CPU = 'cpu'
     DISPLAY_OPTION = 'display_option'
     K8S_DISTRIBUTION = 'k8s_distribution'
@@ -111,6 +117,9 @@ class PayloadKey(str, Enum):
     NUMBER_OF_MASTER_NODES = 'number_of_master_nodes'
     NUMBER_OF_NODES = 'number_of_nodes'
     NUMBER_OF_WORKER_NODES = 'number_of_worker_nodes'
+    NUMBER_OF_NFS_NODES = 'number_of_nfs_nodes'
+    NFS_SIZING_CLASS = 'nfs_sizing_class'
+    NFS_STORAGE_PROFILE = 'nfs_storage_profile'
     OS = 'os'
     STATUS = 'status'
     TARGET = 'target',
@@ -138,6 +147,8 @@ class PayloadKey(str, Enum):
     WAS_TEMP_VAPP_RETAINED = 'was_temp_vapp_retained'
     WERE_TEMPLATES_FORCE_UPDATED = 'were_templates_force_updated'
     WERE_TEMPLATES_SKIPPED = 'were_templates_skipped'
+    WORKERS_SIZING_CLASS = 'workers_sizing_class'
+    WORKERS_STORAGE_PROFILE = 'workers_storage_profile'
 
 
 @unique
