@@ -505,7 +505,7 @@ def _get_existing_extension_type(client):
 
 
 def _install_mqtt(client, config, msg_update_callback):
-    """Installs the MQTT extension and api filter.
+    """Install the MQTT extension and api filter.
 
     :param Client client: client used to install cse server components
     :param dict config: content of the CSE config file.

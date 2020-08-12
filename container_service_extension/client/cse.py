@@ -12,6 +12,7 @@ import yaml
 
 from container_service_extension.client import pks
 from container_service_extension.client.cluster import Cluster
+from container_service_extension.client.cluster import ClusterEntityKind
 import container_service_extension.client.command_filter as cmd_filter
 from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.system import System
@@ -596,19 +597,30 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
             console_message_printer.general_no_color(sample_cluster_config)
             return
 
-        client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         with open(cluster_config_file_path) as f:
             cluster_config = yaml.safe_load(f) or {}
 
-        if not cluster_config.get('metadata', {}).get('ovdc_name'):
+        k8_runtime = cluster_config.get('kind')
+        if not k8_runtime:
+            raise Exception("Cluster kind missing from the spec.")
+
+        metadata = cluster_config.get('metadata', {})
+        metadata_vdc_key = ''
+        if k8_runtime == ClusterEntityKind.NATIVE.value or \
+                k8_runtime == ClusterEntityKind.TANZU_PLUS.value:
+            metadata_vdc_key = 'ovdc_name'
+        elif k8_runtime == ClusterEntityKind.TKG.value:
+            metadata_vdc_key = 'virtualDataCenterName'
+        if not metadata.get(metadata_vdc_key):
             vdc = ctx.obj['profiles'].get('vdc_in_use')
             if not vdc:
                 raise Exception("Virtual datacenter context is not set. "
                                 "Use either command 'vcd vdc use' or option "
                                 "'--vdc' to set the vdc context.")
-            cluster_config['metadata']['ovdc_name'] = vdc
-        if not cluster_config.get('metadata', {}).get('org_name'):
+            metadata[metadata_vdc_key] = vdc
+        if k8_runtime != ClusterEntityKind.TKG.value and \
+                not cluster_config.get('metadata', {}).get('org_name'):
             cluster_config['metadata']['org_name'] = ctx.obj['profiles'].get('org_in_use')  # noqa: E501
 
         cluster = Cluster(client, k8_runtime=cluster_config.get('kind'))  # noqa: E501
@@ -1356,16 +1368,16 @@ def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus):
 @click.option(
     '-n',
     '--native',
-    'enable_native',
+    'disable_native',
     is_flag=True,
-    help="Enable OVDC for native cluster deployment"
+    help="Disable OVDC for native cluster deployment"
 )
 @click.option(
     '-t',
     '--tkg-plus',
-    'enable_tkg_plus',
+    'disable_tkg_plus',
     is_flag=True,
-    help="Enable OVDC for TKG plus cluster deployment"
+    help="Disable OVDC for TKG plus cluster deployment"
 )
 @click.option(
     '-f',
@@ -1375,18 +1387,18 @@ def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus):
     help="Remove the compute policies from deployed VMs as well. "
          "Does not remove the compute policy from vApp templates in catalog. ")
 def ovdc_disable(ctx, ovdc_name, org_name,
-                 enable_native, enable_tkg_plus,
+                 disable_native, disable_tkg_plus,
                  remove_cp_from_vms_on_disable):
     """Disable Kubernetes cluster deployment for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
-    if not (enable_native or enable_tkg_plus):
+    if not (disable_native or disable_tkg_plus):
         msg = "Please specify at least one of --native or --tkg-plus to disable" # noqa:E501
         stderr(msg, ctx)
         CLIENT_LOGGER.error(msg)
     k8_runtime = []
-    if enable_native:
+    if disable_native:
         k8_runtime.append(shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY)
-    if enable_tkg_plus:
+    if disable_tkg_plus:
         k8_runtime.append(shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY)
     try:
         client_utils.cse_restore_session(ctx)

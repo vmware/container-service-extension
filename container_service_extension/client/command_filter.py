@@ -4,12 +4,15 @@
 
 from enum import Enum
 from enum import unique
+import os
 
 import click
 import pyvcloud.vcd.client as vcd_client
 
+import container_service_extension.client.constants as cli_constants
 import container_service_extension.client.utils as client_utils
 from container_service_extension.logger import CLIENT_LOGGER
+from container_service_extension.utils import str_to_bool
 
 
 @unique
@@ -28,6 +31,8 @@ class CommandNameKey(str, Enum):
     UPGRADE_PLAN = 'upgrade-plan'
     INFO = 'info'
     NODE = 'node'
+    ENABLE = 'enable'
+    DISABLE = 'disable'
 
 
 # List of unsupported commands by Api Version
@@ -84,6 +89,12 @@ UNSUPPORTED_SUBCOMMAND_OPTIONS_BY_VERSION = {
     vcd_client.ApiVersion.VERSION_35.value: {
         GroupKey.CLUSTER: {
             CommandNameKey.CREATE: ['cpu', 'memory']
+        },
+        GroupKey.OVDC: {
+            CommandNameKey.ENABLE: [] if str_to_bool(
+                os.getenv(cli_constants.ENV_CSE_TKG_PLUS_ENABLED)) else ['enable_tkg_plus'],  # noqa: E501
+            CommandNameKey.DISABLE: [] if str_to_bool(
+                os.getenv(cli_constants.ENV_CSE_TKG_PLUS_ENABLED)) else ['disable_tkg_plus']  # noqa: E501
         }
     }
 }

@@ -406,8 +406,7 @@ def flatten_dictionary(input_dict, parent_key='', separator='.'):
         val = input_dict.get(k)
         key_prefix = f"{parent_key}{k}"
         if isinstance(val, dict):
-            parent_key = f"{key_prefix}{separator}"
-            flattened_dict.update(flatten_dictionary(val, parent_key))  # noqa: E501
+            flattened_dict.update(flatten_dictionary(val, f"{key_prefix}{separator}"))  # noqa: E501
         else:
             flattened_dict.update({key_prefix: val})
     return flattened_dict
