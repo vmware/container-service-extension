@@ -33,6 +33,10 @@ class CseServerError(Exception):
     """Base class for cse server side exceptions."""
 
 
+class CseServerNotRunningError(CseServerError):
+    """Raised when CLI makes requests to CSE server when it is not available"""
+
+
 class CseRequestError(CseServerError):
     """Base class for all incoming CSE REST request errors."""
 

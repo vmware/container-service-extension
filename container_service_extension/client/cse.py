@@ -20,6 +20,7 @@ import container_service_extension.client.utils as client_utils
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.utils as def_utils
 from container_service_extension.exceptions import CseResponseError
+from container_service_extension.exceptions import CseServerNotRunningError
 from container_service_extension.logger import CLIENT_LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
@@ -614,9 +615,12 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
         if client_utils.is_cli_for_tkg_only():
             if k8_runtime in [ClusterEntityKind.NATIVE.value,
                               ClusterEntityKind.TANZU_PLUS.value]:
-                # Cannot run the command as cse cli is enabled only for native:
-                raise Exception("CSE cli is enabled only for "
-                                "TanzuKubernetesCluster runtime.")
+                # Cannot run the command as cse cli is enabled only for native
+                raise CseServerNotRunningError(
+                    "Please contact administrator, CSE server seems to be down."
+                    " CSE- CLI can now only be used to manage TKG clusters"
+                    " (but not native). Once CSE server is up, please re-login"
+                    " to manage both native and tkg clusters.")
             k8_runtime = ClusterEntityKind.TKG.value
         metadata = cluster_config.get('metadata', {})
         metadata_vdc_key = ''
