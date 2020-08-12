@@ -540,8 +540,11 @@ class ClusterService(abstract_broker.AbstractBroker):
         elif num_nfs_to_add < 0:
             raise e.CseServerError("Scaling down nfs nodes is not supported")
 
-        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
-        #  based clusters
+        # Record telemetry details
+        telemetry_data: def_models.DefEntity = def_models.DefEntity(id=cluster_id, entity=cluster_spec)  # noqa: E501
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY,
+            cse_params=telemetry_data)
 
         # update the task and defined entity.
         msg = f"Resizing the cluster '{cluster_name}' ({cluster_id}) to the " \
@@ -553,9 +556,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
         curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)
-        telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY,
-            cse_params=curr_entity)
 
         # trigger async operation
         self.context.is_async = True

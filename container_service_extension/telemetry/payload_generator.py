@@ -90,6 +90,25 @@ def get_payload_for_install_server(params):
     }
 
 
+def get_payload_for_upgrade_server(params):
+    """Construct telemetry payload of server upgrade operation.
+
+    :param params: parameters provided to the operation
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.SERVICE_UPGRADE.telemetry_table,
+        PayloadKey.SOURCE_CSE_VERSION: params.get(PayloadKey.SOURCE_CSE_VERSION),  # noqa: E501
+        PayloadKey.SOURCE_VCD_API_VERSION: params.get(PayloadKey.SOURCE_VCD_API_VERSION),  # noqa: E501
+        PayloadKey.WERE_TEMPLATES_SKIPPED: bool(params.get(PayloadKey.WERE_TEMPLATES_SKIPPED)),  # noqa: E501
+        PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(params.get(PayloadKey.WAS_TEMP_VAPP_RETAINED)),  # noqa: E501
+        PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(params.get(PayloadKey.WAS_SSH_KEY_SPECIFIED))  # noqa: E501
+    }
+
+
 def get_payload_for_run_server(params):
     """Construct telemetry payload of server run operation.
 
