@@ -1180,10 +1180,19 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
         target_vcd_api_version=config['vcd']['api_version'],
         msg_update_callback=msg_update_callback)
 
+    is_tkg_plus_enabled = utils.is_tkg_plus_enabled(config=config)
+
     # Add global placement polcies
+    if not is_tkg_plus_enabled:
+        policy_list = []
+        for policy in shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES:
+            if policy != shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY:
+                policy_list.append(policy)
+    else:
+        policy_list = shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES
     _setup_placement_policies(
         client=client,
-        policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES,
+        policy_list=policy_list,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
 
@@ -1232,6 +1241,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     _assign_placement_policy_to_vdc_with_existing_clusters(
         client=client,
         cse_clusters=clusters,
+        is_tkg_plus_enabled=is_tkg_plus_enabled,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
 
@@ -1318,12 +1328,13 @@ def _fix_cluster_metadata(client,
             }
             task = vapp.set_multiple_metadata(new_metadata_to_add)
             client.get_task_monitor().wait_for_success(task)
+            vapp.reload()
 
         # This step uses data from the newly updated cse.template.name and
         # cse.template.revision metadata fields as well as github history
         # to add [cse.os, cse.docker.version, cse.kubernetes,
-        # cse.kubernetes.version, cse.cni, cse.cni.version] to the clusters.
-        vapp.reload()
+        # cse.kubernetes.version, cse.cni, cse.cni.version] to the clusters
+        # if they are missing.
         metadata_dict = \
             pyvcloud_vcd_utils.metadata_to_dict(vapp.get_metadata())
         template_name = metadata_dict.get(
@@ -1332,70 +1343,91 @@ def _fix_cluster_metadata(client,
             server_constants.ClusterMetadataKey.TEMPLATE_REVISION, 0))
         cse_version = metadata_dict.get(
             server_constants.ClusterMetadataKey.CSE_VERSION)
+        k8s_distribution = metadata_dict.get(
+            server_constants.ClusterMetadataKey.KUBERNETES)
+        k8s_version = metadata_dict.get(
+            server_constants.ClusterMetadataKey.KUBERNETES_VERSION)
+        os_name = metadata_dict.get(
+            server_constants.ClusterMetadataKey.OS)
+        cni = metadata_dict.get(
+            server_constants.ClusterMetadataKey.CNI)
+        cni_version = metadata_dict.get(
+            server_constants.ClusterMetadataKey.CNI_VERSION)
+        docker_version = metadata_dict.get(
+            server_constants.ClusterMetadataKey.DOCKER_VERSION)
 
-        msg = "Determining k8s version on cluster."
-        INSTALL_LOGGER.info(msg)
-        msg_update_callback.info(msg)
+        if not k8s_distribution or not k8s_version or not os_name or not cni \
+                or not cni_version or not docker_version:
+            msg = "Determining k8s version on cluster."
+            INSTALL_LOGGER.info(msg)
+            msg_update_callback.info(msg)
 
-        if not template_name:
-            msg = "Unable to determine source template of cluster " \
-                  f"'{cluster['name']}'. Stopped processing cluster."
-            INSTALL_LOGGER.error(msg)
-            msg_update_callback.error(msg)
-            continue
+            if not template_name:
+                msg = "Unable to determine source template of cluster " \
+                      f"'{cluster['name']}'. Stopped processing cluster."
+                INSTALL_LOGGER.error(msg)
+                msg_update_callback.error(msg)
+                continue
 
-        tokens = template_name.split('_')
-        k8s_data = tokens[1].split('-')
-        cni_data = tokens[2].split('-')
+            tokens = template_name.split('_')
+            k8s_data = tokens[1].split('-')
+            cni_data = tokens[2].split('-')
 
-        os = tokens[0]
-        # old clusters that were converted can have non-existent template name
-        # that has 'k8s' string in it instead of 'k8'
-        if k8s_data[0] in ('k8', 'k8s'):
-            k8s_distribution = 'upstream'
-        elif k8s_data[0] in ('tkg', 'tkgp'):
-            k8s_distribution = 'TKG+'
-        else:
-            k8s_distribution = "Unknown Kubernetes distribution"
-        cni = cni_data[0]
-        cni_version = cni_data[1]
-        k8s_version, docker_version = \
-            _get_k8s_and_docker_versions_from_history(
-                template_name=template_name,
-                template_revision=template_revision,
-                cse_version=cse_version)
+            if not os_name:
+                os_name = tokens[0]
+            if not k8s_distribution:
+                # old clusters that were converted can have non-existent
+                # template name that has 'k8s' string in it instead of 'k8'
+                if k8s_data[0] in ('k8', 'k8s'):
+                    k8s_distribution = 'upstream'
+                elif k8s_data[0] in ('tkg', 'tkgp'):
+                    k8s_distribution = 'TKG+'
+                else:
+                    k8s_distribution = "Unknown Kubernetes distribution"
+            if not cni:
+                cni = cni_data[0]
+            if not cni_version:
+                cni_version = cni_data[1]
+            if not k8s_version or not docker_version:
+                k8s_version, docker_version = \
+                    _get_k8s_and_docker_versions_from_history(
+                        template_name=template_name,
+                        template_revision=template_revision,
+                        cse_version=cse_version)
 
-        # Try to determine the above values using template definition
-        org_name = config['broker']['org']
-        catalog_name = config['broker']['catalog']
-        k8_templates = ltm.get_all_k8s_local_template_definition(
-            client=client, catalog_name=catalog_name, org_name=org_name)
-        for k8_template in k8_templates:
-            if (str(k8_template[server_constants.LocalTemplateKey.REVISION]), k8_template[server_constants.LocalTemplateKey.NAME]) == (template_revision, template_name):  # noqa: E501
-                if k8_template.get(server_constants.LocalTemplateKey.OS):
-                    os = k8_template.get(server_constants.LocalTemplateKey.OS)
-                if k8_template.get(server_constants.LocalTemplateKey.KUBERNETES): # noqa: E501
-                    k8s_distribution = k8_template.get(server_constants.LocalTemplateKey.KUBERNETES) # noqa: E501
-                if k8_template.get(server_constants.LocalTemplateKey.KUBERNETES_VERSION): # noqa: E501
-                    k8s_version = k8_template[server_constants.LocalTemplateKey.KUBERNETES_VERSION] # noqa: E501
-                if k8_template.get(server_constants.LocalTemplateKey.CNI):
-                    cni = k8_template.get(server_constants.LocalTemplateKey.CNI) # noqa: E501
-                if k8_template.get(server_constants.LocalTemplateKey.CNI_VERSION): # noqa: E501
-                    cni_version = k8_template.get(server_constants.LocalTemplateKey.CNI_VERSION) # noqa: E501
-                if k8_template.get(server_constants.LocalTemplateKey.DOCKER_VERSION): # noqa: E501
-                    docker_version = k8_template[server_constants.LocalTemplateKey.DOCKER_VERSION] # noqa: E501
-                break
+            # Try to determine the above values using template definition
+            org_name = config['broker']['org']
+            catalog_name = config['broker']['catalog']
+            k8s_templates = ltm.get_all_k8s_local_template_definition(
+                client=client, catalog_name=catalog_name, org_name=org_name)
+            for k8s_template in k8s_templates:
+                # The source of truth for metadata on the clusters is always
+                # the template metadata.
+                if (str(k8s_template[server_constants.LocalTemplateKey.REVISION]), k8s_template[server_constants.LocalTemplateKey.NAME]) == (template_revision, template_name):  # noqa: E501
+                    if k8s_template.get(server_constants.LocalTemplateKey.OS):
+                        os_name = k8s_template.get(server_constants.LocalTemplateKey.OS) # noqa: E501
+                    if k8s_template.get(server_constants.LocalTemplateKey.KUBERNETES): # noqa: E501
+                        k8s_distribution = k8s_template.get(server_constants.LocalTemplateKey.KUBERNETES) # noqa: E501
+                    if k8s_template.get(server_constants.LocalTemplateKey.KUBERNETES_VERSION): # noqa: E501
+                        k8s_version = k8s_template[server_constants.LocalTemplateKey.KUBERNETES_VERSION] # noqa: E501
+                    if k8s_template.get(server_constants.LocalTemplateKey.CNI):
+                        cni = k8s_template.get(server_constants.LocalTemplateKey.CNI) # noqa: E501
+                    if k8s_template.get(server_constants.LocalTemplateKey.CNI_VERSION): # noqa: E501
+                        cni_version = k8s_template.get(server_constants.LocalTemplateKey.CNI_VERSION) # noqa: E501
+                    if k8s_template.get(server_constants.LocalTemplateKey.DOCKER_VERSION): # noqa: E501
+                        docker_version = k8s_template[server_constants.LocalTemplateKey.DOCKER_VERSION] # noqa: E501
+                    break
 
-        new_metadata = {
-            server_constants.ClusterMetadataKey.OS: os,
-            server_constants.ClusterMetadataKey.DOCKER_VERSION: docker_version,
-            server_constants.ClusterMetadataKey.KUBERNETES: k8s_distribution,
-            server_constants.ClusterMetadataKey.KUBERNETES_VERSION: k8s_version, # noqa: E501
-            server_constants.ClusterMetadataKey.CNI: cni,
-            server_constants.ClusterMetadataKey.CNI_VERSION: cni_version,
-        }
-        task = vapp.set_multiple_metadata(new_metadata)
-        client.get_task_monitor().wait_for_success(task)
+            new_metadata = {
+                server_constants.ClusterMetadataKey.OS: os_name,
+                server_constants.ClusterMetadataKey.DOCKER_VERSION: docker_version, # noqa: E501
+                server_constants.ClusterMetadataKey.KUBERNETES: k8s_distribution, # noqa: E501
+                server_constants.ClusterMetadataKey.KUBERNETES_VERSION: k8s_version, # noqa: E501
+                server_constants.ClusterMetadataKey.CNI: cni,
+                server_constants.ClusterMetadataKey.CNI_VERSION: cni_version,
+            }
+            task = vapp.set_multiple_metadata(new_metadata)
+            client.get_task_monitor().wait_for_success(task)
 
         msg = "Finished processing metadata of cluster."
         INSTALL_LOGGER.info(msg)
@@ -1624,6 +1656,7 @@ def _get_placement_policy_name_from_template_name(template_name):
 def _assign_placement_policy_to_vdc_with_existing_clusters(
         client,
         cse_clusters,
+        is_tkg_plus_enabled,
         msg_update_callback=utils.NullPrinter(),
         log_wire=False):
     msg = "Assigning placement compute policy(s) to vDC(s) hosting existing CSE clusters." # noqa: E501
@@ -1659,21 +1692,16 @@ def _assign_placement_policy_to_vdc_with_existing_clusters(
     native_ovdcs = set(native_ovdcs)
     tkg_plus_ovdcs = set(tkg_plus_ovdcs)
 
-    msg = f"Found {len(native_ovdcs)} vDC(s) hosting NATIVE CSE custers " \
-          f"and {len(tkg_plus_ovdcs)} vDC(s) hosting TKG PLUS clusters."
-    msg_update_callback.info(msg)
-    INSTALL_LOGGER.info(msg)
-
     cpm = \
         compute_policy_manager.ComputePolicyManager(client, log_wire=log_wire)
-    native_policy = cpm.get_vdc_compute_policy(
-        policy_name=shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY,
-        is_placement_policy=True)
-    tkg_plus_policy = cpm.get_vdc_compute_policy(
-        policy_name=shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY,
-        is_placement_policy=True)
 
     if native_ovdcs:
+        msg = f"Found {len(native_ovdcs)} vDC(s) hosting NATIVE CSE custers."
+        msg_update_callback.info(msg)
+        INSTALL_LOGGER.info(msg)
+        native_policy = cpm.get_vdc_compute_policy(
+            policy_name=shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY,
+            is_placement_policy=True)
         for vdc_id in native_ovdcs:
             cpm.add_compute_policy_to_vdc(
                 vdc_id=vdc_id,
@@ -1684,7 +1712,13 @@ def _assign_placement_policy_to_vdc_with_existing_clusters(
             INSTALL_LOGGER.info(msg)
             msg_update_callback.general(msg)
 
-    if tkg_plus_ovdcs:
+    if is_tkg_plus_enabled and tkg_plus_ovdcs:
+        msg = f"Found {len(tkg_plus_ovdcs)} vDC(s) hosting TKG PLUS clusters."
+        msg_update_callback.info(msg)
+        INSTALL_LOGGER.info(msg)
+        tkg_plus_policy = cpm.get_vdc_compute_policy(
+            policy_name=shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY,
+            is_placement_policy=True)
         for vdc_id in tkg_plus_ovdcs:
             cpm.add_compute_policy_to_vdc(
                 vdc_id=vdc_id,
