@@ -1259,7 +1259,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     :raises requests.exceptions.HTTPError: (when using MQTT) if the MQTT
         components were not installed correctly
     """
-    if utils.use_mqtt_protocol(config):
+    if utils.should_use_mqtt_protocol(config):
         # Delete extension if present and set up MQTT extension
         try:
             api_ext = api_extension.APIExtension(client)
