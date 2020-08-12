@@ -348,8 +348,10 @@ def install_cse(config_file_name, skip_template_creation,
 
         ext_type = _get_existing_extension_type(client)
         if ext_type != server_constants.ExtensionType.NONE:
-            ext_found_msg = f"{ext_type} extension found. Use `cse upgrade` " \
-                            f"instead of 'cse install'."
+            ext_found_msg = f"{ext_type} extension found."
+            if ext_type == server_constants.ExtensionType.AMQP:
+                # Upgrade is only currently supported from AMQP
+                ext_found_msg += " Use `cse upgrade` instead of 'cse install'."
             msg_update_callback.error(ext_found_msg)
             INSTALL_LOGGER.error(ext_found_msg)
             raise Exception(ext_found_msg)
@@ -1126,6 +1128,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
                 msg_update_callback.general(msg)
                 INSTALL_LOGGER.info(msg)
         except MissingRecordException:
+            # No AMQP extension
             msg = "CSE api extension not registered with vCD. Please use " \
                   "`cse install' instead of 'cse upgrade'."
             raise Exception(msg)
