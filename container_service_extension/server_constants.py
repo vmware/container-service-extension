@@ -276,3 +276,10 @@ class MQTTExtTokenKey(str, Enum):
     TOKEN_EXT_ID = 'extensionId'
     TOKEN = 'token'
     TOKEN_ID = 'token_id'
+
+
+@unique
+class ExtensionType(str, Enum):
+    MQTT = 'MQTT'
+    AMQP = 'AMQP'
+    NONE = 'None'
