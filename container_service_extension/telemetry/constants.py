@@ -124,6 +124,8 @@ class PayloadKey(str, Enum):
     NFS_SIZING_CLASS = 'nfs_sizing_class'
     NFS_STORAGE_PROFILE = 'nfs_storage_profile'
     OS = 'os'
+    SOURCE_CSE_VERSION = 'source_cse_version'
+    SOURCE_VCD_API_VERSION = 'source_vcd_api_version'
     STATUS = 'status'
     TARGET = 'target',
     TEMPLATE_NAME = 'template_name'

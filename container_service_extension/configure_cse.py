@@ -741,8 +741,7 @@ def _register_right(client, right_name, description, category, bundle_key,
 def _setup_placement_policies(client, policy_list,
                               msg_update_callback=utils.NullPrinter(),
                               log_wire=False):
-    """
-    Create placement policies for each cluster type.
+    """Create placement policies for each cluster type.
 
     Create the global pvdc compute policy if not present and create placement
     policy for each policy in the policy list. This should be done only for
@@ -1048,8 +1047,6 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
 
     client = None
     try:
-        # Todo: Record telemetry detail call
-
         log_filename = None
         log_wire = utils.str_to_bool(config['service'].get('log_wire'))
         if log_wire:
@@ -1074,6 +1071,20 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         try:
             ext_cse_version, ext_vcd_api_version = \
                 parse_cse_extension_description(client)
+
+            telemetry_data = {
+                PayloadKey.SOURCE_CSE_VERSION: str(ext_cse_version),
+                PayloadKey.SOURCE_VCD_API_VERSION: ext_vcd_api_version,
+                PayloadKey.WERE_TEMPLATES_SKIPPED: bool(skip_template_creation),  # noqa: E501
+                PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(retain_temp_vapp),
+                PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(ssh_key)
+            }
+
+            # Telemetry - Record detailed telemetry data on upgrade
+            record_user_action_details(CseOperation.SERVICE_UPGRADE,
+                                       telemetry_data,
+                                       telemetry_settings=config['service']['telemetry'])  # noqa: E501
+
             if ext_cse_version == server_constants.UNKNOWN_CSE_VERSION or \
                     ext_vcd_api_version == server_constants.UNKNOWN_VCD_API_VERSION: # noqa: E501
                 msg = "Found CSE api extension registered with vCD, but " \
@@ -1152,7 +1163,9 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         else:
             raise Exception(update_path_not_valid_msg)
 
-        # Todo: Telemetry - Record successful upgrade
+        record_user_action(CseOperation.SERVICE_UPGRADE,
+                           status=OperationStatus.SUCCESS,
+                           telemetry_settings=config['service']['telemetry'])
 
         msg = "Upgraded CSE successfully."
         msg_update_callback.general(msg)
@@ -1161,7 +1174,9 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         msg_update_callback.error(
             "CSE Installation Error. Check CSE install logs")
         INSTALL_LOGGER.error("CSE Installation Error", exc_info=True)
-        # Todo: Telemetry - Record failed upgrade
+        record_user_action(CseOperation.SERVICE_UPGRADE,
+                           status=OperationStatus.FAILED,
+                           telemetry_settings=config['service']['telemetry'])
         raise
     finally:
         if client is not None:
