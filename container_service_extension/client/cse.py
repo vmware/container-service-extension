@@ -1308,20 +1308,20 @@ def list_ovdcs(ctx):
     '--native',
     'enable_native',
     is_flag=True,
-    help="Enable OVDC for native cluster deployment"
+    help="Enable OVDC for k8 runtime native"
 )
 @click.option(
     '-t',
     '--tkg-plus',
     'enable_tkg_plus',
     is_flag=True,
-    help="Enable OVDC for TKG plus cluster deployment"
+    help="Enable OVDC for k8 runtime TKG plus"
 )
-def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus):
+def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus=None):
     """Set Kubernetes provider for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     if not (enable_native or enable_tkg_plus):
-        msg = "Please specify at least one of --native or --tkg-plus to enable"
+        msg = "Please specify at least one k8 runtime to enable"
         stderr(msg, ctx)
         CLIENT_LOGGER.error(msg)
     k8_runtime = []
@@ -1370,14 +1370,14 @@ def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus):
     '--native',
     'disable_native',
     is_flag=True,
-    help="Disable OVDC for native cluster deployment"
+    help="Disable OVDC for k8 runtime native cluster"
 )
 @click.option(
     '-t',
     '--tkg-plus',
     'disable_tkg_plus',
     is_flag=True,
-    help="Disable OVDC for TKG plus cluster deployment"
+    help="Disable OVDC for k8 runtime TKG plus"
 )
 @click.option(
     '-f',
@@ -1387,12 +1387,12 @@ def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus):
     help="Remove the compute policies from deployed VMs as well. "
          "Does not remove the compute policy from vApp templates in catalog. ")
 def ovdc_disable(ctx, ovdc_name, org_name,
-                 disable_native, disable_tkg_plus,
-                 remove_cp_from_vms_on_disable):
+                 disable_native, disable_tkg_plus=None,
+                 remove_cp_from_vms_on_disable=False):
     """Disable Kubernetes cluster deployment for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     if not (disable_native or disable_tkg_plus):
-        msg = "Please specify at least one of --native or --tkg-plus to disable" # noqa:E501
+        msg = "Please specify at least one k8 runtime to disable"
         stderr(msg, ctx)
         CLIENT_LOGGER.error(msg)
     k8_runtime = []
