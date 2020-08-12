@@ -337,10 +337,13 @@ def install_cse(config_file_name, skip_template_creation,
                         msg_update_callback=msg_update_callback)
 
         # set up placement policies for all types of clusters
-        _setup_placement_policies(client,
-                                  policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES, # noqa: E501
-                                  msg_update_callback=msg_update_callback,
-                                  log_wire=log_wire)
+        is_tkg_plus_enabled = utils.is_tkg_plus_enabled(config=config)
+        _setup_placement_policies(
+            client=client,
+            policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES,
+            is_tkg_plus_enabled=is_tkg_plus_enabled,
+            msg_update_callback=msg_update_callback,
+            log_wire=log_wire)
 
         # set up cse catalog
         org = vcd_utils.get_org(client, org_name=config['broker']['org'])
@@ -648,7 +651,9 @@ def _register_right(client, right_name, description, category, bundle_key,
             category, bundle_key)
 
 
-def _setup_placement_policies(client, policy_list,
+def _setup_placement_policies(client,
+                              policy_list,
+                              is_tkg_plus_enabled,
                               msg_update_callback=utils.NullPrinter(),
                               log_wire=False):
     """
@@ -683,6 +688,9 @@ def _setup_placement_policies(client, policy_list,
                 server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_DESCRIPTION)
 
         for policy in policy_list:
+            if not is_tkg_plus_enabled and \
+                    policy == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY:
+                continue
             try:
                 cpm.get_vdc_compute_policy(policy, is_placement_policy=True)
                 msg = f"Skipping creation of VDC placement policy '{policy}'. Policy already exists" # noqa: E501
@@ -1183,16 +1191,10 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     is_tkg_plus_enabled = utils.is_tkg_plus_enabled(config=config)
 
     # Add global placement polcies
-    if not is_tkg_plus_enabled:
-        policy_list = []
-        for policy in shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES:
-            if policy != shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY:
-                policy_list.append(policy)
-    else:
-        policy_list = shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES
     _setup_placement_policies(
         client=client,
-        policy_list=policy_list,
+        policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES,
+        is_tkg_plus_enabled=is_tkg_plus_enabled,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
 
