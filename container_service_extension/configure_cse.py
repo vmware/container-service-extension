@@ -18,6 +18,7 @@ from pyvcloud.vcd.org import Org
 import pyvcloud.vcd.utils as pyvcloud_vcd_utils
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
+from requests.exceptions import HTTPError
 import semantic_version
 
 import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
@@ -345,23 +346,17 @@ def install_cse(config_file_name, skip_template_creation,
         msg_update_callback.general(msg)
         INSTALL_LOGGER.info(msg)
 
+        ext_type = _get_existing_extension_type(client)
+        if ext_type != server_constants.ExtensionType.NONE:
+            ext_found_msg = f"{ext_type} extension found. Use `cse upgrade` " \
+                            f"instead of 'cse install'."
+            msg_update_callback.error(ext_found_msg)
+            INSTALL_LOGGER.error(ext_found_msg)
+            raise Exception(ext_found_msg)
+
         # Setup extension message protocol
         if utils.should_use_mqtt_protocol(config):
-            # Check for current MQTT extension
-            mqtt_ext_manager = MQTTExtensionManager(client)
-            ext_info = mqtt_ext_manager.get_extension_info(
-                ext_name=server_constants.CSE_SERVICE_NAME,
-                ext_version=server_constants.MQTT_EXTENSION_VERSION,
-                ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
-            if ext_info:  # Extension exists
-                msg = "MQTT extension already exists. " \
-                    "Use `cse upgrade` instead of 'cse install'."
-                raise Exception(msg)
-
-            _install_mqtt(client, config)
-            mqtt_msg = 'MQTT extension is ready'
-            msg_update_callback.general(mqtt_msg)
-            INSTALL_LOGGER.info(mqtt_msg)
+            _install_mqtt(client, config, msg_update_callback)
         else:
             # create amqp exchange if it doesn't exist
             amqp = config['amqp']
@@ -371,7 +366,7 @@ def install_cse(config_file_name, skip_template_creation,
                                   msg_update_callback=msg_update_callback)
 
             # register cse as an api extension to vCD
-            _register_cse_as_extension(  # TODO: see how to use MQTT
+            _register_cse_as_extension(
                 client=client,
                 routing_key=amqp['routing_key'],
                 exchange=amqp['exchange'],
@@ -470,11 +465,49 @@ def install_cse(config_file_name, skip_template_creation,
             client.logout()
 
 
-def _install_mqtt(client, config):
+def _get_existing_extension_type(client):
+    """Get the existing extension type.
+
+    Only one extension type will be returned because having two extensions
+        is prevented in install_cse.
+
+    ::param Client client: client used to install cse server components
+
+    :return: the current extension type: ExtensionType.MQTT, AMQP, or NONE
+    :rtype: str
+    """
+    # Check for MQTT extension
+    try:
+        mqtt_ext_manager = MQTTExtensionManager(client)
+        ext_info = mqtt_ext_manager.get_extension_info(
+            ext_name=server_constants.CSE_SERVICE_NAME,
+            ext_version=server_constants.MQTT_EXTENSION_VERSION,
+            ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
+        if ext_info:
+            return server_constants.ExtensionType.MQTT
+    except HTTPError as http_err:
+        if http_err.response.status_code != 404:  # not due to unfound resource
+            raise http_err
+
+    # Check for AMQP extension
+    try:
+        amqp_ext = api_extension.APIExtension(client)
+        amqp_ext.get_extension_info(
+            server_constants.CSE_SERVICE_NAME,
+            namespace=server_constants.CSE_SERVICE_NAMESPACE)
+        return server_constants.ExtensionType.AMQP
+    except MissingRecordException:
+        pass
+
+    return server_constants.ExtensionType.NONE
+
+
+def _install_mqtt(client, config, msg_update_callback):
     """Installs the MQTT extension and api filter.
 
     :param Client client: client used to install cse server components
     :param dict config: content of the CSE config file.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :raises requests.exceptions.HTTPError: if the MQTT extension and api filter
         were not set up correctly
@@ -490,6 +523,10 @@ def _install_mqtt(client, config):
     ext_uuid = mqtt_ext_manager.get_extension_uuid(
         ext_info['ext_urn_id'])
     _ = mqtt_ext_manager.setup_api_filter(ext_uuid)
+
+    mqtt_msg = 'MQTT extension is ready'
+    msg_update_callback.general(mqtt_msg)
+    INSTALL_LOGGER.info(mqtt_msg)
 
 
 def _create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
@@ -552,8 +589,6 @@ def _register_cse_as_extension(client, routing_key, exchange,
                                msg_update_callback=utils.NullPrinter()):
     """Register CSE on vCD.
 
-    Throws exception if CSE is already registered.
-
     :param pyvcloud.vcd.client.Client client:
     :param pyvcloud.vcd.client.Client client:
     :param str routing_key:
@@ -573,24 +608,18 @@ def _register_cse_as_extension(client, routing_key, exchange,
         raise ValueError(f"Target VCD API version '{target_vcd_api_version}' "
                          f" is not in supported versions: {vcd_api_versions}")
     description = _construct_cse_extension_description(target_vcd_api_version)
-    msg = None
-    try:
-        ext.get_extension_info(
-            server_constants.CSE_SERVICE_NAME,
-            namespace=server_constants.CSE_SERVICE_NAMESPACE)
-        msg = f"API extension '{server_constants.CSE_SERVICE_NAME}' already " \
-              "exists in vCD. Use `cse upgrade` instead of 'cse install'."
-        raise Exception(msg)
-    except MissingRecordException:
-        ext.add_extension(
-            server_constants.CSE_SERVICE_NAME,
-            server_constants.CSE_SERVICE_NAMESPACE,
-            routing_key,
-            exchange,
-            patterns,
-            description=description)
-        msg = f"Registered {server_constants.CSE_SERVICE_NAME} as an API extension in vCD" # noqa: E501
 
+    # No need to check for existing extension because the calling function
+    # (install_cse) already handles checking for an existing extension
+    ext.add_extension(
+        server_constants.CSE_SERVICE_NAME,
+        server_constants.CSE_SERVICE_NAMESPACE,
+        routing_key,
+        exchange,
+        patterns,
+        description=description)
+
+    msg = f"Registered {server_constants.CSE_SERVICE_NAME} as an API extension in vCD" # noqa: E501
     msg_update_callback.general(msg)
     INSTALL_LOGGER.info(msg)
 
@@ -1071,6 +1100,15 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         msg_update_callback.general(msg)
         INSTALL_LOGGER.info(msg)
 
+        # Handle no extension and upgrading from MQTT extension
+        existing_ext_type = _get_existing_extension_type(client)
+        if existing_ext_type == server_constants.ExtensionType.NONE:
+            msg = "No existing extension.  Please use `cse install' instead " \
+                "of 'cse upgrade'."
+            raise Exception(msg)
+        elif existing_ext_type == server_constants.ExtensionType.MQTT:
+            msg = "Upgrading from the existing MQTT extension is not supported"
+            raise Exception(msg)
         try:
             ext_cse_version, ext_vcd_api_version = \
                 parse_cse_extension_description(client)
@@ -1269,10 +1307,14 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
             api_ext.delete_extension(
                 name=server_constants.CSE_SERVICE_NAME,
                 namespace=server_constants.CSE_SERVICE_NAMESPACE)
+            msg = f"Deleted AMQP extension " \
+                  f"'{server_constants.CSE_SERVICE_NAME}' and its API filters"
+            msg_update_callback.general(msg)
+            INSTALL_LOGGER.info(msg)
         except MissingRecordException:
             pass
 
-        _install_mqtt(client, config)
+        _install_mqtt(client, config, msg_update_callback)
     else:
         # Update amqp exchange
         _create_amqp_exchange(
