@@ -11,22 +11,22 @@ from container_service_extension.client.constants import CSE_SERVER_RUNNING
 import container_service_extension.def_.utils as def_utils
 from container_service_extension.shared_constants import CSE_SERVER_API_VERSION
 
-_ENABLE_ONLY_TKG_OPERATIONS = False
+_RESTRICT_CLI_TO_TKG_OPERATIONS = False
 
 
 def is_cli_for_tkg_only():
-    global _ENABLE_ONLY_TKG_OPERATIONS
-    return _ENABLE_ONLY_TKG_OPERATIONS
+    global _RESTRICT_CLI_TO_TKG_OPERATIONS
+    return _RESTRICT_CLI_TO_TKG_OPERATIONS
 
 
-def enable_cli_for_only_tkg_operations():
-    global _ENABLE_ONLY_TKG_OPERATIONS
-    _ENABLE_ONLY_TKG_OPERATIONS = True
+def restrict_cli_to_tkg_operations():
+    global _RESTRICT_CLI_TO_TKG_OPERATIONS
+    _RESTRICT_CLI_TO_TKG_OPERATIONS = True
 
 
-def disable_cli_for_only_tkg_operations():
-    global _ENABLE_ONLY_TKG_OPERATIONS
-    _ENABLE_ONLY_TKG_OPERATIONS = False
+def enable_cli_for_all_operations():
+    global _RESTRICT_CLI_TO_TKG_OPERATIONS
+    _RESTRICT_CLI_TO_TKG_OPERATIONS = False
 
 
 def cse_restore_session(ctx, vdc_required=False) -> None:
@@ -87,41 +87,43 @@ def _override_client(ctx) -> None:
     :param <click.core.Context> ctx: click context
     """
     profiles = Profiles.load()
+    # if the key CSE_SERVER_RUNNING is not present in the profiles.yaml,
+    # we make an assumption that CSE server is running
     is_cse_server_running = profiles.get(CSE_SERVER_RUNNING, default=True)
     cse_server_api_version = profiles.get(CSE_SERVER_API_VERSION)
-    if is_cse_server_running:
-        # Get server_api_version; save it in profiles if doesn't exist
-        if not cse_server_api_version:
-            try:
-                system = syst.System(ctx.obj['client'])
-                sys_info = system.get_info()
-                cse_server_api_version = sys_info.get(CSE_SERVER_API_VERSION)
-                profiles.set(CSE_SERVER_API_VERSION, cse_server_api_version)
-                profiles.set(CSE_SERVER_RUNNING, True)
-                profiles.save()
-            except Exception:
-                # If request to CSE server times out
-                profiles.set(CSE_SERVER_RUNNING, False)
-                # enable CLI for only TKG operations
-                enable_cli_for_only_tkg_operations()
-                ctx.obj['profiles'] = profiles
-                profiles.save()
-                return
-        client = Client(
-            profiles.get('host'),
-            api_version=cse_server_api_version,
-            verify_ssl_certs=profiles.get('verify'),
-            log_file='vcd.log',
-            log_requests=profiles.get('log_request'),
-            log_headers=profiles.get('log_header'),
-            log_bodies=profiles.get('log_body'))
-        client.rehydrate_from_token(profiles.get('token'), profiles.get('is_jwt_token'))  # noqa: E501
-        ctx.obj['client'] = client
+    if not is_cse_server_running:
+        restrict_cli_to_tkg_operations()
         ctx.obj['profiles'] = profiles
-    else:
-        # CSE server is not running. Enable CLI for only TKG operations.
-        enable_cli_for_only_tkg_operations()
-        ctx.obj['profiles'] = profiles
+        return
+
+    # Get server_api_version; save it in profiles if doesn't exist
+    if not cse_server_api_version:
+        try:
+            system = syst.System(ctx.obj['client'])
+            sys_info = system.get_info()
+            cse_server_api_version = sys_info.get(CSE_SERVER_API_VERSION)
+            profiles.set(CSE_SERVER_API_VERSION, cse_server_api_version)
+            profiles.set(CSE_SERVER_RUNNING, True)
+            profiles.save()
+        except Exception:
+            # If request to CSE server times out
+            profiles.set(CSE_SERVER_RUNNING, False)
+            # enable CLI for only TKG operations
+            restrict_cli_to_tkg_operations()
+            ctx.obj['profiles'] = profiles
+            profiles.save()
+            return
+    client = Client(
+        profiles.get('host'),
+        api_version=cse_server_api_version,
+        verify_ssl_certs=profiles.get('verify'),
+        log_file='vcd.log',
+        log_requests=profiles.get('log_request'),
+        log_headers=profiles.get('log_header'),
+        log_bodies=profiles.get('log_body'))
+    client.rehydrate_from_token(profiles.get('token'), profiles.get('is_jwt_token'))  # noqa: E501
+    ctx.obj['client'] = client
+    ctx.obj['profiles'] = profiles
 
 
 def construct_filters(**kwargs):
