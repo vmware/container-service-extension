@@ -29,10 +29,11 @@ from container_service_extension.remote_template_manager import \
 from container_service_extension.sample_generator import \
     PKS_ACCOUNTS_SECTION_KEY, PKS_NSXT_SERVERS_SECTION_KEY, \
     PKS_ORGS_SECTION_KEY, PKS_PVDCS_SECTION_KEY, PKS_SERVERS_SECTION_KEY, \
-    SAMPLE_AMQP_CONFIG, SAMPLE_BROKER_CONFIG, SAMPLE_PKS_ACCOUNTS_SECTION, \
-    SAMPLE_PKS_NSXT_SERVERS_SECTION, SAMPLE_PKS_ORGS_SECTION, \
-    SAMPLE_PKS_PVDCS_SECTION, SAMPLE_PKS_SERVERS_SECTION, \
-    SAMPLE_SERVICE_CONFIG, SAMPLE_VCD_CONFIG, SAMPLE_VCS_CONFIG # noqa: H301
+    SAMPLE_AMQP_CONFIG, SAMPLE_BROKER_CONFIG, SAMPLE_MQTT_CONFIG, \
+    SAMPLE_PKS_ACCOUNTS_SECTION, SAMPLE_PKS_NSXT_SERVERS_SECTION, \
+    SAMPLE_PKS_ORGS_SECTION, SAMPLE_PKS_PVDCS_SECTION, \
+    SAMPLE_PKS_SERVERS_SECTION, SAMPLE_SERVICE_CONFIG, SAMPLE_VCD_CONFIG, \
+    SAMPLE_VCS_CONFIG
 from container_service_extension.server_constants import \
     SUPPORTED_VCD_API_VERSIONS
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
@@ -44,6 +45,7 @@ from container_service_extension.utils import check_file_permissions
 from container_service_extension.utils import check_keys_and_value_types
 from container_service_extension.utils import get_duplicate_items_in_list
 from container_service_extension.utils import NullPrinter
+from container_service_extension.utils import should_use_mqtt_protocol
 from container_service_extension.utils import str_to_bool
 
 
@@ -77,9 +79,9 @@ def get_validated_config(config_file_name,
     :raises KeyError: if config file has missing or extra properties.
     :raises TypeError: if the value type for a config file property
         is incorrect.
-    :raises container_service_extension.exceptions.AmqpConnectionError: if
-        AMQP connection failed (host, password, port, username,
-        vhost is invalid).
+    :raises container_service_extension.exceptions.AmqpConnectionError:
+        (when not using MQTT) if AMQP connection failed (host, password, port,
+        username, vhost is invalid).
     :raises pyvcloud.vcd.exceptions.NotAcceptableException: if 'vcd'
         'api_version' is unsupported.
     :raises requests.exceptions.ConnectionError: if 'vcd' 'host' is invalid.
@@ -103,8 +105,11 @@ def get_validated_config(config_file_name,
     msg_update_callback.info(
         f"Validating config file '{config_file_name}'")
     # This allows us to compare top-level config keys and value types
+    use_mqtt = should_use_mqtt_protocol(config)
+    sample_message_queue_config = SAMPLE_AMQP_CONFIG if not use_mqtt \
+        else SAMPLE_MQTT_CONFIG
     sample_config = {
-        **SAMPLE_AMQP_CONFIG, **SAMPLE_VCD_CONFIG,
+        **sample_message_queue_config, **SAMPLE_VCD_CONFIG,
         **SAMPLE_VCS_CONFIG, **SAMPLE_SERVICE_CONFIG,
         **SAMPLE_BROKER_CONFIG
     }
@@ -115,7 +120,11 @@ def get_validated_config(config_file_name,
         nsxt_wire_logger = SERVER_NSXT_WIRE_LOGGER
     check_keys_and_value_types(config, sample_config, location='config file',
                                msg_update_callback=msg_update_callback)
-    _validate_amqp_config(config['amqp'], msg_update_callback)
+    # MQTT validation not required because no MQTT host, exchange, etc.
+    # is needed in the config file since the server code creates and
+    # registers the MQTT extension directly using server constants
+    if not use_mqtt:
+        _validate_amqp_config(config['amqp'], msg_update_callback)
     _validate_vcd_and_vcs_config(config['vcd'], config['vcs'],
                                  msg_update_callback,
                                  log_file=log_wire_file,

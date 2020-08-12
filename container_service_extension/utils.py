@@ -17,6 +17,8 @@ import requests
 import semantic_version
 
 from container_service_extension.logger import NULL_LOGGER
+from container_service_extension.server_constants import MQTT_MIN_API_VERSION
+
 
 # chunk size in bytes for file reading
 BUF_SIZE = 65536
@@ -365,6 +367,24 @@ def run_async(func):
 def generate_thread_name(function_name):
     parent_thread_id = threading.current_thread().ident
     return function_name + ':' + str(parent_thread_id)
+
+
+def should_use_mqtt_protocol(config):
+    """Return true if should use the mqtt protocol; false otherwise.
+
+    The MQTT protocol should be used if the config file contains an "mqtt" key
+        and the api version is greater than or equal to the minimum mqtt
+        api version.
+
+    :param dict config: config yaml file as a dictionary
+
+    :return: whether to use the mqtt protocol
+    :rtype: str
+    """
+    return config.get('mqtt') is not None and \
+        config.get('vcd') is not None and \
+        config['vcd'].get('api_version') is not None and \
+        float(config['vcd']['api_version']) >= MQTT_MIN_API_VERSION
 
 
 def flatten_dictionary(input_dict, parent_key='', separator='.'):

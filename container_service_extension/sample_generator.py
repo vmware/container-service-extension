@@ -72,6 +72,12 @@ SAMPLE_AMQP_CONFIG = {
     }
 }
 
+SAMPLE_MQTT_CONFIG = {
+    'mqtt': {
+        'verify_ssl': True
+    }
+}
+
 SAMPLE_VCD_CONFIG = {
     'vcd': {
         'host': 'vcd.vmware.com',

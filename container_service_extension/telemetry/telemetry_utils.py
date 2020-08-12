@@ -9,12 +9,18 @@ from pyvcloud.vcd.client import Client
 import requests
 
 from container_service_extension.logger import NULL_LOGGER
+from container_service_extension.mqtt_extension_manager import \
+    MQTTExtensionManager
 from container_service_extension.server_constants import CSE_SERVICE_NAME
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
+from container_service_extension.server_constants import MQTT_EXTENSION_VENDOR
+from container_service_extension.server_constants import MQTT_EXTENSION_VERSION
+from container_service_extension.server_constants import MQTTExtKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.telemetry.constants import COLLECTOR_ID
 from container_service_extension.telemetry.constants import VAC_URL
 from container_service_extension.utils import NullPrinter
+from container_service_extension.utils import should_use_mqtt_protocol
 
 
 CEIP_HEADER_NAME = "x-vmware-vcloud-ceip-id"
@@ -59,14 +65,14 @@ def get_vcd_ceip_id(vcd_host, verify_ssl=True, logger_debug=NULL_LOGGER):
             response.close()
 
 
-def get_telemetry_instance_id(vcd, logger_debug=NULL_LOGGER,
+def get_telemetry_instance_id(config_dict, logger_debug=NULL_LOGGER,
                               msg_update_callback=NullPrinter()):
-    """Get CSE extension id which is used as instance id.
+    """Get CSE AMQP or MQTT extension id which is used as instance id.
 
     Any exception is logged as error. No exception is leaked out
     of this method and does not affect the server startup.
 
-    :param dict vcd: 'vcd' section of config file as a dict.
+    :param dict config_dict: CSE configuration
     :param logging.logger logger_debug: logger instance to log any error
     in retrieving CSE extension id.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
@@ -78,16 +84,30 @@ def get_telemetry_instance_id(vcd, logger_debug=NULL_LOGGER,
     :raises Exception: if any exception happens while retrieving CSE
     extension id
     """
+    vcd = config_dict['vcd']
     try:
         client = Client(vcd['host'], api_version=vcd['api_version'],
                         verify_ssl_certs=vcd['verify'])
         client.set_credentials(BasicLoginCredentials(
             vcd['username'], SYSTEM_ORG_NAME, vcd['password']))
-        ext = APIExtension(client)
-        cse_info = ext.get_extension_info(CSE_SERVICE_NAME,
-                                          namespace=CSE_SERVICE_NAMESPACE)
-        logger_debug.info("Retrieved telemetry instance id")
-        return cse_info.get('id')
+        if should_use_mqtt_protocol(config_dict):
+            # Get MQTT extension uuid
+            mqtt_ext_manager = MQTTExtensionManager(client)
+            ext_info = mqtt_ext_manager.get_extension_info(
+                ext_name=CSE_SERVICE_NAME,
+                ext_version=MQTT_EXTENSION_VERSION,
+                ext_vendor=MQTT_EXTENSION_VENDOR)
+            if not ext_info:
+                return ''
+            return mqtt_ext_manager.get_extension_uuid(
+                ext_info[MQTTExtKey.EXT_URN_ID])
+        else:
+            # Get AMQP extension id
+            ext = APIExtension(client)
+            cse_info = ext.get_extension_info(CSE_SERVICE_NAME,
+                                              namespace=CSE_SERVICE_NAMESPACE)
+            logger_debug.info("Retrieved telemetry instance id")
+            return cse_info.get('id')
     except Exception as err:
         msg = f"Cannot retrieve telemetry instance id:{err}"
         msg_update_callback.general(msg)
@@ -112,6 +132,6 @@ def store_telemetry_settings(config_dict):
     if config_dict['service']['telemetry']['enable']:
         vcd_ceip_id = get_vcd_ceip_id(config_dict['vcd']['host'],
                                       verify_ssl=config_dict['vcd']['verify'])
-        instance_id = get_telemetry_instance_id(config_dict['vcd'])
+        instance_id = get_telemetry_instance_id(config_dict)
     config_dict['service']['telemetry']['vcd_ceip_id'] = vcd_ceip_id
     config_dict['service']['telemetry']['instance_id'] = instance_id

@@ -1,5 +1,3 @@
-import re
-
 from lxml import etree
 import pyvcloud.vcd.client as vcd_client
 import requests
@@ -59,20 +57,6 @@ def _get_id_from_api_filter_link(filter_link):
     return ''
 
 
-def _parse_api_filter_pattern(initial_pattern):
-    """Parse the url pattern from the initial api filter pattern.
-
-    Example: initial_pattern = '\n     /api/endpoint\n      '
-    The expected return would be: '/api/endpoint'.
-
-    :param str initial_pattern: the raw api filter pattern
-
-    :return: the parsed url pattern
-    :rtype: str
-    """
-    return re.findall(pattern='/.+', string=initial_pattern)[0]
-
-
 class MQTTExtensionManager:
     """Manages the extension, token, and api filter for the MQTT extension.
 
@@ -129,6 +113,8 @@ class MQTTExtensionManager:
         :return: a tuple of urn_id, listen topic, and respond topic,
             each of type str. In case of any error, None is returned.
         :rtype: tuple
+        raises: HTTPError if unable to make the GET request for the extension
+            of if unable to create the extension
         """
         ext_info = self.get_extension_info(ext_name, ext_version, ext_vendor)
         if not ext_info:
@@ -181,6 +167,7 @@ class MQTTExtensionManager:
             MQTTExtKey.EXT_URN_ID: response_body['id'],
             MQTTExtKey.EXT_LISTEN_TOPIC: mqtt_topics['monitor'],
             MQTTExtKey.EXT_RESPOND_TOPIC: mqtt_topics['respond'],
+            MQTTExtKey.EXT_ENABLED: response_body['enabled'],
             MQTTExtKey.EXT_DESCRIPTION: response_body['description']
         }
         return ext_info
@@ -214,12 +201,13 @@ class MQTTExtensionManager:
                     MQTTExtKey.EXT_URN_ID: curr_info['id'],
                     MQTTExtKey.EXT_LISTEN_TOPIC: mqtt_topics['monitor'],
                     MQTTExtKey.EXT_RESPOND_TOPIC: mqtt_topics['respond'],
+                    MQTTExtKey.EXT_ENABLED: curr_info['enabled'],
                     MQTTExtKey.EXT_DESCRIPTION: curr_info['description']
                 }
                 break
         return ext_info
 
-    def get_extension_info_by_urn(self, ext_urn_id):
+    def get_extension_response_body_by_urn(self, ext_urn_id):
         """Get the extension with the specified id.
 
         :param str ext_urn_id: the extension urn id
@@ -241,9 +229,12 @@ class MQTTExtensionManager:
 
         :return: the extension uuid
         :rtype: str
+        :raises: HTTPError if unable to make the GET request for the extension
+            info
         """
         # retrieve string of links and get id from the string of links
-        _ = self.get_extension_info_by_urn(ext_urn_id)  # Make last response
+        # First, ensure that the GET for the extension is the last request
+        _ = self.get_extension_response_body_by_urn(ext_urn_id)
         ext_response_headers = self._cloudapi_client.\
             get_last_response_headers()
         links_str = ext_response_headers['Link']
@@ -322,7 +313,7 @@ class MQTTExtensionManager:
         :rtype: bool
         """
         try:
-            _ = self.get_extension_info_by_urn(ext_urn_id)
+            _ = self.get_extension_response_body_by_urn(ext_urn_id)
             return True
         except requests.exceptions.HTTPError:
             last_response = self._cloudapi_client.get_last_response()
@@ -398,6 +389,7 @@ class MQTTExtensionManager:
         """Delete the specified token with token_id.
 
         :param str token_id: the token's id
+
         :raises: HTTPError if unable to make the delete request
         """
         self._cloudapi_client.do_request(
@@ -437,15 +429,13 @@ class MQTTExtensionManager:
             active = False
         return active
 
-    def setup_api_filter(self, api_filter_url_pattern, ext_uuid):
+    def setup_api_filter(self, ext_uuid):
         """Handle setting up api filter and returns its id.
 
         Creates the filter if it has not been created. Also handles
         possibility of more than one api filter being created with the same
         endpoint path. Deletes any extra api filters.
 
-        :param str api_filter_url_pattern: the url pattern for the api filter,
-            e.g., '/api/mqttEndpoint'
         :param str ext_uuid: the extension uuid
 
         :return: id of api filter. In case of any error, the empty string
@@ -454,21 +444,18 @@ class MQTTExtensionManager:
         :raises: Exception if error in creating api filter or deleting extra
             api filters
         """
-        active_api_filter_ids = self.get_api_filter_ids(api_filter_url_pattern,
-                                                        ext_uuid)
+        active_api_filter_ids = self.get_api_filter_ids(ext_uuid)
         if not active_api_filter_ids:
-            return self.create_api_filter(api_filter_url_pattern, ext_uuid)
+            return self.create_api_filter(ext_uuid)
         elif len(active_api_filter_ids) > 1:
             # Ensure only one api filter
             for filter_id in active_api_filter_ids[1:]:
                 self.delete_api_filter(filter_id)
         return active_api_filter_ids[0]
 
-    def create_api_filter(self, api_filter_url_pattern, ext_uuid):
+    def create_api_filter(self, ext_uuid):
         """Create the api filter for the extension endpoint.
 
-        :param str api_filter_url_pattern: the url pattern for the api filter,
-            e.g., '/api/mqttEndpoint'
         :param str ext_uuid: The extension uuid
 
         :return: id of the api filter. In case of any error, the empty string
@@ -476,15 +463,12 @@ class MQTTExtensionManager:
         :rtype: str
         :raises: Exception if error in making POST request
         """
-        xml_etree = etree.XML(
-            f"""
-            <vmext:ApiFilter xmlns:vmext =
-                "http://www.vmware.com/vcloud/extension/v1.5">
-                <vmext:UrlPattern>
-                    {api_filter_url_pattern}
-                </vmext:UrlPattern >
-            </vmext:ApiFilter>
-            """)
+        xml_str = \
+            f"<vmext:ApiFilter xmlns:vmext =" \
+            f"\"http://www.vmware.com/vcloud/extension/v1.5\">" \
+            f"<vmext:UrlPattern>{constants.MQTT_API_FILTER_PATTERN}" \
+            f"</vmext:UrlPattern ></vmext:ApiFilter>"
+        xml_etree = etree.XML(xml_str)
         absolute_api_filters_url = f"{self._sysadmin_client.get_api_uri()}" \
             f"/{constants.ADMIN_EXT_SERVICE_PATH}/{ext_uuid}" \
             f"/{constants.API_FILTERS_PATH}"
@@ -497,11 +481,9 @@ class MQTTExtensionManager:
             response_body.attrib['href'])
         return api_filter_id
 
-    def get_api_filter_ids(self, api_filter_url_pattern, ext_uuid):
+    def get_api_filter_ids(self, ext_uuid):
         """Retrieve all api filter ids with the passed in path.
 
-        :param str api_filter_url_pattern: the url pattern for the api filter,
-            e.g., '/api/mqttEndpoint'
         :param str ext_uuid: the extension uuid
 
         :return: list of api filter ids
@@ -522,9 +504,8 @@ class MQTTExtensionManager:
         except AttributeError:
             return filter_ids
         for filter_info in api_filters:
-            curr_filter_url_pattern = _parse_api_filter_pattern(
-                filter_info.attrib['urlPattern'])
-            if curr_filter_url_pattern == api_filter_url_pattern:
+            if filter_info.attrib['urlPattern'] == \
+                    constants.MQTT_API_FILTER_PATTERN:
                 filter_id = _get_id_from_api_filter_link(
                     filter_info.attrib['href'])
                 filter_ids.append(filter_id)
@@ -534,6 +515,7 @@ class MQTTExtensionManager:
         """Delete the api filter.
 
         :param str filter_id: filter id
+
         :raises: Exception if error in making DELETE request
         """
         absolute_api_filters_url = f"{self._sysadmin_client.get_api_uri()}" \
