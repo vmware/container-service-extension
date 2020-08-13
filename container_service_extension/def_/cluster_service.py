@@ -68,10 +68,18 @@ class ClusterService(abstract_broker.AbstractBroker):
         It syncs the defined entity with the state of the cluster vApp before
         returning the defined entity.
         """
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_INFO,
+            cse_params={telemetry_constants.PayloadKey.CLUSTER_ID: cluster_id}
+        )
         return self._sync_def_entity(cluster_id)
 
-    def list_clusters(self, filters: dict) -> List[def_models.DefEntity]:
+    def list_clusters(self, filters: dict = {}) -> List[def_models.DefEntity]:
         """List corresponding defined entities of all native clusters."""
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST,
+            cse_params={telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys())}  # noqa: E501
+        )
         ent_type: def_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
         return self.entity_svc.list_entities_by_entity_type(
             vendor=ent_type.vendor,

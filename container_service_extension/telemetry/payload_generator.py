@@ -451,6 +451,36 @@ def get_payload_for_ovdc_list(params):
     }
 
 
+def get_payload_for_v35_cluster_list(params):
+    """Construct telemetry payload of v35 cluster list.
+
+    :param dict params: parameters provided to the operation
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.V35_CLUSTER_LIST.telemetry_table,
+        PayloadKey.FILTER_KEYS: params.get(PayloadKey.FILTER_KEYS)
+    }
+
+
+def get_payload_for_v35_cluster_info(params):
+    """Construct telemetry payload of v35 cluster info.
+
+    :param dict params: parameters provided to the operation
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.V35_CLUSTER_INFO.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(params.get(PayloadKey.CLUSTER_ID)))  # noqa: E501
+    }
+
+
 def get_payload_for_v35_cluster_config(def_entity: DefEntity):
     """Construct telemetry payload of v35 cluster config.
 
@@ -545,4 +575,20 @@ def get_payload_for_v35_cluster_upgrade(def_entity: DefEntity):
         PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
         PayloadKey.TEMPLATE_NAME: def_entity.entity.spec.k8_distribution.template_name,  # noqa: E501
         PayloadKey.TEMPLATE_REVISION: def_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
+    }
+
+
+def get_payload_for_v35_node_delete(params):
+    """Construct telemetry payload of v35 cluster info.
+
+    :param dict params: parameters provided to the operation
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.V35_NODE_DELETE.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(params.get(PayloadKey.CLUSTER_ID))),  # noqa: E501
+        PayloadKey.NODE_NAME: params.get(PayloadKey.NODE_NAME)
     }

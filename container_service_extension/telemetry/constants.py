@@ -74,11 +74,14 @@ class CseOperation(Enum):
     PKS_CLUSTER_LIST = ('pks-cluster list', 'PKS_CLUSTER', 'LIST', 'PKS_CLUSTER_LIST')  # noqa: E501
     PKS_CLUSTER_RESIZE = ('cluster resize', 'PKS_CLUSTER', 'RESIZE', 'PKS_CLUSTER_RESIZE')  # noqa: E501
 
+    V35_CLUSTER_LIST = ('DEF cluster list', 'CLUSTER', 'V35_LIST', 'CSE_V35_CLUSTER_LIST')  # noqa: E501
+    V35_CLUSTER_INFO = ('DEF cluster info', 'CLUSTER', 'V35_INFO', 'CSE_V35_CLUSTER_INFO')  # noqa: E501
     V35_CLUSTER_CONFIG = ('DEF cluster config', 'CLUSTER', 'V35_CONFIG', 'CSE_V35_CLUSTER_CONFIG')   # noqa: E501
     V35_CLUSTER_APPLY = ('DEF cluster create', 'CLUSTER', 'V35_APPLY', 'CSE_V35_CLUSTER_APPLY')  # noqa: E501
     V35_CLUSTER_DELETE = ('DEF cluster delete', 'CLUSTER', 'V35_DELETE', 'CSE_V35_CLUSTER_DELETE')  # noqa: E501
     V35_CLUSTER_UPGRADE_PLAN = ('DEF cluster upgrade plan', 'CLUSTER', 'V35_UPGRADE_PLAN', 'CSE_V35_CLUSTER_UPGRADE_PLAN')  # noqa: E501
     V35_CLUSTER_UPGRADE = ('DEF cluster upgrade', 'CLUSTER', 'V35_UPGRADE', 'CSE_V35_CLUSTER_UPGRADE')  # noqa: E501
+    V35_NODE_DELETE = ('DEF nfs node delete', 'NODE', 'V35_DELETE', 'CSE_V35_NODE_DELETE')  # noqa: E501
 
     # Following operations do not require telemetry details. Hence the VAC
     # table name field is empty
@@ -110,6 +113,7 @@ class PayloadKey(str, Enum):
     CONTROL_PLANE_STORAGE_PROFILE = 'control_plane_storage_class'
     CPU = 'cpu'
     DISPLAY_OPTION = 'display_option'
+    FILTER_KEYS = 'filter_keys'
     K8S_DISTRIBUTION = 'k8s_distribution'
     K8S_PROVIDER = 'k8s_provider'
     K8S_VERSION = 'k8s_version',
