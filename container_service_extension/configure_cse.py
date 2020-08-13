@@ -1097,8 +1097,11 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
 
         # Handle various upgrade scenarios
         # Post CSE 3.0.0 only the following upgrades should be allowed
-        # CSE X.Y.Z -> CSE X+1.0.0, CSE X.Y+1.0, X.Y.Z+1
+        # CSE X.Y.Z -> CSE X+1.0.*, CSE X.Y+1.*, X.Y.Z+
         # vCD api X -> vCD api X+ (as supported by CSE and pyvcloud)
+        # It should be noted that if CSE X.Y.Z is upgradable to CSE X'.Y'.Z',
+        # then CSE X.Y.Z+ should also be allowed to upgrade to CSE X'.Y'.Z'
+        # irrespective of when these patches were released.
 
         # Upgrading from Unknown version is allowed only in
         # CSE 3.0.0 (2.6.0.devX for the time being)
@@ -1121,34 +1124,38 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
 
         # CSE version info in extension description is only applicable for
         # CSE 2.6.02b.dev and CSE 3.0.0+ versions.
-        cse_2_6_0 = semantic_version.Version('2.6.0')
+        cse_2_6_any_patch = semantic_version.SimpleSpec('>=2.6.0,<2.7.0')
         cse_3_0_0 = semantic_version.Version('3.0.0')
-        if ext_cse_version in \
-                (server_constants.UNKNOWN_CSE_VERSION, cse_2_6_0, cse_3_0_0):
-            if target_vcd_api_version in (vCDApiVersion.VERSION_33.value,
-                                          vCDApiVersion.VERSION_34.value):
-                _legacy_upgrade_to_33_34(
-                    client=client,
-                    config=config,
-                    ext_vcd_api_version=ext_vcd_api_version,
-                    skip_template_creation=skip_template_creation,
-                    ssh_key=ssh_key,
-                    retain_temp_vapp=retain_temp_vapp,
-                    admin_password=admin_password,
-                    msg_update_callback=msg_update_callback)
-            elif target_vcd_api_version in (vCDApiVersion.VERSION_35.value):
-                _upgrade_to_35(
-                    client=client,
-                    config=config,
-                    ext_vcd_api_version=ext_vcd_api_version,
-                    skip_template_creation=skip_template_creation,
-                    ssh_key=ssh_key,
-                    retain_temp_vapp=retain_temp_vapp,
-                    admin_password=admin_password,
-                    msg_update_callback=msg_update_callback,
-                    log_wire=log_wire)
-            else:
-                raise Exception(update_path_not_valid_msg)
+        allow_upgrade = \
+            ext_cse_version == server_constants.UNKNOWN_CSE_VERSION or \
+            cse_2_6_any_patch.match(ext_cse_version) or \
+            ext_cse_version == cse_3_0_0
+
+        if not allow_upgrade:
+            raise Exception(update_path_not_valid_msg)
+
+        if target_vcd_api_version in (vCDApiVersion.VERSION_33.value,
+                                      vCDApiVersion.VERSION_34.value):
+            _legacy_upgrade_to_33_34(
+                client=client,
+                config=config,
+                ext_vcd_api_version=ext_vcd_api_version,
+                skip_template_creation=skip_template_creation,
+                ssh_key=ssh_key,
+                retain_temp_vapp=retain_temp_vapp,
+                admin_password=admin_password,
+                msg_update_callback=msg_update_callback)
+        elif target_vcd_api_version in (vCDApiVersion.VERSION_35.value):
+            _upgrade_to_35(
+                client=client,
+                config=config,
+                ext_vcd_api_version=ext_vcd_api_version,
+                skip_template_creation=skip_template_creation,
+                ssh_key=ssh_key,
+                retain_temp_vapp=retain_temp_vapp,
+                admin_password=admin_password,
+                msg_update_callback=msg_update_callback,
+                log_wire=log_wire)
         else:
             raise Exception(update_path_not_valid_msg)
 
