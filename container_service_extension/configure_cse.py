@@ -241,17 +241,34 @@ def _construct_cse_extension_description(target_vcd_api_version):
     return description
 
 
-def parse_cse_extension_description(sys_admin_client):
-    """."""
-    ext = api_extension.APIExtension(sys_admin_client)
-    ext_dict = ext.get_extension_info(
-        server_constants.CSE_SERVICE_NAME,
-        namespace=server_constants.CSE_SERVICE_NAMESPACE)
-    ext_xml = ext.get_extension_xml(ext_dict['id'])
-    child = ext_xml.find(f"{{{NSMAP['vcloud']}}}Description")
+def parse_cse_extension_description(sys_admin_client, config):
+    """Parse CSE extension description.
+
+    :param Client sys_admin_client: system admin vcd client
+    :param dict config: content of the CSE config file.
+
+    :raises: (when using MQTT) HTTPError if there is an error when making the
+        GET request for the extension info
+    """
     description = ''
-    if child:
-        description = child.text
+    if utils.should_use_mqtt_protocol(config):
+        mqtt_ext_manager = MQTTExtensionManager(sys_admin_client)
+        mqtt_ext_info = mqtt_ext_manager.get_extension_info(
+            ext_name=server_constants.CSE_SERVICE_NAME,
+            ext_version=server_constants.MQTT_EXTENSION_VERSION,
+            ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
+        if mqtt_ext_info:
+            description = \
+                mqtt_ext_info[server_constants.MQTTExtKey.EXT_DESCRIPTION]
+    else:
+        ext = api_extension.APIExtension(sys_admin_client)
+        ext_dict = ext.get_extension_info(
+            server_constants.CSE_SERVICE_NAME,
+            namespace=server_constants.CSE_SERVICE_NAMESPACE)
+        ext_xml = ext.get_extension_xml(ext_dict['id'])
+        child = ext_xml.find(f"{{{NSMAP['vcloud']}}}Description")
+        if child:
+            description = child.text
 
     cse_version = server_constants.UNKNOWN_CSE_VERSION
     vcd_api_version = server_constants.UNKNOWN_VCD_API_VERSION
@@ -1113,7 +1130,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
             raise Exception(msg)
         try:
             ext_cse_version, ext_vcd_api_version = \
-                parse_cse_extension_description(client)
+                parse_cse_extension_description(client, config)
             if ext_cse_version == server_constants.UNKNOWN_CSE_VERSION or \
                     ext_vcd_api_version == server_constants.UNKNOWN_VCD_API_VERSION: # noqa: E501
                 msg = "Found CSE api extension registered with vCD, but " \

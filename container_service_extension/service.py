@@ -30,9 +30,12 @@ from container_service_extension.def_.utils import raise_error_if_def_not_suppor
 import container_service_extension.exceptions as cse_exception
 import container_service_extension.local_template_manager as ltm
 import container_service_extension.logger as logger
+from container_service_extension.mqtt_extension_manager import \
+    MQTTExtensionManager
 from container_service_extension.pks_cache import PksCache
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.server_constants as server_constants
+from container_service_extension.server_constants import MQTTExtKey
 import container_service_extension.shared_constants as shared_constants
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import PayloadKey
@@ -71,10 +74,11 @@ def consumer_thread(c):
 
 
 def verify_version_compatibility(sysadmin_client: Client,
-                                 target_vcd_api_version: str):
+                                 config):
+    target_vcd_api_version = config['vcd']['api_version']
     cse_version = utils.get_installed_cse_version()
     ext_cse_version, ext_vcd_api_version = \
-        configure_cse.parse_cse_extension_description(sysadmin_client)
+        configure_cse.parse_cse_extension_description(sysadmin_client, config)
     if cse_version == server_constants.UNKNOWN_CSE_VERSION or \
             ext_vcd_api_version == server_constants.UNKNOWN_VCD_API_VERSION:
         # version data doesn't exist, so CSE <= 2.6.1 was installed
@@ -235,13 +239,48 @@ class Service(object, metaclass=Singleton):
         try:
             sysadmin_client = vcd_utils.get_sys_admin_client()
             verify_version_compatibility(sysadmin_client,
-                                         self.config['vcd']['api_version'])
+                                         self.config)
         except Exception as err:
             logger.SERVER_LOGGER.info(err)
             raise
         finally:
             if sysadmin_client:
                 sysadmin_client.logout()
+
+        if utils.should_use_mqtt_protocol(self.config):
+            # Store/setup MQTT extension, api filter, and token info
+            try:
+                sysadmin_client = vcd_utils.get_sys_admin_client()
+                mqtt_ext_manager = MQTTExtensionManager(sysadmin_client)
+                ext_info = mqtt_ext_manager.get_extension_info(
+                    ext_name=server_constants.CSE_SERVICE_NAME,
+                    ext_version=server_constants.MQTT_EXTENSION_VERSION,
+                    ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
+                ext_urn_id = ext_info[MQTTExtKey.EXT_URN_ID]
+                ext_uuid = mqtt_ext_manager.get_extension_uuid(ext_urn_id)
+                api_filter_ids = mqtt_ext_manager.get_api_filter_ids(ext_uuid)
+                if not api_filter_ids:
+                    msg = 'No MQTT Api filter found'
+                    logger.SERVER_LOGGER.error(msg)
+                    raise Exception(msg)
+                api_filter_id = api_filter_ids[0]
+                token_info = mqtt_ext_manager.create_extension_token(
+                    token_name=server_constants.MQTT_TOKEN_NAME,
+                    ext_urn_id=ext_urn_id)
+
+                self.config['mqtt'] = {
+                    **ext_info,
+                    **token_info,
+                    MQTTExtKey.EXT_UUID: ext_uuid,
+                    MQTTExtKey.API_FILTER_ID: api_filter_id
+                }
+            except Exception as err:
+                msg = f'MQTT extension setup error: {err}'
+                logger.SERVER_LOGGER.error(msg)
+                raise err
+            finally:
+                if sysadmin_client:
+                    sysadmin_client.logout()
 
         populate_vsphere_list(self.config['vcs'])
 
