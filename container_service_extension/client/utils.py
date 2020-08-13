@@ -67,7 +67,7 @@ def cse_restore_session(ctx, vdc_required=False) -> None:
         client.rehydrate_from_token(
             profiles.get('token'), profiles.get('is_jwt_token'))
 
-        ctx.obj = dict()
+        ctx.obj = {}
         ctx.obj['client'] = client
 
     _override_client(ctx)
@@ -105,7 +105,10 @@ def _override_client(ctx) -> None:
             profiles.set(CSE_SERVER_API_VERSION, cse_server_api_version)
             profiles.set(CSE_SERVER_RUNNING, True)
             profiles.save()
-        except Exception:
+        except Exception as e:
+            from container_service_extension.utils import ConsoleMessagePrinter
+            cb = ConsoleMessagePrinter()
+            cb.general(f"{e}")
             # If request to CSE server times out
             profiles.set(CSE_SERVER_RUNNING, False)
             # enable CLI for only TKG operations

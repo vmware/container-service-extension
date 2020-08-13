@@ -88,6 +88,10 @@ UNSUPPORTED_SUBCOMMAND_OPTIONS_BY_VERSION = {
     }
 }
 
+SUPPORTED_SUBCOMMANDS_WHEN_SERVER_NOT_RUNNING_BY_VERSION = {
+    vcd_client.ApiVersion.
+}
+
 
 class GroupCommandFilter(click.Group):
     """Filter for CLI group commands.
