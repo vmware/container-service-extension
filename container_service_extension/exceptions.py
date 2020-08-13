@@ -34,7 +34,7 @@ class CseServerError(Exception):
 
 
 class CseServerNotRunningError(CseServerError):
-    """Raised when CLI makes requests to CSE server when it is not available"""
+    """Raised when CLI makes requests to CSE server when it is not available."""  # noqa: E501
 
 
 class CseRequestError(CseServerError):

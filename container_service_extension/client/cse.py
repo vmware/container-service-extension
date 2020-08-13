@@ -617,10 +617,10 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
                               ClusterEntityKind.TANZU_PLUS.value]:
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError(
-                    "Please contact administrator, CSE server seems to be down."
-                    " CSE- CLI can now only be used to manage TKG clusters"
-                    " (but not native). Once CSE server is up, please re-login"
-                    " to manage both native and tkg clusters.")
+                    "Please contact administrator, CSE server seems to be"
+                    " down. CSE- CLI can now only be used to manage TKG "
+                    " clusters (but not native). Once CSE server is up, please"
+                    " re-login to manage both native and tkg clusters.")
             k8_runtime = ClusterEntityKind.TKG.value
         metadata = cluster_config.get('metadata', {})
         metadata_vdc_key = ''
