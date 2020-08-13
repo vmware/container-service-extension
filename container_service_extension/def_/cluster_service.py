@@ -275,7 +275,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 ClusterMetadataKey.CSE_VERSION: pkg_resources.require('container-service-extension')[0].version, # noqa: E501
                 ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME], # noqa: E501
                 ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION], # noqa: E501
-                ClusterMetadataKey.OS: template[LocalTemplateKey.OS], # noqa: E501
+                ClusterMetadataKey.OS: template[LocalTemplateKey.OS],
                 ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION], # noqa: E501
                 ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES], # noqa: E501
                 ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION], # noqa: E501
@@ -1764,6 +1764,7 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                 policies = cpm.list_compute_policies_on_vdc(vdc_resource.get('id'), filters=filters)  # noqa: E501
                 for policy in policies:
                     sizing_class_href = policy.get('href')
+                    break
                 if not sizing_class_href:
                     msg = f"Sizing policy {sizing_class_name} not present in VDC {vdc.get('name')}"  # noqa: E501
                     LOGGER.error(msg)
