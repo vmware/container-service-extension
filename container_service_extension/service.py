@@ -326,14 +326,10 @@ class Service(object, metaclass=Singleton):
                 orgs=pks_config.get('orgs', []),
                 nsxt_servers=pks_config.get('nsxt_servers', []))
 
-        amqp = self.config['amqp']
         num_consumers = self.config['service']['listeners']
         for n in range(num_consumers):
             try:
-                c = MessageConsumer(
-                    amqp['host'], amqp['port'], amqp['ssl'], amqp['vhost'],
-                    amqp['username'], amqp['password'], amqp['exchange'],
-                    amqp['routing_key'])
+                c = MessageConsumer(self.config)
                 name = 'MessageConsumer-%s' % n
                 t = Thread(name=name, target=consumer_thread, args=(c, ))
                 t.daemon = True
