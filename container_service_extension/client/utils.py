@@ -9,6 +9,7 @@ from vcd_cli.profiles import Profiles
 from container_service_extension.client import system as syst
 from container_service_extension.client.constants import CSE_SERVER_RUNNING
 import container_service_extension.def_.utils as def_utils
+from container_service_extension.exceptions import CseResponseError
 from container_service_extension.shared_constants import CSE_SERVER_API_VERSION
 
 _RESTRICT_CLI_TO_TKG_OPERATIONS = False
@@ -105,13 +106,10 @@ def _override_client(ctx) -> None:
             profiles.set(CSE_SERVER_API_VERSION, cse_server_api_version)
             profiles.set(CSE_SERVER_RUNNING, True)
             profiles.save()
-        except Exception as e:
-            from container_service_extension.utils import ConsoleMessagePrinter
-            cb = ConsoleMessagePrinter()
-            cb.general(f"{e}")
+        except CseResponseError:
             # If request to CSE server times out
             profiles.set(CSE_SERVER_RUNNING, False)
-            # enable CLI for only TKG operations
+            # restrict CLI for only TKG operations
             restrict_cli_to_tkg_operations()
             ctx.obj['profiles'] = profiles
             profiles.save()

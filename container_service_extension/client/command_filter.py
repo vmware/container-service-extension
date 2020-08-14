@@ -17,6 +17,10 @@ class GroupKey(str, Enum):
     CLUSTER = 'cluster'
     NODE = 'node'
     OVDC = 'ovdc'
+    PKS = 'pks'
+    SYSTEM = 'system'
+    TEMPLATE = 'template'
+    VERSION = 'version'
 
 
 @unique
@@ -88,8 +92,10 @@ UNSUPPORTED_SUBCOMMAND_OPTIONS_BY_VERSION = {
     }
 }
 
-SUPPORTED_SUBCOMMANDS_WHEN_SERVER_NOT_RUNNING_BY_VERSION = {
-    vcd_client.ApiVersion.
+UNSUPPORTED_SUBCOMMANDS_WITH_SERVER_NOT_RUNNING_BY_VERSION = {
+    vcd_client.ApiVersion.VERSION_35.value: [GroupKey.VERSION, GroupKey.OVDC,
+                                             GroupKey.SYSTEM, GroupKey.TEMPLATE,  # noqa: E501
+                                             GroupKey.PKS]
 }
 
 
@@ -118,6 +124,10 @@ class GroupCommandFilter(click.Group):
                 client_utils.cse_restore_session(ctx)
             client = ctx.obj['client']
             version = client.get_api_version()
+
+            # Skipping some commands when CSE server is not running
+            if cmd_name in UNSUPPORTED_SUBCOMMANDS_WITH_SERVER_NOT_RUNNING_BY_VERSION.get(version, []) and client_utils.is_cli_for_tkg_only():  # noqa: E501
+                return None
 
             # Skip the command if not supported
             if cmd_name in UNSUPPORTED_COMMANDS_BY_VERSION.get(version, []):
