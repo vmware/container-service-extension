@@ -71,10 +71,11 @@ def consumer_thread(c):
 
 
 def verify_version_compatibility(sysadmin_client: Client,
-                                 target_vcd_api_version: str):
+                                 config):
+    target_vcd_api_version = config['vcd']['api_version']
     cse_version = utils.get_installed_cse_version()
     ext_cse_version, ext_vcd_api_version = \
-        configure_cse.parse_cse_extension_description(sysadmin_client)
+        configure_cse.parse_cse_extension_description(sysadmin_client, config)
     if cse_version == server_constants.UNKNOWN_CSE_VERSION or \
             ext_vcd_api_version == server_constants.UNKNOWN_VCD_API_VERSION:
         # version data doesn't exist, so CSE <= 2.6.1 was installed
@@ -235,7 +236,7 @@ class Service(object, metaclass=Singleton):
         try:
             sysadmin_client = vcd_utils.get_sys_admin_client()
             verify_version_compatibility(sysadmin_client,
-                                         self.config['vcd']['api_version'])
+                                         self.config)
         except Exception as err:
             logger.SERVER_LOGGER.info(err)
             raise
