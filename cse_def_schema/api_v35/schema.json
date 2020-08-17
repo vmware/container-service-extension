@@ -36,7 +36,7 @@
                 "properties": {
                     "workers": {
                         "type": "object",
-                        "description":"The desired worker state of the cluster. The properties \"sizing_class\" and \"storage_profile\" can be specified during the cluster creation phase only. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\". Heterogenity of the clusters is not yet supported.",
+                        "description":"The desired worker state of the cluster. The properties \"sizing_class\" and \"storage_profile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\". Non uniform worker nodes in the clusters is not yet supported.",
                         "required": [
                             "count"
                         ],
@@ -49,7 +49,7 @@
                             },
                             "sizing_class": {
                                 "type": "string",
-                                "description":"The compute sizing policy with which worker nodes need to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published on the given ovdc."
+                                "description":"The compute sizing policy with which worker nodes need to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc."
                             },
                             "storage_profile": {
                                 "type": "string",
@@ -59,20 +59,20 @@
                     },
                     "control_plane": {
                         "type": "object",
-                        "description":"The desired control-plane state of the cluster. The properties \"sizing_class\" and \"storage_profile\" can be specified during the cluster creation phase only. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\". Heterogenity of the clusters is not yet supported.\n ",
+                        "description":"The desired control-plane state of the cluster. The properties \"sizing_class\" and \"storage_profile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".\n ",
                         "required": [
                             "count"
                         ],
                         "properties": {
                             "count": {
                                 "type": "integer",
-                                "description":"Only single master is supported; multi-master is not yet supported.",
+                                "description":"Single master node is supported; multi-master is not yet supported.",
                                 "maximum": 1,
                                 "minimum": 1
                             },
                             "sizing_class": {
                                 "type": "string",
-                                "description":"The compute sizing policy with which control-plane node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published on the given ovdc."
+                                "description":"The compute sizing policy with which control-plane node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc."
                             },
                             "storage_profile": {
                                 "type": "string",
@@ -82,20 +82,20 @@
                     },
                     "nfs": {
                         "type": "object",
-                        "description":"The desired nfs state of the cluster. The properties \"sizing_class\" and \"storage_profile\" can be specified during the cluster creation phase only. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".",
+                        "description":"The desired nfs state of the cluster. The properties \"sizing_class\" and \"storage_profile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".",
                         "required": [
                             "count"
                         ],
                         "properties": {
                             "count": {
                                 "type": "integer",
-                                "description":"Nfs nodes can only be scaled-up, but they cannot be scaled-down.",
+                                "description":"Nfs nodes can only be scaled-up; they cannot be scaled-down.",
                                 "maximum": 100,
                                 "minimum": 0
                             },
                             "sizing_class": {
                                 "type": "string",
-                                "description":"The compute sizing policy with which nfs node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published on the given ovdc."
+                                "description":"The compute sizing policy with which nfs node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc."
                             },
                             "storage_profile": {
                                 "type": "string",
@@ -115,11 +115,11 @@
                             },
                             "ssh_key": {
                                 "type": "string",
-                                "description":"The ssh key that users can use to log into the node vms without explicitly providing passwords."
+                                "description":"The ssh key that users can use to log into the node VMs without explicitly providing passwords."
                             },
                             "rollback_on_failure": {
                                 "type": "boolean",
-                                "description":"On any cluster operation failure, if the value to set to true, relevant node vms will be automatically deleted."
+                                "description":"On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted."
                             }
                         }
                     },
