@@ -36,6 +36,17 @@ class CseServerError(Exception):
 class CseServerNotRunningError(CseServerError):
     """Raised when CLI makes requests to CSE server when it is not available."""  # noqa: E501
 
+    def __init__(self, msg=None):
+        self.msg = msg
+
+    def __str__(self):
+        if self.msg:
+            return self.msg
+        return "Please contact administrator, CSE server seems to be" \
+               " down. CSE- CLI can now only be used to manage TKG " \
+               " clusters (but not native). Once CSE server is up, please" \
+               " re-login to manage both native and tkg clusters."
+
 
 class CseRequestError(CseServerError):
     """Base class for all incoming CSE REST request errors."""

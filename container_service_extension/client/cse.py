@@ -243,11 +243,7 @@ def cluster_delete(ctx, name, vdc, org, k8_runtime=None):
             if k8_runtime in [ClusterEntityKind.NATIVE.value,
                               ClusterEntityKind.TANZU_PLUS.value]:
                 # Cannot run the command as cse cli is enabled only for native
-                raise CseServerNotRunningError(
-                    "Please contact administrator, CSE server seems to be"
-                    " down. CSE- CLI can now only be used to manage TKG "
-                    " clusters (but not native). Once CSE server is up, please"
-                    " re-login to manage both native and tkg clusters.")
+                raise CseServerNotRunningError()
             k8_runtime = ClusterEntityKind.TKG.value
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
@@ -619,11 +615,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
             if k8_runtime in [ClusterEntityKind.NATIVE.value,
                               ClusterEntityKind.TANZU_PLUS.value]:
                 # Cannot run the command as cse cli is enabled only for native
-                raise CseServerNotRunningError(
-                    "Please contact administrator, CSE server seems to be"
-                    " down. CSE- CLI can now only be used to manage TKG "
-                    " clusters (but not native). Once CSE server is up, please"
-                    " re-login to manage both native and tkg clusters.")
+                raise CseServerNotRunningError()
             k8_runtime = ClusterEntityKind.TKG.value
         metadata = cluster_config.get('metadata', {})
         metadata_vdc_key = ''
@@ -692,11 +684,7 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name, k8_runtime=None):
             if k8_runtime in [ClusterEntityKind.NATIVE.value,
                               ClusterEntityKind.TANZU_PLUS.value]:
                 # Cannot run the command as cse cli is enabled only for native
-                raise CseServerNotRunningError(
-                    "Please contact administrator, CSE server seems to be"
-                    " down. CSE- CLI can now only be used to manage TKG "
-                    " clusters (but not native). Once CSE server is up, please"
-                    " re-login to manage both native and tkg clusters.")
+                raise CseServerNotRunningError()
             k8_runtime = ClusterEntityKind.TKG.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
@@ -770,11 +758,7 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
             if k8_runtime in [ClusterEntityKind.NATIVE.value,
                               ClusterEntityKind.TANZU_PLUS.value]:
                 # Cannot run the command as cse cli is enabled only for native
-                raise CseServerNotRunningError(
-                    "Please contact administrator, CSE server seems to be"
-                    " down. CSE- CLI can now only be used to manage TKG "
-                    " clusters (but not native). Once CSE server is up, please"
-                    " re-login to manage both native and tkg clusters.")
+                raise CseServerNotRunningError()
             k8_runtime = ClusterEntityKind.TKG.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
@@ -833,11 +817,7 @@ def cluster_config(ctx, name, vdc, org, k8_runtime=None):
             if k8_runtime in [ClusterEntityKind.NATIVE.value,
                               ClusterEntityKind.TANZU_PLUS.value]:
                 # Cannot run the command as cse cli is enabled only for native
-                raise CseServerNotRunningError(
-                    "Please contact administrator, CSE server seems to be"
-                    " down. CSE- CLI can now only be used to manage TKG "
-                    " clusters (but not native). Once CSE server is up, please"
-                    " re-login to manage both native and tkg clusters.")
+                raise CseServerNotRunningError()
             k8_runtime = ClusterEntityKind.TKG.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
@@ -892,11 +872,7 @@ def cluster_info(ctx, name, org, vdc, k8_runtime=None):
             if k8_runtime in [ClusterEntityKind.NATIVE.value,
                               ClusterEntityKind.TANZU_PLUS.value]:
                 # Cannot run the command as cse cli is enabled only for native
-                raise CseServerNotRunningError(
-                    "Please contact administrator, CSE server seems to be"
-                    " down. CSE- CLI can now only be used to manage TKG "
-                    " clusters (but not native). Once CSE server is up, please"
-                    " re-login to manage both native and tkg clusters.")
+                raise CseServerNotRunningError()
             k8_runtime = ClusterEntityKind.TKG.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
