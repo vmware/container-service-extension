@@ -284,3 +284,4 @@ class DefEntityClusterApi:
             self._client._session,
             accept_type='application/json')
         return response_processor.process_response(response)
+
