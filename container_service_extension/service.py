@@ -268,12 +268,10 @@ class Service(object, metaclass=Singleton):
                     token_name=server_constants.MQTT_TOKEN_NAME,
                     ext_urn_id=ext_urn_id)
 
-                self.config['mqtt'] = {
-                    **ext_info,
-                    **token_info,
-                    MQTTExtKey.EXT_UUID: ext_uuid,
-                    MQTTExtKey.API_FILTER_ID: api_filter_id
-                }
+                self.config['mqtt'].update(ext_info)
+                self.config['mqtt'].update(token_info)
+                self.config['mqtt'][MQTTExtKey.EXT_UUID] = ext_uuid
+                self.config['mqtt'][MQTTExtKey.API_FILTER_ID] = api_filter_id
             except Exception as err:
                 msg = f'MQTT extension setup error: {err}'
                 logger.SERVER_LOGGER.error(msg)

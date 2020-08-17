@@ -1,5 +1,8 @@
 from container_service_extension.amqp_consumer import AMQPConsumer
 from container_service_extension.mqtt_consumer import MQTTConsumer
+import container_service_extension.server_constants as server_constants
+from container_service_extension.server_constants import MQTTExtKey, \
+    MQTTExtTokenKey
 from container_service_extension.utils import should_use_mqtt_protocol
 
 
@@ -14,7 +17,16 @@ class MessageConsumer:
         :return: instance of appropriate message protocol consumer
         """
         if should_use_mqtt_protocol(config):
-            return MQTTConsumer()
+            mqtt = config['mqtt']
+            return MQTTConsumer(
+                url=config['vcd']['host'],
+                listen_topic=mqtt[MQTTExtKey.EXT_LISTEN_TOPIC],
+                respond_topic=mqtt[MQTTExtKey.EXT_RESPOND_TOPIC],
+                verify_ssl=mqtt['verify_ssl'],
+                token=mqtt[MQTTExtTokenKey.TOKEN],
+                client_username=f'{server_constants.MQTT_EXTENSION_VENDOR}/'
+                                f'{server_constants.CSE_SERVICE_NAME}/'
+                                f'{server_constants.MQTT_EXTENSION_VERSION}')
         else:
             amqp = config['amqp']
             return AMQPConsumer(
