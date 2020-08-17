@@ -181,8 +181,7 @@ class DefEntityClusterApi:
         elif native_def_entity:
             return self._nativeCluster.get_cluster_config_by_id(
                 native_def_entity.get('id'))
-        raise NotImplementedError(
-            "Get Cluster Config for TKG clusters not yet implemented")  # noqa: E501
+        return self._tkgCluster.get_cluster_config(cluster_name=cluster_name, org=org, vdc=vdc)  # noqa: E501
 
     def delete_cluster(self, cluster_name, org=None, vdc=None):
         """Delete DEF cluster by name.
