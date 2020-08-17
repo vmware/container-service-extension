@@ -248,8 +248,6 @@ class TKGClusterApi:
             org_id = org_urn.split(':')[-1]
             self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.X_VMWARE_VCLOUD_TENANT_CONTEXT,  # noqa: E501
                                                 org_id)
-
-            # TODO: Make the call using sysadmin context
             response, status, headers, tkg_def_entities = \
                 self._tkg_client_api.create_tkg_cluster_config_task(id=cluster_id)  # noqa: E501
 
