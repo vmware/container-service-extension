@@ -7,8 +7,27 @@ import requests
 from vcd_cli.profiles import Profiles
 
 from container_service_extension.client import system as syst
+from container_service_extension.client.constants import CSE_SERVER_RUNNING
 import container_service_extension.def_.utils as def_utils
+from container_service_extension.exceptions import CseResponseError
 from container_service_extension.shared_constants import CSE_SERVER_API_VERSION
+
+_RESTRICT_CLI_TO_TKG_OPERATIONS = False
+
+
+def is_cli_for_tkg_only():
+    global _RESTRICT_CLI_TO_TKG_OPERATIONS
+    return _RESTRICT_CLI_TO_TKG_OPERATIONS
+
+
+def restrict_cli_to_tkg_operations():
+    global _RESTRICT_CLI_TO_TKG_OPERATIONS
+    _RESTRICT_CLI_TO_TKG_OPERATIONS = True
+
+
+def enable_cli_for_all_operations():
+    global _RESTRICT_CLI_TO_TKG_OPERATIONS
+    _RESTRICT_CLI_TO_TKG_OPERATIONS = False
 
 
 def cse_restore_session(ctx, vdc_required=False) -> None:
@@ -69,14 +88,32 @@ def _override_client(ctx) -> None:
     :param <click.core.Context> ctx: click context
     """
     profiles = Profiles.load()
+    # if the key CSE_SERVER_RUNNING is not present in the profiles.yaml,
+    # we make an assumption that CSE server is running
+    is_cse_server_running = profiles.get(CSE_SERVER_RUNNING, default=True)
     cse_server_api_version = profiles.get(CSE_SERVER_API_VERSION)
+    if not is_cse_server_running:
+        restrict_cli_to_tkg_operations()
+        ctx.obj['profiles'] = profiles
+        return
+
     # Get server_api_version; save it in profiles if doesn't exist
     if not cse_server_api_version:
-        system = syst.System(ctx.obj['client'])
-        sys_info = system.get_info()
-        cse_server_api_version = sys_info.get(CSE_SERVER_API_VERSION)
-        profiles.set(CSE_SERVER_API_VERSION, cse_server_api_version)
-        profiles.save()
+        try:
+            system = syst.System(ctx.obj['client'])
+            sys_info = system.get_info()
+            cse_server_api_version = sys_info.get(CSE_SERVER_API_VERSION)
+            profiles.set(CSE_SERVER_API_VERSION, cse_server_api_version)
+            profiles.set(CSE_SERVER_RUNNING, True)
+            profiles.save()
+        except CseResponseError:
+            # If request to CSE server times out
+            profiles.set(CSE_SERVER_RUNNING, False)
+            # restrict CLI for only TKG operations
+            restrict_cli_to_tkg_operations()
+            ctx.obj['profiles'] = profiles
+            profiles.save()
+            return
     client = Client(
         profiles.get('host'),
         api_version=cse_server_api_version,

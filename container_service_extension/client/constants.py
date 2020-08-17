@@ -18,6 +18,12 @@ TKG_ENTITY_TYPE_ID = def_utils.generate_entity_type_id(
 
 TKG_CLUSTER_RUNTIME = 'TkgCluster'
 
+# if cse_server_running key is set to false in profiles.yaml, CSE CLI can
+# only be used to work with TKG clusters. This key is set when the first call
+# to CSE server is made. If CSE server starts running after the first call
+# fails, a re-login is needed to reset the key in profiles.yaml
+CSE_SERVER_RUNNING = 'cse_server_running'
+
 
 @unique
 class CLIOutputKey(str, Enum):
