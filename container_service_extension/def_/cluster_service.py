@@ -1763,7 +1763,7 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                 }
                 policies = list(cpm.list_compute_policies_on_vdc(vdc_resource.get('id'), filters=filters))  # noqa: E501
                 if len(policies) == 0:
-                    raise Exception(f"No sizing policy with the name {sizing_class_name} exists on the VDC {vdc.get('name')}")  # noqa: E501
+                    raise Exception(f"No sizing policy with the name {sizing_class_name} exists on the VDC")  # noqa: E501
                 if len(policies) > 1:
                     raise Exception(f"Duplicate sizing policies with the name {sizing_class_name}")  # noqa: E501
                 sizing_class_href = policies[0]['href']
