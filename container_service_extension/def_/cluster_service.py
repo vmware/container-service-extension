@@ -377,11 +377,8 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             # Update defined entity instance with new properties like vapp_id,
             # master_ip and nodes.
-            # TODO(DEF) VCDA-1567 Schema doesn't yet have nodes definition.
-            #  master and worker "nodes" also have to be updated.
             def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             def_entity.externalId = vapp_resource.get('href')
-            def_entity.entity.status.master_ip = master_ip
             def_entity.entity.status.phase = str(
                 DefEntityPhase(DefEntityOperation.CREATE,
                                DefEntityOperationStatus.SUCCEEDED))

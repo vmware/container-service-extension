@@ -1642,29 +1642,37 @@ def _get_sample_cluster_configuration(output=None):
     :return: sample cluster configuration
     :rtype: str
     """
-    metadata = def_models.Metadata('mycluster', 'myorg', 'myvdc')
+    metadata = def_models.Metadata('cluster_name', 'organization_name',
+                                   'org_virtual_datacenter_name')
     status = def_models.Status()
-    settings = def_models.Settings(network='myNetwork', ssh_key=None)
+    settings = def_models.Settings(network='ovdc_network_name', ssh_key=None)
     k8_distribution = def_models.Distribution(
         template_name='ubuntu-16.04_k8-1.17_weave-2.6.0',
         template_revision=2
     )
     control_plane = def_models.ControlPlane(
         count=1,
-        sizing_class='Large',
-        storage_profile='myStorageProfile'
+        sizing_class='Large_sizing_policy_name',
+        storage_profile='Gold_storage_profile_name'
     )
     workers = def_models.Workers(
         count=2,
-        sizing_class='small',
-        storage_profile='*'
+        sizing_class='Medium_sizing_policy_name',
+        storage_profile='Silver_storage_profile'
+    )
+
+    nfs = def_models.Nfs(
+        count=1,
+        sizing_class='Large_sizing_policy_name',
+        storage_profile='Platinum_storage_profile_name'
     )
 
     cluster_spec = def_models.ClusterSpec(
         control_plane=control_plane,
         k8_distribution=k8_distribution,
         settings=settings,
-        workers=workers
+        workers=workers,
+        nfs=nfs
     )
     cluster_entity = def_models.ClusterEntity(
         metadata=metadata,
