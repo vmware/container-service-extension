@@ -1714,22 +1714,29 @@ def _assign_placement_policy_to_vdc_with_existing_clusters(
             INSTALL_LOGGER.info(msg)
             msg_update_callback.general(msg)
 
-    if is_tkg_plus_enabled and tkg_plus_ovdcs:
+    if tkg_plus_ovdcs:
         msg = f"Found {len(tkg_plus_ovdcs)} vDC(s) hosting TKG PLUS clusters."
+        if not is_tkg_plus_enabled:
+            msg += " However TKG PLUS is not enabled in CSE. vDC(s) hosting " \
+                   "TKG PLUS clusters will not be processed. Please enable " \
+                   "TKG PLUS for CSE and re-run `cse upgrade` to process " \
+                   "these vDC(s)."
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
-        tkg_plus_policy = cpm.get_vdc_compute_policy(
-            policy_name=shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY,
-            is_placement_policy=True)
-        for vdc_id in tkg_plus_ovdcs:
-            cpm.add_compute_policy_to_vdc(
-                vdc_id=vdc_id,
-                compute_policy_href=tkg_plus_policy['href'])
-            msg = "Added compute policy " \
-                  f"'{tkg_plus_policy['display_name']}' to vDC " \
-                  f"'{vdc_names[vdc_id]}'"
-            INSTALL_LOGGER.info(msg)
-            msg_update_callback.general(msg)
+
+        if is_tkg_plus_enabled:
+            tkg_plus_policy = cpm.get_vdc_compute_policy(
+                policy_name=shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY,
+                is_placement_policy=True)
+            for vdc_id in tkg_plus_ovdcs:
+                cpm.add_compute_policy_to_vdc(
+                    vdc_id=vdc_id,
+                    compute_policy_href=tkg_plus_policy['href'])
+                msg = "Added compute policy " \
+                      f"'{tkg_plus_policy['display_name']}' to vDC " \
+                      f"'{vdc_names[vdc_id]}'"
+                INSTALL_LOGGER.info(msg)
+                msg_update_callback.general(msg)
 
 
 def _remove_old_cse_sizing_compute_policies(
