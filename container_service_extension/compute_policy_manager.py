@@ -625,7 +625,10 @@ class ComputePolicyManager:
         :return: URN of the format - urn:vcloud:vdc:[VDC_ID]
         :rtype: str
         """
-        return f"{cloudapi_constants.CLOUDAPI_URN_PREFIX}:vdc:{vdc_id}"
+        prefix = f"{cloudapi_constants.CLOUDAPI_URN_PREFIX}:vdc"
+        if prefix in vdc_id:
+            return vdc_id
+        return f"{prefix}:{vdc_id}"
 
     def _get_vm_placement_policy_id(self, vm) -> str:
         """Obtain VM's placement policy id if present.
