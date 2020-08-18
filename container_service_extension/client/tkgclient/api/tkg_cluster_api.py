@@ -131,7 +131,19 @@ class TkgClusterApi(object):
             collection_formats=collection_formats)
 
     def create_tkg_cluster_config_task(self, id, **kwargs):
-        """Obtain VCD task to get TKG cluster config."""
+        """Obtain VCD task to get TKG cluster config.
+
+        Makes a call to /entities/{cluster_id}/behaviors/urn:vcloud:behavior-interface:createKubeConfig:vmware:k8s:1.0.0/invocations
+        which generates a task for creating the cluster kube-config. The task
+        is embedded in the 'Location' header of the response. Once the task
+        completes successfully, the kube-config can be found in GET /task/{id}
+        response, under Result.ResultContent tag.
+
+        Note: this method only returns the response to the behaviors endpoint
+        and doesn't handle waiting for task completion and returning the
+        kube-config.
+        :param str id: ID of the TKG cluster
+        """
         all_params = ['id']  # noqa: E501
         all_params.append('async_req')
         # all_params.append('_return_http_data_only')
@@ -168,10 +180,10 @@ class TkgClusterApi(object):
             body=body_params,
             post_params=form_params,
             files=local_var_files,
-            response_type=None,
+            response_type=None,  # Expected response has no content (204)
             auth_settings=auth_settings,
             async_req=params.get('async_req'),
-            _return_http_data_only=False,
+            _return_http_data_only=False,  # Task created present in the Location header  # noqa: E501
             _preload_content=params.get('_preload_content', True),
             _request_timeout=params.get('_request_timeout'),
             collection_formats=collection_formats)

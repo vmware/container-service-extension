@@ -24,7 +24,8 @@ TKG_CLUSTER_RUNTIME = 'TkgCluster'
 # fails, a re-login is needed to reset the key in profiles.yaml
 CSE_SERVER_RUNNING = 'cse_server_running'
 
-TKG_RESPONSE_MESSAGES_BY_STATUS = {
+
+TKG_RESPONSE_MESSAGES_BY_STATUS_CODE = {
     403: "User doesn't have required rights to perform the operation",
     500: "Unexpected error occurred"
 }
