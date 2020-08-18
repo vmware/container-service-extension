@@ -18,7 +18,7 @@ TKG_ENTITY_TYPE_ID = def_utils.generate_entity_type_id(
 
 TKG_CLUSTER_RUNTIME = 'TkgCluster'
 
-TKG_RESPONSE_MESSAGES_BY_STATUS = {
+TKG_RESPONSE_MESSAGES_BY_STATUS_CODE = {
     403: "User doesn't have required rights to perform the operation",
     500: "Unexpected error occurred"
 }

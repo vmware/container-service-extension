@@ -156,7 +156,7 @@ class TKGClusterApi:
             output_dict['task_href'] = headers.get('Location')
             return yaml.dump(output_dict)
         except tkg_rest.ApiException as e:
-            msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS.get(e.status, f"{e.reason}")  # noqa: E501
+            msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{e.reason}")  # noqa: E501
             logger.CLIENT_LOGGER.error(msg)
             raise Exception(msg)
         except Exception as e:
@@ -176,7 +176,7 @@ class TKGClusterApi:
             tkg_cluster_dict['task_href'] = headers.get('Location')
             return yaml.dump(tkg_cluster_dict)
         except tkg_rest.ApiException as e:
-            msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS.get(e.status, f"{e.reason}")  # noqa: E501
+            msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{e.reason}")  # noqa: E501
             logger.CLIENT_LOGGER.error(msg)
             raise Exception(msg)
         except Exception as e:
@@ -203,11 +203,11 @@ class TKGClusterApi:
             else:
                 # More than 1 TKG cluster with the same name found.
                 msg = f"Multiple clusters found with name {cluster_name}. " \
-                      "Failed to apply the Spec."
+                      "Failed to delete the TKG cluster."
                 logger.CLIENT_LOGGER.error(msg)
                 raise cse_exceptions.CseDuplicateClusterError(msg)
         except tkg_rest.ApiException as e:
-            msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS.get(e.status, f"{e.reason}")  # noqa: E501
+            msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{e.reason}")  # noqa: E501
             logger.CLIENT_LOGGER.error(msg)
             raise Exception(msg)
         except Exception as e:
@@ -239,7 +239,7 @@ class TKGClusterApi:
             config_task = self._client.get_resource(config_task_href)
             return {shared_constants.RESPONSE_MESSAGE_KEY: config_task.Result.ResultContent.text}  # noqa: E501
         except tkg_rest.ApiException as e:
-            msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS.get(e.status, f"{e.reason}")  # noqa: E501
+            msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{e.reason}")  # noqa: E501
             logger.CLIENT_LOGGER.error(msg)
             raise Exception(msg)
         except Exception as e:
@@ -265,11 +265,11 @@ class TKGClusterApi:
             else:
                 # More than 1 TKG cluster with the same name found.
                 msg = f"Multiple clusters found with name {cluster_name}. " \
-                      "Failed to apply the Spec."
+                      "Failed to fetch kube-config."
                 logger.CLIENT_LOGGER.error(msg)
                 raise cse_exceptions.CseDuplicateClusterError(msg)
         except tkg_rest.ApiException as e:
-            msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS.get(e.status, f"{e.reason}")  # noqa: E501
+            msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{e.reason}")  # noqa: E501
             logger.CLIENT_LOGGER.error(msg)
             raise Exception(msg)
         except Exception as e:
