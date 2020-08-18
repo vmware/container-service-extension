@@ -124,7 +124,7 @@ def is_pks_enabled():
     return Service().is_pks_enabled()
 
 
-def is_tkg_plus_enabled(config: dict):
+def is_tkg_plus_enabled(config: dict = None):
     if not config:
         try:
             config = get_server_runtime_config()
