@@ -42,6 +42,7 @@ class TKGClusterApi:
                                             f"application/json;version={api_version}")  # noqa: E501
         org_logged_in = vcd_utils.get_org(self._client)
         org_id = org_logged_in.href.split('/')[-1]
+        # TODO setting right tenant context for sysadmin users
         self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.X_VMWARE_VCLOUD_TENANT_CONTEXT,  # noqa: E501
                                             org_id)
         self._tkg_client_api = TkgClusterApi(api_client=self._tkg_client)
@@ -245,7 +246,7 @@ class TKGClusterApi:
         """
         try:
             # set org-id extracted from org-urn in the header
-            org_id = org_urn.split(':')[-1]
+            org_id = vcd_utils.extract_id(org_urn)
             self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.X_VMWARE_VCLOUD_TENANT_CONTEXT,  # noqa: E501
                                                 org_id)
             response, status, headers, tkg_def_entities = \
@@ -296,4 +297,3 @@ class TKGClusterApi:
         except Exception as e:
             logger.CLIENT_LOGGER.error(f"{e}")
             raise
-
