@@ -297,14 +297,3 @@ class TKGClusterApi:
             logger.CLIENT_LOGGER.error(f"{e}")
             raise
 
-    def get_cluster_config(self, cluster_name, vdc=None, org=None):
-        """Get kubernetes cluster config of the cluster.
-
-        :param str cluster_name: TKG cluster name
-        :param str org: name of the org
-        :param str vdc: name of the vdc
-        :return: Cluster kubeconfig information
-        :rtype: str
-        :raises ClusterNotFoundError, CseDuplicateClusterError
-        """
-        raise NotImplementedError()
