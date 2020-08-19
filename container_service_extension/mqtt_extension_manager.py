@@ -429,34 +429,57 @@ class MQTTExtensionManager:
             active = False
         return active
 
-    def setup_api_filter(self, ext_uuid):
-        """Handle setting up api filter and returns its id.
+    def setup_api_filter_patterns(self, ext_uuid, patterns):
+        """Set up all of the specified api filter patterns.
 
-        Creates the filter if it has not been created. Also handles
-        possibility of more than one api filter being created with the same
-        endpoint path. Deletes any extra api filters.
+        Note: function assumes that all patterns are unique.
 
         :param str ext_uuid: the extension uuid
+        :param list patterns: list of api filter patterns
 
-        :return: id of api filter. In case of any error, the empty string
-            is returned.
-        :rtype: str
-        :raises: Exception if error in creating api filter or deleting extra
-            api filters
+        :return: dict of filter pattern keys mapped to id values
+        :rtype: dict of str keys and str values
         """
-        active_api_filter_ids = self.get_api_filter_ids(ext_uuid)
-        if not active_api_filter_ids:
-            return self.create_api_filter(ext_uuid)
-        elif len(active_api_filter_ids) > 1:
-            # Ensure only one api filter
-            for filter_id in active_api_filter_ids[1:]:
-                self.delete_api_filter(filter_id)
-        return active_api_filter_ids[0]
+        pattern_to_ids = self.get_api_filter_ids_for_patterns(ext_uuid,
+                                                              patterns)
+        if not pattern_to_ids:
+            return self.create_api_filter_patterns(ext_uuid, patterns)
+        elif len(pattern_to_ids) == len(patterns):
+            # Ensure each filter only has one id
+            pattern_to_one_id = {}
+            for pattern in patterns:
+                filter_ids = pattern_to_ids[pattern]
+                pattern_to_one_id[pattern] = filter_ids[0]
+                self.delete_extra_api_filters(filter_ids)
+            return pattern_to_one_id
+        else:
+            # Fewer patterns created than needed, so add the needed filters,
+            # and ensure the created filters only have one id
+            pattern_to_one_id = {}
+            for pattern in patterns:
+                filter_ids = pattern_to_ids.get(pattern)
+                if not filter_ids:
+                    pattern_to_one_id[pattern] = self.create_api_filter(
+                        ext_uuid, pattern)
+                else:
+                    pattern_to_one_id[pattern] = filter_ids[0]
+                    self.delete_extra_api_filters(filter_ids)
+            return pattern_to_one_id
 
-    def create_api_filter(self, ext_uuid):
+    def delete_extra_api_filters(self, api_filter_ids):
+        """Delete any extra API filters.
+
+        :param list api_filter_ids: list of api filter ids
+        """
+        if len(api_filter_ids) > 1:
+            for filter_id in api_filter_ids[1:]:
+                self.delete_api_filter_by_id(filter_id)
+
+    def create_api_filter(self, ext_uuid, api_filter_pattern):
         """Create the api filter for the extension endpoint.
 
         :param str ext_uuid: The extension uuid
+        :param str api_filter_pattern: api filter pattern
 
         :return: id of the api filter. In case of any error, the empty string
             is returned.
@@ -466,7 +489,7 @@ class MQTTExtensionManager:
         xml_str = \
             f"<vmext:ApiFilter xmlns:vmext =" \
             f"\"http://www.vmware.com/vcloud/extension/v1.5\">" \
-            f"<vmext:UrlPattern>{constants.MQTT_API_FILTER_PATTERN}" \
+            f"<vmext:UrlPattern>{api_filter_pattern}" \
             f"</vmext:UrlPattern ></vmext:ApiFilter>"
         xml_etree = etree.XML(xml_str)
         absolute_api_filters_url = f"{self._sysadmin_client.get_api_uri()}" \
@@ -481,19 +504,39 @@ class MQTTExtensionManager:
             response_body.attrib['href'])
         return api_filter_id
 
-    def get_api_filter_ids(self, ext_uuid):
-        """Retrieve all api filter ids with the passed in path.
+    def create_api_filter_patterns(self, ext_uuid, patterns):
+        """Create all the api filters in the given list.
+
+        Note: function assumes that all patterns are unique.
 
         :param str ext_uuid: the extension uuid
+        :param list patterns: list of api filter patterns
 
-        :return: list of api filter ids
-        :rtype: list of strs
+        :return: dict of filter pattern keys mapped to filter ids
+        :rtype: dict of str keys and str values
+        """
+        filter_ids = {}
+        for pattern in patterns:
+            filter_id = self.create_api_filter(ext_uuid, pattern)
+            filter_ids[pattern] = filter_id
+        return filter_ids
+
+    def get_api_filter_ids_for_patterns(self, ext_uuid, patterns):
+        """Retrieve the api filters.
+
+        Note: function assumes that all patterns are unique.
+
+        :param str ext_uuid: the extension uuid
+        :param list patterns: list of api filter patterns
+
+        :return: dict of filter pattern keys mapped to list of ids
+        :rtype: dict of str keys and list values
         :raises: Exception if error in making GET request
         """
         absolute_api_filters_url = f"{self._sysadmin_client.get_api_uri()}" \
                                    f"/{constants.ADMIN_EXT_SERVICE_PATH}/" \
                                    f"{ext_uuid}/{constants.API_FILTERS_PATH}"
-        filter_ids = []
+        pattern_to_ids = {}
         response_body = self._sysadmin_client.get_resource(
             uri=absolute_api_filters_url)
 
@@ -502,16 +545,21 @@ class MQTTExtensionManager:
         try:
             api_filters = response_body.ApiFilterRecord
         except AttributeError:
-            return filter_ids
+            return pattern_to_ids
+        patterns_set = set(patterns)
         for filter_info in api_filters:
-            if filter_info.attrib['urlPattern'] == \
-                    constants.MQTT_API_FILTER_PATTERN:
+            curr_pattern = filter_info.attrib['urlPattern']
+            if curr_pattern in patterns_set:
                 filter_id = _get_id_from_api_filter_link(
                     filter_info.attrib['href'])
-                filter_ids.append(filter_id)
-        return filter_ids
 
-    def delete_api_filter(self, filter_id):
+                # Init or add to current array of ids
+                curr_ids = pattern_to_ids.get(curr_pattern, [])
+                curr_ids.append(filter_id)
+                pattern_to_ids[curr_pattern] = curr_ids
+        return pattern_to_ids
+
+    def delete_api_filter_by_id(self, filter_id):
         """Delete the api filter.
 
         :param str filter_id: filter id
@@ -523,7 +571,19 @@ class MQTTExtensionManager:
                                    f"{constants.API_FILTER_PATH}/{filter_id}"
         self._sysadmin_client.delete_resource(absolute_api_filters_url)
 
-    def check_api_filter_exists(self, api_filter_id):
+    def delete_api_filter_patterns(self, ext_uuid, patterns):
+        """Delete the api filter patterns for the extension.
+
+        :param str ext_uuid: the extension uuid
+        :param list patterns: list of api filter patterns
+        """
+        pattern_to_ids = self.get_api_filter_ids_for_patterns(ext_uuid,
+                                                              patterns)
+        for filter_ids in pattern_to_ids.values():
+            for filter_id in filter_ids:
+                self.delete_api_filter_by_id(filter_id)
+
+    def check_api_filter_id_exists(self, api_filter_id):
         """Check if the api filter is active.
 
         :param str api_filter_id: the api filter id
@@ -542,3 +602,19 @@ class MQTTExtensionManager:
         except Exception:
             active = False
         return active
+
+    def check_api_filters_setup(self, ext_uuid, patterns):
+        """Check if the api filters passed in are set up.
+
+        Note: function assumes that all patterns are unique.
+
+        :param str ext_uuid: the extension uuid
+        :param list patterns: list of api filter patterns
+
+        :return: true if the filters are set up and false if not
+        :rtype: bool
+        """
+        pattern_to_ids = self.get_api_filter_ids_for_patterns(ext_uuid,
+                                                              patterns)
+        # filter_ids have at most one entry (list) per pattern
+        return len(patterns) == len(pattern_to_ids)
