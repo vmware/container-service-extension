@@ -130,6 +130,64 @@ class TkgClusterApi(object):
             _request_timeout=params.get('_request_timeout'),
             collection_formats=collection_formats)
 
+    def create_tkg_cluster_config_task(self, id, **kwargs):
+        """Obtain VCD task to get TKG cluster config.
+
+        Makes a call to /entities/{cluster_id}/behaviors/urn:vcloud:behavior-interface:createKubeConfig:vmware:k8s:1.0.0/invocations
+        which generates a task for creating the cluster kube-config. The task
+        is embedded in the 'Location' header of the response. Once the task
+        completes successfully, the kube-config can be found in GET /task/{id}
+        response, under Result.ResultContent tag.
+
+        Note: this method only returns the response to the behaviors endpoint
+        and doesn't handle waiting for task completion and returning the
+        kube-config.
+        :param str id: ID of the TKG cluster
+        """
+        all_params = ['id']  # noqa: E501
+        all_params.append('async_req')
+        # all_params.append('_return_http_data_only')
+        all_params.append('_preload_content')
+        all_params.append('_request_timeout')
+
+        params = locals()
+        for key, val in six.iteritems(params['kwargs']):
+            if key not in all_params:
+                raise TypeError(
+                    "Got an unexpected keyword argument '%s'"
+                    " to method create_tkg_cluster" % key
+                )
+            params[key] = val
+        del params['kwargs']
+        if ('id' not in params or
+                params['id'] is None):
+            raise ValueError("Missing the required parameter `id` when calling `get_tkg_cluster`")  # noqa: E501
+        path_params = {}
+        query_params = []
+        header_params = {}
+        header_params['Content-Type'] = self.api_client.select_header_content_type(['application/json'])  # noqa: E501
+        form_params = []
+        local_var_files = {}
+        body_params = None
+        auth_settings = []
+        collection_formats = {}
+        return self.api_client.call_api(
+            f"entities/{id}/behaviors/urn:vcloud:behavior-interface:createKubeConfig:vmware:k8s:1.0.0/invocations",  # noqa: E501
+            'POST',
+            path_params,
+            query_params,
+            header_params,
+            body=body_params,
+            post_params=form_params,
+            files=local_var_files,
+            response_type=None,  # Expected response has no content (204)
+            auth_settings=auth_settings,
+            async_req=params.get('async_req'),
+            _return_http_data_only=False,  # Task created present in the Location header  # noqa: E501
+            _preload_content=params.get('_preload_content', True),
+            _request_timeout=params.get('_request_timeout'),
+            collection_formats=collection_formats)
+
     def create_tkg_cluster(self, tkg_cluster, **kwargs):  # noqa: E501
         """Creates a new TKG cluster. This operation is asynchronous and returns a task that you can monitor to track the progress of the request.   # noqa: E501
 

@@ -25,6 +25,12 @@ TKG_CLUSTER_RUNTIME = 'TkgCluster'
 CSE_SERVER_RUNNING = 'cse_server_running'
 
 
+TKG_RESPONSE_MESSAGES_BY_STATUS_CODE = {
+    403: "User doesn't have required rights to perform the operation",
+    500: "Unexpected error occurred"
+}
+
+
 @unique
 class CLIOutputKey(str, Enum):
     """Keys for displaying Cluster list output."""
@@ -39,7 +45,7 @@ class CLIOutputKey(str, Enum):
 
 
 @unique
-class TKGClusterEntityFilterKey(str, Enum):
+class TKGEntityFilterKey(str, Enum):
     """Keys to filter TKG cluster entities in CSE CLI.
 
     Below Keys are commonly used filters. An entity can be filtered by any of
@@ -49,3 +55,13 @@ class TKGClusterEntityFilterKey(str, Enum):
     CLUSTER_NAME = 'entity.metadata.name'
     VDC_NAME = 'entity.metadata.virtualDataCenterName'
     ORG_NAME = 'org.name'
+
+
+@unique
+class TKGRequestHeaderKey(str, Enum):
+    """Header keys for tkgCluster requests."""
+
+    AUTHORIZATION = 'Authorization'
+    X_VCLOUD_AUTHORIZATION = 'x-vcloud-authorization'
+    ACCEPT = 'Accept'
+    X_VMWARE_VCLOUD_TENANT_CONTEXT = "x-vmware-vcloud-tenant-context"
