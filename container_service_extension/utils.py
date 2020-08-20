@@ -126,6 +126,21 @@ def is_pks_enabled():
     return Service().is_pks_enabled()
 
 
+def is_tkg_plus_enabled(config: dict = None):
+    if not config:
+        try:
+            config = get_server_runtime_config()
+        except Exception:
+            return False
+    service_section = config.get('service', {})
+    tkg_plus_enabled = service_section.get('enable_tkg_plus', False)
+    if isinstance(tkg_plus_enabled, bool):
+        return tkg_plus_enabled
+    elif isinstance(tkg_plus_enabled, str):
+        return str_to_bool(tkg_plus_enabled)
+    return False
+
+
 def get_duplicate_items_in_list(items):
     """Find duplicate entries in a list.
 

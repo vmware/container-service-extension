@@ -12,7 +12,7 @@ osl = 'open_source_license_container-service-extension_2.6_GA.txt'
 
 setup(
     setup_requires=['pbr>=1.9', 'setuptools>=17.1'],
-    packages=['container_service_extension'],
+    packages=['container_service_extension', 'cse_def_schema'],
     data_files=[
         (str(Path('/')), ['LICENSE.txt', 'NOTICE.txt', osl]),
     ],

@@ -113,6 +113,7 @@ OPERATION_TO_HANDLER = {
     CseOperation.V35_OVDC_LIST: v35_ovdc_handler.ovdc_list,
     CseOperation.V35_OVDC_INFO: v35_ovdc_handler.ovdc_info,
     CseOperation.V35_OVDC_UPDATE: v35_ovdc_handler.ovdc_update,
+    CseOperation.V35_TEMPLATE_LIST: template_handler.template_list,
 
     CseOperation.OVDC_UPDATE: ovdc_handler.ovdc_update,
     CseOperation.OVDC_INFO: ovdc_handler.ovdc_info,
@@ -350,6 +351,9 @@ def _get_v35_url_data(method: str, url: str, api_version: str):
     if operation_type == shared_constants.OperationType.OVDC:
         return _get_v35_ovdc_url_data(method, tokens)
 
+    if operation_type == shared_constants.OperationType.TEMPLATE:
+        return _get_v35_template_data(method, tokens)
+
     raise cse_exception.NotFoundRequestError()
 
 
@@ -443,6 +447,23 @@ def _get_v35_ovdc_url_data(method: str, tokens: list):
                 _OPERATION_KEY: CseOperation.V35_OVDC_INFO,
                 shared_constants.RequestKey.OVDC_ID: tokens[5]
             }
+        raise cse_exception.MethodNotAllowedRequestError()
+
+
+def _get_v35_template_data(method: str, tokens: list):
+    """Parse tokens from url and http method to get v35 template specific data.
+
+    Returns a dictionary with operation and url data.
+
+    :param shared_constants.RequestMethod method: http verb
+    :param str[] tokens: http url
+
+    :rtype: dict
+    """
+    num_tokens = len(tokens)
+    if num_tokens == 5:
+        if method == shared_constants.RequestMethod.GET:
+            return {_OPERATION_KEY: CseOperation.V35_TEMPLATE_LIST}
         raise cse_exception.MethodNotAllowedRequestError()
 
 

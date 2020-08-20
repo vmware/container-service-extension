@@ -275,7 +275,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 ClusterMetadataKey.CSE_VERSION: pkg_resources.require('container-service-extension')[0].version, # noqa: E501
                 ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME], # noqa: E501
                 ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION], # noqa: E501
-                ClusterMetadataKey.OS: template[LocalTemplateKey.OS], # noqa: E501
+                ClusterMetadataKey.OS: template[LocalTemplateKey.OS],
                 ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION], # noqa: E501
                 ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES], # noqa: E501
                 ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION], # noqa: E501
@@ -377,11 +377,8 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             # Update defined entity instance with new properties like vapp_id,
             # master_ip and nodes.
-            # TODO(DEF) VCDA-1567 Schema doesn't yet have nodes definition.
-            #  master and worker "nodes" also have to be updated.
             def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             def_entity.externalId = vapp_resource.get('href')
-            def_entity.entity.status.master_ip = master_ip
             def_entity.entity.status.phase = str(
                 DefEntityPhase(DefEntityOperation.CREATE,
                                DefEntityOperationStatus.SUCCEEDED))
@@ -1756,7 +1753,17 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                                                               log_wire=utils.str_to_bool(config['service']['log_wire']))  # noqa: E501
             sizing_class_href = None
             if sizing_class_name:
-                sizing_class_href = cpm.get_vdc_compute_policy(sizing_class_name)['href']  # noqa: E501
+                vdc_resource = vdc.get_resource()
+                filters = {
+                    'name': sizing_class_name,
+                    'isSizingOnly': True,
+                }
+                policies = list(cpm.list_compute_policies_on_vdc(vdc_resource.get('id'), filters=filters))  # noqa: E501
+                if len(policies) == 0:
+                    raise Exception(f"No sizing policy with the name {sizing_class_name} exists on the VDC")  # noqa: E501
+                if len(policies) > 1:
+                    raise Exception(f"Duplicate sizing policies with the name {sizing_class_name}")  # noqa: E501
+                sizing_class_href = policies[0]['href']
             if storage_profile:
                 storage_profile = vdc.get_storage_profile(storage_profile)
 

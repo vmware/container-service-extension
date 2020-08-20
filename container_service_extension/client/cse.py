@@ -20,6 +20,7 @@ import container_service_extension.client.utils as client_utils
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.utils as def_utils
 from container_service_extension.exceptions import CseResponseError
+from container_service_extension.exceptions import CseServerNotRunningError
 from container_service_extension.logger import CLIENT_LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
@@ -238,6 +239,12 @@ def cluster_delete(ctx, name, vdc, org, k8_runtime=None):
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
+        if client_utils.is_cli_for_tkg_only():
+            if k8_runtime in [ClusterEntityKind.NATIVE.value,
+                              ClusterEntityKind.TANZU_PLUS.value]:
+                # Cannot run the command as cse cli is enabled only for native
+                raise CseServerNotRunningError()
+            k8_runtime = ClusterEntityKind.TKG.value
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
@@ -604,7 +611,12 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
         k8_runtime = cluster_config.get('kind')
         if not k8_runtime:
             raise Exception("Cluster kind missing from the spec.")
-
+        if client_utils.is_cli_for_tkg_only():
+            if k8_runtime in [ClusterEntityKind.NATIVE.value,
+                              ClusterEntityKind.TANZU_PLUS.value]:
+                # Cannot run the command as cse cli is enabled only for native
+                raise CseServerNotRunningError()
+            k8_runtime = ClusterEntityKind.TKG.value
         metadata = cluster_config.get('metadata', {})
         metadata_vdc_key = ''
         if k8_runtime == ClusterEntityKind.NATIVE.value or \
@@ -668,6 +680,12 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name, k8_runtime=None):
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
+        if client_utils.is_cli_for_tkg_only():
+            if k8_runtime in [ClusterEntityKind.NATIVE.value,
+                              ClusterEntityKind.TANZU_PLUS.value]:
+                # Cannot run the command as cse cli is enabled only for native
+                raise CseServerNotRunningError()
+            k8_runtime = ClusterEntityKind.TKG.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org_name is None:
@@ -736,6 +754,12 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
+        if client_utils.is_cli_for_tkg_only():
+            if k8_runtime in [ClusterEntityKind.NATIVE.value,
+                              ClusterEntityKind.TANZU_PLUS.value]:
+                # Cannot run the command as cse cli is enabled only for native
+                raise CseServerNotRunningError()
+            k8_runtime = ClusterEntityKind.TKG.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org_name is None:
@@ -789,6 +813,12 @@ def cluster_config(ctx, name, vdc, org, k8_runtime=None):
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
+        if client_utils.is_cli_for_tkg_only():
+            if k8_runtime in [ClusterEntityKind.NATIVE.value,
+                              ClusterEntityKind.TANZU_PLUS.value]:
+                # Cannot run the command as cse cli is enabled only for native
+                raise CseServerNotRunningError()
+            k8_runtime = ClusterEntityKind.TKG.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
@@ -838,6 +868,12 @@ def cluster_info(ctx, name, org, vdc, k8_runtime=None):
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
+        if client_utils.is_cli_for_tkg_only():
+            if k8_runtime in [ClusterEntityKind.NATIVE.value,
+                              ClusterEntityKind.TANZU_PLUS.value]:
+                # Cannot run the command as cse cli is enabled only for native
+                raise CseServerNotRunningError()
+            k8_runtime = ClusterEntityKind.TKG.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
@@ -1308,20 +1344,20 @@ def list_ovdcs(ctx):
     '--native',
     'enable_native',
     is_flag=True,
-    help="Enable OVDC for native cluster deployment"
+    help="Enable OVDC for k8 runtime native"
 )
 @click.option(
     '-t',
     '--tkg-plus',
     'enable_tkg_plus',
     is_flag=True,
-    help="Enable OVDC for TKG plus cluster deployment"
+    help="Enable OVDC for k8 runtime TKG plus"
 )
-def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus):
+def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus=None):
     """Set Kubernetes provider for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     if not (enable_native or enable_tkg_plus):
-        msg = "Please specify at least one of --native or --tkg-plus to enable"
+        msg = "Please specify at least one k8 runtime to enable"
         stderr(msg, ctx)
         CLIENT_LOGGER.error(msg)
     k8_runtime = []
@@ -1370,14 +1406,14 @@ def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus):
     '--native',
     'disable_native',
     is_flag=True,
-    help="Disable OVDC for native cluster deployment"
+    help="Disable OVDC for k8 runtime native cluster"
 )
 @click.option(
     '-t',
     '--tkg-plus',
     'disable_tkg_plus',
     is_flag=True,
-    help="Disable OVDC for TKG plus cluster deployment"
+    help="Disable OVDC for k8 runtime TKG plus"
 )
 @click.option(
     '-f',
@@ -1387,12 +1423,12 @@ def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus):
     help="Remove the compute policies from deployed VMs as well. "
          "Does not remove the compute policy from vApp templates in catalog. ")
 def ovdc_disable(ctx, ovdc_name, org_name,
-                 disable_native, disable_tkg_plus,
-                 remove_cp_from_vms_on_disable):
+                 disable_native, disable_tkg_plus=None,
+                 remove_cp_from_vms_on_disable=False):
     """Disable Kubernetes cluster deployment for an org VDC."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     if not (disable_native or disable_tkg_plus):
-        msg = "Please specify at least one of --native or --tkg-plus to disable" # noqa:E501
+        msg = "Please specify at least one k8 runtime to disable"
         stderr(msg, ctx)
         CLIENT_LOGGER.error(msg)
     k8_runtime = []
@@ -1606,29 +1642,37 @@ def _get_sample_cluster_configuration(output=None):
     :return: sample cluster configuration
     :rtype: str
     """
-    metadata = def_models.Metadata('mycluster', 'myorg', 'myvdc')
+    metadata = def_models.Metadata('cluster_name', 'organization_name',
+                                   'org_virtual_datacenter_name')
     status = def_models.Status()
-    settings = def_models.Settings(network='myNetwork', ssh_key=None)
+    settings = def_models.Settings(network='ovdc_network_name', ssh_key=None)
     k8_distribution = def_models.Distribution(
         template_name='ubuntu-16.04_k8-1.17_weave-2.6.0',
         template_revision=2
     )
     control_plane = def_models.ControlPlane(
         count=1,
-        sizing_class='Large',
-        storage_profile='myStorageProfile'
+        sizing_class='Large_sizing_policy_name',
+        storage_profile='Gold_storage_profile_name'
     )
     workers = def_models.Workers(
         count=2,
-        sizing_class='small',
-        storage_profile='*'
+        sizing_class='Medium_sizing_policy_name',
+        storage_profile='Silver_storage_profile'
+    )
+
+    nfs = def_models.Nfs(
+        count=1,
+        sizing_class='Large_sizing_policy_name',
+        storage_profile='Platinum_storage_profile_name'
     )
 
     cluster_spec = def_models.ClusterSpec(
         control_plane=control_plane,
         k8_distribution=k8_distribution,
         settings=settings,
-        workers=workers
+        workers=workers,
+        nfs=nfs
     )
     cluster_entity = def_models.ClusterEntity(
         metadata=metadata,

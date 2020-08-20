@@ -136,7 +136,6 @@ class Nodes:
 @dataclass()
 class Status:
     # TODO(DEF) Remove master_ip once nodes is implemented.
-    master_ip: str = None
     phase: str = None
     cni: str = None
     task_href: str = None
@@ -146,11 +145,10 @@ class Status:
     os: str = None
     nodes: Nodes = None
 
-    def __init__(self, master_ip: str = None, phase: str = None,
+    def __init__(self, phase: str = None,
                  cni: str = None, task_href: str = None,
                  kubernetes: str = None, docker_version: str = None,
                  os: str = None, nodes: Nodes = None):
-        self.master_ip = master_ip
         self.phase = phase
         self.cni = cni
         self.task_href = task_href

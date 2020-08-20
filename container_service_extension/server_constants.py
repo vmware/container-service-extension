@@ -209,6 +209,7 @@ class CseOperation(Enum):
     V35_OVDC_LIST = ('list ovdcs for v35')
     V35_OVDC_INFO = ('get info of ovdc for v35')
     V35_OVDC_UPDATE = ('enable or disable ovdc for a cluster kind for v35', requests.codes.accepted)  # noqa: E501
+    V35_TEMPLATE_LIST = ('list all v35 templates')
 
     PKS_CLUSTER_CONFIG = ('get config of PKS cluster')
     PKS_CLUSTER_CREATE = ('create PKS cluster', requests.codes.accepted)

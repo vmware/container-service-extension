@@ -10,12 +10,15 @@ cryptography >= 2.8, < 3.0
 # humanfriendly 4.18
 humanfriendly >= 4.8, < 5.0
 
+#paho-mqtt 1.5.0
+paho-mqtt == 1.5.0
+
 # pika 0.13.1
 pika >= 0.11.2, < 1.0.0
 
 # pyvcloud 22.0.1
 # pyvcloud >= 22.0.1, < 23.0.0
-pyvcloud == 22.0.2.dev25
+pyvcloud == 22.0.2.dev27
 
 # pyvmomi 6.7.3
 pyvmomi >= 6.7.0 , < 7.0.0
