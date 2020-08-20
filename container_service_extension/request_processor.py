@@ -134,20 +134,68 @@ OPERATION_TO_HANDLER = {
 
 _OPERATION_KEY = 'operation'
 
+def _parse_accept_header(accept_header: str):
+    """Parse accept headers and select one that fits CSE.
+
+    CSE is looking for headers like
+    * application/json;version=33.0
+    * *;version=33.0
+    * */*;version=33.0
+    * application/*+json;version=33.0
+    If multiple matches are found, Will pick the first match.
+
+    :param str accept_header: value of 'Accept' header sent by client
+
+    :returns: accept header that is servicable by CSE
+
+    :raises NotAcceptableRequestError: If none of the accept headers matches
+        what CSE is looking for.
+    """
+    accept_header = accept_header.lower()
+    accept_headers = accept_header.split(",")
+
+    selected_header = None
+    for header in accept_headers:
+        tokens = header.split(';')
+        application_fragment = tokens[0]
+        tokens = application_fragment.split('/')
+        if len(tokens) > 1:
+            if tokens[0] in ('*', 'application'):
+                response_format = tokens[1]
+        if not response_format:
+            response_format = tokens[0]
+        response_format = response_format.replace('*+', '')
+        if response_format in ('json' , '*'):
+            selected_header = header
+            break
+
+    if not selected_header:
+        raise cse_exception.NotAcceptableRequestError(
+            error_message="CSE can only serve response as json.")
+
+    return selected_header
+
+
+def _get_api_version_from_accept_header(api_version_header: str):
+    api_version = '0.0'
+    if api_version_header:
+        tokens = api_version_header.split(";")
+        if len(tokens) == 2:
+            tokens = tokens[1].split("=")
+            if len(tokens) == 2:
+                api_version = tokens[1]
+    return api_version
+
 
 @handle_exception
 def process_request(message):
     from container_service_extension.service import Service
     LOGGER.debug(f"Incoming request message: {json.dumps(message)}")
 
-    api_version = '0.0'
-    accept_header = message['headers'].get('Accept')
-    if accept_header:
-        tokens = accept_header.split(";")
-        if len(tokens) == 2:
-            tokens = tokens[1].split("=")
-            if len(tokens) == 2:
-                api_version = tokens[1]
+    api_version_header = _parse_accept_header(
+        accept_header=message['headers'].get('Accept'))
+    api_version = _get_api_version_from_accept_header(
+        api_version_header=api_version_header)
 
     url_data = _get_url_data(method=message['method'],
                              url=message['requestUri'],
