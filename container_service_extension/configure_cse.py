@@ -2015,9 +2015,36 @@ def _create_def_entity_for_existing_clusters(
 
         def_entity = def_models.DefEntity(entity=cluster_entity)
         entity_svc.create_entity(native_entity_type.id, entity=def_entity)
+
         def_entity = entity_svc.get_native_entity_by_name(cluster['name'])
         def_entity_id = def_entity.id
         def_entity.externalId = cluster['vapp_href']
+
+        # update ownership of the entity
+        try:
+            user = client.get_user_in_org(
+                user_name=cluster['owner_name'],
+                org_href=cluster['org_href'])
+            user_urn = user.get('id')
+            orgmember_urn = user_urn.replace(":user:", ":orgMember:")
+
+            org_href = cluster['org_href']
+            org_id = org_href.split("/")[-1]
+            org_urn = f"urn:vcloud:org:{org_id}"
+
+            def_entity.owner = def_models.Owner(
+                name=cluster['owner_name'],
+                id=orgmember_urn)
+            def_entity.org = def_models.Org(
+                name=cluster['org_name'],
+                id=org_urn)
+        except Exception as err:
+            INSTALL_LOGGER.debug(str(err))
+            msg = "Unable to determine current owner of cluster " \
+                  f"'{cluster['name']}'. Unable to process ownership."
+            msg_update_callback.info(msg)
+            INSTALL_LOGGER.info(msg)
+
         entity_svc.update_entity(def_entity_id, def_entity)
         entity_svc.resolve_entity(def_entity_id)
 
