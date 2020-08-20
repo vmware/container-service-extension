@@ -165,7 +165,7 @@ def _parse_accept_header(accept_header: str):
 
         tokens = version_fragment.split("=")
         if len(tokens) == 2:
-            if tokens[0].lower() != 'version':
+            if tokens[0] != 'version':
                 continue
 
         tokens = application_fragment.split('/')
