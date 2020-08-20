@@ -134,6 +134,7 @@ OPERATION_TO_HANDLER = {
 
 _OPERATION_KEY = 'operation'
 
+
 def _parse_accept_header(accept_header: str):
     """Parse accept headers and select one that fits CSE.
 
@@ -157,15 +158,24 @@ def _parse_accept_header(accept_header: str):
     selected_header = None
     for header in accept_headers:
         tokens = header.split(';')
+        if len(tokens) != 2:
+            continue
         application_fragment = tokens[0]
+        version_fragment = tokens[1]
+
+        tokens = version_fragment.split("=")
+        if len(tokens) == 2:
+            if tokens[0].lower() != 'version':
+                continue
+
         tokens = application_fragment.split('/')
+        response_format = tokens[0]
         if len(tokens) > 1:
             if tokens[0] in ('*', 'application'):
                 response_format = tokens[1]
-        if not response_format:
-            response_format = tokens[0]
         response_format = response_format.replace('*+', '')
-        if response_format in ('json' , '*'):
+
+        if response_format in ('json', '*'):
             selected_header = header
             break
 
