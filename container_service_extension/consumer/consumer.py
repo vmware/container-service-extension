@@ -1,5 +1,5 @@
-from container_service_extension.amqp_consumer import AMQPConsumer
-from container_service_extension.mqtt_consumer import MQTTConsumer
+from container_service_extension.consumer.amqp_consumer import AMQPConsumer
+from container_service_extension.consumer.mqtt_consumer import MQTTConsumer
 import container_service_extension.server_constants as server_constants
 from container_service_extension.server_constants import MQTTExtKey, \
     MQTTExtTokenKey

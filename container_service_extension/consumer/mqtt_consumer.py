@@ -5,6 +5,7 @@ import sys
 
 import paho.mqtt.client as mqtt
 
+import container_service_extension.consumer.utils as utils
 import container_service_extension.logger as logger
 
 
@@ -22,6 +23,7 @@ class MQTTConsumer:
         self.verify_ssl = verify_ssl
         self.token = token
         self.client_username = client_username
+        self.fsencoding = sys.getfilesystemencoding()
 
     def connect(self):
         def on_connect(client, userdata, flags, rc):
@@ -30,31 +32,29 @@ class MQTTConsumer:
             client.subscribe(self.listen_topic, qos=2)
 
         def on_message(client, userdata, msg):
-            logger.SERVER_LOGGER.info(f'msg topic: {msg.topic}')
-            payload_json = None
-            try:
-                payload_json = json.loads(msg.payload.decode())
-            except ValueError as e:
-                logger.SERVER_LOGGER.error(f'error for parsing as json: {e}')
-                raise e
-            logger.SERVER_LOGGER.info(f"msg apiAccessToken: "
-                                      f"{payload_json['headers']['context']['apiAccessToken']}")  # noqa: E501
-            hello_msg = json.dumps({"msg": "hello world"})
+            payload_json = json.loads(msg.payload.decode())
+            http_req_json = json.loads(base64.b64decode(
+                payload_json['httpRequest']))
+            message_json = http_req_json['message']
+            reply_body, status_code = utils.get_reply_body_and_status_code(
+                message_json)
+
             response_json = {
                 "type": "API_RESPONSE",
                 "headers": {
                     "requestId": payload_json["headers"]["requestId"],
                 },
                 "httpResponse": {
-                    "statusCode": 200,
+                    "statusCode": status_code,
                     "headers": {
                         "Content-Type": "application/json",
-                        'Content-Length': len(hello_msg)
+                        'Content-Length': len(reply_body)
                     },
-                    "body":
-                        base64.b64encode(hello_msg.encode()).decode(sys.getfilesystemencoding()) # noqa: E501
+                    "body": base64.b64encode(reply_body.encode()).
+                    decode(sys.getfilesystemencoding())
                 }
             }
+
             pub_ret = client.publish(topic=self.respond_topic,
                                      payload=json.dumps(response_json),
                                      qos=2, retain=False)

@@ -22,7 +22,7 @@ import container_service_extension.compute_policy_manager \
     as compute_policy_manager
 from container_service_extension.config_validator import get_validated_config
 import container_service_extension.configure_cse as configure_cse
-from container_service_extension.consumer import MessageConsumer
+from container_service_extension.consumer.consumer import MessageConsumer
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.schema_service as def_schema_svc
 import container_service_extension.def_.utils as def_utils
@@ -258,12 +258,12 @@ class Service(object, metaclass=Singleton):
                     ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
                 ext_urn_id = ext_info[MQTTExtKey.EXT_URN_ID]
                 ext_uuid = mqtt_ext_manager.get_extension_uuid(ext_urn_id)
-                api_filter_ids = mqtt_ext_manager.get_api_filter_ids(ext_uuid)
-                if not api_filter_ids:
-                    msg = 'No MQTT Api filter found'
+                api_filters_status = mqtt_ext_manager.check_api_filters_setup(
+                    ext_uuid, configure_cse.API_FILTER_PATTERNS)
+                if not api_filters_status:
+                    msg = 'MQTT Api filter is not set up'
                     logger.SERVER_LOGGER.error(msg)
                     raise Exception(msg)
-                api_filter_id = api_filter_ids[0]
                 token_info = mqtt_ext_manager.create_extension_token(
                     token_name=server_constants.MQTT_TOKEN_NAME,
                     ext_urn_id=ext_urn_id)
@@ -271,7 +271,6 @@ class Service(object, metaclass=Singleton):
                 self.config['mqtt'].update(ext_info)
                 self.config['mqtt'].update(token_info)
                 self.config['mqtt'][MQTTExtKey.EXT_UUID] = ext_uuid
-                self.config['mqtt'][MQTTExtKey.API_FILTER_ID] = api_filter_id
             except Exception as err:
                 msg = f'MQTT extension setup error: {err}'
                 logger.SERVER_LOGGER.error(msg)

@@ -6,17 +6,12 @@ import base64
 import json
 import sys
 import threading
-import traceback
 
 import pika
-import requests
 
-from container_service_extension.exceptions import CseRequestError
-from container_service_extension.exceptions import NotAcceptableRequestError
+import container_service_extension.consumer.utils as utils
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-import container_service_extension.request_processor as request_processor
 from container_service_extension.server_constants import EXCHANGE_TYPE
-from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 
 
 class AMQPConsumer(object):
@@ -149,41 +144,14 @@ class AMQPConsumer(object):
 
     def on_message(self, unused_channel, basic_deliver, properties, body):
         self.acknowledge_message(basic_deliver.delivery_tag)
-        try:
-            body_json = json.loads(body.decode(self.fsencoding))[0]
-            LOGGER.debug(f"Received message # {basic_deliver.delivery_tag} "
-                         f"from {properties.app_id} "
-                         f"({threading.currentThread().ident}): "
-                         f"{json.dumps(body_json)}, props: {properties}")
+        body_json = json.loads(body.decode(self.fsencoding))[0]
+        LOGGER.debug(f"Received message # {basic_deliver.delivery_tag} "
+                     f"from {properties.app_id} "
+                     f"({threading.currentThread().ident}): "
+                     f"{json.dumps(body_json)}, props: {properties}")
 
-            response_format = None
-            accept_header = body_json['headers']['Accept'].lower()
-            accept_header = accept_header.split(';')[0]
-            tokens = accept_header.split('/')
-            if len(tokens) > 1:
-                if tokens[0] in ('*', 'application'):
-                    response_format = tokens[1]
-            if not response_format:
-                response_format = tokens[0]
-            response_format = response_format.replace('*+', '')
-
-            if not ('json' in response_format or '*' == response_format):
-                raise NotAcceptableRequestError(
-                    error_message="CSE can only serve response as json.")
-
-            result = request_processor.process_request(body_json)
-
-            status_code = result['status_code']
-            reply_body = json.dumps(result['body'])
-        except Exception as e:
-            if isinstance(e, CseRequestError):
-                status_code = e.status_code
-            else:
-                status_code = requests.codes.internal_server_error
-            reply_body = json.dumps({RESPONSE_MESSAGE_KEY: str(e)})
-
-            tb = traceback.format_exc()
-            LOGGER.error(tb)
+        reply_body, status_code = \
+            utils.get_reply_body_and_status_code(body_json)
 
         if properties.reply_to is not None:
             reply_msg = {
@@ -193,9 +161,11 @@ class AMQPConsumer(object):
                     'Content-Length': len(reply_body)
                 },
                 'statusCode': status_code,
-                'body': base64.b64encode(reply_body.encode()).decode(self.fsencoding), # noqa: E501
+                'body': base64.b64encode(reply_body.encode()).decode(
+                    self.fsencoding),
                 'request': False
             }
+
             LOGGER.debug(f"reply: {reply_body}")
 
             reply_properties = pika.BasicProperties(
