@@ -30,6 +30,7 @@ class MQTTConsumer:
         self.token = token
         self.client_username = client_username
         self.fsencoding = sys.getfilesystemencoding()
+        self.mqtt_client = None
 
     def connect(self):
         def on_connect(client, userdata, flags, rc):
@@ -73,29 +74,31 @@ class MQTTConsumer:
         def on_disconnect(client, userdata, rc):
             logger.SERVER_LOGGER.info(f'MQTT disconnect with reason: {rc}')
 
-        mqtt_client = mqtt.Client(client_id=CLIENT_ID,
-                                  transport=TRANSPORT_WSS)
-        mqtt_client.username_pw_set(username=self.client_username,
-                                    password=self.token)
+        self.mqtt_client = mqtt.Client(client_id=CLIENT_ID,
+                                       transport=TRANSPORT_WSS)
+        self.mqtt_client.username_pw_set(username=self.client_username,
+                                         password=self.token)
         cert_req = ssl.CERT_REQUIRED if self.verify_ssl else ssl.CERT_NONE
-        mqtt_client.tls_set(cert_reqs=cert_req)
-        mqtt_client.ws_set_options(path=BROKER_PATH)
+        self.mqtt_client.tls_set(cert_reqs=cert_req)
+        self.mqtt_client.ws_set_options(path=BROKER_PATH)
 
         # Setup callbacks
-        mqtt_client.on_connect = on_connect
-        mqtt_client.on_message = on_message
-        mqtt_client.on_disconnect = on_disconnect
-        mqtt_client.on_subscribe = on_subscribe
+        self.mqtt_client.on_connect = on_connect
+        self.mqtt_client.on_message = on_message
+        self.mqtt_client.on_disconnect = on_disconnect
+        self.mqtt_client.on_subscribe = on_subscribe
 
         try:
-            mqtt_client.connect(self.url, port=CONNECT_PORT)
+            self.mqtt_client.connect(self.url, port=CONNECT_PORT)
+            raise Exception
         except Exception as e:
             logger.SERVER_LOGGER.error(f'connection error: {e}')
             raise e
-        mqtt_client.loop_forever()
+        self.mqtt_client.loop_forever()
 
     def run(self):
         self.connect()
 
     def stop(self):
-        pass
+        if self.mqtt_client:
+            self.mqtt_client.disconnect()
