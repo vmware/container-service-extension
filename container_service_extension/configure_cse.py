@@ -249,7 +249,7 @@ def _construct_cse_extension_description(target_vcd_api_version):
     return description
 
 
-def parse_cse_extension_description(sys_admin_client, config):
+def parse_cse_extension_description(sys_admin_client, is_mqtt_exchange):
     """Parse CSE extension description.
 
     :param Client sys_admin_client: system admin vcd client
@@ -259,7 +259,7 @@ def parse_cse_extension_description(sys_admin_client, config):
         GET request for the extension info
     """
     description = ''
-    if utils.should_use_mqtt_protocol(config):
+    if is_mqtt_exchange:
         mqtt_ext_manager = MQTTExtensionManager(sys_admin_client)
         mqtt_ext_info = mqtt_ext_manager.get_extension_info(
             ext_name=server_constants.CSE_SERVICE_NAME,
@@ -381,7 +381,8 @@ def install_cse(config_file_name, skip_template_creation,
 
         # Setup extension message protocol
         if utils.should_use_mqtt_protocol(config):
-            _register_cse_as_mqtt_extension(client, config,
+            _register_cse_as_mqtt_extension(client,
+                                            config['vcd']['api_version'],
                                             msg_update_callback)
         else:
             # create amqp exchange if it doesn't exist
@@ -528,11 +529,12 @@ def _get_existing_extension_type(client):
     return server_constants.ExtensionType.NONE
 
 
-def _register_cse_as_mqtt_extension(client, config, msg_update_callback):
+def _register_cse_as_mqtt_extension(client, target_vcd_api_version,
+                                    msg_update_callback):
     """Install the MQTT extension and api filter.
 
     :param Client client: client used to install cse server components
-    :param dict config: content of the CSE config file.
+    :param str target_vcd_api_version: the desired vcd api version
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :raises requests.exceptions.HTTPError: if the MQTT extension and api filter
@@ -540,7 +542,7 @@ def _register_cse_as_mqtt_extension(client, config, msg_update_callback):
     """
     mqtt_ext_manager = MQTTExtensionManager(client)
     description = _construct_cse_extension_description(
-        config['vcd']['api_version'])
+        target_vcd_api_version)
     ext_info = mqtt_ext_manager.setup_extension(
         ext_name=server_constants.CSE_SERVICE_NAME,
         ext_version=server_constants.MQTT_EXTENSION_VERSION,
@@ -1156,27 +1158,22 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
             msg = "Upgrading from MQTT extension to AMQP extension is not " \
                   "supported"
             raise Exception(msg)
-        try:
-            ext_cse_version, ext_vcd_api_version = \
-                parse_cse_extension_description(client, config)
-            if ext_cse_version == server_constants.UNKNOWN_CSE_VERSION or \
-                    ext_vcd_api_version == server_constants.UNKNOWN_VCD_API_VERSION: # noqa: E501
-                msg = "Found CSE api extension registered with vCD, but " \
-                      "couldn't determine version of CSE and/or vCD api " \
-                      "used previously."
-                msg_update_callback.info(msg)
-                INSTALL_LOGGER.info(msg)
-            else:
-                msg = "Found CSE api extension registered by CSE " \
-                      f"'{ext_cse_version}' at vCD api version " \
-                      f"'v{ext_vcd_api_version}'."
-                msg_update_callback.general(msg)
-                INSTALL_LOGGER.info(msg)
-        except MissingRecordException:
-            # No AMQP extension
-            msg = "CSE api extension not registered with vCD. Please use " \
-                  "`cse install' instead of 'cse upgrade'."
-            raise Exception(msg)
+        ext_cse_version, ext_vcd_api_version = \
+            parse_cse_extension_description(
+                client, utils.should_use_mqtt_protocol(config))
+        if ext_cse_version == server_constants.UNKNOWN_CSE_VERSION or \
+                ext_vcd_api_version == server_constants.UNKNOWN_VCD_API_VERSION: # noqa: E501
+            msg = "Found CSE api extension registered with vCD, but " \
+                  "couldn't determine version of CSE and/or vCD api " \
+                  "used previously."
+            msg_update_callback.info(msg)
+            INSTALL_LOGGER.info(msg)
+        else:
+            msg = "Found CSE api extension registered by CSE " \
+                  f"'{ext_cse_version}' at vCD api version " \
+                  f"'v{ext_vcd_api_version}'."
+            msg_update_callback.general(msg)
+            INSTALL_LOGGER.info(msg)
 
         target_vcd_api_version = config['vcd']['api_version']
         target_cse_version = utils.get_installed_cse_version()
@@ -1371,7 +1368,8 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
         existing_ext_type = _get_existing_extension_type(client)
         if existing_ext_type == server_constants.ExtensionType.AMQP:
             _deregister_cse_amqp_extension(client)
-            _register_cse_as_mqtt_extension(client, config,
+            _register_cse_as_mqtt_extension(client,
+                                            config['vcd']['api_version'],
                                             msg_update_callback)
         elif existing_ext_type == server_constants.ExtensionType.MQTT:
             # Remove api filters and update description
