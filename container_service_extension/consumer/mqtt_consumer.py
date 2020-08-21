@@ -90,7 +90,6 @@ class MQTTConsumer:
 
         try:
             self.mqtt_client.connect(self.url, port=CONNECT_PORT)
-            raise Exception
         except Exception as e:
             logger.SERVER_LOGGER.error(f'connection error: {e}')
             raise e
