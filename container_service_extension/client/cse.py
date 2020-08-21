@@ -81,8 +81,18 @@ def list_templates(ctx):
         client = ctx.obj['client']
         cluster = Cluster(client)
         result = cluster.get_templates()
-        stdout(result, ctx, sort_headers=False)
         CLIENT_LOGGER.debug(result)
+
+        fields_to_display = [
+            'name', 'revision', 'is_default', 'catalog', 'catalog_item',
+            'description']
+        all_templates = []
+        for template in result:
+            filtered_template_record = {}
+            for field in fields_to_display:
+                filtered_template_record[field] = template.get(field, '')
+            all_templates.append(filtered_template_record)
+        stdout(all_templates, ctx, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
