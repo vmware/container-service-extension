@@ -32,7 +32,7 @@ class Cluster:
         if float(api_version) < float(vcd_client.ApiVersion.VERSION_35.value):   # noqa: E501
             return LegacyNativeClusterApi(client)
         elif float(api_version) >= float(vcd_client.ApiVersion.VERSION_35.value):  # noqa: E501
-            if k8_runtime == ClusterEntityKind.NATIVE.value or k8_runtime == ClusterEntityKind.TANZU_PLUS.value:  # noqa: E501
+            if k8_runtime == ClusterEntityKind.NATIVE.value or k8_runtime == ClusterEntityKind.TKG_PLUS.value:  # noqa: E501
                 return NativeClusterApi(client)
             elif k8_runtime == ClusterEntityKind.TKG.value:
                 return TKGClusterApi(client)

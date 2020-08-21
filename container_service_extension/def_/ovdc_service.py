@@ -240,7 +240,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                                           compute_policy_href=policy['href'])
 
         for cp_name in policies_to_delete:
-            msg = f"Removing k8s provider {cp_name} from OVDC {ovdc_id}"
+            msg = f"Removing k8s provider {RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP[cp_name]} from OVDC {ovdc_id}"  # noqa: E501
             logger.SERVER_LOGGER.debug(msg)
             task_resource = \
                 task.update(status=vcd_client.TaskStatus.RUNNING.value,

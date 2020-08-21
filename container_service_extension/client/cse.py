@@ -239,7 +239,7 @@ def cluster_delete(ctx, name, vdc, org, k8_runtime=None):
         client = ctx.obj['client']
         if client_utils.is_cli_for_tkg_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
-                              shared_constants.ClusterEntityKind.TANZU_PLUS.value]:  # noqa: E501
+                              shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
@@ -611,14 +611,14 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
             raise Exception("Cluster kind missing from the spec.")
         if client_utils.is_cli_for_tkg_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
-                              shared_constants.ClusterEntityKind.TANZU_PLUS.value]:  # noqa: E501
+                              shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
         metadata = cluster_config.get('metadata', {})
         metadata_vdc_key = ''
         if k8_runtime == shared_constants.ClusterEntityKind.NATIVE.value or \
-                k8_runtime == shared_constants.ClusterEntityKind.TANZU_PLUS.value:  # noqa: E501
+                k8_runtime == shared_constants.ClusterEntityKind.TKG_PLUS.value:  # noqa: E501
             metadata_vdc_key = 'ovdc_name'
         elif k8_runtime == shared_constants.ClusterEntityKind.TKG.value:
             metadata_vdc_key = 'virtualDataCenterName'
@@ -680,7 +680,7 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name, k8_runtime=None):
         client_utils.cse_restore_session(ctx)
         if client_utils.is_cli_for_tkg_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
-                              shared_constants.ClusterEntityKind.TANZU_PLUS.value]:  # noqa: E501
+                              shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
@@ -754,7 +754,7 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
         client_utils.cse_restore_session(ctx)
         if client_utils.is_cli_for_tkg_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
-                              shared_constants.ClusterEntityKind.TANZU_PLUS.value]:  # noqa: E501
+                              shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
@@ -813,7 +813,7 @@ def cluster_config(ctx, name, vdc, org, k8_runtime=None):
         client_utils.cse_restore_session(ctx)
         if client_utils.is_cli_for_tkg_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
-                              shared_constants.ClusterEntityKind.TANZU_PLUS.value]:  # noqa: E501
+                              shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
@@ -868,7 +868,7 @@ def cluster_info(ctx, name, org, vdc, k8_runtime=None):
         client_utils.cse_restore_session(ctx)
         if client_utils.is_cli_for_tkg_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
-                              shared_constants.ClusterEntityKind.TANZU_PLUS.value]:  # noqa: E501
+                              shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
@@ -1362,7 +1362,7 @@ def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus=None):
     if enable_native:
         k8_runtime.append(shared_constants.ClusterEntityKind.NATIVE.value)
     if enable_tkg_plus:
-        k8_runtime.append(shared_constants.ClusterEntityKind.TANZU_PLUS.value)  # noqa: E501
+        k8_runtime.append(shared_constants.ClusterEntityKind.TKG_PLUS.value)
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
@@ -1431,9 +1431,9 @@ def ovdc_disable(ctx, ovdc_name, org_name,
         CLIENT_LOGGER.error(msg)
     k8_runtime = []
     if disable_native:
-        k8_runtime.append(shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY)
+        k8_runtime.append(shared_constants.ClusterEntityKind.NATIVE.value)
     if disable_tkg_plus:
-        k8_runtime.append(shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY)
+        k8_runtime.append(shared_constants.ClusterEntityKind.TKG_PLUS.value)
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']

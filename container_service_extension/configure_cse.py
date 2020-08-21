@@ -1963,7 +1963,7 @@ def _create_def_entity_for_existing_clusters(
             # TODO combine to a single constant
             kind = def_utils.ClusterEntityKind.NATIVE.value
         elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
-            kind = def_utils.ClusterEntityKind.TANZU_PLUS.value
+            kind = def_utils.ClusterEntityKind.TKG_PLUS.value
 
         worker_nodes = []
         for item in cluster['nodes']:
