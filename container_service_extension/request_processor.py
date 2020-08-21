@@ -154,28 +154,64 @@ def _parse_accept_header(accept_header: str):
     """
     accept_header = accept_header.lower()
     accept_headers = accept_header.split(",")
+    processed_headers = {}
 
-    selected_header = None
     for header in accept_headers:
+        # break the header into a tuple that follows the following structure
+        # "application/json;version=33.0" ->
+        #     ('application', 'json', 'version', '33.0')
+        # "application/*;version=33.0" ->
+        #     ('application', '*', 'version', '33.0')
+        # "application/*+json;version=33.0" ->
+        #     ('application', '*+json', 'version', '33.0')
+        # "*/*;version=33.0" -> ('*', '*', 'version', '33.0')
+        # "*;version=33.0" -> ('*', '', 'version', '33.0')
+
         tokens = header.split(';')
-        if len(tokens) != 2:
-            continue
-        application_fragment = tokens[0]
-        version_fragment = tokens[1]
+        application_fragment = ''
+        version_fragment = ''
+        if len(tokens) >= 1:
+            application_fragment = tokens[0]
+        if len(tokens) >= 2:
+            version_fragment = tokens[1]
+
+        tokens = application_fragment.split("/")
+        val0 = ''
+        val1 = ''
+        if len(tokens) >= 1:
+            val0 = tokens[0]
+        if len(tokens) >= 2:
+            val1 = tokens[1]
 
         tokens = version_fragment.split("=")
-        if len(tokens) == 2:
-            if tokens[0] != 'version':
-                continue
+        val2 = ''
+        val3 = ''
+        if len(tokens) >= 1:
+            val2 = tokens[0]
+        if len(tokens) >= 2:
+            val3 = tokens[1]
 
-        tokens = application_fragment.split('/')
-        response_format = tokens[0]
-        if len(tokens) > 1:
-            if tokens[0] in ('*', 'application'):
-                response_format = tokens[1]
-        response_format = response_format.replace('*+', '')
+        processed_headers[header] = (val0, val1, val2, val3)
 
-        if response_format in ('json', '*'):
+    selected_header = None
+    for header, value in processed_headers.items():
+        val0 = value[0]
+        val1 = value[1]
+        val2 = value[2]
+
+        # * -> */*
+        if val0 == '*' and not val1:
+            val1 = '*'
+
+        if val0 == '*':
+            val0 = 'application'
+
+        # *+json -> json
+        val1 = val1.replace('*+', '')
+        if val1 == '*':
+            val1 = 'json'
+
+        if (val0, val1, val2) == ('application', 'json', 'version'):
             selected_header = header
             break
 
