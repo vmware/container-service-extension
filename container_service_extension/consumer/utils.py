@@ -42,4 +42,3 @@ def get_reply_body_and_status_code(msg_json):
         LOGGER.error(tb)
 
     return reply_body, status_code
-
