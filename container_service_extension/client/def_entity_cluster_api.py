@@ -99,6 +99,8 @@ class DefEntityClusterApi:
         filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         native_def_entity_dict = {}
+        has_native_rights = True
+        has_tkg_rights = True
         # NOTE: The following can throw error if invoked by users who
         # doesn't have the necessary rights.
         try:
@@ -108,21 +110,22 @@ class DefEntityClusterApi:
             if native_def_entity:
                 native_def_entity_dict = asdict(native_def_entity)
         except Exception:
-            pass
+            has_native_rights = False
 
-        tkg_entities = []
+        tkg_def_entity_dicts = []
         # NOTE: The following can throw error if invoked by users who
         # doesn't have the necessary rights.
         try:
-            tkg_entities, _ = self._tkgCluster.get_tkg_clusters_by_name(
+            tkg_def_entity_dicts = self._tkgCluster.get_tkg_clusters_by_name(
                 cluster_name,
                 vdc=vdc,
                 org=org)
         except Exception:
-            pass
-        # convert the tkg entities to dictionary
-        tkg_entity_dicts = [tkg_entity.to_dict() for tkg_entity in tkg_entities]  # noqa: E501
-        return tkg_entity_dicts, native_def_entity_dict
+            has_tkg_rights = False
+        if not (has_native_rights and has_tkg_rights):
+            raise Exception("User cannot access native or TKG clusters."
+                            " Please contact administrator")
+        return tkg_def_entity_dicts, native_def_entity_dict
 
     def get_cluster_info(self, cluster_name, org=None, vdc=None, **kwargs):
         """Get cluster information using DEF API.
@@ -138,19 +141,20 @@ class DefEntityClusterApi:
         """
         # TODO(Display Owner information): Owner information needs to be
         # displayed
-        tkg_entities, native_def_entity = \
+        tkg_def_entities, native_def_entity = \
             self._get_tkg_native_clusters_by_name(cluster_name,
                                                   org=org, vdc=vdc)
-        if (tkg_entities and native_def_entity) or (len(tkg_entities) > 1):
+        if (tkg_def_entities and native_def_entity) \
+                or (len(tkg_def_entities) > 1):
             msg = f"Multiple clusters found with name {cluster_name}. " \
                   "Please use the flag --k8-runtime to uniquely identify the cluster." # noqa: E501
             logger.CLIENT_LOGGER.error(msg)
             raise cse_exceptions.CseDuplicateClusterError(msg)
-        elif not native_def_entity and len(tkg_entities) == 0:
+        elif not native_def_entity and len(tkg_def_entities) == 0:
             msg = f"Cluster '{cluster_name}' not found."
             logger.CLIENT_LOGGER.error(msg)
             raise cse_exceptions.ClusterNotFoundError(msg)
-        cluster_info = native_def_entity.get('entity') or tkg_entities[0]
+        cluster_info = native_def_entity.get('entity') or tkg_def_entities[0].get('entity')  # noqa: E501
         logger.CLIENT_LOGGER.debug(
             f"Received defined entity of cluster {cluster_name} : {cluster_info}")  # noqa: E501
         return yaml.dump(cluster_info)
@@ -166,22 +170,24 @@ class DefEntityClusterApi:
         :rtype: str
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
-        tkg_entities, native_def_entity = \
+        tkg_def_entities, native_def_entity = \
             self._get_tkg_native_clusters_by_name(cluster_name,
                                                   org=org, vdc=vdc)
-        if (tkg_entities and native_def_entity) or (len(tkg_entities) > 1):
+        if (tkg_def_entities and native_def_entity) or \
+                (len(tkg_def_entities) > 1):
             msg = f"Multiple clusters found with name {cluster_name}. " \
                 "Please use the flag --k8-runtime to uniquely identify the cluster." # noqa: E501
             logger.CLIENT_LOGGER.error(msg)
             raise cse_exceptions.CseDuplicateClusterError(msg)
-        elif not native_def_entity and len(tkg_entities) == 0:
+        elif not native_def_entity and len(tkg_def_entities) == 0:
             msg = f"Cluster '{cluster_name}' not found."
             logger.CLIENT_LOGGER.error(msg)
             raise cse_exceptions.ClusterNotFoundError(msg)
         elif native_def_entity:
             return self._nativeCluster.get_cluster_config_by_id(
                 native_def_entity.get('id'))
-        return self._tkgCluster.get_cluster_config(cluster_name=cluster_name, org=org, vdc=vdc)  # noqa: E501
+        return self._tkgCluster.get_cluster_config_by_id(cluster_id=tkg_def_entities[0].get('id'),  # noqa: E501
+                                                         org_urn=tkg_def_entities[0].get('org', {}).get('id'))  # noqa: E501
 
     def delete_cluster(self, cluster_name, org=None, vdc=None):
         """Delete DEF cluster by name.
@@ -193,22 +199,22 @@ class DefEntityClusterApi:
         :rtype: str
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
-        tkg_entities, native_entity = \
+        tkg_def_entities, native_entity = \
             self._get_tkg_native_clusters_by_name(cluster_name,
                                                   org=org, vdc=vdc)
-        if (tkg_entities and native_entity) or (len(tkg_entities) > 1):
+        if (tkg_def_entities and native_entity) or (len(tkg_def_entities) > 1):
             msg = f"Multiple clusters found with name {cluster_name}. " \
                   "Please use the flag --k8-runtime to uniquely identify the cluster to delete."  # noqa: E501
             logger.CLIENT_LOGGER.error(msg)
             raise cse_exceptions.CseDuplicateClusterError(msg)
-        elif not native_entity and len(tkg_entities) == 0:
+        elif not native_entity and len(tkg_def_entities) == 0:
             msg = f"Cluster '{cluster_name}' not found."
             logger.CLIENT_LOGGER.error(msg)
             raise cse_exceptions.ClusterNotFoundError(msg)
         elif native_entity:
             return self._nativeCluster.delete_cluster_by_id(
                 native_entity.get('id'))
-        return self._tkgCluster.delete_cluster(cluster_name=cluster_name)
+        return self._tkgCluster.delete_cluster_by_id(cluster_id=tkg_def_entities[0].get('id'))  # noqa: E501
 
     def get_upgrade_plan(self, cluster_name, org=None, vdc=None):
         """Get the upgrade plan for the given cluster name.

@@ -84,7 +84,7 @@ class NativeClusterApi:
         :param str cluster_name: native cluster name
         :param str org: name of the org
         :param str vdc: name of the vdc
-        :return: deleted cluster information
+        :return: string containing delete operation task href
         :rtype: str
         :raises ClusterNotFoundError
         """
@@ -99,7 +99,7 @@ class NativeClusterApi:
         """Delete the existing Kubernetes cluster by id.
 
         :param str cluster_id: native cluster entity id
-        :return: decoded response content
+        :return: string containing the task for delete operation
         :rtype: str
         """
         uri = f"{self._uri}/cluster/{cluster_id}"
@@ -109,7 +109,8 @@ class NativeClusterApi:
             self._client._session,
             media_type='application/json',
             accept_type='application/json')
-        return yaml.dump(response_processor.process_response(response))
+        cluster_entity = def_models.DefEntity(**response_processor.process_response(response))  # noqa: E501
+        return f"task_href: {cluster_entity.entity.status.task_href}"
 
     def get_cluster_config(self, cluster_name, org=None, vdc=None):
         """Get cluster config for the given cluster name.
@@ -187,8 +188,8 @@ class NativeClusterApi:
         should be upgraded to.
         :param org_name: name of the org
         :param ovdc_name: name of the vdc
-        :return: requests.models.Response response
-        :rtype: dict
+        :return: string containing upgrade cluster task href
+        :rtype: str
         """
         filters = client_utils.construct_filters(org=org_name, vdc=ovdc_name)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
@@ -204,8 +205,8 @@ class NativeClusterApi:
 
         :param str cluster_id: unique id of the cluster
         :param dict cluster_entity: defined entity
-        :return: requests.models.Response response
-        :rtype: dict
+        :return: string containing upgrade cluster task href
+        :rtype: str
         """
         uri = f'{self._uri}/cluster/{cluster_id}/action/upgrade'
         response = self._client._do_request_prim(
@@ -215,13 +216,15 @@ class NativeClusterApi:
             contents=cluster_entity['entity'],
             media_type='application/json',
             accept_type='application/json')
-        return yaml.dump(response_processor.process_response(response)['entity']) # noqa: E501
+        cluster_entity = def_models.DefEntity(**response_processor.process_response(response))  # noqa: E501
+        return f"task_href: {cluster_entity.entity.status.task_href}"
 
     def apply(self, cluster_config):
         """Apply the configuration either to create or update the cluster.
 
         :param dict cluster_config: cluster configuration information
-        :return: str
+        :return: dictionary containing the apply operation task
+        :rtype: dict
         """
         uri = f"{self._uri}/clusters"
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
@@ -246,4 +249,5 @@ class NativeClusterApi:
                 contents=cluster_config,
                 media_type='application/json',
                 accept_type='application/json')
-        return yaml.dump(response_processor.process_response(response)['entity']) # noqa: E501
+        cluster_entity = def_models.DefEntity(**response_processor.process_response(response))  # noqa: E501
+        return f"task_href: {cluster_entity.entity.status.task_href}"
