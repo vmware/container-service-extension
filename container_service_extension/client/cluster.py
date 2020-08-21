@@ -8,7 +8,7 @@ from container_service_extension.client.def_entity_cluster_api import DefEntityC
 from container_service_extension.client.legacy_native_cluster_api import LegacyNativeClusterApi  # noqa: E501
 from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
 from container_service_extension.client.tkg_cluster_api import TKGClusterApi
-from container_service_extension.def_.utils import ClusterEntityKind
+from container_service_extension.shared_constants import ClusterEntityKind
 
 
 class Cluster:
@@ -32,7 +32,7 @@ class Cluster:
         if float(api_version) < float(vcd_client.ApiVersion.VERSION_35.value):   # noqa: E501
             return LegacyNativeClusterApi(client)
         elif float(api_version) >= float(vcd_client.ApiVersion.VERSION_35.value):  # noqa: E501
-            if k8_runtime == ClusterEntityKind.NATIVE.value or k8_runtime == ClusterEntityKind.TANZU_PLUS.value:  # noqa: E501
+            if k8_runtime == ClusterEntityKind.NATIVE.value or k8_runtime == ClusterEntityKind.TKG_PLUS.value:  # noqa: E501
                 return NativeClusterApi(client)
             elif k8_runtime == ClusterEntityKind.TKG.value:
                 return TKGClusterApi(client)
