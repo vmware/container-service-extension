@@ -779,7 +779,7 @@ def _setup_placement_policies(client,
 
         for policy in policy_list:
             if not is_tkg_plus_enabled and \
-                    policy == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY:
+                    policy == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
                 continue
             try:
                 cpm.get_vdc_compute_policy(policy, is_placement_policy=True)
@@ -815,7 +815,6 @@ def _install_all_templates(
 
         # create all templates defined in cookbook
         for template in remote_template_cookbook['templates']:
-            # TODO tag created templates with placement policies
             _install_single_template(
                 client=client,
                 remote_template_manager=rtm,
@@ -1010,10 +1009,11 @@ def _install_single_template(
         templateBuildKey.STORAGE_PROFILE: storage_profile
     }
     if float(client.get_api_version()) >= float(vCDApiVersion.VERSION_35.value): # noqa: E501
-        if template.get(server_constants.RemoteTemplateKey.KIND) not in shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES: # noqa: E501
+        if template.get(server_constants.RemoteTemplateKey.KIND) not in shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP: # noqa: E501
             raise ValueError(f"Cluster kind is {template.get(server_constants.RemoteTemplateKey.KIND)}" # noqa: E501
-                             f" Expected {shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES}") # noqa: E501
-        build_params[templateBuildKey.CSE_PLACEMENT_POLICY] = template.get(server_constants.RemoteTemplateKey.KIND) # noqa: E501
+                             f" Expected {shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP.keys()}") # noqa: E501
+        build_params[templateBuildKey.CSE_PLACEMENT_POLICY] = \
+            shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[template.get(server_constants.RemoteTemplateKey.KIND)] # noqa: E501
     builder = TemplateBuilder(client, client, build_params, ssh_key=ssh_key,
                               logger=INSTALL_LOGGER,
                               msg_update_callback=msg_update_callback)
@@ -1479,7 +1479,7 @@ def _fix_cluster_metadata(client,
                 # template name that has 'k8s' string in it instead of 'k8'
                 if k8s_data[0] in ('k8', 'k8s'):
                     k8s_distribution = 'upstream'
-                elif k8s_data[0] in ('tkg', 'tkgp'):
+                elif k8s_data[0] in ('tkg', 'tkgp', 'tkgplus'):
                     k8s_distribution = 'TKG+'
                 else:
                     k8s_distribution = "Unknown Kubernetes distribution"
@@ -1742,10 +1742,10 @@ def _fix_cluster_admin_password(client,
 def _get_placement_policy_name_from_template_name(template_name):
     if 'k8' in template_name:
         policy_name = \
-            shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY
-    elif 'tkg' in template_name or 'tkgp' in template_name:
+            shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME
+    elif 'tkg' in template_name or 'tkgplus' in template_name:
         policy_name = \
-            shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY
+            shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME
     else:
         raise Exception(f"Unknown kind of template '{template_name}'.")
 
@@ -1779,11 +1779,11 @@ def _assign_placement_policy_to_vdc_with_existing_clusters(
             INSTALL_LOGGER.error(msg)
             continue
 
-        if policy_name == shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY:
+        if policy_name == shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
             id = cluster['vdc_id']
             native_ovdcs.append(id)
             vdc_names[id] = cluster['vdc_name']
-        elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY:
+        elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
             id = cluster['vdc_id']
             tkg_plus_ovdcs.append(id)
             vdc_names[id] = cluster['vdc_name']
@@ -1799,7 +1799,7 @@ def _assign_placement_policy_to_vdc_with_existing_clusters(
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
         native_policy = cpm.get_vdc_compute_policy(
-            policy_name=shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY,
+            policy_name=shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME,
             is_placement_policy=True)
         for vdc_id in native_ovdcs:
             cpm.add_compute_policy_to_vdc(
@@ -1823,7 +1823,7 @@ def _assign_placement_policy_to_vdc_with_existing_clusters(
 
         if is_tkg_plus_enabled:
             tkg_plus_policy = cpm.get_vdc_compute_policy(
-                policy_name=shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY,
+                policy_name=shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME,  # noqa: E501
                 is_placement_policy=True)
             for vdc_id in tkg_plus_ovdcs:
                 cpm.add_compute_policy_to_vdc(
@@ -1959,10 +1959,11 @@ def _create_def_entity_for_existing_clusters(
             INSTALL_LOGGER.info(msg)
             continue
 
-        if policy_name == shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY:
+        if policy_name == shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
+            # TODO combine to a single constant
             kind = def_utils.ClusterEntityKind.NATIVE.value
-        elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY:
-            kind = def_utils.ClusterEntityKind.TANZU_PLUS
+        elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
+            kind = def_utils.ClusterEntityKind.TANZU_PLUS.value
 
         worker_nodes = []
         for item in cluster['nodes']:

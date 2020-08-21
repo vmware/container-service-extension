@@ -12,13 +12,11 @@ import yaml
 
 from container_service_extension.client import pks
 from container_service_extension.client.cluster import Cluster
-from container_service_extension.client.cluster import ClusterEntityKind
 import container_service_extension.client.command_filter as cmd_filter
 from container_service_extension.client.ovdc import Ovdc
 from container_service_extension.client.system import System
 import container_service_extension.client.utils as client_utils
 import container_service_extension.def_.models as def_models
-import container_service_extension.def_.utils as def_utils
 from container_service_extension.exceptions import CseResponseError
 from container_service_extension.exceptions import CseServerNotRunningError
 from container_service_extension.logger import CLIENT_LOGGER
@@ -240,11 +238,11 @@ def cluster_delete(ctx, name, vdc, org, k8_runtime=None):
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if client_utils.is_cli_for_tkg_only():
-            if k8_runtime in [ClusterEntityKind.NATIVE.value,
-                              ClusterEntityKind.TANZU_PLUS.value]:
+            if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
+                              shared_constants.ClusterEntityKind.TANZU_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
-            k8_runtime = ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
@@ -612,17 +610,17 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
         if not k8_runtime:
             raise Exception("Cluster kind missing from the spec.")
         if client_utils.is_cli_for_tkg_only():
-            if k8_runtime in [ClusterEntityKind.NATIVE.value,
-                              ClusterEntityKind.TANZU_PLUS.value]:
+            if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
+                              shared_constants.ClusterEntityKind.TANZU_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
-            k8_runtime = ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
         metadata = cluster_config.get('metadata', {})
         metadata_vdc_key = ''
-        if k8_runtime == ClusterEntityKind.NATIVE.value or \
-                k8_runtime == ClusterEntityKind.TANZU_PLUS.value:
+        if k8_runtime == shared_constants.ClusterEntityKind.NATIVE.value or \
+                k8_runtime == shared_constants.ClusterEntityKind.TANZU_PLUS.value:  # noqa: E501
             metadata_vdc_key = 'ovdc_name'
-        elif k8_runtime == ClusterEntityKind.TKG.value:
+        elif k8_runtime == shared_constants.ClusterEntityKind.TKG.value:
             metadata_vdc_key = 'virtualDataCenterName'
         if not metadata.get(metadata_vdc_key):
             vdc = ctx.obj['profiles'].get('vdc_in_use')
@@ -631,7 +629,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
                                 "Use either command 'vcd vdc use' or option "
                                 "'--vdc' to set the vdc context.")
             metadata[metadata_vdc_key] = vdc
-        if k8_runtime != ClusterEntityKind.TKG.value and \
+        if k8_runtime != shared_constants.ClusterEntityKind.TKG.value and \
                 not cluster_config.get('metadata', {}).get('org_name'):
             cluster_config['metadata']['org_name'] = ctx.obj['profiles'].get('org_in_use')  # noqa: E501
 
@@ -681,11 +679,11 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name, k8_runtime=None):
     try:
         client_utils.cse_restore_session(ctx)
         if client_utils.is_cli_for_tkg_only():
-            if k8_runtime in [ClusterEntityKind.NATIVE.value,
-                              ClusterEntityKind.TANZU_PLUS.value]:
+            if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
+                              shared_constants.ClusterEntityKind.TANZU_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
-            k8_runtime = ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org_name is None:
@@ -755,11 +753,11 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
     try:
         client_utils.cse_restore_session(ctx)
         if client_utils.is_cli_for_tkg_only():
-            if k8_runtime in [ClusterEntityKind.NATIVE.value,
-                              ClusterEntityKind.TANZU_PLUS.value]:
+            if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
+                              shared_constants.ClusterEntityKind.TANZU_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
-            k8_runtime = ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org_name is None:
@@ -814,11 +812,11 @@ def cluster_config(ctx, name, vdc, org, k8_runtime=None):
     try:
         client_utils.cse_restore_session(ctx)
         if client_utils.is_cli_for_tkg_only():
-            if k8_runtime in [ClusterEntityKind.NATIVE.value,
-                              ClusterEntityKind.TANZU_PLUS.value]:
+            if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
+                              shared_constants.ClusterEntityKind.TANZU_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
-            k8_runtime = ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
@@ -869,11 +867,11 @@ def cluster_info(ctx, name, org, vdc, k8_runtime=None):
     try:
         client_utils.cse_restore_session(ctx)
         if client_utils.is_cli_for_tkg_only():
-            if k8_runtime in [ClusterEntityKind.NATIVE.value,
-                              ClusterEntityKind.TANZU_PLUS.value]:
+            if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
+                              shared_constants.ClusterEntityKind.TANZU_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
-            k8_runtime = ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
@@ -1362,9 +1360,9 @@ def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus=None):
         CLIENT_LOGGER.error(msg)
     k8_runtime = []
     if enable_native:
-        k8_runtime.append(shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY)
+        k8_runtime.append(shared_constants.ClusterEntityKind.NATIVE.value)
     if enable_tkg_plus:
-        k8_runtime.append(shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY)
+        k8_runtime.append(shared_constants.ClusterEntityKind.TANZU_PLUS.value)  # noqa: E501
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
@@ -1678,7 +1676,7 @@ def _get_sample_cluster_configuration(output=None):
         metadata=metadata,
         spec=cluster_spec,
         status=status,
-        kind=def_utils.ClusterEntityKind.NATIVE.value
+        kind=shared_constants.ClusterEntityKind.NATIVE.value
     )
 
     sample_cluster_config = yaml.dump(dataclasses.asdict(cluster_entity))

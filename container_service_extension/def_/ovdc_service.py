@@ -15,6 +15,8 @@ import container_service_extension.logger as logger
 import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.shared_constants import RequestKey
+from container_service_extension.shared_constants import RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP  # noqa: E501
+from container_service_extension.shared_constants import RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP  # noqa: E501
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
 import container_service_extension.telemetry.telemetry_handler as telemetry_handler # noqa: E501
@@ -59,11 +61,12 @@ def update_ovdc(operation_context: ctx.OperationContext,
     # NOTE: Telemetry is currently handled in the async function as it is not
     # possible to know the operation (enable/disable) without comparing it to
     # current k8s runtimes.
+    policy_list = [RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[p] for p in ovdc_spec.k8s_runtime]  # noqa: E501
     _update_ovdc_using_placement_policy_async(operation_context=operation_context, # noqa:E501
                                               task=task,
                                               task_href=task_href,
                                               user_href=user_href,
-                                              policy_list=ovdc_spec.k8s_runtime, # noqa:E501
+                                              policy_list=policy_list, # noqa:E501
                                               ovdc_id=ovdc_id,
                                               vdc=vdc,
                                               remove_cp_from_vms_on_disable=ovdc_spec.remove_cp_from_vms_on_disable) # noqa:E501
@@ -150,7 +153,7 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
     ovdc_name = ovdc.get_resource().get('name')
     policies = []
     for policy in cpm.list_vdc_placement_policies_on_vdc(ovdc_id):
-        policies.append(policy['name'])
+        policies.append(RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP[policy['name']])  # noqa: E501
     return def_models.Ovdc(ovdc_name=ovdc_name, ovdc_id=ovdc_id, k8s_runtime=policies) # noqa: E501
 
 
