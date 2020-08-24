@@ -12,7 +12,6 @@ import pika
 import requests
 
 from container_service_extension.exceptions import CseRequestError
-from container_service_extension.exceptions import NotAcceptableRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.request_processor as request_processor
 from container_service_extension.server_constants import EXCHANGE_TYPE
@@ -155,21 +154,6 @@ class MessageConsumer(object):
                          f"from {properties.app_id} "
                          f"({threading.currentThread().ident}): "
                          f"{json.dumps(body_json)}, props: {properties}")
-
-            response_format = None
-            accept_header = body_json['headers']['Accept'].lower()
-            accept_header = accept_header.split(';')[0]
-            tokens = accept_header.split('/')
-            if len(tokens) > 1:
-                if tokens[0] in ('*', 'application'):
-                    response_format = tokens[1]
-            if not response_format:
-                response_format = tokens[0]
-            response_format = response_format.replace('*+', '')
-
-            if not ('json' in response_format or '*' == response_format):
-                raise NotAcceptableRequestError(
-                    error_message="CSE can only serve response as json.")
 
             result = request_processor.process_request(body_json)
 

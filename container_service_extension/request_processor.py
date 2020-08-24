@@ -135,19 +135,113 @@ OPERATION_TO_HANDLER = {
 _OPERATION_KEY = 'operation'
 
 
+def _parse_accept_header(accept_header: str):
+    """Parse accept headers and select one that fits CSE.
+
+    CSE is looking for headers like
+    * application/json;version=33.0
+    * *;version=33.0
+    * */*;version=33.0
+    * application/*+json;version=33.0
+    If multiple matches are found, Will pick the first match.
+
+    :param str accept_header: value of 'Accept' header sent by client
+
+    :returns: accept header that is servicable by CSE
+
+    :raises NotAcceptableRequestError: If none of the accept headers matches
+        what CSE is looking for.
+    """
+    accept_header = accept_header.lower()
+    accept_headers = accept_header.split(",")
+    processed_headers = {}
+
+    for header in accept_headers:
+        # break the header into a tuple that follows the following structure
+        # "application/json;version=33.0" ->
+        #     ('application', 'json', 'version', '33.0')
+        # "application/*;version=33.0" ->
+        #     ('application', '*', 'version', '33.0')
+        # "application/*+json;version=33.0" ->
+        #     ('application', '*+json', 'version', '33.0')
+        # "*/*;version=33.0" -> ('*', '*', 'version', '33.0')
+        # "*;version=33.0" -> ('*', '', 'version', '33.0')
+
+        tokens = header.split(';')
+        application_fragment = ''
+        version_fragment = ''
+        if len(tokens) >= 1:
+            application_fragment = tokens[0]
+        if len(tokens) >= 2:
+            version_fragment = tokens[1]
+
+        tokens = application_fragment.split("/")
+        val0 = ''
+        val1 = ''
+        if len(tokens) >= 1:
+            val0 = tokens[0]
+        if len(tokens) >= 2:
+            val1 = tokens[1]
+
+        tokens = version_fragment.split("=")
+        val2 = ''
+        val3 = ''
+        if len(tokens) >= 1:
+            val2 = tokens[0]
+        if len(tokens) >= 2:
+            val3 = tokens[1]
+
+        processed_headers[header] = (val0, val1, val2, val3)
+
+    selected_header = None
+    for header, value in processed_headers.items():
+        val0 = value[0]
+        val1 = value[1]
+        val2 = value[2]
+
+        # * -> */*
+        if val0 == '*' and not val1:
+            val1 = '*'
+
+        if val0 == '*':
+            val0 = 'application'
+
+        # *+json -> json
+        val1 = val1.replace('*+', '')
+        if val1 == '*':
+            val1 = 'json'
+
+        if (val0, val1, val2) == ('application', 'json', 'version'):
+            selected_header = header
+            break
+
+    if not selected_header:
+        raise cse_exception.NotAcceptableRequestError(
+            error_message="CSE can only serve response as json.")
+
+    return selected_header
+
+
+def _get_api_version_from_accept_header(api_version_header: str):
+    api_version = '0.0'
+    if api_version_header:
+        tokens = api_version_header.split(";")
+        if len(tokens) == 2:
+            tokens = tokens[1].split("=")
+            if len(tokens) == 2:
+                api_version = tokens[1]
+    return api_version
+
+
 @handle_exception
 def process_request(message):
     from container_service_extension.service import Service
     LOGGER.debug(f"Incoming request message: {json.dumps(message)}")
 
-    api_version = '0.0'
-    accept_header = message['headers'].get('Accept')
-    if accept_header:
-        tokens = accept_header.split(";")
-        if len(tokens) == 2:
-            tokens = tokens[1].split("=")
-            if len(tokens) == 2:
-                api_version = tokens[1]
+    api_version_header = _parse_accept_header(
+        accept_header=message['headers'].get('Accept'))
+    api_version = _get_api_version_from_accept_header(
+        api_version_header=api_version_header)
 
     url_data = _get_url_data(method=message['method'],
                              url=message['requestUri'],
