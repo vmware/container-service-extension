@@ -134,3 +134,10 @@ def construct_filters(**kwargs):
     if kwargs.get('vdc'):
         filters[def_utils.ClusterEntityFilterKey.OVDC_NAME.value] = kwargs['vdc']  # noqa: E501
     return filters
+
+
+def construct_task_console_message(task_href: str) -> str:
+    msg = "Run the following command to track the status of the cluster:\n"
+    task_id = task_href.split('/')[-1]
+    msg += f"vcd task wait {task_id}"
+    return msg

@@ -4,12 +4,14 @@
 from dataclasses import asdict
 import os
 
+from requests.exceptions import HTTPError
 import yaml
 
 import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
 import container_service_extension.client.response_processor as response_processor  # noqa: E501
 import container_service_extension.client.tkg_cluster_api as tkg_cli_api
+import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
 import container_service_extension.def_.entity_service as def_entity_svc
 from container_service_extension.def_.utils import DEF_CSE_VENDOR
@@ -57,6 +59,8 @@ class DefEntityClusterApi:
         :return: cluster list information
         :rtype: list(dict)
         """
+        has_native_rights = True
+        has_tkg_rights = True
         filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         native_entities = entity_svc.list_entities_by_entity_type(
@@ -65,20 +69,34 @@ class DefEntityClusterApi:
             version=DEF_NATIVE_ENTITY_TYPE_VERSION,
             filters=filters)
 
-        clusters = self._tkgCluster.list_tkg_clusters(vdc=vdc, org=org) or []
-        for def_entity in native_entities:
-            entity = def_entity.entity
-            logger.CLIENT_LOGGER.debug(f"Native Defined entity list from server: {def_entity}")  # noqa: E501
-            cluster = {
-                cli_constants.CLIOutputKey.CLUSTER_NAME.value: def_entity.name,
-                cli_constants.CLIOutputKey.VDC.value: entity.metadata.ovdc_name, # noqa: E501
-                cli_constants.CLIOutputKey.ORG.value: entity.metadata.org_name, # noqa: E501
-                cli_constants.CLIOutputKey.K8S_RUNTIME.value: entity.kind, # noqa: E501
-                cli_constants.CLIOutputKey.K8S_VERSION.value: entity.status.kubernetes, # noqa: E501
-                cli_constants.CLIOutputKey.STATUS.value: entity.status.phase, # noqa: E501
-                cli_constants.CLIOutputKey.OWNER.value: def_entity.owner.name
-            }
-            clusters.append(cluster)
+        clusters = []
+        try:
+            clusters += self._tkgCluster.list_tkg_clusters(vdc=vdc, org=org)
+        except tkg_rest.ApiException as e:
+            if e.status != 403:
+                raise
+            has_tkg_rights = False
+        try:
+            for def_entity in native_entities:
+                entity = def_entity.entity
+                logger.CLIENT_LOGGER.debug(f"Native Defined entity list from server: {def_entity}")  # noqa: E501
+                cluster = {
+                    cli_constants.CLIOutputKey.CLUSTER_NAME.value: def_entity.name,  # noqa: E501
+                    cli_constants.CLIOutputKey.VDC.value: entity.metadata.ovdc_name, # noqa: E501
+                    cli_constants.CLIOutputKey.ORG.value: entity.metadata.org_name, # noqa: E501
+                    cli_constants.CLIOutputKey.K8S_RUNTIME.value: entity.kind, # noqa: E501
+                    cli_constants.CLIOutputKey.K8S_VERSION.value: entity.status.kubernetes, # noqa: E501
+                    cli_constants.CLIOutputKey.STATUS.value: entity.status.phase, # noqa: E501
+                    cli_constants.CLIOutputKey.OWNER.value: def_entity.owner.name  # noqa: E501
+                }
+                clusters.append(cluster)
+        except HTTPError as e:
+            if e.response.status_code != 403:
+                raise
+            has_native_rights = False
+        if not (has_tkg_rights and has_native_rights):
+            raise Exception("Logged in user doesn't have Native cluster rights"
+                            " or TKG rights. Please contact administrator.")
         return clusters
 
     def _get_tkg_native_clusters_by_name(self, cluster_name: str,

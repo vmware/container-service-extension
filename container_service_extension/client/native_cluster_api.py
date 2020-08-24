@@ -110,7 +110,7 @@ class NativeClusterApi:
             media_type='application/json',
             accept_type='application/json')
         cluster_entity = def_models.DefEntity(**response_processor.process_response(response))  # noqa: E501
-        return f"task_href: {cluster_entity.entity.status.task_href}"
+        return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501
 
     def get_cluster_config(self, cluster_name, org=None, vdc=None):
         """Get cluster config for the given cluster name.
@@ -217,7 +217,7 @@ class NativeClusterApi:
             media_type='application/json',
             accept_type='application/json')
         cluster_entity = def_models.DefEntity(**response_processor.process_response(response))  # noqa: E501
-        return f"task_href: {cluster_entity.entity.status.task_href}"
+        return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501
 
     def apply(self, cluster_config):
         """Apply the configuration either to create or update the cluster.
@@ -250,4 +250,4 @@ class NativeClusterApi:
                 media_type='application/json',
                 accept_type='application/json')
         cluster_entity = def_models.DefEntity(**response_processor.process_response(response))  # noqa: E501
-        return f"task_href: {cluster_entity.entity.status.task_href}"
+        return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501

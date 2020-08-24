@@ -12,6 +12,7 @@ from container_service_extension.client.tkgclient.api_client import ApiClient
 from container_service_extension.client.tkgclient.configuration import Configuration  # noqa: E501
 from container_service_extension.client.tkgclient.models.tkg_cluster import TkgCluster  # noqa: E501
 import container_service_extension.client.tkgclient.rest as tkg_rest
+import container_service_extension.client.utils as client_utils
 from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_NSS
 from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_VERSION
 from container_service_extension.def_.utils import DEF_VMWARE_VENDOR
@@ -178,8 +179,7 @@ class TKGClusterApi:
                 raise cse_exceptions.CseDuplicateClusterError(msg)
             # Get the task href from the header
             headers = response[2]
-            output = f"task_href: {headers.get('Location')}"
-            return output
+            return client_utils.construct_task_console_message(headers.get('Location'))  # noqa: E501
         except tkg_rest.ApiException as e:
             server_message = json.loads(e.body).get('message') or e.reason
             msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{server_message}")  # noqa: E501
@@ -199,7 +199,7 @@ class TKGClusterApi:
             response = \
                 self._tkg_client_api.delete_tkg_cluster_with_http_info(tkg_cluster_id=cluster_id)  # noqa: E501
             headers = response[2]
-            return f"task_href: {headers.get('Location')}"
+            return client_utils.construct_task_console_message(headers.get('Location'))  # noqa: E501
         except tkg_rest.ApiException as e:
             msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{e.reason}")  # noqa: E501
             logger.CLIENT_LOGGER.error(msg)
