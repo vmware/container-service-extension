@@ -409,14 +409,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
-            LOGGER.error(f"Error creating cluster '{cluster_name}'",
-                         exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR,
-                              error_message=str(err))
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.CREATE,
-                                                    vapp)
-            # raising an exception here prints a stacktrace to server console
+            else:
+                LOGGER.error(f"Error creating cluster '{cluster_name}'", exc_info=True)  # noqa: E501
+                self._update_task(vcd_client.TaskStatus.ERROR, error_message=str(err))  # noqa: E501
+                self._fail_operation_and_resolve_entity(
+                    cluster_id, DefEntityOperation.CREATE, vapp)
         except Exception as err:
             self._fail_operation_and_resolve_entity(cluster_id,
                                                     DefEntityOperation.CREATE,
@@ -490,15 +487,19 @@ class ClusterService(abstract_broker.AbstractBroker):
     def _fail_operation_and_resolve_entity(self, cluster_id: str,
                                            op: DefEntityOperation,
                                            vapp=None):
-        # get the current state of the defined entity
-        def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+        try:
+            # get the current state of the defined entity
+            def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
 
-        # sync the defined entity with the latest status of cluster vApp and
-        # fail the operation.
-        def_entity.entity.status.phase = \
-            str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
-        self._sync_def_entity(cluster_id, def_entity)
-        self.entity_svc.resolve_entity(cluster_id)
+            # sync the defined entity with the latest status of cluster vApp
+            # and fail the operation.
+            def_entity.entity.status.phase = \
+                str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
+            self._sync_def_entity(cluster_id, def_entity)
+            self.entity_svc.resolve_entity(cluster_id)
+        except Exception as error:
+            LOGGER.error(f"Failed on resolve entity:{error}", exc_info=True)
+            self._update_task(vcd_client.TaskStatus.ERROR, error_message=str(error))  # noqa: E501
 
     def resize_cluster(self, cluster_id: str,
                        cluster_spec: def_models.ClusterEntity):
