@@ -1,8 +1,6 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-
-import copy
 import random
 import re
 import string
@@ -41,10 +39,8 @@ from container_service_extension.shared_constants import DefEntityOperation
 from container_service_extension.shared_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.shared_constants import DefEntityPhase
 from container_service_extension.shared_constants import RequestKey
-from container_service_extension.telemetry.constants import CseOperation
-from container_service_extension.telemetry.constants import PayloadKey
-from container_service_extension.telemetry.telemetry_handler import \
-    record_user_action_details
+import container_service_extension.telemetry.constants as telemetry_constants
+import container_service_extension.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.utils as utils
 import container_service_extension.vsphere_utils as vs_utils
 
@@ -72,10 +68,18 @@ class ClusterService(abstract_broker.AbstractBroker):
         It syncs the defined entity with the state of the cluster vApp before
         returning the defined entity.
         """
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_INFO,
+            cse_params={telemetry_constants.PayloadKey.CLUSTER_ID: cluster_id}
+        )
         return self._sync_def_entity(cluster_id)
 
-    def list_clusters(self, filters: dict) -> List[def_models.DefEntity]:
+    def list_clusters(self, filters: dict = {}) -> List[def_models.DefEntity]:
         """List corresponding defined entities of all native clusters."""
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST,
+            cse_params={telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys())}  # noqa: E501
+        )
         ent_type: def_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
         return self.entity_svc.list_entities_by_entity_type(
             vendor=ent_type.vendor,
@@ -92,8 +96,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         curr_entity = self.entity_svc.get_entity(cluster_id)
 
-        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
-        #  based clusters
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_CONFIG,
+            cse_params=curr_entity)
 
         vapp = vcd_vapp.VApp(self.context.client, href=curr_entity.externalId)
         master_node_name = curr_entity.entity.status.nodes.master.name
@@ -122,12 +127,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         :rtype: List[Dict]
         """
         curr_entity = self.entity_svc.get_entity(cluster_id)
-
-        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
-        #  based clusters
-        # cse_params = copy.deepcopy(validated_data)
-        # cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
-        # record_user_action_details(cse_operation=CseOperation.CLUSTER_UPGRADE_PLAN, cse_params=cse_params)  # noqa: E501
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE_PLAN,  # noqa: E501
+            cse_params=curr_entity
+        )
 
         return self._get_cluster_upgrade_plan(curr_entity.entity.spec.k8_distribution.template_name, # noqa: E501
                                               curr_entity.entity.spec.k8_distribution.template_revision) # noqa: E501
@@ -221,6 +224,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                           entity=def_entity)
         self.context.is_async = True
         def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY,
+            cse_params=def_entity)
         self._create_cluster_async(def_entity.id, cluster_spec)
         return def_entity
 
@@ -539,8 +545,11 @@ class ClusterService(abstract_broker.AbstractBroker):
         elif num_nfs_to_add < 0:
             raise e.CseServerError("Scaling down nfs nodes is not supported")
 
-        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
-        #  based clusters
+        # Record telemetry details
+        telemetry_data: def_models.DefEntity = def_models.DefEntity(id=cluster_id, entity=cluster_spec)  # noqa: E501
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY,
+            cse_params=telemetry_data)
 
         # update the task and defined entity.
         msg = f"Resizing the cluster '{cluster_name}' ({cluster_id}) to the " \
@@ -670,7 +679,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
                 f"valid state to be deleted. Please contact administrator.")
 
-        # TODO(DEF) Handle Telemetry
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_DELETE,
+            cse_params=curr_entity)
 
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
@@ -746,10 +757,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"{new_template_revision}) is not a valid upgrade target for "
                 f"cluster '{cluster_name}'.")
 
-        # get cluster data (including node names) to pass to async function
-
-        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
-        #  based clusters
+        telemetry_handler.record_user_action_details(
+            telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE,
+            cse_params=curr_entity)
 
         msg = f"Upgrading cluster '{cluster_name}' " \
               f"software to match template {new_template_name} (revision " \
@@ -800,12 +810,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         cluster = get_cluster(self.context.client, cluster_name,
                               org_name=validated_data[RequestKey.ORG_NAME],
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
-
-        if kwargs.get(KwargKey.TELEMETRY, True):
-            # Record the telemetry data
-            cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
-            record_user_action_details(cse_operation=CseOperation.NODE_INFO, cse_params=cse_params)  # noqa: E501
 
         vapp = vcd_vapp.VApp(self.context.client, href=cluster['vapp_href'])
         vms = vapp.get_all_vms()
