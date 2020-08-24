@@ -1162,26 +1162,6 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
             # Upgrading from MQTT to AMQP extension
             msg = "Upgrading from MQTT extension to AMQP extension is not " \
                   "supported"
-        try:
-            ext_cse_version, ext_vcd_api_version = \
-                parse_cse_extension_description(client)
-
-            if ext_cse_version == server_constants.UNKNOWN_CSE_VERSION or \
-                    ext_vcd_api_version == server_constants.UNKNOWN_VCD_API_VERSION: # noqa: E501
-                msg = "Found CSE api extension registered with vCD, but " \
-                      "couldn't determine version of CSE and/or vCD api " \
-                      "used previously."
-                msg_update_callback.info(msg)
-                INSTALL_LOGGER.info(msg)
-            else:
-                msg = "Found CSE api extension registered by CSE " \
-                      f"'{ext_cse_version}' at vCD api version " \
-                      f"'v{ext_vcd_api_version}'."
-                msg_update_callback.general(msg)
-                INSTALL_LOGGER.info(msg)
-        except MissingRecordException:
-            msg = "CSE api extension not registered with vCD. Please use " \
-                  "`cse install' instead of 'cse upgrade'."
             raise Exception(msg)
         ext_cse_version, ext_vcd_api_version = \
             parse_cse_extension_description(
