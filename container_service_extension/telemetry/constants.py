@@ -109,8 +109,6 @@ class PayloadKey(str, Enum):
     CLUSTER_KIND = 'cluster_kind'
     CNI = 'cni'
     CNI_VERSION = 'cni_version'
-    CONTROL_PLANE_SIZING_CLASS = 'control_plane_sizing_class'
-    CONTROL_PLANE_STORAGE_PROFILE = 'control_plane_storage_class'
     CPU = 'cpu'
     DISPLAY_OPTION = 'display_option'
     FILTER_KEYS = 'filter_keys'
@@ -125,13 +123,13 @@ class PayloadKey(str, Enum):
     NUMBER_OF_NODES = 'number_of_nodes'
     NUMBER_OF_WORKER_NODES = 'number_of_worker_nodes'
     NUMBER_OF_NFS_NODES = 'number_of_nfs_nodes'
-    NFS_SIZING_CLASS = 'nfs_sizing_class'
-    NFS_STORAGE_PROFILE = 'nfs_storage_profile'
     OS = 'os'
     SOURCE_CSE_VERSION = 'source_cse_version'
     SOURCE_VCD_API_VERSION = 'source_vcd_api_version'
     STATUS = 'status'
     TARGET = 'target',
+    TARGET_CSE_VERSION = 'target_cse_version'
+    TARGET_VCD_API_VERSION = 'target_vcd_api_version'
     TEMPLATE_NAME = 'template_name'
     TEMPLATE_REVISION = 'template_revision'
     TYPE = '@type',
@@ -156,8 +154,6 @@ class PayloadKey(str, Enum):
     WAS_TEMP_VAPP_RETAINED = 'was_temp_vapp_retained'
     WERE_TEMPLATES_FORCE_UPDATED = 'were_templates_force_updated'
     WERE_TEMPLATES_SKIPPED = 'were_templates_skipped'
-    WORKERS_SIZING_CLASS = 'workers_sizing_class'
-    WORKERS_STORAGE_PROFILE = 'workers_storage_profile'
 
 
 @unique

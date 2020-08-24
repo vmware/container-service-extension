@@ -103,6 +103,8 @@ def get_payload_for_upgrade_server(params):
         PayloadKey.TYPE: CseOperation.SERVICE_UPGRADE.telemetry_table,
         PayloadKey.SOURCE_CSE_VERSION: params.get(PayloadKey.SOURCE_CSE_VERSION),  # noqa: E501
         PayloadKey.SOURCE_VCD_API_VERSION: params.get(PayloadKey.SOURCE_VCD_API_VERSION),  # noqa: E501
+        PayloadKey.TARGET_CSE_VERSION: params.get(PayloadKey.TARGET_CSE_VERSION),  # noqa: E501
+        PayloadKey.TARGET_VCD_API_VERSION: params.get(PayloadKey.TARGET_VCD_API_VERSION),  # noqa: E501
         PayloadKey.WERE_TEMPLATES_SKIPPED: bool(params.get(PayloadKey.WERE_TEMPLATES_SKIPPED)),  # noqa: E501
         PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(params.get(PayloadKey.WAS_TEMP_VAPP_RETAINED)),  # noqa: E501
         PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(params.get(PayloadKey.WAS_SSH_KEY_SPECIFIED))  # noqa: E501
@@ -517,12 +519,6 @@ def get_payload_for_v35_cluster_apply(def_entity: DefEntity):
         PayloadKey.NUMBER_OF_MASTER_NODES: def_entity.entity.spec.control_plane.count,  # noqa: E501
         PayloadKey.NUMBER_OF_WORKER_NODES: def_entity.entity.spec.workers.count,  # noqa: E501
         PayloadKey.NUMBER_OF_NFS_NODES: def_entity.entity.spec.nfs.count,  # noqa: E501
-        PayloadKey.CONTROL_PLANE_SIZING_CLASS: def_entity.entity.spec.control_plane.sizing_class,  # noqa: E501
-        PayloadKey.CONTROL_PLANE_STORAGE_PROFILE: def_entity.entity.spec.control_plane.storage_profile,  # noqa: E501
-        PayloadKey.WORKERS_SIZING_CLASS: def_entity.entity.spec.workers.sizing_class,  # noqa: E501
-        PayloadKey.WORKERS_STORAGE_PROFILE: def_entity.entity.spec.workers.storage_profile,  # noqa: E501
-        PayloadKey.NFS_SIZING_CLASS: def_entity.entity.spec.nfs.sizing_class,  # noqa: E501
-        PayloadKey.NFS_STORAGE_PROFILE: def_entity.entity.spec.nfs.storage_profile,  # noqa: E501
         PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(def_entity.entity.spec.settings.ssh_key),  # noqa: E501
         PayloadKey.WAS_ROLLBACK_ENABLED: bool(def_entity.entity.spec.settings.rollback_on_failure)  # noqa: E501
     }

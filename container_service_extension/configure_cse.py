@@ -1166,19 +1166,6 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
             ext_cse_version, ext_vcd_api_version = \
                 parse_cse_extension_description(client)
 
-            telemetry_data = {
-                PayloadKey.SOURCE_CSE_VERSION: str(ext_cse_version),
-                PayloadKey.SOURCE_VCD_API_VERSION: ext_vcd_api_version,
-                PayloadKey.WERE_TEMPLATES_SKIPPED: bool(skip_template_creation),  # noqa: E501
-                PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(retain_temp_vapp),
-                PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(ssh_key)
-            }
-
-            # Telemetry - Record detailed telemetry data on upgrade
-            record_user_action_details(CseOperation.SERVICE_UPGRADE,
-                                       telemetry_data,
-                                       telemetry_settings=config['service']['telemetry'])  # noqa: E501
-
             if ext_cse_version == server_constants.UNKNOWN_CSE_VERSION or \
                     ext_vcd_api_version == server_constants.UNKNOWN_VCD_API_VERSION: # noqa: E501
                 msg = "Found CSE api extension registered with vCD, but " \
@@ -1215,6 +1202,21 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
 
         target_vcd_api_version = config['vcd']['api_version']
         target_cse_version = utils.get_installed_cse_version()
+
+        telemetry_data = {
+            PayloadKey.SOURCE_CSE_VERSION: str(ext_cse_version),
+            PayloadKey.SOURCE_VCD_API_VERSION: ext_vcd_api_version,
+            PayloadKey.TARGET_CSE_VERSION: str(target_cse_version),
+            PayloadKey.TARGET_VCD_API_VERSION: target_vcd_api_version,
+            PayloadKey.WERE_TEMPLATES_SKIPPED: bool(skip_template_creation),  # noqa: E501
+            PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(retain_temp_vapp),
+            PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(ssh_key)
+        }
+
+        # Telemetry - Record detailed telemetry data on upgrade
+        record_user_action_details(CseOperation.SERVICE_UPGRADE,
+                                   telemetry_data,
+                                   telemetry_settings=config['service']['telemetry'])  # noqa: E501
 
         # Handle various upgrade scenarios
         # Post CSE 3.0.0 only the following upgrades should be allowed
