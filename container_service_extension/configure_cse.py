@@ -506,18 +506,21 @@ def _get_existing_extension_type(client):
     :return: the current extension type: ExtensionType.MQTT, AMQP, or NONE
     :rtype: str
     """
-    # Check for MQTT extension
-    try:
-        mqtt_ext_manager = MQTTExtensionManager(client)
-        ext_info = mqtt_ext_manager.get_extension_info(
-            ext_name=server_constants.CSE_SERVICE_NAME,
-            ext_version=server_constants.MQTT_EXTENSION_VERSION,
-            ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
-        if ext_info:
-            return server_constants.ExtensionType.MQTT
-    except HTTPError as http_err:
-        if http_err.response.status_code != 404:  # not unfounded resource
-            raise http_err
+    # If API version meets minimum MQTT API version requirement,
+    # check for MQTT extension
+    if float(client.get_api_version()) >= \
+            server_constants.MQTT_MIN_API_VERSION:
+        try:
+            mqtt_ext_manager = MQTTExtensionManager(client)
+            ext_info = mqtt_ext_manager.get_extension_info(
+                ext_name=server_constants.CSE_SERVICE_NAME,
+                ext_version=server_constants.MQTT_EXTENSION_VERSION,
+                ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
+            if ext_info:
+                return server_constants.ExtensionType.MQTT
+        except HTTPError as http_err:
+            if http_err.response.status_code != 404:  # not unfounded resource
+                raise http_err
 
     # Check for AMQP extension
     try:
