@@ -30,7 +30,6 @@ class MQTTConsumer:
         self.mqtt_client = None
 
         self.tpe = ThreadPoolExecutor(constants.NUM_TPE_WORKERS)
-        self.futures = []
         self.publish_lock = Lock()
 
     async def process_mqtt_message(self, msg):
@@ -75,7 +74,6 @@ class MQTTConsumer:
 
         def on_message(client, userdata, msg):
             future = self.tpe.submit(self.process_mqtt_message, msg)
-            self.futures.append(future)
             debug_check = future.done()  # TODO: remove
             logger.SERVER_LOGGER.info(f'debug_check: {debug_check}')
 
