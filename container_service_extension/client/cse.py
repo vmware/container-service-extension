@@ -563,11 +563,13 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
 
 @cluster_group.command('apply',
                        help="Examples:\n\nvcd cse cluster apply input_spec.yaml"  # noqa: E501
-                       " \n\nvcd cse cluster apply --sample"
+                       " \n\nvcd cse cluster apply --sample --native"
+                       " \n\nvcd cse cluster apply --sample --tkg"
+                       " \n\nvcd cse cluster apply --sample --tkg-plus"
                        " \n\nvcd cse cluster apply -s -o output.yaml",
                        short_help='apply the cluster configuration defined '
                                   'in the file to either create new a cluster '
-                                  'or update the existing cluster or'
+                                  'or update the existing cluster or '
                                   'generate sample configuration file')
 @click.pass_context
 @click.argument(
@@ -584,6 +586,30 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
     default=False,
     help="generate sample cluster configuration file; This flag can't be used together with CLUSTER_CONFIG_FILE_PATH")  # noqa: E501
 @click.option(
+    '-n',
+    '--native',
+    'k8_runtime',
+    is_flag=True,
+    flag_value=shared_constants.ClusterEntityKind.NATIVE,
+    help="should be used with --sample, this flag generates sample yaml for k8 runtime: native"  # noqa: E501
+)
+@click.option(
+    '-t',
+    '--tkg',
+    'k8_runtime',
+    is_flag=True,
+    flag_value=shared_constants.ClusterEntityKind.TKG,
+    help="should be used with --sample, this flag generates sample yaml for k8 runtime: TKG"  # noqa: E501
+)
+@click.option(
+    '-k',
+    '--tkg-plus',
+    'k8_runtime',
+    is_flag=True,
+    flag_value=shared_constants.ClusterEntityKind.TKG_PLUS,
+    help="should be used with --sample, this flag generates sample yaml for k8 runtime: TKG+"  # noqa: E501
+)
+@click.option(
     '-o',
     '--output',
     'output',
@@ -591,13 +617,13 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
     default=None,
     metavar='OUTPUT_FILE_NAME',
     help="Filepath to write sample configuration file to; This flag should be used with -s")  # noqa: E501
-def apply(ctx, cluster_config_file_path, generate_sample_config, output):
+def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, output):  # noqa: E501
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         console_message_printer = utils.ConsoleMessagePrinter()
-        if cluster_config_file_path and (generate_sample_config or output):
+        if cluster_config_file_path and (generate_sample_config or output or k8_runtime):  # noqa: E501
             console_message_printer.general_no_color(ctx.get_help())
-            msg = "-s/-o flag can't be used together with CLUSTER_CONFIG_FILE_PATH"  # noqa: E501
+            msg = "-s/-o/-n/-t/-k flag can't be used together with CLUSTER_CONFIG_FILE_PATH"  # noqa: E501
             CLIENT_LOGGER.error(msg)
             raise Exception(msg)
 
@@ -607,8 +633,14 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
             CLIENT_LOGGER.error(msg)
             raise Exception(msg)
 
+        if generate_sample_config and not k8_runtime:
+            console_message_printer.general_no_color(ctx.get_help())
+            msg = "with option --sample you must specify either of options: --native or --tkg or --tkg-plus"  # noqa: E501
+            CLIENT_LOGGER.error(msg)
+            raise Exception(msg)
+
         if generate_sample_config:
-            sample_cluster_config = _get_sample_cluster_configuration(output=output)  # noqa: E501
+            sample_cluster_config = _get_sample_cluster_configuration(output=output, k8_runtime=k8_runtime)  # noqa: E501
             console_message_printer.general_no_color(sample_cluster_config)
             return
 
@@ -1643,13 +1675,27 @@ def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name,
         CLIENT_LOGGER.error(str(e))
 
 
-def _get_sample_cluster_configuration(output=None):
+def _get_sample_cluster_configuration(output=None, k8_runtime=None):
     """Generate sample cluster configuration.
 
     :param str output: full path of output file
+    :param shared_constants.ClusterEntityKind: cluster kind
     :return: sample cluster configuration
     :rtype: str
     """
+    if k8_runtime == shared_constants.ClusterEntityKind.TKG:
+        sample_cluster_config = _get_sample_tkg_cluster_configuration()
+    else:
+        sample_cluster_config = _get_sample_cluster_configuration_by_k8_runtime(k8_runtime)  # noqa: E501
+
+    if output:
+        with open(output, 'w') as f:
+            f.write(sample_cluster_config)
+
+    return sample_cluster_config
+
+
+def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime):
     metadata = def_models.Metadata('cluster_name', 'organization_name',
                                    'org_virtual_datacenter_name')
     status = def_models.Status()
@@ -1686,16 +1732,42 @@ def _get_sample_cluster_configuration(output=None):
         metadata=metadata,
         spec=cluster_spec,
         status=status,
-        kind=shared_constants.ClusterEntityKind.NATIVE.value
+        kind=k8_runtime.value
     )
 
     sample_cluster_config = yaml.dump(dataclasses.asdict(cluster_entity))
     CLIENT_LOGGER.info(sample_cluster_config)
+    return sample_cluster_config
 
-    if output:
-        with open(output, 'w') as f:
-            f.write(sample_cluster_config)
 
+def _get_sample_tkg_cluster_configuration():
+    sample_tkg_plus_config = {
+        "kind": "TanzuKubernetesCluster",
+        "spec": {
+            "topology": {
+                "workers": {
+                    "class": "Gold_storage_profile_name",
+                    "count": 1,
+                    "storageClass": "development #sample storage class"
+                },
+                "controlPlane": {
+                    "class": "Gold_storage_profile_name",
+                    "count": 1,
+                    "storageClass": "development"
+                }
+            },
+            "distribution": {
+                "version": "v1.16"
+            }
+        },
+        "metadata": {
+            "name": "cluster_name",
+            "placementPolicy": "placement_policy_name",
+            "virtualDataCenterName": "org_virtual_datacenter_name"
+        }
+    }
+    sample_cluster_config = yaml.dump(sample_tkg_plus_config)
+    CLIENT_LOGGER.info(sample_cluster_config)
     return sample_cluster_config
 
 
