@@ -1,15 +1,51 @@
-from asyncio import Lock
 import base64
-from concurrent.futures import ThreadPoolExecutor
 import json
 import ssl
 import sys
+from threading import Lock
 
 import paho.mqtt.client as mqtt
 
 import container_service_extension.consumer.constants as constants
+from container_service_extension.consumer.consumer_thread_pool_executor \
+    import ConsumerThreadPoolExecutor
 import container_service_extension.consumer.utils as utils
 import container_service_extension.logger as logger
+
+
+def process_mqtt_message(mqtt_client, publish_topic, publish_lock, msg):
+    payload_json = json.loads(msg.payload.decode())
+    http_req_json = json.loads(base64.b64decode(
+        payload_json['httpRequest']))
+    message_json = http_req_json['message']
+    reply_body, status_code = utils.get_reply_body_and_status_code(
+        message_json)
+
+    response_json = {
+        "type": "API_RESPONSE",
+        "headers": {
+            "requestId": payload_json["headers"]["requestId"],
+        },
+        "httpResponse": {
+            "statusCode": status_code,
+            "headers": {
+                "Content-Type": "application/json",
+                'Content-Length': len(reply_body)
+            },
+            "body": base64.b64encode(reply_body.encode()).
+            decode(sys.getfilesystemencoding())
+        }
+    }
+
+    publish_lock.acquire()
+    try:
+        pub_ret = mqtt_client.publish(topic=publish_topic,
+                                      payload=json.dumps(response_json),
+                                      qos=constants.QOS_LEVEL,
+                                      retain=False)
+    finally:
+        publish_lock.release()
+    logger.SERVER_LOGGER.info(f"pub_ret (rc, msg_id): {pub_ret}")
 
 
 class MQTTConsumer:
@@ -29,42 +65,8 @@ class MQTTConsumer:
         self.fsencoding = sys.getfilesystemencoding()
         self.mqtt_client = None
 
-        self.tpe = ThreadPoolExecutor(constants.NUM_TPE_WORKERS)
+        self.ctpe = ConsumerThreadPoolExecutor(constants.NUM_TPE_WORKERS)
         self.publish_lock = Lock()
-
-    async def process_mqtt_message(self, msg):
-        payload_json = json.loads(msg.payload.decode())
-        http_req_json = json.loads(base64.b64decode(
-            payload_json['httpRequest']))
-        message_json = http_req_json['message']
-        reply_body, status_code = utils.get_reply_body_and_status_code(
-            message_json)
-
-        response_json = {
-            "type": "API_RESPONSE",
-            "headers": {
-                "requestId": payload_json["headers"]["requestId"],
-            },
-            "httpResponse": {
-                "statusCode": status_code,
-                "headers": {
-                    "Content-Type": "application/json",
-                    'Content-Length': len(reply_body)
-                },
-                "body": base64.b64encode(reply_body.encode()).
-                decode(sys.getfilesystemencoding())
-            }
-        }
-
-        await self.publish_lock.acquire()
-        try:
-            pub_ret = self.mqtt_client.publish(topic=self.respond_topic,
-                                               payload=json.dumps(response_json),  # noqa: E501
-                                               qos=constants.QOS_LEVEL,
-                                               retain=False)
-        finally:
-            self.publish_lock.release()
-        logger.SERVER_LOGGER.info(f"pub_ret (rc, msg_id): {pub_ret}")
 
     def connect(self):
         def on_connect(client, userdata, flags, rc):
@@ -72,10 +74,46 @@ class MQTTConsumer:
                                       f' {rc} and flags {flags}')
             client.subscribe(self.listen_topic, qos=constants.QOS_LEVEL)
 
+        def process_mqtt_message_(msg):
+            payload_json = json.loads(msg.payload.decode())
+            http_req_json = json.loads(base64.b64decode(
+                payload_json['httpRequest']))
+            message_json = http_req_json['message']
+            reply_body, status_code = utils.get_reply_body_and_status_code(
+                message_json)
+
+            response_json = {
+                "type": "API_RESPONSE",
+                "headers": {
+                    "requestId": payload_json["headers"]["requestId"],
+                },
+                "httpResponse": {
+                    "statusCode": status_code,
+                    "headers": {
+                        "Content-Type": "application/json",
+                        'Content-Length': len(reply_body)
+                    },
+                    "body": base64.b64encode(reply_body.encode()).
+                    decode(sys.getfilesystemencoding())
+                }
+            }
+
+            self.publish_lock.acquire()
+            try:
+                pub_ret = self.mqtt_client.publish(topic=self.respond_topic,
+                                                   payload=json.dumps(
+                                                       response_json),
+                                                   qos=constants.QOS_LEVEL,
+                                                   retain=False)
+            finally:
+                self.publish_lock.release()
+            logger.SERVER_LOGGER.info(f"pub_ret (rc, msg_id): {pub_ret}")
+
         def on_message(client, userdata, msg):
-            future = self.tpe.submit(self.process_mqtt_message, msg)
-            debug_check = future.done()  # TODO: remove
-            logger.SERVER_LOGGER.info(f'debug_check: {debug_check}')
+            logger.SERVER_LOGGER.info('mqtt on_message called')
+            # future = self.ctpe.submit(lambda: self.process_mqtt_message(msg))
+            self.ctpe.submit(lambda: process_mqtt_message(
+                self.mqtt_client, self.respond_topic, self.publish_lock, msg))
 
         def on_subscribe(client, userdata, msg_id, given_qos):
             logger.SERVER_LOGGER.info(f'MQTT client subscribed with given_qos:'
