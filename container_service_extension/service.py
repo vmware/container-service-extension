@@ -434,12 +434,15 @@ class Service(object, metaclass=Singleton):
                                                               log_wire=self.config['service'].get('log_wire')) # noqa: E501
             for runtime_policy in shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES:  # noqa: E501
                 k8_runtime = shared_constants.RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP[runtime_policy]  # noqa: E501
-                placement_policy_name_to_href[k8_runtime] = cpm.get_vdc_compute_policy(runtime_policy, is_placement_policy=True)['href']  # noqa: E501
+                try:
+                    placement_policy_name_to_href[k8_runtime] = cpm.get_vdc_compute_policy(runtime_policy, is_placement_policy=True)['href']  # noqa: E501
+                except EntityNotFoundException:
+                    pass
             self.config['placement_policy_hrefs'] = placement_policy_name_to_href  # noqa: E501
         except Exception as e:
-            msg = f"Failed to load placement policies to server runtime configt: {str(e)}" # noqa: E501
-            msg_update_callback.error(e)
-            logger.SERVER_LOGGER.error(e)
+            msg = f"Failed to load placement policies to server runtime configuration: {str(e)}" # noqa: E501
+            msg_update_callback.error(msg)
+            logger.SERVER_LOGGER.error(msg)
             raise
 
     def _load_template_definition_from_catalog(self,
