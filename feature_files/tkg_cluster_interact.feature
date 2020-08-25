@@ -1,13 +1,13 @@
 Feature: Interact with TKG clusters
 
 Rules:
-  - CSE UI plugin is published to tenant
-  - User is on CSE UI plugin's landing page
+  - Container UI plugin is published to tenant
+  - User is on Container UI plugin's landing page
   - TKG is enabled in vCenter
   - At least one of the oVDC in the org is configured to host TKG clusters
 
 Scenario: Create TKG cluster
-  When User clicks on 'New' button on CSE UI plugin landing page
+  When User clicks on 'New' button on Container UI plugin landing page
   Then User sees the 'General' section of the cluster create wizard
   And User fills out the name and description of the cluster 
 
