@@ -440,7 +440,7 @@ class Service(object, metaclass=Singleton):
                     pass
             self.config['placement_policy_hrefs'] = placement_policy_name_to_href  # noqa: E501
         except Exception as e:
-            msg = f"Failed to load placement policies to server runtime configtion: {str(e)}" # noqa: E501
+            msg = f"Failed to load placement policies to server runtime configuration: {str(e)}" # noqa: E501
             msg_update_callback.error(msg)
             logger.SERVER_LOGGER.error(msg)
             raise
