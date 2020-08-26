@@ -5,6 +5,7 @@ import sys
 from threading import Lock
 
 import paho.mqtt.client as mqtt
+import requests
 
 from container_service_extension.consumer.consumer_thread_pool_executor \
     import ConsumerThreadPoolExecutor
@@ -41,18 +42,11 @@ class MQTTConsumer:
         self.ctpe = ConsumerThreadPoolExecutor(NUM_TPE_WORKERS)
         self.publish_lock = Lock()
 
-    def process_mqtt_message(self, msg):
-        payload_json = json.loads(msg.payload.decode())
-        http_req_json = json.loads(base64.b64decode(
-            payload_json['httpRequest']))
-        message_json = http_req_json['message']
-        reply_body, status_code = utils.get_reply_body_and_status_code(
-            message_json)
-
+    def form_response_json(self, request_id, status_code, reply_body):
         response_json = {
             "type": "API_RESPONSE",
             "headers": {
-                "requestId": payload_json["headers"]["requestId"],
+                "requestId": request_id,
             },
             "httpResponse": {
                 "statusCode": status_code,
@@ -61,10 +55,36 @@ class MQTTConsumer:
                     'Content-Length': len(reply_body)
                 },
                 "body": base64.b64encode(reply_body.encode()).
-                decode(sys.getfilesystemencoding())
+                decode(self.fsencoding)
             }
         }
+        return response_json
 
+    def process_mqtt_message(self, msg):
+        payload_json = utils.str_to_json(msg.payload, self.fsencoding)
+        http_req_json = json.loads(base64.b64decode(
+            payload_json['httpRequest']))
+        message_json = http_req_json['message']
+        reply_body, status_code = utils.get_reply_body_and_status_code(
+            message_json)
+
+        response_json = self.form_response_json(
+            request_id=payload_json["headers"]["requestId"],
+            status_code=status_code,
+            reply_body=reply_body)
+
+        self.send_response(response_json)
+
+    def send_too_many_requests_response(self, msg):
+        payload_json = utils.str_to_json(msg.payload, self.fsencoding)
+        response_json = self.form_response_json(
+            request_id=payload_json["headers"]["requestId"],
+            status_code=requests.codes.too_many_requests,
+            reply_body='[{"Server is handling too many requests. '
+                       'Please wait and try again.":""}]')
+        self.send_response(response_json)
+
+    def send_response(self, response_json):
         self.publish_lock.acquire()
         try:
             pub_ret = self.mqtt_client.publish(topic=self.respond_topic,
@@ -83,7 +103,10 @@ class MQTTConsumer:
             client.subscribe(self.listen_topic, qos=QOS_LEVEL)
 
         def on_message(client, userdata, msg):
-            self.ctpe.submit(lambda: self.process_mqtt_message(msg))
+            if self.ctpe.max_workers_busy():
+                self.send_too_many_requests_response(msg)
+            else:
+                self.ctpe.submit(lambda: self.process_mqtt_message(msg))
 
         def on_subscribe(client, userdata, msg_id, given_qos):
             logger.SERVER_LOGGER.info(f'MQTT client subscribed with given_qos:'

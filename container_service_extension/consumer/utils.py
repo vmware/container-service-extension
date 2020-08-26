@@ -10,6 +10,10 @@ import container_service_extension.request_processor as request_processor
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 
 
+def str_to_json(json_str, fsencoding):
+    return json.loads(json_str.decode(fsencoding))
+
+
 def get_reply_body_and_status_code(msg_json):
     try:
         response_format = None
