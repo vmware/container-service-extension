@@ -264,7 +264,7 @@ class Service(object, metaclass=Singleton):
                 if not api_filters_status:
                     msg = 'MQTT Api filter is not set up'
                     logger.SERVER_LOGGER.error(msg)
-                    raise Exception(msg)
+                    raise cse_exception.MQTTExtensionError(msg)
                 token_info = mqtt_ext_manager.create_extension_token(
                     token_name=server_constants.MQTT_TOKEN_NAME,
                     ext_urn_id=ext_urn_id)

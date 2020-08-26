@@ -33,12 +33,12 @@ class MQTTConsumer:
         self.mqtt_client = None
 
     def connect(self):
-        def on_connect(client, userdata, flags, rc):
-            logger.SERVER_LOGGER.info(f'MQTT client connected with result code'
-                                      f' {rc} and flags {flags}')
-            client.subscribe(self.listen_topic, qos=QOS_LEVEL)
+        def on_connect(mqtt_client, userdata, flags, rc):
+            logger.SERVER_LOGGER.info(f'MQTT mqtt_client connected with '
+                                      f'result code {rc} and flags {flags}')
+            mqtt_client.subscribe(self.listen_topic, qos=QOS_LEVEL)
 
-        def on_message(client, userdata, msg):
+        def on_message(mqtt_client, userdata, msg):
             payload_json = json.loads(msg.payload.decode())
             http_req_json = json.loads(base64.b64decode(
                 payload_json['httpRequest']))
@@ -62,16 +62,17 @@ class MQTTConsumer:
                 }
             }
 
-            pub_ret = client.publish(topic=self.respond_topic,
-                                     payload=json.dumps(response_json),
-                                     qos=QOS_LEVEL, retain=False)
+            pub_ret = mqtt_client.publish(topic=self.respond_topic,
+                                          payload=json.dumps(response_json),
+                                          qos=QOS_LEVEL,
+                                          retain=False)
             logger.SERVER_LOGGER.info(f"pub_ret (rc, msg_id): {pub_ret}")
 
-        def on_subscribe(client, userdata, msg_id, given_qos):
-            logger.SERVER_LOGGER.info(f'MQTT client subscribed with given_qos:'
-                                      f'{given_qos}')
+        def on_subscribe(mqtt_client, userdata, msg_id, given_qos):
+            logger.SERVER_LOGGER.info(f'MQTT mqtt_client subscribed with '
+                                      f'given_qos: {given_qos}')
 
-        def on_disconnect(client, userdata, rc):
+        def on_disconnect(mqtt_client, userdata, rc):
             logger.SERVER_LOGGER.info(f'MQTT disconnect with reason: {rc}')
 
         self.mqtt_client = mqtt.Client(client_id=CLIENT_ID,
