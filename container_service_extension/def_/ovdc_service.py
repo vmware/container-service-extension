@@ -153,7 +153,7 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
     ovdc_name = ovdc.get_resource().get('name')
     policies = []
     for policy in cpm.list_vdc_placement_policies_on_vdc(ovdc_id):
-        policies.append(RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP[policy['name']])  # noqa: E501
+        policies.append(RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP[policy['display_name']])  # noqa: E501
     return def_models.Ovdc(ovdc_name=ovdc_name, ovdc_id=ovdc_id, k8s_runtime=policies) # noqa: E501
 
 
@@ -189,7 +189,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
             operation_context.sysadmin_client, log_wire=log_wire)
         existing_policies = []
         for policy in cpm.list_vdc_placement_policies_on_vdc(ovdc_id):
-            existing_policies.append(policy['name'])
+            existing_policies.append(policy['display_name'])
 
         logger.SERVER_LOGGER.debug(policy_list)
         logger.SERVER_LOGGER.debug(existing_policies)

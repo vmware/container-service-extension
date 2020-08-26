@@ -1760,15 +1760,20 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
             if sizing_class_name:
                 vdc_resource = vdc.get_resource()
                 filters = {
-                    'name': sizing_class_name,
                     'isSizingOnly': True,
                 }
-                policies = list(cpm.list_compute_policies_on_vdc(vdc_resource.get('id'), filters=filters))  # noqa: E501
-                if len(policies) == 0:
-                    raise Exception(f"No sizing policy with the name {sizing_class_name} exists on the VDC")  # noqa: E501
-                if len(policies) > 1:
-                    raise Exception(f"Duplicate sizing policies with the name {sizing_class_name}")  # noqa: E501
-                sizing_class_href = policies[0]['href']
+                for policy in cpm.list_compute_policies_on_vdc(vdc_resource.get('id'), filters=filters):  # noqa: E501
+                    if policy['name'] == sizing_class_name:
+                        if not sizing_class_href:
+                            sizing_class_href = policy['href']
+                        else:
+                            msg = f"Duplicate sizing policies with the name {sizing_class_name}"  # noqa: E501
+                            LOGGER.error(msg)
+                            raise Exception(msg)
+                if not sizing_class_href:
+                    msg = f"No sizing policy with the name {sizing_class_name} exists on the VDC"  # noqa: E501
+                    LOGGER.error(msg)
+                    raise Exception(msg)
             if storage_profile:
                 storage_profile = vdc.get_storage_profile(storage_profile)
 
