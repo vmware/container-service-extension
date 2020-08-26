@@ -234,8 +234,8 @@ class DefEntityClusterApi:
         elif native_entity:
             return self._nativeCluster.get_upgrade_plan_by_cluster_id(
                 native_entity.get('id'))
-        raise NotImplementedError(
-            "Get Cluster upgrade-plan for TKG clusters not yet implemented")  # noqa: E501
+        return self._tkgCluster.get_upgrade_plan(cluster_name, org=org,
+                                                 vdc=vdc)
 
     def upgrade_cluster(self, cluster_name, template_name,
                         template_revision, org_name=None, ovdc_name=None):
@@ -266,8 +266,7 @@ class DefEntityClusterApi:
             native_entity['entity']['spec']['k8_distribution']['template_name'] = template_name  # noqa: E501
             native_entity['entity']['spec']['k8_distribution']['template_revision'] = template_revision  # noqa: E501
             return self._nativeCluster.upgrade_cluster_by_cluster_id(native_entity['id'], cluster_entity=native_entity)  # noqa: E501
-        raise NotImplementedError(
-            "Cluster upgrade for TKG clusters not yet implemented")  # noqa: E501
+        return self._tkgCluster.upgrade_cluster(cluster_name)
 
     def get_templates(self):
         """Get the template information that are supported by api version 35.
