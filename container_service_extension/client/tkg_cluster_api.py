@@ -75,9 +75,10 @@ class TKGClusterApi:
         """
         filters = []
         if org:
-            # TODO(TKGcluster): Owner filter not working
-            # filters.append((cli_constants.TKGClusterEntityFilterKey.ORG_NAME.value, org))  # noqa: E501
-            pass
+            org_resource = vcd_utils.get_org(self._client, org_name=org)
+            org_id = org_resource.href.split('/')[-1]
+            self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.X_VMWARE_VCLOUD_TENANT_CONTEXT,  # noqa: E501
+                                                org_id)
         if vdc:
             filters.append((cli_constants.TKGEntityFilterKey.VDC_NAME.value, vdc))  # noqa: E501
         filter_string = None
@@ -115,8 +116,10 @@ class TKGClusterApi:
     def get_tkg_clusters_by_name(self, name, vdc=None, org=None):
         filters = [(cli_constants.TKGEntityFilterKey.CLUSTER_NAME.value, name)]
         if org:
-            # TODO(Org filed for TKG): Add filter once schema is updated
-            pass
+            org_resource = vcd_utils.get_org(self._client, org_name=org)
+            org_id = org_resource.href.split('/')[-1]
+            self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.X_VMWARE_VCLOUD_TENANT_CONTEXT,  # noqa: E501
+                                                org_id)
         if vdc:
             filters.append((cli_constants.TKGEntityFilterKey.VDC_NAME.value, vdc))  # noqa: E501
         filter_string = ";".join([f"{f[0]}=={f[1]}" for f in filters])
@@ -195,6 +198,8 @@ class TKGClusterApi:
         :param str cluster_id:
         :return: string containing the task href of delete cluster operation
         """
+        # Assumes that the caller of the function has
+        # already set the org context
         try:
             response = \
                 self._tkg_client_api.delete_tkg_cluster_with_http_info(tkg_cluster_id=cluster_id)  # noqa: E501
@@ -240,7 +245,7 @@ class TKGClusterApi:
             logger.CLIENT_LOGGER.error(f"{e}")
             raise
 
-    def get_cluster_config_by_id(self, cluster_id, org_urn):
+    def get_cluster_config_by_id(self, cluster_id):
         """Get TKG cluster config by cluster id.
 
         :param str cluster_id: ID of the cluster
@@ -248,14 +253,11 @@ class TKGClusterApi:
         :return the cluster config of the TKG cluster
         :rtype: str
         """
+        # Assumes that the caller of the function has
+        # already set the org context
         try:
-            # set org-id extracted from org-urn in the header
-            org_id = vcd_utils.extract_id(org_urn)
-            self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.X_VMWARE_VCLOUD_TENANT_CONTEXT,  # noqa: E501
-                                                org_id)
             response, status, headers = \
                 self._tkg_client_api.create_tkg_cluster_config_task(id=cluster_id)  # noqa: E501
-
             # Extract the task for creating the config from the Location header
             config_task_href = headers.get('Location')
             if not config_task_href:
@@ -285,8 +287,7 @@ class TKGClusterApi:
                 self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)
             if len(tkg_def_entities) == 1:
                 return self.get_cluster_config_by_id(
-                    tkg_def_entities[0]['id'],
-                    org_urn=tkg_def_entities[0]['org']['id'])
+                    tkg_def_entities[0]['id'])
             elif len(tkg_def_entities) == 0:
                 raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
             else:
