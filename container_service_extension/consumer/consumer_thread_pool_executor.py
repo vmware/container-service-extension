@@ -1,11 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 
-
-def decrement_num_active_threads(future, ctpe):
-    ctpe.num_active_threads_lock.acquire()
-    ctpe.num_active_threads -= 1
-    ctpe.num_active_threads_lock.release()
+# import container_service_extension.logger as logger
 
 
 class ConsumerThreadPoolExecutor(ThreadPoolExecutor):
@@ -14,6 +10,8 @@ class ConsumerThreadPoolExecutor(ThreadPoolExecutor):
 
         self.max_workers = max_workers
         self.num_active_threads = 0
+        # logger.SERVER_LOGGER.info(f'num_active_threads: '
+        #                           f'{self.num_active_threads}')
         self.num_active_threads_lock = Lock()
 
     def get_num_active_threads(self):
@@ -25,11 +23,15 @@ class ConsumerThreadPoolExecutor(ThreadPoolExecutor):
     def _increment_num_active_threads(self):
         self.num_active_threads_lock.acquire()
         self.num_active_threads += 1
+        # logger.SERVER_LOGGER.info(f'increment, num_active_threads: '
+        #                           f'{self.num_active_threads}')
         self.num_active_threads_lock.release()
 
     def _decrement_num_active_threads(self):
         self.num_active_threads_lock.acquire()
         self.num_active_threads -= 1
+        # logger.SERVER_LOGGER.info(f'decrement, num_active_threads: '
+        #                           f'{self.num_active_threads}')
         self.num_active_threads_lock.release()
 
     def submit(self, fn, *args, **kwargs):
