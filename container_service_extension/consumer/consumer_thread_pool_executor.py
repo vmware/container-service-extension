@@ -11,8 +11,6 @@ class ConsumerThreadPoolExecutor(ThreadPoolExecutor):
 
         self.max_workers = max_workers
         self.num_active_threads = 0
-        # logger.SERVER_LOGGER.info(f'num_active_threads: '
-        #                           f'{self.num_active_threads}')
         self.num_active_threads_lock = Lock()
         self.num_total_threads = 0
         self.num_total_threads_lock = Lock()
@@ -34,23 +32,25 @@ class ConsumerThreadPoolExecutor(ThreadPoolExecutor):
 
     def get_num_active_threads(self):
         self.num_active_threads_lock.acquire()
-        num_active_threads = self.num_active_threads
-        self.num_active_threads_lock.release()
+        try:
+            num_active_threads = self.num_active_threads
+        finally:
+            self.num_active_threads_lock.release()
         return num_active_threads
 
     def _increment_num_active_threads(self):
         self.num_active_threads_lock.acquire()
-        self.num_active_threads += 1
-        # logger.SERVER_LOGGER.info(f'increment, num_active_threads: '
-        #                           f'{self.num_active_threads}')
-        self.num_active_threads_lock.release()
+        try:
+            self.num_active_threads += 1
+        finally:
+            self.num_active_threads_lock.release()
 
     def _decrement_num_active_threads(self):
         self.num_active_threads_lock.acquire()
-        self.num_active_threads -= 1
-        # logger.SERVER_LOGGER.info(f'decrement, num_active_threads: '
-        #                           f'{self.num_active_threads}')
-        self.num_active_threads_lock.release()
+        try:
+            self.num_active_threads -= 1
+        finally:
+            self.num_active_threads_lock.release()
 
     def submit(self, fn, *args, **kwargs):
         future = super().submit(fn, *args, **kwargs)
