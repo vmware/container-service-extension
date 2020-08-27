@@ -22,7 +22,7 @@ class MQTTConsumer:
                  verify_ssl,
                  token,
                  client_username,
-                 max_pool_threads):
+                 processors):
         self.url = url
         self.listen_topic = listen_topic
         self.respond_topic = respond_topic
@@ -32,8 +32,8 @@ class MQTTConsumer:
         self.fsencoding = sys.getfilesystemencoding()
         self.mqtt_client = None
 
-        self.max_pool_threads = max_pool_threads
-        self.ctpe = ConsumerThreadPoolExecutor(self.max_pool_threads)
+        self.processors = processors
+        self.ctpe = ConsumerThreadPoolExecutor(self.processors)
         self.publish_lock = Lock()
 
     def form_response_json(self, request_id, status_code, reply_body):
@@ -135,3 +135,6 @@ class MQTTConsumer:
         if self.mqtt_client:
             self.mqtt_client.disconnect()
         self.ctpe.shutdown(wait=True)
+
+    def get_num_active_threads(self):
+        return self.ctpe.get_num_active_threads()

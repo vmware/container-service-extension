@@ -27,7 +27,7 @@ class AMQPConsumer(object):
                  password,
                  exchange,
                  routing_key,
-                 max_pool_threads):
+                 processors):
         self._connection = None
         self._channel = None
         self._closing = False
@@ -42,8 +42,8 @@ class AMQPConsumer(object):
         self.routing_key = routing_key
         self.queue = routing_key
         self.fsencoding = sys.getfilesystemencoding()
-        self.max_pool_threads = max_pool_threads
-        self.ctpe = ConsumerThreadPoolExecutor(self.max_pool_threads)
+        self.processors = processors
+        self.ctpe = ConsumerThreadPoolExecutor(self.processors)
         self.publish_lock = Lock()
 
     def connect(self):
@@ -244,3 +244,6 @@ class AMQPConsumer(object):
     def close_connection(self):
         LOGGER.info("Closing connection")
         self._connection.close()
+
+    def get_num_active_threads(self):
+        return self.ctpe.get_num_active_threads()

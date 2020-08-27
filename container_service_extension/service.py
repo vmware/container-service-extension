@@ -132,7 +132,6 @@ class Service(object, metaclass=Singleton):
         self.skip_config_decryption = skip_config_decryption
         self.decryption_password = decryption_password
         self.consumer = None
-        self.threads = []
         self.pks_cache = None
         self._state = ServerState.STOPPED
         self._kubernetesInterface: def_models.DefInterface = None
@@ -166,7 +165,8 @@ class Service(object, metaclass=Singleton):
         result = utils.get_cse_info()
         result[shared_constants.CSE_SERVER_API_VERSION] = utils.get_server_api_version()  # noqa: E501
         if get_sysadmin_info:
-            result['consumer_threads'] = len(self.threads)
+            result['active_consumer_processors'] = 0 if self.consumer is None \
+                else self.consumer.get_num_active_threads()
             result['all_threads'] = threading.activeCount()
             result['requests_in_progress'] = self.active_requests_count()
             result['config_file'] = self.config_file
@@ -324,9 +324,9 @@ class Service(object, metaclass=Singleton):
                 orgs=pks_config.get('orgs', []),
                 nsxt_servers=pks_config.get('nsxt_servers', []))
 
-        num_processors = self.config['service']['listeners']
+        processors = self.config['service']['listeners']
         try:
-            self.consumer = MessageConsumer(self.config, num_processors)
+            self.consumer = MessageConsumer(self.config, processors)
             name = 'MessageConsumer'
             t = Thread(name=name, target=consumer_thread,
                        args=(self.consumer, ))
@@ -335,12 +335,11 @@ class Service(object, metaclass=Singleton):
             msg = f"Started thread '{name}'"
             msg_update_callback.general(msg)
             logger.SERVER_LOGGER.info(msg)
-            self.threads.append(t)
             time.sleep(0.25)
         except Exception:
             logger.SERVER_LOGGER.error(traceback.format_exc())
 
-        logger.SERVER_LOGGER.info(f"Number of threads started: {len(self.threads)}")  # noqa: E501
+        logger.SERVER_LOGGER.info("One MessageConsumer thread started")
 
         self._state = ServerState.RUNNING
 

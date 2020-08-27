@@ -14,7 +14,7 @@ class ConsumerThreadPoolExecutor(ThreadPoolExecutor):
         #                           f'{self.num_active_threads}')
         self.num_active_threads_lock = Lock()
 
-    def _get_num_active_threads(self):
+    def get_num_active_threads(self):
         self.num_active_threads_lock.acquire()
         num_active_threads = self.num_active_threads
         self.num_active_threads_lock.release()
@@ -43,4 +43,4 @@ class ConsumerThreadPoolExecutor(ThreadPoolExecutor):
 
     def max_threads_busy(self):
         """Return bool to indicate if max_workers are busy."""
-        return self._get_num_active_threads() == self.max_workers
+        return self.get_num_active_threads() == self.max_workers

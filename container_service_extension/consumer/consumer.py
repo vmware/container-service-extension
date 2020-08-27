@@ -9,7 +9,7 @@ from container_service_extension.utils import should_use_mqtt_protocol
 class MessageConsumer:
     """Returns the consumer class for the correct message protocol."""
 
-    def __new__(cls, config, max_pool_threads):
+    def __new__(cls, config, processors):
         """Create the correct message consumer class for the message protocol.
 
         :param dict config: content of the CSE config file.
@@ -27,7 +27,7 @@ class MessageConsumer:
                 client_username=f'{server_constants.MQTT_EXTENSION_VENDOR}/'
                                 f'{server_constants.CSE_SERVICE_NAME}/'
                                 f'{server_constants.MQTT_EXTENSION_VERSION}',
-                max_pool_threads=max_pool_threads)
+                processors=processors)
         else:
             amqp = config['amqp']
             return AMQPConsumer(
@@ -39,4 +39,4 @@ class MessageConsumer:
                 password=amqp['password'],
                 exchange=amqp['exchange'],
                 routing_key=amqp['routing_key'],
-                max_pool_threads=max_pool_threads)
+                processors=processors)
