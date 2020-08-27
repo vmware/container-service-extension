@@ -6,12 +6,17 @@ import base64
 import json
 import sys
 import threading
+from threading import Lock
 
 import pika
 
+from container_service_extension.consumer.consumer_thread_pool_executor \
+    import ConsumerThreadPoolExecutor
 import container_service_extension.consumer.utils as utils
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.server_constants import EXCHANGE_TYPE
+
+NUM_TPE_WORKERS = 4
 
 
 class AMQPConsumer(object):
@@ -38,6 +43,8 @@ class AMQPConsumer(object):
         self.routing_key = routing_key
         self.queue = routing_key
         self.fsencoding = sys.getfilesystemencoding()
+        self.ctpe = ConsumerThreadPoolExecutor(NUM_TPE_WORKERS)
+        self.publish_lock = Lock()
 
     def connect(self):
         LOGGER.info(f"Connecting to {self.host}:{self.port}")
@@ -202,6 +209,7 @@ class AMQPConsumer(object):
         self._closing = True
         self.stop_consuming()
         self._connection.ioloop.start()
+        self.ctpe.shutdown(wait=True)
         LOGGER.info("Stopped")
 
     def close_connection(self):

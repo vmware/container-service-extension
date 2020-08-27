@@ -75,15 +75,6 @@ class MQTTConsumer:
 
         self.send_response(response_json)
 
-    def send_too_many_requests_response(self, msg):
-        payload_json = utils.str_to_json(msg.payload, self.fsencoding)
-        response_json = self.form_response_json(
-            request_id=payload_json["headers"]["requestId"],
-            status_code=requests.codes.too_many_requests,
-            reply_body='[{"Server is handling too many requests. '
-                       'Please wait and try again.":""}]')
-        self.send_response(response_json)
-
     def send_response(self, response_json):
         self.publish_lock.acquire()
         try:
@@ -95,6 +86,15 @@ class MQTTConsumer:
         finally:
             self.publish_lock.release()
         logger.SERVER_LOGGER.info(f"pub_ret (rc, msg_id): {pub_ret}")
+
+    def send_too_many_requests_response(self, msg):
+        payload_json = utils.str_to_json(msg.payload, self.fsencoding)
+        response_json = self.form_response_json(
+            request_id=payload_json["headers"]["requestId"],
+            status_code=requests.codes.too_many_requests,
+            reply_body='[{"Server is handling too many requests. '
+                       'Please wait and try again.":""}]')
+        self.send_response(response_json)
 
     def connect(self):
         def on_connect(client, userdata, flags, rc):
@@ -143,3 +143,4 @@ class MQTTConsumer:
     def stop(self):
         if self.mqtt_client:
             self.mqtt_client.disconnect()
+        self.ctpe.shutdown(wait=True)
