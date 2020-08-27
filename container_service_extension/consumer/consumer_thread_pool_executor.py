@@ -41,6 +41,6 @@ class ConsumerThreadPoolExecutor(ThreadPoolExecutor):
         self._increment_num_active_threads()
         return future
 
-    def max_workers_busy(self):
+    def max_threads_busy(self):
         """Return bool to indicate if max_workers are busy."""
         return self._get_num_active_threads() == self.max_workers

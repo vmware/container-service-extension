@@ -16,8 +16,6 @@ import container_service_extension.consumer.utils as utils
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.server_constants import EXCHANGE_TYPE
 
-NUM_TPE_WORKERS = 1
-
 
 class AMQPConsumer(object):
     def __init__(self,
@@ -28,7 +26,8 @@ class AMQPConsumer(object):
                  username,
                  password,
                  exchange,
-                 routing_key):
+                 routing_key,
+                 max_pool_threads):
         self._connection = None
         self._channel = None
         self._closing = False
@@ -43,7 +42,8 @@ class AMQPConsumer(object):
         self.routing_key = routing_key
         self.queue = routing_key
         self.fsencoding = sys.getfilesystemencoding()
-        self.ctpe = ConsumerThreadPoolExecutor(NUM_TPE_WORKERS)
+        self.max_pool_threads = max_pool_threads
+        self.ctpe = ConsumerThreadPoolExecutor(self.max_pool_threads)
         self.publish_lock = Lock()
 
     def connect(self):
@@ -205,7 +205,7 @@ class AMQPConsumer(object):
 
     def on_message(self, unused_channel, basic_deliver, properties, body):
         self.acknowledge_message(basic_deliver.delivery_tag)
-        if self.ctpe.max_workers_busy():
+        if self.ctpe.max_threads_busy():
             self.send_too_many_requests_response(properties, body)
         else:
             self.ctpe.submit(lambda: self.process_amqp_message(properties,

@@ -131,7 +131,7 @@ class Service(object, metaclass=Singleton):
         self.should_check_config = should_check_config
         self.skip_config_decryption = skip_config_decryption
         self.decryption_password = decryption_password
-        self.consumers = []
+        self.consumer = None
         self.threads = []
         self.pks_cache = None
         self._state = ServerState.STOPPED
@@ -324,24 +324,21 @@ class Service(object, metaclass=Singleton):
                 orgs=pks_config.get('orgs', []),
                 nsxt_servers=pks_config.get('nsxt_servers', []))
 
-        num_consumers = self.config['service']['listeners']
-        for n in range(num_consumers):
-            try:
-                c = MessageConsumer(self.config)
-                name = 'MessageConsumer-%s' % n
-                t = Thread(name=name, target=consumer_thread, args=(c, ))
-                t.daemon = True
-                t.start()
-                msg = f"Started thread '{name} ({t.ident})'"
-                msg_update_callback.general(msg)
-                logger.SERVER_LOGGER.info(msg)
-                self.threads.append(t)
-                self.consumers.append(c)
-                time.sleep(0.25)
-            except KeyboardInterrupt:
-                break
-            except Exception:
-                logger.SERVER_LOGGER.error(traceback.format_exc())
+        num_processors = self.config['service']['listeners']
+        try:
+            self.consumer = MessageConsumer(self.config, num_processors)
+            name = 'MessageConsumer'
+            t = Thread(name=name, target=consumer_thread,
+                       args=(self.consumer, ))
+            t.daemon = True
+            t.start()
+            msg = f"Started thread '{name}'"
+            msg_update_callback.general(msg)
+            logger.SERVER_LOGGER.info(msg)
+            self.threads.append(t)
+            time.sleep(0.25)
+        except Exception:
+            logger.SERVER_LOGGER.error(traceback.format_exc())
 
         logger.SERVER_LOGGER.info(f"Number of threads started: {len(self.threads)}")  # noqa: E501
 
@@ -383,11 +380,10 @@ class Service(object, metaclass=Singleton):
 
         logger.SERVER_LOGGER.info("Stop detected")
         logger.SERVER_LOGGER.info("Closing connections...")
-        for c in self.consumers:
-            try:
-                c.stop()
-            except Exception:
-                logger.SERVER_LOGGER.error(traceback.format_exc())
+        try:
+            self.consumer.stop()
+        except Exception:
+            logger.SERVER_LOGGER.error(traceback.format_exc())
 
         self._state = ServerState.STOPPED
         logger.SERVER_LOGGER.info("Done")

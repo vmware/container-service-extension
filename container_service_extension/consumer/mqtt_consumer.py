@@ -14,9 +14,6 @@ import container_service_extension.consumer.utils as utils
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 
 
-NUM_TPE_WORKERS = 4
-
-
 class MQTTConsumer:
     def __init__(self,
                  url,
@@ -24,7 +21,8 @@ class MQTTConsumer:
                  respond_topic,
                  verify_ssl,
                  token,
-                 client_username):
+                 client_username,
+                 max_pool_threads):
         self.url = url
         self.listen_topic = listen_topic
         self.respond_topic = respond_topic
@@ -34,7 +32,8 @@ class MQTTConsumer:
         self.fsencoding = sys.getfilesystemencoding()
         self.mqtt_client = None
 
-        self.ctpe = ConsumerThreadPoolExecutor(NUM_TPE_WORKERS)
+        self.max_pool_threads = max_pool_threads
+        self.ctpe = ConsumerThreadPoolExecutor(self.max_pool_threads)
         self.publish_lock = Lock()
 
     def form_response_json(self, request_id, status_code, reply_body):
@@ -96,7 +95,7 @@ class MQTTConsumer:
             client.subscribe(self.listen_topic, qos=constants.QOS_LEVEL)
 
         def on_message(client, userdata, msg):
-            if self.ctpe.max_workers_busy():
+            if self.ctpe.max_threads_busy():
                 self.send_too_many_requests_response(msg)
             else:
                 self.ctpe.submit(lambda: self.process_mqtt_message(msg))
