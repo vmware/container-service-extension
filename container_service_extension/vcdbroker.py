@@ -1426,12 +1426,9 @@ def get_nfs_exports(sysadmin_client: vcd_client.Client, ip, vapp, vm_name):
 
 def is_valid_cluster_name(name):
     """Validate that the cluster name against the pattern."""
-    if len(name) > 25:
+    if name and len(name) > 25:
         return False
-    if name[-1] == '.':
-        name = name[:-1]
-    allowed = re.compile(r"(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
-    return all(allowed.match(x) for x in name.split("."))
+    return re.match("^[a-zA-Z][A-Za-z0-9-]*$", name) is not None
 
 
 def _update_cluster_dict_with_node_info(client, cluster):
