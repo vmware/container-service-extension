@@ -326,7 +326,7 @@ class Service(object, metaclass=Singleton):
                 orgs=pks_config.get('orgs', []),
                 nsxt_servers=pks_config.get('nsxt_servers', []))
 
-        processors = self.config['service']['listeners']
+        processors = self.config['service']['processors']
         try:
             self.consumer = MessageConsumer(self.config, processors)
             name = 'MessageConsumer'
