@@ -18,7 +18,7 @@ class PolicyBasedOvdc:
         self.client = client
         self._uri = f"{self.client.get_api_uri()}/{shared_constants.CSE_URL_FRAGMENT}/{shared_constants.CSE_3_0_URL_FRAGMENT}"  # noqa: E501
 
-    def list_ovdc_for_k8s(self):
+    def list_ovdc(self):
         method = shared_constants.RequestMethod.GET
         uri = f'{self._uri}/ovdcs'
         response = self.client._do_request_prim(
@@ -28,12 +28,8 @@ class PolicyBasedOvdc:
             accept_type='application/json')
         return process_response(response)
 
-    def update_ovdc_for_k8s(self,
-                            ovdc_name,
-                            k8s_runtime,
-                            enable=True,
-                            org_name=None,
-                            remove_cp_from_vms_on_disable=False):
+    def update_ovdc(self, ovdc_name, k8s_runtime, enable=True, org_name=None,
+                    remove_cp_from_vms_on_disable=False):
         """Enable/Disable ovdc for k8s for the given k8s provider.
 
         :param str ovdc_name: Name of org VDC to update
@@ -85,7 +81,7 @@ class PolicyBasedOvdc:
             accept_type='application/json')
         return process_response(resp)
 
-    def info_ovdc_for_k8s(self, ovdc_name, org_name):
+    def info_ovdc(self, ovdc_name, org_name):
         """Disable ovdc for k8s for the given container provider.
 
         :param str ovdc_name: Name of the org VDC to be enabled
