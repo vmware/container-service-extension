@@ -247,3 +247,6 @@ class AMQPConsumer(object):
 
     def get_num_active_threads(self):
         return self.ctpe.get_num_active_threads()
+
+    def get_num_total_threads(self):
+        return self.ctpe.get_num_total_threads()

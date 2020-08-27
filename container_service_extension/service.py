@@ -165,8 +165,10 @@ class Service(object, metaclass=Singleton):
         result = utils.get_cse_info()
         result[shared_constants.CSE_SERVER_API_VERSION] = utils.get_server_api_version()  # noqa: E501
         if get_sysadmin_info:
-            result['active_consumer_processors'] = 0 if self.consumer is None \
+            result['active_consumer_threads'] = 0 if self.consumer is None \
                 else self.consumer.get_num_active_threads()
+            result['all_consumer_threads'] = 0 if self.consumer is None else \
+                self.consumer.get_num_total_threads()
             result['all_threads'] = threading.activeCount()
             result['requests_in_progress'] = self.active_requests_count()
             result['config_file'] = self.config_file
