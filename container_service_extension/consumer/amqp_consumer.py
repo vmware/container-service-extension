@@ -2,21 +2,21 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import base64
 import json
 import sys
-import threading
 from threading import Lock
 
 import pika
+import requests
 
+import container_service_extension.consumer.constants as constants
 from container_service_extension.consumer.consumer_thread_pool_executor \
     import ConsumerThreadPoolExecutor
 import container_service_extension.consumer.utils as utils
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.server_constants import EXCHANGE_TYPE
 
-NUM_TPE_WORKERS = 4
+NUM_TPE_WORKERS = 1
 
 
 class AMQPConsumer(object):
@@ -149,39 +149,68 @@ class AMQPConsumer(object):
         if self._channel:
             self._channel.close()
 
-    def on_message(self, unused_channel, basic_deliver, properties, body):
-        self.acknowledge_message(basic_deliver.delivery_tag)
-        body_json = json.loads(body.decode(self.fsencoding))[0]
+    def form_response_json(self, request_id, status_code, reply_body):
+        response_json = {
+            'id': request_id,
+            'headers': {
+                'Content-Type': 'application/json',
+                'Content-Length': len(reply_body)
+            },
+            'statusCode': status_code,
+            'body': utils.format_response_body(reply_body, self.fsencoding),
+            'request': False
+        }
+        return response_json
+
+    def process_amqp_message(self, properties, body, basic_deliver):
+        body_json = utils.str_to_json(body, self.fsencoding)[0]
         LOGGER.debug(f"Received message # {basic_deliver.delivery_tag} "
                      f"from {properties.app_id} "
-                     f"({threading.currentThread().ident}): "
                      f"{json.dumps(body_json)}, props: {properties}")
 
         reply_body, status_code = \
             utils.get_reply_body_and_status_code(body_json)
 
         if properties.reply_to is not None:
-            reply_msg = {
-                'id': body_json['id'],
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Content-Length': len(reply_body)
-                },
-                'statusCode': status_code,
-                'body': base64.b64encode(reply_body.encode()).decode(
-                    self.fsencoding),
-                'request': False
-            }
-
+            reply_msg = self.form_response_json(
+                request_id=body_json['id'],
+                status_code=status_code,
+                reply_body=reply_body)
             LOGGER.debug(f"reply: {reply_body}")
 
-            reply_properties = pika.BasicProperties(
-                correlation_id=properties.correlation_id)
+            self.send_response(reply_msg, properties)
+
+    def send_response(self, reply_msg, properties):
+        reply_properties = pika.BasicProperties(
+            correlation_id=properties.correlation_id)
+        self.publish_lock.acquire()
+        try:
             self._channel.basic_publish(
                 exchange=properties.headers['replyToExchange'],
                 routing_key=properties.reply_to,
                 body=json.dumps(reply_msg),
                 properties=reply_properties)
+        finally:
+            self.publish_lock.release()
+
+    def send_too_many_requests_response(self, properties, body):
+        if properties.reply_to is not None:
+            body_json = utils.str_to_json(body, self.fsencoding)[0]
+            reply_msg = self.form_response_json(
+                request_id=body_json['id'],
+                status_code=requests.codes.too_many_requests,
+                reply_body=constants.TOO_MANY_REQUESTS_BODY)
+            LOGGER.debug(f"reply: {constants.TOO_MANY_REQUESTS_BODY}")
+            self.send_response(reply_msg, properties)
+
+    def on_message(self, unused_channel, basic_deliver, properties, body):
+        self.acknowledge_message(basic_deliver.delivery_tag)
+        if self.ctpe.max_workers_busy():
+            self.send_too_many_requests_response(properties, body)
+        else:
+            self.ctpe.submit(lambda: self.process_amqp_message(properties,
+                                                               body,
+                                                               basic_deliver))
 
     def acknowledge_message(self, delivery_tag):
         LOGGER.debug(f"Acknowledging message {delivery_tag}")

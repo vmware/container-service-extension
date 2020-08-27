@@ -1,3 +1,4 @@
+import base64
 import json
 import traceback
 
@@ -12,6 +13,10 @@ from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 
 def str_to_json(json_str, fsencoding):
     return json.loads(json_str.decode(fsencoding))
+
+
+def format_response_body(body, fsencoding):
+    return base64.b64encode(body.encode()).decode(fsencoding)
 
 
 def get_reply_body_and_status_code(msg_json):

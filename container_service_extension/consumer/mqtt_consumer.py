@@ -7,19 +7,14 @@ from threading import Lock
 import paho.mqtt.client as mqtt
 import requests
 
+import container_service_extension.consumer.constants as constants
 from container_service_extension.consumer.consumer_thread_pool_executor \
     import ConsumerThreadPoolExecutor
 import container_service_extension.consumer.utils as utils
-import container_service_extension.logger as logger
+from container_service_extension.logger import SERVER_LOGGER as LOGGER
 
 
 NUM_TPE_WORKERS = 4
-
-BROKER_PATH = '/messaging/mqtt'
-CLIENT_ID = 'pythonMQTT'
-MQTT_CONNECT_PORT = 443
-TRANSPORT_WSS = 'websockets'
-QOS_LEVEL = 2  # No duplicate messages
 
 
 class MQTTConsumer:
@@ -54,8 +49,7 @@ class MQTTConsumer:
                     "Content-Type": "application/json",
                     'Content-Length': len(reply_body)
                 },
-                "body": base64.b64encode(reply_body.encode()).
-                decode(self.fsencoding)
+                "body": utils.format_response_body(reply_body, self.fsencoding)
             }
         }
         return response_json
@@ -81,26 +75,25 @@ class MQTTConsumer:
             pub_ret = self.mqtt_client.publish(topic=self.respond_topic,
                                                payload=json.dumps(
                                                    response_json),
-                                               qos=QOS_LEVEL,
+                                               qos=constants.QOS_LEVEL,
                                                retain=False)
         finally:
             self.publish_lock.release()
-        logger.SERVER_LOGGER.info(f"pub_ret (rc, msg_id): {pub_ret}")
+        LOGGER.info(f"pub_ret (rc, msg_id): {pub_ret}")
 
     def send_too_many_requests_response(self, msg):
         payload_json = utils.str_to_json(msg.payload, self.fsencoding)
         response_json = self.form_response_json(
             request_id=payload_json["headers"]["requestId"],
             status_code=requests.codes.too_many_requests,
-            reply_body='[{"Server is handling too many requests. '
-                       'Please wait and try again.":""}]')
+            reply_body=constants.TOO_MANY_REQUESTS_BODY)
         self.send_response(response_json)
 
     def connect(self):
         def on_connect(client, userdata, flags, rc):
-            logger.SERVER_LOGGER.info(f'MQTT client connected with result code'
-                                      f' {rc} and flags {flags}')
-            client.subscribe(self.listen_topic, qos=QOS_LEVEL)
+            LOGGER.info(f'MQTT client connected with result code {rc} and '
+                        f'flags {flags}')
+            client.subscribe(self.listen_topic, qos=constants.QOS_LEVEL)
 
         def on_message(client, userdata, msg):
             if self.ctpe.max_workers_busy():
@@ -109,19 +102,18 @@ class MQTTConsumer:
                 self.ctpe.submit(lambda: self.process_mqtt_message(msg))
 
         def on_subscribe(client, userdata, msg_id, given_qos):
-            logger.SERVER_LOGGER.info(f'MQTT client subscribed with given_qos:'
-                                      f'{given_qos}')
+            LOGGER.info(f'MQTT client subscribed with given_qos: {given_qos}')
 
         def on_disconnect(client, userdata, rc):
-            logger.SERVER_LOGGER.info(f'MQTT disconnect with reason: {rc}')
+            LOGGER.info(f'MQTT disconnect with reason: {rc}')
 
-        self.mqtt_client = mqtt.Client(client_id=CLIENT_ID,
-                                       transport=TRANSPORT_WSS)
+        self.mqtt_client = mqtt.Client(client_id=constants.MQTT_CLIENT_ID,
+                                       transport=constants.TRANSPORT_WSS)
         self.mqtt_client.username_pw_set(username=self.client_username,
                                          password=self.token)
         cert_req = ssl.CERT_REQUIRED if self.verify_ssl else ssl.CERT_NONE
         self.mqtt_client.tls_set(cert_reqs=cert_req)
-        self.mqtt_client.ws_set_options(path=BROKER_PATH)
+        self.mqtt_client.ws_set_options(path=constants.MQTT_BROKER_PATH)
 
         # Setup callbacks
         self.mqtt_client.on_connect = on_connect
@@ -131,9 +123,9 @@ class MQTTConsumer:
 
         try:
             self.mqtt_client.connect(self.url,
-                                     port=MQTT_CONNECT_PORT)
+                                     port=constants.MQTT_CONNECT_PORT)
         except Exception as e:
-            logger.SERVER_LOGGER.error(f'connection error: {e}')
+            LOGGER.error(f'connection error: {e}')
             raise e
         self.mqtt_client.loop_forever()
 
