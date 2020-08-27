@@ -4,7 +4,7 @@
 from dataclasses import asdict
 import os
 
-from requests.exceptions import HTTPError
+import requests
 import yaml
 
 import container_service_extension.client.constants as cli_constants
@@ -73,7 +73,7 @@ class DefEntityClusterApi:
         try:
             clusters += self._tkgCluster.list_tkg_clusters(vdc=vdc, org=org)
         except tkg_rest.ApiException as e:
-            if e.status != 403:
+            if e.status != requests.codes.FORBIDDEN:
                 raise
             has_tkg_rights = False
         try:
@@ -90,8 +90,8 @@ class DefEntityClusterApi:
                     cli_constants.CLIOutputKey.OWNER.value: def_entity.owner.name  # noqa: E501
                 }
                 clusters.append(cluster)
-        except HTTPError as e:
-            if e.response.status_code != 403:
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code != requests.codes.FORBIDDEN:
                 raise
             has_native_rights = False
         if not (has_tkg_rights and has_native_rights):
@@ -141,7 +141,7 @@ class DefEntityClusterApi:
                 vdc=vdc,
                 org=org)
         except tkg_rest.ApiException as e:
-            if e.status != 403:
+            if e.status != requests.codes.FORBIDDEN:
                 raise
             has_tkg_rights = False
         if not (has_native_rights or has_tkg_rights):
