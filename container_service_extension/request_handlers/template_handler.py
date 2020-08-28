@@ -16,20 +16,29 @@ def template_list(request_data, op_ctx):
     """
     config = utils.get_server_runtime_config()
     templates = []
+    default_template_name = config['broker']['default_template_name']
+    default_template_revision = str(config['broker']['default_template_revision'])  # noqa: E501
+
     for t in config['broker']['templates']:
         template_name = t[LocalTemplateKey.NAME]
         template_revision = str(t[LocalTemplateKey.REVISION])
-        default_template_name = config['broker']['default_template_name']
-        default_template_revision = str(config['broker']['default_template_revision'])  # noqa: E501
         is_default = (template_name, template_revision) == (default_template_name, default_template_revision)  # noqa: E501
 
         templates.append({
-            'name': template_name,
-            'revision': template_revision,
-            'is_default': 'Yes' if is_default else 'No',
             'catalog': config['broker']['catalog'],
             'catalog_item': t[LocalTemplateKey.CATALOG_ITEM_NAME],
-            'description': t[LocalTemplateKey.DESCRIPTION].replace("\\n", ", ")
+            'cni': t[LocalTemplateKey.CNI],
+            'cni_version': t[LocalTemplateKey.CNI_VERSION],
+            'deprecated': t[LocalTemplateKey.DEPRECATED],
+            'description': t[LocalTemplateKey.DESCRIPTION].replace("\\n", ", "),  # noqa: E501
+            'docker_version': t[LocalTemplateKey.DOCKER_VERSION],
+            'is_default': 'Yes' if is_default else 'No',
+            'kind': t[LocalTemplateKey.KIND],
+            'kubernetes': t[LocalTemplateKey.KUBERNETES],
+            'kubernetes_version': t[LocalTemplateKey.KUBERNETES_VERSION],
+            'name': template_name,
+            'os': t[LocalTemplateKey.OS],
+            'revision': template_revision
         })
 
     return sorted(templates, key=lambda i: (i['name'], i['revision']), reverse=True)  # noqa: E501

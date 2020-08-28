@@ -24,6 +24,7 @@ OPERATION_TO_PAYLOAD_GENERATOR = {
     CseOperation.CONFIG_CHECK: payload_generator.get_payload_for_config_check,
 
     CseOperation.SERVICE_INSTALL: payload_generator.get_payload_for_install_server,   # noqa: E501
+    CseOperation.SERVICE_UPGRADE: payload_generator.get_payload_for_upgrade_server,  # noqa: E501
     CseOperation.SERVICE_RUN: payload_generator.get_payload_for_run_server,
 
     CseOperation.TEMPLATE_INSTALL: payload_generator.get_payload_for_install_template,  # noqa: E501
@@ -46,7 +47,17 @@ OPERATION_TO_PAYLOAD_GENERATOR = {
     CseOperation.OVDC_DISABLE: payload_generator.get_payload_for_ovdc_disable,
     CseOperation.OVDC_ENABLE: payload_generator.get_payload_for_ovdc_enable,
     CseOperation.OVDC_INFO: payload_generator.get_payload_for_ovdc_info,
-    CseOperation.OVDC_LIST: payload_generator.get_payload_for_ovdc_list
+    CseOperation.OVDC_LIST: payload_generator.get_payload_for_ovdc_list,
+
+    CseOperation.V35_CLUSTER_INFO: payload_generator.get_payload_for_v35_cluster_info,  # noqa: E501
+    CseOperation.V35_CLUSTER_LIST: payload_generator.get_payload_for_v35_cluster_list,  # noqa: E501
+    CseOperation.V35_CLUSTER_CONFIG: payload_generator.get_payload_for_v35_cluster_config,  # noqa: E501
+    CseOperation.V35_CLUSTER_APPLY: payload_generator.get_payload_for_v35_cluster_apply,  # noqa: E501
+    CseOperation.V35_CLUSTER_DELETE: payload_generator.get_payload_for_v35_cluster_delete,  # noqa: E501
+    CseOperation.V35_CLUSTER_UPGRADE_PLAN: payload_generator.get_payload_for_v35_cluster_upgrade_plan,  # noqa: E501
+    CseOperation.V35_CLUSTER_UPGRADE: payload_generator.get_payload_for_v35_cluster_upgrade,  # noqa: E501
+    CseOperation.V35_NODE_DELETE: payload_generator.get_payload_for_v35_node_delete  # noqa: E501
+
 }
 
 

@@ -506,18 +506,21 @@ def _get_existing_extension_type(client):
     :return: the current extension type: ExtensionType.MQTT, AMQP, or NONE
     :rtype: str
     """
-    # Check for MQTT extension
-    try:
-        mqtt_ext_manager = MQTTExtensionManager(client)
-        ext_info = mqtt_ext_manager.get_extension_info(
-            ext_name=server_constants.CSE_SERVICE_NAME,
-            ext_version=server_constants.MQTT_EXTENSION_VERSION,
-            ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
-        if ext_info:
-            return server_constants.ExtensionType.MQTT
-    except HTTPError as http_err:
-        if http_err.response.status_code != 404:  # not unfounded resource
-            raise http_err
+    # If API version meets minimum MQTT API version requirement,
+    # check for MQTT extension
+    if float(client.get_api_version()) >= \
+            server_constants.MQTT_MIN_API_VERSION:
+        try:
+            mqtt_ext_manager = MQTTExtensionManager(client)
+            ext_info = mqtt_ext_manager.get_extension_info(
+                ext_name=server_constants.CSE_SERVICE_NAME,
+                ext_version=server_constants.MQTT_EXTENSION_VERSION,
+                ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
+            if ext_info:
+                return server_constants.ExtensionType.MQTT
+        except HTTPError as http_err:
+            if http_err.response.status_code != 404:  # not unfounded resource
+                raise http_err
 
     # Check for AMQP extension
     try:
@@ -821,8 +824,7 @@ def _setup_placement_policies(client,
                               is_tkg_plus_enabled,
                               msg_update_callback=utils.NullPrinter(),
                               log_wire=False):
-    """
-    Create placement policies for each cluster type.
+    """Create placement policies for each cluster type.
 
     Create the global pvdc compute policy if not present and create placement
     policy for each policy in the policy list. This should be done only for
@@ -854,7 +856,7 @@ def _setup_placement_policies(client,
 
         for policy in policy_list:
             if not is_tkg_plus_enabled and \
-                    policy == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY:
+                    policy == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
                 continue
             try:
                 cpm.get_vdc_compute_policy(policy, is_placement_policy=True)
@@ -890,7 +892,6 @@ def _install_all_templates(
 
         # create all templates defined in cookbook
         for template in remote_template_cookbook['templates']:
-            # TODO tag created templates with placement policies
             _install_single_template(
                 client=client,
                 remote_template_manager=rtm,
@@ -1085,10 +1086,11 @@ def _install_single_template(
         templateBuildKey.STORAGE_PROFILE: storage_profile
     }
     if float(client.get_api_version()) >= float(vCDApiVersion.VERSION_35.value): # noqa: E501
-        if template.get(server_constants.RemoteTemplateKey.KIND) not in shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES: # noqa: E501
+        if template.get(server_constants.RemoteTemplateKey.KIND) not in shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP: # noqa: E501
             raise ValueError(f"Cluster kind is {template.get(server_constants.RemoteTemplateKey.KIND)}" # noqa: E501
-                             f" Expected {shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES}") # noqa: E501
-        build_params[templateBuildKey.CSE_PLACEMENT_POLICY] = template.get(server_constants.RemoteTemplateKey.KIND) # noqa: E501
+                             f" Expected {shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP.keys()}") # noqa: E501
+        build_params[templateBuildKey.CSE_PLACEMENT_POLICY] = \
+            shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[template.get(server_constants.RemoteTemplateKey.KIND)] # noqa: E501
     builder = TemplateBuilder(client, client, build_params, ssh_key=ssh_key,
                               logger=INSTALL_LOGGER,
                               msg_update_callback=msg_update_callback)
@@ -1131,8 +1133,6 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
 
     client = None
     try:
-        # Todo: Record telemetry detail call
-
         log_filename = None
         log_wire = utils.str_to_bool(config['service'].get('log_wire'))
         if log_wire:
@@ -1186,6 +1186,21 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
 
         target_vcd_api_version = config['vcd']['api_version']
         target_cse_version = utils.get_installed_cse_version()
+
+        telemetry_data = {
+            PayloadKey.SOURCE_CSE_VERSION: str(ext_cse_version),
+            PayloadKey.SOURCE_VCD_API_VERSION: ext_vcd_api_version,
+            PayloadKey.TARGET_CSE_VERSION: str(target_cse_version),
+            PayloadKey.TARGET_VCD_API_VERSION: target_vcd_api_version,
+            PayloadKey.WERE_TEMPLATES_SKIPPED: bool(skip_template_creation),  # noqa: E501
+            PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(retain_temp_vapp),
+            PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(ssh_key)
+        }
+
+        # Telemetry - Record detailed telemetry data on upgrade
+        record_user_action_details(CseOperation.SERVICE_UPGRADE,
+                                   telemetry_data,
+                                   telemetry_settings=config['service']['telemetry'])  # noqa: E501
 
         # Handle various upgrade scenarios
         # Post CSE 3.0.0 only the following upgrades should be allowed
@@ -1251,7 +1266,9 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         else:
             raise Exception(update_path_not_valid_msg)
 
-        # Todo: Telemetry - Record successful upgrade
+        record_user_action(CseOperation.SERVICE_UPGRADE,
+                           status=OperationStatus.SUCCESS,
+                           telemetry_settings=config['service']['telemetry'])
 
         msg = "Upgraded CSE successfully."
         msg_update_callback.general(msg)
@@ -1260,7 +1277,9 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         msg_update_callback.error(
             "CSE Installation Error. Check CSE install logs")
         INSTALL_LOGGER.error("CSE Installation Error", exc_info=True)
-        # Todo: Telemetry - Record failed upgrade
+        record_user_action(CseOperation.SERVICE_UPGRADE,
+                           status=OperationStatus.FAILED,
+                           telemetry_settings=config['service']['telemetry'])
         raise
     finally:
         if client is not None:
@@ -1605,7 +1624,7 @@ def _fix_cluster_metadata(client,
                 # template name that has 'k8s' string in it instead of 'k8'
                 if k8s_data[0] in ('k8', 'k8s'):
                     k8s_distribution = 'upstream'
-                elif k8s_data[0] in ('tkg', 'tkgp'):
+                elif k8s_data[0] in ('tkg', 'tkgp', 'tkgplus'):
                     k8s_distribution = 'TKG+'
                 else:
                     k8s_distribution = "Unknown Kubernetes distribution"
@@ -1868,10 +1887,10 @@ def _fix_cluster_admin_password(client,
 def _get_placement_policy_name_from_template_name(template_name):
     if 'k8' in template_name:
         policy_name = \
-            shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY
-    elif 'tkg' in template_name or 'tkgp' in template_name:
+            shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME
+    elif 'tkg' in template_name or 'tkgplus' in template_name:
         policy_name = \
-            shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY
+            shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME
     else:
         raise Exception(f"Unknown kind of template '{template_name}'.")
 
@@ -1905,11 +1924,11 @@ def _assign_placement_policy_to_vdc_with_existing_clusters(
             INSTALL_LOGGER.error(msg)
             continue
 
-        if policy_name == shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY:
+        if policy_name == shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
             id = cluster['vdc_id']
             native_ovdcs.append(id)
             vdc_names[id] = cluster['vdc_name']
-        elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY:
+        elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
             id = cluster['vdc_id']
             tkg_plus_ovdcs.append(id)
             vdc_names[id] = cluster['vdc_name']
@@ -1925,7 +1944,7 @@ def _assign_placement_policy_to_vdc_with_existing_clusters(
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
         native_policy = cpm.get_vdc_compute_policy(
-            policy_name=shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY,
+            policy_name=shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME,
             is_placement_policy=True)
         for vdc_id in native_ovdcs:
             cpm.add_compute_policy_to_vdc(
@@ -1949,7 +1968,7 @@ def _assign_placement_policy_to_vdc_with_existing_clusters(
 
         if is_tkg_plus_enabled:
             tkg_plus_policy = cpm.get_vdc_compute_policy(
-                policy_name=shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY,
+                policy_name=shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME,  # noqa: E501
                 is_placement_policy=True)
             for vdc_id in tkg_plus_ovdcs:
                 cpm.add_compute_policy_to_vdc(
@@ -1995,11 +2014,11 @@ def _remove_old_cse_sizing_compute_policies(
             vdc_sizing_policies = cpm.list_vdc_sizing_policies_on_vdc(vdc_id)
             if vdc_sizing_policies:
                 for policy in vdc_sizing_policies:
-                    msg = f"Processing Policy : '{policy['name']}' on Org VDC : '{vdc_name}'" # noqa: E501
+                    msg = f"Processing Policy : '{policy['display_name']}' on Org VDC : '{vdc_name}'" # noqa: E501
                     msg_update_callback.info(msg)
                     INSTALL_LOGGER.info(msg)
 
-                    all_cse_policy_names.append(policy['name'])
+                    all_cse_policy_names.append(policy['display_name'])
                     task_data = cpm.remove_vdc_compute_policy_from_vdc(
                         ovdc_id=vdc_id,
                         compute_policy_href=policy['href'],
@@ -2007,7 +2026,7 @@ def _remove_old_cse_sizing_compute_policies(
                     fake_task_object = {'href': task_data['task_href']}
                     client.get_task_monitor().wait_for_status(fake_task_object) # noqa: E501
 
-                    msg = f"Removed Policy : '{policy['name']}' from Org VDC : '{vdc_name}'" # noqa: E501
+                    msg = f"Removed Policy : '{policy['display_name']}' from Org VDC : '{vdc_name}'" # noqa: E501
                     msg_update_callback.general(msg)
                     INSTALL_LOGGER.info(msg)
 
@@ -2085,10 +2104,11 @@ def _create_def_entity_for_existing_clusters(
             INSTALL_LOGGER.info(msg)
             continue
 
-        if policy_name == shared_constants.NATIVE_CLUSTER_RUNTIME_POLICY:
-            kind = def_utils.ClusterEntityKind.NATIVE.value
-        elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_POLICY:
-            kind = def_utils.ClusterEntityKind.TANZU_PLUS
+        if policy_name == shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
+            # TODO combine to a single constant
+            kind = shared_constants.ClusterEntityKind.NATIVE.value
+        elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
+            kind = shared_constants.ClusterEntityKind.TKG_PLUS.value
 
         worker_nodes = []
         for item in cluster['nodes']:
@@ -2141,9 +2161,36 @@ def _create_def_entity_for_existing_clusters(
 
         def_entity = def_models.DefEntity(entity=cluster_entity)
         entity_svc.create_entity(native_entity_type.id, entity=def_entity)
+
         def_entity = entity_svc.get_native_entity_by_name(cluster['name'])
         def_entity_id = def_entity.id
         def_entity.externalId = cluster['vapp_href']
+
+        # update ownership of the entity
+        try:
+            user = client.get_user_in_org(
+                user_name=cluster['owner_name'],
+                org_href=cluster['org_href'])
+            user_urn = user.get('id')
+            orgmember_urn = user_urn.replace(":user:", ":orgMember:")
+
+            org_href = cluster['org_href']
+            org_id = org_href.split("/")[-1]
+            org_urn = f"urn:vcloud:org:{org_id}"
+
+            def_entity.owner = def_models.Owner(
+                name=cluster['owner_name'],
+                id=orgmember_urn)
+            def_entity.org = def_models.Org(
+                name=cluster['org_name'],
+                id=org_urn)
+        except Exception as err:
+            INSTALL_LOGGER.debug(str(err))
+            msg = "Unable to determine current owner of cluster " \
+                  f"'{cluster['name']}'. Unable to process ownership."
+            msg_update_callback.info(msg)
+            INSTALL_LOGGER.info(msg)
+
         entity_svc.update_entity(def_entity_id, def_entity)
         entity_svc.resolve_entity(def_entity_id)
 

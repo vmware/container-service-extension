@@ -11,7 +11,7 @@ VAC_URL = "https://vcsa.vmware.com/ph-stg/api/hyper/send/"
 
 # Value of collector id that is required as part of HTTP request
 # to post sample data to telemetry server
-COLLECTOR_ID = "CSE.2_6"
+COLLECTOR_ID = "CSE.3_0"
 
 
 @unique
@@ -74,6 +74,15 @@ class CseOperation(Enum):
     PKS_CLUSTER_LIST = ('pks-cluster list', 'PKS_CLUSTER', 'LIST', 'PKS_CLUSTER_LIST')  # noqa: E501
     PKS_CLUSTER_RESIZE = ('cluster resize', 'PKS_CLUSTER', 'RESIZE', 'PKS_CLUSTER_RESIZE')  # noqa: E501
 
+    V35_CLUSTER_LIST = ('DEF cluster list', 'CLUSTER', 'V35_LIST', 'CSE_V35_CLUSTER_LIST')  # noqa: E501
+    V35_CLUSTER_INFO = ('DEF cluster info', 'CLUSTER', 'V35_INFO', 'CSE_V35_CLUSTER_INFO')  # noqa: E501
+    V35_CLUSTER_CONFIG = ('DEF cluster config', 'CLUSTER', 'V35_CONFIG', 'CSE_V35_CLUSTER_CONFIG')   # noqa: E501
+    V35_CLUSTER_APPLY = ('DEF cluster create', 'CLUSTER', 'V35_APPLY', 'CSE_V35_CLUSTER_APPLY')  # noqa: E501
+    V35_CLUSTER_DELETE = ('DEF cluster delete', 'CLUSTER', 'V35_DELETE', 'CSE_V35_CLUSTER_DELETE')  # noqa: E501
+    V35_CLUSTER_UPGRADE_PLAN = ('DEF cluster upgrade plan', 'CLUSTER', 'V35_UPGRADE_PLAN', 'CSE_V35_CLUSTER_UPGRADE_PLAN')  # noqa: E501
+    V35_CLUSTER_UPGRADE = ('DEF cluster upgrade', 'CLUSTER', 'V35_UPGRADE', 'CSE_V35_CLUSTER_UPGRADE')  # noqa: E501
+    V35_NODE_DELETE = ('DEF nfs node delete', 'NODE', 'V35_DELETE', 'CSE_V35_NODE_DELETE')  # noqa: E501
+
     # Following operations do not require telemetry details. Hence the VAC
     # table name field is empty
     OVDC_COMPUTE_POLICY_ADD = ('ovdc compute policy', 'COMPUTE_POLICY', 'ADD', '')  # noqa: E501
@@ -97,10 +106,12 @@ class PayloadKey(str, Enum):
     ACTION = 'action',
     ADDED_NFS_NODE = 'added_nfs_node'
     CLUSTER_ID = 'cluster_id'
+    CLUSTER_KIND = 'cluster_kind'
     CNI = 'cni'
     CNI_VERSION = 'cni_version'
     CPU = 'cpu'
     DISPLAY_OPTION = 'display_option'
+    FILTER_KEYS = 'filter_keys'
     K8S_DISTRIBUTION = 'k8s_distribution'
     K8S_PROVIDER = 'k8s_provider'
     K8S_VERSION = 'k8s_version',
@@ -111,9 +122,14 @@ class PayloadKey(str, Enum):
     NUMBER_OF_MASTER_NODES = 'number_of_master_nodes'
     NUMBER_OF_NODES = 'number_of_nodes'
     NUMBER_OF_WORKER_NODES = 'number_of_worker_nodes'
+    NUMBER_OF_NFS_NODES = 'number_of_nfs_nodes'
     OS = 'os'
+    SOURCE_CSE_VERSION = 'source_cse_version'
+    SOURCE_VCD_API_VERSION = 'source_vcd_api_version'
     STATUS = 'status'
     TARGET = 'target',
+    TARGET_CSE_VERSION = 'target_cse_version'
+    TARGET_VCD_API_VERSION = 'target_vcd_api_version'
     TEMPLATE_NAME = 'template_name'
     TEMPLATE_REVISION = 'template_revision'
     TYPE = '@type',

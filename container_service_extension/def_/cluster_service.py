@@ -1,8 +1,6 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-
-import copy
 import random
 import re
 import string
@@ -41,10 +39,8 @@ from container_service_extension.shared_constants import DefEntityOperation
 from container_service_extension.shared_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.shared_constants import DefEntityPhase
 from container_service_extension.shared_constants import RequestKey
-from container_service_extension.telemetry.constants import CseOperation
-from container_service_extension.telemetry.constants import PayloadKey
-from container_service_extension.telemetry.telemetry_handler import \
-    record_user_action_details
+import container_service_extension.telemetry.constants as telemetry_constants
+import container_service_extension.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.utils as utils
 import container_service_extension.vsphere_utils as vs_utils
 
@@ -72,10 +68,18 @@ class ClusterService(abstract_broker.AbstractBroker):
         It syncs the defined entity with the state of the cluster vApp before
         returning the defined entity.
         """
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_INFO,
+            cse_params={telemetry_constants.PayloadKey.CLUSTER_ID: cluster_id}
+        )
         return self._sync_def_entity(cluster_id)
 
-    def list_clusters(self, filters: dict) -> List[def_models.DefEntity]:
+    def list_clusters(self, filters: dict = {}) -> List[def_models.DefEntity]:
         """List corresponding defined entities of all native clusters."""
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST,
+            cse_params={telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys())}  # noqa: E501
+        )
         ent_type: def_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
         return self.entity_svc.list_entities_by_entity_type(
             vendor=ent_type.vendor,
@@ -92,8 +96,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         curr_entity = self.entity_svc.get_entity(cluster_id)
 
-        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
-        #  based clusters
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_CONFIG,
+            cse_params=curr_entity)
 
         vapp = vcd_vapp.VApp(self.context.client, href=curr_entity.externalId)
         master_node_name = curr_entity.entity.status.nodes.master.name
@@ -122,12 +127,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         :rtype: List[Dict]
         """
         curr_entity = self.entity_svc.get_entity(cluster_id)
-
-        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
-        #  based clusters
-        # cse_params = copy.deepcopy(validated_data)
-        # cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
-        # record_user_action_details(cse_operation=CseOperation.CLUSTER_UPGRADE_PLAN, cse_params=cse_params)  # noqa: E501
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE_PLAN,  # noqa: E501
+            cse_params=curr_entity
+        )
 
         return self._get_cluster_upgrade_plan(curr_entity.entity.spec.k8_distribution.template_name, # noqa: E501
                                               curr_entity.entity.spec.k8_distribution.template_revision) # noqa: E501
@@ -221,6 +224,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                           entity=def_entity)
         self.context.is_async = True
         def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY,
+            cse_params=def_entity)
         self._create_cluster_async(def_entity.id, cluster_spec)
         return def_entity
 
@@ -403,14 +409,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
-            LOGGER.error(f"Error creating cluster '{cluster_name}'",
-                         exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR,
-                              error_message=str(err))
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.CREATE,
-                                                    vapp)
-            # raising an exception here prints a stacktrace to server console
+            else:
+                LOGGER.error(f"Error creating cluster '{cluster_name}'", exc_info=True)  # noqa: E501
+                self._update_task(vcd_client.TaskStatus.ERROR, error_message=str(err))  # noqa: E501
+                self._fail_operation_and_resolve_entity(
+                    cluster_id, DefEntityOperation.CREATE, vapp)
         except Exception as err:
             self._fail_operation_and_resolve_entity(cluster_id,
                                                     DefEntityOperation.CREATE,
@@ -484,15 +487,19 @@ class ClusterService(abstract_broker.AbstractBroker):
     def _fail_operation_and_resolve_entity(self, cluster_id: str,
                                            op: DefEntityOperation,
                                            vapp=None):
-        # get the current state of the defined entity
-        def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+        try:
+            # get the current state of the defined entity
+            def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
 
-        # sync the defined entity with the latest status of cluster vApp and
-        # fail the operation.
-        def_entity.entity.status.phase = \
-            str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
-        self._sync_def_entity(cluster_id, def_entity)
-        self.entity_svc.resolve_entity(cluster_id)
+            # sync the defined entity with the latest status of cluster vApp
+            # and fail the operation.
+            def_entity.entity.status.phase = \
+                str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
+            self._sync_def_entity(cluster_id, def_entity)
+            self.entity_svc.resolve_entity(cluster_id)
+        except Exception as error:
+            LOGGER.error(f"Failed on resolve entity:{error}", exc_info=True)
+            self._update_task(vcd_client.TaskStatus.ERROR, error_message=str(error))  # noqa: E501
 
     def resize_cluster(self, cluster_id: str,
                        cluster_spec: def_models.ClusterEntity):
@@ -539,8 +546,11 @@ class ClusterService(abstract_broker.AbstractBroker):
         elif num_nfs_to_add < 0:
             raise e.CseServerError("Scaling down nfs nodes is not supported")
 
-        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
-        #  based clusters
+        # Record telemetry details
+        telemetry_data: def_models.DefEntity = def_models.DefEntity(id=cluster_id, entity=cluster_spec)  # noqa: E501
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY,
+            cse_params=telemetry_data)
 
         # update the task and defined entity.
         msg = f"Resizing the cluster '{cluster_name}' ({cluster_id}) to the " \
@@ -670,7 +680,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
                 f"valid state to be deleted. Please contact administrator.")
 
-        # TODO(DEF) Handle Telemetry
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_DELETE,
+            cse_params=curr_entity)
 
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
@@ -746,10 +758,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"{new_template_revision}) is not a valid upgrade target for "
                 f"cluster '{cluster_name}'.")
 
-        # get cluster data (including node names) to pass to async function
-
-        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
-        #  based clusters
+        telemetry_handler.record_user_action_details(
+            telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE,
+            cse_params=curr_entity)
 
         msg = f"Upgrading cluster '{cluster_name}' " \
               f"software to match template {new_template_name} (revision " \
@@ -800,12 +811,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         cluster = get_cluster(self.context.client, cluster_name,
                               org_name=validated_data[RequestKey.ORG_NAME],
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
-
-        if kwargs.get(KwargKey.TELEMETRY, True):
-            # Record the telemetry data
-            cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
-            record_user_action_details(cse_operation=CseOperation.NODE_INFO, cse_params=cse_params)  # noqa: E501
 
         vapp = vcd_vapp.VApp(self.context.client, href=cluster['vapp_href'])
         vms = vapp.get_all_vms()
@@ -1562,12 +1567,9 @@ def get_nfs_exports(sysadmin_client: vcd_client.Client, ip, vapp, vm_name):
 
 def is_valid_cluster_name(name):
     """Validate that the cluster name against the pattern."""
-    if len(name) > 25:
+    if name and len(name) > 25:
         return False
-    if name[-1] == '.':
-        name = name[:-1]
-    allowed = re.compile(r"(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
-    return all(allowed.match(x) for x in name.split("."))
+    return re.match("^[a-zA-Z][A-Za-z0-9-]*$", name) is not None
 
 
 def get_all_clusters(client, cluster_name=None, cluster_id=None,
@@ -1755,15 +1757,20 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
             if sizing_class_name:
                 vdc_resource = vdc.get_resource()
                 filters = {
-                    'name': sizing_class_name,
                     'isSizingOnly': True,
                 }
-                policies = list(cpm.list_compute_policies_on_vdc(vdc_resource.get('id'), filters=filters))  # noqa: E501
-                if len(policies) == 0:
-                    raise Exception(f"No sizing policy with the name {sizing_class_name} exists on the VDC")  # noqa: E501
-                if len(policies) > 1:
-                    raise Exception(f"Duplicate sizing policies with the name {sizing_class_name}")  # noqa: E501
-                sizing_class_href = policies[0]['href']
+                for policy in cpm.list_compute_policies_on_vdc(vdc_resource.get('id'), filters=filters):  # noqa: E501
+                    if policy['name'] == sizing_class_name:
+                        if not sizing_class_href:
+                            sizing_class_href = policy['href']
+                        else:
+                            msg = f"Duplicate sizing policies with the name {sizing_class_name}"  # noqa: E501
+                            LOGGER.error(msg)
+                            raise Exception(msg)
+                if not sizing_class_href:
+                    msg = f"No sizing policy with the name {sizing_class_name} exists on the VDC"  # noqa: E501
+                    LOGGER.error(msg)
+                    raise Exception(msg)
             if storage_profile:
                 storage_profile = vdc.get_storage_profile(storage_profile)
 
