@@ -11,6 +11,23 @@ import container_service_extension.request_processor as request_processor
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 
 
+def redact_http_req_debug_output(http_req_json):
+    """Shorten the string format for the debug output."""
+    if http_req_json.get('securityContext') is not None and \
+            http_req_json['securityContext'].get('rights') is not None:
+        # Form redacted output
+        security_context_rights = http_req_json['securityContext']['rights']
+        http_req_json['securityContext']['rights'] = \
+            [f"redacted {len(security_context_rights)} rights"]
+        debug_output = json.dumps(http_req_json)
+
+        # Restore redacted field
+        http_req_json['securityContext']['rights'] = security_context_rights
+    else:
+        debug_output = json.dumps(http_req_json)
+    return debug_output
+
+
 def str_to_json(json_str, fsencoding):
     return json.loads(json_str.decode(fsencoding))
 

@@ -57,12 +57,16 @@ class MQTTConsumer:
         payload_json = utils.str_to_json(msg.payload, self.fsencoding)
         http_req_json = json.loads(base64.b64decode(
             payload_json['httpRequest']))
+        request_id = payload_json["headers"]["requestId"]
+        LOGGER.debug(f"Received message with request_id: {request_id}, mid: "
+                     f"{msg.mid}, and HTTP request: "
+                     f"{utils.redact_http_req_debug_output(http_req_json)}")
         message_json = http_req_json['message']
         reply_body, status_code = utils.get_reply_body_and_status_code(
             message_json)
 
         response_json = self.form_response_json(
-            request_id=payload_json["headers"]["requestId"],
+            request_id=request_id,
             status_code=status_code,
             reply_body=reply_body)
 
@@ -78,12 +82,15 @@ class MQTTConsumer:
                                                retain=False)
         finally:
             self.publish_lock.release()
-        LOGGER.info(f"pub_ret (rc, msg_id): {pub_ret}")
+        LOGGER.debug(f"publish return (rc, msg_id): {pub_ret}")
 
     def send_too_many_requests_response(self, msg):
         payload_json = utils.str_to_json(msg.payload, self.fsencoding)
+        request_id = payload_json["headers"]["requestId"]
+        LOGGER.debug(f"Replying with 'too many requests response' for "
+                     f"request_id: {request_id} and msg id: {msg.mid}")
         response_json = self.form_response_json(
-            request_id=payload_json["headers"]["requestId"],
+            request_id=request_id,
             status_code=requests.codes.too_many_requests,
             reply_body=constants.TOO_MANY_REQUESTS_BODY)
         self.send_response(response_json)
@@ -124,7 +131,7 @@ class MQTTConsumer:
             self.mqtt_client.connect(self.url,
                                      port=constants.MQTT_CONNECT_PORT)
         except Exception as e:
-            LOGGER.error(f'connection error: {e}')
+            LOGGER.error(f'MQTT client connection error: {e}')
             raise e
         self.mqtt_client.loop_forever()
 
@@ -132,6 +139,7 @@ class MQTTConsumer:
         self.connect()
 
     def stop(self):
+        LOGGER.info("MQTT consumer stopping")
         if self.mqtt_client:
             self.mqtt_client.disconnect()
         self.ctpe.shutdown(wait=True)
