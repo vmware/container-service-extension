@@ -18,7 +18,7 @@ from pyvcloud.vcd.org import Org
 import pyvcloud.vcd.utils as pyvcloud_vcd_utils
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
-from requests.exceptions import HTTPError
+import requests
 import semantic_version
 
 import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
@@ -375,7 +375,6 @@ def install_cse(config_file_name, skip_template_creation,
         if ext_type != server_constants.ExtensionType.NONE:
             ext_found_msg = f"{ext_type} extension found. Use `cse upgrade` " \
                             f"instead of 'cse install'."
-            msg_update_callback.error(ext_found_msg)
             INSTALL_LOGGER.error(ext_found_msg)
             raise Exception(ext_found_msg)
 
@@ -518,9 +517,9 @@ def _get_existing_extension_type(client):
                 ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
             if ext_info:
                 return server_constants.ExtensionType.MQTT
-        except HTTPError as http_err:
-            if http_err.response.status_code != 404:  # not unfounded resource
-                raise http_err
+        except requests.exceptions.HTTPError as http_err:
+            if http_err.response.status_code != requests.codes.not_found:
+                raise
 
     # Check for AMQP extension
     try:
