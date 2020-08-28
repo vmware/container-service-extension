@@ -141,6 +141,10 @@ def is_tkg_plus_enabled(config: dict = None):
     return False
 
 
+def is_environment_variable_enabled(env_name):
+    return str_to_bool(os.getenv(env_name))
+
+
 def get_duplicate_items_in_list(items):
     """Find duplicate entries in a list.
 

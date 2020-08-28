@@ -12,6 +12,7 @@ import yaml
 from container_service_extension.client import pks
 from container_service_extension.client.cluster import Cluster
 import container_service_extension.client.command_filter as cmd_filter
+import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.ovdc import Ovdc
 import container_service_extension.client.sample_generator as client_sample_generator  # noqa: E501
 from container_service_extension.client.system import System
@@ -605,6 +606,7 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
     '--tkg-plus',
     'k8_runtime',
     is_flag=True,
+    hidden=not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_PLUS_ENABLED),  # noqa: E501
     flag_value=shared_constants.ClusterEntityKind.TKG_PLUS,
     help="should be used with --sample, this flag generates sample yaml for k8 runtime: TKG+"  # noqa: E501
 )
@@ -632,16 +634,19 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
             CLIENT_LOGGER.error(msg)
             raise Exception(msg)
 
-        if generate_sample_config and not k8_runtime:
-            console_message_printer.general_no_color(ctx.get_help())
-            msg = "with option --sample you must specify either of options: --native or --tkg or --tkg-plus"  # noqa: E501
-            CLIENT_LOGGER.error(msg)
-            raise Exception(msg)
-
         if generate_sample_config:
-            sample_cluster_config = client_sample_generator.get_sample_cluster_configuration(output=output, k8_runtime=k8_runtime)  # noqa: E501
-            console_message_printer.general_no_color(sample_cluster_config)
-            return
+            if not k8_runtime:
+                console_message_printer.general_no_color(ctx.get_help())
+                msg = "with option --sample you must specify either of options: --native or --tkg or --tkg-plus"  # noqa: E501
+                CLIENT_LOGGER.error(msg)
+                raise Exception(msg)
+            elif k8_runtime == shared_constants.ClusterEntityKind.TKG_PLUS \
+                    and not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_PLUS_ENABLED):  # noqa: E501
+                raise Exception(f"{shared_constants.ClusterEntityKind.TKG_PLUS.value} not enabled")  # noqa: E501
+            else:
+                sample_cluster_config = client_sample_generator.get_sample_cluster_configuration(output=output, k8_runtime=k8_runtime)  # noqa: E501
+                console_message_printer.general_no_color(sample_cluster_config)
+                return
 
         client = ctx.obj['client']
         with open(cluster_config_file_path) as f:
