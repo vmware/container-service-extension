@@ -200,11 +200,11 @@ class NativeClusterApi:
             return self.upgrade_cluster_by_cluster_id(current_entity.id, cluster_entity=asdict(current_entity))  # noqa: E501
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
 
-    def upgrade_cluster_by_cluster_id(self, cluster_id, cluster_entity):
+    def upgrade_cluster_by_cluster_id(self, cluster_id, cluster_def_entity):
         """Get the upgrade plan for give cluster id.
 
         :param str cluster_id: unique id of the cluster
-        :param dict cluster_entity: defined entity
+        :param dict cluster_def_entity: defined entity
         :return: string containing upgrade cluster task href
         :rtype: str
         """
@@ -213,11 +213,11 @@ class NativeClusterApi:
             shared_constants.RequestMethod.POST,
             uri,
             self._client._session,
-            contents=cluster_entity['entity'],
+            contents=cluster_def_entity['entity'],
             media_type='application/json',
             accept_type='application/json')
-        cluster_entity = def_models.DefEntity(**response_processor.process_response(response))  # noqa: E501
-        return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501
+        cluster_def_entity = def_models.DefEntity(**response_processor.process_response(response))  # noqa: E501
+        return client_utils.construct_task_console_message(cluster_def_entity.entity.status.task_href)  # noqa: E501
 
     def apply(self, cluster_config):
         """Apply the configuration either to create or update the cluster.

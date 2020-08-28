@@ -155,11 +155,15 @@ class ApiClient(object):
         self.last_response = response_data
 
         return_data = response_data
+        additional_data = None
         if _preload_content:
             # deserialize response data
             if response_type:
-                return_data = self.deserialize(response_data, response_type,
-                                               method)
+                # additional_data represents the data related to TkgCluster
+                # entity
+                return_data, additional_data = self.deserialize(response_data,
+                                                                response_type,
+                                                                method)
             else:
                 return_data = None
 
@@ -167,7 +171,7 @@ class ApiClient(object):
             return (return_data)
         else:
             return (return_data, response_data.status,
-                    response_data.getheaders())
+                    response_data.getheaders(), additional_data)
 
     def sanitize_for_serialization(self, obj):
         """Builds a JSON POST object.
@@ -219,7 +223,7 @@ class ApiClient(object):
             deserialized object, or string of class name.
         :param method: HTTP method used to get the response
 
-        :return: deserialized object
+        :return: (deserialized object, additional entity properties)
         """
         # handle file downloading
         # save response body into a tmp file and return the instance
@@ -231,14 +235,20 @@ class ApiClient(object):
             data = json.loads(response.data)
         except ValueError:
             data = response.data
+        additional_data = None
         if response_type == 'TkgCluster' and method == 'GET':
+            additional_data = data
             data = data['entity']
+            del additional_data['entity']
         elif response_type == 'list[TkgCluster]' and method == 'GET':
             def_entities = data['values']
+            additional_data = []
             data = []
             for def_entity in def_entities:
                 data.append(def_entity['entity'])
-        return self.__deserialize(data, response_type)
+                del def_entity['entity']
+                additional_data.append(def_entity)
+        return self.__deserialize(data, response_type), additional_data
 
     def __deserialize(self, data, klass):
         """Deserializes dict, list, str into an object.

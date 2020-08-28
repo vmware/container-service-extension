@@ -4,6 +4,7 @@
 import click
 from pyvcloud.vcd.client import Client
 import requests
+import six
 from vcd_cli.profiles import Profiles
 
 from container_service_extension.client import system as syst
@@ -141,3 +142,30 @@ def construct_task_console_message(task_href: str) -> str:
     task_id = task_href.split('/')[-1]
     msg += f"vcd task wait {task_id}"
     return msg
+
+
+def swagger_object_to_dict(obj):
+    """Convert a swagger obejct to a dictionary without changing case type."""
+    # reference: https://github.com/swagger-api/swagger-codegen/issues/8948
+    result = {}
+    o_map = obj.attribute_map
+
+    for attr, _ in six.iteritems(obj.swagger_types):
+        value = getattr(obj, attr)
+        if isinstance(value, list):
+            result[o_map[attr]] = list(map(
+                lambda x: swagger_object_to_dict(x) if hasattr(x, "to_dict") else x,  # noqa: E501
+                value
+            ))
+        elif hasattr(value, "to_dict"):
+            result[o_map[attr]] = swagger_object_to_dict(value)
+        elif isinstance(value, dict):
+            result[o_map[attr]] = dict(map(
+                lambda item: (item[0], swagger_object_to_dict(item[1]))
+                if hasattr(item[1], "to_dict") else item,
+                value.items()
+            ))
+        else:
+            result[o_map[attr]] = value
+
+    return result

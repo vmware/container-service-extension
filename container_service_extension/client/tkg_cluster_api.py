@@ -86,29 +86,26 @@ class TKGClusterApi:
             filter_string = ";".join([f"{f[0]}=={f[1]}" for f in filters])
         # tkg_def_entities in the following statement represents the
         # information associated with the defined entity
-        response = \
+        (entities, status, headers, tkg_def_entities) = \
             self._tkg_client_api.list_tkg_clusters(
                 f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}",  # noqa: E501
                 _return_http_data_only=False,
-                _preload_content=False,
                 object_filter=filter_string)
-        def_entities = json.loads(response[0].data)['values']
         clusters = []
-        for def_entity in def_entities:
+        for i in range(len(entities)):
             # NOTE: tkg_def_entities will contain corresponding defined entity
             # details
-            entity = def_entity.get('entity', {})
-            metadata = entity.get('metadata', {})
-            spec = entity.get('spec', {})
-            logger.CLIENT_LOGGER.debug(f"TKG Defined entity list from server: {def_entity}")  # noqa: E501
+            entity: TkgCluster = entities[i]
+            entity_properties = tkg_def_entities[i]
+            logger.CLIENT_LOGGER.debug(f"TKG Defined entity list from server: {entity}")  # noqa: E501
             cluster = {
-                cli_constants.CLIOutputKey.CLUSTER_NAME.value: metadata.get('name', 'N/A'),  # noqa: E501
-                cli_constants.CLIOutputKey.VDC.value: metadata.get('virtualDataCenterName', 'N/A'),  # noqa: E501
-                cli_constants.CLIOutputKey.ORG.value: def_entity.get('org', {}).get('name', 'N/A'),  # noqa: E501
-                cli_constants.CLIOutputKey.K8S_RUNTIME.value: cli_constants.TKG_CLUSTER_RUNTIME,  # noqa: E501
-                cli_constants.CLIOutputKey.STATUS.value: entity.get('status', {}).get('phase', 'N/A'),  # noqa: E501
-                cli_constants.CLIOutputKey.K8S_VERSION.value: spec.get('distribution', {}).get('version', 'N/A'),  # noqa: E501
-                cli_constants.CLIOutputKey.OWNER.value: def_entity.get('owner', {}).get('name', 'N/A'),  # noqa: E501
+                cli_constants.CLIOutputKey.CLUSTER_NAME.value: entity.metadata.name, # noqa: E501
+                cli_constants.CLIOutputKey.VDC.value: entity.metadata.virtual_data_center_name, # noqa: E501
+                cli_constants.CLIOutputKey.ORG.value: entity_properties['org']['name'], # noqa: E501
+                cli_constants.CLIOutputKey.K8S_RUNTIME.value: cli_constants.TKG_CLUSTER_RUNTIME, # noqa: E501
+                cli_constants.CLIOutputKey.K8S_VERSION.value: entity.spec.distribution.version, # noqa: E501
+                cli_constants.CLIOutputKey.STATUS.value: entity.status.phase if entity.status else 'N/A',  # noqa: E501
+                cli_constants.CLIOutputKey.OWNER.value: entity_properties['owner']['name'],  # noqa: E501
             }
             clusters.append(cluster)
         return clusters
@@ -126,12 +123,24 @@ class TKGClusterApi:
         response = \
             self._tkg_client_api.list_tkg_clusters(
                 f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}", # noqa: E501
-                _preload_content=False,
                 object_filter=filter_string)
+        tkg_entities = []
         tkg_def_entities = []
         if response:
-            tkg_def_entities = json.loads(response[0].data)['values']
-        return tkg_def_entities
+            tkg_entities = response[0]
+            tkg_def_entities = response[3]
+        if len(tkg_entities) == 0:
+            raise cse_exceptions.ClusterNotFoundError(
+                f"TKG cluster with name '{name}' not found.")
+        if len(tkg_entities) > 1:
+            if not org:
+                raise cse_exceptions.CseDuplicateClusterError(
+                    f"Multiple clusters with the name '{name}' found."
+                    " Please specify the org using --org flag.")
+            raise cse_exceptions.CseDuplicateClusterError(
+                f"Multiple clusters with the name '{name}' present in the"
+                "same Organization. Please contact the administrator.")
+        return tkg_entities, tkg_def_entities
 
     def get_cluster_info(self, cluster_name, org=None, vdc=None):
         """Get cluster information of a TKG cluster API.
@@ -144,15 +153,12 @@ class TKGClusterApi:
         :rtype: str
         :raises ClusterNotFoundError
         """
-        tkg_entities = self.get_tkg_clusters_by_name(cluster_name, vdc=vdc, org=org)  # noqa: E501
-        if len(tkg_entities) == 0:
-            msg = f"Cluster '{cluster_name}' not found."
-            logger.CLIENT_LOGGER.error(msg)
-            raise cse_exceptions.ClusterNotFoundError(msg)
-        cluster_entity = tkg_entities[0]['entity']
+        tkg_entities, _ = \
+            self.get_tkg_clusters_by_name(cluster_name, vdc=vdc, org=org)
+        cluster_entity_dict = client_utils.swagger_object_to_dict(tkg_entities[0])  # noqa: E501
         logger.CLIENT_LOGGER.debug(
-            f"Received defined entity of cluster {cluster_name} : {cluster_entity}")  # noqa: E501
-        return yaml.dump(cluster_entity)
+            f"Received defined entity of cluster {cluster_name} : {cluster_entity_dict}")  # noqa: E501
+        return yaml.dump(cluster_entity_dict)
 
     def apply(self, cluster_config: dict):
         """Apply the configuration either to create or update the cluster.
@@ -164,22 +170,18 @@ class TKGClusterApi:
         try:
             cluster_name = cluster_config.get('metadata', {}).get('name')
             vdc_name = cluster_config.get('metadata', {}).get('virtualDataCenterName')  # noqa: E501
-            tkg_def_entities = self.get_tkg_clusters_by_name(cluster_name, vdc=vdc_name)  # noqa: E501
-            if len(tkg_def_entities) == 0:
-                response = \
-                    self._tkg_client_api.create_tkg_cluster_with_http_info(tkg_cluster=cluster_config)  # noqa: E501
-            elif len(tkg_def_entities) == 1:
-                cluster_id = tkg_def_entities[0]['id']
+            response = None
+            try:
+                _, tkg_def_entities = \
+                    self.get_tkg_clusters_by_name(cluster_name, vdc=vdc_name)
+                cluster_id = tkg_def_entities[0].get('id')
                 response = \
                     self._tkg_client_api.update_tkg_cluster_with_http_info(
                         tkg_cluster_id=cluster_id,
                         tkg_cluster=cluster_config)
-            else:
-                # More than 1 TKG cluster with the same name found.
-                msg = f"Multiple clusters found with name {cluster_name}. " \
-                      "Failed to apply the Spec."
-                logger.CLIENT_LOGGER.error(msg)
-                raise cse_exceptions.CseDuplicateClusterError(msg)
+            except cse_exceptions.ClusterNotFoundError:
+                response = \
+                    self._tkg_client_api.create_tkg_cluster_with_http_info(tkg_cluster=cluster_config)  # noqa: E501
             # Get the task href from the header
             headers = response[2]
             return client_utils.construct_task_console_message(headers.get('Location'))  # noqa: E501
@@ -224,18 +226,9 @@ class TKGClusterApi:
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
         try:
-            tkg_def_entities = \
+            _, tkg_def_entities = \
                 self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)
-            if len(tkg_def_entities) == 1:
-                return self.delete_cluster_by_id(tkg_def_entities[0]['id'])
-            elif len(tkg_def_entities) == 0:
-                raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
-            else:
-                # More than 1 TKG cluster with the same name found.
-                msg = f"Multiple clusters found with name {cluster_name}. " \
-                      "Failed to delete the TKG cluster."
-                logger.CLIENT_LOGGER.error(msg)
-                raise cse_exceptions.CseDuplicateClusterError(msg)
+            return self.delete_cluster_by_id(tkg_def_entities[0]['id'])
         except tkg_rest.ApiException as e:
             server_message = json.loads(e.body).get('message') or e.reason
             msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{server_message}")  # noqa: E501
@@ -256,9 +249,9 @@ class TKGClusterApi:
         # Assumes that the caller of the function has
         # already set the org context
         try:
-            response, status, headers = \
-                self._tkg_client_api.create_tkg_cluster_config_task(id=cluster_id)  # noqa: E501
+            response = self._tkg_client_api.create_tkg_cluster_config_task(id=cluster_id)  # noqa: E501
             # Extract the task for creating the config from the Location header
+            headers = response[2]
             config_task_href = headers.get('Location')
             if not config_task_href:
                 raise Exception(f"Failed to fetch kube-config for TKG cluster {cluster_id}")  # noqa: E501
@@ -283,19 +276,9 @@ class TKGClusterApi:
         :param str vdc: name of the vdc
         """
         try:
-            tkg_def_entities = \
+            _, tkg_def_entities = \
                 self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)
-            if len(tkg_def_entities) == 1:
-                return self.get_cluster_config_by_id(
-                    tkg_def_entities[0]['id'])
-            elif len(tkg_def_entities) == 0:
-                raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
-            else:
-                # More than 1 TKG cluster with the same name found.
-                msg = f"Multiple clusters found with name {cluster_name}. " \
-                      "Failed to fetch kube-config."
-                logger.CLIENT_LOGGER.error(msg)
-                raise cse_exceptions.CseDuplicateClusterError(msg)
+            return self.get_cluster_config_by_id(tkg_def_entities[0]['id'])
         except tkg_rest.ApiException as e:
             server_message = json.loads(e.body).get('message') or e.reason
             msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{server_message}")  # noqa: E501
