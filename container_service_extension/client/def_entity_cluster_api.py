@@ -277,7 +277,7 @@ class DefEntityClusterApi:
         """
         cluster_def_entity, is_native_cluster = \
             self._get_tkg_native_clusters_by_name(cluster_name, org=org_name, vdc=ovdc_name)  # noqa: E501
-        if cluster_def_entity:
+        if is_native_cluster:
             cluster_def_entity['entity']['spec']['k8_distribution']['template_name'] = template_name  # noqa: E501
             cluster_def_entity['entity']['spec']['k8_distribution']['template_revision'] = template_revision  # noqa: E501
             return self._nativeCluster.upgrade_cluster_by_cluster_id(cluster_def_entity['id'], cluster_entity=cluster_def_entity)  # noqa: E501
