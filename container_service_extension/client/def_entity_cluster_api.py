@@ -73,7 +73,7 @@ class DefEntityClusterApi:
         try:
             clusters += self._tkgCluster.list_tkg_clusters(vdc=vdc, org=org)
         except tkg_rest.ApiException as e:
-            if e.status != requests.codes.FORBIDDEN:
+            if e.status not in [requests.codes.FORBIDDEN, requests.codes.UNAUTHORIZED]:
                 raise
             has_tkg_rights = False
         try:
@@ -91,7 +91,7 @@ class DefEntityClusterApi:
                 }
                 clusters.append(cluster)
         except requests.exceptions.HTTPError as e:
-            if e.response.status_code != requests.codes.FORBIDDEN:
+            if e.response.status_code not in [requests.codes.FORBIDDEN, requests.codes.UNAUTHORIZED]:
                 raise
             has_native_rights = False
         if not (has_tkg_rights and has_native_rights):
@@ -141,7 +141,7 @@ class DefEntityClusterApi:
                 vdc=vdc,
                 org=org)
         except tkg_rest.ApiException as e:
-            if e.status != requests.codes.FORBIDDEN:
+            if e.status not in [requests.codes.FORBIDDEN, requests.codes.UNAUTHORIZED]:
                 raise
             has_tkg_rights = False
         if not (has_native_rights or has_tkg_rights):
@@ -152,12 +152,12 @@ class DefEntityClusterApi:
             # If org filter is not provided, ask the user to provide org
             # filter
             if not org:
-                # handles the case where there more than 1 TKG cluster with
-                # the same name
+                # handles the case where there is are TKG clusters and native
+                # clusters with the same name in different organizations
                 raise Exception(f"{msg} Please specify the org to use "
                                 "using --org flag.")
             # handles the case where there is a TKG cluster and a native
-            # native cluster with the same name
+            # native cluster with the same name in the same organization
             raise Exception(f"{msg} Please specify the k8-runtime to use using"
                             " --k8-runtime flag.")
         elif not native_def_entity_dict and len(tkg_def_entity_dicts) == 0:
