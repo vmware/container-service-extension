@@ -39,17 +39,15 @@ class MQTTConsumer:
             mqtt_client.subscribe(self.listen_topic, qos=QOS_LEVEL)
 
         def on_message(mqtt_client, userdata, msg):
-            payload_json = json.loads(msg.payload.decode())
-            http_req_json = json.loads(base64.b64decode(
-                payload_json['httpRequest']))
-            message_json = http_req_json['message']
-            reply_body, status_code = utils.get_reply_body_and_status_code(
-                message_json)
+            reply_body, status_code, request_id = utils.get_response_fields(
+                msg=msg,
+                fsencoding=self.fsencoding,
+                is_amqp=False)
 
             response_json = {
                 "type": "API_RESPONSE",
                 "headers": {
-                    "requestId": payload_json["headers"]["requestId"],
+                    "requestId": request_id,
                 },
                 "httpResponse": {
                     "statusCode": status_code,

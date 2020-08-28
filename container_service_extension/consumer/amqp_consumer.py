@@ -5,17 +5,12 @@
 import base64
 import json
 import sys
-import threading
-import traceback
 
 import pika
-import requests
 
 import container_service_extension.consumer.utils as utils
-from container_service_extension.exceptions import CseRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.server_constants import EXCHANGE_TYPE
-from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 
 
 class AMQPConsumer(object):
@@ -148,28 +143,14 @@ class AMQPConsumer(object):
 
     def on_message(self, unused_channel, basic_deliver, properties, body):
         self.acknowledge_message(basic_deliver.delivery_tag)
-        try:
-            body_json = json.loads(body.decode(self.fsencoding))[0]
-            LOGGER.debug(f"Received message # {basic_deliver.delivery_tag} "
-                         f"from {properties.app_id} "
-                         f"({threading.currentThread().ident}): "
-                         f"{json.dumps(body_json)}, props: {properties}")
-
-            reply_body, status_code = \
-                utils.get_reply_body_and_status_code(body_json)
-        except Exception as e:
-            if isinstance(e, CseRequestError):
-                status_code = e.status_code
-            else:
-                status_code = requests.codes.internal_server_error
-            reply_body = json.dumps({RESPONSE_MESSAGE_KEY: str(e)})
-
-            tb = traceback.format_exc()
-            LOGGER.error(tb)
+        reply_body, status_code, request_id = utils.get_response_fields(
+            msg=body,
+            fsencoding=self.fsencoding,
+            is_amqp=True)
 
         if properties.reply_to is not None:
             reply_msg = {
-                'id': body_json['id'],
+                'id': request_id,
                 'headers': {
                     'Content-Type': 'application/json',
                     'Content-Length': len(reply_body)
