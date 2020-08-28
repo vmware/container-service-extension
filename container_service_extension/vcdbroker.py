@@ -1373,18 +1373,22 @@ def _delete_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
     LOGGER.debug(f"Deleting node(s) {node_names} from cluster '{cluster_name}'"
                  f" (vapp: {vapp_href})")
     script = "#!/usr/bin/env bash\nkubectl delete node "
+    are_there_workers_to_del = False
     for node_name in node_names:
-        script += f' {node_name}'
+        if node_name.startswith(NodeType.WORKER):
+            script += f' {node_name}'
+            are_there_workers_to_del = True
     script += '\n'
 
     vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
     try:
-        master_node_names = get_node_names(vapp, NodeType.MASTER)
-        run_script_in_nodes(sysadmin_client, vapp_href, [master_node_names[0]],
-                            script)
-    except Exception:
+        if are_there_workers_to_del:
+            master_node_names = get_node_names(vapp, NodeType.MASTER)
+            run_script_in_nodes(sysadmin_client, vapp_href,
+                                [master_node_names[0]], script)
+    except Exception as err:
         LOGGER.warning(f"Failed to delete node(s) {node_names} from cluster "
-                       f"'{cluster_name}' using kubectl (vapp: {vapp_href})")
+                       f"'{cluster_name}' using kubectl (vapp: {vapp_href}): {err}")  # noqa: E501
 
     vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
     for vm_name in node_names:
