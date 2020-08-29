@@ -458,8 +458,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                     network=network_name,
                     fence_mode='bridged')
             except Exception as err:
+                LOGGER.error(err, exc_info=True)
                 msg = f"Error while creating vApp: {err}"
-                LOGGER.debug(str(err))
                 raise e.ClusterOperationError(msg)
             self.context.client.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0]) # noqa: E501
 
@@ -502,6 +502,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                            ssh_key=ssh_key,
                            sizing_class_name=master_sizing_class)
             except Exception as err:
+                LOGGER.error(err, exc_info=True)
                 raise e.MasterNodeCreationError("Error adding master node:",
                                                 str(err))
 
@@ -534,6 +535,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                            ssh_key=ssh_key,
                            sizing_class_name=worker_sizing_class)
             except Exception as err:
+                LOGGER.error(err, exc_info=True)
                 raise e.WorkerNodeCreationError("Error creating worker node:",
                                                 str(err))
 
@@ -564,6 +566,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                ssh_key=ssh_key,
                                sizing_class_name=nfs_sizing_class)
                 except Exception as err:
+                    LOGGER.error(err, exc_info=True)
                     raise e.NFSNodeCreationError("Error creating NFS node:",
                                                  str(err))
 
@@ -585,6 +588,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         except (e.MasterNodeCreationError, e.WorkerNodeCreationError,
                 e.NFSNodeCreationError, e.ClusterJoiningError,
                 e.ClusterInitializationError, e.ClusterOperationError) as err:
+            LOGGER.error(f"Error creating cluster '{cluster_name}'", exc_info=True)  # noqa: E501
             if rollback:
                 msg = f"Error creating cluster '{cluster_name}'. " \
                       f"Deleting cluster (rollback=True)"
@@ -600,17 +604,15 @@ class ClusterService(abstract_broker.AbstractBroker):
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
-            else:
-                LOGGER.error(f"Error creating cluster '{cluster_name}'", exc_info=True)  # noqa: E501
-                self._update_task(vcd_client.TaskStatus.ERROR, error_message=str(err))  # noqa: E501
-                self._fail_operation_and_resolve_entity(
-                    cluster_id, DefEntityOperation.CREATE, vapp)
+            self._update_task(vcd_client.TaskStatus.ERROR, error_message=str(err))  # noqa: E501
+            self._fail_operation_and_resolve_entity(
+                cluster_id, DefEntityOperation.CREATE, vapp)
         except Exception as err:
+            LOGGER.error(f"Unknown error creating cluster '{cluster_name}'",
+                         exc_info=True)
             self._fail_operation_and_resolve_entity(cluster_id,
                                                     DefEntityOperation.CREATE,
                                                     vapp)
-            LOGGER.error(f"Unknown error creating cluster '{cluster_name}'",
-                         exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
         finally:
@@ -685,11 +687,11 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             self._sync_def_entity(cluster_id, curr_entity)
         except Exception as err:
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.UPDATE)
             LOGGER.error(f"Unexpected error while resizing nodes for "
                          f"{cluster_name} ({cluster_id}): {err}",
                          exc_info=True)
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.UPDATE)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
         finally:
@@ -809,7 +811,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         except (e.NodeCreationError, e.ClusterJoiningError) as err:
             LOGGER.error(f"Error adding nodes to cluster '{cluster_name}'",
                          exc_info=True)
-            LOGGER.error(str(err), exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
             if rollback:
@@ -831,10 +832,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                                                     DefEntityOperation.UPDATE,
                                                     vapp)
         except Exception as err:
+            LOGGER.error(err, exc_info=True)
             self._fail_operation_and_resolve_entity(cluster_id,
                                                     DefEntityOperation.UPDATE,
                                                     vapp)
-            LOGGER.error(str(err), exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
 
@@ -1045,12 +1046,12 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
             LOGGER.info(f"{msg} ({vapp_href})")
         except Exception as err:
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.UPGRADE,
-                                                    vapp)
             msg = f"Unexpected error while upgrading cluster " \
                   f"'{cluster_name}': {err}"
             LOGGER.error(msg, exc_info=True)
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.UPGRADE,
+                                                    vapp)
             self._update_task(vcd_client.TaskStatus.ERROR, error_message=msg)
 
         finally:
@@ -1093,11 +1094,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                                    DefEntityOperationStatus.SUCCEEDED))
             self._sync_def_entity(cluster_id, curr_entity)
         except Exception as err:
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.UPDATE)
             LOGGER.error(f"Unexpected error while deleting nodes for "
                          f"{cluster_name} ({cluster_id}): {err}",
                          exc_info=True)
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.UPDATE)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
         finally:
@@ -1136,16 +1137,21 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
         try:
-            msg = f"Draining {len(nodes_to_del)} node(s) " \
-                  f"from cluster '{cluster_name}': {nodes_to_del}"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-
             # if nodes fail to drain, continue with node deletion anyways
             try:
-                _drain_nodes(self.context.sysadmin_client,
-                             vapp_href,
-                             nodes_to_del,
-                             cluster_name=cluster_name)
+                worker_nodes_to_delete = [
+                    node_name for node_name in nodes_to_del
+                    if node_name.startswith(NodeType.WORKER)]
+                if worker_nodes_to_delete:
+                    msg = f"Draining {len(worker_nodes_to_delete)} node(s) " \
+                          f"from cluster '{cluster_name}': " \
+                          f"{worker_nodes_to_delete}"
+                    self._update_task(
+                        vcd_client.TaskStatus.RUNNING, message=msg)
+                    _drain_nodes(self.context.sysadmin_client,
+                                 vapp_href,
+                                 worker_nodes_to_delete,
+                                 cluster_name=cluster_name)
             except (e.NodeOperationError, e.ScriptExecutionError) as err:
                 LOGGER.warning(f"Failed to drain nodes: {nodes_to_del}"
                                f" in cluster '{cluster_name}'."
@@ -1163,14 +1169,13 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Deleted {len(nodes_to_del)} node(s)" \
                   f" to cluster '{cluster_name}'"
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-
         except Exception as err:
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.UPDATE,
-                                                    vapp)
             LOGGER.error(f"Unexpected error while deleting nodes "
                          f"{nodes_to_del}: {err}",
                          exc_info=True)
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.UPDATE,
+                                                    vapp)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
 
@@ -1203,9 +1208,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                 str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
             self._sync_def_entity(cluster_id, def_entity)
             self.entity_svc.resolve_entity(cluster_id)
-        except Exception as error:
-            LOGGER.error(f"Failed on resolve entity:{error}", exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR, error_message=str(error))  # noqa: E501
+        except Exception as err:
+            LOGGER.error(f"Failed on resolve entity:{err}", exc_info=True)
+            self._update_task(vcd_client.TaskStatus.ERROR, error_message=str(err))  # noqa: E501
 
     def _update_task(self, status, message='', error_message=None,
                      stack_trace=''):
@@ -1323,9 +1328,9 @@ def _get_nodes_details(sysadmin_client, vapp):
                                                     exports=exports))
         return def_models.Nodes(master=master, workers=workers,
                                 nfs=nfs_nodes)
-    except Exception as e:
-        LOGGER.error(
-            f"Failed to retrieve the status of the nodes of the cluster {vapp.name}: {e}")  # noqa: E501
+    except Exception as err:
+        LOGGER.error("Failed to retrieve the status of the nodes of the "
+                     f"cluster {vapp.name}: {err}", exc_info=True)
 
 
 def _get_nfs_exports(sysadmin_client: vcd_client.Client, ip, vapp, vm_name):
@@ -1367,9 +1372,9 @@ def _drain_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
                              [master_node_names[0]],
                              script)
     except Exception as err:
-        LOGGER.warning(f"Failed to drain nodes {node_names} in cluster "
-                       f"'{cluster_name}' (vapp: {vapp_href}) with "
-                       f"error: {err}")
+        LOGGER.error(f"Failed to drain nodes {node_names} in cluster "
+                     f"'{cluster_name}' (vapp: {vapp_href}) with "
+                     f"error: {err}")
         raise
 
     LOGGER.debug(f"Successfully drained nodes {node_names} in cluster "
@@ -1394,9 +1399,9 @@ def _uncordon_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
                              [master_node_names[0]],
                              script)
     except Exception as err:
-        LOGGER.warning(f"Failed to uncordon nodes {node_names} in cluster "
-                       f"'{cluster_name}' (vapp: {vapp_href}) "
-                       f"with error: {err}")
+        LOGGER.error(f"Failed to uncordon nodes {node_names} in cluster "
+                     f"'{cluster_name}' (vapp: {vapp_href}) "
+                     f"with error: {err}")
         raise
 
     LOGGER.debug(f"Successfully uncordoned nodes {node_names} in cluster "
@@ -1416,8 +1421,8 @@ def _delete_vapp(client, org_name, ovdc_name, vapp_name):
         task = vdc.delete_vapp(vapp_name, force=True)
         client.get_task_monitor().wait_for_status(task)
     except Exception as err:
-        LOGGER.warning(f"Failed to delete vapp {vapp_name} "
-                       f"(vdc: {vdc_href}) with error: {err}")
+        LOGGER.error(f"Failed to delete vapp {vapp_name} "
+                     f"(vdc: {vdc_href}) with error: {err}")
         raise
 
     LOGGER.debug(f"Deleted vapp {vapp_name} (vdc: {vdc_href})")
@@ -1444,8 +1449,9 @@ def _delete_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
             _run_script_in_nodes(sysadmin_client, vapp_href,
                                  [master_node_names[0]], script)
     except Exception as err:
-        LOGGER.warning(f"Failed to delete node(s) {node_names} from cluster "
-                       f"'{cluster_name}' using kubectl (vapp: {vapp_href}): {err}")  # noqa: E501
+        LOGGER.error(f"Failed to delete node(s) {node_names} from cluster "
+                     f"'{cluster_name}' using kubectl "
+                     f"(vapp: {vapp_href}): {err}", exc_info=True)
 
     vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
     for vm_name in node_names:
@@ -1454,8 +1460,8 @@ def _delete_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
             task = vm.undeploy()
             sysadmin_client.get_task_monitor().wait_for_status(task)
         except Exception:
-            LOGGER.warning(f"Failed to undeploy VM {vm_name} "
-                           f"(vapp: {vapp_href})")
+            LOGGER.error(f"Failed to undeploy VM {vm_name} "
+                         f"(vapp: {vapp_href})", exc_info=True)
 
     task = vapp.delete_vms(node_names)
     sysadmin_client.get_task_monitor().wait_for_status(task)
@@ -1488,7 +1494,7 @@ def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
         qfilter=query_filter)
     result = q.execute()
 
-    return len(result) != 0
+    return len(list(result)) != 0
 
 
 def _get_template(name=None, revision=None):
@@ -1626,6 +1632,7 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                             f"VM customization script execution failed "
                             f"on node {vm_name}:{errors}")
         except Exception as err:
+            LOGGER.error(err, exc_info=True)
             # TODO: get details of the exception to determine cause of failure,
             # e.g. not enough resources available.
             node_list = [entry.get('target_vm_name') for entry in specs]
