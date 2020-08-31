@@ -143,6 +143,10 @@ def cli(ctx):
             users with the corresponding private key have access (--ssh-key is
             required when --retain-temp-vapp is used).
 \b
+        cse pks-configure --skip-config-decryption pks_config.yaml
+            Configure CSE for PKS using pks_config.yaml. Skip decryption of
+            the config information.
+\b
         cse check config.yaml --skip-config-decryption
             Checks validity of 'config.yaml'.
 \b
@@ -593,6 +597,60 @@ def install(ctx, config_file_path, pks_config_file_path,
         # block the process to let telemetry handler to finish posting data to
         # VAC. HACK!!!
         time.sleep(3)
+
+
+@cli.command(short_help='Configure PKS')
+@click.pass_context
+@click.argument(
+    'pks_config_file_path',
+    type=click.Path(exists=True),
+    metavar='PKS_CONFIG_FILE_PATH')
+@click.option(
+    '-s',
+    '--skip-config-decryption',
+    is_flag=True,
+    help='Skip decryption of PKS config file')
+def pks_configure(ctx, pks_config_file_path, skip_config_decryption):
+
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
+    console_message_printer = ConsoleMessagePrinter()
+    check_python_version(console_message_printer)
+    requests.packages.urllib3.disable_warnings()
+
+    password = None
+    if not skip_config_decryption:
+        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+            color='green', hide_input=True)
+    try:
+        try:
+            utils.check_file_permissions(
+                pks_config_file_path,
+                msg_update_callback=console_message_printer)
+            if skip_config_decryption:
+                with open(pks_config_file_path) as f:
+                    pks_config = yaml.safe_load(f) or {}
+            else:
+                console_message_printer.info(
+                    f"Decrypting '{pks_config_file_path}'")
+                pks_config = yaml.safe_load(
+                    get_decrypted_file_contents(pks_config_file_path,
+                                                password)) or {}
+            configure_cse.configure_nsxt_for_cse(
+                nsxt_servers=pks_config['nsxt_servers'],
+                log_wire=True,
+                msg_update_callback=console_message_printer
+            )
+        except requests.exceptions.SSLError as err:
+            raise Exception(f"SSL verification failed: {str(err)}")
+        except requests.exceptions.ConnectionError as err:
+            raise Exception(f"Cannot connect to {err.request.url}.")
+        except cryptography.fernet.InvalidToken:
+            raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
+    except Exception as err:
+        SERVER_CLI_LOGGER.error(str(err))
+        console_message_printer.error(str(err))
+        sys.exit(1)
 
 
 @cli.command(short_help='Run CSE service')

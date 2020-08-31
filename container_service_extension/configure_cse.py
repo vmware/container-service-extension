@@ -453,30 +453,11 @@ def install_cse(config_file_name, skip_template_creation,
 
         # if it's a PKS setup, setup NSX-T constructs
         if config.get('pks_config'):
-            nsxt_servers = config['pks_config']['nsxt_servers']
-            wire_logger = NULL_LOGGER
-            if log_wire:
-                wire_logger = SERVER_NSXT_WIRE_LOGGER
-
-            for nsxt_server in nsxt_servers:
-                msg = f"Configuring NSX-T server ({nsxt_server.get('name')})" \
-                      " for CSE. Please check install logs for details."
-                msg_update_callback.general(msg)
-                INSTALL_LOGGER.info(msg)
-                nsxt_client = NSXTClient(
-                    host=nsxt_server.get('host'),
-                    username=nsxt_server.get('username'),
-                    password=nsxt_server.get('password'),
-                    logger_debug=INSTALL_LOGGER,
-                    logger_wire=wire_logger,
-                    http_proxy=nsxt_server.get('proxy'),
-                    https_proxy=nsxt_server.get('proxy'),
-                    verify_ssl=nsxt_server.get('verify'))
-                setup_nsxt_constructs(
-                    nsxt_client=nsxt_client,
-                    nodes_ip_block_id=nsxt_server.get('nodes_ip_block_ids'),
-                    pods_ip_block_id=nsxt_server.get('pods_ip_block_ids'),
-                    ncp_boundary_firewall_section_anchor_id=nsxt_server.get('distributed_firewall_section_anchor_id')) # noqa: E501
+            configure_nsxt_for_cse(
+                nsxt_servers=config['pks_config']['nsxt_servers'],
+                log_wire=log_wire,
+                msg_update_callback=msg_update_callback
+            )
 
         # Telemetry - Record successful install action
         record_user_action(CseOperation.SERVICE_INSTALL,
@@ -2238,3 +2219,38 @@ def _print_users_in_need_of_def_rights(
         msg = f"Org : {org_name} -> Users : {', '.join(set(user_list))}"
         msg_update_callback.general(msg)
         INSTALL_LOGGER.info(msg)
+
+
+def configure_nsxt_for_cse(nsxt_servers, log_wire=False, msg_update_callback=utils.NullPrinter()):  # noqa: E501
+    """Configure NSXT-T server for CSE.
+
+    :param dict nsxt_servers: nsxt_server details
+    :param Logger log_wire:
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    """
+    wire_logger = SERVER_NSXT_WIRE_LOGGER if log_wire else NULL_LOGGER
+    try:
+        for nsxt_server in nsxt_servers:
+            msg = f"Configuring NSX-T server ({nsxt_server.get('name')})" \
+                " for CSE. Please check install logs for details."
+            msg_update_callback.general(msg)
+            INSTALL_LOGGER.info(msg)
+            nsxt_client = NSXTClient(
+                host=nsxt_server.get('host'),
+                username=nsxt_server.get('username'),
+                password=nsxt_server.get('password'),
+                logger_debug=INSTALL_LOGGER,
+                logger_wire=wire_logger,
+                http_proxy=nsxt_server.get('proxy'),
+                https_proxy=nsxt_server.get('proxy'),
+                verify_ssl=nsxt_server.get('verify'))
+            setup_nsxt_constructs(
+                nsxt_client=nsxt_client,
+                nodes_ip_block_id=nsxt_server.get('nodes_ip_block_ids'),
+                pods_ip_block_id=nsxt_server.get('pods_ip_block_ids'),
+                ncp_boundary_firewall_section_anchor_id=nsxt_server.get('distributed_firewall_section_anchor_id')) # noqa: E501
+    except Exception:
+        msg_update_callback.error(
+            "NSXT Configuration Error. Check CSE install logs")
+        INSTALL_LOGGER.error("NSXT Configuration Error", exc_info=True)
+        raise
