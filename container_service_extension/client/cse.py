@@ -39,7 +39,7 @@ def cse(ctx):
     b) whether CSE server is running or not.
 
     If CSE server is not running, "Cluster" command group can be used to
-    manage tkg clusters only.
+    manage "vSphere with Tanzu" clusters only.
     """
 
 
@@ -98,7 +98,8 @@ def list_templates(ctx):
 
 
 @cse.group('cluster', cls=cmd_filter.GroupCommandFilter,
-           short_help='Manage Kubernetes clusters')
+           short_help='Manage Kubernetes clusters (native and vSphere with '
+                      'Tanzu)')
 @click.pass_context
 def cluster_group(ctx):
     """Manage Kubernetes clusters.
@@ -1288,7 +1289,7 @@ def disable_service(ctx):
            short_help='Manage ovdc enablement for native clusters')
 @click.pass_context
 def ovdc_group(ctx):
-    """Manage Kubernetes provider for org VDCs.
+    """Manage ovdc enablement for native clusters.
 
 All commands execute in the context of user's currently logged-in
 organization. Use a different organization by using the '--org' option.
@@ -1297,12 +1298,11 @@ organization. Use a different organization by using the '--org' option.
 \b
 Examples
     vcd cse ovdc enable ovdc1
-        Set 'ovdc1' Kubernetes provider to be native (vCD).
+        Enable ovdc1 for native cluster deployment.
 
 \b
     vcd cse ovdc disable ovdc3
-        Set 'ovdc3' Kubernetes provider to be none,
-        which disables Kubernetes cluster deployment on 'ovdc3'.
+        Disable ovdc3 for any further native cluster deployments.
 \b
     vcd cse ovdc info ovdc1
         Display detailed information about ovdc 'ovdc1'.
@@ -1334,7 +1334,7 @@ def list_ovdcs(ctx):
 
 
 @ovdc_group.command('enable',
-                    short_help='Set Kubernetes provider to be Native for an org VDC')  # noqa: E501
+                    short_help='Enable ovdc for native cluster deployments')
 @click.pass_context
 @click.argument('ovdc_name', required=True, metavar='VDC_NAME')
 @click.option(
@@ -1395,8 +1395,8 @@ def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus=None):
 
 
 @ovdc_group.command('disable',
-                    short_help='Disable Kubernetes cluster deployment for '
-                               'an org VDC')
+                    short_help='Disable further native cluster deployments on '
+                               'the ovdc')
 @click.pass_context
 @click.argument('ovdc_name', required=True, metavar='VDC_NAME')
 @click.option(
