@@ -28,7 +28,7 @@ class PksOvdc:
                 shared_constants.RequestKey.LIST_PKS_PLANS: list_pks_plans})
         return process_response(response)
 
-    def update_ovdc(self, enable, ovdc_name, org_name=None, k8s_provider=None,
+    def update_ovdc(self, enable, ovdc_name, org_name=None,
                     pks_plan=None, pks_cluster_domain=None):
         """Enable/Disable ovdc for k8s for the given container provider.
 
@@ -37,7 +37,6 @@ class PksOvdc:
             the vdc will be disabled.
         :param str ovdc_name: Name of org VDC to update
         :param str org_name: Name of org that @ovdc_name belongs to
-        :param str k8s_provider: Name of the container provider
         :param str pks_plan: PKS plan
         :param str pks_cluster_domain: Suffix of the domain name, which will be
          used to construct FQDN of the clusters.
@@ -50,6 +49,7 @@ class PksOvdc:
         ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
         uri = f'{self._uri}/ovdc/{ovdc_id}'
 
+        k8s_provider = server_constants.K8sProvider.PKS
         if not enable:
             k8s_provider = server_constants.K8sProvider.NONE
             pks_plan = None

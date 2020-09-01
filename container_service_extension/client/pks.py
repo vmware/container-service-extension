@@ -455,7 +455,6 @@ def ovdc_enable(ctx, ovdc_name, pks_plan,
                 enable=True,
                 ovdc_name=ovdc_name,
                 org_name=org_name,
-                k8s_provider=K8sProvider.PKS,
                 pks_plan=pks_plan,
                 pks_cluster_domain=pks_cluster_domain)
             stdout(result, ctx)

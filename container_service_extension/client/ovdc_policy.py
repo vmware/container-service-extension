@@ -82,25 +82,15 @@ class PolicyBasedOvdc:
         return process_response(resp)
 
     def info_ovdc(self, ovdc_name, org_name):
-        """Disable ovdc for k8s for the given container provider.
+        """Disable ovdc for given kubernetes runtime.
 
         :param str ovdc_name: Name of the org VDC to be enabled
         :param str org_name: Name of org that @ovdc_name belongs to
 
         :rtype: dict
         """
-        method = shared_constants.RequestMethod.GET
-        ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
-                       is_admin_operation=True)
-        ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
-        uri = f'{self._uri}/ovdc/{ovdc_id}'
-
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            accept_type='application/json')
-        return process_response(response)
+        raise NotImplementedError("OVDC info functionality is not supported "
+                                  "for the installed CSE version.")
 
     # TODO(compute-policy for v35): Revisit after decision on api v35 support
     def update_ovdc_compute_policies(self, ovdc_name, org_name,
