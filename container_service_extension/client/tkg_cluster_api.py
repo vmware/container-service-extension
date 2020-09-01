@@ -298,7 +298,8 @@ class TKGClusterApi:
         raise NotImplementedError(
             "Get Cluster upgrade-plan yet to be implemented for TKG clusters")
 
-    def upgrade_cluster(self, cluster_name, **kwargs):
+    def upgrade_cluster(self, cluster_name, template_name,
+                        template_revision, **kwargs):
         """Upgrade TKG cluster to the given distribution."""
         raise NotImplementedError(
             "Cluster upgrade yet to be implemented for TKG clusters")

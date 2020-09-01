@@ -103,10 +103,16 @@ UNSUPPORTED_SUBCOMMAND_OPTIONS_BY_VERSION = {
     }
 }
 
-UNSUPPORTED_SUBCOMMANDS_WITH_SERVER_NOT_RUNNING_BY_VERSION = {
+UNSUPPORTED_COMMANDS_WITH_SERVER_NOT_RUNNING_BY_VERSION = {
     vcd_client.ApiVersion.VERSION_35.value: [GroupKey.VERSION, GroupKey.OVDC,
                                              GroupKey.SYSTEM, GroupKey.TEMPLATE,  # noqa: E501
                                              GroupKey.PKS]
+}
+
+UNSUPPORTED_SUBCOMMANDS_WITH_SERVER_NOT_RUNNING_BY_VERSION = {
+    vcd_client.ApiVersion.VERSION_35.value: {
+        GroupKey.CLUSTER: ['upgrade', 'upgrade-plan']
+    }
 }
 
 
@@ -137,7 +143,9 @@ class GroupCommandFilter(click.Group):
             version = client.get_api_version()
 
             # Skipping some commands when CSE server is not running
-            if cmd_name in UNSUPPORTED_SUBCOMMANDS_WITH_SERVER_NOT_RUNNING_BY_VERSION.get(version, []) and client_utils.is_cli_for_tkg_only():  # noqa: E501
+            if client_utils.is_cli_for_tkg_only() and \
+                cmd_name in [*UNSUPPORTED_COMMANDS_WITH_SERVER_NOT_RUNNING_BY_VERSION.get(version, []),  # noqa: E501
+                             *UNSUPPORTED_SUBCOMMANDS_WITH_SERVER_NOT_RUNNING_BY_VERSION.get(version, {}).get(self.name, [])]:  # noqa: E501
                 return None
 
             # Skip the command if not supported
