@@ -459,12 +459,13 @@ class ClusterService(abstract_broker.AbstractBroker):
                     fence_mode='bridged')
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
-                msg = f"Error while creating vApp: {err}"
-                raise e.ClusterOperationError(msg)
+                raise e.ClusterOperationError(
+                    f"Error while creating vApp: {err}")
             self.context.client.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0]) # noqa: E501
 
             template = _get_template(template_name, template_revision)
 
+            LOGGER.debug(f"Setting metadata on cluster vApp '{cluster_name}'")
             tags = {
                 ClusterMetadataKey.CLUSTER_ID: cluster_id,
                 ClusterMetadataKey.CSE_VERSION: pkg_resources.require('container-service-extension')[0].version, # noqa: E501
@@ -484,6 +485,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             msg = f"Creating master node for cluster '{cluster_name}' " \
                   f"({cluster_id})"
+            LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
             server_config = utils.get_server_runtime_config()
@@ -503,10 +505,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                            sizing_class_name=master_sizing_class)
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
-                raise e.MasterNodeCreationError("Error adding master node:",
-                                                str(err))
+                raise e.MasterNodeCreationError(
+                    f"Error adding master node: {err}")
 
             msg = f"Initializing cluster '{cluster_name}' ({cluster_id})"
+            LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
             _init_cluster(self.context.sysadmin_client,
@@ -520,6 +523,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             msg = f"Creating {num_workers} node(s) for cluster " \
                   f"'{cluster_name}' ({cluster_id})"
+            LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             try:
                 _add_nodes(self.context.sysadmin_client,
@@ -536,11 +540,12 @@ class ClusterService(abstract_broker.AbstractBroker):
                            sizing_class_name=worker_sizing_class)
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
-                raise e.WorkerNodeCreationError("Error creating worker node:",
-                                                str(err))
+                raise e.WorkerNodeCreationError(
+                    f"Error creating worker node: {err}")
 
             msg = f"Adding {num_workers} node(s) to cluster " \
                   f"'{cluster_name}' ({cluster_id})"
+            LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
             _join_cluster(self.context.sysadmin_client,
@@ -551,6 +556,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             if nfs_count > 0:
                 msg = f"Creating {nfs_count} NFS nodes for cluster " \
                       f"'{cluster_name}' ({cluster_id})"
+                LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 try:
                     _add_nodes(self.context.sysadmin_client,
@@ -567,10 +573,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                                sizing_class_name=nfs_sizing_class)
                 except Exception as err:
                     LOGGER.error(err, exc_info=True)
-                    raise e.NFSNodeCreationError("Error creating NFS node:",
-                                                 str(err))
+                    raise e.NFSNodeCreationError(
+                        f"Error creating NFS node: {err}")
 
             msg = f"Created cluster '{cluster_name}' ({cluster_id})"
+            LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
 
             # Update defined entity instance with new properties like vapp_id,
@@ -811,8 +818,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         except (e.NodeCreationError, e.ClusterJoiningError) as err:
             LOGGER.error(f"Error adding nodes to cluster '{cluster_name}'",
                          exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR,
-                              error_message=str(err))
             if rollback:
                 msg = f"Error adding nodes to cluster '{cluster_name}' " \
                       f"({cluster_id}). Deleting nodes: {err.node_names} " \
@@ -828,6 +833,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                     LOGGER.error(f"Failed to delete nodes {err.node_names} "
                                  f"from cluster '{cluster_name}'",
                                  exc_info=True)
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              error_message=str(err))
             self._fail_operation_and_resolve_entity(cluster_id,
                                                     DefEntityOperation.UPDATE,
                                                     vapp)
