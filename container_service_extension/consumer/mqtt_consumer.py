@@ -46,7 +46,7 @@ class MQTTConsumer:
             reply_body, status_code, request_id = utils.get_response_fields(
                 msg=msg,
                 fsencoding=self.fsencoding,
-                is_amqp=False)
+                is_mqtt=True)
 
             response_json = {
                 "type": "API_RESPONSE",

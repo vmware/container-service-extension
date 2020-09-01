@@ -14,19 +14,19 @@ import container_service_extension.request_processor as request_processor
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 
 
-def get_response_fields(msg, fsencoding, is_amqp):
+def get_response_fields(msg, fsencoding, is_mqtt):
     """Get the reply body, status code, and request id from the message."""
     try:
         # Parse the message
-        if is_amqp:
-            msg_json = json.loads(msg.decode(fsencoding))[0]
-            request_id = msg_json['id']
-        else:
+        if is_mqtt:
             payload_json = json.loads(msg.payload.decode(fsencoding))
             http_req_json = json.loads(base64.b64decode(
                 payload_json['httpRequest']))
             request_id = payload_json["headers"]["requestId"]
             msg_json = http_req_json['message']
+        else:
+            msg_json = json.loads(msg.decode(fsencoding))[0]
+            request_id = msg_json['id']
 
         result = request_processor.process_request(msg_json)
         status_code = result['status_code']

@@ -146,7 +146,7 @@ class AMQPConsumer(object):
         reply_body, status_code, request_id = utils.get_response_fields(
             msg=body,
             fsencoding=self.fsencoding,
-            is_amqp=True)
+            is_mqtt=False)
 
         if properties.reply_to is not None:
             reply_msg = {
