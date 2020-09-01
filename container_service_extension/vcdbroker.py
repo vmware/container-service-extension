@@ -319,6 +319,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         # call, session becomes None
         msg = f"Creating cluster vApp '{cluster_name}' ({cluster_id}) " \
               f"from template '{template_name}' (revision {template_revision})"
+        LOGGER.debug(msg)
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         self.context.is_async = True
         self._create_cluster_async(
@@ -469,6 +470,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         # do not logout of sys admin, or else in pyvcloud's session.request()
         # call, session becomes None
         msg = f"Deleting cluster '{cluster_name}' ({cluster_id})"
+        LOGGER.debug(msg)
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         self.context.is_async = True
         self._delete_cluster_async(cluster_name=cluster_name,
@@ -544,6 +546,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
               f"{template[LocalTemplateKey.DOCKER_VERSION]}, CNI: " \
               f"{cluster['cni']} {cluster['cni_version']} -> " \
               f"{template[LocalTemplateKey.CNI_VERSION]}"
+        LOGGER.debug(msg)
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         LOGGER.info(f"{msg} ({cluster['vapp_href']})")
         self.context.is_async = True
@@ -704,6 +707,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         msg = f"Creating {num_workers} node(s) from template " \
               f"'{template_name}' (revision {template_revision}) and " \
               f"adding to cluster '{cluster_name}' ({cluster_id})"
+        LOGGER.debug(msg)
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         self.context.is_async = True
         self._create_nodes_async(
@@ -782,6 +786,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         # call, session becomes None
         msg = f"Deleting {len(node_names_list)} node(s) " \
               f"from cluster '{cluster_name}'({cluster_id})"
+        LOGGER.debug(msg)
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         self.context.is_async = True
         self._delete_nodes_async(
@@ -812,6 +817,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                          f"{ovdc_name} with {num_workers} worker nodes, "
                          f"storage profile={storage_profile_name}")
             msg = f"Creating cluster vApp {cluster_name} ({cluster_id})"
+            LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             try:
                 vapp_resource = vdc.create_vapp(
@@ -827,6 +833,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
             template = _get_template(template_name, template_revision)
 
+            LOGGER.debug(f"Setting metadata on cluster vApp '{cluster_name}'")
             tags = {
                 ClusterMetadataKey.CLUSTER_ID: cluster_id,
                 ClusterMetadataKey.CSE_VERSION: pkg_resources.require('container-service-extension')[0].version, # noqa: E501
@@ -846,6 +853,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
             msg = f"Creating master node for cluster '{cluster_name}' " \
                   f"({cluster_id})"
+            LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
             server_config = utils.get_server_runtime_config()
@@ -869,6 +877,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                                                 str(err))
 
             msg = f"Initializing cluster '{cluster_name}' ({cluster_id})"
+            LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
             _init_cluster(self.context.sysadmin_client,
@@ -882,6 +891,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
             msg = f"Creating {num_workers} node(s) for cluster " \
                   f"'{cluster_name}' ({cluster_id})"
+            LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             try:
                 _add_nodes(self.context.sysadmin_client,
@@ -903,6 +913,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
             msg = f"Adding {num_workers} node(s) to cluster " \
                   f"'{cluster_name}' ({cluster_id})"
+            LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
             _join_cluster(self.context.sysadmin_client,
@@ -913,6 +924,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             if enable_nfs:
                 msg = f"Creating NFS node for cluster " \
                       f"'{cluster_name}' ({cluster_id})"
+                LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 try:
                     _add_nodes(self.context.sysadmin_client,
@@ -933,6 +945,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                                                  str(err))
 
             msg = f"Created cluster '{cluster_name}' ({cluster_id})"
+            LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except (e.MasterNodeCreationError, e.WorkerNodeCreationError,
                 e.NFSNodeCreationError, e.ClusterJoiningError,
@@ -940,8 +953,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
             if rollback:
                 msg = f"Error creating cluster '{cluster_name}'. " \
                       f"Deleting cluster (rollback=True)"
+                LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-                LOGGER.info(msg)
                 try:
                     cluster = _get_cluster(self.context.client,
                                            cluster_name,
@@ -1010,10 +1023,12 @@ class VcdBroker(abstract_broker.AbstractBroker):
             if node_type == NodeType.NFS:
                 msg = f"Created {num_workers} node(s) for cluster " \
                       f"'{cluster_name}' ({cluster_id})"
+                LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
             elif node_type == NodeType.WORKER:
                 msg = f"Adding {num_workers} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
+                LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 target_nodes = []
                 for spec in new_nodes['specs']:
@@ -1026,14 +1041,15 @@ class VcdBroker(abstract_broker.AbstractBroker):
                               target_nodes)
                 msg = f"Added {num_workers} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
+                LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except e.NodeCreationError as err:
             if rollback:
                 msg = f"Error adding nodes to cluster '{cluster_name}' " \
                       f"({cluster_id}). Deleting nodes: {err.node_names} " \
                       f"(rollback=True)"
+                LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-                LOGGER.info(msg)
                 try:
                     _delete_nodes(self.context.sysadmin_client,
                                   vapp_href,
@@ -1045,7 +1061,6 @@ class VcdBroker(abstract_broker.AbstractBroker):
                                  exc_info=True)
             LOGGER.error(f"Error adding nodes to cluster '{cluster_name}'",
                          exc_info=True)
-            LOGGER.error(str(err), exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
             # raising an exception here prints a stacktrace to server console
@@ -1063,6 +1078,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         try:
             msg = f"Draining {len(node_names_list)} node(s) from cluster " \
                   f"'{cluster_name}': {node_names_list}"
+            LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
 
             # if nodes fail to drain, continue with node deletion anyways
@@ -1078,6 +1094,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
             msg = f"Deleting {len(node_names_list)} node(s) from cluster " \
                   f"'{cluster_name}': {node_names_list}"
+            LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
 
             _delete_nodes(self.context.sysadmin_client,
@@ -1087,6 +1104,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
             msg = f"Deleted {len(node_names_list)} node(s)" \
                   f" to cluster '{cluster_name}'"
+            LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except Exception as err:
             LOGGER.error(f"Unexpected error while deleting nodes "
@@ -1102,9 +1120,11 @@ class VcdBroker(abstract_broker.AbstractBroker):
     def _delete_cluster_async(self, *args, cluster_name, cluster_vdc_href):
         try:
             msg = f"Deleting cluster '{cluster_name}'"
+            LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             _delete_vapp(self.context.client, cluster_vdc_href, cluster_name)
             msg = f"Deleted cluster '{cluster_name}'"
+            LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except Exception as err:
             LOGGER.error(f"Unexpected error while deleting cluster: {err}",
@@ -1142,12 +1162,14 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
             if upgrade_k8s:
                 msg = f"Draining master node {master_node_names}"
+                LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 _drain_nodes(self.context.sysadmin_client, vapp_href,
                              master_node_names, cluster_name=cluster_name)
 
                 msg = f"Upgrading Kubernetes ({c_k8s} -> {t_k8s}) " \
                       f"in master node {master_node_names}"
+                LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
@@ -1157,6 +1179,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                                      master_node_names, script)
 
                 msg = f"Uncordoning master node {master_node_names}"
+                LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 _uncordon_nodes(self.context.sysadmin_client,
                                 vapp_href,
@@ -1169,6 +1192,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 script = utils.read_data_file(filepath, logger=LOGGER)
                 for node in worker_node_names:
                     msg = f"Draining node {node}"
+                    LOGGER.debug(msg)
                     self._update_task(vcd_client.TaskStatus.RUNNING,
                                       message=msg)
                     _drain_nodes(self.context.sysadmin_client,
@@ -1178,12 +1202,14 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
                     msg = f"Upgrading Kubernetes ({c_k8s} " \
                           f"-> {t_k8s}) in node {node}"
+                    LOGGER.debug(msg)
                     self._update_task(vcd_client.TaskStatus.RUNNING,
                                       message=msg)
                     _run_script_in_nodes(self.context.sysadmin_client,
                                          vapp_href, [node], script)
 
                     msg = f"Uncordoning node {node}"
+                    LOGGER.debug(msg)
                     self._update_task(vcd_client.TaskStatus.RUNNING,
                                       message=msg)
                     _uncordon_nodes(self.context.sysadmin_client,
@@ -1192,6 +1218,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
             if upgrade_docker or upgrade_cni:
                 msg = f"Draining all nodes {all_node_names}"
+                LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 _drain_nodes(self.context.sysadmin_client,
                              vapp_href, all_node_names,
@@ -1200,6 +1227,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             if upgrade_docker:
                 msg = f"Upgrading Docker-CE ({c_docker} -> {t_docker}) " \
                       f"in nodes {all_node_names}"
+                LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
@@ -1211,6 +1239,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             if upgrade_cni:
                 msg = f"Applying CNI ({cluster['cni']} {c_cni} -> {t_cni}) " \
                       f"in master node {master_node_names}"
+                LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
@@ -1221,12 +1250,14 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
             # uncordon all nodes (sometimes redundant)
             msg = f"Uncordoning all nodes {all_node_names}"
+            LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             _uncordon_nodes(self.context.sysadmin_client, vapp_href,
                             all_node_names, cluster_name=cluster_name)
 
             # update cluster metadata
             msg = f"Updating metadata for cluster '{cluster_name}'"
+            LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             metadata = {
                 ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME], # noqa: E501
@@ -1245,8 +1276,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
                   f"{template_revision}): Kubernetes: {c_k8s} -> {t_k8s}, " \
                   f"Docker-CE: {c_docker} -> {t_docker}, " \
                   f"CNI: {c_cni} -> {t_cni}"
+            LOGGER.debug(f"{msg} ({vapp_href})")
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
-            LOGGER.info(f"{msg} ({vapp_href})")
         except Exception as err:
             msg = f"Unexpected error while upgrading cluster " \
                   f"'{cluster_name}': {err}"
