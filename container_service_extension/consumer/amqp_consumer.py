@@ -1,24 +1,19 @@
 # container-service-extension
-# Copyright (c) 2017 VMware, Inc. All Rights Reserved.
+# Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
 import base64
 import json
 import sys
-import threading
-import traceback
 
 import pika
-import requests
 
-from container_service_extension.exceptions import CseRequestError
+import container_service_extension.consumer.utils as utils
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-import container_service_extension.request_processor as request_processor
 from container_service_extension.server_constants import EXCHANGE_TYPE
-from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 
 
-class MessageConsumer(object):
+class AMQPConsumer(object):
     def __init__(self,
                  host,
                  port,
@@ -148,38 +143,24 @@ class MessageConsumer(object):
 
     def on_message(self, unused_channel, basic_deliver, properties, body):
         self.acknowledge_message(basic_deliver.delivery_tag)
-        try:
-            body_json = json.loads(body.decode(self.fsencoding))[0]
-            LOGGER.debug(f"Received message # {basic_deliver.delivery_tag} "
-                         f"from {properties.app_id} "
-                         f"({threading.currentThread().ident}): "
-                         f"{json.dumps(body_json)}, props: {properties}")
-
-            result = request_processor.process_request(body_json)
-
-            status_code = result['status_code']
-            reply_body = json.dumps(result['body'])
-        except Exception as e:
-            if isinstance(e, CseRequestError):
-                status_code = e.status_code
-            else:
-                status_code = requests.codes.internal_server_error
-            reply_body = json.dumps({RESPONSE_MESSAGE_KEY: str(e)})
-
-            tb = traceback.format_exc()
-            LOGGER.error(tb)
+        reply_body, status_code, request_id = utils.get_response_fields(
+            msg=body,
+            fsencoding=self.fsencoding,
+            is_mqtt=False)
 
         if properties.reply_to is not None:
             reply_msg = {
-                'id': body_json['id'],
+                'id': request_id,
                 'headers': {
                     'Content-Type': 'application/json',
                     'Content-Length': len(reply_body)
                 },
                 'statusCode': status_code,
-                'body': base64.b64encode(reply_body.encode()).decode(self.fsencoding), # noqa: E501
+                'body': base64.b64encode(reply_body.encode()).decode(
+                    self.fsencoding),
                 'request': False
             }
+
             LOGGER.debug(f"reply: {reply_body}")
 
             reply_properties = pika.BasicProperties(
