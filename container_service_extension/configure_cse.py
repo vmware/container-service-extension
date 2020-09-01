@@ -2013,11 +2013,11 @@ def _remove_old_cse_sizing_compute_policies(
             vdc_sizing_policies = cpm.list_vdc_sizing_policies_on_vdc(vdc_id)
             if vdc_sizing_policies:
                 for policy in vdc_sizing_policies:
-                    msg = f"Processing Policy : '{policy['name']}' on Org VDC : '{vdc_name}'" # noqa: E501
+                    msg = f"Processing Policy : '{policy['display_name']}' on Org VDC : '{vdc_name}'" # noqa: E501
                     msg_update_callback.info(msg)
                     INSTALL_LOGGER.info(msg)
 
-                    all_cse_policy_names.append(policy['name'])
+                    all_cse_policy_names.append(policy['display_name'])
                     task_data = cpm.remove_vdc_compute_policy_from_vdc(
                         ovdc_id=vdc_id,
                         compute_policy_href=policy['href'],
@@ -2025,7 +2025,7 @@ def _remove_old_cse_sizing_compute_policies(
                     fake_task_object = {'href': task_data['task_href']}
                     client.get_task_monitor().wait_for_status(fake_task_object) # noqa: E501
 
-                    msg = f"Removed Policy : '{policy['name']}' from Org VDC : '{vdc_name}'" # noqa: E501
+                    msg = f"Removed Policy : '{policy['display_name']}' from Org VDC : '{vdc_name}'" # noqa: E501
                     msg_update_callback.general(msg)
                     INSTALL_LOGGER.info(msg)
 

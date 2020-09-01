@@ -448,7 +448,8 @@ class ComputePolicyManager:
                 break
             for cp in response_body['values']:
                 policy = {
-                    'name': self.get_policy_display_name(cp.get('name')),
+                    'display_name': self.get_policy_display_name(cp.get('name')),  # noqa: E501
+                    'name': cp.get('name'),
                     'href': self._get_policy_href(cp.get('id')),
                     'id': cp.get('id')
                 }

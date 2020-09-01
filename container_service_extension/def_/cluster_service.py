@@ -1567,12 +1567,9 @@ def get_nfs_exports(sysadmin_client: vcd_client.Client, ip, vapp, vm_name):
 
 def is_valid_cluster_name(name):
     """Validate that the cluster name against the pattern."""
-    if len(name) > 25:
+    if name and len(name) > 25:
         return False
-    if name[-1] == '.':
-        name = name[:-1]
-    allowed = re.compile(r"(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
-    return all(allowed.match(x) for x in name.split("."))
+    return re.match("^[a-zA-Z][A-Za-z0-9-]*$", name) is not None
 
 
 def get_all_clusters(client, cluster_name=None, cluster_id=None,
@@ -1760,15 +1757,20 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
             if sizing_class_name:
                 vdc_resource = vdc.get_resource()
                 filters = {
-                    'name': sizing_class_name,
                     'isSizingOnly': True,
                 }
-                policies = list(cpm.list_compute_policies_on_vdc(vdc_resource.get('id'), filters=filters))  # noqa: E501
-                if len(policies) == 0:
-                    raise Exception(f"No sizing policy with the name {sizing_class_name} exists on the VDC")  # noqa: E501
-                if len(policies) > 1:
-                    raise Exception(f"Duplicate sizing policies with the name {sizing_class_name}")  # noqa: E501
-                sizing_class_href = policies[0]['href']
+                for policy in cpm.list_compute_policies_on_vdc(vdc_resource.get('id'), filters=filters):  # noqa: E501
+                    if policy['name'] == sizing_class_name:
+                        if not sizing_class_href:
+                            sizing_class_href = policy['href']
+                        else:
+                            msg = f"Duplicate sizing policies with the name {sizing_class_name}"  # noqa: E501
+                            LOGGER.error(msg)
+                            raise Exception(msg)
+                if not sizing_class_href:
+                    msg = f"No sizing policy with the name {sizing_class_name} exists on the VDC"  # noqa: E501
+                    LOGGER.error(msg)
+                    raise Exception(msg)
             if storage_profile:
                 storage_profile = vdc.get_storage_profile(storage_profile)
 
