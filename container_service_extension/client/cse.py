@@ -28,17 +28,18 @@ import container_service_extension.shared_constants as shared_constants
 import container_service_extension.utils as utils
 
 
-@vcd.group(short_help='Manage Native Kubernetes clusters',
+@vcd.group(short_help='Manage Kubernetes clusters',
            cls=cmd_filter.GroupCommandFilter)
 @click.pass_context
 def cse(ctx):
-    """Manage Native Kubernetes clusters.
+    """Manage Kubernetes clusters (Native, Tkg and Ent-PKS).
 
-\b
-Examples
-    vcd cse version
-        Display CSE version. If CSE version is displayed, then vcd-cli has
-        been properly configured to run CSE commands.
+    Once logged-in, few cmd groups may remain hidden based on factors like
+    a) the API version with which CSE server is running
+    b) whether CSE server is running or not.
+
+    If CSE server is not running, "Cluster" command group can be used to
+    manage tkg clusters only.
     """
 
 
@@ -55,24 +56,24 @@ def version(ctx):
     CLIENT_LOGGER.debug(ver_str)
 
 
-@cse.group(short_help='Manage native Kubernetes provider templates')
+@cse.group(short_help='Manage native kubernetes runtime templates')
 @click.pass_context
 def template(ctx):
-    """Manage native Kubernetes provider templates.
+    """Manage native kubernetes runtime templates.
 
 \b
 Examples
     vcd cse template list
-        Display templates that can be used by native Kubernetes provider.
+        Display templates that can be used to deploy native clusters.
     """
     pass
 
 
 @template.command('list',
-                  short_help='List native Kubernetes provider templates')
+                  short_help='List native kubernetes runtime templates')
 @click.pass_context
 def list_templates(ctx):
-    """Display templates that can be used by native Kubernetes provider."""
+    """Display templates that can be used to deploy native clusters."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
@@ -97,7 +98,7 @@ def list_templates(ctx):
 
 
 @cse.group('cluster', cls=cmd_filter.GroupCommandFilter,
-           short_help='Manage Native Kubernetes clusters')
+           short_help='Manage Kubernetes clusters')
 @click.pass_context
 def cluster_group(ctx):
     """Manage Kubernetes clusters.
@@ -212,7 +213,7 @@ def list_clusters(ctx, vdc, org_name):
 
 
 @cluster_group.command('delete',
-                       short_help='Delete a Kubernetes cluster')
+                       short_help='Delete a cluster')
 @click.pass_context
 @click.argument('name', required=True)
 @click.confirmation_option(prompt='Are you sure you want to delete the '
@@ -565,10 +566,9 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
                        help="Examples:\n\nvcd cse cluster apply input_spec.yaml"  # noqa: E501
                        " \n\nvcd cse cluster apply --sample"
                        " \n\nvcd cse cluster apply -s -o output.yaml",
-                       short_help='apply the cluster configuration defined '
-                                  'in the file to either create new a cluster '
-                                  'or update the existing cluster or'
-                                  'generate sample configuration file')
+                       short_help='apply a configuration to a cluster resource'
+                                  ' by filename. The resource will be created '
+                                  'if it does not exist.')
 @click.pass_context
 @click.argument(
     'cluster_config_file_path',
@@ -656,7 +656,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, output):
                        help="Examples:\n\nvcd cse cluster upgrade-plan my-cluster"  # noqa: E501
                             " \n\nvcd cse cluster upgrade-plan --k8-runtime native my-cluster",  # noqa: E501
                        short_help='Display templates that the specified '
-                                  'cluster can upgrade to')
+                                  'native cluster can be upgraded to')
 @click.pass_context
 @click.argument('cluster_name', required=True)
 @click.option(
@@ -723,8 +723,8 @@ def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name, k8_runtime=None):
 @cluster_group.command('upgrade',
                        help="Examples:\n\nvcd cse cluster upgrade my-cluster ubuntu-16.04_k8-1.18_weave-2.6.4 1"  # noqa: E501
                             "\n\nvcd cse cluster upgrade -k native my-cluster ubuntu-16.04_k8.. 2",  # noqa: E501
-                       short_help="Upgrade cluster software to specified "
-                                  "template's software versions")
+                       short_help="Upgrade native cluster software to "
+                                  "specified template's software versions")
 @click.pass_context
 @click.argument('cluster_name', required=True)
 @click.argument('template_name', required=True)
@@ -786,7 +786,7 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
 @cluster_group.command('config',
                        help="Examples:\n\nvcd cse cluster config my-cluster"
                             " \n\nvcd cse cluster config -k native my-cluster",  # noqa: E501
-                       short_help='Display cluster configuration')
+                       short_help='Retrieve cluster configuration details')
 @click.pass_context
 @click.argument('name', required=True)
 @click.option(
@@ -844,7 +844,7 @@ def cluster_config(ctx, name, vdc, org, k8_runtime=None):
 
 
 @cluster_group.command('info',
-                       short_help='Display info about a Kubernetes cluster')
+                       short_help='Display info about a cluster')
 @click.pass_context
 @click.argument('name', required=True)
 @click.option(
@@ -894,12 +894,10 @@ def cluster_info(ctx, name, org, vdc, k8_runtime=None):
         CLIENT_LOGGER.error(str(e))
 
 
-@cse.group('node',
-           short_help='Manage nodes of clusters created by native '
-                      'Kubernetes provider')
+@cse.group('node', short_help='Manage nodes of native clusters')
 @click.pass_context
 def node_group(ctx):
-    """Manage nodes of clusters created by native Kubernetes provider.
+    """Manage nodes of native clusters.
 
 These commands will only work with clusters created by native
 Kubernetes provider.
@@ -1287,7 +1285,7 @@ def disable_service(ctx):
 
 
 @cse.group('ovdc', cls=cmd_filter.GroupCommandFilter,
-           short_help='Manage Kubernetes provider for org VDCs')
+           short_help='Manage ovdc enablement for native clusters')
 @click.pass_context
 def ovdc_group(ctx):
     """Manage Kubernetes provider for org VDCs.
