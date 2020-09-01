@@ -109,7 +109,7 @@ SAMPLE_VCS_CONFIG = {
 
 SAMPLE_SERVICE_CONFIG = {
     'service': {
-        'processors': 10,
+        'processors': 15,
         'enforce_authorization': False,
         'log_wire': False,
         'telemetry': {

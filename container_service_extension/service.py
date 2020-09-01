@@ -148,13 +148,11 @@ class Service(object, metaclass=Singleton):
         return bool(self.pks_cache)
 
     def active_requests_count(self):
-        n = 0
         # TODO(request_count) Add support for PksBroker - VCDA-938
-        for t in threading.enumerate():
-            from container_service_extension.vcdbroker import VcdBroker
-            if type(t) == VcdBroker:
-                n += 1
-        return n
+        if self.consumer is None:
+            return 0
+        else:
+            return self.consumer.get_num_active_threads()
 
     def get_status(self):
         return self._state.value
@@ -166,8 +164,6 @@ class Service(object, metaclass=Singleton):
         result = utils.get_cse_info()
         result[shared_constants.CSE_SERVER_API_VERSION] = utils.get_server_api_version()  # noqa: E501
         if get_sysadmin_info:
-            result['active_consumer_threads'] = 0 if self.consumer is None \
-                else self.consumer.get_num_active_threads()
             result['all_consumer_threads'] = 0 if self.consumer is None else \
                 self.consumer.get_num_total_threads()
             result['all_threads'] = threading.activeCount()
@@ -331,7 +327,7 @@ class Service(object, metaclass=Singleton):
         processors = self.config['service']['processors']
         try:
             self.consumer = MessageConsumer(self.config, processors)
-            name = 'MessageConsumer'
+            name = server_constants.MESSAGE_CONSUMER_THREAD
             t = Thread(name=name, target=consumer_thread,
                        args=(self.consumer, ))
             t.daemon = True

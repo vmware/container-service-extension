@@ -32,11 +32,11 @@ class MQTTConsumer:
         self.verify_ssl = verify_ssl
         self.token = token
         self.client_username = client_username
-        self.fsencoding = sys.getfilesystemencoding()
-        self.mqtt_client = None
         self.processors = processors
-        self.ctpe = ConsumerThreadPoolExecutor(self.processors)
-        self.publish_lock = Lock()
+        self.fsencoding = sys.getfilesystemencoding()
+        self._mqtt_client = None
+        self._ctpe = ConsumerThreadPoolExecutor(self.processors)
+        self._publish_lock = Lock()
 
     def form_response_json(self, request_id, status_code, reply_body):
         response_json = {
@@ -72,15 +72,15 @@ class MQTTConsumer:
         self.send_response(response_json)
 
     def send_response(self, response_json):
-        self.publish_lock.acquire()
+        self._publish_lock.acquire()
         try:
-            pub_ret = self.mqtt_client.publish(topic=self.respond_topic,
-                                               payload=json.dumps(
-                                                   response_json),
-                                               qos=constants.QOS_LEVEL,
-                                               retain=False)
+            pub_ret = self._mqtt_client.publish(topic=self.respond_topic,
+                                                payload=json.dumps(
+                                                    response_json),
+                                                qos=constants.QOS_LEVEL,
+                                                retain=False)
         finally:
-            self.publish_lock.release()
+            self._publish_lock.release()
         LOGGER.debug(f"publish return (rc, msg_id): {pub_ret}")
 
     def send_too_many_requests_response(self, msg):
@@ -101,10 +101,10 @@ class MQTTConsumer:
             mqtt_client.subscribe(self.listen_topic, qos=constants.QOS_LEVEL)
 
         def on_message(mqtt_client, userdata, msg):
-            if self.ctpe.max_threads_busy():
+            if self._ctpe.max_threads_busy():
                 self.send_too_many_requests_response(msg)
             else:
-                self.ctpe.submit(lambda: self.process_mqtt_message(msg))
+                self._ctpe.submit(lambda: self.process_mqtt_message(msg))
 
         def on_subscribe(mqtt_client, userdata, msg_id, given_qos):
             LOGGER.info(f'MQTT client subscribed with given_qos: {given_qos}')
@@ -112,39 +112,39 @@ class MQTTConsumer:
         def on_disconnect(mqtt_client, userdata, rc):
             LOGGER.info(f'MQTT disconnect with reason: {rc}')
 
-        self.mqtt_client = mqtt.Client(client_id=constants.MQTT_CLIENT_ID,
-                                       transport=constants.TRANSPORT_WSS)
-        self.mqtt_client.username_pw_set(username=self.client_username,
-                                         password=self.token)
+        self._mqtt_client = mqtt.Client(client_id=constants.MQTT_CLIENT_ID,
+                                        transport=constants.TRANSPORT_WSS)
+        self._mqtt_client.username_pw_set(username=self.client_username,
+                                          password=self.token)
         cert_req = ssl.CERT_REQUIRED if self.verify_ssl else ssl.CERT_NONE
-        self.mqtt_client.tls_set(cert_reqs=cert_req)
-        self.mqtt_client.ws_set_options(path=constants.MQTT_BROKER_PATH)
+        self._mqtt_client.tls_set(cert_reqs=cert_req)
+        self._mqtt_client.ws_set_options(path=constants.MQTT_BROKER_PATH)
 
         # Setup callbacks
-        self.mqtt_client.on_connect = on_connect
-        self.mqtt_client.on_message = on_message
-        self.mqtt_client.on_disconnect = on_disconnect
-        self.mqtt_client.on_subscribe = on_subscribe
+        self._mqtt_client.on_connect = on_connect
+        self._mqtt_client.on_message = on_message
+        self._mqtt_client.on_disconnect = on_disconnect
+        self._mqtt_client.on_subscribe = on_subscribe
 
         try:
-            self.mqtt_client.connect(self.url,
-                                     port=constants.MQTT_CONNECT_PORT)
+            self._mqtt_client.connect(self.url,
+                                      port=constants.MQTT_CONNECT_PORT)
         except Exception as e:
             LOGGER.error(f'MQTT client connection error: {e}')
             raise
-        self.mqtt_client.loop_forever()
+        self._mqtt_client.loop_forever()
 
     def run(self):
         self.connect()
 
     def stop(self):
         LOGGER.info("MQTT consumer stopping")
-        if self.mqtt_client:
-            self.mqtt_client.disconnect()
-        self.ctpe.shutdown(wait=True)
+        if self._mqtt_client:
+            self._mqtt_client.disconnect()
+        self._ctpe.shutdown(wait=True)
 
     def get_num_active_threads(self):
-        return self.ctpe.get_num_active_threads()
+        return self._ctpe.get_num_active_threads()
 
     def get_num_total_threads(self):
-        return self.ctpe.get_num_total_threads()
+        return self._ctpe.get_num_total_threads()

@@ -10,47 +10,48 @@ class ConsumerThreadPoolExecutor(ThreadPoolExecutor):
                          initializer=lambda: self.increment_num_total_threads())  # noqa: E501
 
         self.max_workers = max_workers
-        self.num_active_threads = 0
-        self.num_active_threads_lock = Lock()
-        self.num_total_threads = 0
-        self.num_total_threads_lock = Lock()
+        self._num_active_threads = 0
+        self._num_active_threads_lock = Lock()
+        self._num_total_threads = 0
+        self._num_total_threads_lock = Lock()
 
     def increment_num_total_threads(self):
-        self.num_total_threads_lock.acquire()
+        """Call when each thread in the TPE is initialized."""
+        self._num_total_threads_lock.acquire()
         try:
-            self.num_total_threads += 1
+            self._num_total_threads += 1
         finally:
-            self.num_total_threads_lock.release()
+            self._num_total_threads_lock.release()
 
     def get_num_total_threads(self):
-        self.num_total_threads_lock.acquire()
+        self._num_total_threads_lock.acquire()
         try:
-            num_total_threads = self.num_total_threads
+            num_total_threads = self._num_total_threads
         finally:
-            self.num_total_threads_lock.release()
+            self._num_total_threads_lock.release()
         return num_total_threads
 
     def get_num_active_threads(self):
-        self.num_active_threads_lock.acquire()
+        self._num_active_threads_lock.acquire()
         try:
-            num_active_threads = self.num_active_threads
+            num_active_threads = self._num_active_threads
         finally:
-            self.num_active_threads_lock.release()
+            self._num_active_threads_lock.release()
         return num_active_threads
 
     def _increment_num_active_threads(self):
-        self.num_active_threads_lock.acquire()
+        self._num_active_threads_lock.acquire()
         try:
-            self.num_active_threads += 1
+            self._num_active_threads += 1
         finally:
-            self.num_active_threads_lock.release()
+            self._num_active_threads_lock.release()
 
     def _decrement_num_active_threads(self):
-        self.num_active_threads_lock.acquire()
+        self._num_active_threads_lock.acquire()
         try:
-            self.num_active_threads -= 1
+            self._num_active_threads -= 1
         finally:
-            self.num_active_threads_lock.release()
+            self._num_active_threads_lock.release()
 
     def submit(self, fn, *args, **kwargs):
         future = super().submit(fn, *args, **kwargs)

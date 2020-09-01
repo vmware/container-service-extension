@@ -41,10 +41,10 @@ class AMQPConsumer(object):
         self.exchange = exchange
         self.routing_key = routing_key
         self.queue = routing_key
-        self.fsencoding = sys.getfilesystemencoding()
         self.processors = processors
-        self.ctpe = ConsumerThreadPoolExecutor(self.processors)
-        self.publish_lock = Lock()
+        self.fsencoding = sys.getfilesystemencoding()
+        self._ctpe = ConsumerThreadPoolExecutor(self.processors)
+        self._publish_lock = Lock()
 
     def connect(self):
         LOGGER.info(f"Connecting to {self.host}:{self.port}")
@@ -180,7 +180,7 @@ class AMQPConsumer(object):
     def send_response(self, reply_msg, properties):
         reply_properties = pika.BasicProperties(
             correlation_id=properties.correlation_id)
-        self.publish_lock.acquire()
+        self._publish_lock.acquire()
         try:
             self._channel.basic_publish(
                 exchange=properties.headers['replyToExchange'],
@@ -188,7 +188,7 @@ class AMQPConsumer(object):
                 body=json.dumps(reply_msg),
                 properties=reply_properties)
         finally:
-            self.publish_lock.release()
+            self._publish_lock.release()
 
     def send_too_many_requests_response(self, properties, body):
         if properties.reply_to is not None:
@@ -202,12 +202,12 @@ class AMQPConsumer(object):
 
     def on_message(self, unused_channel, basic_deliver, properties, body):
         self.acknowledge_message(basic_deliver.delivery_tag)
-        if self.ctpe.max_threads_busy():
+        if self._ctpe.max_threads_busy():
             self.send_too_many_requests_response(properties, body)
         else:
-            self.ctpe.submit(lambda: self.process_amqp_message(properties,
-                                                               body,
-                                                               basic_deliver))
+            self._ctpe.submit(lambda: self.process_amqp_message(properties,
+                                                                body,
+                                                                basic_deliver))
 
     def acknowledge_message(self, delivery_tag):
         LOGGER.debug(f"Acknowledging message {delivery_tag}")
@@ -235,7 +235,7 @@ class AMQPConsumer(object):
         self._closing = True
         self.stop_consuming()
         self._connection.ioloop.start()
-        self.ctpe.shutdown(wait=True)
+        self._ctpe.shutdown(wait=True)
         LOGGER.info("Stopped")
 
     def close_connection(self):
@@ -243,7 +243,7 @@ class AMQPConsumer(object):
         self._connection.close()
 
     def get_num_active_threads(self):
-        return self.ctpe.get_num_active_threads()
+        return self._ctpe.get_num_active_threads()
 
     def get_num_total_threads(self):
-        return self.ctpe.get_num_total_threads()
+        return self._ctpe.get_num_total_threads()
