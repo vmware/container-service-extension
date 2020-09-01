@@ -1327,7 +1327,7 @@ def list_ovdcs(ctx):
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         ovdc = Ovdc(client)
-        result = ovdc.list_ovdc_for_k8s()
+        result = ovdc.list_ovdc()
         stdout(result, ctx, sort_headers=False)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
@@ -1380,7 +1380,7 @@ def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus=None):
             ovdc = Ovdc(client)
             if org_name is None:
                 org_name = ctx.obj['profiles'].get('org_in_use')
-            result = ovdc.update_ovdc_for_k8s(
+            result = ovdc.update_ovdc(
                 enable=True,
                 ovdc_name=ovdc_name,
                 org_name=org_name,
@@ -1451,11 +1451,11 @@ def ovdc_disable(ctx, ovdc_name, org_name,
             ovdc = Ovdc(client)
             if org_name is None:
                 org_name = ctx.obj['profiles'].get('org_in_use')
-            result = ovdc.update_ovdc_for_k8s(enable=False,
-                                              ovdc_name=ovdc_name,
-                                              org_name=org_name,
-                                              k8s_runtime=k8_runtime,
-                                              remove_cp_from_vms_on_disable=remove_cp_from_vms_on_disable) # noqa: E501
+            result = ovdc.update_ovdc(enable=False,
+                                      ovdc_name=ovdc_name,
+                                      org_name=org_name,
+                                      k8s_runtime=k8_runtime,
+                                      remove_cp_from_vms_on_disable=remove_cp_from_vms_on_disable) # noqa: E501
             stdout(result, ctx)
             CLIENT_LOGGER.debug(result)
         else:
@@ -1490,7 +1490,7 @@ def ovdc_info(ctx, ovdc_name, org_name):
             ovdc = Ovdc(client)
             if org_name is None:
                 org_name = ctx.obj['profiles'].get('org_in_use')
-            result = ovdc.info_ovdc_for_k8s(ovdc_name, org_name)
+            result = ovdc.info_ovdc(ovdc_name, org_name)
             stdout(yaml.dump(result), ctx)
             CLIENT_LOGGER.debug(result)
         else:

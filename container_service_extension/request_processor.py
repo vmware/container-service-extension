@@ -83,6 +83,9 @@ GET /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
 PUT /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
 DELETE /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
 GET /pks/cluster/{cluster name}/config?org={org name}&vdc={vdc name}
+GET /pks/ovdcs
+GET /pks/ovdc/{ovdc_id}
+PUT /pks/ovdc/{ovdc_id}
 """  # noqa: E501
 
 OPERATION_TO_HANDLER = {
@@ -411,6 +414,23 @@ def _get_pks_url_data(method: str, url: str):
                         _OPERATION_KEY: CseOperation.PKS_CLUSTER_CONFIG,
                         shared_constants.RequestKey.CLUSTER_NAME: tokens[4]
                     }
+            raise cse_exception.MethodNotAllowedRequestError()
+    elif operation_type == shared_constants.OperationType.OVDC:
+        if num_tokens == 4:
+            if method == shared_constants.RequestMethod.GET:
+                return {_OPERATION_KEY: CseOperation.OVDC_LIST}
+            raise cse_exception.MethodNotAllowedRequestError()
+        if num_tokens == 5:
+            if method == shared_constants.RequestMethod.GET:
+                return {
+                    _OPERATION_KEY: CseOperation.OVDC_INFO,
+                    shared_constants.RequestKey.OVDC_ID: tokens[4]
+                }
+            if method == shared_constants.RequestMethod.PUT:
+                return {
+                    _OPERATION_KEY: CseOperation.OVDC_UPDATE,
+                    shared_constants.RequestKey.OVDC_ID: tokens[4]
+                }
             raise cse_exception.MethodNotAllowedRequestError()
 
     raise cse_exception.NotFoundRequestError()
