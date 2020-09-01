@@ -622,7 +622,14 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
     default=None,
     metavar='OUTPUT_FILE_NAME',
     help="Filepath to write sample configuration file to; This flag should be used with -s")  # noqa: E501
-def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, output):  # noqa: E501
+@click.option(
+    '--org',
+    'org',
+    default=None,
+    required=False,
+    metavar='TKG_ORGANIZATION',
+    help="Organization to which the TKG cluster need to be deployed. Needed only for TKG clusters.")  # noqa: E501
+def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, output, org):  # noqa: E501
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         console_message_printer = utils.ConsoleMessagePrinter()
@@ -684,7 +691,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
             cluster_config['metadata']['org_name'] = ctx.obj['profiles'].get('org_in_use')  # noqa: E501
 
         cluster = Cluster(client, k8_runtime=cluster_config.get('kind'))  # noqa: E501
-        result = cluster.apply(cluster_config)
+        result = cluster.apply(cluster_config, org=org)
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
     except Exception as e:

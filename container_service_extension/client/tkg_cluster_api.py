@@ -160,7 +160,7 @@ class TKGClusterApi:
             f"Received defined entity of cluster {cluster_name} : {cluster_entity_dict}")  # noqa: E501
         return yaml.dump(cluster_entity_dict)
 
-    def apply(self, cluster_config: dict):
+    def apply(self, cluster_config: dict, org=None, **kwargs):
         """Apply the configuration either to create or update the cluster.
 
         :param dict cluster_config: cluster configuration information
@@ -168,6 +168,12 @@ class TKGClusterApi:
         :rtype: str
         """
         try:
+            if self._client.is_sysadmin() and org:
+                org_logged_in = vcd_utils.get_org(self._client, org_name=org)
+                org_id = org_logged_in.href.split('/')[-1]
+                # TODO setting right tenant context for sysadmin users
+                self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.X_VMWARE_VCLOUD_TENANT_CONTEXT,  # noqa: E501
+                                                    org_id)
             cluster_name = cluster_config.get('metadata', {}).get('name')
             vdc_name = cluster_config.get('metadata', {}).get('virtualDataCenterName')  # noqa: E501
             response = None
