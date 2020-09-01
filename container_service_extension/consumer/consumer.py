@@ -1,3 +1,7 @@
+# container-service-extension
+# Copyright (c) 2020 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
 from container_service_extension.consumer.amqp_consumer import AMQPConsumer
 from container_service_extension.consumer.mqtt_consumer import MQTTConsumer
 import container_service_extension.server_constants as server_constants
