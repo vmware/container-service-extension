@@ -218,10 +218,10 @@ def cli(ctx):
         return
 
 
-@cli.group(short_help='Manage native Kubernetes provider templates')
+@cli.group(short_help='Manage native Kubernetes runtime templates')
 @click.pass_context
 def template(ctx):
-    """Manage native Kubernetes provider templates.
+    """Manage native Kubernetes runtime templates.
 
 \b
     Examples, by default, following commands expect an encrypted CSE
@@ -789,7 +789,7 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
 
 @template.command(
     'list',
-    short_help='List Kubernetes templates')
+    short_help='List native Kubernetes templates')
 @click.pass_context
 @click.option(
     '-c',
@@ -969,10 +969,10 @@ def list_template(ctx, config_file_path, skip_config_decryption,
 
 
 @template.command('install',
-                  short_help="Create Kubernetes templates listed in remote "
-                             "template repository. Use '*' for TEMPLATE_NAME "
-                             "and TEMPLATE_REVISION to install all listed "
-                             "templates.")
+                  short_help="Create native Kubernetes templates listed in "
+                             "remote template repository. Use '*' for "
+                             "TEMPLATE_NAME and TEMPLATE_REVISION to install "
+                             "all listed templates.")
 @click.pass_context
 @click.argument('template_name', metavar='TEMPLATE_NAME', default='*')
 @click.argument('template_revision', metavar='TEMPLATE_REVISION', default='*')
