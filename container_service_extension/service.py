@@ -59,7 +59,7 @@ class Singleton(type):
 
 
 def signal_handler(signal, frame):
-    print('\nCrtl+C detected, exiting')
+    print('\nCtrl+C detected, exiting')
     raise KeyboardInterrupt()
 
 
@@ -324,9 +324,9 @@ class Service(object, metaclass=Singleton):
                 orgs=pks_config.get('orgs', []),
                 nsxt_servers=pks_config.get('nsxt_servers', []))
 
-        processors = self.config['service']['processors']
+        num_processors = self.config['service']['processors']
         try:
-            self.consumer = MessageConsumer(self.config, processors)
+            self.consumer = MessageConsumer(self.config, num_processors)
             name = server_constants.MESSAGE_CONSUMER_THREAD
             t = Thread(name=name, target=consumer_thread,
                        args=(self.consumer, ))
@@ -335,6 +335,10 @@ class Service(object, metaclass=Singleton):
             msg = f"Started thread '{name}'"
             msg_update_callback.general(msg)
             logger.SERVER_LOGGER.info(msg)
+        except KeyboardInterrupt:
+            interrupt_msg = f"Keyboard interrupt when starting thread '{name}'"
+            logger.SERVER_LOGGER.debug(interrupt_msg)
+            raise Exception(interrupt_msg)
         except Exception:
             logger.SERVER_LOGGER.error(traceback.format_exc())
             raise  # TODO: restart thread with watchdog

@@ -27,7 +27,7 @@ class AMQPConsumer(object):
                  password,
                  exchange,
                  routing_key,
-                 processors):
+                 num_processors):
         self._connection = None
         self._channel = None
         self._closing = False
@@ -41,9 +41,9 @@ class AMQPConsumer(object):
         self.exchange = exchange
         self.routing_key = routing_key
         self.queue = routing_key
-        self.processors = processors
+        self.num_processors = num_processors
         self.fsencoding = sys.getfilesystemencoding()
-        self._ctpe = ConsumerThreadPoolExecutor(self.processors)
+        self._ctpe = ConsumerThreadPoolExecutor(self.num_processors)
         self._publish_lock = Lock()
 
     def connect(self):

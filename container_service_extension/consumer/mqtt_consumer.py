@@ -25,17 +25,17 @@ class MQTTConsumer:
                  verify_ssl,
                  token,
                  client_username,
-                 processors):
+                 num_processors):
         self.url = url
         self.listen_topic = listen_topic
         self.respond_topic = respond_topic
         self.verify_ssl = verify_ssl
         self.token = token
         self.client_username = client_username
-        self.processors = processors
+        self.num_processors = num_processors
         self.fsencoding = sys.getfilesystemencoding()
         self._mqtt_client = None
-        self._ctpe = ConsumerThreadPoolExecutor(self.processors)
+        self._ctpe = ConsumerThreadPoolExecutor(self.num_processors)
         self._publish_lock = Lock()
 
     def form_response_json(self, request_id, status_code, reply_body):
