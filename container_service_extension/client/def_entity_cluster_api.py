@@ -274,7 +274,7 @@ class DefEntityClusterApi:
             cluster.entity.spec.k8_distribution.template_revision = template_revision  # noqa: E501
             cluster_dict = asdict(cluster)
             return self._nativeCluster.upgrade_cluster_by_cluster_id(cluster.id, cluster_def_entity=cluster_dict)  # noqa: E501
-        self._tkgCluster.upgrade_cluster(cluster_name)
+        self._tkgCluster.upgrade_cluster(cluster_name, template_name, template_revision)  # noqa: E501
 
     def get_templates(self):
         """Get the template information that are supported by api version 35.
