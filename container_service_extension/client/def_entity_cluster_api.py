@@ -61,14 +61,6 @@ class DefEntityClusterApi:
         """
         has_native_rights = True
         has_tkg_rights = True
-        filters = client_utils.construct_filters(org=org, vdc=vdc)
-        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        native_entities = entity_svc.list_entities_by_entity_type(
-            vendor=DEF_CSE_VENDOR,
-            nss=DEF_NATIVE_ENTITY_TYPE_NSS,
-            version=DEF_NATIVE_ENTITY_TYPE_VERSION,
-            filters=filters)
-
         clusters = []
         try:
             clusters += self._tkgCluster.list_tkg_clusters(vdc=vdc, org=org)
@@ -76,24 +68,32 @@ class DefEntityClusterApi:
             if e.status not in [requests.codes.FORBIDDEN, requests.codes.UNAUTHORIZED]:  # noqa: E501
                 raise
             has_tkg_rights = False
-        try:
-            for def_entity in native_entities:
-                entity = def_entity.entity
-                logger.CLIENT_LOGGER.debug(f"Native Defined entity list from server: {def_entity}")  # noqa: E501
-                cluster = {
-                    cli_constants.CLIOutputKey.CLUSTER_NAME.value: def_entity.name,  # noqa: E501
-                    cli_constants.CLIOutputKey.VDC.value: entity.metadata.ovdc_name, # noqa: E501
-                    cli_constants.CLIOutputKey.ORG.value: entity.metadata.org_name, # noqa: E501
-                    cli_constants.CLIOutputKey.K8S_RUNTIME.value: entity.kind, # noqa: E501
-                    cli_constants.CLIOutputKey.K8S_VERSION.value: entity.status.kubernetes, # noqa: E501
-                    cli_constants.CLIOutputKey.STATUS.value: entity.status.phase, # noqa: E501
-                    cli_constants.CLIOutputKey.OWNER.value: def_entity.owner.name  # noqa: E501
-                }
-                clusters.append(cluster)
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code not in [requests.codes.FORBIDDEN, requests.codes.UNAUTHORIZED]:  # noqa: E501
-                raise
-            has_native_rights = False
+        if not client_utils.is_cli_for_tkg_only():
+            filters = client_utils.construct_filters(org=org, vdc=vdc)
+            entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+            native_entities = entity_svc.list_entities_by_entity_type(
+                vendor=DEF_CSE_VENDOR,
+                nss=DEF_NATIVE_ENTITY_TYPE_NSS,
+                version=DEF_NATIVE_ENTITY_TYPE_VERSION,
+                filters=filters)
+            try:
+                for def_entity in native_entities:
+                    entity = def_entity.entity
+                    logger.CLIENT_LOGGER.debug(f"Native Defined entity list from server: {def_entity}")  # noqa: E501
+                    cluster = {
+                        cli_constants.CLIOutputKey.CLUSTER_NAME.value: def_entity.name,  # noqa: E501
+                        cli_constants.CLIOutputKey.VDC.value: entity.metadata.ovdc_name, # noqa: E501
+                        cli_constants.CLIOutputKey.ORG.value: entity.metadata.org_name, # noqa: E501
+                        cli_constants.CLIOutputKey.K8S_RUNTIME.value: entity.kind, # noqa: E501
+                        cli_constants.CLIOutputKey.K8S_VERSION.value: entity.status.kubernetes, # noqa: E501
+                        cli_constants.CLIOutputKey.STATUS.value: entity.status.phase, # noqa: E501
+                        cli_constants.CLIOutputKey.OWNER.value: def_entity.owner.name  # noqa: E501
+                    }
+                    clusters.append(cluster)
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code not in [requests.codes.FORBIDDEN, requests.codes.UNAUTHORIZED]:  # noqa: E501
+                    raise
+                has_native_rights = False
         if not (has_tkg_rights and has_native_rights):
             raise Exception("Logged in user doesn't have Native cluster rights"
                             " or TKG rights. Please contact administrator.")
