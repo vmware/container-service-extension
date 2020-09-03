@@ -336,10 +336,15 @@ class Service(object, metaclass=Singleton):
             msg_update_callback.general(msg)
             logger.SERVER_LOGGER.info(msg)
         except KeyboardInterrupt:
-            interrupt_msg = f"Keyboard interrupt when starting thread '{name}'"
+            if self.consumer:
+                self.consumer.stop()
+            interrupt_msg = f"\nKeyboard interrupt when starting thread " \
+                            f"'{name}'"
             logger.SERVER_LOGGER.debug(interrupt_msg)
             raise Exception(interrupt_msg)
         except Exception:
+            if self.consumer:
+                self.consumer.stop()
             logger.SERVER_LOGGER.error(traceback.format_exc())
             raise  # TODO: restart thread with watchdog
 
