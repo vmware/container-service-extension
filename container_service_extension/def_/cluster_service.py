@@ -605,11 +605,15 @@ class ClusterService(abstract_broker.AbstractBroker):
                                  org_name,
                                  ovdc_name,
                                  cluster_name)
-                    # Delete the corresponding defined entity
-                    self.entity_svc.delete_entity(cluster_id)
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
+                try:
+                    # Delete the corresponding defined entity
+                    self.entity_svc.delete_entity(cluster_id)
+                except Exception:
+                    LOGGER.error("Failed to delete the defined entity for "
+                                 f"cluster '{cluster_name}'", exc_info=True)
             else:
                 self._fail_operation_and_resolve_entity(
                     cluster_id, DefEntityOperation.CREATE, vapp)
