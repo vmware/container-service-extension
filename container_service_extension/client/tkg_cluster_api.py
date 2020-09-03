@@ -287,3 +287,19 @@ class TKGClusterApi:
         except Exception as e:
             logger.CLIENT_LOGGER.error(f"{e}")
             raise
+
+    def get_upgrade_plan(self, cluster_name, vdc=None, org=None):
+        """List of clusters the TKG cluster can upgrade to.
+
+        :param str cluster_name: name of the cluster
+        :param str org: name of the org
+        :param str vdc: name of the vdc
+        """
+        raise NotImplementedError(
+            "Get Cluster upgrade-plan yet to be implemented for TKG clusters")
+
+    def upgrade_cluster(self, cluster_name, template_name,
+                        template_revision, **kwargs):
+        """Upgrade TKG cluster to the given distribution."""
+        raise NotImplementedError(
+            "Cluster upgrade yet to be implemented for TKG clusters")
