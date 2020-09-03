@@ -687,6 +687,45 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
         CLIENT_LOGGER.error(str(e))
 
 
+@cluster_group.command('remove-nfs',
+                       help="Examples:\n\nvcd cse cluster remove-nfs mycluster nfs-uitj",  # noqa: E501
+                       short_help='Remove nfs node from Native Kubernetes cluster')  # noqa: E501
+@click.pass_context
+@click.argument('cluster_name', required=True)
+@click.argument('node_name', required=True)
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    metavar='VDC_NAME',
+    help='Restrict cluster search to specified org VDC')
+@click.option(
+    '-o',
+    '--org',
+    'org',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help='Restrict cluster search to specified org')
+def remove_nfs(ctx, cluster_name, node_name, vdc, org):
+    """Remove nfs node in a cluster that uses native Kubernetes provider."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
+    try:
+        client_utils.cse_restore_session(ctx)
+        client = ctx.obj['client']
+        if not client.is_sysadmin() and org is None:
+            org = ctx.obj['profiles'].get('org_in_use')
+        cluster = Cluster(client)
+        result = cluster.remove_nfs_node(cluster_name, node_name, org=org, vdc=vdc)  # noqa: E501
+        stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
+    except Exception as e:
+        stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
+
+
 @cluster_group.command('upgrade-plan',
                        help="Examples:\n\nvcd cse cluster upgrade-plan my-cluster"  # noqa: E501
                             " \n\nvcd cse cluster upgrade-plan --k8-runtime native my-cluster",  # noqa: E501
