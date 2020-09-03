@@ -229,13 +229,13 @@ def template(ctx):
     the flag --skip-config-decryption.
 \b
         cse template list -c encrypted-config.yaml
-            Display all templates, including that are currently in the local
+            Display all templates, including the ones that are currently in the local
             catalog, and the ones that are defined in remote template repository.
             'encrypted-config.yaml' will be decrypted with the password received
             from user via a console prompt.
 \b
         cse template list -c config.yaml --skip-config-decryption
-            Display all templates, including that are currently in the local
+            Display all templates, including the ones that are currently in the local
             catalog, and the ones that are defined in remote template repository.
 \b
         cse template list -c config.yaml --display local --skip-config-decryption
