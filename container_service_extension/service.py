@@ -22,7 +22,7 @@ import container_service_extension.compute_policy_manager \
     as compute_policy_manager
 from container_service_extension.config_validator import get_validated_config
 import container_service_extension.configure_cse as configure_cse
-from container_service_extension.consumer import MessageConsumer
+from container_service_extension.consumer.consumer import MessageConsumer
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.schema_service as def_schema_svc
 import container_service_extension.def_.utils as def_utils
@@ -30,9 +30,12 @@ from container_service_extension.def_.utils import raise_error_if_def_not_suppor
 import container_service_extension.exceptions as cse_exception
 import container_service_extension.local_template_manager as ltm
 import container_service_extension.logger as logger
+from container_service_extension.mqtt_extension_manager import \
+    MQTTExtensionManager
 from container_service_extension.pks_cache import PksCache
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.server_constants as server_constants
+from container_service_extension.server_constants import MQTTExtKey
 import container_service_extension.shared_constants as shared_constants
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import PayloadKey
@@ -245,6 +248,38 @@ class Service(object, metaclass=Singleton):
             if sysadmin_client:
                 sysadmin_client.logout()
 
+        if utils.should_use_mqtt_protocol(self.config):
+            # Store/setup MQTT extension, api filter, and token info
+            try:
+                sysadmin_client = vcd_utils.get_sys_admin_client()
+                mqtt_ext_manager = MQTTExtensionManager(sysadmin_client)
+                ext_info = mqtt_ext_manager.get_extension_info(
+                    ext_name=server_constants.CSE_SERVICE_NAME,
+                    ext_version=server_constants.MQTT_EXTENSION_VERSION,
+                    ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
+                ext_urn_id = ext_info[MQTTExtKey.EXT_URN_ID]
+                ext_uuid = mqtt_ext_manager.get_extension_uuid(ext_urn_id)
+                api_filters_status = mqtt_ext_manager.check_api_filters_setup(
+                    ext_uuid, configure_cse.API_FILTER_PATTERNS)
+                if not api_filters_status:
+                    msg = 'MQTT Api filter is not set up'
+                    logger.SERVER_LOGGER.error(msg)
+                    raise cse_exception.MQTTExtensionError(msg)
+                token_info = mqtt_ext_manager.create_extension_token(
+                    token_name=server_constants.MQTT_TOKEN_NAME,
+                    ext_urn_id=ext_urn_id)
+
+                self.config['mqtt'].update(ext_info)
+                self.config['mqtt'].update(token_info)
+                self.config['mqtt'][MQTTExtKey.EXT_UUID] = ext_uuid
+            except Exception as err:
+                msg = f'MQTT extension setup error: {err}'
+                logger.SERVER_LOGGER.error(msg)
+                raise err
+            finally:
+                if sysadmin_client:
+                    sysadmin_client.logout()
+
         populate_vsphere_list(self.config['vcs'])
 
         # Load def entity-type and interface
@@ -289,14 +324,10 @@ class Service(object, metaclass=Singleton):
                 orgs=pks_config.get('orgs', []),
                 nsxt_servers=pks_config.get('nsxt_servers', []))
 
-        amqp = self.config['amqp']
         num_consumers = self.config['service']['listeners']
         for n in range(num_consumers):
             try:
-                c = MessageConsumer(
-                    amqp['host'], amqp['port'], amqp['ssl'], amqp['vhost'],
-                    amqp['username'], amqp['password'], amqp['exchange'],
-                    amqp['routing_key'])
+                c = MessageConsumer(self.config)
                 name = 'MessageConsumer-%s' % n
                 t = Thread(name=name, target=consumer_thread, args=(c, ))
                 t.daemon = True

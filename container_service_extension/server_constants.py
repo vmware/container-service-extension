@@ -58,11 +58,12 @@ ADMIN_EXT_SERVICE_PATH = 'admin/extension/service'
 API_FILTER_PATH = 'apifilter'
 API_FILTERS_PATH = 'apifilters'
 EXTENSIONS_API_PATH = 'extensions/api'
-MQTT_API_FILTER_PATTERN = '/api/mqttEndpoint'  # Needs to start with '/'
+MQTT_API_FILTER_PATTERN = '/api/mqttEndpoint/cse'  # Needs to start with '/'
 MQTT_EXTENSION_VERSION = '1.0.0'
 MQTT_EXTENSION_VENDOR = 'VMWare'
 MQTT_EXTENSION_PRIORITY = 100
 MQTT_MIN_API_VERSION = 35.0
+MQTT_TOKEN_NAME = "mqttCseToken"
 TOKEN_PATH = 'tokens'
 
 
@@ -258,6 +259,7 @@ class TemplateBuildKey(str, Enum):
 
 @unique
 class MQTTExtKey(str, Enum):
+    API_FILTER_ID = 'api_filter_id'
     EXT_NAME = 'name'
     EXT_VERSION = 'version'
     EXT_VENDOR = 'vendor'
@@ -266,6 +268,7 @@ class MQTTExtKey(str, Enum):
     EXT_AUTH_ENABLED = 'authorizationEnabled'
     EXT_DESCRIPTION = 'description'
     EXT_URN_ID = 'ext_urn_id'
+    EXT_UUID = 'ext_uuid'
     EXT_LISTEN_TOPIC = 'listen_topic'
     EXT_RESPOND_TOPIC = 'respond_topic'
 

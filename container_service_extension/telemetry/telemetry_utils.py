@@ -79,10 +79,7 @@ def get_telemetry_instance_id(config_dict, logger_debug=NULL_LOGGER,
 
     :return instance id to use for sending data to Vmware telemetry server
 
-    :rtype str
-
-    :raises Exception: if any exception happens while retrieving CSE
-    extension id
+    :rtype str (unless no instance id found)
     """
     vcd = config_dict['vcd']
     try:
@@ -98,7 +95,7 @@ def get_telemetry_instance_id(config_dict, logger_debug=NULL_LOGGER,
                 ext_version=MQTT_EXTENSION_VERSION,
                 ext_vendor=MQTT_EXTENSION_VENDOR)
             if not ext_info:
-                return ''
+                return None
             return mqtt_ext_manager.get_extension_uuid(
                 ext_info[MQTTExtKey.EXT_URN_ID])
         else:

@@ -8,8 +8,8 @@ import click
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
 
-from container_service_extension.client.legacy_ovdc import LegacyOvdc
 from container_service_extension.client.pks_cluster import PksCluster
+from container_service_extension.client.pks_ovdc import PksOvdc
 import container_service_extension.client.utils as client_utils
 from container_service_extension.logger import CLIENT_LOGGER
 from container_service_extension.server_constants import K8sProvider
@@ -405,8 +405,8 @@ def list_ovdcs(ctx, list_pks_plans):
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
-        ovdc = LegacyOvdc(client)
-        result = ovdc.list_ovdc_for_k8s(list_pks_plans=list_pks_plans)
+        ovdc = PksOvdc(client)
+        result = ovdc.list_ovdc(list_pks_plans=list_pks_plans)
         stdout(result, ctx, sort_headers=False)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
@@ -448,14 +448,13 @@ def ovdc_enable(ctx, ovdc_name, pks_plan,
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if client.is_sysadmin():
-            ovdc = LegacyOvdc(client)
+            ovdc = PksOvdc(client)
             if org_name is None:
                 org_name = ctx.obj['profiles'].get('org_in_use')
-            result = ovdc.update_ovdc_for_pks(
+            result = ovdc.update_ovdc(
                 enable=True,
                 ovdc_name=ovdc_name,
                 org_name=org_name,
-                k8s_provider=K8sProvider.PKS,
                 pks_plan=pks_plan,
                 pks_cluster_domain=pks_cluster_domain)
             stdout(result, ctx)
@@ -489,13 +488,13 @@ def ovdc_disable(ctx, ovdc_name, org_name):
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if client.is_sysadmin():
-            ovdc = LegacyOvdc(client)
+            ovdc = PksOvdc(client)
             if org_name is None:
                 org_name = ctx.obj['profiles'].get('org_in_use')
-            result = ovdc.update_ovdc_for_pks(enable=False,
-                                              ovdc_name=ovdc_name,
-                                              k8s_provider=K8sProvider.PKS,
-                                              org_name=org_name)
+            result = ovdc.update_ovdc(enable=False,
+                                      ovdc_name=ovdc_name,
+                                      k8s_provider=K8sProvider.PKS,
+                                      org_name=org_name)
             stdout(result, ctx)
             CLIENT_LOGGER.debug(result)
         else:
@@ -527,10 +526,10 @@ def ovdc_info(ctx, ovdc_name, org_name):
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         if client.is_sysadmin():
-            ovdc = LegacyOvdc(client)
+            ovdc = PksOvdc(client)
             if org_name is None:
                 org_name = ctx.obj['profiles'].get('org_in_use')
-            result = ovdc.info_ovdc_for_k8s(ovdc_name, org_name)
+            result = ovdc.info_ovdc(ovdc_name, org_name)
             stdout(result, ctx)
             CLIENT_LOGGER.debug(result)
         else:

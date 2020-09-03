@@ -18,7 +18,7 @@ class PolicyBasedOvdc:
         self.client = client
         self._uri = f"{self.client.get_api_uri()}/{shared_constants.CSE_URL_FRAGMENT}/{shared_constants.CSE_3_0_URL_FRAGMENT}"  # noqa: E501
 
-    def list_ovdc_for_k8s(self):
+    def list_ovdc(self):
         method = shared_constants.RequestMethod.GET
         uri = f'{self._uri}/ovdcs'
         response = self.client._do_request_prim(
@@ -28,12 +28,8 @@ class PolicyBasedOvdc:
             accept_type='application/json')
         return process_response(response)
 
-    def update_ovdc_for_k8s(self,
-                            ovdc_name,
-                            k8s_runtime,
-                            enable=True,
-                            org_name=None,
-                            remove_cp_from_vms_on_disable=False):
+    def update_ovdc(self, ovdc_name, k8s_runtime, enable=True, org_name=None,
+                    remove_cp_from_vms_on_disable=False):
         """Enable/Disable ovdc for k8s for the given k8s provider.
 
         :param str ovdc_name: Name of org VDC to update
@@ -85,26 +81,16 @@ class PolicyBasedOvdc:
             accept_type='application/json')
         return process_response(resp)
 
-    def info_ovdc_for_k8s(self, ovdc_name, org_name):
-        """Disable ovdc for k8s for the given container provider.
+    def info_ovdc(self, ovdc_name, org_name):
+        """Disable ovdc for given kubernetes runtime.
 
         :param str ovdc_name: Name of the org VDC to be enabled
         :param str org_name: Name of org that @ovdc_name belongs to
 
         :rtype: dict
         """
-        method = shared_constants.RequestMethod.GET
-        ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
-                       is_admin_operation=True)
-        ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
-        uri = f'{self._uri}/ovdc/{ovdc_id}'
-
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            accept_type='application/json')
-        return process_response(response)
+        raise NotImplementedError("OVDC info functionality is not supported "
+                                  "for the installed CSE version.")
 
     # TODO(compute-policy for v35): Revisit after decision on api v35 support
     def update_ovdc_compute_policies(self, ovdc_name, org_name,
