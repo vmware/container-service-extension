@@ -77,38 +77,6 @@ class DefEntityService():
             payload=asdict(entity))
 
     @handle_entity_service_exception
-    def list_entities(self, filters: dict = None) -> List[DefEntity]:
-        """List all defined entities of all entity types.
-
-        vCD's behavior when invalid filter keys are passed:
-            * It will throw a 400 if invalid first-level filter keys are passed
-            Valid keys : [name, id, externalId, entityType, entity, state].
-            * It will simply ignore any invalid nested properties and will
-            simply return empty list.
-
-        :param dict filters: Key-value pairs representing filter options
-        :return: Generator of defined entities
-        :rtype: Generator[DefEntity, None, None]
-        """
-        filter_string = None
-        if filters:
-            filter_string = ";".join([f"{k}=={v}" for (k, v) in filters.items()])  # noqa: E501
-        page_num = 0
-        while True:
-            page_num += 1
-            query_string = f"page={page_num}&sortAsc=name"
-            if filter_string:
-                query_string = f"filter={filter_string}&{query_string}"
-            response_body = self._cloudapi_client.do_request(
-                method=RequestMethod.GET,
-                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
-                resource_url_relative_path=f"{CloudApiResource.ENTITIES}?{query_string}")  # noqa: E501
-            if len(response_body['values']) == 0:
-                break
-            for entity in response_body['values']:
-                yield DefEntity(**entity)
-
-    @handle_entity_service_exception
     def list_entities_by_entity_type(self, vendor: str, nss: str, version: str,
                                      filters: dict = None) -> List[DefEntity]:
         """List entities of a given entity type.
@@ -140,6 +108,7 @@ class DefEntityService():
                 method=RequestMethod.GET,
                 cloudapi_version=CLOUDAPI_VERSION_1_0_0,
                 resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
+                                           f"{CloudApiResource.ENTITY_TYPES_TOKEN}/"  # noqa: E501
                                            f"{vendor}/{nss}/{version}?{query_string}")  # noqa: E501
             if len(response_body['values']) == 0:
                 break
@@ -206,22 +175,6 @@ class DefEntityService():
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{entity_id}")
         return DefEntity(**response_body)
-
-    @handle_entity_service_exception
-    def get_entities_by_name(self, entity_name: str, filters: dict = None) -> List[DefEntity]:  # noqa: E501
-        """Get the defined entities for given entity name.
-
-        :param str entity_name: name of the entity.
-        :param dict filters: key-value pairs representing filter options
-        :return: list of def entities with the given entity_name.
-        :rtype: list of DefEntities
-        """
-        entity_list = self.list_entities(filters=filters)
-        def_entities = []
-        for def_entity in entity_list:
-            if entity_name == def_entity.name:
-                def_entities.append(def_entity)
-        return def_entities
 
     @handle_entity_service_exception
     def get_native_entity_by_name(self, name: str, filters: dict = {}) -> DefEntity:  # noqa: E501

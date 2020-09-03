@@ -17,5 +17,6 @@ class CloudApiResource(str, Enum):
     EXTENSION_UI = 'extensions/ui'
     INTERFACES = 'interfaces'
     ENTITY_TYPES = 'entityTypes'
+    ENTITY_TYPES_TOKEN = 'types'
     ENTITIES = 'entities'
     ENTITY_RESOLVE = 'resolve'
