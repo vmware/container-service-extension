@@ -42,7 +42,6 @@ import container_service_extension.utils as utils
 import container_service_extension.vsphere_utils as vs_utils
 
 
-# noinspection PyTypeChecker
 class ClusterService(abstract_broker.AbstractBroker):
     """Handles cluster operations for native DEF based clusters."""
 
@@ -217,12 +216,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         num_workers_to_add: int = desired_worker_count - curr_worker_count
         num_nfs_to_add: int = desired_nfs_count - curr_nfs_count
 
-        # check if cluster is in a valid state
-        if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
-            raise e.CseServerError(
-                f"Cluster {cluster_name} with id {cluster_id} is not in a "
-                f"valid state to be resized. Please contact the administrator")
-
         # Check if the desired worker and nfs count is valid
         if num_workers_to_add == 0 and num_nfs_to_add == 0:
             raise e.CseServerError(f"Cluster '{cluster_name}' already has "
@@ -233,6 +226,12 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"Worker count must be >= 0 (received {desired_worker_count})")
         elif num_nfs_to_add < 0:
             raise e.CseServerError("Scaling down nfs nodes is not supported")
+
+        # check if cluster is in a valid state
+        if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
+            raise e.CseServerError(
+                f"Cluster {cluster_name} with id {cluster_id} is not in a "
+                f"valid state to be resized. Please contact the administrator")
 
         # Record telemetry details
         telemetry_data: def_models.DefEntity = def_models.DefEntity(id=cluster_id, entity=cluster_spec)  # noqa: E501
@@ -350,8 +349,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                                          curr_entity.entity.spec.k8_distribution.template_revision) # noqa: E501
 
         for t in valid_templates:
-            if t[LocalTemplateKey.NAME] == new_template_name and \
-                    t[LocalTemplateKey.REVISION] == str(new_template_revision): # noqa: E501
+            if (t[LocalTemplateKey.NAME], str(t[LocalTemplateKey.REVISION])) == (new_template_name, str(new_template_revision)): # noqa: E501
                 template = t
                 break
         if not template:
@@ -595,7 +593,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         except (e.MasterNodeCreationError, e.WorkerNodeCreationError,
                 e.NFSNodeCreationError, e.ClusterJoiningError,
                 e.ClusterInitializationError, e.ClusterOperationError) as err:
-            LOGGER.error(f"Error creating cluster '{cluster_name}'", exc_info=True)  # noqa: E501
+            LOGGER.error(
+                f"Error creating cluster '{cluster_name}'", exc_info=True)
             if rollback:
                 msg = f"Error creating cluster '{cluster_name}'. " \
                       f"Deleting cluster (rollback=True)"
@@ -611,9 +610,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR, error_message=str(err))  # noqa: E501
-            self._fail_operation_and_resolve_entity(
-                cluster_id, DefEntityOperation.CREATE, vapp)
+            else:
+                self._fail_operation_and_resolve_entity(
+                    cluster_id, DefEntityOperation.CREATE, vapp)
+            self._update_task(
+                vcd_client.TaskStatus.ERROR, error_message=str(err))
         except Exception as err:
             LOGGER.error(f"Unknown error creating cluster '{cluster_name}'",
                          exc_info=True)
@@ -833,18 +834,16 @@ class ClusterService(abstract_broker.AbstractBroker):
                     LOGGER.error(f"Failed to delete nodes {err.node_names} "
                                  f"from cluster '{cluster_name}'",
                                  exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR,
-                              error_message=str(err))
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.UPDATE,
-                                                    vapp)
+            self._fail_operation_and_resolve_entity(
+                cluster_id, DefEntityOperation.UPDATE, vapp)
+            self._update_task(
+                vcd_client.TaskStatus.ERROR, error_message=str(err))
         except Exception as err:
             LOGGER.error(err, exc_info=True)
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.UPDATE,
-                                                    vapp)
-            self._update_task(vcd_client.TaskStatus.ERROR,
-                              error_message=str(err))
+            self._fail_operation_and_resolve_entity(
+                cluster_id, DefEntityOperation.UPDATE, vapp)
+            self._update_task(
+                vcd_client.TaskStatus.ERROR, error_message=str(err))
 
     @utils.run_async
     def _delete_cluster_async(self, cluster_name, org_name, ovdc_name,
@@ -1512,7 +1511,7 @@ def _get_template(name=None, revision=None):
     name = name or server_config['broker']['default_template_name']
     revision = revision or server_config['broker']['default_template_revision']
     for template in server_config['broker']['templates']:
-        if template[LocalTemplateKey.NAME] == name and str(template[LocalTemplateKey.REVISION]) == str(revision): # noqa: E501
+        if (template[LocalTemplateKey.NAME], str(template[LocalTemplateKey.REVISION])) == (name, str(revision)): # noqa: E501
             return template
     raise Exception(f"Template '{name}' at revision {revision} not found.")
 

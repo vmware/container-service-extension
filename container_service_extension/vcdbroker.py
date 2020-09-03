@@ -115,8 +115,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
         if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the data for telemetry
-            record_user_action_details(cse_operation=CseOperation.CLUSTER_LIST,
-                                       cse_params=copy.deepcopy(validated_data)) # noqa: E501
+            record_user_action_details(
+                cse_operation=CseOperation.CLUSTER_LIST,
+                cse_params=copy.deepcopy(validated_data))
 
         # "raw clusters" do not have well-defined cluster data keys
         raw_clusters = get_all_clusters(
@@ -181,8 +182,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
-            record_user_action_details(cse_operation=CseOperation.CLUSTER_CONFIG, # noqa: E501
-                                       cse_params=cse_params)
+            record_user_action_details(
+                cse_operation=CseOperation.CLUSTER_CONFIG,
+                cse_params=cse_params)
 
         for node_name in node_names:
             LOGGER.debug(f"getting file from node {node_name}")
@@ -232,7 +234,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
-            record_user_action_details(cse_operation=CseOperation.CLUSTER_UPGRADE_PLAN, cse_params=cse_params)  # noqa: E501
+            record_user_action_details(
+                cse_operation=CseOperation.CLUSTER_UPGRADE_PLAN,
+                cse_params=cse_params)
 
         src_name = cluster['template_name']
         src_rev = cluster['template_revision']
@@ -349,8 +353,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
             cse_params[LocalTemplateKey.OS] = template.get(LocalTemplateKey.OS)
             cse_params[LocalTemplateKey.CNI] = template.get(LocalTemplateKey.CNI) # noqa: E501
             cse_params[LocalTemplateKey.CNI_VERSION] = template.get(LocalTemplateKey.CNI_VERSION)  # noqa: E501
-            record_user_action_details(cse_operation=CseOperation.CLUSTER_CREATE, # noqa: E501
-                                       cse_params=cse_params)
+            record_user_action_details(
+                cse_operation=CseOperation.CLUSTER_CREATE,
+                cse_params=cse_params)
 
         return {
             'name': cluster_name,
@@ -417,7 +422,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
             cse_params[PayloadKey.CLUSTER_ID] = cluster_info[PayloadKey.CLUSTER_ID] # noqa: E501
             cse_params[LocalTemplateKey.MEMORY] = validated_data.get(RequestKey.MB_MEMORY) # noqa: E501
             cse_params[LocalTemplateKey.CPU] = validated_data.get(RequestKey.NUM_CPU) # noqa: E501
-            record_user_action_details(cse_operation=CseOperation.CLUSTER_RESIZE, cse_params=cse_params) # noqa: E501
+            record_user_action_details(
+                cse_operation=CseOperation.CLUSTER_RESIZE,
+                cse_params=cse_params)
 
         if num_workers_wanted > num_workers:
             validated_data[RequestKey.NUM_WORKERS] = num_workers_wanted - num_workers  # noqa: E501
@@ -463,8 +470,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster_id
-            record_user_action_details(cse_operation=CseOperation.CLUSTER_DELETE, # noqa: E501
-                                       cse_params=cse_params)
+            record_user_action_details(
+                cse_operation=CseOperation.CLUSTER_DELETE,
+                cse_params=cse_params)
 
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
@@ -516,7 +524,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         valid_templates = self.get_cluster_upgrade_plan(data=validated_data,
                                                         telemetry=False)
         for t in valid_templates:
-            if t[LocalTemplateKey.NAME] == template_name and t[LocalTemplateKey.REVISION] == str(template_revision): # noqa: E501
+            if (t[LocalTemplateKey.NAME], str(t[LocalTemplateKey.REVISION])) == (template_name, str(template_revision)): # noqa: E501
                 template = t
                 break
         if not template:
@@ -534,8 +542,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
-            record_user_action_details(cse_operation=CseOperation.CLUSTER_UPGRADE, # noqa: E501
-                                       cse_params=cse_params)
+            record_user_action_details(
+                cse_operation=CseOperation.CLUSTER_UPGRADE,
+                cse_params=cse_params)
 
         msg = f"Upgrading cluster '{cluster_name}' " \
               f"software to match template {template_name} (revision " \
@@ -588,7 +597,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
-            record_user_action_details(cse_operation=CseOperation.NODE_INFO, cse_params=cse_params)  # noqa: E501
+            record_user_action_details(
+                cse_operation=CseOperation.NODE_INFO,
+                cse_params=cse_params)
 
         vapp = vcd_vapp.VApp(self.context.client, href=cluster['vapp_href'])
         vms = vapp.get_all_vms()
@@ -779,7 +790,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
             cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
             for node in node_names_list:
                 cse_params[PayloadKey.NODE_NAME] = node
-                record_user_action_details(cse_operation=CseOperation.NODE_DELETE, cse_params=cse_params)  # noqa: E501
+                record_user_action_details(
+                    cse_operation=CseOperation.NODE_DELETE,
+                    cse_params=cse_params)
 
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
@@ -1171,9 +1184,10 @@ class VcdBroker(abstract_broker.AbstractBroker):
                       f"in master node {master_node_names}"
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-                filepath = ltm.get_script_filepath(template_name,
-                                                   template_revision,
-                                                   ScriptFile.MASTER_K8S_UPGRADE) # noqa: E501
+                filepath = ltm.get_script_filepath(
+                    template_name,
+                    template_revision,
+                    ScriptFile.MASTER_K8S_UPGRADE)
                 script = utils.read_data_file(filepath, logger=LOGGER)
                 _run_script_in_nodes(self.context.sysadmin_client, vapp_href,
                                      master_node_names, script)
@@ -1186,9 +1200,10 @@ class VcdBroker(abstract_broker.AbstractBroker):
                                 master_node_names,
                                 cluster_name=cluster_name)
 
-                filepath = ltm.get_script_filepath(template_name,
-                                                   template_revision,
-                                                   ScriptFile.WORKER_K8S_UPGRADE) # noqa: E501
+                filepath = ltm.get_script_filepath(
+                    template_name,
+                    template_revision,
+                    ScriptFile.WORKER_K8S_UPGRADE)
                 script = utils.read_data_file(filepath, logger=LOGGER)
                 for node in worker_node_names:
                     msg = f"Draining node {node}"
@@ -1423,8 +1438,9 @@ def _delete_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
             _run_script_in_nodes(sysadmin_client, vapp_href,
                                  [master_node_names[0]], script)
     except Exception as err:
-        LOGGER.warning(f"Failed to delete node(s) {node_names} from cluster "
-                       f"'{cluster_name}' using kubectl (vapp: {vapp_href}): {err}")  # noqa: E501
+        LOGGER.warning(f"Failed to delete node(s) {node_names} from "
+                       f"cluster '{cluster_name}' using kubectl. "
+                       f"(vapp: {vapp_href}): {err}")
 
     vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
     for vm_name in node_names:
@@ -1486,7 +1502,7 @@ def _update_cluster_dict_with_node_info(client, cluster):
 
         if hasattr(vm, 'VmSpecSection'):
             node_info['numberOfCpus'] = vm.VmSpecSection.NumCpus.text
-            node_info['memoryMB'] = vm.VmSpecSection.MemoryResourceMb.Configured.text # noqa: E501
+            node_info['memoryMB'] = vm.VmSpecSection.MemoryResourceMb.Configured.text  # noqa: E501
 
         try:
             node_info['ipAddress'] = vapp.get_primary_ip(vm_name)
@@ -1659,7 +1675,7 @@ def _get_template(name=None, revision=None):
     name = name or server_config['broker']['default_template_name']
     revision = revision or server_config['broker']['default_template_revision']
     for template in server_config['broker']['templates']:
-        if template[LocalTemplateKey.NAME] == name and str(template[LocalTemplateKey.REVISION]) == str(revision): # noqa: E501
+        if (template[LocalTemplateKey.NAME], str(template[LocalTemplateKey.REVISION])) == (name, str(revision)): # noqa: E501
             return template
     raise Exception(f"Template '{name}' at revision {revision} not found.")
 
@@ -1671,16 +1687,16 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
     if num_nodes > 0:
         specs = []
         try:
-            # DEV NOTE: With api v33.0 and onwards, get_catalog operation will fail  # noqa: E501
-            # for non admin users of an an org which is not hosting the catalog,  # noqa: E501
-            # even if the catalog is explicitly shared with the org in question.  # noqa: E501
-            # This happens because for api v 33.0 and onwards, the Org XML no
-            # longer returns the href to catalogs accessible to the org, and typed  # noqa: E501
-            # queries hide the catalog link from non admin users.
-            # As a workaround, we will use a sys admin client to get the href and  # noqa: E501
-            # pass it forward. Do note that the catalog itself can still be
-            # accessed by these non admin users, just that they can't find by the  # noqa: E501
-            # href on their own.
+            # DEV NOTE: With api v33.0 and onwards, get_catalog operation will
+            # fail for non admin users of an an org which is not hosting the
+            # catalog, even if the catalog is explicitly shared with the org in
+            # question. This happens because for api v33.0 and onwards, the Org
+            # XML no longer returns the href to catalogs accessible to the org,
+            # and typed queries hide the catalog link from non admin users.
+            # As a workaround, we will use a sys admin client to get the href
+            # and pass it forward. Do note that the catalog itself can still be
+            # accessed by these non admin users, just that they can't find by
+            # the href on their own.
 
             org_name = org.get_name()
             org_resource = sysadmin_client.get_org_by_name(org_name)
@@ -1689,7 +1705,8 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                 catalog_name, template[LocalTemplateKey.CATALOG_ITEM_NAME])
             catalog_item_href = catalog_item.Entity.get('href')
 
-            source_vapp = vcd_vapp.VApp(sysadmin_client, href=catalog_item_href)  # noqa: E501
+            source_vapp = vcd_vapp.VApp(
+                sysadmin_client, href=catalog_item_href)
             source_vm = source_vapp.get_all_vms()[0].get('name')
             if storage_profile is not None:
                 storage_profile = vdc.get_storage_profile(storage_profile)
@@ -1759,7 +1776,8 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                         template[LocalTemplateKey.NAME],
                         template[LocalTemplateKey.REVISION],
                         ScriptFile.NFSD)
-                    script = utils.read_data_file(script_filepath, logger=LOGGER)  # noqa: E501
+                    script = utils.read_data_file(
+                        script_filepath, logger=LOGGER)
                     exec_results = _execute_script_in_nodes(
                         sysadmin_client, vapp=vapp, node_names=[vm_name],
                         script=script)
