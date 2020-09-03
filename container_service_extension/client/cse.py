@@ -32,7 +32,7 @@ import container_service_extension.utils as utils
            cls=cmd_filter.GroupCommandFilter)
 @click.pass_context
 def cse(ctx):
-    """Manage Kubernetes clusters (Native, Tkg and Ent-PKS).
+    """Manage Kubernetes clusters (Native, vSphere with Tanzu and Ent-PKS).
 
     Once logged-in, few cmd groups may remain hidden based on factors like
     a) the API version with which CSE server is running
@@ -40,6 +40,9 @@ def cse(ctx):
 
     If CSE server is not running, "Cluster" command group can be used to
     manage "vSphere with Tanzu" clusters only.
+
+    Note that re-login is required for CLI to effectively process any changes
+     in the above mentioned external factors.
     """
 
 
