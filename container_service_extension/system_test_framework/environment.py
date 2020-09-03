@@ -203,11 +203,11 @@ def create_user(username, password, role):
     # no assert here because if the user exists, the exit code will be 2
 
     # user can already exist but be disabled
-    cmd = f"user update {username} --enable"
-    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0,\
-        testutils.format_command_info('vcd', cmd, result.exit_code,
-                                      result.output)
+    # cmd = f"user update {username} --enable"
+    # result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    # assert result.exit_code == 0,\
+    #    testutils.format_command_info('vcd', cmd, result.exit_code,
+    #                                  result.output)
 
 
 def delete_catalog_item(item_name):
