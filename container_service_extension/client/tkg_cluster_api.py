@@ -25,6 +25,10 @@ import container_service_extension.shared_constants as shared_constants
 class TKGClusterApi:
     """Embedded Kubernetes into vSphere."""
 
+    # NOTE: When converting model objects from tkgclient/models to dictionary,
+    # please use utils.swagger_object_to_dict() function. This preserves camel
+    # case of the keys.
+
     def __init__(self, client):
         self._client = client
         tkg_config = Configuration()
@@ -168,7 +172,7 @@ class TKGClusterApi:
         :rtype: str
         """
         try:
-            if self._client.is_sysadmin() and org:
+            if org:
                 org_logged_in = vcd_utils.get_org(self._client, org_name=org)
                 org_id = org_logged_in.href.split('/')[-1]
                 # TODO setting right tenant context for sysadmin users
