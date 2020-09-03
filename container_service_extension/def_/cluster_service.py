@@ -27,10 +27,8 @@ import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
-import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import CSE_CLUSTER_KUBECONFIG_PATH # noqa: E501
-from container_service_extension.server_constants import KwargKey
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
@@ -38,7 +36,6 @@ from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import DefEntityOperation
 from container_service_extension.shared_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.shared_constants import DefEntityPhase
-from container_service_extension.shared_constants import RequestKey
 import container_service_extension.telemetry.constants as telemetry_constants
 import container_service_extension.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.utils as utils
@@ -118,43 +115,6 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         return result.content.decode()
 
-    def get_cluster_upgrade_plan(self, cluster_id: str):
-        """Get the template names/revisions that the cluster can upgrade to.
-
-        :param str cluster_id:
-        :return: A list of dictionaries with keys defined in LocalTemplateKey
-
-        :rtype: List[Dict]
-        """
-        curr_entity = self.entity_svc.get_entity(cluster_id)
-        telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE_PLAN,  # noqa: E501
-            cse_params=curr_entity
-        )
-
-        return self._get_cluster_upgrade_plan(curr_entity.entity.spec.k8_distribution.template_name, # noqa: E501
-                                              curr_entity.entity.spec.k8_distribution.template_revision) # noqa: E501
-
-    def _get_cluster_upgrade_plan(self, source_template_name,
-                                  source_template_revision) -> List[dict]: # noqa: E501
-        """Get list of templates that a given cluster can upgrade to.
-
-        :param str source_template_name:
-        :param str source_template_revision:
-        :return: List of dictionary containing templates
-        :rtype: List[dict]
-        """
-        upgrades = []
-        config = utils.get_server_runtime_config()
-        for t in config['broker']['templates']:
-            if source_template_name in t[LocalTemplateKey.UPGRADE_FROM]:
-                if t[LocalTemplateKey.NAME] == source_template_name and \
-                        int(t[LocalTemplateKey.REVISION]) <= int(source_template_revision): # noqa: E501
-                    continue
-                upgrades.append(t)
-
-        return upgrades
-
     def create_cluster(self, cluster_spec: def_models.ClusterEntity):
         """Start the cluster creation operation.
 
@@ -179,7 +139,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             template_revision = default_dist.template_revision
 
         # check that cluster name is syntactically valid
-        if not is_valid_cluster_name(cluster_name):
+        if not _is_valid_cluster_name(cluster_name):
             raise e.CseServerError(f"Invalid cluster name '{cluster_name}'")
 
         # Check that cluster name doesn't already exist.
@@ -187,17 +147,15 @@ class ClusterService(abstract_broker.AbstractBroker):
         # already exists. It will not give accurate result as even sys-admin
         # cannot view all the defined entities unless native entity type admin
         # view right is assigned.
-        try:
-            get_cluster(self.context.client, cluster_name,
-                        org_name=org_name,
-                        ovdc_name=ovdc_name)
+        if _cluster_exists(self.context.client, cluster_name,
+                           org_name=org_name,
+                           ovdc_name=ovdc_name):
             raise e.ClusterAlreadyExistsError(
                 f"Cluster '{cluster_name}' already exists.")
-        except e.ClusterNotFoundError:
-            pass
 
         # check that requested/default template is valid
-        template = get_template(name=template_name, revision=template_revision)
+        template = _get_template(
+            name=template_name, revision=template_revision)
 
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
@@ -230,277 +188,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         self._create_cluster_async(def_entity.id, cluster_spec)
         return def_entity
 
-    @utils.run_async
-    def _create_cluster_async(self, cluster_id: str,
-                              cluster_spec: def_models.ClusterEntity):
-        try:
-            cluster_name = cluster_spec.metadata.cluster_name
-            org_name = cluster_spec.metadata.org_name
-            ovdc_name = cluster_spec.metadata.ovdc_name
-            num_workers = cluster_spec.spec.workers.count
-            master_sizing_class = cluster_spec.spec.control_plane.sizing_class
-            worker_sizing_class = cluster_spec.spec.workers.sizing_class
-            master_storage_profile = cluster_spec.spec.control_plane.storage_profile  # noqa: E501
-            worker_storage_profile = cluster_spec.spec.workers.storage_profile  # noqa: E501
-            nfs_count = cluster_spec.spec.nfs.count
-            nfs_sizing_class = cluster_spec.spec.nfs.sizing_class
-            nfs_storage_profile = cluster_spec.spec.nfs.storage_profile
-            network_name = cluster_spec.spec.settings.network
-            template_name = cluster_spec.spec.k8_distribution.template_name
-            template_revision = cluster_spec.spec.k8_distribution.template_revision  # noqa: E501
-            ssh_key = cluster_spec.spec.settings.ssh_key
-            rollback = cluster_spec.spec.settings.rollback_on_failure
-
-            vapp = None
-            org = vcd_utils.get_org(self.context.client, org_name=org_name)
-            vdc = vcd_utils.get_vdc(self.context.client,
-                                    vdc_name=ovdc_name,
-                                    org=org)
-
-            LOGGER.debug(f"About to create cluster '{cluster_name}' on "
-                         f"{ovdc_name} with {num_workers} worker nodes, "
-                         f"storage profile={worker_storage_profile}")
-            msg = f"Creating cluster vApp {cluster_name} ({cluster_id})"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-            try:
-                vapp_resource = vdc.create_vapp(
-                    cluster_name,
-                    description=f"cluster '{cluster_name}'",
-                    network=network_name,
-                    fence_mode='bridged')
-            except Exception as err:
-                msg = f"Error while creating vApp: {err}"
-                LOGGER.debug(str(err))
-                raise e.ClusterOperationError(msg)
-            self.context.client.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0]) # noqa: E501
-
-            template = get_template(template_name, template_revision)
-
-            tags = {
-                ClusterMetadataKey.CLUSTER_ID: cluster_id,
-                ClusterMetadataKey.CSE_VERSION: pkg_resources.require('container-service-extension')[0].version, # noqa: E501
-                ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME], # noqa: E501
-                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION], # noqa: E501
-                ClusterMetadataKey.OS: template[LocalTemplateKey.OS],
-                ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION], # noqa: E501
-                ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES], # noqa: E501
-                ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION], # noqa: E501
-                ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
-                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION] # noqa: E501
-            }
-            vapp = vcd_vapp.VApp(self.context.client,
-                                 href=vapp_resource.get('href'))
-            task = vapp.set_multiple_metadata(tags)
-            self.context.client.get_task_monitor().wait_for_status(task)
-
-            msg = f"Creating master node for cluster '{cluster_name}' " \
-                  f"({cluster_id})"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-            vapp.reload()
-            server_config = utils.get_server_runtime_config()
-            catalog_name = server_config['broker']['catalog']
-            try:
-                add_nodes(self.context.sysadmin_client,
-                          num_nodes=1,
-                          node_type=NodeType.MASTER,
-                          org=org,
-                          vdc=vdc,
-                          vapp=vapp,
-                          catalog_name=catalog_name,
-                          template=template,
-                          network_name=network_name,
-                          storage_profile=master_storage_profile,
-                          ssh_key=ssh_key,
-                          sizing_class_name=master_sizing_class)
-            except Exception as err:
-                raise e.MasterNodeCreationError("Error adding master node:",
-                                                str(err))
-
-            msg = f"Initializing cluster '{cluster_name}' ({cluster_id})"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-            vapp.reload()
-            init_cluster(self.context.sysadmin_client,
-                         vapp,
-                         template[LocalTemplateKey.NAME],
-                         template[LocalTemplateKey.REVISION])
-            master_ip = get_master_ip(self.context.sysadmin_client, vapp)
-            task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
-                                     master_ip)
-            self.context.client.get_task_monitor().wait_for_status(task)
-
-            msg = f"Creating {num_workers} node(s) for cluster " \
-                  f"'{cluster_name}' ({cluster_id})"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-            try:
-                add_nodes(self.context.sysadmin_client,
-                          num_nodes=num_workers,
-                          node_type=NodeType.WORKER,
-                          org=org,
-                          vdc=vdc,
-                          vapp=vapp,
-                          catalog_name=catalog_name,
-                          template=template,
-                          network_name=network_name,
-                          storage_profile=worker_storage_profile,
-                          ssh_key=ssh_key,
-                          sizing_class_name=worker_sizing_class)
-            except Exception as err:
-                raise e.WorkerNodeCreationError("Error creating worker node:",
-                                                str(err))
-
-            msg = f"Adding {num_workers} node(s) to cluster " \
-                  f"'{cluster_name}' ({cluster_id})"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-            vapp.reload()
-            join_cluster(self.context.sysadmin_client,
-                         vapp,
-                         template[LocalTemplateKey.NAME],
-                         template[LocalTemplateKey.REVISION])
-
-            if nfs_count > 0:
-                msg = f"Creating {nfs_count} NFS nodes for cluster " \
-                      f"'{cluster_name}' ({cluster_id})"
-                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-                try:
-                    add_nodes(self.context.sysadmin_client,
-                              num_nodes=nfs_count,
-                              node_type=NodeType.NFS,
-                              org=org,
-                              vdc=vdc,
-                              vapp=vapp,
-                              catalog_name=catalog_name,
-                              template=template,
-                              network_name=network_name,
-                              storage_profile=nfs_storage_profile,
-                              ssh_key=ssh_key,
-                              sizing_class_name=nfs_sizing_class)
-                except Exception as err:
-                    raise e.NFSNodeCreationError("Error creating NFS node:",
-                                                 str(err))
-
-            msg = f"Created cluster '{cluster_name}' ({cluster_id})"
-            self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
-
-            # Update defined entity instance with new properties like vapp_id,
-            # master_ip and nodes.
-            def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-            def_entity.externalId = vapp_resource.get('href')
-            def_entity.entity.status.phase = str(
-                DefEntityPhase(DefEntityOperation.CREATE,
-                               DefEntityOperationStatus.SUCCEEDED))
-            def_entity.entity.status.nodes = self._get_nodes_details(vapp)
-
-            self.entity_svc.update_entity(cluster_id, def_entity)
-            self.entity_svc.resolve_entity(cluster_id)
-        except (e.MasterNodeCreationError, e.WorkerNodeCreationError,
-                e.NFSNodeCreationError, e.ClusterJoiningError,
-                e.ClusterInitializationError, e.ClusterOperationError) as err:
-            if rollback:
-                msg = f"Error creating cluster '{cluster_name}'. " \
-                      f"Deleting cluster (rollback=True)"
-                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-                LOGGER.info(msg)
-                try:
-                    _delete_vapp(self.context.client,
-                                 self._get_vdc_href(org_name, ovdc_name),
-                                 cluster_name)
-                    # Delete the corresponding defined entity
-                    self.entity_svc.delete_entity(cluster_id)
-                except Exception:
-                    LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
-                                 exc_info=True)
-            else:
-                LOGGER.error(f"Error creating cluster '{cluster_name}'", exc_info=True)  # noqa: E501
-                self._update_task(vcd_client.TaskStatus.ERROR, error_message=str(err))  # noqa: E501
-                self._fail_operation_and_resolve_entity(
-                    cluster_id, DefEntityOperation.CREATE, vapp)
-        except Exception as err:
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.CREATE,
-                                                    vapp)
-            LOGGER.error(f"Unknown error creating cluster '{cluster_name}'",
-                         exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR,
-                              error_message=str(err))
-        finally:
-            self.context.end()
-
-    def _get_nodes_details(self, vapp):
-        """Get the details of the nodes given a vapp.
-
-        This method should not raise an exception. It is being used in the
-        exception blocks to sync the defined entity status of any given cluster
-        It returns None in the case of any unexpected errors.
-
-        :param vapp: vApp
-        :return: Node details
-        :rtype: container_service_extension.def_.models.Nodes
-        """
-        try:
-            vms = vapp.get_all_vms()
-            workers = []
-            nfs_nodes = []
-            for vm in vms:
-                # skip processing vms in 'unresolved' state.
-                if int(vm.get('status')) == 0:
-                    continue
-                name = vm.get('name')
-                ip = None
-                try:
-                    ip = vapp.get_primary_ip(name)
-                except Exception:
-                    LOGGER.error(f"Failed to retrieve the IP of the node "
-                                 f"{name} in cluster {vapp.name}",
-                                 exc_info=True)
-                sizing_class = None
-                if hasattr(vm, 'ComputePolicy') and hasattr(vm.ComputePolicy,
-                                                            'VmSizingPolicy'):
-                    policy_name = vm.ComputePolicy.VmSizingPolicy.get('name')
-                    sizing_class = compute_policy_manager.\
-                        ComputePolicyManager.get_policy_display_name(policy_name)  # noqa: E501
-                if name.startswith(NodeType.MASTER):
-                    master = def_models.Node(name=name, ip=ip,
-                                             sizing_class=sizing_class)
-                elif name.startswith(NodeType.WORKER):
-                    workers.append(
-                        def_models.Node(name=name, ip=ip,
-                                        sizing_class=sizing_class))
-                elif name.startswith(NodeType.NFS):
-                    exports = None
-                    try:
-                        exports = get_nfs_exports(self.context.sysadmin_client,
-                                                  ip,
-                                                  vapp, name)
-                    except Exception:
-                        LOGGER.error(f"Failed to retrieve the NFS exports of "
-                                     f"node {name} of cluster {vapp.name} ",
-                                     exc_info=True)
-                    nfs_nodes.append(def_models.NfsNode(name=name, ip=ip,
-                                                        sizing_class=sizing_class,  # noqa: E501
-                                                        exports=exports))
-            return def_models.Nodes(master=master, workers=workers,
-                                    nfs=nfs_nodes)
-        except Exception as e:
-            LOGGER.error(
-                f"Failed to retrieve the status of the nodes of the cluster {vapp.name}: {e}")  # noqa: E501
-
-    def _fail_operation_and_resolve_entity(self, cluster_id: str,
-                                           op: DefEntityOperation,
-                                           vapp=None):
-        try:
-            # get the current state of the defined entity
-            def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-
-            # sync the defined entity with the latest status of cluster vApp
-            # and fail the operation.
-            def_entity.entity.status.phase = \
-                str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
-            self._sync_def_entity(cluster_id, def_entity)
-            self.entity_svc.resolve_entity(cluster_id)
-        except Exception as error:
-            LOGGER.error(f"Failed on resolve entity:{error}", exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR, error_message=str(error))  # noqa: E501
-
     def resize_cluster(self, cluster_id: str,
                        cluster_spec: def_models.ClusterEntity):
         """Start the resize cluster operation.
@@ -529,12 +216,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         num_workers_to_add: int = desired_worker_count - curr_worker_count
         num_nfs_to_add: int = desired_nfs_count - curr_nfs_count
 
-        # check if cluster is in a valid state
-        if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
-            raise e.CseServerError(
-                f"Cluster {cluster_name} with id {cluster_id} is not in a "
-                f"valid state to be resized. Please contact the administrator")
-
         # Check if the desired worker and nfs count is valid
         if num_workers_to_add == 0 and num_nfs_to_add == 0:
             raise e.CseServerError(f"Cluster '{cluster_name}' already has "
@@ -545,6 +226,12 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"Worker count must be >= 0 (received {desired_worker_count})")
         elif num_nfs_to_add < 0:
             raise e.CseServerError("Scaling down nfs nodes is not supported")
+
+        # check if cluster is in a valid state
+        if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
+            raise e.CseServerError(
+                f"Cluster {cluster_name} with id {cluster_id} is not in a "
+                f"valid state to be resized. Please contact the administrator")
 
         # Record telemetry details
         telemetry_data: def_models.DefEntity = def_models.DefEntity(id=cluster_id, entity=cluster_spec)  # noqa: E501
@@ -568,100 +255,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         self._monitor_resize(cluster_id=cluster_id,
                              cluster_spec=cluster_spec)
         return curr_entity
-
-    @utils.run_async
-    def _monitor_resize(self, cluster_id, cluster_spec):
-        """Triggers and monitors one or more async threads of resize.
-
-        This method (or) thread triggers two async threads (for node
-        addition and deletion) in parallel. It waits for both the threads to
-        join before calling the resize operation complete.
-
-        Performs below once child threads join back.
-        - updates the defined entity
-        - updates the task status to SUCCESS
-        - ends the client context
-        """
-        try:
-            curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
-                cluster_id)
-            cluster_name: str = curr_entity.name
-            curr_worker_count: int = curr_entity.entity.spec.workers.count
-            curr_nfs_count: int = curr_entity.entity.spec.nfs.count
-            template_name = curr_entity.entity.spec.k8_distribution.template_name  # noqa: E501
-            template_revision = curr_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
-
-            desired_worker_count: int = cluster_spec.spec.workers.count
-            desired_nfs_count: int = cluster_spec.spec.nfs.count
-            num_workers_to_add: int = desired_worker_count - curr_worker_count
-            num_nfs_to_add: int = desired_nfs_count - curr_nfs_count
-
-            if num_workers_to_add > 0 or num_nfs_to_add > 0:
-                get_template(name=template_name, revision=template_revision)
-                self._create_nodes_async(cluster_id=cluster_id,
-                                         cluster_spec=cluster_spec)
-
-                # TODO Below is the temporary fix to avoid parallel Recompose
-                #  error between node creation and deletion threads. Below
-                #  serializes the sequence of node creation and deletion.
-                #  Remove the below block once the issue is fixed in pyvcloud.
-                create_nodes_async_thread_name = utils.generate_thread_name(
-                    self._create_nodes_async.__name__)
-                for t in threading.enumerate():
-                    if t.getName() == create_nodes_async_thread_name:
-                        t.join()
-            if num_workers_to_add < 0:
-                self._delete_nodes_async(cluster_id=cluster_id,
-                                         cluster_spec=cluster_spec)
-
-            # Wait for the children threads of the current thread to join
-            curr_thread_id = str(threading.current_thread().ident)
-            for t in threading.enumerate():
-                if t.getName().endswith(curr_thread_id):
-                    t.join()
-
-            # update the defined entity and the task status. Check if one of
-            # the child threads had set the status to ERROR.
-            curr_task_status = self.task_resource.get('status')
-            if curr_task_status == vcd_client.TaskStatus.ERROR.value:
-                curr_entity.entity.status.phase = str(
-                    DefEntityPhase(DefEntityOperation.UPDATE,
-                                   DefEntityOperationStatus.FAILED))
-            else:
-                msg = f"Resized the cluster '{cluster_name}' ({cluster_id}) " \
-                      f"to the desired worker count {desired_worker_count} " \
-                      f"and nfs count {desired_nfs_count}"
-                self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
-                curr_entity.entity.status.phase = str(
-                    DefEntityPhase(DefEntityOperation.UPDATE,
-                                   DefEntityOperationStatus.SUCCEEDED))
-
-            self._sync_def_entity(cluster_id, curr_entity)
-        except Exception as err:
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.UPDATE)
-            LOGGER.error(f"Unexpected error while resizing nodes for "
-                         f"{cluster_name} ({cluster_id}): {err}",
-                         exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR,
-                              error_message=str(err))
-        finally:
-            self.context.end()
-
-    def _sync_def_entity(self, cluster_id, curr_entity=None, vapp=None):
-        """Sync the defined entity with the latest vApp status."""
-        if not curr_entity:
-            curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
-                cluster_id)
-        if not vapp:
-            vapp = vcd_vapp.VApp(self.context.client, href=curr_entity.externalId)  # noqa: E501
-        curr_nodes_status = self._get_nodes_details(vapp)
-        if curr_nodes_status:
-            curr_entity.entity.spec.workers.count = len(
-                curr_nodes_status.workers)
-            curr_entity.entity.spec.nfs.count = len(curr_nodes_status.nfs)
-            curr_entity.entity.status.nodes = curr_nodes_status
-        return self.entity_svc.update_entity(cluster_id, curr_entity)
 
     def delete_cluster(self, cluster_id):
         """Start the delete cluster operation."""
@@ -705,12 +298,22 @@ class ClusterService(abstract_broker.AbstractBroker):
                                    def_entity=curr_entity)
         return curr_entity
 
-    def _get_vdc_href(self, org_name, ovdc_name):
-        client = self.context.client
-        org = vcd_org.Org(client=client,
-                          resource=client.get_org_by_name(org_name))
-        vdc_resource = org.get_vdc(name=ovdc_name)
-        return vdc_resource.get('href')
+    def get_cluster_upgrade_plan(self, cluster_id: str):
+        """Get the template names/revisions that the cluster can upgrade to.
+
+        :param str cluster_id:
+        :return: A list of dictionaries with keys defined in LocalTemplateKey
+
+        :rtype: List[Dict]
+        """
+        curr_entity = self.entity_svc.get_entity(cluster_id)
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE_PLAN,  # noqa: E501
+            cse_params=curr_entity
+        )
+
+        return self._get_cluster_upgrade_plan(curr_entity.entity.spec.k8_distribution.template_name, # noqa: E501
+                                              curr_entity.entity.spec.k8_distribution.template_revision) # noqa: E501
 
     def upgrade_cluster(self, cluster_id: str,
                         upgrade_spec: def_models.ClusterEntity):
@@ -746,8 +349,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                                          curr_entity.entity.spec.k8_distribution.template_revision) # noqa: E501
 
         for t in valid_templates:
-            if t[LocalTemplateKey.NAME] == new_template_name and \
-                    t[LocalTemplateKey.REVISION] == str(new_template_revision): # noqa: E501
+            if (t[LocalTemplateKey.NAME], str(t[LocalTemplateKey.REVISION])) == (new_template_name, str(new_template_revision)): # noqa: E501
                 template = t
                 break
         if not template:
@@ -784,113 +386,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                                     template=template)
         return curr_entity
 
-    def get_node_info(self, **kwargs):
-        """Get node metadata as dictionary.
-
-        **data: Required
-            Required data: cluster_name, node_name
-            Optional data and default values: org_name=None, ovdc_name=None
-        **telemetry: Optional
-        """
-        raise NotImplementedError
-        data = kwargs[KwargKey.DATA]
-        required = [
-            RequestKey.CLUSTER_NAME,
-            RequestKey.NODE_NAME
-        ]
-        defaults = {
-            RequestKey.ORG_NAME: None,
-            RequestKey.OVDC_NAME: None
-        }
-        validated_data = {**defaults, **data}
-        req_utils.validate_payload(validated_data, required)
-
-        cluster_name = validated_data[RequestKey.CLUSTER_NAME]
-        node_name = validated_data[RequestKey.NODE_NAME]
-
-        cluster = get_cluster(self.context.client, cluster_name,
-                              org_name=validated_data[RequestKey.ORG_NAME],
-                              ovdc_name=validated_data[RequestKey.OVDC_NAME])
-
-        vapp = vcd_vapp.VApp(self.context.client, href=cluster['vapp_href'])
-        vms = vapp.get_all_vms()
-        node_info = None
-        for vm in vms:
-            vm_name = vm.get('name')
-            if node_name != vm_name:
-                continue
-
-            node_info = {
-                'name': vm_name,
-                'numberOfCpus': '',
-                'memoryMB': '',
-                'status': vcd_client.VCLOUD_STATUS_MAP.get(int(vm.get('status'))), # noqa: E501
-                'ipAddress': ''
-            }
-            if hasattr(vm, 'VmSpecSection'):
-                node_info['numberOfCpus'] = vm.VmSpecSection.NumCpus.text
-                node_info['memoryMB'] = vm.VmSpecSection.MemoryResourceMb.Configured.text # noqa: E501
-            try:
-                node_info['ipAddress'] = vapp.get_primary_ip(vm_name)
-            except Exception:
-                LOGGER.debug(f"Unable to get ip address of node {vm_name}")
-            if vm_name.startswith(NodeType.MASTER):
-                node_info['node_type'] = 'master'
-            elif vm_name.startswith(NodeType.WORKER):
-                node_info['node_type'] = 'worker'
-            elif vm_name.startswith(NodeType.NFS):
-                node_info['node_type'] = 'nfs'
-                node_info['exports'] = get_nfs_exports(self.context.sysadmin_client, node_info['ipAddress'], vapp, vm_name) # noqa: E501
-        if node_info is None:
-            raise e.NodeNotFoundError(f"Node '{node_name}' not found in "
-                                      f"cluster '{cluster_name}'")
-        return node_info
-
-    def create_nodes(self, cluster_id: str,
-                     cluster_spec: def_models.ClusterEntity):
-        """Start the create nodes operation.
-
-        :param str cluster_id: Defined entity Id of the cluster
-        :param DefEntity cluster_spec: Input cluster spec
-        :return: DefEntity of the cluster with the updated operation status
-        and task_href.
-
-        :rtype: DefEntity
-        """
-        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
-            cluster_id)  # noqa: E501
-        cluster_name = cluster_spec.metadata.cluster_name
-        num_workers_to_add = cluster_spec.spec.workers.count - curr_entity.entity.spec.workers.count  # noqa: E501
-        worker_count = cluster_spec.spec.workers.count
-
-        # Resize using the template with which cluster was originally created.
-        template_name = curr_entity.entity.spec.k8_distribution.template_name
-        template_revision = curr_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
-
-        # check that requested/default template is valid
-        get_template(name=template_name, revision=template_revision)
-
-        if worker_count < 1:
-            raise e.CseServerError(f"Worker count must be > 0 "
-                                   f"(received {worker_count}).")
-
-        # TODO(DEF) Handle Telemetry for defined entities
-
-        msg = f"Creating {num_workers_to_add} node(s) from template " \
-              f"'{template_name}' (revision {template_revision}) and " \
-              f"adding to cluster '{cluster_name}' ({cluster_id})"
-        self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-        curr_entity.entity.status.task_href = self.task_resource.get('href')
-        curr_entity.entity.status.phase = str(
-            DefEntityPhase(DefEntityOperation.UPDATE,
-                           DefEntityOperationStatus.IN_PROGRESS))
-        curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)
-
-        self.context.is_async = True
-        self._create_nodes_async(cluster_id=cluster_id, cluster_spec=cluster_spec)  # noqa: E501
-        return curr_entity
-
     def delete_nodes(self, cluster_id: str, nodes_to_del=[]):
         """Start the delete nodes operation."""
         curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
@@ -923,47 +418,292 @@ class ClusterService(abstract_broker.AbstractBroker):
         return curr_entity
 
     @utils.run_async
-    def _monitor_delete_nodes(self, cluster_id, nodes_to_del):
-        """Triggers and monitors delete thread.
+    def _create_cluster_async(self, cluster_id: str,
+                              cluster_spec: def_models.ClusterEntity):
+        try:
+            cluster_name = cluster_spec.metadata.cluster_name
+            org_name = cluster_spec.metadata.org_name
+            ovdc_name = cluster_spec.metadata.ovdc_name
+            num_workers = cluster_spec.spec.workers.count
+            master_sizing_class = cluster_spec.spec.control_plane.sizing_class
+            worker_sizing_class = cluster_spec.spec.workers.sizing_class
+            master_storage_profile = cluster_spec.spec.control_plane.storage_profile  # noqa: E501
+            worker_storage_profile = cluster_spec.spec.workers.storage_profile  # noqa: E501
+            nfs_count = cluster_spec.spec.nfs.count
+            nfs_sizing_class = cluster_spec.spec.nfs.sizing_class
+            nfs_storage_profile = cluster_spec.spec.nfs.storage_profile
+            network_name = cluster_spec.spec.settings.network
+            template_name = cluster_spec.spec.k8_distribution.template_name
+            template_revision = cluster_spec.spec.k8_distribution.template_revision  # noqa: E501
+            ssh_key = cluster_spec.spec.settings.ssh_key
+            rollback = cluster_spec.spec.settings.rollback_on_failure
 
-        This method (or) thread waits for the thread(s) to join before
-        - updating the defined entity
-        - updating the task status to SUCCESS
-        - ending the client context
+            vapp = None
+            org = vcd_utils.get_org(self.context.client, org_name=org_name)
+            vdc = vcd_utils.get_vdc(self.context.client,
+                                    vdc_name=ovdc_name,
+                                    org=org)
+
+            LOGGER.debug(f"About to create cluster '{cluster_name}' on "
+                         f"{ovdc_name} with {num_workers} worker nodes, "
+                         f"storage profile={worker_storage_profile}")
+            msg = f"Creating cluster vApp {cluster_name} ({cluster_id})"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            try:
+                vapp_resource = vdc.create_vapp(
+                    cluster_name,
+                    description=f"cluster '{cluster_name}'",
+                    network=network_name,
+                    fence_mode='bridged')
+            except Exception as err:
+                LOGGER.error(err, exc_info=True)
+                raise e.ClusterOperationError(
+                    f"Error while creating vApp: {err}")
+            self.context.client.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0]) # noqa: E501
+
+            template = _get_template(template_name, template_revision)
+
+            LOGGER.debug(f"Setting metadata on cluster vApp '{cluster_name}'")
+            tags = {
+                ClusterMetadataKey.CLUSTER_ID: cluster_id,
+                ClusterMetadataKey.CSE_VERSION: pkg_resources.require('container-service-extension')[0].version, # noqa: E501
+                ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME], # noqa: E501
+                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION], # noqa: E501
+                ClusterMetadataKey.OS: template[LocalTemplateKey.OS],
+                ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION], # noqa: E501
+                ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES], # noqa: E501
+                ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION], # noqa: E501
+                ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
+                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION] # noqa: E501
+            }
+            vapp = vcd_vapp.VApp(self.context.client,
+                                 href=vapp_resource.get('href'))
+            task = vapp.set_multiple_metadata(tags)
+            self.context.client.get_task_monitor().wait_for_status(task)
+
+            msg = f"Creating master node for cluster '{cluster_name}' " \
+                  f"({cluster_id})"
+            LOGGER.debug(msg)
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            vapp.reload()
+            server_config = utils.get_server_runtime_config()
+            catalog_name = server_config['broker']['catalog']
+            try:
+                _add_nodes(self.context.sysadmin_client,
+                           num_nodes=1,
+                           node_type=NodeType.MASTER,
+                           org=org,
+                           vdc=vdc,
+                           vapp=vapp,
+                           catalog_name=catalog_name,
+                           template=template,
+                           network_name=network_name,
+                           storage_profile=master_storage_profile,
+                           ssh_key=ssh_key,
+                           sizing_class_name=master_sizing_class)
+            except Exception as err:
+                LOGGER.error(err, exc_info=True)
+                raise e.MasterNodeCreationError(
+                    f"Error adding master node: {err}")
+
+            msg = f"Initializing cluster '{cluster_name}' ({cluster_id})"
+            LOGGER.debug(msg)
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            vapp.reload()
+            _init_cluster(self.context.sysadmin_client,
+                          vapp,
+                          template[LocalTemplateKey.NAME],
+                          template[LocalTemplateKey.REVISION])
+            master_ip = _get_master_ip(self.context.sysadmin_client, vapp)
+            task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
+                                     master_ip)
+            self.context.client.get_task_monitor().wait_for_status(task)
+
+            msg = f"Creating {num_workers} node(s) for cluster " \
+                  f"'{cluster_name}' ({cluster_id})"
+            LOGGER.debug(msg)
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            try:
+                _add_nodes(self.context.sysadmin_client,
+                           num_nodes=num_workers,
+                           node_type=NodeType.WORKER,
+                           org=org,
+                           vdc=vdc,
+                           vapp=vapp,
+                           catalog_name=catalog_name,
+                           template=template,
+                           network_name=network_name,
+                           storage_profile=worker_storage_profile,
+                           ssh_key=ssh_key,
+                           sizing_class_name=worker_sizing_class)
+            except Exception as err:
+                LOGGER.error(err, exc_info=True)
+                raise e.WorkerNodeCreationError(
+                    f"Error creating worker node: {err}")
+
+            msg = f"Adding {num_workers} node(s) to cluster " \
+                  f"'{cluster_name}' ({cluster_id})"
+            LOGGER.debug(msg)
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            vapp.reload()
+            _join_cluster(self.context.sysadmin_client,
+                          vapp,
+                          template[LocalTemplateKey.NAME],
+                          template[LocalTemplateKey.REVISION])
+
+            if nfs_count > 0:
+                msg = f"Creating {nfs_count} NFS nodes for cluster " \
+                      f"'{cluster_name}' ({cluster_id})"
+                LOGGER.debug(msg)
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                try:
+                    _add_nodes(self.context.sysadmin_client,
+                               num_nodes=nfs_count,
+                               node_type=NodeType.NFS,
+                               org=org,
+                               vdc=vdc,
+                               vapp=vapp,
+                               catalog_name=catalog_name,
+                               template=template,
+                               network_name=network_name,
+                               storage_profile=nfs_storage_profile,
+                               ssh_key=ssh_key,
+                               sizing_class_name=nfs_sizing_class)
+                except Exception as err:
+                    LOGGER.error(err, exc_info=True)
+                    raise e.NFSNodeCreationError(
+                        f"Error creating NFS node: {err}")
+
+            msg = f"Created cluster '{cluster_name}' ({cluster_id})"
+            LOGGER.debug(msg)
+            self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+
+            # Update defined entity instance with new properties like vapp_id,
+            # master_ip and nodes.
+            def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+            def_entity.externalId = vapp_resource.get('href')
+            def_entity.entity.status.phase = str(
+                DefEntityPhase(DefEntityOperation.CREATE,
+                               DefEntityOperationStatus.SUCCEEDED))
+            def_entity.entity.status.nodes = _get_nodes_details(
+                self.context.sysadmin_client, vapp)
+
+            self.entity_svc.update_entity(cluster_id, def_entity)
+            self.entity_svc.resolve_entity(cluster_id)
+        except (e.MasterNodeCreationError, e.WorkerNodeCreationError,
+                e.NFSNodeCreationError, e.ClusterJoiningError,
+                e.ClusterInitializationError, e.ClusterOperationError) as err:
+            LOGGER.error(
+                f"Error creating cluster '{cluster_name}'", exc_info=True)
+            if rollback:
+                msg = f"Error creating cluster '{cluster_name}'. " \
+                      f"Deleting cluster (rollback=True)"
+                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                LOGGER.info(msg)
+                try:
+                    _delete_vapp(self.context.client,
+                                 org_name,
+                                 ovdc_name,
+                                 cluster_name)
+                except Exception:
+                    LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
+                                 exc_info=True)
+                try:
+                    # Delete the corresponding defined entity
+                    self.entity_svc.delete_entity(cluster_id)
+                except Exception:
+                    LOGGER.error("Failed to delete the defined entity for "
+                                 f"cluster '{cluster_name}'", exc_info=True)
+            else:
+                self._fail_operation_and_resolve_entity(
+                    cluster_id, DefEntityOperation.CREATE, vapp)
+            self._update_task(
+                vcd_client.TaskStatus.ERROR, error_message=str(err))
+        except Exception as err:
+            LOGGER.error(f"Unknown error creating cluster '{cluster_name}'",
+                         exc_info=True)
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.CREATE,
+                                                    vapp)
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              error_message=str(err))
+        finally:
+            self.context.end()
+
+    @utils.run_async
+    def _monitor_resize(self, cluster_id, cluster_spec):
+        """Triggers and monitors one or more async threads of resize.
+
+        This method (or) thread triggers two async threads (for node
+        addition and deletion) in parallel. It waits for both the threads to
+        join before calling the resize operation complete.
+
+        Performs below once child threads join back.
+        - updates the defined entity
+        - updates the task status to SUCCESS
+        - ends the client context
         """
         try:
             curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
                 cluster_id)
             cluster_name: str = curr_entity.name
-            self._delete_nodes_async(cluster_id=cluster_id,
-                                     nodes_to_del=nodes_to_del)
+            curr_worker_count: int = curr_entity.entity.spec.workers.count
+            curr_nfs_count: int = curr_entity.entity.spec.nfs.count
+            template_name = curr_entity.entity.spec.k8_distribution.template_name  # noqa: E501
+            template_revision = curr_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
 
-            # wait for the children threads of the current thread to join
+            desired_worker_count: int = cluster_spec.spec.workers.count
+            desired_nfs_count: int = cluster_spec.spec.nfs.count
+            num_workers_to_add: int = desired_worker_count - curr_worker_count
+            num_nfs_to_add: int = desired_nfs_count - curr_nfs_count
+
+            if num_workers_to_add > 0 or num_nfs_to_add > 0:
+                _get_template(name=template_name, revision=template_revision)
+                self._create_nodes_async(cluster_id=cluster_id,
+                                         cluster_spec=cluster_spec)
+
+                # TODO Below is the temporary fix to avoid parallel Recompose
+                #  error between node creation and deletion threads. Below
+                #  serializes the sequence of node creation and deletion.
+                #  Remove the below block once the issue is fixed in pyvcloud.
+                create_nodes_async_thread_name = utils.generate_thread_name(
+                    self._create_nodes_async.__name__)
+                for t in threading.enumerate():
+                    if t.getName() == create_nodes_async_thread_name:
+                        t.join()
+            if num_workers_to_add < 0:
+                self._delete_nodes_async(cluster_id=cluster_id,
+                                         cluster_spec=cluster_spec)
+
+            # Wait for the children threads of the current thread to join
             curr_thread_id = str(threading.current_thread().ident)
             for t in threading.enumerate():
                 if t.getName().endswith(curr_thread_id):
                     t.join()
 
-            # update the defined entity and task status.
+            # update the defined entity and the task status. Check if one of
+            # the child threads had set the status to ERROR.
             curr_task_status = self.task_resource.get('status')
             if curr_task_status == vcd_client.TaskStatus.ERROR.value:
                 curr_entity.entity.status.phase = str(
                     DefEntityPhase(DefEntityOperation.UPDATE,
                                    DefEntityOperationStatus.FAILED))
             else:
-                msg = f"Deleted the {nodes_to_del} nodes  from cluster " \
-                      f"'{cluster_name}' ({cluster_id}) "
+                msg = f"Resized the cluster '{cluster_name}' ({cluster_id}) " \
+                      f"to the desired worker count {desired_worker_count} " \
+                      f"and nfs count {desired_nfs_count}"
                 self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
                 curr_entity.entity.status.phase = str(
                     DefEntityPhase(DefEntityOperation.UPDATE,
                                    DefEntityOperationStatus.SUCCEEDED))
+
             self._sync_def_entity(cluster_id, curr_entity)
         except Exception as err:
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.UPDATE)
-            LOGGER.error(f"Unexpected error while deleting nodes for "
+            LOGGER.error(f"Unexpected error while resizing nodes for "
                          f"{cluster_name} ({cluster_id}): {err}",
                          exc_info=True)
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.UPDATE)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               error_message=str(err))
         finally:
@@ -1008,7 +748,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             rollback = cluster_spec.spec.settings.rollback_on_failure
             template_name = curr_entity.entity.spec.k8_distribution.template_name  # noqa: E501
             template_revision = curr_entity.entity.spec.k8_distribution.template_revision  # noqa: E501
-            template = get_template(template_name, template_revision)
+            template = _get_template(template_name, template_revision)
 
             # compute the values of workers and nfs to be added or removed
             desired_worker_count: int = cluster_spec.spec.workers.count
@@ -1028,18 +768,19 @@ class ClusterService(abstract_broker.AbstractBroker):
                       f"adding to cluster '{cluster_name}' ({cluster_id})"
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-                worker_nodes = add_nodes(self.context.sysadmin_client,
-                                         num_nodes=num_workers_to_add,
-                                         node_type=NodeType.WORKER,
-                                         org=org,
-                                         vdc=ovdc,
-                                         vapp=vapp,
-                                         catalog_name=catalog_name,
-                                         template=template,
-                                         network_name=network_name,
-                                         storage_profile=worker_storage_profile,  # noqa: E501
-                                         ssh_key=ssh_key,
-                                         sizing_class_name=worker_sizing_class)
+                worker_nodes = _add_nodes(
+                    self.context.sysadmin_client,
+                    num_nodes=num_workers_to_add,
+                    node_type=NodeType.WORKER,
+                    org=org,
+                    vdc=ovdc,
+                    vapp=vapp,
+                    catalog_name=catalog_name,
+                    template=template,
+                    network_name=network_name,
+                    storage_profile=worker_storage_profile,
+                    ssh_key=ssh_key,
+                    sizing_class_name=worker_sizing_class)
                 msg = f"Adding {num_workers_to_add} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
@@ -1047,10 +788,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                 for spec in worker_nodes['specs']:
                     target_nodes.append(spec['target_vm_name'])
                 vapp.reload()
-                join_cluster(self.context.sysadmin_client,
-                             vapp,
-                             template[LocalTemplateKey.NAME],
-                             template[LocalTemplateKey.REVISION], target_nodes)
+                _join_cluster(self.context.sysadmin_client,
+                              vapp,
+                              template[LocalTemplateKey.NAME],
+                              template[LocalTemplateKey.REVISION],
+                              target_nodes)
                 msg = f"Added {num_workers_to_add} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
@@ -1060,18 +802,18 @@ class ClusterService(abstract_broker.AbstractBroker):
                       f"for cluster '{cluster_name}' ({cluster_id})"
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-                add_nodes(self.context.sysadmin_client,
-                          num_nodes=num_nfs_to_add,
-                          node_type=NodeType.NFS,
-                          org=org,
-                          vdc=ovdc,
-                          vapp=vapp,
-                          catalog_name=catalog_name,
-                          template=template,
-                          network_name=network_name,
-                          storage_profile=nfs_storage_profile,
-                          ssh_key=ssh_key,
-                          sizing_class_name=nfs_sizing_class)
+                _add_nodes(self.context.sysadmin_client,
+                           num_nodes=num_nfs_to_add,
+                           node_type=NodeType.NFS,
+                           org=org,
+                           vdc=ovdc,
+                           vapp=vapp,
+                           catalog_name=catalog_name,
+                           template=template,
+                           network_name=network_name,
+                           storage_profile=nfs_storage_profile,
+                           ssh_key=ssh_key,
+                           sizing_class_name=nfs_sizing_class)
                 msg = f"Created {num_nfs_to_add} nfs_node(s) for cluster " \
                       f"'{cluster_name}' ({cluster_id})"
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
@@ -1081,9 +823,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         except (e.NodeCreationError, e.ClusterJoiningError) as err:
             LOGGER.error(f"Error adding nodes to cluster '{cluster_name}'",
                          exc_info=True)
-            LOGGER.error(str(err), exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR,
-                              error_message=str(err))
             if rollback:
                 msg = f"Error adding nodes to cluster '{cluster_name}' " \
                       f"({cluster_id}). Deleting nodes: {err.node_names} " \
@@ -1099,87 +838,16 @@ class ClusterService(abstract_broker.AbstractBroker):
                     LOGGER.error(f"Failed to delete nodes {err.node_names} "
                                  f"from cluster '{cluster_name}'",
                                  exc_info=True)
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.UPDATE,
-                                                    vapp)
+            self._fail_operation_and_resolve_entity(
+                cluster_id, DefEntityOperation.UPDATE, vapp)
+            self._update_task(
+                vcd_client.TaskStatus.ERROR, error_message=str(err))
         except Exception as err:
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.UPDATE,
-                                                    vapp)
-            LOGGER.error(str(err), exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR,
-                              error_message=str(err))
-
-    @utils.run_async
-    def _delete_nodes_async(self, cluster_id: str,
-                            cluster_spec: def_models.ClusterEntity = None,
-                            nodes_to_del=[]):
-        """Delete worker and/or nfs nodes in vCD.
-
-        This method is executed by a thread in an asynchronous manner.
-        Do's:
-        - Update the defined entity in except blocks.
-        - Set the self.task status either to Running or Error
-        Dont's:
-        - Do not set the self.task status to SUCCESS. This will prevent other
-        parallel threads if any to update the status. vCD interprets SUCCESS
-        as a terminal state.
-        - Do not end the context.client.
-
-        Let the caller monitor thread or method to set SUCCESS task status,
-          end the client context
-        """
-        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-        vapp_href = curr_entity.externalId
-        cluster_name = curr_entity.entity.metadata.cluster_name
-
-        if not nodes_to_del:
-            if not cluster_spec:
-                raise e.CseServerError(f"No nodes specified to delete for "
-                                       f"cluster {cluster_name}({cluster_id})")
-            desired_worker_count = cluster_spec.spec.workers.count
-            nodes_to_del = [node.name for node in
-                            curr_entity.entity.status.nodes.workers[desired_worker_count:]]  # noqa: E501
-
-        vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
-        try:
-            msg = f"Draining {len(nodes_to_del)} node(s) " \
-                  f"from cluster '{cluster_name}': {nodes_to_del}"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-
-            # if nodes fail to drain, continue with node deletion anyways
-            try:
-                _drain_nodes(self.context.sysadmin_client,
-                             vapp_href,
-                             nodes_to_del,
-                             cluster_name=cluster_name)
-            except (e.NodeOperationError, e.ScriptExecutionError) as err:
-                LOGGER.warning(f"Failed to drain nodes: {nodes_to_del}"
-                               f" in cluster '{cluster_name}'."
-                               f" Continuing node delete...\nError: {err}")
-
-            msg = f"Deleting {len(nodes_to_del)} node(s) from " \
-                  f"cluster '{cluster_name}': {nodes_to_del}"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-
-            _delete_nodes(self.context.sysadmin_client,
-                          vapp_href,
-                          nodes_to_del,
-                          cluster_name=cluster_name)
-
-            msg = f"Deleted {len(nodes_to_del)} node(s)" \
-                  f" to cluster '{cluster_name}'"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-
-        except Exception as err:
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.UPDATE,
-                                                    vapp)
-            LOGGER.error(f"Unexpected error while deleting nodes "
-                         f"{nodes_to_del}: {err}",
-                         exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR,
-                              error_message=str(err))
+            LOGGER.error(err, exc_info=True)
+            self._fail_operation_and_resolve_entity(
+                cluster_id, DefEntityOperation.UPDATE, vapp)
+            self._update_task(
+                vcd_client.TaskStatus.ERROR, error_message=str(err))
 
     @utils.run_async
     def _delete_cluster_async(self, cluster_name, org_name, ovdc_name,
@@ -1193,10 +861,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         needs to be recreated in the failure case of cluster vapp deletion.
         """
         try:
-            cluster_vdc_href = self._get_vdc_href(org_name, ovdc_name)
             msg = f"Deleting cluster '{cluster_name}'"
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-            _delete_vapp(self.context.client, cluster_vdc_href, cluster_name)
+            _delete_vapp(
+                self.context.client, org_name, ovdc_name, cluster_name)
             msg = f"Deleted cluster '{cluster_name}'"
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except Exception as err:
@@ -1206,6 +874,26 @@ class ClusterService(abstract_broker.AbstractBroker):
                               error_message=str(err))
         finally:
             self.context.end()
+
+    def _get_cluster_upgrade_plan(self, source_template_name,
+                                  source_template_revision) -> List[dict]: # noqa: E501
+        """Get list of templates that a given cluster can upgrade to.
+
+        :param str source_template_name:
+        :param str source_template_revision:
+        :return: List of dictionary containing templates
+        :rtype: List[dict]
+        """
+        upgrades = []
+        config = utils.get_server_runtime_config()
+        for t in config['broker']['templates']:
+            if source_template_name in t[LocalTemplateKey.UPGRADE_FROM]:
+                if t[LocalTemplateKey.NAME] == source_template_name and \
+                        int(t[LocalTemplateKey.REVISION]) <= int(source_template_revision): # noqa: E501
+                    continue
+                upgrades.append(t)
+
+        return upgrades
 
     @utils.run_async
     def _upgrade_cluster_async(self, *args,
@@ -1254,8 +942,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                                                    template_revision,
                                                    ScriptFile.MASTER_K8S_UPGRADE) # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
-                run_script_in_nodes(self.context.sysadmin_client, vapp_href,
-                                    master_node_names, script)
+                _run_script_in_nodes(self.context.sysadmin_client, vapp_href,
+                                     master_node_names, script)
 
                 msg = f"Uncordoning master node {master_node_names}"
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
@@ -1281,8 +969,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                           f"-> {t_k8s}) in node {node}"
                     self._update_task(vcd_client.TaskStatus.RUNNING,
                                       message=msg)
-                    run_script_in_nodes(self.context.sysadmin_client,
-                                        vapp_href, [node], script)
+                    _run_script_in_nodes(self.context.sysadmin_client,
+                                         vapp_href, [node], script)
 
                     msg = f"Uncordoning node {node}"
                     self._update_task(vcd_client.TaskStatus.RUNNING,
@@ -1306,8 +994,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                                                    template_revision,
                                                    ScriptFile.DOCKER_UPGRADE)
                 script = utils.read_data_file(filepath, logger=LOGGER)
-                run_script_in_nodes(self.context.sysadmin_client, vapp_href,
-                                    all_node_names, script)
+                _run_script_in_nodes(self.context.sysadmin_client, vapp_href,
+                                     all_node_names, script)
 
             if upgrade_cni:
                 msg = "Applying CNI " \
@@ -1318,8 +1006,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                                                    template_revision,
                                                    ScriptFile.MASTER_CNI_APPLY)
                 script = utils.read_data_file(filepath, logger=LOGGER)
-                run_script_in_nodes(self.context.sysadmin_client, vapp_href,
-                                    master_node_names, script)
+                _run_script_in_nodes(self.context.sysadmin_client, vapp_href,
+                                     master_node_names, script)
 
             # uncordon all nodes (sometimes redundant)
             msg = f"Uncordoning all nodes {all_node_names}"
@@ -1368,16 +1056,171 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
             LOGGER.info(f"{msg} ({vapp_href})")
         except Exception as err:
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.UPGRADE,
-                                                    vapp)
             msg = f"Unexpected error while upgrading cluster " \
                   f"'{cluster_name}': {err}"
             LOGGER.error(msg, exc_info=True)
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.UPGRADE,
+                                                    vapp)
             self._update_task(vcd_client.TaskStatus.ERROR, error_message=msg)
 
         finally:
             self.context.end()
+
+    @utils.run_async
+    def _monitor_delete_nodes(self, cluster_id, nodes_to_del):
+        """Triggers and monitors delete thread.
+
+        This method (or) thread waits for the thread(s) to join before
+        - updating the defined entity
+        - updating the task status to SUCCESS
+        - ending the client context
+        """
+        try:
+            curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
+                cluster_id)
+            cluster_name: str = curr_entity.name
+            self._delete_nodes_async(cluster_id=cluster_id,
+                                     nodes_to_del=nodes_to_del)
+
+            # wait for the children threads of the current thread to join
+            curr_thread_id = str(threading.current_thread().ident)
+            for t in threading.enumerate():
+                if t.getName().endswith(curr_thread_id):
+                    t.join()
+
+            # update the defined entity and task status.
+            curr_task_status = self.task_resource.get('status')
+            if curr_task_status == vcd_client.TaskStatus.ERROR.value:
+                curr_entity.entity.status.phase = str(
+                    DefEntityPhase(DefEntityOperation.UPDATE,
+                                   DefEntityOperationStatus.FAILED))
+            else:
+                msg = f"Deleted the {nodes_to_del} nodes  from cluster " \
+                      f"'{cluster_name}' ({cluster_id}) "
+                self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+                curr_entity.entity.status.phase = str(
+                    DefEntityPhase(DefEntityOperation.UPDATE,
+                                   DefEntityOperationStatus.SUCCEEDED))
+            self._sync_def_entity(cluster_id, curr_entity)
+        except Exception as err:
+            LOGGER.error(f"Unexpected error while deleting nodes for "
+                         f"{cluster_name} ({cluster_id}): {err}",
+                         exc_info=True)
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.UPDATE)
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              error_message=str(err))
+        finally:
+            self.context.end()
+
+    @utils.run_async
+    def _delete_nodes_async(self, cluster_id: str,
+                            cluster_spec: def_models.ClusterEntity = None,
+                            nodes_to_del=[]):
+        """Delete worker and/or nfs nodes in vCD.
+
+        This method is executed by a thread in an asynchronous manner.
+        Do's:
+        - Update the defined entity in except blocks.
+        - Set the self.task status either to Running or Error
+        Dont's:
+        - Do not set the self.task status to SUCCESS. This will prevent other
+        parallel threads if any to update the status. vCD interprets SUCCESS
+        as a terminal state.
+        - Do not end the context.client.
+
+        Let the caller monitor thread or method to set SUCCESS task status,
+          end the client context
+        """
+        curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+        vapp_href = curr_entity.externalId
+        cluster_name = curr_entity.entity.metadata.cluster_name
+
+        if not nodes_to_del:
+            if not cluster_spec:
+                raise e.CseServerError(f"No nodes specified to delete for "
+                                       f"cluster {cluster_name}({cluster_id})")
+            desired_worker_count = cluster_spec.spec.workers.count
+            nodes_to_del = [node.name for node in
+                            curr_entity.entity.status.nodes.workers[desired_worker_count:]]  # noqa: E501
+
+        vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
+        try:
+            # if nodes fail to drain, continue with node deletion anyways
+            try:
+                worker_nodes_to_delete = [
+                    node_name for node_name in nodes_to_del
+                    if node_name.startswith(NodeType.WORKER)]
+                if worker_nodes_to_delete:
+                    msg = f"Draining {len(worker_nodes_to_delete)} node(s) " \
+                          f"from cluster '{cluster_name}': " \
+                          f"{worker_nodes_to_delete}"
+                    self._update_task(
+                        vcd_client.TaskStatus.RUNNING, message=msg)
+                    _drain_nodes(self.context.sysadmin_client,
+                                 vapp_href,
+                                 worker_nodes_to_delete,
+                                 cluster_name=cluster_name)
+            except (e.NodeOperationError, e.ScriptExecutionError) as err:
+                LOGGER.warning(f"Failed to drain nodes: {nodes_to_del}"
+                               f" in cluster '{cluster_name}'."
+                               f" Continuing node delete...\nError: {err}")
+
+            msg = f"Deleting {len(nodes_to_del)} node(s) from " \
+                  f"cluster '{cluster_name}': {nodes_to_del}"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+
+            _delete_nodes(self.context.sysadmin_client,
+                          vapp_href,
+                          nodes_to_del,
+                          cluster_name=cluster_name)
+
+            msg = f"Deleted {len(nodes_to_del)} node(s)" \
+                  f" to cluster '{cluster_name}'"
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+        except Exception as err:
+            LOGGER.error(f"Unexpected error while deleting nodes "
+                         f"{nodes_to_del}: {err}",
+                         exc_info=True)
+            self._fail_operation_and_resolve_entity(cluster_id,
+                                                    DefEntityOperation.UPDATE,
+                                                    vapp)
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              error_message=str(err))
+
+    def _sync_def_entity(self, cluster_id, curr_entity=None, vapp=None):
+        """Sync the defined entity with the latest vApp status."""
+        if not curr_entity:
+            curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
+                cluster_id)
+        if not vapp:
+            vapp = vcd_vapp.VApp(self.context.client, href=curr_entity.externalId)  # noqa: E501
+        curr_nodes_status = _get_nodes_details(
+            self.context.sysadmin_client, vapp)
+        if curr_nodes_status:
+            curr_entity.entity.spec.workers.count = len(
+                curr_nodes_status.workers)
+            curr_entity.entity.spec.nfs.count = len(curr_nodes_status.nfs)
+            curr_entity.entity.status.nodes = curr_nodes_status
+        return self.entity_svc.update_entity(cluster_id, curr_entity)
+
+    def _fail_operation_and_resolve_entity(self, cluster_id: str,
+                                           op: DefEntityOperation,
+                                           vapp=None):
+        try:
+            # get the current state of the defined entity
+            def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+
+            # sync the defined entity with the latest status of cluster vApp
+            # and fail the operation.
+            def_entity.entity.status.phase = \
+                str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
+            self._sync_def_entity(cluster_id, def_entity)
+            self.entity_svc.resolve_entity(cluster_id)
+        except Exception as err:
+            LOGGER.error(f"Failed on resolve entity:{err}", exc_info=True)
+            self._update_task(vcd_client.TaskStatus.ERROR, error_message=str(err))  # noqa: E501
 
     def _update_task(self, status, message='', error_message=None,
                      stack_trace=''):
@@ -1437,6 +1280,91 @@ class ClusterService(abstract_broker.AbstractBroker):
             )
 
 
+def _get_nodes_details(sysadmin_client, vapp):
+    """Get the details of the nodes given a vapp.
+
+    This method should not raise an exception. It is being used in the
+    exception blocks to sync the defined entity status of any given cluster
+    It returns None in the case of any unexpected errors.
+
+    :param pyvcloud.client.Client sysadmin_client:
+    :param pyvcloud.vapp.VApp vapp: vApp
+
+    :return: Node details
+    :rtype: container_service_extension.def_.models.Nodes
+    """
+    try:
+        vms = vapp.get_all_vms()
+        workers = []
+        nfs_nodes = []
+        for vm in vms:
+            # skip processing vms in 'unresolved' state.
+            if int(vm.get('status')) == 0:
+                continue
+            vm_name = vm.get('name')
+            ip = None
+            try:
+                ip = vapp.get_primary_ip(vm_name)
+            except Exception:
+                LOGGER.error(f"Failed to retrieve the IP of the node "
+                             f"{vm_name} in cluster {vapp.name}",
+                             exc_info=True)
+            sizing_class = None
+            if hasattr(vm, 'ComputePolicy') and hasattr(vm.ComputePolicy,
+                                                        'VmSizingPolicy'):
+                policy_name = vm.ComputePolicy.VmSizingPolicy.get('name')
+                sizing_class = compute_policy_manager.\
+                    ComputePolicyManager.get_policy_display_name(policy_name)  # noqa: E501
+            if vm_name.startswith(NodeType.MASTER):
+                master = def_models.Node(name=vm_name, ip=ip,
+                                         sizing_class=sizing_class)
+            elif vm_name.startswith(NodeType.WORKER):
+                workers.append(
+                    def_models.Node(name=vm_name, ip=ip,
+                                    sizing_class=sizing_class))
+            elif vm_name.startswith(NodeType.NFS):
+                exports = None
+                try:
+                    exports = _get_nfs_exports(sysadmin_client,
+                                               ip,
+                                               vapp,
+                                               vm_name)
+                except Exception:
+                    LOGGER.error(f"Failed to retrieve the NFS exports of "
+                                 f"node {vm_name} of cluster {vapp.name} ",
+                                 exc_info=True)
+                nfs_nodes.append(def_models.NfsNode(name=vm_name, ip=ip,
+                                                    sizing_class=sizing_class,  # noqa: E501
+                                                    exports=exports))
+        return def_models.Nodes(master=master, workers=workers,
+                                nfs=nfs_nodes)
+    except Exception as err:
+        LOGGER.error("Failed to retrieve the status of the nodes of the "
+                     f"cluster {vapp.name}: {err}", exc_info=True)
+
+
+def _get_nfs_exports(sysadmin_client: vcd_client.Client, ip, vapp, vm_name):
+    """Get the exports from remote NFS server.
+
+    :param pyvcloud.vcd.client.Client sysadmin_client:
+    :param str ip: IP address of the NFS server
+    :param pyvcloud.vcd.vapp.vcd_vapp.VApp vapp:
+    :param str vm_name:
+
+    :return: (List): List of exports
+    """
+    script = f"#!/usr/bin/env bash\nshowmount -e {ip}"
+    result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
+                                      node_names=[vm_name], script=script,
+                                      check_tools=False)
+    lines = result[0][1].content.decode().split('\n')
+    exports = []
+    for index in range(1, len(lines) - 1):
+        export = lines[index].strip().split()[0]
+        exports.append(export)
+    return exports
+
+
 def _drain_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
                  cluster_name=''):
     LOGGER.debug(f"Draining nodes {node_names} in cluster '{cluster_name}' "
@@ -1448,13 +1376,15 @@ def _drain_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
 
     try:
         vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
-        master_node_names = get_node_names(vapp, NodeType.MASTER)
-        run_script_in_nodes(sysadmin_client, vapp_href, [master_node_names[0]],
-                            script)
+        master_node_names = _get_node_names(vapp, NodeType.MASTER)
+        _run_script_in_nodes(sysadmin_client,
+                             vapp_href,
+                             [master_node_names[0]],
+                             script)
     except Exception as err:
-        LOGGER.warning(f"Failed to drain nodes {node_names} in cluster "
-                       f"'{cluster_name}' (vapp: {vapp_href}) with "
-                       f"error: {err}")
+        LOGGER.error(f"Failed to drain nodes {node_names} in cluster "
+                     f"'{cluster_name}' (vapp: {vapp_href}) with "
+                     f"error: {err}")
         raise
 
     LOGGER.debug(f"Successfully drained nodes {node_names} in cluster "
@@ -1473,29 +1403,36 @@ def _uncordon_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
 
     try:
         vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
-        master_node_names = get_node_names(vapp, NodeType.MASTER)
-        run_script_in_nodes(sysadmin_client, vapp_href, [master_node_names[0]],
-                            script)
+        master_node_names = _get_node_names(vapp, NodeType.MASTER)
+        _run_script_in_nodes(sysadmin_client,
+                             vapp_href,
+                             [master_node_names[0]],
+                             script)
     except Exception as err:
-        LOGGER.warning(f"Failed to uncordon nodes {node_names} in cluster "
-                       f"'{cluster_name}' (vapp: {vapp_href}) "
-                       f"with error: {err}")
+        LOGGER.error(f"Failed to uncordon nodes {node_names} in cluster "
+                     f"'{cluster_name}' (vapp: {vapp_href}) "
+                     f"with error: {err}")
         raise
 
     LOGGER.debug(f"Successfully uncordoned nodes {node_names} in cluster "
                  f"'{cluster_name}' (vapp: {vapp_href})")
 
 
-def _delete_vapp(client, vdc_href, vapp_name):
-    LOGGER.debug(f"Deleting vapp {vapp_name} (vdc: {vdc_href})")
+def _delete_vapp(client, org_name, ovdc_name, vapp_name):
+    LOGGER.debug(
+        f"Deleting vapp {vapp_name} in (org: {org_name}, vdc: {ovdc_name})")
 
     try:
+        org = vcd_org.Org(client=client,
+                          resource=client.get_org_by_name(org_name))
+        vdc_resource = org.get_vdc(name=ovdc_name)
+        vdc_href = vdc_resource.get('href')
         vdc = VDC(client, href=vdc_href)
         task = vdc.delete_vapp(vapp_name, force=True)
         client.get_task_monitor().wait_for_status(task)
     except Exception as err:
-        LOGGER.warning(f"Failed to delete vapp {vapp_name} "
-                       f"(vdc: {vdc_href}) with error: {err}")
+        LOGGER.error(f"Failed to delete vapp {vapp_name} "
+                     f"(vdc: {vdc_href}) with error: {err}")
         raise
 
     LOGGER.debug(f"Deleted vapp {vapp_name} (vdc: {vdc_href})")
@@ -1516,26 +1453,25 @@ def _delete_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
     script += '\n'
 
     vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
-
     try:
         if are_there_workers_to_del:
-            master_node_names = get_node_names(vapp, NodeType.MASTER)
-            run_script_in_nodes(sysadmin_client, vapp_href,
-                                [master_node_names[0]], script)
+            master_node_names = _get_node_names(vapp, NodeType.MASTER)
+            _run_script_in_nodes(sysadmin_client, vapp_href,
+                                 [master_node_names[0]], script)
     except Exception as err:
-        LOGGER.warning(f"Failed to delete node(s) {node_names} from cluster "
-                       f"'{cluster_name}' using kubectl (vapp: {vapp_href}): {err}")  # noqa: E501
+        LOGGER.error(f"Failed to delete node(s) {node_names} from cluster "
+                     f"'{cluster_name}' using kubectl "
+                     f"(vapp: {vapp_href}): {err}", exc_info=True)
 
     vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
-    vapp.reload()
     for vm_name in node_names:
         vm = vcd_vm.VM(sysadmin_client, resource=vapp.get_vm(vm_name))
         try:
             task = vm.undeploy()
             sysadmin_client.get_task_monitor().wait_for_status(task)
         except Exception:
-            LOGGER.warning(f"Failed to undeploy VM {vm_name} "
-                           f"(vapp: {vapp_href})")
+            LOGGER.error(f"Failed to undeploy VM {vm_name} "
+                         f"(vapp: {vapp_href})", exc_info=True)
 
     task = vapp.delete_vms(node_names)
     sysadmin_client.get_task_monitor().wait_for_status(task)
@@ -1543,51 +1479,15 @@ def _delete_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
                  f"cluster '{cluster_name}' (vapp: {vapp_href})")
 
 
-def get_nfs_exports(sysadmin_client: vcd_client.Client, ip, vapp, vm_name):
-    """Get the exports from remote NFS server.
-
-    :param pyvcloud.vcd.client.Client sysadmin_client:
-    :param str ip: IP address of the NFS server
-    :param pyvcloud.vcd.vapp.vcd_vapp.VApp vapp:
-    :param str vm_name:
-
-    :return: (List): List of exports
-    """
-    script = f"#!/usr/bin/env bash\nshowmount -e {ip}"
-    result = execute_script_in_nodes(sysadmin_client, vapp=vapp,
-                                     node_names=[vm_name], script=script,
-                                     check_tools=False)
-    lines = result[0][1].content.decode().split('\n')
-    exports = []
-    for index in range(1, len(lines) - 1):
-        export = lines[index].strip().split()[0]
-        exports.append(export)
-    return exports
-
-
-def is_valid_cluster_name(name):
+def _is_valid_cluster_name(name):
     """Validate that the cluster name against the pattern."""
     if name and len(name) > 25:
         return False
     return re.match("^[a-zA-Z][A-Za-z0-9-]*$", name) is not None
 
 
-def get_all_clusters(client, cluster_name=None, cluster_id=None,
-                     org_name=None, ovdc_name=None):
-    """Get list of dictionaries containing data for each visible cluster.
-
-    TODO define these cluster data dictionary keys better:
-        'name', 'vapp_id', 'vapp_href', 'vdc_name', 'vdc_href', 'vdc_id',
-        'leader_endpoint', 'master_nodes', 'nodes', 'nfs_nodes',
-        'number_of_vms', 'template_name', 'template_revision',
-        'cse_version', 'cluster_id', 'status', 'os', 'docker_version',
-        'kubernetes', 'kubernetes_version', 'cni', 'cni_version'
-    """
-    query_filter = f'metadata:{ClusterMetadataKey.CLUSTER_ID}==STRING:*'
-    if cluster_id is not None:
-        query_filter = f'metadata:{ClusterMetadataKey.CLUSTER_ID}==STRING:{cluster_id}' # noqa: E501
-    if cluster_name is not None:
-        query_filter += f';name=={cluster_name}'
+def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
+    query_filter = f'name=={cluster_name}'
     if ovdc_name is not None:
         query_filter += f";vdcName=={ovdc_name}"
     resource_type = 'vApp'
@@ -1598,115 +1498,16 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
             org = vcd_org.Org(client, resource=org_resource)
             query_filter += f";org=={org.resource.get('id')}"
 
-    # 2 queries are required because each query can only return 8 metadata
     q = client.get_typed_query(
         resource_type,
         query_result_format=vcd_client.QueryResultFormat.ID_RECORDS,
-        qfilter=query_filter,
-        fields=f'metadata:{ClusterMetadataKey.CLUSTER_ID}'
-               f',metadata:{ClusterMetadataKey.MASTER_IP}'
-               f',metadata:{ClusterMetadataKey.CSE_VERSION}'
-               f',metadata:{ClusterMetadataKey.TEMPLATE_NAME}'
-               f',metadata:{ClusterMetadataKey.TEMPLATE_REVISION}'
-               f',metadata:{ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME}' # noqa: E501
-               f',metadata:{ClusterMetadataKey.OS}')
-    q2 = client.get_typed_query(
-        resource_type,
-        query_result_format=vcd_client.QueryResultFormat.ID_RECORDS,
-        qfilter=query_filter,
-        fields=f'metadata:{ClusterMetadataKey.DOCKER_VERSION}'
-               f',metadata:{ClusterMetadataKey.KUBERNETES}'
-               f',metadata:{ClusterMetadataKey.KUBERNETES_VERSION}'
-               f',metadata:{ClusterMetadataKey.CNI}'
-               f',metadata:{ClusterMetadataKey.CNI_VERSION}')
+        qfilter=query_filter)
+    result = q.execute()
 
-    metadata_key_to_cluster_key = {
-        ClusterMetadataKey.CLUSTER_ID: 'cluster_id',
-        ClusterMetadataKey.CSE_VERSION: 'cse_version',
-        ClusterMetadataKey.MASTER_IP: 'leader_endpoint',
-        ClusterMetadataKey.TEMPLATE_NAME: 'template_name',
-        ClusterMetadataKey.TEMPLATE_REVISION: 'template_revision',
-        ClusterMetadataKey.OS: 'os',
-        ClusterMetadataKey.DOCKER_VERSION: 'docker_version',
-        ClusterMetadataKey.KUBERNETES: 'kubernetes',
-        ClusterMetadataKey.KUBERNETES_VERSION: 'kubernetes_version',
-        ClusterMetadataKey.CNI: 'cni',
-        ClusterMetadataKey.CNI_VERSION: 'cni_version'
-    }
-
-    clusters = {}
-    for record in q.execute():
-        vapp_id = record.get('id').split(':')[-1]
-        vdc_id = record.get('vdc').split(':')[-1]
-        vapp_href = f'{client.get_api_uri()}/vApp/vapp-{vapp_id}'
-
-        clusters[vapp_id] = {
-            'name': record.get('name'),
-            'vapp_id': vapp_id,
-            'vapp_href': vapp_href,
-            'vdc_name': record.get('vdcName'),
-            'vdc_href': f'{client.get_api_uri()}/vdc/{vdc_id}',
-            'vdc_id': vdc_id,
-            'leader_endpoint': '',
-            'master_nodes': [],
-            'nodes': [],
-            'nfs_nodes': [],
-            'number_of_vms': record.get('numberOfVMs'),
-            'template_name': '',
-            'template_revision': '',
-            'cse_version': '',
-            'cluster_id': '',
-            'status': record.get('status'),
-            'os': '',
-            'docker_version': '',
-            'kubernetes': '',
-            'kubernetes_version': '',
-            'cni': '',
-            'cni_version': ''
-        }
-
-        if hasattr(record, 'Metadata'):
-            for element in record.Metadata.MetadataEntry:
-                if element.Key in metadata_key_to_cluster_key:
-                    clusters[vapp_id][metadata_key_to_cluster_key[element.Key]] = str(element.TypedValue.Value) # noqa: E501
-                # for pre-2.5.0 cluster backwards compatibility
-                elif element.Key == ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME and clusters[vapp_id]['template_name'] == '': # noqa: E501
-                    clusters[vapp_id]['template_name'] = str(element.TypedValue.Value) # noqa: E501
-
-        # pre-2.6 clusters may not have kubernetes version metadata
-        if clusters[vapp_id]['kubernetes_version'] == '':
-            clusters[vapp_id]['kubernetes_version'] = ltm.get_k8s_version_from_template_name(clusters[vapp_id]['template_name']) # noqa: E501
-
-    # api query can fetch only 8 metadata at a time
-    # since we have more than 8 metadata, we need to use 2 queries
-    for record in q2.execute():
-        vapp_id = record.get('id').split(':')[-1]
-        if hasattr(record, 'Metadata'):
-            for element in record.Metadata.MetadataEntry:
-                if element.Key in metadata_key_to_cluster_key:
-                    clusters[vapp_id][metadata_key_to_cluster_key[element.Key]] = str(element.TypedValue.Value) # noqa: E501
-                # for pre-2.5.0 cluster backwards compatibility
-                elif element.Key == ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME and clusters[vapp_id]['template_name'] == '': # noqa: E501
-                    clusters[vapp_id]['template_name'] = str(element.TypedValue.Value) # noqa: E501
-
-    return list(clusters.values())
+    return len(list(result)) != 0
 
 
-def get_cluster(client, cluster_name, cluster_id=None, org_name=None,
-                ovdc_name=None):
-    clusters = get_all_clusters(client, cluster_name=cluster_name,
-                                cluster_id=cluster_id, org_name=org_name,
-                                ovdc_name=ovdc_name)
-    if len(clusters) > 1:
-        raise e.CseDuplicateClusterError(f"Found multiple clusters named"
-                                         f" '{cluster_name}'.")
-    if len(clusters) == 0:
-        raise e.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")
-
-    return clusters[0]
-
-
-def get_template(name=None, revision=None):
+def _get_template(name=None, revision=None):
     if (name is None and revision is not None) or (name is not None and revision is None): # noqa: E501
         raise ValueError("If template revision is specified, then template "
                          "name must also be specified (and vice versa).")
@@ -1714,14 +1515,14 @@ def get_template(name=None, revision=None):
     name = name or server_config['broker']['default_template_name']
     revision = revision or server_config['broker']['default_template_revision']
     for template in server_config['broker']['templates']:
-        if template[LocalTemplateKey.NAME] == name and str(template[LocalTemplateKey.REVISION]) == str(revision): # noqa: E501
+        if (template[LocalTemplateKey.NAME], str(template[LocalTemplateKey.REVISION])) == (name, str(revision)): # noqa: E501
             return template
     raise Exception(f"Template '{name}' at revision {revision} not found.")
 
 
-def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
-              catalog_name, template, network_name, storage_profile=None,
-              ssh_key=None, sizing_class_name=None):
+def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
+               catalog_name, template, network_name, storage_profile=None,
+               ssh_key=None, sizing_class_name=None):
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
 
     if num_nodes > 0:
@@ -1832,15 +1633,16 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                         template[LocalTemplateKey.REVISION],
                         ScriptFile.NFSD)
                     script = utils.read_data_file(script_filepath, logger=LOGGER)  # noqa: E501
-                    exec_results = execute_script_in_nodes(
+                    exec_results = _execute_script_in_nodes(
                         sysadmin_client, vapp=vapp, node_names=[vm_name],
                         script=script)
-                    errors = get_script_execution_errors(exec_results)
+                    errors = _get_script_execution_errors(exec_results)
                     if errors:
                         raise e.ScriptExecutionError(
                             f"VM customization script execution failed "
                             f"on node {vm_name}:{errors}")
         except Exception as err:
+            LOGGER.error(err, exc_info=True)
             # TODO: get details of the exception to determine cause of failure,
             # e.g. not enough resources available.
             node_list = [entry.get('target_vm_name') for entry in specs]
@@ -1855,23 +1657,11 @@ def add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
         return {'task': task, 'specs': specs}
 
 
-def get_node_names(vapp, node_type):
+def _get_node_names(vapp, node_type):
     return [vm.get('name') for vm in vapp.get_all_vms() if vm.get('name').startswith(node_type)] # noqa: E501
 
 
-def _wait_for_tools_ready_callback(message, exception=None):
-    LOGGER.debug(f"waiting for guest tools, status: {message}")
-    if exception is not None:
-        LOGGER.error(f"exception: {str(exception)}")
-
-
-def _wait_for_guest_execution_callback(message, exception=None):
-    LOGGER.debug(message)
-    if exception is not None:
-        LOGGER.error(f"exception: {str(exception)}")
-
-
-def get_master_ip(sysadmin_client: vcd_client.Client, vapp):
+def _get_master_ip(sysadmin_client: vcd_client.Client, vapp):
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
 
     LOGGER.debug(f"Getting master IP for vapp: "
@@ -1879,11 +1669,11 @@ def get_master_ip(sysadmin_client: vcd_client.Client, vapp):
     script = "#!/usr/bin/env bash\n" \
              "ip route get 1 | awk '{print $NF;exit}'\n" \
 
-    node_names = get_node_names(vapp, NodeType.MASTER)
-    result = execute_script_in_nodes(sysadmin_client, vapp=vapp,
-                                     node_names=node_names, script=script,
-                                     check_tools=False)
-    errors = get_script_execution_errors(result)
+    node_names = _get_node_names(vapp, NodeType.MASTER)
+    result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
+                                      node_names=node_names, script=script,
+                                      check_tools=False)
+    errors = _get_script_execution_errors(result)
     if errors:
         raise e.ScriptExecutionError(f"Get master IP script execution failed "
                                      f"on master node {node_names}:{errors}")
@@ -1893,8 +1683,8 @@ def get_master_ip(sysadmin_client: vcd_client.Client, vapp):
     return master_ip
 
 
-def init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
-                 template_revision):
+def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
+                  template_revision):
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
 
     try:
@@ -1902,10 +1692,10 @@ def init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                                                   template_revision,
                                                   ScriptFile.MASTER)
         script = utils.read_data_file(script_filepath, logger=LOGGER)
-        node_names = get_node_names(vapp, NodeType.MASTER)
-        result = execute_script_in_nodes(sysadmin_client, vapp=vapp,
-                                         node_names=node_names, script=script)
-        errors = get_script_execution_errors(result)
+        node_names = _get_node_names(vapp, NodeType.MASTER)
+        result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
+                                          node_names=node_names, script=script)
+        errors = _get_script_execution_errors(result)
         if errors:
             raise e.ScriptExecutionError(
                 f"Initialize cluster script execution failed on node "
@@ -1918,23 +1708,23 @@ def init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
             f"Couldn't initialize cluster: {str(err)}")
 
 
-def join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
-                 template_revision, target_nodes=None):
+def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
+                  template_revision, target_nodes=None):
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
     script = "#!/usr/bin/env bash\n" \
              "kubeadm token create\n" \
              "ip route get 1 | awk '{print $NF;exit}'\n"
-    node_names = get_node_names(vapp, NodeType.MASTER)
-    master_result = execute_script_in_nodes(sysadmin_client, vapp=vapp,
-                                            node_names=node_names,
-                                            script=script)
-    errors = get_script_execution_errors(master_result)
+    node_names = _get_node_names(vapp, NodeType.MASTER)
+    master_result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
+                                             node_names=node_names,
+                                             script=script)
+    errors = _get_script_execution_errors(master_result)
     if errors:
         raise e.ClusterJoiningError(
             f"Join cluster script execution failed on master node {node_names}:{errors}")  # noqa: E501
     init_info = master_result[0][1].content.decode().split()
 
-    node_names = get_node_names(vapp, NodeType.WORKER)
+    node_names = _get_node_names(vapp, NodeType.WORKER)
     if target_nodes is not None:
         node_names = [name for name in node_names if name in target_nodes]
     tmp_script_filepath = ltm.get_script_filepath(template_name,
@@ -1942,10 +1732,10 @@ def join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                                                   ScriptFile.NODE)
     tmp_script = utils.read_data_file(tmp_script_filepath, logger=LOGGER)
     script = tmp_script.format(token=init_info[0], ip=init_info[1])
-    worker_results = execute_script_in_nodes(sysadmin_client, vapp=vapp,
-                                             node_names=node_names,
-                                             script=script)
-    errors = get_script_execution_errors(worker_results)
+    worker_results = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
+                                              node_names=node_names,
+                                              script=script)
+    errors = _get_script_execution_errors(worker_results)
     if errors:
         raise e.ClusterJoiningError(
             f"Join cluster script execution failed on worker node  {node_names}:{errors}")  # noqa: E501
@@ -1953,6 +1743,18 @@ def join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
         if result[0] != 0:
             raise e.ClusterJoiningError(f"Couldn't join cluster:"
                                         f"\n{result[2].content.decode()}")
+
+
+def _wait_for_tools_ready_callback(message, exception=None):
+    LOGGER.debug(f"waiting for guest tools, status: {message}")
+    if exception is not None:
+        LOGGER.error(f"exception: {str(exception)}")
+
+
+def _wait_for_guest_execution_callback(message, exception=None):
+    LOGGER.debug(message)
+    if exception is not None:
+        LOGGER.error(f"exception: {str(exception)}")
 
 
 def _wait_until_ready_to_exec(vs, vm, password, tries=30):
@@ -1979,9 +1781,9 @@ def _wait_until_ready_to_exec(vs, vm, password, tries=30):
         raise e.CseServerError('VM is not ready to execute scripts')
 
 
-def execute_script_in_nodes(sysadmin_client: vcd_client.Client,
-                            vapp, node_names, script,
-                            check_tools=True, wait=True):
+def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
+                             vapp, node_names, script,
+                             check_tools=True, wait=True):
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
     all_results = []
     for node_name in node_names:
@@ -2030,8 +1832,8 @@ def execute_script_in_nodes(sysadmin_client: vcd_client.Client,
     return all_results
 
 
-def run_script_in_nodes(sysadmin_client: vcd_client.Client, vapp_href,
-                        node_names, script):
+def _run_script_in_nodes(sysadmin_client: vcd_client.Client, vapp_href,
+                         node_names, script):
     """Run script in all specified nodes.
 
     Wrapper around `execute_script_in_nodes()`. Use when we don't care about
@@ -2046,12 +1848,12 @@ def run_script_in_nodes(sysadmin_client: vcd_client.Client, vapp_href,
 
     # when is tools checking necessary?
     vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
-    results = execute_script_in_nodes(sysadmin_client,
-                                      vapp=vapp,
-                                      node_names=node_names,
-                                      script=script,
-                                      check_tools=False)
-    errors = get_script_execution_errors(results)
+    results = _execute_script_in_nodes(sysadmin_client,
+                                       vapp=vapp,
+                                       node_names=node_names,
+                                       script=script,
+                                       check_tools=False)
+    errors = _get_script_execution_errors(results)
     if errors:
         raise e.ScriptExecutionError(f"Script execution failed on node "
                                      f"{node_names}\nErrors: {errors}")
@@ -2060,7 +1862,7 @@ def run_script_in_nodes(sysadmin_client: vcd_client.Client, vapp_href,
                                    f"{results[0][2].content.decode()}")
 
 
-def get_script_execution_errors(results):
+def _get_script_execution_errors(results):
     return [result[2].content.decode() for result in results if result[0] != 0]
 
 

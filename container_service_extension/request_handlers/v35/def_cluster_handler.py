@@ -156,8 +156,6 @@ def node_create(request_data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     raise NotImplementedError
-    svc = cluster_svc.ClusterService(op_ctx)
-    return svc.create_nodes(data=request_data)
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_NODE_DELETE)  # noqa: E501
@@ -199,5 +197,3 @@ def node_info(request_data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     raise NotImplementedError
-    svc = cluster_svc.ClusterService(op_ctx)
-    return svc.get_node_info(data=request_data)
