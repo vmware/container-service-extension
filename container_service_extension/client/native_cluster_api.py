@@ -112,7 +112,7 @@ class NativeClusterApi:
         cluster_entity = def_models.DefEntity(**response_processor.process_response(response))  # noqa: E501
         return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501
 
-    def remove_nfs_node(self, cluster_name, node_name, org=None, vdc=None):
+    def delete_nfs_node(self, cluster_name, node_name, org=None, vdc=None):
         """Delete nfs node given the cluster name and node name.
 
         :param str cluster_name: native cluster name
@@ -127,10 +127,10 @@ class NativeClusterApi:
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
         if def_entity:
-            return self.remove_nfs_by_cluster_id(def_entity.id, node_name)
+            return self.delete_nfs_by_cluster_id(def_entity.id, node_name)
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
 
-    def remove_nfs_by_cluster_id(self, cluster_id, node_name):
+    def delete_nfs_by_cluster_id(self, cluster_id, node_name):
         """Delete the nfs-node by name from the given cluster id.
 
         :param str cluster_id: native cluster entity id

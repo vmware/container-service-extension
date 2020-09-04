@@ -13,6 +13,7 @@ from container_service_extension.client import pks
 from container_service_extension.client.cluster import Cluster
 import container_service_extension.client.command_filter as cmd_filter
 import container_service_extension.client.constants as cli_constants
+from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
 from container_service_extension.client.ovdc import Ovdc
 import container_service_extension.client.sample_generator as client_sample_generator  # noqa: E501
 from container_service_extension.client.system import System
@@ -687,9 +688,9 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
         CLIENT_LOGGER.error(str(e))
 
 
-@cluster_group.command('remove-nfs',
-                       help="Examples:\n\nvcd cse cluster remove-nfs mycluster nfs-uitj",  # noqa: E501
-                       short_help='Remove nfs node from Native Kubernetes cluster')  # noqa: E501
+@cluster_group.command('delete-nfs',
+                       help="Examples:\n\nvcd cse cluster delete-nfs mycluster nfs-uitj",  # noqa: E501
+                       short_help='Delete nfs node from Native Kubernetes cluster')  # noqa: E501
 @click.pass_context
 @click.argument('cluster_name', required=True)
 @click.argument('node_name', required=True)
@@ -709,7 +710,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
     required=False,
     metavar='ORG_NAME',
     help='Restrict cluster search to specified org')
-def remove_nfs(ctx, cluster_name, node_name, vdc, org):
+def delete_nfs(ctx, cluster_name, node_name, vdc, org):
     """Remove nfs node in a cluster that uses native Kubernetes provider."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
@@ -717,8 +718,8 @@ def remove_nfs(ctx, cluster_name, node_name, vdc, org):
         client = ctx.obj['client']
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
-        cluster = Cluster(client)
-        result = cluster.remove_nfs_node(cluster_name, node_name, org=org, vdc=vdc)  # noqa: E501
+        cluster = NativeClusterApi(client)
+        result = cluster.delete_nfs_node(cluster_name, node_name, org=org, vdc=vdc)  # noqa: E501
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
