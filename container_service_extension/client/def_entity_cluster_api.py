@@ -293,6 +293,3 @@ class DefEntityClusterApi:
             self._client._session,
             accept_type='application/json')
         return response_processor.process_response(response)
-
-    def remove_nfs_node(self, cluster_name, node_name, org=None, vdc=None):
-        return self._nativeCluster.remove_nfs_node(cluster_name, node_name, org, vdc)  # noqa: E501
