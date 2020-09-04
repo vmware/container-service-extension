@@ -122,13 +122,13 @@ class NfsNode(Node):
 
 @dataclass()
 class Nodes:
-    master: Node = None
+    control_plane: Node = None
     workers: List[Node] = None
     nfs: List[NfsNode] = None
 
-    def __init__(self, master: Node = None, workers: List[Node] = None,
+    def __init__(self, control_plane: Node = None, workers: List[Node] = None,
                  nfs: List[Node] = None):
-        self.master = Node(**master) if isinstance(master, dict) else master
+        self.control_plane = Node(**control_plane) if isinstance(control_plane, dict) else control_plane  # noqa: E501
         self.workers = [Node(**w) if isinstance(w, dict) else w for w in workers]  # noqa: E501
         self.nfs = [NfsNode(**n) if isinstance(n, dict) else n for n in nfs]
 

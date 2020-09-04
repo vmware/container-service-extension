@@ -130,7 +130,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 self.context.sysadmin_client, c['vdc_id'])
             clusters.append({
                 'name': c['name'],
-                'IP master': c['leader_endpoint'],
+                'control plane ip': c['leader_endpoint'],
                 'template_name': c.get('template_name'),
                 'template_revision': c.get('template_revision'),
                 'k8s_type': c.get('kubernetes'),
@@ -173,7 +173,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                               org_name=validated_data[RequestKey.ORG_NAME],
                               ovdc_name=validated_data[RequestKey.OVDC_NAME])
         vapp = vcd_vapp.VApp(self.context.client, href=cluster['vapp_href'])
-        node_names = get_node_names(vapp, NodeType.MASTER)
+        node_names = get_node_names(vapp, NodeType.CONTROL_PLANE)
 
         all_results = []
 
@@ -373,7 +373,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         **telemetry: Optional
         """
         data = kwargs[KwargKey.DATA]
-        # TODO default template for resizing should be master's template
+        # TODO default template for resizing should be control plane's template
         required = [
             RequestKey.CLUSTER_NAME,
             RequestKey.NUM_WORKERS,
@@ -609,8 +609,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 node_info['ipAddress'] = vapp.get_primary_ip(vm_name)
             except Exception:
                 LOGGER.debug(f"Unable to get ip address of node {vm_name}")
-            if vm_name.startswith(NodeType.MASTER):
-                node_info['node_type'] = 'master'
+            if vm_name.startswith(NodeType.CONTROL_PLANE):
+                node_info['node_type'] = 'control plane'
             elif vm_name.startswith(NodeType.WORKER):
                 node_info['node_type'] = 'worker'
             elif vm_name.startswith(NodeType.NFS):
@@ -759,10 +759,10 @@ class VcdBroker(abstract_broker.AbstractBroker):
         if len(node_names_list) == 0:
             LOGGER.debug("No nodes specified to delete")
             return {'body': {}}
-        # check that master node is not in specified nodes
+        # check that control plane node is not in specified nodes
         for node in node_names_list:
-            if node.startswith(NodeType.MASTER):
-                raise e.CseServerError(f"Can't delete master node: '{node}'.")
+            if node.startswith(NodeType.CONTROL_PLANE):
+                raise e.CseServerError(f"Can't delete control plane node: '{node}'.")  # noqa: E501
 
         cluster = get_cluster(self.context.client, cluster_name,
                               org_name=validated_data[RequestKey.ORG_NAME],
@@ -844,7 +844,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             task = vapp.set_multiple_metadata(tags)
             self.context.client.get_task_monitor().wait_for_status(task)
 
-            msg = f"Creating master node for cluster '{cluster_name}' " \
+            msg = f"Creating control plane node for cluster '{cluster_name}' " \
                   f"({cluster_id})"
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
@@ -853,7 +853,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             try:
                 add_nodes(self.context.sysadmin_client,
                           num_nodes=1,
-                          node_type=NodeType.MASTER,
+                          node_type=NodeType.CONTROL_PLANE,
                           org=org,
                           vdc=vdc,
                           vapp=vapp,
@@ -865,8 +865,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
                           storage_profile=storage_profile_name,
                           ssh_key=ssh_key)
             except Exception as err:
-                raise e.MasterNodeCreationError("Error adding master node:",
-                                                str(err))
+                raise e.ControlPlaneNodeCreationError("Error adding control "
+                                                      "plane node:", str(err))
 
             msg = f"Initializing cluster '{cluster_name}' ({cluster_id})"
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
@@ -875,9 +875,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
                          vapp,
                          template[LocalTemplateKey.NAME],
                          template[LocalTemplateKey.REVISION])
-            master_ip = get_master_ip(self.context.sysadmin_client, vapp)
+            control_plane_ip = get_control_plane_ip(self.context.sysadmin_client, vapp)  # noqa: E501
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
-                                     master_ip)
+                                     control_plane_ip)
             self.context.client.get_task_monitor().wait_for_status(task)
 
             msg = f"Creating {num_workers} node(s) for cluster " \
@@ -934,7 +934,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
             msg = f"Created cluster '{cluster_name}' ({cluster_id})"
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
-        except (e.MasterNodeCreationError, e.WorkerNodeCreationError,
+        except (e.ControlPlaneNodeCreationError, e.WorkerNodeCreationError,
                 e.NFSNodeCreationError, e.ClusterJoiningError,
                 e.ClusterInitializationError, e.ClusterOperationError) as err:
             if rollback:
@@ -1118,9 +1118,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
     def _upgrade_cluster_async(self, *args, cluster, template):
         try:
             cluster_name = cluster['name']
-            master_node_names = [n['name'] for n in cluster['master_nodes']]
+            control_plane_node_names = [n['name'] for n in cluster['master_nodes']]  # noqa: E501
             worker_node_names = [n['name'] for n in cluster['nodes']]
-            all_node_names = master_node_names + worker_node_names
+            all_node_names = control_plane_node_names + worker_node_names
             vapp_href = cluster['vapp_href']
             template_name = template[LocalTemplateKey.NAME]
             template_revision = template[LocalTemplateKey.REVISION]
@@ -1140,26 +1140,26 @@ class VcdBroker(abstract_broker.AbstractBroker):
             upgrade_cni = t_cni > c_cni or t_k8s.major > c_k8s.major or t_k8s.minor > c_k8s.minor # noqa: E501
 
             if upgrade_k8s:
-                msg = f"Draining master node {master_node_names}"
+                msg = f"Draining control plane node {control_plane_node_names}"
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 _drain_nodes(self.context.sysadmin_client, vapp_href,
-                             master_node_names, cluster_name=cluster_name)
+                             control_plane_node_names, cluster_name=cluster_name)
 
                 msg = f"Upgrading Kubernetes ({c_k8s} -> {t_k8s}) " \
-                      f"in master node {master_node_names}"
+                      f"in control plane node {control_plane_node_names}"
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
-                                                   ScriptFile.MASTER_K8S_UPGRADE) # noqa: E501
+                                                   ScriptFile.CONTROL_PLANE_K8S_UPGRADE) # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
                 run_script_in_nodes(self.context.sysadmin_client, vapp_href,
-                                    master_node_names, script)
+                                    control_plane_node_names, script)
 
-                msg = f"Uncordoning master node {master_node_names}"
+                msg = f"Uncordoning control plane node {control_plane_node_names}"
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 _uncordon_nodes(self.context.sysadmin_client,
                                 vapp_href,
-                                master_node_names,
+                                control_plane_node_names,
                                 cluster_name=cluster_name)
 
                 filepath = ltm.get_script_filepath(template_name,
@@ -1209,14 +1209,14 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
             if upgrade_cni:
                 msg = f"Applying CNI ({cluster['cni']} {c_cni} -> {t_cni}) " \
-                      f"in master node {master_node_names}"
+                      f"in control plane node {control_plane_node_names}"
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
-                                                   ScriptFile.MASTER_CNI_APPLY)
+                                                   ScriptFile.CONTROL_PLANE_CNI_APPLY)
                 script = utils.read_data_file(filepath, logger=LOGGER)
                 run_script_in_nodes(self.context.sysadmin_client, vapp_href,
-                                    master_node_names, script)
+                                    control_plane_node_names, script)
 
             # uncordon all nodes (sometimes redundant)
             msg = f"Uncordoning all nodes {all_node_names}"
@@ -1313,9 +1313,9 @@ def _drain_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
 
     try:
         vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
-        master_node_names = get_node_names(vapp, NodeType.MASTER)
-        run_script_in_nodes(sysadmin_client, vapp_href, [master_node_names[0]],
-                            script)
+        control_plane_node_names = get_node_names(vapp, NodeType.CONTROL_PLANE)
+        run_script_in_nodes(sysadmin_client, vapp_href,
+                            [control_plane_node_names[0]], script)
     except Exception as err:
         LOGGER.warning(f"Failed to drain nodes {node_names} in cluster "
                        f"'{cluster_name}' (vapp: {vapp_href}) with "
@@ -1338,9 +1338,9 @@ def _uncordon_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
 
     try:
         vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
-        master_node_names = get_node_names(vapp, NodeType.MASTER)
-        run_script_in_nodes(sysadmin_client, vapp_href, [master_node_names[0]],
-                            script)
+        control_plane_node_names = get_node_names(vapp, NodeType.CONTROL_PLANE)
+        run_script_in_nodes(sysadmin_client, vapp_href,
+                            [control_plane_node_names[0]], script)
     except Exception as err:
         LOGGER.warning(f"Failed to uncordon nodes {node_names} in cluster "
                        f"'{cluster_name}' (vapp: {vapp_href}) "
@@ -1379,9 +1379,9 @@ def _delete_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
 
     vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
     try:
-        master_node_names = get_node_names(vapp, NodeType.MASTER)
-        run_script_in_nodes(sysadmin_client, vapp_href, [master_node_names[0]],
-                            script)
+        control_plane_node_names = get_node_names(vapp, NodeType.CONTROL_PLANE)
+        run_script_in_nodes(sysadmin_client, vapp_href,
+                            [control_plane_node_names[0]], script)
     except Exception:
         LOGGER.warning(f"Failed to delete node(s) {node_names} from cluster "
                        f"'{cluster_name}' using kubectl (vapp: {vapp_href})")
@@ -1453,7 +1453,7 @@ def _update_cluster_dict_with_node_info(client, cluster):
         except Exception:
             LOGGER.debug(f"Unable to get ip address of node {vm_name}")
 
-        if vm_name.startswith(NodeType.MASTER):
+        if vm_name.startswith(NodeType.CONTROL_PLANE):
             cluster.get('master_nodes').append(node_info)
         elif vm_name.startswith(NodeType.WORKER):
             cluster.get('nodes').append(node_info)
@@ -1470,7 +1470,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
 
     :param bool fetch_details: If set, will fetch additional information about
         each individual cluster e.g. network_name, org_name, org_href, list of
-        master/worker/nfs nodes and their ips.
+        control plane/worker/nfs nodes and their ips.
     TODO define these cluster data dictionary keys better:
         'name', 'vapp_id', 'vapp_href', 'vdc_name', 'vdc_href', 'vdc_id',
         'leader_endpoint', 'master_nodes', 'nodes', 'nfs_nodes',
@@ -1499,7 +1499,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
         query_result_format=vcd_client.QueryResultFormat.ID_RECORDS,
         qfilter=query_filter,
         fields=f'metadata:{ClusterMetadataKey.CLUSTER_ID}'
-               f',metadata:{ClusterMetadataKey.MASTER_IP}'
+               f',metadata:{ClusterMetadataKey.CONTROL_PLANE_IP}'
                f',metadata:{ClusterMetadataKey.CSE_VERSION}'
                f',metadata:{ClusterMetadataKey.TEMPLATE_NAME}'
                f',metadata:{ClusterMetadataKey.TEMPLATE_REVISION}'
@@ -1517,7 +1517,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
     metadata_key_to_cluster_key = {
         ClusterMetadataKey.CLUSTER_ID: 'cluster_id',
         ClusterMetadataKey.CSE_VERSION: 'cse_version',
-        ClusterMetadataKey.MASTER_IP: 'leader_endpoint',
+        ClusterMetadataKey.CONTROL_PLANE_IP: 'leader_endpoint',
         ClusterMetadataKey.TEMPLATE_NAME: 'template_name',
         ClusterMetadataKey.TEMPLATE_REVISION: 'template_revision',
         ClusterMetadataKey.OS: 'os',
@@ -1754,26 +1754,26 @@ def _wait_for_guest_execution_callback(message, exception=None):
         LOGGER.error(f"exception: {str(exception)}")
 
 
-def get_master_ip(sysadmin_client: vcd_client.Client, vapp):
+def get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
 
-    LOGGER.debug(f"Getting master IP for vapp: "
+    LOGGER.debug(f"Getting control plane IP for vapp: "
                  f"{vapp.get_resource().get('name')}")
     script = "#!/usr/bin/env bash\n" \
              "ip route get 1 | awk '{print $NF;exit}'\n" \
 
-    node_names = get_node_names(vapp, NodeType.MASTER)
+    node_names = get_node_names(vapp, NodeType.CONTROL_PLANE)
     result = execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                      node_names=node_names, script=script,
                                      check_tools=False)
     errors = get_script_execution_errors(result)
     if errors:
-        raise e.ScriptExecutionError(f"Get master IP script execution failed "
-                                     f"on master node {node_names}:{errors}")
-    master_ip = result[0][1].content.decode().split()[0]
-    LOGGER.debug(f"Retrieved master IP for vapp: "
-                 f"{vapp.get_resource().get('name')}, ip: {master_ip}")
-    return master_ip
+        raise e.ScriptExecutionError(f"Get IP script execution failed on "
+                                     f"control plane node {node_names}:{errors}")  # noqa: E501
+    control_plane_ip = result[0][1].content.decode().split()[0]
+    LOGGER.debug(f"Retrieved control plane IP for vapp: "
+                 f"{vapp.get_resource().get('name')}, ip: {control_plane_ip}")
+    return control_plane_ip
 
 
 def init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
@@ -1783,9 +1783,9 @@ def init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
     try:
         script_filepath = ltm.get_script_filepath(template_name,
                                                   template_revision,
-                                                  ScriptFile.MASTER)
+                                                  ScriptFile.CONTROL_PLANE)
         script = utils.read_data_file(script_filepath, logger=LOGGER)
-        node_names = get_node_names(vapp, NodeType.MASTER)
+        node_names = get_node_names(vapp, NodeType.CONTROL_PLANE)
         result = execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                          node_names=node_names, script=script)
         errors = get_script_execution_errors(result)
@@ -1807,15 +1807,15 @@ def join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
     script = "#!/usr/bin/env bash\n" \
              "kubeadm token create\n" \
              "ip route get 1 | awk '{print $NF;exit}'\n"
-    node_names = get_node_names(vapp, NodeType.MASTER)
-    master_result = execute_script_in_nodes(sysadmin_client, vapp=vapp,
+    node_names = get_node_names(vapp, NodeType.CONTROL_PLANE)
+    control_plane_result = execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                             node_names=node_names,
                                             script=script)
-    errors = get_script_execution_errors(master_result)
+    errors = get_script_execution_errors(control_plane_result)
     if errors:
         raise e.ScriptExecutionError(f"Join cluster script execution failed "
-                                     f"on master node {node_names}:{errors}")
-    init_info = master_result[0][1].content.decode().split()
+                                     f"on control plane node {node_names}:{errors}")  # noqa: E501
+    init_info = control_plane_result[0][1].content.decode().split()
 
     node_names = get_node_names(vapp, NodeType.WORKER)
     if target_nodes is not None:

@@ -166,7 +166,7 @@
                         "type": "object",
                         "required": ["master"],
                         "properties": {
-                            "master": {
+                            "control_plane": {
                                 "$ref": "#/definitions/node"
                             },
                             "workers": {

@@ -177,8 +177,8 @@ class NodeCreationError(NodeOperationError):
             f"{self.error_message}"
 
 
-class MasterNodeCreationError(NodeOperationError):
-    """Raised when any error happens while adding master node."""
+class ControlPlaneNodeCreationError(NodeOperationError):
+    """Raised when any error happens while adding control plane node."""
 
 
 class WorkerNodeCreationError(NodeOperationError):

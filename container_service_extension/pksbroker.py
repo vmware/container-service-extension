@@ -278,7 +278,7 @@ class PksBroker(AbstractBroker):
         if not self.nsxt_server:
             raise CseServerError(
                 "NSX-T server details not found for PKS server selected for "
-                f"cluster : {cluster_name}. Aborting creation of cluster.")
+                f"cluster : {cluster_name}. Cancelling the cluster creation.")
 
         # this needs to be refactored
         # when num_workers==None, PKS creates however many the plan specifies

@@ -101,7 +101,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             cse_params=curr_entity)
 
         vapp = vcd_vapp.VApp(self.context.client, href=curr_entity.externalId)
-        master_node_name = curr_entity.entity.status.nodes.master.name
+        master_node_name = curr_entity.entity.status.nodes.control_plane.name
 
         LOGGER.debug(f"getting file from node {master_node_name}")
         password = vapp.get_admin_password(master_node_name)
@@ -302,7 +302,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             try:
                 add_nodes(self.context.sysadmin_client,
                           num_nodes=1,
-                          node_type=NodeType.MASTER,
+                          node_type=NodeType.CONTROL_PLANE,
                           org=org,
                           vdc=vdc,
                           vapp=vapp,
@@ -313,8 +313,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                           ssh_key=ssh_key,
                           sizing_class_name=master_sizing_class)
             except Exception as err:
-                raise e.MasterNodeCreationError("Error adding master node:",
-                                                str(err))
+                raise e.ControlPlaneNodeCreationError("Error adding master node:",
+                                                      str(err))
 
             msg = f"Initializing cluster '{cluster_name}' ({cluster_id})"
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
@@ -392,7 +392,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             self.entity_svc.update_entity(cluster_id, def_entity)
             self.entity_svc.resolve_entity(cluster_id)
-        except (e.MasterNodeCreationError, e.WorkerNodeCreationError,
+        except (e.ControlPlaneNodeCreationError, e.WorkerNodeCreationError,
                 e.NFSNodeCreationError, e.ClusterJoiningError,
                 e.ClusterInitializationError, e.ClusterOperationError) as err:
             if rollback:
@@ -458,7 +458,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     policy_name = vm.ComputePolicy.VmSizingPolicy.get('name')
                     sizing_class = compute_policy_manager.\
                         ComputePolicyManager.get_policy_display_name(policy_name)  # noqa: E501
-                if name.startswith(NodeType.MASTER):
+                if name.startswith(NodeType.CONTROL_PLANE):
                     master = def_models.Node(name=name, ip=ip,
                                              sizing_class=sizing_class)
                 elif name.startswith(NodeType.WORKER):
@@ -478,7 +478,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     nfs_nodes.append(def_models.NfsNode(name=name, ip=ip,
                                                         sizing_class=sizing_class,  # noqa: E501
                                                         exports=exports))
-            return def_models.Nodes(master=master, workers=workers,
+            return def_models.Nodes(control_plane=master, workers=workers,
                                     nfs=nfs_nodes)
         except Exception as e:
             LOGGER.error(
@@ -834,7 +834,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 node_info['ipAddress'] = vapp.get_primary_ip(vm_name)
             except Exception:
                 LOGGER.debug(f"Unable to get ip address of node {vm_name}")
-            if vm_name.startswith(NodeType.MASTER):
+            if vm_name.startswith(NodeType.CONTROL_PLANE):
                 node_info['node_type'] = 'master'
             elif vm_name.startswith(NodeType.WORKER):
                 node_info['node_type'] = 'worker'
@@ -1219,7 +1219,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             # TODO use cluster status field to get the master and worker nodes
             vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
             all_node_names = [vm.get('name') for vm in vapp.get_all_vms()]
-            master_node_names = [curr_entity.entity.status.nodes.master.name]
+            master_node_names = [curr_entity.entity.status.nodes.control_plane.name]
             worker_node_names = [worker.name for worker in curr_entity.entity.status.nodes.workers]  # noqa: E501
 
             template_name = template[LocalTemplateKey.NAME]
@@ -1252,7 +1252,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
-                                                   ScriptFile.MASTER_K8S_UPGRADE) # noqa: E501
+                                                   ScriptFile.CONTROL_PLANE_K8S_UPGRADE) # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
                 run_script_in_nodes(self.context.sysadmin_client, vapp_href,
                                     master_node_names, script)
@@ -1316,7 +1316,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
-                                                   ScriptFile.MASTER_CNI_APPLY)
+                                                   ScriptFile.CONTROL_PLANE_CNI_APPLY)
                 script = utils.read_data_file(filepath, logger=LOGGER)
                 run_script_in_nodes(self.context.sysadmin_client, vapp_href,
                                     master_node_names, script)
@@ -1448,7 +1448,7 @@ def _drain_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
 
     try:
         vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
-        master_node_names = get_node_names(vapp, NodeType.MASTER)
+        master_node_names = get_node_names(vapp, NodeType.CONTROL_PLANE)
         run_script_in_nodes(sysadmin_client, vapp_href, [master_node_names[0]],
                             script)
     except Exception as err:
@@ -1473,7 +1473,7 @@ def _uncordon_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
 
     try:
         vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
-        master_node_names = get_node_names(vapp, NodeType.MASTER)
+        master_node_names = get_node_names(vapp, NodeType.CONTROL_PLANE)
         run_script_in_nodes(sysadmin_client, vapp_href, [master_node_names[0]],
                             script)
     except Exception as err:
@@ -1519,7 +1519,7 @@ def _delete_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
 
     try:
         if are_there_workers_to_del:
-            master_node_names = get_node_names(vapp, NodeType.MASTER)
+            master_node_names = get_node_names(vapp, NodeType.CONTROL_PLANE)
             run_script_in_nodes(sysadmin_client, vapp_href,
                                 [master_node_names[0]], script)
     except Exception as err:
@@ -1604,7 +1604,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
         query_result_format=vcd_client.QueryResultFormat.ID_RECORDS,
         qfilter=query_filter,
         fields=f'metadata:{ClusterMetadataKey.CLUSTER_ID}'
-               f',metadata:{ClusterMetadataKey.MASTER_IP}'
+               f',metadata:{ClusterMetadataKey.CONTROL_PLANE_IP}'
                f',metadata:{ClusterMetadataKey.CSE_VERSION}'
                f',metadata:{ClusterMetadataKey.TEMPLATE_NAME}'
                f',metadata:{ClusterMetadataKey.TEMPLATE_REVISION}'
@@ -1623,7 +1623,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
     metadata_key_to_cluster_key = {
         ClusterMetadataKey.CLUSTER_ID: 'cluster_id',
         ClusterMetadataKey.CSE_VERSION: 'cse_version',
-        ClusterMetadataKey.MASTER_IP: 'leader_endpoint',
+        ClusterMetadataKey.CONTROL_PLANE_IP: 'leader_endpoint',
         ClusterMetadataKey.TEMPLATE_NAME: 'template_name',
         ClusterMetadataKey.TEMPLATE_REVISION: 'template_revision',
         ClusterMetadataKey.OS: 'os',
@@ -1879,7 +1879,7 @@ def get_master_ip(sysadmin_client: vcd_client.Client, vapp):
     script = "#!/usr/bin/env bash\n" \
              "ip route get 1 | awk '{print $NF;exit}'\n" \
 
-    node_names = get_node_names(vapp, NodeType.MASTER)
+    node_names = get_node_names(vapp, NodeType.CONTROL_PLANE)
     result = execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                      node_names=node_names, script=script,
                                      check_tools=False)
@@ -1900,9 +1900,9 @@ def init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
     try:
         script_filepath = ltm.get_script_filepath(template_name,
                                                   template_revision,
-                                                  ScriptFile.MASTER)
+                                                  ScriptFile.CONTROL_PLANE)
         script = utils.read_data_file(script_filepath, logger=LOGGER)
-        node_names = get_node_names(vapp, NodeType.MASTER)
+        node_names = get_node_names(vapp, NodeType.CONTROL_PLANE)
         result = execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                          node_names=node_names, script=script)
         errors = get_script_execution_errors(result)
@@ -1924,7 +1924,7 @@ def join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
     script = "#!/usr/bin/env bash\n" \
              "kubeadm token create\n" \
              "ip route get 1 | awk '{print $NF;exit}'\n"
-    node_names = get_node_names(vapp, NodeType.MASTER)
+    node_names = get_node_names(vapp, NodeType.CONTROL_PLANE)
     master_result = execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                             node_names=node_names,
                                             script=script)

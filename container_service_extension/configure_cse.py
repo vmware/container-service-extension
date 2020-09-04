@@ -2147,7 +2147,7 @@ def _create_def_entity_for_existing_clusters(
                 os=cluster['os'],
                 docker_version=cluster['docker_version'],
                 nodes=def_models.Nodes(
-                    master=def_models.Node(
+                    control_plane=def_models.Node(
                         name=cluster['master_nodes'][0]['name'],
                         ip=cluster['master_nodes'][0]['ipAddress']),
                     workers=worker_nodes,
