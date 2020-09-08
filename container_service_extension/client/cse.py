@@ -106,77 +106,12 @@ def list_templates(ctx):
                       'Tanzu)')
 @click.pass_context
 def cluster_group(ctx):
-    """Manage Kubernetes clusters.
+    """Manage Kubernetes clusters (Native, vSphere with Tanzu and Ent-PKS).
 
 \b
 Cluster names should follow the syntax for valid hostnames and can have
 up to 25 characters .`system`, `template` and `swagger*` are reserved
 words and cannot be used to name a cluster.
-\b
-Examples
-    vcd cse cluster list
-        Display clusters in vCD that are visible to the logged in user.
-\b
-    vcd cse cluster list -vdc ovdc1
-        Display clusters in vdc 'ovdc1'.
-\b
-    vcd cse cluster apply input_spec.yaml
-        Apply the configuration changes defined in the 'input_spec.yaml'
-        to create new cluster or update the existing cluster
-\b
-    vcd cse cluster create mycluster --network mynetwork
-        Create a Kubernetes cluster named 'mycluster'.
-        The cluster will have 2 worker nodes.
-        The cluster will be connected to org VDC network 'mynetwork'.
-        All VMs will use the default template.
-        On create failure, the invalid cluster is deleted.
-\b
-    vcd cse cluster create mycluster --nodes 1 --enable-nfs \\
-    --network mynetwork --template-name photon-v2 --template-revision 1 \\
-    --cpu 3 --memory 1024 --storage-profile mystorageprofile \\
-    --ssh-key ~/.ssh/id_rsa.pub --disable-rollback --vdc othervdc
-        Create a Kubernetes cluster named 'mycluster' on org VDC 'othervdc'.
-        The cluster will have 1 worker node and 1 NFS node.
-        The cluster will be connected to org VDC network 'mynetwork'.
-        All VMs will use the template 'photon-v2'.
-        Each VM in the cluster will have 3 vCPUs and 1024mb of memory.
-        All VMs will use the storage profile 'mystorageprofile'.
-        The public ssh key at '~/.ssh/id_rsa.pub' will be placed into all
-        VMs for user accessibility.
-        On create failure, cluster will be left cluster in error state for
-        troubleshooting.
-\b
-    vcd cse cluster resize mycluster --nodes 5 --network mynetwork
-        Resize the cluster to have 5 worker nodes. On resize failure,
-        returns cluster to original size.
-        Nodes will be created from server default template at default revision.
-        '--vdc' option can be used for faster command execution.
-\b
-    vcd cse cluster resize mycluster -N 10 --template-name my_template \\
-    --template-revision 2 --disable-rollback
-        Resize the cluster size to 10 worker nodes. On resize failure,
-        cluster will be left cluster in error state for troubleshooting.
-        Nodes will be created from template 'my_template' revision 2.
-\b
-    vcd cse cluster config mycluster > ~/.kube/config
-        Write cluster config details into '~/.kube/config' to manage cluster
-        using kubectl.
-        '--vdc' option can be used for faster command execution.
-\b
-    vcd cse cluster info mycluster
-        Display detailed information about cluster 'mycluster'.
-        '--vdc' option can be used for faster command execution.
-\b
-    vcd cse cluster upgrade-plan mycluster
-        Display available templates to upgrade to.
-\b
-    vcd cse cluster upgrade mycluster my_template 1
-        Upgrade cluster 'mycluster' Docker-CE, Kubernetes, and CNI to match
-        template 'my_template' at revision 1.
-\b
-    vcd cse cluster delete mycluster --yes
-        Delete cluster 'mycluster' without prompting.
-        '--vdc' option can be used for faster command execution.
     """
     pass
 
@@ -202,7 +137,16 @@ Examples
     metavar='ORG_NAME',
     help="Filter list to show clusters from a specific org")
 def list_clusters(ctx, vdc, org_name):
-    """Display clusters in vCD that are visible to the logged in user."""
+    """Display clusters in vCD that are visible to the logged in user.
+
+\b
+Examples
+    vcd cse cluster list
+        Display clusters in vCD that are visible to the logged in user.
+\b
+    vcd cse cluster list -vdc ovdc1
+        Display clusters in vdc 'ovdc1'.
+    """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
@@ -248,7 +192,14 @@ def list_clusters(ctx, vdc, org_name):
     metavar='K8-RUNTIME',
     help='Restrict cluster search to cluster kind')
 def cluster_delete(ctx, name, vdc, org, k8_runtime=None):
-    """Delete a Kubernetes cluster."""
+    """Delete a Kubernetes cluster.
+
+\b
+Example
+    vcd cse cluster delete mycluster --yes
+        Delete cluster 'mycluster' without prompting.
+        '--vdc' option can be used for faster command execution.
+    """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
@@ -372,7 +323,32 @@ def cluster_create(ctx, name, vdc, node_count, network_name,
                    storage_profile, ssh_key_file, template_name,
                    template_revision, enable_nfs, disable_rollback, org_name,
                    cpu=None, memory=None):
-    """Create a Kubernetes cluster (max name length is 25 characters)."""
+    """Create a Kubernetes cluster (max name length is 25 characters).
+
+\b
+Examples
+    vcd cse cluster create mycluster --network mynetwork
+        Create a Kubernetes cluster named 'mycluster'.
+        The cluster will have 2 worker nodes.
+        The cluster will be connected to org VDC network 'mynetwork'.
+        All VMs will use the default template.
+        On create failure, the invalid cluster is deleted.
+\b
+    vcd cse cluster create mycluster --nodes 1 --enable-nfs \\
+    --network mynetwork --template-name photon-v2 --template-revision 1 \\
+    --cpu 3 --memory 1024 --storage-profile mystorageprofile \\
+    --ssh-key ~/.ssh/id_rsa.pub --disable-rollback --vdc othervdc
+        Create a Kubernetes cluster named 'mycluster' on org VDC 'othervdc'.
+        The cluster will have 1 worker node and 1 NFS node.
+        The cluster will be connected to org VDC network 'mynetwork'.
+        All VMs will use the template 'photon-v2'.
+        Each VM in the cluster will have 3 vCPUs and 1024mb of memory.
+        All VMs will use the storage profile 'mystorageprofile'.
+        The public ssh key at '~/.ssh/id_rsa.pub' will be placed into all
+        VMs for user accessibility.
+        On create failure, cluster will be left cluster in error state for
+        troubleshooting.
+    """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         if (template_name and not template_revision) or \
@@ -521,6 +497,19 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
 
     Clusters that use native Kubernetes provider can not be sized down
     (use 'vcd cse node delete' command to do so).
+\b
+Examples
+    vcd cse cluster resize mycluster --nodes 5 --network mynetwork
+        Resize the cluster to have 5 worker nodes. On resize failure,
+        returns cluster to original size.
+        Nodes will be created from server default template at default revision.
+        '--vdc' option can be used for faster command execution.
+\b
+    vcd cse cluster resize mycluster -N 10 --template-name my_template \\
+    --template-revision 2 --disable-rollback
+        Resize the cluster size to 10 worker nodes. On resize failure,
+        cluster will be left cluster in error state for troubleshooting.
+        Nodes will be created from template 'my_template' revision 2.
     """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
@@ -568,11 +557,6 @@ def cluster_resize(ctx, cluster_name, node_count, network_name, org_name,
 
 
 @cluster_group.command('apply',
-                       help="Examples:\n\nvcd cse cluster apply input_spec.yaml"  # noqa: E501
-                       " \n\nvcd cse cluster apply --sample --native"
-                       " \n\nvcd cse cluster apply --sample --tkg"
-                       " \n\nvcd cse cluster apply --sample --tkg-plus"
-                       " \n\nvcd cse cluster apply -s -o output.yaml",
                        short_help='apply a configuration to a cluster resource'
                                   ' by filename. The resource will be created '
                                   'if it does not exist.')
@@ -728,8 +712,6 @@ def delete_nfs(ctx, cluster_name, node_name, vdc, org):
 
 
 @cluster_group.command('upgrade-plan',
-                       help="Examples:\n\nvcd cse cluster upgrade-plan my-cluster"  # noqa: E501
-                            " \n\nvcd cse cluster upgrade-plan --k8-runtime native my-cluster",  # noqa: E501
                        short_help='Display templates that the specified '
                                   'native cluster can be upgraded to')
 @click.pass_context
@@ -759,7 +741,13 @@ def delete_nfs(ctx, cluster_name, node_name, vdc, org):
     metavar='K8-RUNTIME',
     help='Restrict cluster search to cluster kind')
 def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name, k8_runtime=None):
-    """Display templates that the specified cluster can upgrade to."""
+    """Display templates that the specified cluster can upgrade to.
+
+\b
+Examples
+    vcd cse cluster upgrade-plan my-cluster
+    vcd cse cluster upgrade-plan --k8-runtime native my-cluster
+    """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
@@ -832,7 +820,12 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
                     vdc, org_name, k8_runtime=None):
     """Upgrade cluster software to specified template's software versions.
 
-    Affected software: Docker-CE, Kubernetes, CNI
+\b
+Example
+    vcd cse cluster upgrade my-cluster ubuntu-16.04_k8-1.18_weave-2.6.4 1
+        Upgrade cluster 'mycluster' Docker-CE, Kubernetes, and CNI to match
+        template 'ubuntu-16.04_k8-1.18_weave-2.6.4' at revision 1.
+        Affected software: Docker-CE, Kubernetes, CNI
     """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
@@ -859,8 +852,6 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
 
 
 @cluster_group.command('config',
-                       help="Examples:\n\nvcd cse cluster config my-cluster"
-                            " \n\nvcd cse cluster config -k native my-cluster",  # noqa: E501
                        short_help='Retrieve cluster configuration details')
 @click.pass_context
 @click.argument('name', required=True)
@@ -890,6 +881,11 @@ def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
     help='Restrict cluster search to cluster kind')
 def cluster_config(ctx, name, vdc, org, k8_runtime=None):
     """Display cluster configuration.
+
+\b
+Examples:
+    vcd cse cluster config my-cluster
+    vcd cse cluster config -k native my-cluster
 
     To write to a file: `vcd cse cluster config mycluster > ~/.kube/my_config`
     """
@@ -947,7 +943,14 @@ def cluster_config(ctx, name, vdc, org, k8_runtime=None):
     metavar='K8-RUNTIME',
     help='Restrict cluster search to cluster kind')
 def cluster_info(ctx, name, org, vdc, k8_runtime=None):
-    """Display info about a Kubernetes cluster."""
+    """Display info about a Kubernetes cluster.
+
+\b
+Example
+    vcd cse cluster info mycluster
+        Display detailed information about cluster 'mycluster'.
+        '--vdc' option can be used for faster command execution.
+    """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
@@ -976,34 +979,6 @@ def node_group(ctx):
 
 These commands will only work with clusters created by native
 Kubernetes provider.
-
-\b
-Examples
-    vcd cse node create mycluster --network mynetwork
-        Add 1 node to vApp named 'mycluster' on vCD.
-        The node will be connected to org VDC network 'mynetwork'.
-        The VM will use the default template.
-\b
-    vcd cse node create mycluster --nodes 2 --enable-nfs --network mynetwork \\
-    --template-name photon-v2 --template-revision 1 --cpu 3 --memory 1024 \\
-    --storage-profile mystorageprofile --ssh-key ~/.ssh/id_rsa.pub \\
-        Add 2 nfs nodes to vApp named 'mycluster' on vCD.
-        The nodes will be connected to org VDC network 'mynetwork'.
-        All VMs will use the template 'photon-v2'.
-        Each VM will have 3 vCPUs and 1024mb of memory.
-        All VMs will use the storage profile 'mystorageprofile'.
-        The public ssh key at '~/.ssh/id_rsa.pub' will be placed into all
-        VMs for user accessibility.
-\b
-    vcd cse node list mycluster
-        Displays nodes in 'mycluster'.
-\b
-    vcd cse node info mycluster node-xxxx
-        Display detailed information about node 'node-xxxx' in cluster
-        'mycluster'.
-\b
-    vcd cse node delete mycluster node-xxxx --yes
-        Delete node 'node-xxxx' in cluster 'mycluster' without prompting.
     """
     pass
 
@@ -1031,7 +1006,14 @@ Examples
     metavar='VDC_NAME',
     help='Restrict cluster search to specified org VDC')
 def node_info(ctx, cluster_name, node_name, org_name, vdc):
-    """Display info about a node in a native Kubernetes provider cluster."""
+    """Display info about a node in a native Kubernetes provider cluster.
+
+\b
+Example
+    vcd cse node info mycluster node-xxxx
+        Display detailed information about node 'node-xxxx' in cluster
+        'mycluster'.
+    """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
@@ -1147,7 +1129,22 @@ def node_info(ctx, cluster_name, node_name, org_name, vdc):
 def create_node(ctx, cluster_name, node_count, org, vdc, cpu, memory,
                 network_name, storage_profile, ssh_key_file, template_name,
                 template_revision, enable_nfs, disable_rollback):
-    """Add node(s) to a cluster that uses native Kubernetes provider."""
+    """Add node(s) to a cluster that uses native Kubernetes provider.
+
+\b
+Example
+    vcd cse node create mycluster --nodes 2 --enable-nfs --network mynetwork \\
+    --template-name photon-v2 --template-revision 1 --cpu 3 --memory 1024 \\
+    --storage-profile mystorageprofile --ssh-key ~/.ssh/id_rsa.pub \\
+        Add 2 nfs nodes to vApp named 'mycluster' on vCD.
+        The nodes will be connected to org VDC network 'mynetwork'.
+        All VMs will use the template 'photon-v2'.
+        Each VM will have 3 vCPUs and 1024mb of memory.
+        All VMs will use the storage profile 'mystorageprofile'.
+        The public ssh key at '~/.ssh/id_rsa.pub' will be placed into all
+        VMs for user accessibility.
+
+    """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         if (template_name and not template_revision) or \
@@ -1206,7 +1203,14 @@ def create_node(ctx, cluster_name, node_count, org, vdc, cpu, memory,
     metavar='VDC_NAME',
     help='Restrict cluster search to specified org VDC')
 def list_nodes(ctx, name, org, vdc):
-    """Display nodes of a cluster that uses native Kubernetes provider."""
+    """Display nodes of a cluster that uses native Kubernetes provider.
+
+\b
+Example
+    vcd cse node list mycluster
+        Displays nodes in 'mycluster'.
+
+    """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
@@ -1251,7 +1255,13 @@ def list_nodes(ctx, name, org, vdc):
     metavar='ORG_NAME',
     help='Restrict cluster search to specified org')
 def delete_nodes(ctx, cluster_name, node_names, org, vdc):
-    """Delete node(s) in a cluster that uses native Kubernetes provider."""
+    """Delete node(s) in a cluster that uses native Kubernetes provider.
+
+\b
+Example
+    vcd cse node delete mycluster node-xxxx --yes
+        Delete node 'node-xxxx' in cluster 'mycluster' without prompting.
+    """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
@@ -1367,23 +1377,6 @@ def ovdc_group(ctx):
 
 All commands execute in the context of user's currently logged-in
 organization. Use a different organization by using the '--org' option.
-
-
-\b
-Examples
-    vcd cse ovdc enable ovdc1
-        Enable ovdc1 for native cluster deployment.
-
-\b
-    vcd cse ovdc disable ovdc3
-        Disable ovdc3 for any further native cluster deployments.
-\b
-    vcd cse ovdc info ovdc1
-        Display detailed information about ovdc 'ovdc1'.
-\b
-    vcd cse ovdc list
-        Display ovdcs in vCD that are visible to the logged in user.
-        vcd cse ovdc list
     """
     pass
 
@@ -1393,7 +1386,14 @@ Examples
                                'to the logged in user')
 @click.pass_context
 def list_ovdcs(ctx):
-    """Display org VDCs in vCD that are visible to the logged in user."""
+    """Display org VDCs in vCD that are visible to the logged in user.
+
+\b
+Example
+    vcd cse ovdc list
+        Display ovdcs in vCD that are visible to the logged in user.
+        vcd cse ovdc list
+    """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
@@ -1435,7 +1435,13 @@ def list_ovdcs(ctx):
     help="Enable OVDC for k8 runtime TKG plus"
 )
 def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus=None):
-    """Set Kubernetes provider for an org VDC."""
+    """Set Kubernetes provider for an org VDC.
+
+\b
+Example
+    vcd cse ovdc enable ovdc1
+        Enable ovdc1 for native cluster deployment.
+    """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     if not (enable_native or enable_tkg_plus):
         msg = "Please specify at least one k8 runtime to enable"
@@ -1507,7 +1513,14 @@ def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus=None):
 def ovdc_disable(ctx, ovdc_name, org_name,
                  disable_native, disable_tkg_plus=None,
                  remove_cp_from_vms_on_disable=False):
-    """Disable Kubernetes cluster deployment for an org VDC."""
+    """Disable Kubernetes cluster deployment for an org VDC.
+
+\b
+Example
+    vcd cse ovdc disable ovdc3
+        Disable ovdc3 for any further native cluster deployments.
+
+    """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     if not (disable_native or disable_tkg_plus):
         msg = "Please specify at least one k8 runtime to disable"
@@ -1555,7 +1568,14 @@ def ovdc_disable(ctx, ovdc_name, org_name,
     metavar='ORG_NAME',
     help="Org to use. Defaults to currently logged-in org")
 def ovdc_info(ctx, ovdc_name, org_name):
-    """Display information about Kubernetes provider for an org VDC."""
+    """Display information about Kubernetes provider for an org VDC.
+
+\b
+Example
+    vcd cse ovdc info ovdc1
+        Display detailed information about ovdc 'ovdc1'.
+
+    """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
