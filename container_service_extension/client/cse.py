@@ -674,9 +674,6 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
         org_name = None
         if k8_runtime == shared_constants.ClusterEntityKind.TKG.value:
-            from container_service_extension.utils import ConsoleMessagePrinter
-            cb = ConsoleMessagePrinter()
-            cb.general(f"val for org: {org}")
             org_name = org
             if not org:
                 org_name = ctx.obj['profiles'].get('org_in_use')
