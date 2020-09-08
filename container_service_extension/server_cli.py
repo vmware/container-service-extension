@@ -218,10 +218,10 @@ def cli(ctx):
         return
 
 
-@cli.group(short_help='Manage native Kubernetes provider templates')
+@cli.group(short_help='Manage native Kubernetes runtime templates')
 @click.pass_context
 def template(ctx):
-    """Manage native Kubernetes provider templates.
+    """Manage native Kubernetes runtime templates.
 
 \b
     Examples, by default, following commands expect an encrypted CSE
@@ -229,13 +229,13 @@ def template(ctx):
     the flag --skip-config-decryption.
 \b
         cse template list -c encrypted-config.yaml
-            Display all templates, including that are currently in the local
+            Display all templates, including the ones that are currently in the local
             catalog, and the ones that are defined in remote template repository.
             'encrypted-config.yaml' will be decrypted with the password received
             from user via a console prompt.
 \b
         cse template list -c config.yaml --skip-config-decryption
-            Display all templates, including that are currently in the local
+            Display all templates, including the ones that are currently in the local
             catalog, and the ones that are defined in remote template repository.
 \b
         cse template list -c config.yaml --display local --skip-config-decryption
@@ -789,7 +789,7 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
 
 @template.command(
     'list',
-    short_help='List Kubernetes templates')
+    short_help='List native Kubernetes templates')
 @click.pass_context
 @click.option(
     '-c',
@@ -969,10 +969,10 @@ def list_template(ctx, config_file_path, skip_config_decryption,
 
 
 @template.command('install',
-                  short_help="Create Kubernetes templates listed in remote "
-                             "template repository. Use '*' for TEMPLATE_NAME "
-                             "and TEMPLATE_REVISION to install all listed "
-                             "templates.")
+                  short_help="Create native Kubernetes templates listed in "
+                             "remote template repository. Use '*' for "
+                             "TEMPLATE_NAME and TEMPLATE_REVISION to install "
+                             "all listed templates.")
 @click.pass_context
 @click.argument('template_name', metavar='TEMPLATE_NAME', default='*')
 @click.argument('template_revision', metavar='TEMPLATE_REVISION', default='*')
