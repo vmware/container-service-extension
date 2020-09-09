@@ -66,7 +66,7 @@
                         "properties": {
                             "count": {
                                 "type": "integer",
-                                "description":"Single master node is supported; multi-master is not yet supported.",
+                                "description":"Single control plane node is supported; More than single control plane node is not yet supported.",
                                 "maximum": 1,
                                 "minimum": 1
                             },
@@ -164,7 +164,7 @@
                     },
                     "nodes": {
                         "type": "object",
-                        "required": ["master"],
+                        "required": ["control_plane"],
                         "properties": {
                             "control_plane": {
                                 "$ref": "#/definitions/node"
