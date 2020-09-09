@@ -13,6 +13,7 @@ from container_service_extension.client import pks
 from container_service_extension.client.cluster import Cluster
 import container_service_extension.client.command_filter as cmd_filter
 import container_service_extension.client.constants as cli_constants
+from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
 from container_service_extension.client.ovdc import Ovdc
 import container_service_extension.client.sample_generator as client_sample_generator  # noqa: E501
 from container_service_extension.client.system import System
@@ -680,6 +681,45 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
 
         cluster = Cluster(client, k8_runtime=cluster_config.get('kind'))  # noqa: E501
         result = cluster.apply(cluster_config, org=org_name)
+        stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
+    except Exception as e:
+        stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
+
+
+@cluster_group.command('delete-nfs',
+                       help="Examples:\n\nvcd cse cluster delete-nfs mycluster nfs-uitj",  # noqa: E501
+                       short_help='Delete nfs node from Native Kubernetes cluster')  # noqa: E501
+@click.pass_context
+@click.argument('cluster_name', required=True)
+@click.argument('node_name', required=True)
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    metavar='VDC_NAME',
+    help='Restrict cluster search to specified org VDC')
+@click.option(
+    '-o',
+    '--org',
+    'org',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help='Restrict cluster search to specified org')
+def delete_nfs(ctx, cluster_name, node_name, vdc, org):
+    """Remove nfs node in a cluster that uses native Kubernetes provider."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
+    try:
+        client_utils.cse_restore_session(ctx)
+        client = ctx.obj['client']
+        if not client.is_sysadmin() and org is None:
+            org = ctx.obj['profiles'].get('org_in_use')
+        cluster = NativeClusterApi(client)
+        result = cluster.delete_nfs_node(cluster_name, node_name, org=org, vdc=vdc)  # noqa: E501
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
