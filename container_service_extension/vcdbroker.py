@@ -864,8 +864,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
             task = vapp.set_multiple_metadata(tags)
             self.context.client.get_task_monitor().wait_for_status(task)
 
-            msg = f"Creating control plane node for cluster '{cluster_name}' " \
-                  f"({cluster_id})"
+            msg = f"Creating control plane node for cluster '{cluster_name}'" \
+                  f" ({cluster_id})"
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
@@ -886,8 +886,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
                            storage_profile=storage_profile_name,
                            ssh_key=ssh_key)
             except Exception as err:
-                raise e.ControlPlaneNodeCreationError("Error adding control plane node:",
-                                                str(err))
+                raise e.ControlPlaneNodeCreationError(
+                    "Error adding control plane node:",
+                    str(err))
 
             msg = f"Initializing cluster '{cluster_name}' ({cluster_id})"
             LOGGER.debug(msg)
@@ -897,7 +898,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                           vapp,
                           template[LocalTemplateKey.NAME],
                           template[LocalTemplateKey.REVISION])
-            control_plane_ip = _get_control_plane_ip(self.context.sysadmin_client, vapp)
+            control_plane_ip = _get_control_plane_ip(self.context.sysadmin_client, vapp)  # noqa: E501
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      control_plane_ip)
             self.context.client.get_task_monitor().wait_for_status(task)
@@ -1152,7 +1153,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
     def _upgrade_cluster_async(self, *args, cluster, template):
         try:
             cluster_name = cluster['name']
-            control_plane_node_names = [n['name'] for n in cluster['master_nodes']]
+            control_plane_node_names = [n['name'] for n in cluster['master_nodes']]  # noqa: E501
             worker_node_names = [n['name'] for n in cluster['nodes']]
             all_node_names = control_plane_node_names + worker_node_names
             vapp_href = cluster['vapp_href']
@@ -1178,10 +1179,10 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 _drain_nodes(self.context.sysadmin_client, vapp_href,
-                             control_plane_node_names, cluster_name=cluster_name)
+                             control_plane_node_names, cluster_name=cluster_name)  # noqa: E501
 
                 msg = f"Upgrading Kubernetes ({c_k8s} -> {t_k8s}) " \
-                      f"incontrol planenode {control_plane_node_names}"
+                      f"in control planenode {control_plane_node_names}"
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(
@@ -1192,7 +1193,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 _run_script_in_nodes(self.context.sysadmin_client, vapp_href,
                                      control_plane_node_names, script)
 
-                msg = f"Uncordoningcontrol planenode {control_plane_node_names}"
+                msg = f"Uncordoning control plane node {control_plane_node_names}"  # noqa: E501
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 _uncordon_nodes(self.context.sysadmin_client,
@@ -1258,7 +1259,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
-                                                   ScriptFile.CONTROL_PLANE_CNI_APPLY)
+                                                   ScriptFile.CONTROL_PLANE_CNI_APPLY)  # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
                 _run_script_in_nodes(self.context.sysadmin_client, vapp_href,
                                      control_plane_node_names, script)
@@ -1360,7 +1361,7 @@ def _drain_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
 
     try:
         vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
-        control_plane_node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
+        control_plane_node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)  # noqa: E501
         _run_script_in_nodes(sysadmin_client,
                              vapp_href,
                              [control_plane_node_names[0]],
@@ -1387,7 +1388,7 @@ def _uncordon_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
 
     try:
         vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
-        control_plane_node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
+        control_plane_node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)  # noqa: E501
         _run_script_in_nodes(sysadmin_client,
                              vapp_href,
                              [control_plane_node_names[0]],
@@ -1434,7 +1435,7 @@ def _delete_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
     vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
     try:
         if are_there_workers_to_del:
-            control_plane_node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
+            control_plane_node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)  # noqa: E501
             _run_script_in_nodes(sysadmin_client, vapp_href,
                                  [control_plane_node_names[0]], script)
     except Exception as err:
@@ -1826,8 +1827,9 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
                                       check_tools=False)
     errors = _get_script_execution_errors(result)
     if errors:
-        raise e.ScriptExecutionError(f"Get control plane IP script execution failed "
-                                     f"on control plane node {node_names}:{errors}")
+        raise e.ScriptExecutionError(f"Get control plane IP script execution "
+                                     f"failed on control plane node"
+                                     f" {node_names}:{errors}")
     control_plane_ip = result[0][1].content.decode().split()[0]
     LOGGER.debug(f"Retrieved control plane IP for vapp: "
                  f"{vapp.get_resource().get('name')}, ip: {control_plane_ip}")
@@ -1872,7 +1874,8 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
     errors = _get_script_execution_errors(control_plane_result)
     if errors:
         raise e.ScriptExecutionError(f"Join cluster script execution failed "
-                                     f"on control plane node {node_names}:{errors}")
+                                     f"on control plane node "
+                                     f"{node_names}:{errors}")
     init_info = control_plane_result[0][1].content.decode().split()
 
     node_names = _get_node_names(vapp, NodeType.WORKER)
