@@ -219,7 +219,7 @@ class NativeClusterApi:
         cluster_def_entity = def_models.DefEntity(**response_processor.process_response(response))  # noqa: E501
         return client_utils.construct_task_console_message(cluster_def_entity.entity.status.task_href)  # noqa: E501
 
-    def apply(self, cluster_config):
+    def apply(self, cluster_config, **kwargs):
         """Apply the configuration either to create or update the cluster.
 
         :param dict cluster_config: cluster configuration information
