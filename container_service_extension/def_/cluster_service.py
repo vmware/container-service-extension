@@ -1318,7 +1318,7 @@ def _get_nodes_details(sysadmin_client, vapp):
                     ComputePolicyManager.get_policy_display_name(policy_name)
             if vm_name.startswith(NodeType.CONTROL_PLANE):
                 control_plane = def_models.Node(name=vm_name, ip=ip,
-                                         sizing_class=sizing_class)
+                                                sizing_class=sizing_class)
             elif vm_name.startswith(NodeType.WORKER):
                 workers.append(
                     def_models.Node(name=vm_name, ip=ip,
@@ -1676,8 +1676,9 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
                                       check_tools=False)
     errors = _get_script_execution_errors(result)
     if errors:
-        raise e.ScriptExecutionError(f"Get control plane IP script execution failed "
-                                     f"on control plane node {node_names}:{errors}")
+        raise e.ScriptExecutionError(f"Get control plane IP script execution "
+                                     f"failed on control plane node "
+                                     f"{node_names}:{errors}")
     control_plane_ip = result[0][1].content.decode().split()[0]
     LOGGER.debug(f"Retrieved control plane IP for vapp: "
                  f"{vapp.get_resource().get('name')}, ip: {control_plane_ip}")
@@ -1717,8 +1718,8 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
              "ip route get 1 | awk '{print $NF;exit}'\n"
     node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
     control_plane_result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
-                                             node_names=node_names,
-                                             script=script)
+                                                    node_names=node_names,
+                                                    script=script)
     errors = _get_script_execution_errors(control_plane_result)
     if errors:
         raise e.ClusterJoiningError(

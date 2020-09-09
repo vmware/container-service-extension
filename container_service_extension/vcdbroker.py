@@ -777,7 +777,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         # check that control plane node is not in specified nodes
         for node in node_names_list:
             if node.startswith(NodeType.CONTROL_PLANE):
-                raise e.CseServerError(f"Can't delete control plane node: '{node}'.")
+                raise e.CseServerError(f"Can't delete control plane node: '{node}'.")  # noqa: E501
 
         cluster = _get_cluster(self.context.client, cluster_name,
                                org_name=validated_data[RequestKey.ORG_NAME],
@@ -1869,8 +1869,8 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
              "ip route get 1 | awk '{print $NF;exit}'\n"
     node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
     control_plane_result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
-                                             node_names=node_names,
-                                             script=script)
+                                                    node_names=node_names,
+                                                    script=script)
     errors = _get_script_execution_errors(control_plane_result)
     if errors:
         raise e.ScriptExecutionError(f"Join cluster script execution failed "
