@@ -70,15 +70,16 @@ class DefEntityService():
         :param DefEntity entity: Defined entity instance
         :return: None
         """
+        additional_headers = {}
         if tenant_org_context:
-            self._cloudapi_client.set_header(key='x-vmware-vcloud-tenant-context',  # noqa: E501
-                                             value=tenant_org_context)
+            additional_headers['x-vmware-vcloud-tenant-context'] = tenant_org_context
         self._cloudapi_client.do_request(
             method=RequestMethod.POST,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/"
                                        f"{entity_type_id}",
-            payload=asdict(entity))
+            payload=asdict(entity),
+            additional_headers=additional_headers)
 
     @handle_entity_service_exception
     def list_entities_by_entity_type(self, vendor: str, nss: str, version: str,

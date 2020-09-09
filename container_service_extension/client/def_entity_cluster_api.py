@@ -100,7 +100,7 @@ class DefEntityClusterApi:
                 logger.CLIENT_LOGGER.debug(f"No rights present to fetch native clusters: {e}")
                 
                 has_native_rights = False
-        if not (has_tkg_rights and has_native_rights):
+        if not (has_tkg_rights or has_native_rights):
             raise Exception("Logged in user doesn't have Native cluster rights"
                             " or TKG rights. Please contact administrator.")
         return clusters
