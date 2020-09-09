@@ -72,7 +72,7 @@ class DefEntityService():
         """
         additional_headers = {}
         if tenant_org_context:
-            additional_headers['x-vmware-vcloud-tenant-context'] = tenant_org_context
+            additional_headers['x-vmware-vcloud-tenant-context'] = tenant_org_context  # noqa: E501
         self._cloudapi_client.do_request(
             method=RequestMethod.POST,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,

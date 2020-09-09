@@ -180,12 +180,13 @@ class ClusterService(abstract_broker.AbstractBroker):
         # No need to set org context for non sysadmin users
         org_context = None
         if self.context.client.is_sysadmin():
-            org_resource = vcd_utils.get_org(self.context.client, org_name=def_entity.entity.metadata.org_name)
+            org_resource = vcd_utils.get_org(self.context.client,
+                                             org_name=def_entity.entity.metadata.org_name)  # noqa: E501
             org_context = org_resource.href.split('/')[-1]
         self.entity_svc. \
             create_entity(def_utils.get_registered_def_entity_type().id,
-                        entity=def_entity,
-                        tenant_org_context=org_context)
+                          entity=def_entity,
+                          tenant_org_context=org_context)
         self.context.is_async = True
         def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)
         telemetry_handler.record_user_action_details(

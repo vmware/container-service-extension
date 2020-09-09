@@ -2158,7 +2158,7 @@ def _create_def_entity_for_existing_clusters(
                 cluster_name=cluster['name']),
             api_version="")
 
-        org_resource = vcd_utils.get_org(self._client, org_name=org)
+        org_resource = vcd_utils.get_org(client, org_name=cluster['org_name'])
         org_id = org_resource.href.split('/')[-1]
         def_entity = def_models.DefEntity(entity=cluster_entity)
         entity_svc.create_entity(native_entity_type.id, entity=def_entity,
