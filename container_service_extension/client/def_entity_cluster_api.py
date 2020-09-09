@@ -66,7 +66,10 @@ class DefEntityClusterApi:
             clusters += self._tkgCluster.list_tkg_clusters(vdc=vdc, org=org)
         except tkg_rest.ApiException as e:
             if e.status not in [requests.codes.FORBIDDEN, requests.codes.UNAUTHORIZED]:  # noqa: E501
-                raise
+                logger.CLIENT_LOGGER.error(f"Failed to fetch TKG clusters: {e}")
+                #TODO for debug: VCD is raising 404 at this point hence uncommenting
+                # raise
+            logger.CLIENT_LOGGER.debug(f"No rights present to fetch TKG clusters: {e}")
             has_tkg_rights = False
         if not client_utils.is_cli_for_tkg_only():
             filters = client_utils.construct_filters(org=org, vdc=vdc)
@@ -92,7 +95,10 @@ class DefEntityClusterApi:
                     clusters.append(cluster)
             except requests.exceptions.HTTPError as e:
                 if e.response.status_code not in [requests.codes.FORBIDDEN, requests.codes.UNAUTHORIZED]:  # noqa: E501
+                    logger.CLIENT_LOGGER.error(f"Failed to fetch native clusters: {e}")
                     raise
+                logger.CLIENT_LOGGER.debug(f"No rights present to fetch native clusters: {e}")
+                
                 has_native_rights = False
         if not (has_tkg_rights and has_native_rights):
             raise Exception("Logged in user doesn't have Native cluster rights"

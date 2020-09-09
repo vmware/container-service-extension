@@ -62,13 +62,17 @@ class DefEntityService():
         self._cloudapi_client = cloudapi_client
 
     @handle_entity_service_exception
-    def create_entity(self, entity_type_id: str, entity: DefEntity) -> None:
+    def create_entity(self, entity_type_id: str, entity: DefEntity,
+                      tenant_org_context: str = None) -> None:
         """Create defined entity instance of an entity type.
 
         :param str entity_type_id: ID of the DefEntityType
         :param DefEntity entity: Defined entity instance
         :return: None
         """
+        if tenant_org_context:
+            self._cloudapi_client.set_header(key='x-vmware-vcloud-tenant-context',  # noqa: E501
+                                             value=tenant_org_context)
         self._cloudapi_client.do_request(
             method=RequestMethod.POST,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,

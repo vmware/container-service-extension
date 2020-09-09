@@ -51,6 +51,9 @@ class CloudApiClient(object):
         if self._last_response:
             return self._last_response.headers
 
+    def set_header(self, key: str, value: str):
+        self._headers[key] = value
+
     def do_request(self,
                    method,
                    cloudapi_version=None,
