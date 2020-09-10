@@ -1,5 +1,44 @@
 <h1>Navigation</h1>
+<select id="cse_version" onchange="setnew()">
+    <option value="cse2_6" selected=false>CSE 2.6</option>
+    <option value="cse3_0" selected=false>CSE 3.0</option>
+</select>
+<script>
+  function setnew() {
+    cse_version = document.getElementById("cse_version").value;
+    window.location.href = '../' + cse_version +'/INTRO.html';
+  }
+</script>
 <ol>
+  {% for item in site.data.navigation %}
+    <li {% if page.url contains item.subdir %}class="current"{% endif %}>
+      {% if page.url contains item.subdir && page.url contains item.link }
+        <a href="." class="current"> {{item.name}} </a>
+      {% elsif page.url contains item.subdir %}
+        <a href="{{ item.link }}">{{item.name}}</a>
+      {% else %}
+        <a href="../{{ item.subdir }}/{{ item.link }}">{{item.name}}</a>
+      {% endif %}
+      {% if page.url contains item.subdir %}
+        <ol>
+        {% for subitem in item.subtoc %}
+          <li {% if page.url contains subitem.link %}class="current"{% endif %}>
+            <a href="{{ subitem.link }}">{{ subitem.name }}</a>
+          </li>
+          {% if page.url contains subitem.link %}
+          <ol>
+            {% for topic in subitem.subtoc %}
+              <li><a href="{{ subitem.link }}#{{ topic.sublink }}">{{ topic.name }}</a></li>
+            {% endfor %}
+          </ol>
+          {% endif %}
+        {% endfor %}
+        </ol>
+      {% endif %}
+    </li>
+  {% endfor %}
+</ol>
+<!--ol>
   {% for item in site.data.navigation %}
     <li {% if page.url contains item.link %}class="current"{% endif %}>
     <a href="{{ item.link }}" {% if page.url == item.link %}class="current"{% endif %}>{{ item.name }}</a>
@@ -12,4 +51,4 @@
     {% endif %}
     </li>
   {% endfor %}
-</ol>
+</ol-->
