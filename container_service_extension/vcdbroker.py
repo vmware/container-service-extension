@@ -1182,7 +1182,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                              control_plane_node_names, cluster_name=cluster_name)  # noqa: E501
 
                 msg = f"Upgrading Kubernetes ({c_k8s} -> {t_k8s}) " \
-                      f"in control planenode {control_plane_node_names}"
+                      f"in control plane node {control_plane_node_names}"
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(
@@ -1254,7 +1254,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
             if upgrade_cni:
                 msg = f"Applying CNI ({cluster['cni']} {c_cni} -> {t_cni}) " \
-                      f"incontrol planenode {control_plane_node_names}"
+                      f"incontrol plane node {control_plane_node_names}"
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
@@ -1816,7 +1816,7 @@ def _wait_for_guest_execution_callback(message, exception=None):
 def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
 
-    LOGGER.debug(f"Getting control planeIP for vapp: "
+    LOGGER.debug(f"Getting control plane IP for vapp: "
                  f"{vapp.get_resource().get('name')}")
     script = "#!/usr/bin/env bash\n" \
              "ip route get 1 | awk '{print $NF;exit}'\n" \
