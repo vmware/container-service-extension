@@ -190,7 +190,8 @@ Examples
     default=None,
     required=False,
     metavar='K8-RUNTIME',
-    help='Restrict cluster search to cluster kind')
+    help='Restrict cluster search to cluster kind; Supported only for'
+         ' vcd api version >= 35')
 def cluster_delete(ctx, name, vdc, org, k8_runtime=None):
     """Delete a Kubernetes cluster.
 
@@ -199,6 +200,8 @@ Example
     vcd cse cluster delete mycluster --yes
         Delete cluster 'mycluster' without prompting.
         '--vdc' option can be used for faster command execution.
+\b
+
     """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
@@ -739,14 +742,18 @@ def delete_nfs(ctx, cluster_name, node_name, vdc, org):
     default=None,
     required=False,
     metavar='K8-RUNTIME',
-    help='Restrict cluster search to cluster kind')
+    help='Restrict cluster search to cluster kind; Supported only '
+         'for vcd api version >= 35.')
 def cluster_upgrade_plan(ctx, cluster_name, vdc, org_name, k8_runtime=None):
     """Display templates that the specified cluster can upgrade to.
 
 \b
 Examples
     vcd cse cluster upgrade-plan my-cluster
+    (Supported only for vcd api version < 35)
+\b
     vcd cse cluster upgrade-plan --k8-runtime native my-cluster
+    (Supported only for vcd api version >= 35)
     """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
@@ -785,7 +792,9 @@ Examples
 
 @cluster_group.command('upgrade',
                        help="Examples:\n\nvcd cse cluster upgrade my-cluster ubuntu-16.04_k8-1.18_weave-2.6.4 1"  # noqa: E501
-                            "\n\nvcd cse cluster upgrade -k native my-cluster ubuntu-16.04_k8.. 2",  # noqa: E501
+                            "\n(Supported only for vcd api version < 35)"
+                            "\n\nvcd cse cluster upgrade -k native mcluster photon-v2_k8-1.14_weave-2.5.2 2"  # noqa: E501
+                            "\n(Supported only for vcd api version >= 35)",
                        short_help="Upgrade native cluster software to "
                                   "specified template's software versions")
 @click.pass_context
@@ -815,7 +824,8 @@ Examples
     default=None,
     required=False,
     metavar='K8-RUNTIME',
-    help='Restrict cluster search to cluster kind')
+    help='Restrict cluster search to cluster kind; Supported '
+         'only for vcd api version >= 35.')
 def cluster_upgrade(ctx, cluster_name, template_name, template_revision,
                     vdc, org_name, k8_runtime=None):
     """Upgrade cluster software to specified template's software versions.
@@ -878,14 +888,17 @@ Example
     default=None,
     required=False,
     metavar='K8-RUNTIME',
-    help='Restrict cluster search to cluster kind')
+    help='Restrict cluster search to cluster kind; Supported only for vcd api version >= 35')  # noqa: E501
 def cluster_config(ctx, name, vdc, org, k8_runtime=None):
     """Display cluster configuration.
 
 \b
 Examples:
     vcd cse cluster config my-cluster
+    (Supported only for vcd api version < 35)
+\b
     vcd cse cluster config -k native my-cluster
+    (Supported only for vcd api version >= 35)
 
     To write to a file: `vcd cse cluster config mycluster > ~/.kube/my_config`
     """
@@ -941,7 +954,7 @@ Examples:
     default=None,
     required=False,
     metavar='K8-RUNTIME',
-    help='Restrict cluster search to cluster kind')
+    help='Restrict cluster search to cluster kind; Supported only for vcd api version >=35')  # noqa: E501
 def cluster_info(ctx, name, org, vdc, k8_runtime=None):
     """Display info about a Kubernetes cluster.
 
@@ -978,7 +991,7 @@ def node_group(ctx):
     """Manage nodes of native clusters.
 
 These commands will only work with clusters created by native
-Kubernetes provider.
+Kubernetes runtime.
     """
     pass
 
@@ -1439,8 +1452,13 @@ def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus=None):
 
 \b
 Example
+    vcd cse ovdc enable --native --org org1 ovdc1
+        Enable native cluster deployment in ovdc1 of org1.
+        Supported only for vcd api version >= 35.
+\b
     vcd cse ovdc enable ovdc1
         Enable ovdc1 for native cluster deployment.
+        Supported only for vcd api version < 35.
     """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     if not (enable_native or enable_tkg_plus):
@@ -1516,9 +1534,19 @@ def ovdc_disable(ctx, ovdc_name, org_name,
     """Disable Kubernetes cluster deployment for an org VDC.
 
 \b
-Example
+Examples
+    vcd cse ovdc disable --native --org org1 ovdc1
+        Disable native cluster deployment in ovdc1 of org1.
+        Supported only for vcd api version >= 35.
+\b
+    vcd cse ovdc disable --native --org org1 --force ovdc1
+        Force disable native cluster deployment in ovdc1 of org1.
+        Replaces CSE policies with VCD default policies.
+        Supported only for vcd api version >= 35.
+\b
     vcd cse ovdc disable ovdc3
         Disable ovdc3 for any further native cluster deployments.
+        Supported only for vcd api version < 35.
 
     """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
