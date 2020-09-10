@@ -1439,8 +1439,8 @@ def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus=None):
 
 \b
 Example
-    vcd cse ovdc enable ovdc1
-        Enable ovdc1 for native cluster deployment.
+    vcd cse ovdc enable --native --org org1 ovdc1
+        Enable native cluster deployment in ovdc1 of org1.
     """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     if not (enable_native or enable_tkg_plus):
@@ -1516,10 +1516,13 @@ def ovdc_disable(ctx, ovdc_name, org_name,
     """Disable Kubernetes cluster deployment for an org VDC.
 
 \b
-Example
-    vcd cse ovdc disable ovdc3
-        Disable ovdc3 for any further native cluster deployments.
-
+Examples
+    vcd cse ovdc disable --native --org org1 ovdc1
+        Disable native cluster deployment in ovdc1 of org1.
+\b
+    vcd cse ovdc disable --native --org org1 --force ovdc1
+        Force disable native cluster deployment in ovdc1 of org1.
+        Replaces CSE policies with VCD default policies.
     """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     if not (disable_native or disable_tkg_plus):
