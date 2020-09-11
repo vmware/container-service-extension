@@ -1,21 +1,15 @@
 <h1>Navigation</h1>
-<select id="cse_version" onchange="setnew()">
-    <option value="cse2_6" selected=false>CSE 2.6</option>
-    <option value="cse3_0" selected=false>CSE 3.0</option>
-</select>
 <script>
-  function setnew() {
-    cse_version = document.getElementById("cse_version").value;
-    window.location.href = '../' + cse_version +'/INTRO.html';
+  cseDirectoryPrefix = 'cse'
+  if (window.location.href.indexOf('cse') == -1) {
+    window.location.href = "cse3_0/INTRO.html"
   }
 </script>
 <ol>
   {% for item in site.data.navigation %}
     <li {% if page.url contains item.subdir %}class="current"{% endif %}>
-      {% if page.url contains item.subdir && page.url contains item.link }
-        <a href="." class="current"> {{item.name}} </a>
-      {% elsif page.url contains item.subdir %}
-        <a href="{{ item.link }}">{{item.name}}</a>
+      {% if page.url contains item.subdir %}
+        <a href="{{ item.link }}" class="current">{{item.name}}</a>
       {% else %}
         <a href="../{{ item.subdir }}/{{ item.link }}">{{item.name}}</a>
       {% endif %}
