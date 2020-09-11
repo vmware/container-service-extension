@@ -3,7 +3,7 @@ layout: default
 title: Introduction
 ---
 
-# Introduction for 2.6
+# Introduction
 <a name="overview"></a>
 ## OverviewChanged
 

@@ -4,7 +4,7 @@ title: Contributing Guide
 sidebar:
   nav: "contributing"
 ---
-# Contributing Guide for 3.0
+# Contributing Guide
 
 <a name="overview"></a>
 ## Overview
