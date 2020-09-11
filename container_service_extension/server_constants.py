@@ -63,7 +63,8 @@ MQTT_MIN_API_VERSION = 35.0
 MQTT_TOKEN_NAME = "mqttCseToken"
 TOKEN_PATH = 'tokens'
 
-# Message Consumer Thread
+# Name of single Message Consumer Thread, which passes jobs to a
+# Thread Pool Executor
 MESSAGE_CONSUMER_THREAD = 'MessageConsumer'
 
 
