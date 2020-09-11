@@ -1,6 +1,10 @@
 import base64
+from hashlib import scrypt
+import os
 import sys
 
+import container_service_extension.server_constants as constants
+from cryptography.fernet import InvalidToken
 from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
@@ -21,10 +25,14 @@ def encrypt_file(input_file, passwd, output_file):
         out_file = None
         try:
             data = infile.read()
-            encryptor = Fernet(_derive_key(passwd))
+            salt = os.urandom(constants.SCRYPT_SALT_SIZE)
+            encryptor = Fernet(_derive_scrypt_key(passwd, salt))
+            encrypted_content = encryptor.encrypt(data)
+            output_data = salt + encrypted_content
+
             out_file = open(output_file, 'wb') \
                 if output_file else sys.stdout.buffer
-            out_file.write(encryptor.encrypt(data))
+            out_file.write(output_data)
         finally:
             if out_file and out_file is not sys.stdout.buffer:
                 out_file.close()
@@ -71,12 +79,42 @@ def get_decrypted_file_contents(input_file, passwd):
     raises this error.
     """
     with open(input_file, 'rb') as infile:
-        decryptor = Fernet(_derive_key(passwd))
         data = infile.read()
-        return decryptor.decrypt(data)
+        salt = data[:constants.SCRYPT_SALT_SIZE]
+        encrypted_content = data[constants.SCRYPT_SALT_SIZE:]
+        decryptor = Fernet(_derive_scrypt_key(passwd, salt))
+        try:
+            decrypted_content = decryptor.decrypt(encrypted_content)
+        except InvalidToken:
+            sha256_decryptor = Fernet(_derive_sha256_key(passwd))
+            decrypted_content = sha256_decryptor.decrypt(data)
+            decrypt_sha256_msg = "This encrypted file was encrypted using a " \
+                                 "less secure algorithm. Please decrypt the " \
+                                 "current content and encrypt it again.\n"
+            sys.stdout.write(decrypt_sha256_msg)
+        return decrypted_content
 
 
-def _derive_key(passwd):
+def _derive_scrypt_key(passwd, salt):
+    """Derive a base64 encoded urlsafe scrypt key.
+
+    :param str passwd: password to make the key
+    :param bytes salt: random bytes used for the key
+
+    :return: key
+    :rtype: bytes
+    """
+    key = scrypt(
+        password=passwd.encode(),
+        salt=salt,
+        n=constants.SCRYPT_ITERATIONS,
+        r=constants.SCRYPT_BLOCK_SIZE,
+        p=constants.SCRYPT_NUM_THREADS,
+        dklen=constants.SCRYPT_OUTPUT_SIZE)
+    return base64.urlsafe_b64encode(key)
+
+
+def _derive_sha256_key(passwd):
     """Derive a base64 encoded urlsafe digest from password.
 
     Using the given password, an irreversible hash is derived using

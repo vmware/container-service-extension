@@ -66,6 +66,13 @@ MQTT_MIN_API_VERSION = 35.0
 MQTT_TOKEN_NAME = "mqttCseToken"
 TOKEN_PATH = 'tokens'
 
+# Encryption constants
+SCRYPT_ITERATIONS = 2048
+SCRYPT_BLOCK_SIZE = 8
+SCRYPT_NUM_THREADS = 1
+SCRYPT_SALT_SIZE = 32
+SCRYPT_OUTPUT_SIZE = 32
+
 
 @unique
 class NodeType(str, Enum):
