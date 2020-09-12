@@ -182,9 +182,10 @@ class TKGClusterApi:
             vdc_name = cluster_config.get('metadata', {}).get('virtualDataCenterName')  # noqa: E501
             response = None
             try:
-                _, tkg_def_entities = \
+                tkg_entity, tkg_def_entities = \
                     self.get_tkg_clusters_by_name(cluster_name, vdc=vdc_name)
                 cluster_id = tkg_def_entities[0].get('id')
+                cluster_config['metadata']['resourceVersion'] = tkg_entity[0].metadata.resource_version  # noqa: E501
                 response = \
                     self._tkg_client_api.update_tkg_cluster_with_http_info(
                         tkg_cluster_id=cluster_id,
