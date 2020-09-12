@@ -85,17 +85,16 @@ def list_templates(ctx):
         cluster = Cluster(client)
         result = cluster.get_templates()
         CLIENT_LOGGER.debug(result)
-
-        fields_to_display = [
-            'name', 'revision', 'is_default', 'catalog', 'catalog_item',
-            'description']
-        all_templates = []
-        for template in result:
-            filtered_template_record = {}
-            for field in fields_to_display:
-                filtered_template_record[field] = template.get(field, '')
-            all_templates.append(filtered_template_record)
-        stdout(all_templates, ctx, sort_headers=False)
+        display_field_to_value_field = {
+            'name': 'name',
+            'revision': 'revision',
+            'is_default': 'is_default',
+            'catalog': 'catalog',
+            'catalog_item': 'catalog_item',
+            'description': 'description'
+        }
+        filtered_result = client_utils.filter_result_set(result, display_field_to_value_field)  # noqa: E501
+        stdout(filtered_result, ctx, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
@@ -1219,7 +1218,14 @@ def list_nodes(ctx, name, org, vdc):
             raise Exception("'node list' operation is not supported by non "
                             "native clusters.")
         all_nodes = cluster_info['master_nodes'] + cluster_info['nodes']
-        stdout(all_nodes, ctx, show_id=True)
+        display_field_to_value_field = {
+            'name': 'name',
+            'ipAddress': 'ipAddress',
+            'numberOfCpus': 'numberOfCpus',
+            'memoryMB': 'memoryMB'
+        }
+        filtered_nodes = client_utils.filter_result_set(all_nodes, display_field_to_value_field)  # noqa: E501
+        stdout(filtered_nodes, ctx, show_id=True, sort_headers=False)
         CLIENT_LOGGER.debug(all_nodes)
     except Exception as e:
         stderr(e, ctx)

@@ -169,3 +169,24 @@ def swagger_object_to_dict(obj):
             result[o_map[attr]] = value
 
     return result
+
+
+def filter_result_set(result_set, display_field_to_value_field):
+    """Extract selected fields from each list item in result_set.
+
+    :param list(dict) result_set: row of records
+    :param dict display_field_to_value_field: display field name -> value field
+    name in result set
+    :return: filtered list of records from result_set
+    :rtype: list(dict)
+    """
+    if isinstance(result_set, list):
+        filtered_result = []
+        for result_record in result_set:
+            filtered_record = {}
+            for display_field, value_field in display_field_to_value_field.items():  # noqa: E501
+                filtered_record[display_field] = result_record.get(value_field, '')  # noqa: E501
+            filtered_result.append(filtered_record)
+        return filtered_result
+    else:
+        return result_set
