@@ -88,10 +88,10 @@ def get_decrypted_file_contents(input_file, passwd):
         except InvalidToken:
             sha256_decryptor = Fernet(_derive_sha256_key(passwd))
             decrypted_content = sha256_decryptor.decrypt(data)
-            decrypt_sha256_msg = "This encrypted file was encrypted using a " \
-                                 "less secure algorithm. Please decrypt the " \
-                                 "current content and encrypt it again.\n"
-            sys.stdout.write(decrypt_sha256_msg)
+            sys.stdout.write("Configuration file encrypted with CSE 2.6 "
+                             "found. Please consider decrypting this file "
+                             "and re-encrypting it with CSE 3.0 for stronger "
+                             "security. \n")
         return decrypted_content
 
 
