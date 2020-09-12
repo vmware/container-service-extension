@@ -8,6 +8,7 @@ import pyvcloud.vcd.exceptions as vcd_exceptions
 
 from container_service_extension.client.response_processor import \
     process_response
+import container_service_extension.client.utils as client_utils
 import container_service_extension.def_.models as def_models
 from container_service_extension.pyvcloud_utils import get_vdc
 import container_service_extension.shared_constants as shared_constants
@@ -26,7 +27,13 @@ class PolicyBasedOvdc:
             uri,
             self.client._session,
             accept_type='application/json')
-        return process_response(response)
+        result = process_response(response)
+        display_field_to_value_field = {
+            'ovdc_name': 'ovdc_name',
+            'ovdc_id': 'ovdc_id',
+            'k8s_runtime': 'k8s_runtime'
+        }
+        return client_utils.filter_result_set(result, display_field_to_value_field)  # noqa: E501
 
     def update_ovdc(self, ovdc_name, k8s_runtime, enable=True, org_name=None,
                     remove_cp_from_vms_on_disable=False):
