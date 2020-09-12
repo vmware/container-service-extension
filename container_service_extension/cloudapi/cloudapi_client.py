@@ -57,7 +57,8 @@ class CloudApiClient(object):
                    resource_url_relative_path=None,
                    resource_url_absolute_path=None,
                    payload=None,
-                   content_type=None):
+                   content_type=None,
+                   additional_headers=None):
         """Make a request to cloudpai server.
 
         :param shared_constants.RequestMethod method: One of the HTTP verb
@@ -72,6 +73,8 @@ class CloudApiClient(object):
         :param str resource_url_absolute_path: absolute path for a resource,
             e.g. https://<vcd fqdn>/transfer/{id}/{file name}
         :param dict payload: JSON payload for the REST call.
+        :param str content_type: content type of the body of the request
+        :param dict additional_headers: request specific headers
 
         :return: body of the response text (JSON) in form of a dictionary.
 
@@ -90,6 +93,8 @@ class CloudApiClient(object):
 
         self.LOGGER_WIRE.debug(f"Request uri : {(method.value).upper()} {url}")
         headers = deepcopy(self._headers)
+        if additional_headers:
+            headers.update(additional_headers)
         if content_type and 'json' not in content_type:
             headers['Content-type'] = content_type
             response = requests.request(
