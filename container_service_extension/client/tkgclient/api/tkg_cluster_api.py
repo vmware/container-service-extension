@@ -71,7 +71,7 @@ class TkgClusterApi(object):
         auth_settings = []
         collection_formats = {}
         return self.api_client.call_api(
-            f"entities/{entity_type}", 'GET',
+            f"entities/types/{entity_type}", 'GET',
             path_params,
             query_params,
             header_params,

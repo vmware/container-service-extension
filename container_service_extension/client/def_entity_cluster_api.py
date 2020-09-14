@@ -2,6 +2,7 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 from dataclasses import asdict
+import json
 import os
 
 import requests
@@ -66,8 +67,10 @@ class DefEntityClusterApi:
             clusters += self._tkgCluster.list_tkg_clusters(vdc=vdc, org=org)
         except tkg_rest.ApiException as e:
             if e.status not in [requests.codes.FORBIDDEN, requests.codes.UNAUTHORIZED]:  # noqa: E501
-                logger.CLIENT_LOGGER.error(f"Failed to fetch TKG clusters: {e}")  # noqa: E501
-                raise
+                server_message = json.loads(e.body).get('message') or e.reason
+                msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{server_message}")  # noqa: E501
+                logger.CLIENT_LOGGER.error(msg)
+                raise Exception(msg)
             logger.CLIENT_LOGGER.debug(f"No rights present to fetch TKG clusters: {e}") # noqa: E501
             has_tkg_rights = False
         if not client_utils.is_cli_for_tkg_only():
