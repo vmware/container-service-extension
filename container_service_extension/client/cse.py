@@ -86,12 +86,12 @@ def list_templates(ctx):
         result = cluster.get_templates()
         CLIENT_LOGGER.debug(result)
         display_field_to_value_field = {
-            'name': 'name',
-            'revision': 'revision',
-            'is_default': 'is_default',
-            'catalog': 'catalog',
-            'catalog_item': 'catalog_item',
-            'description': 'description'
+            'Name': 'name',
+            'Revision': 'revision',
+            'Default': 'is_default',
+            'Catalog': 'catalog',
+            'Catalog Item': 'catalog_item',
+            'Description': 'description'
         }
         filtered_result = client_utils.filter_result_set(result, display_field_to_value_field)  # noqa: E501
         stdout(filtered_result, ctx, sort_headers=False)
@@ -1219,10 +1219,10 @@ def list_nodes(ctx, name, org, vdc):
                             "native clusters.")
         all_nodes = cluster_info['master_nodes'] + cluster_info['nodes']
         display_field_to_value_field = {
-            'name': 'name',
-            'ipAddress': 'ipAddress',
-            'numberOfCpus': 'numberOfCpus',
-            'memoryMB': 'memoryMB'
+            'Name': 'name',
+            'IP Address': 'ipAddress',
+            'Number of CPUs': 'numberOfCpus',
+            'Memory MB': 'memoryMB'
         }
         filtered_nodes = client_utils.filter_result_set(all_nodes, display_field_to_value_field)  # noqa: E501
         stdout(filtered_nodes, ctx, show_id=True, sort_headers=False)

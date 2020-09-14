@@ -29,9 +29,9 @@ class PolicyBasedOvdc:
             accept_type='application/json')
         result = process_response(response)
         display_field_to_value_field = {
-            'ovdc_name': 'ovdc_name',
-            'ovdc_id': 'ovdc_id',
-            'k8s_runtime': 'k8s_runtime'
+            'Name': 'ovdc_name',
+            'ID': 'ovdc_id',
+            'K8s Runtime': 'k8s_runtime'
         }
         return client_utils.filter_result_set(result, display_field_to_value_field)  # noqa: E501
 
