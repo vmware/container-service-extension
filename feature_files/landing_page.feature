@@ -9,7 +9,7 @@ Scenario: Accessing Container UI plugin
   When Container UI plugin is not published to the tenant
   And atleast one UI plugin is published to the tenant
   And User clicks on 'More' menu item on top ribbon
-  Then the drop down menu doesn't displays a 'Kubernetes Container Clusters' entry
+  Then the drop down menu doesn't display a 'Kubernetes Container Clusters' entry
 
   When Container UI plugin is published to the tenant
   And User clicks on 'More' menu item on top ribbon
@@ -22,7 +22,7 @@ Scenario: Accessing Container UI plugin landing page
 
   When the User is on landing page
   And the User has the role System Administrator
-  Then User sees the list of clusters (both TKG and CSE native) owned by them
+  Then User sees the collective list of clusters (both TKG and CSE native) owned by all users
   And User sees an org column that displays the org to which the cluster belongs
 
   When the User is on landing page

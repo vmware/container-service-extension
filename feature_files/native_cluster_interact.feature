@@ -6,10 +6,6 @@ Rules:
 
 Scenario: Create CSE native cluster
   When User clicks on 'New' button on Container UI plugin landing page
-  Then User sees the 'General' section of the cluster create wizard
-  And User fills out the name and description of the cluster 
-
-  When User clicks on Next button in General section
   Then User sees the 'Kubernetes Runtime' section
 
   When User sees the 'Kubernetes Runtime' section
@@ -20,52 +16,69 @@ Scenario: Create CSE native cluster
 
   When User sees the 'Kubernetes Runtime' section
   And atleast one org VDC is enabled for native K8s clusters
-  And there is a card in the dialog, viz. 'Native' as an option for K8s runtime
+  Then there is a card in the dialog, viz. 'Native' as an option for K8s runtime
 
   When User chooses Native radio button
-  Then User is presented with a list of K8s template that are available to deploy a native cluster
-  And User is presented a text box to enter the SSH public key to access cluster vms later
+  And User clicks on Next button
+  Then User sees the 'General' section of the cluster create wizard
 
-  When User chooses a template
-  And User enters SSH key details
+  When User sees the 'General' section
+  Then User is presented a text box to enter the name of the cluster
+  And User is presented with a list of K8s template that are available to deploy a native cluster
+  And User is presented a text box to enter optional description of the cluster
+  And User is presented a text box to enter the optional SSH public key that can be used later to access cluster vms
+
+  When User enters the name of the cluster
+  And User chooses a template
+  And User enters description of the cluster (optional)
+  And User enters SSH key details (optional)
   And User clicks on Next
+  Then User sees the 'Virtual Data Center' section
+
+  When User sees the 'Virtual Data Center' section
   Then User sees all the oVDCs as cards, that are enabled for Native cluster deployment
   And User chooses one of them by clicking on the radio button in one of the cards
 
-  When User clicks on Next button
+  When User is on 'Virtual Data Center' section
+  And User has chosen an org VDC
+  And User clicks on Next button
   Then User sees the 'Compute' section of the wizard
-  And User specifies the number of worker nodes (default is set to 2)
+
+  When User is on the 'Compute' section
+  Then User specifies the number of worker nodes (default is set to 2)
 
   When User specifies negative or non integer number of worker nodes
   Then User sees relevant error next to the field
 
-  When User continues to fill the section of the wizard
+  When User continues to fill the 'Compute' section of the wizard
   And User sees number of control plane nodes set to 1 and this field is not editable
-  And User selects Sizing policy from a drop down list containing the policies available to the oVDC selected in last step
-  And User specifies number of CPU cores
-  And User specifies amount of memory
-
-  When User clicks on Next button
+  And User selects Control Plane Sizing policy from a drop down list containing the policies available to the oVDC selected in last step
+  And User selects Worker Sizing policy from a drop down list containing the policies available to the oVDC selected in last step
+  And User clicks on Next button
   Then User sees the 'Storage' section of the wizard
-  And User chooses a storage profile from the drop down list
-  And User can toggle the 'Enable NFS' radio button (defaulted to off state)
 
-  When User clicks on Next button
+  When User is on the 'Storage' section
+  And User chooses a storage profile for Master node from a list
+  And User chooses a storage profile for worker nodes from a list
+  And User can toggle the 'Enable NFS' radio button (default-ed to off state)
+  And User clicks on Next button
   Then User sees the 'Network' section of the wizard
+
+  When User is on the 'Network' section
   And User chooses a network from a list of networks available to the selected oVDC, by clicking on radio button
-
-  When User clicks on Next button
+  And User clicks on Next button
   Then User sees the 'Review' section of the wizard
-  And User can review the details of the cluster to be created
-  And User can add a NFS node to the cluster by turning on the 'Enable NFS' toggle button
 
-  When User clicks on 'Create' button
+  When User is on the 'Review' section
+  Then User can review the details of the cluster to be created
+
+  When User clicks on 'Finish' button
   And User doesn't have DEF rights assigned to their role
   Then User sees a modal dialog informing the User of the error
   And User is taken back to the landing page on dismissing the modal dialog
   And User sees the cluster create task in failed state with the appropriate error message
 
-  When User clicks on 'Create' button
+  When User clicks on 'Finish   ' button
   And User has DEF rights assigned to their role
   Then User sees a modal dialog informing the User that CSE server has accepted their request to create a cluster
   And User is taken back to the landing page on dismissing the modal dialog.
