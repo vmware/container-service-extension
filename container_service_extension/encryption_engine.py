@@ -3,11 +3,12 @@ from hashlib import scrypt
 import os
 import sys
 
-import container_service_extension.server_constants as constants
-from cryptography.fernet import InvalidToken
 from cryptography.fernet import Fernet
+from cryptography.fernet import InvalidToken
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
+
+import container_service_extension.server_constants as constants
 
 
 def encrypt_file(input_file, passwd, output_file):
@@ -90,7 +91,7 @@ def get_decrypted_file_contents(input_file, passwd):
             decrypted_content = sha256_decryptor.decrypt(data)
             sys.stdout.write("Configuration file encrypted with CSE 2.6 "
                              "found. Please consider decrypting this file "
-                             "and re-encrypting it with CSE 3.0 for stronger "
+                             "and re-encrypting it with CSE 3.0 for enhanced "
                              "security. \n")
         return decrypted_content
 
