@@ -20,7 +20,7 @@ SAMPLE_K8_CLUSTER_SPEC_HELP = """# Short description of various properties used 
 #
 # spec: User specification of the desired state of the cluster.
 # spec.control_plane: An optional sub-section for desired control-plane state of the cluster. The properties \"sizing_class\" and \"storage_profile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".
-# spec.control_plane.count: Number of master node(s). Only single master node is supported.
+# spec.control_plane.count: Number of control plane node(s). Only single control plane node is supported.
 # spec.control_plane.sizing_class: The compute sizing policy with which control-plane node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
 # spec.control_plane.storage_profile: The storage-profile with which control-plane needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc.
 #
@@ -60,7 +60,7 @@ SAMPLE_TKG_CLUSTER_SPEC_HELP = """# Short description of various properties used
 #
 # spec.topology.controlPlane: Required sub-section for desired control-plane state of the cluster. The properties \"class\" and \"StorageClass\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\"
 # spec.topology.controlPlane.class: The Kubernetes policy with which control-plane node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
-# spec.topology.controlPlane.count: Number of master node(s).
+# spec.topology.controlPlane.count: Number of control plane node(s).
 # spec.topology.controlPlane.storageClass: The storage policy with which control-plane needs to be provisioned in a given \"ovdc\". The specified policy is expected to be available on the given ovdc.
 #
 # spec.topology.workers: Required sub-section for the desired worker state of the cluster. The properties \"class\" and \"storageClass\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".
