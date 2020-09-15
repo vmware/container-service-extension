@@ -12,7 +12,6 @@ from container_service_extension.client.pks_cluster import PksCluster
 from container_service_extension.client.pks_ovdc import PksOvdc
 import container_service_extension.client.utils as client_utils
 from container_service_extension.logger import CLIENT_LOGGER
-from container_service_extension.server_constants import K8sProvider
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 
 
