@@ -69,7 +69,7 @@ TOKEN_PATH = 'tokens'
 
 @unique
 class NodeType(str, Enum):
-    MASTER = 'mstr'
+    CONTROL_PLANE = 'mstr'
     WORKER = 'node'
     NFS = 'nfsd'
 
@@ -106,13 +106,13 @@ class ScriptFile(str, Enum):
     NFSD = 'nfsd.sh'
 
     # cluster initialization scripts
-    MASTER = 'mstr.sh'
+    CONTROL_PLANE = 'mstr.sh'
     NODE = 'node.sh'
 
     # cluster upgrade scripts
     DOCKER_UPGRADE = 'cluster-upgrade/docker-upgrade.sh'
-    MASTER_CNI_APPLY = 'cluster-upgrade/master-cni-apply.sh'
-    MASTER_K8S_UPGRADE = 'cluster-upgrade/master-k8s-upgrade.sh'
+    CONTROL_PLANE_CNI_APPLY = 'cluster-upgrade/master-cni-apply.sh'
+    CONTROL_PLANE_K8S_UPGRADE = 'cluster-upgrade/master-k8s-upgrade.sh'
     WORKER_K8S_UPGRADE = 'cluster-upgrade/worker-k8s-upgrade.sh'
 
 
@@ -224,7 +224,7 @@ class ClusterMetadataKey(str, Enum):
     BACKWARD_COMPATIBILE_TEMPLATE_NAME = 'cse.template'
     CLUSTER_ID = 'cse.cluster.id'
     CSE_VERSION = 'cse.version'
-    MASTER_IP = 'cse.master.ip'
+    CONTROL_PLANE_IP = 'cse.master.ip'
     TEMPLATE_NAME = 'cse.template.name'
     TEMPLATE_REVISION = 'cse.template.revision'
     OS = "cse.os"

@@ -36,7 +36,7 @@ def get_script_filepath(template_name, revision, script_file_name):
     template_dir.mkdir(parents=True, exist_ok=True)
 
     # pathlib '/' operator does not intuitively resolve Enums with str mixin
-    # Ex. ScriptFile.MASTER does not resolve to 'mstr'
+    # Ex. ScriptFile.CONTROL_PLANE does not resolve to 'mstr'
     # os.path.join is used instead
     return os.path.join(template_dir, script_file_name)
 
