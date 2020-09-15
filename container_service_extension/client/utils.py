@@ -171,22 +171,27 @@ def swagger_object_to_dict(obj):
     return result
 
 
-def filter_result_set(result_set, display_field_to_value_field):
-    """Extract selected fields from each list item in result_set.
+def filter_columns(result, value_field_to_display_field):
+    """Extract selected fields from each list item in result.
 
-    :param list(dict) result_set: row of records
-    :param dict display_field_to_value_field: display field name -> value field
-    name in result set
-    :return: filtered list of records from result_set
-    :rtype: list(dict)
+    :param list(dict) or dict result: row of records
+    :param dict value_field_to_display_field: mapping of value field to
+    respective display name in result set. Extract selected fields from result
+    based on value fields from this dictionary.
+    :return: filtered list or dict of record(s) from result
+    :rtype: list(dict) or dict
     """
-    if isinstance(result_set, list):
+    if isinstance(result, list):
         filtered_result = []
-        for result_record in result_set:
+        for result_record in result:
             filtered_record = {}
-            for display_field, value_field in display_field_to_value_field.items():  # noqa: E501
+            for value_field, display_field in value_field_to_display_field.items():  # noqa: E501
                 filtered_record[display_field] = result_record.get(value_field, '')  # noqa: E501
             filtered_result.append(filtered_record)
         return filtered_result
-    else:
-        return result_set
+    elif isinstance(result, dict):
+        filtered_result = {
+            display_field: result.get(value_field, '')
+            for value_field, display_field in value_field_to_display_field.items()  # noqa: E501
+        }
+        return filtered_result

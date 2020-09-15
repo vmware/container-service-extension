@@ -28,12 +28,12 @@ class PolicyBasedOvdc:
             self.client._session,
             accept_type='application/json')
         result = process_response(response)
-        display_field_to_value_field = {
-            'Name': 'ovdc_name',
-            'ID': 'ovdc_id',
-            'K8s Runtime': 'k8s_runtime'
+        value_field_to_display_field = {
+            'ovdc_name': 'Name',
+            'ovdc_id': 'ID',
+            'k8s_runtime': 'K8s Runtime'
         }
-        return client_utils.filter_result_set(result, display_field_to_value_field)  # noqa: E501
+        return client_utils.filter_columns(result, value_field_to_display_field)  # noqa: E501
 
     def update_ovdc(self, ovdc_name, k8s_runtime, enable=True, org_name=None,
                     remove_cp_from_vms_on_disable=False):

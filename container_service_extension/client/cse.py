@@ -85,15 +85,15 @@ def list_templates(ctx):
         cluster = Cluster(client)
         result = cluster.get_templates()
         CLIENT_LOGGER.debug(result)
-        display_field_to_value_field = {
-            'Name': 'name',
-            'Revision': 'revision',
-            'Default': 'is_default',
-            'Catalog': 'catalog',
-            'Catalog Item': 'catalog_item',
-            'Description': 'description'
+        value_field_to_display_field = {
+            'name': 'Name',
+            'revision': 'Revision',
+            'is_default': 'Default',
+            'catalog': 'Catalog',
+            'catalog_item': 'Catalog Item',
+            'description': 'Description'
         }
-        filtered_result = client_utils.filter_result_set(result, display_field_to_value_field)  # noqa: E501
+        filtered_result = client_utils.filter_columns(result, value_field_to_display_field)  # noqa: E501
         stdout(filtered_result, ctx, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
@@ -1041,8 +1041,18 @@ def node_info(ctx, cluster_name, node_name, org_name, vdc):
             org_name = ctx.obj['profiles'].get('org_in_use')
         node_info = cluster.get_node_info(cluster_name, node_name,
                                           org_name, vdc)
-        stdout(node_info, ctx, show_id=True)
-        CLIENT_LOGGER.debug(node_info)
+        value_field_to_display_field = {
+            'name': 'Name',
+            'node_type': 'Node Type',
+            'ipAddress': 'IP Address',
+            'numberOfCpus': 'Number of CPUs',
+            'memoryMB': 'Memory MB',
+            'status': 'Status'
+        }
+        filtered_node_info = client_utils.filter_columns(
+            node_info, value_field_to_display_field)
+        stdout(filtered_node_info, ctx, sort_headers=False)
+        CLIENT_LOGGER.debug(filtered_node_info)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
@@ -1218,13 +1228,13 @@ def list_nodes(ctx, name, org, vdc):
             raise Exception("'node list' operation is not supported by non "
                             "native clusters.")
         all_nodes = cluster_info['master_nodes'] + cluster_info['nodes']
-        display_field_to_value_field = {
-            'Name': 'name',
-            'IP Address': 'ipAddress',
-            'Number of CPUs': 'numberOfCpus',
-            'Memory MB': 'memoryMB'
+        value_field_to_display_field = {
+            'name': 'Name',
+            'ipAddress': 'IP Address',
+            'numberOfCpus': 'Number of CPUs',
+            'memoryMB': 'Memory MB'
         }
-        filtered_nodes = client_utils.filter_result_set(all_nodes, display_field_to_value_field)  # noqa: E501
+        filtered_nodes = client_utils.filter_columns(all_nodes, value_field_to_display_field)  # noqa: E501
         stdout(filtered_nodes, ctx, show_id=True, sort_headers=False)
         CLIENT_LOGGER.debug(all_nodes)
     except Exception as e:
