@@ -493,7 +493,6 @@ def ovdc_disable(ctx, ovdc_name, org_name):
                 org_name = ctx.obj['profiles'].get('org_in_use')
             result = ovdc.update_ovdc(enable=False,
                                       ovdc_name=ovdc_name,
-                                      k8s_provider=K8sProvider.PKS,
                                       org_name=org_name)
             stdout(result, ctx)
             CLIENT_LOGGER.debug(result)
