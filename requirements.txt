@@ -16,9 +16,6 @@ paho-mqtt == 1.5.0
 # pika 0.13.1
 pika >= 0.11.2, < 1.0.0
 
-# pyOpenSSL
-pyOpenSSL == 19.1.0
-
 # pyvcloud 22.0.1
 # pyvcloud >= 22.0.1, < 23.0.0
 pyvcloud == 22.0.2.dev27

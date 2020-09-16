@@ -1,5 +1,4 @@
 import base64
-from hashlib import scrypt
 import os
 import sys
 
@@ -7,6 +6,7 @@ from cryptography.fernet import Fernet
 from cryptography.fernet import InvalidToken
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 import container_service_extension.server_constants as constants
 
@@ -26,8 +26,8 @@ def encrypt_file(input_file, passwd, output_file):
         out_file = None
         try:
             data = infile.read()
-            salt = os.urandom(constants.SCRYPT_SALT_SIZE)
-            encryptor = Fernet(_derive_scrypt_key(passwd, salt))
+            salt = os.urandom(constants.SALT_SIZE)
+            encryptor = Fernet(_derive_pbkdf2_key(passwd, salt))
             encrypted_content = encryptor.encrypt(data)
             output_data = salt + encrypted_content
 
@@ -81,9 +81,9 @@ def get_decrypted_file_contents(input_file, passwd):
     """
     with open(input_file, 'rb') as infile:
         data = infile.read()
-        salt = data[:constants.SCRYPT_SALT_SIZE]
-        encrypted_content = data[constants.SCRYPT_SALT_SIZE:]
-        decryptor = Fernet(_derive_scrypt_key(passwd, salt))
+        salt = data[:constants.SALT_SIZE]
+        encrypted_content = data[constants.SALT_SIZE:]
+        decryptor = Fernet(_derive_pbkdf2_key(passwd, salt))
         try:
             decrypted_content = decryptor.decrypt(encrypted_content)
         except InvalidToken:
@@ -96,8 +96,8 @@ def get_decrypted_file_contents(input_file, passwd):
         return decrypted_content
 
 
-def _derive_scrypt_key(passwd, salt):
-    """Derive a base64 encoded urlsafe scrypt key.
+def _derive_pbkdf2_key(passwd, salt):
+    """Derive a base64 encoded urlsafe PBKDF2 key.
 
     :param str passwd: password to make the key
     :param bytes salt: random bytes used for the key
@@ -105,13 +105,14 @@ def _derive_scrypt_key(passwd, salt):
     :return: key
     :rtype: bytes
     """
-    key = scrypt(
-        password=passwd.encode(),
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256,
+        length=constants.PBKDF2_OUTPUT_SIZE,
         salt=salt,
-        n=constants.SCRYPT_ITERATIONS,
-        r=constants.SCRYPT_BLOCK_SIZE,
-        p=constants.SCRYPT_NUM_THREADS,
-        dklen=constants.SCRYPT_OUTPUT_SIZE)
+        iterations=constants.PBKDF2_ITERATIONS,
+        backend=default_backend())
+    key = kdf.derive(passwd.encode())
+
     return base64.urlsafe_b64encode(key)
 
 
