@@ -73,10 +73,23 @@ class NativeClusterApi:
         def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
         logger.CLIENT_LOGGER.debug(f"Defined entity info from server:{def_entity}")  # noqa: E501
         if not def_entity:
+            logger.CLIENT_LOGGER.error(f"Cannot find native cluster with name {cluster_name}")  # noqa: E501
             raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
         # TODO() relevant output
         if def_entity:
             return yaml.dump(asdict(def_entity.entity))
+
+    def get_cluster_info_by_id(self, cluster_id, **kwargs):
+        """Get cluster information by cluster ID.
+
+        :param str cluster_id: ID of the cluster
+        :return: cluster information in yaml format
+        :rtype: str
+        """
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        def_entity = entity_svc.get_entity(cluster_id)
+        logger.CLIENT_LOGGER.debug(f"Defined entity info from server: {def_entity}")  # noqa: E501
+        return yaml.dump(asdict(def_entity.entity))
 
     def delete_cluster(self, cluster_name, org=None, vdc=None):
         """Delete DEF native cluster by name.
@@ -95,7 +108,7 @@ class NativeClusterApi:
             return self.delete_cluster_by_id(def_entity.id)
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
 
-    def delete_cluster_by_id(self, cluster_id):
+    def delete_cluster_by_id(self, cluster_id, **kwargs):
         """Delete the existing Kubernetes cluster by id.
 
         :param str cluster_id: native cluster entity id
@@ -166,7 +179,7 @@ class NativeClusterApi:
             return self.get_cluster_config_by_id(def_entity.id)
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
 
-    def get_cluster_config_by_id(self, cluster_id):
+    def get_cluster_config_by_id(self, cluster_id, **kwargs):
         """Get the cluster config for given cluster id.
 
         :param str cluster_id: native cluster entity id
@@ -198,7 +211,7 @@ class NativeClusterApi:
             return self.get_upgrade_plan_by_cluster_id(def_entity.id)
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
 
-    def get_upgrade_plan_by_cluster_id(self, cluster_id):
+    def get_upgrade_plan_by_cluster_id(self, cluster_id, **kwargs):
         """Get the upgrade plan for give cluster id.
 
         :param cluster_id: unique id of the cluster
@@ -236,7 +249,7 @@ class NativeClusterApi:
             return self.upgrade_cluster_by_cluster_id(current_entity.id, cluster_entity=asdict(current_entity))  # noqa: E501
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
 
-    def upgrade_cluster_by_cluster_id(self, cluster_id, cluster_def_entity):
+    def upgrade_cluster_by_cluster_id(self, cluster_id, cluster_def_entity, **kwargs):  # noqa: E501
         """Get the upgrade plan for give cluster id.
 
         :param str cluster_id: unique id of the cluster
@@ -255,7 +268,7 @@ class NativeClusterApi:
         cluster_def_entity = def_models.DefEntity(**response_processor.process_response(response))  # noqa: E501
         return client_utils.construct_task_console_message(cluster_def_entity.entity.status.task_href)  # noqa: E501
 
-    def apply(self, cluster_config, **kwargs):
+    def apply(self, cluster_config, cluster_id=None, **kwargs):
         """Apply the configuration either to create or update the cluster.
 
         :param dict cluster_config: cluster configuration information
@@ -266,7 +279,11 @@ class NativeClusterApi:
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         cluster_spec = def_models.ClusterEntity(**cluster_config)
         cluster_name = cluster_spec.metadata.cluster_name
-        def_entity = entity_svc.get_native_entity_by_name(cluster_name)
+        if cluster_id:
+            # If cluster id doesn't exist, an exception will be raised
+            def_entity = entity_svc.get_entity(cluster_id)
+        else:
+            def_entity = entity_svc.get_native_entity_by_name(cluster_name)
         if not def_entity:
             response = self._client._do_request_prim(
                 shared_constants.RequestMethod.POST,

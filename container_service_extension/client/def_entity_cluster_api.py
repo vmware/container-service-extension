@@ -209,6 +209,18 @@ class DefEntityClusterApi:
             f"Received defined entity of cluster {cluster_name} : {cluster_info}")  # noqa: E501
         return yaml.dump(cluster_info)
 
+    def get_cluster_info_by_id(self, cluster_id, org=None):
+        """Obtain cluster information using cluster ID.
+
+        :param str cluster_id
+        :return: yaml representation of the cluster information
+        :rtype: str
+        """
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        if entity_svc.is_native_entity(cluster_id):
+            return self._nativeCluster.get_cluster_info_by_id(cluster_id=cluster_id)  # noqa: E501
+        return self._tkgCluster.get_cluster_info_by_id(cluster_id, org=org)  # noqa: E501
+
     def get_cluster_config(self, cluster_name, org=None, vdc=None):
         """Get cluster config.
 
@@ -227,6 +239,17 @@ class DefEntityClusterApi:
             return self._nativeCluster.get_cluster_config_by_id(cluster.id)
         return self._tkgCluster.get_cluster_config_by_id(cluster_id=entity_properties.get('id'))  # noqa: E501
 
+    def get_cluster_config_by_id(self, cluster_id, org=None):
+        """Fetch kube config of the cluster using cluster ID.
+
+        :param str cluster_id:
+        :param str org:
+        """
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        if entity_svc.is_native_entity(cluster_id):
+            return self._nativeCluster.get_cluster_config_by_id(cluster_id)
+        return self._tkgCluster.get_cluster_config_by_id(cluster_id, org=org)
+
     def delete_cluster(self, cluster_name, org=None, vdc=None):
         """Delete DEF cluster by name.
 
@@ -243,6 +266,19 @@ class DefEntityClusterApi:
         if is_native_cluster:
             return self._nativeCluster.delete_cluster_by_id(cluster.id)
         return self._tkgCluster.delete_cluster_by_id(cluster_id=entity_properties.get('id'))  # noqa: E501
+
+    def delete_cluster_by_id(self, cluster_id, org=None):
+        """Delete cluster using cluster id.
+
+        :param str cluster_id: id of the cluster to be deleted
+        :return: deleted cluster information
+        :rtype: str
+        :raises: ClusterNotFoundError
+        """
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        if entity_svc.is_native_entity(cluster_id):
+            return self._nativeCluster.delete_cluster_by_id(cluster_id)
+        return self._tkgCluster.delete_cluster_by_id(cluster_id, org=org)
 
     def get_upgrade_plan(self, cluster_name, org=None, vdc=None):
         """Get the upgrade plan for the given cluster name.
