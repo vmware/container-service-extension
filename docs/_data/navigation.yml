@@ -1,4 +1,4 @@
-- name: CSE 3.0
+- name: WORK IN PROGRESS
   subdir: cse3_0
   link: INTRO.html
   default: false
