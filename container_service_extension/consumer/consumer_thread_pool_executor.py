@@ -1,8 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 
-# import container_service_extension.logger as logger
-
 
 class ConsumerThreadPoolExecutor(ThreadPoolExecutor):
     def __init__(self, max_workers):
