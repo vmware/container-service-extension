@@ -721,9 +721,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
         console_message_printer.error("CSE Server failure. Please check the logs.") # noqa: E501
         sys.exit(1)
     finally:
-        # If skip_config_decryption is false, the user will again be
-        # prompted for the password
-        if not cse_run_complete and skip_config_decryption:
+        if not cse_run_complete:
             config_dict = _get_config_dict(
                 config_file_path=config_file_path,
                 pks_config_file_path=None,
